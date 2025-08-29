@@ -23,6 +23,7 @@ import {
   parseAsArrayOf,
   parseAsInteger,
   parseAsString,
+	parseAsBoolean,
   type UseQueryStateOptions,
   useQueryState,
   useQueryStates,
@@ -176,9 +177,11 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     if (enableAdvancedFilter) return {};
 
     return filterableColumns.reduce<
-      Record<string, Parser<string> | Parser<string[]>>
+      Record<string, Parser<string> | Parser<string[]> | Parser<boolean>>
     >((acc, column) => {
-      if (column.meta?.options) {
+      if (column.meta?.booleanOptions) {
+	      acc[column.id ?? ""] = parseAsBoolean.withOptions(queryStateOptions);
+      } else if (column.meta?.options) {
         acc[column.id ?? ""] = parseAsArrayOf(
           parseAsString,
           ARRAY_SEPARATOR,
@@ -206,11 +209,16 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     return Object.entries(filterValues).reduce<ColumnFiltersState>(
       (filters, [key, value]) => {
         if (value !== null) {
-          const processedValue = Array.isArray(value)
-            ? value
-            : typeof value === "string" && /[^a-zA-Z0-9]/.test(value)
-              ? value.split(/[^a-zA-Z0-9]+/).filter(Boolean)
-              : [value];
+	        let processedValue: unknown;
+	        if (typeof value === "boolean") {
+		        processedValue = value;
+	        } else if (Array.isArray(value)) {
+		        processedValue = value;
+	        } else if (/[^a-zA-Z0-9]/.test(value)) {
+		        processedValue = value.split(/[^a-zA-Z0-9]+/).filter(Boolean);
+	        } else {
+		        processedValue = [value];
+	        }
 
           filters.push({
             id: key,
@@ -237,10 +245,10 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
             : updaterOrValue;
 
         const filterUpdates = next.reduce<
-          Record<string, string | string[] | null>
+	        Record<string, string | string[] | boolean | null>
         >((acc, filter) => {
           if (filterableColumns.find((column) => column.id === filter.id)) {
-            acc[filter.id] = filter.value as string | string[];
+            acc[filter.id] = filter.value as string | string[] | boolean;
           }
           return acc;
         }, {});

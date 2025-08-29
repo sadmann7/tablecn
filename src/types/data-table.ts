@@ -12,6 +12,7 @@ declare module "@tanstack/react-table" {
     range?: [number, number];
     unit?: string;
     icon?: React.FC<React.SVGProps<SVGSVGElement>>;
+	  booleanOptions?: BooleanOption[];
   }
 }
 
@@ -20,6 +21,12 @@ export interface Option {
   value: string;
   count?: number;
   icon?: React.FC<React.SVGProps<SVGSVGElement>>;
+}
+
+export interface BooleanOption {
+	label: string;
+	value: boolean;
+	icon?: React.FC<React.SVGProps<SVGSVGElement>>;
 }
 
 export type FilterOperator = DataTableConfig["operators"][number];
