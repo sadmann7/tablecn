@@ -48,7 +48,7 @@ export function DataGridCell<TData>({
       onBlur={onBlur}
       onKeyDown={onKeyDown}
       className={cn(
-        "h-8 border-none bg-transparent p-1 focus-visible:ring-1 focus-visible:ring-ring",
+        "h-8 w-full rounded-none border-none bg-transparent p-0 focus-visible:ring-1 focus-visible:ring-ring dark:bg-transparent",
         className,
       )}
     />
