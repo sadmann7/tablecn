@@ -1,6 +1,6 @@
 # Contributing Guide
 
-Thank you for investing your time in contributing to our project! Any contribution you make will be reflected on [shadcn-table](<[table.sadmn.com](https://github.com/sadmann7/shadcn-table)>).
+Thank you for investing your time in contributing to our project! Any contribution you make will be reflected on [tablecn](<[table.sadmn.com](https://github.com/sadmann7/tablecn)>).
 
 In this guide you will get an overview of the contribution workflow from opening an issue, creating a PR, reviewing, and merging the PR.
 
@@ -8,15 +8,15 @@ In this guide you will get an overview of the contribution workflow from opening
 
 ### Fork the repository
 
-Fork the project [on GitHub](https://github.com/sadmann7/shadcn-table)
+Fork the project [on GitHub](https://github.com/sadmann7/tablecn)
 
 ### Clone the project
 
 Clone your fork locally. Do not clone the original repository unless you plan to become a long-term contributor and have been given permission to do so.
 
 ```shell
-git clone https://github.com/sadmann7/shadcn-table
-cd shadcn-table
+git clone https://github.com/sadmann7/tablecn
+cd tablecn
 ```
 
 ### Install dependencies
@@ -65,13 +65,13 @@ When you're finished with the changes, create a pull request, also known as a PR
 
 #### Create a new issue
 
-If you spot a problem in the codebase that you believe needs to be fixed, or you have an idea for a new feature, take a look at the [Issues](https://github.com/sadmann7/shadcn-table/issues).
+If you spot a problem in the codebase that you believe needs to be fixed, or you have an idea for a new feature, take a look at the [Issues](https://github.com/sadmann7/tablecn/issues).
 
-If you can't find an open issue addressing the problem, [open a new one](https://github.com/sadmann7/shadcn-table/issues/new). Be sure to include a title and clear description, as much relevant information as possible, and a code sample or an executable test case demonstrating the expected behavior that is not occurring.
+If you can't find an open issue addressing the problem, [open a new one](https://github.com/sadmann7/tablecn/issues/new). Be sure to include a title and clear description, as much relevant information as possible, and a code sample or an executable test case demonstrating the expected behavior that is not occurring.
 
 #### Solve an issue
 
-Scan through our [existing issues](https://github.com/sadmann7/shadcn-table/issues) to find one that interests you. You can narrow down the search using `labels` and `projects` to find issues that need attention.
+Scan through our [existing issues](https://github.com/sadmann7/tablecn/issues) to find one that interests you. You can narrow down the search using `labels` and `projects` to find issues that need attention.
 
 Then, fork the repository, create a branch, and make your changes.
 
@@ -81,7 +81,7 @@ Finally, open a pull request with the changes.
 
 Congratulations :tada::tada: The GitHub team thanks you :sparkles:.
 
-Once your PR is merged, your contributions will be publicly visible on the [shadcn-table](https://github.com/sadmann7/shadcn-table).
+Once your PR is merged, your contributions will be publicly visible on the [tablecn](https://github.com/sadmann7/tablecn).
 
 ### Credits
 

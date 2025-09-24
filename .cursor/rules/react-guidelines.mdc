@@ -14,8 +14,11 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
 - Prefer iteration and modularization over code duplication.
 - Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
 - Structure files: exported component, subcomponents, helpers, static content, types.
-- Use console.log({value}) instead of console.log(value)
+- Use console.log({ value }) instead of console.log(value)
 - Use onCallback instead of handleCallback
+- Use flex and gap instead of space-x-n and space-y-n
+- Use cn to compose class names
+- Just pass ref directly to the component because of react 19
 
 ## Naming Conventions
 
@@ -55,5 +58,4 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, Shadcn UI, 
   - Avoid for data fetching or state management.
 - Follow Next.js docs for Data Fetching, Rendering, and Routing.
 
-Make sure not to start the dev server or run type of lint checking on agent mode. 
-
+Make sure not to start the dev server or run type of lint checking on agent mode.
