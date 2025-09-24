@@ -1,0 +1,322 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "shadcn-table",
+  "homepage": "https://tablecn.com",
+  "items": [
+    {
+      "name": "data-table",
+      "type": "registry:component",
+      "title": "Data Table",
+      "description": "A feature-rich data table component with server-side filtering, sorting, and pagination",
+      "registryDependencies": [
+        "badge",
+        "button",
+        "calendar",
+        "command",
+        "dropdown-menu",
+        "input",
+        "popover",
+        "select",
+        "separator",
+        "slider",
+        "table"
+      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
+      "files": [
+        {
+          "path": "src/components/data-table/data-table.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-column-header.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-column-header.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-pagination.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-pagination.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-view-options.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-view-options.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-faceted-filter.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-faceted-filter.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-toolbar.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-toolbar.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-slider-filter.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-slider-filter.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-date-filter.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-date-filter.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-skeleton.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-skeleton.tsx"
+        },
+        {
+          "path": "src/hooks/use-callback-ref.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/hooks/use-data-table.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/lib/data-table.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/config/data-table.ts",
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
+        },
+        {
+          "path": "src/types/data-table.ts",
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
+        }
+      ]
+    },
+    {
+      "name": "data-table-action-bar",
+      "type": "registry:component",
+      "title": "Data Table Action Bar",
+      "description": "A action bar component for the data table",
+      "registryDependencies": ["button", "tooltip"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "motion"],
+      "files": [
+        {
+          "path": "src/components/data-table/data-table-action-bar.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-action-bar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-sort-list",
+      "type": "registry:component",
+      "title": "Data Table Sort List",
+      "description": "A sort list component for the data table",
+      "registryDependencies": [
+        "badge",
+        "button",
+        "command",
+        "popover",
+        "select"
+      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "files": [
+        {
+          "path": "src/components/data-table/data-table-sort-list.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-sort-list.tsx"
+        },
+        {
+          "path": "src/components/ui/sortable.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/sortable.tsx"
+        },
+        {
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/config/data-table.ts",
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
+        },
+        {
+          "path": "src/types/data-table.ts",
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
+        }
+      ]
+    },
+    {
+      "name": "data-table-filter-list",
+      "type": "registry:component",
+      "title": "Data Table Filter List",
+      "description": "A filter list component for the data table",
+      "registryDependencies": [
+        "badge",
+        "button",
+        "calendar",
+        "command",
+        "input",
+        "popover",
+        "select"
+      ],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "nanoid",
+        "nuqs"
+      ],
+      "files": [
+        {
+          "path": "src/components/data-table/data-table-filter-list.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-filter-list.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-range-filter.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-range-filter.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-advanced-toolbar.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-advanced-toolbar.tsx"
+        },
+        {
+          "path": "src/components/ui/sortable.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/sortable.tsx"
+        },
+        {
+          "path": "src/components/ui/faceted.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/faceted.tsx"
+        },
+        {
+          "path": "src/hooks/use-callback-ref.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/id.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/config/data-table.ts",
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
+        },
+        {
+          "path": "src/types/data-table.ts",
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
+        }
+      ]
+    },
+    {
+      "name": "data-table-filter-menu",
+      "type": "registry:component",
+      "title": "Data Table Filter Menu",
+      "description": "A filter menu component for the data table",
+      "registryDependencies": [
+        "badge",
+        "button",
+        "calendar",
+        "command",
+        "input",
+        "popover",
+        "select"
+      ],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "motion",
+        "nanoid",
+        "nuqs"
+      ],
+      "files": [
+        {
+          "path": "src/components/data-table/data-table-filter-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-filter-menu.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-range-filter.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-range-filter.tsx"
+        },
+        {
+          "path": "src/components/data-table/data-table-advanced-toolbar.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-advanced-toolbar.tsx"
+        },
+        {
+          "path": "src/hooks/use-callback-ref.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/lib/data-table.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/id.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/config/data-table.ts",
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
+        },
+        {
+          "path": "src/types/data-table.ts",
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
+        }
+      ]
+    }
+  ]
+}
