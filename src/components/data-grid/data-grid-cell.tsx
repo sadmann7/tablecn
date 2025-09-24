@@ -12,15 +12,17 @@ interface CellPosition {
 }
 
 declare module "@tanstack/react-table" {
+  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
     updateData: (rowIndex: number, columnId: string, value: unknown) => void;
     focusedCell: CellPosition | null;
     editingCell: CellPosition | null;
-    handleCellClick: (rowIndex: number, columnId: string) => void;
-    handleCellDoubleClick: (rowIndex: number, columnId: string) => void;
+    onCellClick: (rowIndex: number, columnId: string) => void;
+    onCellDoubleClick: (rowIndex: number, columnId: string) => void;
     startEditing: (rowIndex: number, columnId: string) => void;
     stopEditing: () => void;
     navigateCell: (direction: "up" | "down" | "left" | "right") => void;
+    blurCell: () => void;
   }
 }
 
@@ -99,7 +101,7 @@ export function DataGridCell<TData>({
   const onClick = React.useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
-      meta?.handleCellClick(rowIndex, columnId);
+      meta?.onCellClick(rowIndex, columnId);
     },
     [meta, rowIndex, columnId],
   );
@@ -107,7 +109,7 @@ export function DataGridCell<TData>({
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
-      meta?.handleCellDoubleClick(rowIndex, columnId);
+      meta?.onCellDoubleClick(rowIndex, columnId);
     },
     [meta, rowIndex, columnId],
   );

@@ -33,7 +33,8 @@ export function DataGrid<TData>({
   className,
   ...props
 }: DataGridProps<TData>) {
-  const tableContainerRef = React.useRef<HTMLDivElement>(null);
+  const gridRef = React.useRef<HTMLDivElement>(null);
+  const gridContainerRef = React.useRef<HTMLDivElement>(null);
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
@@ -51,9 +52,23 @@ export function DataGrid<TData>({
     defaultColumn,
   });
 
+  // Handle clicks outside the grid to blur focus
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
+        table.options.meta?.blurCell();
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [table]);
+
   const virtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => tableContainerRef.current,
+    getScrollElement: () => gridContainerRef.current,
     estimateSize: () => estimateRowSize,
     overscan,
     measureElement:
@@ -64,9 +79,9 @@ export function DataGrid<TData>({
   });
 
   return (
-    <div className={cn("w-full", className)} {...props}>
+    <div ref={gridRef} className={cn("w-full", className)} {...props}>
       <div
-        ref={tableContainerRef}
+        ref={gridContainerRef}
         className="overflow-auto rounded-md border"
         style={{
           height: `${height}px`,

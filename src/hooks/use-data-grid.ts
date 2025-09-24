@@ -83,7 +83,12 @@ export function useDataGrid<TData>({
     setEditingCell(null);
   }, []);
 
-  const handleCellClick = React.useCallback(
+  const blurCell = React.useCallback(() => {
+    setFocusedCell(null);
+    setEditingCell(null);
+  }, []);
+
+  const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string) => {
       const currentFocused = focusedCell;
 
@@ -101,7 +106,7 @@ export function useDataGrid<TData>({
     [focusedCell, focusCell, startEditing]
   );
 
-  const handleCellDoubleClick = React.useCallback(
+  const onCellDoubleClick = React.useCallback(
     (rowIndex: number, columnId: string) => {
       startEditing(rowIndex, columnId);
     },
@@ -171,11 +176,12 @@ export function useDataGrid<TData>({
         updateData,
         focusedCell,
         editingCell,
-        handleCellClick,
-        handleCellDoubleClick,
+        onCellClick,
+        onCellDoubleClick,
         startEditing,
         stopEditing,
         navigateCell,
+        blurCell,
       },
     }),
     [
@@ -189,11 +195,12 @@ export function useDataGrid<TData>({
       updateData,
       focusedCell,
       editingCell,
-      handleCellClick,
-      handleCellDoubleClick,
+      onCellClick,
+      onCellDoubleClick,
       startEditing,
       stopEditing,
       navigateCell,
+      blurCell,
     ]
   );
 
@@ -212,5 +219,6 @@ export function useDataGrid<TData>({
     startEditing,
     stopEditing,
     navigateCell,
+    blurCell,
   };
 }
