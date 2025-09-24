@@ -37,10 +37,10 @@ export function useDataGrid<TData>({
 }: UseDataGridProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
-    null
+    null,
   );
   const [editingCell, setEditingCell] = React.useState<CellPosition | null>(
-    null
+    null,
   );
 
   const updateData = React.useCallback(
@@ -56,14 +56,14 @@ export function useDataGrid<TData>({
       });
       onDataChange?.(newData);
     },
-    [data, onDataChange]
+    [data, onDataChange],
   );
 
   const handleSortingChange: OnChangeFn<SortingState> = React.useCallback(
     (updater) => {
       setSorting(updater);
     },
-    []
+    [],
   );
 
   const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
@@ -76,7 +76,7 @@ export function useDataGrid<TData>({
       setFocusedCell({ rowIndex, columnId });
       setEditingCell({ rowIndex, columnId });
     },
-    []
+    [],
   );
 
   const stopEditing = React.useCallback(() => {
@@ -103,14 +103,14 @@ export function useDataGrid<TData>({
         focusCell(rowIndex, columnId);
       }
     },
-    [focusedCell, focusCell, startEditing]
+    [focusedCell, focusCell, startEditing],
   );
 
   const onCellDoubleClick = React.useCallback(
     (rowIndex: number, columnId: string) => {
       startEditing(rowIndex, columnId);
     },
-    [startEditing]
+    [startEditing],
   );
 
   const navigateCell = React.useCallback(
@@ -155,7 +155,7 @@ export function useDataGrid<TData>({
         focusCell(newRowIndex, newColumnId);
       }
     },
-    [focusedCell, columns, data.length, focusCell]
+    [focusedCell, columns, data.length, focusCell],
   );
 
   const tableOptions: TableOptions<TData> = React.useMemo(
@@ -201,7 +201,7 @@ export function useDataGrid<TData>({
       stopEditing,
       navigateCell,
       blurCell,
-    ]
+    ],
   );
 
   const table = useReactTable(tableOptions);

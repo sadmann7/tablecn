@@ -2,6 +2,7 @@
 
 import { type ColumnDef, flexRender } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
@@ -34,7 +35,6 @@ export function DataGrid<TData>({
   ...props
 }: DataGridProps<TData>) {
   const gridRef = React.useRef<HTMLDivElement>(null);
-  const gridContainerRef = React.useRef<HTMLDivElement>(null);
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
@@ -68,7 +68,7 @@ export function DataGrid<TData>({
 
   const virtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => gridContainerRef.current,
+    getScrollElement: () => gridRef.current,
     estimateSize: () => estimateRowSize,
     overscan,
     measureElement:
@@ -79,13 +79,12 @@ export function DataGrid<TData>({
   });
 
   return (
-    <div ref={gridRef} className={cn("w-full", className)} {...props}>
+    <div className={cn("w-full", className)} {...props}>
       <div
-        ref={gridContainerRef}
-        className="overflow-auto rounded-md border"
+        ref={gridRef}
+        className="relative overflow-auto rounded-md border"
         style={{
           height: `${height}px`,
-          position: "relative",
         }}
       >
         <div className="grid">
@@ -95,6 +94,8 @@ export function DataGrid<TData>({
                 {headerGroup.headers.map((header) => (
                   <div
                     key={header.id}
+                    role="button"
+                    tabIndex={header.column.getCanSort() ? 0 : -1}
                     className={cn(
                       "flex items-center border-r px-3 py-2 font-medium text-sm",
                       header.column.getCanSort()
@@ -105,15 +106,13 @@ export function DataGrid<TData>({
                       width: header.getSize(),
                       minWidth: header.getSize(),
                     }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        header.column.getToggleSortingHandler()?.(e);
+                    onClick={header.column.getToggleSortingHandler()}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        header.column.getToggleSortingHandler()?.(event);
                       }
                     }}
-                    onClick={header.column.getToggleSortingHandler()}
-                    role="button"
-                    tabIndex={header.column.getCanSort() ? 0 : -1}
                   >
                     {header.isPlaceholder
                       ? null
@@ -122,11 +121,13 @@ export function DataGrid<TData>({
                           header.getContext(),
                         )}
                     {enableSorting && (
-                      <span className="ml-1">
-                        {{
-                          asc: "🔼",
-                          desc: "🔽",
-                        }[header.column.getIsSorted() as string] ?? null}
+                      <span className="ml-2">
+                        {header.column.getIsSorted() === "asc" && (
+                          <ChevronUp className="size-3" />
+                        )}
+                        {header.column.getIsSorted() === "desc" && (
+                          <ChevronDown className="size-3" />
+                        )}
                       </span>
                     )}
                   </div>
