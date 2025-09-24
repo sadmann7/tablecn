@@ -142,6 +142,7 @@ export function DataGrid<TData>({
                   {row.getVisibleCells().map((cell) => (
                     <div
                       key={cell.id}
+                      data-grid-cell
                       className="flex items-center border-r px-2 py-1"
                       style={{
                         width: cell.column.getSize(),

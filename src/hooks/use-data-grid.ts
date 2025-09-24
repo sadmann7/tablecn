@@ -11,6 +11,11 @@ import {
 } from "@tanstack/react-table";
 import * as React from "react";
 
+interface CellPosition {
+  rowIndex: number;
+  columnId: string;
+}
+
 interface UseDataGridProps<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
@@ -31,6 +36,12 @@ export function useDataGrid<TData>({
   defaultColumn,
 }: UseDataGridProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
+  const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
+    null
+  );
+  const [editingCell, setEditingCell] = React.useState<CellPosition | null>(
+    null
+  );
 
   const updateData = React.useCallback(
     (rowIndex: number, columnId: string, value: unknown) => {
@@ -45,14 +56,101 @@ export function useDataGrid<TData>({
       });
       onDataChange?.(newData);
     },
-    [data, onDataChange],
+    [data, onDataChange]
   );
 
   const handleSortingChange: OnChangeFn<SortingState> = React.useCallback(
     (updater) => {
       setSorting(updater);
     },
-    [],
+    []
+  );
+
+  const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
+    setFocusedCell({ rowIndex, columnId });
+    setEditingCell(null);
+  }, []);
+
+  const startEditing = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      setFocusedCell({ rowIndex, columnId });
+      setEditingCell({ rowIndex, columnId });
+    },
+    []
+  );
+
+  const stopEditing = React.useCallback(() => {
+    setEditingCell(null);
+  }, []);
+
+  const handleCellClick = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      const currentFocused = focusedCell;
+
+      if (
+        currentFocused?.rowIndex === rowIndex &&
+        currentFocused?.columnId === columnId
+      ) {
+        // Second click on same cell - start editing
+        startEditing(rowIndex, columnId);
+      } else {
+        // First click or different cell - just focus
+        focusCell(rowIndex, columnId);
+      }
+    },
+    [focusedCell, focusCell, startEditing]
+  );
+
+  const handleCellDoubleClick = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      startEditing(rowIndex, columnId);
+    },
+    [startEditing]
+  );
+
+  const navigateCell = React.useCallback(
+    (direction: "up" | "down" | "left" | "right") => {
+      if (!focusedCell) return;
+
+      const { rowIndex, columnId } = focusedCell;
+      const columnIds = columns
+        .map((col) => {
+          if (col.id) return col.id;
+          if ("accessorKey" in col) return col.accessorKey as string;
+          return undefined;
+        })
+        .filter((id): id is string => Boolean(id));
+      const currentColIndex = columnIds.indexOf(columnId);
+
+      let newRowIndex = rowIndex;
+      let newColumnId = columnId;
+
+      switch (direction) {
+        case "up":
+          newRowIndex = Math.max(0, rowIndex - 1);
+          break;
+        case "down":
+          newRowIndex = Math.min(data.length - 1, rowIndex + 1);
+          break;
+        case "left":
+          if (currentColIndex > 0) {
+            const prevColumnId = columnIds[currentColIndex - 1];
+            if (prevColumnId) newColumnId = prevColumnId;
+          }
+          break;
+        case "right":
+          if (currentColIndex < columnIds.length - 1) {
+            const nextColumnId = columnIds[currentColIndex + 1];
+            if (nextColumnId) newColumnId = nextColumnId;
+          }
+          break;
+      }
+
+      if (newRowIndex !== rowIndex || newColumnId !== columnId) {
+        focusCell(newRowIndex, newColumnId);
+      }
+    },
+    [focusedCell, columns, data.length, focusCell]
   );
 
   const tableOptions: TableOptions<TData> = React.useMemo(
@@ -71,6 +169,13 @@ export function useDataGrid<TData>({
       getRowId,
       meta: {
         updateData,
+        focusedCell,
+        editingCell,
+        handleCellClick,
+        handleCellDoubleClick,
+        startEditing,
+        stopEditing,
+        navigateCell,
       },
     }),
     [
@@ -82,7 +187,14 @@ export function useDataGrid<TData>({
       enableSorting,
       getRowId,
       updateData,
-    ],
+      focusedCell,
+      editingCell,
+      handleCellClick,
+      handleCellDoubleClick,
+      startEditing,
+      stopEditing,
+      navigateCell,
+    ]
   );
 
   const table = useReactTable(tableOptions);
@@ -94,5 +206,11 @@ export function useDataGrid<TData>({
     rows,
     sorting,
     setSorting,
+    focusedCell,
+    editingCell,
+    focusCell,
+    startEditing,
+    stopEditing,
+    navigateCell,
   };
 }
