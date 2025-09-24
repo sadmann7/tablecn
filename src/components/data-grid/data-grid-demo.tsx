@@ -108,11 +108,11 @@ export function DataGridDemo() {
     [],
   );
 
-  const handleDataChange = React.useCallback((newData: Person[]) => {
+  const onDataChange = React.useCallback((newData: Person[]) => {
     setData(newData);
   }, []);
 
-  const handleAddRow = React.useCallback(() => {
+  const onRowAdd = React.useCallback(() => {
     const newId = data.length + 1;
     const newRow: Person = generatePerson(newId);
     setData((prev) => [...prev, newRow]);
@@ -128,9 +128,9 @@ export function DataGridDemo() {
       <DataGrid
         data={data}
         columns={columns}
-        onDataChange={handleDataChange}
+        onDataChange={onDataChange}
         getRowId={(row) => row.id}
-        onAddRow={handleAddRow}
+        onRowAdd={onRowAdd}
         height={500}
       />
       <div className="mt-4 text-muted-foreground text-sm">
