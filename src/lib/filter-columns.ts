@@ -216,18 +216,20 @@ export function filterColumns<T extends Table>({
 
           switch (unit) {
             case "days":
-              startDate = startOfDay(addDays(today, Number.parseInt(amount)));
+              startDate = startOfDay(
+                addDays(today, Number.parseInt(amount, 10)),
+              );
               endDate = endOfDay(startDate);
               break;
             case "weeks":
               startDate = startOfDay(
-                addDays(today, Number.parseInt(amount) * 7),
+                addDays(today, Number.parseInt(amount, 10) * 7),
               );
               endDate = endOfDay(addDays(startDate, 6));
               break;
             case "months":
               startDate = startOfDay(
-                addDays(today, Number.parseInt(amount) * 30),
+                addDays(today, Number.parseInt(amount, 10) * 30),
               );
               endDate = endOfDay(addDays(startDate, 29));
               break;

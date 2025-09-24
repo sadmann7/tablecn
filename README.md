@@ -1,8 +1,8 @@
-# [Shadcn Table](https://tablecn.com)
+# [tablecn](https://tablecn.com)
 
 This is a shadcn table component with server-side sorting, filtering, and pagination. It is bootstrapped with `create-t3-app`.
 
-[![Shadcn Table](./public/images/screenshot.png)](https://tablecn.com)
+[![tablecn](./public/images/screenshot.png)](https://tablecn.com)
 
 [![Vercel OSS Program](https://vercel.com/oss/program-badge.svg)](https://vercel.com/oss)
 
@@ -37,8 +37,8 @@ See the [documentation](https://diceui.com/docs/components/data-table) to get st
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/sadmann7/shadcn-table
-   cd shadcn-table
+   git clone https://github.com/sadmann7/tablecn
+   cd tablecn
    ```
 
 2. **Copy the environment variables**
@@ -60,8 +60,8 @@ See the [documentation](https://diceui.com/docs/components/data-table) to get st
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/sadmann7/shadcn-table
-   cd shadcn-table
+   git clone https://github.com/sadmann7/tablecn
+   cd tablecn
    ```
 
 2. **Install dependencies**

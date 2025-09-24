@@ -5,5 +5,5 @@ export const siteConfig = {
   description:
     "Shadcn table with server side sorting, pagination, and filtering",
   url: "https://tablecn.com",
-  links: { github: "https://github.com/sadmann7/shadcn-table" },
+  links: { github: "https://github.com/sadmann7/tablecn" },
 };

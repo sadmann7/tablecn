@@ -21,7 +21,6 @@ export const metadata: Metadata = {
   keywords: [
     "nextjs",
     "react",
-    "react server components",
     "table",
     "react-table",
     "tanstack-table",

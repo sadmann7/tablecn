@@ -2,7 +2,7 @@
 # See: https://github.com/shadcn-ui/ui/blob/main/.github/ISSUE_TEMPLATE/feature_request.yml
 
 name: "Feature request"
-description: Create a feature request for shadcn-table
+description: Create a feature request for tablecn
 title: "[feat]: "
 labels: ["✨ enhancement"]
 body:
@@ -35,7 +35,7 @@ body:
     id: terms
     attributes:
       label: Before submitting
-      description: By submitting this issue, you agree to follow our [Contributing Guidelines](https://github.com/sadmann7/shadcn-table/blob/main/CONTRIBUTING.md).
+      description: By submitting this issue, you agree to follow our [Contributing Guidelines](https://github.com/sadmann7/tablecn/blob/main/CONTRIBUTING.md).
       options:
         - label: I've made research efforts and searched the documentation
           required: true

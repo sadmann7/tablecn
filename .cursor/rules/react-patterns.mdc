@@ -3,6 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
+
 # React Patterns and Best Practices
 
 ## Core Philosophy
@@ -44,6 +45,7 @@ alwaysApply: true
 ## Code Quality Impact
 
 These patterns prevent subtle bugs that pile up into major issues. While code may "work" without following these guidelines, violations often lead to:
+
 - Hard-to-debug timing issues
 - Unexpected re-renders
 - State synchronization problems
@@ -52,6 +54,7 @@ These patterns prevent subtle bugs that pile up into major issues. While code ma
 ## Examples
 
 ### ❌ Avoid: Multiple useState
+
 ```tsx
 const [loading, setLoading] = useState(false);
 const [error, setError] = useState(null);
@@ -59,6 +62,7 @@ const [data, setData] = useState(null);
 ```
 
 ### ✅ Prefer: State machine
+
 ```tsx
 function useLazyRef<T>(fn: () => T) {
   const ref = React.useRef<T | null>(null);
@@ -124,6 +128,7 @@ function useStoreSelector<T, U>(
 ```
 
 ### ❌ Avoid: Complex conditionals in JSX
+
 ```tsx
 return (
   <div>
@@ -143,6 +148,7 @@ return (
 ```
 
 ### ✅ Prefer: Component abstraction
+
 ```tsx
 function UserDashboard({ user }) {
   if (!user) return <LoginForm />;
@@ -153,6 +159,7 @@ function UserDashboard({ user }) {
 ```
 
 ### ❌ Avoid: Effect-driven logic
+
 ```tsx
 useEffect(() => {
   if (user && user.preferences) {
@@ -162,7 +169,7 @@ useEffect(() => {
 ```
 
 ### ✅ Prefer: Derived values
+
 ```tsx
 const theme = user?.preferences?.theme ?? 'default';
 ```
-

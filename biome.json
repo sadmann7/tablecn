@@ -1,9 +1,11 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.6/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.2.4/schema.json",
   "assist": {
     "actions": {
       "source": {
-        "organizeImports": "on"
+        "organizeImports": {
+          "level": "on"
+        }
       }
     }
   },
@@ -11,6 +13,11 @@
     "enabled": true,
     "indentWidth": 2,
     "indentStyle": "space"
+  },
+  "css": {
+    "parser": {
+      "cssModules": true
+    }
   },
   "linter": {
     "enabled": true,
@@ -25,6 +32,9 @@
         "noLabelWithoutControl": "off"
       },
       "correctness": {
+        "noNestedComponentDefinitions": "off",
+        "useUniqueElementIds": "off",
+        "noUnusedImports": "off",
         "noUnusedVariables": "warn",
         "useExhaustiveDependencies": "warn",
         "useHookAtTopLevel": "warn"
@@ -41,11 +51,13 @@
       },
       "suspicious": {
         "noAssignInExpressions": "off",
+        "noUnknownAtRules": "off",
         "noArrayIndexKey": "off"
       },
       "nursery": {
         "useSortedClasses": {
           "level": "warn",
+          "fix": "safe",
           "options": {
             "attributes": ["classList"],
             "functions": ["clsx", "cva", "tw"]
