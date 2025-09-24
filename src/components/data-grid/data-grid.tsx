@@ -97,7 +97,7 @@ export function DataGrid<TData>({
                     role="button"
                     tabIndex={header.column.getCanSort() ? 0 : -1}
                     className={cn(
-                      "flex items-center border-r px-3 py-2 font-medium text-sm",
+                      "flex items-center gap-2 truncate border-r px-3 py-2 font-medium text-sm",
                       header.column.getCanSort()
                         ? "cursor-pointer"
                         : "cursor-default",
@@ -121,14 +121,20 @@ export function DataGrid<TData>({
                           header.getContext(),
                         )}
                     {enableSorting && (
-                      <span className="ml-2">
+                      <>
                         {header.column.getIsSorted() === "asc" && (
-                          <ChevronUp className="size-3" />
+                          <ChevronUp
+                            size={16}
+                            className="text-muted-foreground"
+                          />
                         )}
                         {header.column.getIsSorted() === "desc" && (
-                          <ChevronDown className="size-3" />
+                          <ChevronDown
+                            size={16}
+                            className="text-muted-foreground"
+                          />
                         )}
-                      </span>
+                      </>
                     )}
                   </div>
                 ))}
