@@ -19,11 +19,9 @@ interface Person {
   country: string;
 }
 
-// Set seed for consistent data across reloads
 faker.seed(12345);
 
-// Generate realistic sample data using Faker
-const generatePerson = (id: number): Person => {
+function generatePerson(id: number): Person {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
   return {
@@ -38,9 +36,8 @@ const generatePerson = (id: number): Person => {
     city: faker.location.city(),
     country: faker.location.country(),
   };
-};
+}
 
-// Create 1000 rows to test virtualization
 const initialData: Person[] = Array.from({ length: 1000 }, (_, i) =>
   generatePerson(i + 1),
 );
@@ -119,11 +116,13 @@ export function DataGridDemo() {
   }, [data.length]);
 
   return (
-    <div className="p-6">
-      <h2 className="mb-4 font-bold text-2xl">Editable Data Grid Example</h2>
-      <div className="mb-4 text-muted-foreground text-sm">
-        📊 {data.length} realistic employee records • ⚡ Virtualized rendering •
-        🖱️ Click any cell to edit • 📱 Horizontal scroll for more columns
+    <div className="flex flex-col gap-4 p-6">
+      <div className="flex flex-col gap-2">
+        <h2 className="font-bold text-2xl">Editable Data Grid Example</h2>
+        <div className="text-muted-foreground text-sm">
+          📊 {data.length} realistic employee records • ⚡ Virtualized rendering
+          • 🖱️ Click any cell to edit • 📱 Horizontal scroll for more columns
+        </div>
       </div>
       <DataGrid
         data={data}
