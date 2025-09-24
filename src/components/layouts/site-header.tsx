@@ -25,6 +25,12 @@ export function SiteHeader() {
           >
             Docs
           </Link>
+          <Link
+            href="/editable"
+            className="text-foreground/60 transition-colors hover:text-foreground"
+          >
+            Editable
+          </Link>
         </nav>
         <nav className="flex flex-1 items-center md:justify-end">
           <Button variant="ghost" size="icon" className="size-8" asChild>
