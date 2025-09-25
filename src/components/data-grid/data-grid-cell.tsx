@@ -1,41 +1,16 @@
 "use client";
 
-import type { Cell, RowData, Table } from "@tanstack/react-table";
+import type { Cell, Table } from "@tanstack/react-table";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-interface CellPosition {
-  rowIndex: number;
-  columnId: string;
-}
-
-declare module "@tanstack/react-table" {
-  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
-  interface TableMeta<TData extends RowData> {
-    updateData: (rowIndex: number, columnId: string, value: unknown) => void;
-    focusedCell: CellPosition | null;
-    editingCell: CellPosition | null;
-    onCellClick: (rowIndex: number, columnId: string) => void;
-    onCellDoubleClick: (rowIndex: number, columnId: string) => void;
-    startEditing: (rowIndex: number, columnId: string) => void;
-    stopEditing: () => void;
-    navigateCell: (direction: "up" | "down" | "left" | "right") => void;
-    blurCell: () => void;
-  }
-}
-
 interface DataGridCellProps<TData> {
   cell: Cell<TData, unknown>;
   table: Table<TData>;
-  className?: string;
 }
 
-export function DataGridCell<TData>({
-  cell,
-  table,
-  className,
-}: DataGridCellProps<TData>) {
+export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue();
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
@@ -211,7 +186,6 @@ export function DataGridCell<TData>({
         "size-full truncate px-2 py-1 text-left text-sm outline-none",
         isEditing ? "cursor-text" : "cursor-default",
         isFocused && "bg-accent/20 ring-1 ring-ring ring-inset",
-        className,
       )}
     >
       {!isEditing ? (value as string) : ""}
