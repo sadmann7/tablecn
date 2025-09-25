@@ -62,6 +62,7 @@ export function DataGridCell<TData>({
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
+      console.log("onInput triggered with value:", currentValue);
       setValue(currentValue);
     },
     [],
@@ -69,6 +70,14 @@ export function DataGridCell<TData>({
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
+      console.log({
+        key: event.key,
+        isEditing,
+        isFocused,
+        contentEditable: cellRef.current?.contentEditable,
+        textContent: cellRef.current?.textContent,
+      });
+
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -107,12 +116,34 @@ export function DataGridCell<TData>({
           default:
             // Start editing on any printable character
             if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+              console.log("Starting edit mode with key:", event.key);
               event.preventDefault();
               meta?.startEditing(rowIndex, columnId);
-              // Clear the content and let the character be typed
-              if (cellRef.current) {
-                cellRef.current.textContent = "";
-              }
+
+              // Immediately set up the cell for editing and insert the character
+              setValue(event.key);
+              console.log("Set value to:", event.key);
+
+              // Use a microtask to set the content after React renders
+              queueMicrotask(() => {
+                if (
+                  cellRef.current &&
+                  cellRef.current.contentEditable === "true"
+                ) {
+                  cellRef.current.textContent = event.key;
+                  // Set cursor to end
+                  const range = document.createRange();
+                  const selection = window.getSelection();
+                  range.selectNodeContents(cellRef.current);
+                  range.collapse(false);
+                  selection?.removeAllRanges();
+                  selection?.addRange(range);
+                  console.log(
+                    "Microtask: Set content and cursor for:",
+                    event.key,
+                  );
+                }
+              });
             }
             break;
         }
@@ -141,26 +172,45 @@ export function DataGridCell<TData>({
 
   // Sync external changes
   React.useEffect(() => {
+    console.log("Sync effect running:", {
+      initialValue,
+      isEditing,
+      currentContent: cellRef.current?.textContent,
+    });
     setValue(initialValue);
     if (cellRef.current && !isEditing) {
+      console.log("Setting textContent to initialValue:", initialValue);
       cellRef.current.textContent = initialValue as string;
     }
   }, [initialValue, isEditing]);
 
   // Focus and manage contentEditable state
   React.useEffect(() => {
+    console.log("Focus effect triggered:", {
+      isFocused,
+      isEditing,
+      contentEditable: cellRef.current?.contentEditable,
+    });
+
     if (cellRef.current) {
       if (isFocused) {
         cellRef.current.focus();
 
         if (isEditing) {
+          console.log(
+            "Setting cursor to end in edit mode, current content:",
+            cellRef.current.textContent,
+          );
           // Set cursor to end when entering edit mode
-          const range = document.createRange();
-          const selection = window.getSelection();
-          range.selectNodeContents(cellRef.current);
-          range.collapse(false);
-          selection?.removeAllRanges();
-          selection?.addRange(range);
+          // Only set cursor if there's content to position within
+          if (cellRef.current.textContent) {
+            const range = document.createRange();
+            const selection = window.getSelection();
+            range.selectNodeContents(cellRef.current);
+            range.collapse(false);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
         }
       }
     }
@@ -185,7 +235,7 @@ export function DataGridCell<TData>({
         className,
       )}
     >
-      {!isEditing && (value as string)}
+      {!isEditing ? (value as string) : ""}
     </div>
   );
 }
