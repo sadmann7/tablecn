@@ -123,7 +123,11 @@ export function DataGridCell<TData>({
   React.useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select();
+
+      inputRef.current.setSelectionRange(
+        inputRef.current.value.length,
+        inputRef.current.value.length,
+      );
     }
   }, [isEditing]);
 
