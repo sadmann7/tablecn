@@ -16,6 +16,11 @@ interface CellPosition {
   columnId: string;
 }
 
+interface ScrollToOptions {
+  rowIndex: number;
+  columnId?: string;
+}
+
 interface UseDataGridProps<TData> {
   data: TData[];
   columns: ColumnDef<TData>[];
@@ -88,6 +93,11 @@ export function useDataGrid<TData>({
     setFocusedCell(null);
     setEditingCell(null);
   }, [editingCell]);
+
+  // Move this after rowVirtualizer is defined
+  const scrollToRowAndFocusCell = React.useRef<
+    ((options: ScrollToOptions) => void) | null
+  >(null);
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string) => {
@@ -206,6 +216,40 @@ export function useDataGrid<TData>({
         : undefined,
   });
 
+  // Define scrollToRowAndFocusCell after rowVirtualizer is created
+  const scrollToRowAndFocusCellFn = React.useCallback(
+    (options: ScrollToOptions) => {
+      const { rowIndex, columnId } = options;
+
+      // Scroll to the row
+      rowVirtualizer.scrollToIndex(rowIndex, {
+        align: "center",
+      });
+
+      // Focus the cell after scrolling
+      const firstColumnId =
+        columnId ||
+        columns
+          .map((col) => {
+            if (col.id) return col.id;
+            if ("accessorKey" in col) return col.accessorKey as string;
+            return undefined;
+          })
+          .filter((id): id is string => Boolean(id))[0];
+
+      if (firstColumnId) {
+        // Use setTimeout to ensure the row is rendered after scrolling
+        setTimeout(() => {
+          focusCell(rowIndex, firstColumnId);
+        }, 100);
+      }
+    },
+    [rowVirtualizer, columns, focusCell],
+  );
+
+  // Update the ref
+  scrollToRowAndFocusCell.current = scrollToRowAndFocusCellFn;
+
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
       if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
@@ -233,5 +277,6 @@ export function useDataGrid<TData>({
     stopEditing,
     navigateCell,
     blurCell,
+    scrollToRowAndFocusCell: scrollToRowAndFocusCellFn,
   };
 }

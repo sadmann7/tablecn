@@ -2,10 +2,15 @@
 
 import { type ColumnDef, flexRender } from "@tanstack/react-table";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import type * as React from "react";
+import * as React from "react";
 
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { cn } from "@/lib/utils";
+
+interface ScrollToOptions {
+  rowIndex: number;
+  columnId?: string;
+}
 
 interface DataGridProps<TData> extends React.ComponentProps<"div"> {
   data: TData[];
@@ -16,7 +21,7 @@ interface DataGridProps<TData> extends React.ComponentProps<"div"> {
   estimateRowSize?: number;
   overscan?: number;
   enableSorting?: boolean;
-  onRowAdd?: () => void;
+  onRowAdd?: () => ScrollToOptions | undefined;
 }
 
 export function DataGrid<TData>({
@@ -28,17 +33,41 @@ export function DataGrid<TData>({
   estimateRowSize = 35,
   overscan = 3,
   enableSorting = true,
-  onRowAdd,
+  onRowAdd: onRowAddProp,
   className,
   ...props
 }: DataGridProps<TData>) {
-  const { gridRef, table, rows, rowVirtualizer } = useDataGrid({
-    data,
-    columns,
-    onDataChange,
-    getRowId,
-    enableSorting,
-  });
+  const { gridRef, table, rows, rowVirtualizer, scrollToRowAndFocusCell } =
+    useDataGrid({
+      data,
+      columns,
+      onDataChange,
+      getRowId,
+      enableSorting,
+    });
+
+  const onRowAdd = React.useCallback(() => {
+    if (!onRowAddProp) return;
+
+    const result = onRowAddProp();
+
+    // Use requestAnimationFrame to ensure the data has been updated and DOM has re-rendered
+    requestAnimationFrame(() => {
+      if (result && typeof result === "object" && "rowIndex" in result) {
+        // If user provided specific scroll options, use them
+        // But adjust rowIndex to account for the newly added row if it seems to be referencing the old data length
+        const adjustedRowIndex =
+          result.rowIndex >= data.length ? data.length : result.rowIndex;
+        scrollToRowAndFocusCell({
+          rowIndex: adjustedRowIndex,
+          columnId: result.columnId,
+        });
+      } else {
+        // Default behavior: scroll to the last row (newly added) and focus first cell
+        scrollToRowAndFocusCell({ rowIndex: data.length });
+      }
+    });
+  }, [onRowAddProp, scrollToRowAndFocusCell, data.length]);
 
   return (
     <div className={cn("w-full", className)} {...props}>
