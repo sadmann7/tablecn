@@ -198,8 +198,14 @@ export function DataGridCell<TData>({
             "Setting cursor to end in edit mode, current content:",
             cellRef.current.textContent,
           );
+
+          // If content is empty, populate it with current value (for Enter/F2/double-click)
+          if (!cellRef.current.textContent && value) {
+            cellRef.current.textContent = value as string;
+            console.log("Populated empty content with current value:", value);
+          }
+
           // Set cursor to end when entering edit mode
-          // Only set cursor if there's content to position within
           if (cellRef.current.textContent) {
             const range = document.createRange();
             const selection = window.getSelection();
@@ -207,11 +213,12 @@ export function DataGridCell<TData>({
             range.collapse(false);
             selection?.removeAllRanges();
             selection?.addRange(range);
+            console.log("Positioned cursor at end of content");
           }
         }
       }
     }
-  }, [isFocused, isEditing]);
+  }, [isFocused, isEditing, value]);
 
   return (
     <div
