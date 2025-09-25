@@ -195,6 +195,9 @@ export function DataGridCell<TData>({
   return (
     <div
       role="textbox"
+      data-slot="cell-input"
+      data-editing={isEditing ? "" : undefined}
+      data-focused={isFocused ? "" : undefined}
       ref={cellRef}
       contentEditable={isEditing}
       tabIndex={isFocused ? 0 : -1}
@@ -206,7 +209,6 @@ export function DataGridCell<TData>({
       suppressContentEditableWarning
       className={cn(
         "h-8 w-full text-left text-sm outline-none",
-        isFocused && "bg-accent/20 ring-1 ring-ring ring-inset",
         isEditing ? "cursor-text" : "cursor-default",
         className,
       )}
