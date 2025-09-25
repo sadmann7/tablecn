@@ -6,11 +6,7 @@ import * as React from "react";
 
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { cn } from "@/lib/utils";
-
-interface ScrollToOptions {
-  rowIndex: number;
-  columnId?: string;
-}
+import type { ScrollToOptions } from "@/types/data-grid";
 
 interface DataGridProps<TData> extends React.ComponentProps<"div"> {
   data: TData[];
@@ -21,7 +17,10 @@ interface DataGridProps<TData> extends React.ComponentProps<"div"> {
   estimateRowSize?: number;
   overscan?: number;
   enableSorting?: boolean;
-  onRowAdd?: () => ScrollToOptions | undefined;
+  onRowAdd?: () =>
+    | ScrollToOptions
+    | undefined
+    | Promise<ScrollToOptions | undefined>;
 }
 
 export function DataGrid<TData>({
@@ -46,24 +45,21 @@ export function DataGrid<TData>({
       enableSorting,
     });
 
-  const onRowAdd = React.useCallback(() => {
+  const onRowAdd = React.useCallback(async () => {
     if (!onRowAddProp) return;
 
-    const result = onRowAddProp();
+    const result = await onRowAddProp();
 
-    // Use requestAnimationFrame to ensure the data has been updated and DOM has re-rendered
     requestAnimationFrame(() => {
       if (result && typeof result === "object" && "rowIndex" in result) {
-        // If user provided specific scroll options, use them
-        // But adjust rowIndex to account for the newly added row if it seems to be referencing the old data length
         const adjustedRowIndex =
           result.rowIndex >= data.length ? data.length : result.rowIndex;
+
         scrollToRowAndFocusCell({
           rowIndex: adjustedRowIndex,
           columnId: result.columnId,
         });
       } else {
-        // Default behavior: scroll to the last row (newly added) and focus first cell
         scrollToRowAndFocusCell({ rowIndex: data.length });
       }
     });
@@ -178,7 +174,10 @@ export function DataGrid<TData>({
         <div className="mt-4">
           <button
             onClick={onRowAdd}
-            className="rounded-md border border-primary/20 bg-primary/10 px-4 py-2 font-medium text-primary text-sm transition-colors hover:bg-primary/20"
+            className={cn(
+              "rounded-md border border-primary/20 bg-primary/10 px-4 py-2 font-medium text-primary text-sm transition-colors hover:bg-primary/20",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+            )}
           >
             Add Row
           </button>

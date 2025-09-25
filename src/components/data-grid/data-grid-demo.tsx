@@ -114,10 +114,9 @@ export function DataGridDemo() {
     const newRow: Person = generatePerson(newId);
     setData((prev) => [...prev, newRow]);
 
-    // Return scroll options - the DataGrid will handle the timing automatically
     return {
-      rowIndex: data.length, // This will be the index of the newly added row
-      columnId: "email",
+      rowIndex: data.length,
+      columnId: "firstName",
     };
   }, [data.length]);
 

@@ -10,16 +10,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
-
-interface CellPosition {
-  rowIndex: number;
-  columnId: string;
-}
-
-interface ScrollToOptions {
-  rowIndex: number;
-  columnId?: string;
-}
+import type { CellPosition, ScrollToOptions } from "@/types/data-grid";
 
 interface UseDataGridProps<TData> {
   data: TData[];
@@ -43,7 +34,6 @@ export function useDataGrid<TData>({
   overscan = 3,
 }: UseDataGridProps<TData>) {
   const gridRef = React.useRef<HTMLDivElement>(null);
-
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
     null,
@@ -93,11 +83,6 @@ export function useDataGrid<TData>({
     setFocusedCell(null);
     setEditingCell(null);
   }, [editingCell]);
-
-  // Move this after rowVirtualizer is defined
-  const scrollToRowAndFocusCell = React.useRef<
-    ((options: ScrollToOptions) => void) | null
-  >(null);
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string) => {
@@ -216,17 +201,14 @@ export function useDataGrid<TData>({
         : undefined,
   });
 
-  // Define scrollToRowAndFocusCell after rowVirtualizer is created
-  const scrollToRowAndFocusCellFn = React.useCallback(
+  const scrollToRowAndFocusCell = React.useCallback(
     (options: ScrollToOptions) => {
       const { rowIndex, columnId } = options;
 
-      // Scroll to the row
       rowVirtualizer.scrollToIndex(rowIndex, {
         align: "center",
       });
 
-      // Focus the cell after scrolling
       const firstColumnId =
         columnId ||
         columns
@@ -238,7 +220,6 @@ export function useDataGrid<TData>({
           .filter((id): id is string => Boolean(id))[0];
 
       if (firstColumnId) {
-        // Use setTimeout to ensure the row is rendered after scrolling
         setTimeout(() => {
           focusCell(rowIndex, firstColumnId);
         }, 100);
@@ -246,9 +227,6 @@ export function useDataGrid<TData>({
     },
     [rowVirtualizer, columns, focusCell],
   );
-
-  // Update the ref
-  scrollToRowAndFocusCell.current = scrollToRowAndFocusCellFn;
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
@@ -277,6 +255,6 @@ export function useDataGrid<TData>({
     stopEditing,
     navigateCell,
     blurCell,
-    scrollToRowAndFocusCell: scrollToRowAndFocusCellFn,
+    scrollToRowAndFocusCell,
   };
 }
