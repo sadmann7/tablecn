@@ -83,9 +83,13 @@ export function useDataGrid<TData>({
   }, []);
 
   const blurCell = React.useCallback(() => {
+    if (editingCell && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setFocusedCell(null);
     setEditingCell(null);
-  }, []);
+  }, [editingCell]);
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string) => {

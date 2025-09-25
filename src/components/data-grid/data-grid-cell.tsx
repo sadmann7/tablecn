@@ -52,17 +52,21 @@ export function DataGridCell<TData>({
     meta?.editingCell?.columnId === columnId;
 
   const onBlur = React.useCallback(() => {
-    if (isEditing) {
-      const currentValue = cellRef.current?.textContent ?? "";
-      meta?.updateData(rowIndex, columnId, currentValue);
+    // Always try to save the current textContent if we have a cell reference
+    // Don't rely on isEditing state as it might have changed already
+    if (cellRef.current) {
+      const currentValue = cellRef.current.textContent ?? "";
+      // Only save if the value actually changed from the initial value
+      if (currentValue !== initialValue) {
+        meta?.updateData(rowIndex, columnId, currentValue);
+      }
       meta?.stopEditing();
     }
-  }, [meta, rowIndex, columnId, isEditing]);
+  }, [meta, rowIndex, columnId, initialValue]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
-      console.log("onInput triggered with value:", currentValue);
       setValue(currentValue);
     },
     [],
@@ -70,14 +74,6 @@ export function DataGridCell<TData>({
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
-      console.log({
-        key: event.key,
-        isEditing,
-        isFocused,
-        contentEditable: cellRef.current?.contentEditable,
-        textContent: cellRef.current?.textContent,
-      });
-
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -113,13 +109,11 @@ export function DataGridCell<TData>({
           default:
             // Start editing on any printable character
             if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-              console.log("Starting edit mode with key:", event.key);
               event.preventDefault();
               meta?.startEditing(rowIndex, columnId);
 
               // Immediately set up the cell for editing and insert the character
               setValue(event.key);
-              console.log("Set value to:", event.key);
 
               // Use a microtask to set the content after React renders
               queueMicrotask(() => {
@@ -135,10 +129,6 @@ export function DataGridCell<TData>({
                   range.collapse(false);
                   selection?.removeAllRanges();
                   selection?.addRange(range);
-                  console.log(
-                    "Microtask: Set content and cursor for:",
-                    event.key,
-                  );
                 }
               });
             }
@@ -146,7 +136,7 @@ export function DataGridCell<TData>({
         }
       }
     },
-    [isEditing, isFocused, initialValue, meta, rowIndex, columnId],
+    [isEditing, isFocused, meta, rowIndex, columnId],
   );
 
   const onClick = React.useCallback(
@@ -169,40 +159,23 @@ export function DataGridCell<TData>({
 
   // Sync external changes
   React.useEffect(() => {
-    console.log("Sync effect running:", {
-      initialValue,
-      isEditing,
-      currentContent: cellRef.current?.textContent,
-    });
     setValue(initialValue);
+    // Only update DOM content when not editing to avoid overwriting user input
     if (cellRef.current && !isEditing) {
-      console.log("Setting textContent to initialValue:", initialValue);
       cellRef.current.textContent = initialValue as string;
     }
   }, [initialValue, isEditing]);
 
   // Focus and manage contentEditable state
   React.useEffect(() => {
-    console.log("Focus effect triggered:", {
-      isFocused,
-      isEditing,
-      contentEditable: cellRef.current?.contentEditable,
-    });
-
     if (cellRef.current) {
       if (isFocused) {
         cellRef.current.focus();
 
         if (isEditing) {
-          console.log(
-            "Setting cursor to end in edit mode, current content:",
-            cellRef.current.textContent,
-          );
-
           // If content is empty, populate it with current value (for Enter/F2/double-click)
           if (!cellRef.current.textContent && value) {
             cellRef.current.textContent = value as string;
-            console.log("Populated empty content with current value:", value);
           }
 
           // Set cursor to end when entering edit mode
@@ -213,7 +186,6 @@ export function DataGridCell<TData>({
             range.collapse(false);
             selection?.removeAllRanges();
             selection?.addRange(range);
-            console.log("Positioned cursor at end of content");
           }
         }
       }
@@ -222,20 +194,20 @@ export function DataGridCell<TData>({
 
   return (
     <div
+      role="textbox"
       ref={cellRef}
-      role="gridcell"
       contentEditable={isEditing}
-      suppressContentEditableWarning
+      tabIndex={isFocused ? 0 : -1}
       onBlur={onBlur}
-      onInput={onInput}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
+      onInput={onInput}
       onKeyDown={onKeyDown}
-      tabIndex={isFocused ? 0 : -1}
+      suppressContentEditableWarning
       className={cn(
-        "h-8 w-full cursor-cell truncate px-0 py-1 text-left text-sm outline-none",
+        "h-8 w-full text-left text-sm outline-none",
         isFocused && "bg-accent/20 ring-1 ring-ring ring-inset",
-        isEditing && "cursor-text",
+        isEditing ? "cursor-text" : "cursor-default",
         className,
       )}
     >
