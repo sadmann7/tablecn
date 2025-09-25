@@ -152,39 +152,22 @@ export function DataGrid<TData>({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  {row.getVisibleCells().map((cell) => {
-                    const isFocused =
-                      table.options.meta?.focusedCell?.rowIndex === row.index &&
-                      table.options.meta?.focusedCell?.columnId ===
-                        cell.column.id;
-                    const isEditing =
-                      table.options.meta?.editingCell?.rowIndex === row.index &&
-                      table.options.meta?.editingCell?.columnId ===
-                        cell.column.id;
-
-                    return (
-                      <div
-                        key={cell.id}
-                        data-slot="cell"
-                        data-editing={isEditing ? "" : undefined}
-                        data-focused={isFocused ? "" : undefined}
-                        className={cn(
-                          "flex items-center truncate border-r px-2 py-1",
-                          isFocused &&
-                            "bg-accent/20 ring-1 ring-ring ring-inset",
-                        )}
-                        style={{
-                          width: cell.column.getSize(),
-                          minWidth: cell.column.getSize(),
-                        }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </div>
-                    );
-                  })}
+                  {row.getVisibleCells().map((cell) => (
+                    <div
+                      key={cell.id}
+                      data-grid-cell
+                      className="flex h-9 w-full items-center border-r"
+                      style={{
+                        width: cell.column.getSize(),
+                        minWidth: cell.column.getSize(),
+                      }}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </div>
+                  ))}
                 </div>
               );
             })}

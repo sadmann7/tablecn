@@ -208,8 +208,9 @@ export function DataGridCell<TData>({
       onKeyDown={onKeyDown}
       suppressContentEditableWarning
       className={cn(
-        "h-8 w-full text-left text-sm outline-none",
+        "size-full truncate px-2 py-1 text-left text-sm outline-none",
         isEditing ? "cursor-text" : "cursor-default",
+        isFocused && "bg-accent/20 ring-1 ring-ring ring-inset",
         className,
       )}
     >
