@@ -84,11 +84,8 @@ export function DataGridCell<TData>({
           cellRef.current?.blur();
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(initialValue);
-          if (cellRef.current) {
-            cellRef.current.textContent = initialValue as string;
-          }
-          meta?.stopEditing();
+          // Save current value instead of reverting (modern behavior like Airtable)
+          cellRef.current?.blur();
         }
       } else if (isFocused) {
         switch (event.key) {
