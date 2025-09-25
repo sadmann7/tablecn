@@ -3,7 +3,6 @@
 import type { Cell, RowData, Table } from "@tanstack/react-table";
 import * as React from "react";
 
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 interface CellPosition {
@@ -39,8 +38,7 @@ export function DataGridCell<TData>({
 }: DataGridCellProps<TData>) {
   const initialValue = cell.getValue();
   const [value, setValue] = React.useState(initialValue);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  const cellRef = React.useRef<HTMLButtonElement>(null);
+  const cellRef = React.useRef<HTMLDivElement>(null);
 
   const meta = table.options.meta;
   const rowIndex = cell.row.index;
@@ -54,19 +52,33 @@ export function DataGridCell<TData>({
     meta?.editingCell?.columnId === columnId;
 
   const onBlur = React.useCallback(() => {
-    meta?.updateData(rowIndex, columnId, value);
-    meta?.stopEditing();
-  }, [meta, rowIndex, columnId, value]);
+    if (isEditing) {
+      const currentValue = cellRef.current?.textContent ?? "";
+      meta?.updateData(rowIndex, columnId, currentValue);
+      meta?.stopEditing();
+    }
+  }, [meta, rowIndex, columnId, isEditing]);
+
+  const onInput = React.useCallback(
+    (event: React.FormEvent<HTMLDivElement>) => {
+      const currentValue = event.currentTarget.textContent ?? "";
+      setValue(currentValue);
+    },
+    [],
+  );
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          (event.currentTarget as HTMLInputElement).blur();
+          cellRef.current?.blur();
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
+          if (cellRef.current) {
+            cellRef.current.textContent = initialValue as string;
+          }
           meta?.stopEditing();
         }
       } else if (isFocused) {
@@ -92,6 +104,17 @@ export function DataGridCell<TData>({
             event.preventDefault();
             meta?.startEditing(rowIndex, columnId);
             break;
+          default:
+            // Start editing on any printable character
+            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+              event.preventDefault();
+              meta?.startEditing(rowIndex, columnId);
+              // Clear the content and let the character be typed
+              if (cellRef.current) {
+                cellRef.current.textContent = "";
+              }
+            }
+            break;
         }
       }
     },
@@ -101,9 +124,11 @@ export function DataGridCell<TData>({
   const onClick = React.useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
-      meta?.onCellClick(rowIndex, columnId);
+      if (!isEditing) {
+        meta?.onCellClick(rowIndex, columnId);
+      }
     },
-    [meta, rowIndex, columnId],
+    [meta, rowIndex, columnId, isEditing],
   );
 
   const onDoubleClick = React.useCallback(
@@ -117,58 +142,50 @@ export function DataGridCell<TData>({
   // Sync external changes
   React.useEffect(() => {
     setValue(initialValue);
-  }, [initialValue]);
-
-  // Focus input when entering edit mode
-  React.useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-
-      inputRef.current.setSelectionRange(
-        inputRef.current.value.length,
-        inputRef.current.value.length,
-      );
+    if (cellRef.current && !isEditing) {
+      cellRef.current.textContent = initialValue as string;
     }
-  }, [isEditing]);
+  }, [initialValue, isEditing]);
 
-  // Focus cell when it becomes focused (but not editing)
+  // Focus and manage contentEditable state
   React.useEffect(() => {
-    if (isFocused && !isEditing && cellRef.current) {
-      cellRef.current.focus();
+    if (cellRef.current) {
+      if (isFocused) {
+        cellRef.current.focus();
+
+        if (isEditing) {
+          // Set cursor to end when entering edit mode
+          const range = document.createRange();
+          const selection = window.getSelection();
+          range.selectNodeContents(cellRef.current);
+          range.collapse(false);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      }
     }
   }, [isFocused, isEditing]);
 
-  if (isEditing) {
-    return (
-      <Input
-        ref={inputRef}
-        value={value as string}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={onBlur}
-        onKeyDown={onKeyDown}
-        className={cn(
-          "h-8 w-full rounded-none border-none bg-transparent p-0 focus-visible:ring-1 focus-visible:ring-ring dark:bg-transparent",
-          className,
-        )}
-      />
-    );
-  }
-
   return (
-    <button
+    <div
       ref={cellRef}
-      type="button"
+      role="gridcell"
+      contentEditable={isEditing}
+      suppressContentEditableWarning
+      onBlur={onBlur}
+      onInput={onInput}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       onKeyDown={onKeyDown}
       tabIndex={isFocused ? 0 : -1}
       className={cn(
-        "h-8 w-full cursor-cell select-none truncate px-0 py-1 text-left text-sm",
+        "h-8 w-full cursor-cell truncate px-0 py-1 text-left text-sm outline-none",
         isFocused && "bg-accent/20 ring-1 ring-ring ring-inset",
+        isEditing && "cursor-text",
         className,
       )}
     >
-      {value as string}
-    </button>
+      {!isEditing && (value as string)}
+    </div>
   );
 }
