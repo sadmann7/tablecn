@@ -36,33 +36,24 @@ export function DataGrid<TData>({
 }: DataGridProps<TData>) {
   const gridRef = React.useRef<HTMLDivElement>(null);
 
-  const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
-    () => ({
-      cell: ({ cell, table }) => <DataGridCell cell={cell} table={table} />,
-    }),
-    [],
-  );
-
   const { table, rows } = useDataGrid({
     data,
     columns,
     onDataChange,
     getRowId,
     enableSorting,
-    defaultColumn,
   });
 
-  // Handle clicks outside the grid to blur focus
   React.useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function onOutsideClick(event: MouseEvent) {
       if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
         table.options.meta?.blurCell();
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onOutsideClick);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", onOutsideClick);
     };
   }, [table]);
 

@@ -4,7 +4,6 @@ import { type ColumnDef, flexRender } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 
-import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { cn } from "@/lib/utils";
 
@@ -43,21 +42,12 @@ export function InfiniteDataGrid<TData>({
 }: InfiniteDataGridProps<TData>) {
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
 
-  // Default column with editable cell
-  const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
-    () => ({
-      cell: ({ cell, table }) => <DataGridCell cell={cell} table={table} />,
-    }),
-    [],
-  );
-
   const { table, rows } = useDataGrid({
     data,
     columns,
     onDataChange,
     getRowId,
     enableSorting,
-    defaultColumn,
   });
 
   const virtualizer = useVirtualizer({

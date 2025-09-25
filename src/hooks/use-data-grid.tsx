@@ -10,6 +10,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import * as React from "react";
+import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 
 interface CellPosition {
   rowIndex: number;
@@ -23,7 +24,6 @@ interface UseDataGridProps<TData> {
   getRowId?: (row: TData, index: number) => string;
   enableSorting?: boolean;
   initialSorting?: SortingState;
-  defaultColumn?: Partial<ColumnDef<TData>>;
 }
 
 export function useDataGrid<TData>({
@@ -33,7 +33,6 @@ export function useDataGrid<TData>({
   getRowId,
   enableSorting = true,
   initialSorting = [],
-  defaultColumn,
 }: UseDataGridProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
@@ -156,6 +155,13 @@ export function useDataGrid<TData>({
       }
     },
     [focusedCell, columns, data.length, focusCell],
+  );
+
+  const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
+    () => ({
+      cell: ({ cell, table }) => <DataGridCell cell={cell} table={table} />,
+    }),
+    [],
   );
 
   const tableOptions: TableOptions<TData> = React.useMemo(
