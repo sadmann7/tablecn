@@ -1,11 +1,9 @@
 "use client";
 
 import { type ColumnDef, flexRender } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 
-import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { cn } from "@/lib/utils";
 
@@ -34,39 +32,12 @@ export function DataGrid<TData>({
   className,
   ...props
 }: DataGridProps<TData>) {
-  const gridRef = React.useRef<HTMLDivElement>(null);
-
-  const { table, rows } = useDataGrid({
+  const { gridRef, table, rows, rowVirtualizer } = useDataGrid({
     data,
     columns,
     onDataChange,
     getRowId,
     enableSorting,
-  });
-
-  React.useEffect(() => {
-    function onOutsideClick(event: MouseEvent) {
-      if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
-        table.options.meta?.blurCell();
-      }
-    }
-
-    document.addEventListener("mousedown", onOutsideClick);
-    return () => {
-      document.removeEventListener("mousedown", onOutsideClick);
-    };
-  }, [table]);
-
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => gridRef.current,
-    estimateSize: () => estimateRowSize,
-    overscan,
-    measureElement:
-      typeof window !== "undefined" &&
-      navigator.userAgent.indexOf("Firefox") === -1
-        ? (element) => element?.getBoundingClientRect().height
-        : undefined,
   });
 
   return (
@@ -135,10 +106,10 @@ export function DataGrid<TData>({
           <div
             className="relative grid"
             style={{
-              height: `${virtualizer.getTotalSize()}px`,
+              height: `${rowVirtualizer.getTotalSize()}px`,
             }}
           >
-            {virtualizer.getVirtualItems().map((virtualRow) => {
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const row = rows[virtualRow.index];
               if (!row) return null;
 
@@ -146,7 +117,7 @@ export function DataGrid<TData>({
                 <div
                   key={row.id}
                   data-index={virtualRow.index}
-                  ref={(node) => virtualizer.measureElement(node)}
+                  ref={(node) => rowVirtualizer.measureElement(node)}
                   className="absolute flex w-full border-b"
                   style={{
                     transform: `translateY(${virtualRow.start}px)`,

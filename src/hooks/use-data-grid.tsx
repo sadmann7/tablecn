@@ -4,11 +4,10 @@ import {
   type ColumnDef,
   getCoreRowModel,
   getSortedRowModel,
-  type OnChangeFn,
   type SortingState,
-  type TableOptions,
   useReactTable,
 } from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 
@@ -24,6 +23,8 @@ interface UseDataGridProps<TData> {
   getRowId?: (row: TData, index: number) => string;
   enableSorting?: boolean;
   initialSorting?: SortingState;
+  estimateRowSize?: number;
+  overscan?: number;
 }
 
 export function useDataGrid<TData>({
@@ -33,7 +34,11 @@ export function useDataGrid<TData>({
   getRowId,
   enableSorting = true,
   initialSorting = [],
+  estimateRowSize = 35,
+  overscan = 3,
 }: UseDataGridProps<TData>) {
+  const gridRef = React.useRef<HTMLDivElement>(null);
+
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
     null,
@@ -161,39 +166,20 @@ export function useDataGrid<TData>({
     [],
   );
 
-  const tableOptions: TableOptions<TData> = React.useMemo(
-    () => ({
-      data,
-      columns,
-      defaultColumn,
-      state: {
-        sorting,
-      },
-      onSortingChange: setSorting,
-      getCoreRowModel: getCoreRowModel(),
-      getSortedRowModel: getSortedRowModel(),
-      manualSorting: false,
-      enableSorting,
-      getRowId,
-      meta: {
-        updateData,
-        focusedCell,
-        editingCell,
-        onCellClick,
-        onCellDoubleClick,
-        startEditing,
-        stopEditing,
-        navigateCell,
-        blurCell,
-      },
-    }),
-    [
-      data,
-      columns,
-      defaultColumn,
+  const table = useReactTable({
+    data,
+    columns,
+    defaultColumn,
+    state: {
       sorting,
-      enableSorting,
-      getRowId,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    manualSorting: false,
+    enableSorting,
+    getRowId,
+    meta: {
       updateData,
       focusedCell,
       editingCell,
@@ -203,16 +189,41 @@ export function useDataGrid<TData>({
       stopEditing,
       navigateCell,
       blurCell,
-    ],
-  );
-
-  const table = useReactTable(tableOptions);
+    },
+  });
 
   const { rows } = table.getRowModel();
 
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => gridRef.current,
+    estimateSize: () => estimateRowSize,
+    overscan,
+    measureElement:
+      typeof window !== "undefined" &&
+      navigator.userAgent.indexOf("Firefox") === -1
+        ? (element) => element?.getBoundingClientRect().height
+        : undefined,
+  });
+
+  React.useEffect(() => {
+    function onOutsideClick(event: MouseEvent) {
+      if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
+        table.options.meta?.blurCell();
+      }
+    }
+
+    document.addEventListener("mousedown", onOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", onOutsideClick);
+    };
+  }, [table]);
+
   return {
+    gridRef,
     table,
     rows,
+    rowVirtualizer,
     sorting,
     setSorting,
     focusedCell,
