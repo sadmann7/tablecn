@@ -58,13 +58,6 @@ export function useDataGrid<TData>({
     [data, onDataChange],
   );
 
-  const handleSortingChange: OnChangeFn<SortingState> = React.useCallback(
-    (updater) => {
-      setSorting(updater);
-    },
-    [],
-  );
-
   const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
     setFocusedCell({ rowIndex, columnId });
     setEditingCell(null);
@@ -176,7 +169,7 @@ export function useDataGrid<TData>({
       state: {
         sorting,
       },
-      onSortingChange: handleSortingChange,
+      onSortingChange: setSorting,
       getCoreRowModel: getCoreRowModel(),
       getSortedRowModel: getSortedRowModel(),
       manualSorting: false,
@@ -199,7 +192,6 @@ export function useDataGrid<TData>({
       columns,
       defaultColumn,
       sorting,
-      handleSortingChange,
       enableSorting,
       getRowId,
       updateData,
