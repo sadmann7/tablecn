@@ -26,15 +26,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
   const rowIndex = displayRowIndex >= 0 ? displayRowIndex : originalRowIndex;
   const columnId = cell.column.id;
 
-  // Debug: Log row indices to understand sorting behavior
-  console.log("🔍 DataGridCell:", {
-    originalRowIndex,
-    displayRowIndex: rowIndex,
-    originalRowId: cell.row.id,
-    columnId,
-    cellValue: cell.getValue(),
-  });
-
   const isFocused =
     meta?.focusedCell?.rowIndex === rowIndex &&
     meta?.focusedCell?.columnId === columnId;
@@ -47,11 +38,12 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     if (cellRef.current) {
       const currentValue = cellRef.current.textContent ?? "";
       if (currentValue !== initialValue) {
-        meta?.updateData(originalRowIndex, columnId, currentValue);
+        // Use display row index (sorted position) for updateData
+        meta?.updateData(rowIndex, columnId, currentValue);
       }
       meta?.stopEditing();
     }
-  }, [meta, originalRowIndex, columnId, initialValue]);
+  }, [meta, rowIndex, columnId, initialValue]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -74,6 +66,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
       } else if (isFocused) {
         switch (event.key) {
           case "F2":
+          case "Enter":
             event.preventDefault();
             event.stopPropagation();
             meta?.startEditing(rowIndex, columnId);

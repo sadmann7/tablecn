@@ -134,7 +134,6 @@ export function useDataGrid<TData>({
 
   const selectRange = React.useCallback(
     (start: CellPosition, end: CellPosition) => {
-      console.log("📦 selectRange:", { start, end, sorting });
       const columnIds = getColumnIds();
       const startColIndex = columnIds.indexOf(start.columnId);
       const endColIndex = columnIds.indexOf(end.columnId);
@@ -144,13 +143,6 @@ export function useDataGrid<TData>({
       const minCol = Math.min(startColIndex, endColIndex);
       const maxCol = Math.max(startColIndex, endColIndex);
 
-      console.log("📦 selectRange calculated bounds:", {
-        minRow,
-        maxRow,
-        minCol,
-        maxCol,
-      });
-
       const selectedCells = new Set<string>();
 
       for (let rowIndex = minRow; rowIndex <= maxRow; rowIndex++) {
@@ -159,7 +151,6 @@ export function useDataGrid<TData>({
           if (columnId) {
             const cellKey = getCellKey(rowIndex, columnId);
             selectedCells.add(cellKey);
-            console.log("📦 Adding cell to selection:", cellKey);
           }
         }
       }
@@ -205,7 +196,6 @@ export function useDataGrid<TData>({
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
-      console.log("🖱️ onCellClick:", { rowIndex, columnId, sorting });
       const currentFocused = focusedCell;
 
       if (event) {
@@ -331,12 +321,6 @@ export function useDataGrid<TData>({
       if (!focusedCell) return;
 
       const { rowIndex, columnId } = focusedCell;
-      console.log("🧭 navigateCell:", {
-        direction,
-        currentRowIndex: rowIndex,
-        columnId,
-        sorting,
-      });
       const columnIds = getColumnIds();
       const currentColIndex = columnIds.indexOf(columnId);
       const rowVirtualizer = rowVirtualizerRef.current;
@@ -629,12 +613,6 @@ export function useDataGrid<TData>({
         value: unknown,
       ) => {
         const originalRowIndex = getOriginalRowIndex(sortedRowIndex);
-        console.log("📝 updateData (with sorting):", {
-          sortedRowIndex,
-          originalRowIndex,
-          columnId,
-          value,
-        });
 
         const newData = data.map((row, index) => {
           if (index === originalRowIndex) {
@@ -683,12 +661,6 @@ export function useDataGrid<TData>({
         if (!focusedCell) return;
 
         const { rowIndex, columnId } = focusedCell;
-        console.log("🧭 navigateCell (with sorting):", {
-          direction,
-          currentRowIndex: rowIndex,
-          columnId,
-          sorting,
-        });
         const columnIds = getColumnIds();
         const currentColIndex = columnIds.indexOf(columnId);
         const rowVirtualizer = rowVirtualizerRef.current;
@@ -900,8 +872,6 @@ export function useDataGrid<TData>({
       };
     }
   }, [selectionState.isSelecting]);
-
-  console.log({ selectionState });
 
   return {
     gridRef,
