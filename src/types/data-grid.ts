@@ -1,4 +1,5 @@
 import type { RowData } from "@tanstack/react-table";
+import type { useVirtualizer } from "@tanstack/react-virtual";
 
 export interface CellPosition {
   rowIndex: number;
@@ -10,6 +11,18 @@ export interface ScrollToOptions {
   columnId?: string;
 }
 
+export type NavigationDirection =
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "home"
+  | "end"
+  | "ctrl+home"
+  | "ctrl+end"
+  | "pageup"
+  | "pagedown";
+
 declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
@@ -20,7 +33,7 @@ declare module "@tanstack/react-table" {
     onCellDoubleClick: (rowIndex: number, columnId: string) => void;
     startEditing: (rowIndex: number, columnId: string) => void;
     stopEditing: () => void;
-    navigateCell: (direction: "up" | "down" | "left" | "right") => void;
+    navigateCell: (direction: NavigationDirection) => void;
     blurCell: () => void;
   }
 }

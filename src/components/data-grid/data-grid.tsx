@@ -43,6 +43,8 @@ export function DataGrid<TData>({
       onDataChange,
       getRowId,
       enableSorting,
+      estimateRowSize,
+      overscan,
     });
 
   const onRowAdd = React.useCallback(async () => {
@@ -69,20 +71,44 @@ export function DataGrid<TData>({
     <div className={cn("w-full", className)} {...props}>
       <div
         ref={gridRef}
-        className="relative overflow-auto rounded-md border"
+        className="relative overflow-auto rounded-md border focus:outline-none"
         style={{
           height: `${height}px`,
         }}
+        role="grid"
+        tabIndex={0}
+        aria-label="Data grid"
+        aria-rowcount={data.length}
+        aria-colcount={columns.length}
       >
         <div className="grid">
-          <div className="sticky top-0 z-10 grid border-b bg-background">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <div key={headerGroup.id} className="flex w-full">
-                {headerGroup.headers.map((header) => (
+          <div
+            className="sticky top-0 z-10 grid border-b bg-background"
+            role="rowgroup"
+          >
+            {table.getHeaderGroups().map((headerGroup, rowIndex) => (
+              <div
+                key={headerGroup.id}
+                className="flex w-full"
+                role="row"
+                aria-rowindex={rowIndex + 1}
+                tabIndex={-1}
+              >
+                {headerGroup.headers.map((header, colIndex) => (
                   <div
                     key={header.id}
-                    role="button"
+                    role="columnheader"
                     tabIndex={header.column.getCanSort() ? 0 : -1}
+                    aria-colindex={colIndex + 1}
+                    aria-sort={
+                      header.column.getIsSorted() === "asc"
+                        ? "ascending"
+                        : header.column.getIsSorted() === "desc"
+                          ? "descending"
+                          : header.column.getCanSort()
+                            ? "none"
+                            : undefined
+                    }
                     className={cn(
                       "flex items-center gap-2 truncate border-r px-3 py-2 font-medium text-sm",
                       header.column.getCanSort()
@@ -130,6 +156,7 @@ export function DataGrid<TData>({
           </div>
           <div
             className="relative grid"
+            role="rowgroup"
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
             }}
@@ -144,14 +171,20 @@ export function DataGrid<TData>({
                   data-index={virtualRow.index}
                   ref={(node) => rowVirtualizer.measureElement(node)}
                   className="absolute flex w-full border-b"
+                  role="row"
+                  aria-rowindex={virtualRow.index + 2} // +2 because header is row 1
+                  tabIndex={-1}
                   style={{
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  {row.getVisibleCells().map((cell) => (
+                  {row.getVisibleCells().map((cell, colIndex) => (
                     <div
                       key={cell.id}
                       data-grid-cell
+                      role="gridcell"
+                      aria-colindex={colIndex + 1}
+                      tabIndex={-1}
                       className="flex h-9 w-full items-center border-r"
                       style={{
                         width: cell.column.getSize(),

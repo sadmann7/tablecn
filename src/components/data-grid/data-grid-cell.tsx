@@ -27,11 +27,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     meta?.editingCell?.columnId === columnId;
 
   const onBlur = React.useCallback(() => {
-    // Always try to save the current textContent if we have a cell reference
-    // Don't rely on isEditing state as it might have changed already
     if (cellRef.current) {
       const currentValue = cellRef.current.textContent ?? "";
-      // Only save if the value actually changed from the initial value
       if (currentValue !== initialValue) {
         meta?.updateData(rowIndex, columnId, currentValue);
       }
@@ -55,49 +52,39 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           cellRef.current?.blur();
         } else if (event.key === "Escape") {
           event.preventDefault();
-          // Save current value instead of reverting (modern behavior like Airtable)
           cellRef.current?.blur();
         }
       } else if (isFocused) {
         switch (event.key) {
+          case "F2":
+            event.preventDefault();
+            event.stopPropagation();
+            meta?.startEditing(rowIndex, columnId);
+            break;
           case "ArrowUp":
           case "ArrowDown":
           case "ArrowLeft":
           case "ArrowRight":
-            event.preventDefault();
-            event.stopPropagation();
-            meta?.navigateCell(
-              event.key === "ArrowUp"
-                ? "up"
-                : event.key === "ArrowDown"
-                  ? "down"
-                  : event.key === "ArrowLeft"
-                    ? "left"
-                    : "right",
-            );
-            break;
-          case "Enter":
-          case "F2":
-            event.preventDefault();
-            meta?.startEditing(rowIndex, columnId);
+          case "Home":
+          case "End":
+          case "PageUp":
+          case "PageDown":
+          case "Tab":
             break;
           default:
-            // Start editing on any printable character
             if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
               event.preventDefault();
+              event.stopPropagation();
               meta?.startEditing(rowIndex, columnId);
 
-              // Immediately set up the cell for editing and insert the character
               setValue(event.key);
 
-              // Use a microtask to set the content after React renders
               queueMicrotask(() => {
                 if (
                   cellRef.current &&
                   cellRef.current.contentEditable === "true"
                 ) {
                   cellRef.current.textContent = event.key;
-                  // Set cursor to end
                   const range = document.createRange();
                   const selection = window.getSelection();
                   range.selectNodeContents(cellRef.current);
@@ -132,28 +119,23 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     [meta, rowIndex, columnId],
   );
 
-  // Sync external changes
   React.useEffect(() => {
     setValue(initialValue);
-    // Only update DOM content when not editing to avoid overwriting user input
     if (cellRef.current && !isEditing) {
       cellRef.current.textContent = initialValue as string;
     }
   }, [initialValue, isEditing]);
 
-  // Focus and manage contentEditable state
   React.useEffect(() => {
     if (cellRef.current) {
       if (isFocused) {
         cellRef.current.focus();
 
         if (isEditing) {
-          // If content is empty, populate it with current value (for Enter/F2/double-click)
           if (!cellRef.current.textContent && value) {
             cellRef.current.textContent = value as string;
           }
 
-          // Set cursor to end when entering edit mode
           if (cellRef.current.textContent) {
             const range = document.createRange();
             const selection = window.getSelection();

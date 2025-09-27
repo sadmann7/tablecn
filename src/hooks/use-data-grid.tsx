@@ -7,10 +7,14 @@ import {
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
-import type { CellPosition, ScrollToOptions } from "@/types/data-grid";
+import type {
+  CellPosition,
+  NavigationDirection,
+  ScrollToOptions,
+} from "@/types/data-grid";
 
 interface UseDataGridProps<TData> {
   data: TData[];
@@ -42,6 +46,9 @@ export function useDataGrid<TData>({
     null,
   );
 
+  const rowVirtualizerRef =
+    React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
+
   const updateData = React.useCallback(
     (rowIndex: number, columnId: string, value: unknown) => {
       const newData = data.map((row, index) => {
@@ -61,6 +68,10 @@ export function useDataGrid<TData>({
   const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
     setFocusedCell({ rowIndex, columnId });
     setEditingCell(null);
+
+    if (gridRef.current && document.activeElement !== gridRef.current) {
+      gridRef.current.focus();
+    }
   }, []);
 
   const startEditing = React.useCallback(
@@ -109,19 +120,24 @@ export function useDataGrid<TData>({
     [startEditing],
   );
 
+  const getColumnIds = React.useCallback(() => {
+    return columns
+      .map((col) => {
+        if (col.id) return col.id;
+        if ("accessorKey" in col) return col.accessorKey as string;
+        return undefined;
+      })
+      .filter((id): id is string => Boolean(id));
+  }, [columns]);
+
   const navigateCell = React.useCallback(
-    (direction: "up" | "down" | "left" | "right") => {
+    (direction: NavigationDirection) => {
       if (!focusedCell) return;
 
       const { rowIndex, columnId } = focusedCell;
-      const columnIds = columns
-        .map((col) => {
-          if (col.id) return col.id;
-          if ("accessorKey" in col) return col.accessorKey as string;
-          return undefined;
-        })
-        .filter((id): id is string => Boolean(id));
+      const columnIds = getColumnIds();
       const currentColIndex = columnIds.indexOf(columnId);
+      const rowVirtualizer = rowVirtualizerRef.current;
 
       let newRowIndex = rowIndex;
       let newColumnId = columnId;
@@ -145,13 +161,136 @@ export function useDataGrid<TData>({
             if (nextColumnId) newColumnId = nextColumnId;
           }
           break;
+        case "home":
+          // Move to first cell in current row
+          if (columnIds.length > 0) {
+            newColumnId = columnIds[0] || columnId;
+          }
+          break;
+        case "end":
+          // Move to last cell in current row
+          if (columnIds.length > 0) {
+            newColumnId = columnIds[columnIds.length - 1] || columnId;
+          }
+          break;
+        case "ctrl+home":
+          // Move to first cell in first row
+          newRowIndex = 0;
+          if (columnIds.length > 0) {
+            newColumnId = columnIds[0] || columnId;
+          }
+          break;
+        case "ctrl+end":
+          // Move to last cell in last row
+          newRowIndex = Math.max(0, data.length - 1);
+          if (columnIds.length > 0) {
+            newColumnId = columnIds[columnIds.length - 1] || columnId;
+          }
+          break;
+        case "pageup":
+          // Move up by visible page size
+          if (rowVirtualizer) {
+            const visibleRange = rowVirtualizer.getVirtualItems();
+            const pageSize = visibleRange.length || 10;
+            newRowIndex = Math.max(0, rowIndex - pageSize);
+          } else {
+            newRowIndex = Math.max(0, rowIndex - 10);
+          }
+          break;
+        case "pagedown":
+          // Move down by visible page size
+          if (rowVirtualizer) {
+            const visibleRange = rowVirtualizer.getVirtualItems();
+            const pageSize = visibleRange.length || 10;
+            newRowIndex = Math.min(data.length - 1, rowIndex + pageSize);
+          } else {
+            newRowIndex = Math.min(data.length - 1, rowIndex + 10);
+          }
+          break;
       }
 
       if (newRowIndex !== rowIndex || newColumnId !== columnId) {
-        focusCell(newRowIndex, newColumnId);
+        // If navigating to a row that might not be visible, scroll to it first
+        if (
+          rowVirtualizer &&
+          (newRowIndex < rowIndex - 5 || newRowIndex > rowIndex + 5)
+        ) {
+          rowVirtualizer.scrollToIndex(newRowIndex, { align: "center" });
+          // Delay focus to allow for scroll to complete
+          setTimeout(() => {
+            focusCell(newRowIndex, newColumnId);
+          }, 50);
+        } else {
+          focusCell(newRowIndex, newColumnId);
+        }
       }
     },
-    [focusedCell, columns, data.length, focusCell],
+    [focusedCell, getColumnIds, data.length, focusCell],
+  );
+
+  const onKeyDown = React.useCallback(
+    (event: KeyboardEvent) => {
+      // Don't handle navigation if we're currently editing a cell
+      if (editingCell) return;
+
+      // Don't handle navigation if no cell is focused
+      if (!focusedCell) return;
+
+      const { key, ctrlKey, metaKey } = event;
+      const isCtrlPressed = ctrlKey || metaKey;
+
+      let direction: NavigationDirection | null = null;
+
+      switch (key) {
+        case "ArrowUp":
+          direction = "up";
+          break;
+        case "ArrowDown":
+          direction = "down";
+          break;
+        case "ArrowLeft":
+          direction = "left";
+          break;
+        case "ArrowRight":
+          direction = "right";
+          break;
+        case "Home":
+          direction = isCtrlPressed ? "ctrl+home" : "home";
+          break;
+        case "End":
+          direction = isCtrlPressed ? "ctrl+end" : "end";
+          break;
+        case "PageUp":
+          direction = "pageup";
+          break;
+        case "PageDown":
+          direction = "pagedown";
+          break;
+        case "Enter":
+          // Enter key starts editing the current cell
+          if (focusedCell) {
+            event.preventDefault();
+            startEditing(focusedCell.rowIndex, focusedCell.columnId);
+          }
+          return;
+        case "Escape":
+          // Escape key stops editing and blurs the cell
+          event.preventDefault();
+          blurCell();
+          return;
+        case "Tab":
+          // Tab moves to next cell, Shift+Tab moves to previous cell
+          event.preventDefault();
+          direction = event.shiftKey ? "left" : "right";
+          break;
+      }
+
+      if (direction) {
+        event.preventDefault();
+        navigateCell(direction);
+      }
+    },
+    [editingCell, focusedCell, startEditing, blurCell, navigateCell],
   );
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
@@ -201,6 +340,11 @@ export function useDataGrid<TData>({
         : undefined,
   });
 
+  // Update the rowVirtualizer ref
+  React.useEffect(() => {
+    rowVirtualizerRef.current = rowVirtualizer;
+  }, [rowVirtualizer]);
+
   const scrollToRowAndFocusCell = React.useCallback(
     (options: ScrollToOptions) => {
       const { rowIndex, columnId } = options;
@@ -209,24 +353,44 @@ export function useDataGrid<TData>({
         align: "center",
       });
 
-      const firstColumnId =
-        columnId ||
-        columns
-          .map((col) => {
-            if (col.id) return col.id;
-            if ("accessorKey" in col) return col.accessorKey as string;
-            return undefined;
-          })
-          .filter((id): id is string => Boolean(id))[0];
+      const columnIds = getColumnIds();
+      const targetColumnId = columnId || columnIds[0];
 
-      if (firstColumnId) {
+      if (targetColumnId) {
         setTimeout(() => {
-          focusCell(rowIndex, firstColumnId);
+          focusCell(rowIndex, targetColumnId);
         }, 100);
       }
     },
-    [rowVirtualizer, columns, focusCell],
+    [rowVirtualizer, getColumnIds, focusCell],
   );
+
+  React.useEffect(() => {
+    const gridElement = gridRef.current;
+    if (!gridElement) return;
+
+    gridElement.addEventListener("keydown", onKeyDown);
+    return () => {
+      gridElement.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onKeyDown]);
+
+  // Initialize focus on the first cell when the grid mounts and has data
+  React.useEffect(() => {
+    if (data.length > 0 && columns.length > 0 && !focusedCell) {
+      const columnIds = getColumnIds();
+      if (columnIds.length > 0) {
+        // Focus the first cell after a brief delay to ensure the grid is fully rendered
+        const timeoutId = setTimeout(() => {
+          const firstColumnId = columnIds[0];
+          if (firstColumnId) {
+            focusCell(0, firstColumnId);
+          }
+        }, 100);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [data.length, columns.length, focusedCell, getColumnIds, focusCell]);
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
@@ -255,6 +419,7 @@ export function useDataGrid<TData>({
     stopEditing,
     navigateCell,
     blurCell,
+    onKeyDown,
     scrollToRowAndFocusCell,
   };
 }

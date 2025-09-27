@@ -135,7 +135,7 @@ export function DataGridDemo() {
         onDataChange={onDataChange}
         getRowId={(row) => row.id}
         onRowAdd={onRowAdd}
-        height={500}
+        height={600}
       />
       <div className="mt-4 text-muted-foreground text-sm">
         💡 Tip: Scroll to see virtualization in action - only visible rows are
