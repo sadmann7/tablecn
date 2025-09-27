@@ -32,6 +32,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     meta?.editingCell?.rowIndex === rowIndex &&
     meta?.editingCell?.columnId === columnId;
   const isSelected = meta?.getIsCellSelected?.(rowIndex, columnId) ?? false;
+  const hasMultipleSelection =
+    (meta?.selectionState?.selectedCells?.size ?? 0) > 1;
 
   const onBlur = React.useCallback(() => {
     if (cellRef.current) {
@@ -201,12 +203,11 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
       onKeyDown={onKeyDown}
       suppressContentEditableWarning
       className={cn(
-        "size-full truncate px-2 py-1 text-left text-sm outline-none",
-        isEditing ? "cursor-text" : "cursor-default",
+        "size-full cursor-default truncate px-2 py-1 text-left text-sm outline-none",
         {
-          "bg-accent/20 ring-1 ring-ring ring-inset": isFocused && !isSelected,
-          "bg-primary/10": isSelected && !isFocused,
-          "bg-primary/15 ring-1 ring-ring ring-inset": isSelected && isFocused,
+          "cursor-text": isEditing,
+          "ring-1 ring-ring ring-inset": isFocused,
+          "bg-primary/10": isSelected && hasMultipleSelection,
         },
       )}
     >

@@ -737,10 +737,10 @@ export function useDataGrid<TData>({
     stopEditing,
     blurCell,
     navigateCell,
+    onKeyDown,
     getIsCellSelected,
     selectAll,
     clearSelection,
-    onKeyDown,
     scrollToRowAndFocusCell,
   };
 }
