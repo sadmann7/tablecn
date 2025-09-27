@@ -69,9 +69,11 @@ export function useDataGrid<TData>({
   }, [columns]);
 
   const updateData = React.useCallback(
-    (rowIndex: number, columnId: string, value: unknown) => {
+    (sortedRowIndex: number, columnId: string, value: unknown) => {
+      // For now, assume sortedRowIndex is the original index
+      // This will be enhanced after table creation
       const newData = data.map((row, index) => {
-        if (index === rowIndex) {
+        if (index === sortedRowIndex) {
           return {
             ...row,
             [columnId]: value,
@@ -132,6 +134,7 @@ export function useDataGrid<TData>({
 
   const selectRange = React.useCallback(
     (start: CellPosition, end: CellPosition) => {
+      console.log("📦 selectRange:", { start, end, sorting });
       const columnIds = getColumnIds();
       const startColIndex = columnIds.indexOf(start.columnId);
       const endColIndex = columnIds.indexOf(end.columnId);
@@ -141,13 +144,22 @@ export function useDataGrid<TData>({
       const minCol = Math.min(startColIndex, endColIndex);
       const maxCol = Math.max(startColIndex, endColIndex);
 
+      console.log("📦 selectRange calculated bounds:", {
+        minRow,
+        maxRow,
+        minCol,
+        maxCol,
+      });
+
       const selectedCells = new Set<string>();
 
       for (let rowIndex = minRow; rowIndex <= maxRow; rowIndex++) {
         for (let colIndex = minCol; colIndex <= maxCol; colIndex++) {
           const columnId = columnIds[colIndex];
           if (columnId) {
-            selectedCells.add(getCellKey(rowIndex, columnId));
+            const cellKey = getCellKey(rowIndex, columnId);
+            selectedCells.add(cellKey);
+            console.log("📦 Adding cell to selection:", cellKey);
           }
         }
       }
@@ -158,7 +170,7 @@ export function useDataGrid<TData>({
         isSelecting: false,
       });
     },
-    [getColumnIds, getCellKey],
+    [getColumnIds, getCellKey, sorting],
   );
 
   const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
@@ -193,6 +205,7 @@ export function useDataGrid<TData>({
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
+      console.log("🖱️ onCellClick:", { rowIndex, columnId, sorting });
       const currentFocused = focusedCell;
 
       if (event) {
@@ -244,6 +257,7 @@ export function useDataGrid<TData>({
       selectionState.selectedCells,
       selectRange,
       clearSelection,
+      sorting,
     ],
   );
 
@@ -301,6 +315,7 @@ export function useDataGrid<TData>({
       selectRange,
       focusedCell,
       focusCell,
+      sorting,
     ],
   );
 
@@ -316,6 +331,12 @@ export function useDataGrid<TData>({
       if (!focusedCell) return;
 
       const { rowIndex, columnId } = focusedCell;
+      console.log("🧭 navigateCell:", {
+        direction,
+        currentRowIndex: rowIndex,
+        columnId,
+        sorting,
+      });
       const columnIds = getColumnIds();
       const currentColIndex = columnIds.indexOf(columnId);
       const rowVirtualizer = rowVirtualizerRef.current;
@@ -586,6 +607,184 @@ export function useDataGrid<TData>({
 
   const { rows } = table.getRowModel();
 
+  // Helper functions to work with sorted vs original indices
+  const getOriginalRowIndex = React.useCallback(
+    (sortedRowIndex: number) => {
+      const row = rows[sortedRowIndex];
+      if (!row) return sortedRowIndex;
+
+      // Find the original index in the data array
+      const originalData = row.original;
+      return data.findIndex((item) => item === originalData);
+    },
+    [rows, data],
+  );
+
+  // Update the table meta to use the correct functions that work with sorting
+  React.useEffect(() => {
+    if (table.options.meta) {
+      table.options.meta.updateData = (
+        sortedRowIndex: number,
+        columnId: string,
+        value: unknown,
+      ) => {
+        const originalRowIndex = getOriginalRowIndex(sortedRowIndex);
+        console.log("📝 updateData (with sorting):", {
+          sortedRowIndex,
+          originalRowIndex,
+          columnId,
+          value,
+        });
+
+        const newData = data.map((row, index) => {
+          if (index === originalRowIndex) {
+            return {
+              ...row,
+              [columnId]: value,
+            };
+          }
+          return row;
+        });
+        onDataChange?.(newData);
+      };
+
+      // Enhanced selectAll that works with sorted rows
+      table.options.meta.selectAll = () => {
+        const columnIds = getColumnIds();
+        const allCells = new Set<string>();
+
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+          for (const columnId of columnIds) {
+            allCells.add(getCellKey(rowIndex, columnId));
+          }
+        }
+
+        const firstColumnId = columnIds[0];
+        const lastColumnId = columnIds[columnIds.length - 1];
+
+        setSelectionState({
+          selectedCells: allCells,
+          selectionRange:
+            columnIds.length > 0 &&
+            rows.length > 0 &&
+            firstColumnId &&
+            lastColumnId
+              ? {
+                  start: { rowIndex: 0, columnId: firstColumnId },
+                  end: { rowIndex: rows.length - 1, columnId: lastColumnId },
+                }
+              : null,
+          isSelecting: false,
+        });
+      };
+
+      // Enhanced navigateCell that works with sorted rows
+      table.options.meta.navigateCell = (direction: NavigationDirection) => {
+        if (!focusedCell) return;
+
+        const { rowIndex, columnId } = focusedCell;
+        console.log("🧭 navigateCell (with sorting):", {
+          direction,
+          currentRowIndex: rowIndex,
+          columnId,
+          sorting,
+        });
+        const columnIds = getColumnIds();
+        const currentColIndex = columnIds.indexOf(columnId);
+        const rowVirtualizer = rowVirtualizerRef.current;
+
+        let newRowIndex = rowIndex;
+        let newColumnId = columnId;
+
+        switch (direction) {
+          case "up":
+            newRowIndex = Math.max(0, rowIndex - 1);
+            break;
+          case "down":
+            newRowIndex = Math.min(rows.length - 1, rowIndex + 1);
+            break;
+          case "left":
+            if (currentColIndex > 0) {
+              const prevColumnId = columnIds[currentColIndex - 1];
+              if (prevColumnId) newColumnId = prevColumnId;
+            }
+            break;
+          case "right":
+            if (currentColIndex < columnIds.length - 1) {
+              const nextColumnId = columnIds[currentColIndex + 1];
+              if (nextColumnId) newColumnId = nextColumnId;
+            }
+            break;
+          case "home":
+            if (columnIds.length > 0) {
+              newColumnId = columnIds[0] || columnId;
+            }
+            break;
+          case "end":
+            if (columnIds.length > 0) {
+              newColumnId = columnIds[columnIds.length - 1] || columnId;
+            }
+            break;
+          case "ctrl+home":
+            newRowIndex = 0;
+            if (columnIds.length > 0) {
+              newColumnId = columnIds[0] || columnId;
+            }
+            break;
+          case "ctrl+end":
+            newRowIndex = Math.max(0, rows.length - 1);
+            if (columnIds.length > 0) {
+              newColumnId = columnIds[columnIds.length - 1] || columnId;
+            }
+            break;
+          case "pageup":
+            if (rowVirtualizer) {
+              const visibleRange = rowVirtualizer.getVirtualItems();
+              const pageSize = visibleRange.length || 10;
+              newRowIndex = Math.max(0, rowIndex - pageSize);
+            } else {
+              newRowIndex = Math.max(0, rowIndex - 10);
+            }
+            break;
+          case "pagedown":
+            if (rowVirtualizer) {
+              const visibleRange = rowVirtualizer.getVirtualItems();
+              const pageSize = visibleRange.length || 10;
+              newRowIndex = Math.min(rows.length - 1, rowIndex + pageSize);
+            } else {
+              newRowIndex = Math.min(rows.length - 1, rowIndex + 10);
+            }
+            break;
+        }
+
+        if (newRowIndex !== rowIndex || newColumnId !== columnId) {
+          if (
+            rowVirtualizer &&
+            (newRowIndex < rowIndex - 5 || newRowIndex > rowIndex + 5)
+          ) {
+            rowVirtualizer.scrollToIndex(newRowIndex, { align: "center" });
+            requestAnimationFrame(() => {
+              focusCell(newRowIndex, newColumnId);
+            });
+          } else {
+            focusCell(newRowIndex, newColumnId);
+          }
+        }
+      };
+    }
+  }, [
+    table,
+    getOriginalRowIndex,
+    data,
+    onDataChange,
+    rows,
+    getColumnIds,
+    getCellKey,
+    focusedCell,
+    focusCell,
+    sorting,
+  ]);
+
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => gridRef.current,
@@ -701,6 +900,8 @@ export function useDataGrid<TData>({
       };
     }
   }, [selectionState.isSelecting]);
+
+  console.log({ selectionState });
 
   return {
     gridRef,
