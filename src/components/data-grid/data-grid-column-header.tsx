@@ -92,10 +92,6 @@ export function DataGridColumnHeader<TData, TValue>({
       <DropdownMenuContent align="start" sideOffset={0} className="w-60">
         {column.getCanSort() && (
           <>
-            <div className="px-2 py-1.5 text-muted-foreground text-xs">
-              Click multiple columns to sort by multiple fields
-            </div>
-            <DropdownMenuSeparator />
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
               checked={column.getIsSorted() === "asc"}
