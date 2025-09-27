@@ -33,12 +33,22 @@ export function DataGridColumnHeader<TData, TValue>({
       ? header.column.columnDef.header
       : header.column.id;
 
-  const onSortChange = React.useCallback(
-    (desc: boolean) => {
-      table.setSorting((prev: SortingState) => [
-        ...prev,
-        { id: column.id, desc },
-      ]);
+  const onSortingChange = React.useCallback(
+    (direction: "asc" | "desc") => {
+      table.setSorting((prev: SortingState) => {
+        const existingIndex = prev.findIndex((sort) => sort.id === column.id);
+
+        if (existingIndex >= 0) {
+          const updated = [...prev];
+          updated[existingIndex] = {
+            id: column.id,
+            desc: direction === "desc",
+          };
+          return updated;
+        } else {
+          return [...prev, { id: column.id, desc: direction === "desc" }];
+        }
+      });
     },
     [column.id, table],
   );
@@ -75,7 +85,7 @@ export function DataGridColumnHeader<TData, TValue>({
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
               checked={column.getIsSorted() === "asc"}
-              onClick={() => onSortChange(false)}
+              onClick={() => onSortingChange("asc")}
             >
               <ChevronUp />
               Sort asc
@@ -83,7 +93,7 @@ export function DataGridColumnHeader<TData, TValue>({
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
               checked={column.getIsSorted() === "desc"}
-              onClick={() => onSortChange(true)}
+              onClick={() => onSortingChange("desc")}
             >
               <ChevronDown />
               Sort desc
