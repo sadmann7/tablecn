@@ -1,6 +1,12 @@
 "use client";
 
-import type { Header, SortingState, Table } from "@tanstack/react-table";
+import type {
+  ColumnSort,
+  Header,
+  SortDirection,
+  SortingState,
+  Table,
+} from "@tanstack/react-table";
 import { ChevronDown, ChevronUp, EyeOff, X } from "lucide-react";
 import * as React from "react";
 
@@ -27,26 +33,29 @@ export function DataGridColumnHeader<TData, TValue>({
   ...props
 }: DataGridColumnHeaderProps<TData, TValue>) {
   const column = header.column;
-  const title = header.column.columnDef.meta?.label
-    ? header.column.columnDef.meta.label
-    : typeof header.column.columnDef.header === "string"
-      ? header.column.columnDef.header
-      : header.column.id;
+  const title = column.columnDef.meta?.label
+    ? column.columnDef.meta.label
+    : typeof column.columnDef.header === "string"
+      ? column.columnDef.header
+      : column.id;
 
   const onSortingChange = React.useCallback(
-    (direction: "asc" | "desc") => {
+    (direction: SortDirection) => {
       table.setSorting((prev: SortingState) => {
-        const existingIndex = prev.findIndex((sort) => sort.id === column.id);
+        const existingSortIndex = prev.findIndex(
+          (sort) => sort.id === column.id,
+        );
+        const newSort: ColumnSort = {
+          id: column.id,
+          desc: direction === "desc",
+        };
 
-        if (existingIndex >= 0) {
+        if (existingSortIndex >= 0) {
           const updated = [...prev];
-          updated[existingIndex] = {
-            id: column.id,
-            desc: direction === "desc",
-          };
+          updated[existingSortIndex] = newSort;
           return updated;
         } else {
-          return [...prev, { id: column.id, desc: direction === "desc" }];
+          return [...prev, newSort];
         }
       });
     },
@@ -77,11 +86,16 @@ export function DataGridColumnHeader<TData, TValue>({
         {...props}
       >
         {title}
+
         <ChevronDown className="text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={0} className="w-60">
         {column.getCanSort() && (
           <>
+            <div className="px-2 py-1.5 text-muted-foreground text-xs">
+              Click multiple columns to sort by multiple fields
+            </div>
+            <DropdownMenuSeparator />
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
               checked={column.getIsSorted() === "asc"}
