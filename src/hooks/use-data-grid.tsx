@@ -21,10 +21,11 @@ interface UseDataGridProps<TData> {
   columns: ColumnDef<TData>[];
   onDataChange?: (data: TData[]) => void;
   getRowId?: (row: TData, index: number) => string;
-  enableSorting?: boolean;
   initialSorting?: SortingState;
   estimateRowSize?: number;
   overscan?: number;
+  autoFocus?: boolean;
+  enableSorting?: boolean;
 }
 
 export function useDataGrid<TData>({
@@ -32,10 +33,11 @@ export function useDataGrid<TData>({
   columns,
   onDataChange,
   getRowId,
-  enableSorting = true,
   initialSorting = [],
   estimateRowSize = 35,
   overscan = 3,
+  autoFocus = false,
+  enableSorting = true,
 }: UseDataGridProps<TData>) {
   const gridRef = React.useRef<HTMLDivElement>(null);
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
@@ -103,10 +105,8 @@ export function useDataGrid<TData>({
         currentFocused?.rowIndex === rowIndex &&
         currentFocused?.columnId === columnId
       ) {
-        // Second click on same cell - start editing
         startEditing(rowIndex, columnId);
       } else {
-        // First click or different cell - just focus
         focusCell(rowIndex, columnId);
       }
     },
@@ -162,33 +162,28 @@ export function useDataGrid<TData>({
           }
           break;
         case "home":
-          // Move to first cell in current row
           if (columnIds.length > 0) {
             newColumnId = columnIds[0] || columnId;
           }
           break;
         case "end":
-          // Move to last cell in current row
           if (columnIds.length > 0) {
             newColumnId = columnIds[columnIds.length - 1] || columnId;
           }
           break;
         case "ctrl+home":
-          // Move to first cell in first row
           newRowIndex = 0;
           if (columnIds.length > 0) {
             newColumnId = columnIds[0] || columnId;
           }
           break;
         case "ctrl+end":
-          // Move to last cell in last row
           newRowIndex = Math.max(0, data.length - 1);
           if (columnIds.length > 0) {
             newColumnId = columnIds[columnIds.length - 1] || columnId;
           }
           break;
         case "pageup":
-          // Move up by visible page size
           if (rowVirtualizer) {
             const visibleRange = rowVirtualizer.getVirtualItems();
             const pageSize = visibleRange.length || 10;
@@ -198,7 +193,6 @@ export function useDataGrid<TData>({
           }
           break;
         case "pagedown":
-          // Move down by visible page size
           if (rowVirtualizer) {
             const visibleRange = rowVirtualizer.getVirtualItems();
             const pageSize = visibleRange.length || 10;
@@ -210,16 +204,14 @@ export function useDataGrid<TData>({
       }
 
       if (newRowIndex !== rowIndex || newColumnId !== columnId) {
-        // If navigating to a row that might not be visible, scroll to it first
         if (
           rowVirtualizer &&
           (newRowIndex < rowIndex - 5 || newRowIndex > rowIndex + 5)
         ) {
           rowVirtualizer.scrollToIndex(newRowIndex, { align: "center" });
-          // Delay focus to allow for scroll to complete
-          setTimeout(() => {
+          requestAnimationFrame(() => {
             focusCell(newRowIndex, newColumnId);
-          }, 50);
+          });
         } else {
           focusCell(newRowIndex, newColumnId);
         }
@@ -230,10 +222,8 @@ export function useDataGrid<TData>({
 
   const onKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
-      // Don't handle navigation if we're currently editing a cell
       if (editingCell) return;
 
-      // Don't handle navigation if no cell is focused
       if (!focusedCell) return;
 
       const { key, ctrlKey, metaKey } = event;
@@ -267,19 +257,16 @@ export function useDataGrid<TData>({
           direction = "pagedown";
           break;
         case "Enter":
-          // Enter key starts editing the current cell
           if (focusedCell) {
             event.preventDefault();
             startEditing(focusedCell.rowIndex, focusedCell.columnId);
           }
           return;
         case "Escape":
-          // Escape key stops editing and blurs the cell
           event.preventDefault();
           blurCell();
           return;
         case "Tab":
-          // Tab moves to next cell, Shift+Tab moves to previous cell
           event.preventDefault();
           direction = event.shiftKey ? "left" : "right";
           break;
@@ -340,10 +327,9 @@ export function useDataGrid<TData>({
         : undefined,
   });
 
-  // Update the rowVirtualizer ref
-  React.useEffect(() => {
+  if (rowVirtualizerRef.current) {
     rowVirtualizerRef.current = rowVirtualizer;
-  }, [rowVirtualizer]);
+  }
 
   const scrollToRowAndFocusCell = React.useCallback(
     (options: ScrollToOptions) => {
@@ -357,9 +343,9 @@ export function useDataGrid<TData>({
       const targetColumnId = columnId || columnIds[0];
 
       if (targetColumnId) {
-        setTimeout(() => {
+        requestAnimationFrame(() => {
           focusCell(rowIndex, targetColumnId);
-        }, 100);
+        });
       }
     },
     [rowVirtualizer, getColumnIds, focusCell],
@@ -375,22 +361,27 @@ export function useDataGrid<TData>({
     };
   }, [onKeyDown]);
 
-  // Initialize focus on the first cell when the grid mounts and has data
   React.useEffect(() => {
-    if (data.length > 0 && columns.length > 0 && !focusedCell) {
+    if (autoFocus && data.length > 0 && columns.length > 0 && !focusedCell) {
       const columnIds = getColumnIds();
       if (columnIds.length > 0) {
-        // Focus the first cell after a brief delay to ensure the grid is fully rendered
-        const timeoutId = setTimeout(() => {
+        const rafId = requestAnimationFrame(() => {
           const firstColumnId = columnIds[0];
           if (firstColumnId) {
             focusCell(0, firstColumnId);
           }
-        }, 100);
-        return () => clearTimeout(timeoutId);
+        });
+        return () => cancelAnimationFrame(rafId);
       }
     }
-  }, [data.length, columns.length, focusedCell, getColumnIds, focusCell]);
+  }, [
+    autoFocus,
+    data.length,
+    columns.length,
+    focusedCell,
+    getColumnIds,
+    focusCell,
+  ]);
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {

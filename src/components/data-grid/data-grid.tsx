@@ -83,80 +83,86 @@ export function DataGrid<TData>({
       >
         <div className="grid">
           <div
-            className="sticky top-0 z-10 grid border-b bg-background"
             role="rowgroup"
+            className="sticky top-0 z-10 grid border-b bg-background"
           >
             {table.getHeaderGroups().map((headerGroup, rowIndex) => (
               <div
                 key={headerGroup.id}
-                className="flex w-full"
                 role="row"
                 aria-rowindex={rowIndex + 1}
+                data-slot="header-row"
                 tabIndex={-1}
+                className="flex w-full"
               >
-                {headerGroup.headers.map((header, colIndex) => (
-                  <div
-                    key={header.id}
-                    role="columnheader"
-                    tabIndex={header.column.getCanSort() ? 0 : -1}
-                    aria-colindex={colIndex + 1}
-                    aria-sort={
-                      header.column.getIsSorted() === "asc"
-                        ? "ascending"
-                        : header.column.getIsSorted() === "desc"
-                          ? "descending"
-                          : header.column.getCanSort()
-                            ? "none"
-                            : undefined
-                    }
-                    className={cn(
-                      "flex items-center gap-2 truncate border-r px-3 py-2 font-medium text-sm",
-                      header.column.getCanSort()
-                        ? "cursor-pointer"
-                        : "cursor-default",
-                    )}
-                    style={{
-                      width: header.getSize(),
-                      minWidth: header.getSize(),
-                    }}
-                    onClick={header.column.getToggleSortingHandler()}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        header.column.getToggleSortingHandler()?.(event);
+                {headerGroup.headers.map((header, colIndex) => {
+                  const isAscending = header.column.getIsSorted() === "asc";
+                  const isDescending = header.column.getIsSorted() === "desc";
+                  const isSortable = header.column.getCanSort();
+
+                  return (
+                    <div
+                      key={header.id}
+                      role="columnheader"
+                      aria-colindex={colIndex + 1}
+                      aria-sort={
+                        isAscending
+                          ? "ascending"
+                          : isDescending
+                            ? "descending"
+                            : isSortable
+                              ? "none"
+                              : undefined
                       }
-                    }}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                    {enableSorting && (
-                      <>
-                        {header.column.getIsSorted() === "asc" && (
-                          <ChevronUp
-                            size={16}
-                            className="text-muted-foreground"
-                          />
-                        )}
-                        {header.column.getIsSorted() === "desc" && (
-                          <ChevronDown
-                            size={16}
-                            className="text-muted-foreground"
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-                ))}
+                      data-slot="header-cell"
+                      tabIndex={isSortable ? 0 : -1}
+                      className={cn(
+                        "flex items-center gap-2 truncate border-r px-3 py-2 font-medium text-sm",
+                        isSortable ? "cursor-pointer" : "cursor-default",
+                      )}
+                      style={{
+                        width: header.getSize(),
+                        minWidth: header.getSize(),
+                      }}
+                      onClick={header.column.getToggleSortingHandler()}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          header.column.getToggleSortingHandler()?.(event);
+                        }
+                      }}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                      {enableSorting && (
+                        <>
+                          {isAscending && (
+                            <ChevronUp
+                              size={16}
+                              className="text-muted-foreground"
+                            />
+                          )}
+                          {isDescending && (
+                            <ChevronDown
+                              size={16}
+                              className="text-muted-foreground"
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
           <div
-            className="relative grid"
             role="rowgroup"
+            className="relative grid"
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
             }}
@@ -168,12 +174,13 @@ export function DataGrid<TData>({
               return (
                 <div
                   key={row.id}
+                  role="row"
+                  aria-rowindex={virtualRow.index + 2}
                   data-index={virtualRow.index}
+                  data-slot="row"
+                  tabIndex={-1}
                   ref={(node) => rowVirtualizer.measureElement(node)}
                   className="absolute flex w-full border-b"
-                  role="row"
-                  aria-rowindex={virtualRow.index + 2} // +2 because header is row 1
-                  tabIndex={-1}
                   style={{
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
@@ -181,9 +188,9 @@ export function DataGrid<TData>({
                   {row.getVisibleCells().map((cell, colIndex) => (
                     <div
                       key={cell.id}
-                      data-grid-cell
                       role="gridcell"
                       aria-colindex={colIndex + 1}
+                      data-slot="cell"
                       tabIndex={-1}
                       className="flex h-9 w-full items-center border-r"
                       style={{
