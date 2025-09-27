@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { useDataGrid } from "@/hooks/use-data-grid";
 
 interface Person {
   id: string;
@@ -52,62 +53,67 @@ export function DataGridDemo() {
         accessorKey: "firstName",
         header: "First Name",
         size: 120,
+        meta: { label: "First Name" },
       },
       {
         id: "lastName",
         accessorKey: "lastName",
         header: "Last Name",
         size: 120,
+        meta: { label: "Last Name" },
       },
       {
         id: "age",
         accessorKey: "age",
         header: "Age",
         size: 80,
+        meta: { label: "Age" },
       },
       {
         id: "email",
         accessorKey: "email",
         header: "Email",
         size: 220,
+        meta: { label: "Email" },
       },
       {
         id: "phone",
         accessorKey: "phone",
         header: "Phone",
         size: 220,
+        meta: { label: "Phone" },
       },
       {
         id: "company",
         accessorKey: "company",
         header: "Company",
         size: 220,
+        meta: { label: "Company" },
       },
       {
         id: "jobTitle",
         accessorKey: "jobTitle",
         header: "Job Title",
         size: 220,
+        meta: { label: "Job Title" },
       },
       {
         id: "city",
         accessorKey: "city",
         header: "City",
         size: 240,
+        meta: { label: "City" },
       },
       {
         id: "country",
         accessorKey: "country",
         header: "Country",
         size: 240,
+        meta: { label: "Country" },
       },
     ],
     [],
   );
-
-  const onDataChange = React.useCallback((newData: Person[]) => {
-    setData(newData);
-  }, []);
 
   const onRowAdd = React.useCallback(() => {
     const newId = data.length + 1;
@@ -127,22 +133,24 @@ export function DataGridDemo() {
         <div className="text-muted-foreground text-sm">
           📊 {data.length} realistic employee records • ⚡ Virtualized rendering
           • 🖱️ Click any cell to edit • 🔲 Cell selection with Ctrl/Shift • 📱
-          Horizontal scroll for more columns
+          Horizontal scroll for more columns • 🔄 Multiple column sorting
         </div>
       </div>
       <DataGrid
         data={data}
         columns={columns}
-        onDataChange={onDataChange}
+        onDataChange={setData}
         getRowId={(row) => row.id}
         onRowAdd={onRowAdd}
         height={600}
       />
       <div className="mt-4 text-muted-foreground text-sm">
-        💡 Tips: Scroll to see virtualization in action - only visible rows are
-        rendered in the DOM. Try cell selection: Ctrl+click for multi-select,
-        Shift+click for range selection, Shift+arrows for keyboard range
-        selection, Ctrl+A to select all, Delete to clear selected cells.
+        💡 Tips: Click column headers to access sorting options. Use the Sort
+        button to manage multiple sorts. Scroll to see virtualization in action
+        - only visible rows are rendered in the DOM. Try cell selection:
+        Ctrl+click for multi-select, Shift+click for range selection,
+        Shift+arrows for keyboard range selection, Ctrl+A to select all, Delete
+        to clear selected cells.
       </div>
     </div>
   );

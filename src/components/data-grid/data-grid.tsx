@@ -1,9 +1,10 @@
 "use client";
 
 import { type ColumnDef, flexRender } from "@tanstack/react-table";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import * as React from "react";
 
+import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
+import { DataGridSortList } from "@/components/data-grid/data-grid-sort-list";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { cn } from "@/lib/utils";
 import type { ScrollToOptions } from "@/types/data-grid";
@@ -68,7 +69,8 @@ export function DataGrid<TData>({
   }, [onRowAddProp, scrollToRowAndFocusCell, data.length]);
 
   return (
-    <div className={cn("w-full", className)} {...props}>
+    <div className={cn("flex w-full flex-col gap-2", className)} {...props}>
+      <DataGridSortList table={table} />
       <div
         ref={gridRef}
         className="relative select-none overflow-auto rounded-md border focus:outline-none"
@@ -96,8 +98,10 @@ export function DataGrid<TData>({
                 className="flex w-full"
               >
                 {headerGroup.headers.map((header, colIndex) => {
-                  const isAscending = header.column.getIsSorted() === "asc";
-                  const isDescending = header.column.getIsSorted() === "desc";
+                  const sorting = table.getState().sorting;
+                  const currentSort = sorting.find(
+                    (sort) => sort.id === header.column.id,
+                  );
                   const isSortable = header.column.getCanSort();
 
                   return (
@@ -106,53 +110,24 @@ export function DataGrid<TData>({
                       role="columnheader"
                       aria-colindex={colIndex + 1}
                       aria-sort={
-                        isAscending
+                        currentSort?.desc === false
                           ? "ascending"
-                          : isDescending
+                          : currentSort?.desc === true
                             ? "descending"
                             : isSortable
                               ? "none"
                               : undefined
                       }
                       data-slot="header-cell"
-                      tabIndex={isSortable ? 0 : -1}
-                      className={cn(
-                        "flex items-center gap-2 truncate border-r px-3 py-2 font-medium text-sm",
-                        isSortable ? "cursor-pointer" : "cursor-default",
-                      )}
+                      tabIndex={-1}
+                      className="border-r"
                       style={{
                         width: header.getSize(),
                         minWidth: header.getSize(),
                       }}
-                      onClick={header.column.getToggleSortingHandler()}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          header.column.getToggleSortingHandler()?.(event);
-                        }
-                      }}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                      {enableSorting && (
-                        <>
-                          {isAscending && (
-                            <ChevronUp
-                              size={16}
-                              className="text-muted-foreground"
-                            />
-                          )}
-                          {isDescending && (
-                            <ChevronDown
-                              size={16}
-                              className="text-muted-foreground"
-                            />
-                          )}
-                        </>
+                      {header.isPlaceholder ? null : (
+                        <DataGridColumnHeader header={header} table={table} />
                       )}
                     </div>
                   );

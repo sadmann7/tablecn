@@ -1,40 +1,11 @@
 import type { RowData } from "@tanstack/react-table";
-import type { useVirtualizer } from "@tanstack/react-virtual";
-
-export interface CellPosition {
-  rowIndex: number;
-  columnId: string;
-}
-
-export interface CellRange {
-  start: CellPosition;
-  end: CellPosition;
-}
-
-export interface SelectionState {
-  selectedCells: Set<string>; // Set of "rowIndex:columnId" strings
-  selectionRange: CellRange | null;
-  isSelecting: boolean;
-}
-
-export interface ScrollToOptions {
-  rowIndex: number;
-  columnId?: string;
-}
-
-export type NavigationDirection =
-  | "up"
-  | "down"
-  | "left"
-  | "right"
-  | "home"
-  | "end"
-  | "ctrl+home"
-  | "ctrl+end"
-  | "pageup"
-  | "pagedown";
 
 declare module "@tanstack/react-table" {
+  // biome-ignore lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface
+  interface ColumnMeta<TData extends RowData, TValue> {
+    label?: string;
+  }
+
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
     updateData: (rowIndex: number, columnId: string, value: unknown) => void;
@@ -67,3 +38,36 @@ declare module "@tanstack/react-table" {
     clearSelection: () => void;
   }
 }
+
+export interface CellPosition {
+  rowIndex: number;
+  columnId: string;
+}
+
+export interface CellRange {
+  start: CellPosition;
+  end: CellPosition;
+}
+
+export interface SelectionState {
+  selectedCells: Set<string>;
+  selectionRange: CellRange | null;
+  isSelecting: boolean;
+}
+
+export interface ScrollToOptions {
+  rowIndex: number;
+  columnId?: string;
+}
+
+export type NavigationDirection =
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "home"
+  | "end"
+  | "ctrl+home"
+  | "ctrl+end"
+  | "pageup"
+  | "pagedown";
