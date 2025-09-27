@@ -5,6 +5,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { useDataGrid } from "@/hooks/use-data-grid";
 
 interface Person {
@@ -126,6 +128,16 @@ export function DataGridDemo() {
     };
   }, [data.length]);
 
+  const { gridRef, table, rowVirtualizer, scrollToRow } = useDataGrid({
+    data,
+    columns,
+    onDataChange: setData,
+    getRowId: (row) => row.id,
+    enableSorting: true,
+    estimateRowSize: 35,
+    overscan: 3,
+  });
+
   return (
     <div className="flex flex-col gap-4 p-6">
       <div className="flex flex-col gap-2">
@@ -136,11 +148,19 @@ export function DataGridDemo() {
           Horizontal scroll for more columns • 🔄 Multiple column sorting
         </div>
       </div>
+      <div
+        role="toolbar"
+        aria-orientation="horizontal"
+        className="ml-auto flex items-center gap-2"
+      >
+        <DataTableSortList table={table} align="end" />
+        <DataTableViewOptions table={table} align="end" />
+      </div>
       <DataGrid
-        data={data}
-        columns={columns}
-        onDataChange={setData}
-        getRowId={(row) => row.id}
+        gridRef={gridRef}
+        table={table}
+        rowVirtualizer={rowVirtualizer}
+        scrollToRow={scrollToRow}
         onRowAdd={onRowAdd}
         height={600}
       />

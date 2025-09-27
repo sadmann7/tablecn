@@ -615,10 +615,8 @@ export function useDataGrid<TData>({
     tableRef.current = table;
   }
 
-  const { rows } = table.getRowModel();
-
   const rowVirtualizer = useVirtualizer({
-    count: rows.length,
+    count: table.getRowModel().rows.length,
     getScrollElement: () => gridRef.current,
     estimateSize: () => estimateRowSize,
     overscan,
@@ -633,7 +631,7 @@ export function useDataGrid<TData>({
     rowVirtualizerRef.current = rowVirtualizer;
   }
 
-  const scrollToRowAndFocusCell = React.useCallback(
+  const scrollToRow = React.useCallback(
     (options: ScrollToOptions) => {
       const { rowIndex, columnId } = options;
 
@@ -725,7 +723,6 @@ export function useDataGrid<TData>({
   return {
     gridRef,
     table,
-    rows,
     rowVirtualizer,
     sorting,
     setSorting,
@@ -741,6 +738,6 @@ export function useDataGrid<TData>({
     getIsCellSelected,
     selectAll,
     clearSelection,
-    scrollToRowAndFocusCell,
+    scrollToRow,
   };
 }

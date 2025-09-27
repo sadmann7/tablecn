@@ -19,12 +19,14 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-interface DataTableViewOptionsProps<TData> {
+interface DataTableViewOptionsProps<TData>
+  extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
 }
 
 export function DataTableViewOptions<TData>({
   table,
+  ...props
 }: DataTableViewOptionsProps<TData>) {
   const columns = React.useMemo(
     () =>
@@ -52,7 +54,7 @@ export function DataTableViewOptions<TData>({
           <ChevronsUpDown className="ml-auto opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-44 p-0">
+      <PopoverContent className="w-44 p-0" {...props}>
         <Command>
           <CommandInput placeholder="Search columns..." />
           <CommandList>

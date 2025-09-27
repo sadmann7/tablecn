@@ -1,23 +1,22 @@
 "use client";
 
-import { type ColumnDef, flexRender } from "@tanstack/react-table";
+import { flexRender, type Table } from "@tanstack/react-table";
 import * as React from "react";
 
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
-import { DataGridSortList } from "@/components/data-grid/data-grid-sort-list";
-import { useDataGrid } from "@/hooks/use-data-grid";
+import { Button } from "@/components/ui/button";
+import type { useDataGrid } from "@/hooks/use-data-grid";
 import { cn } from "@/lib/utils";
 import type { ScrollToOptions } from "@/types/data-grid";
 
-interface DataGridProps<TData> extends React.ComponentProps<"div"> {
-  data: TData[];
-  columns: ColumnDef<TData>[];
-  onDataChange?: (data: TData[]) => void;
-  getRowId?: (row: TData, index: number) => string;
+interface DataGridProps<TData>
+  extends React.ComponentProps<"div">,
+    Pick<
+      ReturnType<typeof useDataGrid>,
+      "gridRef" | "rowVirtualizer" | "scrollToRow"
+    > {
+  table: Table<TData>;
   height?: number;
-  estimateRowSize?: number;
-  overscan?: number;
-  enableSorting?: boolean;
   onRowAdd?: () =>
     | ScrollToOptions
     | undefined
@@ -25,28 +24,17 @@ interface DataGridProps<TData> extends React.ComponentProps<"div"> {
 }
 
 export function DataGrid<TData>({
-  data,
-  columns,
-  onDataChange,
-  getRowId,
+  gridRef,
+  table,
+  rowVirtualizer,
+  scrollToRow,
   height = 600,
-  estimateRowSize = 35,
-  overscan = 3,
-  enableSorting = true,
   onRowAdd: onRowAddProp,
   className,
   ...props
 }: DataGridProps<TData>) {
-  const { gridRef, table, rows, rowVirtualizer, scrollToRowAndFocusCell } =
-    useDataGrid({
-      data,
-      columns,
-      onDataChange,
-      getRowId,
-      enableSorting,
-      estimateRowSize,
-      overscan,
-    });
+  const rows = table.getRowModel().rows;
+  const columns = table.getAllColumns();
 
   const onRowAdd = React.useCallback(async () => {
     if (!onRowAddProp) return;
@@ -56,32 +44,31 @@ export function DataGrid<TData>({
     requestAnimationFrame(() => {
       if (result && typeof result === "object" && "rowIndex" in result) {
         const adjustedRowIndex =
-          result.rowIndex >= data.length ? data.length : result.rowIndex;
+          result.rowIndex >= rows.length ? rows.length : result.rowIndex;
 
-        scrollToRowAndFocusCell({
+        scrollToRow({
           rowIndex: adjustedRowIndex,
           columnId: result.columnId,
         });
       } else {
-        scrollToRowAndFocusCell({ rowIndex: data.length });
+        scrollToRow({ rowIndex: rows.length });
       }
     });
-  }, [onRowAddProp, scrollToRowAndFocusCell, data.length]);
+  }, [onRowAddProp, scrollToRow, rows.length]);
 
   return (
     <div className={cn("flex w-full flex-col gap-2", className)} {...props}>
-      <DataGridSortList table={table} />
       <div
+        role="grid"
+        aria-label="Data grid"
+        aria-rowcount={rows.length}
+        aria-colcount={columns.length}
+        tabIndex={0}
         ref={gridRef}
         className="relative select-none overflow-auto rounded-md border focus:outline-none"
         style={{
           height: `${height}px`,
         }}
-        role="grid"
-        tabIndex={0}
-        aria-label="Data grid"
-        aria-rowcount={data.length}
-        aria-colcount={columns.length}
       >
         <div className="grid">
           <div
@@ -185,19 +172,7 @@ export function DataGrid<TData>({
           </div>
         </div>
       </div>
-      {onRowAdd && (
-        <div className="mt-4">
-          <button
-            onClick={onRowAdd}
-            className={cn(
-              "rounded-md border border-primary/20 bg-primary/10 px-4 py-2 font-medium text-primary text-sm transition-colors hover:bg-primary/20",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          >
-            Add Row
-          </button>
-        </div>
-      )}
+      {onRowAdd && <Button onClick={onRowAdd}>Add Row</Button>}
     </div>
   );
 }
