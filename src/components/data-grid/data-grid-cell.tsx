@@ -16,9 +16,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
   const cellRef = React.useRef<HTMLDivElement>(null);
 
   const meta = table.options.meta;
-  const originalRowIndex = cell.row.index; // Original data index for updates
+  const originalRowIndex = cell.row.index;
 
-  // Get display row index by finding the position in the sorted rows
   const rows = table.getRowModel().rows;
   const displayRowIndex = rows.findIndex(
     (row) => row.original === cell.row.original,
@@ -38,7 +37,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     if (cellRef.current) {
       const currentValue = cellRef.current.textContent ?? "";
       if (currentValue !== initialValue) {
-        // Use display row index (sorted position) for updateData
         meta?.updateData(rowIndex, columnId, currentValue);
       }
       meta?.stopEditing();
