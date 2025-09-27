@@ -195,10 +195,8 @@ export function useDataGrid<TData>({
     (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
       const currentFocused = focusedCell;
 
-      // Handle selection with modifier keys
       if (event) {
         if (event.ctrlKey || event.metaKey) {
-          // Toggle single cell selection
           event.preventDefault();
           const cellKey = getCellKey(rowIndex, columnId);
           const newSelectedCells = new Set(selectionState.selectedCells);
@@ -219,14 +217,12 @@ export function useDataGrid<TData>({
         }
 
         if (event.shiftKey && focusedCell) {
-          // Range selection
           event.preventDefault();
           selectRange(focusedCell, { rowIndex, columnId });
           return;
         }
       }
 
-      // Clear selection on normal click
       if (selectionState.selectedCells.size > 0) {
         clearSelection();
       }
@@ -260,10 +256,8 @@ export function useDataGrid<TData>({
 
   const onCellMouseDown = React.useCallback(
     (rowIndex: number, columnId: string, event: React.MouseEvent) => {
-      // Prevent text selection during drag
       event.preventDefault();
 
-      // Start drag selection if not using modifier keys
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
         setSelectionState((prev) => ({
           ...prev,
@@ -281,10 +275,18 @@ export function useDataGrid<TData>({
 
   const onCellMouseEnter = React.useCallback(
     (rowIndex: number, columnId: string, _event: React.MouseEvent) => {
-      // Update selection during drag
       if (selectionState.isSelecting && selectionState.selectionRange) {
         const start = selectionState.selectionRange.start;
         const end = { rowIndex, columnId };
+
+        // Focus the starting cell when we first start dragging
+        if (
+          focusedCell?.rowIndex !== start.rowIndex ||
+          focusedCell?.columnId !== start.columnId
+        ) {
+          focusCell(start.rowIndex, start.columnId);
+        }
+
         selectRange(start, end);
         setSelectionState((prev) => ({
           ...prev,
@@ -293,11 +295,16 @@ export function useDataGrid<TData>({
         }));
       }
     },
-    [selectionState.isSelecting, selectionState.selectionRange, selectRange],
+    [
+      selectionState.isSelecting,
+      selectionState.selectionRange,
+      selectRange,
+      focusedCell,
+      focusCell,
+    ],
   );
 
   const onCellMouseUp = React.useCallback(() => {
-    // End drag selection
     setSelectionState((prev) => ({
       ...prev,
       isSelecting: false,
@@ -405,7 +412,6 @@ export function useDataGrid<TData>({
 
       let direction: NavigationDirection | null = null;
 
-      // Handle selection shortcuts
       if (isCtrlPressed && key === "a") {
         event.preventDefault();
         selectAll();
@@ -415,7 +421,6 @@ export function useDataGrid<TData>({
       if (key === "Delete" || key === "Backspace") {
         if (selectionState.selectedCells.size > 0) {
           event.preventDefault();
-          // Clear selected cells
           selectionState.selectedCells.forEach((cellKey) => {
             const parts = cellKey.split(":");
             const rowIndexStr = parts[0];
@@ -480,7 +485,6 @@ export function useDataGrid<TData>({
       if (direction) {
         event.preventDefault();
 
-        // Handle shift+arrow for range selection
         if (shiftKey && focusedCell) {
           const columnIds = getColumnIds();
           const currentColIndex = columnIds.indexOf(focusedCell.columnId);
@@ -508,7 +512,6 @@ export function useDataGrid<TData>({
               break;
           }
 
-          // Extend selection to new position
           const selectionStart =
             selectionState.selectionRange?.start || focusedCell;
           selectRange(selectionStart, {
@@ -517,7 +520,6 @@ export function useDataGrid<TData>({
           });
           focusCell(newRowIndex, newColumnId);
         } else {
-          // Clear selection on normal navigation
           if (selectionState.selectedCells.size > 0) {
             clearSelection();
           }
@@ -621,6 +623,17 @@ export function useDataGrid<TData>({
   );
 
   React.useEffect(() => {
+    function onCellMouseUp() {
+      table.options.meta?.onCellMouseUp?.();
+    }
+
+    document.addEventListener("mouseup", onCellMouseUp);
+    return () => {
+      document.removeEventListener("mouseup", onCellMouseUp);
+    };
+  }, [table]);
+
+  React.useEffect(() => {
     const gridElement = gridRef.current;
     if (!gridElement) return;
 
@@ -656,7 +669,6 @@ export function useDataGrid<TData>({
     function onOutsideClick(event: MouseEvent) {
       if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
         table.options.meta?.blurCell();
-        // Clear selection when clicking outside
         if (selectionState.selectedCells.size > 0) {
           clearSelection();
         }
@@ -669,11 +681,14 @@ export function useDataGrid<TData>({
     };
   }, [table, selectionState.selectedCells.size, clearSelection]);
 
-  // Prevent text selection during drag selection
   React.useEffect(() => {
     if (selectionState.isSelecting) {
-      const preventSelection = (e: Event) => e.preventDefault();
-      const preventContextMenu = (e: Event) => e.preventDefault();
+      function preventSelection(event: Event) {
+        event.preventDefault();
+      }
+      function preventContextMenu(event: Event) {
+        event.preventDefault();
+      }
 
       document.addEventListener("selectstart", preventSelection);
       document.addEventListener("contextmenu", preventContextMenu);

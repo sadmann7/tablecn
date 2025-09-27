@@ -47,17 +47,6 @@ export function DataGrid<TData>({
       overscan,
     });
 
-  React.useEffect(() => {
-    function onCellMouseUp() {
-      table.options.meta?.onCellMouseUp?.();
-    }
-
-    document.addEventListener("mouseup", onCellMouseUp);
-    return () => {
-      document.removeEventListener("mouseup", onCellMouseUp);
-    };
-  }, [table]);
-
   const onRowAdd = React.useCallback(async () => {
     if (!onRowAddProp) return;
 

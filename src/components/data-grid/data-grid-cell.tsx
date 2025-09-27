@@ -198,8 +198,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
         isEditing ? "cursor-text" : "cursor-default",
         {
           "bg-accent/20 ring-1 ring-ring ring-inset": isFocused && !isSelected,
-          "ring-1 ring-primary/20 ring-inset": isSelected && !isFocused,
-          "ring-1 ring-primary/30 ring-inset": isSelected && isFocused,
+          "bg-primary/10": isSelected && !isFocused,
+          "bg-primary/15 ring-1 ring-ring ring-inset": isSelected && isFocused,
         },
       )}
     >
