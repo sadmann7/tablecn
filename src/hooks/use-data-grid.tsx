@@ -161,7 +161,7 @@ export function useDataGrid<TData>({
         isSelecting: false,
       });
     },
-    [getColumnIds, getCellKey, sorting],
+    [getColumnIds, getCellKey],
   );
 
   const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
@@ -247,7 +247,6 @@ export function useDataGrid<TData>({
       selectionState.selectedCells,
       selectRange,
       clearSelection,
-      sorting,
     ],
   );
 
@@ -305,7 +304,6 @@ export function useDataGrid<TData>({
       selectRange,
       focusedCell,
       focusCell,
-      sorting,
     ],
   );
 
@@ -467,12 +465,6 @@ export function useDataGrid<TData>({
         case "PageDown":
           direction = "pagedown";
           break;
-        case "Enter":
-          if (focusedCell) {
-            event.preventDefault();
-            startEditing(focusedCell.rowIndex, focusedCell.columnId);
-          }
-          return;
         case "Escape":
           event.preventDefault();
           if (selectionState.selectedCells.size > 0) {
@@ -535,7 +527,6 @@ export function useDataGrid<TData>({
     [
       editingCell,
       focusedCell,
-      startEditing,
       blurCell,
       navigateCell,
       selectAll,
@@ -599,7 +590,7 @@ export function useDataGrid<TData>({
 
       // Find the original index in the data array
       const originalData = row.original;
-      return data.findIndex((item) => item === originalData);
+      return data.indexOf(originalData);
     },
     [rows, data],
   );
@@ -754,7 +745,6 @@ export function useDataGrid<TData>({
     getCellKey,
     focusedCell,
     focusCell,
-    sorting,
   ]);
 
   const rowVirtualizer = useVirtualizer({
