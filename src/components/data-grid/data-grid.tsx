@@ -1,6 +1,7 @@
 "use client";
 
 import { flexRender, type Table } from "@tanstack/react-table";
+import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
@@ -57,11 +58,11 @@ export function DataGrid<TData>({
   }, [onRowAddProp, scrollToRow, rows.length]);
 
   return (
-    <div className={cn("flex w-full flex-col gap-2", className)} {...props}>
+    <div className={cn("flex w-full flex-col", className)} {...props}>
       <div
         role="grid"
         aria-label="Data grid"
-        aria-rowcount={rows.length}
+        aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
         aria-colcount={columns.length}
         tabIndex={0}
         ref={gridRef}
@@ -170,9 +171,42 @@ export function DataGrid<TData>({
               );
             })}
           </div>
+          {onRowAdd && (
+            <div
+              role="rowgroup"
+              className="sticky bottom-0 z-10 grid border-t bg-background"
+            >
+              <div
+                role="row"
+                aria-rowindex={rows.length + 2}
+                data-slot="add-row"
+                tabIndex={-1}
+                className="flex w-full"
+              >
+                <div
+                  role="gridcell"
+                  tabIndex={0}
+                  className="flex h-9 w-full items-center gap-2 bg-muted/30 px-3 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
+                  style={{
+                    width: table.getTotalSize(),
+                    minWidth: table.getTotalSize(),
+                  }}
+                  onClick={onRowAdd}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onRowAdd();
+                    }
+                  }}
+                >
+                  <Plus className="size-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground text-sm">Add Row</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-      {onRowAdd && <Button onClick={onRowAdd}>Add Row</Button>}
     </div>
   );
 }
