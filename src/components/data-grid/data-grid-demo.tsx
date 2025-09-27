@@ -140,14 +140,6 @@ export function DataGridDemo() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex flex-col gap-2">
-        <h2 className="font-bold text-2xl">Editable Data Grid Example</h2>
-        <div className="text-muted-foreground text-sm">
-          📊 {data.length} realistic employee records • ⚡ Virtualized rendering
-          • 🖱️ Click any cell to edit • 🔲 Cell selection with Ctrl/Shift • 📱
-          Horizontal scroll for more columns • 🔄 Multiple column sorting
-        </div>
-      </div>
       <div
         role="toolbar"
         aria-orientation="horizontal"
@@ -162,16 +154,8 @@ export function DataGridDemo() {
         rowVirtualizer={rowVirtualizer}
         scrollToRow={scrollToRow}
         onRowAdd={onRowAdd}
-        height={600}
+        height={500}
       />
-      <div className="mt-4 text-muted-foreground text-sm">
-        💡 Tips: Click column headers to access sorting options. Use the Sort
-        button to manage multiple sorts. Scroll to see virtualization in action
-        - only visible rows are rendered in the DOM. Try cell selection:
-        Ctrl+click for multi-select, Shift+click for range selection,
-        Shift+arrows for keyboard range selection, Ctrl+A to select all, Delete
-        to clear selected cells.
-      </div>
     </div>
   );
 }
