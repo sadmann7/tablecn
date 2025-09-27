@@ -12,8 +12,10 @@ import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import type {
   CellPosition,
+  CellRange,
   NavigationDirection,
   ScrollToOptions,
+  SelectionState,
 } from "@/types/data-grid";
 
 interface UseDataGridProps<TData> {
@@ -47,9 +49,24 @@ export function useDataGrid<TData>({
   const [editingCell, setEditingCell] = React.useState<CellPosition | null>(
     null,
   );
+  const [selectionState, setSelectionState] = React.useState<SelectionState>({
+    selectedCells: new Set(),
+    selectionRange: null,
+    isSelecting: false,
+  });
 
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
+
+  const getColumnIds = React.useCallback(() => {
+    return columns
+      .map((col) => {
+        if (col.id) return col.id;
+        if ("accessorKey" in col) return col.accessorKey as string;
+        return undefined;
+      })
+      .filter((id): id is string => Boolean(id));
+  }, [columns]);
 
   const updateData = React.useCallback(
     (rowIndex: number, columnId: string, value: unknown) => {
@@ -65,6 +82,83 @@ export function useDataGrid<TData>({
       onDataChange?.(newData);
     },
     [data, onDataChange],
+  );
+
+  const getCellKey = React.useCallback(
+    (rowIndex: number, columnId: string) => `${rowIndex}:${columnId}`,
+    [],
+  );
+
+  const getIsCellSelected = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      return selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
+    },
+    [selectionState.selectedCells, getCellKey],
+  );
+
+  const clearSelection = React.useCallback(() => {
+    setSelectionState({
+      selectedCells: new Set(),
+      selectionRange: null,
+      isSelecting: false,
+    });
+  }, []);
+
+  const selectAll = React.useCallback(() => {
+    const columnIds = getColumnIds();
+    const allCells = new Set<string>();
+
+    for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
+      for (const columnId of columnIds) {
+        allCells.add(getCellKey(rowIndex, columnId));
+      }
+    }
+
+    const firstColumnId = columnIds[0];
+    const lastColumnId = columnIds[columnIds.length - 1];
+
+    setSelectionState({
+      selectedCells: allCells,
+      selectionRange:
+        columnIds.length > 0 && data.length > 0 && firstColumnId && lastColumnId
+          ? {
+              start: { rowIndex: 0, columnId: firstColumnId },
+              end: { rowIndex: data.length - 1, columnId: lastColumnId },
+            }
+          : null,
+      isSelecting: false,
+    });
+  }, [data.length, getCellKey, getColumnIds]);
+
+  const selectRange = React.useCallback(
+    (start: CellPosition, end: CellPosition) => {
+      const columnIds = getColumnIds();
+      const startColIndex = columnIds.indexOf(start.columnId);
+      const endColIndex = columnIds.indexOf(end.columnId);
+
+      const minRow = Math.min(start.rowIndex, end.rowIndex);
+      const maxRow = Math.max(start.rowIndex, end.rowIndex);
+      const minCol = Math.min(startColIndex, endColIndex);
+      const maxCol = Math.max(startColIndex, endColIndex);
+
+      const selectedCells = new Set<string>();
+
+      for (let rowIndex = minRow; rowIndex <= maxRow; rowIndex++) {
+        for (let colIndex = minCol; colIndex <= maxCol; colIndex++) {
+          const columnId = columnIds[colIndex];
+          if (columnId) {
+            selectedCells.add(getCellKey(rowIndex, columnId));
+          }
+        }
+      }
+
+      setSelectionState({
+        selectedCells,
+        selectionRange: { start, end },
+        isSelecting: false,
+      });
+    },
+    [getColumnIds, getCellKey],
   );
 
   const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
@@ -98,8 +192,44 @@ export function useDataGrid<TData>({
   }, [editingCell]);
 
   const onCellClick = React.useCallback(
-    (rowIndex: number, columnId: string) => {
+    (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
       const currentFocused = focusedCell;
+
+      // Handle selection with modifier keys
+      if (event) {
+        if (event.ctrlKey || event.metaKey) {
+          // Toggle single cell selection
+          event.preventDefault();
+          const cellKey = getCellKey(rowIndex, columnId);
+          const newSelectedCells = new Set(selectionState.selectedCells);
+
+          if (newSelectedCells.has(cellKey)) {
+            newSelectedCells.delete(cellKey);
+          } else {
+            newSelectedCells.add(cellKey);
+          }
+
+          setSelectionState({
+            selectedCells: newSelectedCells,
+            selectionRange: null,
+            isSelecting: false,
+          });
+          focusCell(rowIndex, columnId);
+          return;
+        }
+
+        if (event.shiftKey && focusedCell) {
+          // Range selection
+          event.preventDefault();
+          selectRange(focusedCell, { rowIndex, columnId });
+          return;
+        }
+      }
+
+      // Clear selection on normal click
+      if (selectionState.selectedCells.size > 0) {
+        clearSelection();
+      }
 
       if (
         currentFocused?.rowIndex === rowIndex &&
@@ -110,7 +240,15 @@ export function useDataGrid<TData>({
         focusCell(rowIndex, columnId);
       }
     },
-    [focusedCell, focusCell, startEditing],
+    [
+      focusedCell,
+      focusCell,
+      startEditing,
+      getCellKey,
+      selectionState.selectedCells,
+      selectRange,
+      clearSelection,
+    ],
   );
 
   const onCellDoubleClick = React.useCallback(
@@ -120,15 +258,51 @@ export function useDataGrid<TData>({
     [startEditing],
   );
 
-  const getColumnIds = React.useCallback(() => {
-    return columns
-      .map((col) => {
-        if (col.id) return col.id;
-        if ("accessorKey" in col) return col.accessorKey as string;
-        return undefined;
-      })
-      .filter((id): id is string => Boolean(id));
-  }, [columns]);
+  const onCellMouseDown = React.useCallback(
+    (rowIndex: number, columnId: string, event: React.MouseEvent) => {
+      // Prevent text selection during drag
+      event.preventDefault();
+
+      // Start drag selection if not using modifier keys
+      if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        setSelectionState((prev) => ({
+          ...prev,
+          isSelecting: true,
+          selectionRange: {
+            start: { rowIndex, columnId },
+            end: { rowIndex, columnId },
+          },
+          selectedCells: new Set([getCellKey(rowIndex, columnId)]),
+        }));
+      }
+    },
+    [getCellKey],
+  );
+
+  const onCellMouseEnter = React.useCallback(
+    (rowIndex: number, columnId: string, _event: React.MouseEvent) => {
+      // Update selection during drag
+      if (selectionState.isSelecting && selectionState.selectionRange) {
+        const start = selectionState.selectionRange.start;
+        const end = { rowIndex, columnId };
+        selectRange(start, end);
+        setSelectionState((prev) => ({
+          ...prev,
+          selectionRange: { start, end },
+          isSelecting: true,
+        }));
+      }
+    },
+    [selectionState.isSelecting, selectionState.selectionRange, selectRange],
+  );
+
+  const onCellMouseUp = React.useCallback(() => {
+    // End drag selection
+    setSelectionState((prev) => ({
+      ...prev,
+      isSelecting: false,
+    }));
+  }, []);
 
   const navigateCell = React.useCallback(
     (direction: NavigationDirection) => {
@@ -226,10 +400,37 @@ export function useDataGrid<TData>({
 
       if (!focusedCell) return;
 
-      const { key, ctrlKey, metaKey } = event;
+      const { key, ctrlKey, metaKey, shiftKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
 
       let direction: NavigationDirection | null = null;
+
+      // Handle selection shortcuts
+      if (isCtrlPressed && key === "a") {
+        event.preventDefault();
+        selectAll();
+        return;
+      }
+
+      if (key === "Delete" || key === "Backspace") {
+        if (selectionState.selectedCells.size > 0) {
+          event.preventDefault();
+          // Clear selected cells
+          selectionState.selectedCells.forEach((cellKey) => {
+            const parts = cellKey.split(":");
+            const rowIndexStr = parts[0];
+            const columnId = parts[1];
+            if (rowIndexStr && columnId) {
+              const rowIndex = parseInt(rowIndexStr, 10);
+              if (!Number.isNaN(rowIndex)) {
+                updateData(rowIndex, columnId, "");
+              }
+            }
+          });
+          clearSelection();
+        }
+        return;
+      }
 
       switch (key) {
         case "ArrowUp":
@@ -264,7 +465,11 @@ export function useDataGrid<TData>({
           return;
         case "Escape":
           event.preventDefault();
-          blurCell();
+          if (selectionState.selectedCells.size > 0) {
+            clearSelection();
+          } else {
+            blurCell();
+          }
           return;
         case "Tab":
           event.preventDefault();
@@ -274,10 +479,67 @@ export function useDataGrid<TData>({
 
       if (direction) {
         event.preventDefault();
-        navigateCell(direction);
+
+        // Handle shift+arrow for range selection
+        if (shiftKey && focusedCell) {
+          const columnIds = getColumnIds();
+          const currentColIndex = columnIds.indexOf(focusedCell.columnId);
+          let newRowIndex = focusedCell.rowIndex;
+          let newColumnId = focusedCell.columnId;
+
+          switch (direction) {
+            case "up":
+              newRowIndex = Math.max(0, focusedCell.rowIndex - 1);
+              break;
+            case "down":
+              newRowIndex = Math.min(data.length - 1, focusedCell.rowIndex + 1);
+              break;
+            case "left":
+              if (currentColIndex > 0) {
+                const prevColumnId = columnIds[currentColIndex - 1];
+                if (prevColumnId) newColumnId = prevColumnId;
+              }
+              break;
+            case "right":
+              if (currentColIndex < columnIds.length - 1) {
+                const nextColumnId = columnIds[currentColIndex + 1];
+                if (nextColumnId) newColumnId = nextColumnId;
+              }
+              break;
+          }
+
+          // Extend selection to new position
+          const selectionStart =
+            selectionState.selectionRange?.start || focusedCell;
+          selectRange(selectionStart, {
+            rowIndex: newRowIndex,
+            columnId: newColumnId,
+          });
+          focusCell(newRowIndex, newColumnId);
+        } else {
+          // Clear selection on normal navigation
+          if (selectionState.selectedCells.size > 0) {
+            clearSelection();
+          }
+          navigateCell(direction);
+        }
       }
     },
-    [editingCell, focusedCell, startEditing, blurCell, navigateCell],
+    [
+      editingCell,
+      focusedCell,
+      startEditing,
+      blurCell,
+      navigateCell,
+      selectAll,
+      selectionState,
+      updateData,
+      clearSelection,
+      getColumnIds,
+      data.length,
+      selectRange,
+      focusCell,
+    ],
   );
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
@@ -304,12 +566,19 @@ export function useDataGrid<TData>({
       updateData,
       focusedCell,
       editingCell,
+      selectionState,
       onCellClick,
       onCellDoubleClick,
+      onCellMouseDown,
+      onCellMouseEnter,
+      onCellMouseUp,
       startEditing,
       stopEditing,
       navigateCell,
       blurCell,
+      clearSelection,
+      selectAll,
+      getIsCellSelected,
     },
   });
 
@@ -387,6 +656,10 @@ export function useDataGrid<TData>({
     function onOutsideClick(event: MouseEvent) {
       if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
         table.options.meta?.blurCell();
+        // Clear selection when clicking outside
+        if (selectionState.selectedCells.size > 0) {
+          clearSelection();
+        }
       }
     }
 
@@ -394,7 +667,25 @@ export function useDataGrid<TData>({
     return () => {
       document.removeEventListener("mousedown", onOutsideClick);
     };
-  }, [table]);
+  }, [table, selectionState.selectedCells.size, clearSelection]);
+
+  // Prevent text selection during drag selection
+  React.useEffect(() => {
+    if (selectionState.isSelecting) {
+      const preventSelection = (e: Event) => e.preventDefault();
+      const preventContextMenu = (e: Event) => e.preventDefault();
+
+      document.addEventListener("selectstart", preventSelection);
+      document.addEventListener("contextmenu", preventContextMenu);
+      document.body.style.userSelect = "none";
+
+      return () => {
+        document.removeEventListener("selectstart", preventSelection);
+        document.removeEventListener("contextmenu", preventContextMenu);
+        document.body.style.userSelect = "";
+      };
+    }
+  }, [selectionState.isSelecting]);
 
   return {
     gridRef,
@@ -405,11 +696,15 @@ export function useDataGrid<TData>({
     setSorting,
     focusedCell,
     editingCell,
+    selectionState,
     focusCell,
     startEditing,
     stopEditing,
-    navigateCell,
     blurCell,
+    navigateCell,
+    getIsCellSelected,
+    selectAll,
+    clearSelection,
     onKeyDown,
     scrollToRowAndFocusCell,
   };

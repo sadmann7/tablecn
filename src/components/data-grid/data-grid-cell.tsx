@@ -25,6 +25,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
   const isEditing =
     meta?.editingCell?.rowIndex === rowIndex &&
     meta?.editingCell?.columnId === columnId;
+  const isSelected = meta?.getIsCellSelected?.(rowIndex, columnId) ?? false;
 
   const onBlur = React.useCallback(() => {
     if (cellRef.current) {
@@ -105,11 +106,35 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     (event: React.MouseEvent) => {
       event.preventDefault();
       if (!isEditing) {
-        meta?.onCellClick(rowIndex, columnId);
+        meta?.onCellClick(rowIndex, columnId, event);
       }
     },
     [meta, rowIndex, columnId, isEditing],
   );
+
+  const onMouseDown = React.useCallback(
+    (event: React.MouseEvent) => {
+      if (!isEditing) {
+        meta?.onCellMouseDown?.(rowIndex, columnId, event);
+      }
+    },
+    [meta, rowIndex, columnId, isEditing],
+  );
+
+  const onMouseEnter = React.useCallback(
+    (event: React.MouseEvent) => {
+      if (!isEditing) {
+        meta?.onCellMouseEnter?.(rowIndex, columnId, event);
+      }
+    },
+    [meta, rowIndex, columnId, isEditing],
+  );
+
+  const onMouseUp = React.useCallback(() => {
+    if (!isEditing) {
+      meta?.onCellMouseUp?.();
+    }
+  }, [meta, isEditing]);
 
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent) => {
@@ -155,19 +180,27 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
       data-slot="cell-input"
       data-editing={isEditing ? "" : undefined}
       data-focused={isFocused ? "" : undefined}
+      data-selected={isSelected ? "" : undefined}
       ref={cellRef}
       contentEditable={isEditing}
       tabIndex={isFocused ? 0 : -1}
       onBlur={onBlur}
       onClick={onClick}
       onDoubleClick={onDoubleClick}
+      onMouseDown={onMouseDown}
+      onMouseEnter={onMouseEnter}
+      onMouseUp={onMouseUp}
       onInput={onInput}
       onKeyDown={onKeyDown}
       suppressContentEditableWarning
       className={cn(
         "size-full truncate px-2 py-1 text-left text-sm outline-none",
         isEditing ? "cursor-text" : "cursor-default",
-        isFocused && "bg-accent/20 ring-1 ring-ring ring-inset",
+        {
+          "bg-accent/20 ring-1 ring-ring ring-inset": isFocused && !isSelected,
+          "ring-1 ring-primary/20 ring-inset": isSelected && !isFocused,
+          "ring-1 ring-primary/30 ring-inset": isSelected && isFocused,
+        },
       )}
     >
       {!isEditing ? (value as string) : ""}

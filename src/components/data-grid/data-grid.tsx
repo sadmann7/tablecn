@@ -47,6 +47,17 @@ export function DataGrid<TData>({
       overscan,
     });
 
+  React.useEffect(() => {
+    function onCellMouseUp() {
+      table.options.meta?.onCellMouseUp?.();
+    }
+
+    document.addEventListener("mouseup", onCellMouseUp);
+    return () => {
+      document.removeEventListener("mouseup", onCellMouseUp);
+    };
+  }, [table]);
+
   const onRowAdd = React.useCallback(async () => {
     if (!onRowAddProp) return;
 
@@ -71,7 +82,7 @@ export function DataGrid<TData>({
     <div className={cn("w-full", className)} {...props}>
       <div
         ref={gridRef}
-        className="relative overflow-auto rounded-md border focus:outline-none"
+        className="relative select-none overflow-auto rounded-md border focus:outline-none"
         style={{
           height: `${height}px`,
         }}

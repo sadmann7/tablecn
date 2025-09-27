@@ -6,6 +6,17 @@ export interface CellPosition {
   columnId: string;
 }
 
+export interface CellRange {
+  start: CellPosition;
+  end: CellPosition;
+}
+
+export interface SelectionState {
+  selectedCells: Set<string>; // Set of "rowIndex:columnId" strings
+  selectionRange: CellRange | null;
+  isSelecting: boolean;
+}
+
 export interface ScrollToOptions {
   rowIndex: number;
   columnId?: string;
@@ -29,11 +40,30 @@ declare module "@tanstack/react-table" {
     updateData: (rowIndex: number, columnId: string, value: unknown) => void;
     focusedCell: CellPosition | null;
     editingCell: CellPosition | null;
-    onCellClick: (rowIndex: number, columnId: string) => void;
+    selectionState: SelectionState;
+    onCellClick: (
+      rowIndex: number,
+      columnId: string,
+      event?: React.MouseEvent,
+    ) => void;
     onCellDoubleClick: (rowIndex: number, columnId: string) => void;
+    onCellMouseDown: (
+      rowIndex: number,
+      columnId: string,
+      event: React.MouseEvent,
+    ) => void;
+    onCellMouseEnter: (
+      rowIndex: number,
+      columnId: string,
+      event: React.MouseEvent,
+    ) => void;
+    onCellMouseUp: () => void;
     startEditing: (rowIndex: number, columnId: string) => void;
     stopEditing: () => void;
-    navigateCell: (direction: NavigationDirection) => void;
     blurCell: () => void;
+    navigateCell: (direction: NavigationDirection) => void;
+    getIsCellSelected: (rowIndex: number, columnId: string) => boolean;
+    selectAll: () => void;
+    clearSelection: () => void;
   }
 }

@@ -126,7 +126,8 @@ export function DataGridDemo() {
         <h2 className="font-bold text-2xl">Editable Data Grid Example</h2>
         <div className="text-muted-foreground text-sm">
           📊 {data.length} realistic employee records • ⚡ Virtualized rendering
-          • 🖱️ Click any cell to edit • 📱 Horizontal scroll for more columns
+          • 🖱️ Click any cell to edit • 🔲 Cell selection with Ctrl/Shift • 📱
+          Horizontal scroll for more columns
         </div>
       </div>
       <DataGrid
@@ -138,9 +139,10 @@ export function DataGridDemo() {
         height={600}
       />
       <div className="mt-4 text-muted-foreground text-sm">
-        💡 Tip: Scroll to see virtualization in action - only visible rows are
-        rendered in the DOM. Try adding a new row to see the auto-scroll and
-        focus behavior!
+        💡 Tips: Scroll to see virtualization in action - only visible rows are
+        rendered in the DOM. Try cell selection: Ctrl+click for multi-select,
+        Shift+click for range selection, Shift+arrows for keyboard range
+        selection, Ctrl+A to select all, Delete to clear selected cells.
       </div>
     </div>
   );
