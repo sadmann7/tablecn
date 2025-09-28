@@ -37,8 +37,6 @@ export function DataGrid<TData>({
   const rows = table.getRowModel().rows;
   const columns = table.getAllColumns();
 
-  console.log({ sorting: table.getState().sorting });
-
   const onRowAdd = React.useCallback(async () => {
     if (!onRowAddProp) return;
 
