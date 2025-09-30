@@ -1,8 +1,10 @@
-# [Shadcn Table](https://tablecn.com)
+# [tablecn](https://tablecn.com)
 
 This is a shadcn table component with server-side sorting, filtering, and pagination. It is bootstrapped with `create-t3-app`.
 
-[![Shadcn Table](./public/images/screenshot.png)](https://tablecn.com)
+[![tablecn](./public/images/screenshot.png)](https://tablecn.com)
+
+[![Vercel OSS Program](https://vercel.com/oss/program-badge.svg)](https://vercel.com/oss)
 
 ## Documentation
 
@@ -30,46 +32,76 @@ See the [documentation](https://diceui.com/docs/components/data-table) to get st
 
 ## Running Locally
 
-1. Clone the repository
+### Quick Setup (with docker)
+
+1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/sadmann7/shadcn-table
+   git clone https://github.com/sadmann7/tablecn
+   cd tablecn
    ```
 
-2. Install dependencies using pnpm
-
-   ```bash
-   pnpm install
-   ```
-
-3. Copy the `.env.example` to `.env` and update the variables.
+2. **Copy the environment variables**
 
    ```bash
    cp .env.example .env
    ```
 
-4. (Optional) Run database using docker-compose.yml file
+3. **Run the setup**
 
    ```bash
-   docker compose up
+   pnpm ollie
    ```
 
-5. Push the database schema
+   This will install dependencies, start the Docker PostgreSQL instance, set up the database schema, and seed it with sample data.
+
+### Manual Setup
+
+1. **Clone the repository**
 
    ```bash
-   pnpm run db:push
+   git clone https://github.com/sadmann7/tablecn
+   cd tablecn
    ```
 
-6. Seed the database
+2. **Install dependencies**
 
    ```bash
-   pnpm run db:seed
+   pnpm install
    ```
 
-7. Start the development server
+3. **Set up environment variables**
 
    ```bash
-   pnpm run dev
+   cp .env.example .env
+   ```
+
+   Update the `.env` file with your database credentials.
+
+4. **Choose your database approach:**
+
+   **Option A: Use Docker PostgreSQL**
+
+   ```bash
+   # Start PostgreSQL container
+   pnpm db:start
+   
+   # Set up database schema and seed data
+   pnpm db:setup
+   
+   # Start development server
+   pnpm dev
+   ```
+
+   **Option B: Use existing PostgreSQL database**
+
+   ```bash
+   # Update .env with your database URL
+   # Then set up database schema and seed data
+   pnpm db:setup
+   
+   # Start development server
+   pnpm dev
    ```
 
 ## How do I deploy this?

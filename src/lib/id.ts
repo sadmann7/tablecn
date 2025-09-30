@@ -23,5 +23,7 @@ export function generateId(
     length,
   )();
 
-  return prefix ? `${prefixes[prefix]}${separator}${id}` : id;
+  return prefix && prefix in prefixes
+    ? `${prefixes[prefix]}${separator}${id}`
+    : id;
 }

@@ -7,10 +7,9 @@ import { cn } from "@/lib/utils";
 import "@/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
-
+import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import { fontMono, fontSans } from "@/lib/fonts";
-import Script from "next/script";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -22,11 +21,11 @@ export const metadata: Metadata = {
   keywords: [
     "nextjs",
     "react",
-    "react server components",
     "table",
     "react-table",
     "tanstack-table",
     "shadcn-table",
+    "tablecn",
   ],
   authors: [
     {
@@ -53,7 +52,6 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icon.png",
   },
-  manifest: `${siteConfig.url}/site.webmanifest`,
 };
 
 export const viewport: Viewport = {

@@ -1,10 +1,9 @@
 "use client";
 
-import type { Task } from "@/db/schema";
 import type { Table } from "@tanstack/react-table";
 import { Download } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import type { Task } from "@/db/schema";
 import { exportTableToCSV } from "@/lib/export";
 
 import { CreateTaskSheet } from "./create-task-sheet";

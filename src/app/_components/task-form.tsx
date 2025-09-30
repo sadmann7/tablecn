@@ -1,9 +1,7 @@
 "use client";
 
-import { tasks } from "@/db/schema";
 import type * as React from "react";
 import type { FieldPath, FieldValues, UseFormReturn } from "react-hook-form";
-
 import {
   Form,
   FormControl,
@@ -22,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { tasks } from "@/db/schema";
 
 interface TaskFormProps<T extends FieldValues>
   extends Omit<React.ComponentPropsWithRef<"form">, "onSubmit"> {

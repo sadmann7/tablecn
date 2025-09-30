@@ -211,10 +211,7 @@ export function DataTableSortList<TData>({
           </div>
           {sorting.length > 0 && (
             <SortableContent asChild>
-              <div
-                role="list"
-                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
-              >
+              <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
                 {sorting.map((sort) => (
                   <DataTableSortItem
                     key={sort.id}
@@ -226,7 +223,7 @@ export function DataTableSortList<TData>({
                     onSortRemove={onSortRemove}
                   />
                 ))}
-              </div>
+              </ul>
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
@@ -290,7 +287,7 @@ function DataTableSortItem({
     React.useState(false);
 
   const onItemKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
+    (event: React.KeyboardEvent<HTMLLIElement>) => {
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
@@ -312,8 +309,7 @@ function DataTableSortItem({
 
   return (
     <SortableItem value={sort.id} asChild>
-      <div
-        role="listitem"
+      <li
         id={sortItemId}
         tabIndex={-1}
         className="flex items-center gap-2"
@@ -323,7 +319,6 @@ function DataTableSortItem({
           <PopoverTrigger asChild>
             <Button
               id={fieldTriggerId}
-              role="combobox"
               aria-controls={fieldListboxId}
               variant="outline"
               size="sm"
@@ -399,7 +394,7 @@ function DataTableSortItem({
             <GripVertical />
           </Button>
         </SortableItemHandle>
-      </div>
+      </li>
     </SortableItem>
   );
 }

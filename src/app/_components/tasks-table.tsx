@@ -1,17 +1,15 @@
 "use client";
 
-import type { Task } from "@/db/schema";
-import type { DataTableRowAction, FilterKeys } from "@/types/data-table";
 import * as React from "react";
-
 import { DataTable } from "@/components/data-table/data-table";
-import { useDataTable } from "@/hooks/use-data-table";
-
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
 import { DataTableFilterMenu } from "@/components/data-table/data-table-filter-menu";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import type { Task } from "@/db/schema";
+import { useDataTable } from "@/hooks/use-data-table";
+import type { DataTableRowAction } from "@/types/data-table";
 import type {
   getEstimatedHoursRange,
   getTaskPriorityCounts,

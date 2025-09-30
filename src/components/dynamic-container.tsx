@@ -4,10 +4,9 @@
  * @see https://github.com/dubinc/dub/blob/main/packages/ui/src/animated-size-container.tsx
  */
 
+import { motion, type TargetAndTransition } from "motion/react";
 import * as React from "react";
-
 import { cn } from "@/lib/utils";
-import { type TargetAndTransition, motion } from "motion/react";
 
 interface Dimensions extends TargetAndTransition {
   width: string | number;

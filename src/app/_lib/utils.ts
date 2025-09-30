@@ -1,4 +1,3 @@
-import { type Task, tasks } from "@/db/schema";
 import { faker } from "@faker-js/faker";
 import {
   ArrowDownIcon,
@@ -11,6 +10,7 @@ import {
   Timer,
 } from "lucide-react";
 import { customAlphabet } from "nanoid";
+import { type Task, tasks } from "@/db/schema";
 
 import { generateId } from "@/lib/id";
 

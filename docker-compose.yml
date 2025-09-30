@@ -1,16 +1,17 @@
 services:
-  shadcn-table:
+  postgres:
     image: postgres:17.4
     restart: always
-    container_name: shadcn-table
     ports:
-      - ${DB_PORT}:5432
+      - ${DATABASE_PORT}:5432
     environment:
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_USER=${DATABASE_USER}
+      - POSTGRES_DB=${DATABASE_NAME}
     volumes:
       - ./docker-data/db:/var/lib/postgresql/data
-
-volumes:
-  postgres:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

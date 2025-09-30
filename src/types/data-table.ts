@@ -1,13 +1,13 @@
+import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
 import type { DataTableConfig } from "@/config/data-table";
 import type { FilterItemSchema } from "@/lib/parsers";
-import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
 
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
     advancedFilterKeys: FilterKeys;
   }
 
-  // biome-ignore lint/correctness/noUnusedVariables: <explanation>
+  // biome-ignore lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
     placeholder?: string;

@@ -1,35 +1,14 @@
-import * as React from "react";
-
-/**
- * A utility to compose multiple event handlers into a single event handler.
- * Call originalEventHandler first, then ourEventHandler unless prevented.
- */
-function composeEventHandlers<E>(
-  originalEventHandler?: (event: E) => void,
-  ourEventHandler?: (event: E) => void,
-  { checkForDefaultPrevented = true } = {},
-) {
-  return function handleEvent(event: E) {
-    originalEventHandler?.(event);
-
-    if (
-      checkForDefaultPrevented === false ||
-      !(event as unknown as Event).defaultPrevented
-    ) {
-      return ourEventHandler?.(event);
-    }
-  };
-}
-
 /**
  * @see https://github.com/radix-ui/primitives/blob/main/packages/react/compose-refs/src/compose-refs.tsx
  */
 
+import * as React from "react";
+
 type PossibleRef<T> = React.Ref<T> | undefined;
 
 /**
- * Set a given ref to a given value.
- * This utility takes care of different types of refs: callback refs and RefObject(s).
+ * Set a given ref to a given value
+ * This utility takes care of different types of refs: callback refs and RefObject(s)
  */
 function setRef<T>(ref: PossibleRef<T>, value: T) {
   if (typeof ref === "function") {
@@ -42,8 +21,8 @@ function setRef<T>(ref: PossibleRef<T>, value: T) {
 }
 
 /**
- * A utility to compose multiple refs together.
- * Accepts callback refs and RefObject(s).
+ * A utility to compose multiple refs together
+ * Accepts callback refs and RefObject(s)
  */
 function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
   return (node) => {
@@ -76,12 +55,12 @@ function composeRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
 }
 
 /**
- * A custom hook that composes multiple refs.
- * Accepts callback refs and RefObject(s).
+ * A custom hook that composes multiple refs
+ * Accepts callback refs and RefObject(s)
  */
 function useComposedRefs<T>(...refs: PossibleRef<T>[]): React.RefCallback<T> {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // biome-ignore lint/correctness/useExhaustiveDependencies: we don't want to re-run this callback when the refs change
   return React.useCallback(composeRefs(...refs), refs);
 }
 
-export { composeEventHandlers, composeRefs, useComposedRefs };
+export { composeRefs, useComposedRefs };

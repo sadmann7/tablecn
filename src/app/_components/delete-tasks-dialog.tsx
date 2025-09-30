@@ -1,11 +1,9 @@
 "use client";
 
-import type { Task } from "@/db/schema";
 import type { Row } from "@tanstack/react-table";
 import { Loader, Trash } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,6 +25,7 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import type { Task } from "@/db/schema";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 import { deleteTasks } from "../_lib/actions";

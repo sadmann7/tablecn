@@ -3,8 +3,8 @@
 import type { Column } from "@tanstack/react-table";
 import {
   ChevronDown,
-  ChevronUp,
   ChevronsUpDown,
+  ChevronUp,
   EyeOff,
   X,
 } from "lucide-react";
