@@ -101,7 +101,7 @@ export function DataTableFilterList<TData>({
   }, [table]);
 
   const [filters, setFilters] = useQueryState(
-    table.options.meta!!.advancedFilterKeys.filters,
+    table.options.meta?.advancedFilterKeys?.filters ?? "",
     getFiltersStateParser<TData>(columns.map((field) => field.id))
       .withDefault([])
       .withOptions({
@@ -113,7 +113,7 @@ export function DataTableFilterList<TData>({
   const debouncedSetFilters = useDebouncedCallback(setFilters, debounceMs);
 
   const [joinOperator, setJoinOperator] = useQueryState(
-    table.options.meta!!.advancedFilterKeys.joinOperator,
+    table.options.meta?.advancedFilterKeys?.joinOperator ?? "",
     parseAsStringEnum(["and", "or"]).withDefault("and").withOptions({
       clearOnDefault: true,
       shallow,
