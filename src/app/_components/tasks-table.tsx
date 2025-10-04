@@ -9,7 +9,7 @@ import { DataTableSortList } from "@/components/data-table/data-table-sort-list"
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import type { Task } from "@/db/schema";
 import { useDataTable } from "@/hooks/use-data-table";
-import type { DataTableRowAction } from "@/types/data-table";
+import type { DataTableRowAction, FilterKeys } from "@/types/data-table";
 import type {
   getEstimatedHoursRange,
   getTaskPriorityCounts,
@@ -31,9 +31,10 @@ interface TasksTableProps {
       Awaited<ReturnType<typeof getEstimatedHoursRange>>,
     ]
   >;
+  advancedFilterKeys?: Partial<FilterKeys>;
 }
 
-export function TasksTable({ promises }: TasksTableProps) {
+export function TasksTable({ promises, advancedFilterKeys }: TasksTableProps) {
   const { enableAdvancedFilter, filterFlag } = useFeatureFlags();
 
   const [
@@ -66,6 +67,7 @@ export function TasksTable({ promises }: TasksTableProps) {
       sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { right: ["actions"] },
     },
+    advancedFilterKeys,
     getRowId: (originalRow) => originalRow.id,
     shallow: false,
     clearOnDefault: true,

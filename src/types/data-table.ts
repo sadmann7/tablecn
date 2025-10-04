@@ -3,6 +3,10 @@ import type { DataTableConfig } from "@/config/data-table";
 import type { FilterItemSchema } from "@/lib/parsers";
 
 declare module "@tanstack/react-table" {
+  interface TableMeta<TData extends RowData> {
+    advancedFilterKeys: FilterKeys;
+  }
+
   // biome-ignore lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
@@ -13,6 +17,14 @@ declare module "@tanstack/react-table" {
     unit?: string;
     icon?: React.FC<React.SVGProps<SVGSVGElement>>;
   }
+}
+
+export interface FilterKeys {
+  page: string;
+  perPage: string;
+  sort: string;
+  filters: string;
+  joinOperator: string;
 }
 
 export interface Option {

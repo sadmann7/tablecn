@@ -31,7 +31,7 @@ import * as React from "react";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getSortingStateParser } from "@/lib/parsers";
-import type { ExtendedColumnSort } from "@/types/data-table";
+import type { ExtendedColumnSort, FilterKeys, } from "@/types/data-table";
 
 const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";
@@ -39,6 +39,8 @@ const SORT_KEY = "sort";
 const ARRAY_SEPARATOR = ",";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
+const FILTERS_KEY = "filters";
+const JOIN_OPERATOR_KEY = "joinOperator";
 
 interface UseDataTableProps<TData>
   extends Omit<
@@ -54,6 +56,7 @@ interface UseDataTableProps<TData>
   initialState?: Omit<Partial<TableState>, "sorting"> & {
     sorting?: ExtendedColumnSort<TData>[];
   };
+  advancedFilterKeys?: Partial<FilterKeys>;
   history?: "push" | "replace";
   debounceMs?: number;
   throttleMs?: number;
@@ -69,6 +72,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     columns,
     pageCount = -1,
     initialState,
+    advancedFilterKeys,
     history = "replace",
     debounceMs = DEBOUNCE_MS,
     throttleMs = THROTTLE_MS,
@@ -79,6 +83,13 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     startTransition,
     ...tableProps
   } = props;
+  const keys = {
+    page: advancedFilterKeys?.page ?? PAGE_KEY,
+    perPage: advancedFilterKeys?.perPage ?? PER_PAGE_KEY,
+    sort: advancedFilterKeys?.sort ?? SORT_KEY,
+    filters: advancedFilterKeys?.filters ?? FILTERS_KEY,
+    joinOperator: advancedFilterKeys?.joinOperator ?? JOIN_OPERATOR_KEY,
+  } as FilterKeys
 
   const queryStateOptions = React.useMemo<
     Omit<UseQueryStateOptions<string>, "parse">
@@ -110,11 +121,11 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     React.useState<VisibilityState>(initialState?.columnVisibility ?? {});
 
   const [page, setPage] = useQueryState(
-    PAGE_KEY,
+    keys.page,
     parseAsInteger.withOptions(queryStateOptions).withDefault(1),
   );
   const [perPage, setPerPage] = useQueryState(
-    PER_PAGE_KEY,
+    keys.perPage,
     parseAsInteger
       .withOptions(queryStateOptions)
       .withDefault(initialState?.pagination?.pageSize ?? 10),
@@ -148,7 +159,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
   }, [columns]);
 
   const [sorting, setSorting] = useQueryState(
-    SORT_KEY,
+    keys.sort,
     getSortingStateParser<TData>(columnIds)
       .withOptions(queryStateOptions)
       .withDefault(initialState?.sorting ?? []),
@@ -290,6 +301,9 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     manualPagination: true,
     manualSorting: true,
     manualFiltering: true,
+    meta: { 
+      advancedFilterKeys: keys, 
+    }
   });
 
   return { table, shallow, debounceMs, throttleMs };
