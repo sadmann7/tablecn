@@ -8,34 +8,34 @@ declare module "@tanstack/react-table" {
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
-    updateData: (rowIndex: number, columnId: string, value: unknown) => void;
-    focusedCell: CellPosition | null;
-    editingCell: CellPosition | null;
-    selectionState: SelectionState;
-    onCellClick: (
+    updateData?: (rowIndex: number, columnId: string, value: unknown) => void;
+    focusedCell?: CellPosition | null;
+    editingCell?: CellPosition | null;
+    selectionState?: SelectionState;
+    onCellClick?: (
       rowIndex: number,
       columnId: string,
       event?: React.MouseEvent,
     ) => void;
-    onCellDoubleClick: (rowIndex: number, columnId: string) => void;
-    onCellMouseDown: (
+    onCellDoubleClick?: (rowIndex: number, columnId: string) => void;
+    onCellMouseDown?: (
       rowIndex: number,
       columnId: string,
       event: React.MouseEvent,
     ) => void;
-    onCellMouseEnter: (
+    onCellMouseEnter?: (
       rowIndex: number,
       columnId: string,
       event: React.MouseEvent,
     ) => void;
-    onCellMouseUp: () => void;
-    startEditing: (rowIndex: number, columnId: string) => void;
-    stopEditing: () => void;
-    blurCell: () => void;
-    navigateCell: (direction: NavigationDirection) => void;
-    getIsCellSelected: (rowIndex: number, columnId: string) => boolean;
-    selectAll: () => void;
-    clearSelection: () => void;
+    onCellMouseUp?: () => void;
+    startEditing?: (rowIndex: number, columnId: string) => void;
+    stopEditing?: () => void;
+    blurCell?: () => void;
+    navigateCell?: (direction: NavigationDirection) => void;
+    getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
+    selectAll?: () => void;
+    clearSelection?: () => void;
   }
 }
 

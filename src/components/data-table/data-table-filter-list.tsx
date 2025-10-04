@@ -68,8 +68,6 @@ import type {
   JoinOperator,
 } from "@/types/data-table";
 
-const FILTERS_KEY = "filters";
-const JOIN_OPERATOR_KEY = "joinOperator";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 const OPEN_MENU_SHORTCUT = "f";
@@ -103,7 +101,7 @@ export function DataTableFilterList<TData>({
   }, [table]);
 
   const [filters, setFilters] = useQueryState(
-    FILTERS_KEY,
+    table.options.meta?.queryKeys?.filters ?? "filters",
     getFiltersStateParser<TData>(columns.map((field) => field.id))
       .withDefault([])
       .withOptions({
@@ -115,7 +113,7 @@ export function DataTableFilterList<TData>({
   const debouncedSetFilters = useDebouncedCallback(setFilters, debounceMs);
 
   const [joinOperator, setJoinOperator] = useQueryState(
-    JOIN_OPERATOR_KEY,
+    table.options.meta?.queryKeys?.joinOperator ?? "",
     parseAsStringEnum(["and", "or"]).withDefault("and").withOptions({
       clearOnDefault: true,
       shallow,

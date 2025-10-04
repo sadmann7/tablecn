@@ -76,7 +76,7 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.2.4",
+    "@biomejs/biome": "^2.2.5",
     "@faker-js/faker": "^10.0.0",
     "@tailwindcss/postcss": "^4.1.13",
     "@total-typescript/ts-reset": "^0.6.1",

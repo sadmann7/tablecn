@@ -20,10 +20,14 @@ export const searchParamsCache = createSearchParamsCache({
     { id: "createdAt", desc: true },
   ]),
   title: parseAsString.withDefault(""),
-  status: parseAsArrayOf(z.enum(tasks.status.enumValues)).withDefault([]),
-  priority: parseAsArrayOf(z.enum(tasks.priority.enumValues)).withDefault([]),
-  estimatedHours: parseAsArrayOf(z.coerce.number()).withDefault([]),
-  createdAt: parseAsArrayOf(z.coerce.number()).withDefault([]),
+  status: parseAsArrayOf(
+    parseAsStringEnum(tasks.status.enumValues),
+  ).withDefault([]),
+  priority: parseAsArrayOf(
+    parseAsStringEnum(tasks.priority.enumValues),
+  ).withDefault([]),
+  estimatedHours: parseAsArrayOf(parseAsInteger).withDefault([]),
+  createdAt: parseAsArrayOf(parseAsInteger).withDefault([]),
   // advanced filter
   filters: getFiltersStateParser().withDefault([]),
   joinOperator: parseAsStringEnum(["and", "or"]).withDefault("and"),

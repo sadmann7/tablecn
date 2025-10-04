@@ -39,9 +39,9 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     if (cellRef.current) {
       const currentValue = cellRef.current.textContent ?? "";
       if (currentValue !== initialValue) {
-        meta?.updateData(rowIndex, columnId, currentValue);
+        meta?.updateData?.(rowIndex, columnId, currentValue);
       }
-      meta?.stopEditing();
+      meta?.stopEditing?.();
     }
   }, [meta, rowIndex, columnId, initialValue]);
 
@@ -69,7 +69,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           case "Enter":
             event.preventDefault();
             event.stopPropagation();
-            meta?.startEditing(rowIndex, columnId);
+            meta?.startEditing?.(rowIndex, columnId);
             break;
           case "ArrowUp":
           case "ArrowDown":
@@ -85,7 +85,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
             if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
               event.preventDefault();
               event.stopPropagation();
-              meta?.startEditing(rowIndex, columnId);
+              meta?.startEditing?.(rowIndex, columnId);
 
               setValue(event.key);
 
@@ -115,7 +115,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     (event: React.MouseEvent) => {
       event.preventDefault();
       if (!isEditing) {
-        meta?.onCellClick(rowIndex, columnId, event);
+        meta?.onCellClick?.(rowIndex, columnId, event);
       }
     },
     [meta, rowIndex, columnId, isEditing],
@@ -148,7 +148,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
-      meta?.onCellDoubleClick(rowIndex, columnId);
+      meta?.onCellDoubleClick?.(rowIndex, columnId);
     },
     [meta, rowIndex, columnId],
   );
