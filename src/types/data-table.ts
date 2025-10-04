@@ -3,8 +3,9 @@ import type { DataTableConfig } from "@/config/data-table";
 import type { FilterItemSchema } from "@/lib/parsers";
 
 declare module "@tanstack/react-table" {
+  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
-    advancedFilterKeys: FilterKeys;
+    queryKeys: QueryKeys;
   }
 
   // biome-ignore lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface
@@ -19,7 +20,7 @@ declare module "@tanstack/react-table" {
   }
 }
 
-export interface FilterKeys {
+export interface QueryKeys {
   page: string;
   perPage: string;
   sort: string;
