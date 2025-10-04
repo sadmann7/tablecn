@@ -1,7 +1,7 @@
 import type { RowData } from "@tanstack/react-table";
 
 declare module "@tanstack/react-table" {
-  // biome-ignore lint/correctness/noUnusedVariables: TValue is used in the ColumnMeta interface
+  // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
   }
@@ -15,18 +15,18 @@ declare module "@tanstack/react-table" {
     onCellClick?: (
       rowIndex: number,
       columnId: string,
-      event?: React.MouseEvent,
+      event?: React.MouseEvent
     ) => void;
     onCellDoubleClick?: (rowIndex: number, columnId: string) => void;
     onCellMouseDown?: (
       rowIndex: number,
       columnId: string,
-      event: React.MouseEvent,
+      event: React.MouseEvent
     ) => void;
     onCellMouseEnter?: (
       rowIndex: number,
       columnId: string,
-      event: React.MouseEvent,
+      event: React.MouseEvent
     ) => void;
     onCellMouseUp?: () => void;
     startEditing?: (rowIndex: number, columnId: string) => void;
