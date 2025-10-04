@@ -6,6 +6,7 @@ import * as React from "react";
 
 import { DataTableDateFilter } from "@/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/components/data-table/data-table-faceted-filter";
+import { DataTableBooleanFilter } from "@/components/data-table/data-table-boolean-filter";
 import { DataTableSliderFilter } from "@/components/data-table/data-table-slider-filter";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { Button } from "@/components/ui/button";
@@ -127,6 +128,15 @@ function DataTableToolbarFilter<TData>({
               multiple={columnMeta.variant === "dateRange"}
             />
           );
+
+	      case "boolean":
+		      return (
+			      <DataTableBooleanFilter
+				      column={column}
+				      title={columnMeta.label ?? column.id}
+				      booleanOptions={columnMeta.booleanOptions ?? []}
+			      />
+		      );
 
         case "select":
         case "multiSelect":
