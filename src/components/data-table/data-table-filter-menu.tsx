@@ -106,7 +106,7 @@ export function DataTableFilterMenu<TData>({
   );
 
   const [filters, setFilters] = useQueryState(
-    table.options.meta?.advancedFilterKeys?.filters ?? "",
+    table.options.meta?.queryKeys?.filters ?? "filters",
     getFiltersStateParser<TData>(columns.map((field) => field.id))
       .withDefault([])
       .withOptions({

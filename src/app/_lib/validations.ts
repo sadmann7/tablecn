@@ -10,7 +10,7 @@ import { flagConfig } from "@/config/flag";
 import { type Task, tasks } from "@/db/schema";
 import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
 
-export const searchParams = {
+export const searchParamsCache = createSearchParamsCache({
   filterFlag: parseAsStringEnum(
     flagConfig.featureFlags.map((flag) => flag.value),
   ),
@@ -20,15 +20,18 @@ export const searchParams = {
     { id: "createdAt", desc: true },
   ]),
   title: parseAsString.withDefault(""),
-  status: parseAsArrayOf(z.enum(tasks.status.enumValues)).withDefault([]),
-  priority: parseAsArrayOf(z.enum(tasks.priority.enumValues)).withDefault([]),
-  estimatedHours: parseAsArrayOf(z.coerce.number()).withDefault([]),
-  createdAt: parseAsArrayOf(z.coerce.number()).withDefault([]),
+  status: parseAsArrayOf(
+    parseAsStringEnum(tasks.status.enumValues),
+  ).withDefault([]),
+  priority: parseAsArrayOf(
+    parseAsStringEnum(tasks.priority.enumValues),
+  ).withDefault([]),
+  estimatedHours: parseAsArrayOf(parseAsInteger).withDefault([]),
+  createdAt: parseAsArrayOf(parseAsInteger).withDefault([]),
   // advanced filter
   filters: getFiltersStateParser().withDefault([]),
   joinOperator: parseAsStringEnum(["and", "or"]).withDefault("and"),
-};
-export const searchParamsCache = createSearchParamsCache(searchParams)
+});
 
 export const createTaskSchema = z.object({
   title: z.string(),
