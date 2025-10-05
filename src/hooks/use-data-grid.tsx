@@ -19,6 +19,9 @@ import type {
   SelectionState,
 } from "@/types/data-grid";
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   columns: ColumnDef<TData>[];
@@ -748,6 +751,22 @@ export function useDataGrid<TData>({
       };
     }
   }, [selectionState.isSelecting]);
+
+  useIsomorphicLayoutEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      rowVirtualizer.measure();
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [
+    table.getState().sorting,
+    table.getState().rowSelection,
+    table.getState().columnVisibility,
+    table.getState().columnFilters,
+    table.getState().columnOrder,
+    table.getState().expanded,
+    table.getState().globalFilter,
+    table.getState().grouping,
+  ]);
 
   return {
     dataGridRef,
