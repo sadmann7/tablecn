@@ -1,11 +1,12 @@
 "use client";
 
-import { flexRender, type Table } from "@tanstack/react-table";
+import { flexRender, type Row, type Table } from "@tanstack/react-table";
+import type { Virtualizer } from "@tanstack/react-virtual";
 import { Plus } from "lucide-react";
 import * as React from "react";
 
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
-import { Button } from "@/components/ui/button";
+import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { cn } from "@/lib/utils";
 import type { ScrollToOptions } from "@/types/data-grid";
@@ -14,7 +15,7 @@ interface DataGridProps<TData>
   extends React.ComponentProps<"div">,
     Pick<
       ReturnType<typeof useDataGrid>,
-      "gridRef" | "rowVirtualizer" | "scrollToRow"
+      "gridRef" | "rowVirtualizer" | "rowMapRef" | "scrollToRow"
     > {
   table: Table<TData>;
   height?: number;
@@ -28,6 +29,7 @@ export function DataGrid<TData>({
   gridRef,
   table,
   rowVirtualizer,
+  rowMapRef,
   scrollToRow,
   height = 600,
   onRowAdd: onRowAddProp,
@@ -130,44 +132,18 @@ export function DataGrid<TData>({
               height: `${rowVirtualizer.getTotalSize()}px`,
             }}
           >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const row = rows[virtualRow.index];
+            {rowVirtualizer.getVirtualIndexes().map((virtualRowIndex) => {
+              const row = rows[virtualRowIndex];
               if (!row) return null;
 
               return (
-                <div
+                <DataGridRow
                   key={row.id}
-                  role="row"
-                  aria-rowindex={virtualRow.index + 2}
-                  data-index={virtualRow.index}
-                  data-slot="row"
-                  tabIndex={-1}
-                  ref={(node) => rowVirtualizer.measureElement(node)}
-                  className="absolute flex w-full border-b"
-                  style={{
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  {row.getVisibleCells().map((cell, colIndex) => (
-                    <div
-                      key={cell.id}
-                      role="gridcell"
-                      aria-colindex={colIndex + 1}
-                      data-slot="cell"
-                      tabIndex={-1}
-                      className="flex h-9 w-full items-center border-r"
-                      style={{
-                        width: cell.column.getSize(),
-                        minWidth: cell.column.getSize(),
-                      }}
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </div>
-                  ))}
-                </div>
+                  row={row}
+                  virtualRowIndex={virtualRowIndex}
+                  rowVirtualizer={rowVirtualizer}
+                  rowMapRef={rowMapRef}
+                />
               );
             })}
           </div>

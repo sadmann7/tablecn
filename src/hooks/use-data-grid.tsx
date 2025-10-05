@@ -47,6 +47,7 @@ export function useDataGrid<TData>({
   );
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
+  const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
   const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
     null,
@@ -625,6 +626,15 @@ export function useDataGrid<TData>({
       navigator.userAgent.indexOf("Firefox") === -1
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
+    onChange: (instance) => {
+      requestAnimationFrame(() => {
+        instance.getVirtualItems().forEach((virtualRow) => {
+          const rowRef = rowMapRef.current.get(virtualRow.index);
+          if (!rowRef) return;
+          rowRef.style.transform = `translateY(${virtualRow.start}px)`;
+        });
+      });
+    },
   });
 
   if (!rowVirtualizerRef.current) {
@@ -730,6 +740,7 @@ export function useDataGrid<TData>({
     gridRef,
     table,
     rowVirtualizer,
+    rowMapRef,
     sorting,
     setSorting,
     focusedCell,
