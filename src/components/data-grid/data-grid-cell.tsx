@@ -37,31 +37,74 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
   const hasMultipleSelection =
     (meta?.selectionState?.selectedCells?.size ?? 0) > 1;
 
-  const cellVariant = cell.column.columnDef.meta?.cellVariant;
-  const variantType = cellVariant?.type || "text";
+  const cellOpts = cell.column.columnDef.meta?.cell;
+  const variant = cellOpts?.variant ?? "text";
 
-  const cellProps = {
-    cell,
-    table,
-    rowIndex,
-    columnId,
-    isFocused,
-    isEditing,
-    isSelected,
-    hasMultipleSelection,
-  };
-
-  switch (variantType) {
+  switch (variant) {
     case "number":
-      return <NumberCell {...cellProps} />;
+      return (
+        <NumberCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+          hasMultipleSelection={hasMultipleSelection}
+        />
+      );
     case "select":
-      return <SelectCell {...cellProps} />;
+      return (
+        <SelectCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+          hasMultipleSelection={hasMultipleSelection}
+        />
+      );
     case "checkbox":
-      return <CheckboxCell {...cellProps} />;
+      return (
+        <CheckboxCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+          hasMultipleSelection={hasMultipleSelection}
+        />
+      );
     case "date":
-      return <DateCell {...cellProps} />;
-    case "text":
+      return (
+        <DateCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+          hasMultipleSelection={hasMultipleSelection}
+        />
+      );
     default:
-      return <TextCell {...cellProps} />;
+      return (
+        <TextCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+          hasMultipleSelection={hasMultipleSelection}
+        />
+      );
   }
 }

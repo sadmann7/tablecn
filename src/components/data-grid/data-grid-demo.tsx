@@ -66,8 +66,8 @@ export function DataGridDemo() {
         size: 150,
         meta: {
           label: "First Name",
-          cellVariant: {
-            type: "text",
+          cell: {
+            variant: "text",
             placeholder: "Enter first name",
           },
         },
@@ -79,8 +79,8 @@ export function DataGridDemo() {
         size: 150,
         meta: {
           label: "Last Name",
-          cellVariant: {
-            type: "text",
+          cell: {
+            variant: "text",
             placeholder: "Enter last name",
           },
         },
@@ -92,8 +92,8 @@ export function DataGridDemo() {
         size: 100,
         meta: {
           label: "Age",
-          cellVariant: {
-            type: "number",
+          cell: {
+            variant: "number",
             min: 18,
             max: 100,
             step: 1,
@@ -108,8 +108,8 @@ export function DataGridDemo() {
         size: 240,
         meta: {
           label: "Email",
-          cellVariant: {
-            type: "text",
+          cell: {
+            variant: "text",
             placeholder: "email@example.com",
           },
         },
@@ -121,8 +121,8 @@ export function DataGridDemo() {
         size: 120,
         meta: {
           label: "Salary",
-          cellVariant: {
-            type: "number",
+          cell: {
+            variant: "number",
             min: 0,
             step: 1000,
             placeholder: "Salary",
@@ -136,8 +136,8 @@ export function DataGridDemo() {
         size: 150,
         meta: {
           label: "Department",
-          cellVariant: {
-            type: "select",
+          cell: {
+            variant: "select",
             options: departments.map((dept) => ({
               label: dept,
               value: dept,
@@ -153,8 +153,8 @@ export function DataGridDemo() {
         size: 130,
         meta: {
           label: "Status",
-          cellVariant: {
-            type: "select",
+          cell: {
+            variant: "select",
             options: statuses.map((status) => ({
               label: status,
               value: status,
@@ -170,8 +170,8 @@ export function DataGridDemo() {
         size: 100,
         meta: {
           label: "Active",
-          cellVariant: {
-            type: "checkbox",
+          cell: {
+            variant: "checkbox",
           },
         },
       },
@@ -182,8 +182,8 @@ export function DataGridDemo() {
         size: 150,
         meta: {
           label: "Start Date",
-          cellVariant: {
-            type: "date",
+          cell: {
+            variant: "date",
             placeholder: "Select date",
           },
         },
@@ -195,8 +195,8 @@ export function DataGridDemo() {
         size: 200,
         meta: {
           label: "Job Title",
-          cellVariant: {
-            type: "text",
+          cell: {
+            variant: "text",
             placeholder: "Enter job title",
           },
         },

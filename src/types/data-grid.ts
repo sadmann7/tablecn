@@ -5,28 +5,28 @@ export interface CellSelectOption {
   value: string;
 }
 
-export type CellVariant =
+export type Cell =
   | {
-      type: "text";
+      variant: "text";
       placeholder?: string;
     }
   | {
-      type: "number";
+      variant: "number";
       min?: number;
       max?: number;
       step?: number;
       placeholder?: string;
     }
   | {
-      type: "select";
+      variant: "select";
       options: CellSelectOption[];
       placeholder?: string;
     }
   | {
-      type: "checkbox";
+      variant: "checkbox";
     }
   | {
-      type: "date";
+      variant: "date";
       placeholder?: string;
     };
 
@@ -34,7 +34,7 @@ declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
-    cellVariant?: CellVariant;
+    cell?: Cell;
   }
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface

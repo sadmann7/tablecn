@@ -31,9 +31,9 @@ export function TextCell<TData>({
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
-  const cellVariant = cell.column.columnDef.meta?.cellVariant;
+  const cellOpts = cell.column.columnDef.meta?.cell;
   const placeholder =
-    cellVariant?.type === "text" ? cellVariant.placeholder : undefined;
+    cellOpts?.variant === "text" ? cellOpts.placeholder : undefined;
 
   const onBlur = React.useCallback(() => {
     if (cellRef.current) {
@@ -145,11 +145,12 @@ export function TextCell<TData>({
     }
   }, [isFocused, isEditing, value]);
 
-  const displayValue = !isEditing ? value || "" : "";
+  const displayValue = !isEditing ? (value ?? "") : "";
   const showPlaceholder = !isEditing && !value && placeholder;
 
   return (
     <DataGridCellWrapper
+      ref={cellRef}
       cell={cell}
       table={table}
       rowIndex={rowIndex}
@@ -158,7 +159,6 @@ export function TextCell<TData>({
       isEditing={isEditing}
       isSelected={isSelected}
       hasMultipleSelection={hasMultipleSelection}
-      ref={cellRef}
     >
       <div
         role="textbox"
@@ -194,12 +194,12 @@ export function NumberCell<TData>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
-  const cellVariant = cell.column.columnDef.meta?.cellVariant;
-  const min = cellVariant?.type === "number" ? cellVariant.min : undefined;
-  const max = cellVariant?.type === "number" ? cellVariant.max : undefined;
-  const step = cellVariant?.type === "number" ? cellVariant.step : undefined;
+  const cellOpts = cell.column.columnDef.meta?.cell;
+  const min = cellOpts?.variant === "number" ? cellOpts.min : undefined;
+  const max = cellOpts?.variant === "number" ? cellOpts.max : undefined;
+  const step = cellOpts?.variant === "number" ? cellOpts.step : undefined;
   const placeholder =
-    cellVariant?.type === "number" ? cellVariant.placeholder : undefined;
+    cellOpts?.variant === "number" ? cellOpts.placeholder : undefined;
 
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
@@ -284,6 +284,7 @@ export function NumberCell<TData>({
 
   return (
     <DataGridCellWrapper
+      ref={containerRef}
       cell={cell}
       table={table}
       rowIndex={rowIndex}
@@ -292,7 +293,6 @@ export function NumberCell<TData>({
       isEditing={isEditing}
       isSelected={isSelected}
       hasMultipleSelection={hasMultipleSelection}
-      ref={containerRef}
       className="truncate"
       onKeyDown={onKeyDown}
     >
@@ -313,7 +313,7 @@ export function NumberCell<TData>({
         <span
           className={cn({ "text-muted-foreground": !value && placeholder })}
         >
-          {value || placeholder}
+          {value ?? placeholder}
         </span>
       )}
     </DataGridCellWrapper>
@@ -335,10 +335,10 @@ export function SelectCell<TData>({
   const selectRef = React.useRef<HTMLSelectElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
-  const cellVariant = cell.column.columnDef.meta?.cellVariant;
-  const options = cellVariant?.type === "select" ? cellVariant.options : [];
+  const cellOpts = cell.column.columnDef.meta?.cell;
+  const options = cellOpts?.variant === "select" ? cellOpts.options : [];
   const placeholder =
-    cellVariant?.type === "select" ? cellVariant.placeholder : undefined;
+    cellOpts?.variant === "select" ? cellOpts.placeholder : undefined;
 
   const onBlur = React.useCallback(() => {
     if (value !== initialValue) {
@@ -411,10 +411,11 @@ export function SelectCell<TData>({
   }, [isFocused, isEditing]);
 
   const displayLabel =
-    options.find((opt) => opt.value === value)?.label || value;
+    options.find((opt) => opt.value === value)?.label ?? value;
 
   return (
     <DataGridCellWrapper
+      ref={containerRef}
       cell={cell}
       table={table}
       rowIndex={rowIndex}
@@ -423,7 +424,6 @@ export function SelectCell<TData>({
       isEditing={isEditing}
       isSelected={isSelected}
       hasMultipleSelection={hasMultipleSelection}
-      ref={containerRef}
       className="truncate"
       onKeyDown={onKeyDown}
     >
@@ -450,7 +450,7 @@ export function SelectCell<TData>({
         <span
           className={cn({ "text-muted-foreground": !value && placeholder })}
         >
-          {displayLabel || placeholder}
+          {displayLabel ?? placeholder}
         </span>
       )}
     </DataGridCellWrapper>
@@ -531,6 +531,7 @@ export function CheckboxCell<TData>({
 
   return (
     <DataGridCellWrapper
+      ref={containerRef}
       cell={cell}
       table={table}
       rowIndex={rowIndex}
@@ -539,7 +540,6 @@ export function CheckboxCell<TData>({
       isEditing={false}
       isSelected={isSelected}
       hasMultipleSelection={hasMultipleSelection}
-      ref={containerRef}
       className="flex cursor-pointer items-center justify-center"
       onKeyDown={onWrapperKeyDown}
     >
@@ -589,13 +589,13 @@ export function DateCell<TData>({
   hasMultipleSelection,
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
-  const [value, setValue] = React.useState(initialValue || "");
+  const [value, setValue] = React.useState(initialValue ?? "");
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
-  const cellVariant = cell.column.columnDef.meta?.cellVariant;
+  const cellOpts = cell.column.columnDef.meta?.cell;
   const placeholder =
-    cellVariant?.type === "date" ? cellVariant.placeholder : undefined;
+    cellOpts?.variant === "date" ? cellOpts.placeholder : undefined;
 
   const formatDateForDisplay = (dateStr: string) => {
     if (!dateStr) return "";
@@ -661,7 +661,7 @@ export function DateCell<TData>({
   );
 
   React.useEffect(() => {
-    setValue(initialValue || "");
+    setValue(initialValue ?? "");
   }, [initialValue]);
 
   React.useEffect(() => {
@@ -675,6 +675,7 @@ export function DateCell<TData>({
 
   return (
     <DataGridCellWrapper
+      ref={containerRef}
       cell={cell}
       table={table}
       rowIndex={rowIndex}
@@ -683,7 +684,6 @@ export function DateCell<TData>({
       isEditing={isEditing}
       isSelected={isSelected}
       hasMultipleSelection={hasMultipleSelection}
-      ref={containerRef}
       className="truncate"
       onKeyDown={onKeyDown}
     >
@@ -701,7 +701,7 @@ export function DateCell<TData>({
         <span
           className={cn({ "text-muted-foreground": !value && placeholder })}
         >
-          {formatDateForDisplay(value) || placeholder}
+          {formatDateForDisplay(value) ?? placeholder}
         </span>
       )}
     </DataGridCellWrapper>
