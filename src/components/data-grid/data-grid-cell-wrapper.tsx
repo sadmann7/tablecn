@@ -134,7 +134,6 @@ export function DataGridCellWrapper<TData>({
         "size-full cursor-default truncate px-2 py-1 text-left text-sm outline-none",
         {
           "ring-1 ring-ring ring-inset": isFocused,
-          "bg-primary/10": isSelected,
         },
         className,
       )}
