@@ -42,7 +42,7 @@ function DataGridRowImpl<TData>({
           aria-colindex={colIndex + 1}
           data-slot="cell"
           tabIndex={-1}
-          className="flex h-9 grow items-center border-r"
+          className="flex h-9 grow items-center justify-center border-r"
           style={{
             ...getCommonPinningStyles({ column: cell.column }),
           }}

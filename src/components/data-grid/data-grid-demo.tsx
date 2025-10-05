@@ -7,6 +7,7 @@ import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useDataGrid } from "@/hooks/use-data-grid";
 
 interface Person {
@@ -62,6 +63,33 @@ export function DataGridDemo() {
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+            className="translate-y-0.5"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+            className="translate-y-0.5"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        size: 40,
+      },
       {
         id: "name",
         accessorKey: "name",
@@ -198,17 +226,34 @@ export function DataGridDemo() {
     data,
     onDataChange: setData,
     getRowId: (row) => row.id,
+    initialState: {
+      columnPinning: {
+        left: ["select", "name"],
+      },
+    },
   });
+
+  const selectedRowsCount = table.getFilteredSelectedRowModel().rows.length;
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div
-        role="toolbar"
-        aria-orientation="horizontal"
-        className="ml-auto flex items-center gap-2"
-      >
-        <DataTableSortList table={table} align="end" />
-        <DataTableViewOptions table={table} align="end" />
+      <div className="flex items-center justify-between">
+        {selectedRowsCount > 0 ? (
+          <div className="text-muted-foreground text-sm">
+            {selectedRowsCount} of {table.getFilteredRowModel().rows.length}{" "}
+            row(s) selected
+          </div>
+        ) : (
+          <div />
+        )}
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2"
+        >
+          <DataTableSortList table={table} align="end" />
+          <DataTableViewOptions table={table} align="end" />
+        </div>
       </div>
       <DataGrid
         {...dataGridProps}

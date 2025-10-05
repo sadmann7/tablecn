@@ -1,10 +1,8 @@
 "use client";
 
-import { flexRender, type Row, type Table } from "@tanstack/react-table";
-import type { Virtualizer } from "@tanstack/react-virtual";
+import { flexRender } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
-
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import type { useDataGrid } from "@/hooks/use-data-grid";
@@ -112,7 +110,15 @@ export function DataGrid<TData>({
                         ...getCommonPinningStyles({ column: header.column }),
                       }}
                     >
-                      {header.isPlaceholder ? null : (
+                      {header.isPlaceholder ? null : typeof header.column
+                          .columnDef.header === "function" ? (
+                        <div className="flex size-full items-center justify-center">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                        </div>
+                      ) : (
                         <DataGridColumnHeader header={header} table={table} />
                       )}
                     </div>

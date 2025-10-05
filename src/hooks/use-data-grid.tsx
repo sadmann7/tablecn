@@ -4,6 +4,7 @@ import {
   type ColumnDef,
   getCoreRowModel,
   getSortedRowModel,
+  type RowSelectionState,
   type SortingState,
   type TableOptions,
   useReactTable,
@@ -24,7 +25,6 @@ interface UseDataGridProps<TData>
   data: TData[];
   onDataChange?: (data: TData[]) => void;
   getRowId?: (row: TData, index: number) => string;
-  initialSorting?: SortingState;
   estimateRowSize?: number;
   overscan?: number;
   autoFocus?: boolean;
@@ -34,8 +34,8 @@ export function useDataGrid<TData>({
   columns,
   data,
   onDataChange,
+  initialState,
   getRowId,
-  initialSorting = [],
   estimateRowSize = 35,
   overscan = 3,
   autoFocus = false,
@@ -48,7 +48,12 @@ export function useDataGrid<TData>({
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
-  const [sorting, setSorting] = React.useState<SortingState>(initialSorting);
+  const [sorting, setSorting] = React.useState<SortingState>(
+    initialState?.sorting ?? [],
+  );
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
+    initialState?.rowSelection ?? {},
+  );
   const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
     null,
   );
@@ -585,10 +590,13 @@ export function useDataGrid<TData>({
     data,
     columns,
     defaultColumn,
+    initialState,
     state: {
       ...dataGridProps.state,
       sorting,
+      rowSelection,
     },
+    onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
