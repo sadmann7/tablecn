@@ -12,15 +12,14 @@ import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import type {
   CellPosition,
-  CellRange,
   NavigationDirection,
   ScrollToOptions,
   SelectionState,
 } from "@/types/data-grid";
 
 interface UseDataGridProps<TData> {
-  data: TData[];
   columns: ColumnDef<TData>[];
+  data: TData[];
   onDataChange?: (data: TData[]) => void;
   getRowId?: (row: TData, index: number) => string;
   initialSorting?: SortingState;
@@ -31,8 +30,8 @@ interface UseDataGridProps<TData> {
 }
 
 export function useDataGrid<TData>({
-  data,
   columns,
+  data,
   onDataChange,
   getRowId,
   initialSorting = [],

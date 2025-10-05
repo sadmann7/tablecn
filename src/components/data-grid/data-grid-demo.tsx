@@ -194,13 +194,10 @@ export function DataGridDemo() {
   }, [data.length]);
 
   const { table, ...dataGridProps } = useDataGrid({
-    data,
     columns,
+    data,
     onDataChange: setData,
     getRowId: (row) => row.id,
-    enableSorting: true,
-    estimateRowSize: 35,
-    overscan: 3,
   });
 
   return (
