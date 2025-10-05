@@ -28,6 +28,7 @@ export function TextCell<TData>({
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const placeholder =
@@ -97,25 +98,24 @@ export function TextCell<TData>({
   }, [initialValue, isEditing]);
 
   React.useEffect(() => {
-    if (cellRef.current) {
-      if (isFocused) {
-        cellRef.current.focus();
+    if (isEditing && cellRef.current) {
+      cellRef.current.focus();
 
-        if (isEditing) {
-          if (!cellRef.current.textContent && value) {
-            cellRef.current.textContent = value;
-          }
-
-          if (cellRef.current.textContent) {
-            const range = document.createRange();
-            const selection = window.getSelection();
-            range.selectNodeContents(cellRef.current);
-            range.collapse(false);
-            selection?.removeAllRanges();
-            selection?.addRange(range);
-          }
-        }
+      if (!cellRef.current.textContent && value) {
+        cellRef.current.textContent = value;
       }
+
+      if (cellRef.current.textContent) {
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.selectNodeContents(cellRef.current);
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    }
+    if (isFocused && !isEditing && containerRef.current) {
+      containerRef.current.focus();
     }
   }, [isFocused, isEditing, value]);
 
@@ -124,7 +124,7 @@ export function TextCell<TData>({
 
   return (
     <DataGridCellWrapper
-      ref={cellRef}
+      ref={containerRef}
       cell={cell}
       table={table}
       rowIndex={rowIndex}
@@ -135,9 +135,10 @@ export function TextCell<TData>({
       onVariantKeyDown={onVariantKeyDown}
     >
       <div
+        ref={cellRef}
         role="textbox"
         contentEditable={isEditing}
-        tabIndex={isFocused ? 0 : -1}
+        tabIndex={-1}
         onBlur={onBlur}
         onInput={onInput}
         suppressContentEditableWarning

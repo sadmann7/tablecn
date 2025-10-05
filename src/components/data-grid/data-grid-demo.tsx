@@ -25,8 +25,14 @@ interface Person {
 
 faker.seed(12345);
 
-const departments = ["Engineering", "Marketing", "Sales", "HR", "Finance"];
-const statuses = ["Active", "On Leave", "Remote", "In Office"];
+const departments = [
+  "Engineering",
+  "Marketing",
+  "Sales",
+  "HR",
+  "Finance",
+] as const;
+const statuses = ["Active", "On Leave", "Remote", "In Office"] as const;
 
 function generatePerson(id: number): Person {
   const firstName = faker.person.firstName();
