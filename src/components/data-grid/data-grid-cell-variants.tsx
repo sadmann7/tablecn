@@ -523,10 +523,14 @@ export function CheckboxCell<TData>({
   const onWrapperClickHandler = React.useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
-      meta?.onCellClick?.(rowIndex, columnId, event);
-      toggleValue();
+
+      if (isFocused) {
+        toggleValue();
+      } else {
+        meta?.onCellClick?.(rowIndex, columnId, event);
+      }
     },
-    [meta, rowIndex, columnId, toggleValue],
+    [isFocused, meta, rowIndex, columnId, toggleValue],
   );
 
   return (
