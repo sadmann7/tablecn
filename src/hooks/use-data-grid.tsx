@@ -760,6 +760,8 @@ export function useDataGrid<TData>({
   }, [
     table.getState().columnFilters,
     table.getState().columnOrder,
+    table.getState().columnPinning,
+    table.getState().columnSizing,
     table.getState().columnVisibility,
     table.getState().expanded,
     table.getState().globalFilter,
