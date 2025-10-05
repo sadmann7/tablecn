@@ -5,6 +5,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   type SortingState,
+  type TableOptions,
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
@@ -17,7 +18,8 @@ import type {
   SelectionState,
 } from "@/types/data-grid";
 
-interface UseDataGridProps<TData> {
+interface UseDataGridProps<TData>
+  extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   columns: ColumnDef<TData>[];
   data: TData[];
   onDataChange?: (data: TData[]) => void;
@@ -26,7 +28,6 @@ interface UseDataGridProps<TData> {
   estimateRowSize?: number;
   overscan?: number;
   autoFocus?: boolean;
-  enableSorting?: boolean;
 }
 
 export function useDataGrid<TData>({
@@ -38,7 +39,7 @@ export function useDataGrid<TData>({
   estimateRowSize = 35,
   overscan = 3,
   autoFocus = false,
-  enableSorting = true,
+  ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>> | null>(
@@ -580,18 +581,20 @@ export function useDataGrid<TData>({
   );
 
   const table = useReactTable({
+    ...dataGridProps,
     data,
     columns,
     defaultColumn,
     state: {
+      ...dataGridProps.state,
       sorting,
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    enableSorting,
     getRowId,
     meta: {
+      ...dataGridProps.meta,
       updateData,
       focusedCell,
       editingCell,

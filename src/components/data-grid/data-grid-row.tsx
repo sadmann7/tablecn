@@ -4,6 +4,8 @@ import { flexRender, type Row } from "@tanstack/react-table";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 
+import { getCommonPinningStyles } from "@/lib/data-table";
+
 interface DataGridRowProps<TData> {
   row: Row<TData>;
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
@@ -42,8 +44,7 @@ function DataGridRowImpl<TData>({
           tabIndex={-1}
           className="flex h-9 grow items-center border-r"
           style={{
-            width: cell.column.getSize(),
-            minWidth: cell.column.getSize(),
+            ...getCommonPinningStyles({ column: cell.column }),
           }}
         >
           {flexRender(cell.column.columnDef.cell, cell.getContext())}

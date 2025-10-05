@@ -8,6 +8,7 @@ import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import type { useDataGrid } from "@/hooks/use-data-grid";
+import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 import type { ScrollToOptions } from "@/types/data-grid";
 
@@ -108,8 +109,7 @@ export function DataGrid<TData>({
                       tabIndex={-1}
                       className="grow border-r"
                       style={{
-                        width: header.getSize(),
-                        minWidth: header.getSize(),
+                        ...getCommonPinningStyles({ column: header.column }),
                       }}
                     >
                       {header.isPlaceholder ? null : (
