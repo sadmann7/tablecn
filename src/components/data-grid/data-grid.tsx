@@ -12,12 +12,8 @@ import { cn } from "@/lib/utils";
 import type { ScrollToOptions } from "@/types/data-grid";
 
 interface DataGridProps<TData>
-  extends React.ComponentProps<"div">,
-    Pick<
-      ReturnType<typeof useDataGrid>,
-      "gridRef" | "rowVirtualizer" | "rowMapRef" | "scrollToRow"
-    > {
-  table: Table<TData>;
+  extends ReturnType<typeof useDataGrid<TData>>,
+    React.ComponentProps<"div"> {
   height?: number;
   onRowAdd?: () =>
     | ScrollToOptions
@@ -26,7 +22,7 @@ interface DataGridProps<TData>
 }
 
 export function DataGrid<TData>({
-  gridRef,
+  dataGridRef,
   table,
   rowVirtualizer,
   rowMapRef,
@@ -67,7 +63,7 @@ export function DataGrid<TData>({
         aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
         aria-colcount={columns.length}
         tabIndex={0}
-        ref={gridRef}
+        ref={dataGridRef}
         className="relative select-none overflow-auto rounded-md border focus:outline-none"
         style={{
           height: `${height}px`,

@@ -193,16 +193,15 @@ export function DataGridDemo() {
     };
   }, [data.length]);
 
-  const { gridRef, table, rowVirtualizer, rowMapRef, scrollToRow } =
-    useDataGrid({
-      data,
-      columns,
-      onDataChange: setData,
-      getRowId: (row) => row.id,
-      enableSorting: true,
-      estimateRowSize: 35,
-      overscan: 3,
-    });
+  const { table, ...dataGridProps } = useDataGrid({
+    data,
+    columns,
+    onDataChange: setData,
+    getRowId: (row) => row.id,
+    enableSorting: true,
+    estimateRowSize: 35,
+    overscan: 3,
+  });
 
   return (
     <div className="flex flex-col gap-4 p-6">
@@ -215,11 +214,8 @@ export function DataGridDemo() {
         <DataTableViewOptions table={table} align="end" />
       </div>
       <DataGrid
-        gridRef={gridRef}
+        {...dataGridProps}
         table={table}
-        rowVirtualizer={rowVirtualizer}
-        rowMapRef={rowMapRef}
-        scrollToRow={scrollToRow}
         onRowAdd={onRowAdd}
         height={500}
       />

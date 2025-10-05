@@ -41,7 +41,7 @@ export function useDataGrid<TData>({
   autoFocus = false,
   enableSorting = true,
 }: UseDataGridProps<TData>) {
-  const gridRef = React.useRef<HTMLDivElement>(null);
+  const dataGridRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>> | null>(
     null,
   );
@@ -195,8 +195,8 @@ export function useDataGrid<TData>({
     setFocusedCell({ rowIndex, columnId });
     setEditingCell(null);
 
-    if (gridRef.current && document.activeElement !== gridRef.current) {
-      gridRef.current.focus();
+    if (dataGridRef.current && document.activeElement !== dataGridRef.current) {
+      dataGridRef.current.focus();
     }
   }, []);
 
@@ -433,7 +433,7 @@ export function useDataGrid<TData>({
     [focusedCell, getColumnIds, focusCell, data.length],
   );
 
-  const onKeyDown = React.useCallback(
+  const onDataGridKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
       if (editingCell) return;
 
@@ -618,7 +618,7 @@ export function useDataGrid<TData>({
 
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
-    getScrollElement: () => gridRef.current,
+    getScrollElement: () => dataGridRef.current,
     estimateSize: () => estimateRowSize,
     overscan,
     measureElement:
@@ -662,14 +662,14 @@ export function useDataGrid<TData>({
   );
 
   React.useEffect(() => {
-    const gridElement = gridRef.current;
-    if (!gridElement) return;
+    const dataGridElement = dataGridRef.current;
+    if (!dataGridElement) return;
 
-    gridElement.addEventListener("keydown", onKeyDown);
+    dataGridElement.addEventListener("keydown", onDataGridKeyDown);
     return () => {
-      gridElement.removeEventListener("keydown", onKeyDown);
+      dataGridElement.removeEventListener("keydown", onDataGridKeyDown);
     };
-  }, [onKeyDown]);
+  }, [onDataGridKeyDown]);
 
   React.useEffect(() => {
     if (autoFocus && data.length > 0 && columns.length > 0 && !focusedCell) {
@@ -695,7 +695,10 @@ export function useDataGrid<TData>({
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
-      if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
+      if (
+        dataGridRef.current &&
+        !dataGridRef.current.contains(event.target as Node)
+      ) {
         const target = event.target;
         const isInsidePopover =
           target instanceof HTMLElement && target.closest("[data-cell-editor]");
@@ -737,24 +740,10 @@ export function useDataGrid<TData>({
   }, [selectionState.isSelecting]);
 
   return {
-    gridRef,
+    dataGridRef,
     table,
     rowVirtualizer,
     rowMapRef,
-    sorting,
-    setSorting,
-    focusedCell,
-    editingCell,
-    selectionState,
-    focusCell,
-    startEditing,
-    stopEditing,
-    blurCell,
-    navigateCell,
-    onKeyDown,
-    getIsCellSelected,
-    selectAll,
-    clearSelection,
     scrollToRow,
   };
 }
