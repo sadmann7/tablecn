@@ -1,9 +1,16 @@
 "use client";
 
 import type { Cell, Table } from "@tanstack/react-table";
+import { Check } from "lucide-react";
 import * as React from "react";
-
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 interface CellVariantProps<TData> {
@@ -52,7 +59,7 @@ export function TextCell<TData>({
     [],
   );
 
-  const onVariantKeyDown = React.useCallback(
+  const onCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -132,13 +139,13 @@ export function TextCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onVariantKeyDown={onVariantKeyDown}
+      onCellKeyDown={onCellKeyDown}
     >
       <div
-        ref={cellRef}
         role="textbox"
         contentEditable={isEditing}
         tabIndex={-1}
+        ref={cellRef}
         onBlur={onBlur}
         onInput={onInput}
         suppressContentEditableWarning
@@ -189,7 +196,7 @@ export function NumberCell<TData>({
     [],
   );
 
-  const onVariantKeyDown = React.useCallback(
+  const onCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -237,7 +244,7 @@ export function NumberCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onVariantKeyDown={onVariantKeyDown}
+      onCellKeyDown={onCellKeyDown}
     >
       {isEditing ? (
         <input
@@ -274,7 +281,7 @@ export function SelectCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
-  const selectRef = React.useRef<HTMLSelectElement>(null);
+  const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
@@ -282,16 +289,8 @@ export function SelectCell<TData>({
   const placeholder =
     cellOpts?.variant === "select" ? cellOpts.placeholder : undefined;
 
-  const onBlur = React.useCallback(() => {
-    if (value !== initialValue) {
-      meta?.updateData?.(rowIndex, columnId, value);
-    }
-    meta?.stopEditing?.();
-  }, [meta, rowIndex, columnId, initialValue, value]);
-
-  const onChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      const newValue = event.target.value;
+  const onValueChange = React.useCallback(
+    (newValue: string) => {
       setValue(newValue);
       meta?.updateData?.(rowIndex, columnId, newValue);
       meta?.stopEditing?.();
@@ -299,15 +298,26 @@ export function SelectCell<TData>({
     [meta, rowIndex, columnId],
   );
 
-  const onVariantKeyDown = React.useCallback(
+  const onOpenChange = React.useCallback(
+    (isOpen: boolean) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        meta?.stopEditing?.();
+      }
+    },
+    [meta],
+  );
+
+  const onCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
-        selectRef.current?.blur();
+        setOpen(false);
+        meta?.stopEditing?.();
       }
     },
-    [isEditing, initialValue],
+    [isEditing, initialValue, meta],
   );
 
   React.useEffect(() => {
@@ -315,13 +325,13 @@ export function SelectCell<TData>({
   }, [initialValue]);
 
   React.useEffect(() => {
-    if (isEditing && selectRef.current) {
-      selectRef.current.focus();
+    if (isEditing && !open) {
+      setOpen(true);
     }
     if (isFocused && !isEditing && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing]);
+  }, [isFocused, isEditing, open]);
 
   const displayLabel =
     options.find((opt) => opt.value === value)?.label ?? value;
@@ -336,27 +346,29 @@ export function SelectCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onVariantKeyDown={onVariantKeyDown}
+      onCellKeyDown={onCellKeyDown}
     >
       {isEditing ? (
-        <select
-          ref={selectRef}
+        <Select
           value={value}
-          onChange={onChange}
-          onBlur={onBlur}
-          className="size-full border-none bg-transparent p-0 outline-none"
+          onValueChange={onValueChange}
+          open={open}
+          onOpenChange={onOpenChange}
         >
-          {placeholder && (
-            <option value="" disabled>
-              {placeholder}
-            </option>
-          )}
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            size="sm"
+            className="h-full w-full border-none p-0 shadow-none focus-visible:ring-0"
+          >
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent data-cell-editor="">
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       ) : (
         <span
           className={cn({ "text-muted-foreground": !value && placeholder })}
@@ -387,7 +399,7 @@ export function CheckboxCell<TData>({
     meta?.updateData?.(rowIndex, columnId, newValue);
   }, [value, meta, rowIndex, columnId]);
 
-  const onVariantKeyDown = React.useCallback(
+  const onCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isFocused && (event.key === " " || event.key === "Enter")) {
         event.preventDefault();
@@ -431,7 +443,7 @@ export function CheckboxCell<TData>({
       isFocused={isFocused}
       isEditing={false}
       isSelected={isSelected}
-      onVariantKeyDown={onVariantKeyDown}
+      onCellKeyDown={onCellKeyDown}
     >
       <div
         role="button"
@@ -441,31 +453,23 @@ export function CheckboxCell<TData>({
       >
         <div
           className={cn(
-            "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+            "flex size-4 items-center justify-center rounded-sm border border-primary",
             {
               "bg-primary text-primary-foreground": value,
             },
           )}
         >
-          {value && (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-3 w-3"
-              aria-hidden="true"
-            >
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-          )}
+          {value && <Check className="size-3" />}
         </div>
       </div>
     </DataGridCellWrapper>
   );
+}
+
+function formatDateForDisplay(dateStr: string) {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleDateString();
 }
 
 export function DateCell<TData>({
@@ -486,12 +490,6 @@ export function DateCell<TData>({
   const placeholder =
     cellOpts?.variant === "date" ? cellOpts.placeholder : undefined;
 
-  const formatDateForDisplay = (dateStr: string) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString();
-  };
-
   const onBlur = React.useCallback(() => {
     if (value !== initialValue) {
       meta?.updateData?.(rowIndex, columnId, value);
@@ -506,7 +504,7 @@ export function DateCell<TData>({
     [],
   );
 
-  const onVariantKeyDown = React.useCallback(
+  const onCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -545,12 +543,13 @@ export function DateCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onVariantKeyDown={onVariantKeyDown}
+      onCellKeyDown={onCellKeyDown}
     >
       {isEditing ? (
         <input
-          ref={inputRef}
           type="date"
+          data-cell-editor=""
+          ref={inputRef}
           value={value}
           placeholder={placeholder}
           onChange={onChange}

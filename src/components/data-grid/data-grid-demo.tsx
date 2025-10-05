@@ -11,8 +11,7 @@ import { useDataGrid } from "@/hooks/use-data-grid";
 
 interface Person {
   id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   age: number;
   email: string;
   salary: number;
@@ -20,7 +19,6 @@ interface Person {
   status: string;
   isActive: boolean;
   startDate: string;
-  jobTitle: string;
 }
 
 faker.seed(12345);
@@ -37,10 +35,10 @@ const statuses = ["Active", "On Leave", "Remote", "In Office"] as const;
 function generatePerson(id: number): Person {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
+
   return {
     id: id.toString(),
-    firstName,
-    lastName,
+    name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
     salary: faker.number.int({ min: 40000, max: 150000 }),
@@ -52,7 +50,6 @@ function generatePerson(id: number): Person {
         .between({ from: "2018-01-01", to: "2024-01-01" })
         .toISOString()
         .split("T")[0] ?? "",
-    jobTitle: faker.person.jobTitle(),
   };
 }
 
@@ -66,28 +63,15 @@ export function DataGridDemo() {
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
       {
-        id: "firstName",
-        accessorKey: "firstName",
-        header: "First Name",
-        size: 150,
+        id: "name",
+        accessorKey: "name",
+        header: "Name",
+        minSize: 180,
         meta: {
-          label: "First Name",
+          label: "Name",
           cell: {
             variant: "text",
-            placeholder: "Enter first name",
-          },
-        },
-      },
-      {
-        id: "lastName",
-        accessorKey: "lastName",
-        header: "Last Name",
-        size: 150,
-        meta: {
-          label: "Last Name",
-          cell: {
-            variant: "text",
-            placeholder: "Enter last name",
+            placeholder: "Enter name",
           },
         },
       },
@@ -95,7 +79,7 @@ export function DataGridDemo() {
         id: "age",
         accessorKey: "age",
         header: "Age",
-        size: 100,
+        minSize: 100,
         meta: {
           label: "Age",
           cell: {
@@ -111,7 +95,7 @@ export function DataGridDemo() {
         id: "email",
         accessorKey: "email",
         header: "Email",
-        size: 240,
+        minSize: 240,
         meta: {
           label: "Email",
           cell: {
@@ -124,7 +108,7 @@ export function DataGridDemo() {
         id: "salary",
         accessorKey: "salary",
         header: "Salary",
-        size: 120,
+        minSize: 180,
         meta: {
           label: "Salary",
           cell: {
@@ -139,7 +123,7 @@ export function DataGridDemo() {
         id: "department",
         accessorKey: "department",
         header: "Department",
-        size: 150,
+        minSize: 180,
         meta: {
           label: "Department",
           cell: {
@@ -156,7 +140,7 @@ export function DataGridDemo() {
         id: "status",
         accessorKey: "status",
         header: "Status",
-        size: 130,
+        minSize: 180,
         meta: {
           label: "Status",
           cell: {
@@ -173,7 +157,7 @@ export function DataGridDemo() {
         id: "isActive",
         accessorKey: "isActive",
         header: "Active",
-        size: 100,
+        minSize: 140,
         meta: {
           label: "Active",
           cell: {
@@ -185,25 +169,12 @@ export function DataGridDemo() {
         id: "startDate",
         accessorKey: "startDate",
         header: "Start Date",
-        size: 150,
+        minSize: 150,
         meta: {
           label: "Start Date",
           cell: {
             variant: "date",
             placeholder: "Select date",
-          },
-        },
-      },
-      {
-        id: "jobTitle",
-        accessorKey: "jobTitle",
-        header: "Job Title",
-        size: 200,
-        meta: {
-          label: "Job Title",
-          cell: {
-            variant: "text",
-            placeholder: "Enter job title",
           },
         },
       },
@@ -218,7 +189,7 @@ export function DataGridDemo() {
 
     return {
       rowIndex: data.length,
-      columnId: "firstName",
+      columnId: "name",
     };
   }, [data.length]);
 

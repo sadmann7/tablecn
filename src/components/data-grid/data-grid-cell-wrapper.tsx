@@ -14,7 +14,7 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   isEditing: boolean;
   isSelected: boolean;
   className?: string;
-  onVariantKeyDown?: (event: React.KeyboardEvent) => void;
+  onCellKeyDown?: (event: React.KeyboardEvent) => void;
 }
 
 export function DataGridCellWrapper<TData>({
@@ -26,19 +26,24 @@ export function DataGridCellWrapper<TData>({
   isSelected,
   className,
   children,
-  onVariantKeyDown,
+  onCellKeyDown,
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const meta = table.options.meta;
 
   const onClick = React.useCallback(
     (event: React.MouseEvent) => {
-      event.preventDefault();
       if (!isEditing) {
-        meta?.onCellClick?.(rowIndex, columnId, event);
+        event.preventDefault();
+        // If already focused, enter edit mode immediately
+        if (isFocused) {
+          meta?.startEditing?.(rowIndex, columnId);
+        } else {
+          meta?.onCellClick?.(rowIndex, columnId, event);
+        }
       }
     },
-    [meta, rowIndex, columnId, isEditing],
+    [meta, rowIndex, columnId, isEditing, isFocused],
   );
 
   const onMouseDown = React.useCallback(
@@ -67,16 +72,18 @@ export function DataGridCellWrapper<TData>({
 
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent) => {
-      event.preventDefault();
-      meta?.onCellDoubleClick?.(rowIndex, columnId);
+      if (!isEditing) {
+        event.preventDefault();
+        meta?.onCellDoubleClick?.(rowIndex, columnId);
+      }
     },
-    [meta, rowIndex, columnId],
+    [meta, rowIndex, columnId, isEditing],
   );
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       // Always let the variant handle its specific logic first
-      onVariantKeyDown?.(event);
+      onCellKeyDown?.(event);
 
       // If variant handled it, don't continue
       if (event.defaultPrevented) return;
@@ -98,7 +105,16 @@ export function DataGridCellWrapper<TData>({
 
       // Handle common editing triggers when focused but not editing
       if (isFocused && !isEditing) {
-        if (event.key === "F2" || event.key === "Enter" || event.key === " ") {
+        // Enter and F2 trigger edit mode immediately
+        if (event.key === "F2" || event.key === "Enter") {
+          event.preventDefault();
+          event.stopPropagation();
+          meta?.startEditing?.(rowIndex, columnId);
+          return;
+        }
+
+        // Space triggers edit mode for most cells (variants can override)
+        if (event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
           meta?.startEditing?.(rowIndex, columnId);
@@ -113,7 +129,7 @@ export function DataGridCellWrapper<TData>({
         }
       }
     },
-    [onVariantKeyDown, isFocused, isEditing, meta, rowIndex, columnId],
+    [onCellKeyDown, isFocused, isEditing, meta, rowIndex, columnId],
   );
 
   return (

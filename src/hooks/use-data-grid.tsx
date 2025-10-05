@@ -686,9 +686,15 @@ export function useDataGrid<TData>({
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
       if (gridRef.current && !gridRef.current.contains(event.target as Node)) {
-        table.options.meta?.blurCell?.();
-        if (selectionState.selectedCells.size > 0) {
-          clearSelection();
+        const target = event.target;
+        const isInsidePopover =
+          target instanceof HTMLElement && target.closest("[data-cell-editor]");
+
+        if (!isInsidePopover) {
+          table.options.meta?.blurCell?.();
+          if (selectionState.selectedCells.size > 0) {
+            clearSelection();
+          }
         }
       }
     }
