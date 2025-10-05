@@ -106,7 +106,7 @@ export function DataGrid<TData>({
                       }
                       data-slot="header-cell"
                       tabIndex={-1}
-                      className="border-r"
+                      className="grow border-r"
                       style={{
                         width: header.getSize(),
                         minWidth: header.getSize(),
@@ -158,7 +158,7 @@ export function DataGrid<TData>({
                 <div
                   role="gridcell"
                   tabIndex={0}
-                  className="relative flex h-9 w-full items-center bg-muted/30 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
+                  className="relative flex h-9 grow items-center bg-muted/30 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
                   style={{
                     width: table.getTotalSize(),
                     minWidth: table.getTotalSize(),

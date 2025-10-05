@@ -32,9 +32,6 @@ function DataGridRowImpl<TData>({
       data-slot="row"
       tabIndex={-1}
       className="absolute flex w-full border-b"
-      style={{
-        width: "100%",
-      }}
     >
       {row.getVisibleCells().map((cell, colIndex) => (
         <div
@@ -43,7 +40,7 @@ function DataGridRowImpl<TData>({
           aria-colindex={colIndex + 1}
           data-slot="cell"
           tabIndex={-1}
-          className="flex h-9 w-full items-center border-r"
+          className="flex h-9 grow items-center border-r"
           style={{
             width: cell.column.getSize(),
             minWidth: cell.column.getSize(),
