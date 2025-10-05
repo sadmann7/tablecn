@@ -1,0 +1,709 @@
+"use client";
+
+import type { Cell, Table } from "@tanstack/react-table";
+import * as React from "react";
+
+import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
+import { cn } from "@/lib/utils";
+
+interface CellVariantProps<TData> {
+  cell: Cell<TData, unknown>;
+  table: Table<TData>;
+  rowIndex: number;
+  columnId: string;
+  isFocused: boolean;
+  isEditing: boolean;
+  isSelected: boolean;
+  hasMultipleSelection: boolean;
+}
+
+export function TextCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+  hasMultipleSelection,
+}: CellVariantProps<TData>) {
+  const initialValue = cell.getValue() as string;
+  const [value, setValue] = React.useState(initialValue);
+  const cellRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+  const cellVariant = cell.column.columnDef.meta?.cellVariant;
+  const placeholder =
+    cellVariant?.type === "text" ? cellVariant.placeholder : undefined;
+
+  const onBlur = React.useCallback(() => {
+    if (cellRef.current) {
+      const currentValue = cellRef.current.textContent ?? "";
+      if (currentValue !== initialValue) {
+        meta?.updateData?.(rowIndex, columnId, currentValue);
+      }
+      meta?.stopEditing?.();
+    }
+  }, [meta, rowIndex, columnId, initialValue]);
+
+  const onInput = React.useCallback(
+    (event: React.FormEvent<HTMLDivElement>) => {
+      const currentValue = event.currentTarget.textContent ?? "";
+      setValue(currentValue);
+    },
+    [],
+  );
+
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (isEditing) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          cellRef.current?.blur();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          if (cellRef.current) {
+            cellRef.current.textContent = initialValue;
+          }
+          cellRef.current?.blur();
+        }
+      } else if (isFocused) {
+        switch (event.key) {
+          case "F2":
+          case "Enter":
+          case " ":
+            event.preventDefault();
+            event.stopPropagation();
+            meta?.startEditing?.(rowIndex, columnId);
+            break;
+          case "ArrowUp":
+          case "ArrowDown":
+          case "ArrowLeft":
+          case "ArrowRight":
+          case "Home":
+          case "End":
+          case "PageUp":
+          case "PageDown":
+          case "Tab":
+            break;
+          default:
+            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+              event.preventDefault();
+              event.stopPropagation();
+              meta?.startEditing?.(rowIndex, columnId);
+
+              setValue(event.key);
+
+              queueMicrotask(() => {
+                if (
+                  cellRef.current &&
+                  cellRef.current.contentEditable === "true"
+                ) {
+                  cellRef.current.textContent = event.key;
+                  const range = document.createRange();
+                  const selection = window.getSelection();
+                  range.selectNodeContents(cellRef.current);
+                  range.collapse(false);
+                  selection?.removeAllRanges();
+                  selection?.addRange(range);
+                }
+              });
+            }
+            break;
+        }
+      }
+    },
+    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+  );
+
+  React.useEffect(() => {
+    setValue(initialValue);
+    if (cellRef.current && !isEditing) {
+      cellRef.current.textContent = initialValue;
+    }
+  }, [initialValue, isEditing]);
+
+  React.useEffect(() => {
+    if (cellRef.current) {
+      if (isFocused) {
+        cellRef.current.focus();
+
+        if (isEditing) {
+          if (!cellRef.current.textContent && value) {
+            cellRef.current.textContent = value;
+          }
+
+          if (cellRef.current.textContent) {
+            const range = document.createRange();
+            const selection = window.getSelection();
+            range.selectNodeContents(cellRef.current);
+            range.collapse(false);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
+        }
+      }
+    }
+  }, [isFocused, isEditing, value]);
+
+  const displayValue = !isEditing ? value || "" : "";
+  const showPlaceholder = !isEditing && !value && placeholder;
+
+  return (
+    <DataGridCellWrapper
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isFocused={isFocused}
+      isEditing={isEditing}
+      isSelected={isSelected}
+      hasMultipleSelection={hasMultipleSelection}
+      ref={cellRef}
+    >
+      <div
+        role="textbox"
+        contentEditable={isEditing}
+        tabIndex={isFocused ? 0 : -1}
+        onBlur={onBlur}
+        onInput={onInput}
+        onKeyDown={onKeyDown}
+        suppressContentEditableWarning
+        className={cn("size-full truncate outline-none", {
+          "cursor-text": isEditing,
+          "text-muted-foreground": showPlaceholder,
+        })}
+      >
+        {showPlaceholder ? placeholder : displayValue}
+      </div>
+    </DataGridCellWrapper>
+  );
+}
+
+export function NumberCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+  hasMultipleSelection,
+}: CellVariantProps<TData>) {
+  const initialValue = cell.getValue() as number;
+  const [value, setValue] = React.useState(String(initialValue ?? ""));
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+  const cellVariant = cell.column.columnDef.meta?.cellVariant;
+  const min = cellVariant?.type === "number" ? cellVariant.min : undefined;
+  const max = cellVariant?.type === "number" ? cellVariant.max : undefined;
+  const step = cellVariant?.type === "number" ? cellVariant.step : undefined;
+  const placeholder =
+    cellVariant?.type === "number" ? cellVariant.placeholder : undefined;
+
+  const onBlur = React.useCallback(() => {
+    const numValue = value === "" ? null : Number(value);
+    if (numValue !== initialValue) {
+      meta?.updateData?.(rowIndex, columnId, numValue);
+    }
+    meta?.stopEditing?.();
+  }, [meta, rowIndex, columnId, initialValue, value]);
+
+  const onChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setValue(event.target.value);
+    },
+    [],
+  );
+
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (isEditing) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          inputRef.current?.blur();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          setValue(String(initialValue ?? ""));
+          inputRef.current?.blur();
+        }
+      } else if (isFocused) {
+        switch (event.key) {
+          case "F2":
+          case "Enter":
+          case " ":
+            event.preventDefault();
+            event.stopPropagation();
+            meta?.startEditing?.(rowIndex, columnId);
+            break;
+          case "ArrowUp":
+          case "ArrowDown":
+          case "ArrowLeft":
+          case "ArrowRight":
+          case "Home":
+          case "End":
+          case "PageUp":
+          case "PageDown":
+          case "Tab":
+            break;
+          default:
+            if (
+              (event.key.length === 1 || event.key === "Backspace") &&
+              !event.ctrlKey &&
+              !event.metaKey
+            ) {
+              event.preventDefault();
+              event.stopPropagation();
+              meta?.startEditing?.(rowIndex, columnId);
+              if (event.key !== "Backspace") {
+                setValue(event.key);
+              } else {
+                setValue("");
+              }
+            }
+            break;
+        }
+      }
+    },
+    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+  );
+
+  React.useEffect(() => {
+    setValue(String(initialValue ?? ""));
+  }, [initialValue]);
+
+  React.useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+    if (isFocused && !isEditing && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isFocused, isEditing]);
+
+  return (
+    <DataGridCellWrapper
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isFocused={isFocused}
+      isEditing={isEditing}
+      isSelected={isSelected}
+      hasMultipleSelection={hasMultipleSelection}
+      ref={containerRef}
+      className="truncate"
+      onKeyDown={onKeyDown}
+    >
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="number"
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          placeholder={placeholder}
+          onChange={onChange}
+          onBlur={onBlur}
+          className="size-full border-none bg-transparent p-0 outline-none"
+        />
+      ) : (
+        <span
+          className={cn({ "text-muted-foreground": !value && placeholder })}
+        >
+          {value || placeholder}
+        </span>
+      )}
+    </DataGridCellWrapper>
+  );
+}
+
+export function SelectCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+  hasMultipleSelection,
+}: CellVariantProps<TData>) {
+  const initialValue = cell.getValue() as string;
+  const [value, setValue] = React.useState(initialValue);
+  const selectRef = React.useRef<HTMLSelectElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+  const cellVariant = cell.column.columnDef.meta?.cellVariant;
+  const options = cellVariant?.type === "select" ? cellVariant.options : [];
+  const placeholder =
+    cellVariant?.type === "select" ? cellVariant.placeholder : undefined;
+
+  const onBlur = React.useCallback(() => {
+    if (value !== initialValue) {
+      meta?.updateData?.(rowIndex, columnId, value);
+    }
+    meta?.stopEditing?.();
+  }, [meta, rowIndex, columnId, initialValue, value]);
+
+  const onChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const newValue = event.target.value;
+      setValue(newValue);
+      meta?.updateData?.(rowIndex, columnId, newValue);
+      meta?.stopEditing?.();
+    },
+    [meta, rowIndex, columnId],
+  );
+
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (isEditing) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setValue(initialValue);
+          selectRef.current?.blur();
+        }
+      } else if (isFocused) {
+        switch (event.key) {
+          case "F2":
+          case "Enter":
+          case " ":
+            event.preventDefault();
+            event.stopPropagation();
+            meta?.startEditing?.(rowIndex, columnId);
+            break;
+          case "ArrowUp":
+          case "ArrowDown":
+          case "ArrowLeft":
+          case "ArrowRight":
+          case "Home":
+          case "End":
+          case "PageUp":
+          case "PageDown":
+          case "Tab":
+            break;
+          default:
+            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+              event.preventDefault();
+              event.stopPropagation();
+              meta?.startEditing?.(rowIndex, columnId);
+            }
+            break;
+        }
+      }
+    },
+    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+  );
+
+  React.useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
+  React.useEffect(() => {
+    if (isEditing && selectRef.current) {
+      selectRef.current.focus();
+    }
+    if (isFocused && !isEditing && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isFocused, isEditing]);
+
+  const displayLabel =
+    options.find((opt) => opt.value === value)?.label || value;
+
+  return (
+    <DataGridCellWrapper
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isFocused={isFocused}
+      isEditing={isEditing}
+      isSelected={isSelected}
+      hasMultipleSelection={hasMultipleSelection}
+      ref={containerRef}
+      className="truncate"
+      onKeyDown={onKeyDown}
+    >
+      {isEditing ? (
+        <select
+          ref={selectRef}
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          className="size-full border-none bg-transparent p-0 outline-none"
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <span
+          className={cn({ "text-muted-foreground": !value && placeholder })}
+        >
+          {displayLabel || placeholder}
+        </span>
+      )}
+    </DataGridCellWrapper>
+  );
+}
+
+export function CheckboxCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isSelected,
+  hasMultipleSelection,
+}: CellVariantProps<TData>) {
+  const initialValue = cell.getValue() as boolean;
+  const [value, setValue] = React.useState(Boolean(initialValue));
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+
+  const toggleValue = React.useCallback(() => {
+    const newValue = !value;
+    setValue(newValue);
+    meta?.updateData?.(rowIndex, columnId, newValue);
+  }, [value, meta, rowIndex, columnId]);
+
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (isFocused) {
+        switch (event.key) {
+          case " ":
+          case "Enter":
+            event.preventDefault();
+            event.stopPropagation();
+            toggleValue();
+            break;
+          case "ArrowUp":
+          case "ArrowDown":
+          case "ArrowLeft":
+          case "ArrowRight":
+          case "Home":
+          case "End":
+          case "PageUp":
+          case "PageDown":
+          case "Tab":
+            break;
+        }
+      }
+    },
+    [isFocused, toggleValue],
+  );
+
+  React.useEffect(() => {
+    setValue(Boolean(initialValue));
+  }, [initialValue]);
+
+  React.useEffect(() => {
+    if (isFocused && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isFocused]);
+
+  const onWrapperKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      onKeyDown(event);
+    },
+    [onKeyDown],
+  );
+
+  const onWrapperClickHandler = React.useCallback(
+    (event: React.MouseEvent) => {
+      event.preventDefault();
+      meta?.onCellClick?.(rowIndex, columnId, event);
+      toggleValue();
+    },
+    [meta, rowIndex, columnId, toggleValue],
+  );
+
+  return (
+    <DataGridCellWrapper
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isFocused={isFocused}
+      isEditing={false}
+      isSelected={isSelected}
+      hasMultipleSelection={hasMultipleSelection}
+      ref={containerRef}
+      className="flex cursor-pointer items-center justify-center"
+      onKeyDown={onWrapperKeyDown}
+    >
+      <div
+        role="button"
+        tabIndex={-1}
+        className="flex size-full items-center justify-center"
+        onClick={onWrapperClickHandler}
+      >
+        <div
+          className={cn(
+            "flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+            {
+              "bg-primary text-primary-foreground": value,
+            },
+          )}
+        >
+          {value && (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-3 w-3"
+              aria-hidden="true"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          )}
+        </div>
+      </div>
+    </DataGridCellWrapper>
+  );
+}
+
+export function DateCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+  hasMultipleSelection,
+}: CellVariantProps<TData>) {
+  const initialValue = cell.getValue() as string;
+  const [value, setValue] = React.useState(initialValue || "");
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+  const cellVariant = cell.column.columnDef.meta?.cellVariant;
+  const placeholder =
+    cellVariant?.type === "date" ? cellVariant.placeholder : undefined;
+
+  const formatDateForDisplay = (dateStr: string) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString();
+  };
+
+  const onBlur = React.useCallback(() => {
+    if (value !== initialValue) {
+      meta?.updateData?.(rowIndex, columnId, value);
+    }
+    meta?.stopEditing?.();
+  }, [meta, rowIndex, columnId, initialValue, value]);
+
+  const onChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setValue(event.target.value);
+    },
+    [],
+  );
+
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (isEditing) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          inputRef.current?.blur();
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          setValue(initialValue);
+          inputRef.current?.blur();
+        }
+      } else if (isFocused) {
+        switch (event.key) {
+          case "F2":
+          case "Enter":
+          case " ":
+            event.preventDefault();
+            event.stopPropagation();
+            meta?.startEditing?.(rowIndex, columnId);
+            break;
+          case "ArrowUp":
+          case "ArrowDown":
+          case "ArrowLeft":
+          case "ArrowRight":
+          case "Home":
+          case "End":
+          case "PageUp":
+          case "PageDown":
+          case "Tab":
+            break;
+          default:
+            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+              event.preventDefault();
+              event.stopPropagation();
+              meta?.startEditing?.(rowIndex, columnId);
+            }
+            break;
+        }
+      }
+    },
+    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+  );
+
+  React.useEffect(() => {
+    setValue(initialValue || "");
+  }, [initialValue]);
+
+  React.useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+    if (isFocused && !isEditing && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isFocused, isEditing]);
+
+  return (
+    <DataGridCellWrapper
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isFocused={isFocused}
+      isEditing={isEditing}
+      isSelected={isSelected}
+      hasMultipleSelection={hasMultipleSelection}
+      ref={containerRef}
+      className="truncate"
+      onKeyDown={onKeyDown}
+    >
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          type="date"
+          value={value}
+          placeholder={placeholder}
+          onChange={onChange}
+          onBlur={onBlur}
+          className="size-full border-none bg-transparent p-0 outline-none"
+        />
+      ) : (
+        <span
+          className={cn({ "text-muted-foreground": !value && placeholder })}
+        >
+          {formatDateForDisplay(value) || placeholder}
+        </span>
+      )}
+    </DataGridCellWrapper>
+  );
+}

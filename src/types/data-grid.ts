@@ -1,9 +1,40 @@
 import type { RowData } from "@tanstack/react-table";
 
+export interface CellSelectOption {
+  label: string;
+  value: string;
+}
+
+export type CellVariant =
+  | {
+      type: "text";
+      placeholder?: string;
+    }
+  | {
+      type: "number";
+      min?: number;
+      max?: number;
+      step?: number;
+      placeholder?: string;
+    }
+  | {
+      type: "select";
+      options: CellSelectOption[];
+      placeholder?: string;
+    }
+  | {
+      type: "checkbox";
+    }
+  | {
+      type: "date";
+      placeholder?: string;
+    };
+
 declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
+    cellVariant?: CellVariant;
   }
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
@@ -15,18 +46,18 @@ declare module "@tanstack/react-table" {
     onCellClick?: (
       rowIndex: number,
       columnId: string,
-      event?: React.MouseEvent
+      event?: React.MouseEvent,
     ) => void;
     onCellDoubleClick?: (rowIndex: number, columnId: string) => void;
     onCellMouseDown?: (
       rowIndex: number,
       columnId: string,
-      event: React.MouseEvent
+      event: React.MouseEvent,
     ) => void;
     onCellMouseEnter?: (
       rowIndex: number,
       columnId: string,
-      event: React.MouseEvent
+      event: React.MouseEvent,
     ) => void;
     onCellMouseUp?: () => void;
     startEditing?: (rowIndex: number, columnId: string) => void;

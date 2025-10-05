@@ -15,14 +15,18 @@ interface Person {
   lastName: string;
   age: number;
   email: string;
-  phone: string;
-  company: string;
+  salary: number;
+  department: string;
+  status: string;
+  isActive: boolean;
+  startDate: string;
   jobTitle: string;
-  city: string;
-  country: string;
 }
 
 faker.seed(12345);
+
+const departments = ["Engineering", "Marketing", "Sales", "HR", "Finance"];
+const statuses = ["Active", "On Leave", "Remote", "In Office"];
 
 function generatePerson(id: number): Person {
   const firstName = faker.person.firstName();
@@ -33,11 +37,16 @@ function generatePerson(id: number): Person {
     lastName,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-    phone: faker.phone.number(),
-    company: faker.company.name(),
+    salary: faker.number.int({ min: 40000, max: 150000 }),
+    department: faker.helpers.arrayElement(departments),
+    status: faker.helpers.arrayElement(statuses),
+    isActive: faker.datatype.boolean(),
+    startDate:
+      faker.date
+        .between({ from: "2018-01-01", to: "2024-01-01" })
+        .toISOString()
+        .split("T")[0] ?? "",
     jobTitle: faker.person.jobTitle(),
-    city: faker.location.city(),
-    country: faker.location.country(),
   };
 }
 
@@ -54,64 +63,143 @@ export function DataGridDemo() {
         id: "firstName",
         accessorKey: "firstName",
         header: "First Name",
-        size: 120,
-        meta: { label: "First Name" },
+        size: 150,
+        meta: {
+          label: "First Name",
+          cellVariant: {
+            type: "text",
+            placeholder: "Enter first name",
+          },
+        },
       },
       {
         id: "lastName",
         accessorKey: "lastName",
         header: "Last Name",
-        size: 120,
-        meta: { label: "Last Name" },
+        size: 150,
+        meta: {
+          label: "Last Name",
+          cellVariant: {
+            type: "text",
+            placeholder: "Enter last name",
+          },
+        },
       },
       {
         id: "age",
         accessorKey: "age",
         header: "Age",
-        size: 80,
-        meta: { label: "Age" },
+        size: 100,
+        meta: {
+          label: "Age",
+          cellVariant: {
+            type: "number",
+            min: 18,
+            max: 100,
+            step: 1,
+            placeholder: "Age",
+          },
+        },
       },
       {
         id: "email",
         accessorKey: "email",
         header: "Email",
-        size: 220,
-        meta: { label: "Email" },
+        size: 240,
+        meta: {
+          label: "Email",
+          cellVariant: {
+            type: "text",
+            placeholder: "email@example.com",
+          },
+        },
       },
       {
-        id: "phone",
-        accessorKey: "phone",
-        header: "Phone",
-        size: 220,
-        meta: { label: "Phone" },
+        id: "salary",
+        accessorKey: "salary",
+        header: "Salary",
+        size: 120,
+        meta: {
+          label: "Salary",
+          cellVariant: {
+            type: "number",
+            min: 0,
+            step: 1000,
+            placeholder: "Salary",
+          },
+        },
       },
       {
-        id: "company",
-        accessorKey: "company",
-        header: "Company",
-        size: 220,
-        meta: { label: "Company" },
+        id: "department",
+        accessorKey: "department",
+        header: "Department",
+        size: 150,
+        meta: {
+          label: "Department",
+          cellVariant: {
+            type: "select",
+            options: departments.map((dept) => ({
+              label: dept,
+              value: dept,
+            })),
+            placeholder: "Select department",
+          },
+        },
+      },
+      {
+        id: "status",
+        accessorKey: "status",
+        header: "Status",
+        size: 130,
+        meta: {
+          label: "Status",
+          cellVariant: {
+            type: "select",
+            options: statuses.map((status) => ({
+              label: status,
+              value: status,
+            })),
+            placeholder: "Select status",
+          },
+        },
+      },
+      {
+        id: "isActive",
+        accessorKey: "isActive",
+        header: "Active",
+        size: 100,
+        meta: {
+          label: "Active",
+          cellVariant: {
+            type: "checkbox",
+          },
+        },
+      },
+      {
+        id: "startDate",
+        accessorKey: "startDate",
+        header: "Start Date",
+        size: 150,
+        meta: {
+          label: "Start Date",
+          cellVariant: {
+            type: "date",
+            placeholder: "Select date",
+          },
+        },
       },
       {
         id: "jobTitle",
         accessorKey: "jobTitle",
         header: "Job Title",
-        size: 220,
-        meta: { label: "Job Title" },
-      },
-      {
-        id: "city",
-        accessorKey: "city",
-        header: "City",
-        size: 240,
-        meta: { label: "City" },
-      },
-      {
-        id: "country",
-        accessorKey: "country",
-        header: "Country",
-        size: 240,
-        meta: { label: "Country" },
+        size: 200,
+        meta: {
+          label: "Job Title",
+          cellVariant: {
+            type: "text",
+            placeholder: "Enter job title",
+          },
+        },
       },
     ],
     [],
