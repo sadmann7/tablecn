@@ -186,7 +186,7 @@ export function DataGrid<TData>({
                 <div
                   role="gridcell"
                   tabIndex={0}
-                  className="flex h-9 w-full items-center gap-2 bg-muted/30 px-3 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
+                  className="relative flex h-9 w-full items-center bg-muted/30 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
                   style={{
                     width: table.getTotalSize(),
                     minWidth: table.getTotalSize(),
@@ -199,8 +199,10 @@ export function DataGrid<TData>({
                     }
                   }}
                 >
-                  <Plus className="size-3.5 text-muted-foreground" />
-                  <span className="text-muted-foreground text-sm">Add row</span>
+                  <div className="sticky left-0 flex items-center gap-2 px-3 text-foreground/80">
+                    <Plus className="size-3.5" />
+                    <span className="text-sm">Add row</span>
+                  </div>
                 </div>
               </div>
             </div>
