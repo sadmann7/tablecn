@@ -758,14 +758,14 @@ export function useDataGrid<TData>({
     });
     return () => cancelAnimationFrame(rafId);
   }, [
-    table.getState().sorting,
-    table.getState().rowSelection,
-    table.getState().columnVisibility,
     table.getState().columnFilters,
     table.getState().columnOrder,
+    table.getState().columnVisibility,
     table.getState().expanded,
     table.getState().globalFilter,
     table.getState().grouping,
+    table.getState().rowSelection,
+    table.getState().sorting,
   ]);
 
   return {
