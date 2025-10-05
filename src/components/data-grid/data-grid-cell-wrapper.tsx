@@ -13,10 +13,8 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   isFocused: boolean;
   isEditing: boolean;
   isSelected: boolean;
-  hasMultipleSelection: boolean;
-  children: React.ReactNode;
   className?: string;
-  onKeyDown?: (event: React.KeyboardEvent) => void;
+  onVariantKeyDown?: (event: React.KeyboardEvent) => void;
 }
 
 export function DataGridCellWrapper<TData>({
@@ -26,10 +24,9 @@ export function DataGridCellWrapper<TData>({
   isFocused,
   isEditing,
   isSelected,
-  hasMultipleSelection,
-  children,
   className,
-  onKeyDown,
+  children,
+  onVariantKeyDown,
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const meta = table.options.meta;
@@ -76,6 +73,49 @@ export function DataGridCellWrapper<TData>({
     [meta, rowIndex, columnId],
   );
 
+  const onKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      // Always let the variant handle its specific logic first
+      onVariantKeyDown?.(event);
+
+      // If variant handled it, don't continue
+      if (event.defaultPrevented) return;
+
+      // Handle common navigation keys (these never trigger editing)
+      if (
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown" ||
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight" ||
+        event.key === "Home" ||
+        event.key === "End" ||
+        event.key === "PageUp" ||
+        event.key === "PageDown" ||
+        event.key === "Tab"
+      ) {
+        return;
+      }
+
+      // Handle common editing triggers when focused but not editing
+      if (isFocused && !isEditing) {
+        if (event.key === "F2" || event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          event.stopPropagation();
+          meta?.startEditing?.(rowIndex, columnId);
+          return;
+        }
+
+        // Handle typing to start editing (single character, not a modifier)
+        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+          event.preventDefault();
+          event.stopPropagation();
+          meta?.startEditing?.(rowIndex, columnId);
+        }
+      }
+    },
+    [onVariantKeyDown, isFocused, isEditing, meta, rowIndex, columnId],
+  );
+
   return (
     <div
       role="button"
@@ -91,10 +131,10 @@ export function DataGridCellWrapper<TData>({
       onMouseUp={onMouseUp}
       onKeyDown={onKeyDown}
       className={cn(
-        "size-full cursor-default px-2 py-1 text-left text-sm outline-none",
+        "size-full cursor-default truncate px-2 py-1 text-left text-sm outline-none",
         {
           "ring-1 ring-ring ring-inset": isFocused,
-          "bg-primary/10": isSelected && hasMultipleSelection,
+          "bg-primary/10": isSelected,
         },
         className,
       )}

@@ -34,8 +34,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     meta?.editingCell?.rowIndex === rowIndex &&
     meta?.editingCell?.columnId === columnId;
   const isSelected = meta?.getIsCellSelected?.(rowIndex, columnId) ?? false;
-  const hasMultipleSelection =
-    (meta?.selectionState?.selectedCells?.size ?? 0) > 1;
 
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
@@ -51,7 +49,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isFocused={isFocused}
           isEditing={isEditing}
           isSelected={isSelected}
-          hasMultipleSelection={hasMultipleSelection}
         />
       );
     case "select":
@@ -64,7 +61,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isFocused={isFocused}
           isEditing={isEditing}
           isSelected={isSelected}
-          hasMultipleSelection={hasMultipleSelection}
         />
       );
     case "checkbox":
@@ -77,7 +73,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isFocused={isFocused}
           isEditing={isEditing}
           isSelected={isSelected}
-          hasMultipleSelection={hasMultipleSelection}
         />
       );
     case "date":
@@ -90,7 +85,18 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isFocused={isFocused}
           isEditing={isEditing}
           isSelected={isSelected}
-          hasMultipleSelection={hasMultipleSelection}
+        />
+      );
+    case "text":
+      return (
+        <TextCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
         />
       );
     default:
@@ -103,7 +109,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isFocused={isFocused}
           isEditing={isEditing}
           isSelected={isSelected}
-          hasMultipleSelection={hasMultipleSelection}
         />
       );
   }

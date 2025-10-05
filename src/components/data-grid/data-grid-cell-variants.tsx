@@ -14,7 +14,6 @@ interface CellVariantProps<TData> {
   isFocused: boolean;
   isEditing: boolean;
   isSelected: boolean;
-  hasMultipleSelection: boolean;
 }
 
 export function TextCell<TData>({
@@ -25,7 +24,6 @@ export function TextCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-  hasMultipleSelection,
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
@@ -53,7 +51,7 @@ export function TextCell<TData>({
     [],
   );
 
-  const onKeyDown = React.useCallback(
+  const onVariantKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -66,53 +64,29 @@ export function TextCell<TData>({
           }
           cellRef.current?.blur();
         }
-      } else if (isFocused) {
-        switch (event.key) {
-          case "F2":
-          case "Enter":
-          case " ":
-            event.preventDefault();
-            event.stopPropagation();
-            meta?.startEditing?.(rowIndex, columnId);
-            break;
-          case "ArrowUp":
-          case "ArrowDown":
-          case "ArrowLeft":
-          case "ArrowRight":
-          case "Home":
-          case "End":
-          case "PageUp":
-          case "PageDown":
-          case "Tab":
-            break;
-          default:
-            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-              event.preventDefault();
-              event.stopPropagation();
-              meta?.startEditing?.(rowIndex, columnId);
+      } else if (
+        isFocused &&
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        // Handle typing to pre-fill the value when editing starts
+        setValue(event.key);
 
-              setValue(event.key);
-
-              queueMicrotask(() => {
-                if (
-                  cellRef.current &&
-                  cellRef.current.contentEditable === "true"
-                ) {
-                  cellRef.current.textContent = event.key;
-                  const range = document.createRange();
-                  const selection = window.getSelection();
-                  range.selectNodeContents(cellRef.current);
-                  range.collapse(false);
-                  selection?.removeAllRanges();
-                  selection?.addRange(range);
-                }
-              });
-            }
-            break;
-        }
+        queueMicrotask(() => {
+          if (cellRef.current && cellRef.current.contentEditable === "true") {
+            cellRef.current.textContent = event.key;
+            const range = document.createRange();
+            const selection = window.getSelection();
+            range.selectNodeContents(cellRef.current);
+            range.collapse(false);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
+        });
       }
     },
-    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+    [isEditing, isFocused, initialValue],
   );
 
   React.useEffect(() => {
@@ -158,7 +132,7 @@ export function TextCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      hasMultipleSelection={hasMultipleSelection}
+      onVariantKeyDown={onVariantKeyDown}
     >
       <div
         role="textbox"
@@ -166,7 +140,6 @@ export function TextCell<TData>({
         tabIndex={isFocused ? 0 : -1}
         onBlur={onBlur}
         onInput={onInput}
-        onKeyDown={onKeyDown}
         suppressContentEditableWarning
         className={cn("size-full truncate outline-none", {
           "cursor-text": isEditing,
@@ -187,7 +160,6 @@ export function NumberCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-  hasMultipleSelection,
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as number;
   const [value, setValue] = React.useState(String(initialValue ?? ""));
@@ -216,7 +188,7 @@ export function NumberCell<TData>({
     [],
   );
 
-  const onKeyDown = React.useCallback(
+  const onVariantKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -228,44 +200,16 @@ export function NumberCell<TData>({
           inputRef.current?.blur();
         }
       } else if (isFocused) {
-        switch (event.key) {
-          case "F2":
-          case "Enter":
-          case " ":
-            event.preventDefault();
-            event.stopPropagation();
-            meta?.startEditing?.(rowIndex, columnId);
-            break;
-          case "ArrowUp":
-          case "ArrowDown":
-          case "ArrowLeft":
-          case "ArrowRight":
-          case "Home":
-          case "End":
-          case "PageUp":
-          case "PageDown":
-          case "Tab":
-            break;
-          default:
-            if (
-              (event.key.length === 1 || event.key === "Backspace") &&
-              !event.ctrlKey &&
-              !event.metaKey
-            ) {
-              event.preventDefault();
-              event.stopPropagation();
-              meta?.startEditing?.(rowIndex, columnId);
-              if (event.key !== "Backspace") {
-                setValue(event.key);
-              } else {
-                setValue("");
-              }
-            }
-            break;
+        // Handle Backspace to start editing with empty value
+        if (event.key === "Backspace") {
+          setValue("");
+        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+          // Handle typing to pre-fill the value when editing starts
+          setValue(event.key);
         }
       }
     },
-    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+    [isEditing, isFocused, initialValue],
   );
 
   React.useEffect(() => {
@@ -292,9 +236,7 @@ export function NumberCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      hasMultipleSelection={hasMultipleSelection}
-      className="truncate"
-      onKeyDown={onKeyDown}
+      onVariantKeyDown={onVariantKeyDown}
     >
       {isEditing ? (
         <input
@@ -328,7 +270,6 @@ export function SelectCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-  hasMultipleSelection,
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
@@ -357,44 +298,15 @@ export function SelectCell<TData>({
     [meta, rowIndex, columnId],
   );
 
-  const onKeyDown = React.useCallback(
+  const onVariantKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
-      if (isEditing) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          setValue(initialValue);
-          selectRef.current?.blur();
-        }
-      } else if (isFocused) {
-        switch (event.key) {
-          case "F2":
-          case "Enter":
-          case " ":
-            event.preventDefault();
-            event.stopPropagation();
-            meta?.startEditing?.(rowIndex, columnId);
-            break;
-          case "ArrowUp":
-          case "ArrowDown":
-          case "ArrowLeft":
-          case "ArrowRight":
-          case "Home":
-          case "End":
-          case "PageUp":
-          case "PageDown":
-          case "Tab":
-            break;
-          default:
-            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-              event.preventDefault();
-              event.stopPropagation();
-              meta?.startEditing?.(rowIndex, columnId);
-            }
-            break;
-        }
+      if (isEditing && event.key === "Escape") {
+        event.preventDefault();
+        setValue(initialValue);
+        selectRef.current?.blur();
       }
     },
-    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+    [isEditing, initialValue],
   );
 
   React.useEffect(() => {
@@ -423,9 +335,7 @@ export function SelectCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      hasMultipleSelection={hasMultipleSelection}
-      className="truncate"
-      onKeyDown={onKeyDown}
+      onVariantKeyDown={onVariantKeyDown}
     >
       {isEditing ? (
         <select
@@ -464,7 +374,6 @@ export function CheckboxCell<TData>({
   columnId,
   isFocused,
   isSelected,
-  hasMultipleSelection,
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as boolean;
   const [value, setValue] = React.useState(Boolean(initialValue));
@@ -477,27 +386,12 @@ export function CheckboxCell<TData>({
     meta?.updateData?.(rowIndex, columnId, newValue);
   }, [value, meta, rowIndex, columnId]);
 
-  const onKeyDown = React.useCallback(
+  const onVariantKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
-      if (isFocused) {
-        switch (event.key) {
-          case " ":
-          case "Enter":
-            event.preventDefault();
-            event.stopPropagation();
-            toggleValue();
-            break;
-          case "ArrowUp":
-          case "ArrowDown":
-          case "ArrowLeft":
-          case "ArrowRight":
-          case "Home":
-          case "End":
-          case "PageUp":
-          case "PageDown":
-          case "Tab":
-            break;
-        }
+      if (isFocused && (event.key === " " || event.key === "Enter")) {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleValue();
       }
     },
     [isFocused, toggleValue],
@@ -512,13 +406,6 @@ export function CheckboxCell<TData>({
       containerRef.current.focus();
     }
   }, [isFocused]);
-
-  const onWrapperKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
-      onKeyDown(event);
-    },
-    [onKeyDown],
-  );
 
   const onWrapperClickHandler = React.useCallback(
     (event: React.MouseEvent) => {
@@ -543,9 +430,7 @@ export function CheckboxCell<TData>({
       isFocused={isFocused}
       isEditing={false}
       isSelected={isSelected}
-      hasMultipleSelection={hasMultipleSelection}
-      className="flex cursor-pointer items-center justify-center"
-      onKeyDown={onWrapperKeyDown}
+      onVariantKeyDown={onVariantKeyDown}
     >
       <div
         role="button"
@@ -590,7 +475,6 @@ export function DateCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-  hasMultipleSelection,
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
@@ -621,7 +505,7 @@ export function DateCell<TData>({
     [],
   );
 
-  const onKeyDown = React.useCallback(
+  const onVariantKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -632,36 +516,9 @@ export function DateCell<TData>({
           setValue(initialValue);
           inputRef.current?.blur();
         }
-      } else if (isFocused) {
-        switch (event.key) {
-          case "F2":
-          case "Enter":
-          case " ":
-            event.preventDefault();
-            event.stopPropagation();
-            meta?.startEditing?.(rowIndex, columnId);
-            break;
-          case "ArrowUp":
-          case "ArrowDown":
-          case "ArrowLeft":
-          case "ArrowRight":
-          case "Home":
-          case "End":
-          case "PageUp":
-          case "PageDown":
-          case "Tab":
-            break;
-          default:
-            if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-              event.preventDefault();
-              event.stopPropagation();
-              meta?.startEditing?.(rowIndex, columnId);
-            }
-            break;
-        }
       }
     },
-    [isEditing, isFocused, meta, rowIndex, columnId, initialValue],
+    [isEditing, initialValue],
   );
 
   React.useEffect(() => {
@@ -687,9 +544,7 @@ export function DateCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      hasMultipleSelection={hasMultipleSelection}
-      className="truncate"
-      onKeyDown={onKeyDown}
+      onVariantKeyDown={onVariantKeyDown}
     >
       {isEditing ? (
         <input
