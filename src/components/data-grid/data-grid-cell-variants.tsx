@@ -357,7 +357,7 @@ export function SelectCell<TData>({
         >
           <SelectTrigger
             size="sm"
-            className="h-full w-full border-none p-0 shadow-none focus-visible:ring-0"
+            className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
           >
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
