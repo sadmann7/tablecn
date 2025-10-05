@@ -199,7 +199,7 @@ export function DataGrid<TData>({
                     }
                   }}
                 >
-                  <div className="sticky left-0 flex items-center gap-2 px-3 text-foreground/80">
+                  <div className="sticky left-0 flex items-center gap-2 px-3 text-muted-foreground">
                     <Plus className="size-3.5" />
                     <span className="text-sm">Add row</span>
                   </div>

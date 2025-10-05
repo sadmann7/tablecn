@@ -7,7 +7,17 @@ import type {
   SortingState,
   Table,
 } from "@tanstack/react-table";
-import { ChevronDown, ChevronUp, EyeOff, X } from "lucide-react";
+import {
+  Calendar,
+  CheckSquare,
+  ChevronDown,
+  ChevronUp,
+  EyeOff,
+  Hash,
+  List,
+  Type,
+  X,
+} from "lucide-react";
 import * as React from "react";
 
 import {
@@ -18,7 +28,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import type { Cell } from "@/types/data-grid";
+
+function getColumnVariant(variant: Cell["variant"]) {
+  switch (variant) {
+    case "text":
+      return { icon: Type, label: "Text" };
+    case "number":
+      return { icon: Hash, label: "Number" };
+    case "select":
+      return { icon: List, label: "Select" };
+    case "checkbox":
+      return { icon: CheckSquare, label: "Checkbox" };
+    case "date":
+      return { icon: Calendar, label: "Date" };
+    default:
+      return null;
+  }
+}
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.ComponentProps<typeof DropdownMenuTrigger> {
@@ -38,6 +71,9 @@ export function DataGridColumnHeader<TData, TValue>({
     : typeof column.columnDef.header === "string"
       ? column.columnDef.header
       : column.id;
+
+  const cellVariant = column.columnDef.meta?.cell;
+  const columnVariant = getColumnVariant(cellVariant?.variant ?? "text");
 
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {
@@ -70,8 +106,23 @@ export function DataGridColumnHeader<TData, TValue>({
 
   if (!column.getCanSort() && !column.getCanHide()) {
     return (
-      <div className={cn("size-full truncate p-2 text-sm", className)}>
-        {title}
+      <div
+        className={cn(
+          "flex size-full items-center gap-1.5 truncate p-2 text-sm",
+          className,
+        )}
+      >
+        {columnVariant && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p>{columnVariant.label}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+        <span className="truncate">{title}</span>
       </div>
     );
   }
@@ -85,9 +136,25 @@ export function DataGridColumnHeader<TData, TValue>({
         )}
         {...props}
       >
-        {title}
-
-        <ChevronDown className="text-muted-foreground" />
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          {columnVariant && (
+            <Tooltip>
+              <TooltipTrigger
+                asChild
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>{columnVariant.label}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <span className="truncate">{title}</span>
+        </div>
+        <ChevronDown className="shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={0} className="w-60">
         {column.getCanSort() && (
