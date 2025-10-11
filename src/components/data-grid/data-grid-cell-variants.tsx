@@ -64,7 +64,11 @@ export function TextCell<TData>({
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          cellRef.current?.blur();
+          const currentValue = cellRef.current?.textContent ?? "";
+          if (currentValue !== initialValue) {
+            meta?.updateData?.({ rowIndex, columnId, value: currentValue });
+          }
+          meta?.stopEditing?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
           if (cellRef.current) {
@@ -94,7 +98,7 @@ export function TextCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue],
+    [isEditing, isFocused, initialValue, meta, rowIndex, columnId],
   );
 
   React.useEffect(() => {
@@ -201,7 +205,11 @@ export function NumberCell<TData>({
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          inputRef.current?.blur();
+          const numValue = value === "" ? null : Number(value);
+          if (numValue !== initialValue) {
+            meta?.updateData?.({ rowIndex, columnId, value: numValue });
+          }
+          meta?.stopEditing?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(String(initialValue ?? ""));
@@ -217,7 +225,7 @@ export function NumberCell<TData>({
         }
       }
     },
-    [isEditing, isFocused, initialValue],
+    [isEditing, isFocused, initialValue, meta, rowIndex, columnId, value],
   );
 
   React.useEffect(() => {
@@ -522,7 +530,10 @@ export function DateCell<TData>({
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          inputRef.current?.blur();
+          if (value !== initialValue) {
+            meta?.updateData?.({ rowIndex, columnId, value });
+          }
+          meta?.stopEditing?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
@@ -530,7 +541,7 @@ export function DateCell<TData>({
         }
       }
     },
-    [isEditing, initialValue],
+    [isEditing, initialValue, meta, rowIndex, columnId, value],
   );
 
   React.useEffect(() => {

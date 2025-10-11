@@ -72,7 +72,7 @@ declare module "@tanstack/react-table" {
       event: React.MouseEvent,
     ) => void;
     startEditing?: (rowIndex: number, columnId: string) => void;
-    stopEditing?: () => void;
+    stopEditing?: (opts?: { moveToNextRow?: boolean }) => void;
     blurCell?: () => void;
     navigateCell?: (direction: NavigationDirection) => void;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;

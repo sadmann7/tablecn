@@ -367,9 +367,29 @@ export function useDataGrid<TData>({
     [store],
   );
 
-  const stopEditing = React.useCallback(() => {
-    store.setState("editingCell", null);
-  }, [store]);
+  const stopEditing = React.useCallback(
+    (options?: { moveToNextRow?: boolean }) => {
+      const currentState = store.getState();
+      const currentEditing = currentState.editingCell;
+
+      store.setState("editingCell", null);
+
+      if (options?.moveToNextRow && currentEditing) {
+        const { rowIndex, columnId } = currentEditing;
+        const currentTable = tableRef.current;
+        const rows = currentTable?.getRowModel().rows || [];
+        const rowCount = rows.length || data.length;
+
+        const nextRowIndex = rowIndex + 1;
+        if (nextRowIndex < rowCount) {
+          requestAnimationFrame(() => {
+            focusCell(nextRowIndex, columnId);
+          });
+        }
+      }
+    },
+    [store, data.length, focusCell],
+  );
 
   const onSearchOpenChange = React.useCallback(
     (open: boolean) => {
