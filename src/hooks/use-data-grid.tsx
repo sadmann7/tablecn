@@ -278,7 +278,7 @@ export function useDataGrid<TData>({
   }, [getCellKey, getColumnIds, data.length, store]);
 
   const selectRange = React.useCallback(
-    (start: CellPosition, end: CellPosition) => {
+    (start: CellPosition, end: CellPosition, isSelecting = false) => {
       const columnIds = getColumnIds();
       const startColIndex = columnIds.indexOf(start.columnId);
       const endColIndex = columnIds.indexOf(end.columnId);
@@ -303,7 +303,7 @@ export function useDataGrid<TData>({
       store.setState("selectionState", {
         selectedCells,
         selectionRange: { start, end },
-        isSelecting: false,
+        isSelecting,
       });
     },
     [getColumnIds, getCellKey, store],
@@ -580,12 +580,7 @@ export function useDataGrid<TData>({
           focusCell(start.rowIndex, start.columnId);
         }
 
-        selectRange(start, end);
-        store.setState("selectionState", {
-          ...currentState.selectionState,
-          selectionRange: { start, end },
-          isSelecting: true,
-        });
+        selectRange(start, end, true);
       }
     },
     [store, selectRange, focusCell],

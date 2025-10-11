@@ -54,7 +54,6 @@ function DataGridRowImpl<TData>({
   );
 }
 
-export const DataGridRow = React.memo(
-  DataGridRowImpl,
-  (_prev, next) => next.rowVirtualizer.isScrolling,
-) as typeof DataGridRowImpl;
+export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
+  return next.rowVirtualizer.isScrolling && prev.row.id === next.row.id;
+}) as typeof DataGridRowImpl;
