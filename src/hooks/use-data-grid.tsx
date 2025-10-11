@@ -16,6 +16,7 @@ import type {
   CellPosition,
   NavigationDirection,
   ScrollToOptions,
+  SearchState,
   SelectionState,
 } from "@/types/data-grid";
 
@@ -1142,7 +1143,7 @@ export function useDataGrid<TData>({
     table.getState().sorting,
   ]);
 
-  const searchState = React.useMemo(() => {
+  const searchState = React.useMemo<SearchState | undefined>(() => {
     if (!enableSearch) return undefined;
 
     return {

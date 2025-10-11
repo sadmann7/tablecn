@@ -62,21 +62,7 @@ export function DataGrid<TData>({
       className={cn("relative flex w-full flex-col", className)}
       {...props}
     >
-      {searchState && (
-        <DataGridSearch
-          open={searchState.searchOpen}
-          onOpenChange={searchState.onSearchOpenChange}
-          searchQuery={searchState.searchQuery}
-          currentMatchIndex={searchState.currentMatchIndex}
-          totalMatches={searchState.searchMatches.length}
-          onSearchChange={(query) => {
-            searchState.setSearchQuery(query);
-            searchState.onSearch(query);
-          }}
-          onNextMatch={searchState.navigateToNextMatch}
-          onPrevMatch={searchState.navigateToPrevMatch}
-        />
-      )}
+      {searchState && <DataGridSearch {...searchState} />}
       <div
         role="grid"
         aria-label="Data grid"

@@ -105,3 +105,15 @@ export type NavigationDirection =
   | "ctrl+end"
   | "pageup"
   | "pagedown";
+
+export interface SearchState {
+  searchOpen: boolean;
+  searchQuery: string;
+  searchMatches: CellPosition[];
+  currentMatchIndex: number;
+  onSearchOpenChange: (open: boolean) => void;
+  onSearch: (query: string) => void;
+  navigateToNextMatch: () => void;
+  navigateToPrevMatch: () => void;
+  setSearchQuery: (query: string) => void;
+}
