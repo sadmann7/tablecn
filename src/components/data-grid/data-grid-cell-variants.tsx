@@ -1,9 +1,9 @@
 "use client";
 
 import type { Cell, Table } from "@tanstack/react-table";
-import { Check } from "lucide-react";
 import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -60,7 +60,7 @@ export function TextCell<TData>({
   );
 
   const onCellKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -201,7 +201,7 @@ export function NumberCell<TData>({
   );
 
   const onCellKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -317,7 +317,7 @@ export function SelectCell<TData>({
   );
 
   const onCellKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
@@ -401,21 +401,23 @@ export function CheckboxCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
-  const toggleValue = React.useCallback(() => {
-    const newValue = !value;
-    setValue(newValue);
-    meta?.updateData?.({ rowIndex, columnId, value: newValue });
-  }, [value, meta, rowIndex, columnId]);
+  const onCheckedChange = React.useCallback(
+    (checked: boolean) => {
+      setValue(checked);
+      meta?.updateData?.({ rowIndex, columnId, value: checked });
+    },
+    [meta, rowIndex, columnId],
+  );
 
   const onCellKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isFocused && (event.key === " " || event.key === "Enter")) {
         event.preventDefault();
         event.stopPropagation();
-        toggleValue();
+        onCheckedChange(!value);
       }
     },
-    [isFocused, toggleValue],
+    [isFocused, value, onCheckedChange],
   );
 
   React.useEffect(() => {
@@ -428,31 +430,15 @@ export function CheckboxCell<TData>({
     }
   }, [isFocused]);
 
-  const onCheckboxClick = React.useCallback(
-    (event: React.MouseEvent) => {
-      event.stopPropagation();
-      event.preventDefault();
-      toggleValue();
-    },
-    [toggleValue],
-  );
-
-  const onCheckboxMouseDown = React.useCallback((event: React.MouseEvent) => {
+  const onCheckboxClick = React.useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
   }, []);
 
-  const onWrapperClick = React.useCallback(
-    (event: React.MouseEvent) => {
-      event.preventDefault();
+  const onCheckboxMouseDown = React.useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
-
-      if (isFocused) {
-        toggleValue();
-      } else {
-        meta?.onCellClick?.(rowIndex, columnId, event);
-      }
     },
-    [isFocused, meta, rowIndex, columnId, toggleValue],
+    [],
   );
 
   return (
@@ -466,29 +452,15 @@ export function CheckboxCell<TData>({
       isEditing={false}
       isSelected={isSelected}
       onCellKeyDown={onCellKeyDown}
+      className="flex size-full items-center justify-center"
     >
-      <div
-        role="button"
-        tabIndex={-1}
-        className="flex size-full items-center justify-center"
-        onClick={onWrapperClick}
-      >
-        <div
-          role="checkbox"
-          aria-checked={value}
-          tabIndex={-1}
-          onClick={onCheckboxClick}
-          onMouseDown={onCheckboxMouseDown}
-          className={cn(
-            "flex size-4 cursor-pointer items-center justify-center rounded-sm border border-primary",
-            {
-              "bg-primary text-primary-foreground": value,
-            },
-          )}
-        >
-          {value && <Check className="size-3" />}
-        </div>
-      </div>
+      <Checkbox
+        checked={value}
+        onCheckedChange={onCheckedChange}
+        onClick={onCheckboxClick}
+        onMouseDown={onCheckboxMouseDown}
+        className="border-primary"
+      />
     </DataGridCellWrapper>
   );
 }
@@ -532,7 +504,7 @@ export function DateCell<TData>({
   );
 
   const onCellKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();

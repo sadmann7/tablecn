@@ -14,7 +14,7 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   isEditing: boolean;
   isSelected: boolean;
   className?: string;
-  onCellKeyDown?: (event: React.KeyboardEvent) => void;
+  onCellKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
 }
 
 export function DataGridCellWrapper<TData>({
@@ -94,7 +94,7 @@ export function DataGridCellWrapper<TData>({
   );
 
   const onKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       // Always let the variant handle its specific logic first
       onCellKeyDown?.(event);
 
