@@ -36,7 +36,6 @@ interface ContextMenuState {
   open: boolean;
   x: number;
   y: number;
-  targetCell: CellPosition | null;
 }
 
 interface DataGridState {
@@ -116,7 +115,6 @@ export function useDataGrid<TData>({
         open: false,
         x: 0,
         y: 0,
-        targetCell: null,
       },
     };
   });
@@ -650,20 +648,23 @@ export function useDataGrid<TData>({
         open: true,
         x: event.clientX,
         y: event.clientY,
-        targetCell: { rowIndex, columnId },
       });
     },
     [store, getCellKey],
   );
 
-  const closeContextMenu = React.useCallback(() => {
-    store.setState("contextMenu", {
-      open: false,
-      x: 0,
-      y: 0,
-      targetCell: null,
-    });
-  }, [store]);
+  const onContextMenuOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (!open) {
+        store.setState("contextMenu", {
+          open: false,
+          x: 0,
+          y: 0,
+        });
+      }
+    },
+    [store],
+  );
 
   const navigateCell = React.useCallback(
     (direction: NavigationDirection) => {
@@ -1030,7 +1031,7 @@ export function useDataGrid<TData>({
       isCurrentSearchMatch,
       searchQuery,
       contextMenu,
-      closeContextMenu,
+      onContextMenuOpenChange,
     },
   });
 
@@ -1268,8 +1269,6 @@ export function useDataGrid<TData>({
     navigateToPrevMatch,
     setSearchQuery,
   ]);
-
-  console.log({ contextMenu });
 
   return {
     dataGridRef,

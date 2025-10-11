@@ -20,32 +20,31 @@ export function DataGridContextMenu<TData>({
 }: DataGridContextMenuProps<TData>) {
   const meta = table.options.meta;
   const contextMenu = meta?.contextMenu;
-  const closeContextMenu = meta?.closeContextMenu;
+  const onContextMenuOpenChange = meta?.onContextMenuOpenChange;
   const selectionState = meta?.selectionState;
 
-  const virtualTriggerRef = React.useRef<HTMLButtonElement>(null);
+  const virtualTriggerStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      position: "fixed",
+      left: `${contextMenu?.x ?? 0}px`,
+      top: `${contextMenu?.y ?? 0}px`,
+      width: "1px",
+      height: "1px",
+      padding: 0,
+      margin: 0,
+      border: "none",
+      background: "transparent",
+      pointerEvents: "none",
+      opacity: 0,
+    }),
+    [contextMenu?.x, contextMenu?.y],
+  );
 
   const onCloseAutoFocus: React.ComponentProps<
     typeof DropdownMenuContent
-  >["onCloseAutoFocus"] = (event) => {
+  >["onCloseAutoFocus"] = React.useCallback((event: Event) => {
     event.preventDefault();
-  };
-
-  React.useEffect(() => {
-    if (contextMenu?.open && virtualTriggerRef.current) {
-      const trigger = virtualTriggerRef.current;
-      trigger.style.position = "fixed";
-      trigger.style.left = `${contextMenu.x}px`;
-      trigger.style.top = `${contextMenu.y}px`;
-      trigger.style.width = "1px";
-      trigger.style.height = "1px";
-      trigger.style.padding = "0";
-      trigger.style.border = "none";
-      trigger.style.background = "transparent";
-      trigger.style.pointerEvents = "none";
-      trigger.style.opacity = "0";
-    }
-  }, [contextMenu?.open, contextMenu?.x, contextMenu?.y]);
+  }, []);
 
   const onCopy = React.useCallback(() => {
     if (
@@ -127,8 +126,8 @@ export function DataGridContextMenu<TData>({
       .join("\n");
 
     navigator.clipboard.writeText(tsvData);
-    closeContextMenu?.();
-  }, [table, selectionState, closeContextMenu]);
+    // Keep selection after copy - user might want to perform more actions
+  }, [table, selectionState]);
 
   const onDelete = React.useCallback(() => {
     if (
@@ -149,27 +148,18 @@ export function DataGridContextMenu<TData>({
       }
     }
 
-    closeContextMenu?.();
-  }, [meta, selectionState, closeContextMenu]);
+    // Keep selection after delete - user might want to paste or perform more actions
+  }, [meta, selectionState]);
 
   if (!contextMenu) return null;
 
   return (
     <DropdownMenu
       open={contextMenu.open}
-      onOpenChange={(open) => {
-        if (!open) {
-          closeContextMenu?.();
-        }
-      }}
+      onOpenChange={onContextMenuOpenChange}
     >
       <DropdownMenuTrigger asChild>
-        <button
-          ref={virtualTriggerRef}
-          type="button"
-          tabIndex={-1}
-          style={{ position: "fixed" }}
-        />
+        <button type="button" tabIndex={-1} style={virtualTriggerStyle} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"

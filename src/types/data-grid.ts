@@ -76,7 +76,7 @@ declare module "@tanstack/react-table" {
     isCurrentSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     searchQuery?: string;
     contextMenu?: ContextMenuState;
-    closeContextMenu?: () => void;
+    onContextMenuOpenChange?: (open: boolean) => void;
   }
 }
 
@@ -100,7 +100,6 @@ export interface ContextMenuState {
   open: boolean;
   x: number;
   y: number;
-  targetCell: CellPosition | null;
 }
 
 export interface ScrollToOptions {
