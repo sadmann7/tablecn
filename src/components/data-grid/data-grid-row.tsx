@@ -35,7 +35,7 @@ function DataGridRowImpl<TData>({
       key={row.id}
       role="row"
       aria-rowindex={virtualRowIndex + 2}
-      data-slot="row"
+      data-slot="data-grid-row"
       tabIndex={-1}
       className="absolute flex w-full border-b"
     >
@@ -44,7 +44,7 @@ function DataGridRowImpl<TData>({
           key={cell.id}
           role="gridcell"
           aria-colindex={colIndex + 1}
-          data-slot="cell"
+          data-slot="data-grid-cell"
           tabIndex={-1}
           className="flex h-9 grow items-center justify-center border-r"
           style={{
