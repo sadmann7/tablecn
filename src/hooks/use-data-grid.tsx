@@ -7,6 +7,7 @@ import {
   type RowSelectionState,
   type SortingState,
   type TableOptions,
+  type Updater,
   useReactTable,
 } from "@tanstack/react-table";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
@@ -867,7 +868,7 @@ export function useDataGrid<TData>({
   );
 
   const setSorting = React.useCallback(
-    (updater: SortingState | ((old: SortingState) => SortingState)) => {
+    (updater: Updater<SortingState>) => {
       const currentState = store.getState();
       const newSorting =
         typeof updater === "function" ? updater(currentState.sorting) : updater;
@@ -877,19 +878,40 @@ export function useDataGrid<TData>({
   );
 
   const setRowSelection = React.useCallback(
-    (
-      updater:
-        | RowSelectionState
-        | ((old: RowSelectionState) => RowSelectionState),
-    ) => {
+    (updater: Updater<RowSelectionState>) => {
       const currentState = store.getState();
       const newRowSelection =
         typeof updater === "function"
           ? updater(currentState.rowSelection)
           : updater;
-      store.setState("rowSelection", newRowSelection);
+
+      const selectedRows = Object.keys(newRowSelection).filter(
+        (key) => newRowSelection[key],
+      );
+
+      const columnIds = getColumnIds();
+      const selectedCells = new Set<string>();
+      const rows = tableRef.current?.getRowModel().rows || [];
+
+      for (const rowId of selectedRows) {
+        const rowIndex = rows.findIndex((r) => r.id === rowId);
+        if (rowIndex === -1) continue;
+
+        for (const columnId of columnIds) {
+          selectedCells.add(getCellKey(rowIndex, columnId));
+        }
+      }
+
+      store.batch(() => {
+        store.setState("rowSelection", newRowSelection);
+        store.setState("selectionState", {
+          selectedCells,
+          selectionRange: null,
+          isSelecting: false,
+        });
+      });
     },
-    [store],
+    [store, getColumnIds, getCellKey],
   );
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
@@ -1078,6 +1100,9 @@ export function useDataGrid<TData>({
           const currentState = store.getState();
           if (currentState.selectionState.selectedCells.size > 0) {
             clearSelection();
+          }
+          if (Object.keys(currentState.rowSelection).length > 0) {
+            table.toggleAllRowsSelected(false);
           }
         }
       }
