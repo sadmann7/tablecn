@@ -67,6 +67,9 @@ declare module "@tanstack/react-table" {
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     selectAll?: () => void;
     clearSelection?: () => void;
+    isSearchMatch?: (rowIndex: number, columnId: string) => boolean;
+    isCurrentSearchMatch?: (rowIndex: number, columnId: string) => boolean;
+    searchQuery?: string;
   }
 }
 

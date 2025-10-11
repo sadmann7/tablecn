@@ -22,6 +22,37 @@ import type {
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
+function useLazyRef<T>(fn: () => T): React.RefObject<T> {
+  const ref = React.useRef<T | null>(null);
+  if (ref.current === null) {
+    ref.current = fn();
+  }
+  return ref as React.RefObject<T>;
+}
+
+interface DataGridState {
+  focusedCell: CellPosition | null;
+  editingCell: CellPosition | null;
+  selectionState: SelectionState;
+  searchQuery: string;
+  searchMatches: CellPosition[];
+  currentMatchIndex: number;
+  searchOpen: boolean;
+  sorting: SortingState;
+  rowSelection: RowSelectionState;
+}
+
+interface DataGridStore {
+  subscribe: (callback: () => void) => () => void;
+  getState: () => DataGridState;
+  setState: <K extends keyof DataGridState>(
+    key: K,
+    value: DataGridState[K],
+  ) => void;
+  notify: () => void;
+  batch: (fn: () => void) => void;
+}
+
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   columns: ColumnDef<TData>[];
@@ -31,6 +62,7 @@ interface UseDataGridProps<TData>
   estimateRowSize?: number;
   overscan?: number;
   autoFocus?: boolean;
+  enableSearch?: boolean;
 }
 
 export function useDataGrid<TData>({
@@ -42,6 +74,7 @@ export function useDataGrid<TData>({
   estimateRowSize = 35,
   overscan = 3,
   autoFocus = false,
+  enableSearch = false,
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
@@ -51,23 +84,99 @@ export function useDataGrid<TData>({
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
-  const [sorting, setSorting] = React.useState<SortingState>(
-    initialState?.sorting ?? [],
-  );
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
-    initialState?.rowSelection ?? {},
-  );
-  const [focusedCell, setFocusedCell] = React.useState<CellPosition | null>(
-    null,
-  );
-  const [editingCell, setEditingCell] = React.useState<CellPosition | null>(
-    null,
-  );
-  const [selectionState, setSelectionState] = React.useState<SelectionState>({
-    selectedCells: new Set(),
-    selectionRange: null,
-    isSelecting: false,
+
+  const listenersRef = useLazyRef(() => new Set<() => void>());
+
+  const stateRef = useLazyRef<DataGridState>(() => {
+    return {
+      focusedCell: null,
+      editingCell: null,
+      selectionState: {
+        selectedCells: new Set(),
+        selectionRange: null,
+        isSelecting: false,
+      },
+      searchQuery: "",
+      searchMatches: [],
+      currentMatchIndex: -1,
+      searchOpen: false,
+      sorting: initialState?.sorting ?? [],
+      rowSelection: initialState?.rowSelection ?? {},
+    };
   });
+
+  const store = React.useMemo<DataGridStore>(() => {
+    let isBatching = false;
+    let pendingNotification = false;
+    let scheduledNotification: Promise<void> | null = null;
+
+    return {
+      subscribe: (callback) => {
+        listenersRef.current.add(callback);
+        return () => listenersRef.current.delete(callback);
+      },
+      getState: () => stateRef.current,
+      setState: (key, value) => {
+        if (Object.is(stateRef.current[key], value)) return;
+        stateRef.current = { ...stateRef.current, [key]: value };
+
+        if (isBatching) {
+          pendingNotification = true;
+        } else {
+          pendingNotification = true;
+          if (scheduledNotification) return;
+
+          scheduledNotification = Promise.resolve().then(() => {
+            scheduledNotification = null;
+            if (pendingNotification) {
+              pendingNotification = false;
+              store.notify();
+            }
+          });
+        }
+      },
+      notify: () => {
+        for (const listener of listenersRef.current) {
+          listener();
+        }
+      },
+      batch: (fn) => {
+        if (isBatching) {
+          fn();
+          return;
+        }
+
+        isBatching = true;
+        pendingNotification = false;
+
+        try {
+          fn();
+        } finally {
+          isBatching = false;
+          if (pendingNotification) {
+            pendingNotification = false;
+            store.notify();
+          }
+        }
+      },
+    };
+  }, [listenersRef, stateRef]);
+
+  const {
+    focusedCell,
+    editingCell,
+    selectionState,
+    searchQuery,
+    searchMatches,
+    currentMatchIndex,
+    searchOpen,
+    sorting,
+    rowSelection,
+  } = React.useSyncExternalStore(
+    store.subscribe,
+    store.getState,
+    store.getState,
+  );
 
   const getColumnIds = React.useCallback(() => {
     return columns
@@ -131,12 +240,12 @@ export function useDataGrid<TData>({
   );
 
   const clearSelection = React.useCallback(() => {
-    setSelectionState({
+    store.setState("selectionState", {
       selectedCells: new Set(),
       selectionRange: null,
       isSelecting: false,
     });
-  }, []);
+  }, [store]);
 
   const selectAll = React.useCallback(() => {
     const columnIds = getColumnIds();
@@ -154,7 +263,7 @@ export function useDataGrid<TData>({
     const firstColumnId = columnIds[0];
     const lastColumnId = columnIds[columnIds.length - 1];
 
-    setSelectionState({
+    store.setState("selectionState", {
       selectedCells: allCells,
       selectionRange:
         columnIds.length > 0 && rowCount > 0 && firstColumnId && lastColumnId
@@ -165,7 +274,7 @@ export function useDataGrid<TData>({
           : null,
       isSelecting: false,
     });
-  }, [getCellKey, getColumnIds, data.length]);
+  }, [getCellKey, getColumnIds, data.length, store]);
 
   const selectRange = React.useCallback(
     (start: CellPosition, end: CellPosition) => {
@@ -190,54 +299,203 @@ export function useDataGrid<TData>({
         }
       }
 
-      setSelectionState({
+      store.setState("selectionState", {
         selectedCells,
         selectionRange: { start, end },
         isSelecting: false,
       });
     },
-    [getColumnIds, getCellKey],
+    [getColumnIds, getCellKey, store],
   );
 
-  const focusCell = React.useCallback((rowIndex: number, columnId: string) => {
-    setFocusedCell({ rowIndex, columnId });
-    setEditingCell(null);
+  const focusCell = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      store.batch(() => {
+        store.setState("focusedCell", { rowIndex, columnId });
+        store.setState("editingCell", null);
+      });
 
-    if (dataGridRef.current && document.activeElement !== dataGridRef.current) {
-      dataGridRef.current.focus();
-    }
-  }, []);
+      if (
+        dataGridRef.current &&
+        document.activeElement !== dataGridRef.current
+      ) {
+        dataGridRef.current.focus();
+      }
+    },
+    [store],
+  );
 
   const startEditing = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      setFocusedCell({ rowIndex, columnId });
-      setEditingCell({ rowIndex, columnId });
+      store.batch(() => {
+        store.setState("focusedCell", { rowIndex, columnId });
+        store.setState("editingCell", { rowIndex, columnId });
+      });
     },
-    [],
+    [store],
   );
 
   const stopEditing = React.useCallback(() => {
-    setEditingCell(null);
-  }, []);
+    store.setState("editingCell", null);
+  }, [store]);
+
+  const onSearchOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (open) {
+        store.setState("searchOpen", true);
+        return;
+      }
+
+      store.batch(() => {
+        store.setState("searchOpen", false);
+        store.setState("searchQuery", "");
+        store.setState("searchMatches", []);
+        store.setState("currentMatchIndex", -1);
+      });
+    },
+    [store],
+  );
+
+  const onSearch = React.useCallback(
+    (query: string) => {
+      if (!query.trim()) {
+        store.batch(() => {
+          store.setState("searchMatches", []);
+          store.setState("currentMatchIndex", -1);
+        });
+        return;
+      }
+
+      const matches: CellPosition[] = [];
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows || [];
+      const columnIds = getColumnIds();
+
+      const lowerQuery = query.toLowerCase();
+
+      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+        const row = rows[rowIndex];
+        if (!row) continue;
+
+        for (const columnId of columnIds) {
+          const cell = row
+            .getVisibleCells()
+            .find((c) => c.column.id === columnId);
+          if (!cell) continue;
+
+          const value = cell.getValue();
+          const stringValue = String(value ?? "").toLowerCase();
+
+          if (stringValue.includes(lowerQuery)) {
+            matches.push({ rowIndex, columnId });
+          }
+        }
+      }
+
+      store.batch(() => {
+        store.setState("searchMatches", matches);
+        store.setState("currentMatchIndex", matches.length > 0 ? 0 : -1);
+      });
+
+      // Scroll to first match but don't focus it (to keep focus in search input)
+      if (matches.length > 0 && matches[0]) {
+        const firstMatch = matches[0];
+        rowVirtualizerRef.current?.scrollToIndex(firstMatch.rowIndex, {
+          align: "center",
+        });
+      }
+    },
+    [getColumnIds, store],
+  );
+
+  const navigateToNextMatch = React.useCallback(() => {
+    const currentState = store.getState();
+    if (currentState.searchMatches.length === 0) return;
+
+    const nextIndex =
+      (currentState.currentMatchIndex + 1) % currentState.searchMatches.length;
+    store.setState("currentMatchIndex", nextIndex);
+
+    const match = currentState.searchMatches[nextIndex];
+    if (match) {
+      rowVirtualizerRef.current?.scrollToIndex(match.rowIndex, {
+        align: "center",
+      });
+      requestAnimationFrame(() => {
+        focusCell(match.rowIndex, match.columnId);
+      });
+    }
+  }, [store, focusCell]);
+
+  const navigateToPrevMatch = React.useCallback(() => {
+    const currentState = store.getState();
+    if (currentState.searchMatches.length === 0) return;
+
+    const prevIndex =
+      currentState.currentMatchIndex - 1 < 0
+        ? currentState.searchMatches.length - 1
+        : currentState.currentMatchIndex - 1;
+    store.setState("currentMatchIndex", prevIndex);
+
+    const match = currentState.searchMatches[prevIndex];
+    if (match) {
+      rowVirtualizerRef.current?.scrollToIndex(match.rowIndex, {
+        align: "center",
+      });
+      requestAnimationFrame(() => {
+        focusCell(match.rowIndex, match.columnId);
+      });
+    }
+  }, [store, focusCell]);
+
+  const isSearchMatch = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      return searchMatches.some(
+        (match) => match.rowIndex === rowIndex && match.columnId === columnId,
+      );
+    },
+    [searchMatches],
+  );
+
+  const isCurrentSearchMatch = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      if (currentMatchIndex < 0) return false;
+      const currentMatch = searchMatches[currentMatchIndex];
+      return (
+        currentMatch?.rowIndex === rowIndex &&
+        currentMatch?.columnId === columnId
+      );
+    },
+    [searchMatches, currentMatchIndex],
+  );
 
   const blurCell = React.useCallback(() => {
-    if (editingCell && document.activeElement instanceof HTMLElement) {
+    const currentState = store.getState();
+    if (
+      currentState.editingCell &&
+      document.activeElement instanceof HTMLElement
+    ) {
       document.activeElement.blur();
     }
 
-    setFocusedCell(null);
-    setEditingCell(null);
-  }, [editingCell]);
+    store.batch(() => {
+      store.setState("focusedCell", null);
+      store.setState("editingCell", null);
+    });
+  }, [store]);
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
-      const currentFocused = focusedCell;
+      const currentState = store.getState();
+      const currentFocused = currentState.focusedCell;
 
       if (event) {
         if (event.ctrlKey || event.metaKey) {
           event.preventDefault();
           const cellKey = getCellKey(rowIndex, columnId);
-          const newSelectedCells = new Set(selectionState.selectedCells);
+          const newSelectedCells = new Set(
+            currentState.selectionState.selectedCells,
+          );
 
           if (newSelectedCells.has(cellKey)) {
             newSelectedCells.delete(cellKey);
@@ -245,7 +503,7 @@ export function useDataGrid<TData>({
             newSelectedCells.add(cellKey);
           }
 
-          setSelectionState({
+          store.setState("selectionState", {
             selectedCells: newSelectedCells,
             selectionRange: null,
             isSelecting: false,
@@ -254,14 +512,14 @@ export function useDataGrid<TData>({
           return;
         }
 
-        if (event.shiftKey && focusedCell) {
+        if (event.shiftKey && currentState.focusedCell) {
           event.preventDefault();
-          selectRange(focusedCell, { rowIndex, columnId });
+          selectRange(currentState.focusedCell, { rowIndex, columnId });
           return;
         }
       }
 
-      if (selectionState.selectedCells.size > 0) {
+      if (currentState.selectionState.selectedCells.size > 0) {
         clearSelection();
       }
 
@@ -274,15 +532,7 @@ export function useDataGrid<TData>({
         focusCell(rowIndex, columnId);
       }
     },
-    [
-      focusedCell,
-      focusCell,
-      startEditing,
-      getCellKey,
-      selectionState.selectedCells,
-      selectRange,
-      clearSelection,
-    ],
+    [store, focusCell, startEditing, getCellKey, selectRange, clearSelection],
   );
 
   const onCellDoubleClick = React.useCallback(
@@ -297,62 +547,63 @@ export function useDataGrid<TData>({
       event.preventDefault();
 
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
-        setSelectionState((prev) => ({
-          ...prev,
+        const currentState = store.getState();
+        store.setState("selectionState", {
+          ...currentState.selectionState,
           isSelecting: true,
           selectionRange: {
             start: { rowIndex, columnId },
             end: { rowIndex, columnId },
           },
           selectedCells: new Set([getCellKey(rowIndex, columnId)]),
-        }));
+        });
       }
     },
-    [getCellKey],
+    [getCellKey, store],
   );
 
   const onCellMouseEnter = React.useCallback(
     (rowIndex: number, columnId: string, _event: React.MouseEvent) => {
-      if (selectionState.isSelecting && selectionState.selectionRange) {
-        const start = selectionState.selectionRange.start;
+      const currentState = store.getState();
+      if (
+        currentState.selectionState.isSelecting &&
+        currentState.selectionState.selectionRange
+      ) {
+        const start = currentState.selectionState.selectionRange.start;
         const end = { rowIndex, columnId };
 
         if (
-          focusedCell?.rowIndex !== start.rowIndex ||
-          focusedCell?.columnId !== start.columnId
+          currentState.focusedCell?.rowIndex !== start.rowIndex ||
+          currentState.focusedCell?.columnId !== start.columnId
         ) {
           focusCell(start.rowIndex, start.columnId);
         }
 
         selectRange(start, end);
-        setSelectionState((prev) => ({
-          ...prev,
+        store.setState("selectionState", {
+          ...currentState.selectionState,
           selectionRange: { start, end },
           isSelecting: true,
-        }));
+        });
       }
     },
-    [
-      selectionState.isSelecting,
-      selectionState.selectionRange,
-      selectRange,
-      focusedCell,
-      focusCell,
-    ],
+    [store, selectRange, focusCell],
   );
 
   const onCellMouseUp = React.useCallback(() => {
-    setSelectionState((prev) => ({
-      ...prev,
+    const currentState = store.getState();
+    store.setState("selectionState", {
+      ...currentState.selectionState,
       isSelecting: false,
-    }));
-  }, []);
+    });
+  }, [store]);
 
   const navigateCell = React.useCallback(
     (direction: NavigationDirection) => {
-      if (!focusedCell) return;
+      const currentState = store.getState();
+      if (!currentState.focusedCell) return;
 
-      const { rowIndex, columnId } = focusedCell;
+      const { rowIndex, columnId } = currentState.focusedCell;
       const columnIds = getColumnIds();
       const currentColIndex = columnIds.indexOf(columnId);
       const rowVirtualizer = rowVirtualizerRef.current;
@@ -438,17 +689,50 @@ export function useDataGrid<TData>({
         }
       }
     },
-    [focusedCell, getColumnIds, focusCell, data.length],
+    [store, getColumnIds, focusCell, data.length],
   );
 
   const onDataGridKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
-      if (editingCell) return;
-
-      if (!focusedCell) return;
-
+      const currentState = store.getState();
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
+
+      // Handle Cmd+F / Ctrl+F to open search (highest priority, works even when editing)
+      if (enableSearch && isCtrlPressed && key === "f") {
+        event.preventDefault();
+        onSearchOpenChange(true);
+        return;
+      }
+
+      // Handle search navigation when search is open
+      if (
+        enableSearch &&
+        currentState.searchOpen &&
+        !currentState.editingCell
+      ) {
+        if (key === "Enter") {
+          event.preventDefault();
+          if (shiftKey) {
+            navigateToPrevMatch();
+          } else {
+            navigateToNextMatch();
+          }
+          return;
+        }
+        if (key === "Escape") {
+          event.preventDefault();
+          onSearchOpenChange(false);
+          return;
+        }
+        // When search is open, don't let data grid handle any other keys
+        // (they should only affect the search input)
+        return;
+      }
+
+      if (currentState.editingCell) return;
+
+      if (!currentState.focusedCell) return;
 
       let direction: NavigationDirection | null = null;
 
@@ -459,9 +743,9 @@ export function useDataGrid<TData>({
       }
 
       if (key === "Delete" || key === "Backspace") {
-        if (selectionState.selectedCells.size > 0) {
+        if (currentState.selectionState.selectedCells.size > 0) {
           event.preventDefault();
-          selectionState.selectedCells.forEach((cellKey) => {
+          currentState.selectionState.selectedCells.forEach((cellKey) => {
             const parts = cellKey.split(":");
             const rowIndexStr = parts[0];
             const columnId = parts[1];
@@ -504,7 +788,7 @@ export function useDataGrid<TData>({
           break;
         case "Escape":
           event.preventDefault();
-          if (selectionState.selectedCells.size > 0) {
+          if (currentState.selectionState.selectedCells.size > 0) {
             clearSelection();
           } else {
             blurCell();
@@ -519,21 +803,23 @@ export function useDataGrid<TData>({
       if (direction) {
         event.preventDefault();
 
-        if (shiftKey && focusedCell) {
+        if (shiftKey && currentState.focusedCell) {
           const columnIds = getColumnIds();
-          const currentColIndex = columnIds.indexOf(focusedCell.columnId);
-          let newRowIndex = focusedCell.rowIndex;
-          let newColumnId = focusedCell.columnId;
+          const currentColIndex = columnIds.indexOf(
+            currentState.focusedCell.columnId,
+          );
+          let newRowIndex = currentState.focusedCell.rowIndex;
+          let newColumnId = currentState.focusedCell.columnId;
 
           switch (direction) {
             case "up":
-              newRowIndex = Math.max(0, focusedCell.rowIndex - 1);
+              newRowIndex = Math.max(0, currentState.focusedCell.rowIndex - 1);
               break;
             case "down":
               newRowIndex = Math.min(
                 (tableRef.current?.getRowModel().rows.length || data.length) -
                   1,
-                focusedCell.rowIndex + 1,
+                currentState.focusedCell.rowIndex + 1,
               );
               break;
             case "left":
@@ -551,14 +837,15 @@ export function useDataGrid<TData>({
           }
 
           const selectionStart =
-            selectionState.selectionRange?.start || focusedCell;
+            currentState.selectionState.selectionRange?.start ||
+            currentState.focusedCell;
           selectRange(selectionStart, {
             rowIndex: newRowIndex,
             columnId: newColumnId,
           });
           focusCell(newRowIndex, newColumnId);
         } else {
-          if (selectionState.selectedCells.size > 0) {
+          if (currentState.selectionState.selectedCells.size > 0) {
             clearSelection();
           }
           navigateCell(direction);
@@ -566,19 +853,47 @@ export function useDataGrid<TData>({
       }
     },
     [
-      editingCell,
-      focusedCell,
+      store,
       blurCell,
       navigateCell,
       selectAll,
-      selectionState,
       updateData,
       clearSelection,
       getColumnIds,
       data.length,
       selectRange,
       focusCell,
+      onSearchOpenChange,
+      navigateToNextMatch,
+      navigateToPrevMatch,
+      enableSearch,
     ],
+  );
+
+  const setSorting = React.useCallback(
+    (updater: SortingState | ((old: SortingState) => SortingState)) => {
+      const currentState = store.getState();
+      const newSorting =
+        typeof updater === "function" ? updater(currentState.sorting) : updater;
+      store.setState("sorting", newSorting);
+    },
+    [store],
+  );
+
+  const setRowSelection = React.useCallback(
+    (
+      updater:
+        | RowSelectionState
+        | ((old: RowSelectionState) => RowSelectionState),
+    ) => {
+      const currentState = store.getState();
+      const newRowSelection =
+        typeof updater === "function"
+          ? updater(currentState.rowSelection)
+          : updater;
+      store.setState("rowSelection", newRowSelection);
+    },
+    [store],
   );
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
@@ -622,6 +937,9 @@ export function useDataGrid<TData>({
       clearSelection,
       selectAll,
       getIsCellSelected,
+      isSearchMatch,
+      isCurrentSearchMatch,
+      searchQuery,
     },
   });
 
@@ -674,6 +992,11 @@ export function useDataGrid<TData>({
     [rowVirtualizer, getColumnIds, focusCell],
   );
 
+  const setSearchQuery = React.useCallback(
+    (query: string) => store.setState("searchQuery", query),
+    [store],
+  );
+
   React.useEffect(() => {
     const dataGridElement = dataGridRef.current;
     if (!dataGridElement) return;
@@ -684,8 +1007,53 @@ export function useDataGrid<TData>({
     };
   }, [onDataGridKeyDown]);
 
+  // Global handler for Cmd+F to override browser default
   React.useEffect(() => {
-    if (autoFocus && data.length > 0 && columns.length > 0 && !focusedCell) {
+    if (!enableSearch) return;
+
+    function onGlobalKeyDown(event: KeyboardEvent) {
+      const isCtrlPressed = event.ctrlKey || event.metaKey;
+
+      if (!isCtrlPressed || event.key !== "f") return;
+
+      const dataGridElement = dataGridRef.current;
+      if (!dataGridElement) return;
+
+      // Don't intercept if we're in a regular input/textarea that's NOT part of the data grid or search
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const isInInput =
+          target.tagName === "INPUT" || target.tagName === "TEXTAREA";
+        const isInDataGrid = dataGridElement.contains(target);
+        const isSearchInput = target.closest('[role="search"]') !== null;
+
+        // If in an input/textarea that's outside the data grid (and not our search), let browser handle it
+        if (isInInput && !isInDataGrid && !isSearchInput) {
+          return;
+        }
+      }
+
+      // Intercept Cmd+F and open our search
+      event.preventDefault();
+      event.stopPropagation();
+      onSearchOpenChange(true);
+    }
+
+    // Use capture phase to intercept before browser
+    window.addEventListener("keydown", onGlobalKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", onGlobalKeyDown, true);
+    };
+  }, [onSearchOpenChange, enableSearch]);
+
+  React.useEffect(() => {
+    const currentState = store.getState();
+    if (
+      autoFocus &&
+      data.length > 0 &&
+      columns.length > 0 &&
+      !currentState.focusedCell
+    ) {
       const columnIds = getColumnIds();
       if (columnIds.length > 0) {
         const rafId = requestAnimationFrame(() => {
@@ -697,14 +1065,7 @@ export function useDataGrid<TData>({
         return () => cancelAnimationFrame(rafId);
       }
     }
-  }, [
-    autoFocus,
-    data.length,
-    columns.length,
-    focusedCell,
-    getColumnIds,
-    focusCell,
-  ]);
+  }, [autoFocus, data.length, columns.length, store, getColumnIds, focusCell]);
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
@@ -718,7 +1079,8 @@ export function useDataGrid<TData>({
 
         if (!isInsidePopover) {
           table.options.meta?.blurCell?.();
-          if (selectionState.selectedCells.size > 0) {
+          const currentState = store.getState();
+          if (currentState.selectionState.selectedCells.size > 0) {
             clearSelection();
           }
         }
@@ -729,28 +1091,38 @@ export function useDataGrid<TData>({
     return () => {
       document.removeEventListener("mousedown", onOutsideClick);
     };
-  }, [table, selectionState.selectedCells.size, clearSelection]);
+  }, [table, clearSelection, store]);
 
   React.useEffect(() => {
-    if (selectionState.isSelecting) {
-      function preventSelection(event: Event) {
-        event.preventDefault();
-      }
-      function preventContextMenu(event: Event) {
-        event.preventDefault();
-      }
-
-      document.addEventListener("selectstart", preventSelection);
-      document.addEventListener("contextmenu", preventContextMenu);
-      document.body.style.userSelect = "none";
-
-      return () => {
-        document.removeEventListener("selectstart", preventSelection);
-        document.removeEventListener("contextmenu", preventContextMenu);
-        document.body.style.userSelect = "";
-      };
+    function cleanup() {
+      document.removeEventListener("selectstart", preventSelection);
+      document.removeEventListener("contextmenu", preventContextMenu);
+      document.body.style.userSelect = "";
     }
-  }, [selectionState.isSelecting]);
+
+    function preventSelection(event: Event) {
+      event.preventDefault();
+    }
+    function preventContextMenu(event: Event) {
+      event.preventDefault();
+    }
+
+    const unsubscribe = store.subscribe(() => {
+      const currentState = store.getState();
+      if (currentState.selectionState.isSelecting) {
+        document.addEventListener("selectstart", preventSelection);
+        document.addEventListener("contextmenu", preventContextMenu);
+        document.body.style.userSelect = "none";
+      } else {
+        cleanup();
+      }
+    });
+
+    return () => {
+      cleanup();
+      unsubscribe();
+    };
+  }, [store]);
 
   useIsomorphicLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
@@ -770,11 +1142,39 @@ export function useDataGrid<TData>({
     table.getState().sorting,
   ]);
 
+  const searchState = React.useMemo(() => {
+    if (!enableSearch) return undefined;
+
+    return {
+      searchOpen,
+      searchQuery,
+      searchMatches,
+      currentMatchIndex,
+      onSearchOpenChange,
+      onSearch,
+      navigateToNextMatch,
+      navigateToPrevMatch,
+      setSearchQuery,
+    };
+  }, [
+    enableSearch,
+    searchOpen,
+    searchQuery,
+    searchMatches,
+    currentMatchIndex,
+    onSearchOpenChange,
+    onSearch,
+    navigateToNextMatch,
+    navigateToPrevMatch,
+    setSearchQuery,
+  ]);
+
   return {
     dataGridRef,
     table,
     rowVirtualizer,
     rowMapRef,
     scrollToRow,
+    searchState,
   };
 }

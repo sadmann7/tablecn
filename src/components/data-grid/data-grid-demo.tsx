@@ -226,6 +226,7 @@ export function DataGridDemo() {
     data,
     onDataChange: setData,
     getRowId: (row) => row.id,
+    enableSearch: true,
     initialState: {
       columnPinning: {
         left: ["select", "name"],
@@ -256,8 +257,8 @@ export function DataGridDemo() {
         </div>
       </div>
       <DataGrid
-        {...dataGridProps}
         table={table}
+        {...dataGridProps}
         onRowAdd={onRowAdd}
         height={500}
       />
