@@ -45,7 +45,7 @@ declare module "@tanstack/react-table" {
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
-    updateCells?: (updates: Array<UpdateCell>) => void;
+    updateData?: (props: UpdateCell | Array<UpdateCell>) => void;
     focusedCell?: CellPosition | null;
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;

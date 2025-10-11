@@ -204,23 +204,23 @@ export function useDataGrid<TData>({
       .filter((id): id is string => Boolean(id));
   }, [columns]);
 
-  const updateCells = React.useCallback(
-    (updates: Array<UpdateCell>) => {
-      if (updates.length === 0) return;
+  const updateData = React.useCallback(
+    (updates: UpdateCell | Array<UpdateCell>) => {
+      const updateArray = Array.isArray(updates) ? updates : [updates];
+
+      if (updateArray.length === 0) return;
 
       const currentTable = tableRef.current;
       const rows = currentTable?.getRowModel().rows;
 
-      // Create a map of original row indices to their updates
       const rowUpdatesMap = new Map<
         number,
         Array<Omit<UpdateCell, "rowIndex">>
       >();
 
-      for (const update of updates) {
+      for (const update of updateArray) {
         if (!rows || !currentTable) {
-          // No table, use sortedRowIndex directly as originalRowIndex
-          const existingUpdates = rowUpdatesMap.get(update.rowIndex) || [];
+          const existingUpdates = rowUpdatesMap.get(update.rowIndex) ?? [];
           existingUpdates.push({
             columnId: update.columnId,
             value: update.value,
@@ -243,7 +243,6 @@ export function useDataGrid<TData>({
         }
       }
 
-      // Apply all updates in a single pass
       const newData = data.map((row, index) => {
         const updates = rowUpdatesMap.get(index);
         if (!updates) return row;
@@ -849,7 +848,7 @@ export function useDataGrid<TData>({
             }
           });
 
-          updateCells(updates);
+          updateData(updates);
           clearSelection();
         }
         return;
@@ -951,7 +950,7 @@ export function useDataGrid<TData>({
       blurCell,
       navigateCell,
       selectAll,
-      updateCells,
+      updateData,
       clearSelection,
       getColumnIds,
       data.length,
@@ -1036,7 +1035,7 @@ export function useDataGrid<TData>({
     getRowId,
     meta: {
       ...dataGridProps.meta,
-      updateCells,
+      updateData,
       focusedCell,
       editingCell,
       selectionState,
