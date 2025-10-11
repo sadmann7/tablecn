@@ -8,7 +8,16 @@ import type { SearchState } from "@/types/data-grid";
 
 interface DataGridSearchProps extends SearchState {}
 
-export function DataGridSearch({
+export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
+  return (
+    prev.searchOpen === next.searchOpen &&
+    prev.searchQuery === next.searchQuery &&
+    prev.currentMatchIndex === next.currentMatchIndex &&
+    prev.searchMatches.length === next.searchMatches.length
+  );
+});
+
+function DataGridSearchImpl({
   searchOpen,
   searchQuery,
   searchMatches,
@@ -77,62 +86,61 @@ export function DataGridSearch({
     <div
       role="search"
       data-slot="data-grid-search"
-      className="fade-in-0 slide-in-from-top-2 absolute top-4 right-4 z-50 flex animate-in items-center gap-2 rounded-lg border bg-background p-2 shadow-lg"
+      className="fade-in-0 slide-in-from-top-2 absolute top-4 right-4 z-50 flex animate-in flex-col gap-2 rounded-lg border bg-background p-2 shadow-lg"
     >
-      <Input
-        ref={inputRef}
-        type="text"
-        placeholder="Find in table..."
-        value={searchQuery}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        className="h-8 w-64"
-        autoComplete="off"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-      />
-      <div className="flex items-center gap-1 text-muted-foreground text-xs">
+      <div className="flex items-center gap-2">
+        <Input
+          ref={inputRef}
+          type="text"
+          placeholder="Find in table..."
+          value={searchQuery}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          className="h-8 w-64"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+        />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={navigateToPrevMatch}
+            disabled={searchMatches.length === 0}
+          >
+            <ChevronUp />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={navigateToNextMatch}
+            disabled={searchMatches.length === 0}
+          >
+            <ChevronDown />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={onClose}
+          >
+            <X />
+          </Button>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 whitespace-nowrap text-muted-foreground text-xs">
         {searchMatches.length > 0 ? (
-          <span className="whitespace-nowrap">
+          <span>
             {currentMatchIndex + 1} of {searchMatches.length}
           </span>
         ) : searchQuery ? (
-          <span className="whitespace-nowrap">No results</span>
+          <span>No results</span>
         ) : (
-          <span className="whitespace-nowrap">Type to search</span>
+          <span>Type to search</span>
         )}
-      </div>
-      <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7"
-          onClick={navigateToPrevMatch}
-          disabled={searchMatches.length === 0}
-          title="Previous match (Shift+Enter)"
-        >
-          <ChevronUp className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7"
-          onClick={navigateToNextMatch}
-          disabled={searchMatches.length === 0}
-          title="Next match (Enter)"
-        >
-          <ChevronDown className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7"
-          onClick={onClose}
-          title="Close (Escape)"
-        >
-          <X className="size-4" />
-        </Button>
       </div>
     </div>
   );

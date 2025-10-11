@@ -13,6 +13,10 @@ interface DataGridRowProps<TData> {
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
 }
 
+export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
+  return next.rowVirtualizer.isScrolling && prev.row.id === next.row.id;
+}) as typeof DataGridRowImpl;
+
 function DataGridRowImpl<TData>({
   row,
   virtualRowIndex,
@@ -53,7 +57,3 @@ function DataGridRowImpl<TData>({
     </div>
   );
 }
-
-export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
-  return next.rowVirtualizer.isScrolling && prev.row.id === next.row.id;
-}) as typeof DataGridRowImpl;
