@@ -361,7 +361,7 @@ export function SelectCell<TData>({
           >
             <SelectValue placeholder={placeholder} />
           </SelectTrigger>
-          <SelectContent data-cell-editor="">
+          <SelectContent data-grid-cell-editor="">
             {options.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
@@ -561,7 +561,7 @@ export function DateCell<TData>({
       {isEditing ? (
         <input
           type="date"
-          data-cell-editor=""
+          data-grid-cell-editor=""
           ref={inputRef}
           value={value}
           placeholder={placeholder}

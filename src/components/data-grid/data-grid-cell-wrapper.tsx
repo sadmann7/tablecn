@@ -84,6 +84,15 @@ export function DataGridCellWrapper<TData>({
     [meta, rowIndex, columnId, isEditing],
   );
 
+  const onContextMenu = React.useCallback(
+    (event: React.MouseEvent) => {
+      if (!isEditing) {
+        meta?.onCellContextMenu?.(rowIndex, columnId, event);
+      }
+    },
+    [meta, rowIndex, columnId, isEditing],
+  );
+
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent) => {
       // Always let the variant handle its specific logic first
@@ -149,6 +158,7 @@ export function DataGridCellWrapper<TData>({
       onMouseDown={onMouseDown}
       onMouseEnter={onMouseEnter}
       onMouseUp={onMouseUp}
+      onContextMenu={onContextMenu}
       onKeyDown={onKeyDown}
       className={cn(
         "size-full cursor-default truncate px-2 py-1 text-left text-sm outline-none",

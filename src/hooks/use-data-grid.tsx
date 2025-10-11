@@ -32,6 +32,13 @@ function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   return ref as React.RefObject<T>;
 }
 
+interface ContextMenuState {
+  open: boolean;
+  x: number;
+  y: number;
+  targetCell: CellPosition | null;
+}
+
 interface DataGridState {
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
@@ -42,6 +49,7 @@ interface DataGridState {
   searchOpen: boolean;
   sorting: SortingState;
   rowSelection: RowSelectionState;
+  contextMenu: ContextMenuState;
 }
 
 interface DataGridStore {
@@ -104,6 +112,12 @@ export function useDataGrid<TData>({
       searchOpen: false,
       sorting: initialState?.sorting ?? [],
       rowSelection: initialState?.rowSelection ?? {},
+      contextMenu: {
+        open: false,
+        x: 0,
+        y: 0,
+        targetCell: null,
+      },
     };
   });
 
@@ -174,6 +188,7 @@ export function useDataGrid<TData>({
     searchOpen,
     sorting,
     rowSelection,
+    contextMenu,
   } = React.useSyncExternalStore(
     store.subscribe,
     store.getState,
@@ -488,6 +503,11 @@ export function useDataGrid<TData>({
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
+      // Ignore right-click (button 2) - let onCellContextMenu handle it
+      if (event?.button === 2) {
+        return;
+      }
+
       const currentState = store.getState();
       const currentFocused = currentState.focusedCell;
 
@@ -546,6 +566,11 @@ export function useDataGrid<TData>({
 
   const onCellMouseDown = React.useCallback(
     (rowIndex: number, columnId: string, event: React.MouseEvent) => {
+      // Ignore right-click (button 2) - let onCellContextMenu handle it
+      if (event.button === 2) {
+        return;
+      }
+
       event.preventDefault();
 
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
@@ -592,6 +617,51 @@ export function useDataGrid<TData>({
     store.setState("selectionState", {
       ...currentState.selectionState,
       isSelecting: false,
+    });
+  }, [store]);
+
+  const onCellContextMenu = React.useCallback(
+    (rowIndex: number, columnId: string, event: React.MouseEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const currentState = store.getState();
+      const cellKey = getCellKey(rowIndex, columnId);
+      const isTargetCellSelected =
+        currentState.selectionState.selectedCells.has(cellKey);
+
+      // If right-clicking on a non-selected cell, select only that cell
+      if (!isTargetCellSelected) {
+        store.batch(() => {
+          store.setState("selectionState", {
+            selectedCells: new Set([cellKey]),
+            selectionRange: {
+              start: { rowIndex, columnId },
+              end: { rowIndex, columnId },
+            },
+            isSelecting: false,
+          });
+          store.setState("focusedCell", { rowIndex, columnId });
+        });
+      }
+
+      // Open context menu at cursor position
+      store.setState("contextMenu", {
+        open: true,
+        x: event.clientX,
+        y: event.clientY,
+        targetCell: { rowIndex, columnId },
+      });
+    },
+    [store, getCellKey],
+  );
+
+  const closeContextMenu = React.useCallback(() => {
+    store.setState("contextMenu", {
+      open: false,
+      x: 0,
+      y: 0,
+      targetCell: null,
     });
   }, [store]);
 
@@ -948,6 +1018,7 @@ export function useDataGrid<TData>({
       onCellMouseDown,
       onCellMouseEnter,
       onCellMouseUp,
+      onCellContextMenu,
       startEditing,
       stopEditing,
       navigateCell,
@@ -958,6 +1029,8 @@ export function useDataGrid<TData>({
       isSearchMatch,
       isCurrentSearchMatch,
       searchQuery,
+      contextMenu,
+      closeContextMenu,
     },
   });
 
@@ -1087,13 +1160,19 @@ export function useDataGrid<TData>({
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
+      if (event.button === 2) {
+        return;
+      }
+
       if (
         dataGridRef.current &&
         !dataGridRef.current.contains(event.target as Node)
       ) {
         const target = event.target;
         const isInsidePopover =
-          target instanceof HTMLElement && target.closest("[data-cell-editor]");
+          target instanceof HTMLElement &&
+          (target.closest("[data-grid-cell-editor]") ||
+            target.closest("[data-grid-popover]"));
 
         if (!isInsidePopover) {
           table.options.meta?.blurCell?.();
@@ -1189,6 +1268,8 @@ export function useDataGrid<TData>({
     navigateToPrevMatch,
     setSearchQuery,
   ]);
+
+  console.log({ contextMenu });
 
   return {
     dataGridRef,

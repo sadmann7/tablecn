@@ -60,6 +60,11 @@ declare module "@tanstack/react-table" {
       event: React.MouseEvent,
     ) => void;
     onCellMouseUp?: () => void;
+    onCellContextMenu?: (
+      rowIndex: number,
+      columnId: string,
+      event: React.MouseEvent,
+    ) => void;
     startEditing?: (rowIndex: number, columnId: string) => void;
     stopEditing?: () => void;
     blurCell?: () => void;
@@ -70,6 +75,8 @@ declare module "@tanstack/react-table" {
     isSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     isCurrentSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     searchQuery?: string;
+    contextMenu?: ContextMenuState;
+    closeContextMenu?: () => void;
   }
 }
 
@@ -87,6 +94,13 @@ export interface SelectionState {
   selectedCells: Set<string>;
   selectionRange: CellRange | null;
   isSelecting: boolean;
+}
+
+export interface ContextMenuState {
+  open: boolean;
+  x: number;
+  y: number;
+  targetCell: CellPosition | null;
 }
 
 export interface ScrollToOptions {
