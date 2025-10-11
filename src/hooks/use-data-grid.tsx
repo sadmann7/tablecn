@@ -19,6 +19,7 @@ import type {
   ScrollToOptions,
   SearchState,
   SelectionState,
+  UpdateCell,
 } from "@/types/data-grid";
 
 const useIsomorphicLayoutEffect =
@@ -203,40 +204,57 @@ export function useDataGrid<TData>({
       .filter((id): id is string => Boolean(id));
   }, [columns]);
 
-  const updateData = React.useCallback(
-    (sortedRowIndex: number, columnId: string, value: unknown) => {
+  const updateCells = React.useCallback(
+    (updates: Array<UpdateCell>) => {
+      if (updates.length === 0) return;
+
       const currentTable = tableRef.current;
-      if (!currentTable) {
-        const newData = data.map((row, index) => {
-          if (index === sortedRowIndex) {
-            return {
-              ...row,
-              [columnId]: value,
-            };
-          }
-          return row;
-        });
-        onDataChange?.(newData);
-        return;
+      const rows = currentTable?.getRowModel().rows;
+
+      // Create a map of original row indices to their updates
+      const rowUpdatesMap = new Map<
+        number,
+        Array<Omit<UpdateCell, "rowIndex">>
+      >();
+
+      for (const update of updates) {
+        if (!rows || !currentTable) {
+          // No table, use sortedRowIndex directly as originalRowIndex
+          const existingUpdates = rowUpdatesMap.get(update.rowIndex) || [];
+          existingUpdates.push({
+            columnId: update.columnId,
+            value: update.value,
+          });
+          rowUpdatesMap.set(update.rowIndex, existingUpdates);
+        } else {
+          const row = rows[update.rowIndex];
+          if (!row) continue;
+
+          const originalData = row.original;
+          const originalRowIndex = data.indexOf(originalData);
+          if (originalRowIndex === -1) continue;
+
+          const existingUpdates = rowUpdatesMap.get(originalRowIndex) || [];
+          existingUpdates.push({
+            columnId: update.columnId,
+            value: update.value,
+          });
+          rowUpdatesMap.set(originalRowIndex, existingUpdates);
+        }
       }
 
-      const row = currentTable.getRowModel().rows[sortedRowIndex];
-      if (!row) return;
-
-      const originalData = row.original;
-      const originalRowIndex = data.indexOf(originalData);
-
-      if (originalRowIndex === -1) return;
-
+      // Apply all updates in a single pass
       const newData = data.map((row, index) => {
-        if (index === originalRowIndex) {
-          return {
-            ...row,
-            [columnId]: value,
-          };
+        const updates = rowUpdatesMap.get(index);
+        if (!updates) return row;
+
+        const updatedRow = { ...row } as Record<string, unknown>;
+        for (const { columnId, value } of updates) {
+          updatedRow[columnId] = value;
         }
-        return row;
+        return updatedRow as TData;
       });
+
       onDataChange?.(newData);
     },
     [data, onDataChange],
@@ -813,6 +831,12 @@ export function useDataGrid<TData>({
       if (key === "Delete" || key === "Backspace") {
         if (currentState.selectionState.selectedCells.size > 0) {
           event.preventDefault();
+          const updates: Array<{
+            rowIndex: number;
+            columnId: string;
+            value: unknown;
+          }> = [];
+
           currentState.selectionState.selectedCells.forEach((cellKey) => {
             const parts = cellKey.split(":");
             const rowIndexStr = parts[0];
@@ -820,10 +844,12 @@ export function useDataGrid<TData>({
             if (rowIndexStr && columnId) {
               const rowIndex = parseInt(rowIndexStr, 10);
               if (!Number.isNaN(rowIndex)) {
-                updateData(rowIndex, columnId, "");
+                updates.push({ rowIndex, columnId, value: "" });
               }
             }
           });
+
+          updateCells(updates);
           clearSelection();
         }
         return;
@@ -925,7 +951,7 @@ export function useDataGrid<TData>({
       blurCell,
       navigateCell,
       selectAll,
-      updateData,
+      updateCells,
       clearSelection,
       getColumnIds,
       data.length,
@@ -1010,7 +1036,7 @@ export function useDataGrid<TData>({
     getRowId,
     meta: {
       ...dataGridProps.meta,
-      updateData,
+      updateCells,
       focusedCell,
       editingCell,
       selectionState,

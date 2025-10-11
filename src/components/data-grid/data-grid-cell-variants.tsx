@@ -45,7 +45,7 @@ export function TextCell<TData>({
     if (cellRef.current) {
       const currentValue = cellRef.current.textContent ?? "";
       if (currentValue !== initialValue) {
-        meta?.updateData?.(rowIndex, columnId, currentValue);
+        meta?.updateCells?.([{ rowIndex, columnId, value: currentValue }]);
       }
       meta?.stopEditing?.();
     }
@@ -184,7 +184,7 @@ export function NumberCell<TData>({
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (numValue !== initialValue) {
-      meta?.updateData?.(rowIndex, columnId, numValue);
+      meta?.updateCells?.([{ rowIndex, columnId, value: numValue }]);
     }
     meta?.stopEditing?.();
   }, [meta, rowIndex, columnId, initialValue, value]);
@@ -292,7 +292,7 @@ export function SelectCell<TData>({
   const onValueChange = React.useCallback(
     (newValue: string) => {
       setValue(newValue);
-      meta?.updateData?.(rowIndex, columnId, newValue);
+      meta?.updateCells?.([{ rowIndex, columnId, value: newValue }]);
       meta?.stopEditing?.();
     },
     [meta, rowIndex, columnId],
@@ -396,7 +396,7 @@ export function CheckboxCell<TData>({
   const toggleValue = React.useCallback(() => {
     const newValue = !value;
     setValue(newValue);
-    meta?.updateData?.(rowIndex, columnId, newValue);
+    meta?.updateCells?.([{ rowIndex, columnId, value: newValue }]);
   }, [value, meta, rowIndex, columnId]);
 
   const onCellKeyDown = React.useCallback(
@@ -505,7 +505,7 @@ export function DateCell<TData>({
 
   const onBlur = React.useCallback(() => {
     if (value !== initialValue) {
-      meta?.updateData?.(rowIndex, columnId, value);
+      meta?.updateCells?.([{ rowIndex, columnId, value }]);
     }
     meta?.stopEditing?.();
   }, [meta, rowIndex, columnId, initialValue, value]);

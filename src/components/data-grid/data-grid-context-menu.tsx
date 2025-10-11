@@ -1,8 +1,9 @@
 "use client";
 
 import type { Table } from "@tanstack/react-table";
-import { CopyIcon, Trash2Icon } from "lucide-react";
+import { Copy, Eraser } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { UpdateCell } from "@/types/data-grid";
 
 interface DataGridContextMenuProps<TData> {
   table: Table<TData>;
@@ -126,15 +128,19 @@ export function DataGridContextMenu<TData>({
       .join("\n");
 
     navigator.clipboard.writeText(tsvData);
-    // Keep selection after copy - user might want to perform more actions
+    toast.success(
+      `${selectionState.selectedCells.size} cell${selectionState.selectedCells.size !== 1 ? "s" : ""} copied`,
+    );
   }, [table, selectionState]);
 
-  const onDelete = React.useCallback(() => {
+  const onClear = React.useCallback(() => {
     if (
       !selectionState?.selectedCells ||
       selectionState.selectedCells.size === 0
     )
       return;
+
+    const updates: Array<UpdateCell> = [];
 
     for (const cellKey of selectionState.selectedCells) {
       const parts = cellKey.split(":");
@@ -143,12 +149,16 @@ export function DataGridContextMenu<TData>({
       if (rowIndexStr && columnId) {
         const rowIndex = Number.parseInt(rowIndexStr, 10);
         if (!Number.isNaN(rowIndex)) {
-          meta?.updateData?.(rowIndex, columnId, "");
+          updates.push({ rowIndex, columnId, value: "" });
         }
       }
     }
 
-    // Keep selection after delete - user might want to paste or perform more actions
+    meta?.updateCells?.(updates);
+
+    toast.success(
+      `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,
+    );
   }, [meta, selectionState]);
 
   if (!contextMenu) return null;
@@ -168,13 +178,13 @@ export function DataGridContextMenu<TData>({
         onCloseAutoFocus={onCloseAutoFocus}
       >
         <DropdownMenuItem onClick={onCopy}>
-          <CopyIcon />
+          <Copy />
           Copy
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={onDelete}>
-          <Trash2Icon />
-          Delete
+        <DropdownMenuItem variant="destructive" onClick={onClear}>
+          <Eraser />
+          Clear
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -30,6 +30,12 @@ export type Cell =
       placeholder?: string;
     };
 
+export interface UpdateCell {
+  rowIndex: number;
+  columnId: string;
+  value: unknown;
+}
+
 declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
@@ -39,7 +45,7 @@ declare module "@tanstack/react-table" {
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
-    updateData?: (rowIndex: number, columnId: string, value: unknown) => void;
+    updateCells?: (updates: Array<UpdateCell>) => void;
     focusedCell?: CellPosition | null;
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
