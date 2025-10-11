@@ -420,6 +420,15 @@ export function CheckboxCell<TData>({
     }
   }, [isFocused]);
 
+  const onCheckboxClick = React.useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+      event.preventDefault();
+      toggleValue();
+    },
+    [toggleValue],
+  );
+
   const onWrapperClickHandler = React.useCallback(
     (event: React.MouseEvent) => {
       event.preventDefault();
@@ -452,8 +461,12 @@ export function CheckboxCell<TData>({
         onClick={onWrapperClickHandler}
       >
         <div
+          role="checkbox"
+          aria-checked={value}
+          tabIndex={-1}
+          onClick={onCheckboxClick}
           className={cn(
-            "flex size-4 items-center justify-center rounded-sm border border-primary",
+            "flex size-4 cursor-pointer items-center justify-center rounded-sm border border-primary",
             {
               "bg-primary text-primary-foreground": value,
             },
