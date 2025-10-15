@@ -196,13 +196,17 @@ export function useDataGrid<TData>({
 
   const getColumnIds = React.useCallback(() => {
     return columns
-      .map((col) => {
-        if (col.id) return col.id;
-        if ("accessorKey" in col) return col.accessorKey as string;
+      .map((c) => {
+        if (c.id) return c.id;
+        if ("accessorKey" in c) return c.accessorKey as string;
         return undefined;
       })
       .filter((id): id is string => Boolean(id));
   }, [columns]);
+
+  const getNavigableColumnIds = React.useCallback(() => {
+    return getColumnIds().filter((c) => c !== "select");
+  }, [getColumnIds]);
 
   const updateData = React.useCallback(
     (updates: UpdateCell | Array<UpdateCell>) => {
@@ -709,7 +713,7 @@ export function useDataGrid<TData>({
       if (!currentState.focusedCell) return;
 
       const { rowIndex, columnId } = currentState.focusedCell;
-      const columnIds = getColumnIds();
+      const columnIds = getNavigableColumnIds();
       const currentColIndex = columnIds.indexOf(columnId);
       const rowVirtualizer = rowVirtualizerRef.current;
       const currentTable = tableRef.current;
@@ -794,7 +798,7 @@ export function useDataGrid<TData>({
         }
       }
     },
-    [store, getColumnIds, focusCell, data.length],
+    [store, getNavigableColumnIds, focusCell, data.length],
   );
 
   const onDataGridKeyDown = React.useCallback(
@@ -917,7 +921,7 @@ export function useDataGrid<TData>({
         event.preventDefault();
 
         if (shiftKey && currentState.focusedCell) {
-          const columnIds = getColumnIds();
+          const columnIds = getNavigableColumnIds();
           const currentColIndex = columnIds.indexOf(
             currentState.focusedCell.columnId,
           );
@@ -972,7 +976,7 @@ export function useDataGrid<TData>({
       selectAll,
       updateData,
       clearSelection,
-      getColumnIds,
+      getNavigableColumnIds,
       data.length,
       selectRange,
       focusCell,
@@ -1117,7 +1121,7 @@ export function useDataGrid<TData>({
         align: "center",
       });
 
-      const columnIds = getColumnIds();
+      const columnIds = getNavigableColumnIds();
       const targetColumnId = columnId || columnIds[0];
 
       if (targetColumnId) {
@@ -1126,7 +1130,7 @@ export function useDataGrid<TData>({
         });
       }
     },
-    [rowVirtualizer, getColumnIds, focusCell],
+    [rowVirtualizer, getNavigableColumnIds, focusCell],
   );
 
   const setSearchQuery = React.useCallback(
@@ -1191,7 +1195,7 @@ export function useDataGrid<TData>({
       columns.length > 0 &&
       !currentState.focusedCell
     ) {
-      const columnIds = getColumnIds();
+      const columnIds = getNavigableColumnIds();
       if (columnIds.length > 0) {
         const rafId = requestAnimationFrame(() => {
           const firstColumnId = columnIds[0];
@@ -1202,7 +1206,14 @@ export function useDataGrid<TData>({
         return () => cancelAnimationFrame(rafId);
       }
     }
-  }, [autoFocus, data.length, columns.length, store, getColumnIds, focusCell]);
+  }, [
+    autoFocus,
+    data.length,
+    columns.length,
+    store,
+    getNavigableColumnIds,
+    focusCell,
+  ]);
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
