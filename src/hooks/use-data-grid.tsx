@@ -15,6 +15,7 @@ import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import type {
   CellPosition,
+  ContextMenuState,
   NavigationDirection,
   ScrollToOptions,
   SearchState,
@@ -33,21 +34,15 @@ function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   return ref as React.RefObject<T>;
 }
 
-interface ContextMenuState {
-  open: boolean;
-  x: number;
-  y: number;
-}
-
 interface DataGridState {
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  selectionState: SelectionState;
   searchQuery: string;
   searchMatches: CellPosition[];
   currentMatchIndex: number;
   searchOpen: boolean;
   sorting: SortingState;
+  selectionState: SelectionState;
   rowSelection: RowSelectionState;
   contextMenu: ContextMenuState;
 }
@@ -1157,6 +1152,33 @@ export function useDataGrid<TData>({
     [store],
   );
 
+  const searchState = React.useMemo<SearchState | undefined>(() => {
+    if (!enableSearch) return undefined;
+
+    return {
+      searchOpen,
+      searchQuery,
+      searchMatches,
+      currentMatchIndex,
+      onSearchOpenChange,
+      onSearch,
+      navigateToNextMatch,
+      navigateToPrevMatch,
+      setSearchQuery,
+    };
+  }, [
+    enableSearch,
+    searchOpen,
+    searchQuery,
+    searchMatches,
+    currentMatchIndex,
+    onSearchOpenChange,
+    onSearch,
+    navigateToNextMatch,
+    navigateToPrevMatch,
+    setSearchQuery,
+  ]);
+
   React.useEffect(() => {
     const dataGridElement = dataGridRef.current;
     if (!dataGridElement) return;
@@ -1316,33 +1338,6 @@ export function useDataGrid<TData>({
     table.getState().grouping,
     table.getState().rowSelection,
     table.getState().sorting,
-  ]);
-
-  const searchState = React.useMemo<SearchState | undefined>(() => {
-    if (!enableSearch) return undefined;
-
-    return {
-      searchOpen,
-      searchQuery,
-      searchMatches,
-      currentMatchIndex,
-      onSearchOpenChange,
-      onSearch,
-      navigateToNextMatch,
-      navigateToPrevMatch,
-      setSearchQuery,
-    };
-  }, [
-    enableSearch,
-    searchOpen,
-    searchQuery,
-    searchMatches,
-    currentMatchIndex,
-    onSearchOpenChange,
-    onSearch,
-    navigateToNextMatch,
-    navigateToPrevMatch,
-    setSearchQuery,
   ]);
 
   return {
