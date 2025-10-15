@@ -798,107 +798,17 @@ export function useDataGrid<TData>({
       }
 
       if (newRowIndex !== rowIndex || newColumnId !== columnId) {
-        console.log({
-          direction,
-          currentRow: rowIndex,
-          newRow: newRowIndex,
-          rowCount,
-        });
-
-        if (rowVirtualizer) {
-          const virtualItems = rowVirtualizer.getVirtualItems();
-          const virtualRowIndices = virtualItems.map((item) => item.index);
-          const isNewRowVirtual = virtualRowIndices.includes(newRowIndex);
-
-          // Check if row is actually visible in viewport
-          const scrollElement = dataGridRef.current;
-          const targetRow = rowMapRef.current.get(newRowIndex);
-          let isInViewport = false;
-
-          if (scrollElement && targetRow) {
-            const scrollRect = scrollElement.getBoundingClientRect();
-            const rowRect = targetRow.getBoundingClientRect();
-
-            // Check if row is fully visible in viewport
-            isInViewport =
-              rowRect.top >= scrollRect.top &&
-              rowRect.bottom <= scrollRect.bottom;
-
-            console.log({
-              virtualItems: virtualRowIndices,
-              isNewRowVirtual,
-              isInViewport,
-              newRowIndex,
-              scrollRect: {
-                top: scrollRect.top,
-                bottom: scrollRect.bottom,
-                height: scrollRect.height,
-              },
-              rowRect: {
-                top: rowRect.top,
-                bottom: rowRect.bottom,
-                height: rowRect.height,
-              },
-            });
-          } else {
-            console.log({
-              virtualItems: virtualRowIndices,
-              isNewRowVirtual,
-              isInViewport: false,
-              newRowIndex,
-              reason: "Row not in DOM yet or no scroll element",
-            });
-          }
-
-          // For arrow key navigation (up/down), ensure the row is visible in viewport
-          if ((direction === "up" || direction === "down") && !isInViewport) {
-            console.log("Scrolling to make row visible:", newRowIndex);
-
-            // For single arrow key press, scroll just enough to reveal the row
-            // This creates the smooth Airtable-like experience
-            if (scrollElement && targetRow) {
-              const scrollRect = scrollElement.getBoundingClientRect();
-              const rowRect = targetRow.getBoundingClientRect();
-
-              if (direction === "down") {
-                // Row is below viewport, scroll down to reveal it at the bottom
-                const amountToScroll = rowRect.bottom - scrollRect.bottom;
-                console.log("Scrolling down by:", amountToScroll);
-                scrollElement.scrollTop += amountToScroll;
-              } else if (direction === "up") {
-                // Row is above viewport, scroll up to reveal it at the top
-                const amountToScroll = scrollRect.top - rowRect.top;
-                console.log("Scrolling up by:", amountToScroll);
-                scrollElement.scrollTop -= amountToScroll;
-              }
-
-              requestAnimationFrame(() => {
-                focusCell(newRowIndex, newColumnId);
-              });
-              return;
-            }
-
-            // Fallback to scrollToIndex if we don't have the elements
-            rowVirtualizer.scrollToIndex(newRowIndex, { align: "auto" });
-            requestAnimationFrame(() => {
-              focusCell(newRowIndex, newColumnId);
-            });
-            return;
-          }
-
-          // For large jumps, center the row
-          if (newRowIndex < rowIndex - 5 || newRowIndex > rowIndex + 5) {
-            console.log("Large jump, centering:", newRowIndex);
-            rowVirtualizer.scrollToIndex(newRowIndex, { align: "center" });
-            requestAnimationFrame(() => {
-              focusCell(newRowIndex, newColumnId);
-            });
-            return;
-          }
+        if (
+          rowVirtualizer &&
+          (newRowIndex < rowIndex - 5 || newRowIndex > rowIndex + 5)
+        ) {
+          rowVirtualizer.scrollToIndex(newRowIndex, { align: "center" });
+          requestAnimationFrame(() => {
+            focusCell(newRowIndex, newColumnId);
+          });
+        } else {
+          focusCell(newRowIndex, newColumnId);
         }
-
-        console.log("Just focusing cell:", newRowIndex);
-        focusCell(newRowIndex, newColumnId);
       }
     },
     [store, getNavigableColumnIds, focusCell, data.length],
