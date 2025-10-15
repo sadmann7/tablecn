@@ -238,7 +238,7 @@ export function useDataGrid<TData>({
           const originalRowIndex = data.indexOf(originalData);
           if (originalRowIndex === -1) continue;
 
-          const existingUpdates = rowUpdatesMap.get(originalRowIndex) || [];
+          const existingUpdates = rowUpdatesMap.get(originalRowIndex) ?? [];
           existingUpdates.push({
             columnId: update.columnId,
             value: update.value,
@@ -287,8 +287,8 @@ export function useDataGrid<TData>({
     const columnIds = getColumnIds();
     const allCells = new Set<string>();
     const currentTable = tableRef.current;
-    const rows = currentTable?.getRowModel().rows || [];
-    const rowCount = rows.length || data.length;
+    const rows = currentTable?.getRowModel().rows ?? [];
+    const rowCount = rows.length ?? data.length;
 
     for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
       for (const columnId of columnIds) {
@@ -381,8 +381,8 @@ export function useDataGrid<TData>({
       if (options?.moveToNextRow && currentEditing) {
         const { rowIndex, columnId } = currentEditing;
         const currentTable = tableRef.current;
-        const rows = currentTable?.getRowModel().rows || [];
-        const rowCount = rows.length || data.length;
+        const rows = currentTable?.getRowModel().rows ?? [];
+        const rowCount = rows.length ?? data.length;
 
         const nextRowIndex = rowIndex + 1;
         if (nextRowIndex < rowCount) {
@@ -424,7 +424,7 @@ export function useDataGrid<TData>({
 
       const matches: CellPosition[] = [];
       const currentTable = tableRef.current;
-      const rows = currentTable?.getRowModel().rows || [];
+      const rows = currentTable?.getRowModel().rows ?? [];
       const columnIds = getColumnIds();
 
       const lowerQuery = query.toLowerCase();
@@ -735,8 +735,8 @@ export function useDataGrid<TData>({
       const currentColIndex = columnIds.indexOf(columnId);
       const rowVirtualizer = rowVirtualizerRef.current;
       const currentTable = tableRef.current;
-      const rows = currentTable?.getRowModel().rows || [];
-      const rowCount = rows.length || data.length;
+      const rows = currentTable?.getRowModel().rows ?? [];
+      const rowCount = rows.length ?? data.length;
 
       let newRowIndex = rowIndex;
       let newColumnId = columnId;
@@ -762,30 +762,30 @@ export function useDataGrid<TData>({
           break;
         case "home":
           if (columnIds.length > 0) {
-            newColumnId = columnIds[0] || columnId;
+            newColumnId = columnIds[0] ?? columnId;
           }
           break;
         case "end":
           if (columnIds.length > 0) {
-            newColumnId = columnIds[columnIds.length - 1] || columnId;
+            newColumnId = columnIds[columnIds.length - 1] ?? columnId;
           }
           break;
         case "ctrl+home":
           newRowIndex = 0;
           if (columnIds.length > 0) {
-            newColumnId = columnIds[0] || columnId;
+            newColumnId = columnIds[0] ?? columnId;
           }
           break;
         case "ctrl+end":
           newRowIndex = Math.max(0, rowCount - 1);
           if (columnIds.length > 0) {
-            newColumnId = columnIds[columnIds.length - 1] || columnId;
+            newColumnId = columnIds[columnIds.length - 1] ?? columnId;
           }
           break;
         case "pageup":
           if (rowVirtualizer) {
             const visibleRange = rowVirtualizer.getVirtualItems();
-            const pageSize = visibleRange.length || 10;
+            const pageSize = visibleRange.length ?? 10;
             newRowIndex = Math.max(0, rowIndex - pageSize);
           } else {
             newRowIndex = Math.max(0, rowIndex - 10);
@@ -794,7 +794,7 @@ export function useDataGrid<TData>({
         case "pagedown":
           if (rowVirtualizer) {
             const visibleRange = rowVirtualizer.getVirtualItems();
-            const pageSize = visibleRange.length || 10;
+            const pageSize = visibleRange.length ?? 10;
             newRowIndex = Math.min(rowCount - 1, rowIndex + pageSize);
           } else {
             newRowIndex = Math.min(rowCount - 1, rowIndex + 10);
@@ -1029,7 +1029,7 @@ export function useDataGrid<TData>({
 
       const columnIds = getColumnIds();
       const selectedCells = new Set<string>();
-      const rows = tableRef.current?.getRowModel().rows || [];
+      const rows = tableRef.current?.getRowModel().rows ?? [];
 
       for (const rowId of selectedRows) {
         const rowIndex = rows.findIndex((r) => r.id === rowId);
@@ -1141,7 +1141,7 @@ export function useDataGrid<TData>({
       });
 
       const columnIds = getNavigableColumnIds();
-      const targetColumnId = columnId || columnIds[0];
+      const targetColumnId = columnId ?? columnIds[0];
 
       if (targetColumnId) {
         requestAnimationFrame(() => {
