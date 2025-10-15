@@ -452,6 +452,13 @@ export function CheckboxCell<TData>({
     [],
   );
 
+  const onCheckboxDoubleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+    },
+    [],
+  );
+
   return (
     <DataGridCellWrapper
       ref={containerRef}
@@ -471,6 +478,7 @@ export function CheckboxCell<TData>({
         onCheckedChange={onCheckedChange}
         onClick={onCheckboxClick}
         onMouseDown={onCheckboxMouseDown}
+        onDoubleClick={onCheckboxDoubleClick}
         className="border-primary"
       />
     </DataGridCellWrapper>

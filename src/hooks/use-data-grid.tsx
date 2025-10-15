@@ -1054,7 +1054,7 @@ export function useDataGrid<TData>({
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
-      cell: ({ cell, table }) => <DataGridCell cell={cell} table={table} />,
+      cell: DataGridCell,
     }),
     [],
   );
