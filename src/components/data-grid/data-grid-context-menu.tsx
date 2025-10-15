@@ -42,11 +42,15 @@ export function DataGridContextMenu<TData>({
     [contextMenu?.x, contextMenu?.y],
   );
 
-  const onCloseAutoFocus: React.ComponentProps<
-    typeof DropdownMenuContent
-  >["onCloseAutoFocus"] = React.useCallback((event: Event) => {
-    event.preventDefault();
-  }, []);
+  const onCloseAutoFocus: NonNullable<
+    React.ComponentProps<typeof DropdownMenuContent>["onCloseAutoFocus"]
+  > = React.useCallback(
+    (event) => {
+      event.preventDefault();
+      meta?.dataGridRef?.current?.focus();
+    },
+    [meta],
+  );
 
   const onCopy = React.useCallback(() => {
     if (

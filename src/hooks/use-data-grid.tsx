@@ -580,8 +580,26 @@ export function useDataGrid<TData>({
         }
       }
 
-      if (currentState.selectionState.selectedCells.size > 0) {
-        clearSelection();
+      // Only clear selection if it wasn't created by a drag operation
+      // (selectedCells will be empty after a simple click due to mouseDown clearing it)
+      if (
+        currentState.selectionState.selectedCells.size > 0 &&
+        !currentState.selectionState.isSelecting
+      ) {
+        // If there's a selection but we're not actively selecting (drag just finished),
+        // don't clear it - keep the selection
+        // Only clear if clicking elsewhere
+        const cellKey = getCellKey(rowIndex, columnId);
+        const isClickingSelectedCell =
+          currentState.selectionState.selectedCells.has(cellKey);
+
+        if (!isClickingSelectedCell) {
+          clearSelection();
+        } else {
+          // Clicking on an already selected cell - just focus it
+          focusCell(rowIndex, columnId);
+          return;
+        }
       }
 
       if (
@@ -612,20 +630,20 @@ export function useDataGrid<TData>({
 
       event.preventDefault();
 
+      // Only start drag selection if no modifier keys are pressed
+      // Clear any existing selection and prepare for potential drag
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
-        const currentState = store.getState();
         store.setState("selectionState", {
-          ...currentState.selectionState,
-          isSelecting: true,
+          selectedCells: new Set(),
           selectionRange: {
             start: { rowIndex, columnId },
             end: { rowIndex, columnId },
           },
-          selectedCells: new Set([getCellKey(rowIndex, columnId)]),
+          isSelecting: true,
         });
       }
     },
-    [getCellKey, store],
+    [store],
   );
 
   const onCellMouseEnter = React.useCallback(
@@ -1059,6 +1077,7 @@ export function useDataGrid<TData>({
     getRowId,
     meta: {
       ...dataGridProps.meta,
+      dataGridRef,
       updateData,
       focusedCell,
       editingCell,
