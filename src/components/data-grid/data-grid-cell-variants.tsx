@@ -59,7 +59,7 @@ export function TextCell<TData>({
     [],
   );
 
-  const onCellKeyDown = React.useCallback(
+  const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -143,7 +143,7 @@ export function TextCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onCellKeyDown={onCellKeyDown}
+      onKeyDown={onWrapperKeyDown}
     >
       <div
         role="textbox"
@@ -200,7 +200,7 @@ export function NumberCell<TData>({
     [],
   );
 
-  const onCellKeyDown = React.useCallback(
+  const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -252,7 +252,7 @@ export function NumberCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onCellKeyDown={onCellKeyDown}
+      onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
         <input
@@ -316,7 +316,7 @@ export function SelectCell<TData>({
     [meta],
   );
 
-  const onCellKeyDown = React.useCallback(
+  const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
@@ -354,7 +354,7 @@ export function SelectCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onCellKeyDown={onCellKeyDown}
+      onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
         <Select
@@ -409,7 +409,7 @@ export function CheckboxCell<TData>({
     [meta, rowIndex, columnId],
   );
 
-  const onCellKeyDown = React.useCallback(
+  const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isFocused && (event.key === " " || event.key === "Enter")) {
         event.preventDefault();
@@ -429,6 +429,17 @@ export function CheckboxCell<TData>({
       containerRef.current.focus();
     }
   }, [isFocused]);
+
+  const onWrapperClick = React.useCallback(
+    (event: React.MouseEvent) => {
+      if (isFocused) {
+        event.preventDefault();
+        event.stopPropagation();
+        onCheckedChange(!value);
+      }
+    },
+    [isFocused, value, onCheckedChange],
+  );
 
   const onCheckboxClick = React.useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
@@ -451,7 +462,8 @@ export function CheckboxCell<TData>({
       isFocused={isFocused}
       isEditing={false}
       isSelected={isSelected}
-      onCellKeyDown={onCellKeyDown}
+      onClick={onWrapperClick}
+      onKeyDown={onWrapperKeyDown}
       className="flex size-full items-center justify-center"
     >
       <Checkbox
@@ -503,7 +515,7 @@ export function DateCell<TData>({
     [],
   );
 
-  const onCellKeyDown = React.useCallback(
+  const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
         if (event.key === "Enter") {
@@ -545,7 +557,7 @@ export function DateCell<TData>({
       isFocused={isFocused}
       isEditing={isEditing}
       isSelected={isSelected}
-      onCellKeyDown={onCellKeyDown}
+      onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
         <input

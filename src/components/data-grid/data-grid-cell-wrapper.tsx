@@ -14,7 +14,6 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   isEditing: boolean;
   isSelected: boolean;
   className?: string;
-  onCellKeyDown?: (event: React.KeyboardEvent<HTMLDivElement>) => void;
 }
 
 export function DataGridCellWrapper<TData>({
@@ -26,7 +25,8 @@ export function DataGridCellWrapper<TData>({
   isSelected,
   className,
   children,
-  onCellKeyDown,
+  onClick: onClickProp,
+  onKeyDown: onKeyDownProp,
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const meta = table.options.meta;
@@ -36,9 +36,10 @@ export function DataGridCellWrapper<TData>({
     meta?.isCurrentSearchMatch?.(rowIndex, columnId) ?? false;
 
   const onClick = React.useCallback(
-    (event: React.MouseEvent) => {
+    (event: React.MouseEvent<HTMLDivElement>) => {
       if (!isEditing) {
         event.preventDefault();
+        onClickProp?.(event);
         // If already focused, enter edit mode immediately
         if (isFocused) {
           meta?.startEditing?.(rowIndex, columnId);
@@ -47,7 +48,7 @@ export function DataGridCellWrapper<TData>({
         }
       }
     },
-    [meta, rowIndex, columnId, isEditing, isFocused],
+    [meta, rowIndex, columnId, isEditing, isFocused, onClickProp],
   );
 
   const onMouseDown = React.useCallback(
@@ -96,7 +97,7 @@ export function DataGridCellWrapper<TData>({
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       // Always let the variant handle its specific logic first
-      onCellKeyDown?.(event);
+      onKeyDownProp?.(event);
 
       // If variant handled it, don't continue
       if (event.defaultPrevented) return;
@@ -142,7 +143,7 @@ export function DataGridCellWrapper<TData>({
         }
       }
     },
-    [onCellKeyDown, isFocused, isEditing, meta, rowIndex, columnId],
+    [onKeyDownProp, isFocused, isEditing, meta, rowIndex, columnId],
   );
 
   return (
@@ -167,7 +168,7 @@ export function DataGridCellWrapper<TData>({
           "bg-yellow-100 dark:bg-yellow-900/30":
             isSearchMatch && !isCurrentSearchMatch,
           "bg-orange-200 dark:bg-orange-900/50": isCurrentSearchMatch,
-          "bg-primary/10": isSelected,
+          "bg-primary/10": isSelected && !isEditing,
         },
         className,
       )}
