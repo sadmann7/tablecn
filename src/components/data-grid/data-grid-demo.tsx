@@ -260,7 +260,7 @@ export function DataGridDemo() {
         table={table}
         {...dataGridProps}
         onRowAdd={onRowAdd}
-        height={500}
+        height={560}
       />
     </div>
   );

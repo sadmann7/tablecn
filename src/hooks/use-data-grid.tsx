@@ -23,6 +23,8 @@ import type {
   UpdateCell,
 } from "@/types/data-grid";
 
+const VIEWPORT_RING_OFFSET = 1;
+
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
@@ -89,6 +91,8 @@ export function useDataGrid<TData>({
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
+  const headerRef = React.useRef<HTMLDivElement>(null);
+  const footerRef = React.useRef<HTMLDivElement>(null);
 
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
@@ -798,20 +802,101 @@ export function useDataGrid<TData>({
       }
 
       if (newRowIndex !== rowIndex || newColumnId !== columnId) {
+        const rowDiff = newRowIndex - rowIndex;
+
+        // For single-row vertical navigation (up/down arrows)
         if (
-          rowVirtualizer &&
-          (newRowIndex < rowIndex - 5 || newRowIndex > rowIndex + 5)
+          Math.abs(rowDiff) === 1 &&
+          (direction === "up" || direction === "down")
         ) {
-          rowVirtualizer.scrollToIndex(newRowIndex, { align: "center" });
+          const container = dataGridRef.current;
+          const currentRow = rowMapRef.current.get(rowIndex);
+          const targetRow = rowMapRef.current.get(newRowIndex);
+
+          if (!container || !currentRow) {
+            // Fallback to simple focus if we can't find elements
+            focusCell(newRowIndex, newColumnId);
+            return;
+          }
+
+          // Check viewport boundaries
+          const containerRect = container.getBoundingClientRect();
+          const headerHeight =
+            headerRef.current?.getBoundingClientRect().height ?? 0;
+          const footerHeight =
+            footerRef.current?.getBoundingClientRect().height ?? 0;
+
+          const viewportTop =
+            containerRect.top + headerHeight + VIEWPORT_RING_OFFSET;
+          const viewportBottom =
+            containerRect.bottom - footerHeight - VIEWPORT_RING_OFFSET;
+
+          // If target row already exists, check if it's visible
+          if (targetRow) {
+            const rowRect = targetRow.getBoundingClientRect();
+            const isFullyVisible =
+              rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
+
+            if (isFullyVisible) {
+              // Row is fully visible, just focus it
+              focusCell(newRowIndex, newColumnId);
+              return;
+            }
+
+            // Row exists but not fully visible, scroll it into view
+            focusCell(newRowIndex, newColumnId);
+
+            if (direction === "down") {
+              // Scroll just enough to show the row at the bottom
+              const scrollNeeded = rowRect.bottom - viewportBottom;
+              container.scrollTop += scrollNeeded;
+            } else {
+              // Scroll just enough to show the row at the top
+              const scrollNeeded = viewportTop - rowRect.top;
+              container.scrollTop -= scrollNeeded;
+            }
+            return;
+          }
+
+          // Target row is not rendered yet
+          // Focus immediately so the ring appears as the row is revealed
+          focusCell(newRowIndex, newColumnId);
+
+          // Scroll by exactly one row height to reveal it smoothly
+          if (direction === "down") {
+            container.scrollTop += estimateRowSize;
+          } else {
+            // For arrow up, ensure we don't go below 0
+            const currentScrollTop = container.scrollTop;
+            const targetScrollTop = Math.max(
+              0,
+              currentScrollTop - estimateRowSize,
+            );
+            container.scrollTop = targetScrollTop;
+          }
+          return;
+        }
+
+        // For larger jumps (page up/down, ctrl+home/end, etc.)
+        if (rowVirtualizer && Math.abs(rowDiff) > 1) {
+          const align =
+            direction === "pageup" || direction === "ctrl+home"
+              ? "start"
+              : direction === "pagedown" || direction === "ctrl+end"
+                ? "end"
+                : "center";
+          rowVirtualizer.scrollToIndex(newRowIndex, { align });
           requestAnimationFrame(() => {
             focusCell(newRowIndex, newColumnId);
           });
-        } else {
-          focusCell(newRowIndex, newColumnId);
+          return;
         }
+
+        // For horizontal navigation or when row is already visible
+        focusCell(newRowIndex, newColumnId);
       }
     },
-    [store, getNavigableColumnIds, focusCell, data.length],
+    [store, getNavigableColumnIds, focusCell, data.length, estimateRowSize],
   );
 
   const onDataGridKeyDown = React.useCallback(
@@ -1345,6 +1430,8 @@ export function useDataGrid<TData>({
     table,
     rowVirtualizer,
     rowMapRef,
+    headerRef,
+    footerRef,
     scrollToRow,
     searchState,
   };

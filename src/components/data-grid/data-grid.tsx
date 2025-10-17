@@ -27,6 +27,8 @@ export function DataGrid<TData>({
   table,
   rowVirtualizer,
   rowMapRef,
+  headerRef,
+  footerRef,
   scrollToRow,
   searchState,
   height = 600,
@@ -57,6 +59,18 @@ export function DataGrid<TData>({
     });
   }, [onRowAddProp, scrollToRow, rows.length]);
 
+  const onAddRowKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!onRowAddProp) return;
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onRowAdd();
+      }
+    },
+    [onRowAddProp, onRowAdd],
+  );
+
   return (
     <div
       data-slot="data-grid-wrapper"
@@ -79,8 +93,9 @@ export function DataGrid<TData>({
         }}
       >
         <div
-          data-slot="data-grid-header"
           role="rowgroup"
+          data-slot="data-grid-header"
+          ref={headerRef}
           className="sticky top-0 z-10 grid border-b bg-background"
         >
           {table.getHeaderGroups().map((headerGroup, rowIndex) => (
@@ -163,6 +178,8 @@ export function DataGrid<TData>({
         {onRowAdd && (
           <div
             role="rowgroup"
+            data-slot="data-grid-footer"
+            ref={footerRef}
             className="sticky bottom-0 z-10 grid border-t bg-background"
           >
             <div
@@ -181,12 +198,7 @@ export function DataGrid<TData>({
                   minWidth: table.getTotalSize(),
                 }}
                 onClick={onRowAdd}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onRowAdd();
-                  }
-                }}
+                onKeyDown={onAddRowKeyDown}
               >
                 <div className="sticky left-0 flex items-center gap-2 px-3 text-muted-foreground">
                   <Plus className="size-3.5" />
