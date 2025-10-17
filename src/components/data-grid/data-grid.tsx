@@ -24,14 +24,14 @@ interface DataGridProps<TData>
 
 export function DataGrid<TData>({
   dataGridRef,
+  headerRef,
+  rowMapRef,
+  footerRef,
   table,
   rowVirtualizer,
-  rowMapRef,
-  headerRef,
-  footerRef,
-  scrollToRow,
-  searchState,
   height = 600,
+  searchState,
+  scrollToRow,
   onRowAdd: onRowAddProp,
   className,
   ...props

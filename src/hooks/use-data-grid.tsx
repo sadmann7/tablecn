@@ -1427,12 +1427,12 @@ export function useDataGrid<TData>({
 
   return {
     dataGridRef,
+    headerRef,
+    rowMapRef,
+    footerRef,
     table,
     rowVirtualizer,
-    rowMapRef,
-    headerRef,
-    footerRef,
-    scrollToRow,
     searchState,
+    scrollToRow,
   };
 }
