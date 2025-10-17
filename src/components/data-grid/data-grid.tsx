@@ -38,6 +38,7 @@ export function DataGrid<TData>({
 }: DataGridProps<TData>) {
   const rows = table.getRowModel().rows;
   const columns = table.getAllColumns();
+  const focusedCell = table.options.meta?.focusedCell ?? null;
 
   const onRowAdd = React.useCallback(async () => {
     if (!onRowAddProp) return;
@@ -171,6 +172,7 @@ export function DataGrid<TData>({
                 virtualRowIndex={virtualRowIndex}
                 rowVirtualizer={rowVirtualizer}
                 rowMapRef={rowMapRef}
+                focusedCell={focusedCell}
               />
             );
           })}

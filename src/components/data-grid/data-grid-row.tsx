@@ -5,16 +5,44 @@ import type { Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 
 import { getCommonPinningStyles } from "@/lib/data-table";
+import type { CellPosition } from "@/types/data-grid";
 
 interface DataGridRowProps<TData> {
   row: Row<TData>;
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualRowIndex: number;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
+  focusedCell: CellPosition | null;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
-  return next.rowVirtualizer.isScrolling && prev.row.id === next.row.id;
+  if (prev.row.id !== next.row.id) {
+    return false;
+  }
+
+  const prevRowIndex = prev.virtualRowIndex;
+  const nextRowIndex = next.virtualRowIndex;
+
+  const prevHasFocus = prev.focusedCell?.rowIndex === prevRowIndex;
+  const nextHasFocus = next.focusedCell?.rowIndex === nextRowIndex;
+
+  if (prevHasFocus !== nextHasFocus) {
+    return false;
+  }
+
+  if (nextHasFocus && prevHasFocus) {
+    const prevFocusedCol = prev.focusedCell?.columnId;
+    const nextFocusedCol = next.focusedCell?.columnId;
+    if (prevFocusedCol !== nextFocusedCol) {
+      return false;
+    }
+  }
+
+  if (next.rowVirtualizer.isScrolling) {
+    return true;
+  }
+
+  return false;
 }) as typeof DataGridRowImpl;
 
 function DataGridRowImpl<TData>({
@@ -22,6 +50,7 @@ function DataGridRowImpl<TData>({
   virtualRowIndex,
   rowVirtualizer,
   rowMapRef,
+  focusedCell: _focusedCell, // Used only in memo comparison
 }: DataGridRowProps<TData>) {
   return (
     <div

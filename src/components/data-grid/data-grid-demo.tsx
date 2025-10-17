@@ -238,10 +238,10 @@ export function DataGridDemo() {
 
   const selectedRowsCount = table.getFilteredSelectedRowModel().rows.length;
 
-  const height = Math.max(400, windowSize.height - 190);
+  const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-4 px-6 py-4">
       <div className="flex items-center justify-between">
         {selectedRowsCount > 0 ? (
           <div className="text-muted-foreground text-sm">
