@@ -169,9 +169,9 @@ export function DataGrid<TData>({
               <DataGridRow
                 key={row.id}
                 row={row}
+                rowMapRef={rowMapRef}
                 virtualRowIndex={virtualRowIndex}
                 rowVirtualizer={rowVirtualizer}
-                rowMapRef={rowMapRef}
                 focusedCell={focusedCell}
               />
             );

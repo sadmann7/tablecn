@@ -3,11 +3,12 @@
 import { flexRender, type Row } from "@tanstack/react-table";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
-
+import { useComposedRefs } from "@/lib/compose-refs";
 import { getCommonPinningStyles } from "@/lib/data-table";
+import { cn } from "@/lib/utils";
 import type { CellPosition } from "@/types/data-grid";
 
-interface DataGridRowProps<TData> {
+interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualRowIndex: number;
@@ -50,39 +51,53 @@ function DataGridRowImpl<TData>({
   virtualRowIndex,
   rowVirtualizer,
   rowMapRef,
-  focusedCell: _focusedCell, // Used only in memo comparison
+  focusedCell,
+  ref,
+  className,
+  ...props
 }: DataGridRowProps<TData>) {
+  const rowRef = useComposedRefs(ref, (node) => {
+    if (node && typeof virtualRowIndex !== "undefined") {
+      rowVirtualizer.measureElement(node);
+      rowMapRef.current.set(virtualRowIndex, node);
+    }
+  });
+
   return (
     <div
       data-index={virtualRowIndex}
-      ref={(node) => {
-        if (node && typeof virtualRowIndex !== "undefined") {
-          rowVirtualizer.measureElement(node);
-          rowMapRef.current.set(virtualRowIndex, node);
-        }
-      }}
       key={row.id}
       role="row"
       aria-rowindex={virtualRowIndex + 2}
       data-slot="data-grid-row"
+      ref={rowRef}
       tabIndex={-1}
-      className="absolute flex w-full border-b"
+      className={cn("absolute flex w-full border-b", className)}
+      {...props}
     >
-      {row.getVisibleCells().map((cell, colIndex) => (
-        <div
-          key={cell.id}
-          role="gridcell"
-          aria-colindex={colIndex + 1}
-          data-slot="data-grid-cell"
-          tabIndex={-1}
-          className="flex h-9 grow items-center justify-center border-r"
-          style={{
-            ...getCommonPinningStyles({ column: cell.column }),
-          }}
-        >
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </div>
-      ))}
+      {row.getVisibleCells().map((cell, colIndex) => {
+        const isCellFocused =
+          focusedCell?.rowIndex === virtualRowIndex &&
+          focusedCell?.columnId === cell.column.id;
+
+        return (
+          <div
+            key={cell.id}
+            role="gridcell"
+            aria-colindex={colIndex + 1}
+            aria-selected={isCellFocused}
+            data-highlighted={isCellFocused ? "" : undefined}
+            data-slot="data-grid-cell"
+            tabIndex={-1}
+            className="flex h-9 grow items-center justify-center border-r"
+            style={{
+              ...getCommonPinningStyles({ column: cell.column }),
+            }}
+          >
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </div>
+        );
+      })}
     </div>
   );
 }
