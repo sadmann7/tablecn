@@ -28,7 +28,7 @@ import {
 import type { Task } from "@/db/schema";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
-import { deleteTasks } from "../_lib/actions";
+import { deleteTasks } from "../lib/actions";
 
 interface DeleteTasksDialogProps
   extends React.ComponentPropsWithoutRef<typeof Dialog> {

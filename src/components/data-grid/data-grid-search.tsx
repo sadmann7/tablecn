@@ -12,7 +12,7 @@ export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
   return (
     prev.searchOpen === next.searchOpen &&
     prev.searchQuery === next.searchQuery &&
-    prev.currentMatchIndex === next.currentMatchIndex &&
+    prev.matchIndex === next.matchIndex &&
     prev.searchMatches.length === next.searchMatches.length
   );
 });
@@ -21,7 +21,7 @@ function DataGridSearchImpl({
   searchOpen,
   searchQuery,
   searchMatches,
-  currentMatchIndex,
+  matchIndex,
   onSearchOpenChange,
   onSearch,
   navigateToNextMatch,
@@ -134,7 +134,7 @@ function DataGridSearchImpl({
       <div className="flex items-center gap-1 whitespace-nowrap text-muted-foreground text-xs">
         {searchMatches.length > 0 ? (
           <span>
-            {currentMatchIndex + 1} of {searchMatches.length}
+            {matchIndex + 1} of {searchMatches.length}
           </span>
         ) : searchQuery ? (
           <span>No results</span>

@@ -18,9 +18,9 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { createTask } from "../_lib/actions";
-import type { CreateTaskSchema } from "../_lib/validations";
-import { createTaskSchema } from "../_lib/validations";
+import { createTask } from "../lib/actions";
+import type { CreateTaskSchema } from "../lib/validations";
+import { createTaskSchema } from "../lib/validations";
 import { TaskForm } from "./task-form";
 
 export function CreateTaskSheet() {

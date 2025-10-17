@@ -41,7 +41,7 @@ interface DataGridState {
   editingCell: CellPosition | null;
   searchQuery: string;
   searchMatches: CellPosition[];
-  currentMatchIndex: number;
+  matchIndex: number;
   searchOpen: boolean;
   sorting: SortingState;
   selectionState: SelectionState;
@@ -107,7 +107,7 @@ export function useDataGrid<TData>({
       },
       searchQuery: "",
       searchMatches: [],
-      currentMatchIndex: -1,
+      matchIndex: -1,
       searchOpen: false,
       sorting: initialState?.sorting ?? [],
       rowSelection: initialState?.rowSelection ?? {},
@@ -182,7 +182,7 @@ export function useDataGrid<TData>({
     selectionState,
     searchQuery,
     searchMatches,
-    currentMatchIndex,
+    matchIndex,
     searchOpen,
     sorting,
     rowSelection,
@@ -405,7 +405,7 @@ export function useDataGrid<TData>({
         store.setState("searchOpen", false);
         store.setState("searchQuery", "");
         store.setState("searchMatches", []);
-        store.setState("currentMatchIndex", -1);
+        store.setState("matchIndex", -1);
       });
     },
     [store],
@@ -416,7 +416,7 @@ export function useDataGrid<TData>({
       if (!query.trim()) {
         store.batch(() => {
           store.setState("searchMatches", []);
-          store.setState("currentMatchIndex", -1);
+          store.setState("matchIndex", -1);
         });
         return;
       }
@@ -449,7 +449,7 @@ export function useDataGrid<TData>({
 
       store.batch(() => {
         store.setState("searchMatches", matches);
-        store.setState("currentMatchIndex", matches.length > 0 ? 0 : -1);
+        store.setState("matchIndex", matches.length > 0 ? 0 : -1);
       });
 
       // Scroll to first match but don't focus it (to keep focus in search input)
@@ -468,8 +468,8 @@ export function useDataGrid<TData>({
     if (currentState.searchMatches.length === 0) return;
 
     const nextIndex =
-      (currentState.currentMatchIndex + 1) % currentState.searchMatches.length;
-    store.setState("currentMatchIndex", nextIndex);
+      (currentState.matchIndex + 1) % currentState.searchMatches.length;
+    store.setState("matchIndex", nextIndex);
 
     const match = currentState.searchMatches[nextIndex];
     if (match) {
@@ -487,10 +487,10 @@ export function useDataGrid<TData>({
     if (currentState.searchMatches.length === 0) return;
 
     const prevIndex =
-      currentState.currentMatchIndex - 1 < 0
+      currentState.matchIndex - 1 < 0
         ? currentState.searchMatches.length - 1
-        : currentState.currentMatchIndex - 1;
-    store.setState("currentMatchIndex", prevIndex);
+        : currentState.matchIndex - 1;
+    store.setState("matchIndex", prevIndex);
 
     const match = currentState.searchMatches[prevIndex];
     if (match) {
@@ -514,14 +514,14 @@ export function useDataGrid<TData>({
 
   const isCurrentSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      if (currentMatchIndex < 0) return false;
-      const currentMatch = searchMatches[currentMatchIndex];
+      if (matchIndex < 0) return false;
+      const currentMatch = searchMatches[matchIndex];
       return (
         currentMatch?.rowIndex === rowIndex &&
         currentMatch?.columnId === columnId
       );
     },
-    [searchMatches, currentMatchIndex],
+    [searchMatches, matchIndex],
   );
 
   const blurCell = React.useCallback(() => {
@@ -1244,7 +1244,7 @@ export function useDataGrid<TData>({
       searchOpen,
       searchQuery,
       searchMatches,
-      currentMatchIndex,
+      matchIndex,
       onSearchOpenChange,
       onSearch,
       navigateToNextMatch,
@@ -1256,7 +1256,7 @@ export function useDataGrid<TData>({
     searchOpen,
     searchQuery,
     searchMatches,
-    currentMatchIndex,
+    matchIndex,
     onSearchOpenChange,
     onSearch,
     navigateToNextMatch,

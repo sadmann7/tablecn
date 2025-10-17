@@ -130,7 +130,7 @@ export interface SearchState {
   searchOpen: boolean;
   searchQuery: string;
   searchMatches: CellPosition[];
-  currentMatchIndex: number;
+  matchIndex: number;
   onSearchOpenChange: (open: boolean) => void;
   onSearch: (query: string) => void;
   navigateToNextMatch: () => void;

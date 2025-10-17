@@ -3,15 +3,15 @@ import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { Shell } from "@/components/shell";
 import { getValidFilters } from "@/lib/data-table";
 import type { SearchParams } from "@/types";
-import { FeatureFlagsProvider } from "./_components/feature-flags-provider";
-import { TasksTable } from "./_components/tasks-table";
+import { FeatureFlagsProvider } from "./components/feature-flags-provider";
+import { TasksTable } from "./components/tasks-table";
 import {
   getEstimatedHoursRange,
   getTaskPriorityCounts,
   getTaskStatusCounts,
   getTasks,
-} from "./_lib/queries";
-import { searchParamsCache } from "./_lib/validations";
+} from "./lib/queries";
+import { searchParamsCache } from "./lib/validations";
 
 interface IndexPageProps {
   searchParams: Promise<SearchParams>;
