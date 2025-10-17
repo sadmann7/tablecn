@@ -9,6 +9,7 @@ import { DataTableSortList } from "@/components/data-table/data-table-sort-list"
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDataGrid } from "@/hooks/use-data-grid";
+import { useWindowSize } from "@/hooks/use-window-size";
 
 interface Person {
   id: string;
@@ -60,6 +61,7 @@ const initialData: Person[] = Array.from({ length: 1000 }, (_, i) =>
 
 export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
+  const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
@@ -236,6 +238,8 @@ export function DataGridDemo() {
 
   const selectedRowsCount = table.getFilteredSelectedRowModel().rows.length;
 
+  const height = Math.max(400, windowSize.height - 190);
+
   return (
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
@@ -260,7 +264,7 @@ export function DataGridDemo() {
         table={table}
         {...dataGridProps}
         onRowAdd={onRowAdd}
-        height={560}
+        height={height}
       />
     </div>
   );
