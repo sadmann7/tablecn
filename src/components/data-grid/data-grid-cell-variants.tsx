@@ -3,6 +3,7 @@
 import type { Cell, Table } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
+import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
@@ -542,7 +543,14 @@ export function SelectCell<TData>({
           >
             <SelectValue />
           </SelectTrigger>
-          <SelectContent data-grid-cell-editor="">
+          <SelectContent
+            data-grid-cell-editor=""
+            // compensate for the wrapper padding
+            align="start"
+            alignOffset={-8}
+            sideOffset={-8}
+            className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
+          >
             {options.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
@@ -671,22 +679,23 @@ export function DateCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [isOpen, setIsOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
-  const onBlur = React.useCallback(() => {
-    if (value !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value });
-    }
-    meta?.stopEditing?.();
-  }, [meta, rowIndex, columnId, initialValue, value]);
+  const selectedDate = value ? new Date(value) : undefined;
 
-  const onChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(event.target.value);
+  const onDateSelect = React.useCallback(
+    (date: Date | undefined) => {
+      if (!date) return;
+
+      const formattedDate = date.toISOString().split("T")[0] ?? "";
+      setValue(formattedDate);
+      meta?.updateData?.({ rowIndex, columnId, value: formattedDate });
+      setIsOpen(false);
+      meta?.stopEditing?.();
     },
-    [],
+    [meta, rowIndex, columnId],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -694,18 +703,16 @@ export function DateCell<TData>({
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          if (value !== initialValue) {
-            meta?.updateData?.({ rowIndex, columnId, value });
-          }
-          meta?.stopEditing?.({ moveToNextRow: true });
+          setIsOpen(true);
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
-          inputRef.current?.blur();
+          setIsOpen(false);
+          meta?.stopEditing?.();
         }
       }
     },
-    [isEditing, initialValue, meta, rowIndex, columnId, value],
+    [isEditing, initialValue, meta],
   );
 
   React.useEffect(() => {
@@ -713,9 +720,14 @@ export function DateCell<TData>({
   }, [initialValue]);
 
   React.useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
+    if (isEditing) {
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
     }
+  }, [isEditing]);
+
+  React.useEffect(() => {
     if (isFocused && !isEditing && containerRef.current) {
       containerRef.current.focus();
     }
@@ -733,19 +745,26 @@ export function DateCell<TData>({
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >
-      {isEditing ? (
-        <input
-          type="date"
-          data-grid-cell-editor=""
-          ref={inputRef}
-          value={value}
-          onChange={onChange}
-          onBlur={onBlur}
-          className="size-full border-none bg-transparent p-0 outline-none"
-        />
-      ) : (
-        <span>{formatDateForDisplay(value)}</span>
-      )}
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverAnchor asChild>
+          <span>{formatDateForDisplay(value)}</span>
+        </PopoverAnchor>
+        {isEditing && (
+          <PopoverContent
+            data-grid-cell-editor=""
+            align="start"
+            sideOffset={10}
+            className="w-auto p-0"
+          >
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={onDateSelect}
+              className="rounded-md border shadow-sm"
+            />
+          </PopoverContent>
+        )}
+      </Popover>
     </DataGridCellWrapper>
   );
 }

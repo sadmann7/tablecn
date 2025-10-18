@@ -40,9 +40,9 @@ import type { Cell } from "@/types/data-grid";
 function getColumnVariant(variant: Cell["variant"]) {
   switch (variant) {
     case "short-text":
-      return { icon: Baseline, label: "Short Text" };
+      return { icon: Baseline, label: "Short text" };
     case "long-text":
-      return { icon: TextInitial, label: "Long Text" };
+      return { icon: TextInitial, label: "Long text" };
     case "number":
       return { icon: Hash, label: "Number" };
     case "select":
