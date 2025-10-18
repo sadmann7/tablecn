@@ -25,8 +25,8 @@ interface CellVariantProps<TData> {
   table: Table<TData>;
   rowIndex: number;
   columnId: string;
-  isFocused: boolean;
   isEditing: boolean;
+  isFocused: boolean;
   isSelected: boolean;
 }
 
@@ -35,8 +35,8 @@ export function ShortTextCell<TData>({
   table,
   rowIndex,
   columnId,
-  isFocused,
   isEditing,
+  isFocused,
   isSelected,
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
@@ -140,8 +140,8 @@ export function ShortTextCell<TData>({
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
-      isFocused={isFocused}
       isEditing={isEditing}
+      isFocused={isFocused}
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >
@@ -293,8 +293,8 @@ export function LongTextCell<TData>({
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
           onKeyDown={onWrapperKeyDown}
         >
@@ -429,8 +429,8 @@ export function NumberCell<TData>({
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
-      isFocused={isFocused}
       isEditing={isEditing}
+      isFocused={isFocused}
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >
@@ -524,8 +524,8 @@ export function SelectCell<TData>({
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
-      isFocused={isFocused}
       isEditing={isEditing}
+      isFocused={isFocused}
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >
@@ -635,8 +635,8 @@ export function CheckboxCell<TData>({
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
-      isFocused={isFocused}
       isEditing={false}
+      isFocused={isFocused}
       isSelected={isSelected}
       onClick={onWrapperClick}
       onKeyDown={onWrapperKeyDown}
@@ -728,8 +728,8 @@ export function DateCell<TData>({
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
-      isFocused={isFocused}
       isEditing={isEditing}
+      isFocused={isFocused}
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >

@@ -10,8 +10,8 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   table: Table<TData>;
   rowIndex: number;
   columnId: string;
-  isFocused: boolean;
   isEditing: boolean;
+  isFocused: boolean;
   isSelected: boolean;
 }
 
@@ -19,8 +19,8 @@ export function DataGridCellWrapper<TData>({
   table,
   rowIndex,
   columnId,
-  isFocused,
   isEditing,
+  isFocused,
   isSelected,
   className,
   onClick: onClickProp,

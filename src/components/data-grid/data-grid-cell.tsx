@@ -47,8 +47,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
         />
       );
@@ -59,8 +59,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
         />
       );
@@ -71,8 +71,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
         />
       );
@@ -83,8 +83,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
         />
       );
@@ -95,8 +95,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
         />
       );
@@ -107,8 +107,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
         />
       );
@@ -120,8 +120,8 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isFocused={isFocused}
           isEditing={isEditing}
+          isFocused={isFocused}
           isSelected={isSelected}
         />
       );
