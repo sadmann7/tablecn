@@ -13,6 +13,7 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
+import { useLazyRef } from "@/hooks/use-lazy-ref";
 import type {
   CellPosition,
   ContextMenuState,
@@ -29,14 +30,6 @@ const VIEWPORT_OFFSET = 1;
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
-function useLazyRef<T>(fn: () => T): React.RefObject<T> {
-  const ref = React.useRef<T | null>(null);
-  if (ref.current === null) {
-    ref.current = fn();
-  }
-  return ref as React.RefObject<T>;
-}
 
 interface DataGridState {
   focusedCell: CellPosition | null;

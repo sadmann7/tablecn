@@ -38,8 +38,10 @@ import type { Cell } from "@/types/data-grid";
 
 function getColumnVariant(variant: Cell["variant"]) {
   switch (variant) {
-    case "text":
-      return { icon: Type, label: "Text" };
+    case "short-text":
+      return { icon: Type, label: "Short Text" };
+    case "long-text":
+      return { icon: Type, label: "Long Text" };
     case "number":
       return { icon: Hash, label: "Number" };
     case "select":
@@ -73,7 +75,7 @@ export function DataGridColumnHeader<TData, TValue>({
       : column.id;
 
   const cellVariant = column.columnDef.meta?.cell;
-  const columnVariant = getColumnVariant(cellVariant?.variant ?? "text");
+  const columnVariant = getColumnVariant(cellVariant?.variant ?? "short-text");
 
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {

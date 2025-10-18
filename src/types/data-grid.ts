@@ -7,7 +7,10 @@ export interface CellSelectOption {
 
 export type Cell =
   | {
-      variant: "text";
+      variant: "short-text";
+    }
+  | {
+      variant: "long-text";
     }
   | {
       variant: "number";

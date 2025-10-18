@@ -1,19 +1,16 @@
 "use client";
 
-import type { Cell, Table } from "@tanstack/react-table";
+import type { Table } from "@tanstack/react-table";
 import * as React from "react";
-
 import { cn } from "@/lib/utils";
 
 interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
-  cell: Cell<TData, unknown>;
   table: Table<TData>;
   rowIndex: number;
   columnId: string;
   isFocused: boolean;
   isEditing: boolean;
   isSelected: boolean;
-  className?: string;
 }
 
 export function DataGridCellWrapper<TData>({
@@ -30,6 +27,7 @@ export function DataGridCellWrapper<TData>({
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const meta = table.options.meta;
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   const isSearchMatch = meta?.isSearchMatch?.(rowIndex, columnId) ?? false;
   const isCurrentSearchMatch =
@@ -40,7 +38,6 @@ export function DataGridCellWrapper<TData>({
       if (!isEditing) {
         event.preventDefault();
         onClickProp?.(event);
-        // If already focused, enter edit mode immediately
         if (isFocused) {
           meta?.startEditing?.(rowIndex, columnId);
         } else {
@@ -49,6 +46,15 @@ export function DataGridCellWrapper<TData>({
       }
     },
     [meta, rowIndex, columnId, isEditing, isFocused, onClickProp],
+  );
+
+  const onContextMenu = React.useCallback(
+    (event: React.MouseEvent) => {
+      if (!isEditing) {
+        meta?.onCellContextMenu?.(rowIndex, columnId, event);
+      }
+    },
+    [meta, rowIndex, columnId, isEditing],
   );
 
   const onMouseDown = React.useCallback(
@@ -85,24 +91,12 @@ export function DataGridCellWrapper<TData>({
     [meta, rowIndex, columnId, isEditing],
   );
 
-  const onContextMenu = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        meta?.onCellContextMenu?.(rowIndex, columnId, event);
-      }
-    },
-    [meta, rowIndex, columnId, isEditing],
-  );
-
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      // Always let the variant handle its specific logic first
       onKeyDownProp?.(event);
 
-      // If variant handled it, don't continue
       if (event.defaultPrevented) return;
 
-      // Handle common navigation keys (these never trigger editing)
       if (
         event.key === "ArrowUp" ||
         event.key === "ArrowDown" ||
@@ -117,9 +111,7 @@ export function DataGridCellWrapper<TData>({
         return;
       }
 
-      // Handle common editing triggers when focused but not editing
       if (isFocused && !isEditing) {
-        // Enter and F2 trigger edit mode immediately
         if (event.key === "F2" || event.key === "Enter") {
           event.preventDefault();
           event.stopPropagation();
@@ -127,7 +119,6 @@ export function DataGridCellWrapper<TData>({
           return;
         }
 
-        // Space triggers edit mode for most cells (variants can override)
         if (event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
@@ -135,7 +126,6 @@ export function DataGridCellWrapper<TData>({
           return;
         }
 
-        // Handle typing to start editing (single character, not a modifier)
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
           event.preventDefault();
           event.stopPropagation();
@@ -146,21 +136,21 @@ export function DataGridCellWrapper<TData>({
     [onKeyDownProp, isFocused, isEditing, meta, rowIndex, columnId],
   );
 
+  React.useEffect(() => {
+    if (isFocused && !isEditing && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isFocused, isEditing]);
+
   return (
     <div
       role="button"
-      data-slot="cell-wrapper"
+      data-slot="data-grid-cell-wrapper"
       data-editing={isEditing ? "" : undefined}
       data-focused={isFocused ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
+      ref={containerRef}
       tabIndex={isFocused && !isEditing ? 0 : -1}
-      onClick={onClick}
-      onDoubleClick={onDoubleClick}
-      onMouseDown={onMouseDown}
-      onMouseEnter={onMouseEnter}
-      onMouseUp={onMouseUp}
-      onContextMenu={onContextMenu}
-      onKeyDown={onKeyDown}
       className={cn(
         "size-full cursor-default truncate px-2 py-1 text-left text-sm outline-none",
         {
@@ -172,6 +162,13 @@ export function DataGridCellWrapper<TData>({
         },
         className,
       )}
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      onDoubleClick={onDoubleClick}
+      onMouseDown={onMouseDown}
+      onMouseEnter={onMouseEnter}
+      onMouseUp={onMouseUp}
+      onKeyDown={onKeyDown}
       {...props}
     >
       {children}

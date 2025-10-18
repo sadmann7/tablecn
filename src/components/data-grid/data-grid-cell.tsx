@@ -8,7 +8,7 @@ import {
   DateCell,
   NumberCell,
   SelectCell,
-  TextCell,
+  ShortTextCell,
 } from "@/components/data-grid/data-grid-cell-variants";
 
 interface DataGridCellProps<TData> {
@@ -87,9 +87,9 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isSelected={isSelected}
         />
       );
-    case "text":
+    case "short-text":
       return (
-        <TextCell
+        <ShortTextCell
           cell={cell}
           table={table}
           rowIndex={rowIndex}
@@ -101,7 +101,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
       );
     default:
       return (
-        <TextCell
+        <ShortTextCell
           cell={cell}
           table={table}
           rowIndex={rowIndex}

@@ -100,7 +100,7 @@ export function DataGridDemo() {
         meta: {
           label: "Name",
           cell: {
-            variant: "text",
+            variant: "short-text",
           },
         },
       },
@@ -127,7 +127,7 @@ export function DataGridDemo() {
         meta: {
           label: "Email",
           cell: {
-            variant: "text",
+            variant: "short-text",
           },
         },
       },

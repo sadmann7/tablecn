@@ -11,9 +11,59 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useLazyRef } from "@/hooks/use-lazy-ref";
 import { cn } from "@/lib/utils";
 
-interface CellVariantProps<TData> {
+interface CellState {
+  value: unknown;
+  open: boolean;
+}
+
+interface CellStore {
+  subscribe: (callback: () => void) => () => void;
+  getState: () => CellState;
+  setState: <K extends keyof CellState>(key: K, value: CellState[K]) => void;
+  notify: () => void;
+}
+
+function createCellStore(
+  listenersRef: React.RefObject<Set<() => void>>,
+  stateRef: React.RefObject<CellState>,
+): CellStore {
+  const store: CellStore = {
+    subscribe: (callback) => {
+      listenersRef.current.add(callback);
+      return () => listenersRef.current.delete(callback);
+    },
+    getState: () => stateRef.current,
+    setState: (key, value) => {
+      if (Object.is(stateRef.current[key], value)) return;
+      stateRef.current[key] = value;
+      store.notify();
+    },
+    notify: () => {
+      for (const cb of listenersRef.current) {
+        cb();
+      }
+    },
+  };
+
+  return store;
+}
+
+function useCellStore<T = CellState>(
+  store: CellStore,
+  selector?: (state: CellState) => T,
+): T {
+  const getSnapshot = React.useCallback(
+    () => (selector ? selector(store.getState()) : store.getState()) as T,
+    [store, selector],
+  );
+
+  return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
+}
+
+interface DataGridCellVariantProps<TData> {
   cell: Cell<TData, unknown>;
   table: Table<TData>;
   rowIndex: number;
@@ -23,7 +73,7 @@ interface CellVariantProps<TData> {
   isSelected: boolean;
 }
 
-export function TextCell<TData>({
+export function ShortTextCell<TData>({
   cell,
   table,
   rowIndex,
@@ -31,26 +81,38 @@ export function TextCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-}: CellVariantProps<TData>) {
+}: DataGridCellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
-  const [value, setValue] = React.useState(initialValue);
+  const listenersRef = useLazyRef(() => new Set<() => void>());
+  const stateRef = useLazyRef<CellState>(() => ({
+    value: initialValue,
+    open: false,
+  }));
+
+  const store = React.useMemo(
+    () => createCellStore(listenersRef, stateRef),
+    [listenersRef, stateRef],
+  );
+
+  const value = useCellStore(store, (state) => state.value);
+
   const cellRef = React.useRef<HTMLDivElement>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
   const onBlur = React.useCallback(() => {
-    if (value !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value });
+    const currentValue = cellRef.current?.textContent ?? "";
+    if (currentValue !== initialValue) {
+      meta?.updateData?.({ rowIndex, columnId, value: currentValue });
     }
     meta?.stopEditing?.();
-  }, [meta, rowIndex, columnId, initialValue, value]);
+  }, [meta, rowIndex, columnId, initialValue]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
-      setValue(currentValue);
+      store.setState("value", currentValue);
     },
-    [],
+    [store],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -65,7 +127,10 @@ export function TextCell<TData>({
           meta?.stopEditing?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(initialValue);
+          const currentValue = cellRef.current?.textContent ?? "";
+          if (currentValue !== initialValue) {
+            meta?.updateData?.({ rowIndex, columnId, value: currentValue });
+          }
           cellRef.current?.blur();
         }
       } else if (
@@ -74,8 +139,7 @@ export function TextCell<TData>({
         !event.ctrlKey &&
         !event.metaKey
       ) {
-        // Handle typing to pre-fill the value when editing starts
-        setValue(event.key);
+        store.setState("value", event.key);
 
         queueMicrotask(() => {
           if (cellRef.current && cellRef.current.contentEditable === "true") {
@@ -90,22 +154,22 @@ export function TextCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, meta, rowIndex, columnId],
+    [isEditing, isFocused, initialValue, meta, rowIndex, columnId, store],
   );
 
   React.useEffect(() => {
-    setValue(initialValue);
+    store.setState("value", initialValue);
     if (cellRef.current && !isEditing) {
       cellRef.current.textContent = initialValue;
     }
-  }, [initialValue, isEditing]);
+  }, [initialValue, isEditing, store]);
 
   React.useEffect(() => {
     if (isEditing && cellRef.current) {
       cellRef.current.focus();
 
       if (!cellRef.current.textContent && value) {
-        cellRef.current.textContent = value;
+        cellRef.current.textContent = value as string;
       }
 
       if (cellRef.current.textContent) {
@@ -117,17 +181,12 @@ export function TextCell<TData>({
         selection?.addRange(range);
       }
     }
-    if (isFocused && !isEditing && containerRef.current) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, value]);
+  }, [isEditing, value]);
 
-  const displayValue = !isEditing ? (value ?? "") : "";
+  const displayValue = !isEditing ? ((value as string) ?? "") : "";
 
   return (
     <DataGridCellWrapper
-      ref={containerRef}
-      cell={cell}
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
@@ -162,11 +221,22 @@ export function NumberCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-}: CellVariantProps<TData>) {
+}: DataGridCellVariantProps<TData>) {
   const initialValue = cell.getValue() as number;
-  const [value, setValue] = React.useState(String(initialValue ?? ""));
+  const listenersRef = useLazyRef(() => new Set<() => void>());
+  const stateRef = useLazyRef<CellState>(() => ({
+    value: String(initialValue ?? ""),
+    open: false,
+  }));
+
+  const store = React.useMemo(
+    () => createCellStore(listenersRef, stateRef),
+    [listenersRef, stateRef],
+  );
+
+  const value = useCellStore(store, (state) => state.value);
+
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const min = cellOpts?.variant === "number" ? cellOpts.min : undefined;
@@ -174,7 +244,8 @@ export function NumberCell<TData>({
   const step = cellOpts?.variant === "number" ? cellOpts.step : undefined;
 
   const onBlur = React.useCallback(() => {
-    const numValue = value === "" ? null : Number(value);
+    const valueStr = value as string;
+    const numValue = valueStr === "" ? null : Number(valueStr);
     if (numValue !== initialValue) {
       meta?.updateData?.({ rowIndex, columnId, value: numValue });
     }
@@ -183,9 +254,9 @@ export function NumberCell<TData>({
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(event.target.value);
+      store.setState("value", event.target.value);
     },
-    [],
+    [store],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -193,47 +264,54 @@ export function NumberCell<TData>({
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          const numValue = value === "" ? null : Number(value);
+          const valueStr = value as string;
+          const numValue = valueStr === "" ? null : Number(valueStr);
           if (numValue !== initialValue) {
             meta?.updateData?.({ rowIndex, columnId, value: numValue });
           }
           meta?.stopEditing?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(String(initialValue ?? ""));
+          const valueStr = value as string;
+          const numValue = valueStr === "" ? null : Number(valueStr);
+          if (numValue !== initialValue) {
+            meta?.updateData?.({ rowIndex, columnId, value: numValue });
+          }
           inputRef.current?.blur();
         }
       } else if (isFocused) {
-        // Handle Backspace to start editing with empty value
         if (event.key === "Backspace") {
-          setValue("");
+          store.setState("value", "");
         } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          // Handle typing to pre-fill the value when editing starts
-          setValue(event.key);
+          store.setState("value", event.key);
         }
       }
     },
-    [isEditing, isFocused, initialValue, meta, rowIndex, columnId, value],
+    [
+      isEditing,
+      isFocused,
+      initialValue,
+      meta,
+      rowIndex,
+      columnId,
+      value,
+      store,
+    ],
   );
 
   React.useEffect(() => {
-    setValue(String(initialValue ?? ""));
-  }, [initialValue]);
+    store.setState("value", String(initialValue ?? ""));
+  }, [initialValue, store]);
 
   React.useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
-    if (isFocused && !isEditing && containerRef.current) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing]);
+  }, [isEditing]);
 
   return (
     <DataGridCellWrapper
-      ref={containerRef}
-      cell={cell}
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
@@ -246,7 +324,7 @@ export function NumberCell<TData>({
         <input
           ref={inputRef}
           type="number"
-          value={value}
+          value={value as string}
           min={min}
           max={max}
           step={step}
@@ -255,7 +333,7 @@ export function NumberCell<TData>({
           className="size-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
-        <span>{value}</span>
+        <span>{value as string}</span>
       )}
     </DataGridCellWrapper>
   );
@@ -269,66 +347,71 @@ export function SelectCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-}: CellVariantProps<TData>) {
+}: DataGridCellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
-  const [value, setValue] = React.useState(initialValue);
-  const [open, setOpen] = React.useState(false);
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const listenersRef = useLazyRef(() => new Set<() => void>());
+  const stateRef = useLazyRef<CellState>(() => ({
+    value: initialValue,
+    open: false,
+  }));
+
+  const store = React.useMemo(
+    () => createCellStore(listenersRef, stateRef),
+    [listenersRef, stateRef],
+  );
+
+  const value = useCellStore(store, (state) => state.value);
+  const open = useCellStore(store, (state) => state.open);
+
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
-      setValue(newValue);
+      store.setState("value", newValue);
       meta?.updateData?.({ rowIndex, columnId, value: newValue });
       meta?.stopEditing?.();
     },
-    [meta, rowIndex, columnId],
+    [meta, rowIndex, columnId, store],
   );
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
+      store.setState("open", isOpen);
       if (!isOpen) {
         meta?.stopEditing?.();
       }
     },
-    [meta],
+    [meta, store],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
-        setValue(initialValue);
-        setOpen(false);
+        store.setState("open", false);
         meta?.stopEditing?.();
       }
     },
-    [isEditing, initialValue, meta],
+    [isEditing, meta, store],
   );
 
   React.useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
+    store.setState("value", initialValue);
+  }, [initialValue, store]);
 
   React.useEffect(() => {
     if (isEditing && !open) {
-      setOpen(true);
+      store.setState("open", true);
     }
-    if (isFocused && !isEditing && containerRef.current) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, open]);
+  }, [isEditing, open, store]);
 
   const displayLabel =
-    options.find((opt) => opt.value === value)?.label ?? value;
+    options.find((opt) => opt.value === value)?.label ?? (value as string);
 
   return (
     <DataGridCellWrapper
-      ref={containerRef}
-      cell={cell}
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
@@ -339,9 +422,9 @@ export function SelectCell<TData>({
     >
       {isEditing ? (
         <Select
-          value={value}
+          value={value as string}
           onValueChange={onValueChange}
-          open={open}
+          open={open as boolean}
           onOpenChange={onOpenChange}
         >
           <SelectTrigger
@@ -372,18 +455,29 @@ export function CheckboxCell<TData>({
   columnId,
   isFocused,
   isSelected,
-}: CellVariantProps<TData>) {
+}: DataGridCellVariantProps<TData>) {
   const initialValue = cell.getValue() as boolean;
-  const [value, setValue] = React.useState(Boolean(initialValue));
-  const containerRef = React.useRef<HTMLDivElement>(null);
+  const listenersRef = useLazyRef(() => new Set<() => void>());
+  const stateRef = useLazyRef<CellState>(() => ({
+    value: Boolean(initialValue),
+    open: false,
+  }));
+
+  const store = React.useMemo(
+    () => createCellStore(listenersRef, stateRef),
+    [listenersRef, stateRef],
+  );
+
+  const value = useCellStore(store, (state) => state.value);
+
   const meta = table.options.meta;
 
   const onCheckedChange = React.useCallback(
     (checked: boolean) => {
-      setValue(checked);
+      store.setState("value", checked);
       meta?.updateData?.({ rowIndex, columnId, value: checked });
     },
-    [meta, rowIndex, columnId],
+    [meta, rowIndex, columnId, store],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -391,28 +485,22 @@ export function CheckboxCell<TData>({
       if (isFocused && (event.key === " " || event.key === "Enter")) {
         event.preventDefault();
         event.stopPropagation();
-        onCheckedChange(!value);
+        onCheckedChange(!(value as boolean));
       }
     },
     [isFocused, value, onCheckedChange],
   );
 
   React.useEffect(() => {
-    setValue(Boolean(initialValue));
-  }, [initialValue]);
-
-  React.useEffect(() => {
-    if (isFocused && containerRef.current) {
-      containerRef.current.focus();
-    }
-  }, [isFocused]);
+    store.setState("value", Boolean(initialValue));
+  }, [initialValue, store]);
 
   const onWrapperClick = React.useCallback(
     (event: React.MouseEvent) => {
       if (isFocused) {
         event.preventDefault();
         event.stopPropagation();
-        onCheckedChange(!value);
+        onCheckedChange(!(value as boolean));
       }
     },
     [isFocused, value, onCheckedChange],
@@ -438,8 +526,6 @@ export function CheckboxCell<TData>({
 
   return (
     <DataGridCellWrapper
-      ref={containerRef}
-      cell={cell}
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
@@ -451,7 +537,7 @@ export function CheckboxCell<TData>({
       className="flex size-full items-center justify-center"
     >
       <Checkbox
-        checked={value}
+        checked={value as boolean}
         onCheckedChange={onCheckedChange}
         onClick={onCheckboxClick}
         onMouseDown={onCheckboxMouseDown}
@@ -476,25 +562,37 @@ export function DateCell<TData>({
   isFocused,
   isEditing,
   isSelected,
-}: CellVariantProps<TData>) {
+}: DataGridCellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
-  const [value, setValue] = React.useState(initialValue ?? "");
+  const listenersRef = useLazyRef(() => new Set<() => void>());
+  const stateRef = useLazyRef<CellState>(() => ({
+    value: initialValue ?? "",
+    open: false,
+  }));
+
+  const store = React.useMemo(
+    () => createCellStore(listenersRef, stateRef),
+    [listenersRef, stateRef],
+  );
+
+  const value = useCellStore(store, (state) => state.value);
+
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
   const onBlur = React.useCallback(() => {
-    if (value !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value });
+    const valueStr = value as string;
+    if (valueStr !== initialValue) {
+      meta?.updateData?.({ rowIndex, columnId, value: valueStr });
     }
     meta?.stopEditing?.();
   }, [meta, rowIndex, columnId, initialValue, value]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(event.target.value);
+      store.setState("value", event.target.value);
     },
-    [],
+    [store],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -502,13 +600,17 @@ export function DateCell<TData>({
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
-          if (value !== initialValue) {
-            meta?.updateData?.({ rowIndex, columnId, value });
+          const valueStr = value as string;
+          if (valueStr !== initialValue) {
+            meta?.updateData?.({ rowIndex, columnId, value: valueStr });
           }
           meta?.stopEditing?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(initialValue);
+          const valueStr = value as string;
+          if (valueStr !== initialValue) {
+            meta?.updateData?.({ rowIndex, columnId, value: valueStr });
+          }
           inputRef.current?.blur();
         }
       }
@@ -517,22 +619,17 @@ export function DateCell<TData>({
   );
 
   React.useEffect(() => {
-    setValue(initialValue ?? "");
-  }, [initialValue]);
+    store.setState("value", initialValue ?? "");
+  }, [initialValue, store]);
 
   React.useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
     }
-    if (isFocused && !isEditing && containerRef.current) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing]);
+  }, [isEditing]);
 
   return (
     <DataGridCellWrapper
-      ref={containerRef}
-      cell={cell}
       table={table}
       rowIndex={rowIndex}
       columnId={columnId}
@@ -546,13 +643,13 @@ export function DateCell<TData>({
           type="date"
           data-grid-cell-editor=""
           ref={inputRef}
-          value={value}
+          value={value as string}
           onChange={onChange}
           onBlur={onBlur}
           className="size-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
-        <span>{formatDateForDisplay(value)}</span>
+        <span>{formatDateForDisplay(value as string)}</span>
       )}
     </DataGridCellWrapper>
   );
