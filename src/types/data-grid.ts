@@ -8,26 +8,22 @@ export interface CellSelectOption {
 export type Cell =
   | {
       variant: "text";
-      placeholder?: string;
     }
   | {
       variant: "number";
       min?: number;
       max?: number;
       step?: number;
-      placeholder?: string;
     }
   | {
       variant: "select";
       options: CellSelectOption[];
-      placeholder?: string;
     }
   | {
       variant: "checkbox";
     }
   | {
       variant: "date";
-      placeholder?: string;
     };
 
 export interface UpdateCell {

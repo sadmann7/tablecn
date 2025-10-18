@@ -37,9 +37,6 @@ export function TextCell<TData>({
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
-  const cellOpts = cell.column.columnDef.meta?.cell;
-  const placeholder =
-    cellOpts?.variant === "text" ? cellOpts.placeholder : undefined;
 
   const onBlur = React.useCallback(() => {
     if (cellRef.current) {
@@ -131,7 +128,6 @@ export function TextCell<TData>({
   }, [isFocused, isEditing, value]);
 
   const displayValue = !isEditing ? (value ?? "") : "";
-  const showPlaceholder = !isEditing && !value && placeholder;
 
   return (
     <DataGridCellWrapper
@@ -155,10 +151,9 @@ export function TextCell<TData>({
         suppressContentEditableWarning
         className={cn("size-full truncate outline-none", {
           "cursor-text": isEditing,
-          "text-muted-foreground": showPlaceholder,
         })}
       >
-        {showPlaceholder ? placeholder : displayValue}
+        {displayValue}
       </div>
     </DataGridCellWrapper>
   );
@@ -182,8 +177,6 @@ export function NumberCell<TData>({
   const min = cellOpts?.variant === "number" ? cellOpts.min : undefined;
   const max = cellOpts?.variant === "number" ? cellOpts.max : undefined;
   const step = cellOpts?.variant === "number" ? cellOpts.step : undefined;
-  const placeholder =
-    cellOpts?.variant === "number" ? cellOpts.placeholder : undefined;
 
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
@@ -262,17 +255,12 @@ export function NumberCell<TData>({
           min={min}
           max={max}
           step={step}
-          placeholder={placeholder}
           onChange={onChange}
           onBlur={onBlur}
           className="size-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
-        <span
-          className={cn({ "text-muted-foreground": !value && placeholder })}
-        >
-          {value ?? placeholder}
-        </span>
+        <span>{value}</span>
       )}
     </DataGridCellWrapper>
   );
@@ -294,8 +282,6 @@ export function SelectCell<TData>({
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
-  const placeholder =
-    cellOpts?.variant === "select" ? cellOpts.placeholder : undefined;
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
@@ -367,7 +353,7 @@ export function SelectCell<TData>({
             size="sm"
             className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
           >
-            <SelectValue placeholder={placeholder} />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent data-grid-cell-editor="">
             {options.map((option) => (
@@ -378,11 +364,7 @@ export function SelectCell<TData>({
           </SelectContent>
         </Select>
       ) : (
-        <span
-          className={cn({ "text-muted-foreground": !value && placeholder })}
-        >
-          {displayLabel ?? placeholder}
-        </span>
+        <span>{displayLabel}</span>
       )}
     </DataGridCellWrapper>
   );
@@ -505,9 +487,6 @@ export function DateCell<TData>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
-  const cellOpts = cell.column.columnDef.meta?.cell;
-  const placeholder =
-    cellOpts?.variant === "date" ? cellOpts.placeholder : undefined;
 
   const onBlur = React.useCallback(() => {
     if (value !== initialValue) {
@@ -573,17 +552,12 @@ export function DateCell<TData>({
           data-grid-cell-editor=""
           ref={inputRef}
           value={value}
-          placeholder={placeholder}
           onChange={onChange}
           onBlur={onBlur}
           className="size-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
-        <span
-          className={cn({ "text-muted-foreground": !value && placeholder })}
-        >
-          {formatDateForDisplay(value) ?? placeholder}
-        </span>
+        <span>{formatDateForDisplay(value)}</span>
       )}
     </DataGridCellWrapper>
   );
