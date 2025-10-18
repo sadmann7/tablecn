@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { cn } from "@/lib/utils";
 
 interface CellVariantProps<TData> {
@@ -45,11 +46,13 @@ export function ShortTextCell<TData>({
   const meta = table.options.meta;
 
   const onBlur = React.useCallback(() => {
-    if (value !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value });
+    // Read the current value directly from the DOM to avoid stale state
+    const currentValue = cellRef.current?.textContent ?? "";
+    if (currentValue !== initialValue) {
+      meta?.updateData?.({ rowIndex, columnId, value: currentValue });
     }
     meta?.stopEditing?.();
-  }, [meta, rowIndex, columnId, initialValue, value]);
+  }, [meta, rowIndex, columnId, initialValue]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -177,36 +180,50 @@ export function LongTextCell<TData>({
   const meta = table.options.meta;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
+  // Debounced auto-save (300ms delay)
+  const debouncedSave = useDebouncedCallback((newValue: string) => {
+    meta?.updateData?.({ rowIndex, columnId, value: newValue });
+  }, 300);
+
   const onSave = React.useCallback(() => {
+    // Immediately save any pending changes and close the popover
     if (value !== initialValue) {
       meta?.updateData?.({ rowIndex, columnId, value });
     }
     setOpen(false);
     meta?.stopEditing?.();
-  }, [meta, rowIndex, columnId, initialValue, value]);
+  }, [meta, value, initialValue, rowIndex, columnId]);
 
   const onCancel = React.useCallback(() => {
+    // Restore the original value
     setValue(initialValue ?? "");
+    meta?.updateData?.({ rowIndex, columnId, value: initialValue });
     setOpen(false);
     meta?.stopEditing?.();
-  }, [meta, initialValue]);
+  }, [meta, initialValue, rowIndex, columnId]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setValue(event.target.value);
+      const newValue = event.target.value;
+      setValue(newValue);
+      // Debounced auto-save
+      debouncedSave(newValue);
     },
-    [],
+    [debouncedSave],
   );
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       setOpen(isOpen);
       if (!isOpen) {
-        setValue(initialValue ?? "");
+        // Immediately save any pending changes when closing
+        if (value !== initialValue) {
+          meta?.updateData?.({ rowIndex, columnId, value });
+        }
         meta?.stopEditing?.();
       }
     },
-    [meta, initialValue],
+    [meta, value, initialValue, rowIndex, columnId],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -246,13 +263,13 @@ export function LongTextCell<TData>({
   );
 
   const onTextareaBlur = React.useCallback(() => {
-    // Auto-save on blur
+    // Immediately save any pending changes on blur
     if (value !== initialValue) {
       meta?.updateData?.({ rowIndex, columnId, value });
     }
     setOpen(false);
     meta?.stopEditing?.();
-  }, [meta, rowIndex, columnId, initialValue, value]);
+  }, [meta, value, initialValue, rowIndex, columnId]);
 
   React.useEffect(() => {
     setValue(initialValue ?? "");
@@ -289,7 +306,7 @@ export function LongTextCell<TData>({
         align="start"
         side="bottom"
         sideOffset={sideOffset}
-        className="w-[400px] animate-none rounded-none p-0"
+        className="w-[400px] rounded-none p-0"
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <div className="flex flex-col">
