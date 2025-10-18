@@ -8,6 +8,7 @@ import type {
   Table,
 } from "@tanstack/react-table";
 import {
+  Baseline,
   Calendar,
   CheckSquare,
   ChevronDown,
@@ -15,7 +16,7 @@ import {
   EyeOff,
   Hash,
   List,
-  Type,
+  TextInitial,
   X,
 } from "lucide-react";
 import * as React from "react";
@@ -39,9 +40,9 @@ import type { Cell } from "@/types/data-grid";
 function getColumnVariant(variant: Cell["variant"]) {
   switch (variant) {
     case "short-text":
-      return { icon: Type, label: "Short Text" };
+      return { icon: Baseline, label: "Short Text" };
     case "long-text":
-      return { icon: Type, label: "Long Text" };
+      return { icon: TextInitial, label: "Long Text" };
     case "number":
       return { icon: Hash, label: "Number" };
     case "select":
