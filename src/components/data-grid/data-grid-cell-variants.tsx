@@ -640,7 +640,7 @@ export function CheckboxCell<TData>({
       isSelected={isSelected}
       onClick={onWrapperClick}
       onKeyDown={onWrapperKeyDown}
-      className="flex size-full items-center justify-center"
+      className="flex size-full justify-center"
     >
       <Checkbox
         checked={value}

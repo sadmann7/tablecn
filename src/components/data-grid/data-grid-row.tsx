@@ -65,10 +65,10 @@ function DataGridRowImpl<TData>({
 
   return (
     <div
-      data-index={virtualRowIndex}
       key={row.id}
       role="row"
       aria-rowindex={virtualRowIndex + 2}
+      data-index={virtualRowIndex}
       data-slot="data-grid-row"
       ref={rowRef}
       tabIndex={-1}

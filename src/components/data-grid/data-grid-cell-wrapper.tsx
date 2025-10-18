@@ -145,7 +145,7 @@ export function DataGridCellWrapper<TData>({
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
       className={cn(
-        "size-full px-2 py-1 text-left text-sm outline-none",
+        "size-full p-2 text-left text-sm outline-none has-[[data-slot=checkbox]]:pt-2.5",
         {
           "ring-1 ring-ring ring-inset": isFocused,
           "bg-yellow-100 dark:bg-yellow-900/30":
