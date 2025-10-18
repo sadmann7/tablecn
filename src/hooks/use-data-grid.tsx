@@ -714,10 +714,11 @@ export function useDataGrid<TData>({
   const onContextMenuOpenChange = React.useCallback(
     (open: boolean) => {
       if (!open) {
+        const currentMenu = store.getState().contextMenu;
         store.setState("contextMenu", {
           open: false,
-          x: 0,
-          y: 0,
+          x: currentMenu.x,
+          y: currentMenu.y,
         });
       }
     },
