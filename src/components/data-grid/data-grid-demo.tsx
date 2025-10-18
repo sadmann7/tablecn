@@ -261,29 +261,17 @@ export function DataGridDemo() {
     },
   });
 
-  const selectedRowsCount = table.getFilteredSelectedRowModel().rows.length;
-
   const height = Math.max(400, windowSize.height - 150);
 
   return (
     <div className="flex flex-col gap-4 px-6 py-4">
-      <div className="flex items-center justify-between">
-        {selectedRowsCount > 0 ? (
-          <div className="text-muted-foreground text-sm">
-            {selectedRowsCount} of {table.getFilteredRowModel().rows.length}{" "}
-            row(s) selected
-          </div>
-        ) : (
-          <div />
-        )}
-        <div
-          role="toolbar"
-          aria-orientation="horizontal"
-          className="flex items-center gap-2"
-        >
-          <DataTableSortList table={table} align="end" />
-          <DataTableViewOptions table={table} align="end" />
-        </div>
+      <div
+        role="toolbar"
+        aria-orientation="horizontal"
+        className="flex items-center gap-2 self-end"
+      >
+        <DataTableSortList table={table} align="end" />
+        <DataTableViewOptions table={table} align="end" />
       </div>
       <DataGrid
         table={table}

@@ -63,11 +63,14 @@ function DataGridRowImpl<TData>({
     }
   });
 
+  const isRowSelected = row.getIsSelected();
+
   return (
     <div
       key={row.id}
       role="row"
       aria-rowindex={virtualRowIndex + 2}
+      aria-selected={isRowSelected}
       data-index={virtualRowIndex}
       data-slot="data-grid-row"
       ref={rowRef}
@@ -88,14 +91,24 @@ function DataGridRowImpl<TData>({
             data-highlighted={isCellFocused ? "" : undefined}
             data-slot="data-grid-cell"
             tabIndex={-1}
-            className={cn("flex h-9 grow items-center justify-center", {
+            className={cn("h-9 grow", {
               "border-r": cell.column.id !== "select",
             })}
             style={{
               ...getCommonPinningStyles({ column: cell.column }),
             }}
           >
-            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+            {cell.column.id === "select" ? (
+              <div
+                className={cn("size-full px-3 py-1.5", {
+                  "bg-primary/10": isRowSelected,
+                })}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </div>
+            ) : (
+              flexRender(cell.column.columnDef.cell, cell.getContext())
+            )}
           </div>
         );
       })}
