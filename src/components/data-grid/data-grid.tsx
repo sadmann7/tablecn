@@ -131,7 +131,9 @@ export function DataGrid<TData>({
                     }
                     data-slot="data-grid-header-cell"
                     tabIndex={-1}
-                    className="grow border-r"
+                    className={cn("grow", {
+                      "border-r": header.column.id !== "select",
+                    })}
                     style={{
                       ...getCommonPinningStyles({ column: header.column }),
                     }}

@@ -13,7 +13,6 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   isFocused: boolean;
   isEditing: boolean;
   isSelected: boolean;
-  className?: string;
 }
 
 export function DataGridCellWrapper<TData>({
@@ -24,7 +23,6 @@ export function DataGridCellWrapper<TData>({
   isEditing,
   isSelected,
   className,
-  children,
   onClick: onClickProp,
   onKeyDown: onKeyDownProp,
   ...props
@@ -40,7 +38,6 @@ export function DataGridCellWrapper<TData>({
       if (!isEditing) {
         event.preventDefault();
         onClickProp?.(event);
-        // If already focused, enter edit mode immediately
         if (isFocused) {
           meta?.startEditing?.(rowIndex, columnId);
         } else {
@@ -96,13 +93,10 @@ export function DataGridCellWrapper<TData>({
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      // Always let the variant handle its specific logic first
       onKeyDownProp?.(event);
 
-      // If variant handled it, don't continue
       if (event.defaultPrevented) return;
 
-      // Handle common navigation keys (these never trigger editing)
       if (
         event.key === "ArrowUp" ||
         event.key === "ArrowDown" ||
@@ -117,9 +111,7 @@ export function DataGridCellWrapper<TData>({
         return;
       }
 
-      // Handle common editing triggers when focused but not editing
       if (isFocused && !isEditing) {
-        // Enter and F2 trigger edit mode immediately
         if (event.key === "F2" || event.key === "Enter") {
           event.preventDefault();
           event.stopPropagation();
@@ -127,7 +119,6 @@ export function DataGridCellWrapper<TData>({
           return;
         }
 
-        // Space triggers edit mode for most cells (variants can override)
         if (event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
@@ -135,7 +126,6 @@ export function DataGridCellWrapper<TData>({
           return;
         }
 
-        // Handle typing to start editing (single character, not a modifier)
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
           event.preventDefault();
           event.stopPropagation();
@@ -156,15 +146,13 @@ export function DataGridCellWrapper<TData>({
       tabIndex={isFocused && !isEditing ? 0 : -1}
       className={cn(
         "size-full px-2 py-1 text-left text-sm outline-none",
-        isEditing
-          ? "cursor-text"
-          : "cursor-default truncate [&_[role=textbox]]:truncate",
         {
           "ring-1 ring-ring ring-inset": isFocused,
           "bg-yellow-100 dark:bg-yellow-900/30":
             isSearchMatch && !isCurrentSearchMatch,
           "bg-orange-200 dark:bg-orange-900/50": isCurrentSearchMatch,
           "bg-primary/10": isSelected && !isEditing,
+          "cursor-default truncate [&_[role=textbox]]:truncate": !isEditing,
         },
         className,
       )}
@@ -176,8 +164,6 @@ export function DataGridCellWrapper<TData>({
       onMouseUp={onMouseUp}
       onKeyDown={onKeyDown}
       {...props}
-    >
-      {children}
-    </div>
+    />
   );
 }

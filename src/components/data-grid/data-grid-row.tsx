@@ -88,7 +88,9 @@ function DataGridRowImpl<TData>({
             data-highlighted={isCellFocused ? "" : undefined}
             data-slot="data-grid-cell"
             tabIndex={-1}
-            className="flex h-9 grow items-center justify-center border-r"
+            className={cn("flex h-9 grow items-center justify-center", {
+              "border-r": cell.column.id !== "select",
+            })}
             style={{
               ...getCommonPinningStyles({ column: cell.column }),
             }}

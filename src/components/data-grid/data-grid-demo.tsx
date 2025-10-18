@@ -35,6 +35,24 @@ const departments = [
 ] as const;
 const statuses = ["Active", "On Leave", "Remote", "In Office"] as const;
 
+const notes = [
+  "Excellent team player with strong communication skills. Consistently meets deadlines and delivers high-quality work.",
+  "Currently working on the Q4 project initiative. Requires additional training in advanced analytics tools.",
+  "Relocated from the Seattle office last month. Adjusting well to the new team dynamics and company culture.",
+  "Submitted request for professional development courses. Shows great initiative in learning new technologies.",
+  "Outstanding performance in the last quarter. Recommended for leadership training program next year.",
+  "Recently completed certification in project management. Looking to take on more responsibility in upcoming projects.",
+  "Needs improvement in time management. Working with mentor to develop better organizational skills.",
+  "Transferred from the marketing department. Bringing valuable cross-functional experience to the team.",
+  "On track for promotion consideration. Has exceeded expectations in client relationship management.",
+  "Participating in the company mentorship program. Showing strong potential for career advancement.",
+  "Recently returned from parental leave. Successfully reintegrated into current project workflows.",
+  "Fluent in three languages. Often assists with international client communications and translations.",
+  "Leading the diversity and inclusion initiative. Organizing monthly team building events and workshops.",
+  "Requested flexible work arrangement for family care. Maintaining productivity while working remotely.",
+  "Completed advanced training in data visualization. Now serving as the team's go-to expert for dashboards.",
+];
+
 function generatePerson(id: number): Person {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
@@ -44,7 +62,7 @@ function generatePerson(id: number): Person {
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-    notes: faker.lorem.paragraph(),
+    notes: faker.helpers.arrayElement(notes),
     salary: faker.number.int({ min: 40000, max: 150000 }),
     department: faker.helpers.arrayElement(departments),
     status: faker.helpers.arrayElement(statuses),
