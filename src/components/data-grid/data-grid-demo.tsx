@@ -21,6 +21,7 @@ interface Person {
   status: string;
   isActive: boolean;
   startDate: string;
+  notes: string;
 }
 
 faker.seed(12345);
@@ -43,6 +44,7 @@ function generatePerson(id: number): Person {
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
+    notes: faker.lorem.paragraph(),
     salary: faker.number.int({ min: 40000, max: 150000 }),
     department: faker.helpers.arrayElement(departments),
     status: faker.helpers.arrayElement(statuses),
@@ -128,6 +130,18 @@ export function DataGridDemo() {
           label: "Email",
           cell: {
             variant: "short-text",
+          },
+        },
+      },
+      {
+        id: "notes",
+        accessorKey: "notes",
+        header: "Notes",
+        minSize: 200,
+        meta: {
+          label: "Notes",
+          cell: {
+            variant: "long-text",
           },
         },
       },

@@ -5,12 +5,18 @@ import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 interface CellVariantProps<TData> {
@@ -151,6 +157,182 @@ export function ShortTextCell<TData>({
         {displayValue}
       </div>
     </DataGridCellWrapper>
+  );
+}
+
+export function LongTextCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+}: CellVariantProps<TData>) {
+  const initialValue = cell.getValue() as string;
+  const [value, setValue] = React.useState(initialValue ?? "");
+  const [open, setOpen] = React.useState(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+
+  const onSave = React.useCallback(() => {
+    if (value !== initialValue) {
+      meta?.updateData?.({ rowIndex, columnId, value });
+    }
+    setOpen(false);
+    meta?.stopEditing?.();
+  }, [meta, rowIndex, columnId, initialValue, value]);
+
+  const onCancel = React.useCallback(() => {
+    setValue(initialValue ?? "");
+    setOpen(false);
+    meta?.stopEditing?.();
+  }, [meta, initialValue]);
+
+  const onChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setValue(event.target.value);
+    },
+    [],
+  );
+
+  const onOpenChange = React.useCallback(
+    (isOpen: boolean) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setValue(initialValue ?? "");
+        meta?.stopEditing?.();
+      }
+    },
+    [meta, initialValue],
+  );
+
+  const onWrapperKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (isEditing && !open && event.key === "Escape") {
+        event.preventDefault();
+        meta?.stopEditing?.();
+      }
+    },
+    [isEditing, open, meta],
+  );
+
+  const onTextareaKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+      } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        onSave();
+      }
+      // Stop propagation to prevent grid navigation
+      event.stopPropagation();
+    },
+    [onCancel, onSave],
+  );
+
+  const onTextareaBlur = React.useCallback(() => {
+    // Auto-save on blur
+    if (value !== initialValue) {
+      meta?.updateData?.({ rowIndex, columnId, value });
+    }
+    setOpen(false);
+    meta?.stopEditing?.();
+  }, [meta, rowIndex, columnId, initialValue, value]);
+
+  React.useEffect(() => {
+    setValue(initialValue ?? "");
+  }, [initialValue]);
+
+  React.useEffect(() => {
+    if (isEditing && !open) {
+      setOpen(true);
+    }
+    if (isFocused && !isEditing && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isFocused, isEditing, open]);
+
+  React.useEffect(() => {
+    if (open && textareaRef.current) {
+      textareaRef.current.focus();
+      // Select all text
+      textareaRef.current.setSelectionRange(
+        0,
+        textareaRef.current.value.length,
+      );
+    }
+  }, [open]);
+
+  // Display truncated value
+  const displayValue = value ?? "";
+  const truncatedValue =
+    displayValue.length > 50 ? `${displayValue.slice(0, 50)}...` : displayValue;
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverAnchor asChild>
+        <DataGridCellWrapper
+          ref={containerRef}
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+          onKeyDown={onWrapperKeyDown}
+        >
+          <span className="truncate">{truncatedValue}</span>
+        </DataGridCellWrapper>
+      </PopoverAnchor>
+      <PopoverContent
+        data-grid-cell-editor=""
+        className="w-[500px] p-0"
+        align="start"
+        side="bottom"
+        sideOffset={0}
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          textareaRef.current?.focus();
+        }}
+      >
+        <div className="flex flex-col">
+          <Textarea
+            ref={textareaRef}
+            value={value}
+            onChange={onChange}
+            onKeyDown={onTextareaKeyDown}
+            onBlur={onTextareaBlur}
+            className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
+            placeholder="Enter text..."
+          />
+          <div className="flex items-center justify-between gap-2 border-t bg-muted/50 px-3 py-2">
+            <div className="text-muted-foreground text-xs">
+              Ctrl/Cmd+Enter to save • Esc to cancel
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded-md px-3 py-1 font-medium text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onSave}
+                className="rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground text-xs transition-colors hover:bg-primary/90"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

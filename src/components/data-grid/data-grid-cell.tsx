@@ -6,6 +6,7 @@ import * as React from "react";
 import {
   CheckboxCell,
   DateCell,
+  LongTextCell,
   NumberCell,
   SelectCell,
   ShortTextCell,
@@ -39,6 +40,30 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
   const variant = cellOpts?.variant ?? "text";
 
   switch (variant) {
+    case "short-text":
+      return (
+        <ShortTextCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+        />
+      );
+    case "long-text":
+      return (
+        <LongTextCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isFocused={isFocused}
+          isEditing={isEditing}
+          isSelected={isSelected}
+        />
+      );
     case "number":
       return (
         <NumberCell
@@ -87,18 +112,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isSelected={isSelected}
         />
       );
-    case "short-text":
-      return (
-        <ShortTextCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isFocused={isFocused}
-          isEditing={isEditing}
-          isSelected={isSelected}
-        />
-      );
+
     default:
       return (
         <ShortTextCell
