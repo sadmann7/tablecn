@@ -39,14 +39,11 @@ export function TextCell<TData>({
   const meta = table.options.meta;
 
   const onBlur = React.useCallback(() => {
-    if (cellRef.current) {
-      const currentValue = cellRef.current.textContent ?? "";
-      if (currentValue !== initialValue) {
-        meta?.updateData?.({ rowIndex, columnId, value: currentValue });
-      }
-      meta?.stopEditing?.();
+    if (value !== initialValue) {
+      meta?.updateData?.({ rowIndex, columnId, value });
     }
-  }, [meta, rowIndex, columnId, initialValue]);
+    meta?.stopEditing?.();
+  }, [meta, rowIndex, columnId, initialValue, value]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -68,9 +65,7 @@ export function TextCell<TData>({
           meta?.stopEditing?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          if (cellRef.current) {
-            cellRef.current.textContent = initialValue;
-          }
+          setValue(initialValue);
           cellRef.current?.blur();
         }
       } else if (
