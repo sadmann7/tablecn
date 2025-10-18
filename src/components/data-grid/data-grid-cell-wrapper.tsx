@@ -155,7 +155,10 @@ export function DataGridCellWrapper<TData>({
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
       className={cn(
-        "size-full cursor-default truncate px-2 py-1 text-left text-sm outline-none",
+        "size-full px-2 py-1 text-left text-sm outline-none",
+        isEditing
+          ? "cursor-text"
+          : "cursor-default truncate [&_[role=textbox]]:truncate",
         {
           "ring-1 ring-ring ring-inset": isFocused,
           "bg-yellow-100 dark:bg-yellow-900/30":

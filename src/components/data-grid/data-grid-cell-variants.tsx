@@ -150,9 +150,9 @@ export function ShortTextCell<TData>({
         onBlur={onBlur}
         onInput={onInput}
         suppressContentEditableWarning
-        className={cn("size-full truncate outline-none", {
-          "cursor-text": isEditing,
-        })}
+        className={cn(
+          "size-full overflow-hidden whitespace-nowrap outline-none [&_*]:inline [&_*]:whitespace-nowrap [&_br]:hidden",
+        )}
       >
         {displayValue}
       </div>
@@ -175,6 +175,7 @@ export function LongTextCell<TData>({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
+  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const onSave = React.useCallback(() => {
     if (value !== initialValue) {
@@ -207,6 +208,17 @@ export function LongTextCell<TData>({
     },
     [meta, initialValue],
   );
+
+  const onOpenAutoFocus: NonNullable<
+    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
+  > = React.useCallback((event) => {
+    event.preventDefault();
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+      const length = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(length, length);
+    }
+  }, []);
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -255,22 +267,6 @@ export function LongTextCell<TData>({
     }
   }, [isFocused, isEditing, open]);
 
-  React.useEffect(() => {
-    if (open && textareaRef.current) {
-      textareaRef.current.focus();
-      // Select all text
-      textareaRef.current.setSelectionRange(
-        0,
-        textareaRef.current.value.length,
-      );
-    }
-  }, [open]);
-
-  // Display truncated value
-  const displayValue = value ?? "";
-  const truncatedValue =
-    displayValue.length > 50 ? `${displayValue.slice(0, 50)}...` : displayValue;
-
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
@@ -285,19 +281,16 @@ export function LongTextCell<TData>({
           isSelected={isSelected}
           onKeyDown={onWrapperKeyDown}
         >
-          <span className="truncate">{truncatedValue}</span>
+          {value}
         </DataGridCellWrapper>
       </PopoverAnchor>
       <PopoverContent
         data-grid-cell-editor=""
-        className="w-[500px] p-0"
         align="start"
         side="bottom"
-        sideOffset={0}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault();
-          textareaRef.current?.focus();
-        }}
+        sideOffset={sideOffset}
+        className="w-[400px] animate-none rounded-none p-0"
+        onOpenAutoFocus={onOpenAutoFocus}
       >
         <div className="flex flex-col">
           <Textarea
