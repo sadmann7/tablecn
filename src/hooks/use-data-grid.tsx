@@ -23,7 +23,9 @@ import type {
   UpdateCell,
 } from "@/types/data-grid";
 
-const VIEWPORT_RING_OFFSET = 1;
+const ESTIMATED_ROW_SIZE = 35;
+const OVERSCAN = 3;
+const VIEWPORT_OFFSET = 1;
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
@@ -78,8 +80,8 @@ export function useDataGrid<TData>({
   onDataChange,
   initialState,
   getRowId,
-  estimateRowSize = 35,
-  overscan = 3,
+  estimateRowSize = ESTIMATED_ROW_SIZE,
+  overscan = OVERSCAN,
   autoFocus = false,
   enableSearch = false,
   ...dataGridProps
@@ -828,9 +830,9 @@ export function useDataGrid<TData>({
             footerRef.current?.getBoundingClientRect().height ?? 0;
 
           const viewportTop =
-            containerRect.top + headerHeight + VIEWPORT_RING_OFFSET;
+            containerRect.top + headerHeight + VIEWPORT_OFFSET;
           const viewportBottom =
-            containerRect.bottom - footerHeight - VIEWPORT_RING_OFFSET;
+            containerRect.bottom - footerHeight - VIEWPORT_OFFSET;
 
           // If target row already exists, check if it's visible
           if (targetRow) {
