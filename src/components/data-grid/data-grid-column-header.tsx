@@ -80,7 +80,10 @@ export function DataGridColumnHeader<TData, TValue>({
   const cellVariant = column.columnDef.meta?.cell;
   const columnVariant = getColumnVariant(cellVariant?.variant ?? "short-text");
 
-  const isFrozen = column.getIsPinned() === "left";
+  const pinnedPosition = column.getIsPinned();
+  const isPinnedLeft = pinnedPosition === "left";
+  const isPinnedRight = pinnedPosition === "right";
+  const isPinned = isPinnedLeft || isPinnedRight;
 
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {
@@ -111,24 +114,17 @@ export function DataGridColumnHeader<TData, TValue>({
     );
   }, [column.id, table]);
 
-  const onColumnsFreeze = React.useCallback(() => {
-    const allColumns = table.getAllLeafColumns();
-    const currentColumnIndex = allColumns.findIndex(
-      (col) => col.id === column.id,
-    );
+  const onLeftPin = React.useCallback(() => {
+    column.pin("left");
+  }, [column]);
 
-    if (currentColumnIndex === -1) return;
+  const onRightPin = React.useCallback(() => {
+    column.pin("right");
+  }, [column]);
 
-    const columnsToFreeze = allColumns
-      .slice(0, currentColumnIndex + 1)
-      .map((col) => col.id);
-
-    table.setColumnPinning({ left: columnsToFreeze, right: [] });
-  }, [column.id, table]);
-
-  const onUnfreezeAll = React.useCallback(() => {
-    table.setColumnPinning({ left: [], right: [] });
-  }, [table]);
+  const onUnpin = React.useCallback(() => {
+    column.pin(false);
+  }, [column]);
 
   if (!column.getCanSort() && !column.getCanHide()) {
     return (
@@ -207,22 +203,31 @@ export function DataGridColumnHeader<TData, TValue>({
         {column.getCanPin() && (
           <>
             <DropdownMenuSeparator />
-            {!isFrozen && (
-              <DropdownMenuItem
-                className="[&_svg]:text-muted-foreground"
-                onClick={onColumnsFreeze}
-              >
-                <PinIcon />
-                Freeze columns
-              </DropdownMenuItem>
+            {!isPinned && (
+              <>
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onLeftPin}
+                >
+                  <PinIcon />
+                  Pin to left
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onRightPin}
+                >
+                  <PinIcon className="rotate-90" />
+                  Pin to right
+                </DropdownMenuItem>
+              </>
             )}
-            {isFrozen && (
+            {isPinned && (
               <DropdownMenuItem
                 className="[&_svg]:text-muted-foreground"
-                onClick={onUnfreezeAll}
+                onClick={onUnpin}
               >
                 <PinOff />
-                Unfreeze columns
+                Unpin column
               </DropdownMenuItem>
             )}
           </>
