@@ -13,16 +13,12 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
-import { useLazyRef } from "@/hooks/use-lazy-ref";
-import {
-  getRowHeightValue,
-  RowHeightFeature,
-  type RowHeightValue,
-} from "@/lib/data-grid-row-height-feature";
+import { getRowHeightValue } from "@/lib/data-grid";
 import type {
   CellPosition,
   ContextMenuState,
   NavigationDirection,
+  RowHeightValue,
   ScrollToOptions,
   SearchState,
   SelectionState,
@@ -33,21 +29,29 @@ const ESTIMATED_ROW_SIZE = 36;
 const OVERSCAN = 3;
 const VIEWPORT_OFFSET = 1;
 
+function useLazyRef<T>(fn: () => T): React.RefObject<T> {
+  const ref = React.useRef<T | null>(null);
+  if (ref.current === null) {
+    ref.current = fn();
+  }
+  return ref as React.RefObject<T>;
+}
+
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
 interface DataGridState {
+  sorting: SortingState;
+  rowHeight: RowHeightValue;
+  rowSelection: RowSelectionState;
+  selectionState: SelectionState;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
+  contextMenu: ContextMenuState;
   searchQuery: string;
   searchMatches: CellPosition[];
   matchIndex: number;
   searchOpen: boolean;
-  sorting: SortingState;
-  selectionState: SelectionState;
-  rowSelection: RowSelectionState;
-  contextMenu: ContextMenuState;
-  rowHeight: RowHeightValue;
 }
 
 interface DataGridStore {
@@ -62,7 +66,10 @@ interface DataGridStore {
 }
 
 interface UseDataGridProps<TData>
-  extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
+  extends Omit<
+    TableOptions<TData>,
+    "pageCount" | "getCoreRowModel" | "initialState"
+  > {
   columns: ColumnDef<TData>[];
   data: TData[];
   onDataChange?: (data: TData[]) => void;
@@ -71,6 +78,9 @@ interface UseDataGridProps<TData>
   overscan?: number;
   autoFocus?: boolean;
   enableSearch?: boolean;
+  initialState?: TableOptions<TData>["initialState"] & {
+    rowHeight?: RowHeightValue;
+  };
 }
 
 export function useDataGrid<TData>({
@@ -99,25 +109,25 @@ export function useDataGrid<TData>({
 
   const stateRef = useLazyRef<DataGridState>(() => {
     return {
-      focusedCell: null,
-      editingCell: null,
+      sorting: initialState?.sorting ?? [],
+      rowHeight: initialState?.rowHeight ?? "short",
+      rowSelection: initialState?.rowSelection ?? {},
       selectionState: {
         selectedCells: new Set(),
         selectionRange: null,
         isSelecting: false,
       },
-      searchQuery: "",
-      searchMatches: [],
-      matchIndex: -1,
-      searchOpen: false,
-      sorting: initialState?.sorting ?? [],
-      rowSelection: initialState?.rowSelection ?? {},
+      focusedCell: null,
+      editingCell: null,
       contextMenu: {
         open: false,
         x: 0,
         y: 0,
       },
-      rowHeight: initialState?.rowHeight ?? "short",
+      searchQuery: "",
+      searchMatches: [],
+      matchIndex: -1,
+      searchOpen: false,
     };
   });
 
@@ -1138,7 +1148,7 @@ export function useDataGrid<TData>({
     [store, getColumnIds, getCellKey],
   );
 
-  const setRowHeight = React.useCallback(
+  const onRowHeightChange = React.useCallback(
     (updater: Updater<RowHeightValue>) => {
       const currentState = store.getState();
       const newRowHeight =
@@ -1159,7 +1169,6 @@ export function useDataGrid<TData>({
 
   const table = useReactTable({
     ...dataGridProps,
-    _features: [RowHeightFeature],
     data,
     columns,
     defaultColumn,
@@ -1168,11 +1177,9 @@ export function useDataGrid<TData>({
       ...dataGridProps.state,
       sorting,
       rowSelection,
-      rowHeight,
     },
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
-    onRowHeightChange: setRowHeight,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,
@@ -1202,6 +1209,7 @@ export function useDataGrid<TData>({
       contextMenu,
       onContextMenuOpenChange,
       rowHeight,
+      onRowHeightChange,
     },
   });
 

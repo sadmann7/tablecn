@@ -38,8 +38,10 @@ export function DataGrid<TData>({
 }: DataGridProps<TData>) {
   const rows = table.getRowModel().rows;
   const columns = table.getAllColumns();
-  const rowHeight = table.options.meta?.rowHeight ?? "short";
-  const focusedCell = table.options.meta?.focusedCell ?? null;
+
+  const meta = table.options.meta;
+  const rowHeight = meta?.rowHeight ?? "short";
+  const focusedCell = meta?.focusedCell ?? null;
 
   const onRowAdd = React.useCallback(async () => {
     if (!onRowAddProp) return;

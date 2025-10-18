@@ -2,7 +2,6 @@
 
 import type { Cell, Table } from "@tanstack/react-table";
 import * as React from "react";
-import type { RowHeightValue } from "@/lib/data-grid-row-height-feature";
 import { cn } from "@/lib/utils";
 
 interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {

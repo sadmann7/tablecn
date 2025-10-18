@@ -7,7 +7,7 @@ import {
   Equal,
   Minus,
 } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 import {
   Select,
   SelectContent,
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { RowHeightValue } from "@/lib/data-grid-row-height-feature";
+import type { RowHeightValue } from "@/types/data-grid";
 
 const rowHeights = [
   {
@@ -40,30 +40,26 @@ const rowHeights = [
   },
 ] as const;
 
-interface DataGridRowHeightSelectProps<TData> {
+interface DataGridRowHeightSelectProps<TData>
+  extends React.ComponentProps<typeof SelectContent> {
   table: Table<TData>;
 }
 
 export function DataGridRowHeightSelect<TData>({
   table,
+  ...props
 }: DataGridRowHeightSelectProps<TData>) {
-  const rowHeight = table.getState().rowHeight;
-
-  const onValueChange = React.useCallback(
-    (value: RowHeightValue) => {
-      table.setRowHeight(value);
-    },
-    [table],
-  );
+  const rowHeight = table.options.meta?.rowHeight;
+  const onRowHeightChange = table.options.meta?.onRowHeightChange;
 
   return (
-    <Select value={rowHeight} onValueChange={onValueChange}>
+    <Select value={rowHeight} onValueChange={onRowHeightChange}>
       <SelectTrigger size="sm">
         <SelectValue placeholder="Row height">
           {rowHeights.find((opt) => opt.value === rowHeight)?.label}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent align="end">
+      <SelectContent {...props}>
         {rowHeights.map((option) => {
           const OptionIcon = option.icon;
           return (

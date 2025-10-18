@@ -4,13 +4,10 @@ import { flexRender, type Row } from "@tanstack/react-table";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
-import {
-  getRowHeightValue,
-  type RowHeightValue,
-} from "@/lib/data-grid-row-height-feature";
+import { getRowHeightValue } from "@/lib/data-grid";
 import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
-import type { CellPosition } from "@/types/data-grid";
+import type { CellPosition, RowHeightValue } from "@/types/data-grid";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;

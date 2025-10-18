@@ -270,8 +270,8 @@ export function DataGridDemo() {
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
-        <DataGridRowHeightSelect table={table} />
         <DataTableSortList table={table} align="end" />
+        <DataGridRowHeightSelect table={table} align="end" />
         <DataTableViewOptions table={table} align="end" />
       </div>
       <DataGrid
