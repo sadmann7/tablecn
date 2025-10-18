@@ -1,4 +1,5 @@
 import type { RowData } from "@tanstack/react-table";
+import type { RowHeightValue } from "@/lib/data-grid-row-height-feature";
 
 export interface CellSelectOption {
   label: string;
@@ -83,6 +84,7 @@ declare module "@tanstack/react-table" {
     searchQuery?: string;
     contextMenu?: ContextMenuState;
     onContextMenuOpenChange?: (open: boolean) => void;
+    rowHeight?: RowHeightValue;
   }
 }
 

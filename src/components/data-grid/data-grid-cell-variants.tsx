@@ -154,9 +154,10 @@ export function ShortTextCell<TData>({
         onBlur={onBlur}
         onInput={onInput}
         suppressContentEditableWarning
-        className={cn(
-          "size-full overflow-hidden whitespace-nowrap outline-none [&_*]:inline [&_*]:whitespace-nowrap [&_br]:hidden",
-        )}
+        className={cn("size-full overflow-hidden outline-none", {
+          "whitespace-nowrap [&_*]:inline [&_*]:whitespace-nowrap [&_br]:hidden":
+            isEditing,
+        })}
       >
         {displayValue}
       </div>
@@ -299,7 +300,7 @@ export function LongTextCell<TData>({
           isSelected={isSelected}
           onKeyDown={onWrapperKeyDown}
         >
-          {value}
+          <span>{value}</span>
         </DataGridCellWrapper>
       </PopoverAnchor>
       <PopoverContent

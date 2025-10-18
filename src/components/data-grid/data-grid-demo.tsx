@@ -3,8 +3,8 @@
 import { faker } from "@faker-js/faker";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
-
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { DataGridRowHeightSelect } from "@/components/data-grid/data-grid-row-height-select";
 import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
 import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -270,6 +270,7 @@ export function DataGridDemo() {
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
+        <DataGridRowHeightSelect table={table} />
         <DataTableSortList table={table} align="end" />
         <DataTableViewOptions table={table} align="end" />
       </div>

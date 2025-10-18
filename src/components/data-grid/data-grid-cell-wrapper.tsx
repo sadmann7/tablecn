@@ -2,7 +2,7 @@
 
 import type { Cell, Table } from "@tanstack/react-table";
 import * as React from "react";
-
+import type { RowHeightValue } from "@/lib/data-grid-row-height-feature";
 import { cn } from "@/lib/utils";
 
 interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
@@ -136,6 +136,8 @@ export function DataGridCellWrapper<TData>({
     [onKeyDownProp, isFocused, isEditing, meta, rowIndex, columnId],
   );
 
+  const rowHeight = meta?.rowHeight ?? "short";
+
   return (
     <div
       role="button"
@@ -152,7 +154,11 @@ export function DataGridCellWrapper<TData>({
             isSearchMatch && !isCurrentSearchMatch,
           "bg-orange-200 dark:bg-orange-900/50": isCurrentSearchMatch,
           "bg-primary/10": isSelected && !isEditing,
-          "cursor-default truncate [&_[role=textbox]]:truncate": !isEditing,
+          "cursor-default": !isEditing,
+          "[&>*]:line-clamp-1": !isEditing && rowHeight === "short",
+          "[&>*]:line-clamp-2": !isEditing && rowHeight === "medium",
+          "[&>*]:line-clamp-3": !isEditing && rowHeight === "tall",
+          "[&>*]:line-clamp-4": !isEditing && rowHeight === "extra-tall",
         },
         className,
       )}

@@ -14,6 +14,11 @@ import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
+import {
+  getRowHeightValue,
+  RowHeightFeature,
+  type RowHeightValue,
+} from "@/lib/data-grid-row-height-feature";
 import type {
   CellPosition,
   ContextMenuState,
@@ -24,7 +29,7 @@ import type {
   UpdateCell,
 } from "@/types/data-grid";
 
-const ESTIMATED_ROW_SIZE = 35;
+const ESTIMATED_ROW_SIZE = 36;
 const OVERSCAN = 3;
 const VIEWPORT_OFFSET = 1;
 
@@ -42,6 +47,7 @@ interface DataGridState {
   selectionState: SelectionState;
   rowSelection: RowSelectionState;
   contextMenu: ContextMenuState;
+  rowHeight: RowHeightValue;
 }
 
 interface DataGridStore {
@@ -111,6 +117,7 @@ export function useDataGrid<TData>({
         x: 0,
         y: 0,
       },
+      rowHeight: initialState?.rowHeight ?? "short",
     };
   });
 
@@ -182,11 +189,14 @@ export function useDataGrid<TData>({
     sorting,
     rowSelection,
     contextMenu,
+    rowHeight,
   } = React.useSyncExternalStore(
     store.subscribe,
     store.getState,
     store.getState,
   );
+
+  const currentRowHeight = getRowHeightValue(rowHeight);
 
   const getColumnIds = React.useCallback(() => {
     return columns
@@ -860,13 +870,13 @@ export function useDataGrid<TData>({
 
           // Scroll by exactly one row height to reveal it smoothly
           if (direction === "down") {
-            container.scrollTop += estimateRowSize;
+            container.scrollTop += currentRowHeight;
           } else {
             // For arrow up, ensure we don't go below 0
             const currentScrollTop = container.scrollTop;
             const targetScrollTop = Math.max(
               0,
-              currentScrollTop - estimateRowSize,
+              currentScrollTop - currentRowHeight,
             );
             container.scrollTop = targetScrollTop;
           }
@@ -892,7 +902,7 @@ export function useDataGrid<TData>({
         focusCell(newRowIndex, newColumnId);
       }
     },
-    [store, getNavigableColumnIds, focusCell, data.length, estimateRowSize],
+    [store, getNavigableColumnIds, focusCell, data.length, currentRowHeight],
   );
 
   const onDataGridKeyDown = React.useCallback(
@@ -1128,6 +1138,18 @@ export function useDataGrid<TData>({
     [store, getColumnIds, getCellKey],
   );
 
+  const setRowHeight = React.useCallback(
+    (updater: Updater<RowHeightValue>) => {
+      const currentState = store.getState();
+      const newRowHeight =
+        typeof updater === "function"
+          ? updater(currentState.rowHeight)
+          : updater;
+      store.setState("rowHeight", newRowHeight);
+    },
+    [store],
+  );
+
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
       cell: DataGridCell,
@@ -1137,6 +1159,7 @@ export function useDataGrid<TData>({
 
   const table = useReactTable({
     ...dataGridProps,
+    _features: [RowHeightFeature],
     data,
     columns,
     defaultColumn,
@@ -1145,9 +1168,11 @@ export function useDataGrid<TData>({
       ...dataGridProps.state,
       sorting,
       rowSelection,
+      rowHeight,
     },
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
+    onRowHeightChange: setRowHeight,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,
@@ -1176,6 +1201,7 @@ export function useDataGrid<TData>({
       searchQuery,
       contextMenu,
       onContextMenuOpenChange,
+      rowHeight,
     },
   });
 
@@ -1186,7 +1212,7 @@ export function useDataGrid<TData>({
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => dataGridRef.current,
-    estimateSize: () => estimateRowSize,
+    estimateSize: () => currentRowHeight,
     overscan,
     measureElement:
       typeof window !== "undefined" &&
@@ -1419,6 +1445,7 @@ export function useDataGrid<TData>({
     table.getState().grouping,
     table.getState().rowSelection,
     table.getState().sorting,
+    rowHeight,
   ]);
 
   return {

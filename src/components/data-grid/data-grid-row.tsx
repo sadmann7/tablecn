@@ -4,6 +4,10 @@ import { flexRender, type Row } from "@tanstack/react-table";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
+import {
+  getRowHeightValue,
+  type RowHeightValue,
+} from "@/lib/data-grid-row-height-feature";
 import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 import type { CellPosition } from "@/types/data-grid";
@@ -13,6 +17,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualRowIndex: number;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
+  rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
 }
 
@@ -51,6 +56,7 @@ function DataGridRowImpl<TData>({
   virtualRowIndex,
   rowVirtualizer,
   rowMapRef,
+  rowHeight,
   focusedCell,
   ref,
   className,
@@ -91,10 +97,11 @@ function DataGridRowImpl<TData>({
             data-highlighted={isCellFocused ? "" : undefined}
             data-slot="data-grid-cell"
             tabIndex={-1}
-            className={cn("h-9 grow", {
+            className={cn("grow", {
               "border-r": cell.column.id !== "select",
             })}
             style={{
+              height: `${getRowHeightValue(rowHeight)}px`,
               ...getCommonPinningStyles({ column: cell.column }),
             }}
           >
