@@ -256,7 +256,7 @@ export function DataGridDemo() {
     enableSearch: true,
     initialState: {
       columnPinning: {
-        left: ["select", "name"],
+        left: ["select"],
       },
     },
   });

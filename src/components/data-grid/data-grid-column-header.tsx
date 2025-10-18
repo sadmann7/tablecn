@@ -16,6 +16,8 @@ import {
   EyeOff,
   Hash,
   List,
+  PinIcon,
+  PinOff,
   TextInitial,
   X,
 } from "lucide-react";
@@ -78,6 +80,8 @@ export function DataGridColumnHeader<TData, TValue>({
   const cellVariant = column.columnDef.meta?.cell;
   const columnVariant = getColumnVariant(cellVariant?.variant ?? "short-text");
 
+  const isFrozen = column.getIsPinned() === "left";
+
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {
       table.setSorting((prev: SortingState) => {
@@ -106,6 +110,25 @@ export function DataGridColumnHeader<TData, TValue>({
       prev.filter((sort) => sort.id !== column.id),
     );
   }, [column.id, table]);
+
+  const onColumnsFreeze = React.useCallback(() => {
+    const allColumns = table.getAllLeafColumns();
+    const currentColumnIndex = allColumns.findIndex(
+      (col) => col.id === column.id,
+    );
+
+    if (currentColumnIndex === -1) return;
+
+    const columnsToFreeze = allColumns
+      .slice(0, currentColumnIndex + 1)
+      .map((col) => col.id);
+
+    table.setColumnPinning({ left: columnsToFreeze, right: [] });
+  }, [column.id, table]);
+
+  const onUnfreezeAll = React.useCallback(() => {
+    table.setColumnPinning({ left: [], right: [] });
+  }, [table]);
 
   if (!column.getCanSort() && !column.getCanHide()) {
     return (
@@ -179,12 +202,32 @@ export function DataGridColumnHeader<TData, TValue>({
               Sort desc
             </DropdownMenuCheckboxItem>
             {column.getIsSorted() && (
-              <DropdownMenuItem
-                className="pl-2 [&_svg]:text-muted-foreground"
-                onClick={onSortRemove}
-              >
+              <DropdownMenuItem onClick={onSortRemove}>
                 <X />
                 Remove sort
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
+        {column.getCanPin() && (
+          <>
+            <DropdownMenuSeparator />
+            {!isFrozen && (
+              <DropdownMenuItem
+                className="[&_svg]:text-muted-foreground"
+                onClick={onColumnsFreeze}
+              >
+                <PinIcon />
+                Freeze columns
+              </DropdownMenuItem>
+            )}
+            {isFrozen && (
+              <DropdownMenuItem
+                className="[&_svg]:text-muted-foreground"
+                onClick={onUnfreezeAll}
+              >
+                <PinOff />
+                Unfreeze columns
               </DropdownMenuItem>
             )}
           </>
