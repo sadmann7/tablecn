@@ -15,6 +15,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -627,6 +628,12 @@ export function MultiSelectCell<TData>({
     [selectedValues, meta, rowIndex, columnId],
   );
 
+  const clearAll = React.useCallback(() => {
+    setSelectedValues([]);
+    meta?.updateData?.({ rowIndex, columnId, value: [] });
+    queueMicrotask(() => inputRef.current?.focus());
+  }, [meta, rowIndex, columnId]);
+
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       setOpen(isOpen);
@@ -785,9 +792,9 @@ export function MultiSelectCell<TData>({
                   className="h-auto flex-1 p-0"
                 />
               </div>
-              <CommandList>
+              <CommandList className="max-h-full">
                 <CommandEmpty>No options found.</CommandEmpty>
-                <CommandGroup>
+                <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
                   {options.map((option) => {
                     const isSelected = selectedValues.includes(option.value);
 
@@ -812,6 +819,19 @@ export function MultiSelectCell<TData>({
                     );
                   })}
                 </CommandGroup>
+                {selectedValues.length > 0 && (
+                  <>
+                    <CommandSeparator />
+                    <CommandGroup>
+                      <CommandItem
+                        onSelect={clearAll}
+                        className="justify-center text-muted-foreground"
+                      >
+                        Clear all
+                      </CommandItem>
+                    </CommandGroup>
+                  </>
+                )}
               </CommandList>
             </Command>
           </PopoverContent>
