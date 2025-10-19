@@ -1,6 +1,7 @@
 "use client";
 
 import type { Cell, Table } from "@tanstack/react-table";
+import { Command as CommandPrimitive } from "cmdk";
 import { Check, X } from "lucide-react";
 import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
@@ -11,6 +12,7 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -636,6 +638,13 @@ export function MultiSelectCell<TData>({
     [meta],
   );
 
+  const onOpenAutoFocus: NonNullable<
+    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
+  > = React.useCallback((event) => {
+    event.preventDefault();
+    inputRef.current?.focus();
+  }, []);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
@@ -739,12 +748,9 @@ export function MultiSelectCell<TData>({
             align="start"
             sideOffset={sideOffset}
             className="w-[300px] rounded-none p-0"
-            onOpenAutoFocus={(e) => {
-              e.preventDefault();
-              inputRef.current?.focus();
-            }}
+            onOpenAutoFocus={onOpenAutoFocus}
           >
-            <Command shouldFilter={false}>
+            <Command className="[&_[data-slot=command-input-wrapper]]:h-auto [&_[data-slot=command-input-wrapper]]:border-none [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
                   const option = options.find((opt) => opt.value === value);
@@ -770,51 +776,41 @@ export function MultiSelectCell<TData>({
                     </Badge>
                   );
                 })}
-                <input
+                <CommandInput
                   ref={inputRef}
-                  type="text"
                   value={searchValue}
-                  onChange={(e) => setSearchValue(e.target.value)}
+                  onValueChange={setSearchValue}
                   onKeyDown={onInputKeyDown}
-                  placeholder={
-                    selectedValues.length === 0 ? "Search options..." : ""
-                  }
-                  className="min-w-[80px] flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
+                  placeholder="Search..."
+                  className="h-auto flex-1 p-0"
                 />
               </div>
               <CommandList>
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup>
-                  {options
-                    .filter((option) => {
-                      if (!searchValue) return true;
-                      return option.label
-                        .toLowerCase()
-                        .includes(searchValue.toLowerCase());
-                    })
-                    .map((option) => {
-                      const isSelected = selectedValues.includes(option.value);
+                  {options.map((option) => {
+                    const isSelected = selectedValues.includes(option.value);
 
-                      return (
-                        <CommandItem
-                          key={option.value}
-                          value={option.value}
-                          onSelect={onValueChange}
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        value={option.label}
+                        onSelect={() => onValueChange(option.value)}
+                      >
+                        <div
+                          className={cn(
+                            "flex size-4 items-center justify-center rounded-sm border border-primary",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50 [&_svg]:invisible",
+                          )}
                         >
-                          <div
-                            className={cn(
-                              "flex size-4 items-center justify-center rounded-sm border border-primary",
-                              isSelected
-                                ? "bg-primary text-primary-foreground"
-                                : "opacity-50 [&_svg]:invisible",
-                            )}
-                          >
-                            <Check className="size-3" />
-                          </div>
-                          <span>{option.label}</span>
-                        </CommandItem>
-                      );
-                    })}
+                          <Check className="size-3" />
+                        </div>
+                        <span>{option.label}</span>
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               </CommandList>
             </Command>
