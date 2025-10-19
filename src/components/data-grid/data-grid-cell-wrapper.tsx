@@ -29,8 +29,8 @@ export function DataGridCellWrapper<TData>({
   const meta = table.options.meta;
 
   const isSearchMatch = meta?.getIsSearchMatch?.(rowIndex, columnId) ?? false;
-  const isCurrentSearchMatch =
-    meta?.getIsCurrentSearchMatch?.(rowIndex, columnId) ?? false;
+  const isActiveSearchMatch =
+    meta?.getIsActiveSearchMatch?.(rowIndex, columnId) ?? false;
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -150,8 +150,8 @@ export function DataGridCellWrapper<TData>({
         {
           "ring-1 ring-ring ring-inset": isFocused,
           "bg-yellow-100 dark:bg-yellow-900/30":
-            isSearchMatch && !isCurrentSearchMatch,
-          "bg-orange-200 dark:bg-orange-900/50": isCurrentSearchMatch,
+            isSearchMatch && !isActiveSearchMatch,
+          "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
           "bg-primary/10": isSelected && !isEditing,
           "cursor-default": !isEditing,
           "[&_[data-slot=grid-cell-content]]:line-clamp-1":

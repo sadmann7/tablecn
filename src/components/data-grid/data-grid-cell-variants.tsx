@@ -62,7 +62,7 @@ export function ShortTextCell<TData>({
     // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
     if (currentValue !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value: currentValue });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
     }
     meta?.onCellEditingStop?.();
   }, [meta, rowIndex, columnId, initialValue]);
@@ -82,7 +82,7 @@ export function ShortTextCell<TData>({
           event.preventDefault();
           const currentValue = cellRef.current?.textContent ?? "";
           if (currentValue !== initialValue) {
-            meta?.updateData?.({ rowIndex, columnId, value: currentValue });
+            meta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
           }
           meta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
@@ -197,13 +197,13 @@ export function LongTextCell<TData>({
 
   // Debounced auto-save (300ms delay)
   const debouncedSave = useDebouncedCallback((newValue: string) => {
-    meta?.updateData?.({ rowIndex, columnId, value: newValue });
+    meta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
   }, 300);
 
   const onSave = React.useCallback(() => {
     // Immediately save any pending changes and close the popover
     if (value !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
     setOpen(false);
     meta?.onCellEditingStop?.();
@@ -212,7 +212,7 @@ export function LongTextCell<TData>({
   const onCancel = React.useCallback(() => {
     // Restore the original value
     setValue(initialValue ?? "");
-    meta?.updateData?.({ rowIndex, columnId, value: initialValue });
+    meta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
     setOpen(false);
     meta?.onCellEditingStop?.();
   }, [meta, initialValue, rowIndex, columnId]);
@@ -233,7 +233,7 @@ export function LongTextCell<TData>({
       if (!isOpen) {
         // Immediately save any pending changes when closing
         if (value !== initialValue) {
-          meta?.updateData?.({ rowIndex, columnId, value });
+          meta?.onDataUpdate?.({ rowIndex, columnId, value });
         }
         meta?.onCellEditingStop?.();
       }
@@ -280,7 +280,7 @@ export function LongTextCell<TData>({
   const onTextareaBlur = React.useCallback(() => {
     // Immediately save any pending changes on blur
     if (value !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
     setOpen(false);
     meta?.onCellEditingStop?.();
@@ -383,7 +383,7 @@ export function NumberCell<TData>({
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (numValue !== initialValue) {
-      meta?.updateData?.({ rowIndex, columnId, value: numValue });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
     }
     meta?.onCellEditingStop?.();
   }, [meta, rowIndex, columnId, initialValue, value]);
@@ -402,7 +402,7 @@ export function NumberCell<TData>({
           event.preventDefault();
           const numValue = value === "" ? null : Number(value);
           if (numValue !== initialValue) {
-            meta?.updateData?.({ rowIndex, columnId, value: numValue });
+            meta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
           }
           meta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
@@ -488,7 +488,7 @@ export function SelectCell<TData>({
   const onValueChange = React.useCallback(
     (newValue: string) => {
       setValue(newValue);
-      meta?.updateData?.({ rowIndex, columnId, value: newValue });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
       meta?.onCellEditingStop?.();
     },
     [meta, rowIndex, columnId],
@@ -607,7 +607,7 @@ export function MultiSelectCell<TData>({
         : [...selectedValues, value];
 
       setSelectedValues(newValues);
-      meta?.updateData?.({ rowIndex, columnId, value: newValues });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
       // Clear search input and focus back on input after selection
       setSearchValue("");
       queueMicrotask(() => inputRef.current?.focus());
@@ -621,7 +621,7 @@ export function MultiSelectCell<TData>({
       event?.preventDefault();
       const newValues = selectedValues.filter((v) => v !== valueToRemove);
       setSelectedValues(newValues);
-      meta?.updateData?.({ rowIndex, columnId, value: newValues });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
       // Focus back on input after removing
       setTimeout(() => inputRef.current?.focus(), 0);
     },
@@ -630,7 +630,7 @@ export function MultiSelectCell<TData>({
 
   const clearAll = React.useCallback(() => {
     setSelectedValues([]);
-    meta?.updateData?.({ rowIndex, columnId, value: [] });
+    meta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
     queueMicrotask(() => inputRef.current?.focus());
   }, [meta, rowIndex, columnId]);
 
@@ -878,7 +878,7 @@ export function CheckboxCell<TData>({
   const onCheckedChange = React.useCallback(
     (checked: boolean) => {
       setValue(checked);
-      meta?.updateData?.({ rowIndex, columnId, value: checked });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: checked });
     },
     [meta, rowIndex, columnId],
   );
@@ -988,7 +988,7 @@ export function DateCell<TData>({
 
       const formattedDate = date.toISOString().split("T")[0] ?? "";
       setValue(formattedDate);
-      meta?.updateData?.({ rowIndex, columnId, value: formattedDate });
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
       setIsOpen(false);
       meta?.onCellEditingStop?.();
     },

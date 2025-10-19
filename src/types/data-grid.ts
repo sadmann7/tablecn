@@ -51,10 +51,13 @@ declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
     dataGridRef?: React.RefObject<HTMLElement | null>;
-    updateData?: (props: UpdateCell | Array<UpdateCell>) => void;
     focusedCell?: CellPosition | null;
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
+    getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
+    getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
+    getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
+    onDataUpdate?: (props: UpdateCell | Array<UpdateCell>) => void;
     onColumnClick?: (columnId: string) => void;
     onCellClick?: (
       rowIndex: number,
@@ -80,9 +83,6 @@ declare module "@tanstack/react-table" {
     ) => void;
     onCellEditingStart?: (rowIndex: number, columnId: string) => void;
     onCellEditingStop?: (opts?: { moveToNextRow?: boolean }) => void;
-    getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
-    getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
-    getIsCurrentSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     contextMenu?: ContextMenuState;
     onContextMenuOpenChange?: (open: boolean) => void;
     rowHeight?: RowHeightValue;

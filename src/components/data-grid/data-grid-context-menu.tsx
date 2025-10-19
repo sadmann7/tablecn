@@ -158,7 +158,7 @@ export function DataGridContextMenu<TData>({
       }
     }
 
-    meta?.updateData?.(updates);
+    meta?.onDataUpdate?.(updates);
 
     toast.success(
       `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,

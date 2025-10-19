@@ -25,6 +25,7 @@ import type {
   UpdateCell,
 } from "@/types/data-grid";
 
+const DEFAULT_ROW_HEIGHT = "short";
 const ESTIMATED_ROW_SIZE = 36;
 const OVERSCAN = 3;
 const VIEWPORT_OFFSET = 1;
@@ -70,35 +71,29 @@ interface DataGridStore {
 }
 
 interface UseDataGridProps<TData>
-  extends Omit<
-    TableOptions<TData>,
-    "pageCount" | "getCoreRowModel" | "initialState"
-  > {
+  extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   columns: ColumnDef<TData>[];
   data: TData[];
   onDataChange?: (data: TData[]) => void;
-  getRowId?: (row: TData, index: number) => string;
+  rowHeight?: RowHeightValue;
   estimateRowSize?: number;
   overscan?: number;
   autoFocus?: boolean;
-  enableSearch?: boolean;
   enableColumnSelection?: boolean;
-  initialState?: TableOptions<TData>["initialState"] & {
-    rowHeight?: RowHeightValue;
-  };
+  enableSearch?: boolean;
 }
 
 export function useDataGrid<TData>({
   columns,
   data,
   onDataChange,
-  initialState,
-  getRowId,
+  rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   estimateRowSize = ESTIMATED_ROW_SIZE,
   overscan = OVERSCAN,
+  initialState,
   autoFocus = false,
-  enableSearch = false,
   enableColumnSelection = false,
+  enableSearch = false,
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
@@ -116,7 +111,7 @@ export function useDataGrid<TData>({
   const stateRef = useLazyRef<DataGridState>(() => {
     return {
       sorting: initialState?.sorting ?? [],
-      rowHeight: initialState?.rowHeight ?? "short",
+      rowHeight: rowHeightProp,
       rowSelection: initialState?.rowSelection ?? {},
       selectionState: {
         selectedCells: new Set(),
@@ -229,7 +224,7 @@ export function useDataGrid<TData>({
     return getColumnIds().filter((c) => c !== "select");
   }, [getColumnIds]);
 
-  const updateData = React.useCallback(
+  const onDataUpdate = React.useCallback(
     (updates: UpdateCell | Array<UpdateCell>) => {
       const updateArray = Array.isArray(updates) ? updates : [updates];
 
@@ -569,7 +564,7 @@ export function useDataGrid<TData>({
     [searchMatches],
   );
 
-  const getIsCurrentSearchMatch = React.useCallback(
+  const getIsActiveSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
       if (matchIndex < 0) return false;
       const currentMatch = searchMatches[matchIndex];
@@ -1040,7 +1035,7 @@ export function useDataGrid<TData>({
             }
           });
 
-          updateData(updates);
+          onDataUpdate(updates);
           clearSelection();
         }
         return;
@@ -1145,7 +1140,7 @@ export function useDataGrid<TData>({
       blurCell,
       navigateCell,
       selectAll,
-      updateData,
+      onDataUpdate,
       clearSelection,
       getNavigableColumnIds,
       data.length,
@@ -1290,14 +1285,16 @@ export function useDataGrid<TData>({
     columnResizeMode: "onChange",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getRowId,
     meta: {
       ...dataGridProps.meta,
       dataGridRef,
-      updateData,
       focusedCell,
       editingCell,
       selectionState,
+      getIsCellSelected,
+      getIsSearchMatch,
+      getIsActiveSearchMatch,
+      onDataUpdate,
       onColumnClick,
       onCellClick,
       onCellDoubleClick,
@@ -1307,9 +1304,6 @@ export function useDataGrid<TData>({
       onCellContextMenu,
       onCellEditingStart,
       onCellEditingStop,
-      getIsCellSelected,
-      getIsSearchMatch,
-      getIsCurrentSearchMatch,
       contextMenu,
       onContextMenuOpenChange,
       rowHeight,
