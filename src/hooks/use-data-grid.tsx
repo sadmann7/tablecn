@@ -28,6 +28,8 @@ import type {
 const ESTIMATED_ROW_SIZE = 36;
 const OVERSCAN = 3;
 const VIEWPORT_OFFSET = 1;
+const MIN_COLUMN_SIZE = 60;
+const MAX_COLUMN_SIZE = 800;
 
 function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   const ref = React.useRef<T | null>(null);
@@ -1163,6 +1165,8 @@ export function useDataGrid<TData>({
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
       cell: DataGridCell,
+      minSize: MIN_COLUMN_SIZE,
+      maxSize: MAX_COLUMN_SIZE,
     }),
     [],
   );
@@ -1180,6 +1184,7 @@ export function useDataGrid<TData>({
     },
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
+    columnResizeMode: "onChange",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getRowId,
@@ -1216,6 +1221,17 @@ export function useDataGrid<TData>({
   if (!tableRef.current) {
     tableRef.current = table;
   }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: we need to memoize the column size vars
+  const columnSizeVars = React.useMemo(() => {
+    const headers = table.getFlatHeaders();
+    const colSizes: { [key: string]: number } = {};
+    for (const header of headers) {
+      colSizes[`--header-${header.id}-size`] = header.getSize();
+      colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
+    }
+    return colSizes;
+  }, [table.getState().columnSizingInfo, table.getState().columnSizing]);
 
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
@@ -1465,5 +1481,6 @@ export function useDataGrid<TData>({
     rowVirtualizer,
     searchState,
     scrollToRow,
+    columnSizeVars,
   };
 }

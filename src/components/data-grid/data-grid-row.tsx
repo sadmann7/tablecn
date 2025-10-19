@@ -97,10 +97,13 @@ function DataGridRowImpl<TData>({
             data-highlighted={isCellFocused ? "" : undefined}
             data-slot="data-grid-cell"
             tabIndex={-1}
-            className={cn("grow", {
+            className={cn({
               "border-r": cell.column.id !== "select",
             })}
-            style={getCommonPinningStyles({ column: cell.column })}
+            style={{
+              ...getCommonPinningStyles({ column: cell.column }),
+              width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
+            }}
           >
             {cell.column.id === "select" ? (
               <div

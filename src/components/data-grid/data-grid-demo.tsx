@@ -122,9 +122,10 @@ export function DataGridDemo() {
             className="translate-y-0.5"
           />
         ),
+        size: 40,
         enableSorting: false,
         enableHiding: false,
-        size: 40,
+        enableResizing: false,
       },
       {
         id: "name",

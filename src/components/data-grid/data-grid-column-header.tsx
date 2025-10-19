@@ -131,37 +131,13 @@ export function DataGridColumnHeader<TData, TValue>({
 
   if (!column.getCanSort() && !column.getCanHide()) {
     return (
-      <div
-        className={cn(
-          "flex size-full items-center gap-1.5 truncate p-2 text-sm",
-          className,
-        )}
-      >
-        {columnVariant && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p>{columnVariant.label}</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-        <span className="truncate">{title}</span>
-      </div>
-    );
-  }
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          "flex size-full items-center justify-between gap-2 truncate p-2 text-sm hover:bg-accent/40 data-[state=open]:bg-accent/40 [&_svg]:size-4",
-          className,
-        )}
-        {...props}
-      >
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <div className="relative flex size-full items-center">
+        <div
+          className={cn(
+            "flex size-full items-center gap-1.5 truncate p-2 text-sm",
+            className,
+          )}
+        >
           {columnVariant && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -174,81 +150,142 @@ export function DataGridColumnHeader<TData, TValue>({
           )}
           <span className="truncate">{title}</span>
         </div>
-        <ChevronDown className="shrink-0 text-muted-foreground" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" sideOffset={0} className="w-60">
-        {column.getCanSort() && (
-          <>
-            <DropdownMenuCheckboxItem
-              className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
-              checked={column.getIsSorted() === "asc"}
-              onClick={() => onSortingChange("asc")}
-            >
-              <ChevronUp />
-              Sort asc
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
-              checked={column.getIsSorted() === "desc"}
-              onClick={() => onSortingChange("desc")}
-            >
-              <ChevronDown />
-              Sort desc
-            </DropdownMenuCheckboxItem>
-            {column.getIsSorted() && (
-              <DropdownMenuItem onClick={onSortRemove}>
-                <X />
-                Remove sort
-              </DropdownMenuItem>
+        <DataGridColumnResizer table={table} header={header} title={title} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex size-full items-center">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className={cn(
+            "flex size-full items-center justify-between gap-2 truncate p-2 text-sm hover:bg-accent/40 data-[state=open]:bg-accent/40 [&_svg]:size-4",
+            className,
+          )}
+          {...props}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            {columnVariant && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{columnVariant.label}</p>
+                </TooltipContent>
+              </Tooltip>
             )}
-          </>
-        )}
-        {column.getCanPin() && (
-          <>
-            <DropdownMenuSeparator />
-            {!isPinned && (
-              <>
-                <DropdownMenuItem
-                  className="[&_svg]:text-muted-foreground"
-                  onClick={onLeftPin}
-                >
-                  <PinIcon />
-                  Pin to left
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="[&_svg]:text-muted-foreground"
-                  onClick={onRightPin}
-                >
-                  <PinIcon className="rotate-90" />
-                  Pin to right
-                </DropdownMenuItem>
-              </>
-            )}
-            {isPinned && (
-              <DropdownMenuItem
-                className="[&_svg]:text-muted-foreground"
-                onClick={onUnpin}
+            <span className="truncate">{title}</span>
+          </div>
+          <ChevronDown className="shrink-0 text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={0} className="w-60">
+          {column.getCanSort() && (
+            <>
+              <DropdownMenuCheckboxItem
+                className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
+                checked={column.getIsSorted() === "asc"}
+                onClick={() => onSortingChange("asc")}
               >
-                <PinOff />
-                Unpin column
-              </DropdownMenuItem>
-            )}
-          </>
-        )}
-        {column.getCanHide() && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
-              checked={!column.getIsVisible()}
-              onClick={() => column.toggleVisibility(false)}
-            >
-              <EyeOff />
-              Hide column
-            </DropdownMenuCheckboxItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+                <ChevronUp />
+                Sort asc
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
+                checked={column.getIsSorted() === "desc"}
+                onClick={() => onSortingChange("desc")}
+              >
+                <ChevronDown />
+                Sort desc
+              </DropdownMenuCheckboxItem>
+              {column.getIsSorted() && (
+                <DropdownMenuItem onClick={onSortRemove}>
+                  <X />
+                  Remove sort
+                </DropdownMenuItem>
+              )}
+            </>
+          )}
+          {column.getCanPin() && (
+            <>
+              <DropdownMenuSeparator />
+              {!isPinned && (
+                <>
+                  <DropdownMenuItem
+                    className="[&_svg]:text-muted-foreground"
+                    onClick={onLeftPin}
+                  >
+                    <PinIcon />
+                    Pin to left
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="[&_svg]:text-muted-foreground"
+                    onClick={onRightPin}
+                  >
+                    <PinIcon className="rotate-90" />
+                    Pin to right
+                  </DropdownMenuItem>
+                </>
+              )}
+              {isPinned && (
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onUnpin}
+                >
+                  <PinOff />
+                  Unpin column
+                </DropdownMenuItem>
+              )}
+            </>
+          )}
+          {column.getCanHide() && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem
+                className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
+                checked={!column.getIsVisible()}
+                onClick={() => column.toggleVisibility(false)}
+              >
+                <EyeOff />
+                Hide column
+              </DropdownMenuCheckboxItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DataGridColumnResizer table={table} header={header} title={title} />
+    </div>
+  );
+}
+
+function DataGridColumnResizer<TData, TValue>({
+  header,
+  table,
+  title,
+}: DataGridColumnHeaderProps<TData, TValue>) {
+  if (!header.column.getCanResize()) return null;
+
+  const defaultColumnDef = table._getDefaultColumnDef();
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={`Resize ${title} column`}
+      aria-valuenow={header.column.getSize()}
+      aria-valuemin={defaultColumnDef.minSize}
+      aria-valuemax={defaultColumnDef.maxSize}
+      tabIndex={0}
+      className={cn(
+        "absolute top-0 right-[-2px] h-full w-1 cursor-ew-resize touch-none select-none bg-border transition-opacity hover:bg-primary focus:bg-primary focus:outline-none",
+        header.column.getIsResizing()
+          ? "bg-primary"
+          : "opacity-0 hover:opacity-100",
+      )}
+      onDoubleClick={() => header.column.resetSize()}
+      onMouseDown={header.getResizeHandler()}
+      onTouchStart={header.getResizeHandler()}
+    />
   );
 }

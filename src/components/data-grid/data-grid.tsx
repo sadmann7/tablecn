@@ -33,6 +33,7 @@ export function DataGrid<TData>({
   searchState,
   scrollToRow,
   onRowAdd: onRowAddProp,
+  columnSizeVars,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -93,6 +94,7 @@ export function DataGrid<TData>({
         ref={dataGridRef}
         className="relative grid select-none overflow-auto rounded-md border focus:outline-none"
         style={{
+          ...columnSizeVars,
           height: `${height}px`,
         }}
       >
@@ -134,11 +136,12 @@ export function DataGrid<TData>({
                     }
                     data-slot="grid-header-cell"
                     tabIndex={-1}
-                    className={cn("grow", {
+                    className={cn("relative", {
                       "border-r": header.column.id !== "select",
                     })}
                     style={{
                       ...getCommonPinningStyles({ column: header.column }),
+                      width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >
                     {header.isPlaceholder ? null : typeof header.column
