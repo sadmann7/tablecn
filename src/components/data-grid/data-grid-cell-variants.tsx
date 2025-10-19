@@ -456,9 +456,9 @@ export function NumberCell<TData>({
           min={min}
           max={max}
           step={step}
-          onChange={onChange}
           onBlur={onBlur}
-          className="size-full border-none bg-transparent p-0 outline-none"
+          onChange={onChange}
+          className="w-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
         <span data-slot="grid-cell-content">{value}</span>

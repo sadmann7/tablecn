@@ -260,7 +260,7 @@ function DataGridColumnResizer<TData, TValue>({
       aria-valuemax={defaultColumnDef.maxSize}
       tabIndex={0}
       className={cn(
-        "absolute top-0 right-[-1px] h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:top-0 after:right-[calc(-1*16px)] after:bottom-0 after:left-[calc(-1*16px)] after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
+        "absolute top-0 right-[-1px] h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:top-0 after:right-[-24px] after:bottom-0 after:left-[-24px] after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
         header.column.getIsResizing()
           ? "bg-primary"
           : "opacity-0 hover:opacity-100",
