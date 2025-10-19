@@ -80,6 +80,9 @@ export function DataGridColumnHeader<TData, TValue>({
       ? column.columnDef.header
       : column.id;
 
+  const isAnyColumnResizing =
+    table.getState().columnSizingInfo.isResizingColumn;
+
   const cellVariant = column.columnDef.meta?.cell;
   const columnVariant = getColumnVariant(cellVariant?.variant ?? "short-text");
 
@@ -134,7 +137,8 @@ export function DataGridColumnHeader<TData, TValue>({
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
-            "flex size-full items-center justify-between gap-2 truncate p-2 text-sm hover:bg-accent/40 data-[state=open]:bg-accent/40 [&_svg]:size-4",
+            "flex size-full items-center justify-between gap-2 p-2 text-sm hover:bg-accent/40 data-[state=open]:bg-accent/40 [&_svg]:size-4",
+            isAnyColumnResizing && "pointer-events-none",
             className,
           )}
           {...props}
@@ -143,12 +147,7 @@ export function DataGridColumnHeader<TData, TValue>({
             {columnVariant && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <columnVariant.icon
-                    className={cn(
-                      "size-3.5 shrink-0 text-muted-foreground",
-                      column.getIsResizing() && "pointer-events-none",
-                    )}
-                  />
+                  <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p>{columnVariant.label}</p>
