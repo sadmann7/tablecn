@@ -187,7 +187,7 @@ export function DataGridColumnHeader<TData, TValue>({
           )}
           {column.getCanPin() && (
             <>
-              <DropdownMenuSeparator />
+              {column.getCanSort() && <DropdownMenuSeparator />}
               {!isPinned && (
                 <>
                   <DropdownMenuItem
@@ -260,7 +260,7 @@ function DataGridColumnResizer<TData, TValue>({
       aria-valuemax={defaultColumnDef.maxSize}
       tabIndex={0}
       className={cn(
-        "absolute top-0 right-[-1px] h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:top-0 after:right-[-24px] after:bottom-0 after:left-[-24px] after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
+        "after:-translate-x-1/2 absolute top-0 right-[-1px] z-50 h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:inset-y-0 after:left-1/2 after:h-full after:w-[18px] after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
         header.column.getIsResizing()
           ? "bg-primary"
           : "opacity-0 hover:opacity-100",
