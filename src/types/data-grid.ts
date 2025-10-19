@@ -91,6 +91,11 @@ declare module "@tanstack/react-table" {
     onContextMenuOpenChange?: (open: boolean) => void;
     rowHeight?: RowHeightValue;
     onRowHeightChange?: (value: RowHeightValue) => void;
+    onRowSelect?: (
+      rowIndex: number,
+      checked: boolean,
+      shiftKey: boolean,
+    ) => void;
   }
 }
 

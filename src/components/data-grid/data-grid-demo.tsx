@@ -103,6 +103,8 @@ export function DataGridDemo() {
         id: "select",
         header: ({ table }) => (
           <Checkbox
+            aria-label="Select all"
+            className="translate-y-0.5"
             checked={
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
@@ -110,16 +112,30 @@ export function DataGridDemo() {
             onCheckedChange={(value) =>
               table.toggleAllPageRowsSelected(!!value)
             }
-            aria-label="Select all"
-            className="translate-y-0.5"
           />
         ),
-        cell: ({ row }) => (
+        cell: ({ row, table }) => (
           <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
             aria-label="Select row"
             className="translate-y-0.5"
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => {
+              const onRowSelect = table.options.meta?.onRowSelect;
+              if (onRowSelect) {
+                onRowSelect(row.index, !!value, false);
+              } else {
+                row.toggleSelected(!!value);
+              }
+            }}
+            onClick={(event: React.MouseEvent) => {
+              if (event.shiftKey) {
+                event.preventDefault();
+                const onRowSelect = table.options.meta?.onRowSelect;
+                if (onRowSelect) {
+                  onRowSelect(row.index, !row.getIsSelected(), true);
+                }
+              }
+            }}
           />
         ),
         size: 40,

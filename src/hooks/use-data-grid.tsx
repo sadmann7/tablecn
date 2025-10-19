@@ -54,6 +54,7 @@ interface DataGridState {
   searchMatches: CellPosition[];
   matchIndex: number;
   searchOpen: boolean;
+  lastClickedRowIndex: number | null;
 }
 
 interface DataGridStore {
@@ -130,6 +131,7 @@ export function useDataGrid<TData>({
       searchMatches: [],
       matchIndex: -1,
       searchOpen: false,
+      lastClickedRowIndex: null,
     };
   });
 
@@ -292,10 +294,13 @@ export function useDataGrid<TData>({
   );
 
   const clearSelection = React.useCallback(() => {
-    store.setState("selectionState", {
-      selectedCells: new Set(),
-      selectionRange: null,
-      isSelecting: false,
+    store.batch(() => {
+      store.setState("selectionState", {
+        selectedCells: new Set(),
+        selectionRange: null,
+        isSelecting: false,
+      });
+      store.setState("rowSelection", {});
     });
   }, [store]);
 
@@ -596,13 +601,13 @@ export function useDataGrid<TData>({
         }
       }
 
-      // Only clear selection if it wasn't created by a drag operation
-      // (selectedCells will be empty after a simple click due to mouseDown clearing it)
-      if (
-        currentState.selectionState.selectedCells.size > 0 &&
-        !currentState.selectionState.isSelecting
-      ) {
-        // If there's a selection but we're not actively selecting (drag just finished),
+      // Clear selection if there are selected cells or rows
+      const hasSelectedCells =
+        currentState.selectionState.selectedCells.size > 0;
+      const hasSelectedRows = Object.keys(currentState.rowSelection).length > 0;
+
+      if (hasSelectedCells && !currentState.selectionState.isSelecting) {
+        // If there's a cell selection but we're not actively selecting (drag just finished),
         // don't clear it - keep the selection
         // Only clear if clicking elsewhere
         const cellKey = getCellKey(rowIndex, columnId);
@@ -616,6 +621,9 @@ export function useDataGrid<TData>({
           focusCell(rowIndex, columnId);
           return;
         }
+      } else if (hasSelectedRows && columnId !== "select") {
+        // If there are selected rows but we're clicking on a non-checkbox cell, clear selections
+        clearSelection();
       }
 
       if (
@@ -1021,7 +1029,10 @@ export function useDataGrid<TData>({
           break;
         case "Escape":
           event.preventDefault();
-          if (currentState.selectionState.selectedCells.size > 0) {
+          if (
+            currentState.selectionState.selectedCells.size > 0 ||
+            Object.keys(currentState.rowSelection).length > 0
+          ) {
             clearSelection();
           } else {
             blurCell();
@@ -1103,7 +1114,7 @@ export function useDataGrid<TData>({
     ],
   );
 
-  const setSorting = React.useCallback(
+  const onSortingChange = React.useCallback(
     (updater: Updater<SortingState>) => {
       const currentState = store.getState();
       const newSorting =
@@ -1113,7 +1124,7 @@ export function useDataGrid<TData>({
     [store],
   );
 
-  const setRowSelection = React.useCallback(
+  const onRowSelectionChange = React.useCallback(
     (updater: Updater<RowSelectionState>) => {
       const currentState = store.getState();
       const newRowSelection =
@@ -1145,9 +1156,46 @@ export function useDataGrid<TData>({
           selectionRange: null,
           isSelecting: false,
         });
+        store.setState("focusedCell", null);
+        store.setState("editingCell", null);
       });
     },
     [store, getColumnIds, getCellKey],
+  );
+
+  const onRowSelect = React.useCallback(
+    (rowIndex: number, selected: boolean, shiftKey: boolean) => {
+      const currentState = store.getState();
+      const rows = tableRef.current?.getRowModel().rows ?? [];
+      const currentRow = rows[rowIndex];
+      if (!currentRow) return;
+
+      if (shiftKey && currentState.lastClickedRowIndex !== null) {
+        const startIndex = Math.min(currentState.lastClickedRowIndex, rowIndex);
+        const endIndex = Math.max(currentState.lastClickedRowIndex, rowIndex);
+
+        const newRowSelection: RowSelectionState = {
+          ...currentState.rowSelection,
+        };
+
+        for (let i = startIndex; i <= endIndex; i++) {
+          const row = rows[i];
+          if (row) {
+            newRowSelection[row.id] = selected;
+          }
+        }
+
+        onRowSelectionChange(newRowSelection);
+      } else {
+        onRowSelectionChange({
+          ...currentState.rowSelection,
+          [currentRow.id]: selected,
+        });
+      }
+
+      store.setState("lastClickedRowIndex", rowIndex);
+    },
+    [store, onRowSelectionChange],
   );
 
   const onRowHeightChange = React.useCallback(
@@ -1182,8 +1230,8 @@ export function useDataGrid<TData>({
       sorting,
       rowSelection,
     },
-    onRowSelectionChange: setRowSelection,
-    onSortingChange: setSorting,
+    onRowSelectionChange,
+    onSortingChange,
     columnResizeMode: "onChange",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -1215,6 +1263,7 @@ export function useDataGrid<TData>({
       onContextMenuOpenChange,
       rowHeight,
       onRowHeightChange,
+      onRowSelect,
     },
   });
 
@@ -1406,11 +1455,11 @@ export function useDataGrid<TData>({
         if (!isInsidePopover) {
           table.options.meta?.blurCell?.();
           const currentState = store.getState();
-          if (currentState.selectionState.selectedCells.size > 0) {
+          if (
+            currentState.selectionState.selectedCells.size > 0 ||
+            Object.keys(currentState.rowSelection).length > 0
+          ) {
             clearSelection();
-          }
-          if (Object.keys(currentState.rowSelection).length > 0) {
-            table.toggleAllRowsSelected(false);
           }
         }
       }
