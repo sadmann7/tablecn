@@ -79,6 +79,9 @@ function DataGridRowImpl<TData>({
       ref={rowRef}
       tabIndex={-1}
       className={cn("absolute flex w-full border-b", className)}
+      style={{
+        height: `${getRowHeightValue(rowHeight)}px`,
+      }}
       {...props}
     >
       {row.getVisibleCells().map((cell, colIndex) => {
@@ -97,10 +100,7 @@ function DataGridRowImpl<TData>({
             className={cn("grow", {
               "border-r": cell.column.id !== "select",
             })}
-            style={{
-              height: `${getRowHeightValue(rowHeight)}px`,
-              ...getCommonPinningStyles({ column: cell.column }),
-            }}
+            style={getCommonPinningStyles({ column: cell.column })}
           >
             {cell.column.id === "select" ? (
               <div

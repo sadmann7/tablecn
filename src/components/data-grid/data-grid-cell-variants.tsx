@@ -656,6 +656,29 @@ export function MultiSelectCell<TData>({
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
     .filter(Boolean);
 
+  const rowHeight = table.options.meta?.rowHeight ?? "short";
+
+  const lineCount =
+    rowHeight === "short"
+      ? 1
+      : rowHeight === "medium"
+        ? 2
+        : rowHeight === "tall"
+          ? 3
+          : rowHeight === "extra-tall"
+            ? 4
+            : 1;
+
+  const maxVisibleBadgeCount = lineCount * 3;
+
+  const visibleLabels = isEditing
+    ? displayLabels
+    : displayLabels.slice(0, maxVisibleBadgeCount);
+
+  const hiddenBadgeCount = isEditing
+    ? 0
+    : Math.max(0, displayLabels.length - maxVisibleBadgeCount);
+
   return (
     <DataGridCellWrapper
       ref={containerRef}
@@ -672,8 +695,8 @@ export function MultiSelectCell<TData>({
         <Popover open={open} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
             <div className="flex flex-wrap items-center gap-1">
-              {displayLabels.length > 0 ? (
-                displayLabels.map((label, index) => (
+              {visibleLabels.length > 0 ? (
+                visibleLabels.map((label, index) => (
                   <Badge
                     key={selectedValues[index]}
                     variant="secondary"
@@ -738,16 +761,24 @@ export function MultiSelectCell<TData>({
           </PopoverContent>
         </Popover>
       ) : displayLabels.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1">
-          {displayLabels.map((label, index) => (
+        <div className="flex flex-wrap items-center gap-1 overflow-hidden">
+          {visibleLabels.map((label, index) => (
             <Badge
               key={selectedValues[index]}
               variant="secondary"
-              className="h-5 px-1.5 text-xs"
+              className="h-5 shrink-0 px-1.5 text-xs"
             >
               {label}
             </Badge>
           ))}
+          {hiddenBadgeCount > 0 && (
+            <Badge
+              variant="outline"
+              className="h-5 shrink-0 px-1.5 text-muted-foreground text-xs"
+            >
+              +{hiddenBadgeCount}
+            </Badge>
+          )}
         </div>
       ) : null}
     </DataGridCellWrapper>
