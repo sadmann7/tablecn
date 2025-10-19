@@ -25,6 +25,10 @@ export type Cell =
       options: CellSelectOption[];
     }
   | {
+      variant: "multi-select";
+      options: CellSelectOption[];
+    }
+  | {
       variant: "checkbox";
     }
   | {

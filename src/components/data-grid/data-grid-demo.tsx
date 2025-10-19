@@ -16,12 +16,13 @@ interface Person {
   name: string;
   age: number;
   email: string;
+  notes: string;
   salary: number;
   department: string;
   status: string;
+  skills: string[];
   isActive: boolean;
   startDate: string;
-  notes: string;
 }
 
 faker.seed(12345);
@@ -34,6 +35,18 @@ const departments = [
   "Finance",
 ] as const;
 const statuses = ["Active", "On Leave", "Remote", "In Office"] as const;
+const skills = [
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Node.js",
+  "Python",
+  "SQL",
+  "AWS",
+  "Docker",
+  "Git",
+  "Agile",
+] as const;
 
 const notes = [
   "Excellent team player with strong communication skills. Consistently meets deadlines and delivers high-quality work.",
@@ -72,6 +85,7 @@ function generatePerson(id: number): Person {
         .between({ from: "2018-01-01", to: "2024-01-01" })
         .toISOString()
         .split("T")[0] ?? "",
+    skills: faker.helpers.arrayElements(skills, { min: 1, max: 5 }),
   };
 }
 
@@ -205,6 +219,22 @@ export function DataGridDemo() {
             options: statuses.map((status) => ({
               label: status,
               value: status,
+            })),
+          },
+        },
+      },
+      {
+        id: "skills",
+        accessorKey: "skills",
+        header: "Skills",
+        minSize: 240,
+        meta: {
+          label: "Skills",
+          cell: {
+            variant: "multi-select",
+            options: skills.map((skill) => ({
+              label: skill,
+              value: skill,
             })),
           },
         },

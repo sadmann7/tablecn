@@ -154,10 +154,14 @@ export function DataGridCellWrapper<TData>({
           "bg-orange-200 dark:bg-orange-900/50": isCurrentSearchMatch,
           "bg-primary/10": isSelected && !isEditing,
           "cursor-default": !isEditing,
-          "[&>*]:line-clamp-1": !isEditing && rowHeight === "short",
-          "[&>*]:line-clamp-2": !isEditing && rowHeight === "medium",
-          "[&>*]:line-clamp-3": !isEditing && rowHeight === "tall",
-          "[&>*]:line-clamp-4": !isEditing && rowHeight === "extra-tall",
+          "[&_[data-slot=grid-cell-content]]:line-clamp-1":
+            !isEditing && rowHeight === "short",
+          "[&_[data-slot=grid-cell-content]]:line-clamp-2":
+            !isEditing && rowHeight === "medium",
+          "[&_[data-slot=grid-cell-content]]:line-clamp-3":
+            !isEditing && rowHeight === "tall",
+          "[&_[data-slot=grid-cell-content]]:line-clamp-4":
+            !isEditing && rowHeight === "extra-tall",
         },
         className,
       )}

@@ -7,6 +7,7 @@ import {
   CheckboxCell,
   DateCell,
   LongTextCell,
+  MultiSelectCell,
   NumberCell,
   SelectCell,
   ShortTextCell,
@@ -79,6 +80,18 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     case "select":
       return (
         <SelectCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isEditing={isEditing}
+          isFocused={isFocused}
+          isSelected={isSelected}
+        />
+      );
+    case "multi-select":
+      return (
+        <MultiSelectCell
           cell={cell}
           table={table}
           rowIndex={rowIndex}

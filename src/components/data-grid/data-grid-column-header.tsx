@@ -16,6 +16,7 @@ import {
   EyeOff,
   Hash,
   List,
+  ListChecks,
   PinIcon,
   PinOff,
   TextInitial,
@@ -49,6 +50,8 @@ function getColumnVariant(variant: Cell["variant"]) {
       return { icon: Hash, label: "Number" };
     case "select":
       return { icon: List, label: "Select" };
+    case "multi-select":
+      return { icon: ListChecks, label: "Multi-select" };
     case "checkbox":
       return { icon: CheckSquare, label: "Checkbox" };
     case "date":

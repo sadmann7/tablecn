@@ -1,10 +1,20 @@
 "use client";
 
 import type { Cell, Table } from "@tanstack/react-table";
+import { Check, X } from "lucide-react";
 import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
+import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverAnchor,
@@ -148,6 +158,7 @@ export function ShortTextCell<TData>({
     >
       <div
         role="textbox"
+        data-slot="grid-cell-content"
         contentEditable={isEditing}
         tabIndex={-1}
         ref={cellRef}
@@ -300,7 +311,7 @@ export function LongTextCell<TData>({
           isSelected={isSelected}
           onKeyDown={onWrapperKeyDown}
         >
-          <span>{value}</span>
+          <span data-slot="grid-cell-content">{value}</span>
         </DataGridCellWrapper>
       </PopoverAnchor>
       <PopoverContent
@@ -449,7 +460,7 @@ export function NumberCell<TData>({
           className="size-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
-        <span>{value}</span>
+        <span data-slot="grid-cell-content">{value}</span>
       )}
     </DataGridCellWrapper>
   );
@@ -560,8 +571,185 @@ export function SelectCell<TData>({
           </SelectContent>
         </Select>
       ) : (
-        <span>{displayLabel}</span>
+        <span data-slot="grid-cell-content">{displayLabel}</span>
       )}
+    </DataGridCellWrapper>
+  );
+}
+
+export function MultiSelectCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+}: CellVariantProps<TData>) {
+  const initialValue = (cell.getValue() as string[]) ?? [];
+  const [selectedValues, setSelectedValues] =
+    React.useState<string[]>(initialValue);
+  const [open, setOpen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+  const cellOpts = cell.column.columnDef.meta?.cell;
+  const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
+
+  const toggleOption = React.useCallback(
+    (optionValue: string) => {
+      const newValues = selectedValues.includes(optionValue)
+        ? selectedValues.filter((v) => v !== optionValue)
+        : [...selectedValues, optionValue];
+
+      setSelectedValues(newValues);
+      meta?.updateData?.({ rowIndex, columnId, value: newValues });
+    },
+    [selectedValues, meta, rowIndex, columnId],
+  );
+
+  const removeValue = React.useCallback(
+    (valueToRemove: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      const newValues = selectedValues.filter((v) => v !== valueToRemove);
+      setSelectedValues(newValues);
+      meta?.updateData?.({ rowIndex, columnId, value: newValues });
+    },
+    [selectedValues, meta, rowIndex, columnId],
+  );
+
+  const onOpenChange = React.useCallback(
+    (isOpen: boolean) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        meta?.stopEditing?.();
+      }
+    },
+    [meta],
+  );
+
+  const onWrapperKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (isEditing && event.key === "Escape") {
+        event.preventDefault();
+        setSelectedValues(initialValue);
+        setOpen(false);
+        meta?.stopEditing?.();
+      }
+    },
+    [isEditing, initialValue, meta],
+  );
+
+  React.useEffect(() => {
+    setSelectedValues(initialValue);
+  }, [initialValue]);
+
+  React.useEffect(() => {
+    if (isEditing && !open) {
+      setOpen(true);
+    }
+    if (isFocused && !isEditing && containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, [isFocused, isEditing, open]);
+
+  const displayLabels = selectedValues
+    .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
+    .filter(Boolean);
+
+  return (
+    <DataGridCellWrapper
+      ref={containerRef}
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isEditing={isEditing}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      onKeyDown={onWrapperKeyDown}
+    >
+      {isEditing ? (
+        <Popover open={open} onOpenChange={onOpenChange}>
+          <PopoverAnchor asChild>
+            <div className="flex flex-wrap items-center gap-1">
+              {displayLabels.length > 0 ? (
+                displayLabels.map((label, index) => (
+                  <Badge
+                    key={selectedValues[index]}
+                    variant="secondary"
+                    className="h-5 gap-1 px-1.5 text-xs"
+                  >
+                    {label}
+                    <button
+                      type="button"
+                      onClick={(e) =>
+                        removeValue(selectedValues[index] ?? "", e)
+                      }
+                      className="ml-0.5 rounded-sm hover:bg-muted"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  Select options...
+                </span>
+              )}
+            </div>
+          </PopoverAnchor>
+          <PopoverContent
+            data-grid-cell-editor=""
+            align="start"
+            className="w-[250px] p-0"
+          >
+            <Command>
+              <CommandInput placeholder="Search options..." className="h-9" />
+              <CommandList>
+                <CommandEmpty>No options found.</CommandEmpty>
+                <CommandGroup>
+                  {options.map((option) => {
+                    const isSelected = selectedValues.includes(option.value);
+
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        value={option.value}
+                        onSelect={() => toggleOption(option.value)}
+                        className="cursor-pointer"
+                      >
+                        <div
+                          className={cn(
+                            "flex size-4 items-center justify-center rounded-sm border border-primary",
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "opacity-50 [&_svg]:invisible",
+                          )}
+                        >
+                          <Check className="size-3" />
+                        </div>
+                        <span>{option.label}</span>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      ) : displayLabels.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1">
+          {displayLabels.map((label, index) => (
+            <Badge
+              key={selectedValues[index]}
+              variant="secondary"
+              className="h-5 px-1.5 text-xs"
+            >
+              {label}
+            </Badge>
+          ))}
+        </div>
+      ) : null}
     </DataGridCellWrapper>
   );
 }
@@ -748,7 +936,9 @@ export function DateCell<TData>({
     >
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverAnchor asChild>
-          <span>{formatDateForDisplay(value)}</span>
+          <span data-slot="grid-cell-content">
+            {formatDateForDisplay(value)}
+          </span>
         </PopoverAnchor>
         {isEditing && (
           <PopoverContent

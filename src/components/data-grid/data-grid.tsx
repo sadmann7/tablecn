@@ -77,7 +77,7 @@ export function DataGrid<TData>({
 
   return (
     <div
-      data-slot="data-grid-wrapper"
+      data-slot="grid-wrapper"
       className={cn("relative flex w-full flex-col", className)}
       {...props}
     >
@@ -88,7 +88,7 @@ export function DataGrid<TData>({
         aria-label="Data grid"
         aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
         aria-colcount={columns.length}
-        data-slot="data-grid"
+        data-slot="grid"
         tabIndex={0}
         ref={dataGridRef}
         className="relative grid select-none overflow-auto rounded-md border focus:outline-none"
@@ -98,7 +98,7 @@ export function DataGrid<TData>({
       >
         <div
           role="rowgroup"
-          data-slot="data-grid-header"
+          data-slot="grid-header"
           ref={headerRef}
           className="sticky top-0 z-10 grid border-b bg-background"
         >
@@ -107,7 +107,7 @@ export function DataGrid<TData>({
               key={headerGroup.id}
               role="row"
               aria-rowindex={rowIndex + 1}
-              data-slot="data-grid-header-row"
+              data-slot="grid-header-row"
               tabIndex={-1}
               className="flex w-full"
             >
@@ -132,7 +132,7 @@ export function DataGrid<TData>({
                             ? "none"
                             : undefined
                     }
-                    data-slot="data-grid-header-cell"
+                    data-slot="grid-header-cell"
                     tabIndex={-1}
                     className={cn("grow", {
                       "border-r": header.column.id !== "select",
@@ -160,7 +160,7 @@ export function DataGrid<TData>({
         </div>
         <div
           role="rowgroup"
-          data-slot="data-grid-body"
+          data-slot="grid-body"
           className="relative grid"
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -186,14 +186,14 @@ export function DataGrid<TData>({
         {onRowAdd && (
           <div
             role="rowgroup"
-            data-slot="data-grid-footer"
+            data-slot="grid-footer"
             ref={footerRef}
             className="sticky bottom-0 z-10 grid border-t bg-background"
           >
             <div
               role="row"
               aria-rowindex={rows.length + 2}
-              data-slot="data-grid-add-row"
+              data-slot="grid-add-row"
               tabIndex={-1}
               className="flex w-full"
             >

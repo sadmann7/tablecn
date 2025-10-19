@@ -176,9 +176,9 @@ export function DataGridContextMenu<TData>({
         <button type="button" tabIndex={-1} style={virtualTriggerStyle} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
+        data-grid-popover
         align="start"
         className="w-48"
-        data-grid-popover
         onCloseAutoFocus={onCloseAutoFocus}
       >
         <DropdownMenuItem onClick={onCopy}>
