@@ -11,7 +11,6 @@ import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
@@ -590,29 +589,38 @@ export function MultiSelectCell<TData>({
   const [selectedValues, setSelectedValues] =
     React.useState<string[]>(initialValue);
   const [open, setOpen] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
+  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  const toggleOption = React.useCallback(
-    (optionValue: string) => {
-      const newValues = selectedValues.includes(optionValue)
-        ? selectedValues.filter((v) => v !== optionValue)
-        : [...selectedValues, optionValue];
+  const onValueChange = React.useCallback(
+    (value: string) => {
+      const newValues = selectedValues.includes(value)
+        ? selectedValues.filter((v) => v !== value)
+        : [...selectedValues, value];
 
       setSelectedValues(newValues);
       meta?.updateData?.({ rowIndex, columnId, value: newValues });
+      // Clear search input and focus back on input after selection
+      setSearchValue("");
+      queueMicrotask(() => inputRef.current?.focus());
     },
     [selectedValues, meta, rowIndex, columnId],
   );
 
   const removeValue = React.useCallback(
-    (valueToRemove: string, event: React.MouseEvent) => {
-      event.stopPropagation();
+    (valueToRemove: string, event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      event?.preventDefault();
       const newValues = selectedValues.filter((v) => v !== valueToRemove);
       setSelectedValues(newValues);
       meta?.updateData?.({ rowIndex, columnId, value: newValues });
+      // Focus back on input after removing
+      setTimeout(() => inputRef.current?.focus(), 0);
     },
     [selectedValues, meta, rowIndex, columnId],
   );
@@ -621,6 +629,7 @@ export function MultiSelectCell<TData>({
     (isOpen: boolean) => {
       setOpen(isOpen);
       if (!isOpen) {
+        setSearchValue("");
         meta?.stopEditing?.();
       }
     },
@@ -632,11 +641,35 @@ export function MultiSelectCell<TData>({
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setSelectedValues(initialValue);
+        setSearchValue("");
         setOpen(false);
         meta?.stopEditing?.();
       }
     },
     [isEditing, initialValue, meta],
+  );
+
+  const onInputKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      // Handle backspace when input is empty - remove last selected item
+      if (
+        event.key === "Backspace" &&
+        searchValue === "" &&
+        selectedValues.length > 0
+      ) {
+        event.preventDefault();
+        const lastValue = selectedValues[selectedValues.length - 1];
+        if (lastValue) {
+          removeValue(lastValue);
+        }
+      }
+      // Prevent escape from propagating to close the popover immediately
+      // Let the command handle it first
+      if (event.key === "Escape") {
+        event.stopPropagation();
+      }
+    },
+    [searchValue, selectedValues, removeValue],
   );
 
   React.useEffect(() => {
@@ -651,6 +684,13 @@ export function MultiSelectCell<TData>({
       containerRef.current.focus();
     }
   }, [isFocused, isEditing, open]);
+
+  // Focus input when popover opens
+  React.useEffect(() => {
+    if (open && inputRef.current) {
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [open]);
 
   const displayLabels = selectedValues
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
@@ -671,13 +711,11 @@ export function MultiSelectCell<TData>({
 
   const maxVisibleBadgeCount = lineCount * 3;
 
-  const visibleLabels = isEditing
-    ? displayLabels
-    : displayLabels.slice(0, maxVisibleBadgeCount);
-
-  const hiddenBadgeCount = isEditing
-    ? 0
-    : Math.max(0, displayLabels.length - maxVisibleBadgeCount);
+  const visibleLabels = displayLabels.slice(0, maxVisibleBadgeCount);
+  const hiddenBadgeCount = Math.max(
+    0,
+    displayLabels.length - maxVisibleBadgeCount,
+  );
 
   return (
     <DataGridCellWrapper
@@ -694,73 +732,96 @@ export function MultiSelectCell<TData>({
       {isEditing ? (
         <Popover open={open} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
-            <div className="flex flex-wrap items-center gap-1">
-              {visibleLabels.length > 0 ? (
-                visibleLabels.map((label, index) => (
-                  <Badge
-                    key={selectedValues[index]}
-                    variant="secondary"
-                    className="h-5 gap-1 px-1.5 text-xs"
-                  >
-                    {label}
-                    <button
-                      type="button"
-                      onClick={(e) =>
-                        removeValue(selectedValues[index] ?? "", e)
-                      }
-                      className="ml-0.5 rounded-sm hover:bg-muted"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </Badge>
-                ))
-              ) : (
-                <span className="text-muted-foreground text-sm">
-                  Select options...
-                </span>
-              )}
-            </div>
+            <div className="absolute inset-0" />
           </PopoverAnchor>
           <PopoverContent
             data-grid-cell-editor=""
             align="start"
-            className="w-[250px] p-0"
+            sideOffset={sideOffset}
+            className="w-[300px] rounded-none p-0"
+            onOpenAutoFocus={(e) => {
+              e.preventDefault();
+              inputRef.current?.focus();
+            }}
           >
-            <Command>
-              <CommandInput placeholder="Search options..." className="h-9" />
+            <Command shouldFilter={false}>
+              <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
+                {selectedValues.map((value) => {
+                  const option = options.find((opt) => opt.value === value);
+                  const label = option?.label ?? value;
+
+                  return (
+                    <Badge
+                      key={value}
+                      variant="secondary"
+                      className="h-5 gap-1 px-1.5 text-xs"
+                    >
+                      {label}
+                      <button
+                        type="button"
+                        onClick={(event) => removeValue(value, event)}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => setSearchValue(e.target.value)}
+                  onKeyDown={onInputKeyDown}
+                  placeholder={
+                    selectedValues.length === 0 ? "Search options..." : ""
+                  }
+                  className="min-w-[80px] flex-1 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
+                />
+              </div>
               <CommandList>
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup>
-                  {options.map((option) => {
-                    const isSelected = selectedValues.includes(option.value);
+                  {options
+                    .filter((option) => {
+                      if (!searchValue) return true;
+                      return option.label
+                        .toLowerCase()
+                        .includes(searchValue.toLowerCase());
+                    })
+                    .map((option) => {
+                      const isSelected = selectedValues.includes(option.value);
 
-                    return (
-                      <CommandItem
-                        key={option.value}
-                        value={option.value}
-                        onSelect={() => toggleOption(option.value)}
-                        className="cursor-pointer"
-                      >
-                        <div
-                          className={cn(
-                            "flex size-4 items-center justify-center rounded-sm border border-primary",
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "opacity-50 [&_svg]:invisible",
-                          )}
+                      return (
+                        <CommandItem
+                          key={option.value}
+                          value={option.value}
+                          onSelect={onValueChange}
                         >
-                          <Check className="size-3" />
-                        </div>
-                        <span>{option.label}</span>
-                      </CommandItem>
-                    );
-                  })}
+                          <div
+                            className={cn(
+                              "flex size-4 items-center justify-center rounded-sm border border-primary",
+                              isSelected
+                                ? "bg-primary text-primary-foreground"
+                                : "opacity-50 [&_svg]:invisible",
+                            )}
+                          >
+                            <Check className="size-3" />
+                          </div>
+                          <span>{option.label}</span>
+                        </CommandItem>
+                      );
+                    })}
                 </CommandGroup>
               </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
-      ) : displayLabels.length > 0 ? (
+      ) : null}
+      {displayLabels.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1 overflow-hidden">
           {visibleLabels.map((label, index) => (
             <Badge
