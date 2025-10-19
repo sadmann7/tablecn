@@ -104,7 +104,7 @@ export function DataGridDemo() {
         header: ({ table }) => (
           <Checkbox
             aria-label="Select all"
-            className="translate-y-0.5"
+            className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
             checked={
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
@@ -117,7 +117,7 @@ export function DataGridDemo() {
         cell: ({ row, table }) => (
           <Checkbox
             aria-label="Select row"
-            className="translate-y-0.5"
+            className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
             checked={row.getIsSelected()}
             onCheckedChange={(value) => {
               const onRowSelect = table.options.meta?.onRowSelect;
