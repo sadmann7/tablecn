@@ -520,15 +520,18 @@ export function useDataGrid<TData>({
 
     const nextIndex =
       (currentState.matchIndex + 1) % currentState.searchMatches.length;
-    store.setState("matchIndex", nextIndex);
-
     const match = currentState.searchMatches[nextIndex];
+
     if (match) {
       rowVirtualizerRef.current?.scrollToIndex(match.rowIndex, {
         align: "center",
       });
+
       requestAnimationFrame(() => {
-        focusCell(match.rowIndex, match.columnId);
+        store.setState("matchIndex", nextIndex);
+        requestAnimationFrame(() => {
+          focusCell(match.rowIndex, match.columnId);
+        });
       });
     }
   }, [store, focusCell]);
@@ -541,15 +544,18 @@ export function useDataGrid<TData>({
       currentState.matchIndex - 1 < 0
         ? currentState.searchMatches.length - 1
         : currentState.matchIndex - 1;
-    store.setState("matchIndex", prevIndex);
-
     const match = currentState.searchMatches[prevIndex];
+
     if (match) {
       rowVirtualizerRef.current?.scrollToIndex(match.rowIndex, {
         align: "center",
       });
+
       requestAnimationFrame(() => {
-        focusCell(match.rowIndex, match.columnId);
+        store.setState("matchIndex", prevIndex);
+        requestAnimationFrame(() => {
+          focusCell(match.rowIndex, match.columnId);
+        });
       });
     }
   }, [store, focusCell]);
