@@ -132,6 +132,7 @@ export function DataGridDemo() {
         accessorKey: "name",
         header: "Name",
         minSize: 180,
+        enableSorting: false,
         meta: {
           label: "Name",
           cell: {

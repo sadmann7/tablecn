@@ -129,32 +129,6 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
-  if (!column.getCanSort() && !column.getCanHide()) {
-    return (
-      <div className="relative flex size-full items-center">
-        <div
-          className={cn(
-            "flex size-full items-center gap-1.5 truncate p-2 text-sm",
-            className,
-          )}
-        >
-          {columnVariant && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>{columnVariant.label}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-          <span className="truncate">{title}</span>
-        </div>
-        <DataGridColumnResizer table={table} header={header} title={title} />
-      </div>
-    );
-  }
-
   return (
     <div className="relative flex size-full items-center">
       <DropdownMenu>
@@ -169,7 +143,12 @@ export function DataGridColumnHeader<TData, TValue>({
             {columnVariant && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
+                  <columnVariant.icon
+                    className={cn(
+                      "size-3.5 shrink-0 text-muted-foreground",
+                      column.getIsResizing() && "pointer-events-none",
+                    )}
+                  />
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p>{columnVariant.label}</p>
@@ -254,7 +233,9 @@ export function DataGridColumnHeader<TData, TValue>({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-      <DataGridColumnResizer table={table} header={header} title={title} />
+      {header.column.getCanResize() && (
+        <DataGridColumnResizer header={header} table={table} title={title} />
+      )}
     </div>
   );
 }
@@ -264,9 +245,11 @@ function DataGridColumnResizer<TData, TValue>({
   table,
   title,
 }: DataGridColumnHeaderProps<TData, TValue>) {
-  if (!header.column.getCanResize()) return null;
-
   const defaultColumnDef = table._getDefaultColumnDef();
+
+  const onDoubleClick = React.useCallback(() => {
+    header.column.resetSize();
+  }, [header.column]);
 
   return (
     <div
@@ -278,12 +261,12 @@ function DataGridColumnResizer<TData, TValue>({
       aria-valuemax={defaultColumnDef.maxSize}
       tabIndex={0}
       className={cn(
-        "absolute top-0 right-[-2px] h-full w-1 cursor-ew-resize touch-none select-none bg-border transition-opacity hover:bg-primary focus:bg-primary focus:outline-none",
+        "absolute top-0 right-[-1px] h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:top-0 after:right-[calc(-1*16px)] after:bottom-0 after:left-[calc(-1*16px)] after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
         header.column.getIsResizing()
           ? "bg-primary"
           : "opacity-0 hover:opacity-100",
       )}
-      onDoubleClick={() => header.column.resetSize()}
+      onDoubleClick={onDoubleClick}
       onMouseDown={header.getResizeHandler()}
       onTouchStart={header.getResizeHandler()}
     />
