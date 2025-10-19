@@ -28,9 +28,9 @@ export function DataGridCellWrapper<TData>({
 }: DataGridCellWrapperProps<TData>) {
   const meta = table.options.meta;
 
-  const isSearchMatch = meta?.isSearchMatch?.(rowIndex, columnId) ?? false;
+  const isSearchMatch = meta?.getIsSearchMatch?.(rowIndex, columnId) ?? false;
   const isCurrentSearchMatch =
-    meta?.isCurrentSearchMatch?.(rowIndex, columnId) ?? false;
+    meta?.getIsCurrentSearchMatch?.(rowIndex, columnId) ?? false;
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -38,7 +38,7 @@ export function DataGridCellWrapper<TData>({
         event.preventDefault();
         onClickProp?.(event);
         if (isFocused) {
-          meta?.startEditing?.(rowIndex, columnId);
+          meta?.onCellEditingStart?.(rowIndex, columnId);
         } else {
           meta?.onCellClick?.(rowIndex, columnId, event);
         }
@@ -114,21 +114,21 @@ export function DataGridCellWrapper<TData>({
         if (event.key === "F2" || event.key === "Enter") {
           event.preventDefault();
           event.stopPropagation();
-          meta?.startEditing?.(rowIndex, columnId);
+          meta?.onCellEditingStart?.(rowIndex, columnId);
           return;
         }
 
         if (event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
-          meta?.startEditing?.(rowIndex, columnId);
+          meta?.onCellEditingStart?.(rowIndex, columnId);
           return;
         }
 
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
           event.preventDefault();
           event.stopPropagation();
-          meta?.startEditing?.(rowIndex, columnId);
+          meta?.onCellEditingStart?.(rowIndex, columnId);
         }
       }
     },

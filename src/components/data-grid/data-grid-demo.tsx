@@ -300,12 +300,12 @@ export function DataGridDemo() {
     data,
     onDataChange: setData,
     getRowId: (row) => row.id,
-    enableSearch: true,
     initialState: {
       columnPinning: {
         left: ["select"],
       },
     },
+    enableSearch: true,
   });
 
   const height = Math.max(400, windowSize.height - 150);

@@ -55,6 +55,7 @@ declare module "@tanstack/react-table" {
     focusedCell?: CellPosition | null;
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
+    onColumnClick?: (columnId: string) => void;
     onCellClick?: (
       rowIndex: number,
       columnId: string,
@@ -77,16 +78,11 @@ declare module "@tanstack/react-table" {
       columnId: string,
       event: React.MouseEvent,
     ) => void;
-    startEditing?: (rowIndex: number, columnId: string) => void;
-    stopEditing?: (opts?: { moveToNextRow?: boolean }) => void;
-    blurCell?: () => void;
-    navigateCell?: (direction: NavigationDirection) => void;
+    onCellEditingStart?: (rowIndex: number, columnId: string) => void;
+    onCellEditingStop?: (opts?: { moveToNextRow?: boolean }) => void;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
-    selectAll?: () => void;
-    clearSelection?: () => void;
-    isSearchMatch?: (rowIndex: number, columnId: string) => boolean;
-    isCurrentSearchMatch?: (rowIndex: number, columnId: string) => boolean;
-    searchQuery?: string;
+    getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
+    getIsCurrentSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     contextMenu?: ContextMenuState;
     onContextMenuOpenChange?: (open: boolean) => void;
     rowHeight?: RowHeightValue;

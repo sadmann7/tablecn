@@ -71,6 +71,7 @@ export function DataGridColumnHeader<TData, TValue>({
   header,
   table,
   className,
+  onPointerDown: onPointerDownProp,
   ...props
 }: DataGridColumnHeaderProps<TData, TValue>) {
   const column = header.column;
@@ -132,8 +133,21 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
+  const onPointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      onPointerDownProp?.(event);
+      if (event.defaultPrevented) return;
+
+      if (event.button !== 0) {
+        return;
+      }
+      table.options.meta?.onColumnClick?.(column.id);
+    },
+    [table.options.meta, column.id, onPointerDownProp],
+  );
+
   return (
-    <div className="relative flex size-full items-center">
+    <>
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
@@ -141,6 +155,7 @@ export function DataGridColumnHeader<TData, TValue>({
             isAnyColumnResizing && "pointer-events-none",
             className,
           )}
+          onPointerDown={onPointerDown}
           {...props}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -235,7 +250,7 @@ export function DataGridColumnHeader<TData, TValue>({
       {header.column.getCanResize() && (
         <DataGridColumnResizer header={header} table={table} title={title} />
       )}
-    </div>
+    </>
   );
 }
 

@@ -63,7 +63,7 @@ export function ShortTextCell<TData>({
     if (currentValue !== initialValue) {
       meta?.updateData?.({ rowIndex, columnId, value: currentValue });
     }
-    meta?.stopEditing?.();
+    meta?.onCellEditingStop?.();
   }, [meta, rowIndex, columnId, initialValue]);
 
   const onInput = React.useCallback(
@@ -83,7 +83,7 @@ export function ShortTextCell<TData>({
           if (currentValue !== initialValue) {
             meta?.updateData?.({ rowIndex, columnId, value: currentValue });
           }
-          meta?.stopEditing?.({ moveToNextRow: true });
+          meta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
@@ -205,7 +205,7 @@ export function LongTextCell<TData>({
       meta?.updateData?.({ rowIndex, columnId, value });
     }
     setOpen(false);
-    meta?.stopEditing?.();
+    meta?.onCellEditingStop?.();
   }, [meta, value, initialValue, rowIndex, columnId]);
 
   const onCancel = React.useCallback(() => {
@@ -213,7 +213,7 @@ export function LongTextCell<TData>({
     setValue(initialValue ?? "");
     meta?.updateData?.({ rowIndex, columnId, value: initialValue });
     setOpen(false);
-    meta?.stopEditing?.();
+    meta?.onCellEditingStop?.();
   }, [meta, initialValue, rowIndex, columnId]);
 
   const onChange = React.useCallback(
@@ -234,7 +234,7 @@ export function LongTextCell<TData>({
         if (value !== initialValue) {
           meta?.updateData?.({ rowIndex, columnId, value });
         }
-        meta?.stopEditing?.();
+        meta?.onCellEditingStop?.();
       }
     },
     [meta, value, initialValue, rowIndex, columnId],
@@ -255,7 +255,7 @@ export function LongTextCell<TData>({
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && !open && event.key === "Escape") {
         event.preventDefault();
-        meta?.stopEditing?.();
+        meta?.onCellEditingStop?.();
       }
     },
     [isEditing, open, meta],
@@ -282,7 +282,7 @@ export function LongTextCell<TData>({
       meta?.updateData?.({ rowIndex, columnId, value });
     }
     setOpen(false);
-    meta?.stopEditing?.();
+    meta?.onCellEditingStop?.();
   }, [meta, value, initialValue, rowIndex, columnId]);
 
   React.useEffect(() => {
@@ -384,7 +384,7 @@ export function NumberCell<TData>({
     if (numValue !== initialValue) {
       meta?.updateData?.({ rowIndex, columnId, value: numValue });
     }
-    meta?.stopEditing?.();
+    meta?.onCellEditingStop?.();
   }, [meta, rowIndex, columnId, initialValue, value]);
 
   const onChange = React.useCallback(
@@ -403,7 +403,7 @@ export function NumberCell<TData>({
           if (numValue !== initialValue) {
             meta?.updateData?.({ rowIndex, columnId, value: numValue });
           }
-          meta?.stopEditing?.({ moveToNextRow: true });
+          meta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(String(initialValue ?? ""));
@@ -488,7 +488,7 @@ export function SelectCell<TData>({
     (newValue: string) => {
       setValue(newValue);
       meta?.updateData?.({ rowIndex, columnId, value: newValue });
-      meta?.stopEditing?.();
+      meta?.onCellEditingStop?.();
     },
     [meta, rowIndex, columnId],
   );
@@ -497,7 +497,7 @@ export function SelectCell<TData>({
     (isOpen: boolean) => {
       setOpen(isOpen);
       if (!isOpen) {
-        meta?.stopEditing?.();
+        meta?.onCellEditingStop?.();
       }
     },
     [meta],
@@ -509,7 +509,7 @@ export function SelectCell<TData>({
         event.preventDefault();
         setValue(initialValue);
         setOpen(false);
-        meta?.stopEditing?.();
+        meta?.onCellEditingStop?.();
       }
     },
     [isEditing, initialValue, meta],
@@ -632,7 +632,7 @@ export function MultiSelectCell<TData>({
       setOpen(isOpen);
       if (!isOpen) {
         setSearchValue("");
-        meta?.stopEditing?.();
+        meta?.onCellEditingStop?.();
       }
     },
     [meta],
@@ -652,7 +652,7 @@ export function MultiSelectCell<TData>({
         setSelectedValues(initialValue);
         setSearchValue("");
         setOpen(false);
-        meta?.stopEditing?.();
+        meta?.onCellEditingStop?.();
       }
     },
     [isEditing, initialValue, meta],
@@ -970,7 +970,7 @@ export function DateCell<TData>({
       setValue(formattedDate);
       meta?.updateData?.({ rowIndex, columnId, value: formattedDate });
       setIsOpen(false);
-      meta?.stopEditing?.();
+      meta?.onCellEditingStop?.();
     },
     [meta, rowIndex, columnId],
   );
@@ -985,7 +985,7 @@ export function DateCell<TData>({
           event.preventDefault();
           setValue(initialValue);
           setIsOpen(false);
-          meta?.stopEditing?.();
+          meta?.onCellEditingStop?.();
         }
       }
     },

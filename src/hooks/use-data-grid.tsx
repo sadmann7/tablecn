@@ -30,6 +30,7 @@ const OVERSCAN = 3;
 const VIEWPORT_OFFSET = 1;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
+const SEARCH_KEY = "f";
 
 function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   const ref = React.useRef<T | null>(null);
@@ -81,6 +82,7 @@ interface UseDataGridProps<TData>
   overscan?: number;
   autoFocus?: boolean;
   enableSearch?: boolean;
+  enableColumnSelection?: boolean;
   initialState?: TableOptions<TData>["initialState"] & {
     rowHeight?: RowHeightValue;
   };
@@ -96,6 +98,7 @@ export function useDataGrid<TData>({
   overscan = OVERSCAN,
   autoFocus = false,
   enableSearch = false,
+  enableColumnSelection = false,
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
@@ -333,6 +336,32 @@ export function useDataGrid<TData>({
     });
   }, [getCellKey, getColumnIds, data.length, store]);
 
+  const selectColumn = React.useCallback(
+    (columnId: string) => {
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows ?? [];
+      const rowCount = rows.length ?? data.length;
+
+      if (rowCount === 0) return;
+
+      const selectedCells = new Set<string>();
+
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        selectedCells.add(getCellKey(rowIndex, columnId));
+      }
+
+      store.setState("selectionState", {
+        selectedCells,
+        selectionRange: {
+          start: { rowIndex: 0, columnId },
+          end: { rowIndex: rowCount - 1, columnId },
+        },
+        isSelecting: false,
+      });
+    },
+    [getCellKey, data.length, store],
+  );
+
   const selectRange = React.useCallback(
     (start: CellPosition, end: CellPosition, isSelecting = false) => {
       const columnIds = getColumnIds();
@@ -382,7 +411,7 @@ export function useDataGrid<TData>({
     [store],
   );
 
-  const startEditing = React.useCallback(
+  const onCellEditingStart = React.useCallback(
     (rowIndex: number, columnId: string) => {
       store.batch(() => {
         store.setState("focusedCell", { rowIndex, columnId });
@@ -392,7 +421,7 @@ export function useDataGrid<TData>({
     [store],
   );
 
-  const stopEditing = React.useCallback(
+  const onCellEditingStop = React.useCallback(
     (options?: { moveToNextRow?: boolean }) => {
       const currentState = store.getState();
       const currentEditing = currentState.editingCell;
@@ -525,7 +554,7 @@ export function useDataGrid<TData>({
     }
   }, [store, focusCell]);
 
-  const isSearchMatch = React.useCallback(
+  const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
       return searchMatches.some(
         (match) => match.rowIndex === rowIndex && match.columnId === columnId,
@@ -534,7 +563,7 @@ export function useDataGrid<TData>({
     [searchMatches],
   );
 
-  const isCurrentSearchMatch = React.useCallback(
+  const getIsCurrentSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
       if (matchIndex < 0) return false;
       const currentMatch = searchMatches[matchIndex];
@@ -630,19 +659,28 @@ export function useDataGrid<TData>({
         currentFocused?.rowIndex === rowIndex &&
         currentFocused?.columnId === columnId
       ) {
-        startEditing(rowIndex, columnId);
+        onCellEditingStart(rowIndex, columnId);
       } else {
         focusCell(rowIndex, columnId);
       }
     },
-    [store, focusCell, startEditing, getCellKey, selectRange, clearSelection],
+    [
+      store,
+      focusCell,
+      onCellEditingStart,
+      getCellKey,
+      selectRange,
+      clearSelection,
+    ],
   );
 
   const onCellDoubleClick = React.useCallback(
-    (rowIndex: number, columnId: string) => {
-      startEditing(rowIndex, columnId);
+    (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
+      if (event?.defaultPrevented) return;
+
+      onCellEditingStart(rowIndex, columnId);
     },
-    [startEditing],
+    [onCellEditingStart],
   );
 
   const onCellMouseDown = React.useCallback(
@@ -932,7 +970,7 @@ export function useDataGrid<TData>({
       const isCtrlPressed = ctrlKey || metaKey;
 
       // Handle Cmd+F / Ctrl+F to open search (highest priority, works even when editing)
-      if (enableSearch && isCtrlPressed && key === "f") {
+      if (enableSearch && isCtrlPressed && key === SEARCH_KEY) {
         event.preventDefault();
         onSearchOpenChange(true);
         return;
@@ -1210,6 +1248,17 @@ export function useDataGrid<TData>({
     [store],
   );
 
+  const onColumnClick = React.useCallback(
+    (columnId: string) => {
+      if (!enableColumnSelection) {
+        return;
+      }
+
+      selectColumn(columnId);
+    },
+    [enableColumnSelection, selectColumn],
+  );
+
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
       cell: DataGridCell,
@@ -1243,22 +1292,18 @@ export function useDataGrid<TData>({
       focusedCell,
       editingCell,
       selectionState,
+      onColumnClick,
       onCellClick,
       onCellDoubleClick,
       onCellMouseDown,
       onCellMouseEnter,
       onCellMouseUp,
       onCellContextMenu,
-      startEditing,
-      stopEditing,
-      navigateCell,
-      blurCell,
-      clearSelection,
-      selectAll,
+      onCellEditingStart,
+      onCellEditingStop,
       getIsCellSelected,
-      isSearchMatch,
-      isCurrentSearchMatch,
-      searchQuery,
+      getIsSearchMatch,
+      getIsCurrentSearchMatch,
       contextMenu,
       onContextMenuOpenChange,
       rowHeight,
@@ -1377,28 +1422,31 @@ export function useDataGrid<TData>({
       const target = event.target;
       if (!(target instanceof HTMLElement)) return;
 
-      const isInDataGrid = dataGridElement.contains(target);
-      if (!isInDataGrid) return;
-
       const { key, ctrlKey, metaKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
 
-      // Handle Cmd+F / Ctrl+F for search
-      if (enableSearch && isCtrlPressed && key === "f") {
-        // Don't intercept if we're in a regular input/textarea that's NOT part of the data grid or search
+      if (enableSearch && isCtrlPressed && key === SEARCH_KEY) {
         const isInInput =
           target.tagName === "INPUT" || target.tagName === "TEXTAREA";
-        const isSearchInput = target.closest('[role="search"]') !== null;
+        const isInDataGrid = dataGridElement.contains(target);
+        const isInSearchInput = target.closest('[role="search"]') !== null;
 
-        if (isInInput && !isSearchInput) {
+        if (isInDataGrid || isInSearchInput || !isInInput) {
+          event.preventDefault();
+          event.stopPropagation();
+          onSearchOpenChange(true);
+
+          if (!isInDataGrid && !isInSearchInput) {
+            requestAnimationFrame(() => {
+              dataGridElement.focus();
+            });
+          }
           return;
         }
-
-        event.preventDefault();
-        event.stopPropagation();
-        onSearchOpenChange(true);
-        return;
       }
+
+      const isInDataGrid = dataGridElement.contains(target);
+      if (!isInDataGrid) return;
 
       if (key === "Escape") {
         const currentState = store.getState();
@@ -1465,7 +1513,7 @@ export function useDataGrid<TData>({
             target.closest("[data-grid-popover]"));
 
         if (!isInsidePopover) {
-          table.options.meta?.blurCell?.();
+          blurCell();
           const currentState = store.getState();
           if (
             currentState.selectionState.selectedCells.size > 0 ||
@@ -1481,7 +1529,7 @@ export function useDataGrid<TData>({
     return () => {
       document.removeEventListener("mousedown", onOutsideClick);
     };
-  }, [table, clearSelection, store]);
+  }, [store, blurCell, clearSelection]);
 
   React.useEffect(() => {
     function cleanup() {
