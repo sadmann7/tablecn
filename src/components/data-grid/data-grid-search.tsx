@@ -85,7 +85,7 @@ function DataGridSearchImpl({
   return (
     <div
       role="search"
-      data-slot="data-grid-search"
+      data-slot="grid-search"
       className="fade-in-0 slide-in-from-top-2 absolute top-4 right-4 z-50 flex animate-in flex-col gap-2 rounded-lg border bg-background p-2 shadow-lg"
     >
       <div className="flex items-center gap-2">

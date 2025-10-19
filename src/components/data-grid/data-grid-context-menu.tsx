@@ -25,7 +25,7 @@ export function DataGridContextMenu<TData>({
   const onContextMenuOpenChange = meta?.onContextMenuOpenChange;
   const selectionState = meta?.selectionState;
 
-  const virtualTriggerStyle = React.useMemo<React.CSSProperties>(
+  const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
       position: "fixed",
       left: `${contextMenu?.x ?? 0}px`,
@@ -172,9 +172,7 @@ export function DataGridContextMenu<TData>({
       open={contextMenu.open}
       onOpenChange={onContextMenuOpenChange}
     >
-      <DropdownMenuTrigger asChild>
-        <button type="button" tabIndex={-1} style={virtualTriggerStyle} />
-      </DropdownMenuTrigger>
+      <DropdownMenuTrigger style={triggerStyle} />
       <DropdownMenuContent
         data-grid-popover
         align="start"
