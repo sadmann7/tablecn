@@ -1479,16 +1479,15 @@ export function useDataGrid<TData>({
       const columnIds = getNavigableColumnIds();
       if (columnIds.length > 0) {
         const rafId = requestAnimationFrame(() => {
-          const firstColumnId = columnIds[0];
-
           if (typeof autoFocus === "object") {
             const { rowIndex, columnId } = autoFocus;
-            if (columnId !== undefined) {
+            if (columnId) {
               focusCell(rowIndex ?? 0, columnId);
             }
             return;
           }
 
+          const firstColumnId = columnIds[0];
           if (firstColumnId) {
             focusCell(0, firstColumnId);
           }
