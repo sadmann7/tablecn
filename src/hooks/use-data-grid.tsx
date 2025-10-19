@@ -1369,44 +1369,56 @@ export function useDataGrid<TData>({
     };
   }, [onDataGridKeyDown]);
 
-  // Global handler for Cmd+F to override browser default
   React.useEffect(() => {
-    if (!enableSearch) return;
-
     function onGlobalKeyDown(event: KeyboardEvent) {
-      const isCtrlPressed = event.ctrlKey || event.metaKey;
-
-      if (!isCtrlPressed || event.key !== "f") return;
-
       const dataGridElement = dataGridRef.current;
       if (!dataGridElement) return;
 
-      // Don't intercept if we're in a regular input/textarea that's NOT part of the data grid or search
       const target = event.target;
-      if (target instanceof HTMLElement) {
+      if (!(target instanceof HTMLElement)) return;
+
+      const isInDataGrid = dataGridElement.contains(target);
+      if (!isInDataGrid) return;
+
+      const { key, ctrlKey, metaKey } = event;
+      const isCtrlPressed = ctrlKey || metaKey;
+
+      // Handle Cmd+F / Ctrl+F for search
+      if (enableSearch && isCtrlPressed && key === "f") {
+        // Don't intercept if we're in a regular input/textarea that's NOT part of the data grid or search
         const isInInput =
           target.tagName === "INPUT" || target.tagName === "TEXTAREA";
-        const isInDataGrid = dataGridElement.contains(target);
         const isSearchInput = target.closest('[role="search"]') !== null;
 
-        // If in an input/textarea that's outside the data grid (and not our search), let browser handle it
-        if (isInInput && !isInDataGrid && !isSearchInput) {
+        if (isInInput && !isSearchInput) {
           return;
         }
+
+        event.preventDefault();
+        event.stopPropagation();
+        onSearchOpenChange(true);
+        return;
       }
 
-      // Intercept Cmd+F and open our search
-      event.preventDefault();
-      event.stopPropagation();
-      onSearchOpenChange(true);
+      if (key === "Escape") {
+        const currentState = store.getState();
+        const hasSelections =
+          currentState.selectionState.selectedCells.size > 0 ||
+          Object.keys(currentState.rowSelection).length > 0;
+
+        if (hasSelections) {
+          event.preventDefault();
+          event.stopPropagation();
+          clearSelection();
+        }
+      }
     }
 
-    // Use capture phase to intercept before browser
     window.addEventListener("keydown", onGlobalKeyDown, true);
     return () => {
       window.removeEventListener("keydown", onGlobalKeyDown, true);
     };
-  }, [onSearchOpenChange, enableSearch]);
+  }, [enableSearch, onSearchOpenChange, store, clearSelection]);
 
   React.useEffect(() => {
     const currentState = store.getState();
