@@ -78,7 +78,7 @@ interface UseDataGridProps<TData>
   rowHeight?: RowHeightValue;
   estimateRowSize?: number;
   overscan?: number;
-  autoFocus?: boolean;
+  autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
 }
@@ -1480,6 +1480,15 @@ export function useDataGrid<TData>({
       if (columnIds.length > 0) {
         const rafId = requestAnimationFrame(() => {
           const firstColumnId = columnIds[0];
+
+          if (typeof autoFocus === "object") {
+            const { rowIndex, columnId } = autoFocus;
+            if (columnId !== undefined) {
+              focusCell(rowIndex ?? 0, columnId);
+            }
+            return;
+          }
+
           if (firstColumnId) {
             focusCell(0, firstColumnId);
           }
