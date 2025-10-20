@@ -22,21 +22,20 @@ function DataGridSearchImpl({
   searchQuery,
   searchMatches,
   matchIndex,
+  searchInputRef,
   onSearchOpenChange,
   onSearch,
   navigateToNextMatch,
   navigateToPrevMatch,
   setSearchQuery,
 }: DataGridSearchProps) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
   React.useEffect(() => {
     if (searchOpen) {
       requestAnimationFrame(() => {
-        inputRef.current?.focus();
+        searchInputRef.current?.focus();
       });
     }
-  }, [searchOpen]);
+  }, [searchOpen, searchInputRef]);
 
   React.useEffect(() => {
     if (!searchOpen) return;
@@ -90,17 +89,16 @@ function DataGridSearchImpl({
     >
       <div className="flex items-center gap-2">
         <Input
-          ref={inputRef}
-          type="text"
-          placeholder="Find in table..."
-          value={searchQuery}
-          onChange={onChange}
-          onKeyDown={onKeyDown}
-          className="h-8 w-64"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck={false}
+          placeholder="Find in table..."
+          className="h-8 w-64"
+          ref={searchInputRef}
+          value={searchQuery}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
         />
         <div className="flex items-center gap-1">
           <Button

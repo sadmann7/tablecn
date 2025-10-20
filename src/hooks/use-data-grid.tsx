@@ -26,7 +26,6 @@ import type {
 } from "@/types/data-grid";
 
 const DEFAULT_ROW_HEIGHT = "short";
-const ESTIMATED_ROW_SIZE = 36;
 const OVERSCAN = 3;
 const VIEWPORT_OFFSET = 1;
 const MIN_COLUMN_SIZE = 60;
@@ -70,13 +69,24 @@ interface DataGridStore {
   batch: (fn: () => void) => void;
 }
 
+function useStore<T>(
+  store: DataGridStore,
+  selector: (state: DataGridState) => T,
+): T {
+  const getSnapshot = React.useCallback(
+    () => selector(store.getState()),
+    [store, selector],
+  );
+
+  return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
+}
+
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   columns: ColumnDef<TData>[];
   data: TData[];
   onDataChange?: (data: TData[]) => void;
   rowHeight?: RowHeightValue;
-  estimateRowSize?: number;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
@@ -88,7 +98,6 @@ export function useDataGrid<TData>({
   data,
   onDataChange,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
-  estimateRowSize = ESTIMATED_ROW_SIZE,
   overscan = OVERSCAN,
   initialState,
   autoFocus = false,
@@ -105,6 +114,7 @@ export function useDataGrid<TData>({
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const headerRef = React.useRef<HTMLDivElement>(null);
   const footerRef = React.useRef<HTMLDivElement>(null);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
@@ -190,25 +200,19 @@ export function useDataGrid<TData>({
     };
   }, [listenersRef, stateRef]);
 
-  const {
-    focusedCell,
-    editingCell,
-    selectionState,
-    searchQuery,
-    searchMatches,
-    matchIndex,
-    searchOpen,
-    sorting,
-    rowSelection,
-    contextMenu,
-    rowHeight,
-  } = React.useSyncExternalStore(
-    store.subscribe,
-    store.getState,
-    store.getState,
-  );
+  const focusedCell = useStore(store, (state) => state.focusedCell);
+  const editingCell = useStore(store, (state) => state.editingCell);
+  const selectionState = useStore(store, (state) => state.selectionState);
+  const searchQuery = useStore(store, (state) => state.searchQuery);
+  const searchMatches = useStore(store, (state) => state.searchMatches);
+  const matchIndex = useStore(store, (state) => state.matchIndex);
+  const searchOpen = useStore(store, (state) => state.searchOpen);
+  const sorting = useStore(store, (state) => state.sorting);
+  const rowSelection = useStore(store, (state) => state.rowSelection);
+  const contextMenu = useStore(store, (state) => state.contextMenu);
+  const rowHeight = useStore(store, (state) => state.rowHeight);
 
-  const currentRowHeight = getRowHeightValue(rowHeight);
+  const rowHeightValue = getRowHeightValue(rowHeight);
 
   const getColumnIds = React.useCallback(() => {
     return columns
@@ -526,6 +530,10 @@ export function useDataGrid<TData>({
         store.setState("matchIndex", nextIndex);
         requestAnimationFrame(() => {
           focusCell(match.rowIndex, match.columnId);
+          // Refocus search input to maintain focus during navigation
+          requestAnimationFrame(() => {
+            searchInputRef.current?.focus();
+          });
         });
       });
     }
@@ -550,6 +558,10 @@ export function useDataGrid<TData>({
         store.setState("matchIndex", prevIndex);
         requestAnimationFrame(() => {
           focusCell(match.rowIndex, match.columnId);
+          // Refocus search input to maintain focus during navigation
+          requestAnimationFrame(() => {
+            searchInputRef.current?.focus();
+          });
         });
       });
     }
@@ -929,13 +941,13 @@ export function useDataGrid<TData>({
 
           // Scroll by exactly one row height to reveal it smoothly
           if (direction === "down") {
-            container.scrollTop += currentRowHeight;
+            container.scrollTop += rowHeightValue;
           } else {
             // For arrow up, ensure we don't go below 0
             const currentScrollTop = container.scrollTop;
             const targetScrollTop = Math.max(
               0,
-              currentScrollTop - currentRowHeight,
+              currentScrollTop - rowHeightValue,
             );
             container.scrollTop = targetScrollTop;
           }
@@ -961,7 +973,7 @@ export function useDataGrid<TData>({
         focusCell(newRowIndex, newColumnId);
       }
     },
-    [store, getNavigableColumnIds, focusCell, data.length, currentRowHeight],
+    [store, getNavigableColumnIds, focusCell, data.length, rowHeightValue],
   );
 
   const onDataGridKeyDown = React.useCallback(
@@ -1330,7 +1342,7 @@ export function useDataGrid<TData>({
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => dataGridRef.current,
-    estimateSize: () => currentRowHeight,
+    estimateSize: () => rowHeightValue,
     overscan,
     measureElement:
       typeof window !== "undefined" &&
@@ -1385,6 +1397,7 @@ export function useDataGrid<TData>({
       searchQuery,
       searchMatches,
       matchIndex,
+      searchInputRef,
       onSearchOpenChange,
       onSearch,
       navigateToNextMatch,

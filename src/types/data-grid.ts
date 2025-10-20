@@ -139,6 +139,7 @@ export interface SearchState {
   searchQuery: string;
   searchMatches: CellPosition[];
   matchIndex: number;
+  searchInputRef: React.RefObject<HTMLInputElement | null>;
   onSearchOpenChange: (open: boolean) => void;
   onSearch: (query: string) => void;
   navigateToNextMatch: () => void;
