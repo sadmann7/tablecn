@@ -83,8 +83,6 @@ function useStore<T>(
 
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
-  columns: ColumnDef<TData>[];
-  data: TData[];
   onDataChange?: (data: TData[]) => void;
   rowHeight?: RowHeightValue;
   overscan?: number;
@@ -727,13 +725,16 @@ export function useDataGrid<TData>({
       // Only start drag selection if no modifier keys are pressed
       // Clear any existing selection and prepare for potential drag
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
-        store.setState("selectionState", {
-          selectedCells: new Set(),
-          selectionRange: {
-            start: { rowIndex, columnId },
-            end: { rowIndex, columnId },
-          },
-          isSelecting: true,
+        store.batch(() => {
+          store.setState("selectionState", {
+            selectedCells: new Set(),
+            selectionRange: {
+              start: { rowIndex, columnId },
+              end: { rowIndex, columnId },
+            },
+            isSelecting: true,
+          });
+          store.setState("rowSelection", {});
         });
       }
     },
