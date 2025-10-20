@@ -10,12 +10,34 @@ import type { SearchState } from "@/types/data-grid";
 interface DataGridSearchProps extends SearchState {}
 
 export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
-  return (
-    prev.searchOpen === next.searchOpen &&
-    prev.searchQuery === next.searchQuery &&
-    prev.matchIndex === next.matchIndex &&
-    prev.searchMatches.length === next.searchMatches.length
-  );
+  if (prev.searchOpen !== next.searchOpen) return false;
+
+  if (!next.searchOpen) return true;
+
+  if (
+    prev.searchQuery !== next.searchQuery ||
+    prev.matchIndex !== next.matchIndex
+  ) {
+    return false;
+  }
+
+  if (prev.searchMatches.length !== next.searchMatches.length) return false;
+
+  for (let i = 0; i < prev.searchMatches.length; i++) {
+    const prevMatch = prev.searchMatches[i];
+    const nextMatch = next.searchMatches[i];
+
+    if (!prevMatch || !nextMatch) return false;
+
+    if (
+      prevMatch.rowIndex !== nextMatch.rowIndex ||
+      prevMatch.columnId !== nextMatch.columnId
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 });
 
 function DataGridSearchImpl({

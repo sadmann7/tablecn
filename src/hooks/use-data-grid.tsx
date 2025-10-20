@@ -1266,12 +1266,13 @@ export function useDataGrid<TData>({
   const onColumnClick = React.useCallback(
     (columnId: string) => {
       if (!enableColumnSelection) {
+        clearSelection();
         return;
       }
 
       selectColumn(columnId);
     },
-    [enableColumnSelection, selectColumn],
+    [enableColumnSelection, selectColumn, clearSelection],
   );
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(

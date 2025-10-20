@@ -67,7 +67,37 @@ interface DataGridColumnHeaderProps<TData, TValue>
   table: Table<TData>;
 }
 
-export function DataGridColumnHeader<TData, TValue>({
+export const DataGridColumnHeader = React.memo(
+  DataGridColumnHeaderImpl,
+  (prev, next) => {
+    const prevColumn = prev.header.column;
+    const nextColumn = next.header.column;
+
+    if (prevColumn.id !== nextColumn.id) return false;
+
+    if (
+      prevColumn.getIsSorted() !== nextColumn.getIsSorted() ||
+      prevColumn.getIsPinned() !== nextColumn.getIsPinned() ||
+      prevColumn.getIsVisible() !== nextColumn.getIsVisible() ||
+      prevColumn.getSize() !== nextColumn.getSize()
+    ) {
+      return false;
+    }
+
+    const prevResizing =
+      prev.table.getState().columnSizingInfo.isResizingColumn;
+    const nextResizing =
+      next.table.getState().columnSizingInfo.isResizingColumn;
+
+    if (prevResizing !== nextResizing) return false;
+
+    if (prev.className !== next.className) return false;
+
+    return true;
+  },
+) as typeof DataGridColumnHeaderImpl;
+
+function DataGridColumnHeaderImpl<TData, TValue>({
   header,
   table,
   className,
@@ -90,7 +120,6 @@ export function DataGridColumnHeader<TData, TValue>({
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
   const isPinnedRight = pinnedPosition === "right";
-  const isPinned = isPinnedLeft || isPinnedRight;
 
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {
@@ -203,31 +232,40 @@ export function DataGridColumnHeader<TData, TValue>({
           {column.getCanPin() && (
             <>
               {column.getCanSort() && <DropdownMenuSeparator />}
-              {!isPinned && (
-                <>
-                  <DropdownMenuItem
-                    className="[&_svg]:text-muted-foreground"
-                    onClick={onLeftPin}
-                  >
-                    <PinIcon />
-                    Pin to left
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="[&_svg]:text-muted-foreground"
-                    onClick={onRightPin}
-                  >
-                    <PinIcon className="rotate-90" />
-                    Pin to right
-                  </DropdownMenuItem>
-                </>
+              {!isPinnedLeft && (
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onLeftPin}
+                >
+                  <PinIcon />
+                  Pin to left
+                </DropdownMenuItem>
               )}
-              {isPinned && (
+              {!isPinnedRight && (
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onRightPin}
+                >
+                  <PinIcon />
+                  Pin to right
+                </DropdownMenuItem>
+              )}
+              {isPinnedLeft && (
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
                   onClick={onUnpin}
                 >
                   <PinOff />
-                  Unpin column
+                  Unpin from left
+                </DropdownMenuItem>
+              )}
+              {isPinnedRight && (
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onUnpin}
+                >
+                  <PinOff />
+                  Unpin from right
                 </DropdownMenuItem>
               )}
             </>
@@ -254,7 +292,28 @@ export function DataGridColumnHeader<TData, TValue>({
   );
 }
 
-function DataGridColumnResizer<TData, TValue>({
+const DataGridColumnResizer = React.memo(
+  DataGridColumnResizerImpl,
+  (prev, next) => {
+    const prevColumn = prev.header.column;
+    const nextColumn = next.header.column;
+
+    if (
+      prevColumn.getIsResizing() !== nextColumn.getIsResizing() ||
+      prevColumn.getSize() !== nextColumn.getSize()
+    ) {
+      return false;
+    }
+
+    if (prev.title !== next.title) return false;
+
+    return true;
+  },
+) as <TData, TValue>(
+  props: DataGridColumnHeaderProps<TData, TValue>,
+) => React.ReactElement;
+
+function DataGridColumnResizerImpl<TData, TValue>({
   header,
   table,
   title,
