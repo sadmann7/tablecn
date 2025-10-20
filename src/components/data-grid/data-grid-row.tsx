@@ -75,7 +75,7 @@ function DataGridRowImpl<TData>({
       aria-rowindex={virtualRowIndex + 2}
       aria-selected={isRowSelected}
       data-index={virtualRowIndex}
-      data-slot="data-grid-row"
+      data-slot="grid-row"
       ref={rowRef}
       tabIndex={-1}
       className={cn("absolute flex w-full border-b", className)}
@@ -95,7 +95,7 @@ function DataGridRowImpl<TData>({
             role="gridcell"
             aria-colindex={colIndex + 1}
             data-highlighted={isCellFocused ? "" : undefined}
-            data-slot="data-grid-cell"
+            data-slot="grid-cell"
             tabIndex={-1}
             className={cn({
               "border-r": cell.column.id !== "select",
