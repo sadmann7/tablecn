@@ -54,6 +54,7 @@ declare module "@tanstack/react-table" {
     focusedCell?: CellPosition | null;
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
+    searchOpen?: boolean;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
@@ -135,14 +136,13 @@ export type NavigationDirection =
   | "pagedown";
 
 export interface SearchState {
-  searchOpen: boolean;
-  searchQuery: string;
   searchMatches: CellPosition[];
   matchIndex: number;
-  searchInputRef: React.RefObject<HTMLInputElement | null>;
+  searchOpen: boolean;
   onSearchOpenChange: (open: boolean) => void;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
   onSearch: (query: string) => void;
-  navigateToNextMatch: () => void;
-  navigateToPrevMatch: () => void;
-  setSearchQuery: (query: string) => void;
+  onNavigateToNextMatch: () => void;
+  onNavigateToPrevMatch: () => void;
 }

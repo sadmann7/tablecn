@@ -114,7 +114,6 @@ export function useDataGrid<TData>({
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const headerRef = React.useRef<HTMLDivElement>(null);
   const footerRef = React.useRef<HTMLDivElement>(null);
-  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
@@ -400,6 +399,12 @@ export function useDataGrid<TData>({
         store.setState("editingCell", null);
       });
 
+      const currentState = store.getState();
+      // Don't steal focus from search input when search is open
+      if (currentState.searchOpen) {
+        return;
+      }
+
       if (
         dataGridRef.current &&
         document.activeElement !== dataGridRef.current
@@ -513,33 +518,12 @@ export function useDataGrid<TData>({
     [getColumnIds, store],
   );
 
-  const navigateToNextMatch = React.useCallback(() => {
-    const currentState = store.getState();
-    if (currentState.searchMatches.length === 0) return;
+  const onSearchQueryChange = React.useCallback(
+    (query: string) => store.setState("searchQuery", query),
+    [store],
+  );
 
-    const nextIndex =
-      (currentState.matchIndex + 1) % currentState.searchMatches.length;
-    const match = currentState.searchMatches[nextIndex];
-
-    if (match) {
-      rowVirtualizerRef.current?.scrollToIndex(match.rowIndex, {
-        align: "center",
-      });
-
-      requestAnimationFrame(() => {
-        store.setState("matchIndex", nextIndex);
-        requestAnimationFrame(() => {
-          focusCell(match.rowIndex, match.columnId);
-          // Refocus search input to maintain focus during navigation
-          requestAnimationFrame(() => {
-            searchInputRef.current?.focus();
-          });
-        });
-      });
-    }
-  }, [store, focusCell]);
-
-  const navigateToPrevMatch = React.useCallback(() => {
+  const onNavigateToPrevMatch = React.useCallback(() => {
     const currentState = store.getState();
     if (currentState.searchMatches.length === 0) return;
 
@@ -558,10 +542,28 @@ export function useDataGrid<TData>({
         store.setState("matchIndex", prevIndex);
         requestAnimationFrame(() => {
           focusCell(match.rowIndex, match.columnId);
-          // Refocus search input to maintain focus during navigation
-          requestAnimationFrame(() => {
-            searchInputRef.current?.focus();
-          });
+        });
+      });
+    }
+  }, [store, focusCell]);
+
+  const onNavigateToNextMatch = React.useCallback(() => {
+    const currentState = store.getState();
+    if (currentState.searchMatches.length === 0) return;
+
+    const nextIndex =
+      (currentState.matchIndex + 1) % currentState.searchMatches.length;
+    const match = currentState.searchMatches[nextIndex];
+
+    if (match) {
+      rowVirtualizerRef.current?.scrollToIndex(match.rowIndex, {
+        align: "center",
+      });
+
+      requestAnimationFrame(() => {
+        store.setState("matchIndex", nextIndex);
+        requestAnimationFrame(() => {
+          focusCell(match.rowIndex, match.columnId);
         });
       });
     }
@@ -998,9 +1000,9 @@ export function useDataGrid<TData>({
         if (key === "Enter") {
           event.preventDefault();
           if (shiftKey) {
-            navigateToPrevMatch();
+            onNavigateToPrevMatch();
           } else {
-            navigateToNextMatch();
+            onNavigateToNextMatch();
           }
           return;
         }
@@ -1159,8 +1161,8 @@ export function useDataGrid<TData>({
       selectRange,
       focusCell,
       onSearchOpenChange,
-      navigateToNextMatch,
-      navigateToPrevMatch,
+      onNavigateToNextMatch,
+      onNavigateToPrevMatch,
       enableSearch,
     ],
   );
@@ -1303,6 +1305,7 @@ export function useDataGrid<TData>({
       focusedCell,
       editingCell,
       selectionState,
+      searchOpen,
       getIsCellSelected,
       getIsSearchMatch,
       getIsActiveSearchMatch,
@@ -1384,37 +1387,31 @@ export function useDataGrid<TData>({
     [rowVirtualizer, getNavigableColumnIds, focusCell],
   );
 
-  const setSearchQuery = React.useCallback(
-    (query: string) => store.setState("searchQuery", query),
-    [store],
-  );
-
   const searchState = React.useMemo<SearchState | undefined>(() => {
     if (!enableSearch) return undefined;
 
     return {
-      searchOpen,
-      searchQuery,
       searchMatches,
       matchIndex,
-      searchInputRef,
+      searchOpen,
       onSearchOpenChange,
+      searchQuery,
+      onSearchQueryChange,
       onSearch,
-      navigateToNextMatch,
-      navigateToPrevMatch,
-      setSearchQuery,
+      onNavigateToNextMatch,
+      onNavigateToPrevMatch,
     };
   }, [
     enableSearch,
-    searchOpen,
-    searchQuery,
     searchMatches,
     matchIndex,
+    searchOpen,
     onSearchOpenChange,
+    searchQuery,
+    onSearchQueryChange,
     onSearch,
-    navigateToNextMatch,
-    navigateToPrevMatch,
-    setSearchQuery,
+    onNavigateToNextMatch,
+    onNavigateToPrevMatch,
   ]);
 
   React.useEffect(() => {

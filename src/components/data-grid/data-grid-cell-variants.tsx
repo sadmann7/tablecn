@@ -139,10 +139,10 @@ export function ShortTextCell<TData>({
         selection?.addRange(range);
       }
     }
-    if (isFocused && !isEditing && containerRef.current) {
+    if (isFocused && !isEditing && !meta?.searchOpen && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, value]);
+  }, [isFocused, isEditing, value, meta?.searchOpen]);
 
   const displayValue = !isEditing ? (value ?? "") : "";
 
@@ -294,10 +294,10 @@ export function LongTextCell<TData>({
     if (isEditing && !open) {
       setOpen(true);
     }
-    if (isFocused && !isEditing && containerRef.current) {
+    if (isFocused && !isEditing && !meta?.searchOpen && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, open]);
+  }, [isFocused, isEditing, open, meta?.searchOpen]);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -432,10 +432,10 @@ export function NumberCell<TData>({
       inputRef.current.focus();
       inputRef.current.select();
     }
-    if (isFocused && !isEditing && containerRef.current) {
+    if (isFocused && !isEditing && !meta?.searchOpen && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing]);
+  }, [isFocused, isEditing, meta?.searchOpen]);
 
   return (
     <DataGridCellWrapper
@@ -524,10 +524,10 @@ export function SelectCell<TData>({
     if (isEditing && !open) {
       setOpen(true);
     }
-    if (isFocused && !isEditing && containerRef.current) {
+    if (isFocused && !isEditing && !meta?.searchOpen && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, open]);
+  }, [isFocused, isEditing, open, meta?.searchOpen]);
 
   const displayLabel =
     options.find((opt) => opt.value === value)?.label ?? value;
@@ -696,10 +696,10 @@ export function MultiSelectCell<TData>({
     if (isEditing && !open) {
       setOpen(true);
     }
-    if (isFocused && !isEditing && containerRef.current) {
+    if (isFocused && !isEditing && !meta?.searchOpen && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, open]);
+  }, [isFocused, isEditing, open, meta?.searchOpen]);
 
   // Focus input when popover opens
   React.useEffect(() => {
@@ -899,10 +899,10 @@ export function CheckboxCell<TData>({
   }, [initialValue]);
 
   React.useEffect(() => {
-    if (isFocused && containerRef.current) {
+    if (isFocused && !meta?.searchOpen && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused]);
+  }, [isFocused, meta?.searchOpen]);
 
   const onWrapperClick = React.useCallback(
     (event: React.MouseEvent) => {
@@ -1025,10 +1025,10 @@ export function DateCell<TData>({
   }, [isEditing]);
 
   React.useEffect(() => {
-    if (isFocused && !isEditing && containerRef.current) {
+    if (isFocused && !isEditing && !meta?.searchOpen && containerRef.current) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing]);
+  }, [isFocused, isEditing, meta?.searchOpen]);
 
   return (
     <DataGridCellWrapper

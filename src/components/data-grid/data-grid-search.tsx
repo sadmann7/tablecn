@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, X } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import type { SearchState } from "@/types/data-grid";
 
 interface DataGridSearchProps extends SearchState {}
@@ -18,24 +19,25 @@ export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
 });
 
 function DataGridSearchImpl({
-  searchOpen,
-  searchQuery,
   searchMatches,
   matchIndex,
-  searchInputRef,
+  searchOpen,
   onSearchOpenChange,
+  searchQuery,
+  onSearchQueryChange,
   onSearch,
-  navigateToNextMatch,
-  navigateToPrevMatch,
-  setSearchQuery,
+  onNavigateToNextMatch,
+  onNavigateToPrevMatch,
 }: DataGridSearchProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
   React.useEffect(() => {
     if (searchOpen) {
       requestAnimationFrame(() => {
-        searchInputRef.current?.focus();
+        inputRef.current?.focus();
       });
     }
-  }, [searchOpen, searchInputRef]);
+  }, [searchOpen]);
 
   React.useEffect(() => {
     if (!searchOpen) return;
@@ -58,21 +60,40 @@ function DataGridSearchImpl({
       if (event.key === "Enter") {
         event.preventDefault();
         if (event.shiftKey) {
-          navigateToPrevMatch();
+          onNavigateToPrevMatch();
         } else {
-          navigateToNextMatch();
+          onNavigateToNextMatch();
         }
       }
     },
-    [navigateToNextMatch, navigateToPrevMatch],
+    [onNavigateToNextMatch, onNavigateToPrevMatch],
   );
+
+  const debouncedSearch = useDebouncedCallback((query: string) => {
+    onSearch(query);
+  }, 150);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setSearchQuery(event.target.value);
-      onSearch(event.target.value);
+      const value = event.target.value;
+      onSearchQueryChange(value);
+      debouncedSearch(value);
     },
-    [setSearchQuery, onSearch],
+    [onSearchQueryChange, debouncedSearch],
+  );
+
+  const onPrevMatchPointerDown = React.useCallback(
+    (event: React.PointerEvent) => {
+      event.preventDefault();
+    },
+    [],
+  );
+
+  const onNextMatchPointerDown = React.useCallback(
+    (event: React.PointerEvent) => {
+      event.preventDefault();
+    },
+    [],
   );
 
   const onClose = React.useCallback(() => {
@@ -95,31 +116,36 @@ function DataGridSearchImpl({
           spellCheck={false}
           placeholder="Find in table..."
           className="h-8 w-64"
-          ref={searchInputRef}
+          ref={inputRef}
           value={searchQuery}
           onChange={onChange}
           onKeyDown={onKeyDown}
         />
         <div className="flex items-center gap-1">
           <Button
+            aria-label="Previous match"
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={navigateToPrevMatch}
+            onClick={onNavigateToPrevMatch}
+            onPointerDown={onPrevMatchPointerDown}
             disabled={searchMatches.length === 0}
           >
             <ChevronUp />
           </Button>
           <Button
+            aria-label="Next match"
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={navigateToNextMatch}
+            onClick={onNavigateToNextMatch}
+            onPointerDown={onNextMatchPointerDown}
             disabled={searchMatches.length === 0}
           >
             <ChevronDown />
           </Button>
           <Button
+            aria-label="Close search"
             variant="ghost"
             size="icon"
             className="size-7"

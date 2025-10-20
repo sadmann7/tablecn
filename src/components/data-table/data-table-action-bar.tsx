@@ -18,13 +18,13 @@ interface DataTableActionBarProps<TData>
   extends React.ComponentProps<typeof motion.div> {
   table: Table<TData>;
   visible?: boolean;
-  container?: Element | DocumentFragment | null;
+  portalContainer?: Element | DocumentFragment | null;
 }
 
 function DataTableActionBar<TData>({
   table,
   visible: visibleProp,
-  container: containerProp,
+  portalContainer: portalContainerProp,
   children,
   className,
   ...props
@@ -46,10 +46,10 @@ function DataTableActionBar<TData>({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [table]);
 
-  const container =
-    containerProp ?? (mounted ? globalThis.document?.body : null);
+  const portalContainer =
+    portalContainerProp ?? (mounted ? globalThis.document?.body : null);
 
-  if (!container) return null;
+  if (!portalContainer) return null;
 
   const visible =
     visibleProp ?? table.getFilteredSelectedRowModel().rows.length > 0;
@@ -74,7 +74,7 @@ function DataTableActionBar<TData>({
         </motion.div>
       )}
     </AnimatePresence>,
-    container,
+    portalContainer,
   );
 }
 
