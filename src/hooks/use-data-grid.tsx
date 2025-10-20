@@ -400,10 +400,8 @@ export function useDataGrid<TData>({
       });
 
       const currentState = store.getState();
-      // Don't steal focus from search input when search is open
-      if (currentState.searchOpen) {
-        return;
-      }
+
+      if (currentState.searchOpen) return;
 
       if (
         dataGridRef.current &&
@@ -456,12 +454,31 @@ export function useDataGrid<TData>({
         return;
       }
 
+      const currentState = store.getState();
+      const currentMatch =
+        currentState.matchIndex >= 0 &&
+        currentState.searchMatches[currentState.matchIndex];
+
       store.batch(() => {
         store.setState("searchOpen", false);
         store.setState("searchQuery", "");
         store.setState("searchMatches", []);
         store.setState("matchIndex", -1);
+
+        if (currentMatch) {
+          store.setState("focusedCell", {
+            rowIndex: currentMatch.rowIndex,
+            columnId: currentMatch.columnId,
+          });
+        }
       });
+
+      if (
+        dataGridRef.current &&
+        document.activeElement !== dataGridRef.current
+      ) {
+        dataGridRef.current.focus();
+      }
     },
     [store],
   );
