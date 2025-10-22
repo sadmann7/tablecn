@@ -22,7 +22,7 @@ export const searchParamsCache = createSearchParamsCache({
   title: parseAsString.withDefault(""),
   status: parseAsArrayOf(
     parseAsStringEnum(tasks.status.enumValues),
-  ).withDefault([]),
+  ).withDefault(["todo"]),
   priority: parseAsArrayOf(
     parseAsStringEnum(tasks.priority.enumValues),
   ).withDefault([]),

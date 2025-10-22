@@ -65,6 +65,10 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     enableAdvancedFilter,
     initialState: {
       sorting: [{ id: "createdAt", desc: true }],
+      columnFilters: [{
+        id: "status",
+        value: ["todo"],
+      }],
       columnPinning: { right: ["actions"] },
     },
     queryKeys,
