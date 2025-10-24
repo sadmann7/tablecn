@@ -777,8 +777,9 @@ function onFilterInputRender<TData>({
             {filter.operator === "isBetween" ? (
               <Calendar
                 aria-label={`Select ${columnMeta?.label} date range`}
-                mode="range"
+                autoFocus
                 captionLayout="dropdown"
+                mode="range"
                 selected={
                   dateValue.length === 2
                     ? {
@@ -804,8 +805,9 @@ function onFilterInputRender<TData>({
             ) : (
               <Calendar
                 aria-label={`Select ${columnMeta?.label} date`}
-                mode="single"
+                autoFocus
                 captionLayout="dropdown"
+                mode="single"
                 selected={
                   dateValue[0] ? new Date(Number(dateValue[0])) : undefined
                 }

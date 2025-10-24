@@ -202,6 +202,12 @@ export function LongTextCell<TData>({
   const meta = table.options.meta;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(initialValue ?? "");
+  }
+
   // Debounced auto-save (300ms delay)
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     meta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
@@ -292,10 +298,6 @@ export function LongTextCell<TData>({
     setOpen(false);
     meta?.onCellEditingStop?.();
   }, [meta, value, initialValue, rowIndex, columnId]);
-
-  React.useEffect(() => {
-    setValue(initialValue ?? "");
-  }, [initialValue]);
 
   React.useEffect(() => {
     if (isEditing && !open) {
@@ -1012,9 +1014,15 @@ export function DateCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
-  const [isOpen, setIsOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
+
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(initialValue ?? "");
+  }
 
   const selectedDate = value ? new Date(value) : undefined;
 
@@ -1025,38 +1033,40 @@ export function DateCell<TData>({
       const formattedDate = date.toISOString().split("T")[0] ?? "";
       setValue(formattedDate);
       meta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
-      setIsOpen(false);
+      setOpen(false);
       meta?.onCellEditingStop?.();
     },
     [meta, rowIndex, columnId],
   );
 
+  const onOpenChange = React.useCallback(
+    (isOpen: boolean) => {
+      setOpen(isOpen);
+      if (!isOpen && isEditing) {
+        meta?.onCellEditingStop?.();
+      }
+    },
+    [isEditing, meta],
+  );
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          setIsOpen(true);
-        } else if (event.key === "Escape") {
+        if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
-          setIsOpen(false);
-          meta?.onCellEditingStop?.();
+          setOpen(false);
         }
       }
     },
-    [isEditing, initialValue, meta],
+    [isEditing, initialValue],
   );
 
   React.useEffect(() => {
-    setValue(initialValue ?? "");
-  }, [initialValue]);
-
-  React.useEffect(() => {
     if (isEditing) {
-      setIsOpen(true);
+      setOpen(true);
     } else {
-      setIsOpen(false);
+      setOpen(false);
     }
   }, [isEditing]);
 
@@ -1084,7 +1094,7 @@ export function DateCell<TData>({
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
           <span data-slot="grid-cell-content">
             {formatDateForDisplay(value)}
@@ -1098,10 +1108,13 @@ export function DateCell<TData>({
             className="w-auto p-0"
           >
             <Calendar
+              autoFocus
+              captionLayout="dropdown"
               mode="single"
+              className="rounded-md border shadow-sm"
+              defaultMonth={selectedDate ?? new Date()}
               selected={selectedDate}
               onSelect={onDateSelect}
-              className="rounded-md border shadow-sm"
             />
           </PopoverContent>
         )}
