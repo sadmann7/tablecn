@@ -55,6 +55,7 @@ declare module "@tanstack/react-table" {
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
     searchOpen?: boolean;
+    isScrolling?: boolean;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;

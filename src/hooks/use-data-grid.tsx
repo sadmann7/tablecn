@@ -56,6 +56,7 @@ interface DataGridState {
   matchIndex: number;
   searchOpen: boolean;
   lastClickedRowIndex: number | null;
+  isScrolling: boolean;
 }
 
 interface DataGridStore {
@@ -137,6 +138,7 @@ export function useDataGrid<TData>({
       matchIndex: -1,
       searchOpen: false,
       lastClickedRowIndex: null,
+      isScrolling: false,
     };
   });
 
@@ -208,6 +210,7 @@ export function useDataGrid<TData>({
   const rowSelection = useStore(store, (state) => state.rowSelection);
   const contextMenu = useStore(store, (state) => state.contextMenu);
   const rowHeight = useStore(store, (state) => state.rowHeight);
+  const isScrolling = useStore(store, (state) => state.isScrolling);
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
@@ -1325,6 +1328,7 @@ export function useDataGrid<TData>({
       editingCell,
       selectionState,
       searchOpen,
+      isScrolling,
       getIsCellSelected,
       getIsSearchMatch,
       getIsActiveSearchMatch,
@@ -1372,6 +1376,14 @@ export function useDataGrid<TData>({
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
     onChange: (instance) => {
+      // Sync virtualizer's isScrolling state to our store
+      const virtualizerIsScrolling = instance.isScrolling;
+      const currentIsScrolling = store.getState().isScrolling;
+
+      if (virtualizerIsScrolling !== currentIsScrolling) {
+        store.setState("isScrolling", virtualizerIsScrolling);
+      }
+
       requestAnimationFrame(() => {
         instance.getVirtualItems().forEach((virtualRow) => {
           const rowRef = rowMapRef.current.get(virtualRow.index);
@@ -1387,7 +1399,7 @@ export function useDataGrid<TData>({
   }
 
   const scrollToRow = React.useCallback(
-    (options: ScrollToOptions) => {
+    async (options: ScrollToOptions) => {
       const { rowIndex, columnId } = options;
 
       rowVirtualizer.scrollToIndex(rowIndex, {
@@ -1397,17 +1409,23 @@ export function useDataGrid<TData>({
       const columnIds = getNavigableColumnIds();
       const targetColumnId = columnId ?? columnIds[0];
 
-      if (targetColumnId) {
-        queueMicrotask(() => {
+      if (!targetColumnId) return;
+
+      queueMicrotask(() => {
+        requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              focusCell(rowIndex, targetColumnId);
+            store.batch(() => {
+              store.setState("focusedCell", {
+                rowIndex,
+                columnId: targetColumnId,
+              });
+              store.setState("editingCell", null);
             });
           });
         });
-      }
+      });
     },
-    [rowVirtualizer, getNavigableColumnIds, focusCell],
+    [rowVirtualizer, getNavigableColumnIds, store],
   );
 
   const searchState = React.useMemo<SearchState | undefined>(() => {
