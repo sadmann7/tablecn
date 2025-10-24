@@ -1,7 +1,6 @@
 "use client";
 
 import type { Cell, Table } from "@tanstack/react-table";
-import { Command as CommandPrimitive } from "cmdk";
 import { Check, X } from "lucide-react";
 import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
@@ -31,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 
 interface CellVariantProps<TData> {
@@ -588,9 +588,16 @@ export function MultiSelectCell<TData>({
   isEditing,
   isSelected,
 }: CellVariantProps<TData>) {
-  const initialValue = (cell.getValue() as string[]) ?? [];
+  const cellValue = React.useMemo(
+    () => (cell.getValue() as string[]) ?? [],
+    [cell],
+  );
+
+  const cellId = `${rowIndex}-${columnId}`;
+  const prevCellIdRef = React.useRef(cellId);
+
   const [selectedValues, setSelectedValues] =
-    React.useState<string[]>(initialValue);
+    React.useState<string[]>(cellValue);
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -599,6 +606,13 @@ export function MultiSelectCell<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
+
+  if (prevCellIdRef.current !== cellId) {
+    prevCellIdRef.current = cellId;
+    setSelectedValues(cellValue);
+    setOpen(false);
+    setSearchValue("");
+  }
 
   const onValueChange = React.useCallback(
     (value: string) => {
@@ -656,13 +670,13 @@ export function MultiSelectCell<TData>({
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
-        setSelectedValues(initialValue);
+        setSelectedValues(cellValue);
         setSearchValue("");
         setOpen(false);
         meta?.onCellEditingStop?.();
       }
     },
-    [isEditing, initialValue, meta],
+    [isEditing, cellValue, meta],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -689,10 +703,6 @@ export function MultiSelectCell<TData>({
   );
 
   React.useEffect(() => {
-    setSelectedValues(initialValue);
-  }, [initialValue]);
-
-  React.useEffect(() => {
     if (isEditing && !open) {
       setOpen(true);
     }
@@ -714,17 +724,7 @@ export function MultiSelectCell<TData>({
 
   const rowHeight = table.options.meta?.rowHeight ?? "short";
 
-  const lineCount =
-    rowHeight === "short"
-      ? 1
-      : rowHeight === "medium"
-        ? 2
-        : rowHeight === "tall"
-          ? 3
-          : rowHeight === "extra-tall"
-            ? 4
-            : 1;
-
+  const lineCount = getLineCount(rowHeight);
   const maxVisibleBadgeCount = lineCount * 3;
 
   const visibleLabels = displayLabels.slice(0, maxVisibleBadgeCount);

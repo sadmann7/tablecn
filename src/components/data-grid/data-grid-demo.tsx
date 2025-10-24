@@ -13,16 +13,16 @@ import { useWindowSize } from "@/hooks/use-window-size";
 
 interface Person {
   id: string;
-  name: string;
-  age: number;
-  email: string;
-  notes: string;
-  salary: number;
-  department: string;
-  status: string;
-  skills: string[];
-  isActive: boolean;
-  startDate: string;
+  name?: string;
+  age?: number;
+  email?: string;
+  notes?: string;
+  salary?: number;
+  department?: string;
+  status?: string;
+  skills?: string[];
+  isActive?: boolean;
+  startDate?: string;
 }
 
 faker.seed(12345);
@@ -286,8 +286,12 @@ export function DataGridDemo() {
 
   const onRowAdd = React.useCallback(() => {
     const newId = data.length + 1;
-    const newRow: Person = generatePerson(newId);
-    setData((prev) => [...prev, newRow]);
+    setData((prev) => [
+      ...prev,
+      {
+        id: newId.toString(),
+      },
+    ]);
 
     return {
       rowIndex: data.length,

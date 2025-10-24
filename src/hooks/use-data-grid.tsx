@@ -1398,8 +1398,12 @@ export function useDataGrid<TData>({
       const targetColumnId = columnId ?? columnIds[0];
 
       if (targetColumnId) {
-        requestAnimationFrame(() => {
-          focusCell(rowIndex, targetColumnId);
+        queueMicrotask(() => {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              focusCell(rowIndex, targetColumnId);
+            });
+          });
         });
       }
     },

@@ -51,19 +51,17 @@ export function DataGrid<TData>({
 
       if (event?.defaultPrevented) return;
 
-      requestAnimationFrame(() => {
-        if (result && typeof result === "object" && "rowIndex" in result) {
-          const adjustedRowIndex =
-            result.rowIndex >= rows.length ? rows.length : result.rowIndex;
+      if (result && typeof result === "object" && "rowIndex" in result) {
+        const adjustedRowIndex =
+          result.rowIndex >= rows.length ? rows.length : result.rowIndex;
 
-          scrollToRow({
-            rowIndex: adjustedRowIndex,
-            columnId: result.columnId,
-          });
-        } else {
-          scrollToRow({ rowIndex: rows.length });
-        }
-      });
+        scrollToRow({
+          rowIndex: adjustedRowIndex,
+          columnId: result.columnId,
+        });
+      } else {
+        scrollToRow({ rowIndex: rows.length });
+      }
     },
     [onRowAddProp, scrollToRow, rows.length],
   );
