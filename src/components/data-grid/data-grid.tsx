@@ -16,10 +16,9 @@ interface DataGridProps<TData>
   extends ReturnType<typeof useDataGrid<TData>>,
     React.ComponentProps<"div"> {
   height?: number;
-  onRowAdd?: () =>
-    | ScrollToOptions
-    | undefined
-    | Promise<ScrollToOptions | undefined>;
+  onRowAdd?: (
+    event?: React.MouseEvent<HTMLDivElement>,
+  ) => ScrollToOptions | undefined | Promise<ScrollToOptions | undefined>;
 }
 
 export function DataGrid<TData>({
@@ -44,25 +43,30 @@ export function DataGrid<TData>({
   const rowHeight = meta?.rowHeight ?? "short";
   const focusedCell = meta?.focusedCell ?? null;
 
-  const onRowAdd = React.useCallback(async () => {
-    if (!onRowAddProp) return;
+  const onRowAdd = React.useCallback(
+    async (event?: React.MouseEvent<HTMLDivElement>) => {
+      if (!onRowAddProp) return;
 
-    const result = await onRowAddProp();
+      const result = await onRowAddProp();
 
-    requestAnimationFrame(() => {
-      if (result && typeof result === "object" && "rowIndex" in result) {
-        const adjustedRowIndex =
-          result.rowIndex >= rows.length ? rows.length : result.rowIndex;
+      if (event?.defaultPrevented) return;
 
-        scrollToRow({
-          rowIndex: adjustedRowIndex,
-          columnId: result.columnId,
-        });
-      } else {
-        scrollToRow({ rowIndex: rows.length });
-      }
-    });
-  }, [onRowAddProp, scrollToRow, rows.length]);
+      requestAnimationFrame(() => {
+        if (result && typeof result === "object" && "rowIndex" in result) {
+          const adjustedRowIndex =
+            result.rowIndex >= rows.length ? rows.length : result.rowIndex;
+
+          scrollToRow({
+            rowIndex: adjustedRowIndex,
+            columnId: result.columnId,
+          });
+        } else {
+          scrollToRow({ rowIndex: rows.length });
+        }
+      });
+    },
+    [onRowAddProp, scrollToRow, rows.length],
+  );
 
   const onAddRowKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
