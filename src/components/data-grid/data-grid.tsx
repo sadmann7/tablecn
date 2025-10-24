@@ -10,15 +10,18 @@ import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
-import type { ScrollToOptions } from "@/types/data-grid";
+import type { CellPosition } from "@/types/data-grid";
 
 interface DataGridProps<TData>
   extends ReturnType<typeof useDataGrid<TData>>,
     React.ComponentProps<"div"> {
   height?: number;
-  onRowAdd?: (
-    event?: React.MouseEvent<HTMLDivElement>,
-  ) => ScrollToOptions | undefined | Promise<ScrollToOptions | undefined>;
+  onRowAdd?: (event?: React.MouseEvent<HTMLDivElement>) =>
+    | Partial<CellPosition>
+    | Promise<Partial<CellPosition>>
+    | null
+    // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
+    | void;
 }
 
 export function DataGrid<TData>({
@@ -49,19 +52,20 @@ export function DataGrid<TData>({
 
       const result = await onRowAddProp();
 
-      if (event?.defaultPrevented) return;
+      if (event?.defaultPrevented || result === null) return;
 
-      if (result && typeof result === "object" && "rowIndex" in result) {
+      if (result) {
         const adjustedRowIndex =
-          result.rowIndex >= rows.length ? rows.length : result.rowIndex;
+          (result.rowIndex ?? 0) >= rows.length ? rows.length : result.rowIndex;
 
         scrollToRow({
           rowIndex: adjustedRowIndex,
           columnId: result.columnId,
         });
-      } else {
-        scrollToRow({ rowIndex: rows.length });
+        return;
       }
+
+      scrollToRow({ rowIndex: rows.length });
     },
     [onRowAddProp, scrollToRow, rows.length],
   );

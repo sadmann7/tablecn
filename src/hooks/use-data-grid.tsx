@@ -19,7 +19,6 @@ import type {
   ContextMenuState,
   NavigationDirection,
   RowHeightValue,
-  ScrollToOptions,
   SearchState,
   SelectionState,
   UpdateCell,
@@ -1399,8 +1398,9 @@ export function useDataGrid<TData>({
   }
 
   const scrollToRow = React.useCallback(
-    async (options: ScrollToOptions) => {
-      const { rowIndex, columnId } = options;
+    async (opts: Partial<CellPosition>) => {
+      const rowIndex = opts?.rowIndex ?? 0;
+      const columnId = opts?.columnId;
 
       rowVirtualizer.scrollToIndex(rowIndex, {
         align: "center",

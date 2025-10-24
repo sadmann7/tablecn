@@ -119,11 +119,6 @@ export interface ContextMenuState {
   y: number;
 }
 
-export interface ScrollToOptions {
-  rowIndex: number;
-  columnId?: string;
-}
-
 export type NavigationDirection =
   | "up"
   | "down"
