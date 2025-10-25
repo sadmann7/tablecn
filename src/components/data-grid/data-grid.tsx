@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-menu";
+import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
@@ -89,6 +90,7 @@ export function DataGrid<TData>({
       {...props}
     >
       {searchState && <DataGridSearch {...searchState} />}
+      <DataGridKeyboardShortcuts enableSearch={!!searchState} />
       <DataGridContextMenu table={table} />
       <div
         role="grid"
