@@ -5,8 +5,8 @@ import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridRowHeightSelect } from "@/components/data-grid/data-grid-row-height-select";
-import { DataTableSortList } from "@/components/data-table/data-table-sort-list";
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
+import { DataGridSortList } from "@/components/data-grid/data-grid-sort-list";
+import { DataGridViewOptions } from "@/components/data-grid/data-grid-view-options";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
@@ -321,9 +321,9 @@ export function DataGridDemo() {
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
-        <DataTableSortList table={table} align="end" />
+        <DataGridSortList table={table} align="end" />
         <DataGridRowHeightSelect table={table} align="end" />
-        <DataTableViewOptions table={table} align="end" />
+        <DataGridViewOptions table={table} align="end" />
       </div>
       <DataGrid
         table={table}
