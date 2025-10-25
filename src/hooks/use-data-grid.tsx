@@ -13,7 +13,7 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
-import { getRowHeightValue } from "@/lib/data-grid";
+import { getRowHeightValue, parseCellKey } from "@/lib/data-grid";
 import type {
   CellPosition,
   ContextMenuState,
@@ -1052,15 +1052,8 @@ export function useDataGrid<TData>({
           }> = [];
 
           currentState.selectionState.selectedCells.forEach((cellKey) => {
-            const parts = cellKey.split(":");
-            const rowIndexStr = parts[0];
-            const columnId = parts[1];
-            if (rowIndexStr && columnId) {
-              const rowIndex = parseInt(rowIndexStr, 10);
-              if (!Number.isNaN(rowIndex)) {
-                updates.push({ rowIndex, columnId, value: "" });
-              }
-            }
+            const { rowIndex, columnId } = parseCellKey(cellKey);
+            updates.push({ rowIndex, columnId, value: "" });
           });
 
           onDataUpdate(updates);

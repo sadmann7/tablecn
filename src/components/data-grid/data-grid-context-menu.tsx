@@ -1,16 +1,16 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
-import { Copy, Eraser } from "lucide-react";
+import type { Table, TableMeta } from "@tanstack/react-table";
+import { CopyIcon, EraserIcon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { parseCellKey } from "@/lib/data-grid";
 import type { UpdateCell } from "@/types/data-grid";
 
 interface DataGridContextMenuProps<TData> {
@@ -24,12 +24,61 @@ export function DataGridContextMenu<TData>({
   const contextMenu = meta?.contextMenu;
   const onContextMenuOpenChange = meta?.onContextMenuOpenChange;
   const selectionState = meta?.selectionState;
+  const dataGridRef = meta?.dataGridRef;
+  const onDataUpdate = meta?.onDataUpdate;
 
+  if (!contextMenu) return null;
+
+  return (
+    <ContextMenu
+      table={table}
+      dataGridRef={dataGridRef}
+      contextMenu={contextMenu}
+      onContextMenuOpenChange={onContextMenuOpenChange}
+      selectionState={selectionState}
+      onDataUpdate={onDataUpdate}
+    />
+  );
+}
+
+interface ContextMenuProps<TData>
+  extends Pick<
+      TableMeta<TData>,
+      | "dataGridRef"
+      | "onContextMenuOpenChange"
+      | "selectionState"
+      | "onDataUpdate"
+    >,
+    Required<Pick<TableMeta<TData>, "contextMenu">> {
+  table: Table<TData>;
+}
+
+const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
+  if (prev.contextMenu.open !== next.contextMenu.open) return false;
+  if (!next.contextMenu.open) return true;
+  if (prev.contextMenu.x !== next.contextMenu.x) return false;
+  if (prev.contextMenu.y !== next.contextMenu.y) return false;
+
+  const prevSize = prev.selectionState?.selectedCells?.size ?? 0;
+  const nextSize = next.selectionState?.selectedCells?.size ?? 0;
+  if (prevSize !== nextSize) return false;
+
+  return true;
+}) as typeof ContextMenuImpl;
+
+function ContextMenuImpl<TData>({
+  table,
+  dataGridRef,
+  contextMenu,
+  onContextMenuOpenChange,
+  selectionState,
+  onDataUpdate,
+}: ContextMenuProps<TData>) {
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
       position: "fixed",
-      left: `${contextMenu?.x ?? 0}px`,
-      top: `${contextMenu?.y ?? 0}px`,
+      left: `${contextMenu.x}px`,
+      top: `${contextMenu.y}px`,
       width: "1px",
       height: "1px",
       padding: 0,
@@ -39,7 +88,7 @@ export function DataGridContextMenu<TData>({
       pointerEvents: "none",
       opacity: 0,
     }),
-    [contextMenu?.x, contextMenu?.y],
+    [contextMenu.x, contextMenu.y],
   );
 
   const onCloseAutoFocus: NonNullable<
@@ -47,9 +96,9 @@ export function DataGridContextMenu<TData>({
   > = React.useCallback(
     (event) => {
       event.preventDefault();
-      meta?.dataGridRef?.current?.focus();
+      dataGridRef?.current?.focus();
     },
-    [meta],
+    [dataGridRef],
   );
 
   const onCopy = React.useCallback(() => {
@@ -65,8 +114,7 @@ export function DataGridContextMenu<TData>({
     // Collect all unique column IDs from selected cells
     const selectedCellsArray = Array.from(selectionState.selectedCells);
     for (const cellKey of selectedCellsArray) {
-      const parts = cellKey.split(":");
-      const columnId = parts[1];
+      const { columnId } = parseCellKey(cellKey);
       if (columnId && !columnIds.includes(columnId)) {
         columnIds.push(columnId);
       }
@@ -75,22 +123,15 @@ export function DataGridContextMenu<TData>({
     // Build grid of selected cells
     const cellData = new Map<string, string>();
     for (const cellKey of selectedCellsArray) {
-      const parts = cellKey.split(":");
-      const rowIndexStr = parts[0];
-      const columnId = parts[1];
-      if (rowIndexStr && columnId) {
-        const rowIndex = Number.parseInt(rowIndexStr, 10);
-        if (!Number.isNaN(rowIndex) && rows[rowIndex]) {
-          const row = rows[rowIndex];
-          if (row) {
-            const cell = row
-              .getVisibleCells()
-              .find((c) => c.column.id === columnId);
-            if (cell) {
-              const value = cell.getValue();
-              cellData.set(cellKey, String(value ?? ""));
-            }
-          }
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      const row = rows[rowIndex];
+      if (row) {
+        const cell = row
+          .getVisibleCells()
+          .find((c) => c.column.id === columnId);
+        if (cell) {
+          const value = cell.getValue();
+          cellData.set(cellKey, String(value ?? ""));
         }
       }
     }
@@ -100,18 +141,11 @@ export function DataGridContextMenu<TData>({
     const colIndices = new Set<number>();
 
     for (const cellKey of selectedCellsArray) {
-      const parts = cellKey.split(":");
-      const rowIndexStr = parts[0];
-      const columnId = parts[1];
-      if (rowIndexStr && columnId) {
-        const rowIndex = Number.parseInt(rowIndexStr, 10);
-        if (!Number.isNaN(rowIndex)) {
-          rowIndices.add(rowIndex);
-        }
-        const colIndex = columnIds.indexOf(columnId);
-        if (colIndex >= 0) {
-          colIndices.add(colIndex);
-        }
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+      const colIndex = columnIds.indexOf(columnId);
+      if (colIndex >= 0) {
+        colIndices.add(colIndex);
       }
     }
 
@@ -147,25 +181,16 @@ export function DataGridContextMenu<TData>({
     const updates: Array<UpdateCell> = [];
 
     for (const cellKey of selectionState.selectedCells) {
-      const parts = cellKey.split(":");
-      const rowIndexStr = parts[0];
-      const columnId = parts[1];
-      if (rowIndexStr && columnId) {
-        const rowIndex = Number.parseInt(rowIndexStr, 10);
-        if (!Number.isNaN(rowIndex)) {
-          updates.push({ rowIndex, columnId, value: "" });
-        }
-      }
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      updates.push({ rowIndex, columnId, value: "" });
     }
 
-    meta?.onDataUpdate?.(updates);
+    onDataUpdate?.(updates);
 
     toast.success(
       `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,
     );
-  }, [meta, selectionState]);
-
-  if (!contextMenu) return null;
+  }, [onDataUpdate, selectionState]);
 
   return (
     <DropdownMenu
@@ -174,18 +199,17 @@ export function DataGridContextMenu<TData>({
     >
       <DropdownMenuTrigger style={triggerStyle} />
       <DropdownMenuContent
-        data-grid-popover
+        data-grid-popover=""
         align="start"
         className="w-48"
         onCloseAutoFocus={onCloseAutoFocus}
       >
-        <DropdownMenuItem onClick={onCopy}>
-          <Copy />
+        <DropdownMenuItem onSelect={onCopy}>
+          <CopyIcon />
           Copy
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={onClear}>
-          <Eraser />
+        <DropdownMenuItem onSelect={onClear}>
+          <EraserIcon />
           Clear
         </DropdownMenuItem>
       </DropdownMenuContent>

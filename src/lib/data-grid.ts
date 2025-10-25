@@ -1,4 +1,17 @@
-import type { RowHeightValue } from "@/types/data-grid";
+import type { CellPosition, RowHeightValue } from "@/types/data-grid";
+
+export function parseCellKey(cellKey: string): Required<CellPosition> {
+  const parts = cellKey.split(":");
+  const rowIndexStr = parts[0];
+  const columnId = parts[1];
+  if (rowIndexStr && columnId) {
+    const rowIndex = parseInt(rowIndexStr, 10);
+    if (!Number.isNaN(rowIndex)) {
+      return { rowIndex, columnId };
+    }
+  }
+  return { rowIndex: 0, columnId: "" };
+}
 
 export function getRowHeightValue(rowHeight: RowHeightValue): number {
   const rowHeightMap: Record<RowHeightValue, number> = {
