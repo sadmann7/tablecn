@@ -8,19 +8,19 @@ import type {
   Table,
 } from "@tanstack/react-table";
 import {
-  Baseline,
-  Calendar,
-  CheckSquare,
-  ChevronDown,
-  ChevronUp,
-  EyeOff,
-  Hash,
-  List,
-  ListChecks,
+  BaselineIcon,
+  CalendarIcon,
+  CheckSquareIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  EyeOffIcon,
+  HashIcon,
+  ListChecksIcon,
+  ListIcon,
   PinIcon,
-  PinOff,
-  TextInitial,
-  X,
+  PinOffIcon,
+  TextInitialIcon,
+  XIcon,
 } from "lucide-react";
 import * as React from "react";
 
@@ -40,22 +40,25 @@ import {
 import { cn } from "@/lib/utils";
 import type { Cell } from "@/types/data-grid";
 
-function getColumnVariant(variant: Cell["variant"]) {
+function getColumnVariant(variant?: Cell["variant"]): {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+} | null {
   switch (variant) {
     case "short-text":
-      return { icon: Baseline, label: "Short text" };
+      return { icon: BaselineIcon, label: "Short text" };
     case "long-text":
-      return { icon: TextInitial, label: "Long text" };
+      return { icon: TextInitialIcon, label: "Long text" };
     case "number":
-      return { icon: Hash, label: "Number" };
+      return { icon: HashIcon, label: "Number" };
     case "select":
-      return { icon: List, label: "Select" };
+      return { icon: ListIcon, label: "Select" };
     case "multi-select":
-      return { icon: ListChecks, label: "Multi-select" };
+      return { icon: ListChecksIcon, label: "Multi-select" };
     case "checkbox":
-      return { icon: CheckSquare, label: "Checkbox" };
+      return { icon: CheckSquareIcon, label: "Checkbox" };
     case "date":
-      return { icon: Calendar, label: "Date" };
+      return { icon: CalendarIcon, label: "Date" };
     default:
       return null;
   }
@@ -67,37 +70,7 @@ interface DataGridColumnHeaderProps<TData, TValue>
   table: Table<TData>;
 }
 
-export const DataGridColumnHeader = React.memo(
-  DataGridColumnHeaderImpl,
-  (prev, next) => {
-    const prevColumn = prev.header.column;
-    const nextColumn = next.header.column;
-
-    if (prevColumn.id !== nextColumn.id) return false;
-
-    if (
-      prevColumn.getIsSorted() !== nextColumn.getIsSorted() ||
-      prevColumn.getIsPinned() !== nextColumn.getIsPinned() ||
-      prevColumn.getIsVisible() !== nextColumn.getIsVisible() ||
-      prevColumn.getSize() !== nextColumn.getSize()
-    ) {
-      return false;
-    }
-
-    const prevResizing =
-      prev.table.getState().columnSizingInfo.isResizingColumn;
-    const nextResizing =
-      next.table.getState().columnSizingInfo.isResizingColumn;
-
-    if (prevResizing !== nextResizing) return false;
-
-    if (prev.className !== next.className) return false;
-
-    return true;
-  },
-) as typeof DataGridColumnHeaderImpl;
-
-function DataGridColumnHeaderImpl<TData, TValue>({
+export function DataGridColumnHeader<TData, TValue>({
   header,
   table,
   className,
@@ -115,7 +88,7 @@ function DataGridColumnHeaderImpl<TData, TValue>({
     table.getState().columnSizingInfo.isResizingColumn;
 
   const cellVariant = column.columnDef.meta?.cell;
-  const columnVariant = getColumnVariant(cellVariant?.variant ?? "short-text");
+  const columnVariant = getColumnVariant(cellVariant?.variant);
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
@@ -200,7 +173,7 @@ function DataGridColumnHeaderImpl<TData, TValue>({
             )}
             <span className="truncate">{title}</span>
           </div>
-          <ChevronDown className="shrink-0 text-muted-foreground" />
+          <ChevronDownIcon className="shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={0} className="w-60">
           {column.getCanSort() && (
@@ -210,7 +183,7 @@ function DataGridColumnHeaderImpl<TData, TValue>({
                 checked={column.getIsSorted() === "asc"}
                 onClick={() => onSortingChange("asc")}
               >
-                <ChevronUp />
+                <ChevronUpIcon />
                 Sort asc
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
@@ -218,12 +191,12 @@ function DataGridColumnHeaderImpl<TData, TValue>({
                 checked={column.getIsSorted() === "desc"}
                 onClick={() => onSortingChange("desc")}
               >
-                <ChevronDown />
+                <ChevronDownIcon />
                 Sort desc
               </DropdownMenuCheckboxItem>
               {column.getIsSorted() && (
                 <DropdownMenuItem onClick={onSortRemove}>
-                  <X />
+                  <XIcon />
                   Remove sort
                 </DropdownMenuItem>
               )}
@@ -238,7 +211,7 @@ function DataGridColumnHeaderImpl<TData, TValue>({
                   className="[&_svg]:text-muted-foreground"
                   onClick={onUnpin}
                 >
-                  <PinOff />
+                  <PinOffIcon />
                   Unpin from left
                 </DropdownMenuItem>
               ) : (
@@ -255,7 +228,7 @@ function DataGridColumnHeaderImpl<TData, TValue>({
                   className="[&_svg]:text-muted-foreground"
                   onClick={onUnpin}
                 >
-                  <PinOff />
+                  <PinOffIcon />
                   Unpin from right
                 </DropdownMenuItem>
               ) : (
@@ -277,7 +250,7 @@ function DataGridColumnHeaderImpl<TData, TValue>({
                 checked={!column.getIsVisible()}
                 onClick={() => column.toggleVisibility(false)}
               >
-                <EyeOff />
+                <EyeOffIcon />
                 Hide column
               </DropdownMenuCheckboxItem>
             </>

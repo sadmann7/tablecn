@@ -2,10 +2,10 @@
 
 import type { Table } from "@tanstack/react-table";
 import {
-  AlignVerticalSpaceAround,
-  ChevronsDownUp,
-  Equal,
-  Minus,
+  AlignVerticalSpaceAroundIcon,
+  ChevronsDownUpIcon,
+  EqualIcon,
+  MinusIcon,
 } from "lucide-react";
 import type * as React from "react";
 import {
@@ -20,22 +20,22 @@ const rowHeights = [
   {
     label: "Short",
     value: "short" as const,
-    icon: Minus,
+    icon: MinusIcon,
   },
   {
     label: "Medium",
     value: "medium" as const,
-    icon: Equal,
+    icon: EqualIcon,
   },
   {
     label: "Tall",
     value: "tall" as const,
-    icon: AlignVerticalSpaceAround,
+    icon: AlignVerticalSpaceAroundIcon,
   },
   {
     label: "Extra Tall",
     value: "extra-tall" as const,
-    icon: ChevronsDownUp,
+    icon: ChevronsDownUpIcon,
   },
 ] as const;
 
