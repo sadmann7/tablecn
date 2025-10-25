@@ -7,7 +7,7 @@ import {
   Equal,
   Minus,
 } from "lucide-react";
-import * as React from "react";
+import type * as React from "react";
 import {
   Select,
   SelectContent,
@@ -15,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { RowHeightValue } from "@/types/data-grid";
 
 const rowHeights = [
   {
@@ -45,19 +44,7 @@ interface DataGridRowHeightSelectProps<TData>
   table: Table<TData>;
 }
 
-export const DataGridRowHeightSelect = React.memo(
-  DataGridRowHeightSelectImpl,
-  (prev, next) => {
-    const prevRowHeight = prev.table.options.meta?.rowHeight;
-    const nextRowHeight = next.table.options.meta?.rowHeight;
-
-    if (prevRowHeight !== nextRowHeight) return false;
-
-    return true;
-  },
-) as typeof DataGridRowHeightSelectImpl;
-
-function DataGridRowHeightSelectImpl<TData>({
+export function DataGridRowHeightSelect<TData>({
   table,
   ...props
 }: DataGridRowHeightSelectProps<TData>) {

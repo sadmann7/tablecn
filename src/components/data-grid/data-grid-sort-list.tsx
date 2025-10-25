@@ -48,37 +48,7 @@ interface DataGridSortListProps<TData>
   table: Table<TData>;
 }
 
-export const DataGridSortList = React.memo(
-  DataGridSortListImpl,
-  (prev, next) => {
-    const prevSorting = prev.table.getState().sorting;
-    const nextSorting = next.table.getState().sorting;
-
-    if (prevSorting.length !== nextSorting.length) return false;
-
-    for (let i = 0; i < prevSorting.length; i++) {
-      const prevSort = prevSorting[i];
-      const nextSort = nextSorting[i];
-      if (
-        !prevSort ||
-        !nextSort ||
-        prevSort.id !== nextSort.id ||
-        prevSort.desc !== nextSort.desc
-      ) {
-        return false;
-      }
-    }
-
-    const prevColumns = prev.table.getAllColumns();
-    const nextColumns = next.table.getAllColumns();
-
-    if (prevColumns.length !== nextColumns.length) return false;
-
-    return true;
-  },
-) as typeof DataGridSortListImpl;
-
-function DataGridSortListImpl<TData>({
+export function DataGridSortList<TData>({
   table,
   ...props
 }: DataGridSortListProps<TData>) {

@@ -24,32 +24,7 @@ interface DataGridViewOptionsProps<TData>
   table: Table<TData>;
 }
 
-export const DataGridViewOptions = React.memo(
-  DataGridViewOptionsImpl,
-  (prev, next) => {
-    const prevColumns = prev.table.getAllColumns();
-    const nextColumns = next.table.getAllColumns();
-
-    if (prevColumns.length !== nextColumns.length) return false;
-
-    for (let i = 0; i < prevColumns.length; i++) {
-      const prevCol = prevColumns[i];
-      const nextCol = nextColumns[i];
-      if (
-        !prevCol ||
-        !nextCol ||
-        prevCol.getIsVisible() !== nextCol.getIsVisible() ||
-        prevCol.id !== nextCol.id
-      ) {
-        return false;
-      }
-    }
-
-    return true;
-  },
-) as typeof DataGridViewOptionsImpl;
-
-function DataGridViewOptionsImpl<TData>({
+export function DataGridViewOptions<TData>({
   table,
   ...props
 }: DataGridViewOptionsProps<TData>) {
