@@ -232,7 +232,16 @@ function DataGridColumnHeaderImpl<TData, TValue>({
           {column.getCanPin() && (
             <>
               {column.getCanSort() && <DropdownMenuSeparator />}
-              {!isPinnedLeft && (
+
+              {isPinnedLeft ? (
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onUnpin}
+                >
+                  <PinOff />
+                  Unpin from left
+                </DropdownMenuItem>
+              ) : (
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
                   onClick={onLeftPin}
@@ -241,31 +250,21 @@ function DataGridColumnHeaderImpl<TData, TValue>({
                   Pin to left
                 </DropdownMenuItem>
               )}
-              {!isPinnedRight && (
-                <DropdownMenuItem
-                  className="[&_svg]:text-muted-foreground"
-                  onClick={onRightPin}
-                >
-                  <PinIcon />
-                  Pin to right
-                </DropdownMenuItem>
-              )}
-              {isPinnedLeft && (
-                <DropdownMenuItem
-                  className="[&_svg]:text-muted-foreground"
-                  onClick={onUnpin}
-                >
-                  <PinOff />
-                  Unpin from left
-                </DropdownMenuItem>
-              )}
-              {isPinnedRight && (
+              {isPinnedRight ? (
                 <DropdownMenuItem
                   className="[&_svg]:text-muted-foreground"
                   onClick={onUnpin}
                 >
                   <PinOff />
                   Unpin from right
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  className="[&_svg]:text-muted-foreground"
+                  onClick={onRightPin}
+                >
+                  <PinIcon />
+                  Pin to right
                 </DropdownMenuItem>
               )}
             </>
@@ -309,9 +308,7 @@ const DataGridColumnResizer = React.memo(
 
     return true;
   },
-) as <TData, TValue>(
-  props: DataGridColumnHeaderProps<TData, TValue>,
-) => React.ReactElement;
+) as typeof DataGridColumnResizerImpl;
 
 function DataGridColumnResizerImpl<TData, TValue>({
   header,
