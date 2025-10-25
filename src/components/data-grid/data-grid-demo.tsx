@@ -4,7 +4,7 @@ import { faker } from "@faker-js/faker";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
-import { DataGridRowHeightSelect } from "@/components/data-grid/data-grid-row-height-select";
+import { DataGridRowHeightOptions } from "@/components/data-grid/data-grid-row-height-options";
 import { DataGridSortList } from "@/components/data-grid/data-grid-sort-list";
 import { DataGridViewOptions } from "@/components/data-grid/data-grid-view-options";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -322,7 +322,7 @@ export function DataGridDemo() {
         className="flex items-center gap-2 self-end"
       >
         <DataGridSortList table={table} align="end" />
-        <DataGridRowHeightSelect table={table} align="end" />
+        <DataGridRowHeightOptions table={table} align="end" />
         <DataGridViewOptions table={table} align="end" />
       </div>
       <DataGrid

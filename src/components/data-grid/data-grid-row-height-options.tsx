@@ -39,15 +39,15 @@ const rowHeights = [
   },
 ] as const;
 
-interface DataGridRowHeightSelectProps<TData>
+interface DataGridRowHeightOptionsProps<TData>
   extends React.ComponentProps<typeof SelectContent> {
   table: Table<TData>;
 }
 
-export function DataGridRowHeightSelect<TData>({
+export function DataGridRowHeightOptions<TData>({
   table,
   ...props
-}: DataGridRowHeightSelectProps<TData>) {
+}: DataGridRowHeightOptionsProps<TData>) {
   const rowHeight = table.options.meta?.rowHeight;
   const onRowHeightChange = table.options.meta?.onRowHeightChange;
 

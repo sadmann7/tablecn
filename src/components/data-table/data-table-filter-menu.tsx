@@ -46,6 +46,7 @@ import type { ExtendedColumnFilter, FilterOperator } from "@/types/data-table";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
+const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
 interface DataTableFilterMenuProps<TData>
@@ -193,7 +194,7 @@ export function DataTableFilterMenu<TData>({
       }
 
       if (
-        event.key.toLowerCase() === "f" &&
+        event.key.toLowerCase() === FILTER_SHORTCUT_KEY &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey
       ) {

@@ -29,7 +29,8 @@ const OVERSCAN = 3;
 const VIEWPORT_OFFSET = 1;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
-const SEARCH_KEY = "f";
+const SEARCH_SHORTCUT_KEY = "f";
+const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"] as const;
 
 function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   const ref = React.useRef<T | null>(null);
@@ -41,6 +42,10 @@ function useLazyRef<T>(fn: () => T): React.RefObject<T> {
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
+function getCellKey(rowIndex: number, columnId: string) {
+  return `${rowIndex}:${columnId}`;
+}
 
 interface DataGridState {
   sorting: SortingState;
@@ -144,7 +149,6 @@ export function useDataGrid<TData>({
   const store = React.useMemo<DataGridStore>(() => {
     let isBatching = false;
     let pendingNotification = false;
-    let scheduledNotification: Promise<void> | null = null;
 
     return {
       subscribe: (callback) => {
@@ -154,21 +158,18 @@ export function useDataGrid<TData>({
       getState: () => stateRef.current,
       setState: (key, value) => {
         if (Object.is(stateRef.current[key], value)) return;
-        stateRef.current = { ...stateRef.current, [key]: value };
+        stateRef.current[key] = value;
 
         if (isBatching) {
           pendingNotification = true;
         } else {
-          pendingNotification = true;
-          if (scheduledNotification) return;
-
-          scheduledNotification = Promise.resolve().then(() => {
-            scheduledNotification = null;
-            if (pendingNotification) {
+          if (!pendingNotification) {
+            pendingNotification = true;
+            queueMicrotask(() => {
               pendingNotification = false;
               store.notify();
-            }
-          });
+            });
+          }
         }
       },
       notify: () => {
@@ -183,13 +184,14 @@ export function useDataGrid<TData>({
         }
 
         isBatching = true;
+        const wasPending = pendingNotification;
         pendingNotification = false;
 
         try {
           fn();
         } finally {
           isBatching = false;
-          if (pendingNotification) {
+          if (pendingNotification || wasPending) {
             pendingNotification = false;
             store.notify();
           }
@@ -213,7 +215,7 @@ export function useDataGrid<TData>({
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
-  const getColumnIds = React.useCallback(() => {
+  const columnIds = React.useMemo(() => {
     return columns
       .map((c) => {
         if (c.id) return c.id;
@@ -223,9 +225,9 @@ export function useDataGrid<TData>({
       .filter((id): id is string => Boolean(id));
   }, [columns]);
 
-  const getNavigableColumnIds = React.useCallback(() => {
-    return getColumnIds().filter((c) => c !== "select");
-  }, [getColumnIds]);
+  const navigableColumnIds = React.useMemo(() => {
+    return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
+  }, [columnIds]);
 
   const onDataUpdate = React.useCallback(
     (updates: UpdateCell | Array<UpdateCell>) => {
@@ -282,16 +284,11 @@ export function useDataGrid<TData>({
     [data, onDataChange],
   );
 
-  const getCellKey = React.useCallback(
-    (rowIndex: number, columnId: string) => `${rowIndex}:${columnId}`,
-    [],
-  );
-
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
       return selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
     },
-    [selectionState.selectedCells, getCellKey],
+    [selectionState.selectedCells],
   );
 
   const clearSelection = React.useCallback(() => {
@@ -306,7 +303,6 @@ export function useDataGrid<TData>({
   }, [store]);
 
   const selectAll = React.useCallback(() => {
-    const columnIds = getColumnIds();
     const allCells = new Set<string>();
     const currentTable = tableRef.current;
     const rows = currentTable?.getRowModel().rows ?? [];
@@ -332,7 +328,7 @@ export function useDataGrid<TData>({
           : null,
       isSelecting: false,
     });
-  }, [getCellKey, getColumnIds, data.length, store]);
+  }, [columnIds, data.length, store]);
 
   const selectColumn = React.useCallback(
     (columnId: string) => {
@@ -357,12 +353,11 @@ export function useDataGrid<TData>({
         isSelecting: false,
       });
     },
-    [getCellKey, data.length, store],
+    [data.length, store],
   );
 
   const selectRange = React.useCallback(
     (start: CellPosition, end: CellPosition, isSelecting = false) => {
-      const columnIds = getColumnIds();
       const startColIndex = columnIds.indexOf(start.columnId);
       const endColIndex = columnIds.indexOf(end.columnId);
 
@@ -377,8 +372,7 @@ export function useDataGrid<TData>({
         for (let colIndex = minCol; colIndex <= maxCol; colIndex++) {
           const columnId = columnIds[colIndex];
           if (columnId) {
-            const cellKey = getCellKey(rowIndex, columnId);
-            selectedCells.add(cellKey);
+            selectedCells.add(getCellKey(rowIndex, columnId));
           }
         }
       }
@@ -389,7 +383,7 @@ export function useDataGrid<TData>({
         isSelecting,
       });
     },
-    [getColumnIds, getCellKey, store],
+    [columnIds, store],
   );
 
   const focusCell = React.useCallback(
@@ -419,8 +413,7 @@ export function useDataGrid<TData>({
       if (!currentState.focusedCell) return;
 
       const { rowIndex, columnId } = currentState.focusedCell;
-      const columnIds = getNavigableColumnIds();
-      const currentColIndex = columnIds.indexOf(columnId);
+      const currentColIndex = navigableColumnIds.indexOf(columnId);
       const rowVirtualizer = rowVirtualizerRef.current;
       const currentTable = tableRef.current;
       const rows = currentTable?.getRowModel().rows ?? [];
@@ -438,36 +431,38 @@ export function useDataGrid<TData>({
           break;
         case "left":
           if (currentColIndex > 0) {
-            const prevColumnId = columnIds[currentColIndex - 1];
+            const prevColumnId = navigableColumnIds[currentColIndex - 1];
             if (prevColumnId) newColumnId = prevColumnId;
           }
           break;
         case "right":
-          if (currentColIndex < columnIds.length - 1) {
-            const nextColumnId = columnIds[currentColIndex + 1];
+          if (currentColIndex < navigableColumnIds.length - 1) {
+            const nextColumnId = navigableColumnIds[currentColIndex + 1];
             if (nextColumnId) newColumnId = nextColumnId;
           }
           break;
         case "home":
-          if (columnIds.length > 0) {
-            newColumnId = columnIds[0] ?? columnId;
+          if (navigableColumnIds.length > 0) {
+            newColumnId = navigableColumnIds[0] ?? columnId;
           }
           break;
         case "end":
-          if (columnIds.length > 0) {
-            newColumnId = columnIds[columnIds.length - 1] ?? columnId;
+          if (navigableColumnIds.length > 0) {
+            newColumnId =
+              navigableColumnIds[navigableColumnIds.length - 1] ?? columnId;
           }
           break;
         case "ctrl+home":
           newRowIndex = 0;
-          if (columnIds.length > 0) {
-            newColumnId = columnIds[0] ?? columnId;
+          if (navigableColumnIds.length > 0) {
+            newColumnId = navigableColumnIds[0] ?? columnId;
           }
           break;
         case "ctrl+end":
           newRowIndex = Math.max(0, rowCount - 1);
-          if (columnIds.length > 0) {
-            newColumnId = columnIds[columnIds.length - 1] ?? columnId;
+          if (navigableColumnIds.length > 0) {
+            newColumnId =
+              navigableColumnIds[navigableColumnIds.length - 1] ?? columnId;
           }
           break;
         case "pageup":
@@ -585,7 +580,7 @@ export function useDataGrid<TData>({
         focusCell(newRowIndex, newColumnId);
       }
     },
-    [store, getNavigableColumnIds, focusCell, data.length, rowHeightValue],
+    [store, navigableColumnIds, focusCell, data.length, rowHeightValue],
   );
 
   const onCellEditingStart = React.useCallback(
@@ -678,7 +673,6 @@ export function useDataGrid<TData>({
       const matches: CellPosition[] = [];
       const currentTable = tableRef.current;
       const rows = currentTable?.getRowModel().rows ?? [];
-      const columnIds = getColumnIds();
 
       const lowerQuery = query.toLowerCase();
 
@@ -714,7 +708,7 @@ export function useDataGrid<TData>({
         });
       }
     },
-    [getColumnIds, store],
+    [columnIds, store],
   );
 
   const onSearchQueryChange = React.useCallback(
@@ -878,14 +872,7 @@ export function useDataGrid<TData>({
         focusCell(rowIndex, columnId);
       }
     },
-    [
-      store,
-      focusCell,
-      onCellEditingStart,
-      getCellKey,
-      selectRange,
-      clearSelection,
-    ],
+    [store, focusCell, onCellEditingStart, selectRange, clearSelection],
   );
 
   const onCellDoubleClick = React.useCallback(
@@ -988,7 +975,7 @@ export function useDataGrid<TData>({
         y: event.clientY,
       });
     },
-    [store, getCellKey],
+    [store],
   );
 
   const onContextMenuOpenChange = React.useCallback(
@@ -1012,7 +999,7 @@ export function useDataGrid<TData>({
       const isCtrlPressed = ctrlKey || metaKey;
 
       // Handle Cmd+F / Ctrl+F to open search (highest priority, works even when editing)
-      if (enableSearch && isCtrlPressed && key === SEARCH_KEY) {
+      if (enableSearch && isCtrlPressed && key === SEARCH_SHORTCUT_KEY) {
         event.preventDefault();
         onSearchOpenChange(true);
         return;
@@ -1129,8 +1116,7 @@ export function useDataGrid<TData>({
 
         // Tab navigation should not trigger selection, even with Shift
         if (shiftKey && key !== "Tab" && currentState.focusedCell) {
-          const columnIds = getNavigableColumnIds();
-          const currentColIndex = columnIds.indexOf(
+          const currentColIndex = navigableColumnIds.indexOf(
             currentState.focusedCell.columnId,
           );
           let newRowIndex = currentState.focusedCell.rowIndex;
@@ -1149,13 +1135,13 @@ export function useDataGrid<TData>({
               break;
             case "left":
               if (currentColIndex > 0) {
-                const prevColumnId = columnIds[currentColIndex - 1];
+                const prevColumnId = navigableColumnIds[currentColIndex - 1];
                 if (prevColumnId) newColumnId = prevColumnId;
               }
               break;
             case "right":
-              if (currentColIndex < columnIds.length - 1) {
-                const nextColumnId = columnIds[currentColIndex + 1];
+              if (currentColIndex < navigableColumnIds.length - 1) {
+                const nextColumnId = navigableColumnIds[currentColIndex + 1];
                 if (nextColumnId) newColumnId = nextColumnId;
               }
               break;
@@ -1184,7 +1170,7 @@ export function useDataGrid<TData>({
       selectAll,
       onDataUpdate,
       clearSelection,
-      getNavigableColumnIds,
+      navigableColumnIds,
       data.length,
       selectRange,
       focusCell,
@@ -1217,7 +1203,6 @@ export function useDataGrid<TData>({
         (key) => newRowSelection[key],
       );
 
-      const columnIds = getColumnIds();
       const selectedCells = new Set<string>();
       const rows = tableRef.current?.getRowModel().rows ?? [];
 
@@ -1241,7 +1226,7 @@ export function useDataGrid<TData>({
         store.setState("editingCell", null);
       });
     },
-    [store, getColumnIds, getCellKey],
+    [store, columnIds],
   );
 
   const onRowSelect = React.useCallback(
@@ -1391,12 +1376,19 @@ export function useDataGrid<TData>({
         store.setState("isScrolling", virtualizerIsScrolling);
       }
 
+      // Batch DOM updates in a single animation frame
+      const virtualItems = instance.getVirtualItems();
+      if (virtualItems.length === 0) return;
+
       requestAnimationFrame(() => {
-        instance.getVirtualItems().forEach((virtualRow) => {
+        for (let i = 0; i < virtualItems.length; i++) {
+          const virtualRow = virtualItems[i];
+          if (!virtualRow) continue;
           const rowRef = rowMapRef.current.get(virtualRow.index);
-          if (!rowRef) return;
-          rowRef.style.transform = `translateY(${virtualRow.start}px)`;
-        });
+          if (rowRef) {
+            rowRef.style.transform = `translateY(${virtualRow.start}px)`;
+          }
+        }
       });
     },
   });
@@ -1414,8 +1406,7 @@ export function useDataGrid<TData>({
         align: "center",
       });
 
-      const columnIds = getNavigableColumnIds();
-      const targetColumnId = columnId ?? columnIds[0];
+      const targetColumnId = columnId ?? navigableColumnIds[0];
 
       if (!targetColumnId) return;
 
@@ -1433,7 +1424,7 @@ export function useDataGrid<TData>({
         });
       });
     },
-    [rowVirtualizer, getNavigableColumnIds, store],
+    [rowVirtualizer, navigableColumnIds, store],
   );
 
   const searchState = React.useMemo<SearchState | undefined>(() => {
@@ -1484,7 +1475,7 @@ export function useDataGrid<TData>({
       const { key, ctrlKey, metaKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
 
-      if (enableSearch && isCtrlPressed && key === SEARCH_KEY) {
+      if (enableSearch && isCtrlPressed && key === SEARCH_SHORTCUT_KEY) {
         const isInInput =
           target.tagName === "INPUT" || target.tagName === "TEXTAREA";
         const isInDataGrid = dataGridElement.contains(target);
@@ -1535,8 +1526,7 @@ export function useDataGrid<TData>({
       columns.length > 0 &&
       !currentState.focusedCell
     ) {
-      const columnIds = getNavigableColumnIds();
-      if (columnIds.length > 0) {
+      if (navigableColumnIds.length > 0) {
         const rafId = requestAnimationFrame(() => {
           if (typeof autoFocus === "object") {
             const { rowIndex, columnId } = autoFocus;
@@ -1546,7 +1536,7 @@ export function useDataGrid<TData>({
             return;
           }
 
-          const firstColumnId = columnIds[0];
+          const firstColumnId = navigableColumnIds[0];
           if (firstColumnId) {
             focusCell(0, firstColumnId);
           }
@@ -1559,7 +1549,7 @@ export function useDataGrid<TData>({
     data.length,
     columns.length,
     store,
-    getNavigableColumnIds,
+    navigableColumnIds,
     focusCell,
   ]);
 

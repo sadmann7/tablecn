@@ -41,6 +41,7 @@ import {
 import { dataTableConfig } from "@/config/data-table";
 import { cn } from "@/lib/utils";
 
+const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 
 interface DataTableSortListProps<TData>
@@ -131,7 +132,7 @@ export function DataTableSortList<TData>({
       }
 
       if (
-        event.key.toLowerCase() === "s" &&
+        event.key.toLowerCase() === SORT_SHORTCUT_KEY &&
         (event.ctrlKey || event.metaKey) &&
         event.shiftKey
       ) {
