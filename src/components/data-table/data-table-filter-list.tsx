@@ -70,7 +70,6 @@ import type {
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
-const OPEN_MENU_SHORTCUT = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
 interface DataTableFilterListProps<TData>
@@ -187,28 +186,18 @@ export function DataTableFilterList<TData>({
       }
 
       if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.shiftKey
+        event.key.toLowerCase() === "f" &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey
       ) {
         event.preventDefault();
-        setOpen(true);
-      }
-
-      if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        event.shiftKey &&
-        filters.length > 0
-      ) {
-        event.preventDefault();
-        onFilterRemove(filters[filters.length - 1]?.filterId ?? "");
+        setOpen((prev) => !prev);
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [filters, onFilterRemove]);
+  }, []);
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {

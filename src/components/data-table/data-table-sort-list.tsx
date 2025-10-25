@@ -41,7 +41,6 @@ import {
 import { dataTableConfig } from "@/config/data-table";
 import { cn } from "@/lib/utils";
 
-const OPEN_MENU_SHORTCUT = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 
 interface DataTableSortListProps<TData>
@@ -132,28 +131,18 @@ export function DataTableSortList<TData>({
       }
 
       if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.shiftKey
+        event.key.toLowerCase() === "s" &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey
       ) {
         event.preventDefault();
-        setOpen(true);
-      }
-
-      if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        event.shiftKey &&
-        sorting.length > 0
-      ) {
-        event.preventDefault();
-        onSortingReset();
+        setOpen((prev) => !prev);
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [sorting.length, onSortingReset]);
+  }, []);
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
