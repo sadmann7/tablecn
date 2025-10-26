@@ -1,5 +1,9 @@
 import type { CellPosition, RowHeightValue } from "@/types/data-grid";
 
+export function getCellKey(rowIndex: number, columnId: string) {
+  return `${rowIndex}:${columnId}`;
+}
+
 export function parseCellKey(cellKey: string): Required<CellPosition> {
   const parts = cellKey.split(":");
   const rowIndexStr = parts[0];

@@ -13,7 +13,7 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
-import { getRowHeightValue, parseCellKey } from "@/lib/data-grid";
+import { getCellKey, getRowHeightValue, parseCellKey } from "@/lib/data-grid";
 import type {
   CellPosition,
   ContextMenuState,
@@ -42,10 +42,6 @@ function useLazyRef<T>(fn: () => T): React.RefObject<T> {
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
-function getCellKey(rowIndex: number, columnId: string) {
-  return `${rowIndex}:${columnId}`;
-}
 
 interface DataGridState {
   sorting: SortingState;
@@ -109,9 +105,7 @@ export function useDataGrid<TData>({
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
-  const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>> | null>(
-    null,
-  );
+  const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>>>(null);
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
@@ -1639,7 +1633,7 @@ export function useDataGrid<TData>({
     table,
     rowVirtualizer,
     searchState,
-    scrollToRow,
     columnSizeVars,
+    scrollToRow,
   };
 }
