@@ -100,7 +100,7 @@ export function getTasksTableColumns({
         return (
           <div className="flex items-center gap-2">
             {label && <Badge variant="outline">{label}</Badge>}
-            <span className="max-w-[31.25rem] truncate font-medium">
+            <span className="max-w-125 truncate font-medium">
               {row.getValue("title")}
             </span>
           </div>

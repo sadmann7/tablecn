@@ -8,9 +8,9 @@ import type { NextConfig } from "next";
 import "./src/env.js";
 
 const nextConfig: NextConfig = {
-  // Already doing linting and typechecking as separate tasks in CI
-  eslint: { ignoreDuringBuilds: true },
+  // Already doing typechecking as separate task in CI
   typescript: { ignoreBuildErrors: true },
+  cacheComponents: true,
 };
 
 export default nextConfig;
