@@ -32,6 +32,9 @@ const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"] as const;
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+
 function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   const ref = React.useRef<T | null>(null);
   if (ref.current === null) {
@@ -40,8 +43,15 @@ function useLazyRef<T>(fn: () => T): React.RefObject<T> {
   return ref as React.RefObject<T>;
 }
 
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
+function useAsRef<T>(data: T) {
+  const ref = React.useRef<T>(data);
+
+  useIsomorphicLayoutEffect(() => {
+    ref.current = data;
+  });
+
+  return ref;
+}
 
 interface DataGridState {
   sorting: SortingState;
@@ -112,6 +122,7 @@ export function useDataGrid<TData>({
   const headerRef = React.useRef<HTMLDivElement>(null);
   const footerRef = React.useRef<HTMLDivElement>(null);
 
+  const dataGridPropsRef = useAsRef(dataGridProps);
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
   const stateRef = useLazyRef<DataGridState>(() => {
@@ -1284,25 +1295,61 @@ export function useDataGrid<TData>({
     [],
   );
 
-  const table = useReactTable({
-    ...dataGridProps,
-    data,
-    columns,
-    defaultColumn,
-    initialState,
-    state: {
-      ...dataGridProps.state,
+  const tableOptions = React.useMemo<TableOptions<TData>>(
+    () => ({
+      ...dataGridPropsRef.current,
+      data,
+      columns,
+      defaultColumn,
+      initialState,
+      state: {
+        ...dataGridPropsRef.current.state,
+        sorting,
+        rowSelection,
+      },
+      onRowSelectionChange,
+      onSortingChange,
+      columnResizeMode: "onChange",
+      getCoreRowModel: getCoreRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+      meta: {
+        ...dataGridPropsRef.current.meta,
+        dataGridRef,
+        focusedCell,
+        editingCell,
+        selectionState,
+        searchOpen,
+        isScrolling,
+        getIsCellSelected,
+        getIsSearchMatch,
+        getIsActiveSearchMatch,
+        onDataUpdate,
+        onColumnClick,
+        onCellClick,
+        onCellDoubleClick,
+        onCellMouseDown,
+        onCellMouseEnter,
+        onCellMouseUp,
+        onCellContextMenu,
+        onCellEditingStart,
+        onCellEditingStop,
+        contextMenu,
+        onContextMenuOpenChange,
+        rowHeight,
+        onRowHeightChange,
+        onRowSelect,
+      },
+    }),
+    [
+      dataGridPropsRef,
+      data,
+      columns,
+      defaultColumn,
+      initialState,
       sorting,
       rowSelection,
-    },
-    onRowSelectionChange,
-    onSortingChange,
-    columnResizeMode: "onChange",
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    meta: {
-      ...dataGridProps.meta,
-      dataGridRef,
+      onRowSelectionChange,
+      onSortingChange,
       focusedCell,
       editingCell,
       selectionState,
@@ -1326,8 +1373,10 @@ export function useDataGrid<TData>({
       rowHeight,
       onRowHeightChange,
       onRowSelect,
-    },
-  });
+    ],
+  );
+
+  const table = useReactTable(tableOptions);
 
   if (!tableRef.current) {
     tableRef.current = table;
