@@ -336,7 +336,6 @@
         "popover",
         "select",
         "separator",
-        "sortable",
         "textarea",
         "tooltip"
       ],
@@ -388,24 +387,9 @@
           "target": "src/components/data-grid/data-grid-row.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-row-height-menu.tsx",
-          "type": "registry:component",
-          "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
-        },
-        {
           "path": "src/components/data-grid/data-grid-search.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-search.tsx"
-        },
-        {
-          "path": "src/components/data-grid/data-grid-sort-menu.tsx",
-          "type": "registry:component",
-          "target": "src/components/data-grid/data-grid-sort-menu.tsx"
-        },
-        {
-          "path": "src/components/data-grid/data-grid-view-menu.tsx",
-          "type": "registry:component",
-          "target": "src/components/data-grid/data-grid-view-menu.tsx"
         },
         {
           "path": "src/hooks/use-callback-ref.ts",
@@ -431,6 +415,66 @@
           "path": "src/types/data-grid.ts",
           "type": "registry:file",
           "target": "src/types/data-grid.ts"
+        }
+      ]
+    },
+    {
+      "name": "data-grid-sort-menu",
+      "type": "registry:component",
+      "title": "Data Grid Sort Menu",
+      "description": "A sort menu component for the data grid with drag-and-drop reordering",
+      "registryDependencies": [
+        "badge",
+        "button",
+        "command",
+        "popover",
+        "select"
+      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid-sort-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-sort-menu.tsx"
+        },
+        {
+          "path": "src/components/ui/sortable.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/sortable.tsx"
+        },
+        {
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "data-grid-row-height-menu",
+      "type": "registry:component",
+      "title": "Data Grid Row Height Menu",
+      "description": "A row height menu component for the data grid to adjust row sizes",
+      "registryDependencies": ["select"],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid-row-height-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-grid-view-menu",
+      "type": "registry:component",
+      "title": "Data Grid View Menu",
+      "description": "A view menu component for the data grid to toggle column visibility",
+      "registryDependencies": ["button", "command", "popover"],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid-view-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-view-menu.tsx"
         }
       ]
     }

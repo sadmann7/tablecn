@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "data-grid-view-menu",
+  "type": "registry:component",
+  "title": "Data Grid View Menu",
+  "description": "A view menu component for the data grid to toggle column visibility",
+  "dependencies": [
+    "@tanstack/react-table",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "button",
+    "command",
+    "popover"
+  ],
+  "files": [
+    {
+      "path": "src/components/data-grid/data-grid-view-menu.tsx",
+      "content": "\"use client\";\r\n\r\nimport type { Table } from \"@tanstack/react-table\";\r\nimport { Check, Settings2 } from \"lucide-react\";\r\nimport * as React from \"react\";\r\nimport { Button } from \"@/components/ui/button\";\r\nimport {\r\n  Command,\r\n  CommandEmpty,\r\n  CommandGroup,\r\n  CommandInput,\r\n  CommandItem,\r\n  CommandList,\r\n} from \"@/components/ui/command\";\r\nimport {\r\n  Popover,\r\n  PopoverContent,\r\n  PopoverTrigger,\r\n} from \"@/components/ui/popover\";\r\nimport { cn } from \"@/lib/utils\";\r\n\r\ninterface DataGridViewMenuProps<TData>\r\n  extends React.ComponentProps<typeof PopoverContent> {\r\n  table: Table<TData>;\r\n}\r\n\r\nexport function DataGridViewMenu<TData>({\r\n  table,\r\n  ...props\r\n}: DataGridViewMenuProps<TData>) {\r\n  const columns = React.useMemo(\r\n    () =>\r\n      table\r\n        .getAllColumns()\r\n        .filter(\r\n          (column) =>\r\n            typeof column.accessorFn !== \"undefined\" && column.getCanHide(),\r\n        ),\r\n    [table],\r\n  );\r\n\r\n  return (\r\n    <Popover>\r\n      <PopoverTrigger asChild>\r\n        <Button\r\n          aria-label=\"Toggle columns\"\r\n          role=\"combobox\"\r\n          variant=\"outline\"\r\n          size=\"sm\"\r\n          className=\"ml-auto hidden h-8 font-normal lg:flex\"\r\n        >\r\n          <Settings2 className=\"text-muted-foreground\" />\r\n          View\r\n        </Button>\r\n      </PopoverTrigger>\r\n      <PopoverContent className=\"w-44 p-0\" {...props}>\r\n        <Command>\r\n          <CommandInput placeholder=\"Search columns...\" />\r\n          <CommandList>\r\n            <CommandEmpty>No columns found.</CommandEmpty>\r\n            <CommandGroup>\r\n              {columns.map((column) => (\r\n                <CommandItem\r\n                  key={column.id}\r\n                  onSelect={() =>\r\n                    column.toggleVisibility(!column.getIsVisible())\r\n                  }\r\n                >\r\n                  <span className=\"truncate\">\r\n                    {column.columnDef.meta?.label ?? column.id}\r\n                  </span>\r\n                  <Check\r\n                    className={cn(\r\n                      \"ml-auto size-4 shrink-0\",\r\n                      column.getIsVisible() ? \"opacity-100\" : \"opacity-0\",\r\n                    )}\r\n                  />\r\n                </CommandItem>\r\n              ))}\r\n            </CommandGroup>\r\n          </CommandList>\r\n        </Command>\r\n      </PopoverContent>\r\n    </Popover>\r\n  );\r\n}\r\n",
+      "type": "registry:component",
+      "target": "src/components/data-grid/data-grid-view-menu.tsx"
+    }
+  ]
+}

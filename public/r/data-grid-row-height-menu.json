@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "data-grid-row-height-menu",
+  "type": "registry:component",
+  "title": "Data Grid Row Height Menu",
+  "description": "A row height menu component for the data grid to adjust row sizes",
+  "dependencies": [
+    "@tanstack/react-table",
+    "lucide-react"
+  ],
+  "registryDependencies": [
+    "select"
+  ],
+  "files": [
+    {
+      "path": "src/components/data-grid/data-grid-row-height-menu.tsx",
+      "content": "\"use client\";\r\n\r\nimport type { Table } from \"@tanstack/react-table\";\r\nimport {\r\n  AlignVerticalSpaceAroundIcon,\r\n  ChevronsDownUpIcon,\r\n  EqualIcon,\r\n  MinusIcon,\r\n} from \"lucide-react\";\r\nimport * as React from \"react\";\r\nimport {\r\n  Select,\r\n  SelectContent,\r\n  SelectItem,\r\n  SelectTrigger,\r\n  SelectValue,\r\n} from \"@/components/ui/select\";\r\n\r\nconst rowHeights = [\r\n  {\r\n    label: \"Short\",\r\n    value: \"short\" as const,\r\n    icon: MinusIcon,\r\n  },\r\n  {\r\n    label: \"Medium\",\r\n    value: \"medium\" as const,\r\n    icon: EqualIcon,\r\n  },\r\n  {\r\n    label: \"Tall\",\r\n    value: \"tall\" as const,\r\n    icon: AlignVerticalSpaceAroundIcon,\r\n  },\r\n  {\r\n    label: \"Extra Tall\",\r\n    value: \"extra-tall\" as const,\r\n    icon: ChevronsDownUpIcon,\r\n  },\r\n] as const;\r\n\r\ninterface DataGridRowHeightMenuProps<TData>\r\n  extends React.ComponentProps<typeof SelectContent> {\r\n  table: Table<TData>;\r\n}\r\n\r\nexport function DataGridRowHeightMenu<TData>({\r\n  table,\r\n  ...props\r\n}: DataGridRowHeightMenuProps<TData>) {\r\n  const rowHeight = table.options.meta?.rowHeight;\r\n  const onRowHeightChange = table.options.meta?.onRowHeightChange;\r\n\r\n  const selectedRowHeight = React.useMemo(() => {\r\n    return (\r\n      rowHeights.find((opt) => opt.value === rowHeight) ?? {\r\n        label: \"Short\",\r\n        value: \"short\" as const,\r\n        icon: MinusIcon,\r\n      }\r\n    );\r\n  }, [rowHeight]);\r\n\r\n  return (\r\n    <Select value={rowHeight} onValueChange={onRowHeightChange}>\r\n      <SelectTrigger size=\"sm\" className=\"[&_svg:nth-child(2)]:hidden\">\r\n        <SelectValue placeholder=\"Row height\">\r\n          <selectedRowHeight.icon />\r\n          {selectedRowHeight.label}\r\n        </SelectValue>\r\n      </SelectTrigger>\r\n      <SelectContent {...props}>\r\n        {rowHeights.map((option) => {\r\n          const OptionIcon = option.icon;\r\n          return (\r\n            <SelectItem key={option.value} value={option.value}>\r\n              <OptionIcon className=\"size-4\" />\r\n              {option.label}\r\n            </SelectItem>\r\n          );\r\n        })}\r\n      </SelectContent>\r\n    </Select>\r\n  );\r\n}\r\n",
+      "type": "registry:component",
+      "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
+    }
+  ]
+}
