@@ -8,9 +8,9 @@ import type { NextConfig } from "next";
 import "./src/env.js";
 
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   // Already doing typechecking as separate task in CI
   typescript: { ignoreBuildErrors: true },
-  cacheComponents: true,
 };
 
 export default nextConfig;
