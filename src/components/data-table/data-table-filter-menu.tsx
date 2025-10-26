@@ -46,7 +46,7 @@ import type { ExtendedColumnFilter, FilterOperator } from "@/types/data-table";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
-const OPEN_MENU_SHORTCUT = "f";
+const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
 interface DataTableFilterMenuProps<TData>
@@ -186,35 +186,26 @@ export function DataTableFilterMenu<TData>({
     function onKeyDown(event: KeyboardEvent) {
       if (
         event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target instanceof HTMLElement &&
+          event.target.contentEditable === "true")
       ) {
         return;
       }
 
       if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.shiftKey
+        event.key.toLowerCase() === FILTER_SHORTCUT_KEY &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey
       ) {
         event.preventDefault();
-        setOpen(true);
-      }
-
-      if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        event.shiftKey &&
-        !open &&
-        filters.length > 0
-      ) {
-        event.preventDefault();
-        onFilterRemove(filters[filters.length - 1]?.filterId ?? "");
+        setOpen((prev) => !prev);
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, filters, onFilterRemove]);
+  }, []);
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -258,11 +249,11 @@ export function DataTableFilterMenu<TData>({
             aria-label="Open filter command menu"
             variant="outline"
             size={filters.length > 0 ? "icon" : "sm"}
-            className={cn(filters.length > 0 && "size-8", "h-8")}
+            className={cn(filters.length > 0 && "size-8", "h-8 font-normal")}
             ref={triggerRef}
             onKeyDown={onTriggerKeyDown}
           >
-            <ListFilter />
+            <ListFilter className="text-muted-foreground" />
             {filters.length > 0 ? null : "Filter"}
           </Button>
         </PopoverTrigger>
@@ -566,8 +557,9 @@ function FilterValueSelector<TData>({
     case "dateRange":
       return (
         <Calendar
-          mode="single"
+          autoFocus
           captionLayout="dropdown"
+          mode="single"
           selected={value ? new Date(value) : undefined}
           onSelect={(date) => onSelect(date?.getTime().toString() ?? "")}
         />
@@ -836,8 +828,9 @@ function onFilterInputRender<TData>({
           >
             {filter.operator === "isBetween" ? (
               <Calendar
-                mode="range"
+                autoFocus
                 captionLayout="dropdown"
+                mode="range"
                 selected={
                   dateValue.length === 2
                     ? {
@@ -862,8 +855,9 @@ function onFilterInputRender<TData>({
               />
             ) : (
               <Calendar
-                mode="single"
+                autoFocus
                 captionLayout="dropdown"
+                mode="single"
                 selected={
                   dateValue[0] ? new Date(Number(dateValue[0])) : undefined
                 }

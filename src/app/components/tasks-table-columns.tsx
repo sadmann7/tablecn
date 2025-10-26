@@ -22,7 +22,6 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -33,8 +32,8 @@ import { formatDate } from "@/lib/format";
 import { getErrorMessage } from "@/lib/handle-error";
 import type { DataTableRowAction } from "@/types/data-table";
 
-import { updateTask } from "../_lib/actions";
-import { getPriorityIcon, getStatusIcon } from "../_lib/utils";
+import { updateTask } from "../lib/actions";
+import { getPriorityIcon, getStatusIcon } from "../lib/utils";
 
 interface GetTasksTableColumnsProps {
   statusCounts: Record<Task["status"], number>;
@@ -56,21 +55,21 @@ export function getTasksTableColumns({
       id: "select",
       header: ({ table }) => (
         <Checkbox
+          aria-label="Select all"
+          className="translate-y-0.5"
           checked={
             table.getIsAllPageRowsSelected() ||
             (table.getIsSomePageRowsSelected() && "indeterminate")
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-          className="translate-y-0.5"
         />
       ),
       cell: ({ row }) => (
         <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
           aria-label="Select row"
           className="translate-y-0.5"
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
         />
       ),
       enableSorting: false,
@@ -81,7 +80,7 @@ export function getTasksTableColumns({
       id: "code",
       accessorKey: "code",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Task" />
+        <DataTableColumnHeader column={column} label="Task" />
       ),
       cell: ({ row }) => <div className="w-20">{row.getValue("code")}</div>,
       enableSorting: false,
@@ -91,7 +90,7 @@ export function getTasksTableColumns({
       id: "title",
       accessorKey: "title",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Title" />
+        <DataTableColumnHeader column={column} label="Title" />
       ),
       cell: ({ row }) => {
         const label = tasks.label.enumValues.find(
@@ -119,7 +118,7 @@ export function getTasksTableColumns({
       id: "status",
       accessorKey: "status",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
+        <DataTableColumnHeader column={column} label="Status" />
       ),
       cell: ({ cell }) => {
         const status = tasks.status.enumValues.find(
@@ -154,7 +153,7 @@ export function getTasksTableColumns({
       id: "priority",
       accessorKey: "priority",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Priority" />
+        <DataTableColumnHeader column={column} label="Priority" />
       ),
       cell: ({ cell }) => {
         const priority = tasks.priority.enumValues.find(
@@ -189,7 +188,7 @@ export function getTasksTableColumns({
       id: "estimatedHours",
       accessorKey: "estimatedHours",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Est. Hours" />
+        <DataTableColumnHeader column={column} label="Est. Hours" />
       ),
       cell: ({ cell }) => {
         const estimatedHours = cell.getValue<number>();
@@ -208,7 +207,7 @@ export function getTasksTableColumns({
       id: "createdAt",
       accessorKey: "createdAt",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created At" />
+        <DataTableColumnHeader column={column} label="Created At" />
       ),
       cell: ({ cell }) => formatDate(cell.getValue<Date>()),
       meta: {
@@ -279,7 +278,6 @@ export function getTasksTableColumns({
                 onSelect={() => setRowAction({ row, variant: "delete" })}
               >
                 Delete
-                <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

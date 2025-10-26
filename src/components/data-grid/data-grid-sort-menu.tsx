@@ -38,21 +38,25 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/components/ui/sortable";
-import { dataTableConfig } from "@/config/data-table";
 import { cn } from "@/lib/utils";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 
-interface DataTableSortListProps<TData>
+const SORT_ORDERS = [
+  { label: "Asc", value: "asc" },
+  { label: "Desc", value: "desc" },
+];
+
+interface DataGridSortMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
 }
 
-export function DataTableSortList<TData>({
+export function DataGridSortMenu<TData>({
   table,
   ...props
-}: DataTableSortListProps<TData>) {
+}: DataGridSortMenuProps<TData>) {
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -366,7 +370,7 @@ function DataTableSortItem({
             id={directionListboxId}
             className="min-w-[var(--radix-select-trigger-width)] origin-[var(--radix-select-content-transform-origin)]"
           >
-            {dataTableConfig.sortOrders.map((order) => (
+            {SORT_ORDERS.map((order) => (
               <SelectItem key={order.value} value={order.value}>
                 {order.label}
               </SelectItem>

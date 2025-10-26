@@ -317,6 +317,122 @@
           "target": "src/types/data-table.ts"
         }
       ]
+    },
+    {
+      "name": "data-grid",
+      "type": "registry:component",
+      "title": "Data Grid",
+      "description": "A high-performance editable data grid component with virtualization, keyboard navigation, and cell editing",
+      "registryDependencies": [
+        "badge",
+        "button",
+        "calendar",
+        "checkbox",
+        "command",
+        "dialog",
+        "dropdown-menu",
+        "input",
+        "kbd",
+        "popover",
+        "select",
+        "separator",
+        "sortable",
+        "textarea",
+        "tooltip"
+      ],
+      "dependencies": [
+        "@tanstack/react-table",
+        "@tanstack/react-virtual",
+        "lucide-react",
+        "sonner"
+      ],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-cell.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-cell.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-cell-wrapper.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-cell-wrapper.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-cell-variants.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-cell-variants.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-column-header.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-column-header.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-context-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-context-menu.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-row.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-row.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-row-height-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-search.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-search.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-sort-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-sort-menu.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-view-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-view-menu.tsx"
+        },
+        {
+          "path": "src/hooks/use-callback-ref.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/hooks/use-data-grid.tsx",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/types/data-grid.ts",
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
+        }
+      ]
     }
   ]
 }

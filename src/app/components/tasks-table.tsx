@@ -15,7 +15,7 @@ import type {
   getTaskPriorityCounts,
   getTaskStatusCounts,
   getTasks,
-} from "../_lib/queries";
+} from "../lib/queries";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
 import { useFeatureFlags } from "./feature-flags-provider";
 import { TasksTableActionBar } from "./tasks-table-action-bar";

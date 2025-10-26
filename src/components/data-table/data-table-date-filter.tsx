@@ -175,7 +175,11 @@ export function DataTableDateFilter<TData>({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="border-dashed">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-dashed font-normal"
+        >
           {hasValue ? (
             <div
               role="button"
@@ -195,6 +199,7 @@ export function DataTableDateFilter<TData>({
       <PopoverContent className="w-auto p-0" align="start">
         {multiple ? (
           <Calendar
+            autoFocus
             captionLayout="dropdown"
             mode="range"
             selected={

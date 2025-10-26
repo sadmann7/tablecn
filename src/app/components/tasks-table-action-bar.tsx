@@ -19,7 +19,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { type Task, tasks } from "@/db/schema";
 import { exportTableToCSV } from "@/lib/export";
-import { deleteTasks, updateTasks } from "../_lib/actions";
+import { deleteTasks, updateTasks } from "../lib/actions";
 
 const actions = [
   "update-status",

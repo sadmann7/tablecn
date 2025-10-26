@@ -70,7 +70,7 @@ import type {
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
-const OPEN_MENU_SHORTCUT = "f";
+const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
 interface DataTableFilterListProps<TData>
@@ -179,34 +179,26 @@ export function DataTableFilterList<TData>({
     function onKeyDown(event: KeyboardEvent) {
       if (
         event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target instanceof HTMLElement &&
+          event.target.contentEditable === "true")
       ) {
         return;
       }
 
       if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.shiftKey
+        event.key.toLowerCase() === FILTER_SHORTCUT_KEY &&
+        (event.ctrlKey || event.metaKey) &&
+        event.shiftKey
       ) {
         event.preventDefault();
-        setOpen(true);
-      }
-
-      if (
-        event.key.toLowerCase() === OPEN_MENU_SHORTCUT &&
-        event.shiftKey &&
-        filters.length > 0
-      ) {
-        event.preventDefault();
-        onFilterRemove(filters[filters.length - 1]?.filterId ?? "");
+        setOpen((prev) => !prev);
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [filters, onFilterRemove]);
+  }, []);
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -229,8 +221,13 @@ export function DataTableFilterList<TData>({
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" onKeyDown={onTriggerKeyDown}>
-            <ListFilter />
+          <Button
+            variant="outline"
+            size="sm"
+            className="font-normal"
+            onKeyDown={onTriggerKeyDown}
+          >
+            <ListFilter className="text-muted-foreground" />
             Filter
             {filters.length > 0 && (
               <Badge
@@ -775,8 +772,9 @@ function onFilterInputRender<TData>({
             {filter.operator === "isBetween" ? (
               <Calendar
                 aria-label={`Select ${columnMeta?.label} date range`}
-                mode="range"
+                autoFocus
                 captionLayout="dropdown"
+                mode="range"
                 selected={
                   dateValue.length === 2
                     ? {
@@ -802,8 +800,9 @@ function onFilterInputRender<TData>({
             ) : (
               <Calendar
                 aria-label={`Select ${columnMeta?.label} date`}
-                mode="single"
+                autoFocus
                 captionLayout="dropdown"
+                mode="single"
                 selected={
                   dateValue[0] ? new Date(Number(dateValue[0])) : undefined
                 }

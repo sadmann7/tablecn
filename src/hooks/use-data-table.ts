@@ -300,6 +300,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     manualSorting: true,
     manualFiltering: true,
     meta: {
+      ...tableProps.meta,
       queryKeys: {
         page: pageKey,
         perPage: perPageKey,
