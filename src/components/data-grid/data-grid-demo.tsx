@@ -330,7 +330,6 @@ export function DataGridDemo() {
         {...dataGridProps}
         onRowAdd={onRowAdd}
         height={height}
-        showRenderCount
       />
     </div>
   );

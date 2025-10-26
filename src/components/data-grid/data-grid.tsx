@@ -6,7 +6,6 @@ import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
-import { DataGridRenderCount } from "@/components/data-grid/data-grid-render-count";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
@@ -24,7 +23,6 @@ interface DataGridProps<TData>
     | null
     // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
     | void;
-  showRenderCount?: boolean;
 }
 
 export function DataGrid<TData>({
@@ -36,10 +34,9 @@ export function DataGrid<TData>({
   rowVirtualizer,
   height = 600,
   searchState,
+  columnSizeVars,
   scrollToRow,
   onRowAdd: onRowAddProp,
-  columnSizeVars,
-  showRenderCount = false,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -102,7 +99,6 @@ export function DataGrid<TData>({
       {searchState && <DataGridSearch {...searchState} />}
       <DataGridKeyboardShortcuts enableSearch={!!searchState} />
       <DataGridContextMenu table={table} />
-      {showRenderCount && <DataGridRenderCount />}
       <div
         role="grid"
         aria-label="Data grid"
