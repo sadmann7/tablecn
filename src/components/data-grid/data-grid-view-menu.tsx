@@ -19,15 +19,15 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-interface DataGridViewOptionsProps<TData>
+interface DataGridViewMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
 }
 
-export function DataGridViewOptions<TData>({
+export function DataGridViewMenu<TData>({
   table,
   ...props
-}: DataGridViewOptionsProps<TData>) {
+}: DataGridViewMenuProps<TData>) {
   const columns = React.useMemo(
     () =>
       table

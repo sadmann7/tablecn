@@ -4,9 +4,9 @@ import { faker } from "@faker-js/faker";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
-import { DataGridRowHeightOptions } from "@/components/data-grid/data-grid-row-height-options";
-import { DataGridSortList } from "@/components/data-grid/data-grid-sort-list";
-import { DataGridViewOptions } from "@/components/data-grid/data-grid-view-options";
+import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
+import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
+import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
@@ -321,9 +321,9 @@ export function DataGridDemo() {
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
-        <DataGridSortList table={table} align="end" />
-        <DataGridRowHeightOptions table={table} align="end" />
-        <DataGridViewOptions table={table} align="end" />
+        <DataGridSortMenu table={table} align="end" />
+        <DataGridRowHeightMenu table={table} align="end" />
+        <DataGridViewMenu table={table} align="end" />
       </div>
       <DataGrid
         table={table}

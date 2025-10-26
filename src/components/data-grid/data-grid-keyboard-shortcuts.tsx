@@ -1,6 +1,6 @@
 "use client";
 
-import { XIcon } from "lucide-react";
+import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,19 +11,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Separator } from "@/components/ui/separator";
 
 const SHORTCUT_KEY = "/";
 
-interface ShortcutItem {
-  keys: string[];
-  description: string;
-}
-
 interface ShortcutGroup {
   title: string;
-  shortcuts: ShortcutItem[];
+  shortcuts: Array<{
+    keys: string[];
+    description: string;
+  }>;
 }
 
 interface DataGridKeyboardShortcutsProps {
@@ -41,6 +40,8 @@ function DataGridKeyboardShortcutsImpl({
   enableSearch = false,
 }: DataGridKeyboardShortcutsProps) {
   const [open, setOpen] = React.useState(false);
+  const [input, setInput] = React.useState("");
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
   const isMac =
     typeof navigator !== "undefined"
@@ -49,19 +50,24 @@ function DataGridKeyboardShortcutsImpl({
 
   const modKey = isMac ? "⌘" : "Ctrl";
 
-  React.useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if ((event.ctrlKey || event.metaKey) && event.key === SHORTCUT_KEY) {
-        event.preventDefault();
-        setOpen(true);
-      }
+  const onOpenChange = React.useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setInput("");
     }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
   }, []);
+
+  const onOpenAutoFocus = React.useCallback((event: Event) => {
+    event.preventDefault();
+    inputRef.current?.focus();
+  }, []);
+
+  const onInputChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setInput(event.target.value);
+    },
+    [],
+  );
 
   const shortcutGroups: ShortcutGroup[] = React.useMemo(
     () => [
@@ -178,6 +184,23 @@ function DataGridKeyboardShortcutsImpl({
           ]
         : []),
       {
+        title: "Sorting",
+        shortcuts: [
+          {
+            keys: [modKey, "Shift", "S"],
+            description: "Toggle the sort menu",
+          },
+          {
+            keys: ["Backspace"],
+            description: "Remove sort (when focused)",
+          },
+          {
+            keys: ["Delete"],
+            description: "Remove sort (when focused)",
+          },
+        ],
+      },
+      {
         title: "General",
         shortcuts: [
           {
@@ -190,9 +213,43 @@ function DataGridKeyboardShortcutsImpl({
     [modKey, enableSearch],
   );
 
+  const filteredGroups = React.useMemo(() => {
+    if (!input.trim()) return shortcutGroups;
+
+    const query = input.toLowerCase();
+    return shortcutGroups
+      .map((group) => ({
+        ...group,
+        shortcuts: group.shortcuts.filter(
+          (shortcut) =>
+            shortcut.description.toLowerCase().includes(query) ||
+            shortcut.keys.some((key) => key.toLowerCase().includes(query)),
+        ),
+      }))
+      .filter((group) => group.shortcuts.length > 0);
+  }, [shortcutGroups, input]);
+
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key === SHORTCUT_KEY) {
+        event.preventDefault();
+        setOpen(true);
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-2xl px-0" showCloseButton={false}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-2xl px-0"
+        onOpenAutoFocus={onOpenAutoFocus}
+        showCloseButton={false}
+      >
         <DialogClose className="absolute top-6 right-6" asChild>
           <Button variant="ghost" size="icon" className="size-6">
             <XIcon />
@@ -205,33 +262,64 @@ function DataGridKeyboardShortcutsImpl({
             grid more efficiently.
           </DialogDescription>
         </DialogHeader>
-        <Separator className="mx-auto data-[orientation=horizontal]:w-[calc(100%-theme(spacing.12))]" />
-        <div className="max-h-[60vh] overflow-y-auto px-6">
-          <div className="flex flex-col gap-6">
-            {shortcutGroups.map((shortcutGroup) => (
-              <div key={shortcutGroup.title} className="flex flex-col gap-2">
-                <h3 className="font-semibold text-foreground text-sm">
-                  {shortcutGroup.title}
-                </h3>
-                <div className="divide-y divide-border rounded-md border">
-                  {shortcutGroup.shortcuts.map((shortcut, index) => (
-                    <ShortcutRow
-                      key={index}
-                      keys={shortcut.keys}
-                      description={shortcut.description}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+        <div className="px-6">
+          <div className="relative">
+            <SearchIcon className="-translate-y-1/2 absolute top-1/2 left-3 size-3.5 text-muted-foreground" />
+            <Input
+              ref={inputRef}
+              placeholder="Search shortcuts..."
+              className="h-8 pl-8"
+              value={input}
+              onChange={onInputChange}
+            />
           </div>
+        </div>
+        <Separator className="mx-auto data-[orientation=horizontal]:w-[calc(100%-theme(spacing.12))]" />
+        <div className="h-[40vh] overflow-y-auto px-6">
+          {filteredGroups.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
+                <SearchIcon className="pointer-events-none size-6" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <div className="font-medium text-lg tracking-tight">
+                  No shortcuts found
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  Try searching for a different term.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {filteredGroups.map((shortcutGroup) => (
+                <div key={shortcutGroup.title} className="flex flex-col gap-2">
+                  <h3 className="font-semibold text-foreground text-sm">
+                    {shortcutGroup.title}
+                  </h3>
+                  <div className="divide-y divide-border rounded-md border">
+                    {shortcutGroup.shortcuts.map((shortcut, index) => (
+                      <ShortcutCard
+                        key={index}
+                        keys={shortcut.keys}
+                        description={shortcut.description}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function ShortcutRow({ keys, description }: ShortcutItem) {
+function ShortcutCard({
+  keys,
+  description,
+}: ShortcutGroup["shortcuts"][number]) {
   return (
     <div className="flex items-center gap-4 px-3 py-2">
       <span className="flex-1 text-sm">{description}</span>

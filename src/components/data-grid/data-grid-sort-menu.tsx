@@ -44,15 +44,15 @@ import { cn } from "@/lib/utils";
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 
-interface DataGridSortListProps<TData>
+interface DataGridSortMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
 }
 
-export function DataGridSortList<TData>({
+export function DataGridSortMenu<TData>({
   table,
   ...props
-}: DataGridSortListProps<TData>) {
+}: DataGridSortMenuProps<TData>) {
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
