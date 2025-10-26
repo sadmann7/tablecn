@@ -47,6 +47,13 @@ export function DataGrid<TData>({
   const rowHeight = meta?.rowHeight ?? "short";
   const focusedCell = meta?.focusedCell ?? null;
 
+  const onGridContextMenu = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+    },
+    [],
+  );
+
   const onRowAdd = React.useCallback(
     async (event?: React.MouseEvent<HTMLDivElement>) => {
       if (!onRowAddProp) return;
@@ -105,6 +112,7 @@ export function DataGrid<TData>({
           ...columnSizeVars,
           height: `${height}px`,
         }}
+        onContextMenu={onGridContextMenu}
       >
         <div
           role="rowgroup"
