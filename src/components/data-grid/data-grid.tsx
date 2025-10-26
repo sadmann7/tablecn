@@ -35,7 +35,7 @@ export function DataGrid<TData>({
   height = 600,
   searchState,
   columnSizeVars,
-  scrollToRow,
+  onScrollToRow,
   onRowAdd: onRowAddProp,
   className,
   ...props
@@ -66,16 +66,16 @@ export function DataGrid<TData>({
         const adjustedRowIndex =
           (result.rowIndex ?? 0) >= rows.length ? rows.length : result.rowIndex;
 
-        scrollToRow({
+        onScrollToRow({
           rowIndex: adjustedRowIndex,
           columnId: result.columnId,
         });
         return;
       }
 
-      scrollToRow({ rowIndex: rows.length });
+      onScrollToRow({ rowIndex: rows.length });
     },
-    [onRowAddProp, scrollToRow, rows.length],
+    [onRowAddProp, onScrollToRow, rows.length],
   );
 
   const onAddRowKeyDown = React.useCallback(

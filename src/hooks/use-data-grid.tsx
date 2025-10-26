@@ -1433,7 +1433,7 @@ export function useDataGrid<TData>({
     rowVirtualizerRef.current = rowVirtualizer;
   }
 
-  const scrollToRow = React.useCallback(
+  const onScrollToRow = React.useCallback(
     async (opts: Partial<CellPosition>) => {
       const rowIndex = opts?.rowIndex ?? 0;
       const columnId = opts?.columnId;
@@ -1625,7 +1625,7 @@ export function useDataGrid<TData>({
   }, [store, blurCell, clearSelection]);
 
   React.useEffect(() => {
-    function cleanup() {
+    function onCleanup() {
       document.removeEventListener("selectstart", preventSelection);
       document.removeEventListener("contextmenu", preventContextMenu);
       document.body.style.userSelect = "";
@@ -1638,20 +1638,20 @@ export function useDataGrid<TData>({
       event.preventDefault();
     }
 
-    const unsubscribe = store.subscribe(() => {
+    const onUnsubscribe = store.subscribe(() => {
       const currentState = store.getState();
       if (currentState.selectionState.isSelecting) {
         document.addEventListener("selectstart", preventSelection);
         document.addEventListener("contextmenu", preventContextMenu);
         document.body.style.userSelect = "none";
       } else {
-        cleanup();
+        onCleanup();
       }
     });
 
     return () => {
-      cleanup();
-      unsubscribe();
+      onCleanup();
+      onUnsubscribe();
     };
   }, [store]);
 
@@ -1683,6 +1683,6 @@ export function useDataGrid<TData>({
     rowVirtualizer,
     searchState,
     columnSizeVars,
-    scrollToRow,
+    onScrollToRow,
   };
 }
