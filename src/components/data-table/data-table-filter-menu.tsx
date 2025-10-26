@@ -249,11 +249,11 @@ export function DataTableFilterMenu<TData>({
             aria-label="Open filter command menu"
             variant="outline"
             size={filters.length > 0 ? "icon" : "sm"}
-            className={cn(filters.length > 0 && "size-8", "h-8")}
+            className={cn(filters.length > 0 && "size-8", "h-8 font-normal")}
             ref={triggerRef}
             onKeyDown={onTriggerKeyDown}
           >
-            <ListFilter />
+            <ListFilter className="text-muted-foreground" />
             {filters.length > 0 ? null : "Filter"}
           </Button>
         </PopoverTrigger>

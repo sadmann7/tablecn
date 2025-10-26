@@ -359,38 +359,15 @@ export function LongTextCell<TData>({
         className="w-[400px] rounded-none p-0"
         onOpenAutoFocus={onOpenAutoFocus}
       >
-        <div className="flex flex-col">
-          <Textarea
-            ref={textareaRef}
-            value={value}
-            onChange={onChange}
-            onKeyDown={onTextareaKeyDown}
-            onBlur={onTextareaBlur}
-            className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
-            placeholder="Enter text..."
-          />
-          <div className="flex items-center justify-between gap-2 border-t bg-muted/50 px-3 py-2">
-            <div className="text-muted-foreground text-xs">
-              Ctrl/Cmd+Enter to save • Esc to cancel
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={onCancel}
-                className="rounded-md px-3 py-1 font-medium text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onSave}
-                className="rounded-md bg-primary px-3 py-1 font-medium text-primary-foreground text-xs transition-colors hover:bg-primary/90"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
+        <Textarea
+          ref={textareaRef}
+          value={value}
+          onChange={onChange}
+          onKeyDown={onTextareaKeyDown}
+          onBlur={onTextareaBlur}
+          className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
+          placeholder="Enter text..."
+        />
       </PopoverContent>
     </Popover>
   );

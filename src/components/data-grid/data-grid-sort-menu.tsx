@@ -166,8 +166,13 @@ export function DataGridSortMenu<TData>({
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" onKeyDown={onTriggerKeyDown}>
-            <ArrowDownUp />
+          <Button
+            variant="outline"
+            size="sm"
+            className="font-normal"
+            onKeyDown={onTriggerKeyDown}
+          >
+            <ArrowDownUp className="text-muted-foreground" />
             Sort
             {sorting.length > 0 && (
               <Badge
