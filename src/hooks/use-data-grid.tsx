@@ -30,7 +30,7 @@ const VIEWPORT_OFFSET = 1;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
-const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"] as const;
+const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;

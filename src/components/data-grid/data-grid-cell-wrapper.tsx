@@ -146,7 +146,7 @@ export function DataGridCellWrapper<TData>({
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
       className={cn(
-        "size-full px-2 py-1.5 text-left text-sm outline-none has-[[data-slot=checkbox]]:pt-2.5",
+        "size-full px-2 py-1.5 text-left text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
           "ring-1 ring-ring ring-inset": isFocused,
           "bg-yellow-100 dark:bg-yellow-900/30":
@@ -154,13 +154,13 @@ export function DataGridCellWrapper<TData>({
           "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
           "bg-primary/10": isSelected && !isEditing,
           "cursor-default": !isEditing,
-          "[&_[data-slot=grid-cell-content]]:line-clamp-1":
+          "**:data-[slot=grid-cell-content]:line-clamp-1":
             !isEditing && rowHeight === "short",
-          "[&_[data-slot=grid-cell-content]]:line-clamp-2":
+          "**:data-[slot=grid-cell-content]:line-clamp-2":
             !isEditing && rowHeight === "medium",
-          "[&_[data-slot=grid-cell-content]]:line-clamp-3":
+          "**:data-[slot=grid-cell-content]:line-clamp-3":
             !isEditing && rowHeight === "tall",
-          "[&_[data-slot=grid-cell-content]]:line-clamp-4":
+          "**:data-[slot=grid-cell-content]:line-clamp-4":
             !isEditing && rowHeight === "extra-tall",
         },
         className,
