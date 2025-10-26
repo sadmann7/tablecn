@@ -153,8 +153,8 @@
     max-width: none;
   }
 
-  @media (width >= 1400px) {
-    max-width: 1400px;
+  @media (width >= 1600px) {
+    max-width: 1600px;
   }
 
   @media (max-width: 640px) {

@@ -315,7 +315,7 @@ export function DataGridDemo() {
   const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <div className="flex flex-col gap-4 px-6 py-4">
+    <div className="container flex flex-col gap-4 py-4">
       <div
         role="toolbar"
         aria-orientation="horizontal"
@@ -326,8 +326,8 @@ export function DataGridDemo() {
         <DataGridViewMenu table={table} align="end" />
       </div>
       <DataGrid
-        table={table}
         {...dataGridProps}
+        table={table}
         onRowAdd={onRowAdd}
         height={height}
       />

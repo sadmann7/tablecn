@@ -274,7 +274,7 @@ function DataGridKeyboardShortcutsImpl({
             />
           </div>
         </div>
-        <Separator className="mx-auto data-[orientation=horizontal]:w-[calc(100%-theme(spacing.12))]" />
+        <Separator className="mx-auto data-[orientation=horizontal]:w-[calc(100%-(--spacing(12)))]" />
         <div className="h-[40vh] overflow-y-auto px-6">
           {filteredGroups.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
