@@ -80,7 +80,7 @@ export function getTasksTableColumns({
       id: "code",
       accessorKey: "code",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Task" />
+        <DataTableColumnHeader column={column} label="Task" />
       ),
       cell: ({ row }) => <div className="w-20">{row.getValue("code")}</div>,
       enableSorting: false,
@@ -90,7 +90,7 @@ export function getTasksTableColumns({
       id: "title",
       accessorKey: "title",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Title" />
+        <DataTableColumnHeader column={column} label="Title" />
       ),
       cell: ({ row }) => {
         const label = tasks.label.enumValues.find(
@@ -118,7 +118,7 @@ export function getTasksTableColumns({
       id: "status",
       accessorKey: "status",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
+        <DataTableColumnHeader column={column} label="Status" />
       ),
       cell: ({ cell }) => {
         const status = tasks.status.enumValues.find(
@@ -153,7 +153,7 @@ export function getTasksTableColumns({
       id: "priority",
       accessorKey: "priority",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Priority" />
+        <DataTableColumnHeader column={column} label="Priority" />
       ),
       cell: ({ cell }) => {
         const priority = tasks.priority.enumValues.find(
@@ -188,7 +188,7 @@ export function getTasksTableColumns({
       id: "estimatedHours",
       accessorKey: "estimatedHours",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Est. Hours" />
+        <DataTableColumnHeader column={column} label="Est. Hours" />
       ),
       cell: ({ cell }) => {
         const estimatedHours = cell.getValue<number>();
@@ -207,7 +207,7 @@ export function getTasksTableColumns({
       id: "createdAt",
       accessorKey: "createdAt",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Created At" />
+        <DataTableColumnHeader column={column} label="Created At" />
       ),
       cell: ({ cell }) => formatDate(cell.getValue<Date>()),
       meta: {

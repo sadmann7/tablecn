@@ -118,8 +118,8 @@ export function useDataGrid<TData>({
   const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>>>(null);
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
-  const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const headerRef = React.useRef<HTMLDivElement>(null);
+  const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
 
   const dataGridPropsRef = useAsRef(dataGridProps);

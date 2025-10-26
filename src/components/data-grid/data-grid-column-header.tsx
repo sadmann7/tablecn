@@ -74,11 +74,11 @@ export function DataGridColumnHeader<TData, TValue>({
   header,
   table,
   className,
-  onPointerDown: onPointerDownProp,
+  onPointerDown,
   ...props
 }: DataGridColumnHeaderProps<TData, TValue>) {
   const column = header.column;
-  const title = column.columnDef.meta?.label
+  const label = column.columnDef.meta?.label
     ? column.columnDef.meta.label
     : typeof column.columnDef.header === "string"
       ? column.columnDef.header
@@ -135,9 +135,9 @@ export function DataGridColumnHeader<TData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const onPointerDown = React.useCallback(
+  const onTriggerPointerDown = React.useCallback(
     (event: React.PointerEvent<HTMLButtonElement>) => {
-      onPointerDownProp?.(event);
+      onPointerDown?.(event);
       if (event.defaultPrevented) return;
 
       if (event.button !== 0) {
@@ -145,7 +145,7 @@ export function DataGridColumnHeader<TData, TValue>({
       }
       table.options.meta?.onColumnClick?.(column.id);
     },
-    [table.options.meta, column.id, onPointerDownProp],
+    [table.options.meta, column.id, onPointerDown],
   );
 
   return (
@@ -157,7 +157,7 @@ export function DataGridColumnHeader<TData, TValue>({
             isAnyColumnResizing && "pointer-events-none",
             className,
           )}
-          onPointerDown={onPointerDown}
+          onPointerDown={onTriggerPointerDown}
           {...props}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -171,7 +171,7 @@ export function DataGridColumnHeader<TData, TValue>({
                 </TooltipContent>
               </Tooltip>
             )}
-            <span className="truncate">{title}</span>
+            <span className="truncate">{label}</span>
           </div>
           <ChevronDownIcon className="shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
@@ -258,7 +258,7 @@ export function DataGridColumnHeader<TData, TValue>({
         </DropdownMenuContent>
       </DropdownMenu>
       {header.column.getCanResize() && (
-        <DataGridColumnResizer header={header} table={table} title={title} />
+        <DataGridColumnResizer header={header} table={table} label={label} />
       )}
     </>
   );
@@ -277,17 +277,22 @@ const DataGridColumnResizer = React.memo(
       return false;
     }
 
-    if (prev.title !== next.title) return false;
+    if (prev.label !== next.label) return false;
 
     return true;
   },
 ) as typeof DataGridColumnResizerImpl;
 
+interface DataGridColumnResizerProps<TData, TValue>
+  extends DataGridColumnHeaderProps<TData, TValue> {
+  label: string;
+}
+
 function DataGridColumnResizerImpl<TData, TValue>({
   header,
   table,
-  title,
-}: DataGridColumnHeaderProps<TData, TValue>) {
+  label,
+}: DataGridColumnResizerProps<TData, TValue>) {
   const defaultColumnDef = table._getDefaultColumnDef();
 
   const onDoubleClick = React.useCallback(() => {
@@ -298,7 +303,7 @@ function DataGridColumnResizerImpl<TData, TValue>({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label={`Resize ${title} column`}
+      aria-label={`Resize ${label} column`}
       aria-valuenow={header.column.getSize()}
       aria-valuemin={defaultColumnDef.minSize}
       aria-valuemax={defaultColumnDef.maxSize}

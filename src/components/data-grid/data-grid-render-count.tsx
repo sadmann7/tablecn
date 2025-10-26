@@ -15,7 +15,6 @@ export function DataGridRenderCount({
   const [mounted, setMounted] = React.useState(false);
   const renderCount = React.useRef(0);
 
-  // Increment on every render (this runs during render phase, not in effect)
   renderCount.current += 1;
 
   React.useLayoutEffect(() => {
