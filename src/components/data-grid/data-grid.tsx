@@ -11,18 +11,11 @@ import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
-import type { CellPosition } from "@/types/data-grid";
 
 interface DataGridProps<TData>
   extends ReturnType<typeof useDataGrid<TData>>,
     React.ComponentProps<"div"> {
   height?: number;
-  onRowAdd?: (event?: React.MouseEvent<HTMLDivElement>) =>
-    | Partial<CellPosition>
-    | Promise<Partial<CellPosition>>
-    | null
-    // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
-    | void;
 }
 
 export function DataGrid<TData>({
@@ -35,8 +28,7 @@ export function DataGrid<TData>({
   height = 600,
   searchState,
   columnSizeVars,
-  scrollToRow,
-  onRowAdd: onRowAddProp,
+  onRowAdd,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -54,40 +46,16 @@ export function DataGrid<TData>({
     [],
   );
 
-  const onRowAdd = React.useCallback(
-    async (event?: React.MouseEvent<HTMLDivElement>) => {
-      if (!onRowAddProp) return;
-
-      const result = await onRowAddProp();
-
-      if (event?.defaultPrevented || result === null) return;
-
-      if (result) {
-        const adjustedRowIndex =
-          (result.rowIndex ?? 0) >= rows.length ? rows.length : result.rowIndex;
-
-        scrollToRow({
-          rowIndex: adjustedRowIndex,
-          columnId: result.columnId,
-        });
-        return;
-      }
-
-      scrollToRow({ rowIndex: rows.length });
-    },
-    [onRowAddProp, scrollToRow, rows.length],
-  );
-
   const onAddRowKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!onRowAddProp) return;
+      if (!onRowAdd) return;
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         onRowAdd();
       }
     },
-    [onRowAddProp, onRowAdd],
+    [onRowAdd],
   );
 
   return (
@@ -102,7 +70,7 @@ export function DataGrid<TData>({
       <div
         role="grid"
         aria-label="Data grid"
-        aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
+        aria-rowcount={rows.length + (onRowAdd ? 1 : 0)}
         aria-colcount={columns.length}
         data-slot="grid"
         tabIndex={0}

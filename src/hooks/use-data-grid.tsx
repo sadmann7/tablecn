@@ -95,6 +95,13 @@ function useStore<T>(
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   onDataChange?: (data: TData[]) => void;
+  onRowAdd?: (event?: React.MouseEvent<HTMLDivElement>) =>
+    | Partial<CellPosition>
+    | Promise<Partial<CellPosition>>
+    | null
+    // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
+    | void;
+  onRowsDelete?: (rows: TData[], rowIndices: number[]) => void | Promise<void>;
   rowHeight?: RowHeightValue;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -102,10 +109,12 @@ interface UseDataGridProps<TData>
   enableSearch?: boolean;
 }
 
-export function useDataGrid<TData>({
+function useDataGrid<TData>({
   columns,
   data,
   onDataChange,
+  onRowAdd: onRowAddProp,
+  onRowsDelete: onRowsDeleteProp,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
   initialState,
@@ -410,6 +419,55 @@ export function useDataGrid<TData>({
       }
     },
     [store],
+  );
+
+  const onRowsDelete = React.useCallback(
+    async (rowIndices: number[]) => {
+      if (!onRowsDeleteProp || rowIndices.length === 0) return;
+
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows;
+
+      if (!rows || rows.length === 0) return;
+
+      const currentState = store.getState();
+      const currentFocusedColumn =
+        currentState.focusedCell?.columnId ?? navigableColumnIds[0];
+
+      const minDeletedRowIndex = Math.min(...rowIndices);
+
+      const rowsToDelete: TData[] = [];
+      for (const rowIndex of rowIndices) {
+        const row = rows[rowIndex];
+        if (row) {
+          rowsToDelete.push(row.original);
+        }
+      }
+
+      await onRowsDeleteProp(rowsToDelete, rowIndices);
+
+      store.batch(() => {
+        store.setState("selectionState", {
+          selectedCells: new Set(),
+          selectionRange: null,
+          isSelecting: false,
+        });
+        store.setState("rowSelection", {});
+        store.setState("editingCell", null);
+      });
+
+      requestAnimationFrame(() => {
+        const currentTable = tableRef.current;
+        const currentRows = currentTable?.getRowModel().rows ?? [];
+        const newRowCount = currentRows.length ?? data.length;
+
+        if (newRowCount > 0 && currentFocusedColumn) {
+          const targetRowIndex = Math.min(minDeletedRowIndex, newRowCount - 1);
+          focusCell(targetRowIndex, currentFocusedColumn);
+        }
+      });
+    },
+    [onRowsDeleteProp, data.length, store, navigableColumnIds, focusCell],
   );
 
   const navigateCell = React.useCallback(
@@ -1319,10 +1377,14 @@ export function useDataGrid<TData>({
         editingCell,
         selectionState,
         searchOpen,
+        rowHeight,
         isScrolling,
         getIsCellSelected,
         getIsSearchMatch,
         getIsActiveSearchMatch,
+        onRowHeightChange,
+        onRowSelect,
+        onRowsDelete: onRowsDeleteProp ? onRowsDelete : undefined,
         onDataUpdate,
         onColumnClick,
         onCellClick,
@@ -1335,9 +1397,6 @@ export function useDataGrid<TData>({
         onCellEditingStop,
         contextMenu,
         onContextMenuOpenChange,
-        rowHeight,
-        onRowHeightChange,
-        onRowSelect,
       },
     }),
     [
@@ -1359,6 +1418,8 @@ export function useDataGrid<TData>({
       getIsSearchMatch,
       getIsActiveSearchMatch,
       onDataUpdate,
+      onRowsDeleteProp,
+      onRowsDelete,
       onColumnClick,
       onCellClick,
       onCellDoubleClick,
@@ -1433,7 +1494,7 @@ export function useDataGrid<TData>({
     rowVirtualizerRef.current = rowVirtualizer;
   }
 
-  const scrollToRow = React.useCallback(
+  const onScrollToRow = React.useCallback(
     async (opts: Partial<CellPosition>) => {
       const rowIndex = opts?.rowIndex ?? 0;
       const columnId = opts?.columnId;
@@ -1461,6 +1522,33 @@ export function useDataGrid<TData>({
       });
     },
     [rowVirtualizer, navigableColumnIds, store],
+  );
+
+  const onRowAdd = React.useCallback(
+    async (event?: React.MouseEvent<HTMLDivElement>) => {
+      if (!onRowAddProp) return;
+
+      const result = await onRowAddProp(event);
+
+      if (event?.defaultPrevented || result === null) return;
+
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows ?? [];
+
+      if (result) {
+        const adjustedRowIndex =
+          (result.rowIndex ?? 0) >= rows.length ? rows.length : result.rowIndex;
+
+        onScrollToRow({
+          rowIndex: adjustedRowIndex,
+          columnId: result.columnId,
+        });
+        return;
+      }
+
+      onScrollToRow({ rowIndex: rows.length });
+    },
+    [onRowAddProp, onScrollToRow],
   );
 
   const searchState = React.useMemo<SearchState | undefined>(() => {
@@ -1625,7 +1713,7 @@ export function useDataGrid<TData>({
   }, [store, blurCell, clearSelection]);
 
   React.useEffect(() => {
-    function cleanup() {
+    function onCleanup() {
       document.removeEventListener("selectstart", preventSelection);
       document.removeEventListener("contextmenu", preventContextMenu);
       document.body.style.userSelect = "";
@@ -1638,20 +1726,20 @@ export function useDataGrid<TData>({
       event.preventDefault();
     }
 
-    const unsubscribe = store.subscribe(() => {
+    const onUnsubscribe = store.subscribe(() => {
       const currentState = store.getState();
       if (currentState.selectionState.isSelecting) {
         document.addEventListener("selectstart", preventSelection);
         document.addEventListener("contextmenu", preventContextMenu);
         document.body.style.userSelect = "none";
       } else {
-        cleanup();
+        onCleanup();
       }
     });
 
     return () => {
-      cleanup();
-      unsubscribe();
+      onCleanup();
+      onUnsubscribe();
     };
   }, [store]);
 
@@ -1683,6 +1771,8 @@ export function useDataGrid<TData>({
     rowVirtualizer,
     searchState,
     columnSizeVars,
-    scrollToRow,
+    onRowAdd: onRowAddProp ? onRowAdd : undefined,
   };
 }
+
+export { useDataGrid, type UseDataGridProps };
