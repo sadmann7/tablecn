@@ -1,13 +1,14 @@
 "use client";
 
 import type { Table, TableMeta } from "@tanstack/react-table";
-import { CopyIcon, EraserIcon } from "lucide-react";
+import { CopyIcon, EraserIcon, Trash2Icon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { parseCellKey } from "@/lib/data-grid";
@@ -26,6 +27,7 @@ export function DataGridContextMenu<TData>({
   const selectionState = meta?.selectionState;
   const dataGridRef = meta?.dataGridRef;
   const onDataUpdate = meta?.onDataUpdate;
+  const onRowsDelete = meta?.onRowsDelete;
 
   if (!contextMenu) return null;
 
@@ -37,6 +39,7 @@ export function DataGridContextMenu<TData>({
       onContextMenuOpenChange={onContextMenuOpenChange}
       selectionState={selectionState}
       onDataUpdate={onDataUpdate}
+      onRowsDelete={onRowsDelete}
     />
   );
 }
@@ -48,6 +51,7 @@ interface ContextMenuProps<TData>
       | "onContextMenuOpenChange"
       | "selectionState"
       | "onDataUpdate"
+      | "onRowsDelete"
     >,
     Required<Pick<TableMeta<TData>, "contextMenu">> {
   table: Table<TData>;
@@ -73,6 +77,7 @@ function ContextMenuImpl<TData>({
   onContextMenuOpenChange,
   selectionState,
   onDataUpdate,
+  onRowsDelete,
 }: ContextMenuProps<TData>) {
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
@@ -111,7 +116,6 @@ function ContextMenuImpl<TData>({
     const rows = table.getRowModel().rows;
     const columnIds: string[] = [];
 
-    // Collect all unique column IDs from selected cells
     const selectedCellsArray = Array.from(selectionState.selectedCells);
     for (const cellKey of selectedCellsArray) {
       const { columnId } = parseCellKey(cellKey);
@@ -120,7 +124,6 @@ function ContextMenuImpl<TData>({
       }
     }
 
-    // Build grid of selected cells
     const cellData = new Map<string, string>();
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
@@ -136,7 +139,6 @@ function ContextMenuImpl<TData>({
       }
     }
 
-    // Get row indices and column indices
     const rowIndices = new Set<number>();
     const colIndices = new Set<number>();
 
@@ -153,7 +155,6 @@ function ContextMenuImpl<TData>({
     const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
     const sortedColumnIds = sortedColIndices.map((i) => columnIds[i]);
 
-    // Build TSV (tab-separated values)
     const tsvData = sortedRowIndices
       .map((rowIndex) =>
         sortedColumnIds
@@ -192,6 +193,27 @@ function ContextMenuImpl<TData>({
     );
   }, [onDataUpdate, selectionState]);
 
+  const onDelete = React.useCallback(async () => {
+    if (
+      !selectionState?.selectedCells ||
+      selectionState.selectedCells.size === 0
+    )
+      return;
+
+    const rowIndices = new Set<number>();
+    for (const cellKey of selectionState.selectedCells) {
+      const { rowIndex } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+    }
+
+    const rowIndicesArray = Array.from(rowIndices).sort((a, b) => a - b);
+    const rowCount = rowIndicesArray.length;
+
+    await onRowsDelete?.(rowIndicesArray);
+
+    toast.success(`${rowCount} row${rowCount !== 1 ? "s" : ""} deleted`);
+  }, [onRowsDelete, selectionState]);
+
   return (
     <DropdownMenu
       open={contextMenu.open}
@@ -212,6 +234,15 @@ function ContextMenuImpl<TData>({
           <EraserIcon />
           Clear
         </DropdownMenuItem>
+        {onRowsDelete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={onDelete}>
+              <Trash2Icon />
+              Delete rows
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -60,6 +60,7 @@ declare module "@tanstack/react-table" {
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     onDataUpdate?: (props: UpdateCell | Array<UpdateCell>) => void;
+    onRowsDelete?: (rowIndices: number[]) => void | Promise<void>;
     onColumnClick?: (columnId: string) => void;
     onCellClick?: (
       rowIndex: number,

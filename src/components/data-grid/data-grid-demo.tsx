@@ -299,10 +299,25 @@ export function DataGridDemo() {
     };
   }, [data.length]);
 
+  const onRowsDelete = React.useCallback(
+    ({ rows }: { rows: Person[]; rowIndices: number[] }) => {
+      // In a real app, you would make a server call here:
+      // await fetch('/api/people', {
+      //   method: 'DELETE',
+      //   body: JSON.stringify({ ids: rows.map(r => r.id) })
+      // });
+
+      // For this demo, just filter out the deleted rows
+      setData((prev) => prev.filter((row) => !rows.includes(row)));
+    },
+    [],
+  );
+
   const { table, ...dataGridProps } = useDataGrid({
     columns,
     data,
     onDataChange: setData,
+    onRowsDelete,
     getRowId: (row) => row.id,
     initialState: {
       columnPinning: {

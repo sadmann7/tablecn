@@ -95,6 +95,10 @@ function useStore<T>(
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   onDataChange?: (data: TData[]) => void;
+  onRowsDelete?: (props: {
+    rows: TData[];
+    rowIndices: number[];
+  }) => void | Promise<void>;
   rowHeight?: RowHeightValue;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -106,6 +110,7 @@ export function useDataGrid<TData>({
   columns,
   data,
   onDataChange,
+  onRowsDelete: onRowsDeleteProp,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
   initialState,
@@ -410,6 +415,58 @@ export function useDataGrid<TData>({
       }
     },
     [store],
+  );
+
+  const onRowsDelete = React.useCallback(
+    async (rowIndices: number[]) => {
+      if (!onRowsDeleteProp || rowIndices.length === 0) return;
+
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows;
+
+      if (!rows || rows.length === 0) return;
+
+      const currentState = store.getState();
+      const currentFocusedColumn =
+        currentState.focusedCell?.columnId ?? navigableColumnIds[0];
+
+      const minDeletedRowIndex = Math.min(...rowIndices);
+
+      const rowsToDelete: TData[] = [];
+      for (const rowIndex of rowIndices) {
+        const row = rows[rowIndex];
+        if (row) {
+          rowsToDelete.push(row.original);
+        }
+      }
+
+      await onRowsDeleteProp({
+        rows: rowsToDelete,
+        rowIndices,
+      });
+
+      store.batch(() => {
+        store.setState("selectionState", {
+          selectedCells: new Set(),
+          selectionRange: null,
+          isSelecting: false,
+        });
+        store.setState("rowSelection", {});
+        store.setState("editingCell", null);
+      });
+
+      requestAnimationFrame(() => {
+        const currentTable = tableRef.current;
+        const currentRows = currentTable?.getRowModel().rows ?? [];
+        const newRowCount = currentRows.length ?? data.length;
+
+        if (newRowCount > 0 && currentFocusedColumn) {
+          const targetRowIndex = Math.min(minDeletedRowIndex, newRowCount - 1);
+          focusCell(targetRowIndex, currentFocusedColumn);
+        }
+      });
+    },
+    [onRowsDeleteProp, data.length, store, navigableColumnIds, focusCell],
   );
 
   const navigateCell = React.useCallback(
@@ -1319,10 +1376,14 @@ export function useDataGrid<TData>({
         editingCell,
         selectionState,
         searchOpen,
+        rowHeight,
         isScrolling,
         getIsCellSelected,
         getIsSearchMatch,
         getIsActiveSearchMatch,
+        onRowHeightChange,
+        onRowSelect,
+        onRowsDelete: onRowsDeleteProp ? onRowsDelete : undefined,
         onDataUpdate,
         onColumnClick,
         onCellClick,
@@ -1335,9 +1396,6 @@ export function useDataGrid<TData>({
         onCellEditingStop,
         contextMenu,
         onContextMenuOpenChange,
-        rowHeight,
-        onRowHeightChange,
-        onRowSelect,
       },
     }),
     [
@@ -1359,6 +1417,8 @@ export function useDataGrid<TData>({
       getIsSearchMatch,
       getIsActiveSearchMatch,
       onDataUpdate,
+      onRowsDeleteProp,
+      onRowsDelete,
       onColumnClick,
       onCellClick,
       onCellDoubleClick,
