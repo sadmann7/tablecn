@@ -101,10 +101,7 @@ interface UseDataGridProps<TData>
     | null
     // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
     | void;
-  onRowsDelete?: (props: {
-    rows: TData[];
-    rowIndices: number[];
-  }) => void | Promise<void>;
+  onRowsDelete?: (rows: TData[], rowIndices: number[]) => void | Promise<void>;
   rowHeight?: RowHeightValue;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -112,7 +109,7 @@ interface UseDataGridProps<TData>
   enableSearch?: boolean;
 }
 
-export function useDataGrid<TData>({
+function useDataGrid<TData>({
   columns,
   data,
   onDataChange,
@@ -447,10 +444,7 @@ export function useDataGrid<TData>({
         }
       }
 
-      await onRowsDeleteProp({
-        rows: rowsToDelete,
-        rowIndices,
-      });
+      await onRowsDeleteProp(rowsToDelete, rowIndices);
 
       store.batch(() => {
         store.setState("selectionState", {
@@ -1780,3 +1774,5 @@ export function useDataGrid<TData>({
     onRowAdd: onRowAddProp ? onRowAdd : undefined,
   };
 }
+
+export { useDataGrid, type UseDataGridProps };

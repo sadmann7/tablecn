@@ -8,7 +8,7 @@ import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-heig
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useDataGrid } from "@/hooks/use-data-grid";
+import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 
 interface Person {
@@ -284,23 +284,31 @@ export function DataGridDemo() {
     [],
   );
 
-  const onRowAdd = React.useCallback(() => {
-    const newId = data.length + 1;
-    setData((prev) => [
-      ...prev,
-      {
-        id: newId.toString(),
-      },
-    ]);
+  const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
+    React.useCallback(() => {
+      // In a real app, you would make a server call here:
+      // await fetch('/api/people', {
+      //   method: 'POST',
+      //   body: JSON.stringify({ name: 'New Person' })
+      // });
 
-    return {
-      rowIndex: data.length,
-      columnId: "name",
-    };
-  }, [data.length]);
+      // For this demo, just add a new row to the data
+      const newId = data.length + 1;
+      setData((prev) => [
+        ...prev,
+        {
+          id: newId.toString(),
+        },
+      ]);
 
-  const onRowsDelete = React.useCallback(
-    ({ rows }: { rows: Person[]; rowIndices: number[] }) => {
+      return {
+        rowIndex: data.length,
+        columnId: "name",
+      };
+    }, [data.length]);
+
+  const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
+    React.useCallback((rows) => {
       // In a real app, you would make a server call here:
       // await fetch('/api/people', {
       //   method: 'DELETE',
@@ -309,9 +317,7 @@ export function DataGridDemo() {
 
       // For this demo, just filter out the deleted rows
       setData((prev) => prev.filter((row) => !rows.includes(row)));
-    },
-    [],
-  );
+    }, []);
 
   const { table, ...dataGridProps } = useDataGrid({
     columns,
