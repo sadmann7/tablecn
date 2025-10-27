@@ -4,6 +4,7 @@ import { faker } from "@faker-js/faker";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
@@ -347,6 +348,7 @@ export function DataGridDemo() {
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />
       </div>
+      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
       <DataGrid {...dataGridProps} table={table} height={height} />
     </div>
   );

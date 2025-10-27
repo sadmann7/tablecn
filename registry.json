@@ -329,10 +329,8 @@
         "calendar",
         "checkbox",
         "command",
-        "dialog",
         "dropdown-menu",
         "input",
-        "kbd",
         "popover",
         "select",
         "separator",
@@ -375,11 +373,6 @@
           "path": "src/components/data-grid/data-grid-context-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-context-menu.tsx"
-        },
-        {
-          "path": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx",
-          "type": "registry:component",
-          "target": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx"
         },
         {
           "path": "src/components/data-grid/data-grid-row.tsx",
@@ -475,6 +468,21 @@
           "path": "src/components/data-grid/data-grid-view-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-view-menu.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-grid-keyboard-shortcuts",
+      "type": "registry:component",
+      "title": "Data Grid Keyboard Shortcuts",
+      "description": "A keyboard shortcuts dialog component for the data grid showing all available shortcuts",
+      "registryDependencies": ["button", "dialog", "input", "kbd", "separator"],
+      "dependencies": ["lucide-react"],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx"
         }
       ]
     }
