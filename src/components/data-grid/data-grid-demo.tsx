@@ -317,6 +317,7 @@ export function DataGridDemo() {
     columns,
     data,
     onDataChange: setData,
+    onRowAdd,
     onRowsDelete,
     getRowId: (row) => row.id,
     initialState: {
@@ -340,12 +341,7 @@ export function DataGridDemo() {
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />
       </div>
-      <DataGrid
-        {...dataGridProps}
-        table={table}
-        onRowAdd={onRowAdd}
-        height={height}
-      />
+      <DataGrid {...dataGridProps} table={table} height={height} />
     </div>
   );
 }

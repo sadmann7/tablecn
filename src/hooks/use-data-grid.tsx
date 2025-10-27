@@ -95,6 +95,12 @@ function useStore<T>(
 interface UseDataGridProps<TData>
   extends Omit<TableOptions<TData>, "pageCount" | "getCoreRowModel"> {
   onDataChange?: (data: TData[]) => void;
+  onRowAdd?: (event?: React.MouseEvent<HTMLDivElement>) =>
+    | Partial<CellPosition>
+    | Promise<Partial<CellPosition>>
+    | null
+    // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
+    | void;
   onRowsDelete?: (props: {
     rows: TData[];
     rowIndices: number[];
@@ -110,6 +116,7 @@ export function useDataGrid<TData>({
   columns,
   data,
   onDataChange,
+  onRowAdd: onRowAddProp,
   onRowsDelete: onRowsDeleteProp,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
@@ -1523,6 +1530,33 @@ export function useDataGrid<TData>({
     [rowVirtualizer, navigableColumnIds, store],
   );
 
+  const onRowAdd = React.useCallback(
+    async (event?: React.MouseEvent<HTMLDivElement>) => {
+      if (!onRowAddProp) return;
+
+      const result = await onRowAddProp(event);
+
+      if (event?.defaultPrevented || result === null) return;
+
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows ?? [];
+
+      if (result) {
+        const adjustedRowIndex =
+          (result.rowIndex ?? 0) >= rows.length ? rows.length : result.rowIndex;
+
+        onScrollToRow({
+          rowIndex: adjustedRowIndex,
+          columnId: result.columnId,
+        });
+        return;
+      }
+
+      onScrollToRow({ rowIndex: rows.length });
+    },
+    [onRowAddProp, onScrollToRow],
+  );
+
   const searchState = React.useMemo<SearchState | undefined>(() => {
     if (!enableSearch) return undefined;
 
@@ -1743,6 +1777,6 @@ export function useDataGrid<TData>({
     rowVirtualizer,
     searchState,
     columnSizeVars,
-    onScrollToRow,
+    onRowAdd: onRowAddProp ? onRowAdd : undefined,
   };
 }
