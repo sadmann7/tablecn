@@ -2,7 +2,7 @@ import * as React from "react";
 
 const badgeWidthCache = new Map<string, number>();
 
-interface MeasureBadgeOpts {
+interface BadgeOverflowOpts {
   iconSize?: number;
   maxWidth?: number;
   className?: string;
@@ -11,7 +11,7 @@ interface MeasureBadgeOpts {
 function measureBadgeWidth(
   label: string,
   cacheKey: string,
-  opts?: MeasureBadgeOpts
+  opts?: BadgeOverflowOpts
 ): number {
   const cached = badgeWidthCache.get(cacheKey);
   if (cached !== undefined) {
@@ -50,29 +50,29 @@ function measureBadgeWidth(
   return width;
 }
 
-interface UseBadgeTruncationOptions<T> {
+interface UseBadgeOverflowOptions<T> {
   items: T[];
   getLabel: (item: T) => string;
   containerRef: React.RefObject<HTMLElement | null>;
   lineCount: number;
   cacheKeyPrefix?: string;
-  measureOpts?: MeasureBadgeOpts;
+  measureOpts?: BadgeOverflowOpts;
 }
 
-interface UseBadgeTruncationResult<T> {
+interface UseBadgeOverflowResult<T> {
   visibleItems: T[];
   hiddenCount: number;
   containerWidth: number;
 }
 
-export function useBadgeTruncation<T>({
+export function useBadgeOverflow<T>({
   items,
   getLabel,
   containerRef,
   lineCount,
   cacheKeyPrefix = "",
   measureOpts,
-}: UseBadgeTruncationOptions<T>): UseBadgeTruncationResult<T> {
+}: UseBadgeOverflowOptions<T>): UseBadgeOverflowResult<T> {
   const [containerWidth, setContainerWidth] = React.useState(0);
 
   React.useEffect(() => {

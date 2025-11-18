@@ -43,7 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { useBadgeTruncation } from "@/hooks/use-badge-truncation";
+import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
@@ -798,7 +798,7 @@ export function MultiSelectCell<TData>({
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } =
-    useBadgeTruncation({
+    useBadgeOverflow({
       items: displayLabels,
       getLabel: (label) => label,
       containerRef,
@@ -1514,7 +1514,7 @@ export function FileCell<TData>({
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } =
-    useBadgeTruncation({
+    useBadgeOverflow({
       items: files,
       getLabel: (file) => file.name,
       containerRef,

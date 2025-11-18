@@ -386,7 +386,7 @@
           "target": "src/components/data-grid/data-grid-search.tsx"
         },
         {
-          "path": "src/hooks/use-badge-truncation.ts",
+          "path": "src/hooks/use-badge-overflow.ts",
           "type": "registry:hook"
         },
         {
