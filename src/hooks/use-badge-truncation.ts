@@ -2,16 +2,16 @@ import * as React from "react";
 
 const badgeWidthCache = new Map<string, number>();
 
-interface MeasureBadgeOptions {
-  className?: string;
+interface MeasureBadgeOpts {
   iconSize?: number;
-  maxWidth?: string;
+  maxWidth?: number;
+  className?: string;
 }
 
 function measureBadgeWidth(
   label: string,
   cacheKey: string,
-  options?: MeasureBadgeOptions
+  opts?: MeasureBadgeOpts
 ): number {
   const cached = badgeWidthCache.get(cacheKey);
   if (cached !== undefined) {
@@ -20,22 +20,22 @@ function measureBadgeWidth(
 
   const measureEl = document.createElement("div");
   measureEl.className = `inline-flex items-center rounded-md border px-1.5 text-xs font-semibold h-5 gap-1 shrink-0 absolute invisible pointer-events-none ${
-    options?.className ?? ""
+    opts?.className ?? ""
   }`;
   measureEl.style.whiteSpace = "nowrap";
 
-  if (options?.iconSize) {
+  if (opts?.iconSize) {
     const icon = document.createElement("span");
     icon.className = "shrink-0";
-    icon.style.width = `${options.iconSize}px`;
-    icon.style.height = `${options.iconSize}px`;
+    icon.style.width = `${opts.iconSize}px`;
+    icon.style.height = `${opts.iconSize}px`;
     measureEl.appendChild(icon);
   }
 
-  if (options?.maxWidth) {
+  if (opts?.maxWidth) {
     const text = document.createElement("span");
     text.className = "truncate";
-    text.style.maxWidth = options.maxWidth;
+    text.style.maxWidth = `${opts.maxWidth}px`;
     text.textContent = label;
     measureEl.appendChild(text);
   } else {
@@ -56,7 +56,7 @@ interface UseBadgeTruncationOptions<T> {
   containerRef: React.RefObject<HTMLElement | null>;
   lineCount: number;
   cacheKeyPrefix?: string;
-  measureOptions?: MeasureBadgeOptions;
+  measureOpts?: MeasureBadgeOpts;
 }
 
 interface UseBadgeTruncationResult<T> {
@@ -71,7 +71,7 @@ export function useBadgeTruncation<T>({
   containerRef,
   lineCount,
   cacheKeyPrefix = "",
-  measureOptions,
+  measureOpts,
 }: UseBadgeTruncationOptions<T>): UseBadgeTruncationResult<T> {
   const [containerWidth, setContainerWidth] = React.useState(0);
 
@@ -109,7 +109,7 @@ export function useBadgeTruncation<T>({
     for (const item of items) {
       const label = getLabel(item);
       const cacheKey = cacheKeyPrefix ? `${cacheKeyPrefix}:${label}` : label;
-      const badgeWidth = measureBadgeWidth(label, cacheKey, measureOptions);
+      const badgeWidth = measureBadgeWidth(label, cacheKey, measureOpts);
       const widthWithGap = badgeWidth + gapWidth;
 
       if (currentLineWidth + widthWithGap <= containerWidth) {
@@ -136,14 +136,7 @@ export function useBadgeTruncation<T>({
       hiddenCount: Math.max(0, items.length - visible.length),
       containerWidth,
     };
-  }, [
-    items,
-    getLabel,
-    containerWidth,
-    lineCount,
-    cacheKeyPrefix,
-    measureOptions,
-  ]);
+  }, [items, getLabel, containerWidth, lineCount, cacheKeyPrefix, measureOpts]);
 
   return result;
 }
