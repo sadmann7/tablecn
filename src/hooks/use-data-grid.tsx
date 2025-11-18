@@ -119,8 +119,8 @@ function useDataGrid<TData>({
   overscan = OVERSCAN,
   initialState,
   autoFocus = false,
-  enableColumnSelection = false,
   enableSearch = false,
+  enableColumnSelection = false,
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
