@@ -334,6 +334,7 @@
         "popover",
         "select",
         "separator",
+        "skeleton",
         "textarea",
         "tooltip"
       ],

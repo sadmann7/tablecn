@@ -33,6 +33,12 @@ export type Cell =
     }
   | {
       variant: "date";
+    }
+  | {
+      variant: "file";
+      maxFileSize?: number;
+      maxFiles?: number;
+      acceptedTypes?: string[];
     };
 
 export interface UpdateCell {
@@ -145,4 +151,12 @@ export interface SearchState {
   onSearch: (query: string) => void;
   onNavigateToNextMatch: () => void;
   onNavigateToPrevMatch: () => void;
+}
+
+export interface FileCellData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
 }

@@ -14,6 +14,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   EyeOffIcon,
+  FileIcon,
   HashIcon,
   ListChecksIcon,
   ListIcon,
@@ -59,6 +60,8 @@ function getColumnVariant(variant?: Cell["variant"]): {
       return { icon: CheckSquareIcon, label: "Checkbox" };
     case "date":
       return { icon: CalendarIcon, label: "Date" };
+    case "file":
+      return { icon: FileIcon, label: "File" };
     default:
       return null;
   }
