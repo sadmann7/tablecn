@@ -386,6 +386,10 @@
           "target": "src/components/data-grid/data-grid-search.tsx"
         },
         {
+          "path": "src/hooks/use-badge-truncation.ts",
+          "type": "registry:hook"
+        },
+        {
           "path": "src/hooks/use-callback-ref.ts",
           "type": "registry:hook"
         },

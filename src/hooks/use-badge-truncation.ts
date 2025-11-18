@@ -25,7 +25,7 @@ interface MeasureBadgeOptions {
 function measureBadgeWidth(
   label: string,
   cacheKey: string,
-  options?: MeasureBadgeOptions,
+  options?: MeasureBadgeOptions
 ): number {
   // Check cache first
   const cached = badgeWidthCache.get(cacheKey);
@@ -35,7 +35,9 @@ function measureBadgeWidth(
 
   // Create temporary measurement element
   const measureEl = document.createElement("div");
-  measureEl.className = `inline-flex items-center rounded-md border px-1.5 text-xs font-semibold h-5 gap-1 shrink-0 absolute invisible pointer-events-none ${options?.className ?? ""}`;
+  measureEl.className = `inline-flex items-center rounded-md border px-1.5 text-xs font-semibold h-5 gap-1 shrink-0 absolute invisible pointer-events-none ${
+    options?.className ?? ""
+  }`;
   measureEl.style.whiteSpace = "nowrap";
 
   if (options?.includeIcon) {
@@ -112,11 +114,11 @@ interface UseBadgeTruncationResult<T> {
 
 /**
  * Hook to calculate badge truncation based on actual measurements
- * 
+ *
  * This hook measures the actual width of badges and calculates how many
  * can fit in the available space across multiple lines. It uses a shared
  * cache for performance and a single ResizeObserver per container.
- * 
+ *
  * @example
  * ```tsx
  * const { visibleItems, hiddenCount } = useBadgeTruncation({
@@ -206,7 +208,14 @@ export function useBadgeTruncation<T>({
       hiddenCount: Math.max(0, items.length - visible.length),
       containerWidth,
     };
-  }, [items, getLabel, containerWidth, lineCount, cacheKeyPrefix, measureOptions]);
+  }, [
+    items,
+    getLabel,
+    containerWidth,
+    lineCount,
+    cacheKeyPrefix,
+    measureOptions,
+  ]);
 
   return result;
 }
@@ -218,4 +227,3 @@ export function useBadgeTruncation<T>({
 export function clearBadgeWidthCache(): void {
   badgeWidthCache.clear();
 }
-
