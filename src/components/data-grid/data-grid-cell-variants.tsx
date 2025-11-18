@@ -1232,9 +1232,8 @@ export function FileCell<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  // Configuration options
   const maxFileSize =
-    cellOpts?.variant === "file" ? cellOpts.maxFileSize : 10 * 1024 * 1024; // 10MB default
+    cellOpts?.variant === "file" ? cellOpts.maxFileSize : 10 * 1024 * 1024;
   const maxFiles = cellOpts?.variant === "file" ? cellOpts.maxFiles : 10;
   const acceptedTypes =
     cellOpts?.variant === "file" ? cellOpts.acceptedTypes : undefined;
@@ -1251,11 +1250,19 @@ export function FileCell<TData>({
       if (maxFileSize && file.size > maxFileSize) {
         return `File size exceeds ${formatFileSize(maxFileSize)}`;
       }
-      if (
-        acceptedTypes &&
-        !acceptedTypes.some((type) => file.type.includes(type))
-      ) {
-        return `File type not accepted. Accepted: ${acceptedTypes.join(", ")}`;
+      if (acceptedTypes && acceptedTypes.length > 0) {
+        const isAccepted = acceptedTypes.some((type) => {
+          if (type.endsWith("/*")) {
+            // Handle wildcard types like "image/*"
+            const baseType = type.slice(0, -2);
+            return file.type.startsWith(`${baseType}/`);
+          }
+          // Exact match for specific MIME types
+          return file.type === type;
+        });
+        if (!isAccepted) {
+          return `File type not accepted. Accepted: ${acceptedTypes.join(", ")}`;
+        }
       }
       return null;
     },
@@ -1277,8 +1284,10 @@ export function FileCell<TData>({
 
       for (const file of newFiles) {
         const validationError = validateFile(file);
-        if (validationError && !firstError) {
-          firstError = validationError;
+        if (validationError) {
+          if (!firstError) {
+            firstError = validationError;
+          }
           continue;
         }
 
@@ -1333,6 +1342,11 @@ export function FileCell<TData>({
   const removeFile = React.useCallback(
     (fileId: string) => {
       setError(null);
+      // Revoke object URL to prevent memory leak
+      const fileToRemove = files.find((f) => f.id === fileId);
+      if (fileToRemove?.url) {
+        URL.revokeObjectURL(fileToRemove.url);
+      }
       const updatedFiles = files.filter((f) => f.id !== fileId);
       setFiles(updatedFiles);
       meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
@@ -1341,10 +1355,16 @@ export function FileCell<TData>({
   );
 
   const clearAll = React.useCallback(() => {
+    // Revoke all object URLs to prevent memory leak
+    for (const file of files) {
+      if (file.url) {
+        URL.revokeObjectURL(file.url);
+      }
+    }
     setFiles([]);
     setError(null);
     meta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
-  }, [meta, rowIndex, columnId]);
+  }, [files, meta, rowIndex, columnId]);
 
   const onDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1442,9 +1462,19 @@ export function FileCell<TData>({
     [addFiles],
   );
 
-  const onBrowseClick = React.useCallback(() => {
+  const onDropzoneClick = React.useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  const onDropzoneKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        onDropzoneClick();
+      }
+    },
+    [onDropzoneClick],
+  );
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
@@ -1488,11 +1518,23 @@ export function FileCell<TData>({
           });
         } else if (event.key === " ") {
           event.preventDefault();
-          onBrowseClick();
+          onDropzoneClick();
         }
+      } else if (isFocused && event.key === "Enter") {
+        // Handle Enter key to start editing when focused but not editing
+        event.preventDefault();
+        meta?.onCellEditingStart?.(rowIndex, columnId);
       }
     },
-    [isEditing, cellValue, meta, onBrowseClick],
+    [
+      isEditing,
+      isFocused,
+      cellValue,
+      meta,
+      onDropzoneClick,
+      rowIndex,
+      columnId,
+    ],
   );
 
   React.useEffect(() => {
@@ -1509,6 +1551,16 @@ export function FileCell<TData>({
       containerRef.current.focus();
     }
   }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
+
+  React.useEffect(() => {
+    return () => {
+      for (const file of files) {
+        if (file.url) {
+          URL.revokeObjectURL(file.url);
+        }
+      }
+    };
+  }, [files]);
 
   const rowHeight = table.options.meta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
@@ -1557,19 +1609,20 @@ export function FileCell<TData>({
             onEscapeKeyDown={onEscapeKeyDown}
           >
             <div className="flex flex-col gap-2 p-3">
-              {/* Drag & Drop Zone */}
-              <button
-                type="button"
-                onClick={onBrowseClick}
+              <div
+                role="region"
+                tabIndex={isDragging ? -1 : 0}
+                onClick={onDropzoneClick}
+                onKeyDown={onDropzoneKeyDown}
                 onDragEnter={onDragEnter}
                 onDragLeave={onDragLeave}
                 onDragOver={onDragOver}
                 onDrop={onDrop}
                 className={cn(
-                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 transition-colors",
+                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50",
                   isDragging
                     ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                    : "border-muted-foreground/25",
                 )}
               >
                 <Upload className="size-8 text-muted-foreground" />
@@ -1587,8 +1640,7 @@ export function FileCell<TData>({
                     {maxFiles && ` • Max ${maxFiles} files`}
                   </p>
                 )}
-              </button>
-
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1597,15 +1649,11 @@ export function FileCell<TData>({
                 onChange={onFileInputChange}
                 className="hidden"
               />
-
-              {/* Error Message */}
               {error && (
                 <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">
                   {error}
                 </div>
               )}
-
-              {/* File List */}
               {files.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
@@ -1623,31 +1671,35 @@ export function FileCell<TData>({
                     </Button>
                   </div>
                   <div className="max-h-[200px] space-y-1 overflow-y-auto">
-                    {files.map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5"
-                      >
-                        {React.createElement(getFileIcon(file.type), {
-                          className: "size-4 shrink-0 text-muted-foreground",
-                        })}
-                        <div className="flex-1 overflow-hidden">
-                          <p className="truncate text-sm">{file.name}</p>
-                          <p className="text-muted-foreground text-xs">
-                            {formatFileSize(file.size)}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="size-5 rounded-sm"
-                          onClick={() => removeFile(file.id)}
+                    {files.map((file) => {
+                      const FileIcon = getFileIcon(file.type);
+
+                      return (
+                        <div
+                          key={file.id}
+                          className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5"
                         >
-                          <X className="size-3" />
-                        </Button>
-                      </div>
-                    ))}
+                          {FileIcon && (
+                            <FileIcon className="size-4 shrink-0 text-muted-foreground" />
+                          )}
+                          <div className="flex-1 overflow-hidden">
+                            <p className="truncate text-sm">{file.name}</p>
+                            <p className="text-muted-foreground text-xs">
+                              {formatFileSize(file.size)}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-5 rounded-sm"
+                            onClick={() => removeFile(file.id)}
+                          >
+                            <X className="size-3" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
