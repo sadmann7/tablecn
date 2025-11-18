@@ -1176,10 +1176,6 @@ function formatFileSize(bytes: number): string {
   return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
 }
 
-// Default file upload constraints
-const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const DEFAULT_MAX_FILES = 10;
-
 function getFileIcon(
   type: string,
 ): React.ComponentType<React.SVGProps<SVGSVGElement>> {
@@ -1236,11 +1232,9 @@ export function FileCell<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  // Configuration options
   const maxFileSize =
-    cellOpts?.variant === "file" ? cellOpts.maxFileSize : DEFAULT_MAX_FILE_SIZE;
-  const maxFiles =
-    cellOpts?.variant === "file" ? cellOpts.maxFiles : DEFAULT_MAX_FILES;
+    cellOpts?.variant === "file" ? cellOpts.maxFileSize : 10 * 1024 * 1024;
+  const maxFiles = cellOpts?.variant === "file" ? cellOpts.maxFiles : 10;
   const acceptedTypes =
     cellOpts?.variant === "file" ? cellOpts.acceptedTypes : undefined;
 
