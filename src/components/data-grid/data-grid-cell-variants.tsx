@@ -549,7 +549,7 @@ export function SelectCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
+      if (isEditing && !open) {
         if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
@@ -564,7 +564,7 @@ export function SelectCell<TData>({
         }
       }
     },
-    [isEditing, initialValue, meta],
+    [isEditing, open, initialValue, meta],
   );
 
   React.useEffect(() => {
@@ -725,7 +725,7 @@ export function MultiSelectCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
+      if (isEditing && !open) {
         if (event.key === "Escape") {
           event.preventDefault();
           setSelectedValues(cellValue);
@@ -742,7 +742,7 @@ export function MultiSelectCell<TData>({
         }
       }
     },
-    [isEditing, cellValue, meta],
+    [isEditing, open, cellValue, meta],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -1090,7 +1090,7 @@ export function DateCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
+      if (isEditing && !open) {
         if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
@@ -1104,7 +1104,7 @@ export function DateCell<TData>({
         }
       }
     },
-    [isEditing, initialValue, meta],
+    [isEditing, open, initialValue, meta],
   );
 
   React.useEffect(() => {
@@ -1503,7 +1503,7 @@ export function FileCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
+      if (isEditing && !open) {
         if (event.key === "Escape") {
           event.preventDefault();
           setFiles(cellValue);
@@ -1528,6 +1528,7 @@ export function FileCell<TData>({
     },
     [
       isEditing,
+      open,
       isFocused,
       cellValue,
       meta,
