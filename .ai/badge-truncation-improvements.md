@@ -57,15 +57,75 @@ This ensures:
 
 ## Implementation Details
 
+### Reusable Hook: `useBadgeTruncation`
+The logic is now encapsulated in a reusable hook located at `src/hooks/use-badge-truncation.ts`.
+
+**Hook Signature:**
+```typescript
+useBadgeTruncation<T>({
+  items: T[],                              // Items to display
+  getLabel: (item: T) => string,           // Extract label from item
+  containerRef: RefObject<HTMLElement>,    // Container reference
+  lineCount: number,                       // Number of available lines
+  cacheKeyPrefix?: string,                 // Optional cache namespace
+  measureOptions?: MeasureBadgeOptions,    // Optional measurement config
+})
+```
+
+**Returns:**
+```typescript
+{
+  visibleItems: T[],      // Items that fit in available space
+  hiddenCount: number,    // Number of hidden items
+  containerWidth: number, // Current container width
+}
+```
+
 ### MultiSelectCell
-- Measures text-only badges
-- Uses `.truncate` class names for styling consistency
-- Handles labels of varying lengths
+- Uses hook with simple text labels
+- Passes labels directly via `getLabel: (label) => label`
+- No additional measure options needed
+
+**Example:**
+```typescript
+const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } =
+  useBadgeTruncation({
+    items: displayLabels,
+    getLabel: (label) => label,
+    containerRef,
+    lineCount,
+  });
+```
 
 ### FileCell
-- Measures badges with icons (12px + gap)
-- Accounts for file name truncation (max-width: 100px)
-- Separate cache key namespace (`file:${fileName}`)
+- Uses hook with file data
+- Includes icon in measurements
+- Applies max-width constraint for long filenames
+- Separate cache namespace with `cacheKeyPrefix: "file"`
+
+**Example:**
+```typescript
+const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } =
+  useBadgeTruncation({
+    items: files,
+    getLabel: (file) => file.name,
+    containerRef,
+    lineCount,
+    cacheKeyPrefix: "file",
+    measureOptions: {
+      includeIcon: true,
+      maxWidth: "100px",
+    },
+  });
+```
+
+### Benefits of Hook Approach
+1. **Reusability**: Same logic works for any badge-like component
+2. **Maintainability**: Single source of truth for truncation algorithm
+3. **Type Safety**: Full TypeScript support with generics
+4. **Testability**: Easy to unit test in isolation
+5. **Flexibility**: Configurable via options for different use cases
+6. **Extensibility**: Can be used by future components (tags, chips, etc.)
 
 ## Performance Characteristics
 
