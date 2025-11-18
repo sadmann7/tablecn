@@ -76,7 +76,7 @@ export function DataGrid<TData>({
         className="relative grid select-none overflow-auto rounded-md border focus:outline-none"
         style={{
           ...columnSizeVars,
-          height: `${height}px`,
+          maxHeight: `${height}px`,
         }}
         onContextMenu={onGridContextMenu}
       >
