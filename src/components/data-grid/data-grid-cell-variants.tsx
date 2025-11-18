@@ -1,7 +1,19 @@
 "use client";
 
 import type { Cell, Table } from "@tanstack/react-table";
-import { Check, Upload, X } from "lucide-react";
+import {
+  Check,
+  File,
+  FileArchive,
+  FileAudio,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
+  Presentation,
+  Upload,
+  X,
+} from "lucide-react";
 import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +41,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getLineCount } from "@/lib/data-grid";
@@ -185,7 +198,7 @@ export function ShortTextCell<TData>({
         onInput={onInput}
         suppressContentEditableWarning
         className={cn("size-full overflow-hidden outline-none", {
-          "whitespace-nowrap [&_*]:inline [&_*]:whitespace-nowrap [&_br]:hidden":
+          "whitespace-nowrap **:inline **:whitespace-nowrap [&_br]:hidden":
             isEditing,
         })}
       >
@@ -814,7 +827,7 @@ export function MultiSelectCell<TData>({
             className="w-[300px] rounded-none p-0"
             onOpenAutoFocus={onOpenAutoFocus}
           >
-            <Command className="[&_[data-slot=command-input-wrapper]]:h-auto [&_[data-slot=command-input-wrapper]]:border-none [&_[data-slot=command-input-wrapper]]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
+            <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
                   const option = options.find((opt) => opt.value === value);
@@ -1169,27 +1182,29 @@ function formatFileSize(bytes: number): string {
   return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
 }
 
-function getFileIcon(type: string): string {
-  if (type.startsWith("image/")) return "🖼️";
-  if (type.startsWith("video/")) return "🎥";
-  if (type.startsWith("audio/")) return "🎵";
-  if (type.includes("pdf")) return "📄";
-  if (type.includes("zip") || type.includes("rar")) return "📦";
+function getFileIcon(
+  type: string,
+): React.ComponentType<React.SVGProps<SVGSVGElement>> {
+  if (type.startsWith("image/")) return FileImage;
+  if (type.startsWith("video/")) return FileVideo;
+  if (type.startsWith("audio/")) return FileAudio;
+  if (type.includes("pdf")) return FileText;
+  if (type.includes("zip") || type.includes("rar")) return FileArchive;
   if (
     type.includes("word") ||
     type.includes("document") ||
     type.includes("doc")
   )
-    return "📝";
+    return FileText;
   if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
-    return "📊";
+    return FileSpreadsheet;
   if (
     type.includes("presentation") ||
     type.includes("powerpoint") ||
     type.includes("ppt")
   )
-    return "📽️";
-  return "📄";
+    return Presentation;
+  return File;
 }
 
 export function FileCell<TData>({
@@ -1274,9 +1289,8 @@ export function FileCell<TData>({
         }
 
         // Create file data object with temporary ID
-        const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
         const fileData: FileData = {
-          id: tempId,
+          id: crypto.randomUUID(),
           name: file.name,
           size: file.size,
           type: file.type,
@@ -1305,8 +1319,8 @@ export function FileCell<TData>({
           await new Promise((resolve) => setTimeout(resolve, 800));
 
           // Replace temp files with real ones
-          const finalFiles = filesWithTemp.map((f) =>
-            validFiles.find((vf) => vf.id === f.id) || f,
+          const finalFiles = filesWithTemp.map(
+            (f) => validFiles.find((vf) => vf.id === f.id) || f,
           );
           setFiles(finalFiles);
           setUploadingFiles(new Set());
@@ -1323,7 +1337,7 @@ export function FileCell<TData>({
   );
 
   const removeFile = React.useCallback(
-    (fileId: string, event?: React.MouseEvent) => {
+    (fileId: string, event?: React.MouseEvent<HTMLButtonElement>) => {
       event?.stopPropagation();
       event?.preventDefault();
       setError(null);
@@ -1606,9 +1620,9 @@ export function FileCell<TData>({
                         key={file.id}
                         className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5"
                       >
-                        <span className="text-base leading-none">
-                          {getFileIcon(file.type)}
-                        </span>
+                        {React.createElement(getFileIcon(file.type), {
+                          className: "size-4 shrink-0 text-muted-foreground",
+                        })}
                         <div className="flex-1 overflow-hidden">
                           <p className="truncate text-sm">{file.name}</p>
                           <p className="text-muted-foreground text-xs">
@@ -1617,8 +1631,10 @@ export function FileCell<TData>({
                         </div>
                         <button
                           type="button"
-                          onClick={(event) => removeFile(file.id, event)}
                           className="rounded-sm p-1 hover:bg-muted"
+                          onClick={(event) => {
+                            removeFile(file.id, event);
+                          }}
                         >
                           <X className="size-3" />
                         </button>
@@ -1635,14 +1651,16 @@ export function FileCell<TData>({
         <div className="flex flex-wrap items-center gap-1 overflow-hidden">
           {visibleFiles.map((file) => {
             const isUploading = uploadingFiles.has(file.id);
-            
+
             if (isUploading) {
               // Show skeleton for uploading files
               return (
-                <div
+                <Skeleton
                   key={file.id}
-                  className="h-5 shrink-0 animate-pulse rounded-md bg-muted px-1.5"
-                  style={{ width: `${Math.min(file.name.length * 8 + 30, 100)}px` }}
+                  className="h-5 shrink-0 px-1.5"
+                  style={{
+                    width: `${Math.min(file.name.length * 8 + 30, 100)}px`,
+                  }}
                 />
               );
             }
@@ -1653,7 +1671,9 @@ export function FileCell<TData>({
                 variant="secondary"
                 className="h-5 shrink-0 gap-1 px-1.5 text-xs"
               >
-                <span>{getFileIcon(file.type)}</span>
+                {React.createElement(getFileIcon(file.type), {
+                  className: "size-3 shrink-0",
+                })}
                 <span className="max-w-[100px] truncate">{file.name}</span>
               </Badge>
             );
@@ -1672,9 +1692,7 @@ export function FileCell<TData>({
           <Upload className="size-4" />
           <span>Drop files here</span>
         </div>
-      ) : (
-        <span className="text-muted-foreground text-sm">No files</span>
-      )}
+      ) : null}
     </DataGridCellWrapper>
   );
 }
