@@ -635,6 +635,70 @@ export function SelectCell<TData>({
   );
 }
 
+// Cache for badge width measurements (shared across all cells)
+const badgeWidthCache = new Map<string, number>();
+
+// Helper to measure badge width using a hidden element
+function measureBadgeWidth(label: string): number {
+  // Check cache first
+  const cached = badgeWidthCache.get(label);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Create temporary measurement element
+  const measureEl = document.createElement("div");
+  measureEl.className =
+    "inline-flex items-center rounded-md border px-1.5 text-xs font-semibold h-5 gap-1 shrink-0 absolute invisible pointer-events-none";
+  measureEl.style.whiteSpace = "nowrap";
+  measureEl.textContent = label;
+
+  document.body.appendChild(measureEl);
+  const width = measureEl.offsetWidth;
+  document.body.removeChild(measureEl);
+
+  // Cache the result
+  badgeWidthCache.set(label, width);
+  return width;
+}
+
+// Helper to measure file badge width (includes icon)
+function measureFileBadgeWidth(fileName: string): number {
+  const cacheKey = `file:${fileName}`;
+  const cached = badgeWidthCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  // Create temporary measurement element with icon
+  const measureEl = document.createElement("div");
+  measureEl.className =
+    "inline-flex items-center rounded-md border px-1.5 text-xs font-semibold h-5 gap-1 shrink-0 absolute invisible pointer-events-none";
+  measureEl.style.whiteSpace = "nowrap";
+
+  // Add icon placeholder (12px width + gap)
+  const icon = document.createElement("span");
+  icon.className = "shrink-0";
+  icon.style.width = "12px";
+  icon.style.height = "12px";
+  measureEl.appendChild(icon);
+
+  // Add text with max-width constraint
+  const text = document.createElement("span");
+  text.className = "truncate";
+  text.style.maxWidth = "100px";
+  text.textContent = fileName;
+  measureEl.appendChild(text);
+
+  document.body.appendChild(measureEl);
+  const width = measureEl.offsetWidth;
+  document.body.removeChild(measureEl);
+
+  // Cache the result
+  badgeWidthCache.set(cacheKey, width);
+  return width;
+}
+
 export function MultiSelectCell<TData>({
   cell,
   table,
@@ -656,6 +720,7 @@ export function MultiSelectCell<TData>({
     React.useState<string[]>(cellValue);
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
+  const [containerWidth, setContainerWidth] = React.useState(0);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const meta = table.options.meta;
@@ -669,6 +734,29 @@ export function MultiSelectCell<TData>({
     setOpen(false);
     setSearchValue("");
   }
+
+  // Measure container width on mount and when column resizes
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+
+    const measureWidth = () => {
+      if (containerRef.current) {
+        // Account for padding (2 * 8px = 16px)
+        const width = containerRef.current.clientWidth - 16;
+        setContainerWidth(width);
+      }
+    };
+
+    measureWidth();
+
+    // Use ResizeObserver only on the container, not on individual badges
+    const resizeObserver = new ResizeObserver(measureWidth);
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   const onValueChange = React.useCallback(
     (value: string) => {
@@ -794,15 +882,52 @@ export function MultiSelectCell<TData>({
     .filter(Boolean);
 
   const rowHeight = table.options.meta?.rowHeight ?? "short";
-
   const lineCount = getLineCount(rowHeight);
-  const maxVisibleBadgeCount = lineCount * 3;
 
-  const visibleLabels = displayLabels.slice(0, maxVisibleBadgeCount);
-  const hiddenBadgeCount = Math.max(
-    0,
-    displayLabels.length - maxVisibleBadgeCount,
-  );
+  // Calculate visible badges based on actual widths
+  const { visibleLabels, hiddenBadgeCount } = React.useMemo(() => {
+    if (!containerWidth || displayLabels.length === 0) {
+      return { visibleLabels: displayLabels, hiddenBadgeCount: 0 };
+    }
+
+    const gapWidth = 4; // gap-1 = 4px
+    const plusBadgeWidth = 40; // Approximate width of "+N" badge
+    let currentLineWidth = 0;
+    let currentLine = 1;
+    const visible: string[] = [];
+
+    for (const label of displayLabels) {
+      const badgeWidth = measureBadgeWidth(label);
+      const widthWithGap = badgeWidth + gapWidth;
+
+      // Check if badge fits on current line
+      if (currentLineWidth + widthWithGap <= containerWidth) {
+        currentLineWidth += widthWithGap;
+        visible.push(label);
+      } else if (currentLine < lineCount) {
+        // Move to next line
+        currentLine++;
+        currentLineWidth = widthWithGap;
+        visible.push(label);
+      } else {
+        // No more space, need to show "+N" badge
+        // If adding "+N" badge would overflow, remove last badge to make room
+        if (
+          currentLineWidth + plusBadgeWidth > containerWidth &&
+          visible.length > 0
+        ) {
+          visible.pop();
+        }
+
+        break;
+      }
+    }
+
+    return {
+      visibleLabels: visible,
+      hiddenBadgeCount: Math.max(0, displayLabels.length - visible.length),
+    };
+  }, [displayLabels, containerWidth, lineCount]);
 
   return (
     <DataGridCellWrapper
@@ -1225,6 +1350,7 @@ export function FileCell<TData>({
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [containerWidth, setContainerWidth] = React.useState(0);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const meta = table.options.meta;
@@ -1244,6 +1370,29 @@ export function FileCell<TData>({
     setOpen(false);
     setError(null);
   }
+
+  // Measure container width on mount and when column resizes
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+
+    const measureWidth = () => {
+      if (containerRef.current) {
+        // Account for padding (2 * 8px = 16px)
+        const width = containerRef.current.clientWidth - 16;
+        setContainerWidth(width);
+      }
+    };
+
+    measureWidth();
+
+    // Use ResizeObserver only on the container
+    const resizeObserver = new ResizeObserver(measureWidth);
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   const validateFile = React.useCallback(
     (file: File): string | null => {
@@ -1511,10 +1660,51 @@ export function FileCell<TData>({
 
   const rowHeight = table.options.meta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
-  const maxVisibleBadgeCount = lineCount * 3;
 
-  const visibleFiles = files.slice(0, maxVisibleBadgeCount);
-  const hiddenFileCount = Math.max(0, files.length - maxVisibleBadgeCount);
+  // Calculate visible files based on actual widths
+  const { visibleFiles, hiddenFileCount } = React.useMemo(() => {
+    if (!containerWidth || files.length === 0) {
+      return { visibleFiles: files, hiddenFileCount: 0 };
+    }
+
+    const gapWidth = 4; // gap-1 = 4px
+    const plusBadgeWidth = 40; // Approximate width of "+N" badge
+    let currentLineWidth = 0;
+    let currentLine = 1;
+    const visible: FileCellData[] = [];
+
+    for (const file of files) {
+      const badgeWidth = measureFileBadgeWidth(file.name);
+      const widthWithGap = badgeWidth + gapWidth;
+
+      // Check if badge fits on current line
+      if (currentLineWidth + widthWithGap <= containerWidth) {
+        currentLineWidth += widthWithGap;
+        visible.push(file);
+      } else if (currentLine < lineCount) {
+        // Move to next line
+        currentLine++;
+        currentLineWidth = widthWithGap;
+        visible.push(file);
+      } else {
+        // No more space, need to show "+N" badge
+        // If adding "+N" badge would overflow, remove last file to make room
+        if (
+          currentLineWidth + plusBadgeWidth > containerWidth &&
+          visible.length > 0
+        ) {
+          visible.pop();
+        }
+
+        break;
+      }
+    }
+
+    return {
+      visibleFiles: visible,
+      hiddenFileCount: Math.max(0, files.length - visible.length),
+    };
+  }, [files, containerWidth, lineCount]);
 
   return (
     <DataGridCellWrapper
