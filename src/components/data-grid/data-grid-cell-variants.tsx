@@ -1469,6 +1469,14 @@ export function FileCell<TData>({
     event.preventDefault();
   }, []);
 
+  const onEscapeKeyDown: NonNullable<
+    React.ComponentProps<typeof PopoverContent>["onEscapeKeyDown"]
+  > = React.useCallback((event) => {
+    // Prevent the escape key from propagating to the data grid's keyboard handler
+    // which would call blurCell() and remove focus from the cell
+    event.stopPropagation();
+  }, []);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
@@ -1528,11 +1536,11 @@ export function FileCell<TData>({
       className={cn({
         "ring-1 ring-primary/80 ring-inset": isDraggingOver,
       })}
-      onKeyDown={onWrapperKeyDown}
       onDragEnter={onCellDragEnter}
       onDragLeave={onCellDragLeave}
       onDragOver={onCellDragOver}
       onDrop={onCellDrop}
+      onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
         <Popover open={open} onOpenChange={onOpenChange}>
@@ -1545,11 +1553,13 @@ export function FileCell<TData>({
             sideOffset={sideOffset}
             className="w-[400px] rounded-none p-0"
             onOpenAutoFocus={onOpenAutoFocus}
+            onEscapeKeyDown={onEscapeKeyDown}
           >
             <div className="flex flex-col gap-2 p-3">
               {/* Drag & Drop Zone */}
               <button
                 type="button"
+                onClick={onBrowseClick}
                 onDragEnter={onDragEnter}
                 onDragLeave={onDragLeave}
                 onDragOver={onDragOver}
@@ -1560,7 +1570,6 @@ export function FileCell<TData>({
                     ? "border-primary bg-primary/5"
                     : "border-muted-foreground/25 hover:border-muted-foreground/50",
                 )}
-                onClick={onBrowseClick}
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <div className="text-center text-sm">
@@ -1606,8 +1615,8 @@ export function FileCell<TData>({
                       type="button"
                       variant="ghost"
                       size="sm"
+                      className="h-6 text-muted-foreground text-xs"
                       onClick={clearAll}
-                      className="h-6 px-2 text-muted-foreground text-xs"
                     >
                       Clear all
                     </Button>
@@ -1633,7 +1642,6 @@ export function FileCell<TData>({
                           size="icon"
                           className="size-5 rounded-sm"
                           onClick={() => removeFile(file.id)}
-                          onPointerDown={(event) => event.preventDefault()}
                         >
                           <X className="size-3" />
                         </Button>
