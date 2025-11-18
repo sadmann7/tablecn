@@ -11,14 +11,7 @@ import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
-
-interface FileData {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url?: string;
-}
+import type { FileCellData } from "@/types/data-grid";
 
 interface Person {
   id: string;
@@ -32,7 +25,7 @@ interface Person {
   skills?: string[];
   isActive?: boolean;
   startDate?: string;
-  attachments?: FileData[];
+  attachments?: FileCellData[];
 }
 
 faker.seed(12345);
@@ -113,7 +106,7 @@ function generatePerson(id: number): Person {
   const fileCount = faker.number.int({ min: 0, max: 3 });
   const selectedFiles = faker.helpers.arrayElements(sampleFiles, fileCount);
 
-  const attachments: FileData[] = selectedFiles.map((file, index) => {
+  const attachments: FileCellData[] = selectedFiles.map((file, index) => {
     const sizeKB = faker.number.int({
       min: file.sizeRange[0],
       max: file.sizeRange[1],

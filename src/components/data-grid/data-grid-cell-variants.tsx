@@ -46,6 +46,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
+import type { FileCellData } from "@/types/data-grid";
 
 interface CellVariantProps<TData> {
   cell: Cell<TData, unknown>;
@@ -1166,14 +1167,6 @@ export function DateCell<TData>({
   );
 }
 
-interface FileData {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url?: string;
-}
-
 function formatFileSize(bytes: number): string {
   if (bytes === 0) return "0 B";
   const k = 1024;
@@ -1217,14 +1210,14 @@ export function FileCell<TData>({
   isSelected,
 }: CellVariantProps<TData>) {
   const cellValue = React.useMemo(
-    () => (cell.getValue() as FileData[]) ?? [],
+    () => (cell.getValue() as FileCellData[]) ?? [],
     [cell],
   );
 
   const cellId = `${rowIndex}-${columnId}`;
   const prevCellIdRef = React.useRef(cellId);
 
-  const [files, setFiles] = React.useState<FileData[]>(cellValue);
+  const [files, setFiles] = React.useState<FileCellData[]>(cellValue);
   const [uploadingFiles, setUploadingFiles] = React.useState<Set<string>>(
     new Set(),
   );
@@ -1278,7 +1271,7 @@ export function FileCell<TData>({
         return;
       }
 
-      const validFiles: FileData[] = [];
+      const validFiles: FileCellData[] = [];
       let firstError: string | null = null;
 
       for (const file of newFiles) {
@@ -1289,7 +1282,7 @@ export function FileCell<TData>({
         }
 
         // Create file data object with temporary ID
-        const fileData: FileData = {
+        const fileData: FileCellData = {
           id: crypto.randomUUID(),
           name: file.name,
           size: file.size,

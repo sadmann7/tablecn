@@ -152,3 +152,11 @@ export interface SearchState {
   onNavigateToNextMatch: () => void;
   onNavigateToPrevMatch: () => void;
 }
+
+export interface FileCellData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
