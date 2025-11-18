@@ -1523,7 +1523,7 @@ export function FileCell<TData>({
       lineCount,
       cacheKeyPrefix: "file",
       measureOptions: {
-        includeIcon: true,
+        iconSize: 12,
         maxWidth: "100px",
       },
     });
