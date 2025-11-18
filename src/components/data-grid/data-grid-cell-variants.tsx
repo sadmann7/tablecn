@@ -1,10 +1,11 @@
 "use client";
 
 import type { Cell, Table } from "@tanstack/react-table";
-import { Check, X } from "lucide-react";
+import { Check, Upload, X } from "lucide-react";
 import * as React from "react";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -1148,6 +1149,431 @@ export function DateCell<TData>({
           </PopoverContent>
         )}
       </Popover>
+    </DataGridCellWrapper>
+  );
+}
+
+interface FileData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+}
+
+function getFileIcon(type: string): string {
+  if (type.startsWith("image/")) return "🖼️";
+  if (type.startsWith("video/")) return "🎥";
+  if (type.startsWith("audio/")) return "🎵";
+  if (type.includes("pdf")) return "📄";
+  if (type.includes("zip") || type.includes("rar")) return "📦";
+  if (
+    type.includes("word") ||
+    type.includes("document") ||
+    type.includes("doc")
+  )
+    return "📝";
+  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
+    return "📊";
+  if (
+    type.includes("presentation") ||
+    type.includes("powerpoint") ||
+    type.includes("ppt")
+  )
+    return "📽️";
+  return "📄";
+}
+
+export function FileCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+}: CellVariantProps<TData>) {
+  const cellValue = React.useMemo(
+    () => (cell.getValue() as FileData[]) ?? [],
+    [cell],
+  );
+
+  const cellId = `${rowIndex}-${columnId}`;
+  const prevCellIdRef = React.useRef(cellId);
+
+  const [files, setFiles] = React.useState<FileData[]>(cellValue);
+  const [open, setOpen] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const meta = table.options.meta;
+  const cellOpts = cell.column.columnDef.meta?.cell;
+  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
+
+  // Configuration options
+  const maxFileSize =
+    cellOpts?.variant === "file" ? cellOpts.maxFileSize : 10 * 1024 * 1024; // 10MB default
+  const maxFiles = cellOpts?.variant === "file" ? cellOpts.maxFiles : 10;
+  const acceptedTypes =
+    cellOpts?.variant === "file" ? cellOpts.acceptedTypes : undefined;
+
+  if (prevCellIdRef.current !== cellId) {
+    prevCellIdRef.current = cellId;
+    setFiles(cellValue);
+    setOpen(false);
+    setError(null);
+  }
+
+  const validateFile = React.useCallback(
+    (file: File): string | null => {
+      if (maxFileSize && file.size > maxFileSize) {
+        return `File size exceeds ${formatFileSize(maxFileSize)}`;
+      }
+      if (
+        acceptedTypes &&
+        !acceptedTypes.some((type) => file.type.includes(type))
+      ) {
+        return `File type not accepted. Accepted: ${acceptedTypes.join(", ")}`;
+      }
+      return null;
+    },
+    [maxFileSize, acceptedTypes],
+  );
+
+  const addFiles = React.useCallback(
+    (newFiles: File[]) => {
+      setError(null);
+
+      // Check max files limit
+      if (maxFiles && files.length + newFiles.length > maxFiles) {
+        setError(`Maximum ${maxFiles} files allowed`);
+        return;
+      }
+
+      const validFiles: FileData[] = [];
+      let firstError: string | null = null;
+
+      for (const file of newFiles) {
+        const validationError = validateFile(file);
+        if (validationError && !firstError) {
+          firstError = validationError;
+          continue;
+        }
+
+        // Create file data object
+        const fileData: FileData = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          // In a real app, you'd upload the file and get a URL back
+          url: URL.createObjectURL(file),
+        };
+        validFiles.push(fileData);
+      }
+
+      if (firstError) {
+        setError(firstError);
+      }
+
+      if (validFiles.length > 0) {
+        const updatedFiles = [...files, ...validFiles];
+        setFiles(updatedFiles);
+        meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+      }
+    },
+    [files, maxFiles, validateFile, meta, rowIndex, columnId],
+  );
+
+  const removeFile = React.useCallback(
+    (fileId: string, event?: React.MouseEvent) => {
+      event?.stopPropagation();
+      event?.preventDefault();
+      setError(null);
+      const updatedFiles = files.filter((f) => f.id !== fileId);
+      setFiles(updatedFiles);
+      meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+    },
+    [files, meta, rowIndex, columnId],
+  );
+
+  const clearAll = React.useCallback(() => {
+    setFiles([]);
+    setError(null);
+    meta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
+  }, [meta, rowIndex, columnId]);
+
+  const onDragEnter = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const onDragLeave = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+
+    if (
+      x <= rect.left ||
+      x >= rect.right ||
+      y <= rect.top ||
+      y >= rect.bottom
+    ) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const onDragOver = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const onDrop = React.useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragging(false);
+
+      const droppedFiles = Array.from(event.dataTransfer.files);
+      addFiles(droppedFiles);
+    },
+    [addFiles],
+  );
+
+  const onFileInputChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = Array.from(event.target.files ?? []);
+      addFiles(selectedFiles);
+      // Reset input so the same file can be selected again
+      event.target.value = "";
+    },
+    [addFiles],
+  );
+
+  const onBrowseClick = React.useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const onOpenChange = React.useCallback(
+    (isOpen: boolean) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setError(null);
+        meta?.onCellEditingStop?.();
+      }
+    },
+    [meta],
+  );
+
+  const onOpenAutoFocus: NonNullable<
+    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
+  > = React.useCallback((event) => {
+    event.preventDefault();
+  }, []);
+
+  const onWrapperKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (isEditing) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          setFiles(cellValue);
+          setError(null);
+          setOpen(false);
+          meta?.onCellEditingStop?.();
+        } else if (event.key === "Tab") {
+          event.preventDefault();
+          setOpen(false);
+          meta?.onCellEditingStop?.({
+            direction: event.shiftKey ? "left" : "right",
+          });
+        } else if (event.key === " ") {
+          event.preventDefault();
+          onBrowseClick();
+        }
+      }
+    },
+    [isEditing, cellValue, meta, onBrowseClick],
+  );
+
+  React.useEffect(() => {
+    if (isEditing && !open) {
+      setOpen(true);
+    }
+    if (
+      isFocused &&
+      !isEditing &&
+      !meta?.searchOpen &&
+      !meta?.isScrolling &&
+      containerRef.current
+    ) {
+      containerRef.current.focus();
+    }
+  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
+
+  const rowHeight = table.options.meta?.rowHeight ?? "short";
+  const lineCount = getLineCount(rowHeight);
+  const maxVisibleBadgeCount = lineCount * 3;
+
+  const visibleFiles = files.slice(0, maxVisibleBadgeCount);
+  const hiddenFileCount = Math.max(0, files.length - maxVisibleBadgeCount);
+
+  return (
+    <DataGridCellWrapper
+      ref={containerRef}
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isEditing={isEditing}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      onKeyDown={onWrapperKeyDown}
+    >
+      {isEditing ? (
+        <Popover open={open} onOpenChange={onOpenChange}>
+          <PopoverAnchor asChild>
+            <div className="absolute inset-0" />
+          </PopoverAnchor>
+          <PopoverContent
+            data-grid-cell-editor=""
+            align="start"
+            sideOffset={sideOffset}
+            className="w-[400px] rounded-none p-0"
+            onOpenAutoFocus={onOpenAutoFocus}
+          >
+            <div className="flex flex-col gap-2 p-3">
+              {/* Drag & Drop Zone */}
+              <button
+                type="button"
+                onDragEnter={onDragEnter}
+                onDragLeave={onDragLeave}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                className={cn(
+                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 transition-colors",
+                  isDragging
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-muted-foreground/50",
+                )}
+                onClick={onBrowseClick}
+              >
+                <Upload className="size-8 text-muted-foreground" />
+                <div className="text-center text-sm">
+                  <p className="font-medium">
+                    {isDragging ? "Drop files here" : "Drag files here"}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    or click to browse
+                  </p>
+                </div>
+                {maxFileSize && (
+                  <p className="text-muted-foreground text-xs">
+                    Max size: {formatFileSize(maxFileSize)}
+                    {maxFiles && ` • Max ${maxFiles} files`}
+                  </p>
+                )}
+              </button>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept={acceptedTypes?.join(",")}
+                onChange={onFileInputChange}
+                className="hidden"
+              />
+
+              {/* Error Message */}
+              {error && (
+                <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">
+                  {error}
+                </div>
+              )}
+
+              {/* File List */}
+              {files.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-muted-foreground text-xs">
+                      {files.length} {files.length === 1 ? "file" : "files"}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAll}
+                      className="h-6 px-2 text-muted-foreground text-xs"
+                    >
+                      Clear all
+                    </Button>
+                  </div>
+                  <div className="max-h-[200px] space-y-1 overflow-y-auto">
+                    {files.map((file) => (
+                      <div
+                        key={file.id}
+                        className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5"
+                      >
+                        <span className="text-base leading-none">
+                          {getFileIcon(file.type)}
+                        </span>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="truncate text-sm">{file.name}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {formatFileSize(file.size)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(event) => removeFile(file.id, event)}
+                          className="rounded-sm p-1 hover:bg-muted"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : null}
+      {files.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-1 overflow-hidden">
+          {visibleFiles.map((file) => (
+            <Badge
+              key={file.id}
+              variant="secondary"
+              className="h-5 shrink-0 gap-1 px-1.5 text-xs"
+            >
+              <span>{getFileIcon(file.type)}</span>
+              <span className="max-w-[100px] truncate">{file.name}</span>
+            </Badge>
+          ))}
+          {hiddenFileCount > 0 && (
+            <Badge
+              variant="outline"
+              className="h-5 shrink-0 px-1.5 text-muted-foreground text-xs"
+            >
+              +{hiddenFileCount}
+            </Badge>
+          )}
+        </div>
+      ) : (
+        <span className="text-muted-foreground text-sm">No files</span>
+      )}
     </DataGridCellWrapper>
   );
 }

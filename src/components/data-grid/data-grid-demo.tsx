@@ -12,6 +12,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 
+interface FileData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
+
 interface Person {
   id: string;
   name?: string;
@@ -24,6 +32,7 @@ interface Person {
   skills?: string[];
   isActive?: boolean;
   startDate?: string;
+  attachments?: FileData[];
 }
 
 faker.seed(12345);
@@ -67,9 +76,56 @@ const notes = [
   "Completed advanced training in data visualization. Now serving as the team's go-to expert for dashboards.",
 ];
 
+const sampleFiles = [
+  { name: "Resume.pdf", type: "application/pdf", sizeRange: [50, 500] },
+  { name: "Contract.pdf", type: "application/pdf", sizeRange: [100, 300] },
+  { name: "ID_Document.pdf", type: "application/pdf", sizeRange: [200, 400] },
+  { name: "Profile_Photo.jpg", type: "image/jpeg", sizeRange: [500, 2000] },
+  {
+    name: "Presentation.pptx",
+    type: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    sizeRange: [1000, 5000],
+  },
+  {
+    name: "Report.docx",
+    type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    sizeRange: [100, 800],
+  },
+  {
+    name: "Timesheet.xlsx",
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    sizeRange: [50, 200],
+  },
+  { name: "Certificate.pdf", type: "application/pdf", sizeRange: [200, 500] },
+  {
+    name: "Background_Check.pdf",
+    type: "application/pdf",
+    sizeRange: [300, 600],
+  },
+  { name: "Training_Video.mp4", type: "video/mp4", sizeRange: [5000, 15000] },
+] as const;
+
 function generatePerson(id: number): Person {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
+
+  // Generate 0-3 files for this person
+  const fileCount = faker.number.int({ min: 0, max: 3 });
+  const selectedFiles = faker.helpers.arrayElements(sampleFiles, fileCount);
+
+  const attachments: FileData[] = selectedFiles.map((file, index) => {
+    const sizeKB = faker.number.int({
+      min: file.sizeRange[0],
+      max: file.sizeRange[1],
+    });
+    return {
+      id: `${id}-file-${index}`,
+      name: file.name,
+      size: sizeKB * 1024, // Convert to bytes
+      type: file.type,
+      url: `https://example.com/files/${id}/${file.name}`,
+    };
+  });
 
   return {
     id: id.toString(),
@@ -87,6 +143,7 @@ function generatePerson(id: number): Person {
         .toISOString()
         .split("T")[0] ?? "",
     skills: faker.helpers.arrayElements(skills, { min: 1, max: 5 }),
+    attachments,
   };
 }
 
@@ -278,6 +335,20 @@ export function DataGridDemo() {
           label: "Start Date",
           cell: {
             variant: "date",
+          },
+        },
+      },
+      {
+        id: "attachments",
+        accessorKey: "attachments",
+        header: "Attachments",
+        minSize: 240,
+        meta: {
+          label: "Attachments",
+          cell: {
+            variant: "file",
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            maxFiles: 5,
           },
         },
       },

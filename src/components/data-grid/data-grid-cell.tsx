@@ -6,6 +6,7 @@ import * as React from "react";
 import {
   CheckboxCell,
   DateCell,
+  FileCell,
   LongTextCell,
   MultiSelectCell,
   NumberCell,
@@ -116,6 +117,18 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     case "date":
       return (
         <DateCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isEditing={isEditing}
+          isFocused={isFocused}
+          isSelected={isSelected}
+        />
+      );
+    case "file":
+      return (
+        <FileCell
           cell={cell}
           table={table}
           rowIndex={rowIndex}
