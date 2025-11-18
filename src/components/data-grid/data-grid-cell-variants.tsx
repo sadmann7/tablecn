@@ -1149,14 +1149,13 @@ export function DateCell<TData>({
           <PopoverContent
             data-grid-cell-editor=""
             align="start"
-            sideOffset={10}
+            alignOffset={-8}
             className="w-auto p-0"
           >
             <Calendar
               autoFocus
               captionLayout="dropdown"
               mode="single"
-              className="rounded-md border shadow-sm"
               defaultMonth={selectedDate ?? new Date()}
               selected={selectedDate}
               onSelect={onDateSelect}
