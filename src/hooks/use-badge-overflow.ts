@@ -2,16 +2,12 @@ import * as React from "react";
 
 const badgeWidthCache = new Map<string, number>();
 
-interface BadgeOverflowOpts {
-  iconSize?: number;
-  maxWidth?: number;
-  className?: string;
-}
-
 function measureBadgeWidth(
   label: string,
   cacheKey: string,
-  opts?: BadgeOverflowOpts
+  iconSize?: number,
+  maxWidth?: number,
+  className?: string
 ): number {
   const cached = badgeWidthCache.get(cacheKey);
   if (cached !== undefined) {
@@ -20,22 +16,22 @@ function measureBadgeWidth(
 
   const measureEl = document.createElement("div");
   measureEl.className = `inline-flex items-center rounded-md border px-1.5 text-xs font-semibold h-5 gap-1 shrink-0 absolute invisible pointer-events-none ${
-    opts?.className ?? ""
+    className ?? ""
   }`;
   measureEl.style.whiteSpace = "nowrap";
 
-  if (opts?.iconSize) {
+  if (iconSize) {
     const icon = document.createElement("span");
     icon.className = "shrink-0";
-    icon.style.width = `${opts.iconSize}px`;
-    icon.style.height = `${opts.iconSize}px`;
+    icon.style.width = `${iconSize}px`;
+    icon.style.height = `${iconSize}px`;
     measureEl.appendChild(icon);
   }
 
-  if (opts?.maxWidth) {
+  if (maxWidth) {
     const text = document.createElement("span");
     text.className = "truncate";
-    text.style.maxWidth = `${opts.maxWidth}px`;
+    text.style.maxWidth = `${maxWidth}px`;
     text.textContent = label;
     measureEl.appendChild(text);
   } else {
@@ -56,7 +52,9 @@ interface UseBadgeOverflowOptions<T> {
   containerRef: React.RefObject<HTMLElement | null>;
   lineCount: number;
   cacheKeyPrefix?: string;
-  measureOpts?: BadgeOverflowOpts;
+  iconSize?: number;
+  maxWidth?: number;
+  className?: string;
 }
 
 interface UseBadgeOverflowResult<T> {
@@ -71,7 +69,9 @@ export function useBadgeOverflow<T>({
   containerRef,
   lineCount,
   cacheKeyPrefix = "",
-  measureOpts,
+  iconSize,
+  maxWidth,
+  className,
 }: UseBadgeOverflowOptions<T>): UseBadgeOverflowResult<T> {
   const [containerWidth, setContainerWidth] = React.useState(0);
 
@@ -109,7 +109,13 @@ export function useBadgeOverflow<T>({
     for (const item of items) {
       const label = getLabel(item);
       const cacheKey = cacheKeyPrefix ? `${cacheKeyPrefix}:${label}` : label;
-      const badgeWidth = measureBadgeWidth(label, cacheKey, measureOpts);
+      const badgeWidth = measureBadgeWidth(
+        label,
+        cacheKey,
+        iconSize,
+        maxWidth,
+        className
+      );
       const widthWithGap = badgeWidth + gapWidth;
 
       if (currentLineWidth + widthWithGap <= containerWidth) {
@@ -136,7 +142,16 @@ export function useBadgeOverflow<T>({
       hiddenCount: Math.max(0, items.length - visible.length),
       containerWidth,
     };
-  }, [items, getLabel, containerWidth, lineCount, cacheKeyPrefix, measureOpts]);
+  }, [
+    items,
+    getLabel,
+    containerWidth,
+    lineCount,
+    cacheKeyPrefix,
+    iconSize,
+    maxWidth,
+    className,
+  ]);
 
   return result;
 }

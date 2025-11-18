@@ -1520,10 +1520,8 @@ export function FileCell<TData>({
       containerRef,
       lineCount,
       cacheKeyPrefix: "file",
-      measureOpts: {
-        iconSize: 12,
-        maxWidth: 100,
-      },
+      iconSize: 12,
+      maxWidth: 100,
     });
 
   return (
