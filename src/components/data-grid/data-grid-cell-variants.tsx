@@ -1018,9 +1018,9 @@ export function CheckboxCell<TData>({
       isEditing={false}
       isFocused={isFocused}
       isSelected={isSelected}
+      className="flex size-full justify-center"
       onClick={onWrapperClick}
       onKeyDown={onWrapperKeyDown}
-      className="flex size-full justify-center"
     >
       <Checkbox
         checked={value}
@@ -1337,9 +1337,7 @@ export function FileCell<TData>({
   );
 
   const removeFile = React.useCallback(
-    (fileId: string, event?: React.MouseEvent<HTMLButtonElement>) => {
-      event?.stopPropagation();
-      event?.preventDefault();
+    (fileId: string) => {
       setError(null);
       const updatedFiles = files.filter((f) => f.id !== fileId);
       setFiles(updatedFiles);
@@ -1527,14 +1525,14 @@ export function FileCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      className={cn({
+        "ring-1 ring-primary/80 ring-inset": isDraggingOver,
+      })}
       onKeyDown={onWrapperKeyDown}
       onDragEnter={onCellDragEnter}
       onDragLeave={onCellDragLeave}
       onDragOver={onCellDragOver}
       onDrop={onCellDrop}
-      className={cn({
-        "ring-2 ring-primary ring-offset-1": isDraggingOver,
-      })}
     >
       {isEditing ? (
         <Popover open={open} onOpenChange={onOpenChange}>
@@ -1629,15 +1627,16 @@ export function FileCell<TData>({
                             {formatFileSize(file.size)}
                           </p>
                         </div>
-                        <button
+                        <Button
                           type="button"
-                          className="rounded-sm p-1 hover:bg-muted"
-                          onClick={(event) => {
-                            removeFile(file.id, event);
-                          }}
+                          variant="ghost"
+                          size="icon"
+                          className="size-5 rounded-sm"
+                          onClick={() => removeFile(file.id)}
+                          onPointerDown={(event) => event.preventDefault()}
                         >
                           <X className="size-3" />
-                        </button>
+                        </Button>
                       </div>
                     ))}
                   </div>
