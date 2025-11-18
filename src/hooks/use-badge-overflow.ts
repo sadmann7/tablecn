@@ -2,13 +2,25 @@ import * as React from "react";
 
 const badgeWidthCache = new Map<string, number>();
 
-function measureBadgeWidth(
-  label: string,
-  cacheKey: string,
-  iconSize?: number,
-  maxWidth?: number,
-  className?: string
-): number {
+const DEFAULT_CONTAINER_PADDING = 16; // px-2 = 8px * 2
+const DEFAULT_BADGE_GAP = 4; // gap-1 = 4px
+const DEFAULT_OVERFLOW_BADGE_WIDTH = 40; // Approximate width of "+N" badge
+
+interface MeasureBadgeWidthProps {
+  label: string;
+  cacheKey: string;
+  iconSize?: number;
+  maxWidth?: number;
+  className?: string;
+}
+
+function measureBadgeWidth({
+  label,
+  cacheKey,
+  iconSize,
+  maxWidth,
+  className,
+}: MeasureBadgeWidthProps): number {
   const cached = badgeWidthCache.get(cacheKey);
   if (cached !== undefined) {
     return cached;
@@ -46,7 +58,7 @@ function measureBadgeWidth(
   return width;
 }
 
-interface UseBadgeOverflowOptions<T> {
+interface UseBadgeOverflowProps<T> {
   items: T[];
   getLabel: (item: T) => string;
   containerRef: React.RefObject<HTMLElement | null>;
@@ -55,9 +67,12 @@ interface UseBadgeOverflowOptions<T> {
   iconSize?: number;
   maxWidth?: number;
   className?: string;
+  containerPadding?: number;
+  badgeGap?: number;
+  overflowBadgeWidth?: number;
 }
 
-interface UseBadgeOverflowResult<T> {
+interface UseBadgeOverflowReturn<T> {
   visibleItems: T[];
   hiddenCount: number;
   containerWidth: number;
@@ -71,8 +86,11 @@ export function useBadgeOverflow<T>({
   cacheKeyPrefix = "",
   iconSize,
   maxWidth,
+  containerPadding = DEFAULT_CONTAINER_PADDING,
+  badgeGap = DEFAULT_BADGE_GAP,
+  overflowBadgeWidth = DEFAULT_OVERFLOW_BADGE_WIDTH,
   className,
-}: UseBadgeOverflowOptions<T>): UseBadgeOverflowResult<T> {
+}: UseBadgeOverflowProps<T>): UseBadgeOverflowReturn<T> {
   const [containerWidth, setContainerWidth] = React.useState(0);
 
   React.useEffect(() => {
@@ -80,7 +98,7 @@ export function useBadgeOverflow<T>({
 
     function measureWidth() {
       if (containerRef.current) {
-        const width = containerRef.current.clientWidth - 16;
+        const width = containerRef.current.clientWidth - containerPadding;
         setContainerWidth(width);
       }
     }
@@ -93,15 +111,13 @@ export function useBadgeOverflow<T>({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [containerRef]);
+  }, [containerRef, containerPadding]);
 
   const result = React.useMemo(() => {
     if (!containerWidth || items.length === 0) {
       return { visibleItems: items, hiddenCount: 0, containerWidth };
     }
 
-    const gapWidth = 4;
-    const plusBadgeWidth = 40;
     let currentLineWidth = 0;
     let currentLine = 1;
     const visible: T[] = [];
@@ -109,14 +125,14 @@ export function useBadgeOverflow<T>({
     for (const item of items) {
       const label = getLabel(item);
       const cacheKey = cacheKeyPrefix ? `${cacheKeyPrefix}:${label}` : label;
-      const badgeWidth = measureBadgeWidth(
+      const badgeWidth = measureBadgeWidth({
         label,
         cacheKey,
         iconSize,
         maxWidth,
-        className
-      );
-      const widthWithGap = badgeWidth + gapWidth;
+        className,
+      });
+      const widthWithGap = badgeWidth + badgeGap;
 
       if (currentLineWidth + widthWithGap <= containerWidth) {
         currentLineWidth += widthWithGap;
@@ -127,7 +143,7 @@ export function useBadgeOverflow<T>({
         visible.push(item);
       } else {
         if (
-          currentLineWidth + plusBadgeWidth > containerWidth &&
+          currentLineWidth + overflowBadgeWidth > containerWidth &&
           visible.length > 0
         ) {
           visible.pop();
@@ -151,6 +167,8 @@ export function useBadgeOverflow<T>({
     iconSize,
     maxWidth,
     className,
+    badgeGap,
+    overflowBadgeWidth,
   ]);
 
   return result;
