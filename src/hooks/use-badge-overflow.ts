@@ -84,11 +84,11 @@ export function useBadgeOverflow<T>({
   containerRef,
   lineCount,
   cacheKeyPrefix = "",
-  iconSize,
-  maxWidth,
   containerPadding = DEFAULT_CONTAINER_PADDING,
   badgeGap = DEFAULT_BADGE_GAP,
   overflowBadgeWidth = DEFAULT_OVERFLOW_BADGE_WIDTH,
+  iconSize,
+  maxWidth,
   className,
 }: UseBadgeOverflowProps<T>): UseBadgeOverflowReturn<T> {
   const [containerWidth, setContainerWidth] = React.useState(0);
