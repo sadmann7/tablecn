@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
@@ -794,15 +795,15 @@ export function MultiSelectCell<TData>({
     .filter(Boolean);
 
   const rowHeight = table.options.meta?.rowHeight ?? "short";
-
   const lineCount = getLineCount(rowHeight);
-  const maxVisibleBadgeCount = lineCount * 3;
 
-  const visibleLabels = displayLabels.slice(0, maxVisibleBadgeCount);
-  const hiddenBadgeCount = Math.max(
-    0,
-    displayLabels.length - maxVisibleBadgeCount,
-  );
+  const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } =
+    useBadgeOverflow({
+      items: displayLabels,
+      getLabel: (label) => label,
+      containerRef,
+      lineCount,
+    });
 
   return (
     <DataGridCellWrapper
@@ -1511,10 +1512,17 @@ export function FileCell<TData>({
 
   const rowHeight = table.options.meta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
-  const maxVisibleBadgeCount = lineCount * 3;
 
-  const visibleFiles = files.slice(0, maxVisibleBadgeCount);
-  const hiddenFileCount = Math.max(0, files.length - maxVisibleBadgeCount);
+  const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } =
+    useBadgeOverflow({
+      items: files,
+      getLabel: (file) => file.name,
+      containerRef,
+      lineCount,
+      cacheKeyPrefix: "file",
+      iconSize: 12,
+      maxWidth: 100,
+    });
 
   return (
     <DataGridCellWrapper
