@@ -1210,7 +1210,11 @@ export function FileCell<TData>({
   const prevCellIdRef = React.useRef(cellId);
 
   const [files, setFiles] = React.useState<FileData[]>(cellValue);
+  const [uploadingFiles, setUploadingFiles] = React.useState<Set<string>>(
+    new Set(),
+  );
   const [open, setOpen] = React.useState(false);
+  const [isDraggingOver, setIsDraggingOver] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -1250,7 +1254,7 @@ export function FileCell<TData>({
   );
 
   const addFiles = React.useCallback(
-    (newFiles: File[]) => {
+    async (newFiles: File[], skipUpload = false) => {
       setError(null);
 
       // Check max files limit
@@ -1269,13 +1273,13 @@ export function FileCell<TData>({
           continue;
         }
 
-        // Create file data object
+        // Create file data object with temporary ID
+        const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
         const fileData: FileData = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          id: tempId,
           name: file.name,
           size: file.size,
           type: file.type,
-          // In a real app, you'd upload the file and get a URL back
           url: URL.createObjectURL(file),
         };
         validFiles.push(fileData);
@@ -1286,9 +1290,33 @@ export function FileCell<TData>({
       }
 
       if (validFiles.length > 0) {
-        const updatedFiles = [...files, ...validFiles];
-        setFiles(updatedFiles);
-        meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+        // If not skipping upload (dropped on cell), show skeletons first
+        if (!skipUpload) {
+          // Add temp files immediately (will show as skeletons)
+          const tempFiles = validFiles.map((f) => ({ ...f, url: undefined }));
+          const filesWithTemp = [...files, ...tempFiles];
+          setFiles(filesWithTemp);
+
+          // Mark as uploading
+          const uploadingIds = new Set(validFiles.map((f) => f.id));
+          setUploadingFiles(uploadingIds);
+
+          // Simulate upload delay (in real app, this would be actual upload)
+          await new Promise((resolve) => setTimeout(resolve, 800));
+
+          // Replace temp files with real ones
+          const finalFiles = filesWithTemp.map((f) =>
+            validFiles.find((vf) => vf.id === f.id) || f,
+          );
+          setFiles(finalFiles);
+          setUploadingFiles(new Set());
+          meta?.onDataUpdate?.({ rowIndex, columnId, value: finalFiles });
+        } else {
+          // If from editor, add immediately without skeleton
+          const updatedFiles = [...files, ...validFiles];
+          setFiles(updatedFiles);
+          meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+        }
       }
     },
     [files, maxFiles, validateFile, meta, rowIndex, columnId],
@@ -1347,7 +1375,7 @@ export function FileCell<TData>({
       setIsDragging(false);
 
       const droppedFiles = Array.from(event.dataTransfer.files);
-      addFiles(droppedFiles);
+      addFiles(droppedFiles, true); // Skip upload skeleton in editor
     },
     [addFiles],
   );
@@ -1355,9 +1383,55 @@ export function FileCell<TData>({
   const onFileInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files ?? []);
-      addFiles(selectedFiles);
+      addFiles(selectedFiles, true); // Skip upload skeleton for manual selection
       // Reset input so the same file can be selected again
       event.target.value = "";
+    },
+    [addFiles],
+  );
+
+  // Cell-level drag handlers (for dropping directly on cell)
+  const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    // Only show drop indicator if dragging files
+    if (event.dataTransfer.types.includes("Files")) {
+      setIsDraggingOver(true);
+    }
+  }, []);
+
+  const onCellDragLeave = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+
+    if (
+      x <= rect.left ||
+      x >= rect.right ||
+      y <= rect.top ||
+      y >= rect.bottom
+    ) {
+      setIsDraggingOver(false);
+    }
+  }, []);
+
+  const onCellDragOver = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const onCellDrop = React.useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDraggingOver(false);
+
+      const droppedFiles = Array.from(event.dataTransfer.files);
+      if (droppedFiles.length > 0) {
+        addFiles(droppedFiles, false); // Show skeleton for dropped files
+      }
     },
     [addFiles],
   );
@@ -1440,6 +1514,13 @@ export function FileCell<TData>({
       isFocused={isFocused}
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
+      onDragEnter={onCellDragEnter}
+      onDragLeave={onCellDragLeave}
+      onDragOver={onCellDragOver}
+      onDrop={onCellDrop}
+      className={cn({
+        "ring-2 ring-primary ring-offset-1": isDraggingOver,
+      })}
     >
       {isEditing ? (
         <Popover open={open} onOpenChange={onOpenChange}>
@@ -1552,16 +1633,31 @@ export function FileCell<TData>({
       ) : null}
       {files.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1 overflow-hidden">
-          {visibleFiles.map((file) => (
-            <Badge
-              key={file.id}
-              variant="secondary"
-              className="h-5 shrink-0 gap-1 px-1.5 text-xs"
-            >
-              <span>{getFileIcon(file.type)}</span>
-              <span className="max-w-[100px] truncate">{file.name}</span>
-            </Badge>
-          ))}
+          {visibleFiles.map((file) => {
+            const isUploading = uploadingFiles.has(file.id);
+            
+            if (isUploading) {
+              // Show skeleton for uploading files
+              return (
+                <div
+                  key={file.id}
+                  className="h-5 shrink-0 animate-pulse rounded-md bg-muted px-1.5"
+                  style={{ width: `${Math.min(file.name.length * 8 + 30, 100)}px` }}
+                />
+              );
+            }
+
+            return (
+              <Badge
+                key={file.id}
+                variant="secondary"
+                className="h-5 shrink-0 gap-1 px-1.5 text-xs"
+              >
+                <span>{getFileIcon(file.type)}</span>
+                <span className="max-w-[100px] truncate">{file.name}</span>
+              </Badge>
+            );
+          })}
           {hiddenFileCount > 0 && (
             <Badge
               variant="outline"
@@ -1570,6 +1666,11 @@ export function FileCell<TData>({
               +{hiddenFileCount}
             </Badge>
           )}
+        </div>
+      ) : isDraggingOver ? (
+        <div className="flex items-center gap-2 text-primary text-sm">
+          <Upload className="size-4" />
+          <span>Drop files here</span>
         </div>
       ) : (
         <span className="text-muted-foreground text-sm">No files</span>
