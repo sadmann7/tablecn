@@ -797,7 +797,6 @@ export function MultiSelectCell<TData>({
   const rowHeight = table.options.meta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
-  // Calculate visible badges based on actual widths
   const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } =
     useBadgeTruncation({
       items: displayLabels,
@@ -1514,7 +1513,6 @@ export function FileCell<TData>({
   const rowHeight = table.options.meta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
-  // Calculate visible files based on actual widths
   const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } =
     useBadgeTruncation({
       items: files,
