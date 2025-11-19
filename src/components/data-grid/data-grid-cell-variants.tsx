@@ -661,6 +661,7 @@ export function UrlCell<TData>({
       if (cellRef.current.textContent) {
         const range = document.createRange();
         const selection = window.getSelection();
+        range.selectNodeContents(cellRef.current);
         range.collapse(false);
         selection?.removeAllRanges();
         selection?.addRange(range);
