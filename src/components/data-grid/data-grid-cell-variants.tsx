@@ -280,28 +280,7 @@ export function LongTextCell<TData>({
     }
   }, []);
 
-  const onWrapperKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
-          event.preventDefault();
-          // Save any pending changes
-          if (value !== initialValue) {
-            meta?.onDataUpdate?.({ rowIndex, columnId, value });
-          }
-          meta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
-          });
-        }
-      }
-    },
-    [isEditing, meta, value, initialValue, rowIndex, columnId],
-  );
-
-  const onTextareaKeyDown = React.useCallback(
+  const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -309,14 +288,24 @@ export function LongTextCell<TData>({
       } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         onSave();
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        // Save any pending changes
+        if (value !== initialValue) {
+          meta?.onDataUpdate?.({ rowIndex, columnId, value });
+        }
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
+        return;
       }
       // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
-    [onCancel, onSave],
+    [onCancel, onSave, value, initialValue, meta, rowIndex, columnId],
   );
 
-  const onTextareaBlur = React.useCallback(() => {
+  const onBlur = React.useCallback(() => {
     // Immediately save any pending changes on blur
     if (value !== initialValue) {
       meta?.onDataUpdate?.({ rowIndex, columnId, value });
@@ -336,7 +325,6 @@ export function LongTextCell<TData>({
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
-          onKeyDown={onWrapperKeyDown}
         >
           <span data-slot="grid-cell-content">{value}</span>
         </DataGridCellWrapper>
@@ -350,13 +338,13 @@ export function LongTextCell<TData>({
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <Textarea
+          placeholder="Enter text..."
+          className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
           ref={textareaRef}
           value={value}
+          onBlur={onBlur}
           onChange={onChange}
-          onKeyDown={onTextareaKeyDown}
-          onBlur={onTextareaBlur}
-          className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
-          placeholder="Enter text..."
+          onKeyDown={onKeyDown}
         />
       </PopoverContent>
     </Popover>
