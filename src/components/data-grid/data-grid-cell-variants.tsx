@@ -1132,11 +1132,16 @@ export function FileCell<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  const maxFileSize =
-    cellOpts?.variant === "file" ? cellOpts.maxFileSize : 10 * 1024 * 1024;
-  const maxFiles = cellOpts?.variant === "file" ? cellOpts.maxFiles : 10;
-  const acceptedTypes =
-    cellOpts?.variant === "file" ? cellOpts.acceptedTypes : undefined;
+  const fileCellOpts = cellOpts?.variant === "file" ? cellOpts : null;
+  const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
+  const maxFiles = fileCellOpts?.maxFiles ?? 10;
+  const accept = fileCellOpts?.accept;
+  const multiple = fileCellOpts?.multiple ?? true;
+
+  const acceptedTypes = React.useMemo(
+    () => (accept ? accept.split(",").map((t) => t.trim()) : null),
+    [accept],
+  );
 
   if (prevCellIdRef.current !== cellId) {
     prevCellIdRef.current = cellId;
@@ -1149,23 +1154,28 @@ export function FileCell<TData>({
       if (maxFileSize && file.size > maxFileSize) {
         return `File size exceeds ${formatFileSize(maxFileSize)}`;
       }
-      if (acceptedTypes && acceptedTypes.length > 0) {
+      if (acceptedTypes) {
+        const fileExtension = `.${file.name.split(".").pop()}`;
         const isAccepted = acceptedTypes.some((type) => {
           if (type.endsWith("/*")) {
             // Handle wildcard types like "image/*"
             const baseType = type.slice(0, -2);
             return file.type.startsWith(`${baseType}/`);
           }
+          if (type.startsWith(".")) {
+            // Handle file extensions like ".pdf"
+            return fileExtension.toLowerCase() === type.toLowerCase();
+          }
           // Exact match for specific MIME types
           return file.type === type;
         });
         if (!isAccepted) {
-          return `File type not accepted. Accepted: ${acceptedTypes.join(", ")}`;
+          return `File type not accepted. Accepted: ${accept}`;
         }
       }
       return null;
     },
-    [maxFileSize, acceptedTypes],
+    [maxFileSize, acceptedTypes, accept],
   );
 
   const addFiles = React.useCallback(
@@ -1539,8 +1549,8 @@ export function FileCell<TData>({
                 ref={fileInputRef}
                 id={inputId}
                 type="file"
-                multiple
-                accept={acceptedTypes?.join(",")}
+                multiple={multiple}
+                accept={accept}
                 aria-labelledby={labelId}
                 aria-describedby={descriptionId}
                 onChange={onFileInputChange}

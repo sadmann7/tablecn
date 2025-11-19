@@ -38,7 +38,8 @@ export type Cell =
       variant: "file";
       maxFileSize?: number;
       maxFiles?: number;
-      acceptedTypes?: string[];
+      accept?: string;
+      multiple?: boolean;
     };
 
 export interface UpdateCell {
