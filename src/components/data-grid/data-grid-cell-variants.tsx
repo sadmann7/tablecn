@@ -1645,3 +1645,275 @@ export function FileCell<TData>({
     </DataGridCellWrapper>
   );
 }
+
+function isValidUrl(urlString: string): boolean {
+  if (!urlString || urlString.trim() === "") return true; // Empty is valid (allows clearing)
+
+  try {
+    const url = new URL(urlString);
+    // Only allow http and https protocols
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    // Try adding https:// prefix if missing
+    try {
+      const url = new URL(`https://${urlString}`);
+      return url.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+}
+
+function normalizeUrl(urlString: string): string {
+  if (!urlString || urlString.trim() === "") return "";
+
+  const trimmed = urlString.trim();
+
+  try {
+    // Try parsing as-is first
+    const url = new URL(trimmed);
+    return url.href;
+  } catch {
+    // Try adding https:// prefix
+    try {
+      const url = new URL(`https://${trimmed}`);
+      return url.href;
+    } catch {
+      // Return as-is if still invalid
+      return trimmed;
+    }
+  }
+}
+
+export function UrlCell<TData>({
+  cell,
+  table,
+  rowIndex,
+  columnId,
+  isEditing,
+  isFocused,
+  isSelected,
+}: CellVariantProps<TData>) {
+  const initialValue = cell.getValue() as string;
+  const [value, setValue] = React.useState(initialValue ?? "");
+  const [isInvalid, setIsInvalid] = React.useState(false);
+  const cellRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const meta = table.options.meta;
+
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(initialValue ?? "");
+    setIsInvalid(false);
+    if (cellRef.current && !isEditing) {
+      cellRef.current.textContent = initialValue ?? "";
+    }
+  }
+
+  const onBlur = React.useCallback(() => {
+    const currentValue = cellRef.current?.textContent?.trim() ?? "";
+
+    // Validate URL
+    if (currentValue && !isValidUrl(currentValue)) {
+      setIsInvalid(true);
+      return;
+    }
+
+    setIsInvalid(false);
+
+    // Normalize the URL (add https:// if needed)
+    const normalizedValue = normalizeUrl(currentValue);
+
+    if (normalizedValue !== initialValue) {
+      meta?.onDataUpdate?.({
+        rowIndex,
+        columnId,
+        value: normalizedValue || null,
+      });
+    }
+    meta?.onCellEditingStop?.();
+  }, [meta, rowIndex, columnId, initialValue]);
+
+  const onInput = React.useCallback(
+    (event: React.FormEvent<HTMLDivElement>) => {
+      const currentValue = event.currentTarget.textContent ?? "";
+      setValue(currentValue);
+      // Clear invalid state while typing
+      if (isInvalid) {
+        setIsInvalid(false);
+      }
+    },
+    [isInvalid],
+  );
+
+  const onWrapperKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (isEditing) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const currentValue = cellRef.current?.textContent?.trim() ?? "";
+
+          // Validate URL
+          if (currentValue && !isValidUrl(currentValue)) {
+            setIsInvalid(true);
+            return;
+          }
+
+          setIsInvalid(false);
+
+          // Normalize the URL
+          const normalizedValue = normalizeUrl(currentValue);
+
+          if (normalizedValue !== initialValue) {
+            meta?.onDataUpdate?.({
+              rowIndex,
+              columnId,
+              value: normalizedValue || null,
+            });
+          }
+          meta?.onCellEditingStop?.({ moveToNextRow: true });
+        } else if (event.key === "Tab") {
+          event.preventDefault();
+          const currentValue = cellRef.current?.textContent?.trim() ?? "";
+
+          // Validate URL
+          if (currentValue && !isValidUrl(currentValue)) {
+            setIsInvalid(true);
+            return;
+          }
+
+          setIsInvalid(false);
+
+          // Normalize the URL
+          const normalizedValue = normalizeUrl(currentValue);
+
+          if (normalizedValue !== initialValue) {
+            meta?.onDataUpdate?.({
+              rowIndex,
+              columnId,
+              value: normalizedValue || null,
+            });
+          }
+          meta?.onCellEditingStop?.({
+            direction: event.shiftKey ? "left" : "right",
+          });
+        } else if (event.key === "Escape") {
+          event.preventDefault();
+          setValue(initialValue ?? "");
+          setIsInvalid(false);
+          cellRef.current?.blur();
+        }
+      } else if (
+        isFocused &&
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        // Handle typing to pre-fill the value when editing starts
+        setValue(event.key);
+        setIsInvalid(false);
+
+        queueMicrotask(() => {
+          if (cellRef.current && cellRef.current.contentEditable === "true") {
+            cellRef.current.textContent = event.key;
+            const range = document.createRange();
+            const selection = window.getSelection();
+            range.selectNodeContents(cellRef.current);
+            range.collapse(false);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+          }
+        });
+      }
+    },
+    [isEditing, isFocused, initialValue, meta, rowIndex, columnId],
+  );
+
+  const onLinkClick = React.useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      if (isEditing) {
+        event.preventDefault();
+        return;
+      }
+      // Let the link open naturally in a new tab
+    },
+    [isEditing],
+  );
+
+  React.useEffect(() => {
+    if (isEditing && cellRef.current) {
+      cellRef.current.focus();
+
+      if (!cellRef.current.textContent && value) {
+        cellRef.current.textContent = value;
+      }
+
+      if (cellRef.current.textContent) {
+        const range = document.createRange();
+        const selection = window.getSelection();
+        range.collapse(false);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    }
+  }, [isEditing, value]);
+
+  const displayValue = !isEditing ? (value ?? "") : "";
+  const hasValidUrl = value && isValidUrl(value);
+
+  return (
+    <DataGridCellWrapper
+      ref={containerRef}
+      cell={cell}
+      table={table}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isEditing={isEditing}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      onKeyDown={onWrapperKeyDown}
+      className={cn({
+        "ring-1 ring-destructive ring-inset": isInvalid,
+      })}
+    >
+      <div
+        role="textbox"
+        data-slot="grid-cell-content"
+        contentEditable={isEditing}
+        tabIndex={-1}
+        ref={cellRef}
+        onBlur={onBlur}
+        onInput={onInput}
+        suppressContentEditableWarning
+        className={cn("size-full overflow-hidden outline-none", {
+          "whitespace-nowrap **:inline **:whitespace-nowrap [&_br]:hidden":
+            isEditing,
+        })}
+      >
+        {displayValue ? (
+          isEditing ? (
+            displayValue
+          ) : hasValidUrl ? (
+            <a
+              href={normalizeUrl(displayValue)}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onLinkClick}
+              className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60"
+            >
+              {displayValue}
+            </a>
+          ) : (
+            <span className="text-muted-foreground">{displayValue}</span>
+          )
+        ) : null}
+      </div>
+      {isInvalid && (
+        <div className="absolute inset-x-0 bottom-0 bg-destructive px-1 py-0.5 text-[10px] text-destructive-foreground">
+          Invalid URL
+        </div>
+      )}
+    </DataGridCellWrapper>
+  );
+}

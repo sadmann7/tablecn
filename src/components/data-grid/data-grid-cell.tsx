@@ -12,6 +12,7 @@ import {
   NumberCell,
   SelectCell,
   ShortTextCell,
+  UrlCell,
 } from "@/components/data-grid/data-grid-cell-variants";
 
 interface DataGridCellProps<TData> {
@@ -117,6 +118,18 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     case "date":
       return (
         <DateCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isEditing={isEditing}
+          isFocused={isFocused}
+          isSelected={isSelected}
+        />
+      );
+    case "url":
+      return (
+        <UrlCell
           cell={cell}
           table={table}
           rowIndex={rowIndex}

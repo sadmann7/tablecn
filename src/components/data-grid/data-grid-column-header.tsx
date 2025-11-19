@@ -16,6 +16,7 @@ import {
   EyeOffIcon,
   FileIcon,
   HashIcon,
+  LinkIcon,
   ListChecksIcon,
   ListIcon,
   PinIcon,
@@ -60,6 +61,8 @@ function getColumnVariant(variant?: Cell["variant"]): {
       return { icon: CheckSquareIcon, label: "Checkbox" };
     case "date":
       return { icon: CalendarIcon, label: "Date" };
+    case "url":
+      return { icon: LinkIcon, label: "URL" };
     case "file":
       return { icon: FileIcon, label: "File" };
     default:

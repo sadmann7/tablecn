@@ -35,6 +35,9 @@ export type Cell =
       variant: "date";
     }
   | {
+      variant: "url";
+    }
+  | {
       variant: "file";
       maxFileSize?: number;
       maxFiles?: number;
