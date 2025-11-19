@@ -74,6 +74,15 @@ export function ShortTextCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(initialValue);
+    if (cellRef.current && !isEditing) {
+      cellRef.current.textContent = initialValue;
+    }
+  }
+
   const onBlur = React.useCallback(() => {
     // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
@@ -139,13 +148,6 @@ export function ShortTextCell<TData>({
     },
     [isEditing, isFocused, initialValue, meta, rowIndex, columnId],
   );
-
-  React.useEffect(() => {
-    setValue(initialValue);
-    if (cellRef.current && !isEditing) {
-      cellRef.current.textContent = initialValue;
-    }
-  }, [initialValue, isEditing]);
 
   React.useEffect(() => {
     if (isEditing && cellRef.current) {
@@ -380,6 +382,12 @@ export function NumberCell<TData>({
   const max = cellOpts?.variant === "number" ? cellOpts.max : undefined;
   const step = cellOpts?.variant === "number" ? cellOpts.step : undefined;
 
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(String(initialValue ?? ""));
+  }
+
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (numValue !== initialValue) {
@@ -431,10 +439,6 @@ export function NumberCell<TData>({
     },
     [isEditing, isFocused, initialValue, meta, rowIndex, columnId, value],
   );
-
-  React.useEffect(() => {
-    setValue(String(initialValue ?? ""));
-  }, [initialValue]);
 
   React.useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -490,6 +494,12 @@ export function SelectCell<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
 
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(initialValue);
+  }
+
   const onValueChange = React.useCallback(
     (newValue: string) => {
       setValue(newValue);
@@ -527,10 +537,6 @@ export function SelectCell<TData>({
     },
     [isEditing, initialValue, meta],
   );
-
-  React.useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
 
   const displayLabel =
     options.find((opt) => opt.value === value)?.label ?? value;
@@ -868,6 +874,12 @@ export function CheckboxCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(Boolean(initialValue));
+  }
+
   const onCheckedChange = React.useCallback(
     (checked: boolean) => {
       setValue(checked);
@@ -886,10 +898,6 @@ export function CheckboxCell<TData>({
     },
     [isFocused, value, onCheckedChange],
   );
-
-  React.useEffect(() => {
-    setValue(Boolean(initialValue));
-  }, [initialValue]);
 
   const onWrapperClick = React.useCallback(
     (event: React.MouseEvent) => {
