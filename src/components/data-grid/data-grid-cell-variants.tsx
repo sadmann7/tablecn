@@ -47,6 +47,7 @@ import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCellKey, getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { CellVariantProps, FileCellData } from "@/types/data-grid";
+import { toast } from "sonner";
 
 export function ShortTextCell<TData>({
   cell,
@@ -582,10 +583,21 @@ export function UrlCell<TData>({
         event.preventDefault();
         return;
       }
+
+      // Check if URL was rejected due to dangerous protocol
+      const href = getUrlHref(value);
+      if (!href) {
+        event.preventDefault();
+        toast.error("Invalid URL", {
+          description: "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
+        });
+        return;
+      }
+
       // Stop propagation to prevent grid from interfering with link navigation
       event.stopPropagation();
     },
-    [isEditing],
+    [isEditing, value],
   );
 
   React.useEffect(() => {
@@ -608,6 +620,8 @@ export function UrlCell<TData>({
   }, [isEditing, value]);
 
   const displayValue = !isEditing ? (value ?? "") : "";
+  const urlHref = displayValue ? getUrlHref(displayValue) : "";
+  const isDangerousUrl = displayValue && !urlHref;
 
   return (
     <DataGridCellWrapper
@@ -627,12 +641,18 @@ export function UrlCell<TData>({
           className="size-full overflow-hidden"
         >
           <a
-            href={getUrlHref(displayValue)}
+            href={urlHref}
             target="_blank"
             rel="noopener noreferrer"
             onClick={onLinkClick}
-            data-focused={isFocused ? "" : undefined}
-            className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 data-focused:text-foreground data-focused:decoration-foreground/50 data-focused:hover:decoration-foreground/70"
+            className={cn(
+              "truncate underline underline-offset-2",
+              isDangerousUrl
+                ? "cursor-not-allowed text-destructive decoration-destructive/50 hover:decoration-destructive/70"
+                : isFocused
+                  ? "text-foreground decoration-foreground/50 hover:decoration-foreground/70"
+                  : "text-primary decoration-primary/30 hover:decoration-primary/60",
+            )}
           >
             {displayValue}
           </a>
