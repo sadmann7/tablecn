@@ -129,6 +129,7 @@ function useDataGrid<TData>({
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
+  const cellMapRef = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
 
   const dataGridPropsRef = useAsRef(dataGridProps);
@@ -400,6 +401,20 @@ function useDataGrid<TData>({
     [columnIds, store],
   );
 
+  const focusCellWrapper = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      requestAnimationFrame(() => {
+        const cellKey = getCellKey(rowIndex, columnId);
+        const cellWrapperElement = cellMapRef.current.get(cellKey);
+
+        if (!cellWrapperElement) return;
+
+        cellWrapperElement.focus();
+      });
+    },
+    [],
+  );
+
   const focusCell = React.useCallback(
     (rowIndex: number, columnId: string) => {
       store.batch(() => {
@@ -411,14 +426,9 @@ function useDataGrid<TData>({
 
       if (currentState.searchOpen) return;
 
-      if (
-        dataGridRef.current &&
-        document.activeElement !== dataGridRef.current
-      ) {
-        dataGridRef.current.focus();
-      }
+      focusCellWrapper(rowIndex, columnId);
     },
-    [store],
+    [store, focusCellWrapper],
   );
 
   const onRowsDelete = React.useCallback(
@@ -682,9 +692,13 @@ function useDataGrid<TData>({
         requestAnimationFrame(() => {
           navigateCell(opts.direction ?? "right");
         });
+      } else if (currentEditing) {
+        // No navigation - just refocus the current cell (e.g., when pressing Escape)
+        const { rowIndex, columnId } = currentEditing;
+        focusCellWrapper(rowIndex, columnId);
       }
     },
-    [store, data.length, focusCell, navigateCell],
+    [store, data.length, focusCell, navigateCell, focusCellWrapper],
   );
 
   const onSearchOpenChange = React.useCallback(
@@ -1373,6 +1387,7 @@ function useDataGrid<TData>({
       meta: {
         ...dataGridPropsRef.current.meta,
         dataGridRef,
+        cellMapRef,
         focusedCell,
         editingCell,
         selectionState,
@@ -1507,21 +1522,19 @@ function useDataGrid<TData>({
 
       if (!targetColumnId) return;
 
-      queueMicrotask(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            store.batch(() => {
-              store.setState("focusedCell", {
-                rowIndex,
-                columnId: targetColumnId,
-              });
-              store.setState("editingCell", null);
-            });
+      requestAnimationFrame(() => {
+        store.batch(() => {
+          store.setState("focusedCell", {
+            rowIndex,
+            columnId: targetColumnId,
           });
+          store.setState("editingCell", null);
         });
+
+        focusCellWrapper(rowIndex, targetColumnId);
       });
     },
-    [rowVirtualizer, navigableColumnIds, store],
+    [rowVirtualizer, navigableColumnIds, store, focusCellWrapper],
   );
 
   const onRowAdd = React.useCallback(

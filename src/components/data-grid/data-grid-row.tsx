@@ -59,12 +59,21 @@ function DataGridRowImpl<TData>({
   className,
   ...props
 }: DataGridRowProps<TData>) {
-  const rowRef = useComposedRefs(ref, (node) => {
-    if (node && typeof virtualRowIndex !== "undefined") {
-      rowVirtualizer.measureElement(node);
-      rowMapRef.current.set(virtualRowIndex, node);
-    }
-  });
+  const onRowChange = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (typeof virtualRowIndex === "undefined") return;
+
+      if (node) {
+        rowVirtualizer.measureElement(node);
+        rowMapRef.current?.set(virtualRowIndex, node);
+      } else {
+        rowMapRef.current?.delete(virtualRowIndex);
+      }
+    },
+    [virtualRowIndex, rowVirtualizer, rowMapRef],
+  );
+
+  const rowRef = useComposedRefs(ref, onRowChange);
 
   const isRowSelected = row.getIsSelected();
 

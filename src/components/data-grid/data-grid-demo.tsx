@@ -342,6 +342,9 @@ export function DataGridDemo() {
             variant: "file",
             maxFileSize: 10 * 1024 * 1024, // 10MB
             maxFiles: 5,
+            accept:
+              "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
+            multiple: true,
           },
         },
       },

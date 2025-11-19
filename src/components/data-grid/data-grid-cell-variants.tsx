@@ -45,7 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getLineCount } from "@/lib/data-grid";
+import { getCellKey, getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { FileCellData } from "@/types/data-grid";
 
@@ -73,6 +73,15 @@ export function ShortTextCell<TData>({
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
+
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(initialValue);
+    if (cellRef.current && !isEditing) {
+      cellRef.current.textContent = initialValue;
+    }
+  }
 
   const onBlur = React.useCallback(() => {
     // Read the current value directly from the DOM to avoid stale state
@@ -141,13 +150,6 @@ export function ShortTextCell<TData>({
   );
 
   React.useEffect(() => {
-    setValue(initialValue);
-    if (cellRef.current && !isEditing) {
-      cellRef.current.textContent = initialValue;
-    }
-  }, [initialValue, isEditing]);
-
-  React.useEffect(() => {
     if (isEditing && cellRef.current) {
       cellRef.current.focus();
 
@@ -164,17 +166,7 @@ export function ShortTextCell<TData>({
         selection?.addRange(range);
       }
     }
-    // Don't focus if we're in the middle of a scroll operation
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, value, meta?.searchOpen, meta?.isScrolling]);
+  }, [isEditing, value]);
 
   const displayValue = !isEditing ? (value ?? "") : "";
 
@@ -221,7 +213,6 @@ export function LongTextCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
-  const [open, setOpen] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
@@ -243,7 +234,6 @@ export function LongTextCell<TData>({
     if (value !== initialValue) {
       meta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
-    setOpen(false);
     meta?.onCellEditingStop?.();
   }, [meta, value, initialValue, rowIndex, columnId]);
 
@@ -251,24 +241,14 @@ export function LongTextCell<TData>({
     // Restore the original value
     setValue(initialValue ?? "");
     meta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
-    setOpen(false);
     meta?.onCellEditingStop?.();
   }, [meta, initialValue, rowIndex, columnId]);
 
-  const onChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = event.target.value;
-      setValue(newValue);
-      // Debounced auto-save
-      debouncedSave(newValue);
-    },
-    [debouncedSave],
-  );
-
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         // Immediately save any pending changes when closing
         if (value !== initialValue) {
           meta?.onDataUpdate?.({ rowIndex, columnId, value });
@@ -290,28 +270,25 @@ export function LongTextCell<TData>({
     }
   }, []);
 
-  const onWrapperKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
-          event.preventDefault();
-          // Save any pending changes
-          if (value !== initialValue) {
-            meta?.onDataUpdate?.({ rowIndex, columnId, value });
-          }
-          meta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
-          });
-        }
-      }
+  const onBlur = React.useCallback(() => {
+    // Immediately save any pending changes on blur
+    if (value !== initialValue) {
+      meta?.onDataUpdate?.({ rowIndex, columnId, value });
+    }
+    meta?.onCellEditingStop?.();
+  }, [meta, value, initialValue, rowIndex, columnId]);
+
+  const onChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = event.target.value;
+      setValue(newValue);
+      // Debounced auto-save
+      debouncedSave(newValue);
     },
-    [isEditing, open, meta, value, initialValue, rowIndex, columnId],
+    [debouncedSave],
   );
 
-  const onTextareaKeyDown = React.useCallback(
+  const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -319,39 +296,25 @@ export function LongTextCell<TData>({
       } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
         onSave();
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        // Save any pending changes
+        if (value !== initialValue) {
+          meta?.onDataUpdate?.({ rowIndex, columnId, value });
+        }
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
+        return;
       }
       // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
-    [onCancel, onSave],
+    [onSave, onCancel, value, initialValue, meta, rowIndex, columnId],
   );
 
-  const onTextareaBlur = React.useCallback(() => {
-    // Immediately save any pending changes on blur
-    if (value !== initialValue) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value });
-    }
-    setOpen(false);
-    meta?.onCellEditingStop?.();
-  }, [meta, value, initialValue, rowIndex, columnId]);
-
-  React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
-
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={isEditing} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
         <DataGridCellWrapper
           ref={containerRef}
@@ -362,7 +325,6 @@ export function LongTextCell<TData>({
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
-          onKeyDown={onWrapperKeyDown}
         >
           <span data-slot="grid-cell-content">{value}</span>
         </DataGridCellWrapper>
@@ -376,13 +338,13 @@ export function LongTextCell<TData>({
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <Textarea
+          placeholder="Enter text..."
+          className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
           ref={textareaRef}
           value={value}
+          onBlur={onBlur}
           onChange={onChange}
-          onKeyDown={onTextareaKeyDown}
-          onBlur={onTextareaBlur}
-          className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
-          placeholder="Enter text..."
+          onKeyDown={onKeyDown}
         />
       </PopoverContent>
     </Popover>
@@ -407,6 +369,12 @@ export function NumberCell<TData>({
   const min = cellOpts?.variant === "number" ? cellOpts.min : undefined;
   const max = cellOpts?.variant === "number" ? cellOpts.max : undefined;
   const step = cellOpts?.variant === "number" ? cellOpts.step : undefined;
+
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(String(initialValue ?? ""));
+  }
 
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
@@ -461,24 +429,11 @@ export function NumberCell<TData>({
   );
 
   React.useEffect(() => {
-    setValue(String(initialValue ?? ""));
-  }, [initialValue]);
-
-  React.useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
+  }, [isEditing]);
 
   return (
     <DataGridCellWrapper
@@ -522,11 +477,16 @@ export function SelectCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
-  const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
+
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(initialValue);
+  }
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
@@ -539,52 +499,32 @@ export function SelectCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         meta?.onCellEditingStop?.();
       }
     },
-    [meta],
+    [meta, rowIndex, columnId],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
-          setOpen(false);
           meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         }
       }
     },
-    [isEditing, open, initialValue, meta],
+    [isEditing, initialValue, meta],
   );
-
-  React.useEffect(() => {
-    setValue(initialValue);
-  }, [initialValue]);
-
-  React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
 
   const displayLabel =
     options.find((opt) => opt.value === value)?.label ?? value;
@@ -605,7 +545,7 @@ export function SelectCell<TData>({
         <Select
           value={value}
           onValueChange={onValueChange}
-          open={open}
+          open={isEditing}
           onOpenChange={onOpenChange}
         >
           <SelectTrigger
@@ -650,12 +590,11 @@ export function MultiSelectCell<TData>({
     [cell],
   );
 
-  const cellId = `${rowIndex}-${columnId}`;
-  const prevCellIdRef = React.useRef(cellId);
+  const cellKey = getCellKey(rowIndex, columnId);
+  const prevCellKeyRef = React.useRef(cellKey);
 
   const [selectedValues, setSelectedValues] =
     React.useState<string[]>(cellValue);
-  const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -664,10 +603,9 @@ export function MultiSelectCell<TData>({
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  if (prevCellIdRef.current !== cellId) {
-    prevCellIdRef.current = cellId;
+  if (prevCellKeyRef.current !== cellKey) {
+    prevCellKeyRef.current = cellKey;
     setSelectedValues(cellValue);
-    setOpen(false);
     setSearchValue("");
   }
 
@@ -707,13 +645,14 @@ export function MultiSelectCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         setSearchValue("");
         meta?.onCellEditingStop?.();
       }
     },
-    [meta],
+    [meta, rowIndex, columnId],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -725,24 +664,22 @@ export function MultiSelectCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setSelectedValues(cellValue);
           setSearchValue("");
-          setOpen(false);
           meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
           setSearchValue("");
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         }
       }
     },
-    [isEditing, open, cellValue, meta],
+    [isEditing, cellValue, meta],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -767,28 +704,6 @@ export function MultiSelectCell<TData>({
     },
     [searchValue, selectedValues, removeValue],
   );
-
-  React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
-
-  // Focus input when popover opens
-  React.useEffect(() => {
-    if (open && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [open]);
 
   const displayLabels = selectedValues
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
@@ -818,7 +733,7 @@ export function MultiSelectCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
-        <Popover open={open} onOpenChange={onOpenChange}>
+        <Popover open={isEditing} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
             <div className="absolute inset-0" />
           </PopoverAnchor>
@@ -947,6 +862,12 @@ export function CheckboxCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
+  const prevInitialValueRef = React.useRef(initialValue);
+  if (initialValue !== prevInitialValueRef.current) {
+    prevInitialValueRef.current = initialValue;
+    setValue(Boolean(initialValue));
+  }
+
   const onCheckedChange = React.useCallback(
     (checked: boolean) => {
       setValue(checked);
@@ -965,21 +886,6 @@ export function CheckboxCell<TData>({
     },
     [isFocused, value, onCheckedChange],
   );
-
-  React.useEffect(() => {
-    setValue(Boolean(initialValue));
-  }, [initialValue]);
-
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, meta?.searchOpen, meta?.isScrolling]);
 
   const onWrapperClick = React.useCallback(
     (event: React.MouseEvent) => {
@@ -1053,7 +959,6 @@ export function DateCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
-  const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
@@ -1072,7 +977,6 @@ export function DateCell<TData>({
       const formattedDate = date.toISOString().split("T")[0] ?? "";
       setValue(formattedDate);
       meta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
-      setOpen(false);
       meta?.onCellEditingStop?.();
     },
     [meta, rowIndex, columnId],
@@ -1080,52 +984,32 @@ export function DateCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen && isEditing) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         meta?.onCellEditingStop?.();
       }
     },
-    [isEditing, meta],
+    [meta, rowIndex, columnId],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
-          setOpen(false);
+          meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         }
       }
     },
-    [isEditing, open, initialValue, meta],
+    [isEditing, initialValue, meta],
   );
-
-  React.useEffect(() => {
-    if (isEditing) {
-      setOpen(true);
-    } else {
-      setOpen(false);
-    }
-  }, [isEditing]);
-
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   return (
     <DataGridCellWrapper
@@ -1139,7 +1023,7 @@ export function DateCell<TData>({
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >
-      <Popover open={open} onOpenChange={onOpenChange}>
+      <Popover open={isEditing} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
           <span data-slot="grid-cell-content">
             {formatDateForDisplay(value)}
@@ -1214,33 +1098,40 @@ export function FileCell<TData>({
     [cell],
   );
 
-  const cellId = `${rowIndex}-${columnId}`;
-  const prevCellIdRef = React.useRef(cellId);
+  const cellKey = getCellKey(rowIndex, columnId);
+  const prevCellKeyRef = React.useRef(cellKey);
+
+  const labelId = React.useId();
+  const descriptionId = React.useId();
 
   const [files, setFiles] = React.useState<FileCellData[]>(cellValue);
   const [uploadingFiles, setUploadingFiles] = React.useState<Set<string>>(
     new Set(),
   );
-  const [open, setOpen] = React.useState(false);
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const dropzoneRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  const maxFileSize =
-    cellOpts?.variant === "file" ? cellOpts.maxFileSize : 10 * 1024 * 1024;
-  const maxFiles = cellOpts?.variant === "file" ? cellOpts.maxFiles : 10;
-  const acceptedTypes =
-    cellOpts?.variant === "file" ? cellOpts.acceptedTypes : undefined;
+  const fileCellOpts = cellOpts?.variant === "file" ? cellOpts : null;
+  const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
+  const maxFiles = fileCellOpts?.maxFiles ?? 10;
+  const accept = fileCellOpts?.accept;
+  const multiple = fileCellOpts?.multiple ?? true;
 
-  if (prevCellIdRef.current !== cellId) {
-    prevCellIdRef.current = cellId;
+  const acceptedTypes = React.useMemo(
+    () => (accept ? accept.split(",").map((t) => t.trim()) : null),
+    [accept],
+  );
+
+  if (prevCellKeyRef.current !== cellKey) {
+    prevCellKeyRef.current = cellKey;
     setFiles(cellValue);
-    setOpen(false);
     setError(null);
   }
 
@@ -1249,23 +1140,28 @@ export function FileCell<TData>({
       if (maxFileSize && file.size > maxFileSize) {
         return `File size exceeds ${formatFileSize(maxFileSize)}`;
       }
-      if (acceptedTypes && acceptedTypes.length > 0) {
+      if (acceptedTypes) {
+        const fileExtension = `.${file.name.split(".").pop()}`;
         const isAccepted = acceptedTypes.some((type) => {
           if (type.endsWith("/*")) {
             // Handle wildcard types like "image/*"
             const baseType = type.slice(0, -2);
             return file.type.startsWith(`${baseType}/`);
           }
+          if (type.startsWith(".")) {
+            // Handle file extensions like ".pdf"
+            return fileExtension.toLowerCase() === type.toLowerCase();
+          }
           // Exact match for specific MIME types
           return file.type === type;
         });
         if (!isAccepted) {
-          return `File type not accepted. Accepted: ${acceptedTypes.join(", ")}`;
+          return `File type not accepted. Accepted: ${accept}`;
         }
       }
       return null;
     },
-    [maxFileSize, acceptedTypes],
+    [maxFileSize, acceptedTypes, accept],
   );
 
   const addFiles = React.useCallback(
@@ -1477,20 +1373,15 @@ export function FileCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         setError(null);
         meta?.onCellEditingStop?.();
       }
     },
-    [meta],
+    [meta, rowIndex, columnId],
   );
-
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
-    event.preventDefault();
-  }, []);
 
   const onEscapeKeyDown: NonNullable<
     React.ComponentProps<typeof PopoverContent>["onEscapeKeyDown"]
@@ -1500,18 +1391,26 @@ export function FileCell<TData>({
     event.stopPropagation();
   }, []);
 
+  const onOpenAutoFocus: NonNullable<
+    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
+  > = React.useCallback((event) => {
+    event.preventDefault();
+    // Focus the dropzone for better keyboard UX - users can press Enter again to open file dialog
+    queueMicrotask(() => {
+      dropzoneRef.current?.focus();
+    });
+  }, []);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setFiles(cellValue);
           setError(null);
-          setOpen(false);
           meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
@@ -1527,7 +1426,6 @@ export function FileCell<TData>({
     },
     [
       isEditing,
-      open,
       isFocused,
       cellValue,
       meta,
@@ -1536,21 +1434,6 @@ export function FileCell<TData>({
       columnId,
     ],
   );
-
-  React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
 
   React.useEffect(() => {
     return () => {
@@ -1596,7 +1479,7 @@ export function FileCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
-        <Popover open={open} onOpenChange={onOpenChange}>
+        <Popover open={isEditing} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
             <div className="absolute inset-0" />
           </PopoverAnchor>
@@ -1605,25 +1488,29 @@ export function FileCell<TData>({
             align="start"
             sideOffset={sideOffset}
             className="w-[400px] rounded-none p-0"
-            onOpenAutoFocus={onOpenAutoFocus}
             onEscapeKeyDown={onEscapeKeyDown}
+            onOpenAutoFocus={onOpenAutoFocus}
           >
             <div className="flex flex-col gap-2 p-3">
+              <span id={labelId} className="sr-only">
+                File upload
+              </span>
               <div
                 role="region"
+                aria-labelledby={labelId}
+                aria-describedby={descriptionId}
+                aria-invalid={!!error}
+                data-dragging={isDragging ? "" : undefined}
+                data-invalid={error ? "" : undefined}
                 tabIndex={isDragging ? -1 : 0}
+                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20"
+                ref={dropzoneRef}
                 onClick={onDropzoneClick}
-                onKeyDown={onDropzoneKeyDown}
                 onDragEnter={onDragEnter}
                 onDragLeave={onDragLeave}
                 onDragOver={onDragOver}
                 onDrop={onDrop}
-                className={cn(
-                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50",
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/25",
-                )}
+                onKeyDown={onDropzoneKeyDown}
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <div className="text-center text-sm">
@@ -1634,20 +1521,23 @@ export function FileCell<TData>({
                     or click to browse
                   </p>
                 </div>
-                {maxFileSize && (
-                  <p className="text-muted-foreground text-xs">
-                    Max size: {formatFileSize(maxFileSize)}
-                    {maxFiles && ` • Max ${maxFiles} files`}
-                  </p>
-                )}
+                <p id={descriptionId} className="text-muted-foreground text-xs">
+                  {maxFileSize
+                    ? `Max size: ${formatFileSize(maxFileSize)}${maxFiles ? ` • Max ${maxFiles} files` : ""}`
+                    : maxFiles
+                      ? `Max ${maxFiles} files`
+                      : "Select files to upload"}
+                </p>
               </div>
               <input
-                ref={fileInputRef}
                 type="file"
-                multiple
-                accept={acceptedTypes?.join(",")}
+                aria-labelledby={labelId}
+                aria-describedby={descriptionId}
+                multiple={multiple}
+                accept={accept}
+                className="sr-only"
+                ref={fileInputRef}
                 onChange={onFileInputChange}
-                className="hidden"
               />
               {error && (
                 <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">
@@ -1707,7 +1597,12 @@ export function FileCell<TData>({
           </PopoverContent>
         </Popover>
       ) : null}
-      {files.length > 0 ? (
+      {isDraggingOver ? (
+        <div className="flex items-center justify-center gap-2 text-primary text-sm">
+          <Upload className="size-4" />
+          <span>Drop files here</span>
+        </div>
+      ) : files.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1 overflow-hidden">
           {visibleFiles.map((file) => {
             const isUploading = uploadingFiles.has(file.id);
@@ -1746,11 +1641,6 @@ export function FileCell<TData>({
               +{hiddenFileCount}
             </Badge>
           )}
-        </div>
-      ) : isDraggingOver ? (
-        <div className="flex items-center gap-2 text-primary text-sm">
-          <Upload className="size-4" />
-          <span>Drop files here</span>
         </div>
       ) : null}
     </DataGridCellWrapper>
