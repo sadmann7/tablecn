@@ -617,7 +617,10 @@ export function UrlCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {!isEditing && displayValue ? (
-        <div data-slot="grid-cell-content" className="size-full overflow-hidden">
+        <div
+          data-slot="grid-cell-content"
+          className="size-full overflow-hidden"
+        >
           <a
             href={getUrlHref(displayValue)}
             target="_blank"
