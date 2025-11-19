@@ -221,7 +221,6 @@ export function LongTextCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
-  const [open, setOpen] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
@@ -243,7 +242,6 @@ export function LongTextCell<TData>({
     if (value !== initialValue) {
       meta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
-    setOpen(false);
     meta?.onCellEditingStop?.();
   }, [meta, value, initialValue, rowIndex, columnId]);
 
@@ -251,7 +249,6 @@ export function LongTextCell<TData>({
     // Restore the original value
     setValue(initialValue ?? "");
     meta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
-    setOpen(false);
     meta?.onCellEditingStop?.();
   }, [meta, initialValue, rowIndex, columnId]);
 
@@ -267,8 +264,9 @@ export function LongTextCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         // Immediately save any pending changes when closing
         if (value !== initialValue) {
           meta?.onDataUpdate?.({ rowIndex, columnId, value });
@@ -292,7 +290,7 @@ export function LongTextCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           meta?.onCellEditingStop?.();
@@ -308,7 +306,7 @@ export function LongTextCell<TData>({
         }
       }
     },
-    [isEditing, open, meta, value, initialValue, rowIndex, columnId],
+    [isEditing, meta, value, initialValue, rowIndex, columnId],
   );
 
   const onTextareaKeyDown = React.useCallback(
@@ -331,14 +329,10 @@ export function LongTextCell<TData>({
     if (value !== initialValue) {
       meta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
-    setOpen(false);
     meta?.onCellEditingStop?.();
   }, [meta, value, initialValue, rowIndex, columnId]);
 
   React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
     if (
       isFocused &&
       !isEditing &&
@@ -348,10 +342,10 @@ export function LongTextCell<TData>({
     ) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
+  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
+    <Popover open={isEditing} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
         <DataGridCellWrapper
           ref={containerRef}
@@ -522,7 +516,6 @@ export function SelectCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
-  const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
@@ -539,32 +532,31 @@ export function SelectCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         meta?.onCellEditingStop?.();
       }
     },
-    [meta],
+    [meta, rowIndex, columnId],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
-          setOpen(false);
           meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         }
       }
     },
-    [isEditing, open, initialValue, meta],
+    [isEditing, initialValue, meta],
   );
 
   React.useEffect(() => {
@@ -572,9 +564,6 @@ export function SelectCell<TData>({
   }, [initialValue]);
 
   React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
     if (
       isFocused &&
       !isEditing &&
@@ -584,7 +573,7 @@ export function SelectCell<TData>({
     ) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
+  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   const displayLabel =
     options.find((opt) => opt.value === value)?.label ?? value;
@@ -605,7 +594,7 @@ export function SelectCell<TData>({
         <Select
           value={value}
           onValueChange={onValueChange}
-          open={open}
+          open={isEditing}
           onOpenChange={onOpenChange}
         >
           <SelectTrigger
@@ -655,7 +644,6 @@ export function MultiSelectCell<TData>({
 
   const [selectedValues, setSelectedValues] =
     React.useState<string[]>(cellValue);
-  const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -667,7 +655,6 @@ export function MultiSelectCell<TData>({
   if (prevCellIdRef.current !== cellId) {
     prevCellIdRef.current = cellId;
     setSelectedValues(cellValue);
-    setOpen(false);
     setSearchValue("");
   }
 
@@ -707,13 +694,14 @@ export function MultiSelectCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         setSearchValue("");
         meta?.onCellEditingStop?.();
       }
     },
-    [meta],
+    [meta, rowIndex, columnId],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -725,24 +713,22 @@ export function MultiSelectCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setSelectedValues(cellValue);
           setSearchValue("");
-          setOpen(false);
           meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
           setSearchValue("");
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         }
       }
     },
-    [isEditing, open, cellValue, meta],
+    [isEditing, cellValue, meta],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -769,9 +755,6 @@ export function MultiSelectCell<TData>({
   );
 
   React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
     if (
       isFocused &&
       !isEditing &&
@@ -781,14 +764,14 @@ export function MultiSelectCell<TData>({
     ) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
+  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   // Focus input when popover opens
   React.useEffect(() => {
-    if (open && inputRef.current) {
+    if (isEditing && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 0);
     }
-  }, [open]);
+  }, [isEditing]);
 
   const displayLabels = selectedValues
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
@@ -818,7 +801,7 @@ export function MultiSelectCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
-        <Popover open={open} onOpenChange={onOpenChange}>
+        <Popover open={isEditing} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
             <div className="absolute inset-0" />
           </PopoverAnchor>
@@ -1053,7 +1036,6 @@ export function DateCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
-  const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
 
@@ -1072,7 +1054,6 @@ export function DateCell<TData>({
       const formattedDate = date.toISOString().split("T")[0] ?? "";
       setValue(formattedDate);
       meta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
-      setOpen(false);
       meta?.onCellEditingStop?.();
     },
     [meta, rowIndex, columnId],
@@ -1080,40 +1061,32 @@ export function DateCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen && isEditing) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         meta?.onCellEditingStop?.();
       }
     },
-    [isEditing, meta],
+    [meta, rowIndex, columnId],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue);
-          setOpen(false);
+          meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         }
       }
     },
-    [isEditing, open, initialValue, meta],
+    [isEditing, initialValue, meta],
   );
-
-  React.useEffect(() => {
-    if (isEditing) {
-      setOpen(true);
-    } else {
-      setOpen(false);
-    }
-  }, [isEditing]);
 
   React.useEffect(() => {
     if (
@@ -1139,7 +1112,7 @@ export function DateCell<TData>({
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
     >
-      <Popover open={open} onOpenChange={onOpenChange}>
+      <Popover open={isEditing} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
           <span data-slot="grid-cell-content">
             {formatDateForDisplay(value)}
@@ -1221,7 +1194,6 @@ export function FileCell<TData>({
   const [uploadingFiles, setUploadingFiles] = React.useState<Set<string>>(
     new Set(),
   );
-  const [open, setOpen] = React.useState(false);
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -1240,7 +1212,6 @@ export function FileCell<TData>({
   if (prevCellIdRef.current !== cellId) {
     prevCellIdRef.current = cellId;
     setFiles(cellValue);
-    setOpen(false);
     setError(null);
   }
 
@@ -1477,13 +1448,14 @@ export function FileCell<TData>({
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
-      setOpen(isOpen);
-      if (!isOpen) {
+      if (isOpen) {
+        meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else {
         setError(null);
         meta?.onCellEditingStop?.();
       }
     },
-    [meta],
+    [meta, rowIndex, columnId],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -1502,16 +1474,14 @@ export function FileCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing && !open) {
+      if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
           setFiles(cellValue);
           setError(null);
-          setOpen(false);
           meta?.onCellEditingStop?.();
         } else if (event.key === "Tab") {
           event.preventDefault();
-          setOpen(false);
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
@@ -1527,7 +1497,6 @@ export function FileCell<TData>({
     },
     [
       isEditing,
-      open,
       isFocused,
       cellValue,
       meta,
@@ -1538,9 +1507,6 @@ export function FileCell<TData>({
   );
 
   React.useEffect(() => {
-    if (isEditing && !open) {
-      setOpen(true);
-    }
     if (
       isFocused &&
       !isEditing &&
@@ -1550,7 +1516,7 @@ export function FileCell<TData>({
     ) {
       containerRef.current.focus();
     }
-  }, [isFocused, isEditing, open, meta?.searchOpen, meta?.isScrolling]);
+  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   React.useEffect(() => {
     return () => {
@@ -1596,7 +1562,7 @@ export function FileCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
-        <Popover open={open} onOpenChange={onOpenChange}>
+        <Popover open={isEditing} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
             <div className="absolute inset-0" />
           </PopoverAnchor>
