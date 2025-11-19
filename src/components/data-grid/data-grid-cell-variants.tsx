@@ -455,49 +455,18 @@ export function NumberCell<TData>({
   );
 }
 
-function isValidUrl(urlString: string): boolean {
-  if (!urlString || urlString.trim() === "") return true; // Empty is valid (allows clearing)
-
-  try {
-    const url = new URL(urlString);
-    // Only allow http and https protocols
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    // Try adding https:// prefix if missing
-    try {
-      const url = new URL(`https://${urlString}`);
-      return url.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }
-}
-
-function normalizeUrl(urlString: string): string {
+function getUrlHref(urlString: string): string {
   if (!urlString || urlString.trim() === "") return "";
 
   const trimmed = urlString.trim();
 
-  try {
-    // Try parsing as-is first
-    const url = new URL(trimmed);
-    // Remove trailing slash if it's just the root path
-    return url.pathname === "/" && !trimmed.endsWith("/")
-      ? url.href.slice(0, -1)
-      : url.href;
-  } catch {
-    // Try adding https:// prefix
-    try {
-      const url = new URL(`https://${trimmed}`);
-      // Remove trailing slash if it's just the root path
-      return url.pathname === "/" && !trimmed.endsWith("/")
-        ? url.href.slice(0, -1)
-        : url.href;
-    } catch {
-      // Return as-is if still invalid
-      return trimmed;
-    }
+  // Check if it already has a protocol
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
   }
+
+  // Add http:// prefix for links without protocol
+  return `http://${trimmed}`;
 }
 
 export function UrlCell<TData>({
@@ -511,7 +480,6 @@ export function UrlCell<TData>({
 }: CellVariantProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
-  const [isInvalid, setIsInvalid] = React.useState(false);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
@@ -520,7 +488,6 @@ export function UrlCell<TData>({
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
     setValue(initialValue ?? "");
-    setIsInvalid(false);
     if (cellRef.current && !isEditing) {
       cellRef.current.textContent = initialValue ?? "";
     }
@@ -529,22 +496,11 @@ export function UrlCell<TData>({
   const onBlur = React.useCallback(() => {
     const currentValue = cellRef.current?.textContent?.trim() ?? "";
 
-    // Validate URL
-    if (currentValue && !isValidUrl(currentValue)) {
-      setIsInvalid(true);
-      return;
-    }
-
-    setIsInvalid(false);
-
-    // Normalize the URL (add https:// if needed)
-    const normalizedValue = normalizeUrl(currentValue);
-
-    if (normalizedValue !== initialValue) {
+    if (currentValue !== initialValue) {
       meta?.onDataUpdate?.({
         rowIndex,
         columnId,
-        value: normalizedValue || null,
+        value: currentValue || null,
       });
     }
     meta?.onCellEditingStop?.();
@@ -554,12 +510,8 @@ export function UrlCell<TData>({
     (event: React.FormEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
       setValue(currentValue);
-      // Clear invalid state while typing
-      if (isInvalid) {
-        setIsInvalid(false);
-      }
     },
-    [isInvalid],
+    [],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -568,46 +520,22 @@ export function UrlCell<TData>({
         if (event.key === "Enter") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent?.trim() ?? "";
-
-          // Validate URL
-          if (currentValue && !isValidUrl(currentValue)) {
-            setIsInvalid(true);
-            return;
-          }
-
-          setIsInvalid(false);
-
-          // Normalize the URL
-          const normalizedValue = normalizeUrl(currentValue);
-
-          if (normalizedValue !== initialValue) {
+          if (currentValue !== initialValue) {
             meta?.onDataUpdate?.({
               rowIndex,
               columnId,
-              value: normalizedValue || null,
+              value: currentValue || null,
             });
           }
           meta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent?.trim() ?? "";
-
-          // Validate URL
-          if (currentValue && !isValidUrl(currentValue)) {
-            setIsInvalid(true);
-            return;
-          }
-
-          setIsInvalid(false);
-
-          // Normalize the URL
-          const normalizedValue = normalizeUrl(currentValue);
-
-          if (normalizedValue !== initialValue) {
+          if (currentValue !== initialValue) {
             meta?.onDataUpdate?.({
               rowIndex,
               columnId,
-              value: normalizedValue || null,
+              value: currentValue || null,
             });
           }
           meta?.onCellEditingStop?.({
@@ -616,7 +544,6 @@ export function UrlCell<TData>({
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue ?? "");
-          setIsInvalid(false);
           cellRef.current?.blur();
         }
       } else if (
@@ -627,7 +554,6 @@ export function UrlCell<TData>({
       ) {
         // Handle typing to pre-fill the value when editing starts
         setValue(event.key);
-        setIsInvalid(false);
 
         queueMicrotask(() => {
           if (cellRef.current && cellRef.current.contentEditable === "true") {
@@ -676,7 +602,6 @@ export function UrlCell<TData>({
   }, [isEditing, value]);
 
   const displayValue = !isEditing ? (value ?? "") : "";
-  const hasValidUrl = value && isValidUrl(value);
 
   return (
     <DataGridCellWrapper
@@ -689,9 +614,6 @@ export function UrlCell<TData>({
       isFocused={isFocused}
       isSelected={isSelected}
       onKeyDown={onWrapperKeyDown}
-      className={cn({
-        "ring-1 ring-destructive ring-inset": isInvalid,
-      })}
     >
       <div
         role="textbox"
@@ -710,9 +632,9 @@ export function UrlCell<TData>({
         {displayValue ? (
           isEditing ? (
             displayValue
-          ) : hasValidUrl ? (
+          ) : (
             <a
-              href={normalizeUrl(displayValue)}
+              href={getUrlHref(displayValue)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={onLinkClick}
@@ -720,16 +642,9 @@ export function UrlCell<TData>({
             >
               {displayValue}
             </a>
-          ) : (
-            <span className="text-muted-foreground">{displayValue}</span>
           )
         ) : null}
       </div>
-      {isInvalid && (
-        <div className="absolute inset-x-0 bottom-0 bg-destructive px-1 py-0.5 text-[10px] text-destructive-foreground">
-          Invalid URL
-        </div>
-      )}
     </DataGridCellWrapper>
   );
 }
