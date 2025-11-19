@@ -79,6 +79,30 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isSelected={isSelected}
         />
       );
+    case "url":
+      return (
+        <UrlCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isEditing={isEditing}
+          isFocused={isFocused}
+          isSelected={isSelected}
+        />
+      );
+    case "checkbox":
+      return (
+        <CheckboxCell
+          cell={cell}
+          table={table}
+          rowIndex={rowIndex}
+          columnId={columnId}
+          isEditing={isEditing}
+          isFocused={isFocused}
+          isSelected={isSelected}
+        />
+      );
     case "select":
       return (
         <SelectCell
@@ -103,33 +127,9 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isSelected={isSelected}
         />
       );
-    case "checkbox":
-      return (
-        <CheckboxCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-        />
-      );
     case "date":
       return (
         <DateCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-        />
-      );
-    case "url":
-      return (
-        <UrlCell
           cell={cell}
           table={table}
           rowIndex={rowIndex}
