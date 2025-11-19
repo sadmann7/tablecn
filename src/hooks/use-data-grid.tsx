@@ -400,6 +400,21 @@ function useDataGrid<TData>({
     [columnIds, store],
   );
 
+  const focusCellWrapper = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      requestAnimationFrame(() => {
+        const cellWrapper = dataGridRef.current?.querySelector(
+          `[data-slot="grid-cell-wrapper"][data-row-index="${rowIndex}"][data-column-id="${columnId}"]`,
+        );
+
+        if (!(cellWrapper instanceof HTMLElement)) return;
+
+        cellWrapper.focus();
+      });
+    },
+    [],
+  );
+
   const focusCell = React.useCallback(
     (rowIndex: number, columnId: string) => {
       store.batch(() => {
@@ -411,14 +426,9 @@ function useDataGrid<TData>({
 
       if (currentState.searchOpen) return;
 
-      if (
-        dataGridRef.current &&
-        document.activeElement !== dataGridRef.current
-      ) {
-        dataGridRef.current.focus();
-      }
+      focusCellWrapper(rowIndex, columnId);
     },
-    [store],
+    [store, focusCellWrapper],
   );
 
   const onRowsDelete = React.useCallback(
@@ -682,9 +692,13 @@ function useDataGrid<TData>({
         requestAnimationFrame(() => {
           navigateCell(opts.direction ?? "right");
         });
+      } else if (currentEditing) {
+        // No navigation - just refocus the current cell (e.g., when pressing Escape)
+        const { rowIndex, columnId } = currentEditing;
+        focusCellWrapper(rowIndex, columnId);
       }
     },
-    [store, data.length, focusCell, navigateCell],
+    [store, data.length, focusCell, navigateCell, focusCellWrapper],
   );
 
   const onSearchOpenChange = React.useCallback(
@@ -1507,21 +1521,19 @@ function useDataGrid<TData>({
 
       if (!targetColumnId) return;
 
-      queueMicrotask(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            store.batch(() => {
-              store.setState("focusedCell", {
-                rowIndex,
-                columnId: targetColumnId,
-              });
-              store.setState("editingCell", null);
-            });
+      requestAnimationFrame(() => {
+        store.batch(() => {
+          store.setState("focusedCell", {
+            rowIndex,
+            columnId: targetColumnId,
           });
+          store.setState("editingCell", null);
         });
+
+        focusCellWrapper(rowIndex, targetColumnId);
       });
     },
-    [rowVirtualizer, navigableColumnIds, store],
+    [rowVirtualizer, navigableColumnIds, store, focusCellWrapper],
   );
 
   const onRowAdd = React.useCallback(

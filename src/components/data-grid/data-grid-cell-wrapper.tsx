@@ -141,6 +141,8 @@ export function DataGridCellWrapper<TData>({
     <div
       role="button"
       data-slot="grid-cell-wrapper"
+      data-row-index={rowIndex}
+      data-column-id={columnId}
       data-editing={isEditing ? "" : undefined}
       data-focused={isFocused ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
