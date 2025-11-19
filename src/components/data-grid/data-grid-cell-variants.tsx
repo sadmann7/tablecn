@@ -1122,6 +1122,7 @@ export function FileCell<TData>({
   const [error, setError] = React.useState<string | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const dropzoneRef = React.useRef<HTMLDivElement>(null);
   const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
@@ -1385,6 +1386,10 @@ export function FileCell<TData>({
     React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
   > = React.useCallback((event) => {
     event.preventDefault();
+    // Focus the dropzone for better keyboard UX - users can press Enter again to open file dialog
+    queueMicrotask(() => {
+      dropzoneRef.current?.focus();
+    });
   }, []);
 
   const onEscapeKeyDown: NonNullable<
@@ -1487,20 +1492,19 @@ export function FileCell<TData>({
           >
             <div className="flex flex-col gap-2 p-3">
               <div
+                ref={dropzoneRef}
                 role="region"
+                aria-invalid={!!error}
+                data-dragging={isDragging ? "" : undefined}
+                data-invalid={error ? "" : undefined}
                 tabIndex={isDragging ? -1 : 0}
+                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20"
                 onClick={onDropzoneClick}
-                onKeyDown={onDropzoneKeyDown}
                 onDragEnter={onDragEnter}
                 onDragLeave={onDragLeave}
                 onDragOver={onDragOver}
                 onDrop={onDrop}
-                className={cn(
-                  "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50",
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/25",
-                )}
+                onKeyDown={onDropzoneKeyDown}
               >
                 <Upload className="size-8 text-muted-foreground" />
                 <div className="text-center text-sm">
