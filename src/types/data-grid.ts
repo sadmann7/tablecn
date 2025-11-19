@@ -1,4 +1,4 @@
-import type { RowData } from "@tanstack/react-table";
+import type { Cell, RowData, Table } from "@tanstack/react-table";
 
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
@@ -7,7 +7,7 @@ export interface CellSelectOption {
   value: string;
 }
 
-export type Cell =
+export type CellOpts =
   | {
       variant: "short-text";
     }
@@ -55,7 +55,7 @@ declare module "@tanstack/react-table" {
   // biome-ignore lint/correctness/noUnusedVariables: TData and TValue are used in the ColumnMeta interface
   interface ColumnMeta<TData extends RowData, TValue> {
     label?: string;
-    cell?: Cell;
+    cell?: CellOpts;
   }
 
   // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
@@ -156,6 +156,16 @@ export interface SearchState {
   onSearch: (query: string) => void;
   onNavigateToNextMatch: () => void;
   onNavigateToPrevMatch: () => void;
+}
+
+export interface CellVariantProps<TData> {
+  cell: Cell<TData, unknown>;
+  table: Table<TData>;
+  rowIndex: number;
+  columnId: string;
+  isEditing: boolean;
+  isFocused: boolean;
+  isSelected: boolean;
 }
 
 export interface FileCellData {

@@ -40,9 +40,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { Cell } from "@/types/data-grid";
+import type { CellOpts } from "@/types/data-grid";
 
-function getColumnVariant(variant?: Cell["variant"]): {
+function getColumnVariant(variant?: CellOpts["variant"]): {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
 } | null {
@@ -53,16 +53,16 @@ function getColumnVariant(variant?: Cell["variant"]): {
       return { icon: TextInitialIcon, label: "Long text" };
     case "number":
       return { icon: HashIcon, label: "Number" };
+    case "url":
+      return { icon: LinkIcon, label: "URL" };
+    case "checkbox":
+      return { icon: CheckSquareIcon, label: "Checkbox" };
     case "select":
       return { icon: ListIcon, label: "Select" };
     case "multi-select":
       return { icon: ListChecksIcon, label: "Multi-select" };
-    case "checkbox":
-      return { icon: CheckSquareIcon, label: "Checkbox" };
     case "date":
       return { icon: CalendarIcon, label: "Date" };
-    case "url":
-      return { icon: LinkIcon, label: "URL" };
     case "file":
       return { icon: FileIcon, label: "File" };
     default:

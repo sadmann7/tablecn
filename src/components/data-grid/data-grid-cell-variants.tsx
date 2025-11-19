@@ -1,6 +1,5 @@
 "use client";
 
-import type { Cell, Table } from "@tanstack/react-table";
 import {
   Check,
   File,
@@ -47,17 +46,7 @@ import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCellKey, getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { FileCellData } from "@/types/data-grid";
-
-interface CellVariantProps<TData> {
-  cell: Cell<TData, unknown>;
-  table: Table<TData>;
-  rowIndex: number;
-  columnId: string;
-  isEditing: boolean;
-  isFocused: boolean;
-  isSelected: boolean;
-}
+import type { CellVariantProps, FileCellData } from "@/types/data-grid";
 
 export function ShortTextCell<TData>({
   cell,
