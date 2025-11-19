@@ -244,16 +244,6 @@ export function LongTextCell<TData>({
     meta?.onCellEditingStop?.();
   }, [meta, initialValue, rowIndex, columnId]);
 
-  const onChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const newValue = event.target.value;
-      setValue(newValue);
-      // Debounced auto-save
-      debouncedSave(newValue);
-    },
-    [debouncedSave],
-  );
-
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       if (isOpen) {
@@ -280,6 +270,24 @@ export function LongTextCell<TData>({
     }
   }, []);
 
+  const onBlur = React.useCallback(() => {
+    // Immediately save any pending changes on blur
+    if (value !== initialValue) {
+      meta?.onDataUpdate?.({ rowIndex, columnId, value });
+    }
+    meta?.onCellEditingStop?.();
+  }, [meta, value, initialValue, rowIndex, columnId]);
+
+  const onChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = event.target.value;
+      setValue(newValue);
+      // Debounced auto-save
+      debouncedSave(newValue);
+    },
+    [debouncedSave],
+  );
+
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.key === "Escape") {
@@ -302,16 +310,8 @@ export function LongTextCell<TData>({
       // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
-    [onCancel, onSave, value, initialValue, meta, rowIndex, columnId],
+    [onSave, onCancel, value, initialValue, meta, rowIndex, columnId],
   );
-
-  const onBlur = React.useCallback(() => {
-    // Immediately save any pending changes on blur
-    if (value !== initialValue) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value });
-    }
-    meta?.onCellEditingStop?.();
-  }, [meta, value, initialValue, rowIndex, columnId]);
 
   return (
     <Popover open={isEditing} onOpenChange={onOpenChange}>
