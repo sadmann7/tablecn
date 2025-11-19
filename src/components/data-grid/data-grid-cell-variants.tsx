@@ -481,12 +481,18 @@ function normalizeUrl(urlString: string): string {
   try {
     // Try parsing as-is first
     const url = new URL(trimmed);
-    return url.href;
+    // Remove trailing slash if it's just the root path
+    return url.pathname === "/" && !trimmed.endsWith("/")
+      ? url.href.slice(0, -1)
+      : url.href;
   } catch {
     // Try adding https:// prefix
     try {
       const url = new URL(`https://${trimmed}`);
-      return url.href;
+      // Remove trailing slash if it's just the root path
+      return url.pathname === "/" && !trimmed.endsWith("/")
+        ? url.href.slice(0, -1)
+        : url.href;
     } catch {
       // Return as-is if still invalid
       return trimmed;
