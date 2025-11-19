@@ -45,7 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getLineCount } from "@/lib/data-grid";
+import { getCellKey, getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { FileCellData } from "@/types/data-grid";
 
@@ -602,8 +602,8 @@ export function MultiSelectCell<TData>({
     [cell],
   );
 
-  const cellId = `${rowIndex}-${columnId}`;
-  const prevCellIdRef = React.useRef(cellId);
+  const cellKey = getCellKey(rowIndex, columnId);
+  const prevCellKeyRef = React.useRef(cellKey);
 
   const [selectedValues, setSelectedValues] =
     React.useState<string[]>(cellValue);
@@ -615,8 +615,8 @@ export function MultiSelectCell<TData>({
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  if (prevCellIdRef.current !== cellId) {
-    prevCellIdRef.current = cellId;
+  if (prevCellKeyRef.current !== cellKey) {
+    prevCellKeyRef.current = cellKey;
     setSelectedValues(cellValue);
     setSearchValue("");
   }
@@ -1110,11 +1110,9 @@ export function FileCell<TData>({
     [cell],
   );
 
-  const cellId = `${rowIndex}-${columnId}`;
-  const prevCellIdRef = React.useRef(cellId);
+  const cellKey = getCellKey(rowIndex, columnId);
+  const prevCellKeyRef = React.useRef(cellKey);
 
-  const inputId = React.useId();
-  const dropzoneId = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
 
@@ -1143,8 +1141,8 @@ export function FileCell<TData>({
     [accept],
   );
 
-  if (prevCellIdRef.current !== cellId) {
-    prevCellIdRef.current = cellId;
+  if (prevCellKeyRef.current !== cellKey) {
+    prevCellKeyRef.current = cellKey;
     setFiles(cellValue);
     setError(null);
   }
@@ -1397,6 +1395,14 @@ export function FileCell<TData>({
     [meta, rowIndex, columnId],
   );
 
+  const onEscapeKeyDown: NonNullable<
+    React.ComponentProps<typeof PopoverContent>["onEscapeKeyDown"]
+  > = React.useCallback((event) => {
+    // Prevent the escape key from propagating to the data grid's keyboard handler
+    // which would call blurCell() and remove focus from the cell
+    event.stopPropagation();
+  }, []);
+
   const onOpenAutoFocus: NonNullable<
     React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
   > = React.useCallback((event) => {
@@ -1405,14 +1411,6 @@ export function FileCell<TData>({
     queueMicrotask(() => {
       dropzoneRef.current?.focus();
     });
-  }, []);
-
-  const onEscapeKeyDown: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onEscapeKeyDown"]
-  > = React.useCallback((event) => {
-    // Prevent the escape key from propagating to the data grid's keyboard handler
-    // which would call blurCell() and remove focus from the cell
-    event.stopPropagation();
   }, []);
 
   const onWrapperKeyDown = React.useCallback(
@@ -1502,8 +1500,8 @@ export function FileCell<TData>({
             align="start"
             sideOffset={sideOffset}
             className="w-[400px] rounded-none p-0"
-            onOpenAutoFocus={onOpenAutoFocus}
             onEscapeKeyDown={onEscapeKeyDown}
+            onOpenAutoFocus={onOpenAutoFocus}
           >
             <div className="flex flex-col gap-2 p-3">
               <span id={labelId} className="sr-only">
@@ -1511,10 +1509,8 @@ export function FileCell<TData>({
               </span>
               <div
                 role="region"
-                id={dropzoneId}
                 aria-labelledby={labelId}
                 aria-describedby={descriptionId}
-                aria-controls={inputId}
                 aria-invalid={!!error}
                 data-dragging={isDragging ? "" : undefined}
                 data-invalid={error ? "" : undefined}
@@ -1546,15 +1542,14 @@ export function FileCell<TData>({
                 </p>
               </div>
               <input
-                ref={fileInputRef}
-                id={inputId}
                 type="file"
-                multiple={multiple}
-                accept={accept}
                 aria-labelledby={labelId}
                 aria-describedby={descriptionId}
+                multiple={multiple}
+                accept={accept}
+                className="sr-only"
+                ref={fileInputRef}
                 onChange={onFileInputChange}
-                className="hidden"
               />
               {error && (
                 <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">
