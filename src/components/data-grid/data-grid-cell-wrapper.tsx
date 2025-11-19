@@ -2,6 +2,8 @@
 
 import type { Cell, Table } from "@tanstack/react-table";
 import * as React from "react";
+import { useComposedRefs } from "@/lib/compose-refs";
+import { getCellKey } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 
 interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
@@ -24,9 +26,28 @@ export function DataGridCellWrapper<TData>({
   className,
   onClick: onClickProp,
   onKeyDown: onKeyDownProp,
+  ref,
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const meta = table.options.meta;
+  const cellMapRef = meta?.cellMapRef;
+
+  const onCellChange = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!cellMapRef) return;
+
+      const cellKey = getCellKey(rowIndex, columnId);
+
+      if (node) {
+        cellMapRef.current.set(cellKey, node);
+      } else {
+        cellMapRef.current.delete(cellKey);
+      }
+    },
+    [rowIndex, columnId, cellMapRef],
+  );
+
+  const composedRefs = useComposedRefs(ref, onCellChange);
 
   const isSearchMatch = meta?.getIsSearchMatch?.(rowIndex, columnId) ?? false;
   const isActiveSearchMatch =
@@ -139,10 +160,9 @@ export function DataGridCellWrapper<TData>({
 
   return (
     <div
+      ref={composedRefs}
       role="button"
       data-slot="grid-cell-wrapper"
-      data-row-index={rowIndex}
-      data-column-id={columnId}
       data-editing={isEditing ? "" : undefined}
       data-focused={isFocused ? "" : undefined}
       data-selected={isSelected ? "" : undefined}

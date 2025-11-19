@@ -129,6 +129,7 @@ function useDataGrid<TData>({
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
+  const cellMapRef = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
 
   const dataGridPropsRef = useAsRef(dataGridProps);
@@ -403,13 +404,12 @@ function useDataGrid<TData>({
   const focusCellWrapper = React.useCallback(
     (rowIndex: number, columnId: string) => {
       requestAnimationFrame(() => {
-        const cellWrapper = dataGridRef.current?.querySelector(
-          `[data-slot="grid-cell-wrapper"][data-row-index="${rowIndex}"][data-column-id="${columnId}"]`,
-        );
+        const cellKey = getCellKey(rowIndex, columnId);
+        const cellWrapperElement = cellMapRef.current.get(cellKey);
 
-        if (!(cellWrapper instanceof HTMLElement)) return;
+        if (!cellWrapperElement) return;
 
-        cellWrapper.focus();
+        cellWrapperElement.focus();
       });
     },
     [],
@@ -1387,6 +1387,7 @@ function useDataGrid<TData>({
       meta: {
         ...dataGridPropsRef.current.meta,
         dataGridRef,
+        cellMapRef,
         focusedCell,
         editingCell,
         selectionState,
