@@ -18,6 +18,7 @@ interface Person {
   name?: string;
   age?: number;
   email?: string;
+  website?: string;
   notes?: string;
   salary?: number;
   department?: string;
@@ -125,6 +126,7 @@ function generatePerson(id: number): Person {
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
+    website: faker.internet.url().replace(/\/$/, ""),
     notes: faker.helpers.arrayElement(notes),
     salary: faker.number.int({ min: 40000, max: 150000 }),
     department: faker.helpers.arrayElement(departments),
@@ -230,6 +232,18 @@ export function DataGridDemo() {
           label: "Email",
           cell: {
             variant: "short-text",
+          },
+        },
+      },
+      {
+        id: "website",
+        accessorKey: "website",
+        header: "Website",
+        minSize: 240,
+        meta: {
+          label: "Website",
+          cell: {
+            variant: "url",
           },
         },
       },
