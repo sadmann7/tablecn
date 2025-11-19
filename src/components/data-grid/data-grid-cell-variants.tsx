@@ -1113,6 +1113,11 @@ export function FileCell<TData>({
   const cellId = `${rowIndex}-${columnId}`;
   const prevCellIdRef = React.useRef(cellId);
 
+  const inputId = React.useId();
+  const dropzoneId = React.useId();
+  const labelId = React.useId();
+  const descriptionId = React.useId();
+
   const [files, setFiles] = React.useState<FileCellData[]>(cellValue);
   const [uploadingFiles, setUploadingFiles] = React.useState<Set<string>>(
     new Set(),
@@ -1491,14 +1496,21 @@ export function FileCell<TData>({
             onEscapeKeyDown={onEscapeKeyDown}
           >
             <div className="flex flex-col gap-2 p-3">
+              <span id={labelId} className="sr-only">
+                File upload
+              </span>
               <div
-                ref={dropzoneRef}
                 role="region"
+                id={dropzoneId}
+                aria-labelledby={labelId}
+                aria-describedby={descriptionId}
+                aria-controls={inputId}
                 aria-invalid={!!error}
                 data-dragging={isDragging ? "" : undefined}
                 data-invalid={error ? "" : undefined}
                 tabIndex={isDragging ? -1 : 0}
                 className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20"
+                ref={dropzoneRef}
                 onClick={onDropzoneClick}
                 onDragEnter={onDragEnter}
                 onDragLeave={onDragLeave}
@@ -1515,18 +1527,22 @@ export function FileCell<TData>({
                     or click to browse
                   </p>
                 </div>
-                {maxFileSize && (
-                  <p className="text-muted-foreground text-xs">
-                    Max size: {formatFileSize(maxFileSize)}
-                    {maxFiles && ` • Max ${maxFiles} files`}
-                  </p>
-                )}
+                <p id={descriptionId} className="text-muted-foreground text-xs">
+                  {maxFileSize
+                    ? `Max size: ${formatFileSize(maxFileSize)}${maxFiles ? ` • Max ${maxFiles} files` : ""}`
+                    : maxFiles
+                      ? `Max ${maxFiles} files`
+                      : "Select files to upload"}
+                </p>
               </div>
               <input
                 ref={fileInputRef}
+                id={inputId}
                 type="file"
                 multiple
                 accept={acceptedTypes?.join(",")}
+                aria-labelledby={labelId}
+                aria-describedby={descriptionId}
                 onChange={onFileInputChange}
                 className="hidden"
               />
@@ -1588,7 +1604,12 @@ export function FileCell<TData>({
           </PopoverContent>
         </Popover>
       ) : null}
-      {files.length > 0 ? (
+      {isDraggingOver ? (
+        <div className="flex items-center justify-center gap-2 text-primary text-sm">
+          <Upload className="size-4" />
+          <span>Drop files here</span>
+        </div>
+      ) : files.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1 overflow-hidden">
           {visibleFiles.map((file) => {
             const isUploading = uploadingFiles.has(file.id);
@@ -1627,11 +1648,6 @@ export function FileCell<TData>({
               +{hiddenFileCount}
             </Badge>
           )}
-        </div>
-      ) : isDraggingOver ? (
-        <div className="flex items-center gap-2 text-primary text-sm">
-          <Upload className="size-4" />
-          <span>Drop files here</span>
         </div>
       ) : null}
     </DataGridCellWrapper>
