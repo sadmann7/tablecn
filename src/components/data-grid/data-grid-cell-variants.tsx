@@ -617,16 +617,17 @@ export function UrlCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {!isEditing && displayValue ? (
-        <a
-          data-slot="grid-cell-content"
-          href={getUrlHref(displayValue)}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={onLinkClick}
-          className="block size-full truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60"
-        >
-          {displayValue}
-        </a>
+        <div data-slot="grid-cell-content" className="size-full overflow-hidden">
+          <a
+            href={getUrlHref(displayValue)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onLinkClick}
+            className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60"
+          >
+            {displayValue}
+          </a>
+        </div>
       ) : (
         <div
           role="textbox"
