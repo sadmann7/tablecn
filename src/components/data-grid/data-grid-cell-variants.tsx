@@ -510,20 +510,18 @@ export function SelectCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          setValue(initialValue);
-          meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
-          event.preventDefault();
-          meta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
-          });
-        }
+      if (isEditing && event.key === "Escape") {
+        event.preventDefault();
+        setValue(initialValue);
+        meta?.onCellEditingStop?.();
+      } else if (!isEditing && isFocused && event.key === "Tab") {
+        event.preventDefault();
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
       }
     },
-    [isEditing, initialValue, meta],
+    [isEditing, isFocused, initialValue, meta],
   );
 
   const displayLabel =
@@ -664,22 +662,20 @@ export function MultiSelectCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          setSelectedValues(cellValue);
-          setSearchValue("");
-          meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
-          event.preventDefault();
-          setSearchValue("");
-          meta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
-          });
-        }
+      if (isEditing && event.key === "Escape") {
+        event.preventDefault();
+        setSelectedValues(cellValue);
+        setSearchValue("");
+        meta?.onCellEditingStop?.();
+      } else if (!isEditing && isFocused && event.key === "Tab") {
+        event.preventDefault();
+        setSearchValue("");
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
       }
     },
-    [isEditing, cellValue, meta],
+    [isEditing, isFocused, cellValue, meta],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -882,9 +878,14 @@ export function CheckboxCell<TData>({
         event.preventDefault();
         event.stopPropagation();
         onCheckedChange(!value);
+      } else if (isFocused && event.key === "Tab") {
+        event.preventDefault();
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
       }
     },
-    [isFocused, value, onCheckedChange],
+    [isFocused, value, onCheckedChange, meta],
   );
 
   const onWrapperClick = React.useCallback(
@@ -933,10 +934,10 @@ export function CheckboxCell<TData>({
       <Checkbox
         checked={value}
         onCheckedChange={onCheckedChange}
+        className="border-primary"
         onClick={onCheckboxClick}
         onMouseDown={onCheckboxMouseDown}
         onDoubleClick={onCheckboxDoubleClick}
-        className="border-primary"
       />
     </DataGridCellWrapper>
   );
@@ -995,20 +996,18 @@ export function DateCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          setValue(initialValue);
-          meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
-          event.preventDefault();
-          meta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
-          });
-        }
+      if (isEditing && event.key === "Escape") {
+        event.preventDefault();
+        setValue(initialValue);
+        meta?.onCellEditingStop?.();
+      } else if (!isEditing && isFocused && event.key === "Tab") {
+        event.preventDefault();
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
       }
     },
-    [isEditing, initialValue, meta],
+    [isEditing, isFocused, initialValue, meta],
   );
 
   return (
@@ -1409,11 +1408,6 @@ export function FileCell<TData>({
           setFiles(cellValue);
           setError(null);
           meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
-          event.preventDefault();
-          meta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
-          });
         } else if (event.key === " ") {
           event.preventDefault();
           onDropzoneClick();
@@ -1422,6 +1416,11 @@ export function FileCell<TData>({
         // Handle Enter key to start editing when focused but not editing
         event.preventDefault();
         meta?.onCellEditingStart?.(rowIndex, columnId);
+      } else if (!isEditing && isFocused && event.key === "Tab") {
+        event.preventDefault();
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
       }
     },
     [
