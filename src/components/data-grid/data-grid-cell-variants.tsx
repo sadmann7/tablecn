@@ -642,13 +642,13 @@ export function UrlCell<TData>({
           className="size-full overflow-hidden"
         >
           <a
+            data-focused={isFocused && !isDangerousUrl ? "" : undefined}
+            data-invalid={isDangerousUrl ? "" : undefined}
             href={urlHref}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={onLinkClick}
-            data-invalid={isDangerousUrl ? "" : undefined}
-            data-focused={isFocused && !isDangerousUrl ? "" : undefined}
             className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 data-invalid:cursor-not-allowed data-focused:text-foreground data-invalid:text-destructive data-focused:decoration-foreground/50 data-invalid:decoration-destructive/50 data-focused:hover:decoration-foreground/70 data-invalid:hover:decoration-destructive/70"
+            onClick={onLinkClick}
           >
             {displayValue}
           </a>
