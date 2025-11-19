@@ -515,7 +515,7 @@ export function SelectCell<TData>({
           event.preventDefault();
           setValue(initialValue);
           meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
+        } else if (event.key === "Tab" && !isEditing) {
           event.preventDefault();
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
@@ -882,9 +882,14 @@ export function CheckboxCell<TData>({
         event.preventDefault();
         event.stopPropagation();
         onCheckedChange(!value);
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        meta?.onCellEditingStop?.({
+          direction: event.shiftKey ? "left" : "right",
+        });
       }
     },
-    [isFocused, value, onCheckedChange],
+    [isFocused, value, onCheckedChange, meta],
   );
 
   const onWrapperClick = React.useCallback(
@@ -933,10 +938,10 @@ export function CheckboxCell<TData>({
       <Checkbox
         checked={value}
         onCheckedChange={onCheckedChange}
+        className="border-primary"
         onClick={onCheckboxClick}
         onMouseDown={onCheckboxMouseDown}
         onDoubleClick={onCheckboxDoubleClick}
-        className="border-primary"
       />
     </DataGridCellWrapper>
   );
@@ -1000,7 +1005,7 @@ export function DateCell<TData>({
           event.preventDefault();
           setValue(initialValue);
           meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
+        } else if (event.key === "Tab" && !isEditing) {
           event.preventDefault();
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
@@ -1409,7 +1414,7 @@ export function FileCell<TData>({
           setFiles(cellValue);
           setError(null);
           meta?.onCellEditingStop?.();
-        } else if (event.key === "Tab") {
+        } else if (event.key === "Tab" && !isEditing) {
           event.preventDefault();
           meta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",

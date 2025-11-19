@@ -117,17 +117,6 @@ export function DataGridCellWrapper<TData>({
 
       if (event.defaultPrevented) return;
 
-      // Don't handle Tab if focus is within a popover (e.g., select, date picker, file upload)
-      // This allows Tab to work normally within those UI elements
-      if (event.key === "Tab" && isEditing) {
-        const activeElement = document.activeElement;
-        const isInPopover =
-          activeElement instanceof HTMLElement &&
-          activeElement.closest("[data-grid-cell-editor]");
-
-        if (isInPopover) return;
-      }
-
       if (
         event.key === "ArrowUp" ||
         event.key === "ArrowDown" ||
