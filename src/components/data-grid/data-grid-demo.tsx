@@ -126,7 +126,7 @@ function generatePerson(id: number): Person {
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-    website: faker.internet.url(),
+    website: faker.internet.url().replace(/\/$/, ""),
     notes: faker.helpers.arrayElement(notes),
     salary: faker.number.int({ min: 40000, max: 150000 }),
     department: faker.helpers.arrayElement(departments),
