@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,6 @@ import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCellKey, getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { CellVariantProps, FileCellData } from "@/types/data-grid";
-import { toast } from "sonner";
 
 export function ShortTextCell<TData>({
   cell,
@@ -589,7 +589,8 @@ export function UrlCell<TData>({
       if (!href) {
         event.preventDefault();
         toast.error("Invalid URL", {
-          description: "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
+          description:
+            "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
         });
         return;
       }
@@ -645,14 +646,9 @@ export function UrlCell<TData>({
             target="_blank"
             rel="noopener noreferrer"
             onClick={onLinkClick}
-            className={cn(
-              "truncate underline underline-offset-2",
-              isDangerousUrl
-                ? "cursor-not-allowed text-destructive decoration-destructive/50 hover:decoration-destructive/70"
-                : isFocused
-                  ? "text-foreground decoration-foreground/50 hover:decoration-foreground/70"
-                  : "text-primary decoration-primary/30 hover:decoration-primary/60",
-            )}
+            data-invalid={isDangerousUrl ? "" : undefined}
+            data-focused={isFocused && !isDangerousUrl ? "" : undefined}
+            className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 data-invalid:cursor-not-allowed data-focused:text-foreground data-invalid:text-destructive data-focused:decoration-foreground/50 data-invalid:decoration-destructive/50 data-focused:hover:decoration-foreground/70 data-invalid:hover:decoration-destructive/70"
           >
             {displayValue}
           </a>
