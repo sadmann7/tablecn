@@ -626,12 +626,8 @@ export function UrlCell<TData>({
             target="_blank"
             rel="noopener noreferrer"
             onClick={onLinkClick}
-            className={cn(
-              "truncate underline underline-offset-2",
-              isFocused
-                ? "text-foreground decoration-foreground/50 hover:decoration-foreground/70"
-                : "text-primary decoration-primary/30 hover:decoration-primary/60",
-            )}
+            data-focused={isFocused ? "" : undefined}
+            className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 data-focused:text-foreground data-focused:decoration-foreground/50 data-focused:hover:decoration-foreground/70"
           >
             {displayValue}
           </a>
