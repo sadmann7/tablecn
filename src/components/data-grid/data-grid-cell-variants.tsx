@@ -460,6 +460,11 @@ function getUrlHref(urlString: string): string {
 
   const trimmed = urlString.trim();
 
+  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
+  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
+    return "";
+  }
+
   // Check if it already has a protocol
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
