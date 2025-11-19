@@ -164,17 +164,7 @@ export function ShortTextCell<TData>({
         selection?.addRange(range);
       }
     }
-    // Don't focus if we're in the middle of a scroll operation
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, value, meta?.searchOpen, meta?.isScrolling]);
+  }, [isEditing, value]);
 
   const displayValue = !isEditing ? (value ?? "") : "";
 
@@ -332,18 +322,6 @@ export function LongTextCell<TData>({
     meta?.onCellEditingStop?.();
   }, [meta, value, initialValue, rowIndex, columnId]);
 
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
-
   return (
     <Popover open={isEditing} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
@@ -463,16 +441,7 @@ export function NumberCell<TData>({
       inputRef.current.focus();
       inputRef.current.select();
     }
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
+  }, [isEditing]);
 
   return (
     <DataGridCellWrapper
@@ -562,18 +531,6 @@ export function SelectCell<TData>({
   React.useEffect(() => {
     setValue(initialValue);
   }, [initialValue]);
-
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   const displayLabel =
     options.find((opt) => opt.value === value)?.label ?? value;
@@ -753,25 +710,6 @@ export function MultiSelectCell<TData>({
     },
     [searchValue, selectedValues, removeValue],
   );
-
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
-
-  // Focus input when popover opens
-  React.useEffect(() => {
-    if (isEditing && inputRef.current) {
-      setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [isEditing]);
 
   const displayLabels = selectedValues
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
@@ -953,17 +891,6 @@ export function CheckboxCell<TData>({
     setValue(Boolean(initialValue));
   }, [initialValue]);
 
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, meta?.searchOpen, meta?.isScrolling]);
-
   const onWrapperClick = React.useCallback(
     (event: React.MouseEvent) => {
       if (isFocused) {
@@ -1087,18 +1014,6 @@ export function DateCell<TData>({
     },
     [isEditing, initialValue, meta],
   );
-
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   return (
     <DataGridCellWrapper
@@ -1505,18 +1420,6 @@ export function FileCell<TData>({
       columnId,
     ],
   );
-
-  React.useEffect(() => {
-    if (
-      isFocused &&
-      !isEditing &&
-      !meta?.searchOpen &&
-      !meta?.isScrolling &&
-      containerRef.current
-    ) {
-      containerRef.current.focus();
-    }
-  }, [isFocused, isEditing, meta?.searchOpen, meta?.isScrolling]);
 
   React.useEffect(() => {
     return () => {
