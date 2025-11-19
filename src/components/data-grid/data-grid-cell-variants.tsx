@@ -577,7 +577,8 @@ export function UrlCell<TData>({
         event.preventDefault();
         return;
       }
-      // Let the link open naturally in a new tab
+      // Stop propagation to prevent grid from interfering with link navigation
+      event.stopPropagation();
     },
     [isEditing],
   );
