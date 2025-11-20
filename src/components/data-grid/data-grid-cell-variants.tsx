@@ -890,10 +890,10 @@ export function MultiSelectCell<TData>({
   isEditing,
   isSelected,
 }: CellVariantProps<TData>) {
-  const cellValue = React.useMemo(
-    () => (cell.getValue() as string[]) ?? [],
-    [cell],
-  );
+  const cellValue = React.useMemo(() => {
+    const value = cell.getValue() as string[];
+    return value ?? [];
+  }, [cell]);
 
   const cellKey = getCellKey(rowIndex, columnId);
   const prevCellKeyRef = React.useRef(cellKey);
@@ -908,9 +908,14 @@ export function MultiSelectCell<TData>({
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
+  const prevCellValueRef = React.useRef(cellValue);
+  if (cellValue !== prevCellValueRef.current) {
+    prevCellValueRef.current = cellValue;
+    setSelectedValues(cellValue);
+  }
+
   if (prevCellKeyRef.current !== cellKey) {
     prevCellKeyRef.current = cellKey;
-    setSelectedValues(cellValue);
     setSearchValue("");
   }
 
@@ -922,7 +927,6 @@ export function MultiSelectCell<TData>({
 
       setSelectedValues(newValues);
       meta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
-      // Clear search input and focus back on input after selection
       setSearchValue("");
       queueMicrotask(() => inputRef.current?.focus());
     },
@@ -1337,9 +1341,16 @@ export function FileCell<TData>({
     [accept],
   );
 
+  // Sync files when cellValue changes (same pattern as other cells)
+  const prevCellValueRef = React.useRef(cellValue);
+  if (cellValue !== prevCellValueRef.current) {
+    prevCellValueRef.current = cellValue;
+    setFiles(cellValue);
+    setError(null);
+  }
+
   if (prevCellKeyRef.current !== cellKey) {
     prevCellKeyRef.current = cellKey;
-    setFiles(cellValue);
     setError(null);
   }
 

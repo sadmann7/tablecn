@@ -180,10 +180,24 @@ function ContextMenuImpl<TData>({
       return;
 
     const updates: Array<UpdateCell> = [];
+    const tableColumns = table.getAllColumns();
 
     for (const cellKey of selectionState.selectedCells) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
-      updates.push({ rowIndex, columnId, value: "" });
+
+      const column = tableColumns.find((col) => col.id === columnId);
+      const cellVariant = column?.columnDef?.meta?.cell?.variant;
+
+      let emptyValue: unknown = "";
+      if (cellVariant === "multi-select" || cellVariant === "file") {
+        emptyValue = [];
+      } else if (cellVariant === "number" || cellVariant === "date") {
+        emptyValue = null;
+      } else if (cellVariant === "checkbox") {
+        emptyValue = false;
+      }
+
+      updates.push({ rowIndex, columnId, value: emptyValue });
     }
 
     onDataUpdate?.(updates);
@@ -191,7 +205,7 @@ function ContextMenuImpl<TData>({
     toast.success(
       `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,
     );
-  }, [onDataUpdate, selectionState]);
+  }, [onDataUpdate, selectionState, table]);
 
   const onDelete = React.useCallback(async () => {
     if (

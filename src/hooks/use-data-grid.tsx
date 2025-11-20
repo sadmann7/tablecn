@@ -1122,15 +1122,32 @@ function useDataGrid<TData>({
       if (key === "Delete" || key === "Backspace") {
         if (currentState.selectionState.selectedCells.size > 0) {
           event.preventDefault();
+
           const updates: Array<{
             rowIndex: number;
             columnId: string;
             value: unknown;
           }> = [];
 
+          const currentTable = tableRef.current;
+          const tableColumns = currentTable?.getAllColumns() ?? [];
+
           currentState.selectionState.selectedCells.forEach((cellKey) => {
             const { rowIndex, columnId } = parseCellKey(cellKey);
-            updates.push({ rowIndex, columnId, value: "" });
+
+            const column = tableColumns.find((col) => col.id === columnId);
+            const cellVariant = column?.columnDef?.meta?.cell?.variant;
+
+            let emptyValue: unknown = "";
+            if (cellVariant === "multi-select" || cellVariant === "file") {
+              emptyValue = [];
+            } else if (cellVariant === "number" || cellVariant === "date") {
+              emptyValue = null;
+            } else if (cellVariant === "checkbox") {
+              emptyValue = false;
+            }
+
+            updates.push({ rowIndex, columnId, value: emptyValue });
           });
 
           onDataUpdate(updates);
