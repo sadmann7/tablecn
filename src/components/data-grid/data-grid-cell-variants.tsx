@@ -1381,6 +1381,9 @@ export function FileCell<TData>({
         const errorMessage = `Maximum ${maxFiles} files allowed`;
         setError(errorMessage);
         toast(errorMessage);
+        setTimeout(() => {
+          setError(null);
+        }, 2000);
         return;
       }
 
@@ -1424,6 +1427,10 @@ export function FileCell<TData>({
               description: `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
             });
           }
+
+          setTimeout(() => {
+            setError(null);
+          }, 2000);
         }
       }
 
@@ -1600,6 +1607,7 @@ export function FileCell<TData>({
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       if (isOpen) {
+        setError(null);
         meta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         setError(null);
@@ -1765,11 +1773,6 @@ export function FileCell<TData>({
                 ref={fileInputRef}
                 onChange={onFileInputChange}
               />
-              {error && (
-                <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">
-                  {error}
-                </div>
-              )}
               {files.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
