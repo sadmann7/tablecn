@@ -1345,6 +1345,12 @@ export function FileCell<TData>({
   const prevCellValueRef = React.useRef(cellValue);
   if (cellValue !== prevCellValueRef.current) {
     prevCellValueRef.current = cellValue;
+    // Revoke old object URLs to prevent memory leaks
+    for (const file of files) {
+      if (file.url) {
+        URL.revokeObjectURL(file.url);
+      }
+    }
     setFiles(cellValue);
     setError(null);
   }
