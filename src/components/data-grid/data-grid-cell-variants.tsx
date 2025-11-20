@@ -1364,12 +1364,12 @@ export function FileCell<TData>({
           return file.type === type;
         });
         if (!isAccepted) {
-          return `File type not accepted. Accepted: ${accept}`;
+          return "File type not accepted";
         }
       }
       return null;
     },
-    [maxFileSize, acceptedTypes, accept],
+    [maxFileSize, acceptedTypes],
   );
 
   const addFiles = React.useCallback(
@@ -1378,19 +1378,22 @@ export function FileCell<TData>({
 
       // Check max files limit
       if (maxFiles && files.length + newFiles.length > maxFiles) {
-        setError(`Maximum ${maxFiles} files allowed`);
+        const errorMessage = `Maximum ${maxFiles} files allowed`;
+        setError(errorMessage);
+        toast(errorMessage);
+        setTimeout(() => {
+          setError(null);
+        }, 2000);
         return;
       }
 
       const validFiles: FileCellData[] = [];
-      let firstError: string | null = null;
+      const rejectedFiles: Array<{ name: string; reason: string }> = [];
 
       for (const file of newFiles) {
         const validationError = validateFile(file);
         if (validationError) {
-          if (!firstError) {
-            firstError = validationError;
-          }
+          rejectedFiles.push({ name: file.name, reason: validationError });
           continue;
         }
 
@@ -1405,8 +1408,30 @@ export function FileCell<TData>({
         validFiles.push(fileData);
       }
 
-      if (firstError) {
-        setError(firstError);
+      if (rejectedFiles.length > 0) {
+        const firstError = rejectedFiles[0];
+        if (firstError) {
+          setError(firstError.reason);
+
+          const truncatedName =
+            firstError.name.length > 20
+              ? `${firstError.name.slice(0, 20)}...`
+              : firstError.name;
+
+          if (rejectedFiles.length === 1) {
+            toast(firstError.reason, {
+              description: `"${truncatedName}" has been rejected`,
+            });
+          } else {
+            toast(firstError.reason, {
+              description: `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
+            });
+          }
+
+          setTimeout(() => {
+            setError(null);
+          }, 2000);
+        }
       }
 
       if (validFiles.length > 0) {
@@ -1582,6 +1607,7 @@ export function FileCell<TData>({
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       if (isOpen) {
+        setError(null);
         meta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         setError(null);
@@ -1747,11 +1773,6 @@ export function FileCell<TData>({
                 ref={fileInputRef}
                 onChange={onFileInputChange}
               />
-              {error && (
-                <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-xs">
-                  {error}
-                </div>
-              )}
               {files.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
