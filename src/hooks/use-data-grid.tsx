@@ -493,6 +493,18 @@ function useDataGrid<TData>({
         const updatedRows = updatedTable?.getRowModel().rows;
         const currentRowCount = updatedRows?.length ?? data.length;
 
+        console.log({
+          beforePaste: {
+            currentRowCount,
+            pastedDataLength: pastedData.length,
+            startRowIndex,
+            willPasteRows: Math.min(
+              pastedData.length,
+              currentRowCount - startRowIndex,
+            ),
+          },
+        });
+
         for (
           let pasteRowIdx = 0;
           pasteRowIdx < pastedData.length;
@@ -502,6 +514,12 @@ function useDataGrid<TData>({
           if (!pasteRow) continue;
 
           const targetRowIndex = startRowIndex + pasteRowIdx;
+          console.log({
+            pasteRowIdx,
+            targetRowIndex,
+            currentRowCount,
+            willBreak: targetRowIndex >= currentRowCount,
+          });
           if (targetRowIndex >= currentRowCount) break; // Don't paste beyond available rows
 
           for (
