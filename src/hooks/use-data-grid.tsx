@@ -19,6 +19,7 @@ import type {
   CellPosition,
   ContextMenuState,
   NavigationDirection,
+  PasteDialogState,
   RowHeightValue,
   SearchState,
   SelectionState,
@@ -52,12 +53,6 @@ function useAsRef<T>(data: T) {
   });
 
   return ref;
-}
-
-interface PasteDialogState {
-  open: boolean;
-  rowsNeeded: number;
-  clipboardText: string;
 }
 
 interface DataGridState {
@@ -434,7 +429,7 @@ function useDataGrid<TData>({
     [columnIds, store],
   );
 
-  const copyCells = React.useCallback(() => {
+  const copyCells = React.useCallback(async () => {
     const currentState = store.getState();
 
     // If no selection, copy the focused cell
@@ -456,12 +451,12 @@ function useDataGrid<TData>({
     const rows = currentTable?.getRowModel().rows;
     if (!rows) return;
 
-    const columnIds: string[] = [];
+    const selectedColumnIds: string[] = [];
 
     for (const cellKey of selectedCellsArray) {
       const { columnId } = parseCellKey(cellKey);
-      if (columnId && !columnIds.includes(columnId)) {
-        columnIds.push(columnId);
+      if (columnId && !selectedColumnIds.includes(columnId)) {
+        selectedColumnIds.push(columnId);
       }
     }
 
@@ -497,7 +492,7 @@ function useDataGrid<TData>({
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
       rowIndices.add(rowIndex);
-      const colIndex = columnIds.indexOf(columnId);
+      const colIndex = selectedColumnIds.indexOf(columnId);
       if (colIndex >= 0) {
         colIndices.add(colIndex);
       }
@@ -505,7 +500,7 @@ function useDataGrid<TData>({
 
     const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
     const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
-    const sortedColumnIds = sortedColIndices.map((i) => columnIds[i]);
+    const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
 
     const tsvData = sortedRowIndices
       .map((rowIndex) =>
@@ -518,10 +513,15 @@ function useDataGrid<TData>({
       )
       .join("\n");
 
-    navigator.clipboard.writeText(tsvData);
-    toast.success(
-      `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
-    );
+    try {
+      await navigator.clipboard.writeText(tsvData);
+      toast.success(
+        `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
+      );
+    } catch (error) {
+      console.error("Copy failed:", error);
+      toast.error("Failed to copy to clipboard");
+    }
   }, [store]);
 
   const pasteCells = React.useCallback(
@@ -643,10 +643,14 @@ function useDataGrid<TData>({
               const numValue = Number.parseFloat(pastedValue);
               processedValue = Number.isNaN(numValue) ? null : numValue;
             } else if (cellVariant === "checkbox") {
-              processedValue =
-                pastedValue.toLowerCase() === "true" ||
-                pastedValue === "1" ||
-                pastedValue.toLowerCase() === "yes";
+              if (!pastedValue) {
+                processedValue = false;
+              } else {
+                processedValue =
+                  pastedValue.toLowerCase() === "true" ||
+                  pastedValue === "1" ||
+                  pastedValue.toLowerCase() === "yes";
+              }
             } else if (cellVariant === "date") {
               if (pastedValue) {
                 const date = new Date(pastedValue);
@@ -720,8 +724,12 @@ function useDataGrid<TData>({
             clipboardText: "",
           });
         }
-      } catch {
-        toast.error("Failed to paste. Please try again.");
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to paste. Please try again.",
+        );
       }
     },
     [

@@ -376,22 +376,18 @@ export function DataGridDemo() {
       // });
 
       // For this demo, just add a new row to the data
-      let newRowIndex = 0;
-      setData((prev) => {
-        newRowIndex = prev.length;
-        return [
-          ...prev,
-          {
-            id: faker.string.nanoid(8),
-          },
-        ];
-      });
+      setData((prev) => [
+        ...prev,
+        {
+          id: faker.string.nanoid(8),
+        },
+      ]);
 
       return {
-        rowIndex: newRowIndex,
+        rowIndex: data.length,
         columnId: "name",
       };
-    }, []);
+    }, [data.length]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
     React.useCallback((count: number) => {
