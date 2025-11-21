@@ -54,6 +54,12 @@ function useAsRef<T>(data: T) {
   return ref;
 }
 
+interface PasteDialogState {
+  open: boolean;
+  rowsNeeded: number;
+  clipboardText: string;
+}
+
 interface DataGridState {
   sorting: SortingState;
   rowHeight: RowHeightValue;
@@ -68,6 +74,7 @@ interface DataGridState {
   searchOpen: boolean;
   lastClickedRowIndex: number | null;
   isScrolling: boolean;
+  pasteDialog: PasteDialogState;
 }
 
 interface DataGridStore {
@@ -159,6 +166,11 @@ function useDataGrid<TData>({
       searchOpen: false,
       lastClickedRowIndex: null,
       isScrolling: false,
+      pasteDialog: {
+        open: false,
+        rowsNeeded: 0,
+        clipboardText: "",
+      },
     };
   });
 
@@ -228,6 +240,7 @@ function useDataGrid<TData>({
   const contextMenu = useStore(store, (state) => state.contextMenu);
   const rowHeight = useStore(store, (state) => state.rowHeight);
   const isScrolling = useStore(store, (state) => state.isScrolling);
+  const pasteDialog = useStore(store, (state) => state.pasteDialog);
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
@@ -397,34 +410,72 @@ function useDataGrid<TData>({
     );
   }, [store]);
 
-  const pasteCells = React.useCallback(async () => {
-    const currentState = store.getState();
-    if (!currentState.focusedCell) return;
+  const pasteCells = React.useCallback(
+    async (expandRows = false) => {
+      const currentState = store.getState();
+      if (!currentState.focusedCell) return;
 
-    const currentTable = tableRef.current;
-    const rows = currentTable?.getRowModel().rows;
-    if (!rows) return;
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows;
+      if (!rows) return;
 
-    try {
-      const clipboardText = await navigator.clipboard.readText();
-      if (!clipboardText) return;
+      try {
+        let clipboardText = currentState.pasteDialog.clipboardText;
 
-      // Parse TSV data (tab-separated values with newlines for rows)
-      const pastedRows = clipboardText
-        .split("\n")
-        .filter((row) => row.length > 0);
-      const pastedData = pastedRows.map((row) => row.split("\t"));
+        // If not called from dialog, read from clipboard
+        if (!clipboardText) {
+          clipboardText = await navigator.clipboard.readText();
+          if (!clipboardText) return;
+        }
 
-      const startRowIndex = currentState.focusedCell.rowIndex;
-      const startColIndex = navigableColumnIds.indexOf(
-        currentState.focusedCell.columnId,
-      );
+        // Parse TSV data (tab-separated values with newlines for rows)
+        const pastedRows = clipboardText
+          .split("\n")
+          .filter((row) => row.length > 0);
+        const pastedData = pastedRows.map((row) => row.split("\t"));
 
-      if (startColIndex === -1) return;
+        const startRowIndex = currentState.focusedCell.rowIndex;
+        const startColIndex = navigableColumnIds.indexOf(
+          currentState.focusedCell.columnId,
+        );
+
+        if (startColIndex === -1) return;
+
+        const rowCount = rows.length ?? data.length;
+        const rowsNeeded = startRowIndex + pastedData.length - rowCount;
+
+        // Check if we need to expand and onRowAdd is available
+        // Only show dialog if we haven't already shown it (clipboardText will be empty on first call)
+        if (
+          rowsNeeded > 0 &&
+          !expandRows &&
+          onRowAddProp &&
+          !currentState.pasteDialog.clipboardText
+        ) {
+          // Show dialog
+          store.setState("pasteDialog", {
+            open: true,
+            rowsNeeded,
+            clipboardText,
+          });
+          return;
+        }
+
+        // If expandRows is true, add the needed rows first
+        if (expandRows && rowsNeeded > 0 && onRowAddProp) {
+          for (let i = 0; i < rowsNeeded; i++) {
+            await onRowAddProp();
+          }
+          // Give time for rows to be added
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
 
       const updates: Array<UpdateCell> = [];
       const tableColumns = currentTable?.getAllColumns() ?? [];
       let cellsUpdated = 0;
+
+      const currentRowCount =
+        tableRef.current?.getRowModel().rows.length ?? data.length;
 
       for (
         let pasteRowIdx = 0;
@@ -435,7 +486,7 @@ function useDataGrid<TData>({
         if (!pasteRow) continue;
 
         const targetRowIndex = startRowIndex + pasteRowIdx;
-        if (targetRowIndex >= (rows.length ?? data.length)) break; // Don't paste beyond available rows
+        if (targetRowIndex >= currentRowCount) break; // Don't paste beyond available rows
 
         for (
           let pasteColIdx = 0;
@@ -498,12 +549,23 @@ function useDataGrid<TData>({
           `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
         );
       }
+
+      // Close dialog if it was open
+      if (currentState.pasteDialog.open) {
+        store.setState("pasteDialog", {
+          open: false,
+          rowsNeeded: 0,
+          clipboardText: "",
+        });
+      }
     } catch (error) {
       // Clipboard access denied or other error
       console.error("Paste error:", error);
       toast.error("Failed to paste. Please check clipboard permissions.");
     }
-  }, [store, navigableColumnIds, data.length, onDataUpdate]);
+  },
+  [store, navigableColumnIds, data.length, onDataUpdate, onRowAddProp],
+);
 
   const selectAll = React.useCallback(() => {
     const allCells = new Set<string>();
@@ -1577,6 +1639,28 @@ function useDataGrid<TData>({
     [enableColumnSelection, selectColumn, clearSelection],
   );
 
+  const onPasteDialogOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (!open) {
+        store.setState("pasteDialog", {
+          open: false,
+          rowsNeeded: 0,
+          clipboardText: "",
+        });
+      }
+    },
+    [store],
+  );
+
+  const onPasteWithExpansion = React.useCallback(() => {
+    pasteCells(true);
+  }, [pasteCells]);
+
+  const onPasteWithoutExpansion = React.useCallback(() => {
+    // Call pasteCells without expansion - it will paste only what fits
+    pasteCells(false);
+  }, [pasteCells]);
+
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
       cell: DataGridCell,
@@ -1613,6 +1697,7 @@ function useDataGrid<TData>({
         searchOpen,
         rowHeight,
         isScrolling,
+        pasteDialog,
         getIsCellSelected,
         getIsSearchMatch,
         getIsActiveSearchMatch,
@@ -1631,6 +1716,9 @@ function useDataGrid<TData>({
         onCellEditingStop,
         contextMenu,
         onContextMenuOpenChange,
+        onPasteDialogOpenChange,
+        onPasteWithExpansion,
+        onPasteWithoutExpansion,
       },
     }),
     [
@@ -1668,6 +1756,10 @@ function useDataGrid<TData>({
       rowHeight,
       onRowHeightChange,
       onRowSelect,
+      pasteDialog,
+      onPasteDialogOpenChange,
+      onPasteWithExpansion,
+      onPasteWithoutExpansion,
     ],
   );
 
