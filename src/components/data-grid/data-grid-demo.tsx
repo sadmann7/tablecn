@@ -417,6 +417,7 @@ export function DataGridDemo() {
       },
     },
     enableSearch: true,
+    enablePaste: true,
   });
 
   const height = Math.max(400, windowSize.height - 150);

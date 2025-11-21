@@ -1892,6 +1892,9 @@ function useDataGrid<TData>({
     async (event?: React.MouseEvent<HTMLDivElement>) => {
       if (!onRowAddProp) return;
 
+      // Clear selections before adding a new row (Airtable behavior)
+      clearSelection();
+
       const result = await onRowAddProp(event);
 
       if (event?.defaultPrevented || result === null) return;
@@ -1912,7 +1915,7 @@ function useDataGrid<TData>({
 
       onScrollToRow({ rowIndex: rows.length });
     },
-    [onRowAddProp, onScrollToRow],
+    [onRowAddProp, onScrollToRow, clearSelection],
   );
 
   const searchState = React.useMemo<SearchState | undefined>(() => {
