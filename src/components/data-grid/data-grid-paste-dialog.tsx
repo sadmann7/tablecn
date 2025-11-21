@@ -64,11 +64,11 @@ function PasteDialogImpl({
     <Dialog open={pasteDialog.open} onOpenChange={onPasteDialogOpenChange}>
       <DialogContent data-grid-popover="">
         <DialogHeader>
-          <DialogTitle>Do you want to expand this table?</DialogTitle>
+          <DialogTitle>Add more rows?</DialogTitle>
           <DialogDescription>
-            To fit your pasted data into the table, we need to add{" "}
-            <strong>{pasteDialog.rowsNeeded}</strong> more record
-            {pasteDialog.rowsNeeded !== 1 ? "s" : ""}.
+            Your clipboard contains more data than available rows. We need{" "}
+            <strong>{pasteDialog.rowsNeeded}</strong> additional row
+            {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to paste everything.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 py-4">
@@ -80,9 +80,9 @@ function PasteDialogImpl({
               defaultChecked
               className="size-4"
             />
-            <span>
-              <strong>Expand the table</strong> so that all of the pasted cells
-              will fit.
+            <span className="text-sm">
+              <strong className="font-medium">Create new rows</strong> and paste
+              all data
             </span>
           </label>
           <label className="flex cursor-pointer items-center gap-3">
@@ -92,9 +92,9 @@ function PasteDialogImpl({
               value="no-expand"
               className="size-4"
             />
-            <span>
-              <strong>Don't expand the table.</strong> Values outside of the
-              table will not be pasted.
+            <span className="text-sm">
+              <strong className="font-medium">Keep current rows</strong> and paste
+              only what fits
             </span>
           </label>
         </div>
