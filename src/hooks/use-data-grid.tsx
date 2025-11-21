@@ -489,9 +489,10 @@ function useDataGrid<TData>({
         let cellsUpdated = 0;
 
         // Recalculate row count after potentially adding rows
+        // IMPORTANT: Don't use data.length as fallback - it's stale after adding rows
         const updatedTable = tableRef.current;
         const updatedRows = updatedTable?.getRowModel().rows;
-        const currentRowCount = updatedRows?.length ?? data.length;
+        const currentRowCount = updatedRows?.length ?? 0;
 
         console.log({
           beforePaste: {
