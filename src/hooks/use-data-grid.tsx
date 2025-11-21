@@ -320,15 +320,26 @@ function useDataGrid<TData>({
 
   const copyCells = React.useCallback(() => {
     const currentState = store.getState();
-    if (!currentState.selectionState.selectedCells.size) return;
+
+    // If no selection, copy the focused cell
+    let selectedCellsArray: string[];
+    if (!currentState.selectionState.selectedCells.size) {
+      if (!currentState.focusedCell) return;
+      const focusedCellKey = getCellKey(
+        currentState.focusedCell.rowIndex,
+        currentState.focusedCell.columnId,
+      );
+      selectedCellsArray = [focusedCellKey];
+    } else {
+      selectedCellsArray = Array.from(
+        currentState.selectionState.selectedCells,
+      );
+    }
 
     const currentTable = tableRef.current;
     const rows = currentTable?.getRowModel().rows;
     if (!rows) return;
 
-    const selectedCellsArray = Array.from(
-      currentState.selectionState.selectedCells,
-    );
     const columnIds: string[] = [];
 
     for (const cellKey of selectedCellsArray) {
@@ -382,9 +393,117 @@ function useDataGrid<TData>({
 
     navigator.clipboard.writeText(tsvData);
     toast.success(
-      `${currentState.selectionState.selectedCells.size} cell${currentState.selectionState.selectedCells.size !== 1 ? "s" : ""} copied`,
+      `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
     );
   }, [store]);
+
+  const pasteCells = React.useCallback(async () => {
+    const currentState = store.getState();
+    if (!currentState.focusedCell) return;
+
+    const currentTable = tableRef.current;
+    const rows = currentTable?.getRowModel().rows;
+    if (!rows) return;
+
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      if (!clipboardText) return;
+
+      // Parse TSV data (tab-separated values with newlines for rows)
+      const pastedRows = clipboardText
+        .split("\n")
+        .filter((row) => row.length > 0);
+      const pastedData = pastedRows.map((row) => row.split("\t"));
+
+      const startRowIndex = currentState.focusedCell.rowIndex;
+      const startColIndex = navigableColumnIds.indexOf(
+        currentState.focusedCell.columnId,
+      );
+
+      if (startColIndex === -1) return;
+
+      const updates: Array<UpdateCell> = [];
+      const tableColumns = currentTable?.getAllColumns() ?? [];
+      let cellsUpdated = 0;
+
+      for (
+        let pasteRowIdx = 0;
+        pasteRowIdx < pastedData.length;
+        pasteRowIdx++
+      ) {
+        const pasteRow = pastedData[pasteRowIdx];
+        if (!pasteRow) continue;
+
+        const targetRowIndex = startRowIndex + pasteRowIdx;
+        if (targetRowIndex >= (rows.length ?? data.length)) break; // Don't paste beyond available rows
+
+        for (
+          let pasteColIdx = 0;
+          pasteColIdx < pasteRow.length;
+          pasteColIdx++
+        ) {
+          const targetColIndex = startColIndex + pasteColIdx;
+          if (targetColIndex >= navigableColumnIds.length) break; // Don't paste beyond available columns
+
+          const targetColumnId = navigableColumnIds[targetColIndex];
+          if (!targetColumnId) continue;
+
+          const pastedValue = pasteRow[pasteColIdx] ?? "";
+
+          // Find column metadata to determine the appropriate value type
+          const column = tableColumns.find((col) => col.id === targetColumnId);
+          const cellVariant = column?.columnDef?.meta?.cell?.variant;
+
+          let processedValue: unknown = pastedValue;
+
+          // Convert the pasted string to the appropriate type based on cell variant
+          if (cellVariant === "number") {
+            const numValue = Number.parseFloat(pastedValue);
+            processedValue = Number.isNaN(numValue) ? null : numValue;
+          } else if (cellVariant === "checkbox") {
+            processedValue =
+              pastedValue.toLowerCase() === "true" ||
+              pastedValue === "1" ||
+              pastedValue.toLowerCase() === "yes";
+          } else if (cellVariant === "date") {
+            if (pastedValue) {
+              const date = new Date(pastedValue);
+              processedValue = Number.isNaN(date.getTime()) ? null : date;
+            } else {
+              processedValue = null;
+            }
+          } else if (cellVariant === "multi-select") {
+            // For multi-select, try to parse as JSON array or split by comma
+            try {
+              processedValue = JSON.parse(pastedValue);
+            } catch {
+              processedValue = pastedValue
+                ? pastedValue.split(",").map((v) => v.trim())
+                : [];
+            }
+          }
+
+          updates.push({
+            rowIndex: targetRowIndex,
+            columnId: targetColumnId,
+            value: processedValue,
+          });
+          cellsUpdated++;
+        }
+      }
+
+      if (updates.length > 0) {
+        onDataUpdate(updates);
+        toast.success(
+          `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
+        );
+      }
+    } catch (error) {
+      // Clipboard access denied or other error
+      console.error("Paste error:", error);
+      toast.error("Failed to paste. Please check clipboard permissions.");
+    }
+  }, [store, navigableColumnIds, data.length, onDataUpdate]);
 
   const selectAll = React.useCallback(() => {
     const allCells = new Set<string>();
@@ -1189,10 +1308,14 @@ function useDataGrid<TData>({
       }
 
       if (isCtrlPressed && key === "c") {
-        if (currentState.selectionState.selectedCells.size > 0) {
-          event.preventDefault();
-          copyCells();
-        }
+        event.preventDefault();
+        copyCells();
+        return;
+      }
+
+      if (isCtrlPressed && key === "v") {
+        event.preventDefault();
+        pasteCells();
         return;
       }
 
@@ -1333,6 +1456,7 @@ function useDataGrid<TData>({
       navigateCell,
       selectAll,
       copyCells,
+      pasteCells,
       onDataUpdate,
       clearSelection,
       navigableColumnIds,
