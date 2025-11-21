@@ -103,7 +103,6 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
           readOnly={readOnly}
