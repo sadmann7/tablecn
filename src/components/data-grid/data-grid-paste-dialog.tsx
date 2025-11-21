@@ -88,4 +88,3 @@ export function DataGridPasteDialog<TData>({
     </Dialog>
   );
 }
-

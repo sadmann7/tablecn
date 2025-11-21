@@ -470,102 +470,104 @@ function useDataGrid<TData>({
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
 
-      const updates: Array<UpdateCell> = [];
-      const tableColumns = currentTable?.getAllColumns() ?? [];
-      let cellsUpdated = 0;
+        const updates: Array<UpdateCell> = [];
+        const tableColumns = currentTable?.getAllColumns() ?? [];
+        let cellsUpdated = 0;
 
-      const currentRowCount =
-        tableRef.current?.getRowModel().rows.length ?? data.length;
-
-      for (
-        let pasteRowIdx = 0;
-        pasteRowIdx < pastedData.length;
-        pasteRowIdx++
-      ) {
-        const pasteRow = pastedData[pasteRowIdx];
-        if (!pasteRow) continue;
-
-        const targetRowIndex = startRowIndex + pasteRowIdx;
-        if (targetRowIndex >= currentRowCount) break; // Don't paste beyond available rows
+        const currentRowCount =
+          tableRef.current?.getRowModel().rows.length ?? data.length;
 
         for (
-          let pasteColIdx = 0;
-          pasteColIdx < pasteRow.length;
-          pasteColIdx++
+          let pasteRowIdx = 0;
+          pasteRowIdx < pastedData.length;
+          pasteRowIdx++
         ) {
-          const targetColIndex = startColIndex + pasteColIdx;
-          if (targetColIndex >= navigableColumnIds.length) break; // Don't paste beyond available columns
+          const pasteRow = pastedData[pasteRowIdx];
+          if (!pasteRow) continue;
 
-          const targetColumnId = navigableColumnIds[targetColIndex];
-          if (!targetColumnId) continue;
+          const targetRowIndex = startRowIndex + pasteRowIdx;
+          if (targetRowIndex >= currentRowCount) break; // Don't paste beyond available rows
 
-          const pastedValue = pasteRow[pasteColIdx] ?? "";
+          for (
+            let pasteColIdx = 0;
+            pasteColIdx < pasteRow.length;
+            pasteColIdx++
+          ) {
+            const targetColIndex = startColIndex + pasteColIdx;
+            if (targetColIndex >= navigableColumnIds.length) break; // Don't paste beyond available columns
 
-          // Find column metadata to determine the appropriate value type
-          const column = tableColumns.find((col) => col.id === targetColumnId);
-          const cellVariant = column?.columnDef?.meta?.cell?.variant;
+            const targetColumnId = navigableColumnIds[targetColIndex];
+            if (!targetColumnId) continue;
 
-          let processedValue: unknown = pastedValue;
+            const pastedValue = pasteRow[pasteColIdx] ?? "";
 
-          // Convert the pasted string to the appropriate type based on cell variant
-          if (cellVariant === "number") {
-            const numValue = Number.parseFloat(pastedValue);
-            processedValue = Number.isNaN(numValue) ? null : numValue;
-          } else if (cellVariant === "checkbox") {
-            processedValue =
-              pastedValue.toLowerCase() === "true" ||
-              pastedValue === "1" ||
-              pastedValue.toLowerCase() === "yes";
-          } else if (cellVariant === "date") {
-            if (pastedValue) {
-              const date = new Date(pastedValue);
-              processedValue = Number.isNaN(date.getTime()) ? null : date;
-            } else {
-              processedValue = null;
+            // Find column metadata to determine the appropriate value type
+            const column = tableColumns.find(
+              (col) => col.id === targetColumnId,
+            );
+            const cellVariant = column?.columnDef?.meta?.cell?.variant;
+
+            let processedValue: unknown = pastedValue;
+
+            // Convert the pasted string to the appropriate type based on cell variant
+            if (cellVariant === "number") {
+              const numValue = Number.parseFloat(pastedValue);
+              processedValue = Number.isNaN(numValue) ? null : numValue;
+            } else if (cellVariant === "checkbox") {
+              processedValue =
+                pastedValue.toLowerCase() === "true" ||
+                pastedValue === "1" ||
+                pastedValue.toLowerCase() === "yes";
+            } else if (cellVariant === "date") {
+              if (pastedValue) {
+                const date = new Date(pastedValue);
+                processedValue = Number.isNaN(date.getTime()) ? null : date;
+              } else {
+                processedValue = null;
+              }
+            } else if (cellVariant === "multi-select") {
+              // For multi-select, try to parse as JSON array or split by comma
+              try {
+                processedValue = JSON.parse(pastedValue);
+              } catch {
+                processedValue = pastedValue
+                  ? pastedValue.split(",").map((v) => v.trim())
+                  : [];
+              }
             }
-          } else if (cellVariant === "multi-select") {
-            // For multi-select, try to parse as JSON array or split by comma
-            try {
-              processedValue = JSON.parse(pastedValue);
-            } catch {
-              processedValue = pastedValue
-                ? pastedValue.split(",").map((v) => v.trim())
-                : [];
-            }
+
+            updates.push({
+              rowIndex: targetRowIndex,
+              columnId: targetColumnId,
+              value: processedValue,
+            });
+            cellsUpdated++;
           }
-
-          updates.push({
-            rowIndex: targetRowIndex,
-            columnId: targetColumnId,
-            value: processedValue,
-          });
-          cellsUpdated++;
         }
-      }
 
-      if (updates.length > 0) {
-        onDataUpdate(updates);
-        toast.success(
-          `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
-        );
-      }
+        if (updates.length > 0) {
+          onDataUpdate(updates);
+          toast.success(
+            `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
+          );
+        }
 
-      // Close dialog if it was open
-      if (currentState.pasteDialog.open) {
-        store.setState("pasteDialog", {
-          open: false,
-          rowsNeeded: 0,
-          clipboardText: "",
-        });
+        // Close dialog if it was open
+        if (currentState.pasteDialog.open) {
+          store.setState("pasteDialog", {
+            open: false,
+            rowsNeeded: 0,
+            clipboardText: "",
+          });
+        }
+      } catch (error) {
+        // Clipboard access denied or other error
+        console.error("Paste error:", error);
+        toast.error("Failed to paste. Please check clipboard permissions.");
       }
-    } catch (error) {
-      // Clipboard access denied or other error
-      console.error("Paste error:", error);
-      toast.error("Failed to paste. Please check clipboard permissions.");
-    }
-  },
-  [store, navigableColumnIds, data.length, onDataUpdate, onRowAddProp],
-);
+    },
+    [store, navigableColumnIds, data.length, onDataUpdate, onRowAddProp],
+  );
 
   const selectAll = React.useCallback(() => {
     const allCells = new Set<string>();

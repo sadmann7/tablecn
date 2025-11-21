@@ -102,6 +102,10 @@ declare module "@tanstack/react-table" {
     }) => void;
     contextMenu?: ContextMenuState;
     onContextMenuOpenChange?: (open: boolean) => void;
+    pasteDialog?: PasteDialogState;
+    onPasteDialogOpenChange?: (open: boolean) => void;
+    onPasteWithExpansion?: () => void;
+    onPasteWithoutExpansion?: () => void;
     rowHeight?: RowHeightValue;
     onRowHeightChange?: (value: RowHeightValue) => void;
     onRowSelect?: (
@@ -132,6 +136,12 @@ export interface ContextMenuState {
   open: boolean;
   x: number;
   y: number;
+}
+
+export interface PasteDialogState {
+  open: boolean;
+  rowsNeeded: number;
+  clipboardText: string;
 }
 
 export type NavigationDirection =
