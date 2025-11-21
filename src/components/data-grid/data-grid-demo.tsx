@@ -122,7 +122,7 @@ function generatePerson(id: number): Person {
   });
 
   return {
-    id: id.toString(),
+    id: faker.string.nanoid(8),
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),

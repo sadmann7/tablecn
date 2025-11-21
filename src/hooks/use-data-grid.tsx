@@ -115,6 +115,7 @@ interface UseDataGridProps<TData>
   autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
+  enablePaste?: boolean;
 }
 
 function useDataGrid<TData>({
@@ -129,6 +130,7 @@ function useDataGrid<TData>({
   autoFocus = false,
   enableColumnSelection = false,
   enableSearch = false,
+  enablePaste = false,
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
@@ -1412,7 +1414,7 @@ function useDataGrid<TData>({
         return;
       }
 
-      if (isCtrlPressed && key === "v") {
+      if (enablePaste && isCtrlPressed && key === "v") {
         event.preventDefault();
         pasteCells();
         return;
@@ -1566,6 +1568,7 @@ function useDataGrid<TData>({
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
       enableSearch,
+      enablePaste,
     ],
   );
 
