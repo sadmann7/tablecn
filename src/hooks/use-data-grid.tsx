@@ -106,6 +106,7 @@ interface UseDataGridProps<TData>
     | void;
   onRowsAdd?: (count: number) => void | Promise<void>;
   onRowsDelete?: (rows: TData[], rowIndices: number[]) => void | Promise<void>;
+  onPaste?: (updates: Array<UpdateCell>) => void | Promise<void>;
   rowHeight?: RowHeightValue;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -122,6 +123,7 @@ function useDataGrid<TData>({
   onRowAdd: onRowAddProp,
   onRowsAdd,
   onRowsDelete: onRowsDeleteProp,
+  onPaste,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
   initialState,
@@ -708,6 +710,10 @@ function useDataGrid<TData>({
         }
 
         if (updates.length > 0) {
+          if (onPaste) {
+            await onPaste(updates);
+          }
+
           onDataUpdate(updates);
           toast.success(
             `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
@@ -747,6 +753,7 @@ function useDataGrid<TData>({
       onDataUpdate,
       onRowAddProp,
       onRowsAdd,
+      onPaste,
       selectRange,
       readOnly,
     ],
