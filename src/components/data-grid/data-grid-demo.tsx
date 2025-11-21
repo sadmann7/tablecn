@@ -375,19 +375,24 @@ export function DataGridDemo() {
       // });
 
       // For this demo, just add a new row to the data
-      const newId = data.length + 1;
-      setData((prev) => [
-        ...prev,
-        {
-          id: newId.toString(),
-        },
-      ]);
+      // Use functional update to get the correct newId from prev state
+      let newRowIndex = 0;
+      setData((prev) => {
+        const newId = prev.length + 1;
+        newRowIndex = prev.length;
+        return [
+          ...prev,
+          {
+            id: newId.toString(),
+          },
+        ];
+      });
 
       return {
-        rowIndex: data.length,
+        rowIndex: newRowIndex,
         columnId: "name",
       };
-    }, [data.length]);
+    }, []);
 
   const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
     React.useCallback((rows) => {

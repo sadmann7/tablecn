@@ -286,27 +286,42 @@ function useDataGrid<TData>({
 
           const originalData = row.original;
           const originalRowIndex = data.indexOf(originalData);
-          if (originalRowIndex === -1) continue;
 
-          const existingUpdates = rowUpdatesMap.get(originalRowIndex) ?? [];
+          // If row is not found in data (e.g., newly added), use the table row index
+          const targetIndex =
+            originalRowIndex !== -1 ? originalRowIndex : update.rowIndex;
+
+          const existingUpdates = rowUpdatesMap.get(targetIndex) ?? [];
           existingUpdates.push({
             columnId: update.columnId,
             value: update.value,
           });
-          rowUpdatesMap.set(originalRowIndex, existingUpdates);
+          rowUpdatesMap.set(targetIndex, existingUpdates);
         }
       }
 
-      const newData = data.map((row, index) => {
-        const updates = rowUpdatesMap.get(index);
-        if (!updates) return row;
+      // Build new data array, ensuring we include all rows from the table
+      const tableRowCount = rows?.length ?? data.length;
+      const newData: TData[] = [];
 
-        const updatedRow = { ...row } as Record<string, unknown>;
-        for (const { columnId, value } of updates) {
-          updatedRow[columnId] = value;
+      for (let i = 0; i < tableRowCount; i++) {
+        const updates = rowUpdatesMap.get(i);
+        const existingRow = data[i];
+        const tableRow = rows?.[i];
+
+        if (updates) {
+          // Has updates - apply them
+          const baseRow = existingRow ?? tableRow?.original ?? ({} as TData);
+          const updatedRow = { ...baseRow } as Record<string, unknown>;
+          for (const { columnId, value } of updates) {
+            updatedRow[columnId] = value;
+          }
+          newData.push(updatedRow as TData);
+        } else {
+          // No updates - use existing or table row
+          newData.push(existingRow ?? tableRow?.original ?? ({} as TData));
         }
-        return updatedRow as TData;
-      });
+      }
 
       onDataChange?.(newData);
     },
@@ -434,8 +449,6 @@ function useDataGrid<TData>({
           .filter((row) => row.length > 0);
         const pastedData = pastedRows.map((row) => row.split("\t"));
 
-        console.log({ clipboardText, pastedRows, pastedData });
-
         const startRowIndex = currentState.focusedCell.rowIndex;
         const startColIndex = navigableColumnIds.indexOf(
           currentState.focusedCell.columnId,
@@ -445,13 +458,6 @@ function useDataGrid<TData>({
 
         const rowCount = rows.length ?? data.length;
         const rowsNeeded = startRowIndex + pastedData.length - rowCount;
-
-        console.log({
-          startRowIndex,
-          pastedDataLength: pastedData.length,
-          rowCount,
-          rowsNeeded,
-        });
 
         // Check if we need to expand and onRowAdd is available
         // Only show dialog if we haven't already shown it (clipboardText will be empty on first call)
@@ -472,16 +478,28 @@ function useDataGrid<TData>({
 
         // If expandRows is true, add the needed rows first
         if (expandRows && rowsNeeded > 0 && onRowAddProp) {
-          console.log({ expandRows, rowsNeeded, adding: "rows" });
+          const expectedRowCount = rowCount + rowsNeeded;
+
           for (let i = 0; i < rowsNeeded; i++) {
             await onRowAddProp();
           }
-          // Give time for rows to be added and table to update
-          await new Promise((resolve) => setTimeout(resolve, 150));
-          console.log({
-            rowsAfterAdd:
-              tableRef.current?.getRowModel().rows.length ?? data.length,
-          });
+
+          // Wait for React and table to fully update
+          // Poll until table row count increases
+          let attempts = 0;
+          const maxAttempts = 50; // 5 seconds max
+          let currentTableRowCount =
+            tableRef.current?.getRowModel().rows.length ?? 0;
+
+          while (
+            currentTableRowCount < expectedRowCount &&
+            attempts < maxAttempts
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            currentTableRowCount =
+              tableRef.current?.getRowModel().rows.length ?? 0;
+            attempts++;
+          }
         }
 
         const updates: Array<UpdateCell> = [];
@@ -494,18 +512,6 @@ function useDataGrid<TData>({
         const updatedRows = updatedTable?.getRowModel().rows;
         const currentRowCount = updatedRows?.length ?? 0;
 
-        console.log({
-          beforePaste: {
-            currentRowCount,
-            pastedDataLength: pastedData.length,
-            startRowIndex,
-            willPasteRows: Math.min(
-              pastedData.length,
-              currentRowCount - startRowIndex,
-            ),
-          },
-        });
-
         for (
           let pasteRowIdx = 0;
           pasteRowIdx < pastedData.length;
@@ -515,12 +521,6 @@ function useDataGrid<TData>({
           if (!pasteRow) continue;
 
           const targetRowIndex = startRowIndex + pasteRowIdx;
-          console.log({
-            pasteRowIdx,
-            targetRowIndex,
-            currentRowCount,
-            willBreak: targetRowIndex >= currentRowCount,
-          });
           if (targetRowIndex >= currentRowCount) break; // Don't paste beyond available rows
 
           for (
