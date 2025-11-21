@@ -66,7 +66,10 @@ export function DataGridPasteDialog<TData>({
           </label>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onPasteDialogOpenChange}>
+          <Button
+            variant="outline"
+            onClick={() => onPasteDialogOpenChange?.(false)}
+          >
             Cancel
           </Button>
           <Button
