@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
+import type { Table, TableMeta } from "@tanstack/react-table";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,39 @@ export function DataGridPasteDialog<TData>({
 
   if (!pasteDialog) return null;
 
+  return (
+    <PasteDialog
+      pasteDialog={pasteDialog}
+      onPasteDialogOpenChange={onPasteDialogOpenChange}
+      onPasteWithExpansion={onPasteWithExpansion}
+      onPasteWithoutExpansion={onPasteWithoutExpansion}
+    />
+  );
+}
+
+interface PasteDialogProps
+  extends Pick<
+      TableMeta<unknown>,
+      | "onPasteDialogOpenChange"
+      | "onPasteWithExpansion"
+      | "onPasteWithoutExpansion"
+    >,
+    Required<Pick<TableMeta<unknown>, "pasteDialog">> {}
+
+const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
+  if (prev.pasteDialog.open !== next.pasteDialog.open) return false;
+  if (!next.pasteDialog.open) return true;
+  if (prev.pasteDialog.rowsNeeded !== next.pasteDialog.rowsNeeded) return false;
+
+  return true;
+}) as typeof PasteDialogImpl;
+
+function PasteDialogImpl({
+  pasteDialog,
+  onPasteDialogOpenChange,
+  onPasteWithExpansion,
+  onPasteWithoutExpansion,
+}: PasteDialogProps) {
   return (
     <Dialog open={pasteDialog.open} onOpenChange={onPasteDialogOpenChange}>
       <DialogContent data-grid-popover="">
