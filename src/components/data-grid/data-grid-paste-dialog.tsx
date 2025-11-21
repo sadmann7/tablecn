@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 interface DataGridPasteDialogProps<TData> {
   table: Table<TData>;
@@ -78,39 +79,42 @@ function PasteDialogImpl({
     <Dialog open={pasteDialog.open} onOpenChange={onPasteDialogOpenChange}>
       <DialogContent data-grid-popover="">
         <DialogHeader>
-          <DialogTitle>Add more rows?</DialogTitle>
+          <DialogTitle>Do you want to add more rows?</DialogTitle>
           <DialogDescription>
-            Your clipboard contains more data than available rows. We need{" "}
-            <strong>{pasteDialog.rowsNeeded}</strong> additional row
-            {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to paste everything.
+            We need <strong>{pasteDialog.rowsNeeded}</strong> additional row
+            {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to paste everything from
+            your clipboard.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-3 py-4">
-          <label className="flex cursor-pointer items-center gap-3">
-            <input
+        <div className="flex flex-col gap-3 py-1">
+          <label className="flex cursor-pointer items-start gap-3">
+            <RadioItem
               ref={expandRadioRef}
-              type="radio"
               name="expand-option"
               value="expand"
               defaultChecked
-              className="size-4"
             />
-            <span className="text-sm">
-              <strong className="font-medium">Create new rows</strong> and paste
-              all data
-            </span>
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-sm leading-none">
+                Create new rows
+              </span>
+              <span className="text-muted-foreground text-sm">
+                Add {pasteDialog.rowsNeeded} new row
+                {pasteDialog.rowsNeeded !== 1 ? "s" : ""} to the table and paste
+                all data
+              </span>
+            </div>
           </label>
-          <label className="flex cursor-pointer items-center gap-3">
-            <input
-              type="radio"
-              name="expand-option"
-              value="no-expand"
-              className="size-4"
-            />
-            <span className="text-sm">
-              <strong className="font-medium">Keep current rows</strong> and
-              paste only what fits
-            </span>
+          <label className="flex cursor-pointer items-start gap-3">
+            <RadioItem name="expand-option" value="no-expand" />
+            <div className="flex flex-col gap-1">
+              <span className="font-medium text-sm leading-none">
+                Keep current rows
+              </span>
+              <span className="text-muted-foreground text-sm">
+                Paste only what fits in the existing rows
+              </span>
+            </div>
           </label>
         </div>
         <DialogFooter>
@@ -121,5 +125,22 @@ function PasteDialogImpl({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function RadioItem({ className, ...props }: React.ComponentProps<"input">) {
+  return (
+    <input
+      type="radio"
+      className={cn(
+        "relative size-4 shrink-0 appearance-none rounded-full border border-input bg-background shadow-xs outline-none transition-[color,box-shadow]",
+        "text-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+        "checked:before:-translate-x-1/2 checked:before:-translate-y-1/2 checked:before:absolute checked:before:top-1/2 checked:before:left-1/2 checked:before:size-2 checked:before:rounded-full checked:before:bg-primary checked:before:content-['']",
+        "dark:bg-input/30",
+        className,
+      )}
+      {...props}
+    />
   );
 }
