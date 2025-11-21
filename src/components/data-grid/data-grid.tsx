@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-menu";
+import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
@@ -65,6 +66,7 @@ export function DataGrid<TData>({
     >
       {searchState && <DataGridSearch {...searchState} />}
       <DataGridContextMenu table={table} />
+      <DataGridPasteDialog table={table} />
       <div
         role="grid"
         aria-label="Data grid"

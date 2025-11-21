@@ -122,7 +122,7 @@ function generatePerson(id: number): Person {
   });
 
   return {
-    id: id.toString(),
+    id: faker.string.nanoid(8),
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
@@ -368,6 +368,7 @@ export function DataGridDemo() {
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
     React.useCallback(() => {
+      // Called when user manually adds a single row (e.g., clicking "Add Row" button)
       // In a real app, you would make a server call here:
       // await fetch('/api/people', {
       //   method: 'POST',
@@ -375,11 +376,10 @@ export function DataGridDemo() {
       // });
 
       // For this demo, just add a new row to the data
-      const newId = data.length + 1;
       setData((prev) => [
         ...prev,
         {
-          id: newId.toString(),
+          id: faker.string.nanoid(8),
         },
       ]);
 
@@ -388,6 +388,25 @@ export function DataGridDemo() {
         columnId: "name",
       };
     }, [data.length]);
+
+  const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
+    React.useCallback((count: number) => {
+      // Called when paste operation needs to create multiple rows at once
+      // This is more efficient than calling onRowAdd multiple times - only a single API call needed
+      // In a real app, you would make a server call here:
+      // await fetch('/api/people/bulk', {
+      //   method: 'POST',
+      //   body: JSON.stringify({ count })
+      // });
+
+      // For this demo, create multiple rows in a single state update
+      setData((prev) => {
+        const newRows = Array.from({ length: count }, () => ({
+          id: faker.string.nanoid(8),
+        }));
+        return [...prev, ...newRows];
+      });
+    }, []);
 
   const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
     React.useCallback((rows) => {
@@ -406,6 +425,7 @@ export function DataGridDemo() {
     data,
     onDataChange: setData,
     onRowAdd,
+    onRowsAdd,
     onRowsDelete,
     getRowId: (row) => row.id,
     initialState: {
@@ -414,6 +434,7 @@ export function DataGridDemo() {
       },
     },
     enableSearch: true,
+    enablePaste: true,
   });
 
   const height = Math.max(400, windowSize.height - 150);

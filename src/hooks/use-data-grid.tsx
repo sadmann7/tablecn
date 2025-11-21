@@ -12,12 +12,14 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
+import { toast } from "sonner";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { getCellKey, getRowHeightValue, parseCellKey } from "@/lib/data-grid";
 import type {
   CellPosition,
   ContextMenuState,
   NavigationDirection,
+  PasteDialogState,
   RowHeightValue,
   SearchState,
   SelectionState,
@@ -67,6 +69,7 @@ interface DataGridState {
   searchOpen: boolean;
   lastClickedRowIndex: number | null;
   isScrolling: boolean;
+  pasteDialog: PasteDialogState;
 }
 
 interface DataGridStore {
@@ -101,12 +104,14 @@ interface UseDataGridProps<TData>
     | null
     // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
     | void;
+  onRowsAdd?: (count: number) => void | Promise<void>;
   onRowsDelete?: (rows: TData[], rowIndices: number[]) => void | Promise<void>;
   rowHeight?: RowHeightValue;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
+  enablePaste?: boolean;
 }
 
 function useDataGrid<TData>({
@@ -114,6 +119,7 @@ function useDataGrid<TData>({
   data,
   onDataChange,
   onRowAdd: onRowAddProp,
+  onRowsAdd,
   onRowsDelete: onRowsDeleteProp,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
@@ -121,6 +127,7 @@ function useDataGrid<TData>({
   autoFocus = false,
   enableColumnSelection = false,
   enableSearch = false,
+  enablePaste = false,
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
@@ -158,6 +165,11 @@ function useDataGrid<TData>({
       searchOpen: false,
       lastClickedRowIndex: null,
       isScrolling: false,
+      pasteDialog: {
+        open: false,
+        rowsNeeded: 0,
+        clipboardText: "",
+      },
     };
   });
 
@@ -227,6 +239,7 @@ function useDataGrid<TData>({
   const contextMenu = useStore(store, (state) => state.contextMenu);
   const rowHeight = useStore(store, (state) => state.rowHeight);
   const isScrolling = useStore(store, (state) => state.isScrolling);
+  const pasteDialog = useStore(store, (state) => state.pasteDialog);
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
@@ -272,27 +285,42 @@ function useDataGrid<TData>({
 
           const originalData = row.original;
           const originalRowIndex = data.indexOf(originalData);
-          if (originalRowIndex === -1) continue;
 
-          const existingUpdates = rowUpdatesMap.get(originalRowIndex) ?? [];
+          // If row is not found in data (e.g., newly added), use the table row index
+          const targetIndex =
+            originalRowIndex !== -1 ? originalRowIndex : update.rowIndex;
+
+          const existingUpdates = rowUpdatesMap.get(targetIndex) ?? [];
           existingUpdates.push({
             columnId: update.columnId,
             value: update.value,
           });
-          rowUpdatesMap.set(originalRowIndex, existingUpdates);
+          rowUpdatesMap.set(targetIndex, existingUpdates);
         }
       }
 
-      const newData = data.map((row, index) => {
-        const updates = rowUpdatesMap.get(index);
-        if (!updates) return row;
+      // Build new data array, ensuring we include all rows from the table
+      const tableRowCount = rows?.length ?? data.length;
+      const newData: TData[] = [];
 
-        const updatedRow = { ...row } as Record<string, unknown>;
-        for (const { columnId, value } of updates) {
-          updatedRow[columnId] = value;
+      for (let i = 0; i < tableRowCount; i++) {
+        const updates = rowUpdatesMap.get(i);
+        const existingRow = data[i];
+        const tableRow = rows?.[i];
+
+        if (updates) {
+          // Has updates - apply them
+          const baseRow = existingRow ?? tableRow?.original ?? ({} as TData);
+          const updatedRow = { ...baseRow } as Record<string, unknown>;
+          for (const { columnId, value } of updates) {
+            updatedRow[columnId] = value;
+          }
+          newData.push(updatedRow as TData);
+        } else {
+          // No updates - use existing or table row
+          newData.push(existingRow ?? tableRow?.original ?? ({} as TData));
         }
-        return updatedRow as TData;
-      });
+      }
 
       onDataChange?.(newData);
     },
@@ -399,6 +427,320 @@ function useDataGrid<TData>({
       });
     },
     [columnIds, store],
+  );
+
+  const copyCells = React.useCallback(async () => {
+    const currentState = store.getState();
+
+    // If no selection, copy the focused cell
+    let selectedCellsArray: string[];
+    if (!currentState.selectionState.selectedCells.size) {
+      if (!currentState.focusedCell) return;
+      const focusedCellKey = getCellKey(
+        currentState.focusedCell.rowIndex,
+        currentState.focusedCell.columnId,
+      );
+      selectedCellsArray = [focusedCellKey];
+    } else {
+      selectedCellsArray = Array.from(
+        currentState.selectionState.selectedCells,
+      );
+    }
+
+    const currentTable = tableRef.current;
+    const rows = currentTable?.getRowModel().rows;
+    if (!rows) return;
+
+    const selectedColumnIds: string[] = [];
+
+    for (const cellKey of selectedCellsArray) {
+      const { columnId } = parseCellKey(cellKey);
+      if (columnId && !selectedColumnIds.includes(columnId)) {
+        selectedColumnIds.push(columnId);
+      }
+    }
+
+    const cellData = new Map<string, string>();
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      const row = rows[rowIndex];
+      if (row) {
+        const cell = row
+          .getVisibleCells()
+          .find((c) => c.column.id === columnId);
+        if (cell) {
+          const value = cell.getValue();
+          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
+
+          let serializedValue = "";
+          if (cellVariant === "file" || cellVariant === "multi-select") {
+            serializedValue = value ? JSON.stringify(value) : "";
+          } else if (value instanceof Date) {
+            serializedValue = value.toISOString();
+          } else {
+            serializedValue = String(value ?? "");
+          }
+
+          cellData.set(cellKey, serializedValue);
+        }
+      }
+    }
+
+    const rowIndices = new Set<number>();
+    const colIndices = new Set<number>();
+
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+      const colIndex = selectedColumnIds.indexOf(columnId);
+      if (colIndex >= 0) {
+        colIndices.add(colIndex);
+      }
+    }
+
+    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
+    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
+    const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
+
+    const tsvData = sortedRowIndices
+      .map((rowIndex) =>
+        sortedColumnIds
+          .map((columnId) => {
+            const cellKey = `${rowIndex}:${columnId}`;
+            return cellData.get(cellKey) ?? "";
+          })
+          .join("\t"),
+      )
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(tsvData);
+      toast.success(
+        `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
+      );
+    } catch (error) {
+      console.error("Copy failed:", error);
+      toast.error("Failed to copy to clipboard");
+    }
+  }, [store]);
+
+  const pasteCells = React.useCallback(
+    async (expandRows = false) => {
+      const currentState = store.getState();
+      if (!currentState.focusedCell) return;
+
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows;
+      if (!rows) return;
+
+      try {
+        let clipboardText = currentState.pasteDialog.clipboardText;
+
+        if (!clipboardText) {
+          clipboardText = await navigator.clipboard.readText();
+          if (!clipboardText) return;
+        }
+
+        // Parse TSV data (tab-separated values with newlines for rows)
+        const pastedRows = clipboardText
+          .split("\n")
+          .filter((row) => row.length > 0);
+        const pastedData = pastedRows.map((row) => row.split("\t"));
+
+        const startRowIndex = currentState.focusedCell.rowIndex;
+        const startColIndex = navigableColumnIds.indexOf(
+          currentState.focusedCell.columnId,
+        );
+
+        if (startColIndex === -1) return;
+
+        const rowCount = rows.length ?? data.length;
+        const rowsNeeded = startRowIndex + pastedData.length - rowCount;
+
+        if (
+          rowsNeeded > 0 &&
+          !expandRows &&
+          onRowAddProp &&
+          !currentState.pasteDialog.clipboardText
+        ) {
+          store.setState("pasteDialog", {
+            open: true,
+            rowsNeeded,
+            clipboardText,
+          });
+          return;
+        }
+
+        if (expandRows && rowsNeeded > 0) {
+          const expectedRowCount = rowCount + rowsNeeded;
+
+          if (onRowsAdd) {
+            await onRowsAdd(rowsNeeded);
+          } else if (onRowAddProp) {
+            for (let i = 0; i < rowsNeeded; i++) {
+              await onRowAddProp();
+            }
+          }
+
+          let attempts = 0;
+          const maxAttempts = 50;
+          let currentTableRowCount =
+            tableRef.current?.getRowModel().rows.length ?? 0;
+
+          while (
+            currentTableRowCount < expectedRowCount &&
+            attempts < maxAttempts
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            currentTableRowCount =
+              tableRef.current?.getRowModel().rows.length ?? 0;
+            attempts++;
+          }
+        }
+
+        const updates: Array<UpdateCell> = [];
+        const tableColumns = currentTable?.getAllColumns() ?? [];
+        let cellsUpdated = 0;
+        let endRowIndex = startRowIndex;
+        let endColIndex = startColIndex;
+
+        const updatedTable = tableRef.current;
+        const updatedRows = updatedTable?.getRowModel().rows;
+        const currentRowCount = updatedRows?.length ?? 0;
+
+        for (
+          let pasteRowIdx = 0;
+          pasteRowIdx < pastedData.length;
+          pasteRowIdx++
+        ) {
+          const pasteRow = pastedData[pasteRowIdx];
+          if (!pasteRow) continue;
+
+          const targetRowIndex = startRowIndex + pasteRowIdx;
+          if (targetRowIndex >= currentRowCount) break; // Don't paste beyond available rows
+
+          for (
+            let pasteColIdx = 0;
+            pasteColIdx < pasteRow.length;
+            pasteColIdx++
+          ) {
+            const targetColIndex = startColIndex + pasteColIdx;
+            if (targetColIndex >= navigableColumnIds.length) break; // Don't paste beyond available columns
+
+            const targetColumnId = navigableColumnIds[targetColIndex];
+            if (!targetColumnId) continue;
+
+            const pastedValue = pasteRow[pasteColIdx] ?? "";
+
+            const column = tableColumns.find(
+              (col) => col.id === targetColumnId,
+            );
+            const cellVariant = column?.columnDef?.meta?.cell?.variant;
+
+            let processedValue: unknown = pastedValue;
+
+            if (cellVariant === "number") {
+              const numValue = Number.parseFloat(pastedValue);
+              processedValue = Number.isNaN(numValue) ? null : numValue;
+            } else if (cellVariant === "checkbox") {
+              if (!pastedValue) {
+                processedValue = false;
+              } else {
+                processedValue =
+                  pastedValue.toLowerCase() === "true" ||
+                  pastedValue === "1" ||
+                  pastedValue.toLowerCase() === "yes";
+              }
+            } else if (cellVariant === "date") {
+              if (pastedValue) {
+                const date = new Date(pastedValue);
+                processedValue = Number.isNaN(date.getTime()) ? null : date;
+              } else {
+                processedValue = null;
+              }
+            } else if (cellVariant === "multi-select") {
+              try {
+                processedValue = JSON.parse(pastedValue);
+              } catch {
+                processedValue = pastedValue
+                  ? pastedValue.split(",").map((v) => v.trim())
+                  : [];
+              }
+            } else if (cellVariant === "file") {
+              try {
+                const parsed = JSON.parse(pastedValue);
+                if (Array.isArray(parsed)) {
+                  processedValue = parsed.filter(
+                    (item) =>
+                      item &&
+                      typeof item === "object" &&
+                      "id" in item &&
+                      "name" in item &&
+                      "size" in item &&
+                      "type" in item,
+                  );
+                } else {
+                  processedValue = [];
+                }
+              } catch {
+                processedValue = [];
+              }
+            }
+
+            updates.push({
+              rowIndex: targetRowIndex,
+              columnId: targetColumnId,
+              value: processedValue,
+            });
+            cellsUpdated++;
+
+            endRowIndex = Math.max(endRowIndex, targetRowIndex);
+            endColIndex = Math.max(endColIndex, targetColIndex);
+          }
+        }
+
+        if (updates.length > 0) {
+          onDataUpdate(updates);
+          toast.success(
+            `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
+          );
+
+          const endColumnId = navigableColumnIds[endColIndex];
+          if (endColumnId) {
+            selectRange(
+              {
+                rowIndex: startRowIndex,
+                columnId: currentState.focusedCell.columnId,
+              },
+              { rowIndex: endRowIndex, columnId: endColumnId },
+            );
+          }
+        }
+
+        if (currentState.pasteDialog.open) {
+          store.setState("pasteDialog", {
+            open: false,
+            rowsNeeded: 0,
+            clipboardText: "",
+          });
+        }
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to paste. Please try again.",
+        );
+      }
+    },
+    [
+      store,
+      navigableColumnIds,
+      data.length,
+      onDataUpdate,
+      onRowAddProp,
+      onRowsAdd,
+      selectRange,
+    ],
   );
 
   const focusCellWrapper = React.useCallback(
@@ -1119,6 +1461,18 @@ function useDataGrid<TData>({
         return;
       }
 
+      if (isCtrlPressed && key === "c") {
+        event.preventDefault();
+        copyCells();
+        return;
+      }
+
+      if (enablePaste && isCtrlPressed && key === "v") {
+        event.preventDefault();
+        pasteCells();
+        return;
+      }
+
       if (key === "Delete" || key === "Backspace") {
         if (currentState.selectionState.selectedCells.size > 0) {
           event.preventDefault();
@@ -1255,6 +1609,8 @@ function useDataGrid<TData>({
       blurCell,
       navigateCell,
       selectAll,
+      copyCells,
+      pasteCells,
       onDataUpdate,
       clearSelection,
       navigableColumnIds,
@@ -1265,6 +1621,7 @@ function useDataGrid<TData>({
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
       enableSearch,
+      enablePaste,
     ],
   );
 
@@ -1375,6 +1732,28 @@ function useDataGrid<TData>({
     [enableColumnSelection, selectColumn, clearSelection],
   );
 
+  const onPasteDialogOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (!open) {
+        store.setState("pasteDialog", {
+          open: false,
+          rowsNeeded: 0,
+          clipboardText: "",
+        });
+      }
+    },
+    [store],
+  );
+
+  const onPasteWithExpansion = React.useCallback(() => {
+    pasteCells(true);
+  }, [pasteCells]);
+
+  const onPasteWithoutExpansion = React.useCallback(() => {
+    // Call pasteCells without expansion - it will paste only what fits
+    pasteCells(false);
+  }, [pasteCells]);
+
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
       cell: DataGridCell,
@@ -1411,6 +1790,7 @@ function useDataGrid<TData>({
         searchOpen,
         rowHeight,
         isScrolling,
+        pasteDialog,
         getIsCellSelected,
         getIsSearchMatch,
         getIsActiveSearchMatch,
@@ -1429,6 +1809,9 @@ function useDataGrid<TData>({
         onCellEditingStop,
         contextMenu,
         onContextMenuOpenChange,
+        onPasteDialogOpenChange,
+        onPasteWithExpansion,
+        onPasteWithoutExpansion,
       },
     }),
     [
@@ -1466,6 +1849,10 @@ function useDataGrid<TData>({
       rowHeight,
       onRowHeightChange,
       onRowSelect,
+      pasteDialog,
+      onPasteDialogOpenChange,
+      onPasteWithExpansion,
+      onPasteWithoutExpansion,
     ],
   );
 

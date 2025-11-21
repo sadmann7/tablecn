@@ -329,6 +329,7 @@
         "calendar",
         "checkbox",
         "command",
+        "dialog",
         "dropdown-menu",
         "input",
         "popover",
@@ -374,6 +375,11 @@
           "path": "src/components/data-grid/data-grid-context-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-context-menu.tsx"
+        },
+        {
+          "path": "src/components/data-grid/data-grid-paste-dialog.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-paste-dialog.tsx"
         },
         {
           "path": "src/components/data-grid/data-grid-row.tsx",
