@@ -67,6 +67,7 @@ declare module "@tanstack/react-table" {
     selectionState?: SelectionState;
     searchOpen?: boolean;
     isScrolling?: boolean;
+    readOnly?: boolean;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
@@ -176,6 +177,7 @@ export interface CellVariantProps<TData> {
   isEditing: boolean;
   isFocused: boolean;
   isSelected: boolean;
+  readOnly?: boolean;
 }
 
 export interface FileCellData {

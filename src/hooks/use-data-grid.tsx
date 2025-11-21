@@ -112,6 +112,7 @@ interface UseDataGridProps<TData>
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
   enablePaste?: boolean;
+  readOnly?: boolean;
 }
 
 function useDataGrid<TData>({
@@ -128,6 +129,7 @@ function useDataGrid<TData>({
   enableColumnSelection = false,
   enableSearch = false,
   enablePaste = false,
+  readOnly = false,
   ...dataGridProps
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
@@ -259,6 +261,9 @@ function useDataGrid<TData>({
 
   const onDataUpdate = React.useCallback(
     (updates: UpdateCell | Array<UpdateCell>) => {
+      // Block data updates in read-only mode
+      if (readOnly) return;
+
       const updateArray = Array.isArray(updates) ? updates : [updates];
 
       if (updateArray.length === 0) return;
@@ -324,7 +329,7 @@ function useDataGrid<TData>({
 
       onDataChange?.(newData);
     },
-    [data, onDataChange],
+    [data, onDataChange, readOnly],
   );
 
   const getIsCellSelected = React.useCallback(
@@ -526,6 +531,9 @@ function useDataGrid<TData>({
 
   const pasteCells = React.useCallback(
     async (expandRows = false) => {
+      // Block paste in read-only mode
+      if (readOnly) return;
+
       const currentState = store.getState();
       if (!currentState.focusedCell) return;
 
@@ -740,6 +748,7 @@ function useDataGrid<TData>({
       onRowAddProp,
       onRowsAdd,
       selectRange,
+      readOnly,
     ],
   );
 
@@ -775,7 +784,8 @@ function useDataGrid<TData>({
 
   const onRowsDelete = React.useCallback(
     async (rowIndices: number[]) => {
-      if (!onRowsDeleteProp || rowIndices.length === 0) return;
+      // Block deletion in read-only mode
+      if (readOnly || !onRowsDeleteProp || rowIndices.length === 0) return;
 
       const currentTable = tableRef.current;
       const rows = currentTable?.getRowModel().rows;
@@ -819,7 +829,14 @@ function useDataGrid<TData>({
         }
       });
     },
-    [onRowsDeleteProp, data.length, store, navigableColumnIds, focusCell],
+    [
+      onRowsDeleteProp,
+      data.length,
+      store,
+      navigableColumnIds,
+      focusCell,
+      readOnly,
+    ],
   );
 
   const navigateCell = React.useCallback(
@@ -1000,12 +1017,15 @@ function useDataGrid<TData>({
 
   const onCellEditingStart = React.useCallback(
     (rowIndex: number, columnId: string) => {
+      // Block editing in read-only mode
+      if (readOnly) return;
+
       store.batch(() => {
         store.setState("focusedCell", { rowIndex, columnId });
         store.setState("editingCell", { rowIndex, columnId });
       });
     },
-    [store],
+    [store, readOnly],
   );
 
   const onCellEditingStop = React.useCallback(
@@ -1467,13 +1487,13 @@ function useDataGrid<TData>({
         return;
       }
 
-      if (enablePaste && isCtrlPressed && key === "v") {
+      if (enablePaste && isCtrlPressed && key === "v" && !readOnly) {
         event.preventDefault();
         pasteCells();
         return;
       }
 
-      if (key === "Delete" || key === "Backspace") {
+      if ((key === "Delete" || key === "Backspace") && !readOnly) {
         if (currentState.selectionState.selectedCells.size > 0) {
           event.preventDefault();
 
@@ -1622,6 +1642,7 @@ function useDataGrid<TData>({
       onNavigateToPrevMatch,
       enableSearch,
       enablePaste,
+      readOnly,
     ],
   );
 
@@ -1790,6 +1811,7 @@ function useDataGrid<TData>({
         searchOpen,
         rowHeight,
         isScrolling,
+        readOnly,
         pasteDialog,
         getIsCellSelected,
         getIsSearchMatch,
@@ -1829,6 +1851,7 @@ function useDataGrid<TData>({
       selectionState,
       searchOpen,
       isScrolling,
+      readOnly,
       getIsCellSelected,
       getIsSearchMatch,
       getIsActiveSearchMatch,
@@ -1943,7 +1966,8 @@ function useDataGrid<TData>({
 
   const onRowAdd = React.useCallback(
     async (event?: React.MouseEvent<HTMLDivElement>) => {
-      if (!onRowAddProp) return;
+      // Block row addition in read-only mode
+      if (readOnly || !onRowAddProp) return;
 
       const result = await onRowAddProp(event);
 
@@ -1965,7 +1989,7 @@ function useDataGrid<TData>({
 
       onScrollToRow({ rowIndex: rows.length });
     },
-    [onRowAddProp, onScrollToRow],
+    [onRowAddProp, onScrollToRow, readOnly],
   );
 
   const searchState = React.useMemo<SearchState | undefined>(() => {

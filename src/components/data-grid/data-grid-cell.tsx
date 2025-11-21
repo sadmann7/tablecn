@@ -38,6 +38,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
     meta?.editingCell?.rowIndex === rowIndex &&
     meta?.editingCell?.columnId === columnId;
   const isSelected = meta?.getIsCellSelected?.(rowIndex, columnId) ?? false;
+  const readOnly = meta?.readOnly ?? false;
 
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
@@ -53,6 +54,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "long-text":
@@ -65,6 +67,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "number":
@@ -77,6 +80,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "url":
@@ -89,6 +93,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "checkbox":
@@ -98,9 +103,9 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           table={table}
           rowIndex={rowIndex}
           columnId={columnId}
-          isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "select":
@@ -113,6 +118,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "multi-select":
@@ -125,6 +131,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "date":
@@ -137,6 +144,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
     case "file":
@@ -149,6 +157,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
 
@@ -162,6 +171,7 @@ export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          readOnly={readOnly}
         />
       );
   }
