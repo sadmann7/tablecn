@@ -475,7 +475,18 @@ function useDataGrid<TData>({
           .find((c) => c.column.id === columnId);
         if (cell) {
           const value = cell.getValue();
-          cellData.set(cellKey, String(value ?? ""));
+          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
+
+          let serializedValue = "";
+          if (cellVariant === "file" || cellVariant === "multi-select") {
+            serializedValue = value ? JSON.stringify(value) : "";
+          } else if (value instanceof Date) {
+            serializedValue = value.toISOString();
+          } else {
+            serializedValue = String(value ?? "");
+          }
+
+          cellData.set(cellKey, serializedValue);
         }
       }
     }
@@ -650,6 +661,25 @@ function useDataGrid<TData>({
                 processedValue = pastedValue
                   ? pastedValue.split(",").map((v) => v.trim())
                   : [];
+              }
+            } else if (cellVariant === "file") {
+              try {
+                const parsed = JSON.parse(pastedValue);
+                if (Array.isArray(parsed)) {
+                  processedValue = parsed.filter(
+                    (item) =>
+                      item &&
+                      typeof item === "object" &&
+                      "id" in item &&
+                      "name" in item &&
+                      "size" in item &&
+                      "type" in item,
+                  );
+                } else {
+                  processedValue = [];
+                }
+              } catch {
+                processedValue = [];
               }
             }
 
