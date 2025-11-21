@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
+import { toast } from "sonner";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { getCellKey, getRowHeightValue, parseCellKey } from "@/lib/data-grid";
 import type {
@@ -315,6 +316,74 @@ function useDataGrid<TData>({
       });
       store.setState("rowSelection", {});
     });
+  }, [store]);
+
+  const copyCells = React.useCallback(() => {
+    const currentState = store.getState();
+    if (!currentState.selectionState.selectedCells.size) return;
+
+    const currentTable = tableRef.current;
+    const rows = currentTable?.getRowModel().rows;
+    if (!rows) return;
+
+    const selectedCellsArray = Array.from(
+      currentState.selectionState.selectedCells,
+    );
+    const columnIds: string[] = [];
+
+    for (const cellKey of selectedCellsArray) {
+      const { columnId } = parseCellKey(cellKey);
+      if (columnId && !columnIds.includes(columnId)) {
+        columnIds.push(columnId);
+      }
+    }
+
+    const cellData = new Map<string, string>();
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      const row = rows[rowIndex];
+      if (row) {
+        const cell = row
+          .getVisibleCells()
+          .find((c) => c.column.id === columnId);
+        if (cell) {
+          const value = cell.getValue();
+          cellData.set(cellKey, String(value ?? ""));
+        }
+      }
+    }
+
+    const rowIndices = new Set<number>();
+    const colIndices = new Set<number>();
+
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+      const colIndex = columnIds.indexOf(columnId);
+      if (colIndex >= 0) {
+        colIndices.add(colIndex);
+      }
+    }
+
+    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
+    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
+    const sortedColumnIds = sortedColIndices.map((i) => columnIds[i]);
+
+    const tsvData = sortedRowIndices
+      .map((rowIndex) =>
+        sortedColumnIds
+          .map((columnId) => {
+            const cellKey = `${rowIndex}:${columnId}`;
+            return cellData.get(cellKey) ?? "";
+          })
+          .join("\t"),
+      )
+      .join("\n");
+
+    navigator.clipboard.writeText(tsvData);
+    toast.success(
+      `${currentState.selectionState.selectedCells.size} cell${currentState.selectionState.selectedCells.size !== 1 ? "s" : ""} copied`,
+    );
   }, [store]);
 
   const selectAll = React.useCallback(() => {
@@ -1119,6 +1188,14 @@ function useDataGrid<TData>({
         return;
       }
 
+      if (isCtrlPressed && key === "c") {
+        if (currentState.selectionState.selectedCells.size > 0) {
+          event.preventDefault();
+          copyCells();
+        }
+        return;
+      }
+
       if (key === "Delete" || key === "Backspace") {
         if (currentState.selectionState.selectedCells.size > 0) {
           event.preventDefault();
@@ -1255,6 +1332,7 @@ function useDataGrid<TData>({
       blurCell,
       navigateCell,
       selectAll,
+      copyCells,
       onDataUpdate,
       clearSelection,
       navigableColumnIds,
