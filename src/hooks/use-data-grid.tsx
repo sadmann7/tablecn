@@ -434,6 +434,8 @@ function useDataGrid<TData>({
           .filter((row) => row.length > 0);
         const pastedData = pastedRows.map((row) => row.split("\t"));
 
+        console.log({ clipboardText, pastedRows, pastedData });
+
         const startRowIndex = currentState.focusedCell.rowIndex;
         const startColIndex = navigableColumnIds.indexOf(
           currentState.focusedCell.columnId,
@@ -443,6 +445,13 @@ function useDataGrid<TData>({
 
         const rowCount = rows.length ?? data.length;
         const rowsNeeded = startRowIndex + pastedData.length - rowCount;
+
+        console.log({
+          startRowIndex,
+          pastedDataLength: pastedData.length,
+          rowCount,
+          rowsNeeded,
+        });
 
         // Check if we need to expand and onRowAdd is available
         // Only show dialog if we haven't already shown it (clipboardText will be empty on first call)
@@ -463,19 +472,26 @@ function useDataGrid<TData>({
 
         // If expandRows is true, add the needed rows first
         if (expandRows && rowsNeeded > 0 && onRowAddProp) {
+          console.log({ expandRows, rowsNeeded, adding: "rows" });
           for (let i = 0; i < rowsNeeded; i++) {
             await onRowAddProp();
           }
-          // Give time for rows to be added
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          // Give time for rows to be added and table to update
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          console.log({
+            rowsAfterAdd:
+              tableRef.current?.getRowModel().rows.length ?? data.length,
+          });
         }
 
         const updates: Array<UpdateCell> = [];
         const tableColumns = currentTable?.getAllColumns() ?? [];
         let cellsUpdated = 0;
 
-        const currentRowCount =
-          tableRef.current?.getRowModel().rows.length ?? data.length;
+        // Recalculate row count after potentially adding rows
+        const updatedTable = tableRef.current;
+        const updatedRows = updatedTable?.getRowModel().rows;
+        const currentRowCount = updatedRows?.length ?? data.length;
 
         for (
           let pasteRowIdx = 0;
