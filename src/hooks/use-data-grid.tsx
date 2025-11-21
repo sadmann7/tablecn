@@ -109,6 +109,7 @@ interface UseDataGridProps<TData>
     | null
     // biome-ignore lint/suspicious/noConfusingVoidType: void is needed here to allow functions without explicit return
     | void;
+  onRowsAdd?: (count: number) => void | Promise<void>;
   onRowsDelete?: (rows: TData[], rowIndices: number[]) => void | Promise<void>;
   rowHeight?: RowHeightValue;
   overscan?: number;
@@ -123,6 +124,7 @@ function useDataGrid<TData>({
   data,
   onDataChange,
   onRowAdd: onRowAddProp,
+  onRowsAdd: onRowsAddProp,
   onRowsDelete: onRowsDeleteProp,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
@@ -523,7 +525,6 @@ function useDataGrid<TData>({
       try {
         let clipboardText = currentState.pasteDialog.clipboardText;
 
-        // If not called from dialog, read from clipboard
         if (!clipboardText) {
           clipboardText = await navigator.clipboard.readText();
           if (!clipboardText) return;
@@ -545,15 +546,12 @@ function useDataGrid<TData>({
         const rowCount = rows.length ?? data.length;
         const rowsNeeded = startRowIndex + pastedData.length - rowCount;
 
-        // Check if we need to expand and onRowAdd is available
-        // Only show dialog if we haven't already shown it (clipboardText will be empty on first call)
         if (
           rowsNeeded > 0 &&
           !expandRows &&
           onRowAddProp &&
           !currentState.pasteDialog.clipboardText
         ) {
-          // Show dialog
           store.setState("pasteDialog", {
             open: true,
             rowsNeeded,
@@ -562,19 +560,19 @@ function useDataGrid<TData>({
           return;
         }
 
-        // If expandRows is true, add the needed rows first
-        if (expandRows && rowsNeeded > 0 && onRowAddProp) {
+        if (expandRows && rowsNeeded > 0) {
           const expectedRowCount = rowCount + rowsNeeded;
 
-          // TODO: Pass a onRowsAdd callback to create rows on a single call
-          for (let i = 0; i < rowsNeeded; i++) {
-            await onRowAddProp();
+          if (onRowsAddProp) {
+            await onRowsAddProp(rowsNeeded);
+          } else if (onRowAddProp) {
+            for (let i = 0; i < rowsNeeded; i++) {
+              await onRowAddProp();
+            }
           }
 
-          // Wait for React and table to fully update
-          // Poll until table row count increases
           let attempts = 0;
-          const maxAttempts = 50; // 5 seconds max
+          const maxAttempts = 50;
           let currentTableRowCount =
             tableRef.current?.getRowModel().rows.length ?? 0;
 
@@ -595,8 +593,6 @@ function useDataGrid<TData>({
         let endRowIndex = startRowIndex;
         let endColIndex = startColIndex;
 
-        // Recalculate row count after potentially adding rows
-        // IMPORTANT: Don't use data.length as fallback - it's stale after adding rows
         const updatedTable = tableRef.current;
         const updatedRows = updatedTable?.getRowModel().rows;
         const currentRowCount = updatedRows?.length ?? 0;
@@ -625,7 +621,6 @@ function useDataGrid<TData>({
 
             const pastedValue = pasteRow[pasteColIdx] ?? "";
 
-            // Find column metadata to determine the appropriate value type
             const column = tableColumns.find(
               (col) => col.id === targetColumnId,
             );
@@ -633,7 +628,6 @@ function useDataGrid<TData>({
 
             let processedValue: unknown = pastedValue;
 
-            // Convert the pasted string to the appropriate type based on cell variant
             if (cellVariant === "number") {
               const numValue = Number.parseFloat(pastedValue);
               processedValue = Number.isNaN(numValue) ? null : numValue;
@@ -650,7 +644,6 @@ function useDataGrid<TData>({
                 processedValue = null;
               }
             } else if (cellVariant === "multi-select") {
-              // For multi-select, try to parse as JSON array or split by comma
               try {
                 processedValue = JSON.parse(pastedValue);
               } catch {
@@ -667,7 +660,6 @@ function useDataGrid<TData>({
             });
             cellsUpdated++;
 
-            // Track the end position of the pasted range
             endRowIndex = Math.max(endRowIndex, targetRowIndex);
             endColIndex = Math.max(endColIndex, targetColIndex);
           }
@@ -679,7 +671,6 @@ function useDataGrid<TData>({
             `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
           );
 
-          // Select the pasted range
           const endColumnId = navigableColumnIds[endColIndex];
           if (endColumnId) {
             selectRange(
@@ -692,7 +683,6 @@ function useDataGrid<TData>({
           }
         }
 
-        // Close dialog if it was open
         if (currentState.pasteDialog.open) {
           store.setState("pasteDialog", {
             open: false,
@@ -700,10 +690,8 @@ function useDataGrid<TData>({
             clipboardText: "",
           });
         }
-      } catch (error) {
-        // Clipboard access denied or other error
-        console.error("Paste error:", error);
-        toast.error("Failed to paste. Please check clipboard permissions.");
+      } catch {
+        toast.error("Failed to paste. Please try again.");
       }
     },
     [
@@ -712,6 +700,7 @@ function useDataGrid<TData>({
       data.length,
       onDataUpdate,
       onRowAddProp,
+      onRowsAddProp,
       selectRange,
     ],
   );
