@@ -52,7 +52,7 @@ const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
   if (prev.pasteDialog.rowsNeeded !== next.pasteDialog.rowsNeeded) return false;
 
   return true;
-}) as typeof PasteDialogImpl;
+});
 
 function PasteDialogImpl({
   pasteDialog,
@@ -60,6 +60,20 @@ function PasteDialogImpl({
   onPasteWithExpansion,
   onPasteWithoutExpansion,
 }: PasteDialogProps) {
+  const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
+
+  const onCancel = React.useCallback(() => {
+    onPasteDialogOpenChange?.(false);
+  }, [onPasteDialogOpenChange]);
+
+  const onContinue = React.useCallback(() => {
+    if (expandRadioRef.current?.checked) {
+      onPasteWithExpansion?.();
+    } else {
+      onPasteWithoutExpansion?.();
+    }
+  }, [onPasteWithExpansion, onPasteWithoutExpansion]);
+
   return (
     <Dialog open={pasteDialog.open} onOpenChange={onPasteDialogOpenChange}>
       <DialogContent data-grid-popover="">
@@ -74,6 +88,7 @@ function PasteDialogImpl({
         <div className="flex flex-col gap-3 py-4">
           <label className="flex cursor-pointer items-center gap-3">
             <input
+              ref={expandRadioRef}
               type="radio"
               name="expand-option"
               value="expand"
@@ -93,32 +108,16 @@ function PasteDialogImpl({
               className="size-4"
             />
             <span className="text-sm">
-              <strong className="font-medium">Keep current rows</strong> and paste
-              only what fits
+              <strong className="font-medium">Keep current rows</strong> and
+              paste only what fits
             </span>
           </label>
         </div>
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onPasteDialogOpenChange?.(false)}
-          >
+          <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button
-            onClick={() => {
-              const expandOption = document.querySelector<HTMLInputElement>(
-                'input[name="expand-option"]:checked',
-              );
-              if (expandOption?.value === "expand") {
-                onPasteWithExpansion?.();
-              } else {
-                onPasteWithoutExpansion?.();
-              }
-            }}
-          >
-            Continue
-          </Button>
+          <Button onClick={onContinue}>Continue</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
