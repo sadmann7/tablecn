@@ -124,7 +124,7 @@ function useDataGrid<TData>({
   data,
   onDataChange,
   onRowAdd: onRowAddProp,
-  onRowsAdd: onRowsAddProp,
+  onRowsAdd,
   onRowsDelete: onRowsDeleteProp,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
@@ -563,8 +563,8 @@ function useDataGrid<TData>({
         if (expandRows && rowsNeeded > 0) {
           const expectedRowCount = rowCount + rowsNeeded;
 
-          if (onRowsAddProp) {
-            await onRowsAddProp(rowsNeeded);
+          if (onRowsAdd) {
+            await onRowsAdd(rowsNeeded);
           } else if (onRowAddProp) {
             for (let i = 0; i < rowsNeeded; i++) {
               await onRowAddProp();
@@ -700,7 +700,7 @@ function useDataGrid<TData>({
       data.length,
       onDataUpdate,
       onRowAddProp,
-      onRowsAddProp,
+      onRowsAdd,
       selectRange,
     ],
   );
