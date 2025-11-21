@@ -348,6 +348,90 @@ function useDataGrid<TData>({
     });
   }, [store]);
 
+  const selectAll = React.useCallback(() => {
+    const allCells = new Set<string>();
+    const currentTable = tableRef.current;
+    const rows = currentTable?.getRowModel().rows ?? [];
+    const rowCount = rows.length ?? data.length;
+
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+      for (const columnId of columnIds) {
+        allCells.add(getCellKey(rowIndex, columnId));
+      }
+    }
+
+    const firstColumnId = columnIds[0];
+    const lastColumnId = columnIds[columnIds.length - 1];
+
+    store.setState("selectionState", {
+      selectedCells: allCells,
+      selectionRange:
+        columnIds.length > 0 && rowCount > 0 && firstColumnId && lastColumnId
+          ? {
+              start: { rowIndex: 0, columnId: firstColumnId },
+              end: { rowIndex: rowCount - 1, columnId: lastColumnId },
+            }
+          : null,
+      isSelecting: false,
+    });
+  }, [columnIds, data.length, store]);
+
+  const selectColumn = React.useCallback(
+    (columnId: string) => {
+      const currentTable = tableRef.current;
+      const rows = currentTable?.getRowModel().rows ?? [];
+      const rowCount = rows.length ?? data.length;
+
+      if (rowCount === 0) return;
+
+      const selectedCells = new Set<string>();
+
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        selectedCells.add(getCellKey(rowIndex, columnId));
+      }
+
+      store.setState("selectionState", {
+        selectedCells,
+        selectionRange: {
+          start: { rowIndex: 0, columnId },
+          end: { rowIndex: rowCount - 1, columnId },
+        },
+        isSelecting: false,
+      });
+    },
+    [data.length, store],
+  );
+
+  const selectRange = React.useCallback(
+    (start: CellPosition, end: CellPosition, isSelecting = false) => {
+      const startColIndex = columnIds.indexOf(start.columnId);
+      const endColIndex = columnIds.indexOf(end.columnId);
+
+      const minRow = Math.min(start.rowIndex, end.rowIndex);
+      const maxRow = Math.max(start.rowIndex, end.rowIndex);
+      const minCol = Math.min(startColIndex, endColIndex);
+      const maxCol = Math.max(startColIndex, endColIndex);
+
+      const selectedCells = new Set<string>();
+
+      for (let rowIndex = minRow; rowIndex <= maxRow; rowIndex++) {
+        for (let colIndex = minCol; colIndex <= maxCol; colIndex++) {
+          const columnId = columnIds[colIndex];
+          if (columnId) {
+            selectedCells.add(getCellKey(rowIndex, columnId));
+          }
+        }
+      }
+
+      store.setState("selectionState", {
+        selectedCells,
+        selectionRange: { start, end },
+        isSelecting,
+      });
+    },
+    [columnIds, store],
+  );
+
   const copyCells = React.useCallback(() => {
     const currentState = store.getState();
 
@@ -482,6 +566,7 @@ function useDataGrid<TData>({
         if (expandRows && rowsNeeded > 0 && onRowAddProp) {
           const expectedRowCount = rowCount + rowsNeeded;
 
+          // TODO: Pass a onRowsAdd callback to create rows on a single call
           for (let i = 0; i < rowsNeeded; i++) {
             await onRowAddProp();
           }
@@ -507,6 +592,8 @@ function useDataGrid<TData>({
         const updates: Array<UpdateCell> = [];
         const tableColumns = currentTable?.getAllColumns() ?? [];
         let cellsUpdated = 0;
+        let endRowIndex = startRowIndex;
+        let endColIndex = startColIndex;
 
         // Recalculate row count after potentially adding rows
         // IMPORTANT: Don't use data.length as fallback - it's stale after adding rows
@@ -579,6 +666,10 @@ function useDataGrid<TData>({
               value: processedValue,
             });
             cellsUpdated++;
+
+            // Track the end position of the pasted range
+            endRowIndex = Math.max(endRowIndex, targetRowIndex);
+            endColIndex = Math.max(endColIndex, targetColIndex);
           }
         }
 
@@ -587,6 +678,18 @@ function useDataGrid<TData>({
           toast.success(
             `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
           );
+
+          // Select the pasted range
+          const endColumnId = navigableColumnIds[endColIndex];
+          if (endColumnId) {
+            selectRange(
+              {
+                rowIndex: startRowIndex,
+                columnId: currentState.focusedCell.columnId,
+              },
+              { rowIndex: endRowIndex, columnId: endColumnId },
+            );
+          }
         }
 
         // Close dialog if it was open
@@ -603,91 +706,14 @@ function useDataGrid<TData>({
         toast.error("Failed to paste. Please check clipboard permissions.");
       }
     },
-    [store, navigableColumnIds, data.length, onDataUpdate, onRowAddProp],
-  );
-
-  const selectAll = React.useCallback(() => {
-    const allCells = new Set<string>();
-    const currentTable = tableRef.current;
-    const rows = currentTable?.getRowModel().rows ?? [];
-    const rowCount = rows.length ?? data.length;
-
-    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-      for (const columnId of columnIds) {
-        allCells.add(getCellKey(rowIndex, columnId));
-      }
-    }
-
-    const firstColumnId = columnIds[0];
-    const lastColumnId = columnIds[columnIds.length - 1];
-
-    store.setState("selectionState", {
-      selectedCells: allCells,
-      selectionRange:
-        columnIds.length > 0 && rowCount > 0 && firstColumnId && lastColumnId
-          ? {
-              start: { rowIndex: 0, columnId: firstColumnId },
-              end: { rowIndex: rowCount - 1, columnId: lastColumnId },
-            }
-          : null,
-      isSelecting: false,
-    });
-  }, [columnIds, data.length, store]);
-
-  const selectColumn = React.useCallback(
-    (columnId: string) => {
-      const currentTable = tableRef.current;
-      const rows = currentTable?.getRowModel().rows ?? [];
-      const rowCount = rows.length ?? data.length;
-
-      if (rowCount === 0) return;
-
-      const selectedCells = new Set<string>();
-
-      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-        selectedCells.add(getCellKey(rowIndex, columnId));
-      }
-
-      store.setState("selectionState", {
-        selectedCells,
-        selectionRange: {
-          start: { rowIndex: 0, columnId },
-          end: { rowIndex: rowCount - 1, columnId },
-        },
-        isSelecting: false,
-      });
-    },
-    [data.length, store],
-  );
-
-  const selectRange = React.useCallback(
-    (start: CellPosition, end: CellPosition, isSelecting = false) => {
-      const startColIndex = columnIds.indexOf(start.columnId);
-      const endColIndex = columnIds.indexOf(end.columnId);
-
-      const minRow = Math.min(start.rowIndex, end.rowIndex);
-      const maxRow = Math.max(start.rowIndex, end.rowIndex);
-      const minCol = Math.min(startColIndex, endColIndex);
-      const maxCol = Math.max(startColIndex, endColIndex);
-
-      const selectedCells = new Set<string>();
-
-      for (let rowIndex = minRow; rowIndex <= maxRow; rowIndex++) {
-        for (let colIndex = minCol; colIndex <= maxCol; colIndex++) {
-          const columnId = columnIds[colIndex];
-          if (columnId) {
-            selectedCells.add(getCellKey(rowIndex, columnId));
-          }
-        }
-      }
-
-      store.setState("selectionState", {
-        selectedCells,
-        selectionRange: { start, end },
-        isSelecting,
-      });
-    },
-    [columnIds, store],
+    [
+      store,
+      navigableColumnIds,
+      data.length,
+      onDataUpdate,
+      onRowAddProp,
+      selectRange,
+    ],
   );
 
   const focusCellWrapper = React.useCallback(
