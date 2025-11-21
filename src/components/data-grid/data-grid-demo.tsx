@@ -375,15 +375,13 @@ export function DataGridDemo() {
       // });
 
       // For this demo, just add a new row to the data
-      // Use functional update to get the correct newId from prev state
       let newRowIndex = 0;
       setData((prev) => {
-        const newId = prev.length + 1;
         newRowIndex = prev.length;
         return [
           ...prev,
           {
-            id: newId.toString(),
+            id: faker.string.nanoid(8),
           },
         ];
       });
