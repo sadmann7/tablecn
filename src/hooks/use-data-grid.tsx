@@ -140,7 +140,7 @@ function useDataGrid<TData>({
   enableSearch = false,
   enablePaste = false,
   readOnly = false,
-  ...dataGridProps
+  ...props
 }: UseDataGridProps<TData>) {
   const dataGridRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>>>(null);
@@ -151,7 +151,7 @@ function useDataGrid<TData>({
   const cellMapRef = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
 
-  const propsRef = useAsRef(dataGridProps);
+  const propsRef = useAsRef(props);
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
   const stateRef = useLazyRef<DataGridState>(() => {
