@@ -63,6 +63,7 @@ interface DataGridState {
   selectionState: SelectionState;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
+  cutCells: Set<string>;
   contextMenu: ContextMenuState;
   searchQuery: string;
   searchMatches: CellPosition[];
@@ -71,7 +72,6 @@ interface DataGridState {
   lastClickedRowIndex: number | null;
   isScrolling: boolean;
   pasteDialog: PasteDialogState;
-  cutCells: Set<string>;
 }
 
 interface DataGridStore {
@@ -174,6 +174,7 @@ function useDataGrid<TData>({
       },
       focusedCell: null,
       editingCell: null,
+      cutCells: new Set(),
       contextMenu: {
         open: false,
         x: 0,
@@ -190,7 +191,6 @@ function useDataGrid<TData>({
         rowsNeeded: 0,
         clipboardText: "",
       },
-      cutCells: new Set(),
     };
   });
 
