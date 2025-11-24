@@ -65,25 +65,19 @@ declare module "@tanstack/react-table" {
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
     searchOpen?: boolean;
-    isScrolling?: boolean;
     readOnly?: boolean;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
+    rowHeight?: RowHeightValue;
+    onRowHeightChange?: (value: RowHeightValue) => void;
+    onRowSelect?: (
+      rowIndex: number,
+      checked: boolean,
+      shiftKey: boolean,
+    ) => void;
     onDataUpdate?: (params: UpdateCell | Array<UpdateCell>) => void;
     onRowsDelete?: (rowIndices: number[]) => void | Promise<void>;
-    onFilesUpload?: (params: {
-      files: File[];
-      rowIndex: number;
-      columnId: string;
-      row: TData;
-    }) => Promise<FileCellData[]>;
-    onFilesDelete?: (params: {
-      fileIds: string[];
-      rowIndex: number;
-      columnId: string;
-      row: TData;
-    }) => void | Promise<void>;
     onColumnClick?: (columnId: string) => void;
     onCellClick?: (
       rowIndex: number,
@@ -112,21 +106,26 @@ declare module "@tanstack/react-table" {
       direction?: NavigationDirection;
       moveToNextRow?: boolean;
     }) => void;
+    onCellsCopy?: () => void;
+    onCellsCut?: () => void;
+    onFilesUpload?: (params: {
+      files: File[];
+      rowIndex: number;
+      columnId: string;
+      row: TData;
+    }) => Promise<FileCellData[]>;
+    onFilesDelete?: (params: {
+      fileIds: string[];
+      rowIndex: number;
+      columnId: string;
+      row: TData;
+    }) => void | Promise<void>;
     contextMenu?: ContextMenuState;
     onContextMenuOpenChange?: (open: boolean) => void;
     pasteDialog?: PasteDialogState;
     onPasteDialogOpenChange?: (open: boolean) => void;
     onPasteWithExpansion?: () => void;
     onPasteWithoutExpansion?: () => void;
-    rowHeight?: RowHeightValue;
-    onRowHeightChange?: (value: RowHeightValue) => void;
-    onRowSelect?: (
-      rowIndex: number,
-      checked: boolean,
-      shiftKey: boolean,
-    ) => void;
-    onCellsCopy?: () => void;
-    onCellsCut?: () => void;
   }
 }
 

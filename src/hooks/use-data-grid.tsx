@@ -70,7 +70,6 @@ interface DataGridState {
   matchIndex: number;
   searchOpen: boolean;
   lastClickedRowIndex: number | null;
-  isScrolling: boolean;
   pasteDialog: PasteDialogState;
 }
 
@@ -178,7 +177,6 @@ function useDataGrid<TData>({
       matchIndex: -1,
       searchOpen: false,
       lastClickedRowIndex: null,
-      isScrolling: false,
       pasteDialog: {
         open: false,
         rowsNeeded: 0,
@@ -252,7 +250,6 @@ function useDataGrid<TData>({
   const rowSelection = useStore(store, (state) => state.rowSelection);
   const contextMenu = useStore(store, (state) => state.contextMenu);
   const rowHeight = useStore(store, (state) => state.rowHeight);
-  const isScrolling = useStore(store, (state) => state.isScrolling);
   const pasteDialog = useStore(store, (state) => state.pasteDialog);
 
   const rowHeightValue = getRowHeightValue(rowHeight);
@@ -1161,7 +1158,6 @@ function useDataGrid<TData>({
 
   const onCellEditingStart = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      // Block editing in read-only mode
       if (readOnly) return;
 
       store.batch(() => {
@@ -1581,14 +1577,12 @@ function useDataGrid<TData>({
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
 
-      // Handle Cmd+F / Ctrl+F to open search (highest priority, works even when editing)
       if (enableSearch && isCtrlPressed && key === SEARCH_SHORTCUT_KEY) {
         event.preventDefault();
         onSearchOpenChange(true);
         return;
       }
 
-      // Handle search navigation when search is open
       if (
         enableSearch &&
         currentState.searchOpen &&
@@ -1608,8 +1602,6 @@ function useDataGrid<TData>({
           onSearchOpenChange(false);
           return;
         }
-        // When search is open, don't let data grid handle any other keys
-        // (they should only affect the search input)
         return;
       }
 
@@ -1677,7 +1669,6 @@ function useDataGrid<TData>({
           onDataUpdate(updates);
           clearSelection();
 
-          // Clear any cut cells when deleting
           if (currentState.cutCells.size > 0) {
             store.setState("cutCells", new Set());
           }
@@ -1965,7 +1956,6 @@ function useDataGrid<TData>({
         selectionState,
         searchOpen,
         rowHeight,
-        isScrolling,
         readOnly,
         pasteDialog,
         getIsCellSelected,
@@ -2013,7 +2003,6 @@ function useDataGrid<TData>({
       editingCell,
       selectionState,
       searchOpen,
-      isScrolling,
       readOnly,
       getIsCellSelected,
       getIsSearchMatch,
@@ -2071,19 +2060,10 @@ function useDataGrid<TData>({
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
     onChange: (instance) => {
-      // Sync virtualizer's isScrolling state to our store
-      const virtualizerIsScrolling = instance.isScrolling;
-      const currentIsScrolling = store.getState().isScrolling;
-
-      if (virtualizerIsScrolling !== currentIsScrolling) {
-        store.setState("isScrolling", virtualizerIsScrolling);
-      }
-
-      // Batch DOM updates in a single animation frame
-      const virtualItems = instance.getVirtualItems();
-      if (virtualItems.length === 0) return;
-
       requestAnimationFrame(() => {
+        const virtualItems = instance.getVirtualItems();
+        if (virtualItems.length === 0) return;
+
         for (let i = 0; i < virtualItems.length; i++) {
           const virtualRow = virtualItems[i];
           if (!virtualRow) continue;
@@ -2130,7 +2110,6 @@ function useDataGrid<TData>({
 
   const onRowAdd = React.useCallback(
     async (event?: React.MouseEvent<HTMLDivElement>) => {
-      // Block row addition in read-only mode
       if (readOnly || !propsRef.current.onRowAdd) return;
 
       const result = await propsRef.current.onRowAdd(event);
@@ -2274,10 +2253,10 @@ function useDataGrid<TData>({
       }
     }
   }, [
+    store,
     autoFocus,
     data.length,
     columns.length,
-    store,
     navigableColumnIds,
     focusCell,
   ]);
@@ -2318,24 +2297,25 @@ function useDataGrid<TData>({
   }, [store, blurCell, clearSelection]);
 
   React.useEffect(() => {
-    function onCleanup() {
-      document.removeEventListener("selectstart", preventSelection);
-      document.removeEventListener("contextmenu", preventContextMenu);
-      document.body.style.userSelect = "";
+    function onSelectStart(event: Event) {
+      event.preventDefault();
     }
 
-    function preventSelection(event: Event) {
+    function onContextMenu(event: Event) {
       event.preventDefault();
     }
-    function preventContextMenu(event: Event) {
-      event.preventDefault();
+
+    function onCleanup() {
+      document.removeEventListener("selectstart", onSelectStart);
+      document.removeEventListener("contextmenu", onContextMenu);
+      document.body.style.userSelect = "";
     }
 
     const onUnsubscribe = store.subscribe(() => {
       const currentState = store.getState();
       if (currentState.selectionState.isSelecting) {
-        document.addEventListener("selectstart", preventSelection);
-        document.addEventListener("contextmenu", preventContextMenu);
+        document.addEventListener("selectstart", onSelectStart);
+        document.addEventListener("contextmenu", onContextMenu);
         document.body.style.userSelect = "none";
       } else {
         onCleanup();
@@ -2354,6 +2334,7 @@ function useDataGrid<TData>({
     });
     return () => cancelAnimationFrame(rafId);
   }, [
+    rowHeight,
     table.getState().columnFilters,
     table.getState().columnOrder,
     table.getState().columnPinning,
@@ -2364,7 +2345,6 @@ function useDataGrid<TData>({
     table.getState().grouping,
     table.getState().rowSelection,
     table.getState().sorting,
-    rowHeight,
   ]);
 
   return {
