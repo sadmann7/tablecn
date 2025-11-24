@@ -270,7 +270,6 @@ function useDataGrid<TData>({
 
   const onDataUpdate = React.useCallback(
     (updates: UpdateCell | Array<UpdateCell>) => {
-      // Block data updates in read-only mode
       if (readOnly) return;
 
       const updateArray = Array.isArray(updates) ? updates : [updates];
@@ -300,7 +299,6 @@ function useDataGrid<TData>({
           const originalData = row.original;
           const originalRowIndex = data.indexOf(originalData);
 
-          // If row is not found in data (e.g., newly added), use the table row index
           const targetIndex =
             originalRowIndex !== -1 ? originalRowIndex : update.rowIndex;
 
@@ -323,7 +321,6 @@ function useDataGrid<TData>({
         const tableRow = rows?.[i];
 
         if (updates) {
-          // Has updates - apply them
           const baseRow = existingRow ?? tableRow?.original ?? ({} as TData);
           const updatedRow = { ...baseRow } as Record<string, unknown>;
           for (const { columnId, value } of updates) {
@@ -331,7 +328,6 @@ function useDataGrid<TData>({
           }
           newData.push(updatedRow as TData);
         } else {
-          // No updates - use existing or table row
           newData.push(existingRow ?? tableRow?.original ?? ({} as TData));
         }
       }
@@ -446,7 +442,6 @@ function useDataGrid<TData>({
   const onCellsCopy = React.useCallback(async () => {
     const currentState = store.getState();
 
-    // If no selection, copy the focused cell
     let selectedCellsArray: string[];
     if (!currentState.selectionState.selectedCells.size) {
       if (!currentState.focusedCell) return;
@@ -530,7 +525,6 @@ function useDataGrid<TData>({
     try {
       await navigator.clipboard.writeText(tsvData);
 
-      // Clear any cut cells when copying
       const currentState = store.getState();
       if (currentState.cutCells.size > 0) {
         store.setState("cutCells", new Set());
@@ -547,12 +541,10 @@ function useDataGrid<TData>({
   }, [store]);
 
   const onCellsCut = React.useCallback(async () => {
-    // Block cut in read-only mode
     if (readOnly) return;
 
     const currentState = store.getState();
 
-    // If no selection, cut the focused cell
     let selectedCellsArray: string[];
     if (!currentState.selectionState.selectedCells.size) {
       if (!currentState.focusedCell) return;
@@ -667,7 +659,6 @@ function useDataGrid<TData>({
           if (!clipboardText) return;
         }
 
-        // Parse TSV data (tab-separated values with newlines for rows)
         const pastedRows = clipboardText
           .split("\n")
           .filter((row) => row.length > 0);
@@ -743,7 +734,7 @@ function useDataGrid<TData>({
           if (!pasteRow) continue;
 
           const targetRowIndex = startRowIndex + pasteRowIdx;
-          if (targetRowIndex >= currentRowCount) break; // Don't paste beyond available rows
+          if (targetRowIndex >= currentRowCount) break;
 
           for (
             let pasteColIdx = 0;
@@ -751,7 +742,7 @@ function useDataGrid<TData>({
             pasteColIdx++
           ) {
             const targetColIndex = startColIndex + pasteColIdx;
-            if (targetColIndex >= navigableColumnIds.length) break; // Don't paste beyond available columns
+            if (targetColIndex >= navigableColumnIds.length) break;
 
             const targetColumnId = navigableColumnIds[targetColIndex];
             if (!targetColumnId) continue;
@@ -830,10 +821,8 @@ function useDataGrid<TData>({
             await propsRef.current.onPaste(updates);
           }
 
-          // Combine paste updates with cut cell clearing into a single update
           const allUpdates = [...updates];
 
-          // Clear cut cells after paste
           if (currentState.cutCells.size > 0) {
             for (const cellKey of currentState.cutCells) {
               const { rowIndex, columnId } = parseCellKey(cellKey);
@@ -1071,12 +1060,10 @@ function useDataGrid<TData>({
           const targetRow = rowMapRef.current.get(newRowIndex);
 
           if (!container || !currentRow) {
-            // Fallback to simple focus if we can't find elements
             focusCell(newRowIndex, newColumnId);
             return;
           }
 
-          // Check viewport boundaries
           const containerRect = container.getBoundingClientRect();
           const headerHeight =
             headerRef.current?.getBoundingClientRect().height ?? 0;
@@ -1088,42 +1075,33 @@ function useDataGrid<TData>({
           const viewportBottom =
             containerRect.bottom - footerHeight - VIEWPORT_OFFSET;
 
-          // If target row already exists, check if it's visible
           if (targetRow) {
             const rowRect = targetRow.getBoundingClientRect();
             const isFullyVisible =
               rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
 
             if (isFullyVisible) {
-              // Row is fully visible, just focus it
               focusCell(newRowIndex, newColumnId);
               return;
             }
 
-            // Row exists but not fully visible, scroll it into view
             focusCell(newRowIndex, newColumnId);
 
             if (direction === "down") {
-              // Scroll just enough to show the row at the bottom
               const scrollNeeded = rowRect.bottom - viewportBottom;
               container.scrollTop += scrollNeeded;
             } else {
-              // Scroll just enough to show the row at the top
               const scrollNeeded = viewportTop - rowRect.top;
               container.scrollTop -= scrollNeeded;
             }
             return;
           }
 
-          // Target row is not rendered yet
-          // Focus immediately so the ring appears as the row is revealed
           focusCell(newRowIndex, newColumnId);
 
-          // Scroll by exactly one row height to reveal it smoothly
           if (direction === "down") {
             container.scrollTop += rowHeightValue;
           } else {
-            // For arrow up, ensure we don't go below 0
             const currentScrollTop = container.scrollTop;
             const targetScrollTop = Math.max(
               0,
@@ -1188,14 +1166,12 @@ function useDataGrid<TData>({
           });
         }
       } else if (opts?.direction && currentEditing) {
-        // Focus the current editing cell first, then navigate
         const { rowIndex, columnId } = currentEditing;
         focusCell(rowIndex, columnId);
         requestAnimationFrame(() => {
           navigateCell(opts.direction ?? "right");
         });
       } else if (currentEditing) {
-        // No navigation - just refocus the current cell (e.g., when pressing Escape)
         const { rowIndex, columnId } = currentEditing;
         focusCellWrapper(rowIndex, columnId);
       }
@@ -1279,7 +1255,6 @@ function useDataGrid<TData>({
         store.setState("matchIndex", matches.length > 0 ? 0 : -1);
       });
 
-      // Scroll to first match but don't focus it (to keep focus in search input)
       if (matches.length > 0 && matches[0]) {
         const firstMatch = matches[0];
         rowVirtualizerRef.current?.scrollToIndex(firstMatch.rowIndex, {
@@ -1379,7 +1354,6 @@ function useDataGrid<TData>({
 
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
-      // Ignore right-click (button 2) - let onCellContextMenu handle it
       if (event?.button === 2) {
         return;
       }
@@ -1417,15 +1391,11 @@ function useDataGrid<TData>({
         }
       }
 
-      // Clear selection if there are selected cells or rows
       const hasSelectedCells =
         currentState.selectionState.selectedCells.size > 0;
       const hasSelectedRows = Object.keys(currentState.rowSelection).length > 0;
 
       if (hasSelectedCells && !currentState.selectionState.isSelecting) {
-        // If there's a cell selection but we're not actively selecting (drag just finished),
-        // don't clear it - keep the selection
-        // Only clear if clicking elsewhere
         const cellKey = getCellKey(rowIndex, columnId);
         const isClickingSelectedCell =
           currentState.selectionState.selectedCells.has(cellKey);
@@ -1433,12 +1403,10 @@ function useDataGrid<TData>({
         if (!isClickingSelectedCell) {
           clearSelection();
         } else {
-          // Clicking on an already selected cell - just focus it
           focusCell(rowIndex, columnId);
           return;
         }
       } else if (hasSelectedRows && columnId !== "select") {
-        // If there are selected rows but we're clicking on a non-checkbox cell, clear selections
         clearSelection();
       }
 
@@ -1465,15 +1433,12 @@ function useDataGrid<TData>({
 
   const onCellMouseDown = React.useCallback(
     (rowIndex: number, columnId: string, event: React.MouseEvent) => {
-      // Ignore right-click (button 2) - let onCellContextMenu handle it
       if (event.button === 2) {
         return;
       }
 
       event.preventDefault();
 
-      // Only start drag selection if no modifier keys are pressed
-      // Clear any existing selection and prepare for potential drag
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
         store.batch(() => {
           store.setState("selectionState", {
@@ -1532,7 +1497,6 @@ function useDataGrid<TData>({
       const isTargetCellSelected =
         currentState.selectionState.selectedCells.has(cellKey);
 
-      // If right-clicking on a non-selected cell, select only that cell
       if (!isTargetCellSelected) {
         store.batch(() => {
           store.setState("selectionState", {
@@ -1547,7 +1511,6 @@ function useDataGrid<TData>({
         });
       }
 
-      // Open context menu at cursor position
       store.setState("contextMenu", {
         open: true,
         x: event.clientX,
@@ -1721,7 +1684,6 @@ function useDataGrid<TData>({
       if (direction) {
         event.preventDefault();
 
-        // Tab navigation should not trigger selection, even with Shift
         if (shiftKey && key !== "Tab" && currentState.focusedCell) {
           const currentColIndex = navigableColumnIds.indexOf(
             currentState.focusedCell.columnId,
