@@ -58,7 +58,6 @@ declare module "@tanstack/react-table" {
     cell?: CellOpts;
   }
 
-  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
     dataGridRef?: React.RefObject<HTMLElement | null>;
     cellMapRef?: React.RefObject<Map<string, HTMLDivElement>>;
@@ -71,30 +70,42 @@ declare module "@tanstack/react-table" {
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
-    onDataUpdate?: (props: UpdateCell | Array<UpdateCell>) => void;
+    onDataUpdate?: (params: UpdateCell | Array<UpdateCell>) => void;
     onRowsDelete?: (rowIndices: number[]) => void | Promise<void>;
+    onFilesUpload?: (params: {
+      files: File[];
+      rowIndex: number;
+      columnId: string;
+      row: TData;
+    }) => Promise<FileCellData[]>;
+    onFilesDelete?: (params: {
+      fileIds: string[];
+      rowIndex: number;
+      columnId: string;
+      row: TData;
+    }) => void | Promise<void>;
     onColumnClick?: (columnId: string) => void;
     onCellClick?: (
       rowIndex: number,
       columnId: string,
-      event?: React.MouseEvent,
+      event?: React.MouseEvent
     ) => void;
     onCellDoubleClick?: (rowIndex: number, columnId: string) => void;
     onCellMouseDown?: (
       rowIndex: number,
       columnId: string,
-      event: React.MouseEvent,
+      event: React.MouseEvent
     ) => void;
     onCellMouseEnter?: (
       rowIndex: number,
       columnId: string,
-      event: React.MouseEvent,
+      event: React.MouseEvent
     ) => void;
     onCellMouseUp?: () => void;
     onCellContextMenu?: (
       rowIndex: number,
       columnId: string,
-      event: React.MouseEvent,
+      event: React.MouseEvent
     ) => void;
     onCellEditingStart?: (rowIndex: number, columnId: string) => void;
     onCellEditingStop?: (opts?: {
@@ -112,7 +123,7 @@ declare module "@tanstack/react-table" {
     onRowSelect?: (
       rowIndex: number,
       checked: boolean,
-      shiftKey: boolean,
+      shiftKey: boolean
     ) => void;
   }
 }

@@ -1365,11 +1365,9 @@ export function FileCell<TData>({
     [accept],
   );
 
-  // Sync files when cellValue changes (same pattern as other cells)
   const prevCellValueRef = React.useRef(cellValue);
   if (cellValue !== prevCellValueRef.current) {
     prevCellValueRef.current = cellValue;
-    // Revoke old object URLs to prevent memory leaks
     for (const file of files) {
       if (file.url) {
         URL.revokeObjectURL(file.url);
@@ -1393,15 +1391,12 @@ export function FileCell<TData>({
         const fileExtension = `.${file.name.split(".").pop()}`;
         const isAccepted = acceptedTypes.some((type) => {
           if (type.endsWith("/*")) {
-            // Handle wildcard types like "image/*"
             const baseType = type.slice(0, -2);
             return file.type.startsWith(`${baseType}/`);
           }
           if (type.startsWith(".")) {
-            // Handle file extensions like ".pdf"
             return fileExtension.toLowerCase() === type.toLowerCase();
           }
-          // Exact match for specific MIME types
           return file.type === type;
         });
         if (!isAccepted) {
@@ -1418,7 +1413,6 @@ export function FileCell<TData>({
       if (readOnly) return;
       setError(null);
 
-      // Check max files limit
       if (maxFiles && files.length + newFiles.length > maxFiles) {
         const errorMessage = `Maximum ${maxFiles} files allowed`;
         setError(errorMessage);
@@ -1429,8 +1423,8 @@ export function FileCell<TData>({
         return;
       }
 
-      const validFiles: FileCellData[] = [];
       const rejectedFiles: Array<{ name: string; reason: string }> = [];
+      const filesToValidate: File[] = [];
 
       for (const file of newFiles) {
         const validationError = validateFile(file);
@@ -1438,16 +1432,7 @@ export function FileCell<TData>({
           rejectedFiles.push({ name: file.name, reason: validationError });
           continue;
         }
-
-        // Create file data object with temporary ID
-        const fileData: FileCellData = {
-          id: crypto.randomUUID(),
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          url: URL.createObjectURL(file),
-        };
-        validFiles.push(fileData);
+        filesToValidate.push(file);
       }
 
       if (rejectedFiles.length > 0) {
@@ -1476,123 +1461,148 @@ export function FileCell<TData>({
         }
       }
 
-      if (validFiles.length > 0) {
-        // If not skipping upload (dropped on cell), show skeletons first
+      if (filesToValidate.length > 0) {
         if (!skipUpload) {
-          // Add temp files immediately (will show as skeletons)
-          const tempFiles = validFiles.map((f) => ({ ...f, url: undefined }));
+          const tempFiles = filesToValidate.map((f) => ({
+            id: crypto.randomUUID(),
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            url: undefined,
+          }));
           const filesWithTemp = [...files, ...tempFiles];
           setFiles(filesWithTemp);
 
-          // Mark as uploading
-          const uploadingIds = new Set(validFiles.map((f) => f.id));
+          const uploadingIds = new Set(tempFiles.map((f) => f.id));
           setUploadingFiles(uploadingIds);
 
-          // Simulate upload delay (in real app, this would be actual upload)
-          await new Promise((resolve) => setTimeout(resolve, 800));
+          let uploadedFiles: FileCellData[] = [];
+          const rowData = table.options.data[rowIndex];
 
-          // Replace temp files with real ones
-          const finalFiles = filesWithTemp.map(
-            (f) => validFiles.find((vf) => vf.id === f.id) || f,
-          );
+          if (meta?.onFilesUpload && rowData) {
+            try {
+              uploadedFiles = await meta.onFilesUpload({
+                files: filesToValidate,
+                rowIndex,
+                columnId,
+                row: rowData,
+              });
+            } catch (error) {
+              console.error("File upload failed:", error);
+              toast.error(
+                `Failed to upload ${filesToValidate.length} file${filesToValidate.length !== 1 ? "s" : ""}`,
+              );
+              setFiles((prev) => prev.filter((f) => !uploadingIds.has(f.id)));
+              setUploadingFiles(new Set());
+              return;
+            }
+          } else {
+            await new Promise((resolve) => setTimeout(resolve, 800));
+            uploadedFiles = filesToValidate.map((f, i) => ({
+              id: tempFiles[i]?.id ?? crypto.randomUUID(),
+              name: f.name,
+              size: f.size,
+              type: f.type,
+              url: URL.createObjectURL(f),
+            }));
+          }
+
+          const finalFiles = filesWithTemp
+            .map((f) => {
+              if (uploadingIds.has(f.id)) {
+                return uploadedFiles.find((uf) => uf.name === f.name) ?? f;
+              }
+              return f;
+            })
+            .filter((f) => f.url !== undefined);
+
           setFiles(finalFiles);
           setUploadingFiles(new Set());
           meta?.onDataUpdate?.({ rowIndex, columnId, value: finalFiles });
         } else {
-          // If from editor, add immediately without skeleton
-          const updatedFiles = [...files, ...validFiles];
+          const newFilesData: FileCellData[] = filesToValidate.map((f) => ({
+            id: crypto.randomUUID(),
+            name: f.name,
+            size: f.size,
+            type: f.type,
+            url: URL.createObjectURL(f),
+          }));
+          const updatedFiles = [...files, ...newFilesData];
           setFiles(updatedFiles);
           meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
         }
       }
     },
-    [files, maxFiles, validateFile, meta, rowIndex, columnId, readOnly],
+    [files, maxFiles, validateFile, meta, rowIndex, columnId, readOnly, table],
   );
 
   const removeFile = React.useCallback(
-    (fileId: string) => {
+    async (fileId: string) => {
       if (readOnly) return;
       setError(null);
-      // Revoke object URL to prevent memory leak
+
       const fileToRemove = files.find((f) => f.id === fileId);
-      if (fileToRemove?.url) {
+      if (!fileToRemove) return;
+
+      const rowData = table.options.data[rowIndex];
+      if (meta?.onFilesDelete && rowData) {
+        try {
+          await meta.onFilesDelete({
+            fileIds: [fileId],
+            rowIndex,
+            columnId,
+            row: rowData,
+          });
+        } catch (error) {
+          console.error("File deletion failed:", error);
+          toast.error(`Failed to delete ${fileToRemove.name}`);
+          return;
+        }
+      }
+
+      if (fileToRemove.url?.startsWith("blob:")) {
         URL.revokeObjectURL(fileToRemove.url);
       }
+
       const updatedFiles = files.filter((f) => f.id !== fileId);
       setFiles(updatedFiles);
       meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
     },
-    [files, meta, rowIndex, columnId, readOnly],
+    [files, meta, rowIndex, columnId, readOnly, table],
   );
 
-  const clearAll = React.useCallback(() => {
+  const clearAll = React.useCallback(async () => {
     if (readOnly) return;
-    // Revoke all object URLs to prevent memory leak
+    setError(null);
+
+    const rowData = table.options.data[rowIndex];
+    if (meta?.onFilesDelete && rowData && files.length > 0) {
+      try {
+        await meta.onFilesDelete({
+          fileIds: files.map((f) => f.id),
+          rowIndex,
+          columnId,
+          row: rowData,
+        });
+      } catch (error) {
+        console.error("File deletion failed:", error);
+        toast.error(`Failed to delete files`);
+        return;
+      }
+    }
+
     for (const file of files) {
-      if (file.url) {
+      if (file.url?.startsWith("blob:")) {
         URL.revokeObjectURL(file.url);
       }
     }
     setFiles([]);
-    setError(null);
     meta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
-  }, [files, meta, rowIndex, columnId, readOnly]);
+  }, [files, meta, rowIndex, columnId, readOnly, table]);
 
-  const onDragEnter = React.useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDragging(true);
-  }, []);
-
-  const onDragLeave = React.useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX;
-    const y = event.clientY;
-
-    if (
-      x <= rect.left ||
-      x >= rect.right ||
-      y <= rect.top ||
-      y >= rect.bottom
-    ) {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const onDragOver = React.useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-  }, []);
-
-  const onDrop = React.useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setIsDragging(false);
-
-      const droppedFiles = Array.from(event.dataTransfer.files);
-      addFiles(droppedFiles, true); // Skip upload skeleton in editor
-    },
-    [addFiles],
-  );
-
-  const onFileInputChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const selectedFiles = Array.from(event.target.files ?? []);
-      addFiles(selectedFiles, true); // Skip upload skeleton for manual selection
-      // Reset input so the same file can be selected again
-      event.target.value = "";
-    },
-    [addFiles],
-  );
-
-  // Cell-level drag handlers (for dropping directly on cell)
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    // Only show drop indicator if dragging files
     if (event.dataTransfer.types.includes("Files")) {
       setIsDraggingOver(true);
     }
@@ -1628,8 +1638,48 @@ export function FileCell<TData>({
 
       const droppedFiles = Array.from(event.dataTransfer.files);
       if (droppedFiles.length > 0) {
-        addFiles(droppedFiles, false); // Show skeleton for dropped files
+        addFiles(droppedFiles, false);
       }
+    },
+    [addFiles],
+  );
+
+  const onDropzoneDragEnter = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const onDropzoneDragLeave = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX;
+    const y = event.clientY;
+
+    if (
+      x <= rect.left ||
+      x >= rect.right ||
+      y <= rect.top ||
+      y >= rect.bottom
+    ) {
+      setIsDragging(false);
+    }
+  }, []);
+
+  const onDropzoneDragOver = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }, []);
+
+  const onDropzoneDrop = React.useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragging(false);
+
+      const droppedFiles = Array.from(event.dataTransfer.files);
+      addFiles(droppedFiles, true);
     },
     [addFiles],
   );
@@ -1646,6 +1696,15 @@ export function FileCell<TData>({
       }
     },
     [onDropzoneClick],
+  );
+
+  const onFileInputChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFiles = Array.from(event.target.files ?? []);
+      addFiles(selectedFiles, true);
+      event.target.value = "";
+    },
+    [addFiles],
   );
 
   const onOpenChange = React.useCallback(
@@ -1673,7 +1732,6 @@ export function FileCell<TData>({
     React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
   > = React.useCallback((event) => {
     event.preventDefault();
-    // Focus the dropzone for better keyboard UX - users can press Enter again to open file dialog
     queueMicrotask(() => {
       dropzoneRef.current?.focus();
     });
@@ -1692,7 +1750,6 @@ export function FileCell<TData>({
           onDropzoneClick();
         }
       } else if (isFocused && event.key === "Enter") {
-        // Handle Enter key to start editing when focused but not editing
         event.preventDefault();
         meta?.onCellEditingStart?.(rowIndex, columnId);
       } else if (!isEditing && isFocused && event.key === "Tab") {
@@ -1784,10 +1841,10 @@ export function FileCell<TData>({
                 className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20"
                 ref={dropzoneRef}
                 onClick={onDropzoneClick}
-                onDragEnter={onDragEnter}
-                onDragLeave={onDragLeave}
-                onDragOver={onDragOver}
-                onDrop={onDrop}
+                onDragEnter={onDropzoneDragEnter}
+                onDragLeave={onDropzoneDragLeave}
+                onDragOver={onDropzoneDragOver}
+                onDrop={onDropzoneDrop}
                 onKeyDown={onDropzoneKeyDown}
               >
                 <Upload className="size-8 text-muted-foreground" />
