@@ -55,19 +55,13 @@ const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 const FILTER_DEBOUNCE_MS = 300;
 
-type JoinOperator = "and" | "or";
-
 interface DataGridFilterMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
-  joinOperator?: JoinOperator;
-  onJoinOperatorChange?: (value: JoinOperator) => void;
 }
 
 export function DataGridFilterMenu<TData>({
   table,
-  joinOperator: externalJoinOperator,
-  onJoinOperatorChange: externalOnJoinOperatorChange,
   ...props
 }: DataGridFilterMenuProps<TData>) {
   const id = React.useId();
@@ -75,12 +69,6 @@ export function DataGridFilterMenu<TData>({
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
-  const [internalJoinOperator, setInternalJoinOperator] =
-    React.useState<JoinOperator>("and");
-
-  const joinOperator = externalJoinOperator ?? internalJoinOperator;
-  const setJoinOperator =
-    externalOnJoinOperatorChange ?? setInternalJoinOperator;
 
   const columnFilters = table.getState().columnFilters;
 
@@ -152,8 +140,7 @@ export function DataGridFilterMenu<TData>({
 
   const onFiltersReset = React.useCallback(() => {
     table.setColumnFilters(table.initialState.columnFilters ?? []);
-    setJoinOperator("and");
-  }, [table, setJoinOperator]);
+  }, [table]);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -254,8 +241,6 @@ export function DataGridFilterMenu<TData>({
                     columnLabels={columnLabels}
                     columnVariants={columnVariants}
                     table={table}
-                    joinOperator={joinOperator}
-                    setJoinOperator={setJoinOperator}
                     onFilterUpdate={onFilterUpdate}
                     onFilterRemove={onFilterRemove}
                   />
@@ -307,8 +292,6 @@ interface DataGridFilterItemProps<TData> {
   columnLabels: Map<string, string>;
   columnVariants: Map<string, string>;
   table: Table<TData>;
-  joinOperator: JoinOperator;
-  setJoinOperator: (value: JoinOperator) => void;
   onFilterUpdate: (filterId: string, updates: Partial<ColumnFilter>) => void;
   onFilterRemove: (filterId: string) => void;
 }
@@ -321,12 +304,9 @@ function DataGridFilterItem<TData>({
   columnLabels,
   columnVariants,
   table,
-  joinOperator,
-  setJoinOperator,
   onFilterUpdate,
   onFilterRemove,
 }: DataGridFilterItemProps<TData>) {
-  const joinOperatorListboxId = `${filterItemId}-join-operator-listbox`;
   const fieldListboxId = `${filterItemId}-field-listbox`;
   const fieldTriggerId = `${filterItemId}-field-trigger`;
   const operatorListboxId = `${filterItemId}-operator-listbox`;
@@ -421,32 +401,8 @@ function DataGridFilterItem<TData>({
         <div className="min-w-[72px] text-center">
           {index === 0 ? (
             <span className="text-muted-foreground text-sm">Where</span>
-          ) : index === 1 ? (
-            <Select
-              value={joinOperator}
-              onValueChange={(value: JoinOperator) => setJoinOperator(value)}
-            >
-              <SelectTrigger
-                aria-label="Select join operator"
-                aria-controls={joinOperatorListboxId}
-                size="sm"
-                className="rounded lowercase"
-              >
-                <SelectValue placeholder={joinOperator} />
-              </SelectTrigger>
-              <SelectContent
-                id={joinOperatorListboxId}
-                position="popper"
-                className="min-w-(--radix-select-trigger-width) lowercase"
-              >
-                <SelectItem value="and">and</SelectItem>
-                <SelectItem value="or">or</SelectItem>
-              </SelectContent>
-            </Select>
           ) : (
-            <span className="text-muted-foreground text-sm">
-              {joinOperator}
-            </span>
+            <span className="text-muted-foreground text-sm">And</span>
           )}
         </div>
         <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
