@@ -133,13 +133,6 @@ interface UseDataGridProps<TData>
 function useDataGrid<TData>({
   columns,
   data,
-  onDataChange,
-  onRowAdd: onRowAddProp,
-  onRowsAdd,
-  onRowsDelete: onRowsDeleteProp,
-  onPaste,
-  onFilesUpload,
-  onFilesDelete,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
   initialState,
@@ -159,7 +152,7 @@ function useDataGrid<TData>({
   const cellMapRef = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
 
-  const dataGridPropsRef = useAsRef(dataGridProps);
+  const propsRef = useAsRef(dataGridProps);
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
   const stateRef = useLazyRef<DataGridState>(() => {
@@ -346,9 +339,9 @@ function useDataGrid<TData>({
         }
       }
 
-      onDataChange?.(newData);
+      propsRef.current.onDataChange?.(newData);
     },
-    [data, onDataChange, readOnly],
+    [data, propsRef, readOnly],
   );
 
   const getIsCellSelected = React.useCallback(
@@ -696,7 +689,7 @@ function useDataGrid<TData>({
         if (
           rowsNeeded > 0 &&
           !expandRows &&
-          onRowAddProp &&
+          propsRef.current.onRowAdd &&
           !currentState.pasteDialog.clipboardText
         ) {
           store.setState("pasteDialog", {
@@ -710,11 +703,11 @@ function useDataGrid<TData>({
         if (expandRows && rowsNeeded > 0) {
           const expectedRowCount = rowCount + rowsNeeded;
 
-          if (onRowsAdd) {
-            await onRowsAdd(rowsNeeded);
-          } else if (onRowAddProp) {
+          if (propsRef.current.onRowsAdd) {
+            await propsRef.current.onRowsAdd(rowsNeeded);
+          } else if (propsRef.current.onRowAdd) {
             for (let i = 0; i < rowsNeeded; i++) {
-              await onRowAddProp();
+              await propsRef.current.onRowAdd();
             }
           }
 
@@ -836,8 +829,8 @@ function useDataGrid<TData>({
         }
 
         if (updates.length > 0) {
-          if (onPaste) {
-            await onPaste(updates);
+          if (propsRef.current.onPaste) {
+            await propsRef.current.onPaste(updates);
           }
 
           // Combine paste updates with cut cell clearing into a single update
@@ -902,11 +895,9 @@ function useDataGrid<TData>({
     [
       store,
       navigableColumnIds,
+      propsRef,
       data.length,
       onDataUpdate,
-      onRowAddProp,
-      onRowsAdd,
-      onPaste,
       selectRange,
       readOnly,
     ],
@@ -944,8 +935,8 @@ function useDataGrid<TData>({
 
   const onRowsDelete = React.useCallback(
     async (rowIndices: number[]) => {
-      // Block deletion in read-only mode
-      if (readOnly || !onRowsDeleteProp || rowIndices.length === 0) return;
+      if (readOnly || !propsRef.current.onRowsDelete || rowIndices.length === 0)
+        return;
 
       const currentTable = tableRef.current;
       const rows = currentTable?.getRowModel().rows;
@@ -966,7 +957,7 @@ function useDataGrid<TData>({
         }
       }
 
-      await onRowsDeleteProp(rowsToDelete, rowIndices);
+      await propsRef.current.onRowsDelete(rowsToDelete, rowIndices);
 
       store.batch(() => {
         store.setState("selectionState", {
@@ -989,14 +980,7 @@ function useDataGrid<TData>({
         }
       });
     },
-    [
-      onRowsDeleteProp,
-      data.length,
-      store,
-      navigableColumnIds,
-      focusCell,
-      readOnly,
-    ],
+    [propsRef, data.length, store, navigableColumnIds, focusCell, readOnly],
   );
 
   const navigateCell = React.useCallback(
@@ -1957,13 +1941,13 @@ function useDataGrid<TData>({
 
   const tableOptions = React.useMemo<TableOptions<TData>>(
     () => ({
-      ...dataGridPropsRef.current,
+      ...propsRef.current,
       data,
       columns,
       defaultColumn,
       initialState,
       state: {
-        ...dataGridPropsRef.current.state,
+        ...propsRef.current.state,
         sorting,
         rowSelection,
       },
@@ -1973,7 +1957,7 @@ function useDataGrid<TData>({
       getCoreRowModel: getCoreRowModel(),
       getSortedRowModel: getSortedRowModel(),
       meta: {
-        ...dataGridPropsRef.current.meta,
+        ...propsRef.current.meta,
         dataGridRef,
         cellMapRef,
         focusedCell,
@@ -1989,10 +1973,14 @@ function useDataGrid<TData>({
         getIsActiveSearchMatch,
         onRowHeightChange,
         onRowSelect,
-        onRowsDelete: onRowsDeleteProp ? onRowsDelete : undefined,
+        onRowsDelete: propsRef.current.onRowsDelete ? onRowsDelete : undefined,
         onDataUpdate,
-        onFilesUpload,
-        onFilesDelete,
+        onFilesUpload: propsRef.current.onFilesUpload
+          ? propsRef.current.onFilesUpload
+          : undefined,
+        onFilesDelete: propsRef.current.onFilesDelete
+          ? propsRef.current.onFilesDelete
+          : undefined,
         onColumnClick,
         onCellClick,
         onCellDoubleClick,
@@ -2012,7 +2000,7 @@ function useDataGrid<TData>({
       },
     }),
     [
-      dataGridPropsRef,
+      propsRef,
       data,
       columns,
       defaultColumn,
@@ -2031,9 +2019,6 @@ function useDataGrid<TData>({
       getIsSearchMatch,
       getIsActiveSearchMatch,
       onDataUpdate,
-      onFilesUpload,
-      onFilesDelete,
-      onRowsDeleteProp,
       onRowsDelete,
       onColumnClick,
       onCellClick,
@@ -2146,9 +2131,9 @@ function useDataGrid<TData>({
   const onRowAdd = React.useCallback(
     async (event?: React.MouseEvent<HTMLDivElement>) => {
       // Block row addition in read-only mode
-      if (readOnly || !onRowAddProp) return;
+      if (readOnly || !propsRef.current.onRowAdd) return;
 
-      const result = await onRowAddProp(event);
+      const result = await propsRef.current.onRowAdd(event);
 
       if (event?.defaultPrevented || result === null) return;
 
@@ -2168,7 +2153,7 @@ function useDataGrid<TData>({
 
       onScrollToRow({ rowIndex: rows.length });
     },
-    [onRowAddProp, onScrollToRow, readOnly],
+    [propsRef, onScrollToRow, readOnly],
   );
 
   const searchState = React.useMemo<SearchState | undefined>(() => {
@@ -2391,8 +2376,12 @@ function useDataGrid<TData>({
     rowVirtualizer,
     searchState,
     columnSizeVars,
-    onRowAdd: onRowAddProp ? onRowAdd : undefined,
+    onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
   };
 }
 
-export { useDataGrid, type UseDataGridProps };
+export {
+  useDataGrid,
+  //
+  type UseDataGridProps,
+};
