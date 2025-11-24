@@ -18,6 +18,7 @@ import { getCellKey, getRowHeightValue, parseCellKey } from "@/lib/data-grid";
 import type {
   CellPosition,
   ContextMenuState,
+  FileCellData,
   NavigationDirection,
   PasteDialogState,
   RowHeightValue,
@@ -107,6 +108,18 @@ interface UseDataGridProps<TData>
   onRowsAdd?: (count: number) => void | Promise<void>;
   onRowsDelete?: (rows: TData[], rowIndices: number[]) => void | Promise<void>;
   onPaste?: (updates: Array<UpdateCell>) => void | Promise<void>;
+  onFilesUpload?: (params: {
+    files: File[];
+    rowIndex: number;
+    columnId: string;
+    row: TData;
+  }) => Promise<FileCellData[]>;
+  onFilesDelete?: (params: {
+    fileIds: string[];
+    rowIndex: number;
+    columnId: string;
+    row: TData;
+  }) => void | Promise<void>;
   rowHeight?: RowHeightValue;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -124,6 +137,8 @@ function useDataGrid<TData>({
   onRowsAdd,
   onRowsDelete: onRowsDeleteProp,
   onPaste,
+  onFilesUpload,
+  onFilesDelete,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
   initialState,
@@ -1827,6 +1842,8 @@ function useDataGrid<TData>({
         onRowSelect,
         onRowsDelete: onRowsDeleteProp ? onRowsDelete : undefined,
         onDataUpdate,
+        onFilesUpload,
+        onFilesDelete,
         onColumnClick,
         onCellClick,
         onCellDoubleClick,
@@ -1863,6 +1880,8 @@ function useDataGrid<TData>({
       getIsSearchMatch,
       getIsActiveSearchMatch,
       onDataUpdate,
+      onFilesUpload,
+      onFilesDelete,
       onRowsDeleteProp,
       onRowsDelete,
       onColumnClick,

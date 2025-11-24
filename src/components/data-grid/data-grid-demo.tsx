@@ -420,6 +420,54 @@ export function DataGridDemo() {
       setData((prev) => prev.filter((row) => !rows.includes(row)));
     }, []);
 
+  const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
+    React.useCallback(async ({ files }) => {
+      // In a real app, you would upload multiple files to your server/storage:
+      // const formData = new FormData();
+      // files.forEach(file => formData.append('files', file));
+      // formData.append('personId', row.id);
+      // formData.append('columnId', columnId);
+      //
+      // const response = await fetch('/api/upload', {
+      //   method: 'POST',
+      //   body: formData
+      // });
+      // const data = await response.json();
+      // return data.files.map(f => ({
+      //   id: f.fileId,
+      //   name: f.fileName,
+      //   size: f.fileSize,
+      //   type: f.fileType,
+      //   url: f.fileUrl
+      // }));
+
+      // For this demo, simulate an upload delay and create local URLs
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      return files.map((file) => ({
+        id: crypto.randomUUID(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+      }));
+    }, []);
+
+  const onFilesDelete: NonNullable<UseDataGridProps<Person>["onFilesDelete"]> =
+    React.useCallback(async ({ fileIds, rowIndex, columnId }) => {
+      // In a real app, you would delete multiple files from your server/storage:
+      // await fetch('/api/files/batch-delete', {
+      //   method: 'DELETE',
+      //   body: JSON.stringify({ fileIds, personId: row.id, columnId })
+      // });
+
+      // For this demo, just log the deletion
+      console.log(
+        `Deleting ${fileIds.length} file(s) from row ${rowIndex}, column ${columnId}:`,
+        fileIds,
+      );
+    }, []);
+
   const { table, ...dataGridProps } = useDataGrid({
     columns,
     data,
@@ -427,6 +475,8 @@ export function DataGridDemo() {
     onRowAdd,
     onRowsAdd,
     onRowsDelete,
+    onFilesUpload,
+    onFilesDelete,
     getRowId: (row) => row.id,
     initialState: {
       columnPinning: {
