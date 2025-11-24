@@ -144,7 +144,7 @@ function generatePerson(id: number): Person {
   };
 }
 
-const initialData: Person[] = Array.from({ length: 1000 }, (_, i) =>
+const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
   generatePerson(i + 1),
 );
 
