@@ -1679,7 +1679,7 @@ export function FileCell<TData>({
       setIsDragging(false);
 
       const droppedFiles = Array.from(event.dataTransfer.files);
-      addFiles(droppedFiles, true);
+      addFiles(droppedFiles, false);
     },
     [addFiles],
   );
@@ -1701,7 +1701,7 @@ export function FileCell<TData>({
   const onFileInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files ?? []);
-      addFiles(selectedFiles, true);
+      addFiles(selectedFiles, false);
       event.target.value = "";
     },
     [addFiles],
