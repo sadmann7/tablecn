@@ -1488,9 +1488,10 @@ export function FileCell<TData>({
                 row: rowData,
               });
             } catch (error) {
-              console.error("File upload failed:", error);
               toast.error(
-                `Failed to upload ${filesToValidate.length} file${filesToValidate.length !== 1 ? "s" : ""}`,
+                error instanceof Error
+                  ? error.message
+                  : `Failed to upload ${filesToValidate.length} file${filesToValidate.length !== 1 ? "s" : ""}`,
               );
               setFiles((prev) => prev.filter((f) => !uploadingIds.has(f.id)));
               setUploadingFiles(new Set());
@@ -1554,8 +1555,11 @@ export function FileCell<TData>({
             row: rowData,
           });
         } catch (error) {
-          console.error("File deletion failed:", error);
-          toast.error(`Failed to delete ${fileToRemove.name}`);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : `Failed to delete ${fileToRemove.name}`,
+          );
           return;
         }
       }
@@ -1585,8 +1589,9 @@ export function FileCell<TData>({
           row: rowData,
         });
       } catch (error) {
-        console.error("File deletion failed:", error);
-        toast.error(`Failed to delete files`);
+        toast.error(
+          error instanceof Error ? error.message : "Failed to delete files",
+        );
         return;
       }
     }
