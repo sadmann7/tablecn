@@ -71,6 +71,7 @@ interface DataGridState {
   lastClickedRowIndex: number | null;
   isScrolling: boolean;
   pasteDialog: PasteDialogState;
+  cutCells: Set<string>;
 }
 
 interface DataGridStore {
@@ -189,6 +190,7 @@ function useDataGrid<TData>({
         rowsNeeded: 0,
         clipboardText: "",
       },
+      cutCells: new Set(),
     };
   });
 
@@ -537,6 +539,13 @@ function useDataGrid<TData>({
 
     try {
       await navigator.clipboard.writeText(tsvData);
+
+      // Clear any cut cells when copying
+      const currentState = store.getState();
+      if (currentState.cutCells.size > 0) {
+        store.setState("cutCells", new Set());
+      }
+
       toast.success(
         `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
       );
@@ -545,6 +554,108 @@ function useDataGrid<TData>({
       toast.error("Failed to copy to clipboard");
     }
   }, [store]);
+
+  const cutCells = React.useCallback(async () => {
+    // Block cut in read-only mode
+    if (readOnly) return;
+
+    const currentState = store.getState();
+
+    // If no selection, cut the focused cell
+    let selectedCellsArray: string[];
+    if (!currentState.selectionState.selectedCells.size) {
+      if (!currentState.focusedCell) return;
+      const focusedCellKey = getCellKey(
+        currentState.focusedCell.rowIndex,
+        currentState.focusedCell.columnId,
+      );
+      selectedCellsArray = [focusedCellKey];
+    } else {
+      selectedCellsArray = Array.from(
+        currentState.selectionState.selectedCells,
+      );
+    }
+
+    const currentTable = tableRef.current;
+    const rows = currentTable?.getRowModel().rows;
+    if (!rows) return;
+
+    const selectedColumnIds: string[] = [];
+
+    for (const cellKey of selectedCellsArray) {
+      const { columnId } = parseCellKey(cellKey);
+      if (columnId && !selectedColumnIds.includes(columnId)) {
+        selectedColumnIds.push(columnId);
+      }
+    }
+
+    const cellData = new Map<string, string>();
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      const row = rows[rowIndex];
+      if (row) {
+        const cell = row
+          .getVisibleCells()
+          .find((c) => c.column.id === columnId);
+        if (cell) {
+          const value = cell.getValue();
+          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
+
+          let serializedValue = "";
+          if (cellVariant === "file" || cellVariant === "multi-select") {
+            serializedValue = value ? JSON.stringify(value) : "";
+          } else if (value instanceof Date) {
+            serializedValue = value.toISOString();
+          } else {
+            serializedValue = String(value ?? "");
+          }
+
+          cellData.set(cellKey, serializedValue);
+        }
+      }
+    }
+
+    const rowIndices = new Set<number>();
+    const colIndices = new Set<number>();
+
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+      const colIndex = selectedColumnIds.indexOf(columnId);
+      if (colIndex >= 0) {
+        colIndices.add(colIndex);
+      }
+    }
+
+    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
+    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
+    const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
+
+    const tsvData = sortedRowIndices
+      .map((rowIndex) =>
+        sortedColumnIds
+          .map((columnId) => {
+            const cellKey = `${rowIndex}:${columnId}`;
+            return cellData.get(cellKey) ?? "";
+          })
+          .join("\t"),
+      )
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(tsvData);
+
+      // Mark cells as cut instead of clearing them immediately
+      store.setState("cutCells", new Set(selectedCellsArray));
+
+      toast.success(
+        `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} cut`,
+      );
+    } catch (error) {
+      console.error("Cut failed:", error);
+      toast.error("Failed to cut to clipboard");
+    }
+  }, [store, readOnly]);
 
   const pasteCells = React.useCallback(
     async (expandRows = false) => {
@@ -729,7 +840,34 @@ function useDataGrid<TData>({
             await onPaste(updates);
           }
 
-          onDataUpdate(updates);
+          // Combine paste updates with cut cell clearing into a single update
+          const allUpdates = [...updates];
+
+          // Clear cut cells after paste
+          if (currentState.cutCells.size > 0) {
+            for (const cellKey of currentState.cutCells) {
+              const { rowIndex, columnId } = parseCellKey(cellKey);
+
+              const column = tableColumns.find((col) => col.id === columnId);
+              const cellVariant = column?.columnDef?.meta?.cell?.variant;
+
+              let emptyValue: unknown = "";
+              if (cellVariant === "multi-select" || cellVariant === "file") {
+                emptyValue = [];
+              } else if (cellVariant === "number" || cellVariant === "date") {
+                emptyValue = null;
+              } else if (cellVariant === "checkbox") {
+                emptyValue = false;
+              }
+
+              allUpdates.push({ rowIndex, columnId, value: emptyValue });
+            }
+
+            store.setState("cutCells", new Set());
+          }
+
+          onDataUpdate(allUpdates);
+
           toast.success(
             `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
           );
@@ -1509,6 +1647,12 @@ function useDataGrid<TData>({
         return;
       }
 
+      if (isCtrlPressed && key === "x" && !readOnly) {
+        event.preventDefault();
+        cutCells();
+        return;
+      }
+
       if (enablePaste && isCtrlPressed && key === "v" && !readOnly) {
         event.preventDefault();
         pasteCells();
@@ -1548,6 +1692,11 @@ function useDataGrid<TData>({
 
           onDataUpdate(updates);
           clearSelection();
+
+          // Clear any cut cells when deleting
+          if (currentState.cutCells.size > 0) {
+            store.setState("cutCells", new Set());
+          }
         }
         return;
       }
@@ -1652,6 +1801,7 @@ function useDataGrid<TData>({
       navigateCell,
       selectAll,
       copyCells,
+      cutCells,
       pasteCells,
       onDataUpdate,
       clearSelection,

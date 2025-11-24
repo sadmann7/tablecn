@@ -1,7 +1,7 @@
 "use client";
 
 import type { Table, TableMeta } from "@tanstack/react-table";
-import { CopyIcon, EraserIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, EraserIcon, ScissorsIcon, Trash2Icon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import {
@@ -134,7 +134,18 @@ function ContextMenuImpl<TData>({
           .find((c) => c.column.id === columnId);
         if (cell) {
           const value = cell.getValue();
-          cellData.set(cellKey, String(value ?? ""));
+          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
+
+          let serializedValue = "";
+          if (cellVariant === "file" || cellVariant === "multi-select") {
+            serializedValue = value ? JSON.stringify(value) : "";
+          } else if (value instanceof Date) {
+            serializedValue = value.toISOString();
+          } else {
+            serializedValue = String(value ?? "");
+          }
+
+          cellData.set(cellKey, serializedValue);
         }
       }
     }
@@ -167,8 +178,90 @@ function ContextMenuImpl<TData>({
       .join("\n");
 
     navigator.clipboard.writeText(tsvData);
+
     toast.success(
       `${selectionState.selectedCells.size} cell${selectionState.selectedCells.size !== 1 ? "s" : ""} copied`,
+    );
+  }, [table, selectionState]);
+
+  const onCut = React.useCallback(() => {
+    if (
+      !selectionState?.selectedCells ||
+      selectionState.selectedCells.size === 0
+    )
+      return;
+
+    const readOnly = table.options.meta?.readOnly;
+    if (readOnly) return;
+
+    const rows = table.getRowModel().rows;
+    const columnIds: string[] = [];
+
+    const selectedCellsArray = Array.from(selectionState.selectedCells);
+    for (const cellKey of selectedCellsArray) {
+      const { columnId } = parseCellKey(cellKey);
+      if (columnId && !columnIds.includes(columnId)) {
+        columnIds.push(columnId);
+      }
+    }
+
+    const cellData = new Map<string, string>();
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      const row = rows[rowIndex];
+      if (row) {
+        const cell = row
+          .getVisibleCells()
+          .find((c) => c.column.id === columnId);
+        if (cell) {
+          const value = cell.getValue();
+          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
+
+          let serializedValue = "";
+          if (cellVariant === "file" || cellVariant === "multi-select") {
+            serializedValue = value ? JSON.stringify(value) : "";
+          } else if (value instanceof Date) {
+            serializedValue = value.toISOString();
+          } else {
+            serializedValue = String(value ?? "");
+          }
+
+          cellData.set(cellKey, serializedValue);
+        }
+      }
+    }
+
+    const rowIndices = new Set<number>();
+    const colIndices = new Set<number>();
+
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+      const colIndex = columnIds.indexOf(columnId);
+      if (colIndex >= 0) {
+        colIndices.add(colIndex);
+      }
+    }
+
+    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
+    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
+    const sortedColumnIds = sortedColIndices.map((i) => columnIds[i]);
+
+    const tsvData = sortedRowIndices
+      .map((rowIndex) =>
+        sortedColumnIds
+          .map((columnId) => {
+            const cellKey = `${rowIndex}:${columnId}`;
+            return cellData.get(cellKey) ?? "";
+          })
+          .join("\t"),
+      )
+      .join("\n");
+
+    navigator.clipboard.writeText(tsvData);
+
+    toast.success(
+      `${selectionState.selectedCells.size} cell${selectionState.selectedCells.size !== 1 ? "s" : ""} cut`,
     );
   }, [table, selectionState]);
 
@@ -244,7 +337,17 @@ function ContextMenuImpl<TData>({
           <CopyIcon />
           Copy
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onClear}>
+        <DropdownMenuItem
+          onSelect={onCut}
+          disabled={table.options.meta?.readOnly}
+        >
+          <ScissorsIcon />
+          Cut
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={onClear}
+          disabled={table.options.meta?.readOnly}
+        >
           <EraserIcon />
           Clear
         </DropdownMenuItem>
