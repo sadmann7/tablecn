@@ -149,6 +149,18 @@ function DataGridKeyboardShortcutsImpl({
             description: "Start editing cell",
           },
           {
+            keys: [modKey, "C"],
+            description: "Copy selected cells",
+          },
+          {
+            keys: [modKey, "X"],
+            description: "Cut selected cells",
+          },
+          {
+            keys: [modKey, "V"],
+            description: "Paste cells",
+          },
+          {
             keys: ["Delete"],
             description: "Clear selected cells",
           },

@@ -125,6 +125,8 @@ declare module "@tanstack/react-table" {
       checked: boolean,
       shiftKey: boolean,
     ) => void;
+    onCellsCopy?: () => void;
+    onCellsCut?: () => void;
   }
 }
 

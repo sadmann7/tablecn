@@ -63,6 +63,7 @@ interface DataGridState {
   selectionState: SelectionState;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
+  cutCells: Set<string>;
   contextMenu: ContextMenuState;
   searchQuery: string;
   searchMatches: CellPosition[];
@@ -173,6 +174,7 @@ function useDataGrid<TData>({
       },
       focusedCell: null,
       editingCell: null,
+      cutCells: new Set(),
       contextMenu: {
         open: false,
         x: 0,
@@ -451,7 +453,7 @@ function useDataGrid<TData>({
     [columnIds, store],
   );
 
-  const copyCells = React.useCallback(async () => {
+  const onCellsCopy = React.useCallback(async () => {
     const currentState = store.getState();
 
     // If no selection, copy the focused cell
@@ -537,18 +539,127 @@ function useDataGrid<TData>({
 
     try {
       await navigator.clipboard.writeText(tsvData);
+
+      // Clear any cut cells when copying
+      const currentState = store.getState();
+      if (currentState.cutCells.size > 0) {
+        store.setState("cutCells", new Set());
+      }
+
       toast.success(
         `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
       );
     } catch (error) {
-      console.error("Copy failed:", error);
-      toast.error("Failed to copy to clipboard");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to copy to clipboard",
+      );
     }
   }, [store]);
 
-  const pasteCells = React.useCallback(
+  const onCellsCut = React.useCallback(async () => {
+    // Block cut in read-only mode
+    if (readOnly) return;
+
+    const currentState = store.getState();
+
+    // If no selection, cut the focused cell
+    let selectedCellsArray: string[];
+    if (!currentState.selectionState.selectedCells.size) {
+      if (!currentState.focusedCell) return;
+      const focusedCellKey = getCellKey(
+        currentState.focusedCell.rowIndex,
+        currentState.focusedCell.columnId,
+      );
+      selectedCellsArray = [focusedCellKey];
+    } else {
+      selectedCellsArray = Array.from(
+        currentState.selectionState.selectedCells,
+      );
+    }
+
+    const currentTable = tableRef.current;
+    const rows = currentTable?.getRowModel().rows;
+    if (!rows) return;
+
+    const selectedColumnIds: string[] = [];
+
+    for (const cellKey of selectedCellsArray) {
+      const { columnId } = parseCellKey(cellKey);
+      if (columnId && !selectedColumnIds.includes(columnId)) {
+        selectedColumnIds.push(columnId);
+      }
+    }
+
+    const cellData = new Map<string, string>();
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      const row = rows[rowIndex];
+      if (row) {
+        const cell = row
+          .getVisibleCells()
+          .find((c) => c.column.id === columnId);
+        if (cell) {
+          const value = cell.getValue();
+          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
+
+          let serializedValue = "";
+          if (cellVariant === "file" || cellVariant === "multi-select") {
+            serializedValue = value ? JSON.stringify(value) : "";
+          } else if (value instanceof Date) {
+            serializedValue = value.toISOString();
+          } else {
+            serializedValue = String(value ?? "");
+          }
+
+          cellData.set(cellKey, serializedValue);
+        }
+      }
+    }
+
+    const rowIndices = new Set<number>();
+    const colIndices = new Set<number>();
+
+    for (const cellKey of selectedCellsArray) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+      const colIndex = selectedColumnIds.indexOf(columnId);
+      if (colIndex >= 0) {
+        colIndices.add(colIndex);
+      }
+    }
+
+    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
+    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
+    const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
+
+    const tsvData = sortedRowIndices
+      .map((rowIndex) =>
+        sortedColumnIds
+          .map((columnId) => {
+            const cellKey = `${rowIndex}:${columnId}`;
+            return cellData.get(cellKey) ?? "";
+          })
+          .join("\t"),
+      )
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(tsvData);
+
+      store.setState("cutCells", new Set(selectedCellsArray));
+
+      toast.success(
+        `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} cut`,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to cut to clipboard",
+      );
+    }
+  }, [store, readOnly]);
+
+  const onCellsPaste = React.useCallback(
     async (expandRows = false) => {
-      // Block paste in read-only mode
       if (readOnly) return;
 
       const currentState = store.getState();
@@ -729,7 +840,34 @@ function useDataGrid<TData>({
             await onPaste(updates);
           }
 
-          onDataUpdate(updates);
+          // Combine paste updates with cut cell clearing into a single update
+          const allUpdates = [...updates];
+
+          // Clear cut cells after paste
+          if (currentState.cutCells.size > 0) {
+            for (const cellKey of currentState.cutCells) {
+              const { rowIndex, columnId } = parseCellKey(cellKey);
+
+              const column = tableColumns.find((col) => col.id === columnId);
+              const cellVariant = column?.columnDef?.meta?.cell?.variant;
+
+              let emptyValue: unknown = "";
+              if (cellVariant === "multi-select" || cellVariant === "file") {
+                emptyValue = [];
+              } else if (cellVariant === "number" || cellVariant === "date") {
+                emptyValue = null;
+              } else if (cellVariant === "checkbox") {
+                emptyValue = false;
+              }
+
+              allUpdates.push({ rowIndex, columnId, value: emptyValue });
+            }
+
+            store.setState("cutCells", new Set());
+          }
+
+          onDataUpdate(allUpdates);
+
           toast.success(
             `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
           );
@@ -1505,13 +1643,19 @@ function useDataGrid<TData>({
 
       if (isCtrlPressed && key === "c") {
         event.preventDefault();
-        copyCells();
+        onCellsCopy();
+        return;
+      }
+
+      if (isCtrlPressed && key === "x" && !readOnly) {
+        event.preventDefault();
+        onCellsCut();
         return;
       }
 
       if (enablePaste && isCtrlPressed && key === "v" && !readOnly) {
         event.preventDefault();
-        pasteCells();
+        onCellsPaste();
         return;
       }
 
@@ -1548,6 +1692,11 @@ function useDataGrid<TData>({
 
           onDataUpdate(updates);
           clearSelection();
+
+          // Clear any cut cells when deleting
+          if (currentState.cutCells.size > 0) {
+            store.setState("cutCells", new Set());
+          }
         }
         return;
       }
@@ -1651,8 +1800,9 @@ function useDataGrid<TData>({
       blurCell,
       navigateCell,
       selectAll,
-      copyCells,
-      pasteCells,
+      onCellsCopy,
+      onCellsCut,
+      onCellsPaste,
       onDataUpdate,
       clearSelection,
       navigableColumnIds,
@@ -1789,13 +1939,12 @@ function useDataGrid<TData>({
   );
 
   const onPasteWithExpansion = React.useCallback(() => {
-    pasteCells(true);
-  }, [pasteCells]);
+    onCellsPaste(true);
+  }, [onCellsPaste]);
 
   const onPasteWithoutExpansion = React.useCallback(() => {
-    // Call pasteCells without expansion - it will paste only what fits
-    pasteCells(false);
-  }, [pasteCells]);
+    onCellsPaste(false);
+  }, [onCellsPaste]);
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
@@ -1858,6 +2007,8 @@ function useDataGrid<TData>({
         onPasteDialogOpenChange,
         onPasteWithExpansion,
         onPasteWithoutExpansion,
+        onCellsCopy,
+        onCellsCut,
       },
     }),
     [
@@ -1902,6 +2053,8 @@ function useDataGrid<TData>({
       onPasteDialogOpenChange,
       onPasteWithExpansion,
       onPasteWithoutExpansion,
+      onCellsCopy,
+      onCellsCut,
     ],
   );
 

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Table, TableMeta } from "@tanstack/react-table";
-import { CopyIcon, EraserIcon, Trash2Icon } from "lucide-react";
+import { CopyIcon, EraserIcon, ScissorsIcon, Trash2Icon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import {
@@ -28,6 +28,8 @@ export function DataGridContextMenu<TData>({
   const dataGridRef = meta?.dataGridRef;
   const onDataUpdate = meta?.onDataUpdate;
   const onRowsDelete = meta?.onRowsDelete;
+  const onCellsCopy = meta?.onCellsCopy;
+  const onCellsCut = meta?.onCellsCut;
 
   if (!contextMenu) return null;
 
@@ -40,6 +42,8 @@ export function DataGridContextMenu<TData>({
       selectionState={selectionState}
       onDataUpdate={onDataUpdate}
       onRowsDelete={onRowsDelete}
+      onCellsCopy={onCellsCopy}
+      onCellsCut={onCellsCut}
     />
   );
 }
@@ -52,6 +56,8 @@ interface ContextMenuProps<TData>
       | "selectionState"
       | "onDataUpdate"
       | "onRowsDelete"
+      | "onCellsCopy"
+      | "onCellsCut"
     >,
     Required<Pick<TableMeta<TData>, "contextMenu">> {
   table: Table<TData>;
@@ -78,6 +84,8 @@ function ContextMenuImpl<TData>({
   selectionState,
   onDataUpdate,
   onRowsDelete,
+  onCellsCopy,
+  onCellsCut,
 }: ContextMenuProps<TData>) {
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
@@ -107,70 +115,12 @@ function ContextMenuImpl<TData>({
   );
 
   const onCopy = React.useCallback(() => {
-    if (
-      !selectionState?.selectedCells ||
-      selectionState.selectedCells.size === 0
-    )
-      return;
+    onCellsCopy?.();
+  }, [onCellsCopy]);
 
-    const rows = table.getRowModel().rows;
-    const columnIds: string[] = [];
-
-    const selectedCellsArray = Array.from(selectionState.selectedCells);
-    for (const cellKey of selectedCellsArray) {
-      const { columnId } = parseCellKey(cellKey);
-      if (columnId && !columnIds.includes(columnId)) {
-        columnIds.push(columnId);
-      }
-    }
-
-    const cellData = new Map<string, string>();
-    for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      const row = rows[rowIndex];
-      if (row) {
-        const cell = row
-          .getVisibleCells()
-          .find((c) => c.column.id === columnId);
-        if (cell) {
-          const value = cell.getValue();
-          cellData.set(cellKey, String(value ?? ""));
-        }
-      }
-    }
-
-    const rowIndices = new Set<number>();
-    const colIndices = new Set<number>();
-
-    for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      rowIndices.add(rowIndex);
-      const colIndex = columnIds.indexOf(columnId);
-      if (colIndex >= 0) {
-        colIndices.add(colIndex);
-      }
-    }
-
-    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
-    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
-    const sortedColumnIds = sortedColIndices.map((i) => columnIds[i]);
-
-    const tsvData = sortedRowIndices
-      .map((rowIndex) =>
-        sortedColumnIds
-          .map((columnId) => {
-            const cellKey = `${rowIndex}:${columnId}`;
-            return cellData.get(cellKey) ?? "";
-          })
-          .join("\t"),
-      )
-      .join("\n");
-
-    navigator.clipboard.writeText(tsvData);
-    toast.success(
-      `${selectionState.selectedCells.size} cell${selectionState.selectedCells.size !== 1 ? "s" : ""} copied`,
-    );
-  }, [table, selectionState]);
+  const onCut = React.useCallback(() => {
+    onCellsCut?.();
+  }, [onCellsCut]);
 
   const onClear = React.useCallback(() => {
     if (
@@ -244,7 +194,17 @@ function ContextMenuImpl<TData>({
           <CopyIcon />
           Copy
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onClear}>
+        <DropdownMenuItem
+          onSelect={onCut}
+          disabled={table.options.meta?.readOnly}
+        >
+          <ScissorsIcon />
+          Cut
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={onClear}
+          disabled={table.options.meta?.readOnly}
+        >
           <EraserIcon />
           Clear
         </DropdownMenuItem>
