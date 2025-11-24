@@ -1917,22 +1917,15 @@ function useDataGrid<TData>({
         editingCell,
         selectionState,
         searchOpen,
-        rowHeight,
         readOnly,
-        pasteDialog,
         getIsCellSelected,
         getIsSearchMatch,
         getIsActiveSearchMatch,
+        rowHeight,
         onRowHeightChange,
         onRowSelect,
-        onRowsDelete: propsRef.current.onRowsDelete ? onRowsDelete : undefined,
         onDataUpdate,
-        onFilesUpload: propsRef.current.onFilesUpload
-          ? propsRef.current.onFilesUpload
-          : undefined,
-        onFilesDelete: propsRef.current.onFilesDelete
-          ? propsRef.current.onFilesDelete
-          : undefined,
+        onRowsDelete: propsRef.current.onRowsDelete ? onRowsDelete : undefined,
         onColumnClick,
         onCellClick,
         onCellDoubleClick,
@@ -1942,13 +1935,20 @@ function useDataGrid<TData>({
         onCellContextMenu,
         onCellEditingStart,
         onCellEditingStop,
+        onCellsCopy,
+        onCellsCut,
+        onFilesUpload: propsRef.current.onFilesUpload
+          ? propsRef.current.onFilesUpload
+          : undefined,
+        onFilesDelete: propsRef.current.onFilesDelete
+          ? propsRef.current.onFilesDelete
+          : undefined,
         contextMenu,
         onContextMenuOpenChange,
+        pasteDialog,
         onPasteDialogOpenChange,
         onPasteWithExpansion,
         onPasteWithoutExpansion,
-        onCellsCopy,
-        onCellsCut,
       },
     }),
     [
@@ -1969,6 +1969,9 @@ function useDataGrid<TData>({
       getIsCellSelected,
       getIsSearchMatch,
       getIsActiveSearchMatch,
+      rowHeight,
+      onRowHeightChange,
+      onRowSelect,
       onDataUpdate,
       onRowsDelete,
       onColumnClick,
@@ -1980,17 +1983,14 @@ function useDataGrid<TData>({
       onCellContextMenu,
       onCellEditingStart,
       onCellEditingStop,
+      onCellsCopy,
+      onCellsCut,
       contextMenu,
       onContextMenuOpenChange,
-      rowHeight,
-      onRowHeightChange,
-      onRowSelect,
       pasteDialog,
       onPasteDialogOpenChange,
       onPasteWithExpansion,
       onPasteWithoutExpansion,
-      onCellsCopy,
-      onCellsCut,
     ],
   );
 
