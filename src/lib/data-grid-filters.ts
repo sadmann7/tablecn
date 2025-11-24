@@ -1,7 +1,18 @@
 import type { Row } from "@tanstack/react-table";
-import type { FilterValue } from "@/types/data-grid";
+import type {
+  BooleanFilterOperator,
+  DateFilterOperator,
+  FilterOperator,
+  FilterValue,
+  NumberFilterOperator,
+  SelectFilterOperator,
+  TextFilterOperator,
+} from "@/types/data-grid";
 
-export const TEXT_FILTER_OPERATORS = [
+export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
+  label: string;
+  value: TextFilterOperator;
+}> = [
   { label: "Contains", value: "contains" },
   { label: "Does not contain", value: "notContains" },
   { label: "Is", value: "equals" },
@@ -10,9 +21,12 @@ export const TEXT_FILTER_OPERATORS = [
   { label: "Ends with", value: "endsWith" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
-] as const;
+];
 
-export const NUMBER_FILTER_OPERATORS = [
+export const NUMBER_FILTER_OPERATORS: ReadonlyArray<{
+  label: string;
+  value: NumberFilterOperator;
+}> = [
   { label: "Is", value: "equals" },
   { label: "Is not", value: "notEquals" },
   { label: "Is less than", value: "lessThan" },
@@ -22,9 +36,12 @@ export const NUMBER_FILTER_OPERATORS = [
   { label: "Is between", value: "between" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
-] as const;
+];
 
-export const DATE_FILTER_OPERATORS = [
+export const DATE_FILTER_OPERATORS: ReadonlyArray<{
+  label: string;
+  value: DateFilterOperator;
+}> = [
   { label: "Is", value: "equals" },
   { label: "Is not", value: "notEquals" },
   { label: "Is before", value: "before" },
@@ -34,23 +51,29 @@ export const DATE_FILTER_OPERATORS = [
   { label: "Is between", value: "between" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
-] as const;
+];
 
-export const SELECT_FILTER_OPERATORS = [
+export const SELECT_FILTER_OPERATORS: ReadonlyArray<{
+  label: string;
+  value: SelectFilterOperator;
+}> = [
   { label: "Is", value: "is" },
   { label: "Is not", value: "isNot" },
   { label: "Has any of", value: "isAnyOf" },
   { label: "Has none of", value: "isNoneOf" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
-] as const;
+];
 
-export const BOOLEAN_FILTER_OPERATORS = [
+export const BOOLEAN_FILTER_OPERATORS: ReadonlyArray<{
+  label: string;
+  value: BooleanFilterOperator;
+}> = [
   { label: "Is", value: "isTrue" },
   { label: "Is not", value: "isFalse" },
-] as const;
+];
 
-export function getDefaultOperator(variant: string): string {
+export function getDefaultOperator(variant: string): FilterOperator {
   switch (variant) {
     case "number":
       return "equals";
@@ -66,7 +89,10 @@ export function getDefaultOperator(variant: string): string {
   }
 }
 
-export function getOperatorsForVariant(variant: string) {
+export function getOperatorsForVariant(variant: string): ReadonlyArray<{
+  label: string;
+  value: FilterOperator;
+}> {
   switch (variant) {
     case "number":
       return NUMBER_FILTER_OPERATORS;
@@ -82,7 +108,7 @@ export function getOperatorsForVariant(variant: string) {
   }
 }
 
-export function createDataGridFilterFn<TData>() {
+export function getFilterFn<TData>() {
   return (row: Row<TData>, columnId: string, filterValue: unknown): boolean => {
     if (!filterValue || typeof filterValue !== "object") {
       return true;
@@ -93,7 +119,6 @@ export function createDataGridFilterFn<TData>() {
 
     const cellValue = row.getValue(columnId);
 
-    // Handle empty/not empty operators
     if (operator === "isEmpty") {
       return (
         cellValue === null ||
@@ -112,7 +137,6 @@ export function createDataGridFilterFn<TData>() {
       );
     }
 
-    // Handle boolean operators
     if (operator === "isTrue") {
       return cellValue === true;
     }
@@ -121,7 +145,6 @@ export function createDataGridFilterFn<TData>() {
       return cellValue === false || !cellValue;
     }
 
-    // For other operators, we need a value
     if (value === undefined || value === null || value === "") {
       return true;
     }
@@ -130,7 +153,6 @@ export function createDataGridFilterFn<TData>() {
     const filterValueStr =
       typeof value === "string" ? value.toLowerCase() : String(value);
 
-    // Text operators
     if (operator === "contains") {
       return cellValueStr.includes(filterValueStr);
     }
@@ -171,7 +193,6 @@ export function createDataGridFilterFn<TData>() {
       return cellValueStr.endsWith(filterValueStr);
     }
 
-    // Number operators
     if (typeof cellValue === "number" && typeof value === "number") {
       if (operator === "greaterThan") {
         return cellValue > value;
@@ -194,7 +215,6 @@ export function createDataGridFilterFn<TData>() {
       }
     }
 
-    // Date operators
     if (cellValue instanceof Date || typeof cellValue === "string") {
       const cellDate = new Date(cellValue);
       if (!Number.isNaN(cellDate.getTime()) && typeof value === "string") {
@@ -223,7 +243,6 @@ export function createDataGridFilterFn<TData>() {
       }
     }
 
-    // Select/Multi-select operators
     if (operator === "is") {
       if (Array.isArray(cellValue)) {
         return cellValue.some((v) => String(v) === String(value));

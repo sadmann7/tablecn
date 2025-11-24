@@ -49,7 +49,7 @@ import {
 } from "@/lib/data-grid-filters";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { FilterValue } from "@/types/data-grid";
+import type { FilterOperator, FilterValue, Option } from "@/types/data-grid";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
@@ -76,7 +76,7 @@ export function DataGridFilterMenu<TData>({
     const labels = new Map<string, string>();
     const variants = new Map<string, string>();
     const filteringIds = new Set(columnFilters.map((f) => f.id));
-    const availableColumns: { id: string; label: string }[] = [];
+    const availableColumns: Option[] = [];
 
     for (const column of table.getAllColumns()) {
       if (!column.getCanFilter()) continue;
@@ -87,7 +87,7 @@ export function DataGridFilterMenu<TData>({
       variants.set(column.id, variant);
 
       if (!filteringIds.has(column.id)) {
-        availableColumns.push({ id: column.id, label });
+        availableColumns.push({ label, value: column.id });
       }
     }
 
@@ -102,13 +102,13 @@ export function DataGridFilterMenu<TData>({
     const firstColumn = columns[0];
     if (!firstColumn) return;
 
-    const variant = columnVariants.get(firstColumn.id) ?? "short-text";
+    const variant = columnVariants.get(firstColumn.value) ?? "short-text";
     const defaultOperator = getDefaultOperator(variant);
 
     table.setColumnFilters((prevFilters) => [
       ...prevFilters,
       {
-        id: firstColumn.id,
+        id: firstColumn.value,
         value: {
           operator: defaultOperator,
           value: "",
@@ -288,7 +288,7 @@ interface DataGridFilterItemProps<TData> {
   filter: ColumnFilter;
   index: number;
   filterItemId: string;
-  columns: { id: string; label: string }[];
+  columns: Option[];
   columnLabels: Map<string, string>;
   columnVariants: Map<string, string>;
   table: Table<TData>;
@@ -349,7 +349,7 @@ function DataGridFilterItem<TData>({
   );
 
   const onOperatorChange = React.useCallback(
-    (newOperator: string) => {
+    (newOperator: FilterOperator) => {
       const currentValue = filterValue?.value;
       const currentValue2 = filterValue?.value2;
 
@@ -430,8 +430,8 @@ function DataGridFilterItem<TData>({
                 <CommandGroup>
                   {columns.map((column) => (
                     <CommandItem
-                      key={column.id}
-                      value={column.id}
+                      key={column.value}
+                      value={column.value}
                       onSelect={(value) => {
                         const newVariant =
                           columnVariants.get(value) ?? "short-text";
@@ -457,7 +457,9 @@ function DataGridFilterItem<TData>({
                       <Check
                         className={cn(
                           "ml-auto",
-                          column.id === filter.id ? "opacity-100" : "opacity-0",
+                          column.value === filter.id
+                            ? "opacity-100"
+                            : "opacity-0",
                         )}
                       />
                     </CommandItem>
@@ -467,7 +469,6 @@ function DataGridFilterItem<TData>({
             </Command>
           </PopoverContent>
         </Popover>
-
         <Select
           open={showOperatorSelector}
           onOpenChange={setShowOperatorSelector}
@@ -491,32 +492,30 @@ function DataGridFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-
         <div className="min-w-36 flex-1">
           {needsValue && column ? (
-            <FilterValueInput
+            <DataGridFilterInput
               variant={variant}
               operator={operator}
-              value={filterValue?.value}
               column={column}
               inputId={inputId}
-              onChange={onValueChange}
+              value={filterValue?.value}
+              onValueChange={onValueChange}
             />
           ) : needsSecondValue && column ? (
-            <FilterValueInput
+            <DataGridFilterInput
+              placeholder="End value"
               variant={variant}
               operator={operator}
-              value={filterValue?.value2}
               column={column}
               inputId={`${inputId}-2`}
-              onChange={onValue2Change}
-              placeholder="End value"
+              value={filterValue?.value2}
+              onValueChange={onValue2Change}
             />
           ) : (
             <div className="h-8 w-full rounded border bg-transparent dark:bg-input/30" />
           )}
         </div>
-
         <Button
           aria-controls={filterItemId}
           variant="outline"
@@ -536,31 +535,31 @@ function DataGridFilterItem<TData>({
   );
 }
 
-interface FilterValueInputProps<TData> {
+interface DataGridFilterInputProps<TData> {
   variant: string;
-  operator: string;
+  operator: FilterOperator;
   value: string | number | string[] | undefined;
   column: Column<TData>;
   inputId: string;
-  onChange: (value: string | number | string[] | undefined) => void;
+  onValueChange: (value: string | number | string[] | undefined) => void;
   placeholder?: string;
 }
 
-function FilterValueInput<TData>({
+function DataGridFilterInput<TData>({
   variant,
   operator,
   value,
   column,
   inputId,
-  onChange,
+  onValueChange,
   placeholder = "Value",
-}: FilterValueInputProps<TData>) {
+}: DataGridFilterInputProps<TData>) {
   const [showValueSelector, setShowValueSelector] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(value);
 
   const debouncedOnChange = useDebouncedCallback(
     (newValue: string | number | string[] | undefined) => {
-      onChange(newValue);
+      onValueChange(newValue);
     },
     FILTER_DEBOUNCE_MS,
   );
@@ -572,17 +571,13 @@ function FilterValueInput<TData>({
   const columnMeta = column.columnDef.meta;
   const cellVariant = columnMeta?.cell;
 
-  // Get options from cell variant config
-  const selectOptions =
-    cellVariant &&
-    "variant" in cellVariant &&
-    (cellVariant.variant === "select" ||
-      cellVariant.variant === "multi-select") &&
-    "options" in cellVariant
+  const selectOptions = React.useMemo(() => {
+    return cellVariant?.variant === "select" ||
+      cellVariant?.variant === "multi-select"
       ? cellVariant.options
       : [];
+  }, [cellVariant]);
 
-  // For number inputs
   if (variant === "number") {
     return (
       <Input
@@ -591,8 +586,8 @@ function FilterValueInput<TData>({
         inputMode="numeric"
         placeholder={placeholder}
         value={(localValue as number | undefined) ?? ""}
-        onChange={(e) => {
-          const val = e.target.value;
+        onChange={(event) => {
+          const val = event.target.value;
           const newValue = val === "" ? undefined : Number(val);
           setLocalValue(newValue);
           debouncedOnChange(newValue);
@@ -602,7 +597,6 @@ function FilterValueInput<TData>({
     );
   }
 
-  // For date inputs with fancy calendar picker
   if (variant === "date") {
     const inputListboxId = `${inputId}-listbox`;
     const dateValue =
@@ -642,7 +636,7 @@ function FilterValueInput<TData>({
             onSelect={(date) => {
               const newValue = date ? date.toISOString() : undefined;
               setLocalValue(newValue);
-              onChange(newValue);
+              onValueChange(newValue);
               setShowValueSelector(false);
             }}
           />
@@ -651,12 +645,10 @@ function FilterValueInput<TData>({
     );
   }
 
-  // For select/multi-select inputs
   if (
     (variant === "select" || variant === "multi-select") &&
     selectOptions.length > 0
   ) {
-    // Multi-value selection for isAnyOf/isNoneOf operators
     if (operator === "isAnyOf" || operator === "isNoneOf") {
       const selectedValues = Array.isArray(value) ? value : [];
       const inputListboxId = `${inputId}-listbox`;
@@ -720,7 +712,7 @@ function FilterValueInput<TData>({
                           const newValues = isSelected
                             ? selectedValues.filter((v) => v !== option.value)
                             : [...selectedValues, option.value];
-                          onChange(
+                          onValueChange(
                             newValues.length > 0 ? newValues : undefined,
                           );
                         }}
@@ -749,7 +741,6 @@ function FilterValueInput<TData>({
       );
     }
 
-    // Single value selection
     const inputListboxId = `${inputId}-listbox`;
     const selectedOption = selectOptions.find(
       (opt) => opt.value === (value as string),
@@ -790,7 +781,7 @@ function FilterValueInput<TData>({
                     key={option.value}
                     value={option.value}
                     onSelect={() => {
-                      onChange(option.value);
+                      onValueChange(option.value);
                       setShowValueSelector(false);
                     }}
                   >
@@ -817,12 +808,12 @@ function FilterValueInput<TData>({
     );
   }
 
-  // Default text input
   return (
     <Input
       id={inputId}
       type="text"
       placeholder={placeholder}
+      className="h-8 w-full rounded"
       value={(localValue as string | undefined) ?? ""}
       onChange={(event) => {
         const val = event.target.value;
@@ -830,7 +821,6 @@ function FilterValueInput<TData>({
         setLocalValue(newValue);
         debouncedOnChange(newValue);
       }}
-      className="h-8 w-full rounded"
     />
   );
 }

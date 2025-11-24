@@ -12,7 +12,7 @@ import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
-import { createDataGridFilterFn } from "@/lib/data-grid-filters";
+import { getFilterFn } from "@/lib/data-grid-filters";
 import type { FileCellData } from "@/types/data-grid";
 
 interface Person {
@@ -152,7 +152,7 @@ export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
-  const filterFn = React.useMemo(() => createDataGridFilterFn<Person>(), []);
+  const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
