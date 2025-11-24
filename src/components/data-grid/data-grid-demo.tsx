@@ -4,6 +4,7 @@ import { faker } from "@faker-js/faker";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
@@ -11,6 +12,7 @@ import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
+import { createDataGridFilterFn } from "@/lib/data-grid-filters";
 import type { FileCellData } from "@/types/data-grid";
 
 interface Person {
@@ -150,6 +152,8 @@ export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
+  const filterFn = React.useMemo(() => createDataGridFilterFn<Person>(), []);
+
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
       {
@@ -201,6 +205,7 @@ export function DataGridDemo() {
         accessorKey: "name",
         header: "Name",
         minSize: 180,
+        filterFn,
         meta: {
           label: "Name",
           cell: {
@@ -213,6 +218,7 @@ export function DataGridDemo() {
         accessorKey: "age",
         header: "Age",
         minSize: 100,
+        filterFn,
         meta: {
           label: "Age",
           cell: {
@@ -228,6 +234,7 @@ export function DataGridDemo() {
         accessorKey: "email",
         header: "Email",
         minSize: 240,
+        filterFn,
         meta: {
           label: "Email",
           cell: {
@@ -240,6 +247,7 @@ export function DataGridDemo() {
         accessorKey: "website",
         header: "Website",
         minSize: 240,
+        filterFn,
         meta: {
           label: "Website",
           cell: {
@@ -252,6 +260,7 @@ export function DataGridDemo() {
         accessorKey: "notes",
         header: "Notes",
         minSize: 200,
+        filterFn,
         meta: {
           label: "Notes",
           cell: {
@@ -264,6 +273,7 @@ export function DataGridDemo() {
         accessorKey: "salary",
         header: "Salary",
         minSize: 180,
+        filterFn,
         meta: {
           label: "Salary",
           cell: {
@@ -278,6 +288,7 @@ export function DataGridDemo() {
         accessorKey: "department",
         header: "Department",
         minSize: 180,
+        filterFn,
         meta: {
           label: "Department",
           cell: {
@@ -294,6 +305,7 @@ export function DataGridDemo() {
         accessorKey: "status",
         header: "Status",
         minSize: 180,
+        filterFn,
         meta: {
           label: "Status",
           cell: {
@@ -310,6 +322,7 @@ export function DataGridDemo() {
         accessorKey: "skills",
         header: "Skills",
         minSize: 240,
+        filterFn,
         meta: {
           label: "Skills",
           cell: {
@@ -326,6 +339,7 @@ export function DataGridDemo() {
         accessorKey: "isActive",
         header: "Active",
         minSize: 140,
+        filterFn,
         meta: {
           label: "Active",
           cell: {
@@ -338,6 +352,7 @@ export function DataGridDemo() {
         accessorKey: "startDate",
         header: "Start Date",
         minSize: 150,
+        filterFn,
         meta: {
           label: "Start Date",
           cell: {
@@ -350,6 +365,7 @@ export function DataGridDemo() {
         accessorKey: "attachments",
         header: "Attachments",
         minSize: 240,
+        filterFn,
         meta: {
           label: "Attachments",
           cell: {
@@ -363,7 +379,7 @@ export function DataGridDemo() {
         },
       },
     ],
-    [],
+    [filterFn],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
@@ -496,6 +512,7 @@ export function DataGridDemo() {
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
+        <DataGridFilterMenu table={table} align="end" />
         <DataGridSortMenu table={table} align="end" />
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />

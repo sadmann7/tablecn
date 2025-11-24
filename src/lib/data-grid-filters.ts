@@ -1,0 +1,261 @@
+import type { Row } from "@tanstack/react-table";
+import type { FilterValue } from "@/types/data-grid";
+
+export const TEXT_FILTER_OPERATORS = [
+  { label: "Contains", value: "contains" },
+  { label: "Does not contain", value: "notContains" },
+  { label: "Equals", value: "equals" },
+  { label: "Does not equal", value: "notEquals" },
+  { label: "Starts with", value: "startsWith" },
+  { label: "Ends with", value: "endsWith" },
+  { label: "Is empty", value: "isEmpty" },
+  { label: "Is not empty", value: "isNotEmpty" },
+] as const;
+
+export const NUMBER_FILTER_OPERATORS = [
+  { label: "Equals", value: "equals" },
+  { label: "Does not equal", value: "notEquals" },
+  { label: "Greater than", value: "greaterThan" },
+  { label: "Greater than or equal", value: "greaterThanOrEqual" },
+  { label: "Less than", value: "lessThan" },
+  { label: "Less than or equal", value: "lessThanOrEqual" },
+  { label: "Between", value: "between" },
+  { label: "Is empty", value: "isEmpty" },
+  { label: "Is not empty", value: "isNotEmpty" },
+] as const;
+
+export const DATE_FILTER_OPERATORS = [
+  { label: "Is", value: "equals" },
+  { label: "Is not", value: "notEquals" },
+  { label: "Is before", value: "before" },
+  { label: "Is after", value: "after" },
+  { label: "Is on or before", value: "onOrBefore" },
+  { label: "Is on or after", value: "onOrAfter" },
+  { label: "Is between", value: "between" },
+  { label: "Is empty", value: "isEmpty" },
+  { label: "Is not empty", value: "isNotEmpty" },
+] as const;
+
+export const SELECT_FILTER_OPERATORS = [
+  { label: "Is", value: "is" },
+  { label: "Is not", value: "isNot" },
+  { label: "Is any of", value: "isAnyOf" },
+  { label: "Is none of", value: "isNoneOf" },
+  { label: "Is empty", value: "isEmpty" },
+  { label: "Is not empty", value: "isNotEmpty" },
+] as const;
+
+export const BOOLEAN_FILTER_OPERATORS = [
+  { label: "Is checked", value: "isTrue" },
+  { label: "Is not checked", value: "isFalse" },
+] as const;
+
+export function getDefaultOperator(variant: string): string {
+  switch (variant) {
+    case "number":
+      return "equals";
+    case "date":
+      return "equals";
+    case "select":
+    case "multi-select":
+      return "is";
+    case "checkbox":
+      return "isTrue";
+    default:
+      return "contains";
+  }
+}
+
+export function getOperatorsForVariant(variant: string) {
+  switch (variant) {
+    case "number":
+      return NUMBER_FILTER_OPERATORS;
+    case "date":
+      return DATE_FILTER_OPERATORS;
+    case "select":
+    case "multi-select":
+      return SELECT_FILTER_OPERATORS;
+    case "checkbox":
+      return BOOLEAN_FILTER_OPERATORS;
+    default:
+      return TEXT_FILTER_OPERATORS;
+  }
+}
+
+export function createDataGridFilterFn<TData>() {
+  return (row: Row<TData>, columnId: string, filterValue: unknown): boolean => {
+    if (!filterValue || typeof filterValue !== "object") {
+      return true;
+    }
+
+    const filter = filterValue as FilterValue;
+    const { operator, value, value2 } = filter;
+
+    const cellValue = row.getValue(columnId);
+
+    // Handle empty/not empty operators
+    if (operator === "isEmpty") {
+      return (
+        cellValue === null ||
+        cellValue === undefined ||
+        cellValue === "" ||
+        (Array.isArray(cellValue) && cellValue.length === 0)
+      );
+    }
+
+    if (operator === "isNotEmpty") {
+      return !(
+        cellValue === null ||
+        cellValue === undefined ||
+        cellValue === "" ||
+        (Array.isArray(cellValue) && cellValue.length === 0)
+      );
+    }
+
+    // Handle boolean operators
+    if (operator === "isTrue") {
+      return cellValue === true;
+    }
+
+    if (operator === "isFalse") {
+      return cellValue === false || !cellValue;
+    }
+
+    // For other operators, we need a value
+    if (value === undefined || value === null || value === "") {
+      return true;
+    }
+
+    const cellValueStr = String(cellValue ?? "").toLowerCase();
+    const filterValueStr =
+      typeof value === "string" ? value.toLowerCase() : String(value);
+
+    // Text operators
+    if (operator === "contains") {
+      return cellValueStr.includes(filterValueStr);
+    }
+
+    if (operator === "notContains") {
+      return !cellValueStr.includes(filterValueStr);
+    }
+
+    if (operator === "equals") {
+      if (typeof cellValue === "number" && typeof value === "number") {
+        return cellValue === value;
+      }
+      if (cellValue instanceof Date && typeof value === "string") {
+        const cellDate = new Date(cellValue);
+        const filterDate = new Date(value);
+        return cellDate.toDateString() === filterDate.toDateString();
+      }
+      return cellValueStr === filterValueStr;
+    }
+
+    if (operator === "notEquals") {
+      if (typeof cellValue === "number" && typeof value === "number") {
+        return cellValue !== value;
+      }
+      if (cellValue instanceof Date && typeof value === "string") {
+        const cellDate = new Date(cellValue);
+        const filterDate = new Date(value);
+        return cellDate.toDateString() !== filterDate.toDateString();
+      }
+      return cellValueStr !== filterValueStr;
+    }
+
+    if (operator === "startsWith") {
+      return cellValueStr.startsWith(filterValueStr);
+    }
+
+    if (operator === "endsWith") {
+      return cellValueStr.endsWith(filterValueStr);
+    }
+
+    // Number operators
+    if (typeof cellValue === "number" && typeof value === "number") {
+      if (operator === "greaterThan") {
+        return cellValue > value;
+      }
+
+      if (operator === "greaterThanOrEqual") {
+        return cellValue >= value;
+      }
+
+      if (operator === "lessThan") {
+        return cellValue < value;
+      }
+
+      if (operator === "lessThanOrEqual") {
+        return cellValue <= value;
+      }
+
+      if (operator === "between" && typeof value2 === "number") {
+        return cellValue >= value && cellValue <= value2;
+      }
+    }
+
+    // Date operators
+    if (cellValue instanceof Date || typeof cellValue === "string") {
+      const cellDate = new Date(cellValue);
+      if (!Number.isNaN(cellDate.getTime()) && typeof value === "string") {
+        const filterDate = new Date(value);
+
+        if (operator === "before") {
+          return cellDate < filterDate;
+        }
+
+        if (operator === "after") {
+          return cellDate > filterDate;
+        }
+
+        if (operator === "onOrBefore") {
+          return cellDate <= filterDate;
+        }
+
+        if (operator === "onOrAfter") {
+          return cellDate >= filterDate;
+        }
+
+        if (operator === "between" && typeof value2 === "string") {
+          const filterDate2 = new Date(value2);
+          return cellDate >= filterDate && cellDate <= filterDate2;
+        }
+      }
+    }
+
+    // Select/Multi-select operators
+    if (operator === "is") {
+      if (Array.isArray(cellValue)) {
+        return cellValue.some((v) => String(v) === String(value));
+      }
+      return String(cellValue) === String(value);
+    }
+
+    if (operator === "isNot") {
+      if (Array.isArray(cellValue)) {
+        return !cellValue.some((v) => String(v) === String(value));
+      }
+      return String(cellValue) !== String(value);
+    }
+
+    if (operator === "isAnyOf" && Array.isArray(value)) {
+      if (Array.isArray(cellValue)) {
+        return cellValue.some((v) =>
+          value.some((fv) => String(v) === String(fv)),
+        );
+      }
+      return value.some((fv) => String(cellValue) === String(fv));
+    }
+
+    if (operator === "isNoneOf" && Array.isArray(value)) {
+      if (Array.isArray(cellValue)) {
+        return !cellValue.some((v) =>
+          value.some((fv) => String(v) === String(fv)),
+        );
+      }
+      return !value.some((fv) => String(cellValue) === String(fv));
+    }
+
+    return true;
+  };
+}

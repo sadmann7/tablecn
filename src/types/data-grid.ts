@@ -199,3 +199,9 @@ export interface FileCellData {
   type: string;
   url?: string;
 }
+
+export interface FilterValue {
+  operator: string;
+  value?: string | number | string[];
+  value2?: string | number;
+}

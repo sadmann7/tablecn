@@ -196,6 +196,23 @@ function DataGridKeyboardShortcutsImpl({
           ]
         : []),
       {
+        title: "Filtering",
+        shortcuts: [
+          {
+            keys: [modKey, "Shift", "F"],
+            description: "Toggle the filter menu",
+          },
+          {
+            keys: ["Backspace"],
+            description: "Remove filter (when focused)",
+          },
+          {
+            keys: ["Delete"],
+            description: "Remove filter (when focused)",
+          },
+        ],
+      },
+      {
         title: "Sorting",
         shortcuts: [
           {
