@@ -550,8 +550,9 @@ function useDataGrid<TData>({
         `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
       );
     } catch (error) {
-      console.error("Copy failed:", error);
-      toast.error("Failed to copy to clipboard");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to copy to clipboard",
+      );
     }
   }, [store]);
 
@@ -645,21 +646,20 @@ function useDataGrid<TData>({
     try {
       await navigator.clipboard.writeText(tsvData);
 
-      // Mark cells as cut instead of clearing them immediately
       store.setState("cutCells", new Set(selectedCellsArray));
 
       toast.success(
         `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} cut`,
       );
     } catch (error) {
-      console.error("Cut failed:", error);
-      toast.error("Failed to cut to clipboard");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to cut to clipboard",
+      );
     }
   }, [store, readOnly]);
 
-  const pasteCells = React.useCallback(
+  const onCellsPaste = React.useCallback(
     async (expandRows = false) => {
-      // Block paste in read-only mode
       if (readOnly) return;
 
       const currentState = store.getState();
@@ -1655,7 +1655,7 @@ function useDataGrid<TData>({
 
       if (enablePaste && isCtrlPressed && key === "v" && !readOnly) {
         event.preventDefault();
-        pasteCells();
+        onCellsPaste();
         return;
       }
 
@@ -1802,7 +1802,7 @@ function useDataGrid<TData>({
       selectAll,
       onCellsCopy,
       onCellsCut,
-      pasteCells,
+      onCellsPaste,
       onDataUpdate,
       clearSelection,
       navigableColumnIds,
@@ -1939,13 +1939,12 @@ function useDataGrid<TData>({
   );
 
   const onPasteWithExpansion = React.useCallback(() => {
-    pasteCells(true);
-  }, [pasteCells]);
+    onCellsPaste(true);
+  }, [onCellsPaste]);
 
   const onPasteWithoutExpansion = React.useCallback(() => {
-    // Call pasteCells without expansion - it will paste only what fits
-    pasteCells(false);
-  }, [pasteCells]);
+    onCellsPaste(false);
+  }, [onCellsPaste]);
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
