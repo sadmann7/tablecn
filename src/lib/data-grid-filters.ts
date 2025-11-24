@@ -4,8 +4,8 @@ import type { FilterValue } from "@/types/data-grid";
 export const TEXT_FILTER_OPERATORS = [
   { label: "Contains", value: "contains" },
   { label: "Does not contain", value: "notContains" },
-  { label: "Equals", value: "equals" },
-  { label: "Does not equal", value: "notEquals" },
+  { label: "Is", value: "equals" },
+  { label: "Is not", value: "notEquals" },
   { label: "Starts with", value: "startsWith" },
   { label: "Ends with", value: "endsWith" },
   { label: "Is empty", value: "isEmpty" },
@@ -13,13 +13,13 @@ export const TEXT_FILTER_OPERATORS = [
 ] as const;
 
 export const NUMBER_FILTER_OPERATORS = [
-  { label: "Equals", value: "equals" },
-  { label: "Does not equal", value: "notEquals" },
-  { label: "Greater than", value: "greaterThan" },
-  { label: "Greater than or equal", value: "greaterThanOrEqual" },
-  { label: "Less than", value: "lessThan" },
-  { label: "Less than or equal", value: "lessThanOrEqual" },
-  { label: "Between", value: "between" },
+  { label: "Is", value: "equals" },
+  { label: "Is not", value: "notEquals" },
+  { label: "Is less than", value: "lessThan" },
+  { label: "Is less than or equal to", value: "lessThanOrEqual" },
+  { label: "Is greater than", value: "greaterThan" },
+  { label: "Is greater than or equal to", value: "greaterThanOrEqual" },
+  { label: "Is between", value: "between" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ] as const;
@@ -39,15 +39,15 @@ export const DATE_FILTER_OPERATORS = [
 export const SELECT_FILTER_OPERATORS = [
   { label: "Is", value: "is" },
   { label: "Is not", value: "isNot" },
-  { label: "Is any of", value: "isAnyOf" },
-  { label: "Is none of", value: "isNoneOf" },
+  { label: "Has any of", value: "isAnyOf" },
+  { label: "Has none of", value: "isNoneOf" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ] as const;
 
 export const BOOLEAN_FILTER_OPERATORS = [
-  { label: "Is checked", value: "isTrue" },
-  { label: "Is not checked", value: "isFalse" },
+  { label: "Is", value: "isTrue" },
+  { label: "Is not", value: "isFalse" },
 ] as const;
 
 export function getDefaultOperator(variant: string): string {

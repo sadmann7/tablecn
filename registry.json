@@ -496,6 +496,56 @@
           "target": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx"
         }
       ]
+    },
+    {
+      "name": "data-grid-filter-menu",
+      "type": "registry:component",
+      "title": "Data Grid Filter Menu",
+      "description": "A filter menu component for the data grid with drag-and-drop reordering and advanced filtering",
+      "registryDependencies": [
+        "badge",
+        "button",
+        "calendar",
+        "command",
+        "input",
+        "popover",
+        "select"
+      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid-filter-menu.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-filter-menu.tsx"
+        },
+        {
+          "path": "src/components/ui/sortable.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/sortable.tsx"
+        },
+        {
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-filters.ts",
+          "type": "registry:lib",
+          "target": "src/lib/data-grid-filters.ts"
+        },
+        {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/types/data-grid.ts",
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
+        }
+      ]
     }
   ]
 }

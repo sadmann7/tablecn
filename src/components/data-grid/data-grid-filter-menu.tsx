@@ -1,11 +1,19 @@
 "use client";
 
-import type { ColumnFilter, Table } from "@tanstack/react-table";
-import { ChevronsUpDown, GripVertical, ListFilter, Trash2 } from "lucide-react";
+import type { Column, ColumnFilter, Table } from "@tanstack/react-table";
+import {
+  CalendarIcon,
+  Check,
+  ChevronsUpDown,
+  GripVertical,
+  ListFilter,
+  Trash2,
+} from "lucide-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Command,
   CommandEmpty,
@@ -39,6 +47,7 @@ import {
   getDefaultOperator,
   getOperatorsForVariant,
 } from "@/lib/data-grid-filters";
+import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { FilterValue } from "@/types/data-grid";
 
@@ -46,13 +55,19 @@ const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 const FILTER_DEBOUNCE_MS = 300;
 
+type JoinOperator = "and" | "or";
+
 interface DataGridFilterMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  joinOperator?: JoinOperator;
+  onJoinOperatorChange?: (value: JoinOperator) => void;
 }
 
 export function DataGridFilterMenu<TData>({
   table,
+  joinOperator: externalJoinOperator,
+  onJoinOperatorChange: externalOnJoinOperatorChange,
   ...props
 }: DataGridFilterMenuProps<TData>) {
   const id = React.useId();
@@ -60,6 +75,12 @@ export function DataGridFilterMenu<TData>({
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
+  const [internalJoinOperator, setInternalJoinOperator] =
+    React.useState<JoinOperator>("and");
+
+  const joinOperator = externalJoinOperator ?? internalJoinOperator;
+  const setJoinOperator =
+    externalOnJoinOperatorChange ?? setInternalJoinOperator;
 
   const columnFilters = table.getState().columnFilters;
 
@@ -129,10 +150,10 @@ export function DataGridFilterMenu<TData>({
     [table],
   );
 
-  const onFiltersReset = React.useCallback(
-    () => table.setColumnFilters(table.initialState.columnFilters ?? []),
-    [table],
-  );
+  const onFiltersReset = React.useCallback(() => {
+    table.setColumnFilters(table.initialState.columnFilters ?? []);
+    setJoinOperator("and");
+  }, [table, setJoinOperator]);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -223,15 +244,18 @@ export function DataGridFilterMenu<TData>({
           {columnFilters.length > 0 && (
             <SortableContent asChild>
               <ul className="flex max-h-[400px] flex-col gap-2 overflow-y-auto p-1">
-                {columnFilters.map((filter) => (
+                {columnFilters.map((filter, index) => (
                   <DataGridFilterItem
                     key={filter.id}
                     filter={filter}
+                    index={index}
                     filterItemId={`${id}-filter-${filter.id}`}
                     columns={columns}
                     columnLabels={columnLabels}
                     columnVariants={columnVariants}
                     table={table}
+                    joinOperator={joinOperator}
+                    setJoinOperator={setJoinOperator}
                     onFilterUpdate={onFilterUpdate}
                     onFilterRemove={onFilterRemove}
                   />
@@ -277,28 +301,36 @@ export function DataGridFilterMenu<TData>({
 
 interface DataGridFilterItemProps<TData> {
   filter: ColumnFilter;
+  index: number;
   filterItemId: string;
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   columnVariants: Map<string, string>;
   table: Table<TData>;
+  joinOperator: JoinOperator;
+  setJoinOperator: (value: JoinOperator) => void;
   onFilterUpdate: (filterId: string, updates: Partial<ColumnFilter>) => void;
   onFilterRemove: (filterId: string) => void;
 }
 
 function DataGridFilterItem<TData>({
   filter,
+  index,
   filterItemId,
   columns,
   columnLabels,
   columnVariants,
   table,
+  joinOperator,
+  setJoinOperator,
   onFilterUpdate,
   onFilterRemove,
 }: DataGridFilterItemProps<TData>) {
+  const joinOperatorListboxId = `${filterItemId}-join-operator-listbox`;
   const fieldListboxId = `${filterItemId}-field-listbox`;
   const fieldTriggerId = `${filterItemId}-field-trigger`;
   const operatorListboxId = `${filterItemId}-operator-listbox`;
+  const inputId = `${filterItemId}-input`;
 
   const [showFieldSelector, setShowFieldSelector] = React.useState(false);
   const [showOperatorSelector, setShowOperatorSelector] = React.useState(false);
@@ -314,15 +346,6 @@ function DataGridFilterItem<TData>({
   const needsSecondValue = ["between"].includes(operator);
 
   const column = table.getColumn(filter.id);
-  const cellVariant = column?.columnDef.meta?.cell;
-  const selectOptions =
-    cellVariant &&
-    "variant" in cellVariant &&
-    (cellVariant.variant === "select" ||
-      cellVariant.variant === "multi-select") &&
-    "options" in cellVariant
-      ? cellVariant.options
-      : [];
 
   const onItemKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLLIElement>) => {
@@ -395,6 +418,37 @@ function DataGridFilterItem<TData>({
         className="flex items-center gap-2"
         onKeyDown={onItemKeyDown}
       >
+        <div className="min-w-[72px] text-center">
+          {index === 0 ? (
+            <span className="text-muted-foreground text-sm">Where</span>
+          ) : index === 1 ? (
+            <Select
+              value={joinOperator}
+              onValueChange={(value: JoinOperator) => setJoinOperator(value)}
+            >
+              <SelectTrigger
+                aria-label="Select join operator"
+                aria-controls={joinOperatorListboxId}
+                size="sm"
+                className="rounded lowercase"
+              >
+                <SelectValue placeholder={joinOperator} />
+              </SelectTrigger>
+              <SelectContent
+                id={joinOperatorListboxId}
+                position="popper"
+                className="min-w-(--radix-select-trigger-width) lowercase"
+              >
+                <SelectItem value="and">and</SelectItem>
+                <SelectItem value="or">or</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="text-muted-foreground text-sm">
+              {joinOperator}
+            </span>
+          )}
+        </div>
         <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
           <PopoverTrigger asChild>
             <Button
@@ -402,7 +456,7 @@ function DataGridFilterItem<TData>({
               aria-controls={fieldListboxId}
               variant="outline"
               size="sm"
-              className="w-36 justify-between rounded font-normal"
+              className="w-32 justify-between rounded font-normal"
             >
               <span className="truncate">{columnLabels.get(filter.id)}</span>
               <ChevronsUpDown className="opacity-50" />
@@ -410,7 +464,8 @@ function DataGridFilterItem<TData>({
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
-            className="w-(--radix-popover-trigger-width) p-0"
+            align="start"
+            className="w-40 p-0"
           >
             <Command>
               <CommandInput placeholder="Search fields..." />
@@ -439,9 +494,16 @@ function DataGridFilterItem<TData>({
                               : f,
                           ),
                         );
+                        setShowFieldSelector(false);
                       }}
                     >
                       <span className="truncate">{column.label}</span>
+                      <Check
+                        className={cn(
+                          "ml-auto",
+                          column.id === filter.id ? "opacity-100" : "opacity-0",
+                        )}
+                      />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -459,58 +521,57 @@ function DataGridFilterItem<TData>({
           <SelectTrigger
             aria-controls={operatorListboxId}
             size="sm"
-            className="w-44 rounded font-normal"
+            className="w-32 rounded lowercase"
           >
-            <SelectValue />
+            <div className="truncate">
+              <SelectValue />
+            </div>
           </SelectTrigger>
-          <SelectContent
-            id={operatorListboxId}
-            className="min-w-(--radix-select-trigger-width)"
-          >
+          <SelectContent id={operatorListboxId}>
             {operators.map((op) => (
-              <SelectItem key={op.value} value={op.value}>
+              <SelectItem key={op.value} value={op.value} className="lowercase">
                 {op.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
 
-        {needsValue && (
-          <FilterValueInput
-            variant={variant}
-            operator={operator}
-            value={filterValue?.value}
-            selectOptions={selectOptions}
-            onChange={onValueChange}
-          />
-        )}
-
-        {needsSecondValue && (
-          <FilterValueInput
-            variant={variant}
-            operator={operator}
-            value={filterValue?.value2}
-            selectOptions={selectOptions}
-            onChange={onValue2Change}
-            placeholder="End value"
-          />
-        )}
+        <div className="min-w-36 flex-1">
+          {needsValue && column ? (
+            <FilterValueInput
+              variant={variant}
+              operator={operator}
+              value={filterValue?.value}
+              column={column}
+              inputId={inputId}
+              onChange={onValueChange}
+            />
+          ) : needsSecondValue && column ? (
+            <FilterValueInput
+              variant={variant}
+              operator={operator}
+              value={filterValue?.value2}
+              column={column}
+              inputId={`${inputId}-2`}
+              onChange={onValue2Change}
+              placeholder="End value"
+            />
+          ) : (
+            <div className="h-8 w-full rounded border bg-transparent dark:bg-input/30" />
+          )}
+        </div>
 
         <Button
           aria-controls={filterItemId}
           variant="outline"
           size="icon"
-          className="size-8 shrink-0 rounded"
+          className="size-8 rounded"
           onClick={() => onFilterRemove(filter.id)}
         >
           <Trash2 />
         </Button>
         <SortableItemHandle asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0 rounded"
-          >
+          <Button variant="outline" size="icon" className="size-8 rounded">
             <GripVertical />
           </Button>
         </SortableItemHandle>
@@ -519,24 +580,26 @@ function DataGridFilterItem<TData>({
   );
 }
 
-interface FilterValueInputProps {
+interface FilterValueInputProps<TData> {
   variant: string;
   operator: string;
   value: string | number | string[] | undefined;
-  selectOptions: Array<{ label: string; value: string }>;
+  column: Column<TData>;
+  inputId: string;
   onChange: (value: string | number | string[] | undefined) => void;
   placeholder?: string;
 }
 
-function FilterValueInput({
+function FilterValueInput<TData>({
   variant,
   operator,
   value,
-  selectOptions,
+  column,
+  inputId,
   onChange,
   placeholder = "Value",
-}: FilterValueInputProps) {
-  const [showSelectMenu, setShowSelectMenu] = React.useState(false);
+}: FilterValueInputProps<TData>) {
+  const [showValueSelector, setShowValueSelector] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(value);
 
   const debouncedOnChange = useDebouncedCallback(
@@ -550,10 +613,26 @@ function FilterValueInput({
     setLocalValue(value);
   }, [value]);
 
+  const columnMeta = column.columnDef.meta;
+  const cellVariant = columnMeta?.cell;
+
+  // Get options from cell variant config
+  const selectOptions =
+    cellVariant &&
+    "variant" in cellVariant &&
+    (cellVariant.variant === "select" ||
+      cellVariant.variant === "multi-select") &&
+    "options" in cellVariant
+      ? cellVariant.options
+      : [];
+
+  // For number inputs
   if (variant === "number") {
     return (
       <Input
+        id={inputId}
         type="number"
+        inputMode="numeric"
         placeholder={placeholder}
         value={(localValue as number | undefined) ?? ""}
         onChange={(e) => {
@@ -562,57 +641,114 @@ function FilterValueInput({
           setLocalValue(newValue);
           debouncedOnChange(newValue);
         }}
-        className="h-8 w-32 rounded"
+        className="h-8 w-full rounded"
       />
     );
   }
 
+  // For date inputs with fancy calendar picker
   if (variant === "date") {
+    const inputListboxId = `${inputId}-listbox`;
     const dateValue =
       localValue && typeof localValue === "string"
-        ? new Date(localValue).toISOString().split("T")[0]
-        : "";
+        ? new Date(localValue)
+        : undefined;
 
     return (
-      <Input
-        type="date"
-        placeholder={placeholder}
-        value={dateValue}
-        onChange={(e) => {
-          const val = e.target.value;
-          const newValue = val === "" ? undefined : val;
-          setLocalValue(newValue);
-          debouncedOnChange(newValue);
-        }}
-        className="h-8 w-40 rounded"
-      />
+      <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
+        <PopoverTrigger asChild>
+          <Button
+            id={inputId}
+            aria-controls={inputListboxId}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "h-8 w-full justify-start rounded font-normal",
+              !dateValue && "text-muted-foreground",
+            )}
+          >
+            <CalendarIcon />
+            <span className="truncate">
+              {dateValue ? formatDate(dateValue) : placeholder}
+            </span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          id={inputListboxId}
+          align="start"
+          className="w-auto p-0"
+        >
+          <Calendar
+            autoFocus
+            captionLayout="dropdown"
+            mode="single"
+            selected={dateValue}
+            onSelect={(date) => {
+              const newValue = date ? date.toISOString() : undefined;
+              setLocalValue(newValue);
+              onChange(newValue);
+              setShowValueSelector(false);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
     );
   }
 
+  // For select/multi-select inputs
   if (
     (variant === "select" || variant === "multi-select") &&
     selectOptions.length > 0
   ) {
+    // Multi-value selection for isAnyOf/isNoneOf operators
     if (operator === "isAnyOf" || operator === "isNoneOf") {
       const selectedValues = Array.isArray(value) ? value : [];
+      const inputListboxId = `${inputId}-listbox`;
+
+      const selectedOptions = selectOptions.filter((option) =>
+        selectedValues.includes(option.value),
+      );
 
       return (
-        <Popover open={showSelectMenu} onOpenChange={setShowSelectMenu}>
+        <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
           <PopoverTrigger asChild>
             <Button
+              id={inputId}
+              aria-controls={inputListboxId}
               variant="outline"
               size="sm"
-              className="w-40 justify-between rounded font-normal"
+              className="h-8 w-full justify-start rounded font-normal"
             >
-              <span className="truncate">
-                {selectedValues.length > 0
-                  ? `${selectedValues.length} selected`
-                  : placeholder}
-              </span>
-              <ChevronsUpDown className="opacity-50" />
+              {selectedOptions.length === 0 ? (
+                <span className="text-muted-foreground">{placeholder}</span>
+              ) : (
+                <>
+                  <div className="-space-x-2 flex items-center rtl:space-x-reverse">
+                    {selectedOptions.map((selectedOption) =>
+                      selectedOption.icon ? (
+                        <div
+                          key={selectedOption.value}
+                          className="rounded-full border bg-background p-0.5"
+                        >
+                          <selectedOption.icon className="size-3.5" />
+                        </div>
+                      ) : null,
+                    )}
+                  </div>
+                  <span className="truncate">
+                    {selectedOptions.length > 1
+                      ? `${selectedOptions.length} selected`
+                      : selectedOptions[0]?.label}
+                  </span>
+                </>
+              )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+          <PopoverContent
+            id={inputListboxId}
+            align="start"
+            className="w-48 p-0"
+          >
             <Command>
               <CommandInput placeholder="Search options..." />
               <CommandList>
@@ -633,8 +769,19 @@ function FilterValueInput({
                           );
                         }}
                       >
+                        {option.icon && <option.icon />}
                         <span className="truncate">{option.label}</span>
-                        {isSelected && <span className="ml-auto">✓</span>}
+                        {option.count && (
+                          <span className="ml-auto font-mono text-xs">
+                            {option.count}
+                          </span>
+                        )}
+                        <Check
+                          className={cn(
+                            "ml-auto",
+                            isSelected ? "opacity-100" : "opacity-0",
+                          )}
+                        />
                       </CommandItem>
                     );
                   })}
@@ -646,27 +793,78 @@ function FilterValueInput({
       );
     }
 
+    // Single value selection
+    const inputListboxId = `${inputId}-listbox`;
+    const selectedOption = selectOptions.find(
+      (opt) => opt.value === (value as string),
+    );
+
     return (
-      <Select
-        value={value as string | undefined}
-        onValueChange={(val) => onChange(val === "" ? undefined : val)}
-      >
-        <SelectTrigger size="sm" className="w-40 rounded font-normal">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {selectOptions.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
+        <PopoverTrigger asChild>
+          <Button
+            id={inputId}
+            aria-controls={inputListboxId}
+            variant="outline"
+            size="sm"
+            className="h-8 w-full justify-start rounded font-normal"
+          >
+            {selectedOption ? (
+              <>
+                {selectedOption.icon && <selectedOption.icon />}
+                <span className="truncate">{selectedOption.label}</span>
+              </>
+            ) : (
+              <span className="text-muted-foreground">{placeholder}</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          id={inputListboxId}
+          align="start"
+          className="w-[200px] p-0"
+        >
+          <Command>
+            <CommandInput placeholder="Search options..." />
+            <CommandList>
+              <CommandEmpty>No options found.</CommandEmpty>
+              <CommandGroup>
+                {selectOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={() => {
+                      onChange(option.value);
+                      setShowValueSelector(false);
+                    }}
+                  >
+                    {option.icon && <option.icon />}
+                    <span className="truncate">{option.label}</span>
+                    {option.count && (
+                      <span className="ml-auto font-mono text-xs">
+                        {option.count}
+                      </span>
+                    )}
+                    <Check
+                      className={cn(
+                        "ml-auto",
+                        value === option.value ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
     );
   }
 
+  // Default text input
   return (
     <Input
+      id={inputId}
       type="text"
       placeholder={placeholder}
       value={(localValue as string | undefined) ?? ""}
@@ -676,7 +874,7 @@ function FilterValueInput({
         setLocalValue(newValue);
         debouncedOnChange(newValue);
       }}
-      className="h-8 w-40 rounded"
+      className="h-8 w-full rounded"
     />
   );
 }

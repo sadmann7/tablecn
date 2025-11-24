@@ -5,6 +5,8 @@ export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 export interface CellSelectOption {
   label: string;
   value: string;
+  icon?: React.FC<React.SVGProps<SVGSVGElement>>;
+  count?: number;
 }
 
 export type CellOpts =
