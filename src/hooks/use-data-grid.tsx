@@ -453,7 +453,7 @@ function useDataGrid<TData>({
     [columnIds, store],
   );
 
-  const copyCells = React.useCallback(async () => {
+  const onCellsCopy = React.useCallback(async () => {
     const currentState = store.getState();
 
     // If no selection, copy the focused cell
@@ -555,7 +555,7 @@ function useDataGrid<TData>({
     }
   }, [store]);
 
-  const cutCells = React.useCallback(async () => {
+  const onCellsCut = React.useCallback(async () => {
     // Block cut in read-only mode
     if (readOnly) return;
 
@@ -1643,13 +1643,13 @@ function useDataGrid<TData>({
 
       if (isCtrlPressed && key === "c") {
         event.preventDefault();
-        copyCells();
+        onCellsCopy();
         return;
       }
 
       if (isCtrlPressed && key === "x" && !readOnly) {
         event.preventDefault();
-        cutCells();
+        onCellsCut();
         return;
       }
 
@@ -1800,8 +1800,8 @@ function useDataGrid<TData>({
       blurCell,
       navigateCell,
       selectAll,
-      copyCells,
-      cutCells,
+      onCellsCopy,
+      onCellsCut,
       pasteCells,
       onDataUpdate,
       clearSelection,
@@ -2008,6 +2008,8 @@ function useDataGrid<TData>({
         onPasteDialogOpenChange,
         onPasteWithExpansion,
         onPasteWithoutExpansion,
+        onCellsCopy,
+        onCellsCut,
       },
     }),
     [
@@ -2052,6 +2054,8 @@ function useDataGrid<TData>({
       onPasteDialogOpenChange,
       onPasteWithExpansion,
       onPasteWithoutExpansion,
+      onCellsCopy,
+      onCellsCut,
     ],
   );
 
