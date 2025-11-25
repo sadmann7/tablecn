@@ -488,7 +488,7 @@ function DataGridFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-        <div className="min-w-36 flex-1">
+        <div className="max-w-36 flex-1">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}
@@ -502,7 +502,13 @@ function DataGridFilterItem<TData>({
               onEndValueChange={onEndValueChange}
             />
           ) : (
-            <div className="h-8 w-full rounded border bg-transparent dark:bg-input/30" />
+            <div
+              id={inputId}
+              role="status"
+              aria-label={`${columnLabels.get(filter.id)} filter is empty`}
+              aria-live="polite"
+              className="h-8 w-full rounded border bg-transparent dark:bg-input/30"
+            />
           )}
         </div>
         <Button
@@ -648,7 +654,7 @@ function DataGridFilterInput<TData>({
           ? `${formatDate(startDate)} - ${formatDate(endDate)}`
           : startDate
             ? formatDate(startDate)
-            : "Pick a date range";
+            : "Pick a range";
 
       return (
         <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
@@ -692,9 +698,6 @@ function DataGridFilterInput<TData>({
                 setLocalEndValue(toValue);
                 onValueChange(fromValue);
                 onEndValueChange?.(toValue);
-                if (range?.from && range?.to) {
-                  setShowValueSelector(false);
-                }
               }}
             />
           </PopoverContent>
@@ -722,7 +725,7 @@ function DataGridFilterInput<TData>({
           >
             <CalendarIcon />
             <span className="truncate">
-              {dateValue ? formatDate(dateValue) : placeholder}
+              {dateValue ? formatDate(dateValue) : "Pick a date"}
             </span>
           </Button>
         </PopoverTrigger>
