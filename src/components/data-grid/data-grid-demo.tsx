@@ -3,6 +3,7 @@
 import { faker } from "@faker-js/faker";
 import { DirectionProvider } from "@radix-ui/react-direction";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Languages } from "lucide-react";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
@@ -109,7 +110,6 @@ function generatePerson(id: number): Person {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
 
-  // Generate 0-3 files for this person
   const fileCount = faker.number.int({ min: 0, max: 3 });
   const selectedFiles = faker.helpers.arrayElements(sampleFiles, fileCount);
 
@@ -121,7 +121,7 @@ function generatePerson(id: number): Person {
     return {
       id: `${id}-file-${index}`,
       name: file.name,
-      size: sizeKB * 1024, // Convert to bytes
+      size: sizeKB * 1024,
       type: file.type,
       url: `https://example.com/files/${id}/${file.name}`,
     };
@@ -154,13 +154,13 @@ const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
 
 interface DataGridDemoImplProps extends UseDataGridProps<Person> {
   dir: Direction;
-  setDir: React.Dispatch<React.SetStateAction<Direction>>;
+  onDirChange: (dir: Direction) => void;
   height: number;
 }
 
 function DataGridDemoImpl({
   dir,
-  setDir,
+  onDirChange,
   data,
   onDataChange,
   columns,
@@ -198,12 +198,15 @@ function DataGridDemoImpl({
         className="flex items-center gap-2 self-end"
       >
         <Toggle
+          aria-label="Toggle text direction"
+          dir={dir}
           variant="outline"
           size="sm"
+          className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
           pressed={dir === "rtl"}
-          onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
-          aria-label="Toggle text direction"
+          onPressedChange={(pressed) => onDirChange(pressed ? "rtl" : "ltr")}
         >
+          <Languages className="text-muted-foreground" />
           {dir === "ltr" ? "LTR" : "RTL"}
         </Toggle>
         <DataGridFilterMenu table={table} align="end" />
@@ -569,7 +572,7 @@ export function DataGridDemo() {
         onFilesDelete={onFilesDelete}
         height={height}
         dir={dir}
-        setDir={setDir}
+        onDirChange={setDir}
       />
     </DirectionProvider>
   );
