@@ -216,7 +216,7 @@ export function DataGridFilterMenu<TData>({
           className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[480px]"
           {...props}
         >
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 text-start">
             <h4 id={labelId} className="font-medium leading-none">
               {columnFilters.length > 0 ? "Filter by" : "No filters applied"}
             </h4>
