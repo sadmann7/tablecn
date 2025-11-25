@@ -3,6 +3,7 @@
 import { faker } from "@faker-js/faker";
 import { DirectionProvider } from "@radix-ui/react-direction";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Languages } from "lucide-react";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
@@ -198,12 +199,14 @@ function DataGridDemoImpl({
       >
         <Toggle
           aria-label="Toggle text direction"
+          dir={dir}
           variant="outline"
           size="sm"
           className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
           pressed={dir === "rtl"}
           onPressedChange={(pressed) => onDirChange(pressed ? "rtl" : "ltr")}
         >
+          <Languages className="text-muted-foreground" />
           {dir === "ltr" ? "LTR" : "RTL"}
         </Toggle>
         <DataGridFilterMenu table={table} align="end" />
