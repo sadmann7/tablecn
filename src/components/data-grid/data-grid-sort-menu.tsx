@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
 import {
   ArrowDownUp,
@@ -57,6 +58,7 @@ export function DataGridSortMenu<TData>({
   table,
   ...props
 }: DataGridSortMenuProps<TData>) {
+  const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -222,6 +224,7 @@ export function DataGridSortMenu<TData>({
                     columnLabels={columnLabels}
                     onSortUpdate={onSortUpdate}
                     onSortRemove={onSortRemove}
+                    dir={dir}
                   />
                 ))}
               </ul>
@@ -269,6 +272,7 @@ interface DataTableSortItemProps {
   columnLabels: Map<string, string>;
   onSortUpdate: (sortId: string, updates: Partial<ColumnSort>) => void;
   onSortRemove: (sortId: string) => void;
+  dir: "ltr" | "rtl";
 }
 
 function DataTableSortItem({
@@ -278,6 +282,7 @@ function DataTableSortItem({
   columnLabels,
   onSortUpdate,
   onSortRemove,
+  dir,
 }: DataTableSortItemProps) {
   const fieldListboxId = `${sortItemId}-field-listbox`;
   const fieldTriggerId = `${sortItemId}-field-trigger`;
@@ -333,7 +338,7 @@ function DataTableSortItem({
             id={fieldListboxId}
             className="w-(--radix-popover-trigger-width) p-0"
           >
-            <Command>
+            <Command dir={dir}>
               <CommandInput placeholder="Search fields..." />
               <CommandList>
                 <CommandEmpty>No fields found.</CommandEmpty>

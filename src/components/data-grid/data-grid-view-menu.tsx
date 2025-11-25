@@ -30,6 +30,7 @@ export function DataGridViewMenu<TData>({
   ...props
 }: DataGridViewMenuProps<TData>) {
   const dir = useDirection();
+
   const columns = React.useMemo(
     () =>
       table

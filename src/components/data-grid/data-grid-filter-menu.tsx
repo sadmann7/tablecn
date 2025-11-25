@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import type { Column, ColumnFilter, Table } from "@tanstack/react-table";
 import {
   CalendarIcon,
@@ -65,6 +66,7 @@ export function DataGridFilterMenu<TData>({
   table,
   ...props
 }: DataGridFilterMenuProps<TData>) {
+  const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -245,6 +247,7 @@ export function DataGridFilterMenu<TData>({
                     table={table}
                     onFilterUpdate={onFilterUpdate}
                     onFilterRemove={onFilterRemove}
+                    dir={dir}
                   />
                 ))}
               </ul>
@@ -296,6 +299,7 @@ interface DataGridFilterItemProps<TData> {
   table: Table<TData>;
   onFilterUpdate: (filterId: string, updates: Partial<ColumnFilter>) => void;
   onFilterRemove: (filterId: string) => void;
+  dir: "ltr" | "rtl";
 }
 
 function DataGridFilterItem<TData>({
@@ -308,6 +312,7 @@ function DataGridFilterItem<TData>({
   table,
   onFilterUpdate,
   onFilterRemove,
+  dir,
 }: DataGridFilterItemProps<TData>) {
   const fieldListboxId = `${filterItemId}-field-listbox`;
   const fieldTriggerId = `${filterItemId}-field-trigger`;
@@ -419,7 +424,7 @@ function DataGridFilterItem<TData>({
             align="start"
             className="w-40 p-0"
           >
-            <Command>
+            <Command dir={dir}>
               <CommandInput placeholder="Search fields..." />
               <CommandList>
                 <CommandEmpty>No fields found.</CommandEmpty>
@@ -500,6 +505,7 @@ function DataGridFilterItem<TData>({
               endValue={filterValue?.endValue}
               onValueChange={onValueChange}
               onEndValueChange={onEndValueChange}
+              dir={dir}
             />
           ) : (
             <div
@@ -540,6 +546,7 @@ interface DataGridFilterInputProps<TData> {
   onValueChange: (value: string | number | string[] | undefined) => void;
   onEndValueChange?: (value: string | number | string[] | undefined) => void;
   placeholder?: string;
+  dir: "ltr" | "rtl";
 }
 
 function DataGridFilterInput<TData>({
@@ -552,6 +559,7 @@ function DataGridFilterInput<TData>({
   onValueChange,
   onEndValueChange,
   placeholder = "Value",
+  dir,
 }: DataGridFilterInputProps<TData>) {
   const [showValueSelector, setShowValueSelector] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(value);
@@ -804,7 +812,7 @@ function DataGridFilterInput<TData>({
             align="start"
             className="w-48 p-0"
           >
-            <Command>
+            <Command dir={dir}>
               <CommandInput placeholder="Search options..." />
               <CommandList>
                 <CommandEmpty>No options found.</CommandEmpty>
@@ -877,7 +885,7 @@ function DataGridFilterInput<TData>({
           align="start"
           className="w-[200px] p-0"
         >
-          <Command>
+          <Command dir={dir}>
             <CommandInput placeholder="Search options..." />
             <CommandList>
               <CommandEmpty>No options found.</CommandEmpty>
