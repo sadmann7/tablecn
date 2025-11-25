@@ -1,4 +1,4 @@
-import type { Row } from "@tanstack/react-table";
+import type { FilterFn, Row } from "@tanstack/react-table";
 import type {
   BooleanFilterOperator,
   DateFilterOperator,
@@ -108,7 +108,7 @@ export function getOperatorsForVariant(variant: string): ReadonlyArray<{
   }
 }
 
-export function getFilterFn<TData>() {
+export function getFilterFn<TData>(): FilterFn<TData> {
   return (row: Row<TData>, columnId: string, filterValue: unknown): boolean => {
     if (!filterValue || typeof filterValue !== "object") {
       return true;
