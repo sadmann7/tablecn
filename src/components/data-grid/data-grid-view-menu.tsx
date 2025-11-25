@@ -56,7 +56,7 @@ export function DataGridViewMenu<TData>({
           View
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-44 p-0" {...props}>
+      <PopoverContent dir={dir} className="w-44 p-0" {...props}>
         <Command dir={dir}>
           <CommandInput placeholder="Search columns..." />
           <CommandList>

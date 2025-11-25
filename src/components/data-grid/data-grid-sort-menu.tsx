@@ -193,10 +193,11 @@ export function DataGridSortMenu<TData>({
         <PopoverContent
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
+          dir={dir}
           className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
           {...props}
         >
-          <div className="flex flex-col gap-1 text-start">
+          <div className="flex flex-col gap-1">
             <h4 id={labelId} className="font-medium leading-none">
               {sorting.length > 0 ? "Sort by" : "No sorting applied"}
             </h4>
