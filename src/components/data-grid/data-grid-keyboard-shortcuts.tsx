@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export const DataGridKeyboardShortcuts = React.memo(
 function DataGridKeyboardShortcutsImpl({
   enableSearch = false,
 }: DataGridKeyboardShortcutsProps) {
+  const dir = useDirection();
   const [open, setOpen] = React.useState(false);
   const [input, setInput] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -275,6 +277,7 @@ function DataGridKeyboardShortcutsImpl({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        dir={dir}
         className="max-w-2xl px-0"
         onOpenAutoFocus={onOpenAutoFocus}
         showCloseButton={false}
