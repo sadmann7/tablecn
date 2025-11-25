@@ -1705,7 +1705,6 @@ function useDataGrid<TData>({
           return;
         case "Tab":
           event.preventDefault();
-          // In RTL, Tab moves right-to-left (forward), Shift+Tab moves left-to-right (backward)
           if (dir === "rtl") {
             direction = event.shiftKey ? "right" : "left";
           } else {
@@ -1724,7 +1723,6 @@ function useDataGrid<TData>({
           let newRowIndex = currentState.focusedCell.rowIndex;
           let newColumnId = currentState.focusedCell.columnId;
 
-          // In RTL mode, swap left and right navigation
           const isRtl = dir === "rtl";
 
           switch (direction) {
@@ -1740,7 +1738,6 @@ function useDataGrid<TData>({
               break;
             case "left":
               if (isRtl) {
-                // In RTL, left arrow should move to next column (visually to the left)
                 if (currentColIndex < navigableColumnIds.length - 1) {
                   const nextColumnId = navigableColumnIds[currentColIndex + 1];
                   if (nextColumnId) newColumnId = nextColumnId;
@@ -1754,7 +1751,6 @@ function useDataGrid<TData>({
               break;
             case "right":
               if (isRtl) {
-                // In RTL, right arrow should move to previous column (visually to the right)
                 if (currentColIndex > 0) {
                   const prevColumnId = navigableColumnIds[currentColIndex - 1];
                   if (prevColumnId) newColumnId = prevColumnId;

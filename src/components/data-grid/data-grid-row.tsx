@@ -1,11 +1,11 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import { flexRender, type Row } from "@tanstack/react-table";
 import type { Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
-import { getRowHeightValue } from "@/lib/data-grid";
-import { getCommonPinningStyles } from "@/lib/data-table";
+import { getCommonPinningStyles, getRowHeightValue } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { CellPosition, RowHeightValue } from "@/types/data-grid";
 
@@ -59,6 +59,8 @@ function DataGridRowImpl<TData>({
   className,
   ...props
 }: DataGridRowProps<TData>) {
+  const dir = useDirection();
+
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
       if (typeof virtualRowIndex === "undefined") return;
@@ -110,7 +112,7 @@ function DataGridRowImpl<TData>({
               "border-e": cell.column.id !== "select",
             })}
             style={{
-              ...getCommonPinningStyles({ column: cell.column }),
+              ...getCommonPinningStyles({ column: cell.column, dir }),
               width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
             }}
           >

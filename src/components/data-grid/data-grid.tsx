@@ -10,7 +10,7 @@ import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dial
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
-import { getCommonPinningStyles } from "@/lib/data-table";
+import { getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 
 interface DataGridProps<TData>
@@ -127,7 +127,7 @@ export function DataGrid<TData>({
                       "border-e": header.column.id !== "select",
                     })}
                     style={{
-                      ...getCommonPinningStyles({ column: header.column }),
+                      ...getCommonPinningStyles({ column: header.column, dir }),
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >

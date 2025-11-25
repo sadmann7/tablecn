@@ -1,3 +1,4 @@
+import type { Column } from "@tanstack/react-table";
 import type { CellPosition, RowHeightValue } from "@/types/data-grid";
 
 export function getCellKey(rowIndex: number, columnId: string) {
@@ -37,4 +38,48 @@ export function getLineCount(rowHeight: RowHeightValue): number {
   };
 
   return lineCountMap[rowHeight];
+}
+
+export function getCommonPinningStyles<TData>({
+  column,
+  withBorder = false,
+  dir = "ltr",
+}: {
+  column: Column<TData>;
+  withBorder?: boolean;
+  dir?: "ltr" | "rtl";
+}): React.CSSProperties {
+  const isPinned = column.getIsPinned();
+  const isLastLeftPinnedColumn =
+    isPinned === "left" && column.getIsLastColumn("left");
+  const isFirstRightPinnedColumn =
+    isPinned === "right" && column.getIsFirstColumn("right");
+
+  const isRtl = dir === "rtl";
+
+  const leftPosition =
+    isPinned === "left" ? `${column.getStart("left")}px` : undefined;
+  const rightPosition =
+    isPinned === "right" ? `${column.getAfter("right")}px` : undefined;
+
+  return {
+    boxShadow: withBorder
+      ? isLastLeftPinnedColumn
+        ? isRtl
+          ? "4px 0 4px -4px var(--border) inset"
+          : "-4px 0 4px -4px var(--border) inset"
+        : isFirstRightPinnedColumn
+          ? isRtl
+            ? "-4px 0 4px -4px var(--border) inset"
+            : "4px 0 4px -4px var(--border) inset"
+          : undefined
+      : undefined,
+    left: isRtl ? rightPosition : leftPosition,
+    right: isRtl ? leftPosition : rightPosition,
+    opacity: isPinned ? 0.97 : 1,
+    position: isPinned ? "sticky" : "relative",
+    background: isPinned ? "var(--background)" : "var(--background)",
+    width: column.getSize(),
+    zIndex: isPinned ? 1 : undefined,
+  };
 }
