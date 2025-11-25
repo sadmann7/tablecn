@@ -8,6 +8,7 @@ import "@/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { DirectionProvider } from "@/components/direction-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { fontMono, fontSans } from "@/lib/fonts";
 
@@ -84,11 +85,13 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
           enableSystem
           disableTransitionOnChange
         >
-          <div className="relative flex min-h-screen flex-col">
-            <SiteHeader />
-            <main className="flex-1">{children}</main>
-          </div>
-          <TailwindIndicator />
+          <DirectionProvider dir="rtl">
+            <div className="relative flex min-h-screen flex-col">
+              <SiteHeader />
+              <main className="flex-1">{children}</main>
+            </div>
+            <TailwindIndicator />
+          </DirectionProvider>
         </ThemeProvider>
         <Toaster />
       </body>

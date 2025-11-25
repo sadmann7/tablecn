@@ -136,7 +136,7 @@ function RadioItem({ className, ...props }: React.ComponentProps<"input">) {
         "relative size-4 shrink-0 appearance-none rounded-full border border-input bg-background shadow-xs outline-none transition-[color,box-shadow]",
         "text-primary focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        "checked:before:-translate-x-1/2 checked:before:-translate-y-1/2 checked:before:absolute checked:before:top-1/2 checked:before:left-1/2 checked:before:size-2 checked:before:rounded-full checked:before:bg-primary checked:before:content-['']",
+        "checked:before:-translate-x-1/2 checked:before:-translate-y-1/2 checked:before:absolute checked:before:top-1/2 checked:before:start-1/2 checked:before:size-2 checked:before:rounded-full checked:before:bg-primary checked:before:content-['']",
         "dark:bg-input/30",
         className,
       )}

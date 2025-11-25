@@ -8,8 +8,8 @@ import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-me
 import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
+import { type Direction, useDirection } from "@/components/direction-provider";
 import type { useDataGrid } from "@/hooks/use-data-grid";
-import { useDirection } from "@/hooks/use-direction";
 import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ interface DataGridProps<TData>
   extends ReturnType<typeof useDataGrid<TData>>,
     React.ComponentProps<"div"> {
   height?: number;
-  dir?: "ltr" | "rtl";
+  dir?: Direction;
 }
 
 export function DataGrid<TData>({
@@ -31,8 +31,8 @@ export function DataGrid<TData>({
   searchState,
   columnSizeVars,
   onRowAdd,
-  className,
   dir: dirProp,
+  className,
   ...props
 }: DataGridProps<TData>) {
   const dir = useDirection(dirProp);

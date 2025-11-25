@@ -47,7 +47,7 @@ export function DataGridViewMenu<TData>({
           role="combobox"
           variant="outline"
           size="sm"
-          className="ml-auto hidden h-8 font-normal lg:flex"
+          className="ms-auto hidden h-8 font-normal lg:flex"
         >
           <Settings2 className="text-muted-foreground" />
           View
@@ -71,7 +71,7 @@ export function DataGridViewMenu<TData>({
                   </span>
                   <Check
                     className={cn(
-                      "ml-auto size-4 shrink-0",
+                      "ms-auto size-4 shrink-0",
                       column.getIsVisible() ? "opacity-100" : "opacity-0",
                     )}
                   />

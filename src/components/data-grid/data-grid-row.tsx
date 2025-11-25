@@ -107,7 +107,7 @@ function DataGridRowImpl<TData>({
             data-slot="grid-cell"
             tabIndex={-1}
             className={cn({
-              "border-r": cell.column.id !== "select",
+              "border-e": cell.column.id !== "select",
             })}
             style={{
               ...getCommonPinningStyles({ column: cell.column }),

@@ -507,21 +507,19 @@ export function DataGridDemo() {
   const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <DirectionProvider value="rtl">
-      <div className="container flex flex-col gap-4 py-4">
-        <div
-          role="toolbar"
-          aria-orientation="horizontal"
-          className="flex items-center gap-2 self-end"
-        >
-          <DataGridFilterMenu table={table} align="end" />
-          <DataGridSortMenu table={table} align="end" />
-          <DataGridRowHeightMenu table={table} align="end" />
-          <DataGridViewMenu table={table} align="end" />
-        </div>
-        <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
-        <DataGrid {...dataGridProps} table={table} height={height} />
+    <div className="container flex flex-col gap-4 py-4">
+      <div
+        role="toolbar"
+        aria-orientation="horizontal"
+        className="flex items-center gap-2 self-end"
+      >
+        <DataGridFilterMenu table={table} align="end" />
+        <DataGridSortMenu table={table} align="end" />
+        <DataGridRowHeightMenu table={table} align="end" />
+        <DataGridViewMenu table={table} align="end" />
       </div>
-    </DirectionProvider>
+      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
+      <DataGrid {...dataGridProps} table={table} height={height} />
+    </div>
   );
 }

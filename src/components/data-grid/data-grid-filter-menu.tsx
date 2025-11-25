@@ -452,7 +452,7 @@ function DataGridFilterItem<TData>({
                       <span className="truncate">{column.label}</span>
                       <Check
                         className={cn(
-                          "ml-auto",
+                          "ms-auto",
                           column.value === filter.id
                             ? "opacity-100"
                             : "opacity-0",
@@ -827,13 +827,13 @@ function DataGridFilterInput<TData>({
                         {option.icon && <option.icon />}
                         <span className="truncate">{option.label}</span>
                         {option.count && (
-                          <span className="ml-auto font-mono text-xs">
+                          <span className="ms-auto font-mono text-xs">
                             {option.count}
                           </span>
                         )}
                         <Check
                           className={cn(
-                            "ml-auto",
+                            "ms-auto",
                             isSelected ? "opacity-100" : "opacity-0",
                           )}
                         />
@@ -894,13 +894,13 @@ function DataGridFilterInput<TData>({
                     {option.icon && <option.icon />}
                     <span className="truncate">{option.label}</span>
                     {option.count && (
-                      <span className="ml-auto font-mono text-xs">
+                      <span className="ms-auto font-mono text-xs">
                         {option.count}
                       </span>
                     )}
                     <Check
                       className={cn(
-                        "ml-auto",
+                        "ms-auto",
                         value === option.value ? "opacity-100" : "opacity-0",
                       )}
                     />

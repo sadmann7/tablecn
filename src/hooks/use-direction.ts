@@ -4,11 +4,16 @@ type Direction = "ltr" | "rtl";
 
 const DirectionContext = React.createContext<Direction | undefined>(undefined);
 
+const DirectionProvider = DirectionContext.Provider;
+
 function useDirection(dirProp?: Direction): Direction {
   const contextDir = React.useContext(DirectionContext);
   return dirProp ?? contextDir ?? "ltr";
 }
 
-const DirectionProvider = DirectionContext.Provider;
-
-export { useDirection, DirectionProvider };
+export {
+  useDirection,
+  DirectionProvider,
+  //
+  type Direction,
+};
