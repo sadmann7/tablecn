@@ -9,9 +9,9 @@ import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyb
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
+import { DirectionProvider } from "@/components/direction-provider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
-import { DirectionProvider } from "@/hooks/use-direction";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { FileCellData } from "@/types/data-grid";

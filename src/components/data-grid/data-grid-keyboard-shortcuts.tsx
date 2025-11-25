@@ -279,7 +279,7 @@ function DataGridKeyboardShortcutsImpl({
         onOpenAutoFocus={onOpenAutoFocus}
         showCloseButton={false}
       >
-        <DialogClose className="absolute top-6 end-6" asChild>
+        <DialogClose className="absolute end-6 top-6" asChild>
           <Button variant="ghost" size="icon" className="size-6">
             <XIcon />
           </Button>
@@ -293,7 +293,7 @@ function DataGridKeyboardShortcutsImpl({
         </DialogHeader>
         <div className="px-6">
           <div className="relative">
-            <SearchIcon className="-translate-y-1/2 absolute top-1/2 start-3 size-3.5 text-muted-foreground" />
+            <SearchIcon className="-translate-y-1/2 absolute start-3 top-1/2 size-3.5 text-muted-foreground" />
             <Input
               ref={inputRef}
               placeholder="Search shortcuts..."

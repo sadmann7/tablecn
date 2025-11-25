@@ -8,9 +8,6 @@ const DirectionContext = React.createContext<Direction | undefined>(undefined);
 
 function useDirection(dir?: Direction): Direction {
   const contextDir = React.useContext(DirectionContext);
-  if (!contextDir) {
-    throw new Error("useDirection must be used within a DirectionProvider");
-  }
   return dir ?? contextDir ?? "ltr";
 }
 
