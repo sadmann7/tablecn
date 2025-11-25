@@ -172,9 +172,7 @@ function DataGridDemoImpl({
   height,
 }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
-    columns:
-      // render 4 columns for now
-      columns.slice(0, 4),
+    columns,
     data,
     onDataChange,
     onRowAdd,
