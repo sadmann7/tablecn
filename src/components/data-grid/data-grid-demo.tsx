@@ -17,6 +17,8 @@ import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { FileCellData } from "@/types/data-grid";
 
+type Direction = "ltr" | "rtl";
+
 interface Person {
   id: string;
   name?: string;
@@ -150,9 +152,77 @@ const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
   generatePerson(i + 1),
 );
 
+interface DataGridDemoImplProps extends UseDataGridProps<Person> {
+  dir: Direction;
+  setDir: React.Dispatch<React.SetStateAction<Direction>>;
+  data: Person[];
+  setData: React.Dispatch<React.SetStateAction<Person[]>>;
+  columns: ColumnDef<Person>[];
+  height: number;
+}
+
+function DataGridDemoImpl({
+  dir,
+  setDir,
+  data,
+  setData,
+  columns,
+  onRowAdd,
+  onRowsAdd,
+  onRowsDelete,
+  onFilesUpload,
+  onFilesDelete,
+  height,
+}: DataGridDemoImplProps) {
+  const { table, ...dataGridProps } = useDataGrid({
+    columns,
+    data,
+    onDataChange: setData,
+    onRowAdd,
+    onRowsAdd,
+    onRowsDelete,
+    onFilesUpload,
+    onFilesDelete,
+    getRowId: (row) => row.id,
+    initialState: {
+      columnPinning: {
+        left: ["select"],
+      },
+    },
+    enableSearch: true,
+    enablePaste: true,
+  });
+
+  return (
+    <div className="container flex flex-col gap-4 py-4">
+      <div
+        role="toolbar"
+        aria-orientation="horizontal"
+        className="flex items-center gap-2 self-end"
+      >
+        <Toggle
+          variant="outline"
+          size="sm"
+          pressed={dir === "rtl"}
+          onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
+          aria-label="Toggle text direction"
+        >
+          {dir === "ltr" ? "LTR" : "RTL"}
+        </Toggle>
+        <DataGridFilterMenu table={table} align="end" />
+        <DataGridSortMenu table={table} align="end" />
+        <DataGridRowHeightMenu table={table} align="end" />
+        <DataGridViewMenu table={table} align="end" />
+      </div>
+      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
+      <DataGrid {...dataGridProps} table={table} height={height} />
+    </div>
+  );
+}
+
 export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
-  const [dir, setDir] = React.useState<"ltr" | "rtl">("ltr");
+  const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
@@ -487,52 +557,23 @@ export function DataGridDemo() {
       );
     }, []);
 
-  const { table, ...dataGridProps } = useDataGrid({
-    columns,
-    data,
-    onDataChange: setData,
-    onRowAdd,
-    onRowsAdd,
-    onRowsDelete,
-    onFilesUpload,
-    onFilesDelete,
-    getRowId: (row) => row.id,
-    initialState: {
-      columnPinning: {
-        left: ["select"],
-      },
-    },
-    enableSearch: true,
-    enablePaste: true,
-  });
-
   const height = Math.max(400, windowSize.height - 150);
 
   return (
     <DirectionProvider dir={dir}>
-      <div className="container flex flex-col gap-4 py-4">
-        <div
-          role="toolbar"
-          aria-orientation="horizontal"
-          className="flex items-center gap-2 self-end"
-        >
-          <Toggle
-            variant="outline"
-            size="sm"
-            pressed={dir === "rtl"}
-            onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
-            aria-label="Toggle text direction"
-          >
-            {dir === "ltr" ? "LTR" : "RTL"}
-          </Toggle>
-          <DataGridFilterMenu table={table} align="end" />
-          <DataGridSortMenu table={table} align="end" />
-          <DataGridRowHeightMenu table={table} align="end" />
-          <DataGridViewMenu table={table} align="end" />
-        </div>
-        <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
-        <DataGrid {...dataGridProps} table={table} height={height} />
-      </div>
+      <DataGridDemoImpl
+        data={data}
+        setData={setData}
+        columns={columns}
+        onRowAdd={onRowAdd}
+        onRowsAdd={onRowsAdd}
+        onRowsDelete={onRowsDelete}
+        onFilesUpload={onFilesUpload}
+        onFilesDelete={onFilesDelete}
+        height={height}
+        dir={dir}
+        setDir={setDir}
+      />
     </DirectionProvider>
   );
 }
