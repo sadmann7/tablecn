@@ -5,7 +5,6 @@ import {
   type ThemeProviderProps,
 } from "next-themes";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
-
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {

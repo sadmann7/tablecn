@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import { flexRender } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
@@ -9,7 +10,7 @@ import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dial
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
-import { getCommonPinningStyles } from "@/lib/data-table";
+import { getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 
 interface DataGridProps<TData>
@@ -32,6 +33,7 @@ export function DataGrid<TData>({
   className,
   ...props
 }: DataGridProps<TData>) {
+  const dir = useDirection();
   const rows = table.getRowModel().rows;
   const columns = table.getAllColumns();
 
@@ -61,6 +63,7 @@ export function DataGrid<TData>({
   return (
     <div
       data-slot="grid-wrapper"
+      dir={dir}
       className={cn("relative flex w-full flex-col", className)}
       {...props}
     >
@@ -121,10 +124,10 @@ export function DataGrid<TData>({
                     data-slot="grid-header-cell"
                     tabIndex={-1}
                     className={cn("relative", {
-                      "border-r": header.column.id !== "select",
+                      "border-e": header.column.id !== "select",
                     })}
                     style={{
-                      ...getCommonPinningStyles({ column: header.column }),
+                      ...getCommonPinningStyles({ column: header.column, dir }),
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >
@@ -195,7 +198,7 @@ export function DataGrid<TData>({
                 onClick={onRowAdd}
                 onKeyDown={onAddRowKeyDown}
               >
-                <div className="sticky left-0 flex items-center gap-2 px-3 text-muted-foreground">
+                <div className="sticky start-0 flex items-center gap-2 px-3 text-muted-foreground">
                   <Plus className="size-3.5" />
                   <span className="text-sm">Add row</span>
                 </div>

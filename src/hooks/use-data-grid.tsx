@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -145,6 +146,7 @@ function useDataGrid<TData>({
   readOnly = false,
   ...props
 }: UseDataGridProps<TData>) {
+  const dir = useDirection();
   const dataGridRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>>>(null);
   const rowVirtualizerRef =
@@ -989,6 +991,8 @@ function useDataGrid<TData>({
       let newRowIndex = rowIndex;
       let newColumnId = columnId;
 
+      const isRtl = dir === "rtl";
+
       switch (direction) {
         case "up":
           newRowIndex = Math.max(0, rowIndex - 1);
@@ -997,15 +1001,29 @@ function useDataGrid<TData>({
           newRowIndex = Math.min(rowCount - 1, rowIndex + 1);
           break;
         case "left":
-          if (currentColIndex > 0) {
-            const prevColumnId = navigableColumnIds[currentColIndex - 1];
-            if (prevColumnId) newColumnId = prevColumnId;
+          if (isRtl) {
+            if (currentColIndex < navigableColumnIds.length - 1) {
+              const nextColumnId = navigableColumnIds[currentColIndex + 1];
+              if (nextColumnId) newColumnId = nextColumnId;
+            }
+          } else {
+            if (currentColIndex > 0) {
+              const prevColumnId = navigableColumnIds[currentColIndex - 1];
+              if (prevColumnId) newColumnId = prevColumnId;
+            }
           }
           break;
         case "right":
-          if (currentColIndex < navigableColumnIds.length - 1) {
-            const nextColumnId = navigableColumnIds[currentColIndex + 1];
-            if (nextColumnId) newColumnId = nextColumnId;
+          if (isRtl) {
+            if (currentColIndex > 0) {
+              const prevColumnId = navigableColumnIds[currentColIndex - 1];
+              if (prevColumnId) newColumnId = prevColumnId;
+            }
+          } else {
+            if (currentColIndex < navigableColumnIds.length - 1) {
+              const nextColumnId = navigableColumnIds[currentColIndex + 1];
+              if (nextColumnId) newColumnId = nextColumnId;
+            }
           }
           break;
         case "home":
@@ -1136,7 +1154,7 @@ function useDataGrid<TData>({
         focusCell(newRowIndex, newColumnId);
       }
     },
-    [store, navigableColumnIds, focusCell, data.length, rowHeightValue],
+    [dir, store, navigableColumnIds, focusCell, data.length, rowHeightValue],
   );
 
   const onCellEditingStart = React.useCallback(
@@ -1687,7 +1705,11 @@ function useDataGrid<TData>({
           return;
         case "Tab":
           event.preventDefault();
-          direction = event.shiftKey ? "left" : "right";
+          if (dir === "rtl") {
+            direction = event.shiftKey ? "right" : "left";
+          } else {
+            direction = event.shiftKey ? "left" : "right";
+          }
           break;
       }
 
@@ -1701,6 +1723,8 @@ function useDataGrid<TData>({
           let newRowIndex = currentState.focusedCell.rowIndex;
           let newColumnId = currentState.focusedCell.columnId;
 
+          const isRtl = dir === "rtl";
+
           switch (direction) {
             case "up":
               newRowIndex = Math.max(0, currentState.focusedCell.rowIndex - 1);
@@ -1713,15 +1737,29 @@ function useDataGrid<TData>({
               );
               break;
             case "left":
-              if (currentColIndex > 0) {
-                const prevColumnId = navigableColumnIds[currentColIndex - 1];
-                if (prevColumnId) newColumnId = prevColumnId;
+              if (isRtl) {
+                if (currentColIndex < navigableColumnIds.length - 1) {
+                  const nextColumnId = navigableColumnIds[currentColIndex + 1];
+                  if (nextColumnId) newColumnId = nextColumnId;
+                }
+              } else {
+                if (currentColIndex > 0) {
+                  const prevColumnId = navigableColumnIds[currentColIndex - 1];
+                  if (prevColumnId) newColumnId = prevColumnId;
+                }
               }
               break;
             case "right":
-              if (currentColIndex < navigableColumnIds.length - 1) {
-                const nextColumnId = navigableColumnIds[currentColIndex + 1];
-                if (nextColumnId) newColumnId = nextColumnId;
+              if (isRtl) {
+                if (currentColIndex > 0) {
+                  const prevColumnId = navigableColumnIds[currentColIndex - 1];
+                  if (prevColumnId) newColumnId = prevColumnId;
+                }
+              } else {
+                if (currentColIndex < navigableColumnIds.length - 1) {
+                  const nextColumnId = navigableColumnIds[currentColIndex + 1];
+                  if (nextColumnId) newColumnId = nextColumnId;
+                }
               }
               break;
           }
@@ -1743,6 +1781,7 @@ function useDataGrid<TData>({
       }
     },
     [
+      dir,
       store,
       blurCell,
       navigateCell,

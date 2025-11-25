@@ -26,7 +26,7 @@ export function DataGridRenderCount({
   return (
     <div
       className={cn(
-        "fixed right-4 bottom-4 z-50 rounded-md border bg-background/95 px-3 py-2 font-mono text-xs shadow-lg backdrop-blur supports-backdrop-filter:bg-background/60",
+        "fixed end-4 bottom-4 z-50 rounded-md border bg-background/95 px-3 py-2 font-mono text-xs shadow-lg backdrop-blur supports-backdrop-filter:bg-background/60",
         className,
       )}
       {...props}

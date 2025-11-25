@@ -185,7 +185,7 @@ export function DataGridColumnHeader<TData, TValue>({
           {column.getCanSort() && (
             <>
               <DropdownMenuCheckboxItem
-                className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
+                className="relative ps-2 pe-8 [&>span:first-child]:start-auto [&>span:first-child]:end-2 [&_svg]:text-muted-foreground"
                 checked={column.getIsSorted() === "asc"}
                 onClick={() => onSortingChange("asc")}
               >
@@ -193,7 +193,7 @@ export function DataGridColumnHeader<TData, TValue>({
                 Sort asc
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
-                className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
+                className="relative ps-2 pe-8 [&>span:first-child]:start-auto [&>span:first-child]:end-2 [&_svg]:text-muted-foreground"
                 checked={column.getIsSorted() === "desc"}
                 onClick={() => onSortingChange("desc")}
               >
@@ -252,7 +252,7 @@ export function DataGridColumnHeader<TData, TValue>({
             <>
               <DropdownMenuSeparator />
               <DropdownMenuCheckboxItem
-                className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
+                className="relative ps-2 pe-8 [&>span:first-child]:start-auto [&>span:first-child]:end-2 [&_svg]:text-muted-foreground"
                 checked={!column.getIsVisible()}
                 onClick={() => column.toggleVisibility(false)}
               >
@@ -315,7 +315,7 @@ function DataGridColumnResizerImpl<TData, TValue>({
       aria-valuemax={defaultColumnDef.maxSize}
       tabIndex={0}
       className={cn(
-        "after:-translate-x-1/2 -right-px absolute top-0 z-50 h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:inset-y-0 after:left-1/2 after:h-full after:w-[18px] after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
+        "after:-translate-x-1/2 -end-px absolute top-0 z-50 h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:inset-y-0 after:start-1/2 after:h-full after:w-[18px] after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
         header.column.getIsResizing()
           ? "bg-primary"
           : "opacity-0 hover:opacity-100",

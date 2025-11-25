@@ -1,5 +1,6 @@
 "use client";
 
+import { useDirection } from "@radix-ui/react-direction";
 import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
 import {
   ArrowDownUp,
@@ -57,6 +58,7 @@ export function DataGridSortMenu<TData>({
   table,
   ...props
 }: DataGridSortMenuProps<TData>) {
+  const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -191,6 +193,7 @@ export function DataGridSortMenu<TData>({
         <PopoverContent
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
+          dir={dir}
           className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
           {...props}
         >
@@ -218,6 +221,7 @@ export function DataGridSortMenu<TData>({
                     key={sort.id}
                     sort={sort}
                     sortItemId={`${id}-sort-${sort.id}`}
+                    dir={dir}
                     columns={columns}
                     columnLabels={columnLabels}
                     onSortUpdate={onSortUpdate}
@@ -251,8 +255,8 @@ export function DataGridSortMenu<TData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-[180px] rounded-sm bg-primary/10" />
+        <div dir={dir} className="flex items-center gap-2">
+          <div className="h-8 w-44 rounded-sm bg-primary/10" />
           <div className="h-8 w-24 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
@@ -265,6 +269,7 @@ export function DataGridSortMenu<TData>({
 interface DataTableSortItemProps {
   sort: ColumnSort;
   sortItemId: string;
+  dir: "ltr" | "rtl";
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   onSortUpdate: (sortId: string, updates: Partial<ColumnSort>) => void;
@@ -274,6 +279,7 @@ interface DataTableSortItemProps {
 function DataTableSortItem({
   sort,
   sortItemId,
+  dir,
   columns,
   columnLabels,
   onSortUpdate,
@@ -333,7 +339,7 @@ function DataTableSortItem({
             id={fieldListboxId}
             className="w-(--radix-popover-trigger-width) p-0"
           >
-            <Command>
+            <Command dir={dir}>
               <CommandInput placeholder="Search fields..." />
               <CommandList>
                 <CommandEmpty>No fields found.</CommandEmpty>

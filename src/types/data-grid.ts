@@ -1,10 +1,5 @@
 import type { Cell, RowData, Table } from "@tanstack/react-table";
 
-export interface Option {
-  label: string;
-  value: string;
-}
-
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
 export interface CellSelectOption {
