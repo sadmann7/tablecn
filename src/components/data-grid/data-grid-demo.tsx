@@ -172,7 +172,9 @@ function DataGridDemoImpl({
   height,
 }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
-    columns,
+    columns:
+      // render 4 columns for now
+      columns.slice(0, 4),
     data,
     onDataChange,
     onRowAdd,
@@ -212,7 +214,12 @@ function DataGridDemoImpl({
         <DataGridViewMenu table={table} align="end" />
       </div>
       <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
-      <DataGrid {...dataGridProps} table={table} height={height} />
+      <DataGrid
+        {...dataGridProps}
+        table={table}
+        height={height}
+        stretchColumns
+      />
     </div>
   );
 }

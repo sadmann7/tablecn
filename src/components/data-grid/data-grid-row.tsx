@@ -16,6 +16,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
+  stretchColumns?: boolean;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -55,6 +56,7 @@ function DataGridRowImpl<TData>({
   rowMapRef,
   rowHeight,
   focusedCell,
+  stretchColumns = false,
   ref,
   className,
   ...props
@@ -109,6 +111,7 @@ function DataGridRowImpl<TData>({
             data-slot="grid-cell"
             tabIndex={-1}
             className={cn({
+              grow: stretchColumns && cell.column.id !== "select",
               "border-e": cell.column.id !== "select",
             })}
             style={{

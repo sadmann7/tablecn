@@ -17,6 +17,7 @@ interface DataGridProps<TData>
   extends ReturnType<typeof useDataGrid<TData>>,
     React.ComponentProps<"div"> {
   height?: number;
+  stretchColumns?: boolean;
 }
 
 export function DataGrid<TData>({
@@ -30,6 +31,7 @@ export function DataGrid<TData>({
   searchState,
   columnSizeVars,
   onRowAdd,
+  stretchColumns = false,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -124,6 +126,7 @@ export function DataGrid<TData>({
                     data-slot="grid-header-cell"
                     tabIndex={-1}
                     className={cn("relative", {
+                      grow: stretchColumns && header.column.id !== "select",
                       "border-e": header.column.id !== "select",
                     })}
                     style={{
@@ -169,6 +172,7 @@ export function DataGrid<TData>({
                 rowVirtualizer={rowVirtualizer}
                 rowHeight={rowHeight}
                 focusedCell={focusedCell}
+                stretchColumns={stretchColumns}
               />
             );
           })}
