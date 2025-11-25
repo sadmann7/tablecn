@@ -173,6 +173,7 @@ export function DataGridSortMenu<TData>({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            dir={dir}
             variant="outline"
             size="sm"
             className="font-normal"
@@ -337,9 +338,10 @@ function DataTableSortItem({
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
+            dir={dir}
             className="w-(--radix-popover-trigger-width) p-0"
           >
-            <Command dir={dir}>
+            <Command>
               <CommandInput placeholder="Search fields..." />
               <CommandList>
                 <CommandEmpty>No fields found.</CommandEmpty>

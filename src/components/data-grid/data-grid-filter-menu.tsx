@@ -64,6 +64,7 @@ interface DataGridFilterMenuProps<TData>
 
 export function DataGridFilterMenu<TData>({
   table,
+  className,
   ...props
 }: DataGridFilterMenuProps<TData>) {
   const dir = useDirection();
@@ -193,6 +194,7 @@ export function DataGridFilterMenu<TData>({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            dir={dir}
             variant="outline"
             size="sm"
             className="font-normal"
@@ -214,7 +216,10 @@ export function DataGridFilterMenu<TData>({
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
           dir={dir}
-          className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[480px]"
+          className={cn(
+            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[480px]",
+            className,
+          )}
           {...props}
         >
           <div className="flex flex-col gap-1">
@@ -413,6 +418,7 @@ function DataGridFilterItem<TData>({
             <Button
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
+              dir={dir}
               variant="outline"
               size="sm"
               className="w-32 justify-between rounded font-normal"
@@ -423,10 +429,11 @@ function DataGridFilterItem<TData>({
           </PopoverTrigger>
           <PopoverContent
             id={fieldListboxId}
+            dir={dir}
             align="start"
             className="w-40 p-0"
           >
-            <Command dir={dir}>
+            <Command>
               <CommandInput placeholder="Search fields..." />
               <CommandList>
                 <CommandEmpty>No fields found.</CommandEmpty>
@@ -670,6 +677,7 @@ function DataGridFilterInput<TData>({
             <Button
               id={inputId}
               aria-controls={inputListboxId}
+              dir={dir}
               variant="outline"
               size="sm"
               className={cn(
@@ -683,6 +691,7 @@ function DataGridFilterInput<TData>({
           </PopoverTrigger>
           <PopoverContent
             id={inputListboxId}
+            dir={dir}
             align="start"
             className="w-auto p-0"
           >
@@ -724,6 +733,7 @@ function DataGridFilterInput<TData>({
           <Button
             id={inputId}
             aria-controls={inputListboxId}
+            dir={dir}
             variant="outline"
             size="sm"
             className={cn(
@@ -739,6 +749,7 @@ function DataGridFilterInput<TData>({
         </PopoverTrigger>
         <PopoverContent
           id={inputListboxId}
+          dir={dir}
           align="start"
           className="w-auto p-0"
         >
@@ -778,6 +789,7 @@ function DataGridFilterInput<TData>({
             <Button
               id={inputId}
               aria-controls={inputListboxId}
+              dir={dir}
               variant="outline"
               size="sm"
               className="h-8 w-full justify-start rounded font-normal"
@@ -809,10 +821,11 @@ function DataGridFilterInput<TData>({
           </PopoverTrigger>
           <PopoverContent
             id={inputListboxId}
+            dir={dir}
             align="start"
             className="w-48 p-0"
           >
-            <Command dir={dir}>
+            <Command>
               <CommandInput placeholder="Search options..." />
               <CommandList>
                 <CommandEmpty>No options found.</CommandEmpty>
@@ -866,6 +879,7 @@ function DataGridFilterInput<TData>({
           <Button
             id={inputId}
             aria-controls={inputListboxId}
+            dir={dir}
             variant="outline"
             size="sm"
             className="h-8 w-full justify-start rounded font-normal"
@@ -882,10 +896,11 @@ function DataGridFilterInput<TData>({
         </PopoverTrigger>
         <PopoverContent
           id={inputListboxId}
+          dir={dir}
           align="start"
           className="w-[200px] p-0"
         >
-          <Command dir={dir}>
+          <Command>
             <CommandInput placeholder="Search options..." />
             <CommandList>
               <CommandEmpty>No options found.</CommandEmpty>

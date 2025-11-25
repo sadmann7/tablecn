@@ -27,6 +27,7 @@ interface DataGridViewMenuProps<TData>
 
 export function DataGridViewMenu<TData>({
   table,
+  className,
   ...props
 }: DataGridViewMenuProps<TData>) {
   const dir = useDirection();
@@ -48,6 +49,7 @@ export function DataGridViewMenu<TData>({
         <Button
           aria-label="Toggle columns"
           role="combobox"
+          dir={dir}
           variant="outline"
           size="sm"
           className="ms-auto hidden h-8 font-normal lg:flex"
@@ -56,8 +58,12 @@ export function DataGridViewMenu<TData>({
           View
         </Button>
       </PopoverTrigger>
-      <PopoverContent dir={dir} className="w-44 p-0" {...props}>
-        <Command dir={dir}>
+      <PopoverContent
+        dir={dir}
+        className={cn("w-44 p-0", className)}
+        {...props}
+      >
+        <Command>
           <CommandInput placeholder="Search columns..." />
           <CommandList>
             <CommandEmpty>No columns found.</CommandEmpty>
