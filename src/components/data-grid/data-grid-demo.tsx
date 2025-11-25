@@ -11,6 +11,7 @@ import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
+import { DirectionProvider } from "@/hooks/use-direction";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { FileCellData } from "@/types/data-grid";
@@ -506,19 +507,21 @@ export function DataGridDemo() {
   const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <div className="container flex flex-col gap-4 py-4">
-      <div
-        role="toolbar"
-        aria-orientation="horizontal"
-        className="flex items-center gap-2 self-end"
-      >
-        <DataGridFilterMenu table={table} align="end" />
-        <DataGridSortMenu table={table} align="end" />
-        <DataGridRowHeightMenu table={table} align="end" />
-        <DataGridViewMenu table={table} align="end" />
+    <DirectionProvider value="rtl">
+      <div className="container flex flex-col gap-4 py-4">
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2 self-end"
+        >
+          <DataGridFilterMenu table={table} align="end" />
+          <DataGridSortMenu table={table} align="end" />
+          <DataGridRowHeightMenu table={table} align="end" />
+          <DataGridViewMenu table={table} align="end" />
+        </div>
+        <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
+        <DataGrid {...dataGridProps} table={table} height={height} />
       </div>
-      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
-      <DataGrid {...dataGridProps} table={table} height={height} />
-    </div>
+    </DirectionProvider>
   );
 }
