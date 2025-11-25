@@ -221,11 +221,11 @@ export function DataGridSortMenu<TData>({
                     key={sort.id}
                     sort={sort}
                     sortItemId={`${id}-sort-${sort.id}`}
+                    dir={dir}
                     columns={columns}
                     columnLabels={columnLabels}
                     onSortUpdate={onSortUpdate}
                     onSortRemove={onSortRemove}
-                    dir={dir}
                   />
                 ))}
               </ul>
@@ -255,8 +255,8 @@ export function DataGridSortMenu<TData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-[180px] rounded-sm bg-primary/10" />
+        <div dir={dir} className="flex items-center gap-2">
+          <div className="h-8 w-44 rounded-sm bg-primary/10" />
           <div className="h-8 w-24 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
@@ -269,21 +269,21 @@ export function DataGridSortMenu<TData>({
 interface DataTableSortItemProps {
   sort: ColumnSort;
   sortItemId: string;
+  dir: "ltr" | "rtl";
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   onSortUpdate: (sortId: string, updates: Partial<ColumnSort>) => void;
   onSortRemove: (sortId: string) => void;
-  dir: "ltr" | "rtl";
 }
 
 function DataTableSortItem({
   sort,
   sortItemId,
+  dir,
   columns,
   columnLabels,
   onSortUpdate,
   onSortRemove,
-  dir,
 }: DataTableSortItemProps) {
   const fieldListboxId = `${sortItemId}-field-listbox`;
   const fieldTriggerId = `${sortItemId}-field-trigger`;

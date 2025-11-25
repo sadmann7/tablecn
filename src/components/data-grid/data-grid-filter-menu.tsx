@@ -50,7 +50,7 @@ import {
 } from "@/lib/data-grid-filters";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { FilterOperator, FilterValue, Option } from "@/types/data-grid";
+import type { FilterOperator, FilterValue } from "@/types/data-grid";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
@@ -79,7 +79,7 @@ export function DataGridFilterMenu<TData>({
     const labels = new Map<string, string>();
     const variants = new Map<string, string>();
     const filteringIds = new Set(columnFilters.map((f) => f.id));
-    const availableColumns: Option[] = [];
+    const availableColumns: { id: string; label: string }[] = [];
 
     for (const column of table.getAllColumns()) {
       if (!column.getCanFilter()) continue;
@@ -91,7 +91,7 @@ export function DataGridFilterMenu<TData>({
       variants.set(column.id, variant);
 
       if (!filteringIds.has(column.id)) {
-        availableColumns.push({ label, value: column.id });
+        availableColumns.push({ id: column.id, label });
       }
     }
 
@@ -106,13 +106,13 @@ export function DataGridFilterMenu<TData>({
     const firstColumn = columns[0];
     if (!firstColumn) return;
 
-    const variant = columnVariants.get(firstColumn.value) ?? "short-text";
+    const variant = columnVariants.get(firstColumn.id) ?? "short-text";
     const defaultOperator = getDefaultOperator(variant);
 
     table.setColumnFilters((prevFilters) => [
       ...prevFilters,
       {
-        id: firstColumn.value,
+        id: firstColumn.id,
         value: {
           operator: defaultOperator,
           value: "",
@@ -242,13 +242,13 @@ export function DataGridFilterMenu<TData>({
                     filter={filter}
                     index={index}
                     filterItemId={`${id}-filter-${filter.id}`}
+                    dir={dir}
                     columns={columns}
                     columnLabels={columnLabels}
                     columnVariants={columnVariants}
                     table={table}
                     onFilterUpdate={onFilterUpdate}
                     onFilterRemove={onFilterRemove}
-                    dir={dir}
                   />
                 ))}
               </ul>
@@ -278,10 +278,11 @@ export function DataGridFilterMenu<TData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-[140px] rounded-sm bg-primary/10" />
-          <div className="h-8 w-[140px] rounded-sm bg-primary/10" />
-          <div className="h-8 w-[140px] rounded-sm bg-primary/10" />
+        <div dir={dir} className="flex items-center gap-2">
+          <div className="h-8 min-w-[72px] rounded-sm bg-primary/10" />
+          <div className="h-8 w-32 rounded-sm bg-primary/10" />
+          <div className="h-8 w-32 rounded-sm bg-primary/10" />
+          <div className="h-8 w-36 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
           <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
         </div>
@@ -294,26 +295,26 @@ interface DataGridFilterItemProps<TData> {
   filter: ColumnFilter;
   index: number;
   filterItemId: string;
-  columns: Option[];
+  dir: "ltr" | "rtl";
+  columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   columnVariants: Map<string, string>;
   table: Table<TData>;
   onFilterUpdate: (filterId: string, updates: Partial<ColumnFilter>) => void;
   onFilterRemove: (filterId: string) => void;
-  dir: "ltr" | "rtl";
 }
 
 function DataGridFilterItem<TData>({
   filter,
   index,
   filterItemId,
+  dir,
   columns,
   columnLabels,
   columnVariants,
   table,
   onFilterUpdate,
   onFilterRemove,
-  dir,
 }: DataGridFilterItemProps<TData>) {
   const fieldListboxId = `${filterItemId}-field-listbox`;
   const fieldTriggerId = `${filterItemId}-field-trigger`;
@@ -432,8 +433,8 @@ function DataGridFilterItem<TData>({
                 <CommandGroup>
                   {columns.map((column) => (
                     <CommandItem
-                      key={column.value}
-                      value={column.value}
+                      key={column.id}
+                      value={column.id}
                       onSelect={(value) => {
                         const newVariant =
                           columnVariants.get(value) ?? "short-text";
@@ -459,9 +460,7 @@ function DataGridFilterItem<TData>({
                       <Check
                         className={cn(
                           "ms-auto",
-                          column.value === filter.id
-                            ? "opacity-100"
-                            : "opacity-0",
+                          column.id === filter.id ? "opacity-100" : "opacity-0",
                         )}
                       />
                     </CommandItem>
@@ -502,11 +501,11 @@ function DataGridFilterItem<TData>({
               operator={operator}
               column={column}
               inputId={inputId}
+              dir={dir}
               value={filterValue?.value}
               endValue={filterValue?.endValue}
               onValueChange={onValueChange}
               onEndValueChange={onEndValueChange}
-              dir={dir}
             />
           ) : (
             <div
@@ -540,27 +539,27 @@ function DataGridFilterItem<TData>({
 interface DataGridFilterInputProps<TData> {
   variant: string;
   operator: FilterOperator;
+  dir: "ltr" | "rtl";
+  placeholder?: string;
   value: string | number | string[] | undefined;
   endValue?: string | number;
   column: Column<TData>;
   inputId: string;
   onValueChange: (value: string | number | string[] | undefined) => void;
   onEndValueChange?: (value: string | number | string[] | undefined) => void;
-  placeholder?: string;
-  dir: "ltr" | "rtl";
 }
 
 function DataGridFilterInput<TData>({
   variant,
   operator,
+  dir,
+  placeholder = "Value",
   value,
   endValue,
   column,
   inputId,
   onValueChange,
   onEndValueChange,
-  placeholder = "Value",
-  dir,
 }: DataGridFilterInputProps<TData>) {
   const [showValueSelector, setShowValueSelector] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(value);

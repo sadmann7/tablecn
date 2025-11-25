@@ -5,6 +5,7 @@
   "title": "Data Grid View Menu",
   "description": "A view menu component for the data grid to toggle column visibility",
   "dependencies": [
+    "@radix-ui/react-direction",
     "@tanstack/react-table",
     "lucide-react"
   ],

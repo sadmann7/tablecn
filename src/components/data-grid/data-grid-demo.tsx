@@ -15,7 +15,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { Direction, FileCellData } from "@/types/data-grid";
+import type { FileCellData } from "@/types/data-grid";
 
 interface Person {
   id: string;
@@ -152,7 +152,7 @@ const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
 
 export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
-  const [dir, setDir] = React.useState<Direction>("ltr");
+  const [dir, setDir] = React.useState<"ltr" | "rtl">("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
