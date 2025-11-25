@@ -15,7 +15,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { FileCellData } from "@/types/data-grid";
+import type { Direction, FileCellData } from "@/types/data-grid";
 
 interface Person {
   id: string;
@@ -152,7 +152,7 @@ const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
 
 export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
-  const [direction, setDirection] = React.useState<"ltr" | "rtl">("ltr");
+  const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
@@ -509,7 +509,7 @@ export function DataGridDemo() {
   const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <DirectionProvider dir={direction}>
+    <DirectionProvider dir={dir}>
       <div className="container flex flex-col gap-4 py-4">
         <div
           role="toolbar"
@@ -519,11 +519,11 @@ export function DataGridDemo() {
           <Toggle
             variant="outline"
             size="sm"
-            pressed={direction === "rtl"}
-            onPressedChange={(pressed) => setDirection(pressed ? "rtl" : "ltr")}
+            pressed={dir === "rtl"}
+            onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
             aria-label="Toggle text direction"
           >
-            {direction === "ltr" ? "LTR" : "RTL"}
+            {dir === "ltr" ? "LTR" : "RTL"}
           </Toggle>
           <DataGridFilterMenu table={table} align="end" />
           <DataGridSortMenu table={table} align="end" />

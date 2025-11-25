@@ -12,12 +12,13 @@ import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { getCommonPinningStyles } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
+import type { Direction } from "@/types/data-grid";
 
 interface DataGridProps<TData>
   extends ReturnType<typeof useDataGrid<TData>>,
     React.ComponentProps<"div"> {
   height?: number;
-  dir?: "ltr" | "rtl";
+  dir?: Direction;
 }
 
 export function DataGrid<TData>({
