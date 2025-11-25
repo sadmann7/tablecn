@@ -807,6 +807,7 @@ function onFilterInputRender<TData>({
                   onFilterUpdate(filter.filterId, {
                     value: (date?.getTime() ?? "").toString(),
                   });
+                  setShowValueSelector(false);
                 }}
               />
             )}

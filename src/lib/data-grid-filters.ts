@@ -115,7 +115,7 @@ export function getFilterFn<TData>(): FilterFn<TData> {
     }
 
     const filter = filterValue as FilterValue;
-    const { operator, value, value2 } = filter;
+    const { operator, value, endValue } = filter;
 
     const cellValue = row.getValue(columnId);
 
@@ -210,8 +210,8 @@ export function getFilterFn<TData>(): FilterFn<TData> {
         return cellValue <= value;
       }
 
-      if (operator === "between" && typeof value2 === "number") {
-        return cellValue >= value && cellValue <= value2;
+      if (operator === "between" && typeof endValue === "number") {
+        return cellValue >= value && cellValue <= endValue;
       }
     }
 
@@ -236,8 +236,8 @@ export function getFilterFn<TData>(): FilterFn<TData> {
           return cellDate >= filterDate;
         }
 
-        if (operator === "between" && typeof value2 === "string") {
-          const filterDate2 = new Date(value2);
+        if (operator === "between" && typeof endValue === "string") {
+          const filterDate2 = new Date(endValue);
           return cellDate >= filterDate && cellDate <= filterDate2;
         }
       }
