@@ -1,6 +1,7 @@
 "use client";
 
 import { faker } from "@faker-js/faker";
+import { DirectionProvider } from "@radix-ui/react-direction";
 import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
@@ -9,8 +10,8 @@ import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyb
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
-import { DirectionProvider } from "@/components/direction-provider";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
@@ -151,6 +152,7 @@ const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
 
 export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
+  const [direction, setDirection] = React.useState<"ltr" | "rtl">("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
@@ -507,19 +509,30 @@ export function DataGridDemo() {
   const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <div className="container flex flex-col gap-4 py-4">
-      <div
-        role="toolbar"
-        aria-orientation="horizontal"
-        className="flex items-center gap-2 self-end"
-      >
-        <DataGridFilterMenu table={table} align="end" />
-        <DataGridSortMenu table={table} align="end" />
-        <DataGridRowHeightMenu table={table} align="end" />
-        <DataGridViewMenu table={table} align="end" />
+    <DirectionProvider dir={direction}>
+      <div className="container flex flex-col gap-4 py-4">
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2 self-end"
+        >
+          <Toggle
+            variant="outline"
+            size="sm"
+            pressed={direction === "rtl"}
+            onPressedChange={(pressed) => setDirection(pressed ? "rtl" : "ltr")}
+            aria-label="Toggle text direction"
+          >
+            {direction === "ltr" ? "LTR" : "RTL"}
+          </Toggle>
+          <DataGridFilterMenu table={table} align="end" />
+          <DataGridSortMenu table={table} align="end" />
+          <DataGridRowHeightMenu table={table} align="end" />
+          <DataGridViewMenu table={table} align="end" />
+        </div>
+        <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
+        <DataGrid {...dataGridProps} table={table} height={height} />
       </div>
-      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
-      <DataGrid {...dataGridProps} table={table} height={height} />
-    </div>
+    </DirectionProvider>
   );
 }
