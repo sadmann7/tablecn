@@ -155,9 +155,6 @@ const initialData: Person[] = Array.from({ length: 10000 }, (_, i) =>
 interface DataGridDemoImplProps extends UseDataGridProps<Person> {
   dir: Direction;
   setDir: React.Dispatch<React.SetStateAction<Direction>>;
-  data: Person[];
-  setData: React.Dispatch<React.SetStateAction<Person[]>>;
-  columns: ColumnDef<Person>[];
   height: number;
 }
 
@@ -165,7 +162,7 @@ function DataGridDemoImpl({
   dir,
   setDir,
   data,
-  setData,
+  onDataChange,
   columns,
   onRowAdd,
   onRowsAdd,
@@ -177,7 +174,7 @@ function DataGridDemoImpl({
   const { table, ...dataGridProps } = useDataGrid({
     columns,
     data,
-    onDataChange: setData,
+    onDataChange,
     onRowAdd,
     onRowsAdd,
     onRowsDelete,
@@ -563,7 +560,7 @@ export function DataGridDemo() {
     <DirectionProvider dir={dir}>
       <DataGridDemoImpl
         data={data}
-        setData={setData}
+        onDataChange={setData}
         columns={columns}
         onRowAdd={onRowAdd}
         onRowsAdd={onRowsAdd}
