@@ -1,14 +1,21 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
 import { flexRender, type Row, type Table } from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useComposedRefs } from "@/lib/compose-refs";
-import { getCommonPinningStyles, getRowHeightValue } from "@/lib/data-grid";
+import {
+  getCellKey,
+  getCommonPinningStyles,
+  getRowHeightValue,
+} from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { CellPosition, RowHeightValue } from "@/types/data-grid";
+import type {
+  CellPosition,
+  RowHeightValue,
+  SelectionState,
+} from "@/types/data-grid";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
@@ -19,7 +26,8 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
+  selectionState?: SelectionState;
+  dir: "ltr" | "rtl";
   readOnly: boolean;
   stretchColumns?: boolean;
 }
@@ -68,6 +76,13 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     }
   }
 
+  // Re-render if selection state changed (different Set reference means selection changed)
+  if (
+    prev.selectionState?.selectedCells !== next.selectionState?.selectedCells
+  ) {
+    return false;
+  }
+
   // Re-render if row height changed
   if (prev.rowHeight !== next.rowHeight) {
     return false;
@@ -91,7 +106,8 @@ function DataGridRowImpl<TData>({
   rowHeight,
   focusedCell,
   editingCell,
-  getIsCellSelected,
+  selectionState,
+  dir,
   readOnly,
   stretchColumns = false,
   className,
@@ -99,7 +115,6 @@ function DataGridRowImpl<TData>({
   ref,
   ...props
 }: DataGridRowProps<TData>) {
-  const dir = useDirection();
   const virtualRowIndex = virtualItem.index;
 
   const onRowChange = React.useCallback(
@@ -150,7 +165,9 @@ function DataGridRowImpl<TData>({
           editingCell?.rowIndex === virtualRowIndex &&
           editingCell?.columnId === columnId;
         const isCellSelected =
-          getIsCellSelected?.(virtualRowIndex, columnId) ?? false;
+          selectionState?.selectedCells.has(
+            getCellKey(virtualRowIndex, columnId),
+          ) ?? false;
 
         return (
           <div

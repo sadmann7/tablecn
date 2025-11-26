@@ -43,7 +43,7 @@ export function DataGrid<TData>({
   const rowHeight = meta?.rowHeight ?? "short";
   const focusedCell = meta?.focusedCell ?? null;
   const editingCell = meta?.editingCell ?? null;
-  const getIsCellSelected = meta?.getIsCellSelected;
+  const selectionState = meta?.selectionState;
   const readOnly = meta?.readOnly ?? false;
 
   const onGridContextMenu = React.useCallback(
@@ -178,7 +178,8 @@ export function DataGrid<TData>({
                 rowHeight={rowHeight}
                 focusedCell={focusedCell}
                 editingCell={editingCell}
-                getIsCellSelected={getIsCellSelected}
+                selectionState={selectionState}
+                dir={dir}
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}
               />
