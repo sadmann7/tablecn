@@ -157,10 +157,11 @@ export function DataGrid<TData>({
           className="relative grid"
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
+            contain: "strict",
           }}
         >
-          {rowVirtualizer.getVirtualIndexes().map((virtualRowIndex) => {
-            const row = rows[virtualRowIndex];
+          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+            const row = rows[virtualItem.index];
             if (!row) return null;
 
             return (
@@ -168,7 +169,7 @@ export function DataGrid<TData>({
                 key={row.id}
                 row={row}
                 rowMapRef={rowMapRef}
-                virtualRowIndex={virtualRowIndex}
+                virtualItem={virtualItem}
                 rowVirtualizer={rowVirtualizer}
                 rowHeight={rowHeight}
                 focusedCell={focusedCell}

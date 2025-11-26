@@ -2,7 +2,7 @@
 
 import { useDirection } from "@radix-ui/react-direction";
 import { flexRender, type Row } from "@tanstack/react-table";
-import type { Virtualizer } from "@tanstack/react-virtual";
+import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { getCommonPinningStyles, getRowHeightValue } from "@/lib/data-grid";
@@ -12,7 +12,7 @@ import type { CellPosition, RowHeightValue } from "@/types/data-grid";
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
-  virtualRowIndex: number;
+  virtualItem: VirtualItem;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
@@ -20,13 +20,20 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
+  // Re-render if row identity changed
   if (prev.row.id !== next.row.id) {
     return false;
   }
 
-  const prevRowIndex = prev.virtualRowIndex;
-  const nextRowIndex = next.virtualRowIndex;
+  // Re-render if virtual position changed (handles transform updates)
+  if (prev.virtualItem.start !== next.virtualItem.start) {
+    return false;
+  }
 
+  const prevRowIndex = prev.virtualItem.index;
+  const nextRowIndex = next.virtualItem.index;
+
+  // Re-render if focus state changed for this row
   const prevHasFocus = prev.focusedCell?.rowIndex === prevRowIndex;
   const nextHasFocus = next.focusedCell?.rowIndex === nextRowIndex;
 
@@ -34,6 +41,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if focused column changed within this row
   if (nextHasFocus && prevHasFocus) {
     const prevFocusedCol = prev.focusedCell?.columnId;
     const nextFocusedCol = next.focusedCell?.columnId;
@@ -42,16 +50,18 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     }
   }
 
-  if (next.rowVirtualizer.isScrolling) {
-    return true;
+  // Re-render if row height changed
+  if (prev.rowHeight !== next.rowHeight) {
+    return false;
   }
 
-  return false;
+  // Skip re-render - props are equal
+  return true;
 }) as typeof DataGridRowImpl;
 
 function DataGridRowImpl<TData>({
   row,
-  virtualRowIndex,
+  virtualItem,
   rowVirtualizer,
   rowMapRef,
   rowHeight,
@@ -62,6 +72,7 @@ function DataGridRowImpl<TData>({
   ...props
 }: DataGridRowProps<TData>) {
   const dir = useDirection();
+  const virtualRowIndex = virtualItem.index;
 
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
@@ -91,9 +102,13 @@ function DataGridRowImpl<TData>({
       data-slot="grid-row"
       ref={rowRef}
       tabIndex={-1}
-      className={cn("absolute flex w-full border-b", className)}
+      className={cn(
+        "absolute flex w-full border-b will-change-transform",
+        className,
+      )}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
+        transform: `translateY(${virtualItem.start}px)`,
       }}
       {...props}
     >

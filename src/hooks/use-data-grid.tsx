@@ -31,7 +31,7 @@ import type {
 } from "@/types/data-grid";
 
 const DEFAULT_ROW_HEIGHT = "short";
-const OVERSCAN = 3;
+const OVERSCAN = 6;
 const VIEWPORT_OFFSET = 1;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
@@ -2082,26 +2082,13 @@ function useDataGrid<TData>({
     getScrollElement: () => dataGridRef.current,
     estimateSize: () => rowHeightValue,
     overscan,
+    // Delay before isScrolling becomes false - helps batch updates during fast scrolling
+    isScrollingResetDelay: 150,
     measureElement:
       typeof window !== "undefined" &&
       navigator.userAgent.indexOf("Firefox") === -1
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
-    onChange: (instance) => {
-      requestAnimationFrame(() => {
-        const virtualItems = instance.getVirtualItems();
-        if (virtualItems.length === 0) return;
-
-        for (let i = 0; i < virtualItems.length; i++) {
-          const virtualRow = virtualItems[i];
-          if (!virtualRow) continue;
-          const rowRef = rowMapRef.current.get(virtualRow.index);
-          if (rowRef) {
-            rowRef.style.transform = `translateY(${virtualRow.start}px)`;
-          }
-        }
-      });
-    },
   });
 
   if (!rowVirtualizerRef.current) {
