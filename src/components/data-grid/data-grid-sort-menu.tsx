@@ -370,7 +370,8 @@ function DataTableSortItem({
         >
           <SelectTrigger
             aria-controls={directionListboxId}
-            className="h-8 w-24 rounded data-size:h-8"
+            size="sm"
+            className="w-24 rounded"
           >
             <SelectValue />
           </SelectTrigger>

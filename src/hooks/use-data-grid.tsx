@@ -2082,7 +2082,6 @@ function useDataGrid<TData>({
     getScrollElement: () => dataGridRef.current,
     estimateSize: () => rowHeightValue,
     overscan,
-    // Delay before isScrolling becomes false - helps batch updates during fast scrolling
     isScrollingResetDelay: 150,
     measureElement:
       typeof window !== "undefined" &&

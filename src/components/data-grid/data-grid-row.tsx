@@ -67,8 +67,9 @@ function DataGridRowImpl<TData>({
   rowHeight,
   focusedCell,
   stretchColumns = false,
-  ref,
   className,
+  style,
+  ref,
   ...props
 }: DataGridRowProps<TData>) {
   const dir = useDirection();
@@ -109,6 +110,7 @@ function DataGridRowImpl<TData>({
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
         transform: `translateY(${virtualItem.start}px)`,
+        ...style,
       }}
       {...props}
     >
