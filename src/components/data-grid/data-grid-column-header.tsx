@@ -185,7 +185,7 @@ export function DataGridColumnHeader<TData, TValue>({
           {column.getCanSort() && (
             <>
               <DropdownMenuCheckboxItem
-                className="relative ps-2 pe-8 [&>span:first-child]:start-auto [&>span:first-child]:end-2 [&_svg]:text-muted-foreground"
+                className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2 [&_svg]:text-muted-foreground"
                 checked={column.getIsSorted() === "asc"}
                 onClick={() => onSortingChange("asc")}
               >
@@ -193,7 +193,7 @@ export function DataGridColumnHeader<TData, TValue>({
                 Sort asc
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
-                className="relative ps-2 pe-8 [&>span:first-child]:start-auto [&>span:first-child]:end-2 [&_svg]:text-muted-foreground"
+                className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2 [&_svg]:text-muted-foreground"
                 checked={column.getIsSorted() === "desc"}
                 onClick={() => onSortingChange("desc")}
               >
@@ -251,14 +251,13 @@ export function DataGridColumnHeader<TData, TValue>({
           {column.getCanHide() && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                className="relative ps-2 pe-8 [&>span:first-child]:start-auto [&>span:first-child]:end-2 [&_svg]:text-muted-foreground"
-                checked={!column.getIsVisible()}
+              <DropdownMenuItem
+                className="[&_svg]:text-muted-foreground"
                 onClick={() => column.toggleVisibility(false)}
               >
                 <EyeOffIcon />
                 Hide column
-              </DropdownMenuCheckboxItem>
+              </DropdownMenuItem>
             </>
           )}
         </DropdownMenuContent>
