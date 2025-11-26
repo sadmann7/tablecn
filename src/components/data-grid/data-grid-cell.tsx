@@ -26,6 +26,26 @@ interface DataGridCellProps<TData> {
   readOnly: boolean;
 }
 
+// Memoize with stable props - this works because we now receive primitive
+// boolean props instead of reading from unstable table.options.meta
+export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
+  // Fast path: check stable primitive props first
+  if (prev.isFocused !== next.isFocused) return false;
+  if (prev.isEditing !== next.isEditing) return false;
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.readOnly !== next.readOnly) return false;
+  if (prev.rowIndex !== next.rowIndex) return false;
+  if (prev.columnId !== next.columnId) return false;
+
+  // Check cell value
+  if (prev.cell.getValue() !== next.cell.getValue()) return false;
+
+  // Check cell/row identity
+  if (prev.cell.row.id !== next.cell.row.id) return false;
+
+  return true;
+}) as typeof DataGridCellImpl;
+
 function DataGridCellImpl<TData>({
   cell,
   table,
@@ -172,23 +192,3 @@ function DataGridCellImpl<TData>({
       );
   }
 }
-
-// Memoize with stable props - this works because we now receive primitive
-// boolean props instead of reading from unstable table.options.meta
-export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
-  // Fast path: check stable primitive props first
-  if (prev.isFocused !== next.isFocused) return false;
-  if (prev.isEditing !== next.isEditing) return false;
-  if (prev.isSelected !== next.isSelected) return false;
-  if (prev.readOnly !== next.readOnly) return false;
-  if (prev.rowIndex !== next.rowIndex) return false;
-  if (prev.columnId !== next.columnId) return false;
-
-  // Check cell value
-  if (prev.cell.getValue() !== next.cell.getValue()) return false;
-
-  // Check cell/row identity
-  if (prev.cell.row.id !== next.cell.row.id) return false;
-
-  return true;
-}) as typeof DataGridCellImpl;
