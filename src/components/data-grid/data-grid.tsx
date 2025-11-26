@@ -42,6 +42,9 @@ export function DataGrid<TData>({
   const meta = table.options.meta;
   const rowHeight = meta?.rowHeight ?? "short";
   const focusedCell = meta?.focusedCell ?? null;
+  const editingCell = meta?.editingCell ?? null;
+  const getIsCellSelected = meta?.getIsCellSelected;
+  const readOnly = meta?.readOnly ?? false;
 
   const onGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -168,11 +171,15 @@ export function DataGrid<TData>({
               <DataGridRow
                 key={row.id}
                 row={row}
+                table={table}
                 rowMapRef={rowMapRef}
                 virtualItem={virtualItem}
                 rowVirtualizer={rowVirtualizer}
                 rowHeight={rowHeight}
                 focusedCell={focusedCell}
+                editingCell={editingCell}
+                getIsCellSelected={getIsCellSelected}
+                readOnly={readOnly}
                 stretchColumns={stretchColumns}
               />
             );

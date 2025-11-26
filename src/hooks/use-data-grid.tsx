@@ -16,7 +16,6 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
-import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { getCellKey, getRowHeightValue, parseCellKey } from "@/lib/data-grid";
 import type {
   CellPosition,
@@ -1946,7 +1945,8 @@ function useDataGrid<TData>({
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
-      cell: DataGridCell,
+      // Note: cell is rendered directly in DataGridRow to bypass flexRender's
+      // unstable cell.getContext() (see TanStack Table issue #4794)
       minSize: MIN_COLUMN_SIZE,
       maxSize: MAX_COLUMN_SIZE,
     }),
