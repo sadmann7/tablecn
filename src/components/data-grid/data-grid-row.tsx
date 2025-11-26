@@ -118,6 +118,8 @@ function DataGridRowImpl<TData>({
   focusedCell,
   editingCell,
   selectionState,
+  // columnVisibility is used in the memo comparison
+  columnVisibility: _columnVisibility,
   dir,
   readOnly,
   stretchColumns = false,
