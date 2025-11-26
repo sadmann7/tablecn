@@ -1,6 +1,11 @@
 "use client";
 
-import { flexRender, type Row, type Table } from "@tanstack/react-table";
+import {
+  flexRender,
+  type Row,
+  type Table,
+  type VisibilityState,
+} from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
@@ -27,6 +32,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
   selectionState?: SelectionState;
+  columnVisibility?: VisibilityState;
   dir: "ltr" | "rtl";
   readOnly: boolean;
   stretchColumns?: boolean;
@@ -80,6 +86,11 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   if (
     prev.selectionState?.selectedCells !== next.selectionState?.selectedCells
   ) {
+    return false;
+  }
+
+  // Re-render if column visibility changed
+  if (prev.columnVisibility !== next.columnVisibility) {
     return false;
   }
 
