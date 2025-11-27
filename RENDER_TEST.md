@@ -60,6 +60,23 @@ for (let i = 0; i < 10; i++) {
 }
 ```
 
+### AI Autofill Simulation
+
+**🤖 Simulate AI Autofill**: This is the **most realistic test** for AI agent scenarios. It simulates a complete AI workflow:
+
+1. **Phase 1 - Searching** (800ms): Cells show "🔍 Searching..." while waiting for AI
+2. **Phase 2 - Generating (first batch)** (600ms): First 10 cells show "✨ Generating..."
+3. **Phase 3 - Generating (second batch)** (400ms): Remaining cells show "✨ Generating..."
+4. **Phase 4 - Results streaming** (200ms per chunk): AI results populate in chunks of 5
+
+This mimics what happens when:
+- User triggers AI autofill for multiple cells
+- Backend sends request to AI service
+- AI streams responses back
+- Frontend updates cells progressively
+
+**Total duration**: ~3-4 seconds for 20 cells with multiple state transitions per cell.
+
 ## What to Look For
 
 ### In the UI
@@ -116,6 +133,8 @@ Only rows and cells that actually changed should re-render. Check the console to
 ✅ Batched updates complete in <50ms for 100 cells
 ✅ No unnecessary re-renders of unaffected components
 ✅ Memory stays stable across multiple updates
+✅ AI simulation shows smooth state transitions without jank
+✅ FPS stays above 30 during continuous updates
 
 ### Warning Signs
 
@@ -123,6 +142,8 @@ Only rows and cells that actually changed should re-render. Check the console to
 ⚠️ Multiple re-renders of the same cell
 ⚠️ Update time increases non-linearly with cell count
 ⚠️ Memory leaks or increasing render counts
+⚠️ Frame drops or stuttering during AI simulation
+⚠️ Cells flashing or showing incorrect intermediate states
 
 ## AI Autofill Best Practices
 
@@ -145,7 +166,29 @@ When implementing AI autofill:
    });
    ```
 
-2. **Consider Chunking**: For very large datasets (1000+ cells), consider updating in chunks:
+2. **Show Loading States**: Update cells to show loading states while AI is working
+
+   ```typescript
+   // Step 1: Show loading state
+   const loadingUpdates = selectedCells.map(cell => ({
+     ...cell,
+     value: "🔍 Searching..."
+   }));
+   onDataUpdate(loadingUpdates);
+
+   // Step 2: Call AI
+   const aiResults = await fetchAIResults(selectedCells);
+
+   // Step 3: Update with results
+   const finalUpdates = aiResults.map((result, i) => ({
+     rowIndex: selectedCells[i].rowIndex,
+     columnId: selectedCells[i].columnId,
+     value: result
+   }));
+   onDataUpdate(finalUpdates);
+   ```
+
+3. **Consider Chunking**: For very large datasets (1000+ cells), consider updating in chunks:
 
    ```typescript
    const CHUNK_SIZE = 100;
@@ -156,7 +199,7 @@ When implementing AI autofill:
    }
    ```
 
-3. **Stream Updates**: For real-time AI generation, accumulate updates and flush periodically:
+4. **Stream Updates**: For real-time AI generation, accumulate updates and flush periodically:
 
    ```typescript
    const updateBuffer = [];
@@ -170,6 +213,21 @@ When implementing AI autofill:
    });
 
    setInterval(flushUpdates, flushInterval);
+   ```
+
+5. **Handle Errors Gracefully**: Show error states in cells when AI fails
+
+   ```typescript
+   try {
+     const results = await fetchAIResults(cells);
+     onDataUpdate(results);
+   } catch (error) {
+     const errorUpdates = cells.map(cell => ({
+       ...cell,
+       value: "⚠️ Error - click to retry"
+     }));
+     onDataUpdate(errorUpdates);
+   }
    ```
 
 ## Debugging

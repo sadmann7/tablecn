@@ -41,10 +41,6 @@ function RenderCounter({ label }: { label: string }) {
   const renderCount = React.useRef(0);
   renderCount.current++;
 
-  React.useEffect(() => {
-    console.log(`${label} rendered ${renderCount.current} times`);
-  });
-
   return (
     <div className="text-muted-foreground text-xs">
       {label}: {renderCount.current} renders
@@ -153,17 +149,7 @@ export function DataGridRenderTest() {
   );
 
   const onDataChange = React.useCallback((newData: TestPerson[]) => {
-    const startTime = performance.now();
-    console.log(
-      `%c[onDataChange] Updating data...`,
-      "color: #51cf66; font-weight: bold;",
-    );
     setData(newData);
-    const endTime = performance.now();
-    console.log(
-      `%c[onDataChange] Data update took ${(endTime - startTime).toFixed(2)}ms`,
-      "color: #51cf66;",
-    );
   }, []);
 
   const { table, ...dataGridProps } = useDataGrid({
@@ -372,6 +358,114 @@ export function DataGridRenderTest() {
     }
   }, [table]);
 
+  const [isSimulating, setIsSimulating] = React.useState(false);
+
+  const simulateAIAutofill = React.useCallback(async () => {
+    if (isSimulating) return;
+
+    console.log(
+      `%c\n========== SIMULATING AI AUTOFILL (Realistic) ==========`,
+      "color: #845ef7; font-size: 14px; font-weight: bold;",
+    );
+    setIsSimulating(true);
+    const overallStartTime = performance.now();
+    const cellCount = 20;
+
+    try {
+      if (!table.options.meta?.onDataUpdate) return;
+
+      // Phase 1: Mark cells as "Searching..." (simulating AI request sent)
+      console.log(
+        `%c[AI Phase 1] Marking ${cellCount} cells as "Searching..."`,
+        "color: #845ef7;",
+      );
+      const searchingUpdates = [];
+      for (let i = 0; i < cellCount; i++) {
+        searchingUpdates.push({
+          rowIndex: i,
+          columnId: "name",
+          value: "🔍 Searching...",
+        });
+      }
+      table.options.meta.onDataUpdate(searchingUpdates);
+
+      // Simulate network latency
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      // Phase 2: Mark half as "Generating..." (simulating streaming AI response)
+      console.log(
+        `%c[AI Phase 2] ${cellCount / 2} cells "Generating..."`,
+        "color: #845ef7;",
+      );
+      const generatingUpdates = [];
+      for (let i = 0; i < cellCount / 2; i++) {
+        generatingUpdates.push({
+          rowIndex: i,
+          columnId: "name",
+          value: "✨ Generating...",
+        });
+      }
+      table.options.meta.onDataUpdate(generatingUpdates);
+
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      // Phase 3: Update remaining cells to "Generating..."
+      console.log(
+        `%c[AI Phase 3] Remaining cells "Generating..."`,
+        "color: #845ef7;",
+      );
+      const moreGeneratingUpdates = [];
+      for (let i = cellCount / 2; i < cellCount; i++) {
+        moreGeneratingUpdates.push({
+          rowIndex: i,
+          columnId: "name",
+          value: "✨ Generating...",
+        });
+      }
+      table.options.meta.onDataUpdate(moreGeneratingUpdates);
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      // Phase 4: Start populating with AI results (simulate streaming)
+      console.log(
+        `%c[AI Phase 4] Populating with AI results...`,
+        "color: #845ef7;",
+      );
+
+      // Simulate chunked streaming updates (like AI tokens arriving)
+      const chunkSize = 5;
+      for (let chunk = 0; chunk < cellCount / chunkSize; chunk++) {
+        const chunkUpdates = [];
+        for (let i = 0; i < chunkSize; i++) {
+          const rowIndex = chunk * chunkSize + i;
+          if (rowIndex < cellCount) {
+            chunkUpdates.push({
+              rowIndex,
+              columnId: "name",
+              value: `AI Generated: Result ${rowIndex}`,
+            });
+          }
+        }
+        table.options.meta.onDataUpdate(chunkUpdates);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      const overallEndTime = performance.now();
+      console.log(
+        `%c[AI Complete] Total time: ${(overallEndTime - overallStartTime).toFixed(2)}ms`,
+        "color: #845ef7; font-weight: bold;",
+      );
+
+      setRenderStats({
+        componentRenders: componentRenderCount.current,
+        lastUpdateTime: overallEndTime - overallStartTime,
+        cellsUpdated: cellCount,
+      });
+    } finally {
+      setIsSimulating(false);
+    }
+  }, [table, isSimulating]);
+
   return (
     <div className="container flex flex-col gap-4 py-8">
       <div className="rounded-lg border bg-background">
@@ -437,6 +531,30 @@ export function DataGridRenderTest() {
               <div className="mt-2 text-muted-foreground text-xs">
                 Compare performance: batched updates should be much faster and
                 cause fewer re-renders
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 font-semibold text-sm">
+                AI Autofill Simulation
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={simulateAIAutofill}
+                  variant="outline"
+                  size="sm"
+                  disabled={isSimulating}
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50 disabled:opacity-50"
+                >
+                  {isSimulating
+                    ? "🤖 AI Running..."
+                    : "🤖 Simulate AI Autofill"}
+                </Button>
+              </div>
+              <div className="mt-2 text-muted-foreground text-xs">
+                Realistic AI workflow: idle → searching → generating → final
+                values. Watch cells update through multiple states like a real
+                AI agent would.
               </div>
             </div>
           </div>

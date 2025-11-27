@@ -38,7 +38,19 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.columnId !== next.columnId) return false;
 
   // Check cell value
-  if (prev.cell.getValue() !== next.cell.getValue()) return false;
+  const prevValue = prev.cell.getValue();
+  const nextValue = next.cell.getValue();
+  if (prevValue !== nextValue) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `[DataGridCell Memo] ${next.rowIndex}:${next.columnId} value changed:`,
+        prevValue,
+        "→",
+        nextValue,
+      );
+    }
+    return false;
+  }
 
   // Check cell/row identity
   if (prev.cell.row.id !== next.cell.row.id) return false;

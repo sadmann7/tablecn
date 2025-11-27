@@ -44,6 +44,19 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if row data (original) reference changed
+  if (prev.row.original !== next.row.original) {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `[DataGridRow Memo] Row ${next.virtualItem.index} data changed`,
+        prev.row.original,
+        "→",
+        next.row.original,
+      );
+    }
+    return false;
+  }
+
   // Re-render if virtual position changed (handles transform updates)
   if (prev.virtualItem.start !== next.virtualItem.start) {
     return false;
