@@ -360,111 +360,184 @@ export function DataGridRenderTest() {
 
   const [isSimulating, setIsSimulating] = React.useState(false);
 
-  const simulateAIAutofill = React.useCallback(async () => {
-    if (isSimulating) return;
+  const simulateAIAutofill = React.useCallback(
+    async (cellCount: number) => {
+      if (isSimulating) return;
 
-    console.log(
-      `%c\n========== SIMULATING AI AUTOFILL (Realistic) ==========`,
-      "color: #845ef7; font-size: 14px; font-weight: bold;",
-    );
-    setIsSimulating(true);
-    const overallStartTime = performance.now();
-    const cellCount = 20;
-
-    try {
-      if (!table.options.meta?.onDataUpdate) return;
-
-      // Phase 1: Mark cells as "Searching..." (simulating AI request sent)
       console.log(
-        `%c[AI Phase 1] Marking ${cellCount} cells as "Searching..."`,
-        "color: #845ef7;",
+        `%c\n========== AI AUTOFILL: ${cellCount} CELLS ==========`,
+        "color: #845ef7; font-size: 14px; font-weight: bold;",
       );
-      const searchingUpdates = [];
-      for (let i = 0; i < cellCount; i++) {
-        searchingUpdates.push({
-          rowIndex: i,
-          columnId: "name",
-          value: "🔍 Searching...",
-        });
-      }
-      table.options.meta.onDataUpdate(searchingUpdates);
+      setIsSimulating(true);
+      const overallStartTime = performance.now();
 
-      // Simulate network latency
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      try {
+        if (!table.options.meta?.onDataUpdate) return;
 
-      // Phase 2: Mark half as "Generating..." (simulating streaming AI response)
-      console.log(
-        `%c[AI Phase 2] ${cellCount / 2} cells "Generating..."`,
-        "color: #845ef7;",
-      );
-      const generatingUpdates = [];
-      for (let i = 0; i < cellCount / 2; i++) {
-        generatingUpdates.push({
-          rowIndex: i,
-          columnId: "name",
-          value: "✨ Generating...",
-        });
-      }
-      table.options.meta.onDataUpdate(generatingUpdates);
+        // Calculate how many rows and which columns to update
+        // Spread across multiple columns for realism
+        const columnsToFill = ["name", "email", "department", "age"];
+        const rowsCount = Math.ceil(cellCount / columnsToFill.length);
 
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
-      // Phase 3: Update remaining cells to "Generating..."
-      console.log(
-        `%c[AI Phase 3] Remaining cells "Generating..."`,
-        "color: #845ef7;",
-      );
-      const moreGeneratingUpdates = [];
-      for (let i = cellCount / 2; i < cellCount; i++) {
-        moreGeneratingUpdates.push({
-          rowIndex: i,
-          columnId: "name",
-          value: "✨ Generating...",
-        });
-      }
-      table.options.meta.onDataUpdate(moreGeneratingUpdates);
-
-      await new Promise((resolve) => setTimeout(resolve, 400));
-
-      // Phase 4: Start populating with AI results (simulate streaming)
-      console.log(
-        `%c[AI Phase 4] Populating with AI results...`,
-        "color: #845ef7;",
-      );
-
-      // Simulate chunked streaming updates (like AI tokens arriving)
-      const chunkSize = 5;
-      for (let chunk = 0; chunk < cellCount / chunkSize; chunk++) {
-        const chunkUpdates = [];
-        for (let i = 0; i < chunkSize; i++) {
-          const rowIndex = chunk * chunkSize + i;
-          if (rowIndex < cellCount) {
-            chunkUpdates.push({
-              rowIndex,
-              columnId: "name",
-              value: `AI Generated: Result ${rowIndex}`,
+        // Phase 1: Mark cells as "Searching..." (simulating AI request sent)
+        console.log(
+          `%c[AI Phase 1] Marking ${cellCount} cells as "Searching..."`,
+          "color: #845ef7;",
+        );
+        const searchingUpdates = [];
+        let cellsAdded = 0;
+        for (let row = 0; row < rowsCount && cellsAdded < cellCount; row++) {
+          for (const col of columnsToFill) {
+            if (cellsAdded >= cellCount) break;
+            searchingUpdates.push({
+              rowIndex: row,
+              columnId: col,
+              value: "🔍 Searching...",
             });
+            cellsAdded++;
           }
         }
-        table.options.meta.onDataUpdate(chunkUpdates);
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        table.options.meta.onDataUpdate(searchingUpdates);
+
+        // Simulate network latency
+        await new Promise((resolve) => setTimeout(resolve, 800));
+
+        // Phase 2: Mark half as "Generating..." (simulating streaming AI response)
+        const halfwayPoint = Math.floor(cellCount / 2);
+        console.log(
+          `%c[AI Phase 2] ${halfwayPoint} cells "Generating..."`,
+          "color: #845ef7;",
+        );
+        const generatingUpdates = [];
+        cellsAdded = 0;
+        for (let row = 0; row < rowsCount && cellsAdded < halfwayPoint; row++) {
+          for (const col of columnsToFill) {
+            if (cellsAdded >= halfwayPoint) break;
+            generatingUpdates.push({
+              rowIndex: row,
+              columnId: col,
+              value: "✨ Generating...",
+            });
+            cellsAdded++;
+          }
+        }
+        table.options.meta.onDataUpdate(generatingUpdates);
+
+        await new Promise((resolve) => setTimeout(resolve, 600));
+
+        // Phase 3: Update remaining cells to "Generating..."
+        console.log(
+          `%c[AI Phase 3] Remaining cells "Generating..."`,
+          "color: #845ef7;",
+        );
+        const moreGeneratingUpdates = [];
+        cellsAdded = 0;
+        for (
+          let row = Math.floor(halfwayPoint / columnsToFill.length);
+          row < rowsCount && cellsAdded < cellCount - halfwayPoint;
+          row++
+        ) {
+          for (const col of columnsToFill) {
+            if (
+              cellsAdded + halfwayPoint >= cellCount ||
+              cellsAdded >= cellCount - halfwayPoint
+            )
+              break;
+            // Skip cells already updated in phase 2
+            const globalIndex =
+              row * columnsToFill.length + columnsToFill.indexOf(col);
+            if (globalIndex < halfwayPoint) continue;
+
+            moreGeneratingUpdates.push({
+              rowIndex: row,
+              columnId: col,
+              value: "✨ Generating...",
+            });
+            cellsAdded++;
+          }
+        }
+        table.options.meta.onDataUpdate(moreGeneratingUpdates);
+
+        await new Promise((resolve) => setTimeout(resolve, 400));
+
+        // Phase 4: Start populating with AI results (simulate streaming)
+        console.log(
+          `%c[AI Phase 4] Populating with AI results...`,
+          "color: #845ef7;",
+        );
+
+        // Simulate chunked streaming updates (like AI tokens arriving)
+        const chunkSize = Math.max(5, Math.floor(cellCount / 10));
+        cellsAdded = 0;
+        for (let chunk = 0; chunk < Math.ceil(cellCount / chunkSize); chunk++) {
+          const chunkUpdates = [];
+          for (let i = 0; i < chunkSize && cellsAdded < cellCount; i++) {
+            const globalIndex = chunk * chunkSize + i;
+            const row = Math.floor(globalIndex / columnsToFill.length);
+            const colIndex = globalIndex % columnsToFill.length;
+            const col = columnsToFill[colIndex];
+
+            if (!col || row >= rowsCount) break;
+
+            let value: string | number;
+            switch (col) {
+              case "name":
+                value = `AI Name ${row}`;
+                break;
+              case "email":
+                value = `ai.generated.${row}@example.com`;
+                break;
+              case "department":
+                value = departments[row % departments.length] ?? "Engineering";
+                break;
+              case "age":
+                value = 25 + (row % 40);
+                break;
+              default:
+                value = `AI Result ${row}`;
+            }
+
+            chunkUpdates.push({
+              rowIndex: row,
+              columnId: col,
+              value,
+            });
+            cellsAdded++;
+          }
+          table.options.meta.onDataUpdate(chunkUpdates);
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+
+        const overallEndTime = performance.now();
+        console.log(
+          `%c[AI Complete] Total time: ${(overallEndTime - overallStartTime).toFixed(2)}ms`,
+          "color: #845ef7; font-weight: bold;",
+        );
+
+        setRenderStats({
+          componentRenders: componentRenderCount.current,
+          lastUpdateTime: overallEndTime - overallStartTime,
+          cellsUpdated: cellCount,
+        });
+      } finally {
+        setIsSimulating(false);
       }
+    },
+    [table, isSimulating],
+  );
 
-      const overallEndTime = performance.now();
-      console.log(
-        `%c[AI Complete] Total time: ${(overallEndTime - overallStartTime).toFixed(2)}ms`,
-        "color: #845ef7; font-weight: bold;",
-      );
-
-      setRenderStats({
-        componentRenders: componentRenderCount.current,
-        lastUpdateTime: overallEndTime - overallStartTime,
-        cellsUpdated: cellCount,
-      });
-    } finally {
-      setIsSimulating(false);
-    }
-  }, [table, isSimulating]);
+  const aiAutofill5 = React.useCallback(
+    () => simulateAIAutofill(5),
+    [simulateAIAutofill],
+  );
+  const aiAutofill25 = React.useCallback(
+    () => simulateAIAutofill(25),
+    [simulateAIAutofill],
+  );
+  const aiAutofill100 = React.useCallback(
+    () => simulateAIAutofill(100),
+    [simulateAIAutofill],
+  );
 
   return (
     <div className="container flex flex-col gap-4 py-8">
@@ -540,21 +613,38 @@ export function DataGridRenderTest() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
-                  onClick={simulateAIAutofill}
+                  onClick={aiAutofill5}
                   variant="outline"
                   size="sm"
                   disabled={isSimulating}
                   className="border-purple-500 text-purple-600 hover:bg-purple-50 disabled:opacity-50"
                 >
-                  {isSimulating
-                    ? "🤖 AI Running..."
-                    : "🤖 Simulate AI Autofill"}
+                  {isSimulating ? "🤖 Running..." : "🤖 AI Autofill 5 Cells"}
+                </Button>
+                <Button
+                  onClick={aiAutofill25}
+                  variant="outline"
+                  size="sm"
+                  disabled={isSimulating}
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50 disabled:opacity-50"
+                >
+                  {isSimulating ? "🤖 Running..." : "🤖 AI Autofill 25 Cells"}
+                </Button>
+                <Button
+                  onClick={aiAutofill100}
+                  variant="outline"
+                  size="sm"
+                  disabled={isSimulating}
+                  className="border-purple-500 text-purple-600 hover:bg-purple-50 disabled:opacity-50"
+                >
+                  {isSimulating ? "🤖 Running..." : "🤖 AI Autofill 100 Cells"}
                 </Button>
               </div>
               <div className="mt-2 text-muted-foreground text-xs">
-                Realistic AI workflow: idle → searching → generating → final
-                values. Watch cells update through multiple states like a real
-                AI agent would.
+                Realistic AI workflow across <strong>multiple columns</strong>:
+                idle → searching → generating → final values. Cells update in a
+                scattered pattern across rows and columns, like real AI
+                selection.
               </div>
             </div>
           </div>

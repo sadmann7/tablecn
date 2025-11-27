@@ -62,20 +62,30 @@ for (let i = 0; i < 10; i++) {
 
 ### AI Autofill Simulation
 
-**🤖 Simulate AI Autofill**: This is the **most realistic test** for AI agent scenarios. It simulates a complete AI workflow:
+**🤖 AI Autofill N Cells**: This is the **most realistic test** for AI agent scenarios. It simulates a complete AI workflow across **multiple columns** (name, email, department, age).
 
-1. **Phase 1 - Searching** (800ms): Cells show "🔍 Searching..." while waiting for AI
-2. **Phase 2 - Generating (first batch)** (600ms): First 10 cells show "✨ Generating..."
+Available options:
+- **AI Autofill 5 Cells**: Quick test for small-scale AI operations (~2 rows)
+- **AI Autofill 25 Cells**: Medium-scale test for typical use cases (~7 rows)
+- **AI Autofill 100 Cells**: Large-scale test for bulk AI operations (~25 rows)
+
+Each simulation follows these phases:
+1. **Phase 1 - Searching** (800ms): All cells show "🔍 Searching..." while waiting for AI
+2. **Phase 2 - Generating (first batch)** (600ms): First half of cells show "✨ Generating..."
 3. **Phase 3 - Generating (second batch)** (400ms): Remaining cells show "✨ Generating..."
-4. **Phase 4 - Results streaming** (200ms per chunk): AI results populate in chunks of 5
+4. **Phase 4 - Results streaming** (200ms per chunk): AI results populate in adaptive chunks
+   - Generates realistic data per column type (names, emails, departments, ages)
+   - Updates spread across multiple rows and columns
 
 This mimics what happens when:
-- User triggers AI autofill for multiple cells
+- User selects multiple cells across different rows and columns
+- User triggers AI autofill for the selection
 - Backend sends request to AI service
 - AI streams responses back
-- Frontend updates cells progressively
+- Frontend updates cells progressively across the grid
 
-**Total duration**: ~3-4 seconds for 20 cells with multiple state transitions per cell.
+**Duration**: ~3-5 seconds with multiple state transitions per cell (4 updates per cell).
+**Pattern**: Cells update in a scattered pattern across rows and columns, just like real AI selection.
 
 ## What to Look For
 
