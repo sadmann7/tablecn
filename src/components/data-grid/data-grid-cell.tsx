@@ -59,6 +59,18 @@ function DataGridCellImpl<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 
+  // Debug render tracking (only in development)
+  const renderCount = React.useRef(0);
+  renderCount.current++;
+  React.useEffect(() => {
+    if (renderCount.current > 1) {
+      console.log(
+        `[DataGridCell ${rowIndex}:${columnId}] Re-rendered (count: ${renderCount.current}), value:`,
+        cell.getValue(),
+      );
+    }
+  });
+
   switch (variant) {
     case "short-text":
       return (

@@ -130,6 +130,17 @@ function DataGridRowImpl<TData>({
 }: DataGridRowProps<TData>) {
   const virtualRowIndex = virtualItem.index;
 
+  // Debug render tracking (only in development)
+  const renderCount = React.useRef(0);
+  renderCount.current++;
+  React.useEffect(() => {
+    if (renderCount.current > 1) {
+      console.log(
+        `[DataGridRow ${virtualRowIndex}] Re-rendered (count: ${renderCount.current})`,
+      );
+    }
+  });
+
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
       if (typeof virtualRowIndex === "undefined") return;
