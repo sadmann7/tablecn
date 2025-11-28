@@ -1,4 +1,4 @@
-import type { Cell, RowData, Table } from "@tanstack/react-table";
+import type { Cell, RowData, TableMeta } from "@tanstack/react-table";
 
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
@@ -60,6 +60,7 @@ declare module "@tanstack/react-table" {
     cell?: CellOpts;
   }
 
+  // biome-ignore lint/correctness/noUnusedVariables: TData is used in the TableMeta interface
   interface TableMeta<TData extends RowData> {
     dataGridRef?: React.RefObject<HTMLElement | null>;
     cellMapRef?: React.RefObject<Map<string, HTMLDivElement>>;
@@ -114,13 +115,11 @@ declare module "@tanstack/react-table" {
       files: File[];
       rowIndex: number;
       columnId: string;
-      row: TData;
     }) => Promise<FileCellData[]>;
     onFilesDelete?: (params: {
       fileIds: string[];
       rowIndex: number;
       columnId: string;
-      row: TData;
     }) => void | Promise<void>;
     contextMenu?: ContextMenuState;
     onContextMenuOpenChange?: (open: boolean) => void;
@@ -185,7 +184,7 @@ export interface SearchState {
 
 export interface CellVariantProps<TData> {
   cell: Cell<TData, unknown>;
-  table: Table<TData>;
+  meta: TableMeta<TData>;
   rowIndex: number;
   columnId: string;
   isEditing: boolean;

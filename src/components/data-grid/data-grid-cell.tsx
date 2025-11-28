@@ -1,6 +1,6 @@
 "use client";
 
-import type { Cell, Table } from "@tanstack/react-table";
+import type { Cell, TableMeta } from "@tanstack/react-table";
 import * as React from "react";
 
 import {
@@ -17,7 +17,7 @@ import {
 
 interface DataGridCellProps<TData> {
   cell: Cell<TData, unknown>;
-  table: Table<TData>;
+  meta: TableMeta<TData>;
   rowIndex: number;
   columnId: string;
   isFocused: boolean;
@@ -55,7 +55,7 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
 
 function DataGridCellImpl<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -71,7 +71,7 @@ function DataGridCellImpl<TData>({
       return (
         <ShortTextCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -84,7 +84,7 @@ function DataGridCellImpl<TData>({
       return (
         <LongTextCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -97,7 +97,7 @@ function DataGridCellImpl<TData>({
       return (
         <NumberCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -110,7 +110,7 @@ function DataGridCellImpl<TData>({
       return (
         <UrlCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -123,7 +123,7 @@ function DataGridCellImpl<TData>({
       return (
         <CheckboxCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isFocused={isFocused}
@@ -135,7 +135,7 @@ function DataGridCellImpl<TData>({
       return (
         <SelectCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -148,7 +148,7 @@ function DataGridCellImpl<TData>({
       return (
         <MultiSelectCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -161,7 +161,7 @@ function DataGridCellImpl<TData>({
       return (
         <DateCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -174,7 +174,7 @@ function DataGridCellImpl<TData>({
       return (
         <FileCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -188,7 +188,7 @@ function DataGridCellImpl<TData>({
       return (
         <ShortTextCell
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}

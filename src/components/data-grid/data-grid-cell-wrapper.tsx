@@ -1,6 +1,6 @@
 "use client";
 
-import type { Cell, Table } from "@tanstack/react-table";
+import type { Cell, Table, TableMeta } from "@tanstack/react-table";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { getCellKey } from "@/lib/data-grid";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   cell: Cell<TData, unknown>;
-  table: Table<TData>;
+  meta: TableMeta<TData>;
   rowIndex: number;
   columnId: string;
   isEditing: boolean;
@@ -17,7 +17,7 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
 }
 
 export function DataGridCellWrapper<TData>({
-  table,
+  meta,
   rowIndex,
   columnId,
   isEditing,
@@ -29,7 +29,6 @@ export function DataGridCellWrapper<TData>({
   ref,
   ...props
 }: DataGridCellWrapperProps<TData>) {
-  const meta = table.options.meta;
   const cellMapRef = meta?.cellMapRef;
 
   const onCellChange = React.useCallback(

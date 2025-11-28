@@ -51,7 +51,7 @@ import type { CellVariantProps, FileCellData } from "@/types/data-grid";
 
 export function ShortTextCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isEditing,
@@ -63,7 +63,6 @@ export function ShortTextCell<TData>({
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -165,7 +164,7 @@ export function ShortTextCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -195,7 +194,7 @@ export function ShortTextCell<TData>({
 
 export function LongTextCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -207,7 +206,6 @@ export function LongTextCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const prevInitialValueRef = React.useRef(initialValue);
@@ -315,7 +313,7 @@ export function LongTextCell<TData>({
         <DataGridCellWrapper
           ref={containerRef}
           cell={cell}
-          table={table}
+          meta={meta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -349,7 +347,7 @@ export function LongTextCell<TData>({
 
 export function NumberCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -361,7 +359,6 @@ export function NumberCell<TData>({
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const min = cellOpts?.variant === "number" ? cellOpts.min : undefined;
   const max = cellOpts?.variant === "number" ? cellOpts.max : undefined;
@@ -436,7 +433,7 @@ export function NumberCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -484,7 +481,7 @@ function getUrlHref(urlString: string): string {
 
 export function UrlCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isEditing,
@@ -496,7 +493,6 @@ export function UrlCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -637,7 +633,7 @@ export function UrlCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -686,7 +682,7 @@ export function UrlCell<TData>({
 
 export function CheckboxCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -696,7 +692,6 @@ export function CheckboxCell<TData>({
   const initialValue = cell.getValue() as boolean;
   const [value, setValue] = React.useState(Boolean(initialValue));
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -766,7 +761,7 @@ export function CheckboxCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={false}
@@ -791,7 +786,7 @@ export function CheckboxCell<TData>({
 
 export function SelectCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -802,7 +797,6 @@ export function SelectCell<TData>({
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
 
@@ -856,7 +850,7 @@ export function SelectCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -901,7 +895,7 @@ export function SelectCell<TData>({
 
 export function MultiSelectCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -922,7 +916,6 @@ export function MultiSelectCell<TData>({
   const [searchValue, setSearchValue] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
@@ -1038,7 +1031,7 @@ export function MultiSelectCell<TData>({
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
     .filter(Boolean);
 
-  const rowHeight = table.options.meta?.rowHeight ?? "short";
+  const rowHeight = meta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } =
@@ -1053,7 +1046,7 @@ export function MultiSelectCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -1186,7 +1179,7 @@ function formatDateForDisplay(dateStr: string) {
 
 export function DateCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -1197,7 +1190,6 @@ export function DateCell<TData>({
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -1250,7 +1242,7 @@ export function DateCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -1321,7 +1313,7 @@ function getFileIcon(
 
 export function FileCell<TData>({
   cell,
-  table,
+  meta,
   rowIndex,
   columnId,
   isFocused,
@@ -1350,7 +1342,6 @@ export function FileCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dropzoneRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
@@ -1477,15 +1468,13 @@ export function FileCell<TData>({
           setUploadingFiles(uploadingIds);
 
           let uploadedFiles: FileCellData[] = [];
-          const rowData = table.options.data[rowIndex];
 
-          if (meta?.onFilesUpload && rowData) {
+          if (meta?.onFilesUpload) {
             try {
               uploadedFiles = await meta.onFilesUpload({
                 files: filesToValidate,
                 rowIndex,
                 columnId,
-                row: rowData,
               });
             } catch (error) {
               toast.error(
@@ -1534,7 +1523,7 @@ export function FileCell<TData>({
         }
       }
     },
-    [files, maxFiles, validateFile, meta, rowIndex, columnId, readOnly, table],
+    [files, maxFiles, validateFile, meta, rowIndex, columnId, readOnly],
   );
 
   const removeFile = React.useCallback(
@@ -1545,14 +1534,12 @@ export function FileCell<TData>({
       const fileToRemove = files.find((f) => f.id === fileId);
       if (!fileToRemove) return;
 
-      const rowData = table.options.data[rowIndex];
-      if (meta?.onFilesDelete && rowData) {
+      if (meta?.onFilesDelete) {
         try {
           await meta.onFilesDelete({
             fileIds: [fileId],
             rowIndex,
             columnId,
-            row: rowData,
           });
         } catch (error) {
           toast.error(
@@ -1572,21 +1559,19 @@ export function FileCell<TData>({
       setFiles(updatedFiles);
       meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
     },
-    [files, meta, rowIndex, columnId, readOnly, table],
+    [files, meta, rowIndex, columnId, readOnly],
   );
 
   const clearAll = React.useCallback(async () => {
     if (readOnly) return;
     setError(null);
 
-    const rowData = table.options.data[rowIndex];
-    if (meta?.onFilesDelete && rowData && files.length > 0) {
+    if (meta?.onFilesDelete && files.length > 0) {
       try {
         await meta.onFilesDelete({
           fileIds: files.map((f) => f.id),
           rowIndex,
           columnId,
-          row: rowData,
         });
       } catch (error) {
         toast.error(
@@ -1603,7 +1588,7 @@ export function FileCell<TData>({
     }
     setFiles([]);
     meta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
-  }, [files, meta, rowIndex, columnId, readOnly, table]);
+  }, [files, meta, rowIndex, columnId, readOnly]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1785,7 +1770,7 @@ export function FileCell<TData>({
     };
   }, [files]);
 
-  const rowHeight = table.options.meta?.rowHeight ?? "short";
+  const rowHeight = meta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } =
@@ -1803,7 +1788,7 @@ export function FileCell<TData>({
     <DataGridCellWrapper
       ref={containerRef}
       cell={cell}
-      table={table}
+      meta={meta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}

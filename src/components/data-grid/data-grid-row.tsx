@@ -1,6 +1,11 @@
 "use client";
 
-import type { Row, Table, VisibilityState } from "@tanstack/react-table";
+import type {
+  Row,
+  Table,
+  TableMeta,
+  VisibilityState,
+} from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
@@ -20,7 +25,7 @@ import type {
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
-  table: Table<TData>;
+  meta: TableMeta<TData>;
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualItem: VirtualItem;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
@@ -111,7 +116,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
 function DataGridRowImpl<TData>({
   row,
-  table,
+  meta,
   virtualItem,
   rowVirtualizer,
   rowMapRef,
@@ -218,7 +223,7 @@ function DataGridRowImpl<TData>({
             ) : (
               <DataGridCell
                 cell={cell}
-                table={table}
+                meta={meta}
                 rowIndex={virtualRowIndex}
                 columnId={columnId}
                 isFocused={isCellFocused}

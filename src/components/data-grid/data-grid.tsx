@@ -67,6 +67,7 @@ export function DataGrid<TData>({
 
   return (
     <div
+      ref={dataGridRef}
       data-slot="grid-wrapper"
       dir={dir}
       className={cn("relative flex w-full flex-col", className)}
@@ -171,7 +172,7 @@ export function DataGrid<TData>({
               <DataGridRow
                 key={row.id}
                 row={row}
-                table={table}
+                meta={tableMeta}
                 rowMapRef={rowMapRef}
                 virtualItem={virtualItem}
                 rowVirtualizer={rowVirtualizer}
