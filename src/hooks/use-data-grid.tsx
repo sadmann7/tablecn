@@ -246,9 +246,9 @@ function useDataGrid<TData>({
     };
   }, [listenersRef, stateRef]);
 
-  // Only subscribe to values that are used directly in this hook
+  // Only subscribe to values that are used directly in this hook or returned to consumers
   // Values only used in table.options.meta are accessed via getters to avoid unnecessary re-renders
-  const selectionState = useStore(store, (state) => state.selectionState);
+  // selectionState is NOT subscribed - only accessed via meta getter to avoid re-renders on selection changes
   const searchQuery = useStore(store, (state) => state.searchQuery);
   const searchMatches = useStore(store, (state) => state.searchMatches);
   const matchIndex = useStore(store, (state) => state.matchIndex);
@@ -365,11 +365,14 @@ function useDataGrid<TData>({
     }
   }, [onDataUpdate]);
 
+  // Stable callback that reads from store directly to avoid recreating on selection changes
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      return selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
+      return store
+        .getState()
+        .selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
     },
-    [selectionState.selectedCells],
+    [store],
   );
 
   const clearSelection = React.useCallback(() => {
@@ -1360,25 +1363,29 @@ function useDataGrid<TData>({
     }
   }, [store, focusCell]);
 
+  // Stable callbacks that read from store directly to avoid recreating on search changes
   const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      return searchMatches.some(
-        (match) => match.rowIndex === rowIndex && match.columnId === columnId,
-      );
+      return store
+        .getState()
+        .searchMatches.some(
+          (match) => match.rowIndex === rowIndex && match.columnId === columnId,
+        );
     },
-    [searchMatches],
+    [store],
   );
 
   const getIsActiveSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      if (matchIndex < 0) return false;
-      const currentMatch = searchMatches[matchIndex];
+      const currentState = store.getState();
+      if (currentState.matchIndex < 0) return false;
+      const currentMatch = currentState.searchMatches[currentState.matchIndex];
       return (
         currentMatch?.rowIndex === rowIndex &&
         currentMatch?.columnId === columnId
       );
     },
-    [searchMatches, matchIndex],
+    [store],
   );
 
   const blurCell = React.useCallback(() => {
@@ -1979,7 +1986,7 @@ function useDataGrid<TData>({
   const tableMeta = React.useMemo<TableMeta<TData>>(() => {
     if (process.env.NODE_ENV === "development") {
       console.log(
-        "%c[useDataGrid] tableMeta recreated",
+        "%c[useDataGrid] tableMeta recreated (should only happen on mount or callback changes)",
         "color: #ff6b6b; font-weight: bold;",
       );
     }
@@ -2067,6 +2074,22 @@ function useDataGrid<TData>({
     onPasteWithoutExpansion,
   ]);
 
+  // Memoize row model creators (stable functions)
+  const coreRowModel = React.useMemo(() => getCoreRowModel(), []);
+  const filteredRowModel = React.useMemo(() => getFilteredRowModel(), []);
+  const sortedRowModel = React.useMemo(() => getSortedRowModel(), []);
+
+  // Memoize state object to reduce shallow equality checks
+  const tableState = React.useMemo(
+    () => ({
+      ...propsRef.current.state,
+      sorting,
+      columnFilters,
+      rowSelection,
+    }),
+    [propsRef, sorting, columnFilters, rowSelection],
+  );
+
   const tableOptions = React.useMemo<TableOptions<TData>>(() => {
     if (process.env.NODE_ENV === "development") {
       console.log(
@@ -2080,19 +2103,14 @@ function useDataGrid<TData>({
       columns,
       defaultColumn,
       initialState,
-      state: {
-        ...propsRef.current.state,
-        sorting,
-        columnFilters,
-        rowSelection,
-      },
+      state: tableState,
       onRowSelectionChange,
       onSortingChange,
       onColumnFiltersChange,
       columnResizeMode: "onChange",
-      getCoreRowModel: getCoreRowModel(),
-      getFilteredRowModel: getFilteredRowModel(),
-      getSortedRowModel: getSortedRowModel(),
+      getCoreRowModel: coreRowModel,
+      getFilteredRowModel: filteredRowModel,
+      getSortedRowModel: sortedRowModel,
       meta: tableMeta,
     };
   }, [
@@ -2101,12 +2119,13 @@ function useDataGrid<TData>({
     columns,
     defaultColumn,
     initialState,
-    sorting,
-    columnFilters,
-    rowSelection,
+    tableState,
     onRowSelectionChange,
     onSortingChange,
     onColumnFiltersChange,
+    coreRowModel,
+    filteredRowModel,
+    sortedRowModel,
     tableMeta,
   ]);
 
