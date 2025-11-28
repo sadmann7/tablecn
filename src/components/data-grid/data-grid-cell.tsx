@@ -37,9 +37,14 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.rowIndex !== next.rowIndex) return false;
   if (prev.columnId !== next.columnId) return false;
 
-  // Check cell value
-  const prevValue = prev.cell.getValue();
-  const nextValue = next.cell.getValue();
+  // Check cell value using row.original instead of getValue() for stability
+  // getValue() is unstable and recreates on every render, breaking memoization
+  const prevValue = (prev.cell.row.original as Record<string, unknown>)[
+    prev.columnId
+  ];
+  const nextValue = (next.cell.row.original as Record<string, unknown>)[
+    next.columnId
+  ];
   if (prevValue !== nextValue) {
     return false;
   }
