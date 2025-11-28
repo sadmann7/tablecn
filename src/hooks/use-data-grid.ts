@@ -254,15 +254,14 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
-  const columnIds = React.useMemo(() => {
-    return propsRef.current.columns
-      .map((c) => {
-        if (c.id) return c.id;
-        if ("accessorKey" in c) return c.accessorKey as string;
-        return undefined;
-      })
-      .filter((id): id is string => Boolean(id));
-  }, [propsRef]);
+  // Don't memoize columnIds - need fresh columns from propsRef on each render
+  const columnIds = propsRef.current.columns
+    .map((c) => {
+      if (c.id) return c.id;
+      if ("accessorKey" in c) return c.accessorKey as string;
+      return undefined;
+    })
+    .filter((id): id is string => Boolean(id));
 
   const navigableColumnIds = React.useMemo(() => {
     return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
@@ -2059,35 +2058,24 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
     [propsRef, sorting, columnFilters, rowSelection]
   );
 
-  const tableOptions = React.useMemo<TableOptions<TData>>(() => {
-    return {
-      ...propsRef.current,
-      data: propsRef.current.data,
-      columns: propsRef.current.columns,
-      defaultColumn,
-      initialState: propsRef.current.initialState,
-      state: tableState,
-      onRowSelectionChange,
-      onSortingChange,
-      onColumnFiltersChange,
-      columnResizeMode: "onChange",
-      getCoreRowModel: getMemoizedCoreRowModel,
-      getFilteredRowModel: getMemoizedFilteredRowModel,
-      getSortedRowModel: getMemoizedSortedRowModel,
-      meta: tableMeta,
-    };
-  }, [
-    propsRef,
+  // Don't memoize tableOptions when using stable props pattern
+  // The ref pattern means we need fresh options on each render to get latest data
+  const tableOptions: TableOptions<TData> = {
+    ...propsRef.current,
+    data: propsRef.current.data,
+    columns: propsRef.current.columns,
     defaultColumn,
-    tableState,
+    initialState: propsRef.current.initialState,
+    state: tableState,
     onRowSelectionChange,
     onSortingChange,
     onColumnFiltersChange,
-    getMemoizedCoreRowModel,
-    getMemoizedFilteredRowModel,
-    getMemoizedSortedRowModel,
-    tableMeta,
-  ]);
+    columnResizeMode: "onChange",
+    getCoreRowModel: getMemoizedCoreRowModel,
+    getFilteredRowModel: getMemoizedFilteredRowModel,
+    getSortedRowModel: getMemoizedSortedRowModel,
+    meta: tableMeta,
+  };
 
   const table = useReactTable(tableOptions);
 
