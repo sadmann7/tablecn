@@ -246,9 +246,11 @@ function useDataGrid<TData>({
     };
   }, [listenersRef, stateRef]);
 
-  // Only subscribe to values that are used directly in this hook or returned to consumers
-  // Values only used in table.options.meta are accessed via getters to avoid unnecessary re-renders
-  // selectionState is NOT subscribed - only accessed via meta getter to avoid re-renders on selection changes
+  // Subscribe to values that are used for rendering or returned to consumers
+  // These subscriptions are necessary for visual updates (focus, selection, editing)
+  const focusedCell = useStore(store, (state) => state.focusedCell);
+  const editingCell = useStore(store, (state) => state.editingCell);
+  const selectionState = useStore(store, (state) => state.selectionState);
   const searchQuery = useStore(store, (state) => state.searchQuery);
   const searchMatches = useStore(store, (state) => state.searchMatches);
   const matchIndex = useStore(store, (state) => state.matchIndex);
@@ -365,14 +367,11 @@ function useDataGrid<TData>({
     }
   }, [onDataUpdate]);
 
-  // Stable callback that reads from store directly to avoid recreating on selection changes
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      return store
-        .getState()
-        .selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
+      return selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
     },
-    [store],
+    [selectionState.selectedCells],
   );
 
   const clearSelection = React.useCallback(() => {
@@ -936,6 +935,11 @@ function useDataGrid<TData>({
 
   const focusCell = React.useCallback(
     (rowIndex: number, columnId: string) => {
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          `[focusCell] Setting focus to row ${rowIndex}, column ${columnId}`,
+        );
+      }
       store.batch(() => {
         store.setState("focusedCell", { rowIndex, columnId });
         store.setState("editingCell", null);
@@ -1363,29 +1367,25 @@ function useDataGrid<TData>({
     }
   }, [store, focusCell]);
 
-  // Stable callbacks that read from store directly to avoid recreating on search changes
   const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      return store
-        .getState()
-        .searchMatches.some(
-          (match) => match.rowIndex === rowIndex && match.columnId === columnId,
-        );
+      return searchMatches.some(
+        (match) => match.rowIndex === rowIndex && match.columnId === columnId,
+      );
     },
-    [store],
+    [searchMatches],
   );
 
   const getIsActiveSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      const currentState = store.getState();
-      if (currentState.matchIndex < 0) return false;
-      const currentMatch = currentState.searchMatches[currentState.matchIndex];
+      if (matchIndex < 0) return false;
+      const currentMatch = searchMatches[matchIndex];
       return (
         currentMatch?.rowIndex === rowIndex &&
         currentMatch?.columnId === columnId
       );
     },
-    [store],
+    [searchMatches, matchIndex],
   );
 
   const blurCell = React.useCallback(() => {
@@ -2452,9 +2452,14 @@ function useDataGrid<TData>({
     rowMapRef,
     footerRef,
     table,
+    tableMeta,
     rowVirtualizer,
     searchState,
     columnSizeVars,
+    focusedCell,
+    editingCell,
+    selectionState,
+    rowHeight,
     onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
   };
 }

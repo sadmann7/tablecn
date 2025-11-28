@@ -25,11 +25,16 @@ export function DataGrid<TData>({
   rowMapRef,
   footerRef,
   table,
+  tableMeta,
   rowVirtualizer,
-  height = 600,
   searchState,
   columnSizeVars,
+  focusedCell,
+  editingCell,
+  selectionState,
+  rowHeight,
   onRowAdd,
+  height = 600,
   stretchColumns = false,
   className,
   ...props
@@ -38,13 +43,18 @@ export function DataGrid<TData>({
   const rows = table.getRowModel().rows;
   const columns = table.getAllColumns();
 
-  const meta = table.options.meta;
-  const rowHeight = meta?.rowHeight ?? "short";
-  const focusedCell = meta?.focusedCell ?? null;
-  const editingCell = meta?.editingCell ?? null;
-  const selectionState = meta?.selectionState;
-  const readOnly = meta?.readOnly ?? false;
-  const columnVisibility = table.getState().columnVisibility;
+  // Debug logging for focus changes
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[DataGrid] focusedCell changed:", focusedCell);
+    }
+  }, [focusedCell]);
+
+  const readOnly = tableMeta?.readOnly ?? false;
+  const columnVisibility = React.useMemo(
+    () => table.getState().columnVisibility,
+    [table],
+  );
 
   const onGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {

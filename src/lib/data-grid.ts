@@ -4,7 +4,7 @@ import type { CellPosition, RowHeightValue } from "@/types/data-grid";
 
 export function flexRender<TProps extends object>(
   Comp: ((props: TProps) => React.ReactNode) | string | undefined,
-  props: TProps
+  props: TProps,
 ): React.ReactNode {
   if (typeof Comp === "string") {
     return Comp;
@@ -80,10 +80,10 @@ export function getCommonPinningStyles<TData>({
           ? "4px 0 4px -4px var(--border) inset"
           : "-4px 0 4px -4px var(--border) inset"
         : isFirstRightPinnedColumn
-        ? isRtl
-          ? "-4px 0 4px -4px var(--border) inset"
-          : "4px 0 4px -4px var(--border) inset"
-        : undefined
+          ? isRtl
+            ? "-4px 0 4px -4px var(--border) inset"
+            : "4px 0 4px -4px var(--border) inset"
+          : undefined
       : undefined,
     left: isRtl ? rightPosition : leftPosition,
     right: isRtl ? leftPosition : rightPosition,
