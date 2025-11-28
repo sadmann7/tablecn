@@ -1,7 +1,6 @@
 "use client";
 
 import { useDirection } from "@radix-ui/react-direction";
-import { flexRender } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
@@ -10,7 +9,7 @@ import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dial
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
-import { getCommonPinningStyles } from "@/lib/data-grid";
+import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 
 interface DataGridProps<TData>

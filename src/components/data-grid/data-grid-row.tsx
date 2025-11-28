@@ -1,16 +1,12 @@
 "use client";
 
-import {
-  flexRender,
-  type Row,
-  type Table,
-  type VisibilityState,
-} from "@tanstack/react-table";
+import type { Row, Table, VisibilityState } from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useComposedRefs } from "@/lib/compose-refs";
 import {
+  flexRender,
   getCellKey,
   getCommonPinningStyles,
   getRowHeightValue,

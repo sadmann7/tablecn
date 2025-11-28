@@ -156,6 +156,7 @@ function useDataGrid<TData>({
   const footerRef = React.useRef<HTMLDivElement>(null);
 
   const propsRef = useAsRef(props);
+  const dataRef = useAsRef(data);
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
   const stateRef = useLazyRef<DataGridState>(() => {
@@ -283,6 +284,7 @@ function useDataGrid<TData>({
       if (updateArray.length === 0) return;
 
       const currentTable = tableRef.current;
+      const currentData = dataRef.current;
       const rows = currentTable?.getRowModel().rows;
 
       const rowUpdatesMap = new Map<
@@ -303,7 +305,7 @@ function useDataGrid<TData>({
           if (!row) continue;
 
           const originalData = row.original;
-          const originalRowIndex = data.indexOf(originalData);
+          const originalRowIndex = currentData.indexOf(originalData);
 
           const targetIndex =
             originalRowIndex !== -1 ? originalRowIndex : update.rowIndex;
@@ -317,30 +319,33 @@ function useDataGrid<TData>({
         }
       }
 
-      // Build new data array, ensuring we include all rows from the table
-      const tableRowCount = rows?.length ?? data.length;
-      const newData: TData[] = [];
+      // ✅ OPTIMIZED: Only create new objects for rows that changed
+      // Keep unchanged rows as-is to maintain referential equality
+      const tableRowCount = rows?.length ?? currentData.length;
+      const newData: TData[] = new Array(tableRowCount);
 
       for (let i = 0; i < tableRowCount; i++) {
         const updates = rowUpdatesMap.get(i);
-        const existingRow = data[i];
+        const existingRow = currentData[i];
         const tableRow = rows?.[i];
 
         if (updates) {
+          // Only create new object for rows with updates
           const baseRow = existingRow ?? tableRow?.original ?? ({} as TData);
           const updatedRow = { ...baseRow } as Record<string, unknown>;
           for (const { columnId, value } of updates) {
             updatedRow[columnId] = value;
           }
-          newData.push(updatedRow as TData);
+          newData[i] = updatedRow as TData;
         } else {
-          newData.push(existingRow ?? tableRow?.original ?? ({} as TData));
+          // ✅ Keep same reference for unchanged rows
+          newData[i] = existingRow ?? tableRow?.original ?? ({} as TData);
         }
       }
 
       propsRef.current.onDataChange?.(newData);
     },
-    [data, propsRef, readOnly],
+    [dataRef, propsRef, readOnly],
   );
 
   const getIsCellSelected = React.useCallback(
@@ -365,7 +370,7 @@ function useDataGrid<TData>({
     const allCells = new Set<string>();
     const currentTable = tableRef.current;
     const rows = currentTable?.getRowModel().rows ?? [];
-    const rowCount = rows.length ?? data.length;
+    const rowCount = rows.length ?? dataRef.current.length;
 
     for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
       for (const columnId of columnIds) {
@@ -387,13 +392,13 @@ function useDataGrid<TData>({
           : null,
       isSelecting: false,
     });
-  }, [columnIds, data.length, store]);
+  }, [columnIds, dataRef, store]);
 
   const selectColumn = React.useCallback(
     (columnId: string) => {
       const currentTable = tableRef.current;
       const rows = currentTable?.getRowModel().rows ?? [];
-      const rowCount = rows.length ?? data.length;
+      const rowCount = rows.length ?? dataRef.current.length;
 
       if (rowCount === 0) return;
 
@@ -412,7 +417,7 @@ function useDataGrid<TData>({
         isSelecting: false,
       });
     },
-    [data.length, store],
+    [dataRef, store],
   );
 
   const selectRange = React.useCallback(
@@ -677,7 +682,7 @@ function useDataGrid<TData>({
 
         if (startColIndex === -1) return;
 
-        const rowCount = rows.length ?? data.length;
+        const rowCount = rows.length ?? dataRef.current.length;
         const rowsNeeded = startRowIndex + pastedData.length - rowCount;
 
         if (
@@ -888,7 +893,7 @@ function useDataGrid<TData>({
       store,
       navigableColumnIds,
       propsRef,
-      data.length,
+      dataRef,
       onDataUpdate,
       selectRange,
       readOnly,
@@ -964,7 +969,7 @@ function useDataGrid<TData>({
       requestAnimationFrame(() => {
         const currentTable = tableRef.current;
         const currentRows = currentTable?.getRowModel().rows ?? [];
-        const newRowCount = currentRows.length ?? data.length;
+        const newRowCount = currentRows.length ?? dataRef.current.length;
 
         if (newRowCount > 0 && currentFocusedColumn) {
           const targetRowIndex = Math.min(minDeletedRowIndex, newRowCount - 1);
@@ -972,7 +977,7 @@ function useDataGrid<TData>({
         }
       });
     },
-    [propsRef, data.length, store, navigableColumnIds, focusCell, readOnly],
+    [propsRef, dataRef, store, navigableColumnIds, focusCell, readOnly],
   );
 
   const navigateCell = React.useCallback(
@@ -985,7 +990,7 @@ function useDataGrid<TData>({
       const rowVirtualizer = rowVirtualizerRef.current;
       const currentTable = tableRef.current;
       const rows = currentTable?.getRowModel().rows ?? [];
-      const rowCount = rows.length ?? data.length;
+      const rowCount = rows.length ?? dataRef.current.length;
 
       let newRowIndex = rowIndex;
       let newColumnId = columnId;
@@ -1153,7 +1158,7 @@ function useDataGrid<TData>({
         focusCell(newRowIndex, newColumnId);
       }
     },
-    [dir, store, navigableColumnIds, focusCell, data.length, rowHeightValue],
+    [dir, store, navigableColumnIds, focusCell, dataRef, rowHeightValue],
   );
 
   const onCellEditingStart = React.useCallback(
@@ -1179,7 +1184,7 @@ function useDataGrid<TData>({
         const { rowIndex, columnId } = currentEditing;
         const currentTable = tableRef.current;
         const rows = currentTable?.getRowModel().rows ?? [];
-        const rowCount = rows.length ?? data.length;
+        const rowCount = rows.length ?? dataRef.current.length;
 
         const nextRowIndex = rowIndex + 1;
         if (nextRowIndex < rowCount) {
@@ -1198,7 +1203,7 @@ function useDataGrid<TData>({
         focusCellWrapper(rowIndex, columnId);
       }
     },
-    [store, data.length, focusCell, navigateCell, focusCellWrapper],
+    [store, dataRef, focusCell, navigateCell, focusCellWrapper],
   );
 
   const onSearchOpenChange = React.useCallback(
@@ -1730,8 +1735,8 @@ function useDataGrid<TData>({
               break;
             case "down":
               newRowIndex = Math.min(
-                (tableRef.current?.getRowModel().rows.length || data.length) -
-                  1,
+                (tableRef.current?.getRowModel().rows.length ||
+                  dataRef.current.length) - 1,
                 currentState.focusedCell.rowIndex + 1,
               );
               break;
@@ -1791,7 +1796,7 @@ function useDataGrid<TData>({
       onDataUpdate,
       clearSelection,
       navigableColumnIds,
-      data.length,
+      dataRef,
       selectRange,
       focusCell,
       onSearchOpenChange,
