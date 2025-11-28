@@ -1,6 +1,6 @@
 "use client";
 
-import type { Row, Table, VisibilityState } from "@tanstack/react-table";
+import type { Cell, Row, Table, VisibilityState } from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
@@ -109,6 +109,119 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   return true;
 }) as typeof DataGridRowImpl;
 
+// Memoized cell wrapper component to prevent unnecessary re-renders
+interface CellWrapperProps<TData> {
+  cell: Cell<TData, unknown>;
+  table: Table<TData>;
+  virtualRowIndex: number;
+  colIndex: number;
+  focusedCell: CellPosition | null;
+  editingCell: CellPosition | null;
+  selectionState?: SelectionState;
+  isRowSelected: boolean;
+  dir: "ltr" | "rtl";
+  readOnly: boolean;
+  stretchColumns?: boolean;
+}
+
+const CellWrapper = React.memo(function CellWrapper<TData>({
+  cell,
+  table,
+  virtualRowIndex,
+  colIndex,
+  focusedCell,
+  editingCell,
+  selectionState,
+  isRowSelected,
+  dir,
+  readOnly,
+  stretchColumns = false,
+}: CellWrapperProps<TData>) {
+  const columnId = cell.column.id;
+  const isCellFocused =
+    focusedCell?.rowIndex === virtualRowIndex &&
+    focusedCell?.columnId === columnId;
+  const isCellEditing =
+    editingCell?.rowIndex === virtualRowIndex &&
+    editingCell?.columnId === columnId;
+  const isCellSelected =
+    selectionState?.selectedCells.has(
+      getCellKey(virtualRowIndex, columnId),
+    ) ?? false;
+
+  return (
+    <div
+      key={cell.id}
+      role="gridcell"
+      aria-colindex={colIndex + 1}
+      data-highlighted={isCellFocused ? "" : undefined}
+      data-slot="grid-cell"
+      tabIndex={-1}
+      className={cn({
+        grow: stretchColumns && columnId !== "select",
+        "border-e": columnId !== "select",
+      })}
+      style={{
+        ...getCommonPinningStyles({ column: cell.column, dir }),
+        width: `calc(var(--col-${columnId}-size) * 1px)`,
+      }}
+    >
+      {typeof cell.column.columnDef.header === "function" ? (
+        <div
+          className={cn("size-full px-3 py-1.5", {
+            "bg-primary/10": isRowSelected,
+          })}
+        >
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </div>
+      ) : (
+        <DataGridCell
+          cell={cell}
+          table={table}
+          rowIndex={virtualRowIndex}
+          columnId={columnId}
+          isFocused={isCellFocused}
+          isEditing={isCellEditing}
+          isSelected={isCellSelected}
+          readOnly={readOnly}
+        />
+      )}
+    </div>
+  );
+}, (prev, next) => {
+  // Memoization comparison for cell wrapper
+  if (prev.cell.id !== next.cell.id) return false;
+  if (prev.virtualRowIndex !== next.virtualRowIndex) return false;
+  if (prev.colIndex !== next.colIndex) return false;
+  if (prev.readOnly !== next.readOnly) return false;
+  if (prev.isRowSelected !== next.isRowSelected) return false;
+  if (prev.stretchColumns !== next.stretchColumns) return false;
+  
+  // Check if focus state changed for this cell
+  const prevFocused = prev.focusedCell?.rowIndex === prev.virtualRowIndex &&
+    prev.focusedCell?.columnId === prev.cell.column.id;
+  const nextFocused = next.focusedCell?.rowIndex === next.virtualRowIndex &&
+    next.focusedCell?.columnId === next.cell.column.id;
+  if (prevFocused !== nextFocused) return false;
+  
+  // Check if editing state changed for this cell
+  const prevEditing = prev.editingCell?.rowIndex === prev.virtualRowIndex &&
+    prev.editingCell?.columnId === prev.cell.column.id;
+  const nextEditing = next.editingCell?.rowIndex === next.virtualRowIndex &&
+    next.editingCell?.columnId === next.cell.column.id;
+  if (prevEditing !== nextEditing) return false;
+  
+  // Check if selection state changed
+  if (prev.selectionState?.selectedCells !== next.selectionState?.selectedCells) return false;
+  
+  // Check cell value using row.original for stability
+  const prevValue = (prev.cell.row.original as Record<string, unknown>)[prev.cell.column.id];
+  const nextValue = (next.cell.row.original as Record<string, unknown>)[next.cell.column.id];
+  if (prevValue !== nextValue) return false;
+  
+  return true;
+}) as <TData>(props: CellWrapperProps<TData>) => React.ReactElement;
+
 function DataGridRowImpl<TData>({
   row,
   table,
@@ -148,7 +261,7 @@ function DataGridRowImpl<TData>({
   const rowRef = useComposedRefs(ref, onRowChange);
 
   const isRowSelected = row.getIsSelected();
-  
+
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
   const visibleCells = React.useMemo(() => row.getVisibleCells(), [row]);
@@ -174,59 +287,22 @@ function DataGridRowImpl<TData>({
       }}
       {...props}
     >
-      {visibleCells.map((cell, colIndex) => {
-        const columnId = cell.column.id;
-        const isCellFocused =
-          focusedCell?.rowIndex === virtualRowIndex &&
-          focusedCell?.columnId === columnId;
-        const isCellEditing =
-          editingCell?.rowIndex === virtualRowIndex &&
-          editingCell?.columnId === columnId;
-        const isCellSelected =
-          selectionState?.selectedCells.has(
-            getCellKey(virtualRowIndex, columnId),
-          ) ?? false;
-
-        return (
-          <div
-            key={cell.id}
-            role="gridcell"
-            aria-colindex={colIndex + 1}
-            data-highlighted={isCellFocused ? "" : undefined}
-            data-slot="grid-cell"
-            tabIndex={-1}
-            className={cn({
-              grow: stretchColumns && columnId !== "select",
-              "border-e": columnId !== "select",
-            })}
-            style={{
-              ...getCommonPinningStyles({ column: cell.column, dir }),
-              width: `calc(var(--col-${columnId}-size) * 1px)`,
-            }}
-          >
-            {typeof cell.column.columnDef.header === "function" ? (
-              <div
-                className={cn("size-full px-3 py-1.5", {
-                  "bg-primary/10": isRowSelected,
-                })}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </div>
-            ) : (
-              <DataGridCell
-                cell={cell}
-                table={table}
-                rowIndex={virtualRowIndex}
-                columnId={columnId}
-                isFocused={isCellFocused}
-                isEditing={isCellEditing}
-                isSelected={isCellSelected}
-                readOnly={readOnly}
-              />
-            )}
-          </div>
-        );
-      })}
+      {visibleCells.map((cell, colIndex) => (
+        <CellWrapper
+          key={cell.id}
+          cell={cell}
+          table={table}
+          virtualRowIndex={virtualRowIndex}
+          colIndex={colIndex}
+          focusedCell={focusedCell}
+          editingCell={editingCell}
+          selectionState={selectionState}
+          isRowSelected={isRowSelected}
+          dir={dir}
+          readOnly={readOnly}
+          stretchColumns={stretchColumns}
+        />
+      ))}
     </div>
   );
 }
