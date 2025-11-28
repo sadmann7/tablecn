@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   type RowSelectionState,
   type SortingState,
+  type TableMeta,
   type TableOptions,
   type Updater,
   useReactTable,
@@ -245,8 +246,8 @@ function useDataGrid<TData>({
     };
   }, [listenersRef, stateRef]);
 
-  const focusedCell = useStore(store, (state) => state.focusedCell);
-  const editingCell = useStore(store, (state) => state.editingCell);
+  // Only subscribe to values that are used directly in this hook
+  // Values only used in table.options.meta are accessed via getters to avoid unnecessary re-renders
   const selectionState = useStore(store, (state) => state.selectionState);
   const searchQuery = useStore(store, (state) => state.searchQuery);
   const searchMatches = useStore(store, (state) => state.searchMatches);
@@ -255,9 +256,7 @@ function useDataGrid<TData>({
   const sorting = useStore(store, (state) => state.sorting);
   const columnFilters = useStore(store, (state) => state.columnFilters);
   const rowSelection = useStore(store, (state) => state.rowSelection);
-  const contextMenu = useStore(store, (state) => state.contextMenu);
   const rowHeight = useStore(store, (state) => state.rowHeight);
-  const pasteDialog = useStore(store, (state) => state.pasteDialog);
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
@@ -277,6 +276,13 @@ function useDataGrid<TData>({
 
   const onDataUpdate = React.useCallback(
     (updates: UpdateCell | Array<UpdateCell>) => {
+      if (process.env.NODE_ENV === "development") {
+        console.log(
+          "%c[useDataGrid] onDataUpdate called",
+          "color: #51cf66;",
+          Array.isArray(updates) ? `${updates.length} updates` : "1 update",
+        );
+      }
       if (readOnly) return;
 
       const updateArray = Array.isArray(updates) ? updates : [updates];
@@ -347,6 +353,17 @@ function useDataGrid<TData>({
     },
     [dataRef, propsRef, readOnly],
   );
+
+  // Track when onDataUpdate callback is recreated (dev only)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally tracking callback identity
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "%c[useDataGrid] onDataUpdate callback recreated",
+        "color: #845ef7; font-weight: bold;",
+      );
+    }
+  }, [onDataUpdate]);
 
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
@@ -1958,8 +1975,106 @@ function useDataGrid<TData>({
     [],
   );
 
-  const tableOptions = React.useMemo<TableOptions<TData>>(
-    () => ({
+  // Create stable meta object that uses getters for frequently changing values
+  const tableMeta = React.useMemo<TableMeta<TData>>(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "%c[useDataGrid] tableMeta recreated",
+        "color: #ff6b6b; font-weight: bold;",
+      );
+    }
+    return {
+      ...propsRef.current.meta,
+      dataGridRef,
+      cellMapRef,
+      // Use getters for frequently changing state values to avoid recreating meta
+      get focusedCell() {
+        return store.getState().focusedCell;
+      },
+      get editingCell() {
+        return store.getState().editingCell;
+      },
+      get selectionState() {
+        return store.getState().selectionState;
+      },
+      get searchOpen() {
+        return store.getState().searchOpen;
+      },
+      get contextMenu() {
+        return store.getState().contextMenu;
+      },
+      get pasteDialog() {
+        return store.getState().pasteDialog;
+      },
+      get rowHeight() {
+        return store.getState().rowHeight;
+      },
+      readOnly,
+      getIsCellSelected,
+      getIsSearchMatch,
+      getIsActiveSearchMatch,
+      onRowHeightChange,
+      onRowSelect,
+      onDataUpdate,
+      onRowsDelete: propsRef.current.onRowsDelete ? onRowsDelete : undefined,
+      onColumnClick,
+      onCellClick,
+      onCellDoubleClick,
+      onCellMouseDown,
+      onCellMouseEnter,
+      onCellMouseUp,
+      onCellContextMenu,
+      onCellEditingStart,
+      onCellEditingStop,
+      onCellsCopy,
+      onCellsCut,
+      onFilesUpload: propsRef.current.onFilesUpload
+        ? propsRef.current.onFilesUpload
+        : undefined,
+      onFilesDelete: propsRef.current.onFilesDelete
+        ? propsRef.current.onFilesDelete
+        : undefined,
+      onContextMenuOpenChange,
+      onPasteDialogOpenChange,
+      onPasteWithExpansion,
+      onPasteWithoutExpansion,
+    };
+  }, [
+    propsRef,
+    store,
+    readOnly,
+    getIsCellSelected,
+    getIsSearchMatch,
+    getIsActiveSearchMatch,
+    onRowHeightChange,
+    onRowSelect,
+    onDataUpdate,
+    onRowsDelete,
+    onColumnClick,
+    onCellClick,
+    onCellDoubleClick,
+    onCellMouseDown,
+    onCellMouseEnter,
+    onCellMouseUp,
+    onCellContextMenu,
+    onCellEditingStart,
+    onCellEditingStop,
+    onCellsCopy,
+    onCellsCut,
+    onContextMenuOpenChange,
+    onPasteDialogOpenChange,
+    onPasteWithExpansion,
+    onPasteWithoutExpansion,
+  ]);
+
+  const tableOptions = React.useMemo<TableOptions<TData>>(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "%c[useDataGrid] tableOptions recreated",
+        "color: #ffd43b; font-weight: bold;",
+      );
+    }
+    return {
       ...propsRef.current,
       data,
       columns,
@@ -1978,94 +2093,35 @@ function useDataGrid<TData>({
       getCoreRowModel: getCoreRowModel(),
       getFilteredRowModel: getFilteredRowModel(),
       getSortedRowModel: getSortedRowModel(),
-      meta: {
-        ...propsRef.current.meta,
-        dataGridRef,
-        cellMapRef,
-        focusedCell,
-        editingCell,
-        selectionState,
-        searchOpen,
-        readOnly,
-        getIsCellSelected,
-        getIsSearchMatch,
-        getIsActiveSearchMatch,
-        rowHeight,
-        onRowHeightChange,
-        onRowSelect,
-        onDataUpdate,
-        onRowsDelete: propsRef.current.onRowsDelete ? onRowsDelete : undefined,
-        onColumnClick,
-        onCellClick,
-        onCellDoubleClick,
-        onCellMouseDown,
-        onCellMouseEnter,
-        onCellMouseUp,
-        onCellContextMenu,
-        onCellEditingStart,
-        onCellEditingStop,
-        onCellsCopy,
-        onCellsCut,
-        onFilesUpload: propsRef.current.onFilesUpload
-          ? propsRef.current.onFilesUpload
-          : undefined,
-        onFilesDelete: propsRef.current.onFilesDelete
-          ? propsRef.current.onFilesDelete
-          : undefined,
-        contextMenu,
-        onContextMenuOpenChange,
-        pasteDialog,
-        onPasteDialogOpenChange,
-        onPasteWithExpansion,
-        onPasteWithoutExpansion,
-      },
-    }),
-    [
-      propsRef,
-      data,
-      columns,
-      defaultColumn,
-      initialState,
-      sorting,
-      columnFilters,
-      rowSelection,
-      onRowSelectionChange,
-      onSortingChange,
-      onColumnFiltersChange,
-      focusedCell,
-      editingCell,
-      selectionState,
-      searchOpen,
-      readOnly,
-      getIsCellSelected,
-      getIsSearchMatch,
-      getIsActiveSearchMatch,
-      rowHeight,
-      onRowHeightChange,
-      onRowSelect,
-      onDataUpdate,
-      onRowsDelete,
-      onColumnClick,
-      onCellClick,
-      onCellDoubleClick,
-      onCellMouseDown,
-      onCellMouseEnter,
-      onCellMouseUp,
-      onCellContextMenu,
-      onCellEditingStart,
-      onCellEditingStop,
-      onCellsCopy,
-      onCellsCut,
-      contextMenu,
-      onContextMenuOpenChange,
-      pasteDialog,
-      onPasteDialogOpenChange,
-      onPasteWithExpansion,
-      onPasteWithoutExpansion,
-    ],
-  );
+      meta: tableMeta,
+    };
+  }, [
+    propsRef,
+    data,
+    columns,
+    defaultColumn,
+    initialState,
+    sorting,
+    columnFilters,
+    rowSelection,
+    onRowSelectionChange,
+    onSortingChange,
+    onColumnFiltersChange,
+    tableMeta,
+  ]);
 
   const table = useReactTable(tableOptions);
+
+  // Track when table instance changes (dev only)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally tracking table identity
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        "%c[useDataGrid] table instance changed",
+        "color: #fa5252; font-weight: bold;",
+      );
+    }
+  }, [table]);
 
   if (!tableRef.current) {
     tableRef.current = table;
