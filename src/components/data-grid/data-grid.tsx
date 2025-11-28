@@ -27,6 +27,7 @@ export function DataGrid<TData>({
   table,
   tableMeta,
   rowVirtualizer,
+  columns,
   searchState,
   columnSizeVars,
   focusedCell,
@@ -41,11 +42,7 @@ export function DataGrid<TData>({
 }: DataGridProps<TData>) {
   const dir = useDirection();
 
-  // Note: table.getRowModel().rows returns new Row wrappers on each call,
-  // but our DataGridRow memoization compares row.original references,
-  // which remain stable for unchanged rows due to our immutable update strategy
   const rows = table.getRowModel().rows;
-  const columns = table.getAllColumns();
 
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = React.useMemo(

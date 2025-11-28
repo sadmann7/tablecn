@@ -11,6 +11,7 @@ import {
   type SortingState,
   type TableMeta,
   type TableOptions,
+  type TableState,
   type Updater,
   useReactTable,
 } from "@tanstack/react-table";
@@ -348,8 +349,6 @@ function useDataGrid<TData>({
     },
     [dataRef, propsRef, readOnly],
   );
-
-  // Track when onDataUpdate callback is recreated (dev only)
 
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
@@ -1961,7 +1960,6 @@ function useDataGrid<TData>({
     [],
   );
 
-  // Create stable meta object that uses getters for frequently changing values
   const tableMeta = React.useMemo<TableMeta<TData>>(() => {
     return {
       ...propsRef.current.meta,
@@ -2047,13 +2045,18 @@ function useDataGrid<TData>({
     onPasteWithoutExpansion,
   ]);
 
-  // Memoize row model creators (stable functions)
-  const coreRowModel = React.useMemo(() => getCoreRowModel(), []);
-  const filteredRowModel = React.useMemo(() => getFilteredRowModel(), []);
-  const sortedRowModel = React.useMemo(() => getSortedRowModel(), []);
+  const getMemoizedCoreRowModel = React.useMemo(() => getCoreRowModel(), []);
+  const getMemoizedFilteredRowModel = React.useMemo(
+    () => getFilteredRowModel(),
+    [],
+  );
+  const getMemoizedSortedRowModel = React.useMemo(
+    () => getSortedRowModel(),
+    [],
+  );
 
   // Memoize state object to reduce shallow equality checks
-  const tableState = React.useMemo(
+  const tableState = React.useMemo<Partial<TableState>>(
     () => ({
       ...propsRef.current.state,
       sorting,
@@ -2075,9 +2078,9 @@ function useDataGrid<TData>({
       onSortingChange,
       onColumnFiltersChange,
       columnResizeMode: "onChange",
-      getCoreRowModel: coreRowModel,
-      getFilteredRowModel: filteredRowModel,
-      getSortedRowModel: sortedRowModel,
+      getCoreRowModel: getMemoizedCoreRowModel,
+      getFilteredRowModel: getMemoizedFilteredRowModel,
+      getSortedRowModel: getMemoizedSortedRowModel,
       meta: tableMeta,
     };
   }, [
@@ -2090,15 +2093,13 @@ function useDataGrid<TData>({
     onRowSelectionChange,
     onSortingChange,
     onColumnFiltersChange,
-    coreRowModel,
-    filteredRowModel,
-    sortedRowModel,
+    getMemoizedCoreRowModel,
+    getMemoizedFilteredRowModel,
+    getMemoizedSortedRowModel,
     tableMeta,
   ]);
 
   const table = useReactTable(tableOptions);
-
-  // Track when table instance changes (dev only)
 
   if (!tableRef.current) {
     tableRef.current = table;
@@ -2233,11 +2234,11 @@ function useDataGrid<TData>({
       if (!(target instanceof HTMLElement)) return;
 
       const { key, ctrlKey, metaKey, shiftKey } = event;
-      const isCtrlPressed = ctrlKey || metaKey;
+      const isCommandPressed = ctrlKey || metaKey;
 
       if (
         enableSearch &&
-        isCtrlPressed &&
+        isCommandPressed &&
         !shiftKey &&
         key === SEARCH_SHORTCUT_KEY
       ) {
@@ -2412,6 +2413,7 @@ function useDataGrid<TData>({
     table,
     tableMeta,
     rowVirtualizer,
+    columns,
     searchState,
     columnSizeVars,
     focusedCell,
