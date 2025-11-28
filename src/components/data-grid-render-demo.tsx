@@ -48,7 +48,7 @@ function RenderCounter({ label }: { label: string }) {
   );
 }
 
-export function DataGridRenderTest() {
+export function DataGridRenderDemo() {
   const [data, setData] = React.useState<TestPerson[]>(initialData);
   const [renderStats, setRenderStats] = React.useState({
     componentRenders: 0,

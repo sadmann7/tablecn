@@ -1,11 +1,11 @@
 "use client";
 
-import { DataGridRenderTest } from "@/components/data-grid/data-grid-render-test";
+import { DataGridRenderDemo } from "@/components/data-grid-render-demo";
 import { Fps } from "@/components/ui/fps";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMounted } from "@/hooks/use-mounted";
 
-export default function RenderTestPage() {
+export default function RenderPage() {
   const mounted = useMounted();
 
   if (!mounted)
@@ -18,7 +18,7 @@ export default function RenderTestPage() {
   return (
     <>
       <Fps strategy="fixed" />
-      <DataGridRenderTest />
+      <DataGridRenderDemo />
     </>
   );
 }
