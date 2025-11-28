@@ -148,6 +148,10 @@ function DataGridRowImpl<TData>({
   const rowRef = useComposedRefs(ref, onRowChange);
 
   const isRowSelected = row.getIsSelected();
+  
+  // Memoize visible cells to avoid recreating cell array on every render
+  // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
+  const visibleCells = React.useMemo(() => row.getVisibleCells(), [row]);
 
   return (
     <div
@@ -170,7 +174,7 @@ function DataGridRowImpl<TData>({
       }}
       {...props}
     >
-      {row.getVisibleCells().map((cell, colIndex) => {
+      {visibleCells.map((cell, colIndex) => {
         const columnId = cell.column.id;
         const isCellFocused =
           focusedCell?.rowIndex === virtualRowIndex &&

@@ -40,7 +40,7 @@ export function DataGrid<TData>({
   ...props
 }: DataGridProps<TData>) {
   const dir = useDirection();
-  
+
   // Note: table.getRowModel().rows returns new Row wrappers on each call,
   // but our DataGridRow memoization compares row.original references,
   // which remain stable for unchanged rows due to our immutable update strategy
