@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table, TableMeta } from "@tanstack/react-table";
+import type { TableMeta } from "@tanstack/react-table";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,21 +12,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import type { PasteDialogState } from "@/types/data-grid";
 
 interface DataGridPasteDialogProps<TData> {
-  table: Table<TData>;
+  tableMeta: TableMeta<TData>;
+  pasteDialog: PasteDialogState;
 }
 
 export function DataGridPasteDialog<TData>({
-  table,
+  tableMeta,
+  pasteDialog,
 }: DataGridPasteDialogProps<TData>) {
-  const meta = table.options.meta;
-  const pasteDialog = meta?.pasteDialog;
-  const onPasteDialogOpenChange = meta?.onPasteDialogOpenChange;
-  const onPasteWithExpansion = meta?.onPasteWithExpansion;
-  const onPasteWithoutExpansion = meta?.onPasteWithoutExpansion;
+  const onPasteDialogOpenChange = tableMeta?.onPasteDialogOpenChange;
+  const onPasteWithExpansion = tableMeta?.onPasteWithExpansion;
+  const onPasteWithoutExpansion = tableMeta?.onPasteWithoutExpansion;
 
-  if (!pasteDialog) return null;
+  if (!pasteDialog.open) return null;
 
   return (
     <PasteDialog

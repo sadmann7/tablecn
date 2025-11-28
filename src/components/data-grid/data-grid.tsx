@@ -14,32 +14,36 @@ import { cn } from "@/lib/utils";
 
 interface DataGridProps<TData>
   extends ReturnType<typeof useDataGrid<TData>>,
-    React.ComponentProps<"div"> {
+    Omit<React.ComponentProps<"div">, "contextMenu"> {
   height?: number;
   stretchColumns?: boolean;
 }
 
-export function DataGrid<TData>({
-  dataGridRef,
-  headerRef,
-  rowMapRef,
-  footerRef,
-  table,
-  tableMeta,
-  rowVirtualizer,
-  columns,
-  searchState,
-  columnSizeVars,
-  focusedCell,
-  editingCell,
-  selectionState,
-  rowHeight,
-  onRowAdd,
-  height = 600,
-  stretchColumns = false,
-  className,
-  ...props
-}: DataGridProps<TData>) {
+export function DataGrid<TData>(props: DataGridProps<TData>) {
+  const {
+    dataGridRef,
+    headerRef,
+    rowMapRef,
+    footerRef,
+    table,
+    tableMeta,
+    rowVirtualizer,
+    columns,
+    searchState,
+    columnSizeVars,
+    focusedCell,
+    editingCell,
+    selectionState,
+    rowHeight,
+    contextMenu,
+    pasteDialog,
+    onRowAdd,
+    height = 600,
+    stretchColumns = false,
+    className,
+    ...dataGridProps
+  } = props;
+
   const dir = useDirection();
 
   const rows = table.getRowModel().rows;
@@ -67,15 +71,19 @@ export function DataGrid<TData>({
 
   return (
     <div
-      ref={dataGridRef}
       data-slot="grid-wrapper"
       dir={dir}
+      {...dataGridProps}
+      ref={dataGridRef}
       className={cn("relative flex w-full flex-col", className)}
-      {...props}
     >
       {searchState && <DataGridSearch {...searchState} />}
-      <DataGridContextMenu table={table} />
-      <DataGridPasteDialog table={table} />
+      <DataGridContextMenu
+        tableMeta={tableMeta}
+        columns={columns}
+        contextMenu={contextMenu}
+      />
+      <DataGridPasteDialog tableMeta={tableMeta} pasteDialog={pasteDialog} />
       <div
         role="grid"
         aria-label="Data grid"

@@ -123,8 +123,9 @@ interface UseDataGridProps<TData>
     rowIndex: number;
     columnId: string;
   }) => void | Promise<void>;
-  rowHeight?: RowHeightValue;
   overscan?: number;
+  rowHeight?: RowHeightValue;
+  dir: "ltr" | "rtl";
   autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
@@ -135,12 +136,13 @@ interface UseDataGridProps<TData>
 function useDataGrid<TData>({
   data,
   columns,
-  rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
   overscan = OVERSCAN,
+  rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
+  dir: dirProp = "ltr",
   initialState,
   ...props
 }: UseDataGridProps<TData>) {
-  const dir = useDirection();
+  const dir = useDirection(dirProp);
   const dataGridRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>>>(null);
   const rowVirtualizerRef =
@@ -255,6 +257,8 @@ function useDataGrid<TData>({
   const columnFilters = useStore(store, (state) => state.columnFilters);
   const rowSelection = useStore(store, (state) => state.rowSelection);
   const rowHeight = useStore(store, (state) => state.rowHeight);
+  const contextMenu = useStore(store, (state) => state.contextMenu);
+  const pasteDialog = useStore(store, (state) => state.pasteDialog);
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
@@ -2421,6 +2425,8 @@ function useDataGrid<TData>({
       editingCell,
       selectionState,
       rowHeight,
+      contextMenu,
+      pasteDialog,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
     }),
     [
@@ -2435,6 +2441,8 @@ function useDataGrid<TData>({
       editingCell,
       selectionState,
       rowHeight,
+      contextMenu,
+      pasteDialog,
       onRowAdd,
     ],
   );
