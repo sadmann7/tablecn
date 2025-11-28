@@ -401,7 +401,7 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/hooks/use-data-grid.tsx",
+          "path": "src/hooks/use-data-grid.ts",
           "type": "registry:hook"
         },
         {

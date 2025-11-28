@@ -538,7 +538,9 @@ function useDataGrid<TData>({
       }
 
       toast.success(
-        `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} copied`,
+        `${selectedCellsArray.length} cell${
+          selectedCellsArray.length !== 1 ? "s" : ""
+        } copied`,
       );
     } catch (error) {
       toast.error(
@@ -638,7 +640,9 @@ function useDataGrid<TData>({
       store.setState("cutCells", new Set(selectedCellsArray));
 
       toast.success(
-        `${selectedCellsArray.length} cell${selectedCellsArray.length !== 1 ? "s" : ""} cut`,
+        `${selectedCellsArray.length} cell${
+          selectedCellsArray.length !== 1 ? "s" : ""
+        } cut`,
       );
     } catch (error) {
       toast.error(
