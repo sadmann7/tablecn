@@ -119,8 +119,7 @@ function DataGridRowImpl<TData>({
   focusedCell,
   editingCell,
   selectionState,
-  // columnVisibility is used in the memo comparison
-  columnVisibility: _columnVisibility,
+  columnVisibility,
   dir,
   readOnly,
   stretchColumns = false,
@@ -155,7 +154,7 @@ function DataGridRowImpl<TData>({
   // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility needed to recalculate visible cells
   const visibleCells = React.useMemo(
     () => row.getVisibleCells(),
-    [row, _columnVisibility],
+    [row, columnVisibility],
   );
 
   return (
