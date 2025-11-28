@@ -192,7 +192,7 @@ export interface CellVariantProps<TData> {
   isEditing: boolean;
   isFocused: boolean;
   isSelected: boolean;
-  readOnly?: boolean;
+  readOnly: boolean;
 }
 
 export interface FileCellData {

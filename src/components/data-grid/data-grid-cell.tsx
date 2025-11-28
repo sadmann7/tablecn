@@ -14,6 +14,7 @@ import {
   ShortTextCell,
   UrlCell,
 } from "@/components/data-grid/data-grid-cell-variants";
+import type { CellVariantProps } from "@/types/data-grid";
 
 interface DataGridCellProps<TData> {
   cell: Cell<TData, unknown>;
@@ -66,136 +67,52 @@ function DataGridCellImpl<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 
+  let Comp: React.ComponentType<CellVariantProps<TData>>;
+
   switch (variant) {
     case "short-text":
-      return (
-        <ShortTextCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = ShortTextCell;
+      break;
     case "long-text":
-      return (
-        <LongTextCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = LongTextCell;
+      break;
     case "number":
-      return (
-        <NumberCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = NumberCell;
+      break;
     case "url":
-      return (
-        <UrlCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = UrlCell;
+      break;
     case "checkbox":
-      return (
-        <CheckboxCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = CheckboxCell;
+      break;
     case "select":
-      return (
-        <SelectCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = SelectCell;
+      break;
     case "multi-select":
-      return (
-        <MultiSelectCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = MultiSelectCell;
+      break;
     case "date":
-      return (
-        <DateCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = DateCell;
+      break;
     case "file":
-      return (
-        <FileCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = FileCell;
+      break;
 
     default:
-      return (
-        <ShortTextCell
-          cell={cell}
-          meta={meta}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = ShortTextCell;
+      break;
   }
+
+  return (
+    <Comp
+      cell={cell}
+      meta={meta}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isEditing={isEditing}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      readOnly={readOnly}
+    />
+  );
 }
