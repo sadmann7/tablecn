@@ -41,14 +41,6 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   const prevValue = prev.cell.getValue();
   const nextValue = next.cell.getValue();
   if (prevValue !== nextValue) {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `[DataGridCell Memo] ${next.rowIndex}:${next.columnId} value changed:`,
-        prevValue,
-        "→",
-        nextValue,
-      );
-    }
     return false;
   }
 
@@ -70,18 +62,6 @@ function DataGridCellImpl<TData>({
 }: DataGridCellProps<TData>) {
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
-
-  // Debug render tracking (only in development)
-  const renderCount = React.useRef(0);
-  renderCount.current++;
-  React.useEffect(() => {
-    if (renderCount.current > 1) {
-      console.log(
-        `[DataGridCell ${rowIndex}:${columnId}] Re-rendered (count: ${renderCount.current}), value:`,
-        cell.getValue(),
-      );
-    }
-  });
 
   switch (variant) {
     case "short-text":

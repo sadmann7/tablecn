@@ -278,13 +278,6 @@ function useDataGrid<TData>({
 
   const onDataUpdate = React.useCallback(
     (updates: UpdateCell | Array<UpdateCell>) => {
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          "%c[useDataGrid] onDataUpdate called",
-          "color: #51cf66;",
-          Array.isArray(updates) ? `${updates.length} updates` : "1 update",
-        );
-      }
       if (readOnly) return;
 
       const updateArray = Array.isArray(updates) ? updates : [updates];
@@ -357,15 +350,6 @@ function useDataGrid<TData>({
   );
 
   // Track when onDataUpdate callback is recreated (dev only)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally tracking callback identity
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        "%c[useDataGrid] onDataUpdate callback recreated",
-        "color: #845ef7; font-weight: bold;",
-      );
-    }
-  }, [onDataUpdate]);
 
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
@@ -935,11 +919,6 @@ function useDataGrid<TData>({
 
   const focusCell = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          `[focusCell] Setting focus to row ${rowIndex}, column ${columnId}`,
-        );
-      }
       store.batch(() => {
         store.setState("focusedCell", { rowIndex, columnId });
         store.setState("editingCell", null);
@@ -1984,12 +1963,6 @@ function useDataGrid<TData>({
 
   // Create stable meta object that uses getters for frequently changing values
   const tableMeta = React.useMemo<TableMeta<TData>>(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        "%c[useDataGrid] tableMeta recreated (should only happen on mount or callback changes)",
-        "color: #ff6b6b; font-weight: bold;",
-      );
-    }
     return {
       ...propsRef.current.meta,
       dataGridRef,
@@ -2091,12 +2064,6 @@ function useDataGrid<TData>({
   );
 
   const tableOptions = React.useMemo<TableOptions<TData>>(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        "%c[useDataGrid] tableOptions recreated",
-        "color: #ffd43b; font-weight: bold;",
-      );
-    }
     return {
       ...propsRef.current,
       data,
@@ -2132,15 +2099,6 @@ function useDataGrid<TData>({
   const table = useReactTable(tableOptions);
 
   // Track when table instance changes (dev only)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally tracking table identity
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        "%c[useDataGrid] table instance changed",
-        "color: #fa5252; font-weight: bold;",
-      );
-    }
-  }, [table]);
 
   if (!tableRef.current) {
     tableRef.current = table;

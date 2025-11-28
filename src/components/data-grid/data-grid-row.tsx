@@ -42,14 +42,6 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
   // Re-render if row data (original) reference changed
   if (prev.row.original !== next.row.original) {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `[DataGridRow Memo] Row ${next.virtualItem.index} data changed`,
-        prev.row.original,
-        "→",
-        next.row.original,
-      );
-    }
     return false;
   }
 
@@ -66,28 +58,12 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   const nextHasFocus = next.focusedCell?.rowIndex === nextRowIndex;
 
   if (prevHasFocus !== nextHasFocus) {
-    if (process.env.NODE_ENV === "development") {
-      console.log(
-        `[DataGridRow Memo] Row ${nextRowIndex} focus state changed:`,
-        prevHasFocus,
-        "→",
-        nextHasFocus,
-      );
-    }
     return false;
   }
 
   // Re-render if focused column changed within this row
   if (nextHasFocus && prevHasFocus) {
     if (prev.focusedCell?.columnId !== next.focusedCell?.columnId) {
-      if (process.env.NODE_ENV === "development") {
-        console.log(
-          `[DataGridRow Memo] Row ${nextRowIndex} focused column changed:`,
-          prev.focusedCell?.columnId,
-          "→",
-          next.focusedCell?.columnId,
-        );
-      }
       return false;
     }
   }
@@ -154,30 +130,6 @@ function DataGridRowImpl<TData>({
   ...props
 }: DataGridRowProps<TData>) {
   const virtualRowIndex = virtualItem.index;
-
-  // Debug render tracking (only in development)
-  const renderCount = React.useRef(0);
-  renderCount.current++;
-  React.useEffect(() => {
-    if (renderCount.current > 1) {
-      console.log(
-        `[DataGridRow ${virtualRowIndex}] Re-rendered (count: ${renderCount.current})`,
-      );
-    }
-  });
-
-  // Debug focus state
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      const hasFocus = focusedCell?.rowIndex === virtualRowIndex;
-      if (hasFocus) {
-        console.log(
-          `[DataGridRow ${virtualRowIndex}] focusedCell:`,
-          focusedCell,
-        );
-      }
-    }
-  }, [focusedCell, virtualRowIndex]);
 
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {

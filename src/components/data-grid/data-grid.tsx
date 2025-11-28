@@ -43,13 +43,6 @@ export function DataGrid<TData>({
   const rows = table.getRowModel().rows;
   const columns = table.getAllColumns();
 
-  // Debug logging for focus changes
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[DataGrid] focusedCell changed:", focusedCell);
-    }
-  }, [focusedCell]);
-
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = React.useMemo(
     () => table.getState().columnVisibility,
