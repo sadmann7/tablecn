@@ -74,7 +74,6 @@ export function DataGrid<TData>(props: DataGridProps<TData>) {
       data-slot="grid-wrapper"
       dir={dir}
       {...dataGridProps}
-      ref={dataGridRef}
       className={cn("relative flex w-full flex-col", className)}
     >
       {searchState && <DataGridSearch {...searchState} />}
