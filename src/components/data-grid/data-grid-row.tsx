@@ -21,7 +21,7 @@ import type {
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
-  meta: TableMeta<TData>;
+  tableMeta: TableMeta<TData>;
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualItem: VirtualItem;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
@@ -113,7 +113,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 function DataGridRowImpl<TData>(props: DataGridRowProps<TData>) {
   const {
     row,
-    meta,
+    tableMeta,
     virtualItem,
     rowVirtualizer,
     rowMapRef,
@@ -221,7 +221,7 @@ function DataGridRowImpl<TData>(props: DataGridRowProps<TData>) {
             ) : (
               <DataGridCell
                 cell={cell}
-                meta={meta}
+                tableMeta={tableMeta}
                 rowIndex={virtualRowIndex}
                 columnId={columnId}
                 isFocused={isCellFocused}

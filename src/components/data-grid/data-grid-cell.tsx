@@ -18,7 +18,7 @@ import type { CellVariantProps } from "@/types/data-grid";
 
 interface DataGridCellProps<TData> {
   cell: Cell<TData, unknown>;
-  meta: TableMeta<TData>;
+  tableMeta: TableMeta<TData>;
   rowIndex: number;
   columnId: string;
   isFocused: boolean;
@@ -56,7 +56,7 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
 
 function DataGridCellImpl<TData>({
   cell,
-  meta,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -106,7 +106,7 @@ function DataGridCellImpl<TData>({
   return (
     <Comp
       cell={cell}
-      meta={meta}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}

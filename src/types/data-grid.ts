@@ -186,7 +186,7 @@ export interface SearchState {
 
 export interface CellVariantProps<TData> {
   cell: Cell<TData, unknown>;
-  meta: TableMeta<TData>;
+  tableMeta: TableMeta<TData>;
   rowIndex: number;
   columnId: string;
   isEditing: boolean;

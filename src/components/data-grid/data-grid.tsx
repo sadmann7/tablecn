@@ -180,7 +180,7 @@ export function DataGrid<TData>(props: DataGridProps<TData>) {
               <DataGridRow
                 key={row.id}
                 row={row}
-                meta={tableMeta}
+                tableMeta={tableMeta}
                 rowMapRef={rowMapRef}
                 virtualItem={virtualItem}
                 rowVirtualizer={rowVirtualizer}
