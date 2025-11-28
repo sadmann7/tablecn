@@ -20,32 +20,30 @@ interface DataGridProps<TData>
   stretchColumns?: boolean;
 }
 
-export function DataGrid<TData>(props: DataGridProps<TData>) {
-  const {
-    dataGridRef,
-    headerRef,
-    rowMapRef,
-    footerRef,
-    dir = "ltr",
-    table,
-    tableMeta,
-    rowVirtualizer,
-    columns,
-    searchState,
-    columnSizeVars,
-    focusedCell,
-    editingCell,
-    selectionState,
-    rowHeight,
-    contextMenu,
-    pasteDialog,
-    onRowAdd,
-    height = 600,
-    stretchColumns = false,
-    className,
-    ...dataGridProps
-  } = props;
-
+export function DataGrid<TData>({
+  dataGridRef,
+  headerRef,
+  rowMapRef,
+  footerRef,
+  dir = "ltr",
+  table,
+  tableMeta,
+  rowVirtualizer,
+  columns,
+  searchState,
+  columnSizeVars,
+  focusedCell,
+  editingCell,
+  selectionState,
+  rowHeight,
+  contextMenu,
+  pasteDialog,
+  onRowAdd,
+  height = 600,
+  stretchColumns = false,
+  className,
+  ...props
+}: DataGridProps<TData>) {
   const rows = table.getRowModel().rows;
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = table.getState().columnVisibility;
@@ -73,7 +71,7 @@ export function DataGrid<TData>(props: DataGridProps<TData>) {
     <div
       data-slot="grid-wrapper"
       dir={dir}
-      {...dataGridProps}
+      {...props}
       className={cn("relative flex w-full flex-col", className)}
     >
       {searchState && <DataGridSearch {...searchState} />}

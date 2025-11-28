@@ -110,27 +110,25 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   return true;
 }) as typeof DataGridRowImpl;
 
-function DataGridRowImpl<TData>(props: DataGridRowProps<TData>) {
-  const {
-    row,
-    tableMeta,
-    virtualItem,
-    rowVirtualizer,
-    rowMapRef,
-    rowHeight,
-    focusedCell,
-    editingCell,
-    selectionState,
-    columnVisibility,
-    dir,
-    readOnly,
-    stretchColumns = false,
-    className,
-    style,
-    ref,
-    ...dataGridRowProps
-  } = props;
-
+function DataGridRowImpl<TData>({
+  row,
+  tableMeta,
+  virtualItem,
+  rowVirtualizer,
+  rowMapRef,
+  rowHeight,
+  focusedCell,
+  editingCell,
+  selectionState,
+  columnVisibility,
+  dir,
+  readOnly,
+  stretchColumns = false,
+  className,
+  style,
+  ref,
+  ...props
+}: DataGridRowProps<TData>) {
   const virtualRowIndex = virtualItem.index;
 
   const onRowChange = React.useCallback(
@@ -168,7 +166,7 @@ function DataGridRowImpl<TData>(props: DataGridRowProps<TData>) {
       data-index={virtualRowIndex}
       data-slot="grid-row"
       tabIndex={-1}
-      {...dataGridRowProps}
+      {...props}
       ref={rowRef}
       className={cn(
         "absolute flex w-full border-b will-change-transform",
