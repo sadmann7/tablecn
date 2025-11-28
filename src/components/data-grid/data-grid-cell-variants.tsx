@@ -360,9 +360,10 @@ export function NumberCell<TData>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const min = cellOpts?.variant === "number" ? cellOpts.min : undefined;
-  const max = cellOpts?.variant === "number" ? cellOpts.max : undefined;
-  const step = cellOpts?.variant === "number" ? cellOpts.step : undefined;
+  const numberCellOpts = cellOpts?.variant === "number" ? cellOpts : null;
+  const min = numberCellOpts?.min;
+  const max = numberCellOpts?.max;
+  const step = numberCellOpts?.step;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -1349,7 +1350,7 @@ export function FileCell<TData>({
   const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
   const maxFiles = fileCellOpts?.maxFiles ?? 10;
   const accept = fileCellOpts?.accept;
-  const multiple = fileCellOpts?.multiple ?? true;
+  const multiple = fileCellOpts?.multiple ?? false;
 
   const acceptedTypes = React.useMemo(
     () => (accept ? accept.split(",").map((t) => t.trim()) : null),
