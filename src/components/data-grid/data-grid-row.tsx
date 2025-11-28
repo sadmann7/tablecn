@@ -150,12 +150,11 @@ function DataGridRowImpl<TData>({
 
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  // Include columnVisibility to recalculate when columns are hidden/shown
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility needed to recalculate visible cells
-  const visibleCells = React.useMemo(
-    () => row.getVisibleCells(),
-    [row, columnVisibility],
-  );
+  // Include columnVisibility to recalculate when columns are hidden/shown, without this the cells under the column header will be still visible
+  const visibleCells = React.useMemo(() => {
+    void columnVisibility;
+    return row.getVisibleCells();
+  }, [row, columnVisibility]);
 
   return (
     <div

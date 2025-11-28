@@ -45,7 +45,6 @@ export function DataGrid<TData>({
   const rows = table.getRowModel().rows;
 
   const readOnly = tableMeta?.readOnly ?? false;
-  // Don't memoize - this is a getter that should always return current state
   const columnVisibility = table.getState().columnVisibility;
 
   const onGridContextMenu = React.useCallback(
