@@ -16,9 +16,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { FileCellData } from "@/types/data-grid";
-
-type Direction = "ltr" | "rtl";
+import type { Direction, FileCellData } from "@/types/data-grid";
 
 interface Person {
   id: string;

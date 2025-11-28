@@ -1,5 +1,7 @@
 import type { Cell, RowData, TableMeta } from "@tanstack/react-table";
 
+export type Direction = "ltr" | "rtl";
+
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
 export interface CellSelectOption {

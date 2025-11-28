@@ -1,11 +1,6 @@
 "use client";
 
-import type {
-  Row,
-  Table,
-  TableMeta,
-  VisibilityState,
-} from "@tanstack/react-table";
+import type { Row, TableMeta, VisibilityState } from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
@@ -19,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import type {
   CellPosition,
+  Direction,
   RowHeightValue,
   SelectionState,
 } from "@/types/data-grid";
@@ -34,7 +30,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   editingCell: CellPosition | null;
   selectionState?: SelectionState;
   columnVisibility?: VisibilityState;
-  dir: "ltr" | "rtl";
+  dir: Direction;
   readOnly: boolean;
   stretchColumns?: boolean;
 }
@@ -114,25 +110,27 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   return true;
 }) as typeof DataGridRowImpl;
 
-function DataGridRowImpl<TData>({
-  row,
-  meta,
-  virtualItem,
-  rowVirtualizer,
-  rowMapRef,
-  rowHeight,
-  focusedCell,
-  editingCell,
-  selectionState,
-  columnVisibility,
-  dir,
-  readOnly,
-  stretchColumns = false,
-  className,
-  style,
-  ref,
-  ...props
-}: DataGridRowProps<TData>) {
+function DataGridRowImpl<TData>(props: DataGridRowProps<TData>) {
+  const {
+    row,
+    meta,
+    virtualItem,
+    rowVirtualizer,
+    rowMapRef,
+    rowHeight,
+    focusedCell,
+    editingCell,
+    selectionState,
+    columnVisibility,
+    dir,
+    readOnly,
+    stretchColumns = false,
+    className,
+    style,
+    ref,
+    ...dataGridRowProps
+  } = props;
+
   const virtualRowIndex = virtualItem.index;
 
   const onRowChange = React.useCallback(
@@ -169,8 +167,9 @@ function DataGridRowImpl<TData>({
       aria-selected={isRowSelected}
       data-index={virtualRowIndex}
       data-slot="grid-row"
-      ref={rowRef}
       tabIndex={-1}
+      {...dataGridRowProps}
+      ref={rowRef}
       className={cn(
         "absolute flex w-full border-b will-change-transform",
         className,
@@ -180,7 +179,6 @@ function DataGridRowImpl<TData>({
         transform: `translateY(${virtualItem.start}px)`,
         ...style,
       }}
-      {...props}
     >
       {visibleCells.map((cell, colIndex) => {
         const columnId = cell.column.id;

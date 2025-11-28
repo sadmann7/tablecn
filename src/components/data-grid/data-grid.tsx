@@ -1,6 +1,5 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
 import { Plus } from "lucide-react";
 import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
@@ -11,10 +10,12 @@ import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
+import type { Direction } from "@/types/data-grid";
 
 interface DataGridProps<TData>
-  extends ReturnType<typeof useDataGrid<TData>>,
+  extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
+  dir?: Direction;
   height?: number;
   stretchColumns?: boolean;
 }
@@ -25,6 +26,7 @@ export function DataGrid<TData>(props: DataGridProps<TData>) {
     headerRef,
     rowMapRef,
     footerRef,
+    dir = "ltr",
     table,
     tableMeta,
     rowVirtualizer,
@@ -43,8 +45,6 @@ export function DataGrid<TData>(props: DataGridProps<TData>) {
     className,
     ...dataGridProps
   } = props;
-
-  const dir = useDirection();
 
   const rows = table.getRowModel().rows;
   const readOnly = tableMeta?.readOnly ?? false;

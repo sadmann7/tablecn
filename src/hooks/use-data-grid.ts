@@ -22,6 +22,7 @@ import { getCellKey, getRowHeightValue, parseCellKey } from "@/lib/data-grid";
 import type {
   CellPosition,
   ContextMenuState,
+  Direction,
   FileCellData,
   NavigationDirection,
   PasteDialogState,
@@ -125,7 +126,7 @@ interface UseDataGridProps<TData>
   }) => void | Promise<void>;
   overscan?: number;
   rowHeight?: RowHeightValue;
-  dir: "ltr" | "rtl";
+  dir?: Direction;
   autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
@@ -2415,6 +2416,7 @@ function useDataGrid<TData>({
       headerRef,
       rowMapRef,
       footerRef,
+      dir,
       table,
       tableMeta,
       rowVirtualizer,
@@ -2431,6 +2433,7 @@ function useDataGrid<TData>({
     }),
     [
       propsRef,
+      dir,
       table,
       tableMeta,
       rowVirtualizer,
