@@ -43,7 +43,6 @@ export function DataGrid<TData>({
   const dir = useDirection();
 
   const rows = table.getRowModel().rows;
-
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = table.getState().columnVisibility;
 

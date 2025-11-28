@@ -247,8 +247,6 @@ function useDataGrid<TData>({
     };
   }, [listenersRef, stateRef]);
 
-  // Subscribe to values that are used for rendering or returned to consumers
-  // These subscriptions are necessary for visual updates (focus, selection, editing)
   const focusedCell = useStore(store, (state) => state.focusedCell);
   const editingCell = useStore(store, (state) => state.editingCell);
   const selectionState = useStore(store, (state) => state.selectionState);
@@ -321,8 +319,6 @@ function useDataGrid<TData>({
         }
       }
 
-      // ✅ OPTIMIZED: Only create new objects for rows that changed
-      // Keep unchanged rows as-is to maintain referential equality
       const tableRowCount = rows?.length ?? currentData.length;
       const newData: TData[] = new Array(tableRowCount);
 
@@ -332,7 +328,6 @@ function useDataGrid<TData>({
         const tableRow = rows?.[i];
 
         if (updates) {
-          // Only create new object for rows with updates
           const baseRow = existingRow ?? tableRow?.original ?? ({} as TData);
           const updatedRow = { ...baseRow } as Record<string, unknown>;
           for (const { columnId, value } of updates) {
@@ -340,7 +335,6 @@ function useDataGrid<TData>({
           }
           newData[i] = updatedRow as TData;
         } else {
-          // ✅ Keep same reference for unchanged rows
           newData[i] = existingRow ?? tableRow?.original ?? ({} as TData);
         }
       }
@@ -2105,7 +2099,7 @@ function useDataGrid<TData>({
     tableRef.current = table;
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: we need to memoize the column size vars
+  // biome-ignore lint/correctness/useExhaustiveDependencies: columnSizingInfo and columnSizing are used for calculating the column size vars
   const columnSizeVars = React.useMemo(() => {
     const headers = table.getFlatHeaders();
     const colSizes: { [key: string]: number } = {};
@@ -2405,23 +2399,39 @@ function useDataGrid<TData>({
     table.getState().sorting,
   ]);
 
-  return {
-    dataGridRef,
-    headerRef,
-    rowMapRef,
-    footerRef,
-    table,
-    tableMeta,
-    rowVirtualizer,
-    columns,
-    searchState,
-    columnSizeVars,
-    focusedCell,
-    editingCell,
-    selectionState,
-    rowHeight,
-    onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
-  };
+  return React.useMemo(
+    () => ({
+      dataGridRef,
+      headerRef,
+      rowMapRef,
+      footerRef,
+      table,
+      tableMeta,
+      rowVirtualizer,
+      columns,
+      searchState,
+      columnSizeVars,
+      focusedCell,
+      editingCell,
+      selectionState,
+      rowHeight,
+      onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
+    }),
+    [
+      propsRef,
+      table,
+      tableMeta,
+      rowVirtualizer,
+      columns,
+      searchState,
+      columnSizeVars,
+      focusedCell,
+      editingCell,
+      selectionState,
+      rowHeight,
+      onRowAdd,
+    ],
+  );
 }
 
 export {

@@ -26,8 +26,6 @@ interface DataGridCellProps<TData> {
   readOnly: boolean;
 }
 
-// Memoize with stable props - this works because we now receive primitive
-// boolean props instead of reading from unstable table.options.meta
 export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   // Fast path: check stable primitive props first
   if (prev.isFocused !== next.isFocused) return false;
