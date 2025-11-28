@@ -5,6 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
 
@@ -70,6 +71,50 @@ export function DataGridRenderDemo() {
 
   const columns = React.useMemo<ColumnDef<TestPerson>[]>(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            aria-label="Select all"
+            className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+          />
+        ),
+        cell: ({ row, table }) => (
+          <Checkbox
+            aria-label="Select row"
+            className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => {
+              const onRowSelect = table.options.meta?.onRowSelect;
+              if (onRowSelect) {
+                onRowSelect(row.index, !!value, false);
+              } else {
+                row.toggleSelected(!!value);
+              }
+            }}
+            onClick={(event: React.MouseEvent) => {
+              if (event.shiftKey) {
+                event.preventDefault();
+                const onRowSelect = table.options.meta?.onRowSelect;
+                if (onRowSelect) {
+                  onRowSelect(row.index, !row.getIsSelected(), true);
+                }
+              }
+            }}
+          />
+        ),
+        size: 40,
+        enableSorting: false,
+        enableHiding: false,
+        enableResizing: false,
+      },
       {
         id: "name",
         accessorKey: "name",

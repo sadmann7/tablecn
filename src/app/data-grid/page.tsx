@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { DataGridRenderDemo } from "@/components/data-grid-render-demo";
+import { DataGridDemo } from "@/components/data-grid-demo";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default async function DataGridPage() {
@@ -16,7 +16,7 @@ export default async function DataGridPage() {
         </div>
       }
     >
-      <DataGridRenderDemo />
+      <DataGridDemo />
     </Suspense>
   );
 }
