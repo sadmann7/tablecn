@@ -5,7 +5,12 @@ import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useComposedRefs } from "@/lib/compose-refs";
-import { getCellKey, getRowHeightValue } from "@/lib/data-grid";
+import {
+  flexRender,
+  getCellKey,
+  getCommonPinningStyles,
+  getRowHeightValue,
+} from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type {
   CellPosition,
@@ -186,21 +191,43 @@ function DataGridRowImpl<TData>({
           ) ?? false;
 
         return (
-          <DataGridCell
+          <div
             key={cell.id}
-            cell={cell}
-            table={table}
-            rowIndex={virtualRowIndex}
-            columnId={columnId}
-            colIndex={colIndex}
-            isFocused={isCellFocused}
-            isEditing={isCellEditing}
-            isSelected={isCellSelected}
-            isRowSelected={isRowSelected}
-            readOnly={readOnly}
-            dir={dir}
-            stretchColumns={stretchColumns}
-          />
+            role="gridcell"
+            aria-colindex={colIndex + 1}
+            data-highlighted={isCellFocused ? "" : undefined}
+            data-slot="grid-cell"
+            tabIndex={-1}
+            className={cn({
+              grow: stretchColumns && columnId !== "select",
+              "border-e": columnId !== "select",
+            })}
+            style={{
+              ...getCommonPinningStyles({ column: cell.column, dir }),
+              width: `calc(var(--col-${columnId}-size) * 1px)`,
+            }}
+          >
+            {typeof cell.column.columnDef.header === "function" ? (
+              <div
+                className={cn("size-full px-3 py-1.5", {
+                  "bg-primary/10": isRowSelected,
+                })}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </div>
+            ) : (
+              <DataGridCell
+                cell={cell}
+                table={table}
+                rowIndex={virtualRowIndex}
+                columnId={columnId}
+                isFocused={isCellFocused}
+                isEditing={isCellEditing}
+                isSelected={isCellSelected}
+                readOnly={readOnly}
+              />
+            )}
+          </div>
         );
       })}
     </div>
