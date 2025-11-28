@@ -136,6 +136,8 @@ interface UseDataGridProps<TData>
 
 function useDataGrid<TData>(props: UseDataGridProps<TData>) {
   const {
+    data,
+    columns,
     rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
     overscan = OVERSCAN,
     initialState,
@@ -254,14 +256,15 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
-  // Don't memoize columnIds - need fresh columns from propsRef on each render
-  const columnIds = propsRef.current.columns
-    .map((c) => {
-      if (c.id) return c.id;
-      if ("accessorKey" in c) return c.accessorKey as string;
-      return undefined;
-    })
-    .filter((id): id is string => Boolean(id));
+  const columnIds = React.useMemo(() => {
+    return columns
+      .map((c) => {
+        if (c.id) return c.id;
+        if ("accessorKey" in c) return c.accessorKey as string;
+        return undefined;
+      })
+      .filter((id): id is string => Boolean(id));
+  }, [columns]);
 
   const navigableColumnIds = React.useMemo(() => {
     return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
@@ -2058,24 +2061,37 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
     [propsRef, sorting, columnFilters, rowSelection]
   );
 
-  // Don't memoize tableOptions when using stable props pattern
-  // The ref pattern means we need fresh options on each render to get latest data
-  const tableOptions: TableOptions<TData> = {
-    ...propsRef.current,
-    data: propsRef.current.data,
-    columns: propsRef.current.columns,
+  const tableOptions = React.useMemo<TableOptions<TData>>(() => {
+    return {
+      ...propsRef.current,
+      data,
+      columns,
+      defaultColumn,
+      initialState: propsRef.current.initialState,
+      state: tableState,
+      onRowSelectionChange,
+      onSortingChange,
+      onColumnFiltersChange,
+      columnResizeMode: "onChange",
+      getCoreRowModel: getMemoizedCoreRowModel,
+      getFilteredRowModel: getMemoizedFilteredRowModel,
+      getSortedRowModel: getMemoizedSortedRowModel,
+      meta: tableMeta,
+    };
+  }, [
+    propsRef,
+    data,
+    columns,
     defaultColumn,
-    initialState: propsRef.current.initialState,
-    state: tableState,
+    tableState,
     onRowSelectionChange,
     onSortingChange,
     onColumnFiltersChange,
-    columnResizeMode: "onChange",
-    getCoreRowModel: getMemoizedCoreRowModel,
-    getFilteredRowModel: getMemoizedFilteredRowModel,
-    getSortedRowModel: getMemoizedSortedRowModel,
-    meta: tableMeta,
-  };
+    getMemoizedCoreRowModel,
+    getMemoizedFilteredRowModel,
+    getMemoizedSortedRowModel,
+    tableMeta,
+  ]);
 
   const table = useReactTable(tableOptions);
 
@@ -2274,8 +2290,6 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
   React.useEffect(() => {
     const currentState = store.getState();
     const autoFocus = propsRef.current.autoFocus;
-    const data = propsRef.current.data;
-    const columns = propsRef.current.columns;
 
     if (
       autoFocus &&
@@ -2301,7 +2315,7 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
         return () => cancelAnimationFrame(rafId);
       }
     }
-  }, [store, propsRef, navigableColumnIds, focusCell]);
+  }, [store, propsRef, data, columns, navigableColumnIds, focusCell]);
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
@@ -2398,9 +2412,7 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
       table,
       tableMeta,
       rowVirtualizer,
-      get columns() {
-        return propsRef.current.columns;
-      },
+      columns,
       searchState,
       columnSizeVars,
       focusedCell,
@@ -2414,6 +2426,7 @@ function useDataGrid<TData>(props: UseDataGridProps<TData>) {
       table,
       tableMeta,
       rowVirtualizer,
+      columns,
       searchState,
       columnSizeVars,
       focusedCell,
