@@ -543,7 +543,7 @@ export function DataGridRenderDemo() {
             >
               <ToggleGroupItem
                 value="batched"
-                className="px-3 data-[state=on]:bg-accent/70"
+                className="data-[state=on]:bg-accent/70"
               >
                 Batched
               </ToggleGroupItem>
