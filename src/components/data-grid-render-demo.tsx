@@ -64,7 +64,7 @@ export function DataGridRenderDemo() {
     lastUpdateTime: 0,
     cellsUpdated: 0,
   });
-  const [cellCount, setCellCount] = React.useState(25);
+  const [cellCount, setCellCount] = React.useState(50);
   const [isUpdatePending, startUpdateTransition] = React.useTransition();
   const [isRapidUpdating, setIsRapidUpdating] = React.useState(false);
 
@@ -311,19 +311,15 @@ export function DataGridRenderDemo() {
         const rowsCount = Math.ceil(count / columnsToFill.length);
 
         // Helper to build updates for a given range
-        const buildUpdates = (
+        function buildUpdates(
           startCell: number,
           endCell: number,
           getValue: (
             row: number,
             col: (typeof columnsToFill)[number],
           ) => string | number,
-        ) => {
-          const updates: {
-            rowIndex: number;
-            columnId: string;
-            value: string | number;
-          }[] = [];
+        ) {
+          const updates: UpdateCell[] = [];
           for (let i = startCell; i < endCell; i++) {
             const rowIndex = Math.floor(i / columnsToFill.length);
             const colIndex = i % columnsToFill.length;
@@ -336,7 +332,7 @@ export function DataGridRenderDemo() {
             });
           }
           return updates;
-        };
+        }
 
         // Phase 1: Mark all cells as "Searching..."
         console.log(
@@ -364,8 +360,21 @@ export function DataGridRenderDemo() {
         table.options.meta.onDataUpdate(generatingUpdates);
         await new Promise((resolve) => setTimeout(resolve, 400));
 
-        // Phase 3: Stream final values in chunks
-        console.log(`%c[Phase 3] Streaming final values...`, "color: #845ef7;");
+        // Phase 3: Mark cells as "Processing..."
+        console.log(
+          `%c[Phase 3] Marking cells as "Processing..."`,
+          "color: #845ef7;",
+        );
+        const processingUpdates = buildUpdates(
+          0,
+          count,
+          () => "⚙️ Processing...",
+        );
+        table.options.meta.onDataUpdate(processingUpdates);
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        // Phase 4: Stream final values in chunks
+        console.log(`%c[Phase 4] Streaming final values...`, "color: #845ef7;");
         const chunkSize = Math.max(5, Math.floor(count / 10));
         const cycle = updateCycleRef.current++;
         for (let chunk = 0; chunk < Math.ceil(count / chunkSize); chunk++) {
