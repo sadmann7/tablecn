@@ -16,12 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { UpdateCell } from "@/types/data-grid";
 
-interface TestPerson {
+interface Person {
   id: string;
   name?: string;
   age?: number;
@@ -29,8 +28,6 @@ interface TestPerson {
   salary?: number;
   department?: string;
 }
-
-faker.seed(123);
 
 const DEPARTMENTS = ["Engineering", "Marketing", "Sales", "HR", "Finance"];
 const NAME_PREFIXES = ["Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley"];
@@ -41,10 +38,11 @@ const EMAIL_DOMAINS = [
   "icloud.com",
   "proton.me",
 ];
-
 const CELL_COUNT_OPTIONS = [1, 5, 10, 25, 50, 100, 250, 500];
 
-function generatePerson(): TestPerson {
+faker.seed(123);
+
+function generatePerson(): Person {
   return {
     id: faker.string.nanoid(8),
     name: faker.person.fullName(),
@@ -55,12 +53,12 @@ function generatePerson(): TestPerson {
   };
 }
 
-const initialData: TestPerson[] = Array.from({ length: 100 }, () =>
+const initialData: Person[] = Array.from({ length: 100 }, () =>
   generatePerson(),
 );
 
 export function DataGridRenderDemo() {
-  const [data, setData] = React.useState<TestPerson[]>(initialData);
+  const [data, setData] = React.useState<Person[]>(initialData);
   const [renderStats, setRenderStats] = React.useState({
     componentRenders: 0,
     lastUpdateTime: 0,
@@ -68,6 +66,7 @@ export function DataGridRenderDemo() {
   });
   const [cellCount, setCellCount] = React.useState(25);
   const [isUpdatePending, startUpdateTransition] = React.useTransition();
+  const [isRapidUpdating, setIsRapidUpdating] = React.useState(false);
 
   const componentRenderCount = React.useRef(0);
   componentRenderCount.current++;
@@ -81,9 +80,9 @@ export function DataGridRenderDemo() {
     );
   });
 
-  const filterFn = React.useMemo(() => getFilterFn<TestPerson>(), []);
+  const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
-  const columns = React.useMemo<ColumnDef<TestPerson>[]>(
+  const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
       {
         id: "select",
@@ -207,7 +206,7 @@ export function DataGridRenderDemo() {
     [filterFn],
   );
 
-  const onDataChange = React.useCallback((newData: TestPerson[]) => {
+  const onDataChange = React.useCallback((newData: Person[]) => {
     setData(newData);
   }, []);
 
@@ -220,7 +219,7 @@ export function DataGridRenderDemo() {
     enablePaste: true,
   });
 
-  const updateCells = React.useCallback(
+  const onCellsUpdate = React.useCallback(
     (count: number) => {
       startUpdateTransition(() => {
         const cycle = updateCycleRef.current++;
@@ -288,65 +287,7 @@ export function DataGridRenderDemo() {
     [table],
   );
 
-  const updateSequentially = React.useCallback(() => {
-    const cycle = updateCycleRef.current++;
-    console.log(
-      `%c\n========== UPDATING 10 CELLS SEQUENTIALLY (BAD) ==========`,
-      "color: #ff6b6b; font-size: 14px; font-weight: bold;",
-    );
-    const startTime = performance.now();
-
-    if (table.options.meta?.onDataUpdate) {
-      // BAD: Calling onDataUpdate multiple times
-      for (let i = 0; i < 10; i++) {
-        table.options.meta.onDataUpdate({
-          rowIndex: i,
-          columnId: "name",
-          value: `${NAME_PREFIXES[(i + cycle) % NAME_PREFIXES.length]} (seq)`,
-        });
-      }
-
-      const endTime = performance.now();
-      setRenderStats({
-        componentRenders: componentRenderCount.current,
-        lastUpdateTime: endTime - startTime,
-        cellsUpdated: 10,
-      });
-    }
-  }, [table]);
-
-  const updateBatched = React.useCallback(() => {
-    const cycle = updateCycleRef.current++;
-    console.log(
-      `%c\n========== UPDATING 10 CELLS BATCHED (GOOD) ==========`,
-      "color: #51cf66; font-size: 14px; font-weight: bold;",
-    );
-    const startTime = performance.now();
-
-    if (table.options.meta?.onDataUpdate) {
-      // GOOD: Single call with array of updates
-      const updates = [];
-      for (let i = 0; i < 10; i++) {
-        updates.push({
-          rowIndex: i,
-          columnId: "name",
-          value: `${NAME_PREFIXES[(i + cycle) % NAME_PREFIXES.length]} (batch)`,
-        });
-      }
-      table.options.meta.onDataUpdate(updates);
-
-      const endTime = performance.now();
-      setRenderStats({
-        componentRenders: componentRenderCount.current,
-        lastUpdateTime: endTime - startTime,
-        cellsUpdated: 10,
-      });
-    }
-  }, [table]);
-
-  const [isRapidUpdating, setIsRapidUpdating] = React.useState(false);
-
-  const rapidUpdate = React.useCallback(
+  const onRapidCellsUpdate = React.useCallback(
     async (count: number) => {
       if (isRapidUpdating) return;
 
@@ -487,7 +428,7 @@ export function DataGridRenderDemo() {
             value={String(cellCount)}
             onValueChange={(value) => setCellCount(Number(value))}
           >
-            <SelectTrigger className="w-24">
+            <SelectTrigger className="w-22">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -507,7 +448,7 @@ export function DataGridRenderDemo() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => updateCells(cellCount)}
+              onClick={() => onCellsUpdate(cellCount)}
               disabled={isUpdatePending}
             >
               {isUpdatePending ? (
@@ -518,9 +459,9 @@ export function DataGridRenderDemo() {
               Update
             </Button>
             <Button
-              size="sm"
               variant="outline"
-              onClick={() => rapidUpdate(cellCount)}
+              size="sm"
+              onClick={() => onRapidCellsUpdate(cellCount)}
               disabled={isRapidUpdating}
             >
               {isRapidUpdating ? (
@@ -530,30 +471,6 @@ export function DataGridRenderDemo() {
               )}
               Rapid update
             </Button>
-            <div className="mx-2 h-6 w-px bg-border" />
-            <ToggleGroup
-              type="single"
-              size="sm"
-              variant="outline"
-              className="gap-0"
-              onValueChange={(value) => {
-                if (value === "batched") updateBatched();
-                if (value === "sequential") updateSequentially();
-              }}
-            >
-              <ToggleGroupItem
-                value="batched"
-                className="data-[state=on]:bg-accent/70"
-              >
-                Batched
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                value="sequential"
-                className="px-3 data-[state=on]:bg-accent/70"
-              >
-                Sequential
-              </ToggleGroupItem>
-            </ToggleGroup>
           </div>
           <div className="flex items-center gap-1">
             <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2.5 py-1.5 text-sm">
