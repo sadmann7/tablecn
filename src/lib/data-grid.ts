@@ -1,5 +1,16 @@
 import type { Column } from "@tanstack/react-table";
+import type * as React from "react";
 import type { CellPosition, RowHeightValue } from "@/types/data-grid";
+
+export function flexRender<TProps extends object>(
+  Comp: ((props: TProps) => React.ReactNode) | string | undefined,
+  props: TProps,
+): React.ReactNode {
+  if (typeof Comp === "string") {
+    return Comp;
+  }
+  return Comp?.(props);
+}
 
 export function getCellKey(rowIndex: number, columnId: string) {
   return `${rowIndex}:${columnId}`;

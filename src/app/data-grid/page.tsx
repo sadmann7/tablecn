@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { DataGridDemo } from "@/components/data-grid/data-grid-demo";
+import { DataGridDemo } from "@/components/data-grid-demo";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default async function DataGridPage() {

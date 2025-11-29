@@ -1,32 +1,60 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
-import { flexRender, type Row } from "@tanstack/react-table";
-import type { Virtualizer } from "@tanstack/react-virtual";
+import type { Row, TableMeta, VisibilityState } from "@tanstack/react-table";
+import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
+import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useComposedRefs } from "@/lib/compose-refs";
-import { getCommonPinningStyles, getRowHeightValue } from "@/lib/data-grid";
+import {
+  flexRender,
+  getCellKey,
+  getCommonPinningStyles,
+  getRowHeightValue,
+} from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { CellPosition, RowHeightValue } from "@/types/data-grid";
+import type {
+  CellPosition,
+  Direction,
+  RowHeightValue,
+  SelectionState,
+} from "@/types/data-grid";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
+  tableMeta: TableMeta<TData>;
   rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
-  virtualRowIndex: number;
+  virtualItem: VirtualItem;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
+  editingCell: CellPosition | null;
+  selectionState?: SelectionState;
+  columnVisibility?: VisibilityState;
+  dir: Direction;
+  readOnly: boolean;
   stretchColumns?: boolean;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
+  // Re-render if row identity changed
   if (prev.row.id !== next.row.id) {
     return false;
   }
 
-  const prevRowIndex = prev.virtualRowIndex;
-  const nextRowIndex = next.virtualRowIndex;
+  // Re-render if row data (original) reference changed
+  if (prev.row.original !== next.row.original) {
+    return false;
+  }
 
+  // Re-render if virtual position changed (handles transform updates)
+  if (prev.virtualItem.start !== next.virtualItem.start) {
+    return false;
+  }
+
+  const prevRowIndex = prev.virtualItem.index;
+  const nextRowIndex = next.virtualItem.index;
+
+  // Re-render if focus state changed for this row
   const prevHasFocus = prev.focusedCell?.rowIndex === prevRowIndex;
   const nextHasFocus = next.focusedCell?.rowIndex === nextRowIndex;
 
@@ -34,34 +62,74 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if focused column changed within this row
   if (nextHasFocus && prevHasFocus) {
-    const prevFocusedCol = prev.focusedCell?.columnId;
-    const nextFocusedCol = next.focusedCell?.columnId;
-    if (prevFocusedCol !== nextFocusedCol) {
+    if (prev.focusedCell?.columnId !== next.focusedCell?.columnId) {
       return false;
     }
   }
 
-  if (next.rowVirtualizer.isScrolling) {
-    return true;
+  // Re-render if editing state changed for this row
+  const prevHasEditing = prev.editingCell?.rowIndex === prevRowIndex;
+  const nextHasEditing = next.editingCell?.rowIndex === nextRowIndex;
+
+  if (prevHasEditing !== nextHasEditing) {
+    return false;
   }
 
-  return false;
+  // Re-render if editing column changed within this row
+  if (nextHasEditing && prevHasEditing) {
+    if (prev.editingCell?.columnId !== next.editingCell?.columnId) {
+      return false;
+    }
+  }
+
+  // Re-render if selection state changed (different Set reference means selection changed)
+  if (
+    prev.selectionState?.selectedCells !== next.selectionState?.selectedCells
+  ) {
+    return false;
+  }
+
+  // Re-render if column visibility changed
+  if (prev.columnVisibility !== next.columnVisibility) {
+    return false;
+  }
+
+  // Re-render if row height changed
+  if (prev.rowHeight !== next.rowHeight) {
+    return false;
+  }
+
+  // Re-render if readOnly changed
+  if (prev.readOnly !== next.readOnly) {
+    return false;
+  }
+
+  // Skip re-render - props are equal
+  return true;
 }) as typeof DataGridRowImpl;
 
 function DataGridRowImpl<TData>({
   row,
-  virtualRowIndex,
+  tableMeta,
+  virtualItem,
   rowVirtualizer,
   rowMapRef,
   rowHeight,
   focusedCell,
+  editingCell,
+  selectionState,
+  columnVisibility,
+  dir,
+  readOnly,
   stretchColumns = false,
-  ref,
   className,
+  style,
+  ref,
   ...props
 }: DataGridRowProps<TData>) {
-  const dir = useDirection();
+  const virtualRowIndex = virtualItem.index;
 
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
@@ -81,6 +149,14 @@ function DataGridRowImpl<TData>({
 
   const isRowSelected = row.getIsSelected();
 
+  // Memoize visible cells to avoid recreating cell array on every render
+  // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
+  // Include columnVisibility to recalculate when columns are hidden/shown, without this the cells under the column header will be still visible
+  const visibleCells = React.useMemo(() => {
+    void columnVisibility;
+    return row.getVisibleCells();
+  }, [row, columnVisibility]);
+
   return (
     <div
       key={row.id}
@@ -89,18 +165,31 @@ function DataGridRowImpl<TData>({
       aria-selected={isRowSelected}
       data-index={virtualRowIndex}
       data-slot="grid-row"
-      ref={rowRef}
       tabIndex={-1}
-      className={cn("absolute flex w-full border-b", className)}
+      {...props}
+      ref={rowRef}
+      className={cn(
+        "absolute flex w-full border-b will-change-transform",
+        className,
+      )}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
+        transform: `translateY(${virtualItem.start}px)`,
+        ...style,
       }}
-      {...props}
     >
-      {row.getVisibleCells().map((cell, colIndex) => {
+      {visibleCells.map((cell, colIndex) => {
+        const columnId = cell.column.id;
         const isCellFocused =
           focusedCell?.rowIndex === virtualRowIndex &&
-          focusedCell?.columnId === cell.column.id;
+          focusedCell?.columnId === columnId;
+        const isCellEditing =
+          editingCell?.rowIndex === virtualRowIndex &&
+          editingCell?.columnId === columnId;
+        const isCellSelected =
+          selectionState?.selectedCells.has(
+            getCellKey(virtualRowIndex, columnId),
+          ) ?? false;
 
         return (
           <div
@@ -111,12 +200,12 @@ function DataGridRowImpl<TData>({
             data-slot="grid-cell"
             tabIndex={-1}
             className={cn({
-              grow: stretchColumns && cell.column.id !== "select",
-              "border-e": cell.column.id !== "select",
+              grow: stretchColumns && columnId !== "select",
+              "border-e": columnId !== "select",
             })}
             style={{
               ...getCommonPinningStyles({ column: cell.column, dir }),
-              width: `calc(var(--col-${cell.column.id}-size) * 1px)`,
+              width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >
             {typeof cell.column.columnDef.header === "function" ? (
@@ -128,7 +217,16 @@ function DataGridRowImpl<TData>({
                 {flexRender(cell.column.columnDef.cell, cell.getContext())}
               </div>
             ) : (
-              flexRender(cell.column.columnDef.cell, cell.getContext())
+              <DataGridCell
+                cell={cell}
+                tableMeta={tableMeta}
+                rowIndex={virtualRowIndex}
+                columnId={columnId}
+                isFocused={isCellFocused}
+                isEditing={isCellEditing}
+                isSelected={isCellSelected}
+                readOnly={readOnly}
+              />
             )}
           </div>
         );

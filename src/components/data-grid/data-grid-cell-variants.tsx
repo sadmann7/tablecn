@@ -51,7 +51,7 @@ import type { CellVariantProps, FileCellData } from "@/types/data-grid";
 
 export function ShortTextCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isEditing,
@@ -63,7 +63,6 @@ export function ShortTextCell<TData>({
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -78,10 +77,10 @@ export function ShortTextCell<TData>({
     // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
     if (!readOnly && currentValue !== initialValue) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
     }
-    meta?.onCellEditingStop?.();
-  }, [meta, rowIndex, columnId, initialValue, readOnly]);
+    tableMeta?.onCellEditingStop?.();
+  }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -98,16 +97,24 @@ export function ShortTextCell<TData>({
           event.preventDefault();
           const currentValue = cellRef.current?.textContent ?? "";
           if (currentValue !== initialValue) {
-            meta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
+            tableMeta?.onDataUpdate?.({
+              rowIndex,
+              columnId,
+              value: currentValue,
+            });
           }
-          meta?.onCellEditingStop?.({ moveToNextRow: true });
+          tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent ?? "";
           if (currentValue !== initialValue) {
-            meta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
+            tableMeta?.onDataUpdate?.({
+              rowIndex,
+              columnId,
+              value: currentValue,
+            });
           }
-          meta?.onCellEditingStop?.({
+          tableMeta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         } else if (event.key === "Escape") {
@@ -137,7 +144,7 @@ export function ShortTextCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, meta, rowIndex, columnId],
+    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId],
   );
 
   React.useEffect(() => {
@@ -162,10 +169,10 @@ export function ShortTextCell<TData>({
   const displayValue = !isEditing ? (value ?? "") : "";
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -195,7 +202,7 @@ export function ShortTextCell<TData>({
 
 export function LongTextCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -207,7 +214,6 @@ export function LongTextCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const prevInitialValueRef = React.useRef(initialValue);
@@ -219,40 +225,40 @@ export function LongTextCell<TData>({
   // Debounced auto-save (300ms delay)
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     if (!readOnly) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
     }
   }, 300);
 
   const onSave = React.useCallback(() => {
     // Immediately save any pending changes and close the popover
     if (!readOnly && value !== initialValue) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
-    meta?.onCellEditingStop?.();
-  }, [meta, value, initialValue, rowIndex, columnId, readOnly]);
+    tableMeta?.onCellEditingStop?.();
+  }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
 
   const onCancel = React.useCallback(() => {
     // Restore the original value
     setValue(initialValue ?? "");
     if (!readOnly) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
     }
-    meta?.onCellEditingStop?.();
-  }, [meta, initialValue, rowIndex, columnId, readOnly]);
+    tableMeta?.onCellEditingStop?.();
+  }, [tableMeta, initialValue, rowIndex, columnId, readOnly]);
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       if (isOpen && !readOnly) {
-        meta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         // Immediately save any pending changes when closing
         if (!readOnly && value !== initialValue) {
-          meta?.onDataUpdate?.({ rowIndex, columnId, value });
+          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
         }
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       }
     },
-    [meta, value, initialValue, rowIndex, columnId, readOnly],
+    [tableMeta, value, initialValue, rowIndex, columnId, readOnly],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -269,10 +275,10 @@ export function LongTextCell<TData>({
   const onBlur = React.useCallback(() => {
     // Immediately save any pending changes on blur
     if (!readOnly && value !== initialValue) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
-    meta?.onCellEditingStop?.();
-  }, [meta, value, initialValue, rowIndex, columnId, readOnly]);
+    tableMeta?.onCellEditingStop?.();
+  }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -296,9 +302,9 @@ export function LongTextCell<TData>({
         event.preventDefault();
         // Save any pending changes
         if (value !== initialValue) {
-          meta?.onDataUpdate?.({ rowIndex, columnId, value });
+          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
         }
-        meta?.onCellEditingStop?.({
+        tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
         });
         return;
@@ -306,16 +312,16 @@ export function LongTextCell<TData>({
       // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
-    [onSave, onCancel, value, initialValue, meta, rowIndex, columnId],
+    [onSave, onCancel, value, initialValue, tableMeta, rowIndex, columnId],
   );
 
   return (
     <Popover open={isEditing} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
-        <DataGridCellWrapper
+        <DataGridCellWrapper<TData>
           ref={containerRef}
           cell={cell}
-          table={table}
+          tableMeta={tableMeta}
           rowIndex={rowIndex}
           columnId={columnId}
           isEditing={isEditing}
@@ -349,7 +355,7 @@ export function LongTextCell<TData>({
 
 export function NumberCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -361,11 +367,11 @@ export function NumberCell<TData>({
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const min = cellOpts?.variant === "number" ? cellOpts.min : undefined;
-  const max = cellOpts?.variant === "number" ? cellOpts.max : undefined;
-  const step = cellOpts?.variant === "number" ? cellOpts.step : undefined;
+  const numberCellOpts = cellOpts?.variant === "number" ? cellOpts : null;
+  const min = numberCellOpts?.min;
+  const max = numberCellOpts?.max;
+  const step = numberCellOpts?.step;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -376,10 +382,10 @@ export function NumberCell<TData>({
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (!readOnly && numValue !== initialValue) {
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
     }
-    meta?.onCellEditingStop?.();
-  }, [meta, rowIndex, columnId, initialValue, value, readOnly]);
+    tableMeta?.onCellEditingStop?.();
+  }, [tableMeta, rowIndex, columnId, initialValue, value, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -395,16 +401,16 @@ export function NumberCell<TData>({
           event.preventDefault();
           const numValue = value === "" ? null : Number(value);
           if (numValue !== initialValue) {
-            meta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
+            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
           }
-          meta?.onCellEditingStop?.({ moveToNextRow: true });
+          tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const numValue = value === "" ? null : Number(value);
           if (numValue !== initialValue) {
-            meta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
+            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
           }
-          meta?.onCellEditingStop?.({
+          tableMeta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         } else if (event.key === "Escape") {
@@ -422,7 +428,7 @@ export function NumberCell<TData>({
         }
       }
     },
-    [isEditing, isFocused, initialValue, meta, rowIndex, columnId, value],
+    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId, value],
   );
 
   React.useEffect(() => {
@@ -433,10 +439,10 @@ export function NumberCell<TData>({
   }, [isEditing]);
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -484,7 +490,7 @@ function getUrlHref(urlString: string): string {
 
 export function UrlCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isEditing,
@@ -496,7 +502,6 @@ export function UrlCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -511,14 +516,14 @@ export function UrlCell<TData>({
     const currentValue = cellRef.current?.textContent?.trim() ?? "";
 
     if (!readOnly && currentValue !== initialValue) {
-      meta?.onDataUpdate?.({
+      tableMeta?.onDataUpdate?.({
         rowIndex,
         columnId,
         value: currentValue || null,
       });
     }
-    meta?.onCellEditingStop?.();
-  }, [meta, rowIndex, columnId, initialValue, readOnly]);
+    tableMeta?.onCellEditingStop?.();
+  }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -535,24 +540,24 @@ export function UrlCell<TData>({
           event.preventDefault();
           const currentValue = cellRef.current?.textContent?.trim() ?? "";
           if (!readOnly && currentValue !== initialValue) {
-            meta?.onDataUpdate?.({
+            tableMeta?.onDataUpdate?.({
               rowIndex,
               columnId,
               value: currentValue || null,
             });
           }
-          meta?.onCellEditingStop?.({ moveToNextRow: true });
+          tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent?.trim() ?? "";
           if (!readOnly && currentValue !== initialValue) {
-            meta?.onDataUpdate?.({
+            tableMeta?.onDataUpdate?.({
               rowIndex,
               columnId,
               value: currentValue || null,
             });
           }
-          meta?.onCellEditingStop?.({
+          tableMeta?.onCellEditingStop?.({
             direction: event.shiftKey ? "left" : "right",
           });
         } else if (event.key === "Escape") {
@@ -583,7 +588,15 @@ export function UrlCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, meta, rowIndex, columnId, readOnly],
+    [
+      isEditing,
+      isFocused,
+      initialValue,
+      tableMeta,
+      rowIndex,
+      columnId,
+      readOnly,
+    ],
   );
 
   const onLinkClick = React.useCallback(
@@ -634,10 +647,10 @@ export function UrlCell<TData>({
   const isDangerousUrl = displayValue && !urlHref;
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -686,7 +699,7 @@ export function UrlCell<TData>({
 
 export function CheckboxCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -696,7 +709,6 @@ export function CheckboxCell<TData>({
   const initialValue = cell.getValue() as boolean;
   const [value, setValue] = React.useState(Boolean(initialValue));
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -708,9 +720,9 @@ export function CheckboxCell<TData>({
     (checked: boolean) => {
       if (readOnly) return;
       setValue(checked);
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: checked });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: checked });
     },
-    [meta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -725,12 +737,12 @@ export function CheckboxCell<TData>({
         onCheckedChange(!value);
       } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
-        meta?.onCellEditingStop?.({
+        tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
         });
       }
     },
-    [isFocused, value, onCheckedChange, meta, readOnly],
+    [isFocused, value, onCheckedChange, tableMeta, readOnly],
   );
 
   const onWrapperClick = React.useCallback(
@@ -763,10 +775,10 @@ export function CheckboxCell<TData>({
   );
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={false}
@@ -791,7 +803,7 @@ export function CheckboxCell<TData>({
 
 export function SelectCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -802,7 +814,6 @@ export function SelectCell<TData>({
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
 
@@ -816,21 +827,21 @@ export function SelectCell<TData>({
     (newValue: string) => {
       if (readOnly) return;
       setValue(newValue);
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
-      meta?.onCellEditingStop?.();
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      tableMeta?.onCellEditingStop?.();
     },
-    [meta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       if (isOpen && !readOnly) {
-        meta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       }
     },
-    [meta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -838,25 +849,25 @@ export function SelectCell<TData>({
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       } else if (!isEditing && isFocused && event.key === "Tab") {
         event.preventDefault();
-        meta?.onCellEditingStop?.({
+        tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
         });
       }
     },
-    [isEditing, isFocused, initialValue, meta],
+    [isEditing, isFocused, initialValue, tableMeta],
   );
 
   const displayLabel =
     options.find((opt) => opt.value === value)?.label ?? value;
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -901,7 +912,7 @@ export function SelectCell<TData>({
 
 export function MultiSelectCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -922,7 +933,6 @@ export function MultiSelectCell<TData>({
   const [searchValue, setSearchValue] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
@@ -946,11 +956,11 @@ export function MultiSelectCell<TData>({
         : [...selectedValues, value];
 
       setSelectedValues(newValues);
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
       setSearchValue("");
       queueMicrotask(() => inputRef.current?.focus());
     },
-    [selectedValues, meta, rowIndex, columnId, readOnly],
+    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
   );
 
   const removeValue = React.useCallback(
@@ -960,30 +970,30 @@ export function MultiSelectCell<TData>({
       event?.preventDefault();
       const newValues = selectedValues.filter((v) => v !== valueToRemove);
       setSelectedValues(newValues);
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
       // Focus back on input after removing
       setTimeout(() => inputRef.current?.focus(), 0);
     },
-    [selectedValues, meta, rowIndex, columnId, readOnly],
+    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
   );
 
   const clearAll = React.useCallback(() => {
     if (readOnly) return;
     setSelectedValues([]);
-    meta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
+    tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
     queueMicrotask(() => inputRef.current?.focus());
-  }, [meta, rowIndex, columnId, readOnly]);
+  }, [tableMeta, rowIndex, columnId, readOnly]);
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       if (isOpen && !readOnly) {
-        meta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         setSearchValue("");
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       }
     },
-    [meta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -999,16 +1009,16 @@ export function MultiSelectCell<TData>({
         event.preventDefault();
         setSelectedValues(cellValue);
         setSearchValue("");
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       } else if (!isEditing && isFocused && event.key === "Tab") {
         event.preventDefault();
         setSearchValue("");
-        meta?.onCellEditingStop?.({
+        tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
         });
       }
     },
-    [isEditing, isFocused, cellValue, meta],
+    [isEditing, isFocused, cellValue, tableMeta],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -1038,7 +1048,7 @@ export function MultiSelectCell<TData>({
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
     .filter(Boolean);
 
-  const rowHeight = table.options.meta?.rowHeight ?? "short";
+  const rowHeight = tableMeta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } =
@@ -1050,10 +1060,10 @@ export function MultiSelectCell<TData>({
     });
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -1186,7 +1196,7 @@ function formatDateForDisplay(dateStr: string) {
 
 export function DateCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -1197,7 +1207,6 @@ export function DateCell<TData>({
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -1213,21 +1222,21 @@ export function DateCell<TData>({
 
       const formattedDate = date.toISOString().split("T")[0] ?? "";
       setValue(formattedDate);
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
-      meta?.onCellEditingStop?.();
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
+      tableMeta?.onCellEditingStop?.();
     },
-    [meta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const onOpenChange = React.useCallback(
     (isOpen: boolean) => {
       if (isOpen && !readOnly) {
-        meta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       }
     },
-    [meta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -1235,22 +1244,22 @@ export function DateCell<TData>({
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       } else if (!isEditing && isFocused && event.key === "Tab") {
         event.preventDefault();
-        meta?.onCellEditingStop?.({
+        tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
         });
       }
     },
-    [isEditing, isFocused, initialValue, meta],
+    [isEditing, isFocused, initialValue, tableMeta],
   );
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}
@@ -1321,7 +1330,7 @@ function getFileIcon(
 
 export function FileCell<TData>({
   cell,
-  table,
+  tableMeta,
   rowIndex,
   columnId,
   isFocused,
@@ -1350,7 +1359,6 @@ export function FileCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dropzoneRef = React.useRef<HTMLDivElement>(null);
-  const meta = table.options.meta;
   const cellOpts = cell.column.columnDef.meta?.cell;
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
@@ -1358,7 +1366,7 @@ export function FileCell<TData>({
   const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
   const maxFiles = fileCellOpts?.maxFiles ?? 10;
   const accept = fileCellOpts?.accept;
-  const multiple = fileCellOpts?.multiple ?? true;
+  const multiple = fileCellOpts?.multiple ?? false;
 
   const acceptedTypes = React.useMemo(
     () => (accept ? accept.split(",").map((t) => t.trim()) : null),
@@ -1477,15 +1485,13 @@ export function FileCell<TData>({
           setUploadingFiles(uploadingIds);
 
           let uploadedFiles: FileCellData[] = [];
-          const rowData = table.options.data[rowIndex];
 
-          if (meta?.onFilesUpload && rowData) {
+          if (tableMeta?.onFilesUpload) {
             try {
-              uploadedFiles = await meta.onFilesUpload({
+              uploadedFiles = await tableMeta.onFilesUpload({
                 files: filesToValidate,
                 rowIndex,
                 columnId,
-                row: rowData,
               });
             } catch (error) {
               toast.error(
@@ -1519,7 +1525,7 @@ export function FileCell<TData>({
 
           setFiles(finalFiles);
           setUploadingFiles(new Set());
-          meta?.onDataUpdate?.({ rowIndex, columnId, value: finalFiles });
+          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: finalFiles });
         } else {
           const newFilesData: FileCellData[] = filesToValidate.map((f) => ({
             id: crypto.randomUUID(),
@@ -1530,11 +1536,15 @@ export function FileCell<TData>({
           }));
           const updatedFiles = [...files, ...newFilesData];
           setFiles(updatedFiles);
-          meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+          tableMeta?.onDataUpdate?.({
+            rowIndex,
+            columnId,
+            value: updatedFiles,
+          });
         }
       }
     },
-    [files, maxFiles, validateFile, meta, rowIndex, columnId, readOnly, table],
+    [files, maxFiles, validateFile, tableMeta, rowIndex, columnId, readOnly],
   );
 
   const removeFile = React.useCallback(
@@ -1545,14 +1555,12 @@ export function FileCell<TData>({
       const fileToRemove = files.find((f) => f.id === fileId);
       if (!fileToRemove) return;
 
-      const rowData = table.options.data[rowIndex];
-      if (meta?.onFilesDelete && rowData) {
+      if (tableMeta?.onFilesDelete) {
         try {
-          await meta.onFilesDelete({
+          await tableMeta.onFilesDelete({
             fileIds: [fileId],
             rowIndex,
             columnId,
-            row: rowData,
           });
         } catch (error) {
           toast.error(
@@ -1570,23 +1578,21 @@ export function FileCell<TData>({
 
       const updatedFiles = files.filter((f) => f.id !== fileId);
       setFiles(updatedFiles);
-      meta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
     },
-    [files, meta, rowIndex, columnId, readOnly, table],
+    [files, tableMeta, rowIndex, columnId, readOnly],
   );
 
   const clearAll = React.useCallback(async () => {
     if (readOnly) return;
     setError(null);
 
-    const rowData = table.options.data[rowIndex];
-    if (meta?.onFilesDelete && rowData && files.length > 0) {
+    if (tableMeta?.onFilesDelete && files.length > 0) {
       try {
-        await meta.onFilesDelete({
+        await tableMeta.onFilesDelete({
           fileIds: files.map((f) => f.id),
           rowIndex,
           columnId,
-          row: rowData,
         });
       } catch (error) {
         toast.error(
@@ -1602,8 +1608,8 @@ export function FileCell<TData>({
       }
     }
     setFiles([]);
-    meta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
-  }, [files, meta, rowIndex, columnId, readOnly, table]);
+    tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
+  }, [files, tableMeta, rowIndex, columnId, readOnly]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1716,13 +1722,13 @@ export function FileCell<TData>({
     (isOpen: boolean) => {
       if (isOpen && !readOnly) {
         setError(null);
-        meta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         setError(null);
-        meta?.onCellEditingStop?.();
+        tableMeta?.onCellEditingStop?.();
       }
     },
-    [meta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const onEscapeKeyDown: NonNullable<
@@ -1749,17 +1755,17 @@ export function FileCell<TData>({
           event.preventDefault();
           setFiles(cellValue);
           setError(null);
-          meta?.onCellEditingStop?.();
+          tableMeta?.onCellEditingStop?.();
         } else if (event.key === " ") {
           event.preventDefault();
           onDropzoneClick();
         }
       } else if (isFocused && event.key === "Enter") {
         event.preventDefault();
-        meta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else if (!isEditing && isFocused && event.key === "Tab") {
         event.preventDefault();
-        meta?.onCellEditingStop?.({
+        tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
         });
       }
@@ -1768,7 +1774,7 @@ export function FileCell<TData>({
       isEditing,
       isFocused,
       cellValue,
-      meta,
+      tableMeta,
       onDropzoneClick,
       rowIndex,
       columnId,
@@ -1785,7 +1791,7 @@ export function FileCell<TData>({
     };
   }, [files]);
 
-  const rowHeight = table.options.meta?.rowHeight ?? "short";
+  const rowHeight = tableMeta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } =
@@ -1800,10 +1806,10 @@ export function FileCell<TData>({
     });
 
   return (
-    <DataGridCellWrapper
+    <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      table={table}
+      tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
       isEditing={isEditing}

@@ -16,9 +16,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { FileCellData } from "@/types/data-grid";
-
-type Direction = "ltr" | "rtl";
+import type { Direction, FileCellData } from "@/types/data-grid";
 
 interface Person {
   id: string;
@@ -510,41 +508,46 @@ export function DataGridDemo() {
     }, []);
 
   const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
-    React.useCallback(async ({ files }) => {
-      // In a real app, you would upload multiple files to your server/storage:
-      // const formData = new FormData();
-      // files.forEach(file => formData.append('files', file));
-      // formData.append('personId', row.id);
-      // formData.append('columnId', columnId);
-      //
-      // const response = await fetch('/api/upload', {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      // const data = await response.json();
-      // return data.files.map(f => ({
-      //   id: f.fileId,
-      //   name: f.fileName,
-      //   size: f.fileSize,
-      //   type: f.fileType,
-      //   url: f.fileUrl
-      // }));
+    React.useCallback(
+      async ({ files, rowIndex: _rowIndex, columnId: _columnId }) => {
+        // In a real app, you would upload multiple files to your server/storage:
+        // const row = data[rowIndex];
+        // const formData = new FormData();
+        // files.forEach(file => formData.append('files', file));
+        // formData.append('personId', row.id);
+        // formData.append('columnId', columnId);
+        //
+        // const response = await fetch('/api/upload', {
+        //   method: 'POST',
+        //   body: formData
+        // });
+        // const data = await response.json();
+        // return data.files.map(f => ({
+        //   id: f.fileId,
+        //   name: f.fileName,
+        //   size: f.fileSize,
+        //   type: f.fileType,
+        //   url: f.fileUrl
+        // }));
 
-      // For this demo, simulate an upload delay and create local URLs
-      await new Promise((resolve) => setTimeout(resolve, 800));
+        // For this demo, simulate an upload delay and create local URLs
+        await new Promise((resolve) => setTimeout(resolve, 800));
 
-      return files.map((file) => ({
-        id: crypto.randomUUID(),
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
-      }));
-    }, []);
+        return files.map((file) => ({
+          id: crypto.randomUUID(),
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: URL.createObjectURL(file),
+        }));
+      },
+      [],
+    );
 
   const onFilesDelete: NonNullable<UseDataGridProps<Person>["onFilesDelete"]> =
     React.useCallback(async ({ fileIds, rowIndex, columnId }) => {
       // In a real app, you would delete multiple files from your server/storage:
+      // const row = data[rowIndex];
       // await fetch('/api/files/batch-delete', {
       //   method: 'DELETE',
       //   body: JSON.stringify({ fileIds, personId: row.id, columnId })

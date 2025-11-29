@@ -1,6 +1,6 @@
 "use client";
 
-import type { Cell, Table } from "@tanstack/react-table";
+import type { Cell, TableMeta } from "@tanstack/react-table";
 import * as React from "react";
 
 import {
@@ -14,165 +14,105 @@ import {
   ShortTextCell,
   UrlCell,
 } from "@/components/data-grid/data-grid-cell-variants";
+import type { CellVariantProps } from "@/types/data-grid";
 
 interface DataGridCellProps<TData> {
   cell: Cell<TData, unknown>;
-  table: Table<TData>;
+  tableMeta: TableMeta<TData>;
+  rowIndex: number;
+  columnId: string;
+  isFocused: boolean;
+  isEditing: boolean;
+  isSelected: boolean;
+  readOnly: boolean;
 }
 
-export function DataGridCell<TData>({ cell, table }: DataGridCellProps<TData>) {
-  const meta = table.options.meta;
-  const originalRowIndex = cell.row.index;
+export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
+  // Fast path: check stable primitive props first
+  if (prev.isFocused !== next.isFocused) return false;
+  if (prev.isEditing !== next.isEditing) return false;
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.readOnly !== next.readOnly) return false;
+  if (prev.rowIndex !== next.rowIndex) return false;
+  if (prev.columnId !== next.columnId) return false;
 
-  const rows = table.getRowModel().rows;
-  const displayRowIndex = rows.findIndex(
-    (row) => row.original === cell.row.original,
-  );
-  const rowIndex = displayRowIndex >= 0 ? displayRowIndex : originalRowIndex;
-  const columnId = cell.column.id;
+  // Check cell value using row.original instead of getValue() for stability
+  // getValue() is unstable and recreates on every render, breaking memoization
+  const prevValue = (prev.cell.row.original as Record<string, unknown>)[
+    prev.columnId
+  ];
+  const nextValue = (next.cell.row.original as Record<string, unknown>)[
+    next.columnId
+  ];
+  if (prevValue !== nextValue) {
+    return false;
+  }
 
-  const isFocused =
-    meta?.focusedCell?.rowIndex === rowIndex &&
-    meta?.focusedCell?.columnId === columnId;
-  const isEditing =
-    meta?.editingCell?.rowIndex === rowIndex &&
-    meta?.editingCell?.columnId === columnId;
-  const isSelected = meta?.getIsCellSelected?.(rowIndex, columnId) ?? false;
-  const readOnly = meta?.readOnly ?? false;
+  // Check cell/row identity
+  if (prev.cell.row.id !== next.cell.row.id) return false;
 
+  return true;
+}) as typeof DataGridCellImpl;
+
+function DataGridCellImpl<TData>({
+  cell,
+  tableMeta,
+  rowIndex,
+  columnId,
+  isFocused,
+  isEditing,
+  isSelected,
+  readOnly,
+}: DataGridCellProps<TData>) {
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 
+  let Comp: React.ComponentType<CellVariantProps<TData>>;
+
   switch (variant) {
     case "short-text":
-      return (
-        <ShortTextCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = ShortTextCell;
+      break;
     case "long-text":
-      return (
-        <LongTextCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = LongTextCell;
+      break;
     case "number":
-      return (
-        <NumberCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = NumberCell;
+      break;
     case "url":
-      return (
-        <UrlCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = UrlCell;
+      break;
     case "checkbox":
-      return (
-        <CheckboxCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = CheckboxCell;
+      break;
     case "select":
-      return (
-        <SelectCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = SelectCell;
+      break;
     case "multi-select":
-      return (
-        <MultiSelectCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = MultiSelectCell;
+      break;
     case "date":
-      return (
-        <DateCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = DateCell;
+      break;
     case "file":
-      return (
-        <FileCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = FileCell;
+      break;
 
     default:
-      return (
-        <ShortTextCell
-          cell={cell}
-          table={table}
-          rowIndex={rowIndex}
-          columnId={columnId}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          readOnly={readOnly}
-        />
-      );
+      Comp = ShortTextCell;
+      break;
   }
+
+  return (
+    <Comp
+      cell={cell}
+      tableMeta={tableMeta}
+      rowIndex={rowIndex}
+      columnId={columnId}
+      isEditing={isEditing}
+      isFocused={isFocused}
+      isSelected={isSelected}
+      readOnly={readOnly}
+    />
+  );
 }
