@@ -40,6 +40,175 @@ const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
 
+// Paste validation constants
+const TRUTHY_VALUES = new Set(["true", "1", "yes", "checked"]);
+const BOOLEAN_VALUES = new Set([
+  "true",
+  "false",
+  "1",
+  "0",
+  "yes",
+  "no",
+  "checked",
+  "unchecked",
+]);
+
+// Paste validation result type
+type PasteResult =
+  | { skip: true }
+  | { skip: false; value: unknown };
+
+// Helper to match option by value or label (case-insensitive)
+function matchOption(
+  value: string,
+  options: Array<{ value: string; label: string }>
+): string | undefined {
+  const exactMatch = options.find((opt) => opt.value === value);
+  if (exactMatch) return exactMatch.value;
+
+  const lowerValue = value.toLowerCase();
+  const caseInsensitiveMatch = options.find(
+    (opt) =>
+      opt.value.toLowerCase() === lowerValue ||
+      opt.label.toLowerCase() === lowerValue
+  );
+  return caseInsensitiveMatch?.value;
+}
+
+// Helper to check if value is a valid file object
+function isFileObject(
+  item: unknown
+): item is { id: string; name: string; size: number; type: string } {
+  return (
+    item !== null &&
+    typeof item === "object" &&
+    "id" in item &&
+    "name" in item &&
+    "size" in item &&
+    "type" in item
+  );
+}
+
+// Helper to parse pasted value for a specific cell variant
+function processPastedValue(
+  pastedValue: string,
+  cellOpts: import("@/types/data-grid").CellOpts | undefined
+): PasteResult {
+  const variant = cellOpts?.variant;
+
+  if (!pastedValue) {
+    // Handle empty values per variant
+    if (variant === "number" || variant === "date") return { skip: false, value: null };
+    if (variant === "checkbox") return { skip: false, value: false };
+    if (variant === "multi-select" || variant === "file") return { skip: false, value: [] };
+    return { skip: false, value: "" };
+  }
+
+  switch (variant) {
+    case "number": {
+      const numValue = Number.parseFloat(pastedValue);
+      return Number.isNaN(numValue) ? { skip: true } : { skip: false, value: numValue };
+    }
+
+    case "checkbox": {
+      const lowerValue = pastedValue.toLowerCase();
+      if (!BOOLEAN_VALUES.has(lowerValue)) return { skip: true };
+      return { skip: false, value: TRUTHY_VALUES.has(lowerValue) };
+    }
+
+    case "date": {
+      const date = new Date(pastedValue);
+      return Number.isNaN(date.getTime()) ? { skip: true } : { skip: false, value: date };
+    }
+
+    case "select": {
+      const options = cellOpts?.variant === "select" ? cellOpts.options : [];
+      const matched = matchOption(pastedValue, options);
+      return matched ? { skip: false, value: matched } : { skip: true };
+    }
+
+    case "multi-select": {
+      const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
+      let parsedValues: string[];
+
+      try {
+        const parsed = JSON.parse(pastedValue);
+        parsedValues = Array.isArray(parsed)
+          ? parsed.filter((v): v is string => typeof v === "string")
+          : pastedValue.split(",").map((v) => v.trim());
+      } catch {
+        parsedValues = pastedValue.split(",").map((v) => v.trim());
+      }
+
+      const validatedValues = parsedValues
+        .map((val) => matchOption(val, options))
+        .filter((v): v is string => v !== undefined);
+
+      return parsedValues.length > 0 && validatedValues.length === 0
+        ? { skip: true }
+        : { skip: false, value: validatedValues };
+    }
+
+    case "file": {
+      try {
+        const parsed = JSON.parse(pastedValue);
+        if (!Array.isArray(parsed)) return { skip: true };
+
+        const validFiles = parsed.filter(isFileObject);
+        return parsed.length > 0 && validFiles.length === 0
+          ? { skip: true }
+          : { skip: false, value: validFiles };
+      } catch {
+        return { skip: true };
+      }
+    }
+
+    case "url": {
+      try {
+        new URL(pastedValue);
+        return { skip: false, value: pastedValue };
+      } catch {
+        // Allow URLs without protocol if they look like domains
+        return pastedValue.includes(".") && !pastedValue.includes(" ")
+          ? { skip: false, value: pastedValue }
+          : { skip: true };
+      }
+    }
+
+    case "short-text":
+    case "long-text":
+    default: {
+      // Convert complex types to human-readable text
+      try {
+        const parsed = JSON.parse(pastedValue);
+
+        if (Array.isArray(parsed)) {
+          // File array → comma-separated names
+          if (parsed.length > 0 && parsed.every(isFileObject)) {
+            return { skip: false, value: parsed.map((f) => f.name).join(", ") };
+          }
+          // String array → comma-separated values
+          if (parsed.every((item) => typeof item === "string")) {
+            return { skip: false, value: parsed.join(", ") };
+          }
+        }
+
+        if (typeof parsed === "boolean") {
+          return { skip: false, value: parsed ? "Checked" : "Unchecked" };
+        }
+      } catch {
+        // Check for boolean strings
+        const lowerValue = pastedValue.toLowerCase();
+        if (lowerValue === "true" || lowerValue === "false") {
+          return { skip: false, value: lowerValue === "true" ? "Checked" : "Unchecked" };
+        }
+      }
+
+      return { skip: false, value: pastedValue };
+    }
+  }
+}
+
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
 
@@ -806,234 +975,12 @@ function useDataGrid<TData>({
             if (!targetColumnId) continue;
 
             const pastedValue = pasteRow[pasteColIdx] ?? "";
-
             const column = tableColumns.find((c) => c.id === targetColumnId);
             const cellOpts = column?.columnDef?.meta?.cell;
-            const cellVariant = cellOpts?.variant;
 
-            let processedValue: unknown = pastedValue;
-            let shouldSkip = false;
+            const result = processPastedValue(pastedValue, cellOpts);
 
-            if (cellVariant === "number") {
-              if (!pastedValue) {
-                processedValue = null;
-              } else {
-                const numValue = Number.parseFloat(pastedValue);
-                if (Number.isNaN(numValue)) {
-                  shouldSkip = true;
-                } else {
-                  processedValue = numValue;
-                }
-              }
-            } else if (cellVariant === "checkbox") {
-              if (!pastedValue) {
-                processedValue = false;
-              } else {
-                const lowerValue = pastedValue.toLowerCase();
-                if (
-                  lowerValue === "true" ||
-                  lowerValue === "false" ||
-                  pastedValue === "1" ||
-                  pastedValue === "0" ||
-                  lowerValue === "yes" ||
-                  lowerValue === "no" ||
-                  lowerValue === "checked" ||
-                  lowerValue === "unchecked"
-                ) {
-                  processedValue =
-                    lowerValue === "true" ||
-                    pastedValue === "1" ||
-                    lowerValue === "yes" ||
-                    lowerValue === "checked";
-                } else {
-                  shouldSkip = true;
-                }
-              }
-            } else if (cellVariant === "date") {
-              if (pastedValue) {
-                const date = new Date(pastedValue);
-                if (Number.isNaN(date.getTime())) {
-                  shouldSkip = true;
-                } else {
-                  processedValue = date;
-                }
-              } else {
-                processedValue = null;
-              }
-            } else if (cellVariant === "select") {
-              const options =
-                cellOpts?.variant === "select" ? cellOpts.options : [];
-              const validValues = options.map((opt) => opt.value);
-
-              if (!pastedValue) {
-                processedValue = "";
-              } else if (validValues.includes(pastedValue)) {
-                processedValue = pastedValue;
-              } else {
-                // Try case-insensitive match
-                const matchedOption = options.find(
-                  (opt) =>
-                    opt.value.toLowerCase() === pastedValue.toLowerCase() ||
-                    opt.label.toLowerCase() === pastedValue.toLowerCase()
-                );
-                if (matchedOption) {
-                  processedValue = matchedOption.value;
-                } else {
-                  shouldSkip = true;
-                }
-              }
-            } else if (cellVariant === "multi-select") {
-              const options =
-                cellOpts?.variant === "multi-select" ? cellOpts.options : [];
-              const validValues = options.map((opt) => opt.value);
-
-              let parsedValues: string[] = [];
-              try {
-                const parsed = JSON.parse(pastedValue);
-                if (Array.isArray(parsed)) {
-                  parsedValues = parsed.filter(
-                    (v): v is string => typeof v === "string"
-                  );
-                } else {
-                  parsedValues = pastedValue
-                    ? pastedValue.split(",").map((v) => v.trim())
-                    : [];
-                }
-              } catch {
-                parsedValues = pastedValue
-                  ? pastedValue.split(",").map((v) => v.trim())
-                  : [];
-              }
-
-              // Filter to only valid options (case-insensitive match)
-              const validatedValues = parsedValues
-                .map((val) => {
-                  if (validValues.includes(val)) return val;
-                  const matchedOption = options.find(
-                    (opt) =>
-                      opt.value.toLowerCase() === val.toLowerCase() ||
-                      opt.label.toLowerCase() === val.toLowerCase()
-                  );
-                  return matchedOption?.value;
-                })
-                .filter((v): v is string => v !== undefined);
-
-              if (parsedValues.length > 0 && validatedValues.length === 0) {
-                // All values were invalid
-                shouldSkip = true;
-              } else {
-                processedValue = validatedValues;
-              }
-            } else if (cellVariant === "file") {
-              // File cells only accept properly formatted file data
-              // Skip if pasting incompatible text
-              try {
-                const parsed = JSON.parse(pastedValue);
-                if (Array.isArray(parsed)) {
-                  const validFiles = parsed.filter(
-                    (item) =>
-                      item &&
-                      typeof item === "object" &&
-                      "id" in item &&
-                      "name" in item &&
-                      "size" in item &&
-                      "type" in item
-                  );
-                  if (parsed.length > 0 && validFiles.length === 0) {
-                    // Had data but none was valid file format
-                    shouldSkip = true;
-                  } else {
-                    processedValue = validFiles;
-                  }
-                } else {
-                  shouldSkip = true;
-                }
-              } catch {
-                // Not JSON - skip file cells when pasting plain text
-                if (pastedValue) {
-                  shouldSkip = true;
-                } else {
-                  processedValue = [];
-                }
-              }
-            } else if (cellVariant === "url") {
-              // Basic URL validation - allow empty or valid URLs
-              if (!pastedValue) {
-                processedValue = "";
-              } else {
-                try {
-                  new URL(pastedValue);
-                  processedValue = pastedValue;
-                } catch {
-                  // Allow URLs without protocol (add https://)
-                  if (pastedValue.includes(".") && !pastedValue.includes(" ")) {
-                    processedValue = pastedValue;
-                  } else {
-                    shouldSkip = true;
-                  }
-                }
-              }
-            } else if (
-              cellVariant === "short-text" ||
-              cellVariant === "long-text" ||
-              !cellVariant
-            ) {
-              // Text cells - convert complex types to human-readable strings
-              if (!pastedValue) {
-                processedValue = "";
-              } else {
-                // Try to detect and convert JSON data from other cell types
-                try {
-                  const parsed = JSON.parse(pastedValue);
-
-                  if (Array.isArray(parsed)) {
-                    // Check if it's a file array (has id, name, size, type)
-                    const isFileArray =
-                      parsed.length > 0 &&
-                      parsed.every(
-                        (item) =>
-                          item &&
-                          typeof item === "object" &&
-                          "name" in item &&
-                          "size" in item
-                      );
-
-                    if (isFileArray) {
-                      // Convert file array to comma-separated file names
-                      processedValue = parsed
-                        .map((file) => (file as { name: string }).name)
-                        .join(", ");
-                    } else if (
-                      parsed.every((item) => typeof item === "string")
-                    ) {
-                      // Multi-select array - convert to comma-separated string
-                      processedValue = parsed.join(", ");
-                    } else {
-                      // Unknown array format, use as-is
-                      processedValue = pastedValue;
-                    }
-                  } else if (typeof parsed === "boolean") {
-                    // Boolean value - convert to readable text
-                    processedValue = parsed ? "Checked" : "Unchecked";
-                  } else {
-                    // Other JSON value, use as-is
-                    processedValue = pastedValue;
-                  }
-                } catch {
-                  // Not JSON - check for boolean strings
-                  const lowerValue = pastedValue.toLowerCase();
-                  if (lowerValue === "true" || lowerValue === "false") {
-                    processedValue =
-                      lowerValue === "true" ? "Checked" : "Unchecked";
-                  } else {
-                    // Plain text, use as-is
-                    processedValue = pastedValue;
-                  }
-                }
-              }
-            }
-
-            if (shouldSkip) {
+            if (result.skip) {
               cellsSkipped++;
               endRowIndex = Math.max(endRowIndex, targetRowIndex);
               endColIndex = Math.max(endColIndex, targetColIndex);
@@ -1043,7 +990,7 @@ function useDataGrid<TData>({
             updates.push({
               rowIndex: targetRowIndex,
               columnId: targetColumnId,
-              value: processedValue,
+              value: result.value,
             });
             cellsUpdated++;
 
