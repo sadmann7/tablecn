@@ -47,6 +47,7 @@ export function DataGrid<TData>({
   const rows = table.getRowModel().rows;
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = table.getState().columnVisibility;
+  const columnPinning = table.getState().columnPinning;
 
   const onGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -186,6 +187,7 @@ export function DataGrid<TData>({
                 editingCell={editingCell}
                 selectionState={selectionState}
                 columnVisibility={columnVisibility}
+                columnPinning={columnPinning}
                 dir={dir}
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}
