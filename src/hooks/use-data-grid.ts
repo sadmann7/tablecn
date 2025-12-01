@@ -45,6 +45,7 @@ const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
+
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
 const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
@@ -1845,7 +1846,19 @@ function useDataGrid<TData>({
         (key === "Delete" || key === "Backspace") &&
         !propsRef.current.readOnly
       ) {
-        if (currentState.selectionState.selectedCells.size > 0) {
+        const cellsToClear =
+          currentState.selectionState.selectedCells.size > 0
+            ? Array.from(currentState.selectionState.selectedCells)
+            : currentState.focusedCell
+              ? [
+                  getCellKey(
+                    currentState.focusedCell.rowIndex,
+                    currentState.focusedCell.columnId,
+                  ),
+                ]
+              : [];
+
+        if (cellsToClear.length > 0) {
           event.preventDefault();
 
           const updates: Array<{
@@ -1857,7 +1870,7 @@ function useDataGrid<TData>({
           const currentTable = tableRef.current;
           const tableColumns = currentTable?.getAllColumns() ?? [];
 
-          currentState.selectionState.selectedCells.forEach((cellKey) => {
+          for (const cellKey of cellsToClear) {
             const { rowIndex, columnId } = parseCellKey(cellKey);
 
             const column = tableColumns.find((c) => c.id === columnId);
@@ -1873,10 +1886,13 @@ function useDataGrid<TData>({
             }
 
             updates.push({ rowIndex, columnId, value: emptyValue });
-          });
+          }
 
           onDataUpdate(updates);
-          clearSelection();
+
+          if (currentState.selectionState.selectedCells.size > 0) {
+            clearSelection();
+          }
 
           if (currentState.cutCells.size > 0) {
             store.setState("cutCells", new Set());
