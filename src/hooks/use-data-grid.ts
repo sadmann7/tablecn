@@ -139,7 +139,7 @@ function useDataGrid<TData>({
   columns,
   overscan = OVERSCAN,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
-  dir: dirProp = "ltr",
+  dir: dirProp,
   initialState,
   ...props
 }: UseDataGridProps<TData>) {
@@ -263,17 +263,17 @@ function useDataGrid<TData>({
 
   const rowHeightValue = getRowHeightValue(rowHeight);
 
-  const prevRowSelectionMapRef = useLazyRef(
+  const prevCellSelectionMapRef = useLazyRef(
     () => new Map<number, Set<string>>(),
   );
 
   // Memoize per-row selection sets to prevent unnecessary row re-renders
   // Each row gets a stable Set reference that only changes when its cells' selection changes
-  const rowSelectionMap = React.useMemo(() => {
+  const cellSelectionMap = React.useMemo(() => {
     const selectedCells = selectionState.selectedCells;
 
     if (selectedCells.size === 0) {
-      prevRowSelectionMapRef.current.clear();
+      prevCellSelectionMapRef.current.clear();
       return null;
     }
 
@@ -290,7 +290,7 @@ function useDataGrid<TData>({
 
     const stableMap = new Map<number, Set<string>>();
     for (const [rowIndex, newSet] of newRowCells) {
-      const prevSet = prevRowSelectionMapRef.current.get(rowIndex);
+      const prevSet = prevCellSelectionMapRef.current.get(rowIndex);
       if (
         prevSet &&
         prevSet.size === newSet.size &&
@@ -302,9 +302,9 @@ function useDataGrid<TData>({
       }
     }
 
-    prevRowSelectionMapRef.current = stableMap;
+    prevCellSelectionMapRef.current = stableMap;
     return stableMap;
-  }, [selectionState.selectedCells, prevRowSelectionMapRef]);
+  }, [selectionState.selectedCells, prevCellSelectionMapRef]);
 
   const columnIds = React.useMemo(() => {
     return columns
@@ -805,9 +805,7 @@ function useDataGrid<TData>({
 
             const pastedValue = pasteRow[pasteColIdx] ?? "";
 
-            const column = tableColumns.find(
-              (col) => col.id === targetColumnId,
-            );
+            const column = tableColumns.find((c) => c.id === targetColumnId);
             const cellVariant = column?.columnDef?.meta?.cell?.variant;
 
             let processedValue: unknown = pastedValue;
@@ -883,7 +881,7 @@ function useDataGrid<TData>({
             for (const cellKey of currentState.cutCells) {
               const { rowIndex, columnId } = parseCellKey(cellKey);
 
-              const column = tableColumns.find((col) => col.id === columnId);
+              const column = tableColumns.find((c) => c.id === columnId);
               const cellVariant = column?.columnDef?.meta?.cell?.variant;
 
               let emptyValue: unknown = "";
@@ -1695,7 +1693,7 @@ function useDataGrid<TData>({
           currentState.selectionState.selectedCells.forEach((cellKey) => {
             const { rowIndex, columnId } = parseCellKey(cellKey);
 
-            const column = tableColumns.find((col) => col.id === columnId);
+            const column = tableColumns.find((c) => c.id === columnId);
             const cellVariant = column?.columnDef?.meta?.cell?.variant;
 
             let emptyValue: unknown = "";
@@ -2466,9 +2464,9 @@ function useDataGrid<TData>({
       columns,
       searchState,
       columnSizeVars,
+      cellSelectionMap,
       focusedCell,
       editingCell,
-      rowSelectionMap,
       rowHeight,
       contextMenu,
       pasteDialog,
@@ -2483,9 +2481,9 @@ function useDataGrid<TData>({
       columns,
       searchState,
       columnSizeVars,
+      cellSelectionMap,
       focusedCell,
       editingCell,
-      rowSelectionMap,
       rowHeight,
       contextMenu,
       pasteDialog,

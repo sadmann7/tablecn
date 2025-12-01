@@ -32,7 +32,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  rowCellSelectionKeys?: Set<string>;
+  cellSelectionKeys?: Set<string>;
   columnVisibility?: VisibilityState;
   columnPinning?: ColumnPinningState;
   dir: Direction;
@@ -91,7 +91,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
   // Re-render if this row's selected cells changed
   // Using stable Set reference that only includes this row's cells
-  if (prev.rowCellSelectionKeys !== next.rowCellSelectionKeys) {
+  if (prev.cellSelectionKeys !== next.cellSelectionKeys) {
     return false;
   }
 
@@ -128,12 +128,12 @@ function DataGridRowImpl<TData>({
   rowHeight,
   focusedCell,
   editingCell,
-  rowCellSelectionKeys,
+  cellSelectionKeys,
   columnVisibility,
   columnPinning,
   dir,
   readOnly,
-  stretchColumns = false,
+  stretchColumns,
   className,
   style,
   ref,
@@ -161,13 +161,11 @@ function DataGridRowImpl<TData>({
 
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  // Include columnVisibility to recalculate when columns are hidden/shown, without this the cells under the column header will be still visible
-  // Also include columnPinning to recalculate when columns are pinned/unpinned, without this the cells will be shifted to the left or right
-  const visibleCells = React.useMemo(() => {
-    void columnVisibility;
-    void columnPinning;
-    return row.getVisibleCells();
-  }, [row, columnVisibility, columnPinning]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility and columnPinning are used for calculating the visible cells
+  const visibleCells = React.useMemo(
+    () => row.getVisibleCells(),
+    [row, columnVisibility, columnPinning],
+  );
 
   return (
     <div
@@ -199,7 +197,7 @@ function DataGridRowImpl<TData>({
           editingCell?.rowIndex === virtualRowIndex &&
           editingCell?.columnId === columnId;
         const isCellSelected =
-          rowCellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
+          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
           false;
 
         return (

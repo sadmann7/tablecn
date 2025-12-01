@@ -1,6 +1,10 @@
 import type { Column } from "@tanstack/react-table";
 import type * as React from "react";
-import type { CellPosition, RowHeightValue } from "@/types/data-grid";
+import type {
+  CellPosition,
+  Direction,
+  RowHeightValue,
+} from "@/types/data-grid";
 
 export function flexRender<TProps extends object>(
   Comp: ((props: TProps) => React.ReactNode) | string | undefined,
@@ -58,7 +62,7 @@ export function getCommonPinningStyles<TData>({
 }: {
   column: Column<TData>;
   withBorder?: boolean;
-  dir?: "ltr" | "rtl";
+  dir?: Direction;
 }): React.CSSProperties {
   const isPinned = column.getIsPinned();
   const isLastLeftPinnedColumn =
