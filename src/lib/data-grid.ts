@@ -3,6 +3,7 @@ import type * as React from "react";
 import type {
   CellPosition,
   Direction,
+  FileCellData,
   RowHeightValue,
 } from "@/types/data-grid";
 
@@ -14,6 +15,29 @@ export function flexRender<TProps extends object>(
     return Comp;
   }
   return Comp?.(props);
+}
+
+export function getIsFileCellData(item: unknown): item is FileCellData {
+  return (
+    !!item &&
+    typeof item === "object" &&
+    "id" in item &&
+    "name" in item &&
+    "size" in item &&
+    "type" in item
+  );
+}
+
+export function matchSelectOption(
+  value: string,
+  options: { value: string; label: string }[],
+): string | undefined {
+  return options.find(
+    (o) =>
+      o.value === value ||
+      o.value.toLowerCase() === value.toLowerCase() ||
+      o.label.toLowerCase() === value.toLowerCase(),
+  )?.value;
 }
 
 export function getCellKey(rowIndex: number, columnId: string) {
