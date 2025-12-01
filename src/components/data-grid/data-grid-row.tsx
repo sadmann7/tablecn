@@ -1,6 +1,11 @@
 "use client";
 
-import type { Row, TableMeta, VisibilityState } from "@tanstack/react-table";
+import type {
+  ColumnPinningState,
+  Row,
+  TableMeta,
+  VisibilityState,
+} from "@tanstack/react-table";
 import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
@@ -30,6 +35,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   editingCell: CellPosition | null;
   selectionState?: SelectionState;
   columnVisibility?: VisibilityState;
+  columnPinning?: ColumnPinningState;
   dir: Direction;
   readOnly: boolean;
   stretchColumns?: boolean;
@@ -101,6 +107,11 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if column pinning state changed
+  if (prev.columnPinning !== next.columnPinning) {
+    return false;
+  }
+
   // Re-render if readOnly changed
   if (prev.readOnly !== next.readOnly) {
     return false;
@@ -121,6 +132,7 @@ function DataGridRowImpl<TData>({
   editingCell,
   selectionState,
   columnVisibility,
+  columnPinning,
   dir,
   readOnly,
   stretchColumns = false,
@@ -152,10 +164,12 @@ function DataGridRowImpl<TData>({
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
   // Include columnVisibility to recalculate when columns are hidden/shown, without this the cells under the column header will be still visible
+  // Also include columnPinning to recalculate when columns are pinned/unpinned, without this the cells will be shifted to the left or right
   const visibleCells = React.useMemo(() => {
     void columnVisibility;
+    void columnPinning;
     return row.getVisibleCells();
-  }, [row, columnVisibility]);
+  }, [row, columnVisibility, columnPinning]);
 
   return (
     <div
