@@ -1504,7 +1504,6 @@ export function FileCell<TData>({
               return;
             }
           } else {
-            await new Promise((resolve) => setTimeout(resolve, 800));
             uploadedFiles = filesToValidate.map((f, i) => ({
               id: tempFiles[i]?.id ?? crypto.randomUUID(),
               name: f.name,

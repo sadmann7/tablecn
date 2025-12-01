@@ -18,7 +18,13 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
-import { getCellKey, getRowHeightValue, parseCellKey } from "@/lib/data-grid";
+import {
+  getCellKey,
+  getIsFileCellData,
+  getRowHeightValue,
+  matchSelectOption,
+  parseCellKey,
+} from "@/lib/data-grid";
 import type {
   CellPosition,
   ContextMenuState,
@@ -39,6 +45,19 @@ const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
+const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
+const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
+const VALID_BOOLEANS = new Set([
+  "true",
+  "false",
+  "1",
+  "0",
+  "yes",
+  "no",
+  "checked",
+  "unchecked",
+]);
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
@@ -781,6 +800,10 @@ function useDataGrid<TData>({
         const updatedRows = updatedTable?.getRowModel().rows;
         const currentRowCount = updatedRows?.length ?? 0;
 
+        let cellsSkipped = 0;
+
+        const columnMap = new Map(tableColumns.map((c) => [c.id, c]));
+
         for (
           let pasteRowIdx = 0;
           pasteRowIdx < pastedData.length;
@@ -804,58 +827,188 @@ function useDataGrid<TData>({
             if (!targetColumnId) continue;
 
             const pastedValue = pasteRow[pasteColIdx] ?? "";
-
-            const column = tableColumns.find((c) => c.id === targetColumnId);
-            const cellVariant = column?.columnDef?.meta?.cell?.variant;
+            const column = columnMap.get(targetColumnId);
+            const cellOpts = column?.columnDef?.meta?.cell;
+            const cellVariant = cellOpts?.variant;
 
             let processedValue: unknown = pastedValue;
+            let shouldSkip = false;
 
-            if (cellVariant === "number") {
-              const numValue = Number.parseFloat(pastedValue);
-              processedValue = Number.isNaN(numValue) ? null : numValue;
-            } else if (cellVariant === "checkbox") {
-              if (!pastedValue) {
-                processedValue = false;
-              } else {
-                processedValue =
-                  pastedValue.toLowerCase() === "true" ||
-                  pastedValue === "1" ||
-                  pastedValue.toLowerCase() === "yes";
-              }
-            } else if (cellVariant === "date") {
-              if (pastedValue) {
-                const date = new Date(pastedValue);
-                processedValue = Number.isNaN(date.getTime()) ? null : date;
-              } else {
-                processedValue = null;
-              }
-            } else if (cellVariant === "multi-select") {
-              try {
-                processedValue = JSON.parse(pastedValue);
-              } catch {
-                processedValue = pastedValue
-                  ? pastedValue.split(",").map((v) => v.trim())
-                  : [];
-              }
-            } else if (cellVariant === "file") {
-              try {
-                const parsed = JSON.parse(pastedValue);
-                if (Array.isArray(parsed)) {
-                  processedValue = parsed.filter(
-                    (item) =>
-                      item &&
-                      typeof item === "object" &&
-                      "id" in item &&
-                      "name" in item &&
-                      "size" in item &&
-                      "type" in item,
-                  );
+            switch (cellVariant) {
+              case "number": {
+                if (!pastedValue) {
+                  processedValue = null;
                 } else {
-                  processedValue = [];
+                  const num = Number.parseFloat(pastedValue);
+                  if (Number.isNaN(num)) shouldSkip = true;
+                  else processedValue = num;
                 }
-              } catch {
-                processedValue = [];
+                break;
               }
+
+              case "checkbox": {
+                if (!pastedValue) {
+                  processedValue = false;
+                } else {
+                  const lower = pastedValue.toLowerCase();
+                  if (VALID_BOOLEANS.has(lower)) {
+                    processedValue = TRUTHY_BOOLEANS.has(lower);
+                  } else {
+                    shouldSkip = true;
+                  }
+                }
+                break;
+              }
+
+              case "date": {
+                if (!pastedValue) {
+                  processedValue = null;
+                } else {
+                  const date = new Date(pastedValue);
+                  if (Number.isNaN(date.getTime())) shouldSkip = true;
+                  else processedValue = date;
+                }
+                break;
+              }
+
+              case "select": {
+                const options = cellOpts?.options ?? [];
+                if (!pastedValue) {
+                  processedValue = "";
+                } else {
+                  const matched = matchSelectOption(pastedValue, options);
+                  if (matched) processedValue = matched;
+                  else shouldSkip = true;
+                }
+                break;
+              }
+
+              case "multi-select": {
+                const options = cellOpts?.options ?? [];
+                let values: string[] = [];
+                try {
+                  const parsed = JSON.parse(pastedValue);
+                  if (Array.isArray(parsed)) {
+                    values = parsed.filter(
+                      (v): v is string => typeof v === "string",
+                    );
+                  }
+                } catch {
+                  values = pastedValue
+                    ? pastedValue.split(",").map((v) => v.trim())
+                    : [];
+                }
+
+                const validated = values
+                  .map((v) => matchSelectOption(v, options))
+                  .filter(Boolean) as string[];
+
+                if (values.length > 0 && validated.length === 0) {
+                  shouldSkip = true;
+                } else {
+                  processedValue = validated;
+                }
+                break;
+              }
+
+              case "file": {
+                if (!pastedValue) {
+                  processedValue = [];
+                } else {
+                  try {
+                    const parsed = JSON.parse(pastedValue);
+                    if (!Array.isArray(parsed)) {
+                      shouldSkip = true;
+                    } else {
+                      const validFiles = parsed.filter(getIsFileCellData);
+                      if (parsed.length > 0 && validFiles.length === 0) {
+                        shouldSkip = true;
+                      } else {
+                        processedValue = validFiles;
+                      }
+                    }
+                  } catch {
+                    shouldSkip = true;
+                  }
+                }
+                break;
+              }
+
+              case "url": {
+                if (!pastedValue) {
+                  processedValue = "";
+                } else {
+                  const firstChar = pastedValue[0];
+                  if (firstChar === "[" || firstChar === "{") {
+                    shouldSkip = true;
+                  } else {
+                    try {
+                      new URL(pastedValue);
+                      processedValue = pastedValue;
+                    } catch {
+                      if (DOMAIN_REGEX.test(pastedValue)) {
+                        processedValue = pastedValue;
+                      } else {
+                        shouldSkip = true;
+                      }
+                    }
+                  }
+                }
+                break;
+              }
+
+              default: {
+                if (!pastedValue) {
+                  processedValue = "";
+                  break;
+                }
+
+                if (ISO_DATE_REGEX.test(pastedValue)) {
+                  const date = new Date(pastedValue);
+                  if (!Number.isNaN(date.getTime())) {
+                    processedValue = date.toLocaleDateString();
+                    break;
+                  }
+                }
+
+                const firstChar = pastedValue[0];
+                if (
+                  firstChar === "[" ||
+                  firstChar === "{" ||
+                  firstChar === "t" ||
+                  firstChar === "f"
+                ) {
+                  try {
+                    const parsed = JSON.parse(pastedValue);
+
+                    if (Array.isArray(parsed)) {
+                      if (
+                        parsed.length > 0 &&
+                        parsed.every(getIsFileCellData)
+                      ) {
+                        processedValue = parsed.map((f) => f.name).join(", ");
+                      } else if (parsed.every((v) => typeof v === "string")) {
+                        processedValue = (parsed as string[]).join(", ");
+                      }
+                    } else if (typeof parsed === "boolean") {
+                      processedValue = parsed ? "Checked" : "Unchecked";
+                    }
+                  } catch {
+                    const lower = pastedValue.toLowerCase();
+                    if (lower === "true" || lower === "false") {
+                      processedValue =
+                        lower === "true" ? "Checked" : "Unchecked";
+                    }
+                  }
+                }
+              }
+            }
+
+            if (shouldSkip) {
+              cellsSkipped++;
+              endRowIndex = Math.max(endRowIndex, targetRowIndex);
+              endColIndex = Math.max(endColIndex, targetColIndex);
+              continue;
             }
 
             updates.push({
@@ -901,9 +1054,17 @@ function useDataGrid<TData>({
 
           onDataUpdate(allUpdates);
 
-          toast.success(
-            `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
-          );
+          if (cellsSkipped > 0) {
+            toast.success(
+              `${cellsUpdated} cell${
+                cellsUpdated !== 1 ? "s" : ""
+              } pasted, ${cellsSkipped} skipped`,
+            );
+          } else {
+            toast.success(
+              `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
+            );
+          }
 
           const endColumnId = navigableColumnIds[endColIndex];
           if (endColumnId) {
@@ -915,6 +1076,12 @@ function useDataGrid<TData>({
               { rowIndex: endRowIndex, columnId: endColumnId },
             );
           }
+        } else if (cellsSkipped > 0) {
+          toast.error(
+            `${cellsSkipped} cell${
+              cellsSkipped !== 1 ? "s" : ""
+            } skipped pasting for invalid data`,
+          );
         }
 
         if (currentState.pasteDialog.open) {
