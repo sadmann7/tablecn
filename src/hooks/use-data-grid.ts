@@ -1078,9 +1078,9 @@ function useDataGrid<TData>({
           }
         } else if (cellsSkipped > 0) {
           toast.error(
-            `Could not paste: ${cellsSkipped} cell${
+            `${cellsSkipped} cell${
               cellsSkipped !== 1 ? "s" : ""
-            } skipped due to incompatible data`,
+            } skipped pasting for invalid data`,
           );
         }
 
