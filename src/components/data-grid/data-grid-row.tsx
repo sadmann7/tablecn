@@ -16,7 +16,6 @@ import type {
   CellPosition,
   Direction,
   RowHeightValue,
-  SelectionState,
 } from "@/types/data-grid";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
@@ -28,7 +27,8 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  selectionState?: SelectionState;
+  /** Stable reference - only cells in this row's selection keys */
+  rowSelectedCellKeys?: Set<string>;
   columnVisibility?: VisibilityState;
   dir: Direction;
   readOnly: boolean;
@@ -84,10 +84,9 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     }
   }
 
-  // Re-render if selection state changed (different Set reference means selection changed)
-  if (
-    prev.selectionState?.selectedCells !== next.selectionState?.selectedCells
-  ) {
+  // Re-render if this row's selected cells changed
+  // Using stable Set reference that only includes this row's cells
+  if (prev.rowSelectedCellKeys !== next.rowSelectedCellKeys) {
     return false;
   }
 
@@ -119,7 +118,7 @@ function DataGridRowImpl<TData>({
   rowHeight,
   focusedCell,
   editingCell,
-  selectionState,
+  rowSelectedCellKeys,
   columnVisibility,
   dir,
   readOnly,
@@ -187,9 +186,8 @@ function DataGridRowImpl<TData>({
           editingCell?.rowIndex === virtualRowIndex &&
           editingCell?.columnId === columnId;
         const isCellSelected =
-          selectionState?.selectedCells.has(
-            getCellKey(virtualRowIndex, columnId),
-          ) ?? false;
+          rowSelectedCellKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
+          false;
 
         return (
           <div
