@@ -45,6 +45,19 @@ const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
+const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
+const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
+const VALID_BOOLEANS = new Set([
+  "true",
+  "false",
+  "1",
+  "0",
+  "yes",
+  "no",
+  "checked",
+  "unchecked",
+]);
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
@@ -90,7 +103,7 @@ interface DataGridStore {
   getState: () => DataGridState;
   setState: <K extends keyof DataGridState>(
     key: K,
-    value: DataGridState[K]
+    value: DataGridState[K],
   ) => void;
   notify: () => void;
   batch: (fn: () => void) => void;
@@ -98,11 +111,11 @@ interface DataGridStore {
 
 function useStore<T>(
   store: DataGridStore,
-  selector: (state: DataGridState) => T
+  selector: (state: DataGridState) => T,
 ): T {
   const getSnapshot = React.useCallback(
     () => selector(store.getState()),
-    [store, selector]
+    [store, selector],
   );
 
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
@@ -270,7 +283,7 @@ function useDataGrid<TData>({
   const rowHeightValue = getRowHeightValue(rowHeight);
 
   const prevCellSelectionMapRef = useLazyRef(
-    () => new Map<number, Set<string>>()
+    () => new Map<number, Set<string>>(),
   );
 
   // Memoize per-row selection sets to prevent unnecessary row re-renders
@@ -392,14 +405,14 @@ function useDataGrid<TData>({
 
       propsRef.current.onDataChange?.(newData);
     },
-    [propsRef]
+    [propsRef],
   );
 
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
       return selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
     },
-    [selectionState.selectedCells]
+    [selectionState.selectedCells],
   );
 
   const clearSelection = React.useCallback(() => {
@@ -464,7 +477,7 @@ function useDataGrid<TData>({
         isSelecting: false,
       });
     },
-    [propsRef, store]
+    [propsRef, store],
   );
 
   const selectRange = React.useCallback(
@@ -494,7 +507,7 @@ function useDataGrid<TData>({
         isSelecting,
       });
     },
-    [columnIds, store]
+    [columnIds, store],
   );
 
   const onCellsCopy = React.useCallback(async () => {
@@ -505,12 +518,12 @@ function useDataGrid<TData>({
       if (!currentState.focusedCell) return;
       const focusedCellKey = getCellKey(
         currentState.focusedCell.rowIndex,
-        currentState.focusedCell.columnId
+        currentState.focusedCell.columnId,
       );
       selectedCellsArray = [focusedCellKey];
     } else {
       selectedCellsArray = Array.from(
-        currentState.selectionState.selectedCells
+        currentState.selectionState.selectedCells,
       );
     }
 
@@ -576,7 +589,7 @@ function useDataGrid<TData>({
             const cellKey = `${rowIndex}:${columnId}`;
             return cellData.get(cellKey) ?? "";
           })
-          .join("\t")
+          .join("\t"),
       )
       .join("\n");
 
@@ -591,11 +604,11 @@ function useDataGrid<TData>({
       toast.success(
         `${selectedCellsArray.length} cell${
           selectedCellsArray.length !== 1 ? "s" : ""
-        } copied`
+        } copied`,
       );
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to copy to clipboard"
+        error instanceof Error ? error.message : "Failed to copy to clipboard",
       );
     }
   }, [store]);
@@ -610,12 +623,12 @@ function useDataGrid<TData>({
       if (!currentState.focusedCell) return;
       const focusedCellKey = getCellKey(
         currentState.focusedCell.rowIndex,
-        currentState.focusedCell.columnId
+        currentState.focusedCell.columnId,
       );
       selectedCellsArray = [focusedCellKey];
     } else {
       selectedCellsArray = Array.from(
-        currentState.selectionState.selectedCells
+        currentState.selectionState.selectedCells,
       );
     }
 
@@ -681,7 +694,7 @@ function useDataGrid<TData>({
             const cellKey = `${rowIndex}:${columnId}`;
             return cellData.get(cellKey) ?? "";
           })
-          .join("\t")
+          .join("\t"),
       )
       .join("\n");
 
@@ -693,11 +706,11 @@ function useDataGrid<TData>({
       toast.success(
         `${selectedCellsArray.length} cell${
           selectedCellsArray.length !== 1 ? "s" : ""
-        } cut`
+        } cut`,
       );
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to cut to clipboard"
+        error instanceof Error ? error.message : "Failed to cut to clipboard",
       );
     }
   }, [store, propsRef]);
@@ -728,7 +741,7 @@ function useDataGrid<TData>({
 
         const startRowIndex = currentState.focusedCell.rowIndex;
         const startColIndex = navigableColumnIds.indexOf(
-          currentState.focusedCell.columnId
+          currentState.focusedCell.columnId,
         );
 
         if (startColIndex === -1) return;
@@ -789,6 +802,8 @@ function useDataGrid<TData>({
 
         let cellsSkipped = 0;
 
+        const columnMap = new Map(tableColumns.map((c) => [c.id, c]));
+
         for (
           let pasteRowIdx = 0;
           pasteRowIdx < pastedData.length;
@@ -812,7 +827,7 @@ function useDataGrid<TData>({
             if (!targetColumnId) continue;
 
             const pastedValue = pasteRow[pasteColIdx] ?? "";
-            const column = tableColumns.find((c) => c.id === targetColumnId);
+            const column = columnMap.get(targetColumnId);
             const cellOpts = column?.columnDef?.meta?.cell;
             const cellVariant = cellOpts?.variant;
 
@@ -836,10 +851,8 @@ function useDataGrid<TData>({
                   processedValue = false;
                 } else {
                   const lower = pastedValue.toLowerCase();
-                  const truthy = ["true", "1", "yes", "checked"];
-                  const valid = [...truthy, "false", "0", "no", "unchecked"];
-                  if (valid.includes(lower)) {
-                    processedValue = truthy.includes(lower);
+                  if (VALID_BOOLEANS.has(lower)) {
+                    processedValue = TRUTHY_BOOLEANS.has(lower);
                   } else {
                     shouldSkip = true;
                   }
@@ -877,7 +890,7 @@ function useDataGrid<TData>({
                   const parsed = JSON.parse(pastedValue);
                   if (Array.isArray(parsed)) {
                     values = parsed.filter(
-                      (v): v is string => typeof v === "string"
+                      (v): v is string => typeof v === "string",
                     );
                   }
                 } catch {
@@ -925,20 +938,15 @@ function useDataGrid<TData>({
                 if (!pastedValue) {
                   processedValue = "";
                 } else {
-                  // Skip JSON data (arrays, objects)
-                  const trimmed = pastedValue.trim();
-                  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+                  const firstChar = pastedValue[0];
+                  if (firstChar === "[" || firstChar === "{") {
                     shouldSkip = true;
                   } else {
                     try {
                       new URL(pastedValue);
                       processedValue = pastedValue;
                     } catch {
-                      // Allow domain-like strings (e.g., "example.com")
-                      // Must have a dot, no spaces, and look like a domain
-                      const looksLikeDomain =
-                        /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(pastedValue);
-                      if (looksLikeDomain) {
+                      if (DOMAIN_REGEX.test(pastedValue)) {
                         processedValue = pastedValue;
                       } else {
                         shouldSkip = true;
@@ -949,18 +957,13 @@ function useDataGrid<TData>({
                 break;
               }
 
-              // Text cells (short-text, long-text, default)
               default: {
                 if (!pastedValue) {
                   processedValue = "";
                   break;
                 }
 
-                // Check for ISO date string (from date cell copy)
-                const isoDateMatch = pastedValue.match(
-                  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/
-                );
-                if (isoDateMatch) {
+                if (ISO_DATE_REGEX.test(pastedValue)) {
                   const date = new Date(pastedValue);
                   if (!Number.isNaN(date.getTime())) {
                     processedValue = date.toLocaleDateString();
@@ -968,25 +971,34 @@ function useDataGrid<TData>({
                   }
                 }
 
-                try {
-                  const parsed = JSON.parse(pastedValue);
+                const firstChar = pastedValue[0];
+                if (
+                  firstChar === "[" ||
+                  firstChar === "{" ||
+                  firstChar === "t" ||
+                  firstChar === "f"
+                ) {
+                  try {
+                    const parsed = JSON.parse(pastedValue);
 
-                  if (Array.isArray(parsed)) {
-                    if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
-                      // File array → extract names
-                      processedValue = parsed.map((f) => f.name).join(", ");
-                    } else if (parsed.every((v) => typeof v === "string")) {
-                      // String array → join
-                      processedValue = (parsed as string[]).join(", ");
+                    if (Array.isArray(parsed)) {
+                      if (
+                        parsed.length > 0 &&
+                        parsed.every(getIsFileCellData)
+                      ) {
+                        processedValue = parsed.map((f) => f.name).join(", ");
+                      } else if (parsed.every((v) => typeof v === "string")) {
+                        processedValue = (parsed as string[]).join(", ");
+                      }
+                    } else if (typeof parsed === "boolean") {
+                      processedValue = parsed ? "Checked" : "Unchecked";
                     }
-                  } else if (typeof parsed === "boolean") {
-                    processedValue = parsed ? "Checked" : "Unchecked";
-                  }
-                } catch {
-                  // Check for boolean strings
-                  const lower = pastedValue.toLowerCase();
-                  if (lower === "true" || lower === "false") {
-                    processedValue = lower === "true" ? "Checked" : "Unchecked";
+                  } catch {
+                    const lower = pastedValue.toLowerCase();
+                    if (lower === "true" || lower === "false") {
+                      processedValue =
+                        lower === "true" ? "Checked" : "Unchecked";
+                    }
                   }
                 }
               }
@@ -1046,11 +1058,11 @@ function useDataGrid<TData>({
             toast.success(
               `${cellsUpdated} cell${
                 cellsUpdated !== 1 ? "s" : ""
-              } pasted, ${cellsSkipped} skipped`
+              } pasted, ${cellsSkipped} skipped`,
             );
           } else {
             toast.success(
-              `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`
+              `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
             );
           }
 
@@ -1061,15 +1073,14 @@ function useDataGrid<TData>({
                 rowIndex: startRowIndex,
                 columnId: currentState.focusedCell.columnId,
               },
-              { rowIndex: endRowIndex, columnId: endColumnId }
+              { rowIndex: endRowIndex, columnId: endColumnId },
             );
           }
         } else if (cellsSkipped > 0) {
-          // All cells were skipped due to incompatible types
           toast.error(
             `Could not paste: ${cellsSkipped} cell${
               cellsSkipped !== 1 ? "s" : ""
-            } skipped due to incompatible data`
+            } skipped due to incompatible data`,
           );
         }
 
@@ -1084,11 +1095,11 @@ function useDataGrid<TData>({
         toast.error(
           error instanceof Error
             ? error.message
-            : "Failed to paste. Please try again."
+            : "Failed to paste. Please try again.",
         );
       }
     },
-    [store, navigableColumnIds, propsRef, onDataUpdate, selectRange]
+    [store, navigableColumnIds, propsRef, onDataUpdate, selectRange],
   );
 
   const focusCellWrapper = React.useCallback(
@@ -1102,7 +1113,7 @@ function useDataGrid<TData>({
         cellWrapperElement.focus();
       });
     },
-    []
+    [],
   );
 
   const focusCell = React.useCallback(
@@ -1118,7 +1129,7 @@ function useDataGrid<TData>({
 
       focusCellWrapper(rowIndex, columnId);
     },
-    [store, focusCellWrapper]
+    [store, focusCellWrapper],
   );
 
   const onRowsDelete = React.useCallback(
@@ -1172,7 +1183,7 @@ function useDataGrid<TData>({
         }
       });
     },
-    [propsRef, store, navigableColumnIds, focusCell]
+    [propsRef, store, navigableColumnIds, focusCell],
   );
 
   const navigateCell = React.useCallback(
@@ -1327,7 +1338,7 @@ function useDataGrid<TData>({
             const currentScrollTop = container.scrollTop;
             const targetScrollTop = Math.max(
               0,
-              currentScrollTop - rowHeightValue
+              currentScrollTop - rowHeightValue,
             );
             container.scrollTop = targetScrollTop;
           }
@@ -1340,8 +1351,8 @@ function useDataGrid<TData>({
             direction === "pageup" || direction === "ctrl+home"
               ? "start"
               : direction === "pagedown" || direction === "ctrl+end"
-              ? "end"
-              : "center";
+                ? "end"
+                : "center";
           rowVirtualizer.scrollToIndex(newRowIndex, { align });
           requestAnimationFrame(() => {
             focusCell(newRowIndex, newColumnId);
@@ -1353,7 +1364,7 @@ function useDataGrid<TData>({
         focusCell(newRowIndex, newColumnId);
       }
     },
-    [dir, store, navigableColumnIds, focusCell, propsRef, rowHeightValue]
+    [dir, store, navigableColumnIds, focusCell, propsRef, rowHeightValue],
   );
 
   const onCellEditingStart = React.useCallback(
@@ -1365,7 +1376,7 @@ function useDataGrid<TData>({
         store.setState("editingCell", { rowIndex, columnId });
       });
     },
-    [store, propsRef]
+    [store, propsRef],
   );
 
   const onCellEditingStop = React.useCallback(
@@ -1398,7 +1409,7 @@ function useDataGrid<TData>({
         focusCellWrapper(rowIndex, columnId);
       }
     },
-    [store, propsRef, focusCell, navigateCell, focusCellWrapper]
+    [store, propsRef, focusCell, navigateCell, focusCellWrapper],
   );
 
   const onSearchOpenChange = React.useCallback(
@@ -1434,7 +1445,7 @@ function useDataGrid<TData>({
         dataGridRef.current.focus();
       }
     },
-    [store]
+    [store],
   );
 
   const onSearch = React.useCallback(
@@ -1484,12 +1495,12 @@ function useDataGrid<TData>({
         });
       }
     },
-    [columnIds, store]
+    [columnIds, store],
   );
 
   const onSearchQueryChange = React.useCallback(
     (query: string) => store.setState("searchQuery", query),
-    [store]
+    [store],
   );
 
   const onNavigateToPrevMatch = React.useCallback(() => {
@@ -1541,10 +1552,10 @@ function useDataGrid<TData>({
   const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
       return searchMatches.some(
-        (match) => match.rowIndex === rowIndex && match.columnId === columnId
+        (match) => match.rowIndex === rowIndex && match.columnId === columnId,
       );
     },
-    [searchMatches]
+    [searchMatches],
   );
 
   const getIsActiveSearchMatch = React.useCallback(
@@ -1556,7 +1567,7 @@ function useDataGrid<TData>({
         currentMatch?.columnId === columnId
       );
     },
-    [searchMatches, matchIndex]
+    [searchMatches, matchIndex],
   );
 
   const blurCell = React.useCallback(() => {
@@ -1588,7 +1599,7 @@ function useDataGrid<TData>({
           event.preventDefault();
           const cellKey = getCellKey(rowIndex, columnId);
           const newSelectedCells = new Set(
-            currentState.selectionState.selectedCells
+            currentState.selectionState.selectedCells,
           );
 
           if (newSelectedCells.has(cellKey)) {
@@ -1641,7 +1652,7 @@ function useDataGrid<TData>({
         focusCell(rowIndex, columnId);
       }
     },
-    [store, focusCell, onCellEditingStart, selectRange, clearSelection]
+    [store, focusCell, onCellEditingStart, selectRange, clearSelection],
   );
 
   const onCellDoubleClick = React.useCallback(
@@ -1650,7 +1661,7 @@ function useDataGrid<TData>({
 
       onCellEditingStart(rowIndex, columnId);
     },
-    [onCellEditingStart]
+    [onCellEditingStart],
   );
 
   const onCellMouseDown = React.useCallback(
@@ -1675,7 +1686,7 @@ function useDataGrid<TData>({
         });
       }
     },
-    [store]
+    [store],
   );
 
   const onCellMouseEnter = React.useCallback(
@@ -1698,7 +1709,7 @@ function useDataGrid<TData>({
         selectRange(start, end, true);
       }
     },
-    [store, selectRange, focusCell]
+    [store, selectRange, focusCell],
   );
 
   const onCellMouseUp = React.useCallback(() => {
@@ -1739,7 +1750,7 @@ function useDataGrid<TData>({
         y: event.clientY,
       });
     },
-    [store]
+    [store],
   );
 
   const onContextMenuOpenChange = React.useCallback(
@@ -1753,7 +1764,7 @@ function useDataGrid<TData>({
         });
       }
     },
-    [store]
+    [store],
   );
 
   const onDataGridKeyDown = React.useCallback(
@@ -1925,7 +1936,7 @@ function useDataGrid<TData>({
 
         if (shiftKey && key !== "Tab" && currentState.focusedCell) {
           const currentColIndex = navigableColumnIds.indexOf(
-            currentState.focusedCell.columnId
+            currentState.focusedCell.columnId,
           );
           let newRowIndex = currentState.focusedCell.rowIndex;
           let newColumnId = currentState.focusedCell.columnId;
@@ -1940,7 +1951,7 @@ function useDataGrid<TData>({
               newRowIndex = Math.min(
                 (tableRef.current?.getRowModel().rows.length ||
                   propsRef.current.data.length) - 1,
-                currentState.focusedCell.rowIndex + 1
+                currentState.focusedCell.rowIndex + 1,
               );
               break;
             case "left":
@@ -2005,7 +2016,7 @@ function useDataGrid<TData>({
       onSearchOpenChange,
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
-    ]
+    ],
   );
 
   const onSortingChange = React.useCallback(
@@ -2015,7 +2026,7 @@ function useDataGrid<TData>({
         typeof updater === "function" ? updater(currentState.sorting) : updater;
       store.setState("sorting", newSorting);
     },
-    [store]
+    [store],
   );
 
   const onColumnFiltersChange = React.useCallback(
@@ -2027,7 +2038,7 @@ function useDataGrid<TData>({
           : updater;
       store.setState("columnFilters", newColumnFilters);
     },
-    [store]
+    [store],
   );
 
   const onRowSelectionChange = React.useCallback(
@@ -2039,7 +2050,7 @@ function useDataGrid<TData>({
           : updater;
 
       const selectedRows = Object.keys(newRowSelection).filter(
-        (key) => newRowSelection[key]
+        (key) => newRowSelection[key],
       );
 
       const selectedCells = new Set<string>();
@@ -2065,7 +2076,7 @@ function useDataGrid<TData>({
         store.setState("editingCell", null);
       });
     },
-    [store, columnIds]
+    [store, columnIds],
   );
 
   const onRowSelect = React.useCallback(
@@ -2100,7 +2111,7 @@ function useDataGrid<TData>({
 
       store.setState("lastClickedRowIndex", rowIndex);
     },
-    [store, onRowSelectionChange]
+    [store, onRowSelectionChange],
   );
 
   const onRowHeightChange = React.useCallback(
@@ -2112,7 +2123,7 @@ function useDataGrid<TData>({
           : updater;
       store.setState("rowHeight", newRowHeight);
     },
-    [store]
+    [store],
   );
 
   const onColumnClick = React.useCallback(
@@ -2124,7 +2135,7 @@ function useDataGrid<TData>({
 
       selectColumn(columnId);
     },
-    [propsRef, selectColumn, clearSelection]
+    [propsRef, selectColumn, clearSelection],
   );
 
   const onPasteDialogOpenChange = React.useCallback(
@@ -2137,7 +2148,7 @@ function useDataGrid<TData>({
         });
       }
     },
-    [store]
+    [store],
   );
 
   const onPasteWithExpansion = React.useCallback(() => {
@@ -2155,7 +2166,7 @@ function useDataGrid<TData>({
       minSize: MIN_COLUMN_SIZE,
       maxSize: MAX_COLUMN_SIZE,
     }),
-    []
+    [],
   );
 
   const tableMeta = React.useMemo<TableMeta<TData>>(() => {
@@ -2247,11 +2258,11 @@ function useDataGrid<TData>({
   const getMemoizedCoreRowModel = React.useMemo(() => getCoreRowModel(), []);
   const getMemoizedFilteredRowModel = React.useMemo(
     () => getFilteredRowModel(),
-    []
+    [],
   );
   const getMemoizedSortedRowModel = React.useMemo(
     () => getSortedRowModel(),
-    []
+    [],
   );
 
   // Memoize state object to reduce shallow equality checks
@@ -2262,7 +2273,7 @@ function useDataGrid<TData>({
       columnFilters,
       rowSelection,
     }),
-    [propsRef, sorting, columnFilters, rowSelection]
+    [propsRef, sorting, columnFilters, rowSelection],
   );
 
   const tableOptions = React.useMemo<TableOptions<TData>>(() => {
@@ -2365,7 +2376,7 @@ function useDataGrid<TData>({
         focusCellWrapper(rowIndex, targetColumnId);
       });
     },
-    [rowVirtualizer, propsRef, store, focusCellWrapper]
+    [rowVirtualizer, propsRef, store, focusCellWrapper],
   );
 
   const onRowAdd = React.useCallback(
@@ -2392,7 +2403,7 @@ function useDataGrid<TData>({
 
       onScrollToRow({ rowIndex: rows.length });
     },
-    [propsRef, onScrollToRow]
+    [propsRef, onScrollToRow],
   );
 
   const searchState = React.useMemo<SearchState | undefined>(() => {
@@ -2644,7 +2655,7 @@ function useDataGrid<TData>({
       contextMenu,
       pasteDialog,
       onRowAdd,
-    ]
+    ],
   );
 }
 
