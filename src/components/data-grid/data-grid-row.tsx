@@ -21,7 +21,6 @@ import type {
   CellPosition,
   Direction,
   RowHeightValue,
-  SelectionState,
 } from "@/types/data-grid";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
@@ -33,7 +32,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  selectionState?: SelectionState;
+  cellSelectionKeys?: Set<string>;
   columnVisibility?: VisibilityState;
   columnPinning?: ColumnPinningState;
   dir: Direction;
@@ -90,10 +89,9 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     }
   }
 
-  // Re-render if selection state changed (different Set reference means selection changed)
-  if (
-    prev.selectionState?.selectedCells !== next.selectionState?.selectedCells
-  ) {
+  // Re-render if this row's selected cells changed
+  // Using stable Set reference that only includes this row's cells
+  if (prev.cellSelectionKeys !== next.cellSelectionKeys) {
     return false;
   }
 
@@ -130,12 +128,12 @@ function DataGridRowImpl<TData>({
   rowHeight,
   focusedCell,
   editingCell,
-  selectionState,
+  cellSelectionKeys,
   columnVisibility,
   columnPinning,
   dir,
   readOnly,
-  stretchColumns = false,
+  stretchColumns,
   className,
   style,
   ref,
@@ -163,13 +161,11 @@ function DataGridRowImpl<TData>({
 
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  // Include columnVisibility to recalculate when columns are hidden/shown, without this the cells under the column header will be still visible
-  // Also include columnPinning to recalculate when columns are pinned/unpinned, without this the cells will be shifted to the left or right
-  const visibleCells = React.useMemo(() => {
-    void columnVisibility;
-    void columnPinning;
-    return row.getVisibleCells();
-  }, [row, columnVisibility, columnPinning]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility and columnPinning are used for calculating the visible cells
+  const visibleCells = React.useMemo(
+    () => row.getVisibleCells(),
+    [row, columnVisibility, columnPinning],
+  );
 
   return (
     <div
@@ -201,9 +197,8 @@ function DataGridRowImpl<TData>({
           editingCell?.rowIndex === virtualRowIndex &&
           editingCell?.columnId === columnId;
         const isCellSelected =
-          selectionState?.selectedCells.has(
-            getCellKey(virtualRowIndex, columnId),
-          ) ?? false;
+          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
+          false;
 
         return (
           <div

@@ -783,6 +783,10 @@ function DataGridFilterInput<TData>({
         selectedValues.includes(option.value),
       );
 
+      const selectedOptionsWithIcons = selectedOptions.filter(
+        (selectedOption) => selectedOption.icon,
+      );
+
       return (
         <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
           <PopoverTrigger asChild>
@@ -798,18 +802,21 @@ function DataGridFilterInput<TData>({
                 <span className="text-muted-foreground">{placeholder}</span>
               ) : (
                 <>
-                  <div className="-space-x-2 flex items-center rtl:space-x-reverse">
-                    {selectedOptions.map((selectedOption) =>
-                      selectedOption.icon ? (
-                        <div
-                          key={selectedOption.value}
-                          className="rounded-full border bg-background p-0.5"
-                        >
-                          <selectedOption.icon className="size-3.5" />
-                        </div>
-                      ) : null,
-                    )}
-                  </div>
+                  {selectedOptionsWithIcons.length > 0 && (
+                    <div className="-space-x-2 flex items-center rtl:space-x-reverse">
+                      {selectedOptionsWithIcons.map(
+                        (selectedOption) =>
+                          selectedOption.icon && (
+                            <div
+                              key={selectedOption.value}
+                              className="rounded-full border bg-background p-0.5"
+                            >
+                              <selectedOption.icon className="size-3.5" />
+                            </div>
+                          ),
+                      )}
+                    </div>
+                  )}
                   <span className="truncate">
                     {selectedOptions.length > 1
                       ? `${selectedOptions.length} selected`

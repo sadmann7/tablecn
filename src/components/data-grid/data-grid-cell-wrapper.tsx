@@ -48,10 +48,15 @@ export function DataGridCellWrapper<TData>({
 
   const composedRefs = useComposedRefs(ref, onCellChange);
 
-  const isSearchMatch =
-    tableMeta?.getIsSearchMatch?.(rowIndex, columnId) ?? false;
-  const isActiveSearchMatch =
-    tableMeta?.getIsActiveSearchMatch?.(rowIndex, columnId) ?? false;
+  const isSearchMatch = React.useMemo(
+    () => tableMeta?.getIsSearchMatch?.(rowIndex, columnId) ?? false,
+    [tableMeta, rowIndex, columnId],
+  );
+
+  const isActiveSearchMatch = React.useMemo(
+    () => tableMeta?.getIsActiveSearchMatch?.(rowIndex, columnId) ?? false,
+    [tableMeta, rowIndex, columnId],
+  );
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {

@@ -32,9 +32,9 @@ export function DataGrid<TData>({
   columns,
   searchState,
   columnSizeVars,
+  cellSelectionMap,
   focusedCell,
   editingCell,
-  selectionState,
   rowHeight,
   contextMenu,
   pasteDialog,
@@ -174,6 +174,9 @@ export function DataGrid<TData>({
             const row = rows[virtualItem.index];
             if (!row) return null;
 
+            const cellSelectionKeys =
+              cellSelectionMap?.get(virtualItem.index) ?? new Set<string>();
+
             return (
               <DataGridRow
                 key={row.id}
@@ -185,7 +188,7 @@ export function DataGrid<TData>({
                 rowHeight={rowHeight}
                 focusedCell={focusedCell}
                 editingCell={editingCell}
-                selectionState={selectionState}
+                cellSelectionKeys={cellSelectionKeys}
                 columnVisibility={columnVisibility}
                 columnPinning={columnPinning}
                 dir={dir}
