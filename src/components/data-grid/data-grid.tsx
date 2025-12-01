@@ -12,9 +12,6 @@ import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { Direction } from "@/types/data-grid";
 
-// Empty set for rows with no selection - stable reference
-const EMPTY_SELECTION = new Set<string>();
-
 interface DataGridProps<TData>
   extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
@@ -177,9 +174,8 @@ export function DataGrid<TData>({
             const row = rows[virtualItem.index];
             if (!row) return null;
 
-            // Get this row's selected cells - stable reference per row
-            const rowSelectedCellKeys =
-              rowSelectionMap?.get(virtualItem.index) ?? EMPTY_SELECTION;
+            const rowCellSelectionKeys =
+              rowSelectionMap?.get(virtualItem.index) ?? new Set<string>();
 
             return (
               <DataGridRow
@@ -192,7 +188,7 @@ export function DataGrid<TData>({
                 rowHeight={rowHeight}
                 focusedCell={focusedCell}
                 editingCell={editingCell}
-                rowSelectedCellKeys={rowSelectedCellKeys}
+                rowCellSelectionKeys={rowCellSelectionKeys}
                 columnVisibility={columnVisibility}
                 columnPinning={columnPinning}
                 dir={dir}

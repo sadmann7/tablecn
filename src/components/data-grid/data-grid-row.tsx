@@ -32,8 +32,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  /** Stable reference - only cells in this row's selection keys */
-  rowSelectedCellKeys?: Set<string>;
+  rowCellSelectionKeys?: Set<string>;
   columnVisibility?: VisibilityState;
   columnPinning?: ColumnPinningState;
   dir: Direction;
@@ -92,7 +91,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
   // Re-render if this row's selected cells changed
   // Using stable Set reference that only includes this row's cells
-  if (prev.rowSelectedCellKeys !== next.rowSelectedCellKeys) {
+  if (prev.rowCellSelectionKeys !== next.rowCellSelectionKeys) {
     return false;
   }
 
@@ -129,7 +128,7 @@ function DataGridRowImpl<TData>({
   rowHeight,
   focusedCell,
   editingCell,
-  rowSelectedCellKeys,
+  rowCellSelectionKeys,
   columnVisibility,
   columnPinning,
   dir,
@@ -200,7 +199,7 @@ function DataGridRowImpl<TData>({
           editingCell?.rowIndex === virtualRowIndex &&
           editingCell?.columnId === columnId;
         const isCellSelected =
-          rowSelectedCellKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
+          rowCellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
           false;
 
         return (

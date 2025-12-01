@@ -52,6 +52,7 @@ export function DataGridCellWrapper<TData>({
     () => tableMeta?.getIsSearchMatch?.(rowIndex, columnId) ?? false,
     [tableMeta, rowIndex, columnId],
   );
+
   const isActiveSearchMatch = React.useMemo(
     () => tableMeta?.getIsActiveSearchMatch?.(rowIndex, columnId) ?? false,
     [tableMeta, rowIndex, columnId],
