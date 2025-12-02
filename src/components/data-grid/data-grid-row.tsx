@@ -22,6 +22,7 @@ import type {
   Direction,
   RowHeightValue,
 } from "@/types/data-grid";
+import { DataGridVirtualPadding } from "./data-grid-virtual-padding";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
@@ -38,6 +39,12 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   dir: Direction;
   readOnly: boolean;
   stretchColumns?: boolean;
+  leftPinnedIds?: Set<string>;
+  rightPinnedIds?: Set<string>;
+  centerColumnIndices?: number[];
+  virtualColumns?: Array<VirtualItem>;
+  virtualPaddingLeft?: number;
+  virtualPaddingRight?: number;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -115,6 +122,17 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if column virtualization inputs changed
+  if (prev.virtualPaddingLeft !== next.virtualPaddingLeft) {
+    return false;
+  }
+  if (prev.virtualPaddingRight !== next.virtualPaddingRight) {
+    return false;
+  }
+  if (prev.virtualColumns !== next.virtualColumns) {
+    return false;
+  }
+
   // Skip re-render - props are equal
   return true;
 }) as typeof DataGridRowImpl;
@@ -134,6 +152,12 @@ function DataGridRowImpl<TData>({
   dir,
   readOnly,
   stretchColumns,
+  leftPinnedIds = new Set<string>(),
+  rightPinnedIds = new Set<string>(),
+  centerColumnIndices = [],
+  virtualColumns = [],
+  virtualPaddingLeft,
+  virtualPaddingRight,
   className,
   style,
   ref,
@@ -167,6 +191,61 @@ function DataGridRowImpl<TData>({
     [row, columnVisibility, columnPinning],
   );
 
+  function renderCell(
+    cell: (typeof visibleCells)[number],
+    ariaColIndex: number,
+  ) {
+    const columnId = cell.column.id;
+    const isCellFocused =
+      focusedCell?.rowIndex === virtualRowIndex &&
+      focusedCell?.columnId === columnId;
+    const isCellEditing =
+      editingCell?.rowIndex === virtualRowIndex &&
+      editingCell?.columnId === columnId;
+    const isCellSelected =
+      cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ?? false;
+
+    return (
+      <div
+        key={cell.id}
+        role="gridcell"
+        aria-colindex={ariaColIndex}
+        data-highlighted={isCellFocused ? "" : undefined}
+        data-slot="grid-cell"
+        tabIndex={-1}
+        className={cn({
+          grow: stretchColumns && columnId !== "select",
+          "border-e": columnId !== "select",
+        })}
+        style={{
+          ...getCommonPinningStyles({ column: cell.column, dir }),
+          width: `calc(var(--col-${columnId}-size) * 1px)`,
+        }}
+      >
+        {typeof cell.column.columnDef.header === "function" ? (
+          <div
+            className={cn("size-full px-3 py-1.5", {
+              "bg-primary/10": isRowSelected,
+            })}
+          >
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </div>
+        ) : (
+          <DataGridCell
+            cell={cell}
+            tableMeta={tableMeta}
+            rowIndex={virtualRowIndex}
+            columnId={columnId}
+            isFocused={isCellFocused}
+            isEditing={isCellEditing}
+            isSelected={isCellSelected}
+            readOnly={readOnly}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       key={row.id}
@@ -188,58 +267,36 @@ function DataGridRowImpl<TData>({
         ...style,
       }}
     >
-      {visibleCells.map((cell, colIndex) => {
-        const columnId = cell.column.id;
-        const isCellFocused =
-          focusedCell?.rowIndex === virtualRowIndex &&
-          focusedCell?.columnId === columnId;
-        const isCellEditing =
-          editingCell?.rowIndex === virtualRowIndex &&
-          editingCell?.columnId === columnId;
-        const isCellSelected =
-          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
-          false;
+      {/* Left pinned cells */}
+      {visibleCells
+        .filter((c) => leftPinnedIds.has(c.column.id))
+        .map((cell, idx) => renderCell(cell, idx + 1))}
 
-        return (
-          <div
-            key={cell.id}
-            role="gridcell"
-            aria-colindex={colIndex + 1}
-            data-highlighted={isCellFocused ? "" : undefined}
-            data-slot="grid-cell"
-            tabIndex={-1}
-            className={cn({
-              grow: stretchColumns && columnId !== "select",
-              "border-e": columnId !== "select",
-            })}
-            style={{
-              ...getCommonPinningStyles({ column: cell.column, dir }),
-              width: `calc(var(--col-${columnId}-size) * 1px)`,
-            }}
-          >
-            {typeof cell.column.columnDef.header === "function" ? (
-              <div
-                className={cn("size-full px-3 py-1.5", {
-                  "bg-primary/10": isRowSelected,
-                })}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </div>
-            ) : (
-              <DataGridCell
-                cell={cell}
-                tableMeta={tableMeta}
-                rowIndex={virtualRowIndex}
-                columnId={columnId}
-                isFocused={isCellFocused}
-                isEditing={isCellEditing}
-                isSelected={isCellSelected}
-                readOnly={readOnly}
-              />
-            )}
-          </div>
-        );
-      })}
+      {/* Center (virtualized) */}
+      <DataGridVirtualPadding
+        virtualPaddingLeft={virtualPaddingLeft}
+        virtualPaddingRight={virtualPaddingRight}
+      >
+        {virtualColumns.map((vc) => {
+          const actualIndex = centerColumnIndices[vc.index] ?? vc.index;
+          const cell = visibleCells[actualIndex];
+          if (!cell) return null;
+          // Guard: ensure pinned columns never render in the center virtualized region
+          if (
+            leftPinnedIds.has(cell.column.id) ||
+            rightPinnedIds.has(cell.column.id) ||
+            cell.column.getIsPinned()
+          ) {
+            return null;
+          }
+          return renderCell(cell, actualIndex + 1);
+        })}
+      </DataGridVirtualPadding>
+
+      {/* Right pinned cells */}
+      {visibleCells
+        .filter((c) => rightPinnedIds.has(c.column.id))
+        .map((cell, idx) => renderCell(cell, visibleCells.length - idx))}
     </div>
   );
 }
