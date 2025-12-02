@@ -9,6 +9,7 @@ import {
   getSortedRowModel,
   type RowSelectionState,
   type SortingState,
+  type Table,
   type TableMeta,
   type TableOptions,
   type TableState,
@@ -24,6 +25,7 @@ import {
   getRowHeightValue,
   matchSelectOption,
   parseCellKey,
+  scrollCellIntoView,
 } from "@/lib/data-grid";
 import type {
   CellPosition,
@@ -41,6 +43,7 @@ import type {
 const DEFAULT_ROW_HEIGHT = "short";
 const OVERSCAN = 6;
 const VIEWPORT_OFFSET = 1;
+
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
@@ -1377,55 +1380,14 @@ function useDataGrid<TData>({
 
           if (!container || !targetCell) return;
 
-          const containerRect = container.getBoundingClientRect();
-          const cellRect = targetCell.getBoundingClientRect();
-
-          // Calculate pinned column widths
-          const currentTable = tableRef.current;
-          const leftPinnedColumns =
-            currentTable?.getLeftVisibleLeafColumns() ?? [];
-          const rightPinnedColumns =
-            currentTable?.getRightVisibleLeafColumns() ?? [];
-
-          const leftPinnedWidth = leftPinnedColumns.reduce(
-            (sum, col) => sum + col.getSize(),
-            0,
-          );
-          const rightPinnedWidth = rightPinnedColumns.reduce(
-            (sum, col) => sum + col.getSize(),
-            0,
-          );
-
-          const isRtl = dir === "rtl";
-          const viewportLeft = isRtl
-            ? containerRect.left + rightPinnedWidth + VIEWPORT_OFFSET
-            : containerRect.left + leftPinnedWidth + VIEWPORT_OFFSET;
-          const viewportRight = isRtl
-            ? containerRect.right - leftPinnedWidth - VIEWPORT_OFFSET
-            : containerRect.right - rightPinnedWidth - VIEWPORT_OFFSET;
-
-          const isFullyVisible =
-            cellRect.left >= viewportLeft && cellRect.right <= viewportRight;
-
-          if (isFullyVisible) return;
-
-          if (isRtl) {
-            if (direction === "left" || direction === "end") {
-              const scrollNeeded = viewportLeft - cellRect.left;
-              container.scrollLeft -= scrollNeeded;
-            } else {
-              const scrollNeeded = cellRect.right - viewportRight;
-              container.scrollLeft += scrollNeeded;
-            }
-          } else {
-            if (direction === "right" || direction === "end") {
-              const scrollNeeded = cellRect.right - viewportRight;
-              container.scrollLeft += scrollNeeded;
-            } else {
-              const scrollNeeded = viewportLeft - cellRect.left;
-              container.scrollLeft -= scrollNeeded;
-            }
-          }
+          scrollCellIntoView({
+            container,
+            targetCell,
+            tableRef,
+            viewportOffset: VIEWPORT_OFFSET,
+            direction,
+            isRtl: dir === "rtl",
+          });
           return;
         }
 
@@ -2085,55 +2047,14 @@ function useDataGrid<TData>({
             const targetCell = cellMapRef.current.get(cellKey);
 
             if (container && targetCell) {
-              const containerRect = container.getBoundingClientRect();
-              const cellRect = targetCell.getBoundingClientRect();
-
-              // Calculate pinned column widths
-              const currentTable = tableRef.current;
-              const leftPinnedColumns =
-                currentTable?.getLeftVisibleLeafColumns() ?? [];
-              const rightPinnedColumns =
-                currentTable?.getRightVisibleLeafColumns() ?? [];
-
-              const leftPinnedWidth = leftPinnedColumns.reduce(
-                (sum, col) => sum + col.getSize(),
-                0,
-              );
-              const rightPinnedWidth = rightPinnedColumns.reduce(
-                (sum, col) => sum + col.getSize(),
-                0,
-              );
-
-              const viewportLeft = isRtl
-                ? containerRect.left + rightPinnedWidth + VIEWPORT_OFFSET
-                : containerRect.left + leftPinnedWidth + VIEWPORT_OFFSET;
-              const viewportRight = isRtl
-                ? containerRect.right - leftPinnedWidth - VIEWPORT_OFFSET
-                : containerRect.right - rightPinnedWidth - VIEWPORT_OFFSET;
-
-              const isFullyVisible =
-                cellRect.left >= viewportLeft &&
-                cellRect.right <= viewportRight;
-
-              if (!isFullyVisible) {
-                if (isRtl) {
-                  if (direction === "left") {
-                    const scrollNeeded = viewportLeft - cellRect.left;
-                    container.scrollLeft -= scrollNeeded;
-                  } else {
-                    const scrollNeeded = cellRect.right - viewportRight;
-                    container.scrollLeft += scrollNeeded;
-                  }
-                } else {
-                  if (direction === "right") {
-                    const scrollNeeded = cellRect.right - viewportRight;
-                    container.scrollLeft += scrollNeeded;
-                  } else {
-                    const scrollNeeded = viewportLeft - cellRect.left;
-                    container.scrollLeft -= scrollNeeded;
-                  }
-                }
-              }
+              scrollCellIntoView({
+                container,
+                targetCell,
+                tableRef,
+                viewportOffset: VIEWPORT_OFFSET,
+                direction,
+                isRtl,
+              });
             }
           }
         } else {
