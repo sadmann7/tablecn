@@ -168,6 +168,8 @@ function useDataGrid<TData>({
   const tableRef = React.useRef<ReturnType<typeof useReactTable<TData>>>(null);
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
+  const columnVirtualizerRef =
+    React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const cellMapRef = React.useRef<Map<string, HTMLDivElement>>(new Map());
@@ -1109,9 +1111,43 @@ function useDataGrid<TData>({
         const cellKey = getCellKey(rowIndex, columnId);
         const cellWrapperElement = cellMapRef.current.get(cellKey);
 
-        if (!cellWrapperElement) return;
+        if (cellWrapperElement) {
+          cellWrapperElement.focus();
+          return;
+        }
 
-        cellWrapperElement.focus();
+        // If the cell isn't mounted (e.g., scrolled out by column virtualization),
+        // attempt to horizontally scroll the center (non-pinned) column into view, then retry.
+        const table = tableRef.current;
+        const visible = table?.getVisibleLeafColumns() ?? [];
+        const actualIndex = visible.findIndex((c) => c.id === columnId);
+        if (actualIndex < 0) return;
+
+        const pinning = table?.getState().columnPinning;
+        const left = new Set(pinning?.left ?? []);
+        const right = new Set(pinning?.right ?? []);
+
+        // Only scroll if the column is not pinned
+        if (!left.has(columnId) && !right.has(columnId)) {
+          // Build center indices mapping from current visible columns
+          const indices: number[] = [];
+          for (let i = 0; i < visible.length; i++) {
+            const id = visible[i]?.id;
+            if (!id) continue;
+            if (!left.has(id) && !right.has(id)) indices.push(i);
+          }
+          const centerIdx = indices.indexOf(actualIndex);
+          if (centerIdx >= 0) {
+            columnVirtualizerRef.current?.scrollToIndex(centerIdx, {
+              align: "auto",
+            });
+          }
+        }
+
+        requestAnimationFrame(() => {
+          const retryElement = cellMapRef.current.get(cellKey);
+          retryElement?.focus();
+        });
       });
     },
     [],
@@ -2358,6 +2394,36 @@ function useDataGrid<TData>({
     rowVirtualizerRef.current = rowVirtualizer;
   }
 
+  // Horizontal column virtualizer (center columns only)
+  const visibleLeafColumns = table.getVisibleLeafColumns();
+  // Compute indices for non-pinned (center) columns
+  const centerColumnIndices = React.useMemo(() => {
+    const indices: number[] = [];
+    for (let i = 0; i < visibleLeafColumns.length; i++) {
+      const col = visibleLeafColumns[i];
+      if (!col) continue;
+      const isPinned = col.getIsPinned?.();
+      if (!isPinned) indices.push(i);
+    }
+    return indices;
+  }, [visibleLeafColumns]);
+
+  const columnVirtualizer = useVirtualizer({
+    count: centerColumnIndices.length,
+    getScrollElement: () => dataGridRef.current,
+    estimateSize: (index) => {
+      const actualIndex = centerColumnIndices[index] ?? index;
+      return visibleLeafColumns[actualIndex]?.getSize() ?? 0;
+    },
+    horizontal: true,
+    overscan: 3,
+    isScrollingResetDelay: 150,
+  });
+
+  if (!columnVirtualizerRef.current) {
+    columnVirtualizerRef.current = columnVirtualizer;
+  }
+
   const onScrollToRow = React.useCallback(
     async (opts: Partial<CellPosition>) => {
       const rowIndex = opts?.rowIndex ?? 0;
@@ -2634,6 +2700,19 @@ function useDataGrid<TData>({
     table.getState().sorting,
   ]);
 
+  // Keep column virtualizer measurements in sync with column changes
+  useIsomorphicLayoutEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      columnVirtualizer.measure();
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [
+    table.getState().columnOrder,
+    table.getState().columnPinning,
+    table.getState().columnSizing,
+    table.getState().columnVisibility,
+  ]);
+
   return React.useMemo(
     () => ({
       dataGridRef,
@@ -2644,6 +2723,8 @@ function useDataGrid<TData>({
       table,
       tableMeta,
       rowVirtualizer,
+      columnVirtualizer,
+      centerColumnIndices,
       columns,
       searchState,
       columnSizeVars,
@@ -2661,6 +2742,8 @@ function useDataGrid<TData>({
       table,
       tableMeta,
       rowVirtualizer,
+      columnVirtualizer,
+      centerColumnIndices,
       columns,
       searchState,
       columnSizeVars,
