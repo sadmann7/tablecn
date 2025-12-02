@@ -1460,7 +1460,11 @@ function useDataGrid<TData>({
         const nextRowIndex = rowIndex + 1;
         if (nextRowIndex < rowCount) {
           requestAnimationFrame(() => {
-            focusCell(nextRowIndex, columnId);
+            store.batch(() => {
+              store.setState("focusedCell", { rowIndex: nextRowIndex, columnId });
+              store.setState("editingCell", { rowIndex: nextRowIndex, columnId });
+            });
+            focusCellWrapper(nextRowIndex, columnId);
           });
         }
       } else if (opts?.direction && currentEditing) {
