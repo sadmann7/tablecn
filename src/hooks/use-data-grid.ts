@@ -42,7 +42,7 @@ import type {
 const DEFAULT_ROW_HEIGHT = "short";
 const OVERSCAN = 6;
 const VIEWPORT_OFFSET = 1;
-const PAGE_COLUMN_SIZE = 5;
+const HORIZONTAL_PAGE_SIZE = 5;
 
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
@@ -1298,7 +1298,7 @@ function useDataGrid<TData>({
           break;
         case "pageleft":
           if (currentColIndex > 0) {
-            const targetIndex = Math.max(0, currentColIndex - PAGE_COLUMN_SIZE);
+            const targetIndex = Math.max(0, currentColIndex - HORIZONTAL_PAGE_SIZE);
             const targetColumnId = navigableColumnIds[targetIndex];
             if (targetColumnId) newColumnId = targetColumnId;
           }
@@ -1307,7 +1307,7 @@ function useDataGrid<TData>({
           if (currentColIndex < navigableColumnIds.length - 1) {
             const targetIndex = Math.min(
               navigableColumnIds.length - 1,
-              currentColIndex + PAGE_COLUMN_SIZE,
+              currentColIndex + HORIZONTAL_PAGE_SIZE,
             );
             const targetColumnId = navigableColumnIds[targetIndex];
             if (targetColumnId) newColumnId = targetColumnId;
