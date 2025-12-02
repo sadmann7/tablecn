@@ -1275,11 +1275,9 @@ function useDataGrid<TData>({
           }
           break;
         case "ctrl+up":
-          // Jump to first row, same column
           newRowIndex = 0;
           break;
         case "ctrl+down":
-          // Jump to last row, same column
           newRowIndex = Math.max(0, rowCount - 1);
           break;
         case "pageup":
@@ -1301,9 +1299,7 @@ function useDataGrid<TData>({
           }
           break;
         case "pageleft":
-          // Move left by approximately one viewport width of columns
           if (currentColIndex > 0) {
-            // Move left by 5 columns or to the start, whichever comes first
             const columnsToMove = 5;
             const targetIndex = Math.max(0, currentColIndex - columnsToMove);
             const targetColumnId = navigableColumnIds[targetIndex];
@@ -1311,13 +1307,11 @@ function useDataGrid<TData>({
           }
           break;
         case "pageright":
-          // Move right by approximately one viewport width of columns
           if (currentColIndex < navigableColumnIds.length - 1) {
-            // Move right by 5 columns or to the end, whichever comes first
             const columnsToMove = 5;
             const targetIndex = Math.min(
               navigableColumnIds.length - 1,
-              currentColIndex + columnsToMove
+              currentColIndex + columnsToMove,
             );
             const targetColumnId = navigableColumnIds[targetIndex];
             if (targetColumnId) newColumnId = targetColumnId;
@@ -1901,19 +1895,16 @@ function useDataGrid<TData>({
       }
 
       if (currentState.editingCell) {
-        // Allow Escape to stop editing
         if (key === "Escape") {
           event.preventDefault();
           onCellEditingStop();
           return;
         }
-        // Allow Enter to stop editing and move to next row
         if (key === "Enter" && !shiftKey && !altKey) {
           event.preventDefault();
           onCellEditingStop({ moveToNextRow: true });
           return;
         }
-        // Allow Tab to stop editing and move to next cell
         if (key === "Tab") {
           event.preventDefault();
           const direction = shiftKey ? "left" : "right";
@@ -1927,21 +1918,18 @@ function useDataGrid<TData>({
 
       let direction: NavigationDirection | null = null;
 
-      // Cmd+A: Select all
       if (isCtrlPressed && !shiftKey && key === "a") {
         event.preventDefault();
         selectAll();
         return;
       }
 
-      // Cmd+C: Copy
       if (isCtrlPressed && !shiftKey && key === "c") {
         event.preventDefault();
         onCellsCopy();
         return;
       }
 
-      // Cmd+X: Cut
       if (
         isCtrlPressed &&
         !shiftKey &&
@@ -1953,7 +1941,6 @@ function useDataGrid<TData>({
         return;
       }
 
-      // Cmd+V: Paste
       if (
         propsRef.current.enablePaste &&
         isCtrlPressed &&
@@ -1966,7 +1953,6 @@ function useDataGrid<TData>({
         return;
       }
 
-      // Cmd+Backspace: Delete selected rows
       if (
         isCtrlPressed &&
         key === "Backspace" &&
@@ -1991,7 +1977,6 @@ function useDataGrid<TData>({
         return;
       }
 
-      // Delete/Backspace: Clear cell contents
       if (
         (key === "Delete" || key === "Backspace") &&
         !isCtrlPressed &&
@@ -2052,7 +2037,6 @@ function useDataGrid<TData>({
         return;
       }
 
-      // Enter or F2: Start editing cell
       if (
         (key === "Enter" || key === "F2") &&
         !propsRef.current.readOnly &&
@@ -2066,7 +2050,6 @@ function useDataGrid<TData>({
         return;
       }
 
-      // Shift+Enter: Insert row below
       if (
         key === "Enter" &&
         shiftKey &&
@@ -2107,14 +2090,11 @@ function useDataGrid<TData>({
         return;
       }
 
-      // Handle arrow keys with modifiers
       switch (key) {
         case "ArrowUp":
-          // Alt+Up: Page up
           if (altKey && !isCtrlPressed && !shiftKey) {
             direction = "pageup";
           } else if (isCtrlPressed && shiftKey) {
-            // Cmd+Shift+Up: Select to top edge
             const selectionEdge =
               currentState.selectionState.selectionRange?.end ||
               currentState.focusedCell;
@@ -2131,30 +2111,26 @@ function useDataGrid<TData>({
                 navigableColumnIds[currentColIndex] ?? selectionEdge.columnId,
             });
 
-            // Scroll to top edge but keep focus at selection anchor
+            // Scroll to edge but keep focus at selection anchor
             const rowVirtualizer = rowVirtualizerRef.current;
             if (rowVirtualizer) {
               rowVirtualizer.scrollToIndex(0, { align: "start" });
             }
 
-            // Ensure data grid maintains focus after edge scroll
             restoreDataGridFocus(dataGridRef.current);
 
             event.preventDefault();
             return;
           } else if (isCtrlPressed && !shiftKey) {
-            // Cmd+Up: Jump to first row, same column
             direction = "ctrl+up";
           } else {
             direction = "up";
           }
           break;
         case "ArrowDown":
-          // Alt+Down: Page down
           if (altKey && !isCtrlPressed && !shiftKey) {
             direction = "pagedown";
           } else if (isCtrlPressed && shiftKey) {
-            // Cmd+Shift+Down: Select to bottom edge
             const rowCount =
               tableRef.current?.getRowModel().rows.length ||
               propsRef.current.data.length;
@@ -2174,7 +2150,7 @@ function useDataGrid<TData>({
                 navigableColumnIds[currentColIndex] ?? selectionEdge.columnId,
             });
 
-            // Scroll to bottom edge but keep focus at selection anchor
+            // Scroll to edge but keep focus at selection anchor
             const rowVirtualizer = rowVirtualizerRef.current;
             if (rowVirtualizer) {
               rowVirtualizer.scrollToIndex(Math.max(0, rowCount - 1), {
@@ -2182,13 +2158,11 @@ function useDataGrid<TData>({
               });
             }
 
-            // Ensure data grid maintains focus after edge scroll
             restoreDataGridFocus(dataGridRef.current);
 
             event.preventDefault();
             return;
           } else if (isCtrlPressed && !shiftKey) {
-            // Cmd+Down: Jump to last row, same column
             direction = "ctrl+down";
           } else {
             direction = "down";
@@ -2196,7 +2170,6 @@ function useDataGrid<TData>({
           break;
         case "ArrowLeft":
           if (isCtrlPressed && shiftKey) {
-            // Cmd+Shift+Left: Select to left edge
             const selectionEdge =
               currentState.selectionState.selectionRange?.end ||
               currentState.focusedCell;
@@ -2232,13 +2205,11 @@ function useDataGrid<TData>({
                 });
               }
 
-              // Ensure data grid maintains focus after edge scroll
               restoreDataGridFocus(container);
             }
             event.preventDefault();
             return;
           } else if (isCtrlPressed && !shiftKey) {
-            // Cmd+Left: Scroll to left edge
             direction = "home";
           } else {
             direction = "left";
@@ -2246,7 +2217,6 @@ function useDataGrid<TData>({
           break;
         case "ArrowRight":
           if (isCtrlPressed && shiftKey) {
-            // Cmd+Shift+Right: Select to right edge
             const selectionEdge =
               currentState.selectionState.selectionRange?.end ||
               currentState.focusedCell;
@@ -2282,13 +2252,11 @@ function useDataGrid<TData>({
                 });
               }
 
-              // Ensure data grid maintains focus after edge scroll
               restoreDataGridFocus(container);
             }
             event.preventDefault();
             return;
           } else if (isCtrlPressed && !shiftKey) {
-            // Cmd+Right: Scroll to right edge
             direction = "end";
           } else {
             direction = "right";
@@ -2301,11 +2269,9 @@ function useDataGrid<TData>({
           direction = isCtrlPressed ? "ctrl+end" : "end";
           break;
         case "PageUp":
-          // Alt+PageUp: Scroll left one page of columns
           direction = altKey ? "pageleft" : "pageup";
           break;
         case "PageDown":
-          // Alt+PageDown: Scroll right one page of columns
           direction = altKey ? "pageright" : "pagedown";
           break;
         case "Escape":
@@ -2407,22 +2373,18 @@ function useDataGrid<TData>({
             columnId: newColumnId,
           });
 
-          // Keep focus at the selection anchor point (don't move focus to the end)
-          // But ensure the target cell is scrolled into view
-
-          // Handle scrolling for shift+arrow selection
+          // Keep focus at the selection anchor point, but scroll target cell into view
           const container = dataGridRef.current;
           const targetRow = rowMapRef.current.get(newRowIndex);
           const cellKey = getCellKey(newRowIndex, newColumnId);
           const targetCell = cellMapRef.current.get(cellKey);
 
-          // Handle vertical scrolling for shift+arrow (up/down)
           if (
             newRowIndex !== selectionEdge.rowIndex &&
             (direction === "up" || direction === "down")
           ) {
             if (container && targetRow) {
-              // Row is already rendered - use direct scrolling for snappier response
+              // Use direct scrolling for already-rendered rows
               const containerRect = container.getBoundingClientRect();
               const headerHeight =
                 headerRef.current?.getBoundingClientRect().height ?? 0;
@@ -2450,23 +2412,20 @@ function useDataGrid<TData>({
                   container.scrollTop -= scrollNeeded;
                 }
 
-                // Ensure data grid maintains focus after scroll
                 restoreDataGridFocus(container);
               }
             } else {
-              // Row is not yet rendered - use virtualizer to scroll it into view
+              // Use virtualizer for not-yet-rendered rows
               const rowVirtualizer = rowVirtualizerRef.current;
               if (rowVirtualizer) {
                 const align = direction === "up" ? "start" : "end";
                 rowVirtualizer.scrollToIndex(newRowIndex, { align });
 
-                // Ensure data grid maintains focus after virtualizer scroll
                 restoreDataGridFocus(container);
               }
             }
           }
 
-          // Handle horizontal scrolling for shift+arrow/home/end
           if (
             newColumnId !== selectionEdge.columnId &&
             (direction === "left" ||
@@ -2475,7 +2434,6 @@ function useDataGrid<TData>({
               direction === "end")
           ) {
             if (container && targetCell) {
-              // Cell is rendered - scroll it into view
               scrollCellIntoView({
                 container,
                 targetCell,
