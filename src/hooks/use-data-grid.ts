@@ -1300,6 +1300,29 @@ function useDataGrid<TData>({
             newRowIndex = Math.min(rowCount - 1, rowIndex + 10);
           }
           break;
+        case "pageleft":
+          // Move left by approximately one viewport width of columns
+          if (currentColIndex > 0) {
+            // Move left by 5 columns or to the start, whichever comes first
+            const columnsToMove = 5;
+            const targetIndex = Math.max(0, currentColIndex - columnsToMove);
+            const targetColumnId = navigableColumnIds[targetIndex];
+            if (targetColumnId) newColumnId = targetColumnId;
+          }
+          break;
+        case "pageright":
+          // Move right by approximately one viewport width of columns
+          if (currentColIndex < navigableColumnIds.length - 1) {
+            // Move right by 5 columns or to the end, whichever comes first
+            const columnsToMove = 5;
+            const targetIndex = Math.min(
+              navigableColumnIds.length - 1,
+              currentColIndex + columnsToMove
+            );
+            const targetColumnId = navigableColumnIds[targetIndex];
+            if (targetColumnId) newColumnId = targetColumnId;
+          }
+          break;
       }
 
       if (newRowIndex !== rowIndex || newColumnId !== columnId) {
@@ -2278,10 +2301,12 @@ function useDataGrid<TData>({
           direction = isCtrlPressed ? "ctrl+end" : "end";
           break;
         case "PageUp":
-          direction = "pageup";
+          // Alt+PageUp: Scroll left one page of columns
+          direction = altKey ? "pageleft" : "pageup";
           break;
         case "PageDown":
-          direction = "pagedown";
+          // Alt+PageDown: Scroll right one page of columns
+          direction = altKey ? "pageright" : "pagedown";
           break;
         case "Escape":
           event.preventDefault();

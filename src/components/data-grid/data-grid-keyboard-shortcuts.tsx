@@ -136,6 +136,14 @@ function DataGridKeyboardShortcutsImpl({
             keys: ["⌥", "↓"],
             description: "Scroll down one page",
           },
+          {
+            keys: ["⌥", "PgUp"],
+            description: "Scroll left one page of columns",
+          },
+          {
+            keys: ["⌥", "PgDn"],
+            description: "Scroll right one page of columns",
+          },
         ],
       },
       {
