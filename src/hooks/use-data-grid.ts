@@ -2048,6 +2048,18 @@ function useDataGrid<TData>({
                 }
               }
               break;
+            case "home":
+              if (navigableColumnIds.length > 0) {
+                newColumnId = navigableColumnIds[0] ?? newColumnId;
+              }
+              break;
+            case "end":
+              if (navigableColumnIds.length > 0) {
+                newColumnId =
+                  navigableColumnIds[navigableColumnIds.length - 1] ??
+                  newColumnId;
+              }
+              break;
           }
 
           const selectionStart =
@@ -2059,10 +2071,13 @@ function useDataGrid<TData>({
           });
           focusCell(newRowIndex, newColumnId);
 
-          // Handle horizontal scroll adjustment for shift+left/right
+          // Handle horizontal scroll adjustment for shift+arrow/home/end
           if (
             newColumnId !== currentState.focusedCell.columnId &&
-            (direction === "left" || direction === "right")
+            (direction === "left" ||
+              direction === "right" ||
+              direction === "home" ||
+              direction === "end")
           ) {
             const container = dataGridRef.current;
             const cellKey = getCellKey(newRowIndex, newColumnId);
