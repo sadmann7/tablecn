@@ -1380,9 +1380,29 @@ function useDataGrid<TData>({
           const containerRect = container.getBoundingClientRect();
           const cellRect = targetCell.getBoundingClientRect();
 
+          // Calculate pinned column widths
+          const currentTable = tableRef.current;
+          const leftPinnedColumns =
+            currentTable?.getLeftVisibleLeafColumns() ?? [];
+          const rightPinnedColumns =
+            currentTable?.getRightVisibleLeafColumns() ?? [];
+
+          const leftPinnedWidth = leftPinnedColumns.reduce(
+            (sum, col) => sum + col.getSize(),
+            0
+          );
+          const rightPinnedWidth = rightPinnedColumns.reduce(
+            (sum, col) => sum + col.getSize(),
+            0
+          );
+
           const isRtl = dir === "rtl";
-          const viewportLeft = containerRect.left + VIEWPORT_OFFSET;
-          const viewportRight = containerRect.right - VIEWPORT_OFFSET;
+          const viewportLeft = isRtl
+            ? containerRect.left + rightPinnedWidth + VIEWPORT_OFFSET
+            : containerRect.left + leftPinnedWidth + VIEWPORT_OFFSET;
+          const viewportRight = isRtl
+            ? containerRect.right - leftPinnedWidth - VIEWPORT_OFFSET
+            : containerRect.right - rightPinnedWidth - VIEWPORT_OFFSET;
 
           const isFullyVisible =
             cellRect.left >= viewportLeft && cellRect.right <= viewportRight;
@@ -2068,8 +2088,28 @@ function useDataGrid<TData>({
               const containerRect = container.getBoundingClientRect();
               const cellRect = targetCell.getBoundingClientRect();
 
-              const viewportLeft = containerRect.left + VIEWPORT_OFFSET;
-              const viewportRight = containerRect.right - VIEWPORT_OFFSET;
+              // Calculate pinned column widths
+              const currentTable = tableRef.current;
+              const leftPinnedColumns =
+                currentTable?.getLeftVisibleLeafColumns() ?? [];
+              const rightPinnedColumns =
+                currentTable?.getRightVisibleLeafColumns() ?? [];
+
+              const leftPinnedWidth = leftPinnedColumns.reduce(
+                (sum, col) => sum + col.getSize(),
+                0
+              );
+              const rightPinnedWidth = rightPinnedColumns.reduce(
+                (sum, col) => sum + col.getSize(),
+                0
+              );
+
+              const viewportLeft = isRtl
+                ? containerRect.left + rightPinnedWidth + VIEWPORT_OFFSET
+                : containerRect.left + leftPinnedWidth + VIEWPORT_OFFSET;
+              const viewportRight = isRtl
+                ? containerRect.right - leftPinnedWidth - VIEWPORT_OFFSET
+                : containerRect.right - rightPinnedWidth - VIEWPORT_OFFSET;
 
               const isFullyVisible =
                 cellRect.left >= viewportLeft &&
