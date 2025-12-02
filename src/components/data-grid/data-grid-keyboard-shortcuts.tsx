@@ -97,6 +97,22 @@ function DataGridKeyboardShortcutsImpl({
             description: "Move to last column",
           },
           {
+            keys: [modKey, "↑"],
+            description: "Scroll to top of table",
+          },
+          {
+            keys: [modKey, "↓"],
+            description: "Scroll to bottom of table",
+          },
+          {
+            keys: [modKey, "←"],
+            description: "Scroll to first column",
+          },
+          {
+            keys: [modKey, "→"],
+            description: "Scroll to last column",
+          },
+          {
             keys: [modKey, "Home"],
             description: "Move to first cell",
           },
@@ -112,6 +128,14 @@ function DataGridKeyboardShortcutsImpl({
             keys: ["PgDn"],
             description: "Move down one page",
           },
+          {
+            keys: ["⌥", "↑"],
+            description: "Scroll up one page",
+          },
+          {
+            keys: ["⌥", "↓"],
+            description: "Scroll down one page",
+          },
         ],
       },
       {
@@ -120,6 +144,22 @@ function DataGridKeyboardShortcutsImpl({
           {
             keys: ["Shift", "↑↓←→"],
             description: "Extend selection",
+          },
+          {
+            keys: [modKey, "Shift", "↑"],
+            description: "Select to top of table",
+          },
+          {
+            keys: [modKey, "Shift", "↓"],
+            description: "Select to bottom of table",
+          },
+          {
+            keys: [modKey, "Shift", "←"],
+            description: "Select to first column",
+          },
+          {
+            keys: [modKey, "Shift", "→"],
+            description: "Select to last column",
           },
           {
             keys: [modKey, "A"],
@@ -147,8 +187,16 @@ function DataGridKeyboardShortcutsImpl({
             description: "Start editing cell",
           },
           {
+            keys: ["F2"],
+            description: "Start editing cell",
+          },
+          {
             keys: ["Double Click"],
             description: "Start editing cell",
+          },
+          {
+            keys: ["Shift", "Enter"],
+            description: "Insert row below",
           },
           {
             keys: [modKey, "C"],
@@ -169,6 +217,10 @@ function DataGridKeyboardShortcutsImpl({
           {
             keys: ["Backspace"],
             description: "Clear selected cells",
+          },
+          {
+            keys: [modKey, "Backspace"],
+            description: "Delete selected rows",
           },
         ],
       },

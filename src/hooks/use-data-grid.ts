@@ -1823,7 +1823,7 @@ function useDataGrid<TData>({
   const onDataGridKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
       const currentState = store.getState();
-      const { key, ctrlKey, metaKey, shiftKey } = event;
+      const { key, ctrlKey, metaKey, shiftKey, altKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
 
       if (
@@ -1859,33 +1859,64 @@ function useDataGrid<TData>({
         return;
       }
 
-      if (currentState.editingCell) return;
+      if (currentState.editingCell) {
+        // Allow Escape to stop editing
+        if (key === "Escape") {
+          event.preventDefault();
+          onCellEditingStop();
+          return;
+        }
+        // Allow Enter to stop editing and move to next row
+        if (key === "Enter" && !shiftKey && !altKey) {
+          event.preventDefault();
+          onCellEditingStop({ moveToNextRow: true });
+          return;
+        }
+        // Allow Tab to stop editing and move to next cell
+        if (key === "Tab") {
+          event.preventDefault();
+          const direction = shiftKey ? "left" : "right";
+          onCellEditingStop({ direction });
+          return;
+        }
+        return;
+      }
 
       if (!currentState.focusedCell) return;
 
       let direction: NavigationDirection | null = null;
 
-      if (isCtrlPressed && key === "a") {
+      // Cmd+A: Select all
+      if (isCtrlPressed && !shiftKey && key === "a") {
         event.preventDefault();
         selectAll();
         return;
       }
 
-      if (isCtrlPressed && key === "c") {
+      // Cmd+C: Copy
+      if (isCtrlPressed && !shiftKey && key === "c") {
         event.preventDefault();
         onCellsCopy();
         return;
       }
 
-      if (isCtrlPressed && key === "x" && !propsRef.current.readOnly) {
+      // Cmd+X: Cut
+      if (
+        isCtrlPressed &&
+        !shiftKey &&
+        key === "x" &&
+        !propsRef.current.readOnly
+      ) {
         event.preventDefault();
         onCellsCut();
         return;
       }
 
+      // Cmd+V: Paste
       if (
         propsRef.current.enablePaste &&
         isCtrlPressed &&
+        !shiftKey &&
         key === "v" &&
         !propsRef.current.readOnly
       ) {
@@ -1894,8 +1925,35 @@ function useDataGrid<TData>({
         return;
       }
 
+      // Cmd+Backspace: Delete selected rows
+      if (
+        isCtrlPressed &&
+        key === "Backspace" &&
+        !propsRef.current.readOnly &&
+        propsRef.current.onRowsDelete
+      ) {
+        event.preventDefault();
+
+        const rowIndices = new Set<number>();
+        if (currentState.selectionState.selectedCells.size > 0) {
+          for (const cellKey of currentState.selectionState.selectedCells) {
+            const { rowIndex } = parseCellKey(cellKey);
+            rowIndices.add(rowIndex);
+          }
+        } else if (currentState.focusedCell) {
+          rowIndices.add(currentState.focusedCell.rowIndex);
+        }
+
+        if (rowIndices.size > 0) {
+          onRowsDelete(Array.from(rowIndices));
+        }
+        return;
+      }
+
+      // Delete/Backspace: Clear cell contents
       if (
         (key === "Delete" || key === "Backspace") &&
+        !isCtrlPressed &&
         !propsRef.current.readOnly
       ) {
         const cellsToClear =
@@ -1953,18 +2011,229 @@ function useDataGrid<TData>({
         return;
       }
 
+      // Enter or F2: Start editing cell
+      if (
+        (key === "Enter" || key === "F2") &&
+        !propsRef.current.readOnly &&
+        !shiftKey
+      ) {
+        event.preventDefault();
+        onCellEditingStart(
+          currentState.focusedCell.rowIndex,
+          currentState.focusedCell.columnId,
+        );
+        return;
+      }
+
+      // Shift+Enter: Insert row below
+      if (
+        key === "Enter" &&
+        shiftKey &&
+        !propsRef.current.readOnly &&
+        propsRef.current.onRowAdd
+      ) {
+        event.preventDefault();
+        const newRowIndex = currentState.focusedCell.rowIndex + 1;
+        const currentColumnId = currentState.focusedCell.columnId;
+
+        Promise.resolve(propsRef.current.onRowAdd()).then((result) => {
+          if (result !== null && result !== undefined) {
+            const targetRowIndex = result.rowIndex ?? newRowIndex;
+            const targetColumnId = result.columnId ?? currentColumnId;
+
+            const rowVirtualizer = rowVirtualizerRef.current;
+            if (rowVirtualizer) {
+              rowVirtualizer.scrollToIndex(targetRowIndex, { align: "center" });
+            }
+
+            requestAnimationFrame(() => {
+              store.batch(() => {
+                store.setState("focusedCell", {
+                  rowIndex: targetRowIndex,
+                  columnId: targetColumnId,
+                });
+                store.setState("editingCell", null);
+              });
+
+              const cellKey = getCellKey(targetRowIndex, targetColumnId);
+              const cellWrapperElement = cellMapRef.current.get(cellKey);
+              if (cellWrapperElement) {
+                cellWrapperElement.focus();
+              }
+            });
+          }
+        });
+        return;
+      }
+
+      // Handle arrow keys with modifiers
       switch (key) {
         case "ArrowUp":
-          direction = "up";
+          // Alt+Up: Page up
+          if (altKey && !isCtrlPressed && !shiftKey) {
+            direction = "pageup";
+          } else if (isCtrlPressed && shiftKey) {
+            // Cmd+Shift+Up: Select to top edge
+            const selectionEdge =
+              currentState.selectionState.selectionRange?.end ||
+              currentState.focusedCell;
+            const currentColIndex = navigableColumnIds.indexOf(
+              selectionEdge.columnId,
+            );
+            const selectionStart =
+              currentState.selectionState.selectionRange?.start ||
+              currentState.focusedCell;
+            selectRange(selectionStart, {
+              rowIndex: 0,
+              columnId:
+                navigableColumnIds[currentColIndex] ?? selectionEdge.columnId,
+            });
+
+            // Scroll to top edge but keep focus at selection anchor
+            const rowVirtualizer = rowVirtualizerRef.current;
+            if (rowVirtualizer) {
+              rowVirtualizer.scrollToIndex(0, { align: "start" });
+            }
+            event.preventDefault();
+            return;
+          } else if (isCtrlPressed && !shiftKey) {
+            // Cmd+Up: Scroll to top
+            direction = "ctrl+home";
+          } else {
+            direction = "up";
+          }
           break;
         case "ArrowDown":
-          direction = "down";
+          // Alt+Down: Page down
+          if (altKey && !isCtrlPressed && !shiftKey) {
+            direction = "pagedown";
+          } else if (isCtrlPressed && shiftKey) {
+            // Cmd+Shift+Down: Select to bottom edge
+            const rowCount =
+              tableRef.current?.getRowModel().rows.length ||
+              propsRef.current.data.length;
+            const selectionEdge =
+              currentState.selectionState.selectionRange?.end ||
+              currentState.focusedCell;
+            const currentColIndex = navigableColumnIds.indexOf(
+              selectionEdge.columnId,
+            );
+            const selectionStart =
+              currentState.selectionState.selectionRange?.start ||
+              currentState.focusedCell;
+            selectRange(selectionStart, {
+              rowIndex: Math.max(0, rowCount - 1),
+              columnId:
+                navigableColumnIds[currentColIndex] ?? selectionEdge.columnId,
+            });
+
+            // Scroll to bottom edge but keep focus at selection anchor
+            const rowVirtualizer = rowVirtualizerRef.current;
+            if (rowVirtualizer) {
+              rowVirtualizer.scrollToIndex(Math.max(0, rowCount - 1), {
+                align: "end",
+              });
+            }
+            event.preventDefault();
+            return;
+          } else if (isCtrlPressed && !shiftKey) {
+            // Cmd+Down: Scroll to bottom
+            direction = "ctrl+end";
+          } else {
+            direction = "down";
+          }
           break;
         case "ArrowLeft":
-          direction = "left";
+          if (isCtrlPressed && shiftKey) {
+            // Cmd+Shift+Left: Select to left edge
+            const selectionEdge =
+              currentState.selectionState.selectionRange?.end ||
+              currentState.focusedCell;
+            const selectionStart =
+              currentState.selectionState.selectionRange?.start ||
+              currentState.focusedCell;
+            const targetColumnId =
+              dir === "rtl"
+                ? navigableColumnIds[navigableColumnIds.length - 1]
+                : navigableColumnIds[0];
+            if (targetColumnId) {
+              selectRange(selectionStart, {
+                rowIndex: selectionEdge.rowIndex,
+                columnId: targetColumnId,
+              });
+
+              // Scroll target cell into view but keep focus at selection anchor
+              const container = dataGridRef.current;
+              const cellKey = getCellKey(
+                selectionEdge.rowIndex,
+                targetColumnId,
+              );
+              const targetCell = cellMapRef.current.get(cellKey);
+              if (container && targetCell) {
+                scrollCellIntoView({
+                  container,
+                  targetCell,
+                  tableRef,
+                  viewportOffset: VIEWPORT_OFFSET,
+                  direction: "home",
+                  isRtl: dir === "rtl",
+                });
+              }
+            }
+            event.preventDefault();
+            return;
+          } else if (isCtrlPressed && !shiftKey) {
+            // Cmd+Left: Scroll to left edge
+            direction = "home";
+          } else {
+            direction = "left";
+          }
           break;
         case "ArrowRight":
-          direction = "right";
+          if (isCtrlPressed && shiftKey) {
+            // Cmd+Shift+Right: Select to right edge
+            const selectionEdge =
+              currentState.selectionState.selectionRange?.end ||
+              currentState.focusedCell;
+            const selectionStart =
+              currentState.selectionState.selectionRange?.start ||
+              currentState.focusedCell;
+            const targetColumnId =
+              dir === "rtl"
+                ? navigableColumnIds[0]
+                : navigableColumnIds[navigableColumnIds.length - 1];
+            if (targetColumnId) {
+              selectRange(selectionStart, {
+                rowIndex: selectionEdge.rowIndex,
+                columnId: targetColumnId,
+              });
+
+              // Scroll target cell into view but keep focus at selection anchor
+              const container = dataGridRef.current;
+              const cellKey = getCellKey(
+                selectionEdge.rowIndex,
+                targetColumnId,
+              );
+              const targetCell = cellMapRef.current.get(cellKey);
+              if (container && targetCell) {
+                scrollCellIntoView({
+                  container,
+                  targetCell,
+                  tableRef,
+                  viewportOffset: VIEWPORT_OFFSET,
+                  direction: "end",
+                  isRtl: dir === "rtl",
+                });
+              }
+            }
+            event.preventDefault();
+            return;
+          } else if (isCtrlPressed && !shiftKey) {
+            // Cmd+Right: Scroll to right edge
+            direction = "end";
+          } else {
+            direction = "right";
+          }
           break;
         case "Home":
           direction = isCtrlPressed ? "ctrl+home" : "home";
@@ -2003,23 +2272,29 @@ function useDataGrid<TData>({
         event.preventDefault();
 
         if (shiftKey && key !== "Tab" && currentState.focusedCell) {
+          // Calculate new position based on current selection edge, not anchor
+          // This allows continuous expansion with shift+arrow
+          const selectionEdge =
+            currentState.selectionState.selectionRange?.end ||
+            currentState.focusedCell;
+
           const currentColIndex = navigableColumnIds.indexOf(
-            currentState.focusedCell.columnId,
+            selectionEdge.columnId,
           );
-          let newRowIndex = currentState.focusedCell.rowIndex;
-          let newColumnId = currentState.focusedCell.columnId;
+          let newRowIndex = selectionEdge.rowIndex;
+          let newColumnId = selectionEdge.columnId;
 
           const isRtl = dir === "rtl";
 
           switch (direction) {
             case "up":
-              newRowIndex = Math.max(0, currentState.focusedCell.rowIndex - 1);
+              newRowIndex = Math.max(0, selectionEdge.rowIndex - 1);
               break;
             case "down":
               newRowIndex = Math.min(
                 (tableRef.current?.getRowModel().rows.length ||
                   propsRef.current.data.length) - 1,
-                currentState.focusedCell.rowIndex + 1,
+                selectionEdge.rowIndex + 1,
               );
               break;
             case "left":
@@ -2069,21 +2344,67 @@ function useDataGrid<TData>({
             rowIndex: newRowIndex,
             columnId: newColumnId,
           });
-          focusCell(newRowIndex, newColumnId);
 
-          // Handle horizontal scroll adjustment for shift+arrow/home/end
+          // Keep focus at the selection anchor point (don't move focus to the end)
+          // But ensure the target cell is scrolled into view
+
+          // Handle scrolling for shift+arrow selection
+          const container = dataGridRef.current;
+          const targetRow = rowMapRef.current.get(newRowIndex);
+          const cellKey = getCellKey(newRowIndex, newColumnId);
+          const targetCell = cellMapRef.current.get(cellKey);
+
+          // Handle vertical scrolling for shift+arrow (up/down)
           if (
-            newColumnId !== currentState.focusedCell.columnId &&
+            newRowIndex !== selectionEdge.rowIndex &&
+            (direction === "up" || direction === "down")
+          ) {
+            if (container && targetRow) {
+              // Row is already rendered - use direct scrolling for snappier response
+              const containerRect = container.getBoundingClientRect();
+              const headerHeight =
+                headerRef.current?.getBoundingClientRect().height ?? 0;
+              const footerHeight =
+                footerRef.current?.getBoundingClientRect().height ?? 0;
+
+              const viewportTop =
+                containerRect.top + headerHeight + VIEWPORT_OFFSET;
+              const viewportBottom =
+                containerRect.bottom - footerHeight - VIEWPORT_OFFSET;
+
+              const rowRect = targetRow.getBoundingClientRect();
+              const isFullyVisible =
+                rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
+
+              if (!isFullyVisible) {
+                if (direction === "down") {
+                  const scrollNeeded = rowRect.bottom - viewportBottom;
+                  container.scrollTop += scrollNeeded;
+                } else {
+                  const scrollNeeded = viewportTop - rowRect.top;
+                  container.scrollTop -= scrollNeeded;
+                }
+              }
+            } else {
+              // Row is not yet rendered - use virtualizer to scroll it into view
+              const rowVirtualizer = rowVirtualizerRef.current;
+              if (rowVirtualizer) {
+                const align = direction === "up" ? "start" : "end";
+                rowVirtualizer.scrollToIndex(newRowIndex, { align });
+              }
+            }
+          }
+
+          // Handle horizontal scrolling for shift+arrow/home/end
+          if (
+            newColumnId !== selectionEdge.columnId &&
             (direction === "left" ||
               direction === "right" ||
               direction === "home" ||
               direction === "end")
           ) {
-            const container = dataGridRef.current;
-            const cellKey = getCellKey(newRowIndex, newColumnId);
-            const targetCell = cellMapRef.current.get(cellKey);
-
             if (container && targetCell) {
+              // Cell is rendered - scroll it into view
               scrollCellIntoView({
                 container,
                 targetCell,
@@ -2093,6 +2414,8 @@ function useDataGrid<TData>({
                 isRtl,
               });
             }
+            // Note: For horizontal, cells should always be rendered since columns
+            // are not virtualized, so no fallback needed
           }
         } else {
           if (currentState.selectionState.selectedCells.size > 0) {
@@ -2116,10 +2439,12 @@ function useDataGrid<TData>({
       clearSelection,
       navigableColumnIds,
       selectRange,
-      focusCell,
       onSearchOpenChange,
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
+      onCellEditingStart,
+      onCellEditingStop,
+      onRowsDelete,
     ],
   );
 
