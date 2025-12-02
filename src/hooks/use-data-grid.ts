@@ -1274,6 +1274,14 @@ function useDataGrid<TData>({
               navigableColumnIds[navigableColumnIds.length - 1] ?? columnId;
           }
           break;
+        case "ctrl+up":
+          // Jump to first row, same column
+          newRowIndex = 0;
+          break;
+        case "ctrl+down":
+          // Jump to last row, same column
+          newRowIndex = Math.max(0, rowCount - 1);
+          break;
         case "pageup":
           if (rowVirtualizer) {
             const visibleRange = rowVirtualizer.getVirtualItems();
@@ -2112,8 +2120,8 @@ function useDataGrid<TData>({
             event.preventDefault();
             return;
           } else if (isCtrlPressed && !shiftKey) {
-            // Cmd+Up: Scroll to top
-            direction = "ctrl+home";
+            // Cmd+Up: Jump to first row, same column
+            direction = "ctrl+up";
           } else {
             direction = "up";
           }
@@ -2157,8 +2165,8 @@ function useDataGrid<TData>({
             event.preventDefault();
             return;
           } else if (isCtrlPressed && !shiftKey) {
-            // Cmd+Down: Scroll to bottom
-            direction = "ctrl+end";
+            // Cmd+Down: Jump to last row, same column
+            direction = "ctrl+down";
           } else {
             direction = "down";
           }

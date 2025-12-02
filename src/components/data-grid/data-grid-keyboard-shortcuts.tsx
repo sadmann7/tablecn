@@ -98,19 +98,19 @@ function DataGridKeyboardShortcutsImpl({
           },
           {
             keys: [modKey, "↑"],
-            description: "Scroll to top of table",
+            description: "Move to first row (same column)",
           },
           {
             keys: [modKey, "↓"],
-            description: "Scroll to bottom of table",
+            description: "Move to last row (same column)",
           },
           {
             keys: [modKey, "←"],
-            description: "Scroll to first column",
+            description: "Move to first column (same row)",
           },
           {
             keys: [modKey, "→"],
-            description: "Scroll to last column",
+            description: "Move to last column (same row)",
           },
           {
             keys: [modKey, "Home"],

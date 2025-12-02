@@ -167,6 +167,8 @@ export type NavigationDirection =
   | "right"
   | "home"
   | "end"
+  | "ctrl+up"
+  | "ctrl+down"
   | "ctrl+home"
   | "ctrl+end"
   | "pageup"
