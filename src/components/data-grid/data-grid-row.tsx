@@ -22,6 +22,7 @@ import type {
   Direction,
   RowHeightValue,
 } from "@/types/data-grid";
+import { DataGridVirtualPadding } from "./data-grid-virtual-padding";
 
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
@@ -272,36 +273,25 @@ function DataGridRowImpl<TData>({
         .map((cell, idx) => renderCell(cell, idx + 1))}
 
       {/* Center (virtualized) */}
-      {virtualPaddingLeft ? (
-        <div
-          role="presentation"
-          aria-hidden
-          style={{ display: "flex", width: virtualPaddingLeft }}
-        />
-      ) : null}
-
-      {virtualColumns.map((vc) => {
-        const actualIndex = centerColumnIndices[vc.index] ?? vc.index;
-        const cell = visibleCells[actualIndex];
-        if (!cell) return null;
-        // Guard: ensure pinned columns never render in the center virtualized region
-        if (
-          leftPinnedIds.has(cell.column.id) ||
-          rightPinnedIds.has(cell.column.id) ||
-          cell.column.getIsPinned()
-        ) {
-          return null;
-        }
-        return renderCell(cell, actualIndex + 1);
-      })}
-
-      {virtualPaddingRight ? (
-        <div
-          role="presentation"
-          aria-hidden
-          style={{ display: "flex", width: virtualPaddingRight }}
-        />
-      ) : null}
+      <DataGridVirtualPadding
+        virtualPaddingLeft={virtualPaddingLeft}
+        virtualPaddingRight={virtualPaddingRight}
+      >
+        {virtualColumns.map((vc) => {
+          const actualIndex = centerColumnIndices[vc.index] ?? vc.index;
+          const cell = visibleCells[actualIndex];
+          if (!cell) return null;
+          // Guard: ensure pinned columns never render in the center virtualized region
+          if (
+            leftPinnedIds.has(cell.column.id) ||
+            rightPinnedIds.has(cell.column.id) ||
+            cell.column.getIsPinned()
+          ) {
+            return null;
+          }
+          return renderCell(cell, actualIndex + 1);
+        })}
+      </DataGridVirtualPadding>
 
       {/* Right pinned cells */}
       {visibleCells

@@ -1,5 +1,6 @@
 "use client";
 
+import type { Header } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import * as React from "react";
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
@@ -11,6 +12,7 @@ import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { Direction } from "@/types/data-grid";
+import { DataGridVirtualPadding } from "./data-grid-virtual-padding";
 
 interface DataGridProps<TData>
   extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
@@ -85,6 +87,55 @@ export function DataGrid<TData>({
     [onRowAdd],
   );
 
+  function renderHeaderCell(
+    header: Header<TData, unknown>,
+    ariaColIndex: number,
+    keyPrefix?: string,
+  ) {
+    const sorting = table.getState().sorting;
+    const currentSort = sorting.find((sort) => sort.id === header.column.id);
+    const isSortable = header.column.getCanSort();
+
+    return (
+      <div
+        key={`${keyPrefix ?? ""}${header.id}`}
+        role="columnheader"
+        aria-colindex={ariaColIndex}
+        aria-sort={
+          currentSort?.desc === false
+            ? "ascending"
+            : currentSort?.desc === true
+              ? "descending"
+              : isSortable
+                ? "none"
+                : undefined
+        }
+        data-slot="grid-header-cell"
+        tabIndex={-1}
+        className={cn("relative", {
+          grow: stretchColumns && header.column.id !== "select",
+          "border-e": header.column.id !== "select",
+        })}
+        style={{
+          ...getCommonPinningStyles({
+            column: header.column,
+            dir,
+          }),
+          width: `calc(var(--header-${header.id}-size) * 1px)`,
+        }}
+      >
+        {header.isPlaceholder ? null : typeof header.column.columnDef.header ===
+          "function" ? (
+          <div className="size-full px-3 py-1.5">
+            {flexRender(header.column.columnDef.header, header.getContext())}
+          </div>
+        ) : (
+          <DataGridColumnHeader header={header} table={table} />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       data-slot="grid-wrapper"
@@ -130,60 +181,6 @@ export function DataGrid<TData>({
               className="flex w-full"
             >
               {(() => {
-                function renderHeaderCell(
-                  header: (typeof headerGroup.headers)[number],
-                  ariaColIndex: number,
-                  keyPrefix?: string,
-                ) {
-                  const sorting = table.getState().sorting;
-                  const currentSort = sorting.find(
-                    (sort) => sort.id === header.column.id,
-                  );
-                  const isSortable = header.column.getCanSort();
-
-                  return (
-                    <div
-                      key={`${keyPrefix ?? ""}${header.id}`}
-                      role="columnheader"
-                      aria-colindex={ariaColIndex}
-                      aria-sort={
-                        currentSort?.desc === false
-                          ? "ascending"
-                          : currentSort?.desc === true
-                            ? "descending"
-                            : isSortable
-                              ? "none"
-                              : undefined
-                      }
-                      data-slot="grid-header-cell"
-                      tabIndex={-1}
-                      className={cn("relative", {
-                        grow: stretchColumns && header.column.id !== "select",
-                        "border-e": header.column.id !== "select",
-                      })}
-                      style={{
-                        ...getCommonPinningStyles({
-                          column: header.column,
-                          dir,
-                        }),
-                        width: `calc(var(--header-${header.id}-size) * 1px)`,
-                      }}
-                    >
-                      {header.isPlaceholder ? null : typeof header.column
-                          .columnDef.header === "function" ? (
-                        <div className="size-full px-3 py-1.5">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                        </div>
-                      ) : (
-                        <DataGridColumnHeader header={header} table={table} />
-                      )}
-                    </div>
-                  );
-                }
-
                 return (
                   <>
                     {/* Left pinned headers */}
@@ -194,30 +191,25 @@ export function DataGrid<TData>({
                       )}
 
                     {/* Center (virtualized) */}
-                    {virtualPaddingLeft ? (
-                      <div
-                        style={{ width: virtualPaddingLeft, display: "flex" }}
-                      />
-                    ) : null}
-                    {virtualColumns.map((vc) => {
-                      const actualIndex =
-                        centerColumnIndices[vc.index] ?? vc.index;
-                      const header = headerGroup.headers[actualIndex];
-                      if (!header) return null;
-                      if (
-                        leftPinnedIds.has(header.column.id) ||
-                        rightPinnedIds.has(header.column.id) ||
-                        header.column.getIsPinned()
-                      ) {
-                        return null;
-                      }
-                      return renderHeaderCell(header, actualIndex + 1);
-                    })}
-                    {virtualPaddingRight ? (
-                      <div
-                        style={{ width: virtualPaddingRight, display: "flex" }}
-                      />
-                    ) : null}
+                    <DataGridVirtualPadding
+                      virtualPaddingLeft={virtualPaddingLeft}
+                      virtualPaddingRight={virtualPaddingRight}
+                    >
+                      {virtualColumns.map((vc) => {
+                        const actualIndex =
+                          centerColumnIndices[vc.index] ?? vc.index;
+                        const header = headerGroup.headers[actualIndex];
+                        if (!header) return null;
+                        if (
+                          leftPinnedIds.has(header.column.id) ||
+                          rightPinnedIds.has(header.column.id) ||
+                          header.column.getIsPinned()
+                        ) {
+                          return null;
+                        }
+                        return renderHeaderCell(header, actualIndex + 1);
+                      })}
+                    </DataGridVirtualPadding>
 
                     {/* Right pinned headers */}
                     {headerGroup.headers
