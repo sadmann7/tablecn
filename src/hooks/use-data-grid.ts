@@ -9,7 +9,6 @@ import {
   getSortedRowModel,
   type RowSelectionState,
   type SortingState,
-  type Table,
   type TableMeta,
   type TableOptions,
   type TableState,
@@ -2286,16 +2285,16 @@ function useDataGrid<TData>({
 
           const isRtl = dir === "rtl";
 
+          const rowCount =
+            tableRef.current?.getRowModel().rows.length ||
+            propsRef.current.data.length;
+
           switch (direction) {
             case "up":
               newRowIndex = Math.max(0, selectionEdge.rowIndex - 1);
               break;
             case "down":
-              newRowIndex = Math.min(
-                (tableRef.current?.getRowModel().rows.length ||
-                  propsRef.current.data.length) - 1,
-                selectionEdge.rowIndex + 1,
-              );
+              newRowIndex = Math.min(rowCount - 1, selectionEdge.rowIndex + 1);
               break;
             case "left":
               if (isRtl) {
@@ -2340,6 +2339,7 @@ function useDataGrid<TData>({
           const selectionStart =
             currentState.selectionState.selectionRange?.start ||
             currentState.focusedCell;
+
           selectRange(selectionStart, {
             rowIndex: newRowIndex,
             columnId: newColumnId,
@@ -2377,12 +2377,20 @@ function useDataGrid<TData>({
                 rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
 
               if (!isFullyVisible) {
+                const scrollNeeded =
+                  direction === "down"
+                    ? rowRect.bottom - viewportBottom
+                    : viewportTop - rowRect.top;
+
                 if (direction === "down") {
-                  const scrollNeeded = rowRect.bottom - viewportBottom;
                   container.scrollTop += scrollNeeded;
                 } else {
-                  const scrollNeeded = viewportTop - rowRect.top;
                   container.scrollTop -= scrollNeeded;
+                }
+
+                // Ensure data grid maintains focus after scroll
+                if (document.activeElement !== container) {
+                  container.focus();
                 }
               }
             } else {
@@ -2391,6 +2399,13 @@ function useDataGrid<TData>({
               if (rowVirtualizer) {
                 const align = direction === "up" ? "start" : "end";
                 rowVirtualizer.scrollToIndex(newRowIndex, { align });
+
+                // Ensure data grid maintains focus after virtualizer scroll
+                if (container && document.activeElement !== container) {
+                  requestAnimationFrame(() => {
+                    container.focus();
+                  });
+                }
               }
             }
           }
