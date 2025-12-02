@@ -167,10 +167,14 @@ export type NavigationDirection =
   | "right"
   | "home"
   | "end"
+  | "ctrl+up"
+  | "ctrl+down"
   | "ctrl+home"
   | "ctrl+end"
   | "pageup"
-  | "pagedown";
+  | "pagedown"
+  | "pageleft"
+  | "pageright";
 
 export interface SearchState {
   searchMatches: CellPosition[];
