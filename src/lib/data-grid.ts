@@ -9,7 +9,7 @@ import type {
 
 export function flexRender<TProps extends object>(
   Comp: ((props: TProps) => React.ReactNode) | string | undefined,
-  props: TProps
+  props: TProps,
 ): React.ReactNode {
   if (typeof Comp === "string") {
     return Comp;
@@ -30,13 +30,13 @@ export function getIsFileCellData(item: unknown): item is FileCellData {
 
 export function matchSelectOption(
   value: string,
-  options: { value: string; label: string }[]
+  options: { value: string; label: string }[],
 ): string | undefined {
   return options.find(
     (o) =>
       o.value === value ||
       o.value.toLowerCase() === value.toLowerCase() ||
-      o.label.toLowerCase() === value.toLowerCase()
+      o.label.toLowerCase() === value.toLowerCase(),
   )?.value;
 }
 
@@ -106,10 +106,10 @@ export function getCommonPinningStyles<TData>(params: {
           ? "4px 0 4px -4px var(--border) inset"
           : "-4px 0 4px -4px var(--border) inset"
         : isFirstRightPinnedColumn
-        ? isRtl
-          ? "-4px 0 4px -4px var(--border) inset"
-          : "4px 0 4px -4px var(--border) inset"
-        : undefined
+          ? isRtl
+            ? "-4px 0 4px -4px var(--border) inset"
+            : "4px 0 4px -4px var(--border) inset"
+          : undefined
       : undefined,
     left: isRtl ? rightPosition : leftPosition,
     right: isRtl ? leftPosition : rightPosition,
@@ -135,8 +135,6 @@ export function scrollCellIntoView<TData>(params: {
   const containerRect = container.getBoundingClientRect();
   const cellRect = targetCell.getBoundingClientRect();
 
-  // Detect actual RTL scroll behavior by checking if scrollLeft is negative
-  // This handles browser-specific RTL implementations more reliably than dir attribute alone
   const hasNegativeScroll = container.scrollLeft < 0;
   const isActuallyRtl = isRtl || hasNegativeScroll;
 
@@ -146,11 +144,11 @@ export function scrollCellIntoView<TData>(params: {
 
   const leftPinnedWidth = leftPinnedColumns.reduce(
     (sum, c) => sum + c.getSize(),
-    0
+    0,
   );
   const rightPinnedWidth = rightPinnedColumns.reduce(
     (sum, c) => sum + c.getSize(),
-    0
+    0,
   );
 
   const viewportLeft = isActuallyRtl
@@ -165,54 +163,28 @@ export function scrollCellIntoView<TData>(params: {
 
   if (isFullyVisible) return;
 
-  // Check which side is clipped for auto-scroll calculation
   const isClippedLeft = cellRect.left < viewportLeft;
   const isClippedRight = cellRect.right > viewportRight;
 
-  // If no direction provided (e.g., from a click), determine scroll based on which side is clipped
+  let scrollDelta = 0;
+
   if (!direction) {
-    // For clicks, scroll the minimum amount needed to show the cell
-    if (isActuallyRtl) {
-      // In RTL, scroll based on which edge is clipped
-      if (isClippedRight) {
-        // Cell extends beyond right edge - scroll to show right edge
-        const scrollNeeded = cellRect.right - viewportRight;
-        container.scrollLeft += scrollNeeded;
-      } else if (isClippedLeft) {
-        // Cell extends beyond left edge - scroll to show left edge
-        const scrollNeeded = viewportLeft - cellRect.left;
-        container.scrollLeft -= scrollNeeded;
-      }
-    } else {
-      // In LTR, scroll based on which edge is clipped
-      if (isClippedRight) {
-        // Cell extends beyond right edge - scroll to show right edge
-        const scrollNeeded = cellRect.right - viewportRight;
-        container.scrollLeft += scrollNeeded;
-      } else if (isClippedLeft) {
-        // Cell extends beyond left edge - scroll to show left edge
-        const scrollNeeded = viewportLeft - cellRect.left;
-        container.scrollLeft -= scrollNeeded;
-      }
+    if (isClippedRight) {
+      scrollDelta = cellRect.right - viewportRight;
+    } else if (isClippedLeft) {
+      scrollDelta = -(viewportLeft - cellRect.left);
     }
   } else {
-    // For keyboard navigation with explicit direction
-    if (isActuallyRtl) {
-      if (direction === "left" || direction === "end") {
-        const scrollNeeded = viewportLeft - cellRect.left;
-        container.scrollLeft -= scrollNeeded;
-      } else {
-        const scrollNeeded = cellRect.right - viewportRight;
-        container.scrollLeft += scrollNeeded;
-      }
+    const shouldScrollRight = isActuallyRtl
+      ? direction === "right" || direction === "home"
+      : direction === "right" || direction === "end";
+
+    if (shouldScrollRight) {
+      scrollDelta = cellRect.right - viewportRight;
     } else {
-      if (direction === "right" || direction === "end") {
-        const scrollNeeded = cellRect.right - viewportRight;
-        container.scrollLeft += scrollNeeded;
-      } else {
-        const scrollNeeded = viewportLeft - cellRect.left;
-        container.scrollLeft -= scrollNeeded;
-      }
+      scrollDelta = -(viewportLeft - cellRect.left);
     }
   }
+
+  container.scrollLeft += scrollDelta;
 }
