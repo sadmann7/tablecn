@@ -160,7 +160,10 @@ export function DataGrid<TData>({
                         "border-e": header.column.id !== "select",
                       })}
                       style={{
-                        ...getCommonPinningStyles({ column: header.column, dir }),
+                        ...getCommonPinningStyles({
+                          column: header.column,
+                          dir,
+                        }),
                         width: `calc(var(--header-${header.id}-size) * 1px)`,
                       }}
                     >
@@ -275,7 +278,10 @@ export function DataGrid<TData>({
                         "border-e": header.column.id !== "select",
                       })}
                       style={{
-                        ...getCommonPinningStyles({ column: header.column, dir }),
+                        ...getCommonPinningStyles({
+                          column: header.column,
+                          dir,
+                        }),
                         width: `calc(var(--header-${header.id}-size) * 1px)`,
                       }}
                     >

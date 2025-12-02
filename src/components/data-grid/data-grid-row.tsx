@@ -269,7 +269,11 @@ function DataGridRowImpl<TData>({
 
       {/* Center (virtualized) */}
       {virtualPaddingLeft ? (
-        <div role="presentation" aria-hidden style={{ display: "flex", width: virtualPaddingLeft }} />
+        <div
+          role="presentation"
+          aria-hidden
+          style={{ display: "flex", width: virtualPaddingLeft }}
+        />
       ) : null}
       {virtualColumns.map((vc) => {
         const actualIndex = centerColumnIndices[vc.index] ?? vc.index;
@@ -335,7 +339,11 @@ function DataGridRowImpl<TData>({
         );
       })}
       {virtualPaddingRight ? (
-        <div role="presentation" aria-hidden style={{ display: "flex", width: virtualPaddingRight }} />
+        <div
+          role="presentation"
+          aria-hidden
+          style={{ display: "flex", width: virtualPaddingRight }}
+        />
       ) : null}
 
       {/* Right pinned cells */}
