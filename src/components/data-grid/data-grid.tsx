@@ -129,10 +129,12 @@ export function DataGrid<TData>({
               tabIndex={-1}
               className="flex w-full"
             >
-              {/* Left pinned headers */}
-              {headerGroup.headers
-                .filter((h) => leftPinnedIds.has(h.column.id))
-                .map((header, idx) => {
+              {(() => {
+                function renderHeaderCell(
+                  header: (typeof headerGroup.headers)[number],
+                  ariaColIndex: number,
+                  keyPrefix?: string,
+                ) {
                   const sorting = table.getState().sorting;
                   const currentSort = sorting.find(
                     (sort) => sort.id === header.column.id,
@@ -141,9 +143,9 @@ export function DataGrid<TData>({
 
                   return (
                     <div
-                      key={`left-${header.id}-${idx}`}
+                      key={`${keyPrefix ?? ""}${header.id}`}
                       role="columnheader"
-                      aria-colindex={idx + 1}
+                      aria-colindex={ariaColIndex}
                       aria-sort={
                         currentSort?.desc === false
                           ? "ascending"
@@ -180,125 +182,56 @@ export function DataGrid<TData>({
                       )}
                     </div>
                   );
-                })}
-
-              {/* Center (virtualized) */}
-              {virtualPaddingLeft ? (
-                <div style={{ width: virtualPaddingLeft, display: "flex" }} />
-              ) : null}
-              {virtualColumns.map((vc) => {
-                const actualIndex = centerColumnIndices[vc.index] ?? vc.index;
-                const header = headerGroup.headers[actualIndex];
-                if (!header) return null;
-                // Ensure pinned columns do not render here
-                if (
-                  leftPinnedIds.has(header.column.id) ||
-                  rightPinnedIds.has(header.column.id) ||
-                  header.column.getIsPinned()
-                ) {
-                  return null;
                 }
-                const sorting = table.getState().sorting;
-                const currentSort = sorting.find(
-                  (sort) => sort.id === header.column.id,
-                );
-                const isSortable = header.column.getCanSort();
 
                 return (
-                  <div
-                    key={header.id}
-                    role="columnheader"
-                    aria-colindex={actualIndex + 1}
-                    aria-sort={
-                      currentSort?.desc === false
-                        ? "ascending"
-                        : currentSort?.desc === true
-                          ? "descending"
-                          : isSortable
-                            ? "none"
-                            : undefined
-                    }
-                    data-slot="grid-header-cell"
-                    tabIndex={-1}
-                    className={cn("relative", {
-                      grow: stretchColumns && header.column.id !== "select",
-                      "border-e": header.column.id !== "select",
-                    })}
-                    style={{
-                      ...getCommonPinningStyles({ column: header.column, dir }),
-                      width: `calc(var(--header-${header.id}-size) * 1px)`,
-                    }}
-                  >
-                    {header.isPlaceholder ? null : typeof header.column
-                        .columnDef.header === "function" ? (
-                      <div className="size-full px-3 py-1.5">
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </div>
-                    ) : (
-                      <DataGridColumnHeader header={header} table={table} />
-                    )}
-                  </div>
-                );
-              })}
-              {virtualPaddingRight ? (
-                <div style={{ width: virtualPaddingRight, display: "flex" }} />
-              ) : null}
-
-              {/* Right pinned headers */}
-              {headerGroup.headers
-                .filter((h) => rightPinnedIds.has(h.column.id))
-                .map((header, idx) => {
-                  const sorting = table.getState().sorting;
-                  const currentSort = sorting.find(
-                    (sort) => sort.id === header.column.id,
-                  );
-                  const isSortable = header.column.getCanSort();
-
-                  return (
-                    <div
-                      key={`right-${header.id}-${idx}`}
-                      role="columnheader"
-                      aria-colindex={visibleColumns.length - idx}
-                      aria-sort={
-                        currentSort?.desc === false
-                          ? "ascending"
-                          : currentSort?.desc === true
-                            ? "descending"
-                            : isSortable
-                              ? "none"
-                              : undefined
-                      }
-                      data-slot="grid-header-cell"
-                      tabIndex={-1}
-                      className={cn("relative", {
-                        grow: stretchColumns && header.column.id !== "select",
-                        "border-e": header.column.id !== "select",
-                      })}
-                      style={{
-                        ...getCommonPinningStyles({
-                          column: header.column,
-                          dir,
-                        }),
-                        width: `calc(var(--header-${header.id}-size) * 1px)`,
-                      }}
-                    >
-                      {header.isPlaceholder ? null : typeof header.column
-                          .columnDef.header === "function" ? (
-                        <div className="size-full px-3 py-1.5">
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                        </div>
-                      ) : (
-                        <DataGridColumnHeader header={header} table={table} />
+                  <>
+                    {/* Left pinned headers */}
+                    {headerGroup.headers
+                      .filter((h) => leftPinnedIds.has(h.column.id))
+                      .map((header, idx) =>
+                        renderHeaderCell(header, idx + 1, `left-${idx}-`),
                       )}
-                    </div>
-                  );
-                })}
+
+                    {/* Center (virtualized) */}
+                    {virtualPaddingLeft ? (
+                      <div
+                        style={{ width: virtualPaddingLeft, display: "flex" }}
+                      />
+                    ) : null}
+                    {virtualColumns.map((vc) => {
+                      const actualIndex =
+                        centerColumnIndices[vc.index] ?? vc.index;
+                      const header = headerGroup.headers[actualIndex];
+                      if (!header) return null;
+                      if (
+                        leftPinnedIds.has(header.column.id) ||
+                        rightPinnedIds.has(header.column.id) ||
+                        header.column.getIsPinned()
+                      ) {
+                        return null;
+                      }
+                      return renderHeaderCell(header, actualIndex + 1);
+                    })}
+                    {virtualPaddingRight ? (
+                      <div
+                        style={{ width: virtualPaddingRight, display: "flex" }}
+                      />
+                    ) : null}
+
+                    {/* Right pinned headers */}
+                    {headerGroup.headers
+                      .filter((h) => rightPinnedIds.has(h.column.id))
+                      .map((header, idx) =>
+                        renderHeaderCell(
+                          header,
+                          visibleColumns.length - idx,
+                          `right-${idx}-`,
+                        ),
+                      )}
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>

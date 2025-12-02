@@ -190,6 +190,61 @@ function DataGridRowImpl<TData>({
     [row, columnVisibility, columnPinning],
   );
 
+  function renderCell(
+    cell: (typeof visibleCells)[number],
+    ariaColIndex: number,
+  ) {
+    const columnId = cell.column.id;
+    const isCellFocused =
+      focusedCell?.rowIndex === virtualRowIndex &&
+      focusedCell?.columnId === columnId;
+    const isCellEditing =
+      editingCell?.rowIndex === virtualRowIndex &&
+      editingCell?.columnId === columnId;
+    const isCellSelected =
+      cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ?? false;
+
+    return (
+      <div
+        key={cell.id}
+        role="gridcell"
+        aria-colindex={ariaColIndex}
+        data-highlighted={isCellFocused ? "" : undefined}
+        data-slot="grid-cell"
+        tabIndex={-1}
+        className={cn({
+          grow: stretchColumns && columnId !== "select",
+          "border-e": columnId !== "select",
+        })}
+        style={{
+          ...getCommonPinningStyles({ column: cell.column, dir }),
+          width: `calc(var(--col-${columnId}-size) * 1px)`,
+        }}
+      >
+        {typeof cell.column.columnDef.header === "function" ? (
+          <div
+            className={cn("size-full px-3 py-1.5", {
+              "bg-primary/10": isRowSelected,
+            })}
+          >
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </div>
+        ) : (
+          <DataGridCell
+            cell={cell}
+            tableMeta={tableMeta}
+            rowIndex={virtualRowIndex}
+            columnId={columnId}
+            isFocused={isCellFocused}
+            isEditing={isCellEditing}
+            isSelected={isCellSelected}
+            readOnly={readOnly}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       key={row.id}
@@ -214,58 +269,7 @@ function DataGridRowImpl<TData>({
       {/* Left pinned cells */}
       {visibleCells
         .filter((c) => leftPinnedIds.has(c.column.id))
-        .map((cell, idx) => {
-          const columnId = cell.column.id;
-          const isCellFocused =
-            focusedCell?.rowIndex === virtualRowIndex &&
-            focusedCell?.columnId === columnId;
-          const isCellEditing =
-            editingCell?.rowIndex === virtualRowIndex &&
-            editingCell?.columnId === columnId;
-          const isCellSelected =
-            cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
-            false;
-
-          return (
-            <div
-              key={cell.id}
-              role="gridcell"
-              aria-colindex={idx + 1}
-              data-highlighted={isCellFocused ? "" : undefined}
-              data-slot="grid-cell"
-              tabIndex={-1}
-              className={cn({
-                grow: stretchColumns && columnId !== "select",
-                "border-e": columnId !== "select",
-              })}
-              style={{
-                ...getCommonPinningStyles({ column: cell.column, dir }),
-                width: `calc(var(--col-${columnId}-size) * 1px)`,
-              }}
-            >
-              {typeof cell.column.columnDef.header === "function" ? (
-                <div
-                  className={cn("size-full px-3 py-1.5", {
-                    "bg-primary/10": isRowSelected,
-                  })}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </div>
-              ) : (
-                <DataGridCell
-                  cell={cell}
-                  tableMeta={tableMeta}
-                  rowIndex={virtualRowIndex}
-                  columnId={columnId}
-                  isFocused={isCellFocused}
-                  isEditing={isCellEditing}
-                  isSelected={isCellSelected}
-                  readOnly={readOnly}
-                />
-              )}
-            </div>
-          );
-        })}
+        .map((cell, idx) => renderCell(cell, idx + 1))}
 
       {/* Center (virtualized) */}
       {virtualPaddingLeft ? (
@@ -275,6 +279,7 @@ function DataGridRowImpl<TData>({
           style={{ display: "flex", width: virtualPaddingLeft }}
         />
       ) : null}
+
       {virtualColumns.map((vc) => {
         const actualIndex = centerColumnIndices[vc.index] ?? vc.index;
         const cell = visibleCells[actualIndex];
@@ -287,57 +292,9 @@ function DataGridRowImpl<TData>({
         ) {
           return null;
         }
-        const columnId = cell.column.id;
-        const isCellFocused =
-          focusedCell?.rowIndex === virtualRowIndex &&
-          focusedCell?.columnId === columnId;
-        const isCellEditing =
-          editingCell?.rowIndex === virtualRowIndex &&
-          editingCell?.columnId === columnId;
-        const isCellSelected =
-          cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
-          false;
-
-        return (
-          <div
-            key={cell.id}
-            role="gridcell"
-            aria-colindex={actualIndex + 1}
-            data-highlighted={isCellFocused ? "" : undefined}
-            data-slot="grid-cell"
-            tabIndex={-1}
-            className={cn({
-              grow: stretchColumns && columnId !== "select",
-              "border-e": columnId !== "select",
-            })}
-            style={{
-              ...getCommonPinningStyles({ column: cell.column, dir }),
-              width: `calc(var(--col-${columnId}-size) * 1px)`,
-            }}
-          >
-            {typeof cell.column.columnDef.header === "function" ? (
-              <div
-                className={cn("size-full px-3 py-1.5", {
-                  "bg-primary/10": isRowSelected,
-                })}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </div>
-            ) : (
-              <DataGridCell
-                cell={cell}
-                tableMeta={tableMeta}
-                rowIndex={virtualRowIndex}
-                columnId={columnId}
-                isFocused={isCellFocused}
-                isEditing={isCellEditing}
-                isSelected={isCellSelected}
-                readOnly={readOnly}
-              />
-            )}
-          </div>
-        );
+        return renderCell(cell, actualIndex + 1);
       })}
+
       {virtualPaddingRight ? (
         <div
           role="presentation"
@@ -349,58 +306,7 @@ function DataGridRowImpl<TData>({
       {/* Right pinned cells */}
       {visibleCells
         .filter((c) => rightPinnedIds.has(c.column.id))
-        .map((cell, idx) => {
-          const columnId = cell.column.id;
-          const isCellFocused =
-            focusedCell?.rowIndex === virtualRowIndex &&
-            focusedCell?.columnId === columnId;
-          const isCellEditing =
-            editingCell?.rowIndex === virtualRowIndex &&
-            editingCell?.columnId === columnId;
-          const isCellSelected =
-            cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
-            false;
-
-          return (
-            <div
-              key={cell.id}
-              role="gridcell"
-              aria-colindex={visibleCells.length - idx}
-              data-highlighted={isCellFocused ? "" : undefined}
-              data-slot="grid-cell"
-              tabIndex={-1}
-              className={cn({
-                grow: stretchColumns && columnId !== "select",
-                "border-e": columnId !== "select",
-              })}
-              style={{
-                ...getCommonPinningStyles({ column: cell.column, dir }),
-                width: `calc(var(--col-${columnId}-size) * 1px)`,
-              }}
-            >
-              {typeof cell.column.columnDef.header === "function" ? (
-                <div
-                  className={cn("size-full px-3 py-1.5", {
-                    "bg-primary/10": isRowSelected,
-                  })}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </div>
-              ) : (
-                <DataGridCell
-                  cell={cell}
-                  tableMeta={tableMeta}
-                  rowIndex={virtualRowIndex}
-                  columnId={columnId}
-                  isFocused={isCellFocused}
-                  isEditing={isCellEditing}
-                  isSelected={isCellSelected}
-                  readOnly={readOnly}
-                />
-              )}
-            </div>
-          );
-        })}
+        .map((cell, idx) => renderCell(cell, visibleCells.length - idx))}
     </div>
   );
 }
