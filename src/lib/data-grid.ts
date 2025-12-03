@@ -121,6 +121,22 @@ export function getCommonPinningStyles<TData>(params: {
   };
 }
 
+export function getScrollDirection(
+  direction: string,
+): "left" | "right" | "home" | "end" | undefined {
+  if (
+    direction === "left" ||
+    direction === "right" ||
+    direction === "home" ||
+    direction === "end"
+  ) {
+    return direction as "left" | "right" | "home" | "end";
+  }
+  if (direction === "pageleft") return "left";
+  if (direction === "pageright") return "right";
+  return undefined;
+}
+
 export function scrollCellIntoView<TData>(params: {
   container: HTMLDivElement;
   targetCell: HTMLDivElement;

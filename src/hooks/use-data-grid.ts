@@ -22,6 +22,7 @@ import {
   getCellKey,
   getIsFileCellData,
   getRowHeightValue,
+  getScrollDirection,
   matchSelectOption,
   parseCellKey,
   scrollCellIntoView,
@@ -1112,17 +1113,7 @@ function useDataGrid<TData>({
         const cellKey = getCellKey(rowIndex, columnId);
         const cellWrapperElement = cellMapRef.current.get(cellKey);
 
-        console.log("focusCellWrapper called:", {
-          rowIndex,
-          columnId,
-          cellKey,
-          elementExists: !!cellWrapperElement,
-        });
-
         if (!cellWrapperElement) {
-          console.log(
-            "Cell wrapper not found, focusing dataGrid container instead",
-          );
           const container = dataGridRef.current;
           if (container) {
             container.focus();
@@ -1231,15 +1222,6 @@ function useDataGrid<TData>({
 
       const isRtl = dir === "rtl";
 
-      console.table({
-        direction,
-        currentRowIndex: rowIndex,
-        currentColumnId: columnId,
-        currentColIndex,
-        rowCount,
-        isRtl,
-      });
-
       switch (direction) {
         case "up":
           newRowIndex = Math.max(0, rowIndex - 1);
@@ -1344,17 +1326,6 @@ function useDataGrid<TData>({
       }
 
       if (newRowIndex !== rowIndex || newColumnId !== columnId) {
-        const rowDiff = newRowIndex - rowIndex;
-
-        console.table({
-          "New Cell": {
-            newRowIndex,
-            newColumnId,
-            rowDiff,
-            colChanged: newColumnId !== columnId,
-          },
-        });
-
         // Focus the cell first
         focusCell(newRowIndex, newColumnId);
 
@@ -1366,20 +1337,8 @@ function useDataGrid<TData>({
         const cellKey = getCellKey(newRowIndex, newColumnId);
         const targetCell = cellMapRef.current.get(cellKey);
 
-        console.table({
-          "Scroll Check": {
-            hasContainer: !!container,
-            hasTargetRow: !!targetRow,
-            hasTargetCell: !!targetCell,
-            targetRowIndex: newRowIndex,
-            targetColumnId: newColumnId,
-          },
-        });
-
         // If target row is not rendered, scroll it into view first
         if (!targetRow && rowVirtualizer) {
-          console.log("Target row not rendered, scrolling into view");
-
           const align =
             direction === "up" ||
             direction === "pageup" ||
@@ -1393,14 +1352,6 @@ function useDataGrid<TData>({
                 ? "end"
                 : "center";
 
-          console.table({
-            "Vertical Scroll (Virtualizer)": {
-              targetRowIndex: newRowIndex,
-              align,
-              direction,
-            },
-          });
-
           rowVirtualizer.scrollToIndex(newRowIndex, { align });
 
           // Wait for row to render before horizontal scroll
@@ -1409,27 +1360,8 @@ function useDataGrid<TData>({
               const cellKeyRetry = getCellKey(newRowIndex, newColumnId);
               const targetCellRetry = cellMapRef.current.get(cellKeyRetry);
 
-              console.log("After row render, cell exists?", !!targetCellRetry);
-
               if (targetCellRetry) {
-                let scrollDirection:
-                  | "left"
-                  | "right"
-                  | "home"
-                  | "end"
-                  | undefined;
-                if (
-                  direction === "left" ||
-                  direction === "right" ||
-                  direction === "home" ||
-                  direction === "end"
-                ) {
-                  scrollDirection = direction;
-                } else if (direction === "pageleft") {
-                  scrollDirection = "left";
-                } else if (direction === "pageright") {
-                  scrollDirection = "right";
-                }
+                const scrollDirection = getScrollDirection(direction);
 
                 scrollCellIntoView({
                   container,
@@ -1448,14 +1380,12 @@ function useDataGrid<TData>({
 
         // Handle vertical scrolling for rendered rows that changed
         if (newRowIndex !== rowIndex && targetRow) {
-          // Target row is rendered, check if it needs scrolling
           requestAnimationFrame(() => {
             const containerRect = container.getBoundingClientRect();
             const headerHeight =
               headerRef.current?.getBoundingClientRect().height ?? 0;
             const footerHeight =
               footerRef.current?.getBoundingClientRect().height ?? 0;
-
             const viewportTop =
               containerRect.top + headerHeight + VIEWPORT_OFFSET;
             const viewportBottom =
@@ -1465,16 +1395,6 @@ function useDataGrid<TData>({
             const isFullyVisible =
               rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
 
-            console.table({
-              "Vertical Scroll (Rendered)": {
-                rowTop: rowRect.top,
-                rowBottom: rowRect.bottom,
-                viewportTop,
-                viewportBottom,
-                isFullyVisible,
-              },
-            });
-
             if (!isFullyVisible) {
               if (
                 direction === "down" ||
@@ -1482,13 +1402,9 @@ function useDataGrid<TData>({
                 direction === "ctrl+down" ||
                 direction === "ctrl+end"
               ) {
-                const scrollNeeded = rowRect.bottom - viewportBottom;
-                container.scrollTop += scrollNeeded;
-                console.log("Scrolling down by:", scrollNeeded);
+                container.scrollTop += rowRect.bottom - viewportBottom;
               } else {
-                const scrollNeeded = viewportTop - rowRect.top;
-                container.scrollTop -= scrollNeeded;
-                console.log("Scrolling up by:", scrollNeeded);
+                container.scrollTop -= viewportTop - rowRect.top;
               }
             }
           });
@@ -1497,21 +1413,7 @@ function useDataGrid<TData>({
         // Handle horizontal scrolling for rendered cells
         if (newColumnId !== columnId && targetCell) {
           requestAnimationFrame(() => {
-            console.log("Scrolling horizontally to column:", newColumnId);
-
-            let scrollDirection: "left" | "right" | "home" | "end" | undefined;
-            if (
-              direction === "left" ||
-              direction === "right" ||
-              direction === "home" ||
-              direction === "end"
-            ) {
-              scrollDirection = direction;
-            } else if (direction === "pageleft") {
-              scrollDirection = "left";
-            } else if (direction === "pageright") {
-              scrollDirection = "right";
-            }
+            const scrollDirection = getScrollDirection(direction);
 
             scrollCellIntoView({
               container,
@@ -1952,26 +1854,9 @@ function useDataGrid<TData>({
 
   const onDataGridKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
-      console.log("onDataGridKeyDown called with key:", event.key);
-
       const currentState = store.getState();
       const { key, ctrlKey, metaKey, shiftKey, altKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
-
-      console.table({
-        "Keyboard Event": {
-          key,
-          focusedCell: currentState.focusedCell
-            ? `${currentState.focusedCell.rowIndex}:${currentState.focusedCell.columnId}`
-            : "null",
-          editingCell: currentState.editingCell
-            ? `${currentState.editingCell.rowIndex}:${currentState.editingCell.columnId}`
-            : "null",
-          searchOpen: currentState.searchOpen,
-          activeElement: document.activeElement?.tagName,
-          activeElementRole: document.activeElement?.getAttribute("role"),
-        },
-      });
 
       if (
         propsRef.current.enableSearch &&
@@ -2026,15 +1911,7 @@ function useDataGrid<TData>({
         return;
       }
 
-      if (!currentState.focusedCell) {
-        console.log("No focused cell, returning early");
-        return;
-      }
-
-      console.log(
-        "Processing navigation, focusedCell:",
-        currentState.focusedCell,
-      );
+      if (!currentState.focusedCell) return;
 
       let direction: NavigationDirection | null = null;
 
@@ -3123,17 +3000,6 @@ function useDataGrid<TData>({
       const currentState = store.getState();
       const relatedTarget = event.relatedTarget;
 
-      console.log("FocusOut event:", {
-        hasFocusedCell: !!currentState.focusedCell,
-        isEditingCell: !!currentState.editingCell,
-        relatedTargetTag:
-          relatedTarget instanceof Element ? relatedTarget.tagName : null,
-        relatedTargetRole:
-          relatedTarget instanceof Element
-            ? relatedTarget.getAttribute("role")
-            : null,
-      });
-
       // If we have a focused cell, not editing, and focus is leaving the grid entirely
       if (currentState.focusedCell && !currentState.editingCell) {
         const isFocusMovingOutsideGrid =
@@ -3144,7 +3010,6 @@ function useDataGrid<TData>({
             relatedTarget.closest("[data-grid-popover]"));
 
         if (isFocusMovingOutsideGrid && !isFocusMovingToPopover) {
-          console.log("Focus leaving grid, restoring to container");
           requestAnimationFrame(() => {
             container.focus();
           });
