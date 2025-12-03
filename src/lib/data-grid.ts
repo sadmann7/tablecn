@@ -204,3 +204,11 @@ export function scrollCellIntoView<TData>(params: {
 
   container.scrollLeft += scrollDelta;
 }
+
+export function getIsInPopover(element: unknown): boolean {
+  return (
+    element instanceof Element &&
+    (element.closest("[data-grid-cell-editor]") ||
+      element.closest("[data-grid-popover]")) !== null
+  );
+}
