@@ -39,6 +39,7 @@ export function DataGrid<TData>({
   contextMenu,
   pasteDialog,
   onRowAdd,
+  onDataGridBlur,
   height = 600,
   stretchColumns = false,
   className,
@@ -96,6 +97,7 @@ export function DataGrid<TData>({
           maxHeight: `${height}px`,
         }}
         onContextMenu={onGridContextMenu}
+        onBlur={onDataGridBlur}
       >
         <div
           role="rowgroup"
