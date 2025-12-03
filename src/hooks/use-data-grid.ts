@@ -1327,7 +1327,6 @@ function useDataGrid<TData>({
       }
 
       if (newRowIndex !== rowIndex || newColumnId !== columnId) {
-        // Focus the cell first
         focusCell(newRowIndex, newColumnId);
 
         // Calculate and apply scrolls synchronously to avoid flashing
@@ -3012,30 +3011,32 @@ function useDataGrid<TData>({
     }
   }, [store, propsRef, data, columns, navigableColumnIds, focusCell]);
 
-  // Maintain focus on dataGrid container when focused cell is out of view
+  // When a focused cell scrolls out of view and is virtualized out,
+  // React unmounts the DOM element which causes focus to be lost.
+  // This handler catches that focusout event and refocuses the container.
   React.useEffect(() => {
     const container = dataGridRef.current;
     if (!container) return;
 
     function onFocusOut(event: FocusEvent) {
-      // Using a fresh reference to avoid stale closures
       const currentContainer = dataGridRef.current;
       if (!currentContainer) return;
 
       const currentState = store.getState();
+
+      if (!currentState.focusedCell || currentState.editingCell) return;
+
       const relatedTarget = event.relatedTarget;
 
-      // If we have a focused cell, not editing, and focus is leaving the grid entirely
-      if (currentState.focusedCell && !currentState.editingCell) {
-        const isFocusMovingOutsideGrid =
-          !relatedTarget || !currentContainer.contains(relatedTarget as Node);
-        const isFocusMovingToPopover = getIsInPopover(relatedTarget);
+      const isFocusMovingOutsideGrid =
+        !relatedTarget || !currentContainer.contains(relatedTarget as Node);
 
-        if (isFocusMovingOutsideGrid && !isFocusMovingToPopover) {
-          requestAnimationFrame(() => {
-            currentContainer.focus();
-          });
-        }
+      const isFocusMovingToPopover = getIsInPopover(relatedTarget);
+
+      if (isFocusMovingOutsideGrid && !isFocusMovingToPopover) {
+        requestAnimationFrame(() => {
+          currentContainer.focus();
+        });
       }
     }
 
