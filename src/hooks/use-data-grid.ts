@@ -3011,9 +3011,7 @@ function useDataGrid<TData>({
     }
   }, [store, propsRef, data, columns, navigableColumnIds, focusCell]);
 
-  // When a focused cell scrolls out of view and is virtualized out,
-  // React unmounts the DOM element which causes focus to be lost.
-  // This handler catches that focusout event and refocuses the container.
+  // Restore focus to container when virtualized cells are unmounted
   React.useEffect(() => {
     const container = dataGridRef.current;
     if (!container) return;
