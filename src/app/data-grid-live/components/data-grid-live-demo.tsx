@@ -255,9 +255,68 @@ export function DataGridLiveDemo() {
     [tasks],
   );
 
+  const onRowAdd: NonNullable<UseDataGridProps<TaskSchema>["onRowAdd"]> =
+    React.useCallback(() => {
+      const id = crypto.randomUUID();
+      const code = `TASK-${String(tasks.length + 1).padStart(4, "0")}`;
+
+      tasksCollection.insert({
+        id,
+        code,
+        title: null,
+        status: "todo",
+        label: "feature",
+        priority: "medium",
+        estimatedHours: 0,
+        archived: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      return {
+        rowIndex: tasks.length,
+        columnId: "title",
+      };
+    }, [tasks.length]);
+
+  const onRowsAdd: NonNullable<UseDataGridProps<TaskSchema>["onRowsAdd"]> =
+    React.useCallback(
+      (count: number) => {
+        for (let i = 0; i < count; i++) {
+          const id = crypto.randomUUID();
+          const code = `TASK-${String(tasks.length + i + 1).padStart(4, "0")}`;
+
+          tasksCollection.insert({
+            id,
+            code,
+            title: null,
+            status: "todo",
+            label: "feature",
+            priority: "medium",
+            estimatedHours: 0,
+            archived: false,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      },
+      [tasks.length],
+    );
+
+  const onRowsDelete: NonNullable<
+    UseDataGridProps<TaskSchema>["onRowsDelete"]
+  > = React.useCallback((rowsToDelete) => {
+    for (const task of rowsToDelete) {
+      tasksCollection.delete(task.id);
+    }
+  }, []);
+
   const { table, ...dataGridProps } = useDataGrid({
     data: tasks,
     onDataChange,
+    onRowAdd,
+    onRowsAdd,
+    onRowsDelete,
     columns,
     getRowId: (row) => row.id,
     initialState: {
