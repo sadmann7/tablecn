@@ -24,6 +24,12 @@ export function SiteHeader() {
           >
             Data Grid
           </Link>
+          <Link
+            href="/tasks-db"
+            className="text-foreground/60 transition-colors hover:text-foreground"
+          >
+            TanStack DB
+          </Link>
           <DocsLink />
         </nav>
         <nav className="flex flex-1 items-center md:justify-end">
