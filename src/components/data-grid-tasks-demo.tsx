@@ -215,11 +215,32 @@ export function DataGridTasksDemo() {
       // Diff and update changed tasks via TanStack DB for optimistic updates
       for (const task of newData) {
         const existingTask = tasks.find((t) => t.id === task.id);
-        if (
-          existingTask &&
-          JSON.stringify(existingTask) !== JSON.stringify(task)
-        ) {
-          tasksCollection.update(task.id, () => task);
+        if (existingTask) {
+          // Find the specific fields that changed
+          let hasChanges = false;
+          for (const key of Object.keys(task) as Array<keyof TaskSchema>) {
+            // Skip comparing Date objects by converting to ISO strings
+            const existingValue =
+              existingTask[key] instanceof Date
+                ? (existingTask[key] as Date).toISOString()
+                : existingTask[key];
+            const newValue =
+              task[key] instanceof Date
+                ? (task[key] as Date).toISOString()
+                : task[key];
+
+            if (existingValue !== newValue) {
+              hasChanges = true;
+              break;
+            }
+          }
+
+          if (hasChanges) {
+            // Update with the new task data
+            tasksCollection.update(task.id, (draft) => {
+              Object.assign(draft, task);
+            });
+          }
         }
       }
     },
@@ -240,7 +261,6 @@ export function DataGridTasksDemo() {
     enablePaste: true,
   });
 
-  // Update a task with optimistic mutation
   const updateTaskStatus = React.useCallback(
     (taskId: string, status: TaskSchema["status"]) => {
       tasksCollection.update(taskId, (draft) => {
@@ -251,7 +271,6 @@ export function DataGridTasksDemo() {
     [],
   );
 
-  // Update task priority with optimistic mutation
   const updateTaskPriority = React.useCallback(
     (taskId: string, priority: TaskSchema["priority"]) => {
       tasksCollection.update(taskId, (draft) => {

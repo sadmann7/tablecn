@@ -5,7 +5,7 @@ import { Fps } from "@/components/ui/fps";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMounted } from "@/hooks/use-mounted";
 
-export default function RenderPage() {
+export default function DataGridRenderPage() {
   const mounted = useMounted();
 
   if (!mounted)

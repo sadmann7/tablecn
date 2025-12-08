@@ -21,7 +21,7 @@ const DataGridTasksDemo = dynamic(
   },
 );
 
-export default function TasksDbPage() {
+export default function DataGridLivePage() {
   // Preload the collection before rendering
   use(tasksCollection.preload());
 

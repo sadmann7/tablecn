@@ -50,19 +50,26 @@ export const tasksCollection = createCollection(
     // Handle updates by patching to API
     onUpdate: async ({ transaction }) => {
       const mutation = transaction.mutations[0];
-      if (!mutation?.key || !mutation?.modified) return;
+      if (!mutation?.key || !mutation?.changes) return;
+
+      console.log("TanStack DB Update:", {
+        id: mutation.key,
+        changes: mutation.changes,
+      });
 
       const response = await fetch(`/api/tasks/${mutation.key}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(mutation.modified),
+        body: JSON.stringify(mutation.changes),
       });
 
       if (!response.ok) {
         throw new Error("Failed to update task");
       }
 
-      return response.json();
+      const result = await response.json();
+      console.log("TanStack DB Update Result:", result);
+      return result;
     },
     // Handle deletes by sending DELETE request to API
     onDelete: async ({ transaction }) => {

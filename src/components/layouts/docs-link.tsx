@@ -1,23 +1,17 @@
 "use client";
 
-import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
+import { ActiveLink } from "@/components/active-link";
 
 export function DocsLink() {
   const segment = useSelectedLayoutSegment();
-  const href =
-    segment === "data-grid"
-      ? "https://diceui.com/docs/components/data-grid"
-      : "https://diceui.com/docs/components/data-table";
+  const href = segment?.startsWith("data-grid")
+    ? "https://diceui.com/docs/components/data-grid"
+    : "https://diceui.com/docs/components/data-table";
 
   return (
-    <Link
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-foreground/60 transition-colors hover:text-foreground"
-    >
+    <ActiveLink href={href} target="_blank" rel="noopener noreferrer">
       Docs
-    </Link>
+    </ActiveLink>
   );
 }

@@ -10,11 +10,23 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const body = (await request.json()) as TaskSchema;
+    const body = (await request.json()) as Partial<TaskSchema>;
+
+    console.log("PATCH /api/tasks/[id]:", { id, body });
+
+    // Remove fields that shouldn't be updated by the client
+    const {
+      id: _id,
+      createdAt: _createdAt,
+      updatedAt: _updatedAt,
+      ...updateData
+    } = body;
+
+    console.log("Updating task with:", updateData);
 
     const updatedTask = await db
       .update(tasks)
-      .set(body)
+      .set(updateData)
       .where(eq(tasks.id, id))
       .returning()
       .then((res) => res[0]);
@@ -34,7 +46,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
