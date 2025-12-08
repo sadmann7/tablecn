@@ -1,7 +1,6 @@
 "use client";
 
 import { DirectionProvider } from "@radix-ui/react-direction";
-import { SelectTrigger } from "@radix-ui/react-select";
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUp, CheckCircle2, Languages, Trash2, X } from "lucide-react";
@@ -21,14 +20,13 @@ import {
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/components/ui/action-bar";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-} from "@/components/ui/select";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
@@ -384,48 +382,49 @@ export function DataGridTasksDemo() {
           </ActionBarSelection>
           <ActionBarSeparator />
           <ActionBarGroup>
-            <Select
-              onValueChange={(value: TaskSchema["status"]) =>
-                updateSelectedTasks("status", value)
-              }
-            >
-              <SelectTrigger asChild>
-                <ActionBarItem variant="secondary" size="icon-sm">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <ActionBarItem variant="secondary" size="sm">
                   <CheckCircle2 />
+                  Status
                 </ActionBarItem>
-              </SelectTrigger>
-              <SelectContent data-grid-popover align="center">
-                <SelectGroup>
-                  {statusOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <Select
-              onValueChange={(value: TaskSchema["priority"]) =>
-                updateSelectedTasks("priority", value)
-              }
-            >
-              <SelectTrigger asChild>
-                <ActionBarItem variant="secondary" size="icon-sm">
+              </DropdownMenuTrigger>
+              <DropdownMenuContent data-grid-popover align="center">
+                {statusOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => updateSelectedTasks("status", option.value)}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <ActionBarItem variant="secondary" size="sm">
                   <ArrowUp />
+                  Priority
                 </ActionBarItem>
-              </SelectTrigger>
-              <SelectContent data-grid-popover align="center">
-                <SelectGroup>
-                  {priorityOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <ActionBarItem size="icon-sm" onClick={deleteSelectedTasks}>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent data-grid-popover align="center">
+                {priorityOptions.map((option) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => updateSelectedTasks("priority", option.value)}
+                  >
+                    {option.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <ActionBarItem
+              variant="destructive"
+              size="sm"
+              onClick={deleteSelectedTasks}
+            >
               <Trash2 />
+              Delete
             </ActionBarItem>
           </ActionBarGroup>
         </ActionBar>
