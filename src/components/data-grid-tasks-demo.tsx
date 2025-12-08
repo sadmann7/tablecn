@@ -297,11 +297,7 @@ export function DataGridTasksDemo() {
             {dir === "ltr" ? "LTR" : "RTL"}
           </Toggle>
         </div>
-
-        <div className="rounded-lg border">
-          <DataGrid {...dataGridProps} table={table} height={gridHeight} />
-        </div>
-
+        <DataGrid {...dataGridProps} table={table} height={gridHeight} />
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
           <div className="flex items-center gap-1">
             <span className="font-medium">{tasks.length}</span>
