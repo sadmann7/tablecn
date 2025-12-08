@@ -106,19 +106,6 @@ export function DataGridTasksDemo() {
         enableResizing: false,
       },
       {
-        id: "code",
-        accessorKey: "code",
-        header: "Code",
-        minSize: 120,
-        filterFn,
-        meta: {
-          label: "Code",
-          cell: {
-            variant: "short-text",
-          },
-        },
-      },
-      {
         id: "title",
         accessorKey: "title",
         header: "Title",
@@ -411,7 +398,9 @@ export function DataGridTasksDemo() {
                 {priorityOptions.map((option) => (
                   <DropdownMenuItem
                     key={option.value}
-                    onClick={() => updateSelectedTasks("priority", option.value)}
+                    onClick={() =>
+                      updateSelectedTasks("priority", option.value)
+                    }
                   >
                     {option.label}
                   </DropdownMenuItem>
