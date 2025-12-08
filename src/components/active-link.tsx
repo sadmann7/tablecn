@@ -21,7 +21,7 @@ export function ActiveLink({ href, className, ...props }: ActiveLinkProps) {
         data-state={isActive ? "active" : "inactive"}
         href={href}
         className={cn(
-          "font-normal data-[state=active]:text-accent-foreground",
+          "font-normal text-foreground/60 data-[state=active]:text-accent-foreground",
           className,
         )}
         {...props}

@@ -46,7 +46,7 @@ const priorityOptions = tasks.priority.enumValues.map((priority) => ({
   icon: getPriorityIcon(priority),
 }));
 
-export function DataGridTasksDemo() {
+export function DataGridLiveDemo() {
   const { height } = useWindowSize();
 
   const { data: tasks = [], isLoading } = useLiveQuery((q) =>

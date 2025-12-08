@@ -6,10 +6,10 @@ import { tasksCollection } from "@/app/data-grid-live/lib/collections";
 import { Shell } from "@/components/shell";
 
 // Dynamic import to prevent SSR issues with useLiveQuery
-const DataGridTasksDemo = dynamic(
+const DataGridLiveDemo = dynamic(
   () =>
-    import("./components/data-grid-tasks-demo").then(
-      (mod) => mod.DataGridTasksDemo,
+    import("./components/data-grid-live-demo").then(
+      (mod) => mod.DataGridLiveDemo,
     ),
   {
     ssr: false,
@@ -27,7 +27,7 @@ export default function DataGridLivePage() {
 
   return (
     <Shell>
-      <DataGridTasksDemo />
+      <DataGridLiveDemo />
     </Shell>
   );
 }
