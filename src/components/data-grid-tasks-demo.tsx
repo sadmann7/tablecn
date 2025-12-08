@@ -1,10 +1,10 @@
 "use client";
 
 import { DirectionProvider } from "@radix-ui/react-direction";
+import { SelectTrigger } from "@radix-ui/react-select";
 import { useLiveQuery } from "@tanstack/react-db";
-import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Languages } from "lucide-react";
+import { ArrowUp, CheckCircle2, Languages, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { DataGrid } from "@/components/data-grid/data-grid";
@@ -13,15 +13,43 @@ import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyb
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
+import {
+  ActionBar,
+  ActionBarClose,
+  ActionBarGroup,
+  ActionBarItem,
+  ActionBarSelection,
+  ActionBarSeparator,
+} from "@/components/ui/action-bar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+} from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { tasksCollection } from "@/lib/collections";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { TaskSchema } from "@/lib/task-schema";
+import { cn } from "@/lib/utils";
 import type { Direction } from "@/types/data-grid";
+
+const statusOptions = [
+  { label: "Todo", value: "todo" },
+  { label: "In Progress", value: "in-progress" },
+  { label: "Done", value: "done" },
+  { label: "Canceled", value: "canceled" },
+] as const;
+
+const priorityOptions = [
+  { label: "Low", value: "low" },
+  { label: "Medium", value: "medium" },
+  { label: "High", value: "high" },
+] as const;
 
 export function DataGridTasksDemo() {
   const { height } = useWindowSize();
@@ -261,25 +289,48 @@ export function DataGridTasksDemo() {
     enablePaste: true,
   });
 
-  const updateTaskStatus = React.useCallback(
-    (taskId: string, status: TaskSchema["status"]) => {
-      tasksCollection.update(taskId, (draft) => {
-        draft.status = status;
-      });
-      toast.success("Task updated");
+  // Batch update selected tasks
+  const updateSelectedTasks = React.useCallback(
+    (
+      field: "status" | "priority",
+      value: TaskSchema["status"] | TaskSchema["priority"],
+    ) => {
+      const selectedRows = table.getSelectedRowModel().rows;
+      if (selectedRows.length === 0) {
+        toast.error("No tasks selected");
+        return;
+      }
+
+      for (const row of selectedRows) {
+        tasksCollection.update(row.original.id, (draft) => {
+          draft[field] = value as never;
+        });
+      }
+
+      toast.success(
+        `${selectedRows.length} task${selectedRows.length === 1 ? "" : "s"} updated`,
+      );
     },
-    [],
+    [table],
   );
 
-  const updateTaskPriority = React.useCallback(
-    (taskId: string, priority: TaskSchema["priority"]) => {
-      tasksCollection.update(taskId, (draft) => {
-        draft.priority = priority;
-      });
-      toast.success("Task priority updated");
-    },
-    [],
-  );
+  // Delete selected tasks
+  const deleteSelectedTasks = React.useCallback(() => {
+    const selectedRows = table.getSelectedRowModel().rows;
+    if (selectedRows.length === 0) {
+      toast.error("No tasks selected");
+      return;
+    }
+
+    for (const row of selectedRows) {
+      tasksCollection.delete(row.original.id);
+    }
+
+    toast.success(
+      `${selectedRows.length} task${selectedRows.length === 1 ? "" : "s"} deleted`,
+    );
+    table.toggleAllRowsSelected(false);
+  }, [table]);
 
   const gridHeight = height ? Math.min(height - 200, 800) : 600;
 
@@ -317,96 +368,77 @@ export function DataGridTasksDemo() {
           </Toggle>
         </div>
         <DataGrid {...dataGridProps} table={table} height={gridHeight} />
-        <div className="flex items-center gap-2 text-muted-foreground text-sm">
-          <div className="flex items-center gap-1">
-            <span className="font-medium">{tasks.length}</span>
-            <span>total tasks</span>
-          </div>
-          <span>•</span>
-          <div className="flex items-center gap-1">
-            <span className="font-medium">
-              {table.getFilteredRowModel().rows.length}
-            </span>
-            <span>filtered</span>
-          </div>
-          <span>•</span>
-          <div className="flex items-center gap-1">
+
+        <ActionBar
+          open={table.getSelectedRowModel().rows.length > 0}
+          onOpenChange={(open) => {
+            if (!open) table.toggleAllRowsSelected(false);
+          }}
+        >
+          <ActionBarSelection>
             <span className="font-medium">
               {table.getSelectedRowModel().rows.length}
             </span>
             <span>selected</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-2">
-          <h3 className="font-semibold text-lg">Quick Actions</h3>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const selected = table.getSelectedRowModel().rows;
-                if (selected.length === 0) {
-                  toast.error("No tasks selected");
-                  return;
-                }
-                for (const row of selected) {
-                  updateTaskStatus(row.original.id, "done");
-                }
-              }}
+            <ActionBarClose>
+              <X />
+            </ActionBarClose>
+          </ActionBarSelection>
+          <ActionBarSeparator />
+          <ActionBarGroup>
+            <Select
+              onValueChange={(value: TaskSchema["status"]) =>
+                updateSelectedTasks("status", value)
+              }
             >
-              Mark Selected as Done
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const selected = table.getSelectedRowModel().rows;
-                if (selected.length === 0) {
-                  toast.error("No tasks selected");
-                  return;
-                }
-                for (const row of selected) {
-                  updateTaskStatus(row.original.id, "in-progress");
-                }
-              }}
+              <SelectTrigger asChild>
+                <Button variant="secondary" size="icon">
+                  <CheckCircle2 />
+                </Button>
+              </SelectTrigger>
+              <SelectContent align="center">
+                <SelectGroup>
+                  {statusOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="capitalize"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select
+              onValueChange={(value: TaskSchema["priority"]) =>
+                updateSelectedTasks("priority", value)
+              }
             >
-              Mark Selected as In Progress
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const selected = table.getSelectedRowModel().rows;
-                if (selected.length === 0) {
-                  toast.error("No tasks selected");
-                  return;
-                }
-                for (const row of selected) {
-                  updateTaskPriority(row.original.id, "high");
-                }
-              }}
-            >
-              Set Selected to High Priority
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => {
-                const selected = table.getSelectedRowModel().rows;
-                if (selected.length === 0) {
-                  toast.error("No tasks selected");
-                  return;
-                }
-                for (const row of selected) {
-                  tasksCollection.delete(row.original.id);
-                }
-                toast.success(`${selected.length} tasks deleted`);
-              }}
-            >
-              Delete Selected
-            </Button>
-          </div>
-        </div>
+              <SelectTrigger asChild>
+                <Button variant="secondary" size="icon">
+                  <ArrowUp />
+                </Button>
+              </SelectTrigger>
+              <SelectContent align="center">
+                <SelectGroup>
+                  {priorityOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="capitalize"
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <ActionBarItem size="icon" onClick={deleteSelectedTasks}>
+              <Trash2 />
+            </ActionBarItem>
+          </ActionBarGroup>
+        </ActionBar>
       </div>
     </DirectionProvider>
   );
