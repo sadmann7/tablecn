@@ -3055,8 +3055,18 @@ function useDataGrid<TData>({
         dataGridRef.current &&
         !dataGridRef.current.contains(event.target as Node)
       ) {
-        const target = event.target;
-        const isInsidePopover = getIsInPopover(target);
+        // Get all elements at the click point to see what's really there
+        // This is more reliable than event.target which may have bubbled up
+        const elementsAtPoint = document.elementsFromPoint(
+          event.clientX,
+          event.clientY,
+        );
+
+        // Check if ANY element at the click point is inside a popover
+        // This handles cases where event.target has bubbled too far
+        const isInsidePopover = elementsAtPoint.some((element) =>
+          getIsInPopover(element),
+        );
 
         if (!isInsidePopover) {
           blurCell();

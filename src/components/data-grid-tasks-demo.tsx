@@ -30,7 +30,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Toggle } from "@/components/ui/toggle";
-import { useDataGrid } from "@/hooks/use-data-grid";
+import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { tasksCollection } from "@/lib/collections";
 import { getFilterFn } from "@/lib/data-grid-filters";
@@ -235,11 +235,10 @@ export function DataGridTasksDemo() {
     [filterFn],
   );
 
-  // Handle data changes through TanStack DB
-  const onDataChange = React.useCallback(
-    (updater: TaskSchema[] | ((prev: TaskSchema[]) => TaskSchema[])) => {
-      const newData = typeof updater === "function" ? updater(tasks) : updater;
-
+  const onDataChange: NonNullable<
+    UseDataGridProps<TaskSchema>["onDataChange"]
+  > = React.useCallback(
+    (newData) => {
       // Diff and update changed tasks via TanStack DB for optimistic updates
       for (const task of newData) {
         const existingTask = tasks.find((t) => t.id === task.id);
@@ -289,7 +288,6 @@ export function DataGridTasksDemo() {
     enablePaste: true,
   });
 
-  // Batch update selected tasks
   const updateSelectedTasks = React.useCallback(
     (
       field: "status" | "priority",
@@ -314,7 +312,6 @@ export function DataGridTasksDemo() {
     [table],
   );
 
-  // Delete selected tasks
   const deleteSelectedTasks = React.useCallback(() => {
     const selectedRows = table.getSelectedRowModel().rows;
     if (selectedRows.length === 0) {
@@ -380,6 +377,7 @@ export function DataGridTasksDemo() {
               {table.getSelectedRowModel().rows.length}
             </span>
             <span>selected</span>
+            <ActionBarSeparator />
             <ActionBarClose>
               <X />
             </ActionBarClose>
@@ -392,18 +390,14 @@ export function DataGridTasksDemo() {
               }
             >
               <SelectTrigger asChild>
-                <Button variant="secondary" size="icon">
+                <ActionBarItem variant="secondary" size="icon-sm">
                   <CheckCircle2 />
-                </Button>
+                </ActionBarItem>
               </SelectTrigger>
               <SelectContent data-grid-popover align="center">
                 <SelectGroup>
                   {statusOptions.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value}
-                      className="capitalize"
-                    >
+                    <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
@@ -416,25 +410,21 @@ export function DataGridTasksDemo() {
               }
             >
               <SelectTrigger asChild>
-                <Button variant="secondary" size="icon">
+                <ActionBarItem variant="secondary" size="icon-sm">
                   <ArrowUp />
-                </Button>
+                </ActionBarItem>
               </SelectTrigger>
               <SelectContent data-grid-popover align="center">
                 <SelectGroup>
                   {priorityOptions.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value}
-                      className="capitalize"
-                    >
+                    <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
                   ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <ActionBarItem size="icon" onClick={deleteSelectedTasks}>
+            <ActionBarItem size="icon-sm" onClick={deleteSelectedTasks}>
               <Trash2 />
             </ActionBarItem>
           </ActionBarGroup>
