@@ -368,8 +368,8 @@ export function DataGridTasksDemo() {
           </Toggle>
         </div>
         <DataGrid {...dataGridProps} table={table} height={gridHeight} />
-
         <ActionBar
+          data-grid-popover
           open={table.getSelectedRowModel().rows.length > 0}
           onOpenChange={(open) => {
             if (!open) table.toggleAllRowsSelected(false);
@@ -396,7 +396,7 @@ export function DataGridTasksDemo() {
                   <CheckCircle2 />
                 </Button>
               </SelectTrigger>
-              <SelectContent align="center">
+              <SelectContent data-grid-popover align="center">
                 <SelectGroup>
                   {statusOptions.map((option) => (
                     <SelectItem
@@ -420,7 +420,7 @@ export function DataGridTasksDemo() {
                   <ArrowUp />
                 </Button>
               </SelectTrigger>
-              <SelectContent align="center">
+              <SelectContent data-grid-popover align="center">
                 <SelectGroup>
                   {priorityOptions.map((option) => (
                     <SelectItem
