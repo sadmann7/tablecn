@@ -28,7 +28,7 @@ export function SiteHeader() {
             href="/tasks-db"
             className="text-foreground/60 transition-colors hover:text-foreground"
           >
-            TanStack DB
+            Data Grid Synced
           </Link>
           <DocsLink />
         </nav>

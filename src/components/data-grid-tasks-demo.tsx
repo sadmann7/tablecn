@@ -4,6 +4,7 @@ import { DirectionProvider } from "@radix-ui/react-direction";
 import { useLiveQuery } from "@tanstack/react-db";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Languages } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { DataGrid } from "@/components/data-grid/data-grid";
@@ -22,16 +23,9 @@ import { getFilterFn } from "@/lib/data-grid-filters";
 import type { TaskSchema } from "@/lib/task-schema";
 import type { Direction } from "@/types/data-grid";
 
-// Data grid options that will be passed to useDataGrid
-const dataGridOptions = {
-  enableColumnResizing: true,
-  columnResizeMode: "onChange" as const,
-  columnResizeDirection: "ltr" as const,
-};
-
 export function DataGridTasksDemo() {
   const { height } = useWindowSize();
-  const [direction, setDirection] = React.useState<Direction>("ltr");
+  const [dir, setDir] = React.useState<Direction>("ltr");
 
   const { data: tasks = [], isLoading } = useLiveQuery((q) =>
     q.from({ task: tasksCollection }),
@@ -233,11 +227,10 @@ export function DataGridTasksDemo() {
   );
 
   const { table, ...dataGridProps } = useDataGrid({
-    ...dataGridOptions,
     data: tasks,
+    onDataChange,
     columns,
     getRowId: (row) => row.id,
-    onDataChange,
     initialState: {
       columnPinning: {
         left: ["select"],
@@ -279,36 +272,30 @@ export function DataGridTasksDemo() {
     );
   }
 
-  console.log({ tasks });
-
   return (
-    <DirectionProvider dir={direction}>
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-bold text-2xl">Tasks with TanStack DB</h2>
-            <p className="text-muted-foreground text-sm">
-              Real-time data grid powered by TanStack DB + Drizzle ORM with
-              optimistic updates
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <DataGridKeyboardShortcuts />
-            <DataGridViewMenu table={table} align="end" />
-            <DataGridFilterMenu table={table} align="end" />
-            <DataGridSortMenu table={table} align="end" />
-            <DataGridRowHeightMenu table={table} align="end" />
-            <Toggle
-              variant="outline"
-              aria-label="Toggle direction"
-              pressed={direction === "rtl"}
-              onPressedChange={(pressed) =>
-                setDirection(pressed ? "rtl" : "ltr")
-              }
-            >
-              RTL
-            </Toggle>
-          </div>
+    <DirectionProvider dir={dir}>
+      <div className="flex flex-col gap-4">
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2 self-end"
+        >
+          <DataGridKeyboardShortcuts />
+          <DataGridViewMenu table={table} align="end" />
+          <DataGridFilterMenu table={table} align="end" />
+          <DataGridSortMenu table={table} align="end" />
+          <DataGridRowHeightMenu table={table} align="end" />
+          <Toggle
+            aria-label="Toggle direction"
+            variant="outline"
+            size="sm"
+            className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
+            pressed={dir === "rtl"}
+            onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
+          >
+            <Languages className="text-muted-foreground" />
+            {dir === "ltr" ? "LTR" : "RTL"}
+          </Toggle>
         </div>
 
         <div className="rounded-lg border">
@@ -335,8 +322,7 @@ export function DataGridTasksDemo() {
             <span>selected</span>
           </div>
         </div>
-
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <h3 className="font-semibold text-lg">Quick Actions</h3>
           <div className="flex flex-wrap gap-2">
             <Button

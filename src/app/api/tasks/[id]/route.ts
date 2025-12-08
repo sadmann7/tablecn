@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
+import type { TaskSchema } from "@/lib/task-schema";
 
 export async function PATCH(
   request: Request,
@@ -9,7 +10,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = (await request.json()) as TaskSchema;
 
     const updatedTask = await db
       .update(tasks)
