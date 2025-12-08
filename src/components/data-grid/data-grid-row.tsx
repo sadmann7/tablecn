@@ -6,7 +6,7 @@ import type {
   TableMeta,
   VisibilityState,
 } from "@tanstack/react-table";
-import type { VirtualItem, Virtualizer } from "@tanstack/react-virtual";
+import type { VirtualItem } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useComposedRefs } from "@/lib/compose-refs";
@@ -26,8 +26,8 @@ import type {
 interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   row: Row<TData>;
   tableMeta: TableMeta<TData>;
-  rowVirtualizer: Virtualizer<HTMLDivElement, Element>;
   virtualItem: VirtualItem;
+  measureElement: (node: Element | null) => void;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
   focusedCell: CellPosition | null;
@@ -123,7 +123,7 @@ function DataGridRowImpl<TData>({
   row,
   tableMeta,
   virtualItem,
-  rowVirtualizer,
+  measureElement,
   rowMapRef,
   rowHeight,
   focusedCell,
@@ -146,13 +146,13 @@ function DataGridRowImpl<TData>({
       if (typeof virtualRowIndex === "undefined") return;
 
       if (node) {
-        rowVirtualizer.measureElement(node);
+        measureElement(node);
         rowMapRef.current?.set(virtualRowIndex, node);
       } else {
         rowMapRef.current?.delete(virtualRowIndex);
       }
     },
-    [virtualRowIndex, rowVirtualizer, rowMapRef],
+    [virtualRowIndex, measureElement, rowMapRef],
   );
 
   const rowRef = useComposedRefs(ref, onRowChange);

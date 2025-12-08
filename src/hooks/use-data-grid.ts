@@ -3140,6 +3140,11 @@ function useDataGrid<TData>({
     table.getState().sorting,
   ]);
 
+  // Calculate virtual values outside of child render to avoid flushSync issues
+  const virtualTotalSize = rowVirtualizer.getTotalSize();
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const measureElement = rowVirtualizer.measureElement;
+
   return React.useMemo(
     () => ({
       dataGridRef,
@@ -3149,7 +3154,9 @@ function useDataGrid<TData>({
       dir,
       table,
       tableMeta,
-      rowVirtualizer,
+      virtualTotalSize,
+      virtualItems,
+      measureElement,
       columns,
       searchState,
       columnSizeVars,
@@ -3166,7 +3173,9 @@ function useDataGrid<TData>({
       dir,
       table,
       tableMeta,
-      rowVirtualizer,
+      virtualTotalSize,
+      virtualItems,
+      measureElement,
       columns,
       searchState,
       columnSizeVars,
