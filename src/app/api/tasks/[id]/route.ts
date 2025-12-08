@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import type { TaskSchema } from "@/app/data-grid-live/lib/validation";
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
-import type { TaskSchema } from "@/lib/task-schema";
 
 export async function PATCH(
   request: Request,

@@ -1,11 +1,12 @@
 "use client";
 
-import { DirectionProvider } from "@radix-ui/react-direction";
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUp, CheckCircle2, Languages, Trash2, X } from "lucide-react";
+import { ArrowUp, CheckCircle2, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+import { tasksCollection } from "@/app/data-grid-live/lib/collections";
+import { getPriorityIcon, getStatusIcon } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
@@ -27,31 +28,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Toggle } from "@/components/ui/toggle";
+import { tasks } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
-import { tasksCollection } from "@/lib/collections";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { TaskSchema } from "@/lib/task-schema";
-import { cn } from "@/lib/utils";
-import type { Direction } from "@/types/data-grid";
+import type { TaskSchema } from "../lib/validation";
 
-const statusOptions = [
-  { label: "Todo", value: "todo" },
-  { label: "In Progress", value: "in-progress" },
-  { label: "Done", value: "done" },
-  { label: "Canceled", value: "canceled" },
-] as const;
+const statusOptions = tasks.status.enumValues.map((status) => ({
+  label: status.charAt(0).toUpperCase() + status.slice(1),
+  value: status,
+  icon: getStatusIcon(status),
+}));
 
-const priorityOptions = [
-  { label: "Low", value: "low" },
-  { label: "Medium", value: "medium" },
-  { label: "High", value: "high" },
-] as const;
+const priorityOptions = tasks.priority.enumValues.map((priority) => ({
+  label: priority.charAt(0).toUpperCase() + priority.slice(1),
+  value: priority,
+  icon: getPriorityIcon(priority),
+}));
 
 export function DataGridTasksDemo() {
   const { height } = useWindowSize();
-  const [dir, setDir] = React.useState<Direction>("ltr");
 
   const { data: tasks = [], isLoading } = useLiveQuery((q) =>
     q.from({ task: tasksCollection }),
@@ -325,99 +321,84 @@ export function DataGridTasksDemo() {
   }
 
   return (
-    <DirectionProvider dir={dir}>
-      <div className="flex flex-col gap-4">
-        <div
-          role="toolbar"
-          aria-orientation="horizontal"
-          className="flex items-center gap-2 self-end"
-        >
-          <DataGridKeyboardShortcuts />
-          <DataGridViewMenu table={table} align="end" />
-          <DataGridFilterMenu table={table} align="end" />
-          <DataGridSortMenu table={table} align="end" />
-          <DataGridRowHeightMenu table={table} align="end" />
-          <Toggle
-            aria-label="Toggle direction"
-            variant="outline"
-            size="sm"
-            className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
-            pressed={dir === "rtl"}
-            onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
-          >
-            <Languages className="text-muted-foreground" />
-            {dir === "ltr" ? "LTR" : "RTL"}
-          </Toggle>
-        </div>
-        <DataGrid {...dataGridProps} table={table} height={gridHeight} />
-        <ActionBar
-          data-grid-popover
-          open={table.getSelectedRowModel().rows.length > 0}
-          onOpenChange={(open) => {
-            if (!open) table.toggleAllRowsSelected(false);
-          }}
-        >
-          <ActionBarSelection>
-            <span className="font-medium">
-              {table.getSelectedRowModel().rows.length}
-            </span>
-            <span>selected</span>
-            <ActionBarSeparator />
-            <ActionBarClose>
-              <X />
-            </ActionBarClose>
-          </ActionBarSelection>
-          <ActionBarSeparator />
-          <ActionBarGroup>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ActionBarItem variant="secondary" size="sm">
-                  <CheckCircle2 />
-                  Status
-                </ActionBarItem>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent data-grid-popover align="center">
-                {statusOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.value}
-                    onClick={() => updateSelectedTasks("status", option.value)}
-                  >
-                    {option.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <ActionBarItem variant="secondary" size="sm">
-                  <ArrowUp />
-                  Priority
-                </ActionBarItem>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent data-grid-popover align="center">
-                {priorityOptions.map((option) => (
-                  <DropdownMenuItem
-                    key={option.value}
-                    onClick={() =>
-                      updateSelectedTasks("priority", option.value)
-                    }
-                  >
-                    {option.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <ActionBarItem
-              variant="destructive"
-              size="sm"
-              onClick={deleteSelectedTasks}
-            >
-              <Trash2 />
-              Delete
-            </ActionBarItem>
-          </ActionBarGroup>
-        </ActionBar>
+    <div className="flex flex-col gap-4">
+      <div
+        role="toolbar"
+        aria-orientation="horizontal"
+        className="flex items-center gap-2 self-end"
+      >
+        <DataGridKeyboardShortcuts />
+        <DataGridViewMenu table={table} align="end" />
+        <DataGridFilterMenu table={table} align="end" />
+        <DataGridSortMenu table={table} align="end" />
+        <DataGridRowHeightMenu table={table} align="end" />
       </div>
-    </DirectionProvider>
+      <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+      <ActionBar
+        data-grid-popover
+        open={table.getSelectedRowModel().rows.length > 0}
+        onOpenChange={(open) => {
+          if (!open) table.toggleAllRowsSelected(false);
+        }}
+      >
+        <ActionBarSelection>
+          <span className="font-medium">
+            {table.getSelectedRowModel().rows.length}
+          </span>
+          <span>selected</span>
+          <ActionBarSeparator />
+          <ActionBarClose>
+            <X />
+          </ActionBarClose>
+        </ActionBarSelection>
+        <ActionBarSeparator />
+        <ActionBarGroup>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ActionBarItem variant="secondary" size="sm">
+                <CheckCircle2 />
+                Status
+              </ActionBarItem>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent data-grid-popover align="center">
+              {statusOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => updateSelectedTasks("status", option.value)}
+                >
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ActionBarItem variant="secondary" size="sm">
+                <ArrowUp />
+                Priority
+              </ActionBarItem>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent data-grid-popover align="center">
+              {priorityOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => updateSelectedTasks("priority", option.value)}
+                >
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ActionBarItem
+            variant="destructive"
+            size="sm"
+            onClick={deleteSelectedTasks}
+          >
+            <Trash2 />
+            Delete
+          </ActionBarItem>
+        </ActionBarGroup>
+      </ActionBar>
+    </div>
   );
 }

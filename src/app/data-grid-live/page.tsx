@@ -2,13 +2,13 @@
 
 import dynamic from "next/dynamic";
 import { use } from "react";
+import { tasksCollection } from "@/app/data-grid-live/lib/collections";
 import { Shell } from "@/components/shell";
-import { tasksCollection } from "@/lib/collections";
 
 // Dynamic import to prevent SSR issues with useLiveQuery
 const DataGridTasksDemo = dynamic(
   () =>
-    import("@/components/data-grid-tasks-demo").then(
+    import("./components/data-grid-tasks-demo").then(
       (mod) => mod.DataGridTasksDemo,
     ),
   {

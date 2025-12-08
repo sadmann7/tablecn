@@ -3,7 +3,7 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { createCollection } from "@tanstack/react-db";
 import { QueryClient } from "@tanstack/react-query";
-import { type TaskSchema, taskSchema } from "./task-schema";
+import { type TaskSchema, taskSchema } from "./validation";
 
 // Create a QueryClient at module level for the collection
 const queryClient = new QueryClient({
