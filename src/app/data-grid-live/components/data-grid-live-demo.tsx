@@ -257,11 +257,11 @@ export function DataGridLiveDemo() {
       {
         id: "startedSkating",
         accessorKey: "startedSkating",
-        header: "Started At",
+        header: "Skating Since",
         minSize: 170,
         filterFn,
         meta: {
-          label: "Started At",
+          label: "Skating Since",
           cell: {
             variant: "date",
           },
