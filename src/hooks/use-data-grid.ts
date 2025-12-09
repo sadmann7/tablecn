@@ -2504,8 +2504,10 @@ function useDataGrid<TData>({
       const newSorting =
         typeof updater === "function" ? updater(currentState.sorting) : updater;
       store.setState("sorting", newSorting);
+
+      propsRef.current.onSortingChange?.(newSorting);
     },
-    [store],
+    [store, propsRef],
   );
 
   const onColumnFiltersChange = React.useCallback(
@@ -2516,8 +2518,10 @@ function useDataGrid<TData>({
           ? updater(currentState.columnFilters)
           : updater;
       store.setState("columnFilters", newColumnFilters);
+
+      propsRef.current.onColumnFiltersChange?.(newColumnFilters);
     },
-    [store],
+    [store, propsRef],
   );
 
   const onRowSelectionChange = React.useCallback(

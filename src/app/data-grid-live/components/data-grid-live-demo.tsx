@@ -1,7 +1,7 @@
 "use client";
 
 import { useLiveQuery } from "@tanstack/react-db";
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { CheckCircle2, Sparkles, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -82,12 +82,28 @@ const trickSelectOptions = trickOptions.map((trick) => ({
 }));
 
 export function DataGridLiveDemo() {
-  const { height } = useWindowSize();
+  const windowSize = useWindowSize();
+  const [sorting, setSorting] = React.useState<SortingState>([
+    { id: "createdAt", desc: false },
+  ]);
 
-  const { data = [], isLoading } = useLiveQuery((q) =>
-    q
-      .from({ skater: skatersCollection })
-      .orderBy((t) => t.skater.startedSkating ?? t.skater.createdAt),
+  const { data = [], isLoading } = useLiveQuery(
+    (q) => {
+      let query = q.from({ skater: skatersCollection });
+
+      if (sorting.length > 0) {
+        for (const sort of sorting) {
+          const field = sort.id as keyof SkaterSchema;
+          const direction = sort.desc ? "desc" : "asc";
+          query = query.orderBy((t) => t.skater[field], direction);
+        }
+      } else {
+        query = query.orderBy((t) => t.skater.createdAt, "asc");
+      }
+
+      return query;
+    },
+    [sorting],
   );
 
   const { startUpload } = useUploadThing("skaterMedia");
@@ -241,11 +257,24 @@ export function DataGridLiveDemo() {
       {
         id: "startedSkating",
         accessorKey: "startedSkating",
-        header: "Started",
+        header: "Started At",
         minSize: 170,
         filterFn,
         meta: {
-          label: "Started Skating",
+          label: "Started At",
+          cell: {
+            variant: "date",
+          },
+        },
+      },
+      {
+        id: "createdAt",
+        accessorKey: "createdAt",
+        header: "Date Added",
+        minSize: 170,
+        filterFn,
+        meta: {
+          label: "Date Added",
           cell: {
             variant: "date",
           },
@@ -426,8 +455,10 @@ export function DataGridLiveDemo() {
       columnPinning: {
         left: ["select"],
       },
-      sorting: [{ id: "startedSkating", desc: true }],
+      sorting,
     },
+    manualSorting: true,
+    onSortingChange: setSorting,
     enableSearch: true,
     enablePaste: true,
   });
@@ -476,7 +507,7 @@ export function DataGridLiveDemo() {
     table.toggleAllRowsSelected(false);
   }, [table]);
 
-  const gridHeight = height ? Math.min(height - 170, 800) : 600;
+  const height = Math.max(400, windowSize.height - 150);
 
   if (isLoading) {
     return (
@@ -499,7 +530,7 @@ export function DataGridLiveDemo() {
         <DataGridSortMenu table={table} align="end" />
         <DataGridRowHeightMenu table={table} align="end" />
       </div>
-      <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+      <DataGrid {...dataGridProps} table={table} height={height} />
       <ActionBar
         data-grid-popover
         open={table.getSelectedRowModel().rows.length > 0}
