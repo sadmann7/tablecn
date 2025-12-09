@@ -57,6 +57,6 @@ export function rateLimitResponse(result: {
         "X-RateLimit-Remaining": String(result.remaining ?? 0),
         "X-RateLimit-Reset": String(result.reset ?? Date.now()),
       },
-    }
+    },
   );
 }

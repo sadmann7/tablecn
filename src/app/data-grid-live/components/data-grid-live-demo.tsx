@@ -276,7 +276,7 @@ export function DataGridLiveDemo() {
             variant: "file",
             maxFileSize: 10 * 1024 * 1024,
             maxFiles: 5,
-            accept: "image/*,video/*,.pdf",
+            accept: "image/*,pdf/*,audio/*,video/*",
             multiple: true,
           },
         },
