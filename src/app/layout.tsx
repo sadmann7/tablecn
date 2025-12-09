@@ -1,12 +1,9 @@
-import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
-import { connection } from "next/server";
 import { Suspense } from "react";
-import { extractRouterConfig } from "uploadthing/server";
 
-import { ourFileRouter } from "@/app/api/uploadthing/core";
 import { SiteHeader } from "@/components/layouts/site-header";
 import { ThemeProvider } from "@/components/providers";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
+import { UploadThingSSR } from "@/components/uploadthing-ssr";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 
@@ -16,11 +13,6 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import { fontMono, fontSans } from "@/lib/fonts";
-
-async function UploadThingSSR() {
-  await connection();
-  return <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />;
-}
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
