@@ -5,6 +5,8 @@ import { Slot } from "@radix-ui/react-slot";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { Button } from "@/components/ui/button";
+import { useAsRef } from "@/hooks/use-as-ref";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
 
@@ -24,22 +26,9 @@ interface DivProps extends React.ComponentProps<"div"> {
   asChild?: boolean;
 }
 
-type RootElement = React.ComponentRef<typeof ActionBarRoot>;
+type RootElement = React.ComponentRef<typeof ActionBar>;
 type ItemElement = React.ComponentRef<typeof ActionBarItem>;
 type CloseElement = React.ComponentRef<typeof ActionBarClose>;
-
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
-function useAsRef<T>(props: T) {
-  const ref = React.useRef<T>(props);
-
-  useIsomorphicLayoutEffect(() => {
-    ref.current = props;
-  });
-
-  return ref;
-}
 
 function focusFirst(
   candidates: React.RefObject<HTMLElement | null>[],
@@ -118,7 +107,7 @@ function useFocusContext(consumerName: string) {
   return context;
 }
 
-interface ActionBarRootProps extends DivProps {
+interface ActionBarProps extends DivProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
@@ -132,7 +121,7 @@ interface ActionBarRootProps extends DivProps {
   loop?: boolean;
 }
 
-function ActionBarRoot(props: ActionBarRootProps) {
+function ActionBar(props: ActionBarProps) {
   const {
     open = false,
     onOpenChange,
@@ -668,17 +657,11 @@ function ActionBarSeparator(props: ActionBarSeparatorProps) {
 }
 
 export {
-  ActionBarRoot as Root,
-  ActionBarSelection as Selection,
-  ActionBarGroup as Group,
-  ActionBarItem as Item,
-  ActionBarClose as Close,
-  ActionBarSeparator as Separator,
-  //
-  ActionBarRoot as ActionBar,
+  ActionBar,
   ActionBarSelection,
   ActionBarGroup,
   ActionBarItem,
   ActionBarClose,
   ActionBarSeparator,
+  type ActionBarProps,
 };

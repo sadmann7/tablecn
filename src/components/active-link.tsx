@@ -13,7 +13,7 @@ export function ActiveLink({ href, className, ...props }: ActiveLinkProps) {
   const hrefSegment =
     typeof href === "string" ? href.split("/").filter(Boolean)[0] : null;
 
-  const isActive = segment === hrefSegment;
+  const isActive = hrefSegment ? segment === hrefSegment : segment === null;
 
   return (
     <Button variant="ghost" size="sm" asChild>
