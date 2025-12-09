@@ -10,7 +10,7 @@ export async function POST(request: Request) {
     if (!fileKeys || fileKeys.length === 0) {
       return NextResponse.json(
         { error: "No file keys provided" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     console.error("Error deleting files:", error);
     return NextResponse.json(
       { error: "Failed to delete files" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

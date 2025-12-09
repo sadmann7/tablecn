@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { tasks } from "@/db/schema";
+import { employees } from "@/db/schema";
 
-const fileSchema = z.object({
+const documentSchema = z.object({
   id: z.string(),
   name: z.string(),
   size: z.number(),
@@ -9,61 +9,65 @@ const fileSchema = z.object({
   url: z.string().optional(),
 });
 
-export const taskSchema = z.object({
+export const employeeSchema = z.object({
   id: z.string(),
-  code: z.string(),
-  title: z.string().nullable(),
-  status: z.enum(tasks.status.enumValues),
-  label: z.enum(tasks.label.enumValues),
-  priority: z.enum(tasks.priority.enumValues),
-  estimatedHours: z.number(),
-  archived: z.boolean(),
-  tags: z.array(z.string()).nullable(),
-  files: z.array(fileSchema).nullable(),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+  department: z.enum(employees.department.enumValues),
+  role: z.enum(employees.role.enumValues),
+  status: z.enum(employees.status.enumValues),
+  salary: z.number(),
+  startDate: z.coerce.date().nullable(),
+  isVerified: z.boolean(),
+  skills: z.array(z.string()).nullable(),
+  documents: z.array(documentSchema).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date().nullable(),
 });
 
-export const insertTaskSchema = z.object({
-  code: z.string(),
-  title: z.string().nullable().optional(),
-  status: z.enum(tasks.status.enumValues).optional(),
-  label: z.enum(tasks.label.enumValues).optional(),
-  priority: z.enum(tasks.priority.enumValues).optional(),
-  estimatedHours: z.number().optional(),
-  archived: z.boolean().optional(),
-  tags: z.array(z.string()).nullable().optional(),
-  files: z.array(fileSchema).nullable().optional(),
+export const insertEmployeeSchema = z.object({
+  name: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  department: z.enum(employees.department.enumValues).optional(),
+  role: z.enum(employees.role.enumValues).optional(),
+  status: z.enum(employees.status.enumValues).optional(),
+  salary: z.number().optional(),
+  startDate: z.coerce.date().nullable().optional(),
+  isVerified: z.boolean().optional(),
+  skills: z.array(z.string()).nullable().optional(),
+  documents: z.array(documentSchema).nullable().optional(),
 });
 
-export const insertTasksSchema = z.object({
-  tasks: z.array(insertTaskSchema).min(1),
+export const insertEmployeesSchema = z.object({
+  employees: z.array(insertEmployeeSchema).min(1),
 });
 
-export const updateTaskSchema = z.object({
-  title: z.string().nullable().optional(),
-  status: z.enum(tasks.status.enumValues).optional(),
-  label: z.enum(tasks.label.enumValues).optional(),
-  priority: z.enum(tasks.priority.enumValues).optional(),
-  estimatedHours: z.number().optional(),
-  archived: z.boolean().optional(),
-  tags: z.array(z.string()).nullable().optional(),
-  files: z.array(fileSchema).nullable().optional(),
+export const updateEmployeeSchema = z.object({
+  name: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  department: z.enum(employees.department.enumValues).optional(),
+  role: z.enum(employees.role.enumValues).optional(),
+  status: z.enum(employees.status.enumValues).optional(),
+  salary: z.number().optional(),
+  startDate: z.coerce.date().nullable().optional(),
+  isVerified: z.boolean().optional(),
+  skills: z.array(z.string()).nullable().optional(),
+  documents: z.array(documentSchema).nullable().optional(),
 });
 
-export const updateTasksSchema = z.object({
+export const updateEmployeesSchema = z.object({
   updates: z
     .array(
       z.object({
         id: z.string(),
-        changes: updateTaskSchema,
+        changes: updateEmployeeSchema,
       }),
     )
     .min(1),
 });
 
-export const deleteTasksSchema = z.object({
+export const deleteEmployeesSchema = z.object({
   ids: z.array(z.string()).min(1),
 });
 
-export type TaskSchema = z.infer<typeof taskSchema>;
+export type EmployeeSchema = z.infer<typeof employeeSchema>;

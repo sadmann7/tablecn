@@ -1,47 +1,50 @@
 import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import {
-  deleteTasksSchema,
-  insertTaskSchema,
-  insertTasksSchema,
-  updateTasksSchema,
+  deleteEmployeesSchema,
+  insertEmployeeSchema,
+  insertEmployeesSchema,
+  updateEmployeesSchema,
 } from "@/app/data-grid-live/lib/validation";
 import { db } from "@/db";
-import { type Task, tasks } from "@/db/schema";
+import { type Employee, employees } from "@/db/schema";
 
 export async function GET() {
   try {
-    const allTasks = await db.select().from(tasks);
-    return NextResponse.json(allTasks);
+    const allEmployees = await db.select().from(employees);
+    return NextResponse.json(allEmployees);
   } catch (error) {
     console.error({ error });
     return NextResponse.json(
-      { error: "Failed to fetch tasks" },
+      { error: "Failed to fetch employees" },
       { status: 500 },
     );
   }
 }
 
 // Supports both single insert and bulk insert
-// Single: { code, title, ... }
-// Bulk: { tasks: [{ code, title, ... }, ...] }
+// Single: { name, email, ... }
+// Bulk: { employees: [{ name, email, ... }, ...] }
 export async function POST(request: Request) {
   try {
     const body: unknown = await request.json();
 
     // Try bulk insert first
-    const bulkResult = insertTasksSchema.safeParse(body);
+    const bulkResult = insertEmployeesSchema.safeParse(body);
     if (bulkResult.success) {
-      const newTasks = await db
-        .insert(tasks)
-        .values(bulkResult.data.tasks)
+      const newEmployees = await db
+        .insert(employees)
+        .values(bulkResult.data.employees)
         .returning();
 
-      return NextResponse.json({ inserted: newTasks.length, tasks: newTasks });
+      return NextResponse.json({
+        inserted: newEmployees.length,
+        employees: newEmployees,
+      });
     }
 
     // Try single insert
-    const singleResult = insertTaskSchema.safeParse(body);
+    const singleResult = insertEmployeeSchema.safeParse(body);
     if (!singleResult.success) {
       return NextResponse.json(
         {
@@ -52,29 +55,29 @@ export async function POST(request: Request) {
       );
     }
 
-    const newTask = await db
-      .insert(tasks)
+    const newEmployee = await db
+      .insert(employees)
       .values(singleResult.data)
       .returning()
       .then((res) => res[0]);
 
-    return NextResponse.json(newTask);
+    return NextResponse.json(newEmployee);
   } catch (error) {
     console.error({ error });
     return NextResponse.json(
-      { error: "Failed to create task" },
+      { error: "Failed to create employee" },
       { status: 500 },
     );
   }
 }
 
 // Bulk update endpoint
-// Body: { updates: [{ id, changes: { status?, priority?, ... } }, ...] }
+// Body: { updates: [{ id, changes: { status?, role?, ... } }, ...] }
 export async function PATCH(request: Request) {
   try {
     const body: unknown = await request.json();
 
-    const result = updateTasksSchema.safeParse(body);
+    const result = updateEmployeesSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid request body", details: result.error.flatten() },
@@ -95,9 +98,9 @@ export async function PATCH(request: Request) {
     // Single update - just update directly
     if (updates.length === 1) {
       const [updated] = await db
-        .update(tasks)
+        .update(employees)
         .set(firstUpdate.changes)
-        .where(eq(tasks.id, firstUpdate.id))
+        .where(eq(employees.id, firstUpdate.id))
         .returning();
 
       return NextResponse.json({ updated: updated ? 1 : 0 });
@@ -115,9 +118,9 @@ export async function PATCH(request: Request) {
       const ids = updates.map((u) => u.id);
 
       const updated = await db
-        .update(tasks)
+        .update(employees)
         .set(firstUpdate.changes)
-        .where(inArray(tasks.id, ids))
+        .where(inArray(employees.id, ids))
         .returning();
 
       return NextResponse.json({ updated: updated.length });
@@ -125,12 +128,12 @@ export async function PATCH(request: Request) {
 
     // Different changes per row - need individual updates (but in a transaction)
     const results = await db.transaction(async (tx) => {
-      const updated: Task[] = [];
+      const updated: Employee[] = [];
       for (const { id, changes } of updates) {
         const [updateResult] = await tx
-          .update(tasks)
+          .update(employees)
           .set(changes)
-          .where(eq(tasks.id, id))
+          .where(eq(employees.id, id))
           .returning();
         if (updateResult) updated.push(updateResult);
       }
@@ -141,7 +144,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.error({ error });
     return NextResponse.json(
-      { error: "Failed to update tasks" },
+      { error: "Failed to update employees" },
       { status: 500 },
     );
   }
@@ -153,7 +156,7 @@ export async function DELETE(request: Request) {
   try {
     const body: unknown = await request.json();
 
-    const result = deleteTasksSchema.safeParse(body);
+    const result = deleteEmployeesSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid request body", details: result.error.flatten() },
@@ -161,16 +164,16 @@ export async function DELETE(request: Request) {
       );
     }
 
-    const deletedTasks = await db
-      .delete(tasks)
-      .where(inArray(tasks.id, result.data.ids))
+    const deletedEmployees = await db
+      .delete(employees)
+      .where(inArray(employees.id, result.data.ids))
       .returning();
 
-    return NextResponse.json({ deleted: deletedTasks.length });
+    return NextResponse.json({ deleted: deletedEmployees.length });
   } catch (error) {
     console.error({ error });
     return NextResponse.json(
-      { error: "Failed to delete tasks" },
+      { error: "Failed to delete employees" },
       { status: 500 },
     );
   }

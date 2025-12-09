@@ -2,15 +2,15 @@
 
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ArrowUp, CheckCircle2, Trash2, X } from "lucide-react";
+import { Building2, CheckCircle2, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { tasksCollection } from "@/app/data-grid-live/lib/collections";
+import { employeesCollection } from "@/app/data-grid-live/lib/collections";
 import {
-  generateRandomTask,
-  getLabelIcon,
-  getPriorityIcon,
-  getStatusIcon,
+  generateRandomEmployee,
+  getDepartmentIcon,
+  getEmployeeStatusIcon,
+  getRoleIcon,
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
@@ -33,61 +33,61 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { tasks } from "@/db/schema";
+import { employees } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { useUploadThing } from "@/lib/uploadthing";
-import type { TaskSchema } from "../lib/validation";
+import type { EmployeeSchema } from "../lib/validation";
 
-const statusOptions = tasks.status.enumValues.map((status) => ({
-  label: status.charAt(0).toUpperCase() + status.slice(1),
+const departmentOptions = employees.department.enumValues.map((dept) => ({
+  label: dept.charAt(0).toUpperCase() + dept.slice(1),
+  value: dept,
+  icon: getDepartmentIcon(dept),
+}));
+
+const roleOptions = employees.role.enumValues.map((role) => ({
+  label: role.charAt(0).toUpperCase() + role.slice(1),
+  value: role,
+  icon: getRoleIcon(role),
+}));
+
+const statusOptions = employees.status.enumValues.map((status) => ({
+  label: status.charAt(0).toUpperCase() + status.slice(1).replace("-", " "),
   value: status,
-  icon: getStatusIcon(status),
+  icon: getEmployeeStatusIcon(status),
 }));
 
-const priorityOptions = tasks.priority.enumValues.map((priority) => ({
-  label: priority.charAt(0).toUpperCase() + priority.slice(1),
-  value: priority,
-  icon: getPriorityIcon(priority),
-}));
-
-const labelOptions = tasks.label.enumValues.map((label) => ({
-  label: label.charAt(0).toUpperCase() + label.slice(1),
-  value: label,
-  icon: getLabelIcon(label),
-}));
-
-const tagOptions = [
-  "frontend",
-  "backend",
-  "api",
-  "database",
-  "ui",
-  "ux",
-  "performance",
-  "security",
-  "testing",
-  "deployment",
+const skillOptions = [
+  "JavaScript",
+  "TypeScript",
+  "React",
+  "Node.js",
+  "Python",
+  "SQL",
+  "AWS",
+  "Docker",
+  "Git",
+  "Agile",
 ] as const;
 
-const tagSelectOptions = tagOptions.map((tag) => ({
-  label: tag.charAt(0).toUpperCase() + tag.slice(1),
-  value: tag,
+const skillSelectOptions = skillOptions.map((skill) => ({
+  label: skill,
+  value: skill,
 }));
 
 export function DataGridLiveDemo() {
   const { height } = useWindowSize();
 
   const { data = [], isLoading } = useLiveQuery((q) =>
-    q.from({ task: tasksCollection }),
+    q.from({ employee: employeesCollection }),
   );
 
   const { startUpload } = useUploadThing("taskAttachment");
 
-  const filterFn = React.useMemo(() => getFilterFn<TaskSchema>(), []);
+  const filterFn = React.useMemo(() => getFilterFn<EmployeeSchema>(), []);
 
-  const columns = React.useMemo<ColumnDef<TaskSchema>[]>(
+  const columns = React.useMemo<ColumnDef<EmployeeSchema>[]>(
     () => [
       {
         id: "select",
@@ -134,15 +134,56 @@ export function DataGridLiveDemo() {
         enableResizing: false,
       },
       {
-        id: "title",
-        accessorKey: "title",
-        header: "Title",
+        id: "name",
+        accessorKey: "name",
+        header: "Name",
+        minSize: 200,
+        filterFn,
+        meta: {
+          label: "Name",
+          cell: {
+            variant: "short-text",
+          },
+        },
+      },
+      {
+        id: "email",
+        accessorKey: "email",
+        header: "Email",
         minSize: 250,
         filterFn,
         meta: {
-          label: "Title",
+          label: "Email",
           cell: {
             variant: "short-text",
+          },
+        },
+      },
+      {
+        id: "department",
+        accessorKey: "department",
+        header: "Department",
+        minSize: 180,
+        filterFn,
+        meta: {
+          label: "Department",
+          cell: {
+            variant: "select",
+            options: departmentOptions,
+          },
+        },
+      },
+      {
+        id: "role",
+        accessorKey: "role",
+        header: "Role",
+        minSize: 160,
+        filterFn,
+        meta: {
+          label: "Role",
+          cell: {
+            variant: "select",
+            options: roleOptions,
           },
         },
       },
@@ -150,7 +191,7 @@ export function DataGridLiveDemo() {
         id: "status",
         accessorKey: "status",
         header: "Status",
-        minSize: 180,
+        minSize: 160,
         filterFn,
         meta: {
           label: "Status",
@@ -161,97 +202,68 @@ export function DataGridLiveDemo() {
         },
       },
       {
-        id: "priority",
-        accessorKey: "priority",
-        header: "Priority",
-        minSize: 160,
-        filterFn,
-        meta: {
-          label: "Priority",
-          cell: {
-            variant: "select",
-            options: priorityOptions,
-          },
-        },
-      },
-      {
-        id: "label",
-        accessorKey: "label",
-        header: "Label",
-        minSize: 180,
-        filterFn,
-        meta: {
-          label: "Label",
-          cell: {
-            variant: "select",
-            options: labelOptions,
-          },
-        },
-      },
-      {
-        id: "tags",
-        accessorKey: "tags",
-        header: "Tags",
+        id: "skills",
+        accessorKey: "skills",
+        header: "Skills",
         minSize: 240,
         filterFn,
         meta: {
-          label: "Tags",
+          label: "Skills",
           cell: {
             variant: "multi-select",
-            options: tagSelectOptions,
+            options: skillSelectOptions,
           },
         },
       },
       {
-        id: "estimatedHours",
-        accessorKey: "estimatedHours",
-        header: "Est. Hours",
+        id: "salary",
+        accessorKey: "salary",
+        header: "Salary",
         minSize: 140,
         filterFn,
         meta: {
-          label: "Estimated Hours",
+          label: "Salary",
           cell: {
             variant: "number",
             min: 0,
-            max: 1000,
-            step: 0.5,
+            step: 1000,
           },
         },
       },
       {
-        id: "createdAt",
-        accessorKey: "createdAt",
-        header: "Created",
+        id: "startDate",
+        accessorKey: "startDate",
+        header: "Start Date",
         minSize: 150,
         filterFn,
         meta: {
-          label: "Created At",
+          label: "Start Date",
           cell: {
             variant: "date",
           },
         },
       },
       {
-        id: "archived",
-        accessorKey: "archived",
-        header: "Archived",
+        id: "isVerified",
+        accessorKey: "isVerified",
+        header: "Verified",
         minSize: 120,
         filterFn,
         meta: {
-          label: "Archived",
+          label: "Verified",
           cell: {
             variant: "checkbox",
           },
         },
       },
       {
-        id: "files",
-        accessorKey: "files",
-        header: "Files",
+        id: "documents",
+        accessorKey: "documents",
+        header: "Documents",
         minSize: 240,
         filterFn,
         meta: {
-          label: "Files",
+          label: "Documents",
           cell: {
             variant: "file",
             maxFileSize: 10 * 1024 * 1024, // 10MB
@@ -267,33 +279,33 @@ export function DataGridLiveDemo() {
   );
 
   const onDataChange: NonNullable<
-    UseDataGridProps<TaskSchema>["onDataChange"]
+    UseDataGridProps<EmployeeSchema>["onDataChange"]
   > = React.useCallback(
     (newData) => {
-      // Diff and update changed tasks via TanStack DB for optimistic updates
-      for (const task of newData) {
-        const existingTask = data.find((t) => t.id === task.id);
-        if (!existingTask) continue;
+      // Diff and update changed employees via TanStack DB for optimistic updates
+      for (const employee of newData) {
+        const existingEmployee = data.find((e) => e.id === employee.id);
+        if (!existingEmployee) continue;
 
         // Check if any field changed using JSON comparison for arrays/objects
-        const hasChanges = (Object.keys(task) as Array<keyof TaskSchema>).some(
-          (key) => {
-            const existingValue =
-              existingTask[key] instanceof Date
-                ? (existingTask[key] as Date).toISOString()
-                : existingTask[key];
-            const newValue =
-              task[key] instanceof Date
-                ? (task[key] as Date).toISOString()
-                : task[key];
+        const hasChanges = (
+          Object.keys(employee) as Array<keyof EmployeeSchema>
+        ).some((key) => {
+          const existingValue =
+            existingEmployee[key] instanceof Date
+              ? (existingEmployee[key] as Date).toISOString()
+              : existingEmployee[key];
+          const newValue =
+            employee[key] instanceof Date
+              ? (employee[key] as Date).toISOString()
+              : employee[key];
 
-            return JSON.stringify(existingValue) !== JSON.stringify(newValue);
-          },
-        );
+          return JSON.stringify(existingValue) !== JSON.stringify(newValue);
+        });
 
         if (hasChanges) {
-          tasksCollection.update(task.id, (draft) => {
-            Object.assign(draft, task);
+          employeesCollection.update(employee.id, (draft) => {
+            Object.assign(draft, employee);
           });
         }
       }
@@ -301,55 +313,50 @@ export function DataGridLiveDemo() {
     [data],
   );
 
-  const onRowAdd: NonNullable<UseDataGridProps<TaskSchema>["onRowAdd"]> =
+  const onRowAdd: NonNullable<UseDataGridProps<EmployeeSchema>["onRowAdd"]> =
     React.useCallback(() => {
-      tasksCollection.insert(
-        generateRandomTask({
-          title: "",
+      employeesCollection.insert(
+        generateRandomEmployee({
+          name: "",
         }),
       );
 
       return {
         rowIndex: data.length,
-        columnId: "title",
+        columnId: "name",
       };
     }, [data.length]);
 
-  const onRowsAdd: NonNullable<UseDataGridProps<TaskSchema>["onRowsAdd"]> =
-    React.useCallback(
-      (count: number) => {
-        for (let i = 0; i < count; i++) {
-          const id = crypto.randomUUID();
-          const code = `TASK-${String(data.length + i + 1).padStart(4, "0")}`;
-
-          tasksCollection.insert({
-            id,
-            code,
-            title: null,
-            status: "todo",
-            label: "feature",
-            priority: "medium",
-            estimatedHours: 0,
-            archived: false,
-            tags: null,
-            files: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-        }
-      },
-      [data.length],
-    );
+  const onRowsAdd: NonNullable<UseDataGridProps<EmployeeSchema>["onRowsAdd"]> =
+    React.useCallback((count: number) => {
+      for (let i = 0; i < count; i++) {
+        employeesCollection.insert({
+          id: crypto.randomUUID(),
+          name: null,
+          email: null,
+          department: "engineering",
+          role: "developer",
+          status: "active",
+          salary: 0,
+          startDate: null,
+          isVerified: false,
+          skills: null,
+          documents: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }, []);
 
   const onRowsDelete: NonNullable<
-    UseDataGridProps<TaskSchema>["onRowsDelete"]
+    UseDataGridProps<EmployeeSchema>["onRowsDelete"]
   > = React.useCallback((rowsToDelete) => {
     // Use batch delete - single transaction for all deletions
-    tasksCollection.delete(rowsToDelete.map((task) => task.id));
+    employeesCollection.delete(rowsToDelete.map((emp) => emp.id));
   }, []);
 
   const onFilesUpload: NonNullable<
-    UseDataGridProps<TaskSchema>["onFilesUpload"]
+    UseDataGridProps<EmployeeSchema>["onFilesUpload"]
   > = React.useCallback(
     async ({ files }) => {
       // Try to upload via UploadThing, fall back to simulation if not configured
@@ -384,8 +391,9 @@ export function DataGridLiveDemo() {
   );
 
   const onFilesDelete: NonNullable<
-    UseDataGridProps<TaskSchema>["onFilesDelete"]
+    UseDataGridProps<EmployeeSchema>["onFilesDelete"]
   > = React.useCallback(async ({ fileIds }) => {
+    // Try to delete from UploadThing, silently fail if not configured
     try {
       await fetch("/api/uploadthing/delete", {
         method: "POST",
@@ -416,19 +424,19 @@ export function DataGridLiveDemo() {
     enablePaste: true,
   });
 
-  const updateSelectedTasks = React.useCallback(
+  const updateSelectedEmployees = React.useCallback(
     (
-      field: "status" | "priority",
-      value: TaskSchema["status"] | TaskSchema["priority"],
+      field: "status" | "department",
+      value: EmployeeSchema["status"] | EmployeeSchema["department"],
     ) => {
       const selectedRows = table.getSelectedRowModel().rows;
       if (selectedRows.length === 0) {
-        toast.error("No tasks selected");
+        toast.error("No employees selected");
         return;
       }
 
       // Use batch update - single transaction for all updates
-      tasksCollection.update(
+      employeesCollection.update(
         selectedRows.map((row) => row.original.id),
         (drafts) => {
           for (const draft of drafts) {
@@ -438,24 +446,24 @@ export function DataGridLiveDemo() {
       );
 
       toast.success(
-        `${selectedRows.length} task${selectedRows.length === 1 ? "" : "s"} updated`,
+        `${selectedRows.length} employee${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
     [table],
   );
 
-  const deleteSelectedTasks = React.useCallback(() => {
+  const deleteSelectedEmployees = React.useCallback(() => {
     const selectedRows = table.getSelectedRowModel().rows;
     if (selectedRows.length === 0) {
-      toast.error("No tasks selected");
+      toast.error("No employees selected");
       return;
     }
 
     // Use batch delete - single transaction for all deletions
-    tasksCollection.delete(selectedRows.map((row) => row.original.id));
+    employeesCollection.delete(selectedRows.map((row) => row.original.id));
 
     toast.success(
-      `${selectedRows.length} task${selectedRows.length === 1 ? "" : "s"} deleted`,
+      `${selectedRows.length} employee${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
     table.toggleAllRowsSelected(false);
   }, [table]);
@@ -465,7 +473,7 @@ export function DataGridLiveDemo() {
   if (isLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div className="text-muted-foreground">Loading tasks...</div>
+        <div className="text-muted-foreground">Loading employees...</div>
       </div>
     );
   }
@@ -514,7 +522,9 @@ export function DataGridLiveDemo() {
               {statusOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => updateSelectedTasks("status", option.value)}
+                  onClick={() =>
+                    updateSelectedEmployees("status", option.value)
+                  }
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -524,15 +534,17 @@ export function DataGridLiveDemo() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <ActionBarItem variant="secondary" size="sm">
-                <ArrowUp />
-                Priority
+                <Building2 />
+                Department
               </ActionBarItem>
             </DropdownMenuTrigger>
             <DropdownMenuContent data-grid-popover>
-              {priorityOptions.map((option) => (
+              {departmentOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => updateSelectedTasks("priority", option.value)}
+                  onClick={() =>
+                    updateSelectedEmployees("department", option.value)
+                  }
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -542,7 +554,7 @@ export function DataGridLiveDemo() {
           <ActionBarItem
             variant="destructive"
             size="sm"
-            onClick={deleteSelectedTasks}
+            onClick={deleteSelectedEmployees}
           >
             <Trash2 />
             Delete
