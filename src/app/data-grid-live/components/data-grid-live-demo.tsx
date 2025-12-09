@@ -270,11 +270,11 @@ export function DataGridLiveDemo() {
       // Diff and update changed tasks via TanStack DB for optimistic updates
       for (const task of newData) {
         const existingTask = data.find((t) => t.id === task.id);
-        if (existingTask) {
-          // Find the specific fields that changed
-          let hasChanges = false;
-          for (const key of Object.keys(task) as Array<keyof TaskSchema>) {
-            // Skip comparing Date objects by converting to ISO strings
+        if (!existingTask) continue;
+
+        // Check if any field changed using JSON comparison for arrays/objects
+        const hasChanges = (Object.keys(task) as Array<keyof TaskSchema>).some(
+          (key) => {
             const existingValue =
               existingTask[key] instanceof Date
                 ? (existingTask[key] as Date).toISOString()
@@ -284,18 +284,14 @@ export function DataGridLiveDemo() {
                 ? (task[key] as Date).toISOString()
                 : task[key];
 
-            if (existingValue !== newValue) {
-              hasChanges = true;
-              break;
-            }
-          }
+            return JSON.stringify(existingValue) !== JSON.stringify(newValue);
+          },
+        );
 
-          if (hasChanges) {
-            // Update with the new task data
-            tasksCollection.update(task.id, (draft) => {
-              Object.assign(draft, task);
-            });
-          }
+        if (hasChanges) {
+          tasksCollection.update(task.id, (draft) => {
+            Object.assign(draft, task);
+          });
         }
       }
     },
