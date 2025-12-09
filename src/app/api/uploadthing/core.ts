@@ -1,5 +1,6 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError } from "uploadthing/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const f = createUploadthing();
 
@@ -26,10 +27,23 @@ export const ourFileRouter = {
     audio: { maxFileSize: "8MB", maxFileCount: 5 },
   })
     .middleware(async () => {
-      // For demo purposes, we don't require authentication
-      // In a real app, you would check the user session here
-      // const user = await auth();
-      // if (!user) throw new UploadThingError("Unauthorized");
+      // Rate limiting
+      const rateLimitResult = await checkRateLimit();
+      if (!rateLimitResult.success) {
+        throw new UploadThingError("Too many requests. Please slow down.");
+      }
+
+      // Authentication example:
+      // In a real app, you would check the user session here using your auth provider
+      // For example with NextAuth.js:
+      //   const session = await auth();
+      //   if (!session?.user) throw new UploadThingError("Unauthorized");
+      //   return { userId: session.user.id };
+      //
+      // Or with Clerk:
+      //   const { userId } = await auth();
+      //   if (!userId) throw new UploadThingError("Unauthorized");
+      //   return { userId };
 
       return {};
     })

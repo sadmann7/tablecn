@@ -1353,9 +1353,16 @@ export function FileCell<TData>({
   const [uploadingFiles, setUploadingFiles] = React.useState<Set<string>>(
     new Set(),
   );
+  const [deletingFiles, setDeletingFiles] = React.useState<Set<string>>(
+    new Set(),
+  );
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const isUploading = uploadingFiles.size > 0;
+  const isDeleting = deletingFiles.size > 0;
+  const isPending = isUploading || isDeleting;
   const containerRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dropzoneRef = React.useRef<HTMLDivElement>(null);
@@ -1418,7 +1425,7 @@ export function FileCell<TData>({
 
   const addFiles = React.useCallback(
     async (newFiles: File[], skipUpload = false) => {
-      if (readOnly) return;
+      if (readOnly || isPending) return;
       setError(null);
 
       if (maxFiles && files.length + newFiles.length > maxFiles) {
@@ -1543,16 +1550,27 @@ export function FileCell<TData>({
         }
       }
     },
-    [files, maxFiles, validateFile, tableMeta, rowIndex, columnId, readOnly],
+    [
+      files,
+      maxFiles,
+      validateFile,
+      tableMeta,
+      rowIndex,
+      columnId,
+      readOnly,
+      isPending,
+    ],
   );
 
   const removeFile = React.useCallback(
     async (fileId: string) => {
-      if (readOnly) return;
+      if (readOnly || isPending) return;
       setError(null);
 
       const fileToRemove = files.find((f) => f.id === fileId);
       if (!fileToRemove) return;
+
+      setDeletingFiles((prev) => new Set(prev).add(fileId));
 
       if (tableMeta?.onFilesDelete) {
         try {
@@ -1567,6 +1585,11 @@ export function FileCell<TData>({
               ? error.message
               : `Failed to delete ${fileToRemove.name}`,
           );
+          setDeletingFiles((prev) => {
+            const next = new Set(prev);
+            next.delete(fileId);
+            return next;
+          });
           return;
         }
       }
@@ -1577,19 +1600,27 @@ export function FileCell<TData>({
 
       const updatedFiles = files.filter((f) => f.id !== fileId);
       setFiles(updatedFiles);
+      setDeletingFiles((prev) => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
     },
-    [files, tableMeta, rowIndex, columnId, readOnly],
+    [files, tableMeta, rowIndex, columnId, readOnly, isPending],
   );
 
   const clearAll = React.useCallback(async () => {
-    if (readOnly) return;
+    if (readOnly || isPending) return;
     setError(null);
+
+    const fileIds = files.map((f) => f.id);
+    setDeletingFiles(new Set(fileIds));
 
     if (tableMeta?.onFilesDelete && files.length > 0) {
       try {
         await tableMeta.onFilesDelete({
-          fileIds: files.map((f) => f.id),
+          fileIds,
           rowIndex,
           columnId,
         });
@@ -1597,6 +1628,7 @@ export function FileCell<TData>({
         toast.error(
           error instanceof Error ? error.message : "Failed to delete files",
         );
+        setDeletingFiles(new Set());
         return;
       }
     }
@@ -1607,8 +1639,9 @@ export function FileCell<TData>({
       }
     }
     setFiles([]);
+    setDeletingFiles(new Set());
     tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
-  }, [files, tableMeta, rowIndex, columnId, readOnly]);
+  }, [files, tableMeta, rowIndex, columnId, readOnly, isPending]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1845,10 +1878,12 @@ export function FileCell<TData>({
                 aria-labelledby={labelId}
                 aria-describedby={descriptionId}
                 aria-invalid={!!error}
+                aria-disabled={isPending}
                 data-dragging={isDragging ? "" : undefined}
                 data-invalid={error ? "" : undefined}
-                tabIndex={isDragging ? -1 : 0}
-                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-invalid:ring-destructive/20"
+                data-disabled={isPending ? "" : undefined}
+                tabIndex={isDragging || isPending ? -1 : 0}
+                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-disabled:pointer-events-none data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-disabled:opacity-50 data-invalid:ring-destructive/20"
                 ref={dropzoneRef}
                 onClick={onDropzoneClick}
                 onDragEnter={onDropzoneDragEnter}
@@ -1896,6 +1931,7 @@ export function FileCell<TData>({
                       size="sm"
                       className="h-6 text-muted-foreground text-xs"
                       onClick={clearAll}
+                      disabled={isPending}
                     >
                       Clear all
                     </Button>
@@ -1903,11 +1939,15 @@ export function FileCell<TData>({
                   <div className="max-h-[200px] space-y-1 overflow-y-auto">
                     {files.map((file) => {
                       const FileIcon = getFileIcon(file.type);
+                      const isFileUploading = uploadingFiles.has(file.id);
+                      const isFileDeleting = deletingFiles.has(file.id);
+                      const isFilePending = isFileUploading || isFileDeleting;
 
                       return (
                         <div
                           key={file.id}
-                          className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5"
+                          data-pending={isFilePending ? "" : undefined}
+                          className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5 data-pending:opacity-60"
                         >
                           {FileIcon && (
                             <FileIcon className="size-4 shrink-0 text-muted-foreground" />
@@ -1915,7 +1955,11 @@ export function FileCell<TData>({
                           <div className="flex-1 overflow-hidden">
                             <p className="truncate text-sm">{file.name}</p>
                             <p className="text-muted-foreground text-xs">
-                              {formatFileSize(file.size)}
+                              {isFileUploading
+                                ? "Uploading..."
+                                : isFileDeleting
+                                  ? "Deleting..."
+                                  : formatFileSize(file.size)}
                             </p>
                           </div>
                           <Button
@@ -1924,6 +1968,7 @@ export function FileCell<TData>({
                             size="icon"
                             className="size-5 rounded-sm"
                             onClick={() => removeFile(file.id)}
+                            disabled={isPending}
                           >
                             <X className="size-3" />
                           </Button>
