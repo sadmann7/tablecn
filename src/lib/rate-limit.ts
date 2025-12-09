@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { env } from "@/env";
 
-// Create Redis client if configured
 const redis =
   env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN
     ? new Redis({
@@ -13,7 +12,6 @@ const redis =
       })
     : null;
 
-// Create rate limiter - 30 requests per 10 seconds per IP
 const ratelimit = redis
   ? new Ratelimit({
       redis,
@@ -24,7 +22,6 @@ const ratelimit = redis
   : null;
 
 export async function checkRateLimit() {
-  // Skip rate limiting if not configured
   if (!ratelimit) {
     return { success: true };
   }
@@ -60,6 +57,6 @@ export function rateLimitResponse(result: {
         "X-RateLimit-Remaining": String(result.remaining ?? 0),
         "X-RateLimit-Reset": String(result.reset ?? Date.now()),
       },
-    }
+    },
   );
 }

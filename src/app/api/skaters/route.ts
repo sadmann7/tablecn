@@ -18,7 +18,7 @@ export async function GET() {
     console.error({ error });
     return NextResponse.json(
       { error: "Failed to fetch skaters" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
           error: "Invalid request body",
           details: singleResult.error.flatten(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     console.error({ error });
     return NextResponse.json(
       { error: "Failed to create skater" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -92,7 +92,7 @@ export async function PATCH(request: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid request body", details: result.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -102,7 +102,7 @@ export async function PATCH(request: Request) {
     if (!firstUpdate) {
       return NextResponse.json(
         { error: "updates array is empty" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -121,7 +121,7 @@ export async function PATCH(request: Request) {
     // If all updates have the same changes, we can do a single query
     const firstChanges = JSON.stringify(firstUpdate.changes);
     const allSameChanges = updates.every(
-      (u) => JSON.stringify(u.changes) === firstChanges
+      (u) => JSON.stringify(u.changes) === firstChanges,
     );
 
     if (allSameChanges) {
@@ -156,7 +156,7 @@ export async function PATCH(request: Request) {
     console.error({ error });
     return NextResponse.json(
       { error: "Failed to update skaters" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -176,7 +176,7 @@ export async function DELETE(request: Request) {
     if (!result.success) {
       return NextResponse.json(
         { error: "Invalid request body", details: result.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -190,7 +190,7 @@ export async function DELETE(request: Request) {
     console.error({ error });
     return NextResponse.json(
       { error: "Failed to delete skaters" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

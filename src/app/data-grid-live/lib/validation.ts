@@ -61,7 +61,7 @@ export const updateSkatersSchema = z.object({
       z.object({
         id: z.string(),
         changes: updateSkaterSchema,
-      })
+      }),
     )
     .min(1),
 });

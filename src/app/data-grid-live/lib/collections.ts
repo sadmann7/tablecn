@@ -5,16 +5,7 @@ import { createCollection } from "@tanstack/react-db";
 import { QueryClient } from "@tanstack/react-query";
 import { type SkaterSchema, skaterSchema } from "./validation";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 0,
-      gcTime: 0,
-      refetchOnMount: "always",
-      refetchOnWindowFocus: true,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
 export const skatersCollection = createCollection(
   queryCollectionOptions({
@@ -47,7 +38,7 @@ export const skatersCollection = createCollection(
             createdAt: _createdAt,
             updatedAt: _updatedAt,
             ...data
-          }) => data
+          }) => data,
         );
 
       if (skatersToInsert.length === 0) return;
@@ -67,11 +58,11 @@ export const skatersCollection = createCollection(
       const updates = transaction.mutations
         .filter(
           (
-            m
+            m,
           ): m is typeof m & {
             key: string;
             changes: Partial<SkaterSchema>;
-          } => m?.key != null && m?.changes != null
+          } => m?.key != null && m?.changes != null,
         )
         .map((m) => ({ id: m.key, changes: m.changes }));
 
@@ -106,5 +97,5 @@ export const skatersCollection = createCollection(
         throw new Error("Failed to delete skaters");
       }
     },
-  })
+  }),
 );

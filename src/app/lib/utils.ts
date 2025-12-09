@@ -9,8 +9,8 @@ import {
   Circle,
   CircleCheck,
   CircleHelp,
-  CircleIcon,
   CircleX,
+  type LucideIcon,
   Timer,
 } from "lucide-react";
 import { customAlphabet } from "nanoid";
@@ -18,7 +18,6 @@ import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 
 import { generateId } from "@/lib/id";
 
-// Task utilities for data-table demo
 export function generateRandomTask(input?: Partial<Task>): Task {
   return {
     id: generateId("task"),
@@ -38,38 +37,37 @@ export function generateRandomTask(input?: Partial<Task>): Task {
 }
 
 export function getStatusIcon(status: Task["status"]) {
-  const statusIcons = {
+  const statusIcons: Record<Task["status"], LucideIcon> = {
     canceled: CircleX,
     done: CheckCircle2,
     "in-progress": Timer,
     todo: CircleHelp,
   };
 
-  return statusIcons[status] || CircleIcon;
+  return statusIcons[status];
 }
 
 export function getPriorityIcon(priority: Task["priority"]) {
-  const priorityIcons = {
+  const priorityIcons: Record<Task["priority"], LucideIcon> = {
     high: ArrowUpIcon,
     low: ArrowDownIcon,
     medium: ArrowRightIcon,
   };
 
-  return priorityIcons[priority] || CircleIcon;
+  return priorityIcons[priority];
 }
 
 export function getLabelIcon(label: Task["label"]) {
-  const labelIcons = {
+  const labelIcons: Record<Task["label"], LucideIcon> = {
     bug: Bug,
     feature: Circle,
     enhancement: CircleCheck,
     documentation: Book,
   };
 
-  return labelIcons[label] || CircleIcon;
+  return labelIcons[label];
 }
 
-// Skater utilities for data-grid-live demo
 const availableTricks = [
   "Kickflip",
   "Heelflip",
@@ -104,14 +102,12 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
 
-  // Generate random tricks (0-8 tricks)
   const trickCount = faker.number.int({ min: 0, max: 8 });
   const tricks =
     trickCount > 0
       ? faker.helpers.arrayElements([...availableTricks], trickCount)
       : null;
 
-  // Generate random media (0-2 files, 30% chance of having media)
   const hasMedia = faker.datatype.boolean({ probability: 0.3 });
   const media = hasMedia
     ? faker.helpers
@@ -151,27 +147,27 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
 }
 
 export function getSkaterStatusIcon(status: Skater["status"]) {
-  const statusIcons = {
+  const statusIcons: Record<Skater["status"], LucideIcon> = {
     amateur: Circle,
     sponsored: Timer,
     pro: CheckCircle2,
     legend: CircleCheck,
   };
 
-  return statusIcons[status] || CircleIcon;
+  return statusIcons[status];
 }
 
 export function getStanceIcon(stance: Skater["stance"]) {
-  const stanceIcons = {
+  const stanceIcons: Record<Skater["stance"], LucideIcon> = {
     regular: ArrowRightIcon,
     goofy: ArrowDownIcon,
   };
 
-  return stanceIcons[stance] || CircleIcon;
+  return stanceIcons[stance];
 }
 
 export function getStyleIcon(style: Skater["style"]) {
-  const styleIcons = {
+  const styleIcons: Record<Skater["style"], LucideIcon> = {
     street: CircleCheck,
     vert: ArrowUpIcon,
     park: Circle,
@@ -179,5 +175,5 @@ export function getStyleIcon(style: Skater["style"]) {
     "all-around": CheckCircle2,
   };
 
-  return styleIcons[style] || CircleIcon;
+  return styleIcons[style];
 }
