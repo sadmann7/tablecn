@@ -186,6 +186,20 @@ export function DataGridLiveDemo() {
         },
       },
       {
+        id: "tags",
+        accessorKey: "tags",
+        header: "Tags",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Tags",
+          cell: {
+            variant: "multi-select",
+            options: tagSelectOptions,
+          },
+        },
+      },
+      {
         id: "estimatedHours",
         accessorKey: "estimatedHours",
         header: "Est. Hours",
@@ -202,6 +216,19 @@ export function DataGridLiveDemo() {
         },
       },
       {
+        id: "createdAt",
+        accessorKey: "createdAt",
+        header: "Created",
+        minSize: 150,
+        filterFn,
+        meta: {
+          label: "Created At",
+          cell: {
+            variant: "date",
+          },
+        },
+      },
+      {
         id: "archived",
         accessorKey: "archived",
         header: "Archived",
@@ -211,20 +238,6 @@ export function DataGridLiveDemo() {
           label: "Archived",
           cell: {
             variant: "checkbox",
-          },
-        },
-      },
-      {
-        id: "tags",
-        accessorKey: "tags",
-        header: "Tags",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Tags",
-          cell: {
-            variant: "multi-select",
-            options: tagSelectOptions,
           },
         },
       },
@@ -243,19 +256,6 @@ export function DataGridLiveDemo() {
             accept:
               "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
             multiple: true,
-          },
-        },
-      },
-      {
-        id: "createdAt",
-        accessorKey: "createdAt",
-        header: "Created",
-        minSize: 150,
-        filterFn,
-        meta: {
-          label: "Created At",
-          cell: {
-            variant: "date",
           },
         },
       },
