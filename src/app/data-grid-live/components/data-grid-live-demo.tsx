@@ -37,6 +37,7 @@ import { tasks } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
+import { useUploadThing } from "@/lib/uploadthing";
 import type { TaskSchema } from "../lib/validation";
 
 const statusOptions = tasks.status.enumValues.map((status) => ({
@@ -81,6 +82,8 @@ export function DataGridLiveDemo() {
   const { data = [], isLoading } = useLiveQuery((q) =>
     q.from({ task: tasksCollection }),
   );
+
+  const { startUpload } = useUploadThing("taskAttachment");
 
   const filterFn = React.useMemo(() => getFilterFn<TaskSchema>(), []);
 
@@ -347,19 +350,38 @@ export function DataGridLiveDemo() {
 
   const onFilesUpload: NonNullable<
     UseDataGridProps<TaskSchema>["onFilesUpload"]
-  > = React.useCallback(async ({ files }) => {
-    // In a real app, you would upload files to your server/storage
-    // For this demo, simulate an upload delay and create local URLs
-    await new Promise((resolve) => setTimeout(resolve, 800));
+  > = React.useCallback(
+    async ({ files }) => {
+      // Try to upload via UploadThing, fall back to simulation if not configured
+      try {
+        const uploadedFiles = await startUpload(files);
 
-    return files.map((file) => ({
-      id: crypto.randomUUID(),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: URL.createObjectURL(file),
-    }));
-  }, []);
+        if (uploadedFiles) {
+          return uploadedFiles.map((file) => ({
+            id: file.key,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: file.ufsUrl,
+          }));
+        }
+      } catch {
+        // UploadThing not configured, fall back to simulation
+      }
+
+      // Simulate upload for demo/development without UploadThing
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      return files.map((file) => ({
+        id: crypto.randomUUID(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+      }));
+    },
+    [startUpload],
+  );
 
   const onFilesDelete: NonNullable<
     UseDataGridProps<TaskSchema>["onFilesDelete"]
