@@ -60,7 +60,7 @@ const labelOptions = tasks.label.enumValues.map((label) => ({
 export function DataGridLiveDemo() {
   const { height } = useWindowSize();
 
-  const { data: tasks = [], isLoading } = useLiveQuery((q) =>
+  const { data = [], isLoading } = useLiveQuery((q) =>
     q.from({ task: tasksCollection }),
   );
 
@@ -219,7 +219,7 @@ export function DataGridLiveDemo() {
     (newData) => {
       // Diff and update changed tasks via TanStack DB for optimistic updates
       for (const task of newData) {
-        const existingTask = tasks.find((t) => t.id === task.id);
+        const existingTask = data.find((t) => t.id === task.id);
         if (existingTask) {
           // Find the specific fields that changed
           let hasChanges = false;
@@ -249,7 +249,7 @@ export function DataGridLiveDemo() {
         }
       }
     },
-    [tasks],
+    [data],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<TaskSchema>["onRowAdd"]> =
@@ -261,17 +261,17 @@ export function DataGridLiveDemo() {
       );
 
       return {
-        rowIndex: tasks.length,
+        rowIndex: data.length,
         columnId: "title",
       };
-    }, [tasks.length]);
+    }, [data.length]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<TaskSchema>["onRowsAdd"]> =
     React.useCallback(
       (count: number) => {
         for (let i = 0; i < count; i++) {
           const id = crypto.randomUUID();
-          const code = `TASK-${String(tasks.length + i + 1).padStart(4, "0")}`;
+          const code = `TASK-${String(data.length + i + 1).padStart(4, "0")}`;
 
           tasksCollection.insert({
             id,
@@ -287,7 +287,7 @@ export function DataGridLiveDemo() {
           });
         }
       },
-      [tasks.length],
+      [data.length],
     );
 
   const onRowsDelete: NonNullable<
@@ -298,7 +298,7 @@ export function DataGridLiveDemo() {
   }, []);
 
   const { table, ...dataGridProps } = useDataGrid({
-    data: tasks,
+    data,
     onDataChange,
     onRowAdd,
     onRowsAdd,
@@ -358,7 +358,7 @@ export function DataGridLiveDemo() {
     table.toggleAllRowsSelected(false);
   }, [table]);
 
-  const gridHeight = height ? Math.min(height - 200, 800) : 600;
+  const gridHeight = height ? Math.min(height - 170, 800) : 600;
 
   if (isLoading) {
     return (
