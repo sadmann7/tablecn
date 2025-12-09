@@ -26,9 +26,9 @@ export const ourFileRouter = {
     video: { maxFileSize: "16MB", maxFileCount: 2 },
     audio: { maxFileSize: "8MB", maxFileCount: 5 },
   })
-    .middleware(async () => {
+    .middleware(async ({ req }) => {
       // Rate limiting
-      const rateLimitResult = await checkRateLimit();
+      const rateLimitResult = await checkRateLimit(req);
       if (!rateLimitResult.success) {
         throw new UploadThingError("Too many requests. Please slow down.");
       }
