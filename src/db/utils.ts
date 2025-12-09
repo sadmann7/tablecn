@@ -5,13 +5,13 @@
 import { type AnyColumn, sql } from "drizzle-orm";
 import { pgTableCreator } from "drizzle-orm/pg-core";
 
-import { databasePrefix } from "@/lib/constants";
+import { DATABASE_PREFIX } from "@/lib/constants";
 
 /**
  * Allows a single database instance for multiple projects.
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const pgTable = pgTableCreator((name) => `${databasePrefix}_${name}`);
+export const pgTable = pgTableCreator((name) => `${DATABASE_PREFIX}_${name}`);
 
 export function takeFirstOrNull<TData>(data: TData[]) {
   return data[0] ?? null;

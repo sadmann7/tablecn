@@ -1,6 +1,14 @@
 import { z } from "zod";
 import { tasks } from "@/db/schema";
 
+const fileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  size: z.number(),
+  type: z.string(),
+  url: z.string().optional(),
+});
+
 export const taskSchema = z.object({
   id: z.string(),
   code: z.string(),
@@ -10,6 +18,8 @@ export const taskSchema = z.object({
   priority: z.enum(tasks.priority.enumValues),
   estimatedHours: z.number(),
   archived: z.boolean(),
+  tags: z.array(z.string()).nullable(),
+  files: z.array(fileSchema).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date().nullable(),
 });
@@ -22,6 +32,8 @@ export const insertTaskSchema = z.object({
   priority: z.enum(tasks.priority.enumValues).optional(),
   estimatedHours: z.number().optional(),
   archived: z.boolean().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  files: z.array(fileSchema).nullable().optional(),
 });
 
 export const insertTasksSchema = z.object({
@@ -35,6 +47,8 @@ export const updateTaskSchema = z.object({
   priority: z.enum(tasks.priority.enumValues).optional(),
   estimatedHours: z.number().optional(),
   archived: z.boolean().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+  files: z.array(fileSchema).nullable().optional(),
 });
 
 export const updateTasksSchema = z.object({

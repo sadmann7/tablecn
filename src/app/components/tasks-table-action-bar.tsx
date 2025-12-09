@@ -101,7 +101,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
               Status
             </ActionBarItem>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center">
+          <DropdownMenuContent>
             {tasks.status.enumValues.map((status) => (
               <DropdownMenuItem
                 key={status}
@@ -120,7 +120,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
               Priority
             </ActionBarItem>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center">
+          <DropdownMenuContent>
             {tasks.priority.enumValues.map((priority) => (
               <DropdownMenuItem
                 key={priority}

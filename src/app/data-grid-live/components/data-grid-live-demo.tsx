@@ -57,6 +57,24 @@ const labelOptions = tasks.label.enumValues.map((label) => ({
   icon: getLabelIcon(label),
 }));
 
+const tagOptions = [
+  "frontend",
+  "backend",
+  "api",
+  "database",
+  "ui",
+  "ux",
+  "performance",
+  "security",
+  "testing",
+  "deployment",
+] as const;
+
+const tagSelectOptions = tagOptions.map((tag) => ({
+  label: tag.charAt(0).toUpperCase() + tag.slice(1),
+  value: tag,
+}));
+
 export function DataGridLiveDemo() {
   const { height } = useWindowSize();
 
@@ -197,6 +215,38 @@ export function DataGridLiveDemo() {
         },
       },
       {
+        id: "tags",
+        accessorKey: "tags",
+        header: "Tags",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Tags",
+          cell: {
+            variant: "multi-select",
+            options: tagSelectOptions,
+          },
+        },
+      },
+      {
+        id: "files",
+        accessorKey: "files",
+        header: "Files",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Files",
+          cell: {
+            variant: "file",
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            maxFiles: 5,
+            accept:
+              "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
+            multiple: true,
+          },
+        },
+      },
+      {
         id: "createdAt",
         accessorKey: "createdAt",
         header: "Created",
@@ -282,6 +332,8 @@ export function DataGridLiveDemo() {
             priority: "medium",
             estimatedHours: 0,
             archived: false,
+            tags: null,
+            files: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           });
@@ -297,12 +349,40 @@ export function DataGridLiveDemo() {
     tasksCollection.delete(rowsToDelete.map((task) => task.id));
   }, []);
 
+  const onFilesUpload: NonNullable<
+    UseDataGridProps<TaskSchema>["onFilesUpload"]
+  > = React.useCallback(async ({ files }) => {
+    // In a real app, you would upload files to your server/storage
+    // For this demo, simulate an upload delay and create local URLs
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    return files.map((file) => ({
+      id: crypto.randomUUID(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file),
+    }));
+  }, []);
+
+  const onFilesDelete: NonNullable<
+    UseDataGridProps<TaskSchema>["onFilesDelete"]
+  > = React.useCallback(async ({ fileIds, rowIndex, columnId }) => {
+    // In a real app, you would delete files from your server/storage
+    console.log(
+      `Deleting ${fileIds.length} file(s) from row ${rowIndex}, column ${columnId}:`,
+      fileIds,
+    );
+  }, []);
+
   const { table, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
     onRowsAdd,
     onRowsDelete,
+    onFilesUpload,
+    onFilesDelete,
     columns,
     getRowId: (row) => row.id,
     initialState: {
@@ -408,7 +488,7 @@ export function DataGridLiveDemo() {
                 Status
               </ActionBarItem>
             </DropdownMenuTrigger>
-            <DropdownMenuContent data-grid-popover align="center">
+            <DropdownMenuContent data-grid-popover>
               {statusOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
@@ -426,7 +506,7 @@ export function DataGridLiveDemo() {
                 Priority
               </ActionBarItem>
             </DropdownMenuTrigger>
-            <DropdownMenuContent data-grid-popover align="center">
+            <DropdownMenuContent data-grid-popover>
               {priorityOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}

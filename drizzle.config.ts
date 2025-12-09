@@ -1,7 +1,7 @@
 import type { Config } from "drizzle-kit";
 import { env } from "@/env.js";
 
-import { databasePrefix } from "@/lib/constants";
+import { DATABASE_PREFIX } from "@/lib/constants";
 
 export default {
   schema: "./src/db/schema.ts",
@@ -10,5 +10,5 @@ export default {
   dbCredentials: {
     url: env.DATABASE_URL,
   },
-  tablesFilter: [`${databasePrefix}_*`],
+  tablesFilter: [`${DATABASE_PREFIX}_*`],
 } satisfies Config;
