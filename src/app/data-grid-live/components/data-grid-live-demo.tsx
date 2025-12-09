@@ -90,7 +90,7 @@ export function DataGridLiveDemo() {
       .orderBy((t) => t.skater.startedSkating ?? t.skater.createdAt),
   );
 
-  const { startUpload } = useUploadThing("taskAttachment");
+  const { startUpload } = useUploadThing("skaterMedia");
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 

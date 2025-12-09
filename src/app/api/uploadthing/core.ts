@@ -4,10 +4,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const f = createUploadthing();
 
-// FileRouter for your app, can contain multiple FileRoutes
 export const ourFileRouter = {
-  // FileRoute for task attachments
-  taskAttachment: f({
+  skaterMedia: f({
     image: { maxFileSize: "4MB", maxFileCount: 5 },
     pdf: { maxFileSize: "8MB", maxFileCount: 5 },
     "application/msword": { maxFileSize: "8MB", maxFileCount: 5 },
@@ -27,30 +25,16 @@ export const ourFileRouter = {
     audio: { maxFileSize: "8MB", maxFileCount: 5 },
   })
     .middleware(async ({ req }) => {
-      // Rate limiting
-      const rateLimitResult = await checkRateLimit(req);
-      if (!rateLimitResult.success) {
-        throw new UploadThingError("Too many requests. Please slow down.");
+      const limit = await checkRateLimit(req);
+      if (!limit.success) {
+        throw new UploadThingError(
+          "Rate limit exceeded, please try again later."
+        );
       }
-
-      // Authentication example:
-      // In a real app, you would check the user session here using your auth provider
-      // For example with NextAuth.js:
-      //   const session = await auth();
-      //   if (!session?.user) throw new UploadThingError("Unauthorized");
-      //   return { userId: session.user.id };
-      //
-      // Or with Clerk:
-      //   const { userId } = await auth();
-      //   if (!userId) throw new UploadThingError("Unauthorized");
-      //   return { userId };
 
       return {};
     })
     .onUploadComplete(async ({ file }) => {
-      console.log("Upload complete:", file.name);
-
-      // Return file data to the client
       return {
         id: file.key,
         name: file.name,

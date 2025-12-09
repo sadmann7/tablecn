@@ -21,21 +21,16 @@ const ratelimit = redis
     })
   : null;
 
-function getIpFromHeaders(headersList: Headers) {
-  return (
-    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headersList.get("x-real-ip") ??
-    "anonymous"
-  );
-}
-
 export async function checkRateLimit(req?: Request) {
   if (!ratelimit) {
     return { success: true };
   }
 
   const headersList = req ? req.headers : await headers();
-  const ip = getIpFromHeaders(headersList);
+  const ip =
+    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headersList.get("x-real-ip") ??
+    "anonymous";
 
   const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
@@ -62,6 +57,6 @@ export function rateLimitResponse(result: {
         "X-RateLimit-Remaining": String(result.remaining ?? 0),
         "X-RateLimit-Reset": String(result.reset ?? Date.now()),
       },
-    },
+    }
   );
 }
