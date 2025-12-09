@@ -1,4 +1,6 @@
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { extractRouterConfig } from "uploadthing/server";
 
 import { ourFileRouter } from "@/app/api/uploadthing/core";
@@ -14,6 +16,11 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Toaster } from "@/components/ui/sonner";
 import { fontMono, fontSans } from "@/lib/fonts";
+
+async function UploadThingSSR() {
+  await connection();
+  return <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />;
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -77,7 +84,9 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
           fontMono.variable,
         )}
       >
-        <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />
+        <Suspense>
+          <UploadThingSSR />
+        </Suspense>
         <Script
           defer
           data-site-id={siteConfig.url}
