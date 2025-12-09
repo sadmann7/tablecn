@@ -2864,16 +2864,37 @@ function useDataGrid<TData>({
     async (event?: React.MouseEvent<HTMLDivElement>) => {
       if (propsRef.current.readOnly || !propsRef.current.onRowAdd) return;
 
+      // Capture initial row count before the insert
+      const initialRowCount =
+        tableRef.current?.getRowModel().rows.length ??
+        propsRef.current.data.length;
+
       const result = await propsRef.current.onRowAdd(event);
 
       if (event?.defaultPrevented || result === null) return;
 
-      const currentTable = tableRef.current;
-      const rows = currentTable?.getRowModel().rows ?? [];
+      // Wait for the row to actually be added to the table
+      // This handles async state updates (e.g., from TanStack DB collections)
+      let attempts = 0;
+      const maxAttempts = 20;
+      let currentRowCount = tableRef.current?.getRowModel().rows.length ?? 0;
+
+      while (currentRowCount <= initialRowCount && attempts < maxAttempts) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        currentRowCount = tableRef.current?.getRowModel().rows.length ?? 0;
+        attempts++;
+      }
+
+      const rowCount = tableRef.current?.getRowModel().rows.length ?? 0;
+      const newRowIndex = Math.max(0, rowCount - 1);
 
       if (result) {
-        const adjustedRowIndex =
-          (result.rowIndex ?? 0) >= rows.length ? rows.length : result.rowIndex;
+        // Default to new row if rowIndex not specified, clamp to valid range
+        const targetRowIndex = result.rowIndex ?? newRowIndex;
+        const adjustedRowIndex = Math.min(
+          Math.max(0, targetRowIndex),
+          newRowIndex,
+        );
 
         onScrollToRow({
           rowIndex: adjustedRowIndex,
@@ -2882,7 +2903,7 @@ function useDataGrid<TData>({
         return;
       }
 
-      onScrollToRow({ rowIndex: rows.length });
+      onScrollToRow({ rowIndex: newRowIndex });
     },
     [propsRef, onScrollToRow],
   );

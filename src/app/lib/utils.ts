@@ -3,7 +3,11 @@ import {
   ArrowDownIcon,
   ArrowRightIcon,
   ArrowUpIcon,
+  Book,
+  Bug,
   CheckCircle2,
+  Circle,
+  CircleCheck,
   CircleHelp,
   CircleIcon,
   CircleX,
@@ -14,7 +18,7 @@ import { type Task, tasks } from "@/db/schema";
 
 import { generateId } from "@/lib/id";
 
-export function generateRandomTask(): Task {
+export function generateRandomTask(input?: Partial<Task>): Task {
   return {
     id: generateId("task"),
     code: `TASK-${customAlphabet("0123456789", 4)()}`,
@@ -28,6 +32,7 @@ export function generateRandomTask(): Task {
     archived: faker.datatype.boolean({ probability: 0.2 }),
     createdAt: new Date(),
     updatedAt: new Date(),
+    ...input,
   };
 }
 
@@ -50,4 +55,15 @@ export function getPriorityIcon(priority: Task["priority"]) {
   };
 
   return priorityIcons[priority] || CircleIcon;
+}
+
+export function getLabelIcon(label: Task["label"]) {
+  const labelIcons = {
+    bug: Bug,
+    feature: Circle,
+    enhancement: CircleCheck,
+    documentation: Book,
+  };
+
+  return labelIcons[label] || CircleIcon;
 }

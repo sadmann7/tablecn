@@ -6,7 +6,12 @@ import { ArrowUp, CheckCircle2, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { tasksCollection } from "@/app/data-grid-live/lib/collections";
-import { getPriorityIcon, getStatusIcon } from "@/app/lib/utils";
+import {
+  generateRandomTask,
+  getLabelIcon,
+  getPriorityIcon,
+  getStatusIcon,
+} from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
@@ -44,6 +49,12 @@ const priorityOptions = tasks.priority.enumValues.map((priority) => ({
   label: priority.charAt(0).toUpperCase() + priority.slice(1),
   value: priority,
   icon: getPriorityIcon(priority),
+}));
+
+const labelOptions = tasks.label.enumValues.map((label) => ({
+  label: label.charAt(0).toUpperCase() + label.slice(1),
+  value: label,
+  icon: getLabelIcon(label),
 }));
 
 export function DataGridLiveDemo() {
@@ -124,12 +135,7 @@ export function DataGridLiveDemo() {
           label: "Status",
           cell: {
             variant: "select",
-            options: [
-              { label: "Todo", value: "todo" },
-              { label: "In Progress", value: "in-progress" },
-              { label: "Done", value: "done" },
-              { label: "Canceled", value: "canceled" },
-            ],
+            options: statusOptions,
           },
         },
       },
@@ -143,11 +149,7 @@ export function DataGridLiveDemo() {
           label: "Priority",
           cell: {
             variant: "select",
-            options: [
-              { label: "Low", value: "low" },
-              { label: "Medium", value: "medium" },
-              { label: "High", value: "high" },
-            ],
+            options: priorityOptions,
           },
         },
       },
@@ -161,12 +163,7 @@ export function DataGridLiveDemo() {
           label: "Label",
           cell: {
             variant: "select",
-            options: [
-              { label: "Bug", value: "bug" },
-              { label: "Feature", value: "feature" },
-              { label: "Enhancement", value: "enhancement" },
-              { label: "Documentation", value: "documentation" },
-            ],
+            options: labelOptions,
           },
         },
       },
@@ -257,21 +254,11 @@ export function DataGridLiveDemo() {
 
   const onRowAdd: NonNullable<UseDataGridProps<TaskSchema>["onRowAdd"]> =
     React.useCallback(() => {
-      const id = crypto.randomUUID();
-      const code = `TASK-${String(tasks.length + 1).padStart(4, "0")}`;
-
-      tasksCollection.insert({
-        id,
-        code,
-        title: null,
-        status: "todo",
-        label: "feature",
-        priority: "medium",
-        estimatedHours: 0,
-        archived: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+      tasksCollection.insert(
+        generateRandomTask({
+          title: "",
+        }),
+      );
 
       return {
         rowIndex: tasks.length,
@@ -306,9 +293,8 @@ export function DataGridLiveDemo() {
   const onRowsDelete: NonNullable<
     UseDataGridProps<TaskSchema>["onRowsDelete"]
   > = React.useCallback((rowsToDelete) => {
-    for (const task of rowsToDelete) {
-      tasksCollection.delete(task.id);
-    }
+    // Use batch delete - single transaction for all deletions
+    tasksCollection.delete(rowsToDelete.map((task) => task.id));
   }, []);
 
   const { table, ...dataGridProps } = useDataGrid({
@@ -339,11 +325,15 @@ export function DataGridLiveDemo() {
         return;
       }
 
-      for (const row of selectedRows) {
-        tasksCollection.update(row.original.id, (draft) => {
-          draft[field] = value as never;
-        });
-      }
+      // Use batch update - single transaction for all updates
+      tasksCollection.update(
+        selectedRows.map((row) => row.original.id),
+        (drafts) => {
+          for (const draft of drafts) {
+            draft[field] = value as never;
+          }
+        },
+      );
 
       toast.success(
         `${selectedRows.length} task${selectedRows.length === 1 ? "" : "s"} updated`,
@@ -359,9 +349,8 @@ export function DataGridLiveDemo() {
       return;
     }
 
-    for (const row of selectedRows) {
-      tasksCollection.delete(row.original.id);
-    }
+    // Use batch delete - single transaction for all deletions
+    tasksCollection.delete(selectedRows.map((row) => row.original.id));
 
     toast.success(
       `${selectedRows.length} task${selectedRows.length === 1 ? "" : "s"} deleted`,
