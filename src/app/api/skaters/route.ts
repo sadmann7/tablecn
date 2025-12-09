@@ -8,6 +8,7 @@ import {
 } from "@/app/data-grid-live/lib/validation";
 import { db } from "@/db";
 import { type Skater, skaters } from "@/db/schema";
+import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export async function GET() {
   try {
@@ -26,6 +27,11 @@ export async function GET() {
 // Single: { name, email, ... }
 // Bulk: { skaters: [{ name, email, ... }, ...] }
 export async function POST(request: Request) {
+  const rateLimit = await checkRateLimit();
+  if (!rateLimit.success) {
+    return rateLimitResponse(rateLimit);
+  }
+
   try {
     const body: unknown = await request.json();
 
@@ -74,6 +80,11 @@ export async function POST(request: Request) {
 // Bulk update endpoint
 // Body: { updates: [{ id, changes: { status?, style?, ... } }, ...] }
 export async function PATCH(request: Request) {
+  const rateLimit = await checkRateLimit();
+  if (!rateLimit.success) {
+    return rateLimitResponse(rateLimit);
+  }
+
   try {
     const body: unknown = await request.json();
 
@@ -153,6 +164,11 @@ export async function PATCH(request: Request) {
 // Bulk delete endpoint
 // Body: { ids: string[] }
 export async function DELETE(request: Request) {
+  const rateLimit = await checkRateLimit();
+  if (!rateLimit.success) {
+    return rateLimitResponse(rateLimit);
+  }
+
   try {
     const body: unknown = await request.json();
 

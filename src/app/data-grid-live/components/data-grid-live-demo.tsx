@@ -85,7 +85,9 @@ export function DataGridLiveDemo() {
   const { height } = useWindowSize();
 
   const { data = [], isLoading } = useLiveQuery((q) =>
-    q.from({ skater: skatersCollection }),
+    q
+      .from({ skater: skatersCollection })
+      .orderBy((t) => t.skater.startedSkating ?? t.skater.createdAt),
   );
 
   const { startUpload } = useUploadThing("taskAttachment");
@@ -224,7 +226,7 @@ export function DataGridLiveDemo() {
         id: "yearsSkating",
         accessorKey: "yearsSkating",
         header: "Years Skating",
-        minSize: 140,
+        minSize: 160,
         filterFn,
         meta: {
           label: "Years Skating",
@@ -240,7 +242,7 @@ export function DataGridLiveDemo() {
         id: "startedSkating",
         accessorKey: "startedSkating",
         header: "Started",
-        minSize: 150,
+        minSize: 170,
         filterFn,
         meta: {
           label: "Started Skating",
@@ -253,7 +255,7 @@ export function DataGridLiveDemo() {
         id: "isPro",
         accessorKey: "isPro",
         header: "Pro",
-        minSize: 100,
+        minSize: 90,
         filterFn,
         meta: {
           label: "Pro",
@@ -272,7 +274,7 @@ export function DataGridLiveDemo() {
           label: "Media",
           cell: {
             variant: "file",
-            maxFileSize: 50 * 1024 * 1024, // 50MB for videos
+            maxFileSize: 10 * 1024 * 1024,
             maxFiles: 5,
             accept: "image/*,video/*,.pdf",
             multiple: true,
@@ -424,6 +426,7 @@ export function DataGridLiveDemo() {
       columnPinning: {
         left: ["select"],
       },
+      sorting: [{ id: "startedSkating", desc: true }],
     },
     enableSearch: true,
     enablePaste: true,
