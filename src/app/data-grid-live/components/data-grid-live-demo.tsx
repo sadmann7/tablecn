@@ -385,12 +385,16 @@ export function DataGridLiveDemo() {
 
   const onFilesDelete: NonNullable<
     UseDataGridProps<TaskSchema>["onFilesDelete"]
-  > = React.useCallback(async ({ fileIds, rowIndex, columnId }) => {
-    // In a real app, you would delete files from your server/storage
-    console.log(
-      `Deleting ${fileIds.length} file(s) from row ${rowIndex}, column ${columnId}:`,
-      fileIds,
-    );
+  > = React.useCallback(async ({ fileIds }) => {
+    try {
+      await fetch("/api/uploadthing/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileKeys: fileIds }),
+      });
+    } catch {
+      // UploadThing not configured or delete failed, ignore
+    }
   }, []);
 
   const { table, ...dataGridProps } = useDataGrid({
