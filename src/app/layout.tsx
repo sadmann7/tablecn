@@ -1,6 +1,9 @@
+import { Suspense } from "react";
+
 import { SiteHeader } from "@/components/layouts/site-header";
 import { ThemeProvider } from "@/components/providers";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
+import { UploadThingSSR } from "@/components/uploadthing-ssr";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +76,9 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
           fontMono.variable,
         )}
       >
+        <Suspense>
+          <UploadThingSSR />
+        </Suspense>
         <Script
           defer
           data-site-id={siteConfig.url}

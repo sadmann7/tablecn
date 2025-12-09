@@ -1,11 +1,11 @@
 "use client";
 
-import { DataGridRenderDemo } from "@/components/data-grid-render-demo";
 import { Fps } from "@/components/ui/fps";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMounted } from "@/hooks/use-mounted";
+import { DataGridRenderDemo } from "./components/data-grid-render-demo";
 
-export default function RenderPage() {
+export default function DataGridRenderPage() {
   const mounted = useMounted();
 
   if (!mounted)

@@ -13,11 +13,17 @@ import { cn } from "@/lib/utils";
 import type { Direction } from "@/types/data-grid";
 
 interface DataGridProps<TData>
-  extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
+  extends Omit<
+      ReturnType<typeof useDataGrid<TData>>,
+      "dir" | "virtualTotalSize" | "virtualItems" | "measureElement"
+    >,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
   dir?: Direction;
   height?: number;
   stretchColumns?: boolean;
+  virtualTotalSize: number;
+  virtualItems: ReturnType<typeof useDataGrid<TData>>["virtualItems"];
+  measureElement: ReturnType<typeof useDataGrid<TData>>["measureElement"];
 }
 
 export function DataGrid<TData>({
@@ -28,7 +34,9 @@ export function DataGrid<TData>({
   dir = "ltr",
   table,
   tableMeta,
-  rowVirtualizer,
+  virtualTotalSize,
+  virtualItems,
+  measureElement,
   columns,
   searchState,
   columnSizeVars,
@@ -166,11 +174,11 @@ export function DataGrid<TData>({
           data-slot="grid-body"
           className="relative grid"
           style={{
-            height: `${rowVirtualizer.getTotalSize()}px`,
+            height: `${virtualTotalSize}px`,
             contain: "strict",
           }}
         >
-          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+          {virtualItems.map((virtualItem) => {
             const row = rows[virtualItem.index];
             if (!row) return null;
 
@@ -184,7 +192,7 @@ export function DataGrid<TData>({
                 tableMeta={tableMeta}
                 rowMapRef={rowMapRef}
                 virtualItem={virtualItem}
-                rowVirtualizer={rowVirtualizer}
+                measureElement={measureElement}
                 rowHeight={rowHeight}
                 focusedCell={focusedCell}
                 editingCell={editingCell}

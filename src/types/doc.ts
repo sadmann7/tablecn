@@ -1,5 +1,4 @@
 import type { Column, Table, TableOptions } from "@tanstack/react-table";
-import type { motion } from "motion/react";
 import type * as React from "react";
 import type { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import type { EmptyProps } from "@/types";
@@ -86,21 +85,6 @@ export interface DataTableAdvancedToolbarProps<TData>
   extends EmptyProps<"div"> {
   /** The table instance. */
   table: Table<TData>;
-}
-
-export interface DataTableActionBarProps<TData>
-  extends EmptyProps<typeof motion.div> {
-  /** The table instance. */
-  table: Table<TData>;
-
-  /** Whether the action bar is visible. */
-  visible?: boolean;
-
-  /**
-   * The container to mount the portal into.
-   * @default document.body
-   */
-  container?: Element | DocumentFragment | null;
 }
 
 export interface DataTableColumnHeaderProps<TData, TValue>

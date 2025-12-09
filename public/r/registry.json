@@ -105,21 +105,6 @@
       ]
     },
     {
-      "name": "data-table-action-bar",
-      "type": "registry:component",
-      "title": "Data Table Action Bar",
-      "description": "A action bar component for the data table",
-      "registryDependencies": ["button", "tooltip"],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "motion"],
-      "files": [
-        {
-          "path": "src/components/data-table/data-table-action-bar.tsx",
-          "type": "registry:component",
-          "target": "src/components/data-table/data-table-action-bar.tsx"
-        }
-      ]
-    },
-    {
       "name": "data-table-sort-list",
       "type": "registry:component",
       "title": "Data Table Sort List",
