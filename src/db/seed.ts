@@ -1,12 +1,45 @@
 import { seedSkaters, seedTasks } from "@/app/lib/seeds";
 
+const SEED_FUNCTIONS = {
+  tasks: () => seedTasks({ count: 100 }),
+  skaters: () => seedSkaters({ count: 100 }),
+} as const;
+
+type TableName = keyof typeof SEED_FUNCTIONS;
+const ALL_TABLES = Object.keys(SEED_FUNCTIONS) as TableName[];
+
+function parseArgs(): TableName[] {
+  const args = process.argv.slice(2);
+
+  if (args.length === 0) return ALL_TABLES;
+
+  // Support both space-separated and comma-separated
+  const tables = args
+    .flatMap((arg) => arg.split(","))
+    .map((t) => t.trim())
+    .filter(Boolean) as TableName[];
+
+  const invalid = tables.filter((t) => !(t in SEED_FUNCTIONS));
+
+  if (invalid.length > 0) {
+    console.error(`❌ Unknown table(s): ${invalid.join(", ")}`);
+    console.log(`Available: ${ALL_TABLES.join(", ")}`);
+    process.exit(1);
+  }
+
+  return tables;
+}
+
 async function runSeed() {
-  console.log("⏳ Running seed...");
+  const tables = parseArgs();
+
+  console.log(`⏳ Seeding: ${tables.join(", ")}...`);
 
   const start = Date.now();
 
-  await seedTasks({ count: 100 });
-  await seedSkaters({ count: 100 });
+  for (const table of tables) {
+    await SEED_FUNCTIONS[table]();
+  }
 
   const end = Date.now();
 
