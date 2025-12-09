@@ -10,6 +10,7 @@ import {
 import { pgTable } from "@/db/utils";
 
 import { generateId } from "@/lib/id";
+import type { FileCellData } from "@/types/data-grid";
 
 // For data-table
 export const tasks = pgTable("tasks", {
@@ -48,49 +49,40 @@ export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 
 // For data-grid-live
-export const employees = pgTable("employees", {
+export const skaters = pgTable("skaters", {
   id: varchar("id", { length: 30 })
     .$defaultFn(() => generateId())
     .primaryKey(),
   name: varchar("name", { length: 128 }),
   email: varchar("email", { length: 256 }),
-  department: varchar("department", {
+  stance: varchar("stance", {
     length: 30,
-    enum: ["engineering", "marketing", "sales", "hr", "finance"],
+    enum: ["regular", "goofy"],
   })
     .notNull()
-    .default("engineering"),
-  role: varchar("role", {
+    .default("regular"),
+  style: varchar("style", {
     length: 30,
-    enum: ["admin", "manager", "developer", "designer", "analyst"],
+    enum: ["street", "vert", "park", "freestyle", "all-around"],
   })
     .notNull()
-    .default("developer"),
+    .default("street"),
   status: varchar("status", {
     length: 30,
-    enum: ["active", "inactive", "on-leave", "remote"],
+    enum: ["amateur", "sponsored", "pro", "legend"],
   })
     .notNull()
-    .default("active"),
-  salary: integer("salary").notNull().default(0),
-  startDate: timestamp("start_date"),
-  isVerified: boolean("is_verified").notNull().default(false),
-  skills: jsonb("skills").$type<string[]>(),
-  documents:
-    jsonb("documents").$type<
-      Array<{
-        id: string;
-        name: string;
-        size: number;
-        type: string;
-        url?: string;
-      }>
-    >(),
+    .default("amateur"),
+  yearsSkating: integer("years_skating").notNull().default(0),
+  startedSkating: timestamp("started_skating"),
+  isPro: boolean("is_pro").notNull().default(false),
+  tricks: jsonb("tricks").$type<string[]>(),
+  media: jsonb("media").$type<Array<FileCellData>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .default(sql`current_timestamp`)
     .$onUpdate(() => new Date()),
 });
 
-export type Employee = typeof employees.$inferSelect;
-export type NewEmployee = typeof employees.$inferInsert;
+export type Skater = typeof skaters.$inferSelect;
+export type NewSkater = typeof skaters.$inferInsert;

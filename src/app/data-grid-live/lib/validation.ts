@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { employees } from "@/db/schema";
+import { skaters } from "@/db/schema";
 
-const documentSchema = z.object({
+const mediaSchema = z.object({
   id: z.string(),
   name: z.string(),
   size: z.number(),
@@ -9,65 +9,65 @@ const documentSchema = z.object({
   url: z.string().optional(),
 });
 
-export const employeeSchema = z.object({
+export const skaterSchema = z.object({
   id: z.string(),
   name: z.string().nullable(),
   email: z.string().nullable(),
-  department: z.enum(employees.department.enumValues),
-  role: z.enum(employees.role.enumValues),
-  status: z.enum(employees.status.enumValues),
-  salary: z.number(),
-  startDate: z.coerce.date().nullable(),
-  isVerified: z.boolean(),
-  skills: z.array(z.string()).nullable(),
-  documents: z.array(documentSchema).nullable(),
+  stance: z.enum(skaters.stance.enumValues),
+  style: z.enum(skaters.style.enumValues),
+  status: z.enum(skaters.status.enumValues),
+  yearsSkating: z.number(),
+  startedSkating: z.coerce.date().nullable(),
+  isPro: z.boolean(),
+  tricks: z.array(z.string()).nullable(),
+  media: z.array(mediaSchema).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date().nullable(),
 });
 
-export const insertEmployeeSchema = z.object({
+export const insertSkaterSchema = z.object({
   name: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
-  department: z.enum(employees.department.enumValues).optional(),
-  role: z.enum(employees.role.enumValues).optional(),
-  status: z.enum(employees.status.enumValues).optional(),
-  salary: z.number().optional(),
-  startDate: z.coerce.date().nullable().optional(),
-  isVerified: z.boolean().optional(),
-  skills: z.array(z.string()).nullable().optional(),
-  documents: z.array(documentSchema).nullable().optional(),
+  stance: z.enum(skaters.stance.enumValues).optional(),
+  style: z.enum(skaters.style.enumValues).optional(),
+  status: z.enum(skaters.status.enumValues).optional(),
+  yearsSkating: z.number().optional(),
+  startedSkating: z.coerce.date().nullable().optional(),
+  isPro: z.boolean().optional(),
+  tricks: z.array(z.string()).nullable().optional(),
+  media: z.array(mediaSchema).nullable().optional(),
 });
 
-export const insertEmployeesSchema = z.object({
-  employees: z.array(insertEmployeeSchema).min(1),
+export const insertSkatersSchema = z.object({
+  skaters: z.array(insertSkaterSchema).min(1),
 });
 
-export const updateEmployeeSchema = z.object({
+export const updateSkaterSchema = z.object({
   name: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
-  department: z.enum(employees.department.enumValues).optional(),
-  role: z.enum(employees.role.enumValues).optional(),
-  status: z.enum(employees.status.enumValues).optional(),
-  salary: z.number().optional(),
-  startDate: z.coerce.date().nullable().optional(),
-  isVerified: z.boolean().optional(),
-  skills: z.array(z.string()).nullable().optional(),
-  documents: z.array(documentSchema).nullable().optional(),
+  stance: z.enum(skaters.stance.enumValues).optional(),
+  style: z.enum(skaters.style.enumValues).optional(),
+  status: z.enum(skaters.status.enumValues).optional(),
+  yearsSkating: z.number().optional(),
+  startedSkating: z.coerce.date().nullable().optional(),
+  isPro: z.boolean().optional(),
+  tricks: z.array(z.string()).nullable().optional(),
+  media: z.array(mediaSchema).nullable().optional(),
 });
 
-export const updateEmployeesSchema = z.object({
+export const updateSkatersSchema = z.object({
   updates: z
     .array(
       z.object({
         id: z.string(),
-        changes: updateEmployeeSchema,
-      }),
+        changes: updateSkaterSchema,
+      })
     )
     .min(1),
 });
 
-export const deleteEmployeesSchema = z.object({
+export const deleteSkatersSchema = z.object({
   ids: z.array(z.string()).min(1),
 });
 
-export type EmployeeSchema = z.infer<typeof employeeSchema>;
+export type SkaterSchema = z.infer<typeof skaterSchema>;

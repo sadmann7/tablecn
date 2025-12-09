@@ -14,7 +14,7 @@ import {
   Timer,
 } from "lucide-react";
 import { customAlphabet } from "nanoid";
-import { type Employee, employees, type Task, tasks } from "@/db/schema";
+import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 
 import { generateId } from "@/lib/id";
 
@@ -69,112 +69,115 @@ export function getLabelIcon(label: Task["label"]) {
   return labelIcons[label] || CircleIcon;
 }
 
-// Employee utilities for data-grid-live demo
-const availableSkills = [
-  "JavaScript",
-  "TypeScript",
-  "React",
-  "Node.js",
-  "Python",
-  "SQL",
-  "AWS",
-  "Docker",
-  "Git",
-  "Agile",
+// Skater utilities for data-grid-live demo
+const availableTricks = [
+  "Kickflip",
+  "Heelflip",
+  "Tre Flip",
+  "Hardflip",
+  "Varial Flip",
+  "360 Flip",
+  "Ollie",
+  "Nollie",
+  "Pop Shove-it",
+  "FS Boardslide",
+  "BS Boardslide",
+  "50-50 Grind",
+  "5-0 Grind",
+  "Crooked Grind",
+  "Smith Grind",
 ] as const;
 
-const sampleDocuments = [
-  { name: "resume.pdf", type: "application/pdf", sizeRange: [50, 500] },
-  { name: "contract.pdf", type: "application/pdf", sizeRange: [100, 300] },
-  { name: "id_document.jpg", type: "image/jpeg", sizeRange: [200, 800] },
-  { name: "profile_photo.png", type: "image/png", sizeRange: [300, 1000] },
+const sampleMedia = [
+  { name: "trick_clip.mp4", type: "video/mp4", sizeRange: [5000, 50000] },
+  { name: "skate_edit.mp4", type: "video/mp4", sizeRange: [10000, 100000] },
+  { name: "photo_1.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
+  { name: "photo_2.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
   {
-    name: "certification.pdf",
+    name: "sponsor_contract.pdf",
     type: "application/pdf",
-    sizeRange: [50, 200],
+    sizeRange: [100, 500],
   },
 ] as const;
 
-export function generateRandomEmployee(input?: Partial<Employee>): Employee {
+export function generateRandomSkater(input?: Partial<Skater>): Skater {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
 
-  // Generate random skills (0-5 skills)
-  const skillCount = faker.number.int({ min: 0, max: 5 });
-  const skills =
-    skillCount > 0
-      ? faker.helpers.arrayElements([...availableSkills], skillCount)
+  // Generate random tricks (0-8 tricks)
+  const trickCount = faker.number.int({ min: 0, max: 8 });
+  const tricks =
+    trickCount > 0
+      ? faker.helpers.arrayElements([...availableTricks], trickCount)
       : null;
 
-  // Generate random documents (0-2 files, 30% chance of having documents)
-  const hasDocuments = faker.datatype.boolean({ probability: 0.3 });
-  const documents = hasDocuments
+  // Generate random media (0-2 files, 30% chance of having media)
+  const hasMedia = faker.datatype.boolean({ probability: 0.3 });
+  const media = hasMedia
     ? faker.helpers
-        .arrayElements(sampleDocuments, { min: 1, max: 2 })
-        .map((doc, index) => ({
-          id: `doc-${generateId("doc")}-${index}`,
-          name: doc.name,
+        .arrayElements(sampleMedia, { min: 1, max: 2 })
+        .map((file, index) => ({
+          id: `media-${generateId("media")}-${index}`,
+          name: file.name,
           size:
             faker.number.int({
-              min: doc.sizeRange[0],
-              max: doc.sizeRange[1],
+              min: file.sizeRange[0],
+              max: file.sizeRange[1],
             }) * 1024,
-          type: doc.type,
-          url: `https://example.com/documents/${doc.name}`,
+          type: file.type,
+          url: `https://example.com/media/${file.name}`,
         }))
     : null;
 
   return {
-    id: generateId("emp"),
+    id: generateId("skater"),
     name: `${firstName} ${lastName}`,
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-    department:
-      faker.helpers.shuffle(employees.department.enumValues)[0] ??
-      "engineering",
-    role: faker.helpers.shuffle(employees.role.enumValues)[0] ?? "developer",
-    status: faker.helpers.shuffle(employees.status.enumValues)[0] ?? "active",
-    salary: faker.number.int({ min: 40000, max: 200000 }),
-    startDate: faker.date.between({ from: "2018-01-01", to: "2024-01-01" }),
-    isVerified: faker.datatype.boolean({ probability: 0.7 }),
-    skills,
-    documents,
+    stance: faker.helpers.shuffle(skaters.stance.enumValues)[0] ?? "regular",
+    style: faker.helpers.shuffle(skaters.style.enumValues)[0] ?? "street",
+    status: faker.helpers.shuffle(skaters.status.enumValues)[0] ?? "amateur",
+    yearsSkating: faker.number.int({ min: 1, max: 25 }),
+    startedSkating: faker.date.between({
+      from: "2000-01-01",
+      to: "2023-01-01",
+    }),
+    isPro: faker.datatype.boolean({ probability: 0.3 }),
+    tricks,
+    media,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...input,
   };
 }
 
-export function getEmployeeStatusIcon(status: Employee["status"]) {
+export function getSkaterStatusIcon(status: Skater["status"]) {
   const statusIcons = {
-    active: CheckCircle2,
-    inactive: CircleX,
-    "on-leave": Timer,
-    remote: Circle,
+    amateur: Circle,
+    sponsored: Timer,
+    pro: CheckCircle2,
+    legend: CircleCheck,
   };
 
   return statusIcons[status] || CircleIcon;
 }
 
-export function getDepartmentIcon(department: Employee["department"]) {
-  const departmentIcons = {
-    engineering: CircleCheck,
-    marketing: Circle,
-    sales: ArrowUpIcon,
-    hr: CircleHelp,
-    finance: Book,
+export function getStanceIcon(stance: Skater["stance"]) {
+  const stanceIcons = {
+    regular: ArrowRightIcon,
+    goofy: ArrowDownIcon,
   };
 
-  return departmentIcons[department] || CircleIcon;
+  return stanceIcons[stance] || CircleIcon;
 }
 
-export function getRoleIcon(role: Employee["role"]) {
-  const roleIcons = {
-    admin: CheckCircle2,
-    manager: ArrowUpIcon,
-    developer: CircleCheck,
-    designer: Circle,
-    analyst: Book,
+export function getStyleIcon(style: Skater["style"]) {
+  const styleIcons = {
+    street: CircleCheck,
+    vert: ArrowUpIcon,
+    park: Circle,
+    freestyle: CircleHelp,
+    "all-around": CheckCircle2,
   };
 
-  return roleIcons[role] || CircleIcon;
+  return styleIcons[style] || CircleIcon;
 }

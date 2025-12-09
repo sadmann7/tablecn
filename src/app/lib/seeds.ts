@@ -1,7 +1,7 @@
 import { db } from "@/db/index";
-import { type Employee, employees, type Task, tasks } from "@/db/schema";
+import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 
-import { generateRandomEmployee, generateRandomTask } from "./utils";
+import { generateRandomSkater, generateRandomTask } from "./utils";
 
 export async function seedTasks(input: { count: number }) {
   const count = input.count ?? 100;
@@ -23,21 +23,21 @@ export async function seedTasks(input: { count: number }) {
   }
 }
 
-export async function seedEmployees(input: { count: number }) {
+export async function seedSkaters(input: { count: number }) {
   const count = input.count ?? 100;
 
   try {
-    const allEmployees: Employee[] = [];
+    const allSkaters: Skater[] = [];
 
     for (let i = 0; i < count; i++) {
-      allEmployees.push(generateRandomEmployee());
+      allSkaters.push(generateRandomSkater());
     }
 
-    await db.delete(employees);
+    await db.delete(skaters);
 
-    console.log("👥 Inserting employees", allEmployees.length);
+    console.log("🛹 Inserting skaters", allSkaters.length);
 
-    await db.insert(employees).values(allEmployees).onConflictDoNothing();
+    await db.insert(skaters).values(allSkaters).onConflictDoNothing();
   } catch (err) {
     console.error(err);
   }

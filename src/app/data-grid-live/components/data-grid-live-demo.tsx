@@ -2,15 +2,15 @@
 
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Building2, CheckCircle2, Trash2, X } from "lucide-react";
+import { CheckCircle2, Sparkles, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { employeesCollection } from "@/app/data-grid-live/lib/collections";
+import { skatersCollection } from "@/app/data-grid-live/lib/collections";
 import {
-  generateRandomEmployee,
-  getDepartmentIcon,
-  getEmployeeStatusIcon,
-  getRoleIcon,
+  generateRandomSkater,
+  getSkaterStatusIcon,
+  getStanceIcon,
+  getStyleIcon,
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
@@ -33,61 +33,66 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { employees } from "@/db/schema";
+import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { useUploadThing } from "@/lib/uploadthing";
-import type { EmployeeSchema } from "../lib/validation";
+import type { SkaterSchema } from "../lib/validation";
 
-const departmentOptions = employees.department.enumValues.map((dept) => ({
-  label: dept.charAt(0).toUpperCase() + dept.slice(1),
-  value: dept,
-  icon: getDepartmentIcon(dept),
+const stanceOptions = skaters.stance.enumValues.map((stance) => ({
+  label: stance.charAt(0).toUpperCase() + stance.slice(1),
+  value: stance,
+  icon: getStanceIcon(stance),
 }));
 
-const roleOptions = employees.role.enumValues.map((role) => ({
-  label: role.charAt(0).toUpperCase() + role.slice(1),
-  value: role,
-  icon: getRoleIcon(role),
+const styleOptions = skaters.style.enumValues.map((style) => ({
+  label: style.charAt(0).toUpperCase() + style.slice(1).replace("-", " "),
+  value: style,
+  icon: getStyleIcon(style),
 }));
 
-const statusOptions = employees.status.enumValues.map((status) => ({
-  label: status.charAt(0).toUpperCase() + status.slice(1).replace("-", " "),
+const statusOptions = skaters.status.enumValues.map((status) => ({
+  label: status.charAt(0).toUpperCase() + status.slice(1),
   value: status,
-  icon: getEmployeeStatusIcon(status),
+  icon: getSkaterStatusIcon(status),
 }));
 
-const skillOptions = [
-  "JavaScript",
-  "TypeScript",
-  "React",
-  "Node.js",
-  "Python",
-  "SQL",
-  "AWS",
-  "Docker",
-  "Git",
-  "Agile",
+const trickOptions = [
+  "Kickflip",
+  "Heelflip",
+  "Tre Flip",
+  "Hardflip",
+  "Varial Flip",
+  "360 Flip",
+  "Ollie",
+  "Nollie",
+  "Pop Shove-it",
+  "FS Boardslide",
+  "BS Boardslide",
+  "50-50 Grind",
+  "5-0 Grind",
+  "Crooked Grind",
+  "Smith Grind",
 ] as const;
 
-const skillSelectOptions = skillOptions.map((skill) => ({
-  label: skill,
-  value: skill,
+const trickSelectOptions = trickOptions.map((trick) => ({
+  label: trick,
+  value: trick,
 }));
 
 export function DataGridLiveDemo() {
   const { height } = useWindowSize();
 
   const { data = [], isLoading } = useLiveQuery((q) =>
-    q.from({ employee: employeesCollection }),
+    q.from({ skater: skatersCollection }),
   );
 
   const { startUpload } = useUploadThing("taskAttachment");
 
-  const filterFn = React.useMemo(() => getFilterFn<EmployeeSchema>(), []);
+  const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
-  const columns = React.useMemo<ColumnDef<EmployeeSchema>[]>(
+  const columns = React.useMemo<ColumnDef<SkaterSchema>[]>(
     () => [
       {
         id: "select",
@@ -160,30 +165,30 @@ export function DataGridLiveDemo() {
         },
       },
       {
-        id: "department",
-        accessorKey: "department",
-        header: "Department",
-        minSize: 180,
+        id: "stance",
+        accessorKey: "stance",
+        header: "Stance",
+        minSize: 140,
         filterFn,
         meta: {
-          label: "Department",
+          label: "Stance",
           cell: {
             variant: "select",
-            options: departmentOptions,
+            options: stanceOptions,
           },
         },
       },
       {
-        id: "role",
-        accessorKey: "role",
-        header: "Role",
+        id: "style",
+        accessorKey: "style",
+        header: "Style",
         minSize: 160,
         filterFn,
         meta: {
-          label: "Role",
+          label: "Style",
           cell: {
             variant: "select",
-            options: roleOptions,
+            options: styleOptions,
           },
         },
       },
@@ -202,74 +207,74 @@ export function DataGridLiveDemo() {
         },
       },
       {
-        id: "skills",
-        accessorKey: "skills",
-        header: "Skills",
+        id: "tricks",
+        accessorKey: "tricks",
+        header: "Tricks",
         minSize: 240,
         filterFn,
         meta: {
-          label: "Skills",
+          label: "Tricks",
           cell: {
             variant: "multi-select",
-            options: skillSelectOptions,
+            options: trickSelectOptions,
           },
         },
       },
       {
-        id: "salary",
-        accessorKey: "salary",
-        header: "Salary",
+        id: "yearsSkating",
+        accessorKey: "yearsSkating",
+        header: "Years Skating",
         minSize: 140,
         filterFn,
         meta: {
-          label: "Salary",
+          label: "Years Skating",
           cell: {
             variant: "number",
             min: 0,
-            step: 1000,
+            max: 50,
+            step: 1,
           },
         },
       },
       {
-        id: "startDate",
-        accessorKey: "startDate",
-        header: "Start Date",
+        id: "startedSkating",
+        accessorKey: "startedSkating",
+        header: "Started",
         minSize: 150,
         filterFn,
         meta: {
-          label: "Start Date",
+          label: "Started Skating",
           cell: {
             variant: "date",
           },
         },
       },
       {
-        id: "isVerified",
-        accessorKey: "isVerified",
-        header: "Verified",
-        minSize: 120,
+        id: "isPro",
+        accessorKey: "isPro",
+        header: "Pro",
+        minSize: 100,
         filterFn,
         meta: {
-          label: "Verified",
+          label: "Pro",
           cell: {
             variant: "checkbox",
           },
         },
       },
       {
-        id: "documents",
-        accessorKey: "documents",
-        header: "Documents",
+        id: "media",
+        accessorKey: "media",
+        header: "Media",
         minSize: 240,
         filterFn,
         meta: {
-          label: "Documents",
+          label: "Media",
           cell: {
             variant: "file",
-            maxFileSize: 10 * 1024 * 1024, // 10MB
+            maxFileSize: 50 * 1024 * 1024, // 50MB for videos
             maxFiles: 5,
-            accept:
-              "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
+            accept: "image/*,video/*,.pdf",
             multiple: true,
           },
         },
@@ -279,33 +284,33 @@ export function DataGridLiveDemo() {
   );
 
   const onDataChange: NonNullable<
-    UseDataGridProps<EmployeeSchema>["onDataChange"]
+    UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
     (newData) => {
-      // Diff and update changed employees via TanStack DB for optimistic updates
-      for (const employee of newData) {
-        const existingEmployee = data.find((e) => e.id === employee.id);
-        if (!existingEmployee) continue;
+      // Diff and update changed skaters via TanStack DB for optimistic updates
+      for (const skater of newData) {
+        const existingSkater = data.find((s) => s.id === skater.id);
+        if (!existingSkater) continue;
 
         // Check if any field changed using JSON comparison for arrays/objects
         const hasChanges = (
-          Object.keys(employee) as Array<keyof EmployeeSchema>
+          Object.keys(skater) as Array<keyof SkaterSchema>
         ).some((key) => {
           const existingValue =
-            existingEmployee[key] instanceof Date
-              ? (existingEmployee[key] as Date).toISOString()
-              : existingEmployee[key];
+            existingSkater[key] instanceof Date
+              ? (existingSkater[key] as Date).toISOString()
+              : existingSkater[key];
           const newValue =
-            employee[key] instanceof Date
-              ? (employee[key] as Date).toISOString()
-              : employee[key];
+            skater[key] instanceof Date
+              ? (skater[key] as Date).toISOString()
+              : skater[key];
 
           return JSON.stringify(existingValue) !== JSON.stringify(newValue);
         });
 
         if (hasChanges) {
-          employeesCollection.update(employee.id, (draft) => {
-            Object.assign(draft, employee);
+          skatersCollection.update(skater.id, (draft) => {
+            Object.assign(draft, skater);
           });
         }
       }
@@ -313,10 +318,10 @@ export function DataGridLiveDemo() {
     [data],
   );
 
-  const onRowAdd: NonNullable<UseDataGridProps<EmployeeSchema>["onRowAdd"]> =
+  const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
-      employeesCollection.insert(
-        generateRandomEmployee({
+      skatersCollection.insert(
+        generateRandomSkater({
           name: "",
         }),
       );
@@ -327,21 +332,21 @@ export function DataGridLiveDemo() {
       };
     }, [data.length]);
 
-  const onRowsAdd: NonNullable<UseDataGridProps<EmployeeSchema>["onRowsAdd"]> =
+  const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
     React.useCallback((count: number) => {
       for (let i = 0; i < count; i++) {
-        employeesCollection.insert({
+        skatersCollection.insert({
           id: crypto.randomUUID(),
           name: null,
           email: null,
-          department: "engineering",
-          role: "developer",
-          status: "active",
-          salary: 0,
-          startDate: null,
-          isVerified: false,
-          skills: null,
-          documents: null,
+          stance: "regular",
+          style: "street",
+          status: "amateur",
+          yearsSkating: 0,
+          startedSkating: null,
+          isPro: false,
+          tricks: null,
+          media: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
@@ -349,14 +354,14 @@ export function DataGridLiveDemo() {
     }, []);
 
   const onRowsDelete: NonNullable<
-    UseDataGridProps<EmployeeSchema>["onRowsDelete"]
+    UseDataGridProps<SkaterSchema>["onRowsDelete"]
   > = React.useCallback((rowsToDelete) => {
     // Use batch delete - single transaction for all deletions
-    employeesCollection.delete(rowsToDelete.map((emp) => emp.id));
+    skatersCollection.delete(rowsToDelete.map((skater) => skater.id));
   }, []);
 
   const onFilesUpload: NonNullable<
-    UseDataGridProps<EmployeeSchema>["onFilesUpload"]
+    UseDataGridProps<SkaterSchema>["onFilesUpload"]
   > = React.useCallback(
     async ({ files }) => {
       // Try to upload via UploadThing, fall back to simulation if not configured
@@ -391,7 +396,7 @@ export function DataGridLiveDemo() {
   );
 
   const onFilesDelete: NonNullable<
-    UseDataGridProps<EmployeeSchema>["onFilesDelete"]
+    UseDataGridProps<SkaterSchema>["onFilesDelete"]
   > = React.useCallback(async ({ fileIds }) => {
     // Try to delete from UploadThing, silently fail if not configured
     try {
@@ -424,19 +429,19 @@ export function DataGridLiveDemo() {
     enablePaste: true,
   });
 
-  const updateSelectedEmployees = React.useCallback(
+  const updateSelectedSkaters = React.useCallback(
     (
-      field: "status" | "department",
-      value: EmployeeSchema["status"] | EmployeeSchema["department"],
+      field: "status" | "style",
+      value: SkaterSchema["status"] | SkaterSchema["style"],
     ) => {
       const selectedRows = table.getSelectedRowModel().rows;
       if (selectedRows.length === 0) {
-        toast.error("No employees selected");
+        toast.error("No skaters selected");
         return;
       }
 
       // Use batch update - single transaction for all updates
-      employeesCollection.update(
+      skatersCollection.update(
         selectedRows.map((row) => row.original.id),
         (drafts) => {
           for (const draft of drafts) {
@@ -446,24 +451,24 @@ export function DataGridLiveDemo() {
       );
 
       toast.success(
-        `${selectedRows.length} employee${selectedRows.length === 1 ? "" : "s"} updated`,
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
     [table],
   );
 
-  const deleteSelectedEmployees = React.useCallback(() => {
+  const deleteSelectedSkaters = React.useCallback(() => {
     const selectedRows = table.getSelectedRowModel().rows;
     if (selectedRows.length === 0) {
-      toast.error("No employees selected");
+      toast.error("No skaters selected");
       return;
     }
 
     // Use batch delete - single transaction for all deletions
-    employeesCollection.delete(selectedRows.map((row) => row.original.id));
+    skatersCollection.delete(selectedRows.map((row) => row.original.id));
 
     toast.success(
-      `${selectedRows.length} employee${selectedRows.length === 1 ? "" : "s"} deleted`,
+      `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
     table.toggleAllRowsSelected(false);
   }, [table]);
@@ -473,7 +478,7 @@ export function DataGridLiveDemo() {
   if (isLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div className="text-muted-foreground">Loading employees...</div>
+        <div className="text-muted-foreground">Loading skaters...</div>
       </div>
     );
   }
@@ -522,9 +527,7 @@ export function DataGridLiveDemo() {
               {statusOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() =>
-                    updateSelectedEmployees("status", option.value)
-                  }
+                  onClick={() => updateSelectedSkaters("status", option.value)}
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -534,17 +537,15 @@ export function DataGridLiveDemo() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <ActionBarItem variant="secondary" size="sm">
-                <Building2 />
-                Department
+                <Sparkles />
+                Style
               </ActionBarItem>
             </DropdownMenuTrigger>
             <DropdownMenuContent data-grid-popover>
-              {departmentOptions.map((option) => (
+              {styleOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() =>
-                    updateSelectedEmployees("department", option.value)
-                  }
+                  onClick={() => updateSelectedSkaters("style", option.value)}
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -554,7 +555,7 @@ export function DataGridLiveDemo() {
           <ActionBarItem
             variant="destructive"
             size="sm"
-            onClick={deleteSelectedEmployees}
+            onClick={deleteSelectedSkaters}
           >
             <Trash2 />
             Delete

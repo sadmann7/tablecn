@@ -1,4 +1,4 @@
-import { seedEmployees, seedTasks } from "@/app/lib/seeds";
+import { seedSkaters, seedTasks } from "@/app/lib/seeds";
 
 async function runSeed() {
   console.log("⏳ Running seed...");
@@ -6,7 +6,7 @@ async function runSeed() {
   const start = Date.now();
 
   await seedTasks({ count: 100 });
-  await seedEmployees({ count: 100 });
+  await seedSkaters({ count: 100 });
 
   const end = Date.now();
 

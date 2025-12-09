@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { use } from "react";
-import { employeesCollection } from "@/app/data-grid-live/lib/collections";
+import { skatersCollection } from "@/app/data-grid-live/lib/collections";
 import { Shell } from "@/components/shell";
 
 // Dynamic import to prevent SSR issues with useLiveQuery
@@ -23,7 +23,7 @@ const DataGridLiveDemo = dynamic(
 
 export default function DataGridLivePage() {
   // Preload the collection before rendering
-  use(employeesCollection.preload());
+  use(skatersCollection.preload());
 
   return (
     <Shell>
