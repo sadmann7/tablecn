@@ -1632,26 +1632,44 @@ function useDataGrid<TData>({
     }
   }, [store, focusCell]);
 
+  // Stable function refs that access store - avoids tableMeta recreation on search state change
   const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      return searchMatches.some(
+      const currentSearchMatches = store.getState().searchMatches;
+      return currentSearchMatches.some(
         (match) => match.rowIndex === rowIndex && match.columnId === columnId,
       );
     },
-    [searchMatches],
+    [store],
   );
 
   const getIsActiveSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      if (matchIndex < 0) return false;
-      const currentMatch = searchMatches[matchIndex];
+      const currentState = store.getState();
+      if (currentState.matchIndex < 0) return false;
+      const currentMatch = currentState.searchMatches[currentState.matchIndex];
       return (
         currentMatch?.rowIndex === rowIndex &&
         currentMatch?.columnId === columnId
       );
     },
-    [searchMatches, matchIndex],
+    [store],
   );
+
+  // Compute search match data for targeted row re-renders
+  const searchMatchRowSet = React.useMemo(() => {
+    if (searchMatches.length === 0) return null;
+    const rowSet = new Set<number>();
+    for (const match of searchMatches) {
+      rowSet.add(match.rowIndex);
+    }
+    return rowSet;
+  }, [searchMatches]);
+
+  const activeSearchMatch = React.useMemo<CellPosition | null>(() => {
+    if (matchIndex < 0 || searchMatches.length === 0) return null;
+    return searchMatches[matchIndex] ?? null;
+  }, [searchMatches, matchIndex]);
 
   const blurCell = React.useCallback(() => {
     const currentState = store.getState();
@@ -3191,6 +3209,8 @@ function useDataGrid<TData>({
       rowHeight,
       contextMenu,
       pasteDialog,
+      searchMatchRowSet,
+      activeSearchMatch,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
     }),
     [
@@ -3210,6 +3230,8 @@ function useDataGrid<TData>({
       rowHeight,
       contextMenu,
       pasteDialog,
+      searchMatchRowSet,
+      activeSearchMatch,
       onRowAdd,
     ],
   );

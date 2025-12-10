@@ -1,6 +1,6 @@
 "use client";
 
-import type { Cell, Table, TableMeta } from "@tanstack/react-table";
+import type { Cell, TableMeta } from "@tanstack/react-table";
 import * as React from "react";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { getCellKey } from "@/lib/data-grid";
@@ -14,6 +14,8 @@ interface DataGridCellWrapperProps<TData> extends React.ComponentProps<"div"> {
   isEditing: boolean;
   isFocused: boolean;
   isSelected: boolean;
+  isSearchMatch?: boolean;
+  isActiveSearchMatch?: boolean;
 }
 
 export function DataGridCellWrapper<TData>({
@@ -23,6 +25,8 @@ export function DataGridCellWrapper<TData>({
   isEditing,
   isFocused,
   isSelected,
+  isSearchMatch = false,
+  isActiveSearchMatch = false,
   className,
   onClick: onClickProp,
   onKeyDown: onKeyDownProp,
@@ -47,16 +51,6 @@ export function DataGridCellWrapper<TData>({
   );
 
   const composedRefs = useComposedRefs(ref, onCellChange);
-
-  const isSearchMatch = React.useMemo(
-    () => tableMeta?.getIsSearchMatch?.(rowIndex, columnId) ?? false,
-    [tableMeta, rowIndex, columnId],
-  );
-
-  const isActiveSearchMatch = React.useMemo(
-    () => tableMeta?.getIsActiveSearchMatch?.(rowIndex, columnId) ?? false,
-    [tableMeta, rowIndex, columnId],
-  );
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {

@@ -47,7 +47,7 @@ import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCellKey, getLineCount } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { CellVariantProps, FileCellData } from "@/types/data-grid";
+import type { DataGridCellProps, FileCellData } from "@/types/data-grid";
 
 export function ShortTextCell<TData>({
   cell,
@@ -57,8 +57,10 @@ export function ShortTextCell<TData>({
   isEditing,
   isFocused,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
@@ -178,6 +180,8 @@ export function ShortTextCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       onKeyDown={onWrapperKeyDown}
     >
       <div
@@ -208,8 +212,10 @@ export function LongTextCell<TData>({
   isFocused,
   isEditing,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -327,6 +333,8 @@ export function LongTextCell<TData>({
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
+          isSearchMatch={isSearchMatch}
+          isActiveSearchMatch={isActiveSearchMatch}
         >
           <span data-slot="grid-cell-content">{value}</span>
         </DataGridCellWrapper>
@@ -361,8 +369,10 @@ export function NumberCell<TData>({
   isFocused,
   isEditing,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as number;
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -448,6 +458,8 @@ export function NumberCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -496,8 +508,10 @@ export function UrlCell<TData>({
   isEditing,
   isFocused,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
@@ -656,6 +670,8 @@ export function UrlCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       onKeyDown={onWrapperKeyDown}
     >
       {!isEditing && displayValue ? (
@@ -704,8 +720,10 @@ export function CheckboxCell<TData>({
   columnId,
   isFocused,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: Omit<CellVariantProps<TData>, "isEditing">) {
+}: Omit<DataGridCellProps<TData>, "isEditing">) {
   const initialValue = cell.getValue() as boolean;
   const [value, setValue] = React.useState(Boolean(initialValue));
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -784,6 +802,8 @@ export function CheckboxCell<TData>({
       isEditing={false}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       className="flex size-full justify-center"
       onClick={onWrapperClick}
       onKeyDown={onWrapperKeyDown}
@@ -809,8 +829,10 @@ export function SelectCell<TData>({
   isFocused,
   isEditing,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -873,6 +895,8 @@ export function SelectCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -918,8 +942,10 @@ export function MultiSelectCell<TData>({
   isFocused,
   isEditing,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const cellValue = React.useMemo(() => {
     const value = cell.getValue() as string[];
     return value ?? [];
@@ -1069,6 +1095,8 @@ export function MultiSelectCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -1202,8 +1230,10 @@ export function DateCell<TData>({
   isFocused,
   isEditing,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -1265,6 +1295,8 @@ export function DateCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       onKeyDown={onWrapperKeyDown}
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
@@ -1336,8 +1368,10 @@ export function FileCell<TData>({
   isFocused,
   isEditing,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
-}: CellVariantProps<TData>) {
+}: DataGridCellProps<TData>) {
   const cellValue = React.useMemo(
     () => (cell.getValue() as FileCellData[]) ?? [],
     [cell],
@@ -1847,6 +1881,8 @@ export function FileCell<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       className={cn({
         "ring-1 ring-primary/80 ring-inset": isDraggingOver,
       })}

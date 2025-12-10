@@ -48,6 +48,8 @@ export function DataGrid<TData>({
   rowHeight,
   contextMenu,
   pasteDialog,
+  searchMatchRowSet,
+  activeSearchMatch,
   onRowAdd,
   height = 600,
   stretchColumns = false,
@@ -188,6 +190,11 @@ export function DataGrid<TData>({
               cellSelectionMap?.get(virtualItem.index) ??
               EMPTY_CELL_SELECTION_SET;
 
+            const hasSearchMatch =
+              searchMatchRowSet?.has(virtualItem.index) ?? false;
+            const isActiveSearchRow =
+              activeSearchMatch?.rowIndex === virtualItem.index;
+
             return (
               <DataGridRow
                 key={row.id}
@@ -205,6 +212,8 @@ export function DataGrid<TData>({
                 dir={dir}
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}
+                hasSearchMatch={hasSearchMatch}
+                activeSearchMatch={isActiveSearchRow ? activeSearchMatch : null}
               />
             );
           })}

@@ -38,6 +38,8 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   dir: Direction;
   readOnly: boolean;
   stretchColumns?: boolean;
+  hasSearchMatch?: boolean;
+  activeSearchMatch?: CellPosition | null;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -115,8 +117,13 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
-  // Re-render if tableMeta changed (needed for search match highlighting)
-  if (prev.tableMeta !== next.tableMeta) {
+  // Re-render if search match state changed for this row
+  if (prev.hasSearchMatch !== next.hasSearchMatch) {
+    return false;
+  }
+
+  // Re-render if active search match changed for this row
+  if (prev.activeSearchMatch?.columnId !== next.activeSearchMatch?.columnId) {
     return false;
   }
 
@@ -139,6 +146,8 @@ function DataGridRowImpl<TData>({
   dir,
   readOnly,
   stretchColumns,
+  hasSearchMatch,
+  activeSearchMatch,
   className,
   style,
   ref,
@@ -205,6 +214,12 @@ function DataGridRowImpl<TData>({
           cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
           false;
 
+        const isSearchMatch =
+          (hasSearchMatch &&
+            tableMeta?.getIsSearchMatch?.(virtualRowIndex, columnId)) ??
+          false;
+        const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
+
         return (
           <div
             key={cell.id}
@@ -239,6 +254,8 @@ function DataGridRowImpl<TData>({
                 isFocused={isCellFocused}
                 isEditing={isCellEditing}
                 isSelected={isCellSelected}
+                isSearchMatch={isSearchMatch}
+                isActiveSearchMatch={isActiveSearchMatch}
                 readOnly={readOnly}
               />
             )}
