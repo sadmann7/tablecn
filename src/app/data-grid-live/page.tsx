@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { use } from "react";
 import { skatersCollection } from "@/app/data-grid-live/lib/collections";
 import { Shell } from "@/components/shell";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Dynamic import to prevent SSR issues with useLiveQuery
 const DataGridLiveDemo = dynamic(
@@ -14,8 +15,13 @@ const DataGridLiveDemo = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="container flex h-[calc(100dvh-5.5rem)] flex-col gap-4 py-4">
+        <div className="flex items-center gap-2 self-end">
+          <Skeleton className="h-7 w-18" />
+          <Skeleton className="h-7 w-18" />
+          <Skeleton className="h-7 w-18" />
+        </div>
+        <Skeleton className="h-full w-full" />
       </div>
     ),
   },

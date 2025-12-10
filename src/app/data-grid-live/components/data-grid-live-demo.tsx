@@ -33,6 +33,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
@@ -87,7 +88,7 @@ export function DataGridLiveDemo() {
     { id: "createdAt", desc: false },
   ]);
 
-  const { data = [], isLoading } = useLiveQuery(
+  const { data = [] } = useLiveQuery(
     (q) => {
       let query = q.from({ skater: skatersCollection });
 
@@ -351,11 +352,7 @@ export function DataGridLiveDemo() {
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
-      skatersCollection.insert(
-        generateRandomSkater({
-          name: "",
-        }),
-      );
+      skatersCollection.insert(generateRandomSkater());
 
       return {
         rowIndex: data.length,
@@ -508,14 +505,6 @@ export function DataGridLiveDemo() {
   }, [table]);
 
   const height = Math.max(400, windowSize.height - 150);
-
-  if (isLoading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="text-muted-foreground">Loading skaters...</div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col gap-4">
