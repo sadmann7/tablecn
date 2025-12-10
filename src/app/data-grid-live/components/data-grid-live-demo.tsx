@@ -351,7 +351,22 @@ export function DataGridLiveDemo() {
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
-      skatersCollection.insert(generateRandomSkater());
+      console.log("[LiveDemo onRowAdd] Called - data.length:", data.length);
+
+      // Randomly fail ~20% of the time to test error handling
+      // Return null to signal cancellation (no scroll/focus will happen)
+      if (Math.random() < 0.2) {
+        console.log("[LiveDemo onRowAdd] Simulating random failure");
+        toast.error("Random error: Failed to create row");
+        return null;
+      }
+
+      const newSkater = generateRandomSkater();
+      console.log(
+        "[LiveDemo onRowAdd] Inserting skater with id:",
+        newSkater.id,
+      );
+      skatersCollection.insert(newSkater);
 
       return {
         rowIndex: data.length,
