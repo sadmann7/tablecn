@@ -61,7 +61,7 @@ export function DataGrid<TData>({
   const columnVisibility = table.getState().columnVisibility;
   const columnPinning = table.getState().columnPinning;
 
-  const onGridContextMenu = React.useCallback(
+  const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       event.preventDefault();
     },
@@ -107,7 +107,7 @@ export function DataGrid<TData>({
           ...columnSizeVars,
           maxHeight: `${height}px`,
         }}
-        onContextMenu={onGridContextMenu}
+        onContextMenu={onDataGridContextMenu}
       >
         <div
           role="rowgroup"

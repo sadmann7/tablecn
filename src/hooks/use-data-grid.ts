@@ -2081,22 +2081,6 @@ function useDataGrid<TData>({
       }
 
       if (
-        (key === "Enter" || key === "F2") &&
-        !propsRef.current.readOnly &&
-        !shiftKey
-      ) {
-        event.preventDefault();
-        // Stop propagation so the cell variant's "stop editing on Enter"
-        // handler doesn't fire on the same keypress that started editing
-        event.stopPropagation();
-        onCellEditingStart(
-          currentState.focusedCell.rowIndex,
-          currentState.focusedCell.columnId,
-        );
-        return;
-      }
-
-      if (
         key === "Enter" &&
         shiftKey &&
         !propsRef.current.readOnly &&
@@ -2517,7 +2501,6 @@ function useDataGrid<TData>({
       onSearchOpenChange,
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
-      onCellEditingStart,
       onCellEditingStop,
       onRowsDelete,
       restoreFocus,
