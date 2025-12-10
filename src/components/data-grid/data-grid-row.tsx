@@ -38,7 +38,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   dir: Direction;
   readOnly: boolean;
   stretchColumns?: boolean;
-  hasSearchMatch?: boolean;
+  searchMatchColumns?: Set<string> | null;
   activeSearchMatch?: CellPosition | null;
 }
 
@@ -117,8 +117,8 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
-  // Re-render if search match state changed for this row
-  if (prev.hasSearchMatch !== next.hasSearchMatch) {
+  // Re-render if search match columns changed for this row
+  if (prev.searchMatchColumns !== next.searchMatchColumns) {
     return false;
   }
 
@@ -146,7 +146,7 @@ function DataGridRowImpl<TData>({
   dir,
   readOnly,
   stretchColumns,
-  hasSearchMatch,
+  searchMatchColumns,
   activeSearchMatch,
   className,
   style,
@@ -214,10 +214,8 @@ function DataGridRowImpl<TData>({
           cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
           false;
 
-        const isSearchMatch =
-          (hasSearchMatch &&
-            tableMeta?.getIsSearchMatch?.(virtualRowIndex, columnId)) ??
-          false;
+        // Use pre-computed search match columns - O(1) Set lookup, no function call
+        const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
 
         return (
