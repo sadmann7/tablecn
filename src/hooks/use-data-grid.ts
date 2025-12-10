@@ -1120,18 +1120,7 @@ function useDataGrid<TData>({
         const cellKey = getCellKey(rowIndex, columnId);
         const cellWrapperElement = cellMapRef.current.get(cellKey);
 
-        console.log("[focusCellWrapper] Trying to focus:", {
-          rowIndex,
-          columnId,
-          cellKey,
-          elementFound: !!cellWrapperElement,
-          cellMapSize: cellMapRef.current.size,
-        });
-
         if (!cellWrapperElement) {
-          console.log(
-            "[focusCellWrapper] Cell not found, focusing container instead"
-          );
           const container = dataGridRef.current;
           if (container) {
             container.focus();
@@ -1144,7 +1133,6 @@ function useDataGrid<TData>({
         }
 
         cellWrapperElement.focus();
-        console.log("[focusCellWrapper] Focused cell successfully");
 
         // Reset flag after a longer delay to allow for any re-renders caused by data updates
         // This is especially important for async data sources like TanStack DB
@@ -2257,8 +2245,6 @@ function useDataGrid<TData>({
       const rowIndex = opts?.rowIndex ?? 0;
       const columnId = opts?.columnId;
 
-      console.log("[onScrollToRow] Scrolling to:", { rowIndex, columnId });
-
       // Set programmatic focus flag to prevent focusout interference
       isProgrammaticFocusRef.current = true;
 
@@ -2284,11 +2270,6 @@ function useDataGrid<TData>({
 
         // If the requested row doesn't exist yet, wait for data to update
         if (rowIndex >= currentRowCount && retriesLeft > 0) {
-          console.log("[onScrollToRow] Row not in data yet, waiting...", {
-            requestedRowIndex: rowIndex,
-            currentRowCount,
-            retriesLeft,
-          });
           await new Promise((resolve) => setTimeout(resolve, 50));
           await attemptScrollAndFocus(retriesLeft - 1);
           return;
@@ -2299,13 +2280,6 @@ function useDataGrid<TData>({
           rowIndex,
           Math.max(0, currentRowCount - 1)
         );
-
-        console.log("[onScrollToRow] Attempting scroll:", {
-          requestedRowIndex: rowIndex,
-          safeRowIndex,
-          currentRowCount,
-          retriesLeft,
-        });
 
         rowVirtualizer.scrollToIndex(safeRowIndex, {
           align: "center",
@@ -2327,24 +2301,16 @@ function useDataGrid<TData>({
 
         if (cellElement) {
           cellElement.focus();
-          console.log(
-            "[onScrollToRow] Successfully focused cell at row",
-            safeRowIndex
-          );
           // Reset flag after delay
           setTimeout(() => {
             isProgrammaticFocusRef.current = false;
           }, 300);
         } else if (retriesLeft > 0) {
           // Cell not rendered yet, wait and retry
-          console.log("[onScrollToRow] Cell not found, retrying...");
           await new Promise((resolve) => setTimeout(resolve, 50));
           await attemptScrollAndFocus(retriesLeft - 1);
         } else {
           // Give up, focus container
-          console.log(
-            "[onScrollToRow] Failed to focus cell, focusing container"
-          );
           dataGridRef.current?.focus();
           setTimeout(() => {
             isProgrammaticFocusRef.current = false;
@@ -2363,18 +2329,13 @@ function useDataGrid<TData>({
 
       const initialRowCount = propsRef.current.data.length;
 
-      console.log("[onRowAdd] Start - initialRowCount:", initialRowCount);
-
       let result: Partial<CellPosition> | null;
       try {
         result = await propsRef.current.onRowAdd(event);
       } catch (error) {
         console.error("[onRowAdd] Error from callback:", error);
-        // Error was thrown by the callback, don't proceed with scroll/focus
         return;
       }
-
-      console.log("[onRowAdd] After callback - result:", result);
 
       // If null is returned or event was prevented, don't scroll/focus
       if (result === null || event?.defaultPrevented) return;
@@ -2383,12 +2344,6 @@ function useDataGrid<TData>({
       // onScrollToRow will handle retries if the row isn't rendered yet
       const targetRowIndex = result.rowIndex ?? initialRowCount;
       const targetColumnId = result.columnId;
-
-      console.log("[onRowAdd] Scrolling to:", {
-        targetRowIndex,
-        targetColumnId,
-        initialRowCount,
-      });
 
       onScrollToRow({
         rowIndex: targetRowIndex,
@@ -2590,26 +2545,13 @@ function useDataGrid<TData>({
         const initialRowCount = propsRef.current.data.length;
         const currentColumnId = currentState.focusedCell.columnId;
 
-        console.log("[Shift+Enter] Starting - focusedCell:", {
-          rowIndex: currentState.focusedCell.rowIndex,
-          columnId: currentColumnId,
-          initialRowCount,
-        });
-
         Promise.resolve(propsRef.current.onRowAdd())
           .then(async (result) => {
-            console.log("[Shift+Enter] onRowAdd returned:", result);
-
             // If null is returned, don't scroll/focus
             if (result === null) return;
 
             const targetRowIndex = result.rowIndex ?? initialRowCount;
             const targetColumnId = result.columnId ?? currentColumnId;
-
-            console.log("[Shift+Enter] Scrolling to:", {
-              targetRowIndex,
-              targetColumnId,
-            });
 
             onScrollToRow({
               rowIndex: targetRowIndex,
@@ -2618,7 +2560,6 @@ function useDataGrid<TData>({
           })
           .catch((error) => {
             console.error("[Shift+Enter] Error from onRowAdd:", error);
-            // Error was thrown by the callback, don't proceed with scroll/focus
           });
         return;
       }
@@ -3133,10 +3074,7 @@ function useDataGrid<TData>({
 
     function onFocusOut(event: FocusEvent) {
       // Skip if we're in the middle of programmatic focus
-      if (isProgrammaticFocusRef.current) {
-        console.log("[onFocusOut] Skipping - programmatic focus in progress");
-        return;
-      }
+      if (isProgrammaticFocusRef.current) return;
 
       const currentContainer = dataGridRef.current;
       if (!currentContainer) return;
@@ -3152,34 +3090,19 @@ function useDataGrid<TData>({
 
       const isFocusMovingToPopover = getIsInPopover(relatedTarget);
 
-      console.log("[onFocusOut]", {
-        focusedCell: currentState.focusedCell,
-        relatedTarget: relatedTarget,
-        isFocusMovingOutsideGrid,
-        isFocusMovingToPopover,
-        activeElement: document.activeElement?.tagName,
-      });
-
       if (isFocusMovingOutsideGrid && !isFocusMovingToPopover) {
         // Try to re-focus the intended cell first
         const { rowIndex, columnId } = currentState.focusedCell;
         const cellKey = getCellKey(rowIndex, columnId);
         const cellElement = cellMapRef.current.get(cellKey);
 
-        console.log("[onFocusOut] Attempting to restore focus", {
-          cellKey,
-          cellFound: !!cellElement,
-        });
-
         requestAnimationFrame(() => {
           // Check again if programmatic focus started
           if (isProgrammaticFocusRef.current) return;
 
           if (cellElement && document.body.contains(cellElement)) {
-            console.log("[onFocusOut] Re-focusing cell");
             cellElement.focus();
           } else {
-            console.log("[onFocusOut] Cell not found, focusing container");
             currentContainer.focus();
           }
         });
