@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import { use } from "react";
 import { skatersCollection } from "@/app/data-grid-live/lib/collections";
-import { Shell } from "@/components/shell";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Dynamic import to prevent SSR issues with useLiveQuery
@@ -31,9 +30,5 @@ export default function DataGridLivePage() {
   // Preload the collection before rendering
   use(skatersCollection.preload());
 
-  return (
-    <Shell>
-      <DataGridLiveDemo />
-    </Shell>
-  );
+  return <DataGridLiveDemo />;
 }
