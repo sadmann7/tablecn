@@ -30,16 +30,16 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   measureElement: (node: Element | null) => void;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
+  columnVisibility: VisibilityState;
+  columnPinning: ColumnPinningState;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  cellSelectionKeys?: Set<string>;
-  columnVisibility?: VisibilityState;
-  columnPinning?: ColumnPinningState;
+  cellSelectionKeys: Set<string>;
+  searchMatchColumns: Set<string> | null;
+  activeSearchMatch: CellPosition | null;
   dir: Direction;
   readOnly: boolean;
-  stretchColumns?: boolean;
-  searchMatchColumns?: Set<string> | null;
-  activeSearchMatch?: CellPosition | null;
+  stretchColumns: boolean;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -138,16 +138,16 @@ function DataGridRowImpl<TData>({
   measureElement,
   rowMapRef,
   rowHeight,
+  columnVisibility,
+  columnPinning,
   focusedCell,
   editingCell,
   cellSelectionKeys,
-  columnVisibility,
-  columnPinning,
+  searchMatchColumns,
+  activeSearchMatch,
   dir,
   readOnly,
   stretchColumns,
-  searchMatchColumns,
-  activeSearchMatch,
   className,
   style,
   ref,
@@ -204,6 +204,7 @@ function DataGridRowImpl<TData>({
     >
       {visibleCells.map((cell, colIndex) => {
         const columnId = cell.column.id;
+
         const isCellFocused =
           focusedCell?.rowIndex === virtualRowIndex &&
           focusedCell?.columnId === columnId;
@@ -214,7 +215,6 @@ function DataGridRowImpl<TData>({
           cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
           false;
 
-        // Use pre-computed search match columns - O(1) Set lookup, no function call
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
 

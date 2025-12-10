@@ -40,16 +40,16 @@ export function DataGrid<TData>({
   virtualItems,
   measureElement,
   columns,
-  searchState,
   columnSizeVars,
+  searchState,
+  searchMatchesByRow,
+  activeSearchMatch,
   cellSelectionMap,
   focusedCell,
   editingCell,
   rowHeight,
   contextMenu,
   pasteDialog,
-  searchMatchesByRow,
-  activeSearchMatch,
   onRowAdd,
   height = 600,
   stretchColumns = false,
@@ -190,7 +190,6 @@ export function DataGrid<TData>({
               cellSelectionMap?.get(virtualItem.index) ??
               EMPTY_CELL_SELECTION_SET;
 
-            // Get the Set of columnIds that have search matches for this row
             const searchMatchColumns =
               searchMatchesByRow?.get(virtualItem.index) ?? null;
             const isActiveSearchRow =
@@ -205,16 +204,16 @@ export function DataGrid<TData>({
                 virtualItem={virtualItem}
                 measureElement={measureElement}
                 rowHeight={rowHeight}
+                columnVisibility={columnVisibility}
+                columnPinning={columnPinning}
                 focusedCell={focusedCell}
                 editingCell={editingCell}
                 cellSelectionKeys={cellSelectionKeys}
-                columnVisibility={columnVisibility}
-                columnPinning={columnPinning}
+                searchMatchColumns={searchMatchColumns}
+                activeSearchMatch={isActiveSearchRow ? activeSearchMatch : null}
                 dir={dir}
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}
-                searchMatchColumns={searchMatchColumns}
-                activeSearchMatch={isActiveSearchRow ? activeSearchMatch : null}
               />
             );
           })}
