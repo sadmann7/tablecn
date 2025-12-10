@@ -12,6 +12,8 @@ import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { Direction } from "@/types/data-grid";
 
+const EMPTY_CELL_SELECTION_SET = new Set<string>();
+
 interface DataGridProps<TData>
   extends Omit<
       ReturnType<typeof useDataGrid<TData>>,
@@ -38,8 +40,10 @@ export function DataGrid<TData>({
   virtualItems,
   measureElement,
   columns,
-  searchState,
   columnSizeVars,
+  searchState,
+  searchMatchesByRow,
+  activeSearchMatch,
   cellSelectionMap,
   focusedCell,
   editingCell,
@@ -183,7 +187,13 @@ export function DataGrid<TData>({
             if (!row) return null;
 
             const cellSelectionKeys =
-              cellSelectionMap?.get(virtualItem.index) ?? new Set<string>();
+              cellSelectionMap?.get(virtualItem.index) ??
+              EMPTY_CELL_SELECTION_SET;
+
+            const searchMatchColumns =
+              searchMatchesByRow?.get(virtualItem.index) ?? null;
+            const isActiveSearchRow =
+              activeSearchMatch?.rowIndex === virtualItem.index;
 
             return (
               <DataGridRow
@@ -194,11 +204,13 @@ export function DataGrid<TData>({
                 virtualItem={virtualItem}
                 measureElement={measureElement}
                 rowHeight={rowHeight}
+                columnVisibility={columnVisibility}
+                columnPinning={columnPinning}
                 focusedCell={focusedCell}
                 editingCell={editingCell}
                 cellSelectionKeys={cellSelectionKeys}
-                columnVisibility={columnVisibility}
-                columnPinning={columnPinning}
+                searchMatchColumns={searchMatchColumns}
+                activeSearchMatch={isActiveSearchRow ? activeSearchMatch : null}
                 dir={dir}
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}

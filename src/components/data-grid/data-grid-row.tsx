@@ -30,17 +30,22 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   measureElement: (node: Element | null) => void;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
   rowHeight: RowHeightValue;
+  columnVisibility: VisibilityState;
+  columnPinning: ColumnPinningState;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  cellSelectionKeys?: Set<string>;
-  columnVisibility?: VisibilityState;
-  columnPinning?: ColumnPinningState;
+  cellSelectionKeys: Set<string>;
+  searchMatchColumns: Set<string> | null;
+  activeSearchMatch: CellPosition | null;
   dir: Direction;
   readOnly: boolean;
-  stretchColumns?: boolean;
+  stretchColumns: boolean;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
+  const prevRowIndex = prev.virtualItem.index;
+  const nextRowIndex = next.virtualItem.index;
+
   // Re-render if row identity changed
   if (prev.row.id !== next.row.id) {
     return false;
@@ -55,9 +60,6 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   if (prev.virtualItem.start !== next.virtualItem.start) {
     return false;
   }
-
-  const prevRowIndex = prev.virtualItem.index;
-  const nextRowIndex = next.virtualItem.index;
 
   // Re-render if focus state changed for this row
   const prevHasFocus = prev.focusedCell?.rowIndex === prevRowIndex;
@@ -115,6 +117,16 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if search match columns changed for this row
+  if (prev.searchMatchColumns !== next.searchMatchColumns) {
+    return false;
+  }
+
+  // Re-render if active search match changed for this row
+  if (prev.activeSearchMatch?.columnId !== next.activeSearchMatch?.columnId) {
+    return false;
+  }
+
   // Skip re-render - props are equal
   return true;
 }) as typeof DataGridRowImpl;
@@ -126,11 +138,13 @@ function DataGridRowImpl<TData>({
   measureElement,
   rowMapRef,
   rowHeight,
+  columnVisibility,
+  columnPinning,
   focusedCell,
   editingCell,
   cellSelectionKeys,
-  columnVisibility,
-  columnPinning,
+  searchMatchColumns,
+  activeSearchMatch,
   dir,
   readOnly,
   stretchColumns,
@@ -190,6 +204,7 @@ function DataGridRowImpl<TData>({
     >
       {visibleCells.map((cell, colIndex) => {
         const columnId = cell.column.id;
+
         const isCellFocused =
           focusedCell?.rowIndex === virtualRowIndex &&
           focusedCell?.columnId === columnId;
@@ -199,6 +214,9 @@ function DataGridRowImpl<TData>({
         const isCellSelected =
           cellSelectionKeys?.has(getCellKey(virtualRowIndex, columnId)) ??
           false;
+
+        const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
+        const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
 
         return (
           <div
@@ -234,6 +252,8 @@ function DataGridRowImpl<TData>({
                 isFocused={isCellFocused}
                 isEditing={isCellEditing}
                 isSelected={isCellSelected}
+                isSearchMatch={isSearchMatch}
+                isActiveSearchMatch={isActiveSearchMatch}
                 readOnly={readOnly}
               />
             )}

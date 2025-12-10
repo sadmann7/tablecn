@@ -14,24 +14,15 @@ import {
   ShortTextCell,
   UrlCell,
 } from "@/components/data-grid/data-grid-cell-variants";
-import type { CellVariantProps } from "@/types/data-grid";
-
-interface DataGridCellProps<TData> {
-  cell: Cell<TData, unknown>;
-  tableMeta: TableMeta<TData>;
-  rowIndex: number;
-  columnId: string;
-  isFocused: boolean;
-  isEditing: boolean;
-  isSelected: boolean;
-  readOnly: boolean;
-}
+import type { DataGridCellProps } from "@/types/data-grid";
 
 export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   // Fast path: check stable primitive props first
   if (prev.isFocused !== next.isFocused) return false;
   if (prev.isEditing !== next.isEditing) return false;
   if (prev.isSelected !== next.isSelected) return false;
+  if (prev.isSearchMatch !== next.isSearchMatch) return false;
+  if (prev.isActiveSearchMatch !== next.isActiveSearchMatch) return false;
   if (prev.readOnly !== next.readOnly) return false;
   if (prev.rowIndex !== next.rowIndex) return false;
   if (prev.columnId !== next.columnId) return false;
@@ -62,12 +53,14 @@ function DataGridCellImpl<TData>({
   isFocused,
   isEditing,
   isSelected,
+  isSearchMatch,
+  isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
   const cellOpts = cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 
-  let Comp: React.ComponentType<CellVariantProps<TData>>;
+  let Comp: React.ComponentType<DataGridCellProps<TData>>;
 
   switch (variant) {
     case "short-text":
@@ -112,6 +105,8 @@ function DataGridCellImpl<TData>({
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
+      isSearchMatch={isSearchMatch}
+      isActiveSearchMatch={isActiveSearchMatch}
       readOnly={readOnly}
     />
   );

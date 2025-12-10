@@ -188,7 +188,7 @@ export interface SearchState {
   onNavigateToPrevMatch: () => void;
 }
 
-export interface CellVariantProps<TData> {
+export interface DataGridCellProps<TData> {
   cell: Cell<TData, unknown>;
   tableMeta: TableMeta<TData>;
   rowIndex: number;
@@ -196,6 +196,8 @@ export interface CellVariantProps<TData> {
   isEditing: boolean;
   isFocused: boolean;
   isSelected: boolean;
+  isSearchMatch: boolean;
+  isActiveSearchMatch: boolean;
   readOnly: boolean;
 }
 

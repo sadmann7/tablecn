@@ -416,9 +416,12 @@ function useDataGrid<TData>({
 
   const getIsCellSelected = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      return selectionState.selectedCells.has(getCellKey(rowIndex, columnId));
+      const currentSelectionState = store.getState().selectionState;
+      return currentSelectionState.selectedCells.has(
+        getCellKey(rowIndex, columnId),
+      );
     },
-    [selectionState.selectedCells],
+    [store],
   );
 
   const clearSelection = React.useCallback(() => {
@@ -1634,24 +1637,47 @@ function useDataGrid<TData>({
 
   const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      return searchMatches.some(
+      const currentSearchMatches = store.getState().searchMatches;
+      return currentSearchMatches.some(
         (match) => match.rowIndex === rowIndex && match.columnId === columnId,
       );
     },
-    [searchMatches],
+    [store],
   );
 
   const getIsActiveSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      if (matchIndex < 0) return false;
-      const currentMatch = searchMatches[matchIndex];
+      const currentState = store.getState();
+      if (currentState.matchIndex < 0) return false;
+      const currentMatch = currentState.searchMatches[currentState.matchIndex];
       return (
         currentMatch?.rowIndex === rowIndex &&
         currentMatch?.columnId === columnId
       );
     },
-    [searchMatches, matchIndex],
+    [store],
   );
+
+  // Compute search match data for targeted row re-renders
+  // Maps rowIndex -> Set of columnIds that have matches in that row
+  const searchMatchesByRow = React.useMemo(() => {
+    if (searchMatches.length === 0) return null;
+    const rowMap = new Map<number, Set<string>>();
+    for (const match of searchMatches) {
+      let columnSet = rowMap.get(match.rowIndex);
+      if (!columnSet) {
+        columnSet = new Set<string>();
+        rowMap.set(match.rowIndex, columnSet);
+      }
+      columnSet.add(match.columnId);
+    }
+    return rowMap;
+  }, [searchMatches]);
+
+  const activeSearchMatch = React.useMemo<CellPosition | null>(() => {
+    if (matchIndex < 0 || searchMatches.length === 0) return null;
+    return searchMatches[matchIndex] ?? null;
+  }, [searchMatches, matchIndex]);
 
   const blurCell = React.useCallback(() => {
     const currentState = store.getState();
@@ -3183,8 +3209,10 @@ function useDataGrid<TData>({
       virtualItems,
       measureElement,
       columns,
-      searchState,
       columnSizeVars,
+      searchState,
+      searchMatchesByRow,
+      activeSearchMatch,
       cellSelectionMap,
       focusedCell,
       editingCell,
@@ -3202,8 +3230,10 @@ function useDataGrid<TData>({
       virtualItems,
       measureElement,
       columns,
-      searchState,
       columnSizeVars,
+      searchState,
+      searchMatchesByRow,
+      activeSearchMatch,
       cellSelectionMap,
       focusedCell,
       editingCell,
