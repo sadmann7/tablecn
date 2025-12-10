@@ -159,25 +159,10 @@ interface DataGridDemoImplProps extends UseDataGridProps<Person> {
 function DataGridDemoImpl({
   dir,
   onDirChange,
-  data,
-  onDataChange,
-  columns,
-  onRowAdd,
-  onRowsAdd,
-  onRowsDelete,
-  onFilesUpload,
-  onFilesDelete,
   height,
+  ...props
 }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
-    columns,
-    data,
-    onDataChange,
-    onRowAdd,
-    onRowsAdd,
-    onRowsDelete,
-    onFilesUpload,
-    onFilesDelete,
     getRowId: (row) => row.id,
     initialState: {
       columnPinning: {
@@ -186,6 +171,7 @@ function DataGridDemoImpl({
     },
     enableSearch: true,
     enablePaste: true,
+    ...props,
   });
 
   return (

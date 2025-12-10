@@ -52,7 +52,7 @@ export function DataGridCellWrapper<TData>({
         onClickProp?.(event);
         if (isFocused && !readOnly) {
           tableMeta?.onCellEditingStart?.(rowIndex, columnId);
-        } else if (!isFocused) {
+        } else {
           tableMeta?.onCellClick?.(rowIndex, columnId, event);
         }
       }
