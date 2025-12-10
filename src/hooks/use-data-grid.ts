@@ -45,8 +45,7 @@ const DEFAULT_ROW_HEIGHT = "short";
 const OVERSCAN = 6;
 const VIEWPORT_OFFSET = 1;
 const HORIZONTAL_PAGE_SIZE = 5;
-const SCROLL_AND_FOCUS_RETRY_COUNT = 16;
-
+const SCROLL_SYNC_RETRY_COUNT = 16;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
@@ -2266,7 +2265,8 @@ function useDataGrid<TData>({
         return;
       }
 
-      const onScrollAndFocus = async (retryCount: number) => {
+      async function onScrollAndFocus(retryCount: number) {
+        if (!targetColumnId) return;
         const currentRowCount = propsRef.current.data.length;
 
         // If the requested row doesn't exist yet, wait for data to update
@@ -2308,9 +2308,9 @@ function useDataGrid<TData>({
           dataGridRef.current?.focus();
           releaseFocusGuard();
         }
-      };
+      }
 
-      await onScrollAndFocus(SCROLL_AND_FOCUS_RETRY_COUNT);
+      await onScrollAndFocus(SCROLL_SYNC_RETRY_COUNT);
     },
     [rowVirtualizer, propsRef, store, releaseFocusGuard],
   );
@@ -2324,12 +2324,11 @@ function useDataGrid<TData>({
       let result: Partial<CellPosition> | null;
       try {
         result = await propsRef.current.onRowAdd(event);
-      } catch (error) {
-        console.error("[onRowAdd] Error from callback:", error);
+      } catch {
+        // Callback threw an error, don't proceed with scroll/focus
         return;
       }
 
-      // If null is returned or event was prevented, don't scroll/focus
       if (result === null || event?.defaultPrevented) return;
 
       // Trust the returned rowIndex from the callback
@@ -2539,7 +2538,6 @@ function useDataGrid<TData>({
 
         Promise.resolve(propsRef.current.onRowAdd())
           .then(async (result) => {
-            // If null is returned, don't scroll/focus
             if (result === null) return;
 
             const targetRowIndex = result.rowIndex ?? initialRowCount;
@@ -2550,8 +2548,8 @@ function useDataGrid<TData>({
               columnId: targetColumnId,
             });
           })
-          .catch((error) => {
-            console.error("[Shift+Enter] Error from onRowAdd:", error);
+          .catch(() => {
+            // Callback threw an error, don't proceed with scroll/focus
           });
         return;
       }
