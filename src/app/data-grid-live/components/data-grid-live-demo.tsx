@@ -351,7 +351,8 @@ export function DataGridLiveDemo() {
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
-      skatersCollection.insert(generateRandomSkater());
+      const newSkater = generateRandomSkater();
+      skatersCollection.insert(newSkater);
 
       return {
         rowIndex: data.length,
