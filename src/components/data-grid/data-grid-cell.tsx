@@ -36,6 +36,9 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.rowIndex !== next.rowIndex) return false;
   if (prev.columnId !== next.columnId) return false;
 
+  // Re-render if tableMeta changed (needed for search match highlighting)
+  if (prev.tableMeta !== next.tableMeta) return false;
+
   // Check cell value using row.original instead of getValue() for stability
   // getValue() is unstable and recreates on every render, breaking memoization
   const prevValue = (prev.cell.row.original as Record<string, unknown>)[

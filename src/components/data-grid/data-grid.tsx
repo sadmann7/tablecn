@@ -12,6 +12,8 @@ import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { Direction } from "@/types/data-grid";
 
+const EMPTY_CELL_SELECTION_SET = new Set<string>();
+
 interface DataGridProps<TData>
   extends Omit<
       ReturnType<typeof useDataGrid<TData>>,
@@ -183,7 +185,8 @@ export function DataGrid<TData>({
             if (!row) return null;
 
             const cellSelectionKeys =
-              cellSelectionMap?.get(virtualItem.index) ?? new Set<string>();
+              cellSelectionMap?.get(virtualItem.index) ??
+              EMPTY_CELL_SELECTION_SET;
 
             return (
               <DataGridRow

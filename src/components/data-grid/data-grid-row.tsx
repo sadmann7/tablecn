@@ -41,6 +41,9 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
+  const prevRowIndex = prev.virtualItem.index;
+  const nextRowIndex = next.virtualItem.index;
+
   // Re-render if row identity changed
   if (prev.row.id !== next.row.id) {
     return false;
@@ -55,9 +58,6 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   if (prev.virtualItem.start !== next.virtualItem.start) {
     return false;
   }
-
-  const prevRowIndex = prev.virtualItem.index;
-  const nextRowIndex = next.virtualItem.index;
 
   // Re-render if focus state changed for this row
   const prevHasFocus = prev.focusedCell?.rowIndex === prevRowIndex;
@@ -112,6 +112,11 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
   // Re-render if readOnly changed
   if (prev.readOnly !== next.readOnly) {
+    return false;
+  }
+
+  // Re-render if tableMeta changed (needed for search match highlighting)
+  if (prev.tableMeta !== next.tableMeta) {
     return false;
   }
 
