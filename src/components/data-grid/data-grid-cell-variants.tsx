@@ -182,6 +182,7 @@ export function ShortTextCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       <div
@@ -335,6 +336,7 @@ export function LongTextCell<TData>({
           isSelected={isSelected}
           isSearchMatch={isSearchMatch}
           isActiveSearchMatch={isActiveSearchMatch}
+          readOnly={readOnly}
         >
           <span data-slot="grid-cell-content">{value}</span>
         </DataGridCellWrapper>
@@ -460,6 +462,7 @@ export function NumberCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -672,6 +675,7 @@ export function UrlCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {!isEditing && displayValue ? (
@@ -804,6 +808,7 @@ export function CheckboxCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       className="flex size-full justify-center"
       onClick={onWrapperClick}
       onKeyDown={onWrapperKeyDown}
@@ -897,6 +902,7 @@ export function SelectCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -1097,6 +1103,7 @@ export function MultiSelectCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -1297,6 +1304,7 @@ export function DateCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
@@ -1883,6 +1891,7 @@ export function FileCell<TData>({
       isSelected={isSelected}
       isSearchMatch={isSearchMatch}
       isActiveSearchMatch={isActiveSearchMatch}
+      readOnly={readOnly}
       className={cn({
         "ring-1 ring-primary/80 ring-inset": isDraggingOver,
       })}
