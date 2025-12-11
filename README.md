@@ -110,4 +110,4 @@ Follow the deployment guides for [Vercel](https://create.t3.gg/en/deployment/ver
 
 ## Credits
 
-- [shadcn/ui](https://github.com/shadcn-ui/ui/tree/main/apps/www/app/(app)/examples/tasks) - For the initial implementation of the data table.
+- [shadcn/ui](https://github.com/shadcn-ui/ui/tree/main/apps/v4/app/(app)/examples/tasks) - For the initial implementation of the data table.

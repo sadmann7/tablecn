@@ -146,6 +146,7 @@ interface UseDataGridProps<TData>
     rowIndex: number;
     columnId: string;
   }) => void | Promise<void>;
+  onRowHeightChange?: (rowHeight: RowHeightValue) => void;
   overscan?: number;
   rowHeight?: RowHeightValue;
   dir?: Direction;
@@ -2020,8 +2021,9 @@ function useDataGrid<TData>({
           ? updater(currentState.rowHeight)
           : updater;
       store.setState("rowHeight", newRowHeight);
+      propsRef.current.onRowHeightChange?.(newRowHeight);
     },
-    [store],
+    [store, propsRef],
   );
 
   const onColumnClick = React.useCallback(

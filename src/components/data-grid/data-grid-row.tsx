@@ -249,6 +249,7 @@ function DataGridRowImpl<TData>({
                 tableMeta={tableMeta}
                 rowIndex={virtualRowIndex}
                 columnId={columnId}
+                rowHeight={rowHeight}
                 isFocused={isCellFocused}
                 isEditing={isCellEditing}
                 isSelected={isCellSelected}
