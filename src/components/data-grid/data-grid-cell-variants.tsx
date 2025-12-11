@@ -54,6 +54,7 @@ export function ShortTextCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isEditing,
   isFocused,
   isSelected,
@@ -177,6 +178,7 @@ export function ShortTextCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
@@ -210,6 +212,7 @@ export function LongTextCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isFocused,
   isEditing,
   isSelected,
@@ -331,6 +334,7 @@ export function LongTextCell<TData>({
           tableMeta={tableMeta}
           rowIndex={rowIndex}
           columnId={columnId}
+          rowHeight={rowHeight}
           isEditing={isEditing}
           isFocused={isFocused}
           isSelected={isSelected}
@@ -368,6 +372,7 @@ export function NumberCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isFocused,
   isEditing,
   isSelected,
@@ -457,6 +462,7 @@ export function NumberCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
@@ -508,6 +514,7 @@ export function UrlCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isEditing,
   isFocused,
   isSelected,
@@ -670,6 +677,7 @@ export function UrlCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
@@ -722,6 +730,7 @@ export function CheckboxCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isFocused,
   isSelected,
   isSearchMatch,
@@ -803,6 +812,7 @@ export function CheckboxCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={false}
       isFocused={isFocused}
       isSelected={isSelected}
@@ -831,6 +841,7 @@ export function SelectCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isFocused,
   isEditing,
   isSelected,
@@ -897,6 +908,7 @@ export function SelectCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
@@ -945,6 +957,7 @@ export function MultiSelectCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isFocused,
   isEditing,
   isSelected,
@@ -1080,7 +1093,6 @@ export function MultiSelectCell<TData>({
     .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
     .filter(Boolean);
 
-  const rowHeight = tableMeta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleLabels, hiddenCount: hiddenBadgeCount } =
@@ -1098,6 +1110,7 @@ export function MultiSelectCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
@@ -1234,6 +1247,7 @@ export function DateCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isFocused,
   isEditing,
   isSelected,
@@ -1299,6 +1313,7 @@ export function DateCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}
@@ -1373,6 +1388,7 @@ export function FileCell<TData>({
   tableMeta,
   rowIndex,
   columnId,
+  rowHeight,
   isFocused,
   isEditing,
   isSelected,
@@ -1865,7 +1881,6 @@ export function FileCell<TData>({
     };
   }, [files]);
 
-  const rowHeight = tableMeta?.rowHeight ?? "short";
   const lineCount = getLineCount(rowHeight);
 
   const { visibleItems: visibleFiles, hiddenCount: hiddenFileCount } =
@@ -1886,6 +1901,7 @@ export function FileCell<TData>({
       tableMeta={tableMeta}
       rowIndex={rowIndex}
       columnId={columnId}
+      rowHeight={rowHeight}
       isEditing={isEditing}
       isFocused={isFocused}
       isSelected={isSelected}

@@ -20,6 +20,7 @@ export function DataGridCellWrapper<TData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
+  rowHeight,
   className,
   onClick: onClickProp,
   onKeyDown: onKeyDownProp,
@@ -163,8 +164,6 @@ export function DataGridCellWrapper<TData>({
       tableMeta?.onCellMouseUp?.();
     }
   }, [tableMeta, isEditing]);
-
-  const rowHeight = tableMeta?.rowHeight ?? "short";
 
   return (
     <div

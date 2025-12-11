@@ -193,6 +193,7 @@ export interface DataGridCellProps<TData> {
   tableMeta: TableMeta<TData>;
   rowIndex: number;
   columnId: string;
+  rowHeight: RowHeightValue;
   isEditing: boolean;
   isFocused: boolean;
   isSelected: boolean;
