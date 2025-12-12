@@ -1,6 +1,5 @@
 "use client";
 
-import type { Cell, TableMeta } from "@tanstack/react-table";
 import * as React from "react";
 
 import {
