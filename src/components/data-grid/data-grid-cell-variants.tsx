@@ -928,7 +928,12 @@ export function SelectCell<TData>({
             size="sm"
             className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
           >
-            <SelectValue />
+            <Badge
+              variant="secondary"
+              className="whitespace-pre-wrap px-1.5 text-xs"
+            >
+              {displayLabel}
+            </Badge>
           </SelectTrigger>
           <SelectContent
             data-grid-cell-editor=""
@@ -945,9 +950,15 @@ export function SelectCell<TData>({
             ))}
           </SelectContent>
         </Select>
-      ) : (
-        <span data-slot="grid-cell-content">{displayLabel}</span>
-      )}
+      ) : displayLabel ? (
+        <Badge
+          data-slot="grid-cell-content"
+          variant="secondary"
+          className="whitespace-pre-wrap px-1.5 text-xs"
+        >
+          {displayLabel}
+        </Badge>
+      ) : null}
     </DataGridCellWrapper>
   );
 }
@@ -1141,7 +1152,7 @@ export function MultiSelectCell<TData>({
                     <Badge
                       key={value}
                       variant="secondary"
-                      className="h-5 gap-1 px-1.5 text-xs"
+                      className="gap-1 px-1.5 text-xs"
                     >
                       {label}
                       <button
@@ -1217,7 +1228,7 @@ export function MultiSelectCell<TData>({
             <Badge
               key={selectedValues[index]}
               variant="secondary"
-              className="h-5 shrink-0 px-1.5 text-xs"
+              className="shrink-0 px-1.5 text-xs"
             >
               {label}
             </Badge>
@@ -1225,7 +1236,7 @@ export function MultiSelectCell<TData>({
           {hiddenBadgeCount > 0 && (
             <Badge
               variant="outline"
-              className="h-5 shrink-0 px-1.5 text-muted-foreground text-xs"
+              className="shrink-0 px-1.5 text-muted-foreground text-xs"
             >
               +{hiddenBadgeCount}
             </Badge>
@@ -2070,7 +2081,7 @@ export function FileCell<TData>({
               <Badge
                 key={file.id}
                 variant="secondary"
-                className="h-5 shrink-0 gap-1 px-1.5 text-xs"
+                className="shrink-0 gap-1 px-1.5 text-xs"
               >
                 {React.createElement(getFileIcon(file.type), {
                   className: "size-3 shrink-0",
@@ -2082,7 +2093,7 @@ export function FileCell<TData>({
           {hiddenFileCount > 0 && (
             <Badge
               variant="outline"
-              className="h-5 shrink-0 px-1.5 text-muted-foreground text-xs"
+              className="shrink-0 px-1.5 text-muted-foreground text-xs"
             >
               +{hiddenFileCount}
             </Badge>
