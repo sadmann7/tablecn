@@ -3063,18 +3063,6 @@ function useDataGrid<TData>({
     }
   }, [store, propsRef, data, columns, navigableColumnIds, focusCell]);
 
-  // Clear selection when data length changes (rows added/removed externally)
-  const prevDataLengthRef = React.useRef(data.length);
-  React.useEffect(() => {
-    const prevLength = prevDataLengthRef.current;
-    const currentLength = data.length;
-    prevDataLengthRef.current = currentLength;
-
-    if (prevLength !== currentLength) {
-      clearSelection();
-    }
-  }, [data.length, clearSelection]);
-
   // Restore focus to container when virtualized cells are unmounted
   React.useEffect(() => {
     const container = dataGridRef.current;
