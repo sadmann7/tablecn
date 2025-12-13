@@ -1404,7 +1404,7 @@ function useDataGrid<TData>({
               });
             }
           } else {
-            // Fallback: use direct scroll calculation when virtualizer unavailable
+            // Fallback: use direct scroll calculation when virtualizer is not available
             const rowHeightValue = getRowHeightValue(rowHeight);
             const estimatedScrollTop = newRowIndex * rowHeightValue;
             container.scrollTop = estimatedScrollTop;
@@ -2292,11 +2292,43 @@ function useDataGrid<TData>({
           Math.max(0, currentRowCount - 1),
         );
 
+        const isBottomHalf = safeRowIndex > currentRowCount / 2;
         rowVirtualizer.scrollToIndex(safeRowIndex, {
-          align: "center",
+          align: isBottomHalf ? "end" : "start",
         });
 
         await new Promise((resolve) => requestAnimationFrame(resolve));
+
+        // Adjust scroll position to account for sticky header/footer
+        const container = dataGridRef.current;
+        const targetRow = rowMapRef.current.get(safeRowIndex);
+
+        if (container && targetRow) {
+          const containerRect = container.getBoundingClientRect();
+          const headerHeight =
+            headerRef.current?.getBoundingClientRect().height ?? 0;
+          const footerHeight =
+            footerRef.current?.getBoundingClientRect().height ?? 0;
+
+          const viewportTop =
+            containerRect.top + headerHeight + VIEWPORT_OFFSET;
+          const viewportBottom =
+            containerRect.bottom - footerHeight - VIEWPORT_OFFSET;
+
+          const rowRect = targetRow.getBoundingClientRect();
+          const isFullyVisible =
+            rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
+
+          if (!isFullyVisible) {
+            if (rowRect.top < viewportTop) {
+              // Row is partially hidden by header - scroll up
+              container.scrollTop -= viewportTop - rowRect.top;
+            } else if (rowRect.bottom > viewportBottom) {
+              // Row is partially hidden by footer - scroll down
+              container.scrollTop += rowRect.bottom - viewportBottom;
+            }
+          }
+        }
 
         store.batch(() => {
           store.setState("focusedCell", {

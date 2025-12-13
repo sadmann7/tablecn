@@ -514,10 +514,10 @@ export function DataGridLiveDemo() {
         className="flex items-center gap-2 self-end"
       >
         <DataGridKeyboardShortcuts />
-        <DataGridViewMenu table={table} align="end" />
         <DataGridFilterMenu table={table} align="end" />
         <DataGridSortMenu table={table} align="end" />
         <DataGridRowHeightMenu table={table} align="end" />
+        <DataGridViewMenu table={table} align="end" />
       </div>
       <DataGrid {...dataGridProps} table={table} height={height} />
       <ActionBar
