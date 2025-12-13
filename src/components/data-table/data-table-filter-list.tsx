@@ -263,7 +263,10 @@ export function DataTableFilterList<TData>({
           </div>
           {filters.length > 0 ? (
             <SortableContent asChild>
-              <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
+              <div
+                role="list"
+                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
+              >
                 {filters.map((filter, index) => (
                   <DataTableFilterItem<TData>
                     key={filter.filterId}
@@ -277,7 +280,7 @@ export function DataTableFilterList<TData>({
                     onFilterRemove={onFilterRemove}
                   />
                 ))}
-              </ul>
+              </div>
             </SortableContent>
           ) : null}
           <div className="flex w-full items-center gap-2">
@@ -355,7 +358,7 @@ function DataTableFilterItem<TData>({
   const filterOperators = getFilterOperators(filter.variant);
 
   const onItemKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLLIElement>) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
@@ -385,7 +388,8 @@ function DataTableFilterItem<TData>({
 
   return (
     <SortableItem value={filter.filterId} asChild>
-      <li
+      <div
+        role="listitem"
         id={filterItemId}
         tabIndex={-1}
         className="flex items-center gap-2"
@@ -543,7 +547,7 @@ function DataTableFilterItem<TData>({
             <GripVertical />
           </Button>
         </SortableItemHandle>
-      </li>
+      </div>
     </SortableItem>
   );
 }
@@ -736,11 +740,12 @@ function onFilterInputRender<TData>({
 
       const displayValue =
         filter.operator === "isBetween" && dateValue.length === 2
-          ? `${formatDate(new Date(Number(dateValue[0])))} - ${formatDate(
+          ? `${formatDate(new Date(Number(dateValue[0])), { month: "short" })} - ${formatDate(
               new Date(Number(dateValue[1])),
+              { month: "short" },
             )}`
           : dateValue[0]
-            ? formatDate(new Date(Number(dateValue[0])))
+            ? formatDate(new Date(Number(dateValue[0])), { month: "short" })
             : "Pick a date";
 
       return (

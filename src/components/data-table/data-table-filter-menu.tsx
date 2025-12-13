@@ -221,7 +221,7 @@ export function DataTableFilterMenu<TData>({
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div role="list" className="flex flex-wrap items-center gap-2">
       {filters.map((filter) => (
         <DataTableFilterItem
           key={filter.filterId}
@@ -791,11 +791,12 @@ function onFilterInputRender<TData>({
 
       const displayValue =
         filter.operator === "isBetween" && dateValue.length === 2
-          ? `${formatDate(new Date(Number(dateValue[0])))} - ${formatDate(
+          ? `${formatDate(new Date(Number(dateValue[0])), { month: "short" })} - ${formatDate(
               new Date(Number(dateValue[1])),
+              { month: "short" },
             )}`
           : dateValue[0]
-            ? formatDate(new Date(Number(dateValue[0])))
+            ? formatDate(new Date(Number(dateValue[0])), { month: "short" })
             : "Pick date...";
 
       return (
