@@ -2069,7 +2069,6 @@ export function FileCell<TData>({
             const isUploading = uploadingFiles.has(file.id);
 
             if (isUploading) {
-              // Show skeleton for uploading files
               return (
                 <Skeleton
                   key={file.id}
