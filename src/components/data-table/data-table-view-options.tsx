@@ -22,10 +22,12 @@ import { cn } from "@/lib/utils";
 interface DataTableViewOptionsProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 export function DataTableViewOptions<TData>({
   table,
+  disabled,
   ...props
 }: DataTableViewOptionsProps<TData>) {
   const columns = React.useMemo(
@@ -48,6 +50,7 @@ export function DataTableViewOptions<TData>({
           variant="outline"
           size="sm"
           className="ml-auto hidden h-8 font-normal lg:flex"
+          disabled={disabled}
         >
           <Settings2 className="text-muted-foreground" />
           View

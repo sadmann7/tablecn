@@ -55,6 +55,7 @@ interface DataTableFilterMenuProps<TData>
   debounceMs?: number;
   throttleMs?: number;
   shallow?: boolean;
+  disabled?: boolean;
 }
 
 export function DataTableFilterMenu<TData>({
@@ -62,7 +63,7 @@ export function DataTableFilterMenu<TData>({
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
   shallow = true,
-  align = "start",
+  disabled,
   ...props
 }: DataTableFilterMenuProps<TData>) {
   const id = React.useId();
@@ -252,13 +253,13 @@ export function DataTableFilterMenu<TData>({
             className={cn(filters.length > 0 && "size-8", "h-8 font-normal")}
             ref={triggerRef}
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ListFilter className="text-muted-foreground" />
             {filters.length > 0 ? null : "Filter"}
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          align={align}
           className="w-full max-w-(--radix-popover-content-available-width) p-0"
           {...props}
         >

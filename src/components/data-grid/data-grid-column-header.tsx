@@ -8,20 +8,11 @@ import type {
   Table,
 } from "@tanstack/react-table";
 import {
-  BaselineIcon,
-  CalendarIcon,
-  CheckSquareIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   EyeOffIcon,
-  FileIcon,
-  HashIcon,
-  LinkIcon,
-  ListChecksIcon,
-  ListIcon,
   PinIcon,
   PinOffIcon,
-  TextInitialIcon,
   XIcon,
 } from "lucide-react";
 import * as React from "react";
@@ -39,36 +30,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getColumnVariant } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
-import type { CellOpts } from "@/types/data-grid";
-
-function getColumnVariant(variant?: CellOpts["variant"]): {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  label: string;
-} | null {
-  switch (variant) {
-    case "short-text":
-      return { icon: BaselineIcon, label: "Short text" };
-    case "long-text":
-      return { icon: TextInitialIcon, label: "Long text" };
-    case "number":
-      return { icon: HashIcon, label: "Number" };
-    case "url":
-      return { icon: LinkIcon, label: "URL" };
-    case "checkbox":
-      return { icon: CheckSquareIcon, label: "Checkbox" };
-    case "select":
-      return { icon: ListIcon, label: "Select" };
-    case "multi-select":
-      return { icon: ListChecksIcon, label: "Multi-select" };
-    case "date":
-      return { icon: CalendarIcon, label: "Date" };
-    case "file":
-      return { icon: FileIcon, label: "File" };
-    default:
-      return null;
-  }
-}
 
 interface DataGridColumnHeaderProps<TData, TValue>
   extends React.ComponentProps<typeof DropdownMenuTrigger> {
@@ -156,7 +119,7 @@ export function DataGridColumnHeader<TData, TValue>({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger
           className={cn(
             "flex size-full items-center justify-between gap-2 p-2 text-sm hover:bg-accent/40 data-[state=open]:bg-accent/40 [&_svg]:size-4",

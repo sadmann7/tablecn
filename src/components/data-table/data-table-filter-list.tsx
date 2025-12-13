@@ -79,6 +79,7 @@ interface DataTableFilterListProps<TData>
   debounceMs?: number;
   throttleMs?: number;
   shallow?: boolean;
+  disabled?: boolean;
 }
 
 export function DataTableFilterList<TData>({
@@ -86,6 +87,7 @@ export function DataTableFilterList<TData>({
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
   shallow = true,
+  disabled,
   ...props
 }: DataTableFilterListProps<TData>) {
   const id = React.useId();
@@ -226,6 +228,7 @@ export function DataTableFilterList<TData>({
             size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ListFilter className="text-muted-foreground" />
             Filter
@@ -522,7 +525,7 @@ function DataTableFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-        <div className="min-w-36 flex-1">
+        <div className="min-w-36 max-w-56 flex-1">
           {onFilterInputRender({
             filter,
             inputId,

@@ -52,10 +52,12 @@ const SORT_ORDERS = [
 interface DataGridSortMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 export function DataGridSortMenu<TData>({
   table,
+  disabled,
   ...props
 }: DataGridSortMenuProps<TData>) {
   const dir = useDirection();
@@ -178,6 +180,7 @@ export function DataGridSortMenu<TData>({
             size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ArrowDownUp className="text-muted-foreground" />
             Sort

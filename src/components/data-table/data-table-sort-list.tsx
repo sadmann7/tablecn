@@ -47,10 +47,12 @@ const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 interface DataTableSortListProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 export function DataTableSortList<TData>({
   table,
+  disabled,
   ...props
 }: DataTableSortListProps<TData>) {
   const id = React.useId();
@@ -171,6 +173,7 @@ export function DataTableSortList<TData>({
             size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ArrowDownUp className="text-muted-foreground" />
             Sort

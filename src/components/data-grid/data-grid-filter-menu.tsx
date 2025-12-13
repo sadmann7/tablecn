@@ -60,10 +60,12 @@ const OPERATORS_WITHOUT_VALUE = ["isEmpty", "isNotEmpty", "isTrue", "isFalse"];
 interface DataGridFilterMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 export function DataGridFilterMenu<TData>({
   table,
+  disabled,
   className,
   ...props
 }: DataGridFilterMenuProps<TData>) {
@@ -199,6 +201,7 @@ export function DataGridFilterMenu<TData>({
             size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ListFilter className="text-muted-foreground" />
             Filter
@@ -504,7 +507,7 @@ function DataGridFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-        <div className="max-w-36 flex-1">
+        <div className="min-w-36 max-w-56 flex-1">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}
