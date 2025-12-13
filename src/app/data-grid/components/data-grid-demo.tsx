@@ -126,7 +126,7 @@ function generatePerson(id: number): Person {
   });
 
   return {
-    id: faker.string.nanoid(8),
+    id: faker.string.nanoid(12),
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
@@ -452,7 +452,7 @@ export function DataGridDemo() {
       setData((prev) => [
         ...prev,
         {
-          id: faker.string.nanoid(8),
+          id: faker.string.nanoid(12),
         },
       ]);
 
@@ -475,7 +475,7 @@ export function DataGridDemo() {
       // For this demo, create multiple rows in a single state update
       setData((prev) => {
         const newRows = Array.from({ length: count }, () => ({
-          id: faker.string.nanoid(8),
+          id: faker.string.nanoid(12),
         }));
         return [...prev, ...newRows];
       });
