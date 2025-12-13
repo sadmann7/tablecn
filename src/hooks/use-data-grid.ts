@@ -723,6 +723,14 @@ function useDataGrid<TData>({
     }
   }, [store, propsRef]);
 
+  const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
+    if (element && document.activeElement !== element) {
+      requestAnimationFrame(() => {
+        element.focus();
+      });
+    }
+  }, []);
+
   const onCellsPaste = React.useCallback(
     async (expandRows = false) => {
       if (propsRef.current.readOnly) return;
@@ -1084,6 +1092,8 @@ function useDataGrid<TData>({
               { rowIndex: endRowIndex, columnId: endColumnId },
             );
           }
+
+          restoreFocus(dataGridRef.current);
         } else if (cellsSkipped > 0) {
           toast.error(
             `${cellsSkipped} cell${
@@ -1107,7 +1117,14 @@ function useDataGrid<TData>({
         );
       }
     },
-    [store, navigableColumnIds, propsRef, onDataUpdate, selectRange],
+    [
+      store,
+      navigableColumnIds,
+      propsRef,
+      onDataUpdate,
+      selectRange,
+      restoreFocus,
+    ],
   );
 
   // Release focus guard after delay to allow async data re-renders to settle.
@@ -1162,14 +1179,6 @@ function useDataGrid<TData>({
     },
     [store, focusCellWrapper],
   );
-
-  const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
-    if (element && document.activeElement !== element) {
-      requestAnimationFrame(() => {
-        element.focus();
-      });
-    }
-  }, []);
 
   const onRowsDelete = React.useCallback(
     async (rowIndices: number[]) => {
