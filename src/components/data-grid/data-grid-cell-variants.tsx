@@ -928,12 +928,16 @@ export function SelectCell<TData>({
             size="sm"
             className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
           >
-            <Badge
-              variant="secondary"
-              className="whitespace-pre-wrap px-1.5 text-xs"
-            >
-              {displayLabel}
-            </Badge>
+            {displayLabel ? (
+              <Badge
+                variant="secondary"
+                className="whitespace-pre-wrap px-1.5 text-xs"
+              >
+                <SelectValue />
+              </Badge>
+            ) : (
+              <SelectValue />
+            )}
           </SelectTrigger>
           <SelectContent
             data-grid-cell-editor=""
