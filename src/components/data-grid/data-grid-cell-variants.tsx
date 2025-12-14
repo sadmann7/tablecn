@@ -355,7 +355,7 @@ export function LongTextCell<TData>({
       >
         <Textarea
           placeholder="Enter text..."
-          className="min-h-[150px] resize-none rounded-none border-0 shadow-none focus-visible:ring-0"
+          className="max-h-[300px] min-h-[150px] resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-0"
           ref={textareaRef}
           value={value}
           onBlur={onBlur}
