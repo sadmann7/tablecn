@@ -745,6 +745,7 @@ function onFilterInputRender<TData>({
         ? new Date(Number(dateValue[0]))
         : undefined;
       const endDate = dateValue[1] ? new Date(Number(dateValue[1])) : undefined;
+
       const isSameDate =
         startDate &&
         endDate &&
