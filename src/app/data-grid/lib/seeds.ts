@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { generateId } from "@/lib/id";
 import type { FileCellData } from "@/types/data-grid";
 
 export interface Person {
@@ -143,7 +144,7 @@ function generatePerson(id: number): Person {
   });
 
   return {
-    id: faker.string.nanoid(12),
+    id: generateId(),
     name: `${firstName} ${lastName}`,
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
