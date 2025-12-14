@@ -507,7 +507,7 @@ function DataGridFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-        <div className="min-w-36 max-w-56 flex-1">
+        <div className="min-w-36 max-w-60 flex-1">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}
@@ -671,11 +671,16 @@ function DataGridFilterInput<TData>({
           ? new Date(localEndValue)
           : undefined;
 
+      const isSameDate =
+        startDate &&
+        endDate &&
+        startDate.toDateString() === endDate.toDateString();
+
       const displayValue =
-        startDate && endDate
+        startDate && endDate && !isSameDate
           ? `${formatDate(startDate, { month: "short" })} - ${formatDate(endDate, { month: "short" })}`
           : startDate
-            ? `${formatDate(startDate, { month: "short" })} - ${formatDate(startDate, { month: "short" })}`
+            ? formatDate(startDate, { month: "short" })
             : "Pick a range";
 
       return (

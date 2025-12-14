@@ -525,7 +525,7 @@ function DataTableFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-        <div className="min-w-36 max-w-56 flex-1">
+        <div className="min-w-36 max-w-60 flex-1">
           {onFilterInputRender({
             filter,
             inputId,
@@ -741,14 +741,20 @@ function onFilterInputRender<TData>({
         ? filter.value.filter(Boolean)
         : [filter.value, filter.value].filter(Boolean);
 
+      const startDate = dateValue[0]
+        ? new Date(Number(dateValue[0]))
+        : undefined;
+      const endDate = dateValue[1] ? new Date(Number(dateValue[1])) : undefined;
+      const isSameDate =
+        startDate &&
+        endDate &&
+        startDate.toDateString() === endDate.toDateString();
+
       const displayValue =
-        filter.operator === "isBetween" && dateValue.length === 2
-          ? `${formatDate(new Date(Number(dateValue[0])), { month: "short" })} - ${formatDate(
-              new Date(Number(dateValue[1])),
-              { month: "short" },
-            )}`
-          : dateValue[0]
-            ? formatDate(new Date(Number(dateValue[0])), { month: "short" })
+        filter.operator === "isBetween" && dateValue.length === 2 && !isSameDate
+          ? `${formatDate(startDate, { month: "short" })} - ${formatDate(endDate, { month: "short" })}`
+          : startDate
+            ? formatDate(startDate, { month: "short" })
             : "Pick a date";
 
       return (
