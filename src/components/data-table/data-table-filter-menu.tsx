@@ -55,6 +55,7 @@ interface DataTableFilterMenuProps<TData>
   debounceMs?: number;
   throttleMs?: number;
   shallow?: boolean;
+  disabled?: boolean;
 }
 
 export function DataTableFilterMenu<TData>({
@@ -62,7 +63,7 @@ export function DataTableFilterMenu<TData>({
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
   shallow = true,
-  align = "start",
+  disabled,
   ...props
 }: DataTableFilterMenuProps<TData>) {
   const id = React.useId();
@@ -221,7 +222,7 @@ export function DataTableFilterMenu<TData>({
   );
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div role="list" className="flex flex-wrap items-center gap-2">
       {filters.map((filter) => (
         <DataTableFilterItem
           key={filter.filterId}
@@ -252,13 +253,13 @@ export function DataTableFilterMenu<TData>({
             className={cn(filters.length > 0 && "size-8", "h-8 font-normal")}
             ref={triggerRef}
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ListFilter className="text-muted-foreground" />
             {filters.length > 0 ? null : "Filter"}
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          align={align}
           className="w-full max-w-(--radix-popover-content-available-width) p-0"
           {...props}
         >
@@ -789,13 +790,21 @@ function onFilterInputRender<TData>({
         ? filter.value.filter(Boolean)
         : [filter.value, filter.value].filter(Boolean);
 
+      const startDate = dateValue[0]
+        ? new Date(Number(dateValue[0]))
+        : undefined;
+      const endDate = dateValue[1] ? new Date(Number(dateValue[1])) : undefined;
+
+      const isSameDate =
+        startDate &&
+        endDate &&
+        startDate.toDateString() === endDate.toDateString();
+
       const displayValue =
-        filter.operator === "isBetween" && dateValue.length === 2
-          ? `${formatDate(new Date(Number(dateValue[0])))} - ${formatDate(
-              new Date(Number(dateValue[1])),
-            )}`
-          : dateValue[0]
-            ? formatDate(new Date(Number(dateValue[0])))
+        filter.operator === "isBetween" && dateValue.length === 2 && !isSameDate
+          ? `${formatDate(startDate, { month: "short" })} - ${formatDate(endDate, { month: "short" })}`
+          : startDate
+            ? formatDate(startDate, { month: "short" })
             : "Pick date...";
 
       return (

@@ -60,10 +60,12 @@ const OPERATORS_WITHOUT_VALUE = ["isEmpty", "isNotEmpty", "isTrue", "isFalse"];
 interface DataGridFilterMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 export function DataGridFilterMenu<TData>({
   table,
+  disabled,
   className,
   ...props
 }: DataGridFilterMenuProps<TData>) {
@@ -199,6 +201,7 @@ export function DataGridFilterMenu<TData>({
             size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ListFilter className="text-muted-foreground" />
             Filter
@@ -240,7 +243,10 @@ export function DataGridFilterMenu<TData>({
           </div>
           {columnFilters.length > 0 && (
             <SortableContent asChild>
-              <ul className="flex max-h-[400px] flex-col gap-2 overflow-y-auto p-1">
+              <div
+                role="list"
+                className="flex max-h-[400px] flex-col gap-2 overflow-y-auto p-1"
+              >
                 {columnFilters.map((filter, index) => (
                   <DataGridFilterItem
                     key={filter.id}
@@ -256,7 +262,7 @@ export function DataGridFilterMenu<TData>({
                     onFilterRemove={onFilterRemove}
                   />
                 ))}
-              </ul>
+              </div>
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
@@ -339,7 +345,7 @@ function DataGridFilterItem<TData>({
   const column = table.getColumn(filter.id);
 
   const onItemKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLLIElement>) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
@@ -400,7 +406,8 @@ function DataGridFilterItem<TData>({
 
   return (
     <SortableItem value={filter.id} asChild>
-      <li
+      <div
+        role="listitem"
         id={filterItemId}
         tabIndex={-1}
         className="flex items-center gap-2"
@@ -500,7 +507,7 @@ function DataGridFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-        <div className="max-w-36 flex-1">
+        <div className="min-w-36 max-w-60 flex-1">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}
@@ -538,7 +545,7 @@ function DataGridFilterItem<TData>({
             <GripVertical />
           </Button>
         </SortableItemHandle>
-      </li>
+      </div>
     </SortableItem>
   );
 }
@@ -595,7 +602,7 @@ function DataGridFilterInput<TData>({
       : [];
   }, [cellVariant]);
 
-  const isBetween = operator === "between";
+  const isBetween = operator === "isBetween";
 
   if (variant === "number") {
     if (isBetween) {
@@ -664,11 +671,16 @@ function DataGridFilterInput<TData>({
           ? new Date(localEndValue)
           : undefined;
 
+      const isSameDate =
+        startDate &&
+        endDate &&
+        startDate.toDateString() === endDate.toDateString();
+
       const displayValue =
-        startDate && endDate
-          ? `${formatDate(startDate)} - ${formatDate(endDate)}`
+        startDate && endDate && !isSameDate
+          ? `${formatDate(startDate, { month: "short" })} - ${formatDate(endDate, { month: "short" })}`
           : startDate
-            ? formatDate(startDate)
+            ? formatDate(startDate, { month: "short" })
             : "Pick a range";
 
       return (
@@ -743,7 +755,9 @@ function DataGridFilterInput<TData>({
           >
             <CalendarIcon />
             <span className="truncate">
-              {dateValue ? formatDate(dateValue) : "Pick a date"}
+              {dateValue
+                ? formatDate(dateValue, { month: "short" })
+                : "Pick a date"}
             </span>
           </Button>
         </PopoverTrigger>

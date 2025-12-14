@@ -23,10 +23,12 @@ import { cn } from "@/lib/utils";
 interface DataGridViewMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 export function DataGridViewMenu<TData>({
   table,
+  disabled,
   className,
   ...props
 }: DataGridViewMenuProps<TData>) {
@@ -53,6 +55,7 @@ export function DataGridViewMenu<TData>({
           variant="outline"
           size="sm"
           className="ms-auto hidden h-8 font-normal lg:flex"
+          disabled={disabled}
         >
           <Settings2 className="text-muted-foreground" />
           View

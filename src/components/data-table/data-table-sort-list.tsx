@@ -47,10 +47,12 @@ const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 interface DataTableSortListProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
   table: Table<TData>;
+  disabled?: boolean;
 }
 
 export function DataTableSortList<TData>({
   table,
+  disabled,
   ...props
 }: DataTableSortListProps<TData>) {
   const id = React.useId();
@@ -171,6 +173,7 @@ export function DataTableSortList<TData>({
             size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ArrowDownUp className="text-muted-foreground" />
             Sort
@@ -208,7 +211,10 @@ export function DataTableSortList<TData>({
           </div>
           {sorting.length > 0 && (
             <SortableContent asChild>
-              <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
+              <div
+                role="list"
+                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
+              >
                 {sorting.map((sort) => (
                   <DataTableSortItem
                     key={sort.id}
@@ -220,7 +226,7 @@ export function DataTableSortList<TData>({
                     onSortRemove={onSortRemove}
                   />
                 ))}
-              </ul>
+              </div>
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
@@ -284,7 +290,7 @@ function DataTableSortItem({
     React.useState(false);
 
   const onItemKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLLIElement>) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
@@ -306,7 +312,8 @@ function DataTableSortItem({
 
   return (
     <SortableItem value={sort.id} asChild>
-      <li
+      <div
+        role="listitem"
         id={sortItemId}
         tabIndex={-1}
         className="flex items-center gap-2"
@@ -392,7 +399,7 @@ function DataTableSortItem({
             <GripVertical />
           </Button>
         </SortableItemHandle>
-      </li>
+      </div>
     </SortableItem>
   );
 }

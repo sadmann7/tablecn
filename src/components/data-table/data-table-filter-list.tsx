@@ -79,6 +79,7 @@ interface DataTableFilterListProps<TData>
   debounceMs?: number;
   throttleMs?: number;
   shallow?: boolean;
+  disabled?: boolean;
 }
 
 export function DataTableFilterList<TData>({
@@ -86,6 +87,7 @@ export function DataTableFilterList<TData>({
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
   shallow = true,
+  disabled,
   ...props
 }: DataTableFilterListProps<TData>) {
   const id = React.useId();
@@ -226,6 +228,7 @@ export function DataTableFilterList<TData>({
             size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
+            disabled={disabled}
           >
             <ListFilter className="text-muted-foreground" />
             Filter
@@ -263,7 +266,10 @@ export function DataTableFilterList<TData>({
           </div>
           {filters.length > 0 ? (
             <SortableContent asChild>
-              <ul className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1">
+              <div
+                role="list"
+                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
+              >
                 {filters.map((filter, index) => (
                   <DataTableFilterItem<TData>
                     key={filter.filterId}
@@ -277,7 +283,7 @@ export function DataTableFilterList<TData>({
                     onFilterRemove={onFilterRemove}
                   />
                 ))}
-              </ul>
+              </div>
             </SortableContent>
           ) : null}
           <div className="flex w-full items-center gap-2">
@@ -355,7 +361,7 @@ function DataTableFilterItem<TData>({
   const filterOperators = getFilterOperators(filter.variant);
 
   const onItemKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLLIElement>) => {
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement
@@ -385,7 +391,8 @@ function DataTableFilterItem<TData>({
 
   return (
     <SortableItem value={filter.filterId} asChild>
-      <li
+      <div
+        role="listitem"
         id={filterItemId}
         tabIndex={-1}
         className="flex items-center gap-2"
@@ -518,7 +525,7 @@ function DataTableFilterItem<TData>({
             ))}
           </SelectContent>
         </Select>
-        <div className="min-w-36 flex-1">
+        <div className="min-w-36 max-w-60 flex-1">
           {onFilterInputRender({
             filter,
             inputId,
@@ -543,7 +550,7 @@ function DataTableFilterItem<TData>({
             <GripVertical />
           </Button>
         </SortableItemHandle>
-      </li>
+      </div>
     </SortableItem>
   );
 }
@@ -734,13 +741,21 @@ function onFilterInputRender<TData>({
         ? filter.value.filter(Boolean)
         : [filter.value, filter.value].filter(Boolean);
 
+      const startDate = dateValue[0]
+        ? new Date(Number(dateValue[0]))
+        : undefined;
+      const endDate = dateValue[1] ? new Date(Number(dateValue[1])) : undefined;
+
+      const isSameDate =
+        startDate &&
+        endDate &&
+        startDate.toDateString() === endDate.toDateString();
+
       const displayValue =
-        filter.operator === "isBetween" && dateValue.length === 2
-          ? `${formatDate(new Date(Number(dateValue[0])))} - ${formatDate(
-              new Date(Number(dateValue[1])),
-            )}`
-          : dateValue[0]
-            ? formatDate(new Date(Number(dateValue[0])))
+        filter.operator === "isBetween" && dateValue.length === 2 && !isSameDate
+          ? `${formatDate(startDate, { month: "short" })} - ${formatDate(endDate, { month: "short" })}`
+          : startDate
+            ? formatDate(startDate, { month: "short" })
             : "Pick a date";
 
       return (

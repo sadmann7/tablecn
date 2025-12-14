@@ -1,6 +1,18 @@
 import type { Column, Table } from "@tanstack/react-table";
+import {
+  BaselineIcon,
+  CalendarIcon,
+  CheckSquareIcon,
+  FileIcon,
+  HashIcon,
+  LinkIcon,
+  ListChecksIcon,
+  ListIcon,
+  TextInitialIcon,
+} from "lucide-react";
 import type * as React from "react";
 import type {
+  CellOpts,
   CellPosition,
   Direction,
   FileCellData,
@@ -211,4 +223,32 @@ export function getIsInPopover(element: unknown): boolean {
     (element.closest("[data-grid-cell-editor]") ||
       element.closest("[data-grid-popover]")) !== null
   );
+}
+
+export function getColumnVariant(variant?: CellOpts["variant"]): {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+} | null {
+  switch (variant) {
+    case "short-text":
+      return { label: "Short text", icon: BaselineIcon };
+    case "long-text":
+      return { label: "Long text", icon: TextInitialIcon };
+    case "number":
+      return { label: "Number", icon: HashIcon };
+    case "url":
+      return { label: "URL", icon: LinkIcon };
+    case "checkbox":
+      return { label: "Checkbox", icon: CheckSquareIcon };
+    case "select":
+      return { label: "Select", icon: ListIcon };
+    case "multi-select":
+      return { label: "Multi-select", icon: ListChecksIcon };
+    case "date":
+      return { label: "Date", icon: CalendarIcon };
+    case "file":
+      return { label: "File", icon: FileIcon };
+    default:
+      return null;
+  }
 }
