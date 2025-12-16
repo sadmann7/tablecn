@@ -2,7 +2,7 @@
 
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { CheckCircle2, Sparkles, Trash2, X } from "lucide-react";
+import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { skatersCollection } from "@/app/data-grid-live/lib/collections";
@@ -561,7 +561,7 @@ export function DataGridLiveDemo() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <ActionBarItem variant="secondary" size="sm">
-                <Sparkles />
+                <Palette />
                 Style
               </ActionBarItem>
             </DropdownMenuTrigger>
