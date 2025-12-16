@@ -2,7 +2,7 @@
 
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { CheckCircle2, Sparkles, Trash2, X } from "lucide-react";
+import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { skatersCollection } from "@/app/data-grid-live/lib/collections";
@@ -495,14 +495,15 @@ export function DataGridLiveDemo() {
       return;
     }
 
-    // Use batch delete - single transaction for all deletions
-    skatersCollection.delete(selectedRows.map((row) => row.original.id));
+    const rowIndices = selectedRows.map((row) => row.index);
+
+    dataGridProps.tableMeta.onRowsDelete?.(rowIndices);
 
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
     table.toggleAllRowsSelected(false);
-  }, [table]);
+  }, [table, dataGridProps.tableMeta]);
 
   const height = Math.max(400, windowSize.height - 150);
 
@@ -560,7 +561,7 @@ export function DataGridLiveDemo() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <ActionBarItem variant="secondary" size="sm">
-                <Sparkles />
+                <Palette />
                 Style
               </ActionBarItem>
             </DropdownMenuTrigger>

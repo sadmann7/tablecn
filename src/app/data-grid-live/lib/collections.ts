@@ -1,8 +1,7 @@
-"use client";
-
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { createCollection } from "@tanstack/react-db";
 import { QueryClient } from "@tanstack/react-query";
+import { getAbsoluteUrl } from "@/lib/utils";
 import { type SkaterSchema, skaterSchema } from "./validation";
 
 const queryClient = new QueryClient();
@@ -13,7 +12,7 @@ export const skatersCollection = createCollection(
     queryKey: ["skaters"],
     queryClient,
     queryFn: async (): Promise<SkaterSchema[]> => {
-      const response = await fetch("/api/skaters");
+      const response = await fetch(getAbsoluteUrl("/api/skaters"));
       if (!response.ok) {
         throw new Error("Failed to fetch skaters");
       }
@@ -44,7 +43,7 @@ export const skatersCollection = createCollection(
       if (skatersToInsert.length === 0) return;
 
       // Use bulk insert - single DB query for all inserts
-      const response = await fetch("/api/skaters", {
+      const response = await fetch(getAbsoluteUrl("/api/skaters"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ skaters: skatersToInsert }),
@@ -69,7 +68,7 @@ export const skatersCollection = createCollection(
       if (updates.length === 0) return;
 
       // Use bulk update - optimized for same-changes case
-      const response = await fetch("/api/skaters", {
+      const response = await fetch(getAbsoluteUrl("/api/skaters"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ updates }),
@@ -87,7 +86,7 @@ export const skatersCollection = createCollection(
       if (ids.length === 0) return;
 
       // Use bulk delete - single DB query for all deletes
-      const response = await fetch("/api/skaters", {
+      const response = await fetch(getAbsoluteUrl("/api/skaters"), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),
