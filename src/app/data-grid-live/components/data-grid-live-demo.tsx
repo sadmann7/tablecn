@@ -495,14 +495,15 @@ export function DataGridLiveDemo() {
       return;
     }
 
-    // Use batch delete - single transaction for all deletions
-    skatersCollection.delete(selectedRows.map((row) => row.original.id));
+    const rowIndices = selectedRows.map((row) => row.index);
+
+    dataGridProps.tableMeta.onRowsDelete?.(rowIndices);
 
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
     table.toggleAllRowsSelected(false);
-  }, [table]);
+  }, [table, dataGridProps.tableMeta]);
 
   const height = Math.max(400, windowSize.height - 150);
 
