@@ -434,7 +434,7 @@ function useDataGrid<TData>({
     });
   }, [store]);
 
-  const onSelectAll = React.useCallback(() => {
+  const selectAll = React.useCallback(() => {
     const allCells = new Set<string>();
     const currentTable = tableRef.current;
     const rows = currentTable?.getRowModel().rows ?? [];
@@ -488,7 +488,7 @@ function useDataGrid<TData>({
     [propsRef, store],
   );
 
-  const onRangeSelect = React.useCallback(
+  const selectRange = React.useCallback(
     (start: CellPosition, end: CellPosition, isSelecting = false) => {
       const startColIndex = columnIds.indexOf(start.columnId);
       const endColIndex = columnIds.indexOf(end.columnId);
@@ -723,7 +723,7 @@ function useDataGrid<TData>({
     }
   }, [store, propsRef]);
 
-  const onFocusRestore = React.useCallback((element: HTMLDivElement | null) => {
+  const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
     if (element && document.activeElement !== element) {
       requestAnimationFrame(() => {
         element.focus();
@@ -1084,7 +1084,7 @@ function useDataGrid<TData>({
 
           const endColumnId = navigableColumnIds[endColIndex];
           if (endColumnId) {
-            onRangeSelect(
+            selectRange(
               {
                 rowIndex: startRowIndex,
                 columnId: currentState.focusedCell.columnId,
@@ -1093,7 +1093,7 @@ function useDataGrid<TData>({
             );
           }
 
-          onFocusRestore(dataGridRef.current);
+          restoreFocus(dataGridRef.current);
         } else if (cellsSkipped > 0) {
           toast.error(
             `${cellsSkipped} cell${
@@ -1122,14 +1122,14 @@ function useDataGrid<TData>({
       navigableColumnIds,
       propsRef,
       onDataUpdate,
-      onRangeSelect,
-      onFocusRestore,
+      selectRange,
+      restoreFocus,
     ],
   );
 
   // Release focus guard after delay to allow async data re-renders to settle.
   // 300ms accounts for db sync and virtualized cell mounting.
-  const onFocusGuardRelease = React.useCallback((immediate = false) => {
+  const releaseFocusGuard = React.useCallback((immediate = false) => {
     if (immediate) {
       focusGuardRef.current = false;
       return;
@@ -1153,15 +1153,15 @@ function useDataGrid<TData>({
           if (container) {
             container.focus();
           }
-          onFocusGuardRelease();
+          releaseFocusGuard();
           return;
         }
 
         cellWrapperElement.focus();
-        onFocusGuardRelease();
+        releaseFocusGuard();
       });
     },
-    [onFocusGuardRelease],
+    [releaseFocusGuard],
   );
 
   const focusCell = React.useCallback(
@@ -1234,7 +1234,7 @@ function useDataGrid<TData>({
     [propsRef, store, navigableColumnIds, focusCell],
   );
 
-  const onCellNavigate = React.useCallback(
+  const navigateCell = React.useCallback(
     (direction: NavigationDirection) => {
       const currentState = store.getState();
       if (!currentState.focusedCell) return;
@@ -1513,14 +1513,14 @@ function useDataGrid<TData>({
         const { rowIndex, columnId } = currentEditing;
         focusCell(rowIndex, columnId);
         requestAnimationFrame(() => {
-          onCellNavigate(opts.direction ?? "right");
+          navigateCell(opts.direction ?? "right");
         });
       } else if (currentEditing) {
         const { rowIndex, columnId } = currentEditing;
         focusCellWrapper(rowIndex, columnId);
       }
     },
-    [store, propsRef, focusCell, onCellNavigate, focusCellWrapper],
+    [store, propsRef, focusCell, navigateCell, focusCellWrapper],
   );
 
   const onSearchOpenChange = React.useCallback(
@@ -1704,7 +1704,7 @@ function useDataGrid<TData>({
     return searchMatches[matchIndex] ?? null;
   }, [searchMatches, matchIndex]);
 
-  const onCellBlur = React.useCallback(() => {
+  const blurCell = React.useCallback(() => {
     const currentState = store.getState();
     if (
       currentState.editingCell &&
@@ -1772,7 +1772,7 @@ function useDataGrid<TData>({
 
         if (event.shiftKey && currentState.focusedCell) {
           event.preventDefault();
-          onRangeSelect(currentState.focusedCell, { rowIndex, columnId });
+          selectRange(currentState.focusedCell, { rowIndex, columnId });
           scrollToCell();
           return;
         }
@@ -1808,14 +1808,7 @@ function useDataGrid<TData>({
         scrollToCell();
       }
     },
-    [
-      store,
-      focusCell,
-      onCellEditingStart,
-      onRangeSelect,
-      onSelectionClear,
-      dir,
-    ],
+    [store, focusCell, onCellEditingStart, selectRange, onSelectionClear, dir],
   );
 
   const onCellDoubleClick = React.useCallback(
@@ -1869,10 +1862,10 @@ function useDataGrid<TData>({
           focusCell(start.rowIndex, start.columnId);
         }
 
-        onRangeSelect(start, end, true);
+        selectRange(start, end, true);
       }
     },
-    [store, onRangeSelect, focusCell],
+    [store, selectRange, focusCell],
   );
 
   const onCellMouseUp = React.useCallback(() => {
@@ -2281,7 +2274,7 @@ function useDataGrid<TData>({
       const targetColumnId = columnId ?? navigableIds[0];
 
       if (!targetColumnId) {
-        onFocusGuardRelease(true);
+        releaseFocusGuard(true);
         return;
       }
 
@@ -2352,19 +2345,19 @@ function useDataGrid<TData>({
 
         if (cellElement) {
           cellElement.focus();
-          onFocusGuardRelease();
+          releaseFocusGuard();
         } else if (retryCount > 0) {
           await new Promise((resolve) => setTimeout(resolve, 50));
           await onScrollAndFocus(retryCount - 1);
         } else {
           dataGridRef.current?.focus();
-          onFocusGuardRelease();
+          releaseFocusGuard();
         }
       }
 
       await onScrollAndFocus(SCROLL_SYNC_RETRY_COUNT);
     },
-    [rowVirtualizer, propsRef, store, onFocusGuardRelease],
+    [rowVirtualizer, propsRef, store, releaseFocusGuard],
   );
 
   const onRowAdd = React.useCallback(
@@ -2463,7 +2456,7 @@ function useDataGrid<TData>({
 
       if (isCtrlPressed && !shiftKey && key === "a") {
         event.preventDefault();
-        onSelectAll();
+        selectAll();
         return;
       }
 
@@ -2625,7 +2618,7 @@ function useDataGrid<TData>({
               currentState.selectionState.selectionRange?.start ||
               currentState.focusedCell;
 
-            onRangeSelect(selectionStart, {
+            selectRange(selectionStart, {
               rowIndex: 0,
               columnId:
                 navigableColumnIds[currentColIndex] ?? selectionEdge.columnId,
@@ -2636,7 +2629,7 @@ function useDataGrid<TData>({
               rowVirtualizer.scrollToIndex(0, { align: "start" });
             }
 
-            onFocusRestore(dataGridRef.current);
+            restoreFocus(dataGridRef.current);
 
             event.preventDefault();
             return;
@@ -2663,7 +2656,7 @@ function useDataGrid<TData>({
               currentState.selectionState.selectionRange?.start ||
               currentState.focusedCell;
 
-            onRangeSelect(selectionStart, {
+            selectRange(selectionStart, {
               rowIndex: Math.max(0, rowCount - 1),
               columnId:
                 navigableColumnIds[currentColIndex] ?? selectionEdge.columnId,
@@ -2676,7 +2669,7 @@ function useDataGrid<TData>({
               });
             }
 
-            onFocusRestore(dataGridRef.current);
+            restoreFocus(dataGridRef.current);
 
             event.preventDefault();
             return;
@@ -2700,7 +2693,7 @@ function useDataGrid<TData>({
                 : navigableColumnIds[0];
 
             if (targetColumnId) {
-              onRangeSelect(selectionStart, {
+              selectRange(selectionStart, {
                 rowIndex: selectionEdge.rowIndex,
                 columnId: targetColumnId,
               });
@@ -2722,7 +2715,7 @@ function useDataGrid<TData>({
                 });
               }
 
-              onFocusRestore(container);
+              restoreFocus(container);
             }
             event.preventDefault();
             return;
@@ -2746,7 +2739,7 @@ function useDataGrid<TData>({
                 : navigableColumnIds[navigableColumnIds.length - 1];
 
             if (targetColumnId) {
-              onRangeSelect(selectionStart, {
+              selectRange(selectionStart, {
                 rowIndex: selectionEdge.rowIndex,
                 columnId: targetColumnId,
               });
@@ -2768,7 +2761,7 @@ function useDataGrid<TData>({
                 });
               }
 
-              onFocusRestore(container);
+              restoreFocus(container);
             }
             event.preventDefault();
             return;
@@ -2798,7 +2791,7 @@ function useDataGrid<TData>({
           ) {
             onSelectionClear();
           } else {
-            onCellBlur();
+            blurCell();
           }
           return;
         case "Tab":
@@ -2882,7 +2875,7 @@ function useDataGrid<TData>({
             currentState.selectionState.selectionRange?.start ||
             currentState.focusedCell;
 
-          onRangeSelect(selectionStart, {
+          selectRange(selectionStart, {
             rowIndex: newRowIndex,
             columnId: newColumnId,
           });
@@ -2924,7 +2917,7 @@ function useDataGrid<TData>({
                   container.scrollTop -= scrollNeeded;
                 }
 
-                onFocusRestore(container);
+                restoreFocus(container);
               }
             } else {
               const rowVirtualizer = rowVirtualizerRef.current;
@@ -2932,7 +2925,7 @@ function useDataGrid<TData>({
                 const align = direction === "up" ? "start" : "end";
                 rowVirtualizer.scrollToIndex(newRowIndex, { align });
 
-                onFocusRestore(container);
+                restoreFocus(container);
               }
             }
           }
@@ -2959,7 +2952,7 @@ function useDataGrid<TData>({
           if (currentState.selectionState.selectedCells.size > 0) {
             onSelectionClear();
           }
-          onCellNavigate(direction);
+          navigateCell(direction);
         }
       }
     },
@@ -2967,22 +2960,22 @@ function useDataGrid<TData>({
       dir,
       store,
       propsRef,
-      onCellBlur,
-      onCellNavigate,
-      onSelectAll,
+      blurCell,
+      navigateCell,
+      selectAll,
       onCellsCopy,
       onCellsCut,
       onCellsPaste,
       onDataUpdate,
       onSelectionClear,
       navigableColumnIds,
-      onRangeSelect,
+      selectRange,
       onSearchOpenChange,
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
       onCellEditingStop,
       onRowsDelete,
-      onFocusRestore,
+      restoreFocus,
       onScrollToRow,
     ],
   );
@@ -3180,7 +3173,7 @@ function useDataGrid<TData>({
         );
 
         if (!isInsidePopover) {
-          onCellBlur();
+          blurCell();
           const currentState = store.getState();
           if (
             currentState.selectionState.selectedCells.size > 0 ||
@@ -3196,7 +3189,7 @@ function useDataGrid<TData>({
     return () => {
       document.removeEventListener("mousedown", onOutsideClick);
     };
-  }, [store, onCellBlur, onSelectionClear]);
+  }, [store, blurCell, onSelectionClear]);
 
   React.useEffect(() => {
     function onSelectStart(event: Event) {
