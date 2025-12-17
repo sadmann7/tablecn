@@ -8,9 +8,9 @@ import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
+import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
@@ -88,50 +88,7 @@ export function DataGridDemo() {
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            aria-label="Select all"
-            className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-          />
-        ),
-        cell: ({ row, table }) => (
-          <Checkbox
-            aria-label="Select row"
-            className="after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40"
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => {
-              const onRowSelect = table.options.meta?.onRowSelect;
-              if (onRowSelect) {
-                onRowSelect(row.index, !!value, false);
-              } else {
-                row.toggleSelected(!!value);
-              }
-            }}
-            onClick={(event: React.MouseEvent) => {
-              if (event.shiftKey) {
-                event.preventDefault();
-                const onRowSelect = table.options.meta?.onRowSelect;
-                if (onRowSelect) {
-                  onRowSelect(row.index, !row.getIsSelected(), true);
-                }
-              }
-            }}
-          />
-        ),
-        size: 40,
-        enableSorting: false,
-        enableHiding: false,
-        enableResizing: false,
-      },
+      getDataGridSelectColumn<Person>(),
       {
         id: "name",
         accessorKey: "name",

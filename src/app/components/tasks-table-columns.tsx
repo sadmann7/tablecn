@@ -72,8 +72,8 @@ export function getTasksTableColumns({
           onCheckedChange={(value) => row.toggleSelected(!!value)}
         />
       ),
-      enableSorting: false,
       enableHiding: false,
+      enableSorting: false,
       size: 40,
     },
     {
