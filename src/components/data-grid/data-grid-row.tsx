@@ -8,7 +8,9 @@ import type {
 } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 import * as React from "react";
+
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
+import { useAsRef } from "@/hooks/use-as-ref";
 import { useComposedRefs } from "@/lib/compose-refs";
 import {
   flexRender,
@@ -155,8 +157,16 @@ function DataGridRowImpl<TData>({
 }: DataGridRowProps<TData>) {
   const virtualRowIndex = virtualItem.index;
 
+  const propsRef = useAsRef({
+    virtualRowIndex,
+    measureElement,
+    rowMapRef,
+  });
+
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
+      const { virtualRowIndex, measureElement, rowMapRef } = propsRef.current;
+
       if (typeof virtualRowIndex === "undefined") return;
 
       if (node) {
@@ -166,7 +176,7 @@ function DataGridRowImpl<TData>({
         rowMapRef.current?.delete(virtualRowIndex);
       }
     },
-    [virtualRowIndex, measureElement, rowMapRef],
+    [propsRef],
   );
 
   const rowRef = useComposedRefs(ref, onRowChange);
