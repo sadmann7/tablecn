@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAsRef } from "@/hooks/use-as-ref";
 import { cn } from "@/lib/utils";
 import type { PasteDialogState } from "@/types/data-grid";
 
@@ -62,19 +63,25 @@ function PasteDialogImpl({
   onPasteWithExpansion,
   onPasteWithoutExpansion,
 }: PasteDialogProps) {
+  const propsRef = useAsRef({
+    onPasteDialogOpenChange,
+    onPasteWithExpansion,
+    onPasteWithoutExpansion,
+  });
+
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
 
   const onCancel = React.useCallback(() => {
-    onPasteDialogOpenChange?.(false);
-  }, [onPasteDialogOpenChange]);
+    propsRef.current.onPasteDialogOpenChange?.(false);
+  }, [propsRef]);
 
   const onContinue = React.useCallback(() => {
     if (expandRadioRef.current?.checked) {
-      onPasteWithExpansion?.();
+      propsRef.current.onPasteWithExpansion?.();
     } else {
-      onPasteWithoutExpansion?.();
+      propsRef.current.onPasteWithoutExpansion?.();
     }
-  }, [onPasteWithExpansion, onPasteWithoutExpansion]);
+  }, [propsRef]);
 
   return (
     <Dialog open={pasteDialog.open} onOpenChange={onPasteDialogOpenChange}>

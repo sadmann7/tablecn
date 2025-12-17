@@ -18,6 +18,10 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
+
+import { useAsRef } from "@/hooks/use-as-ref";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   getCellKey,
   getIsFileCellData,
@@ -64,27 +68,6 @@ const VALID_BOOLEANS = new Set([
   "checked",
   "unchecked",
 ]);
-
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
-function useLazyRef<T>(fn: () => T): React.RefObject<T> {
-  const ref = React.useRef<T | null>(null);
-  if (ref.current === null) {
-    ref.current = fn();
-  }
-  return ref as React.RefObject<T>;
-}
-
-function useAsRef<T>(data: T) {
-  const ref = React.useRef<T>(data);
-
-  useIsomorphicLayoutEffect(() => {
-    ref.current = data;
-  });
-
-  return ref;
-}
 
 interface DataGridState {
   sorting: SortingState;
