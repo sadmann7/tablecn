@@ -77,9 +77,9 @@ function DataGridSelectCell<TData>({
 
 export function getDataGridSelectColumn<TData>({
   size = 40,
-  enableSorting = false,
   enableHiding = false,
   enableResizing = false,
+  enableSorting = false,
   ...props
 }: Partial<ColumnDef<TData>> = {}): ColumnDef<TData> {
   return {
@@ -87,6 +87,9 @@ export function getDataGridSelectColumn<TData>({
     header: DataGridSelectHeader,
     cell: DataGridSelectCell,
     size,
+    enableHiding,
+    enableResizing,
+    enableSorting,
     ...props,
   };
 }
