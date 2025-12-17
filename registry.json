@@ -409,6 +409,21 @@
       ]
     },
     {
+      "name": "data-grid-select-column",
+      "type": "registry:component",
+      "title": "Data Grid Select Column",
+      "description": "A reusable select column definition for the data grid with checkbox selection and shift-click support",
+      "registryDependencies": ["checkbox"],
+      "dependencies": ["@tanstack/react-table"],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid-select-column.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-select-column.tsx"
+        }
+      ]
+    },
+    {
       "name": "data-grid-sort-menu",
       "type": "registry:component",
       "title": "Data Grid Sort Menu",
@@ -488,21 +503,6 @@
           "path": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx"
-        }
-      ]
-    },
-    {
-      "name": "data-grid-select-column",
-      "type": "registry:component",
-      "title": "Data Grid Select Column",
-      "description": "A reusable select column definition for the data grid with checkbox selection and shift-click support",
-      "registryDependencies": ["checkbox"],
-      "dependencies": ["@tanstack/react-table"],
-      "files": [
-        {
-          "path": "src/components/data-grid/data-grid-select-column.tsx",
-          "type": "registry:component",
-          "target": "src/components/data-grid/data-grid-select-column.tsx"
         }
       ]
     },
