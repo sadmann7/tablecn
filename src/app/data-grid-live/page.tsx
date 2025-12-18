@@ -16,9 +16,10 @@ const DataGridLiveDemo = dynamic(
     loading: () => (
       <div className="container flex h-[calc(100dvh-5.5rem)] flex-col gap-4 py-4">
         <div className="flex items-center gap-2 self-end">
-          <Skeleton className="h-7 w-18" />
-          <Skeleton className="h-7 w-18" />
-          <Skeleton className="h-7 w-18" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="hidden h-7 w-20 lg:block" />
         </div>
         <Skeleton className="h-full w-full" />
       </div>
