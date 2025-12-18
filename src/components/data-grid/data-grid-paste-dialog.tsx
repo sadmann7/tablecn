@@ -25,8 +25,7 @@ export function DataGridPasteDialog<TData>({
   pasteDialog,
 }: DataGridPasteDialogProps<TData>) {
   const onPasteDialogOpenChange = tableMeta?.onPasteDialogOpenChange;
-  const onPasteWithExpansion = tableMeta?.onPasteWithExpansion;
-  const onPasteWithoutExpansion = tableMeta?.onPasteWithoutExpansion;
+  const onCellsPaste = tableMeta?.onCellsPaste;
 
   if (!pasteDialog.open) return null;
 
@@ -34,19 +33,13 @@ export function DataGridPasteDialog<TData>({
     <PasteDialog
       pasteDialog={pasteDialog}
       onPasteDialogOpenChange={onPasteDialogOpenChange}
-      onPasteWithExpansion={onPasteWithExpansion}
-      onPasteWithoutExpansion={onPasteWithoutExpansion}
+      onCellsPaste={onCellsPaste}
     />
   );
 }
 
 interface PasteDialogProps
-  extends Pick<
-      TableMeta<unknown>,
-      | "onPasteDialogOpenChange"
-      | "onPasteWithExpansion"
-      | "onPasteWithoutExpansion"
-    >,
+  extends Pick<TableMeta<unknown>, "onPasteDialogOpenChange" | "onCellsPaste">,
     Required<Pick<TableMeta<unknown>, "pasteDialog">> {}
 
 const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
@@ -60,13 +53,11 @@ const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
 function PasteDialogImpl({
   pasteDialog,
   onPasteDialogOpenChange,
-  onPasteWithExpansion,
-  onPasteWithoutExpansion,
+  onCellsPaste,
 }: PasteDialogProps) {
   const propsRef = useAsRef({
     onPasteDialogOpenChange,
-    onPasteWithExpansion,
-    onPasteWithoutExpansion,
+    onCellsPaste,
   });
 
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
@@ -83,11 +74,7 @@ function PasteDialogImpl({
   }, [propsRef]);
 
   const onContinue = React.useCallback(() => {
-    if (expandRadioRef.current?.checked) {
-      propsRef.current.onPasteWithExpansion?.();
-    } else {
-      propsRef.current.onPasteWithoutExpansion?.();
-    }
+    propsRef.current.onCellsPaste?.(expandRadioRef.current?.checked ?? false);
   }, [propsRef]);
 
   return (

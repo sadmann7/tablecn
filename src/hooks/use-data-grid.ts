@@ -2043,14 +2043,6 @@ function useDataGrid<TData>({
     [store],
   );
 
-  const onPasteWithExpansion = React.useCallback(() => {
-    onCellsPaste(true);
-  }, [onCellsPaste]);
-
-  const onPasteWithoutExpansion = React.useCallback(() => {
-    onCellsPaste(false);
-  }, [onCellsPaste]);
-
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
       // Note: cell is rendered directly in DataGridRow to bypass flexRender's
@@ -2118,8 +2110,7 @@ function useDataGrid<TData>({
         : undefined,
       onContextMenuOpenChange,
       onPasteDialogOpenChange,
-      onPasteWithExpansion,
-      onPasteWithoutExpansion,
+      onCellsPaste,
     };
   }, [
     propsRef,
@@ -2145,8 +2136,7 @@ function useDataGrid<TData>({
     onSelectionClear,
     onContextMenuOpenChange,
     onPasteDialogOpenChange,
-    onPasteWithExpansion,
-    onPasteWithoutExpansion,
+    onCellsPaste,
   ]);
 
   const getMemoizedCoreRowModel = React.useMemo(() => getCoreRowModel(), []);

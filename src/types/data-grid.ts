@@ -112,6 +112,7 @@ declare module "@tanstack/react-table" {
     }) => void;
     onCellsCopy?: () => void;
     onCellsCut?: () => void;
+    onCellsPaste?: (expand?: boolean) => void;
     onSelectionClear?: () => void;
     onFilesUpload?: (params: {
       files: File[];
@@ -127,8 +128,6 @@ declare module "@tanstack/react-table" {
     onContextMenuOpenChange?: (open: boolean) => void;
     pasteDialog?: PasteDialogState;
     onPasteDialogOpenChange?: (open: boolean) => void;
-    onPasteWithExpansion?: () => void;
-    onPasteWithoutExpansion?: () => void;
     readOnly?: boolean;
   }
 }
