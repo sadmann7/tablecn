@@ -71,6 +71,13 @@ function PasteDialogImpl({
 
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
 
+  const onOpenChange = React.useCallback(
+    (open: boolean) => {
+      propsRef.current.onPasteDialogOpenChange?.(open);
+    },
+    [propsRef],
+  );
+
   const onCancel = React.useCallback(() => {
     propsRef.current.onPasteDialogOpenChange?.(false);
   }, [propsRef]);
@@ -84,7 +91,7 @@ function PasteDialogImpl({
   }, [propsRef]);
 
   return (
-    <Dialog open={pasteDialog.open} onOpenChange={onPasteDialogOpenChange}>
+    <Dialog open={pasteDialog.open} onOpenChange={onOpenChange}>
       <DialogContent data-grid-popover="">
         <DialogHeader>
           <DialogTitle>Do you want to add more rows?</DialogTitle>
