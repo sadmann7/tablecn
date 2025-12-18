@@ -4,6 +4,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
+import { use } from "react";
 import { toast } from "sonner";
 import { skatersCollection } from "@/app/data-grid-live/lib/collections";
 import {
@@ -82,6 +83,8 @@ const trickSelectOptions = trickOptions.map((trick) => ({
 }));
 
 export function DataGridLiveDemo() {
+  use(skatersCollection.preload());
+
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "createdAt", desc: false },
