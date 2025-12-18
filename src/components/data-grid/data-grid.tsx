@@ -7,6 +7,7 @@ import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-me
 import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
+import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,8 @@ export function DataGrid<TData>({
   const columnVisibility = table.getState().columnVisibility;
   const columnPinning = table.getState().columnPinning;
 
+  const onRowAddRef = useAsRef(onRowAdd);
+
   const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -68,16 +71,16 @@ export function DataGrid<TData>({
     [],
   );
 
-  const onAddRowKeyDown = React.useCallback(
+  const onFooterCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!onRowAdd) return;
+      if (!onRowAddRef.current) return;
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        onRowAdd();
+        onRowAddRef.current();
       }
     },
-    [onRowAdd],
+    [onRowAddRef],
   );
 
   return (
@@ -218,7 +221,7 @@ export function DataGrid<TData>({
             );
           })}
         </div>
-        {onRowAdd && (
+        {!readOnly && onRowAdd && (
           <div
             role="rowgroup"
             data-slot="grid-footer"
@@ -241,7 +244,7 @@ export function DataGrid<TData>({
                   minWidth: table.getTotalSize(),
                 }}
                 onClick={onRowAdd}
-                onKeyDown={onAddRowKeyDown}
+                onKeyDown={onFooterCellKeyDown}
               >
                 <div className="sticky start-0 flex items-center gap-2 px-3 text-muted-foreground">
                   <Plus className="size-3.5" />

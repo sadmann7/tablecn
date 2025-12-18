@@ -129,9 +129,9 @@ interface UseDataGridProps<TData>
     rowIndex: number;
     columnId: string;
   }) => void | Promise<void>;
+  rowHeight?: RowHeightValue;
   onRowHeightChange?: (rowHeight: RowHeightValue) => void;
   overscan?: number;
-  rowHeight?: RowHeightValue;
   dir?: Direction;
   autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
@@ -143,8 +143,8 @@ interface UseDataGridProps<TData>
 function useDataGrid<TData>({
   data,
   columns,
-  overscan = OVERSCAN,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
+  overscan = OVERSCAN,
   dir: dirProp,
   initialState,
   ...props
