@@ -1,11 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { use } from "react";
-import { skatersCollection } from "@/app/data-grid-live/lib/collections";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Dynamic import to prevent SSR issues with useLiveQuery
+// Dynamic import with ssr: false is required because:
+// 1. useLiveQuery uses useSyncExternalStore which needs getServerSnapshot for SSR
+// 2. Collection preload triggers fetch() which rejects during prerendering
 const DataGridLiveDemo = dynamic(
   () =>
     import("./components/data-grid-live-demo").then(
@@ -16,19 +16,17 @@ const DataGridLiveDemo = dynamic(
     loading: () => (
       <div className="container flex h-[calc(100dvh-5.5rem)] flex-col gap-4 py-4">
         <div className="flex items-center gap-2 self-end">
-          <Skeleton className="h-7 w-18" />
-          <Skeleton className="h-7 w-18" />
-          <Skeleton className="h-7 w-18" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="hidden h-7 w-20 lg:block" />
         </div>
-        <Skeleton className="h-full w-full" />
+        <Skeleton className="size-full" />
       </div>
     ),
   },
 );
 
 export default function DataGridLivePage() {
-  // Preload the collection before rendering
-  use(skatersCollection.preload());
-
   return <DataGridLiveDemo />;
 }
