@@ -384,19 +384,20 @@ export function NumberCell<TData>({
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+
   const cellOpts = cell.column.columnDef.meta?.cell;
   const numberCellOpts = cellOpts?.variant === "number" ? cellOpts : null;
   const min = numberCellOpts?.min;
   const max = numberCellOpts?.max;
   const step = numberCellOpts?.step;
 
+  const prevIsEditingRef = React.useRef(isEditing);
+
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
     setValue(String(initialValue ?? ""));
   }
-
-  const prevIsEditingRef = React.useRef(isEditing);
 
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
