@@ -448,10 +448,15 @@ export function NumberCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId, value],
   );
 
+  const prevIsEditingRef = React.useRef(isEditing);
   React.useEffect(() => {
-    if (isEditing && inputRef.current) {
+    const wasEditing = prevIsEditingRef.current;
+    prevIsEditingRef.current = isEditing;
+
+    // Only focus when we START editing (transition from false to true)
+    // Note: type="number" inputs don't support setSelectionRange, so we just focus
+    if (isEditing && !wasEditing && inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select();
     }
   }, [isEditing]);
 
