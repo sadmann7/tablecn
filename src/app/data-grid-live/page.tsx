@@ -21,7 +21,7 @@ const DataGridLiveDemo = dynamic(
           <Skeleton className="h-7 w-20" />
           <Skeleton className="hidden h-7 w-20 lg:block" />
         </div>
-        <Skeleton className="h-full w-full" />
+        <Skeleton className="size-full" />
       </div>
     ),
   },
