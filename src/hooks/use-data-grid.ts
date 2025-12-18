@@ -2101,6 +2101,7 @@ function useDataGrid<TData>({
       onCellEditingStop,
       onCellsCopy,
       onCellsCut,
+      onCellsPaste,
       onSelectionClear,
       onFilesUpload: propsRef.current.onFilesUpload
         ? propsRef.current.onFilesUpload
@@ -2110,7 +2111,6 @@ function useDataGrid<TData>({
         : undefined,
       onContextMenuOpenChange,
       onPasteDialogOpenChange,
-      onCellsPaste,
     };
   }, [
     propsRef,
@@ -2133,10 +2133,10 @@ function useDataGrid<TData>({
     onCellEditingStop,
     onCellsCopy,
     onCellsCut,
+    onCellsPaste,
     onSelectionClear,
     onContextMenuOpenChange,
     onPasteDialogOpenChange,
-    onCellsPaste,
   ]);
 
   const getMemoizedCoreRowModel = React.useMemo(() => getCoreRowModel(), []);
