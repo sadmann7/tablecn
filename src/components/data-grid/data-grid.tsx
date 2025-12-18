@@ -16,17 +16,11 @@ import type { Direction } from "@/types/data-grid";
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 
 interface DataGridProps<TData>
-  extends Omit<
-      ReturnType<typeof useDataGrid<TData>>,
-      "dir" | "virtualTotalSize" | "virtualItems" | "measureElement"
-    >,
+  extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
   dir?: Direction;
   height?: number;
   stretchColumns?: boolean;
-  virtualTotalSize: number;
-  virtualItems: ReturnType<typeof useDataGrid<TData>>["virtualItems"];
-  measureElement: ReturnType<typeof useDataGrid<TData>>["measureElement"];
 }
 
 export function DataGrid<TData>({
