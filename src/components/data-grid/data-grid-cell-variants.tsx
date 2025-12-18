@@ -396,6 +396,8 @@ export function NumberCell<TData>({
     setValue(String(initialValue ?? ""));
   }
 
+  const prevIsEditingRef = React.useRef(isEditing);
+
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (!readOnly && numValue !== initialValue) {
@@ -448,13 +450,11 @@ export function NumberCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId, value],
   );
 
-  const prevIsEditingRef = React.useRef(isEditing);
   React.useEffect(() => {
     const wasEditing = prevIsEditingRef.current;
     prevIsEditingRef.current = isEditing;
 
-    // Only focus when we START editing (transition from false to true)
-    // Note: type="number" inputs don't support setSelectionRange, so we just focus
+    // Only focus when we start editing (transition from false to true)
     if (isEditing && !wasEditing && inputRef.current) {
       inputRef.current.focus();
     }
@@ -478,15 +478,15 @@ export function NumberCell<TData>({
     >
       {isEditing ? (
         <input
-          ref={inputRef}
           type="number"
+          ref={inputRef}
           value={value}
           min={min}
           max={max}
           step={step}
+          className="w-full border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           onBlur={onBlur}
           onChange={onChange}
-          className="w-full border-none bg-transparent p-0 outline-none"
         />
       ) : (
         <span data-slot="grid-cell-content">{value}</span>
