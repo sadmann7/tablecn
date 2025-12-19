@@ -45,7 +45,7 @@ export function DataGrid<TData>({
   rowHeight,
   contextMenu,
   pasteDialog,
-  onRowAdd,
+  onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
   className,
@@ -56,7 +56,14 @@ export function DataGrid<TData>({
   const columnVisibility = table.getState().columnVisibility;
   const columnPinning = table.getState().columnPinning;
 
-  const onRowAddRef = useAsRef(onRowAdd);
+  const onRowAddRef = useAsRef(onRowAddProp);
+
+  const onRowAdd = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      onRowAddRef.current?.(event);
+    },
+    [onRowAddRef],
+  );
 
   const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -94,7 +101,7 @@ export function DataGrid<TData>({
       <div
         role="grid"
         aria-label="Data grid"
-        aria-rowcount={rows.length + (onRowAdd ? 1 : 0)}
+        aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
         aria-colcount={columns.length}
         data-slot="grid"
         tabIndex={0}
