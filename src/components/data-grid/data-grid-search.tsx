@@ -152,6 +152,14 @@ function DataGridSearchImpl({
     propsRef.current.onSearchOpenChange(false);
   }, [propsRef]);
 
+  const onPrevMatch = React.useCallback(() => {
+    propsRef.current.onNavigateToPrevMatch();
+  }, [propsRef]);
+
+  const onNextMatch = React.useCallback(() => {
+    propsRef.current.onNavigateToNextMatch();
+  }, [propsRef]);
+
   if (!searchOpen) return null;
 
   return (
@@ -179,7 +187,7 @@ function DataGridSearchImpl({
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={onNavigateToPrevMatch}
+            onClick={onPrevMatch}
             onPointerDown={onPrevMatchPointerDown}
             disabled={searchMatches.length === 0}
           >
@@ -190,7 +198,7 @@ function DataGridSearchImpl({
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={onNavigateToNextMatch}
+            onClick={onNextMatch}
             onPointerDown={onNextMatchPointerDown}
             disabled={searchMatches.length === 0}
           >

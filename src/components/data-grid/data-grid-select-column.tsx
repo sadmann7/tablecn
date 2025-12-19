@@ -4,7 +4,6 @@ import type {
   CellContext,
   ColumnDef,
   HeaderContext,
-  Table,
 } from "@tanstack/react-table";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
