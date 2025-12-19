@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useLazyRef } from "./use-lazy-ref";
+import { useLazyRef } from "@/hooks/use-lazy-ref";
 
 describe("useLazyRef", () => {
   it("should initialize the ref with the result of the function", () => {

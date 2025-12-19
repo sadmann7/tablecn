@@ -1,13 +1,8 @@
 "use client";
 
-import type {
-  CellContext,
-  ColumnDef,
-  HeaderContext,
-} from "@tanstack/react-table";
+import type { CellContext, ColumnDef, Table } from "@tanstack/react-table";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAsRef } from "@/hooks/use-as-ref";
 import { cn } from "@/lib/utils";
 
 function DataGridSelectCheckbox({
@@ -25,12 +20,10 @@ function DataGridSelectCheckbox({
   );
 }
 
-function DataGridSelectHeader<TData>({ table }: HeaderContext<TData, unknown>) {
-  const tableRef = useAsRef(table);
-
+function DataGridSelectHeader<TData>({ table }: { table: Table<TData> }) {
   const onCheckedChange = React.useCallback(
-    (value: boolean) => tableRef.current.toggleAllPageRowsSelected(value),
-    [tableRef],
+    (value: boolean) => table.toggleAllPageRowsSelected(value),
+    [table],
   );
 
   return (
@@ -48,35 +41,28 @@ function DataGridSelectHeader<TData>({ table }: HeaderContext<TData, unknown>) {
 function DataGridSelectCell<TData>({
   row,
   table,
-}: CellContext<TData, unknown>) {
-  const propsRef = useAsRef({
-    row,
-    onRowSelect: table.options.meta?.onRowSelect,
-  });
+}: Pick<CellContext<TData, unknown>, "row" | "table">) {
+  const onRowSelect = table.options.meta?.onRowSelect;
 
   const onCheckedChange = React.useCallback(
     (value: boolean) => {
-      const { row, onRowSelect } = propsRef.current;
-
       if (onRowSelect) {
         onRowSelect(row.index, value, false);
       } else {
         row.toggleSelected(value);
       }
     },
-    [propsRef],
+    [onRowSelect, row],
   );
 
   const onClick = React.useCallback(
     (event: React.MouseEvent) => {
       if (event.shiftKey) {
         event.preventDefault();
-        const { row, onRowSelect } = propsRef.current;
-
         onRowSelect?.(row.index, !row.getIsSelected(), true);
       }
     },
-    [propsRef],
+    [onRowSelect, row],
   );
 
   return (

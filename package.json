@@ -7,8 +7,7 @@
     "clean": "rimraf --glob **/node_modules **/dist **/.next pnpm-lock.yaml **/.tsbuildinfo",
     "build": "next build",
     "dev": "next dev",
-    "test": "vitest",
-    "test:run": "vitest run",
+    "test": "vitest run",
     "dev:docker": "pnpm db:start && pnpm dev",
     "start": "next start",
     "ollie": "pnpm install && pnpm run db:start && pnpm run db:setup",
@@ -110,5 +109,5 @@
   "ct3aMetadata": {
     "initVersion": "7.23.1"
   },
-  "packageManager": "pnpm@10.3.0"
+  "packageManager": "pnpm@10.26.1"
 }

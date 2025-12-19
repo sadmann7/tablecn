@@ -1,6 +1,6 @@
-import { act, renderHook } from "@testing-library/react";
+import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { useAsRef } from "./use-as-ref";
+import { useAsRef } from "@/hooks/use-as-ref";
 
 describe("useAsRef", () => {
   it("should return a ref with the initial value", () => {

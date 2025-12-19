@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { useIsomorphicLayoutEffect } from "./use-isomorphic-layout-effect";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 describe("useIsomorphicLayoutEffect", () => {
   it("should use useLayoutEffect in browser environment", () => {
