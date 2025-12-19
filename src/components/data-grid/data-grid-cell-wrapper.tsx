@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+
+import { useAsRef } from "@/hooks/use-as-ref";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { getCellKey } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
@@ -27,10 +29,22 @@ export function DataGridCellWrapper<TData>({
   ref,
   ...props
 }: DataGridCellWrapperProps<TData>) {
-  const cellMapRef = tableMeta?.cellMapRef;
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    isEditing,
+    isFocused,
+    readOnly,
+    onClickProp,
+    onKeyDownProp,
+  });
 
   const onCellChange = React.useCallback(
     (node: HTMLDivElement | null) => {
+      const { tableMeta, rowIndex, columnId } = propsRef.current;
+
+      const cellMapRef = tableMeta?.cellMapRef;
       if (!cellMapRef) return;
 
       const cellKey = getCellKey(rowIndex, columnId);
@@ -41,13 +55,23 @@ export function DataGridCellWrapper<TData>({
         cellMapRef.current.delete(cellKey);
       }
     },
-    [rowIndex, columnId, cellMapRef],
+    [propsRef],
   );
 
   const composedRef = useComposedRefs(ref, onCellChange);
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      const {
+        tableMeta,
+        rowIndex,
+        columnId,
+        isEditing,
+        isFocused,
+        readOnly,
+        onClickProp,
+      } = propsRef.current;
+
       if (!isEditing) {
         event.preventDefault();
         onClickProp?.(event);
@@ -58,38 +82,44 @@ export function DataGridCellWrapper<TData>({
         }
       }
     },
-    [
-      tableMeta,
-      rowIndex,
-      columnId,
-      isEditing,
-      isFocused,
-      readOnly,
-      onClickProp,
-    ],
+    [propsRef],
   );
 
   const onContextMenu = React.useCallback(
     (event: React.MouseEvent) => {
+      const { tableMeta, rowIndex, columnId, isEditing } = propsRef.current;
+
       if (!isEditing) {
         tableMeta?.onCellContextMenu?.(rowIndex, columnId, event);
       }
     },
-    [tableMeta, rowIndex, columnId, isEditing],
+    [propsRef],
   );
 
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent) => {
+      const { tableMeta, rowIndex, columnId, isEditing } = propsRef.current;
+
       if (!isEditing) {
         event.preventDefault();
         tableMeta?.onCellDoubleClick?.(rowIndex, columnId);
       }
     },
-    [tableMeta, rowIndex, columnId, isEditing],
+    [propsRef],
   );
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const {
+        tableMeta,
+        rowIndex,
+        columnId,
+        isEditing,
+        isFocused,
+        readOnly,
+        onKeyDownProp,
+      } = propsRef.current;
+
       onKeyDownProp?.(event);
 
       if (event.defaultPrevented) return;
@@ -130,40 +160,38 @@ export function DataGridCellWrapper<TData>({
         }
       }
     },
-    [
-      onKeyDownProp,
-      isFocused,
-      isEditing,
-      readOnly,
-      tableMeta,
-      rowIndex,
-      columnId,
-    ],
+    [propsRef],
   );
 
   const onMouseDown = React.useCallback(
     (event: React.MouseEvent) => {
+      const { tableMeta, rowIndex, columnId, isEditing } = propsRef.current;
+
       if (!isEditing) {
         tableMeta?.onCellMouseDown?.(rowIndex, columnId, event);
       }
     },
-    [tableMeta, rowIndex, columnId, isEditing],
+    [propsRef],
   );
 
   const onMouseEnter = React.useCallback(
     (event: React.MouseEvent) => {
+      const { tableMeta, rowIndex, columnId, isEditing } = propsRef.current;
+
       if (!isEditing) {
         tableMeta?.onCellMouseEnter?.(rowIndex, columnId, event);
       }
     },
-    [tableMeta, rowIndex, columnId, isEditing],
+    [propsRef],
   );
 
   const onMouseUp = React.useCallback(() => {
+    const { tableMeta, isEditing } = propsRef.current;
+
     if (!isEditing) {
       tableMeta?.onCellMouseUp?.();
     }
-  }, [tableMeta, isEditing]);
+  }, [propsRef]);
 
   return (
     <div

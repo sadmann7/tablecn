@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useAsRef } from "@/hooks/use-as-ref";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getCellKey, getLineCount } from "@/lib/data-grid";
@@ -67,6 +68,16 @@ export function ShortTextCell<TData>({
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    initialValue,
+    readOnly,
+    isEditing,
+    isFocused,
+  });
+
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
@@ -77,13 +88,16 @@ export function ShortTextCell<TData>({
   }
 
   const onBlur = React.useCallback(() => {
+    const { tableMeta, rowIndex, columnId, initialValue, readOnly } =
+      propsRef.current;
+
     // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
     if (!readOnly && currentValue !== initialValue) {
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
+  }, [propsRef]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -95,6 +109,15 @@ export function ShortTextCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const {
+        tableMeta,
+        rowIndex,
+        columnId,
+        initialValue,
+        isEditing,
+        isFocused,
+      } = propsRef.current;
+
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -147,7 +170,7 @@ export function ShortTextCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId],
+    [propsRef],
   );
 
   React.useEffect(() => {
@@ -226,39 +249,58 @@ export function LongTextCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    initialValue,
+    readOnly,
+    value,
+  });
+
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
     setValue(initialValue ?? "");
   }
 
-  // Debounced auto-save (300ms delay)
   const debouncedSave = useDebouncedCallback((newValue: string) => {
+    const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
     if (!readOnly) {
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
     }
   }, 300);
 
   const onSave = React.useCallback(() => {
+    const { tableMeta, rowIndex, columnId, initialValue, readOnly, value } =
+      propsRef.current;
+
     // Immediately save any pending changes and close the popover
     if (!readOnly && value !== initialValue) {
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
+  }, [propsRef]);
 
   const onCancel = React.useCallback(() => {
+    const { tableMeta, rowIndex, columnId, initialValue, readOnly } =
+      propsRef.current;
+
     // Restore the original value
     setValue(initialValue ?? "");
     if (!readOnly) {
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, initialValue, rowIndex, columnId, readOnly]);
+  }, [propsRef]);
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      const { tableMeta, rowIndex, columnId, initialValue, readOnly, value } =
+        propsRef.current;
+
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         // Immediately save any pending changes when closing
@@ -268,7 +310,7 @@ export function LongTextCell<TData>({
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, value, initialValue, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -283,12 +325,15 @@ export function LongTextCell<TData>({
   }, []);
 
   const onBlur = React.useCallback(() => {
+    const { tableMeta, rowIndex, columnId, initialValue, readOnly, value } =
+      propsRef.current;
+
     // Immediately save any pending changes on blur
     if (!readOnly && value !== initialValue) {
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
+  }, [propsRef]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -302,6 +347,9 @@ export function LongTextCell<TData>({
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const { tableMeta, rowIndex, columnId, initialValue, value } =
+        propsRef.current;
+
       if (event.key === "Escape") {
         event.preventDefault();
         onCancel();
@@ -322,7 +370,7 @@ export function LongTextCell<TData>({
       // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
-    [onSave, onCancel, value, initialValue, tableMeta, rowIndex, columnId],
+    [propsRef, onSave, onCancel],
   );
 
   return (
@@ -391,6 +439,17 @@ export function NumberCell<TData>({
   const max = numberCellOpts?.max;
   const step = numberCellOpts?.step;
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    initialValue,
+    readOnly,
+    isEditing,
+    isFocused,
+    value,
+  });
+
   const prevIsEditingRef = React.useRef(isEditing);
 
   const prevInitialValueRef = React.useRef(initialValue);
@@ -400,12 +459,15 @@ export function NumberCell<TData>({
   }
 
   const onBlur = React.useCallback(() => {
+    const { tableMeta, rowIndex, columnId, initialValue, readOnly, value } =
+      propsRef.current;
+
     const numValue = value === "" ? null : Number(value);
     if (!readOnly && numValue !== initialValue) {
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, rowIndex, columnId, initialValue, value, readOnly]);
+  }, [propsRef]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,6 +478,16 @@ export function NumberCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const {
+        tableMeta,
+        rowIndex,
+        columnId,
+        initialValue,
+        isEditing,
+        isFocused,
+        value,
+      } = propsRef.current;
+
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -448,7 +520,7 @@ export function NumberCell<TData>({
         }
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId, value],
+    [propsRef],
   );
 
   React.useEffect(() => {
@@ -533,6 +605,17 @@ export function UrlCell<TData>({
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    initialValue,
+    readOnly,
+    isEditing,
+    isFocused,
+    value,
+  });
+
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
@@ -543,6 +626,9 @@ export function UrlCell<TData>({
   }
 
   const onBlur = React.useCallback(() => {
+    const { tableMeta, rowIndex, columnId, initialValue, readOnly } =
+      propsRef.current;
+
     const currentValue = cellRef.current?.textContent?.trim() ?? "";
 
     if (!readOnly && currentValue !== initialValue) {
@@ -553,7 +639,7 @@ export function UrlCell<TData>({
       });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
+  }, [propsRef]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -565,6 +651,16 @@ export function UrlCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const {
+        tableMeta,
+        rowIndex,
+        columnId,
+        initialValue,
+        readOnly,
+        isEditing,
+        isFocused,
+      } = propsRef.current;
+
       if (isEditing) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -618,19 +714,13 @@ export function UrlCell<TData>({
         });
       }
     },
-    [
-      isEditing,
-      isFocused,
-      initialValue,
-      tableMeta,
-      rowIndex,
-      columnId,
-      readOnly,
-    ],
+    [propsRef],
   );
 
   const onLinkClick = React.useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>) => {
+      const { isEditing, value } = propsRef.current;
+
       if (isEditing) {
         event.preventDefault();
         return;
@@ -650,7 +740,7 @@ export function UrlCell<TData>({
       // Stop propagation to prevent grid from interfering with link navigation
       event.stopPropagation();
     },
-    [isEditing, value],
+    [propsRef],
   );
 
   React.useEffect(() => {
@@ -747,6 +837,15 @@ export function CheckboxCell<TData>({
   const [value, setValue] = React.useState(Boolean(initialValue));
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    readOnly,
+    isFocused,
+    value,
+  });
+
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
@@ -755,15 +854,19 @@ export function CheckboxCell<TData>({
 
   const onCheckedChange = React.useCallback(
     (checked: boolean) => {
+      const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
       if (readOnly) return;
       setValue(checked);
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: checked });
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const { tableMeta, isFocused, readOnly, value } = propsRef.current;
+
       if (
         isFocused &&
         !readOnly &&
@@ -779,18 +882,20 @@ export function CheckboxCell<TData>({
         });
       }
     },
-    [isFocused, value, onCheckedChange, tableMeta, readOnly],
+    [propsRef, onCheckedChange],
   );
 
   const onWrapperClick = React.useCallback(
     (event: React.MouseEvent) => {
+      const { isFocused, readOnly, value } = propsRef.current;
+
       if (isFocused && !readOnly) {
         event.preventDefault();
         event.stopPropagation();
         onCheckedChange(!value);
       }
     },
-    [isFocused, value, onCheckedChange, readOnly],
+    [propsRef, onCheckedChange],
   );
 
   const onCheckboxClick = React.useCallback((event: React.MouseEvent) => {
@@ -861,6 +966,16 @@ export function SelectCell<TData>({
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    readOnly,
+    isEditing,
+    isFocused,
+    initialValue,
+  });
+
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
@@ -869,27 +984,34 @@ export function SelectCell<TData>({
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
+      const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
       if (readOnly) return;
       setValue(newValue);
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
       tableMeta?.onCellEditingStop?.();
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const { tableMeta, isEditing, isFocused, initialValue } =
+        propsRef.current;
+
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
@@ -901,7 +1023,7 @@ export function SelectCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta],
+    [propsRef],
   );
 
   const displayLabel =
@@ -1003,6 +1125,18 @@ export function MultiSelectCell<TData>({
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    readOnly,
+    isEditing,
+    isFocused,
+    cellValue,
+    selectedValues,
+    searchValue,
+  });
+
   const prevCellValueRef = React.useRef(cellValue);
   if (cellValue !== prevCellValueRef.current) {
     prevCellValueRef.current = cellValue;
@@ -1016,6 +1150,9 @@ export function MultiSelectCell<TData>({
 
   const onValueChange = React.useCallback(
     (value: string) => {
+      const { tableMeta, rowIndex, columnId, readOnly, selectedValues } =
+        propsRef.current;
+
       if (readOnly) return;
       const newValues = selectedValues.includes(value)
         ? selectedValues.filter((v) => v !== value)
@@ -1026,11 +1163,14 @@ export function MultiSelectCell<TData>({
       setSearchValue("");
       queueMicrotask(() => inputRef.current?.focus());
     },
-    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const removeValue = React.useCallback(
     (valueToRemove: string, event?: React.MouseEvent) => {
+      const { tableMeta, rowIndex, columnId, readOnly, selectedValues } =
+        propsRef.current;
+
       if (readOnly) return;
       event?.stopPropagation();
       event?.preventDefault();
@@ -1040,26 +1180,30 @@ export function MultiSelectCell<TData>({
       // Focus back on input after removing
       setTimeout(() => inputRef.current?.focus(), 0);
     },
-    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const clearAll = React.useCallback(() => {
+    const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
     if (readOnly) return;
     setSelectedValues([]);
     tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
     queueMicrotask(() => inputRef.current?.focus());
-  }, [tableMeta, rowIndex, columnId, readOnly]);
+  }, [propsRef]);
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         setSearchValue("");
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onOpenAutoFocus: NonNullable<
@@ -1071,6 +1215,8 @@ export function MultiSelectCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const { tableMeta, isEditing, isFocused, cellValue } = propsRef.current;
+
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setSelectedValues(cellValue);
@@ -1084,11 +1230,13 @@ export function MultiSelectCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, cellValue, tableMeta],
+    [propsRef],
   );
 
   const onInputKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      const { selectedValues, searchValue } = propsRef.current;
+
       // Handle backspace when input is empty - remove last selected item
       if (
         event.key === "Backspace" &&
@@ -1107,7 +1255,7 @@ export function MultiSelectCell<TData>({
         event.stopPropagation();
       }
     },
-    [searchValue, selectedValues, removeValue],
+    [propsRef, removeValue],
   );
 
   const displayLabels = selectedValues
@@ -1280,6 +1428,16 @@ export function DateCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    readOnly,
+    isEditing,
+    isFocused,
+    initialValue,
+  });
+
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
@@ -1290,6 +1448,8 @@ export function DateCell<TData>({
 
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
+      const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
       if (!date || readOnly) return;
 
       const formattedDate = date.toISOString().split("T")[0] ?? "";
@@ -1297,22 +1457,27 @@ export function DateCell<TData>({
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
       tableMeta?.onCellEditingStop?.();
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
+      if (open && !readOnly) {
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const { tableMeta, isEditing, isFocused, initialValue } =
+        propsRef.current;
+
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
@@ -1324,7 +1489,7 @@ export function DateCell<TData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta],
+    [propsRef],
   );
 
   return (
@@ -1459,6 +1624,21 @@ export function FileCell<TData>({
     [accept],
   );
 
+  const propsRef = useAsRef({
+    tableMeta,
+    rowIndex,
+    columnId,
+    readOnly,
+    isEditing,
+    isFocused,
+    cellValue,
+    files,
+    isPending,
+    maxFiles,
+    maxFileSize,
+    acceptedTypes,
+  });
+
   const prevCellValueRef = React.useRef(cellValue);
   if (cellValue !== prevCellValueRef.current) {
     prevCellValueRef.current = cellValue;
@@ -1478,6 +1658,8 @@ export function FileCell<TData>({
 
   const validateFile = React.useCallback(
     (file: File): string | null => {
+      const { maxFileSize, acceptedTypes } = propsRef.current;
+
       if (maxFileSize && file.size > maxFileSize) {
         return `File size exceeds ${formatFileSize(maxFileSize)}`;
       }
@@ -1499,11 +1681,21 @@ export function FileCell<TData>({
       }
       return null;
     },
-    [maxFileSize, acceptedTypes],
+    [propsRef],
   );
 
   const addFiles = React.useCallback(
     async (newFiles: File[], skipUpload = false) => {
+      const {
+        tableMeta,
+        rowIndex,
+        columnId,
+        readOnly,
+        isPending,
+        files,
+        maxFiles,
+      } = propsRef.current;
+
       if (readOnly || isPending) return;
       setError(null);
 
@@ -1629,20 +1821,14 @@ export function FileCell<TData>({
         }
       }
     },
-    [
-      files,
-      maxFiles,
-      validateFile,
-      tableMeta,
-      rowIndex,
-      columnId,
-      readOnly,
-      isPending,
-    ],
+    [propsRef, validateFile],
   );
 
   const removeFile = React.useCallback(
     async (fileId: string) => {
+      const { tableMeta, rowIndex, columnId, readOnly, isPending, files } =
+        propsRef.current;
+
       if (readOnly || isPending) return;
       setError(null);
 
@@ -1686,10 +1872,13 @@ export function FileCell<TData>({
       });
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
     },
-    [files, tableMeta, rowIndex, columnId, readOnly, isPending],
+    [propsRef],
   );
 
   const clearAll = React.useCallback(async () => {
+    const { tableMeta, rowIndex, columnId, readOnly, isPending, files } =
+      propsRef.current;
+
     if (readOnly || isPending) return;
     setError(null);
 
@@ -1720,7 +1909,7 @@ export function FileCell<TData>({
     setFiles([]);
     setDeletingFiles(new Set());
     tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
-  }, [files, tableMeta, rowIndex, columnId, readOnly, isPending]);
+  }, [propsRef]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1830,8 +2019,10 @@ export function FileCell<TData>({
   );
 
   const onOpenChange = React.useCallback(
-    (isOpen: boolean) => {
-      if (isOpen && !readOnly) {
+    (open: boolean) => {
+      const { tableMeta, rowIndex, columnId, readOnly } = propsRef.current;
+
+      if (open && !readOnly) {
         setError(null);
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
       } else {
@@ -1839,7 +2030,7 @@ export function FileCell<TData>({
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [propsRef],
   );
 
   const onEscapeKeyDown: NonNullable<
@@ -1861,6 +2052,9 @@ export function FileCell<TData>({
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const { tableMeta, rowIndex, columnId, isEditing, isFocused, cellValue } =
+        propsRef.current;
+
       if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
@@ -1881,15 +2075,7 @@ export function FileCell<TData>({
         });
       }
     },
-    [
-      isEditing,
-      isFocused,
-      cellValue,
-      tableMeta,
-      onDropzoneClick,
-      rowIndex,
-      columnId,
-    ],
+    [propsRef, onDropzoneClick],
   );
 
   React.useEffect(() => {

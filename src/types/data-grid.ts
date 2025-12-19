@@ -70,7 +70,6 @@ declare module "@tanstack/react-table" {
     editingCell?: CellPosition | null;
     selectionState?: SelectionState;
     searchOpen?: boolean;
-    readOnly?: boolean;
     getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
@@ -113,6 +112,7 @@ declare module "@tanstack/react-table" {
     }) => void;
     onCellsCopy?: () => void;
     onCellsCut?: () => void;
+    onCellsPaste?: (expand?: boolean) => void;
     onSelectionClear?: () => void;
     onFilesUpload?: (params: {
       files: File[];
@@ -128,8 +128,7 @@ declare module "@tanstack/react-table" {
     onContextMenuOpenChange?: (open: boolean) => void;
     pasteDialog?: PasteDialogState;
     onPasteDialogOpenChange?: (open: boolean) => void;
-    onPasteWithExpansion?: () => void;
-    onPasteWithoutExpansion?: () => void;
+    readOnly?: boolean;
   }
 }
 

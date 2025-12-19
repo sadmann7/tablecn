@@ -18,6 +18,10 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
+
+import { useAsRef } from "@/hooks/use-as-ref";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   getCellKey,
   getIsFileCellData,
@@ -64,27 +68,6 @@ const VALID_BOOLEANS = new Set([
   "checked",
   "unchecked",
 ]);
-
-const useIsomorphicLayoutEffect =
-  typeof window !== "undefined" ? React.useLayoutEffect : React.useEffect;
-
-function useLazyRef<T>(fn: () => T): React.RefObject<T> {
-  const ref = React.useRef<T | null>(null);
-  if (ref.current === null) {
-    ref.current = fn();
-  }
-  return ref as React.RefObject<T>;
-}
-
-function useAsRef<T>(data: T) {
-  const ref = React.useRef<T>(data);
-
-  useIsomorphicLayoutEffect(() => {
-    ref.current = data;
-  });
-
-  return ref;
-}
 
 interface DataGridState {
   sorting: SortingState;
@@ -146,9 +129,9 @@ interface UseDataGridProps<TData>
     rowIndex: number;
     columnId: string;
   }) => void | Promise<void>;
+  rowHeight?: RowHeightValue;
   onRowHeightChange?: (rowHeight: RowHeightValue) => void;
   overscan?: number;
-  rowHeight?: RowHeightValue;
   dir?: Direction;
   autoFocus?: boolean | Partial<CellPosition>;
   enableColumnSelection?: boolean;
@@ -160,8 +143,8 @@ interface UseDataGridProps<TData>
 function useDataGrid<TData>({
   data,
   columns,
-  overscan = OVERSCAN,
   rowHeight: rowHeightProp = DEFAULT_ROW_HEIGHT,
+  overscan = OVERSCAN,
   dir: dirProp,
   initialState,
   ...props
@@ -2060,14 +2043,6 @@ function useDataGrid<TData>({
     [store],
   );
 
-  const onPasteWithExpansion = React.useCallback(() => {
-    onCellsPaste(true);
-  }, [onCellsPaste]);
-
-  const onPasteWithoutExpansion = React.useCallback(() => {
-    onCellsPaste(false);
-  }, [onCellsPaste]);
-
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
       // Note: cell is rendered directly in DataGridRow to bypass flexRender's
@@ -2126,6 +2101,7 @@ function useDataGrid<TData>({
       onCellEditingStop,
       onCellsCopy,
       onCellsCut,
+      onCellsPaste,
       onSelectionClear,
       onFilesUpload: propsRef.current.onFilesUpload
         ? propsRef.current.onFilesUpload
@@ -2135,8 +2111,6 @@ function useDataGrid<TData>({
         : undefined,
       onContextMenuOpenChange,
       onPasteDialogOpenChange,
-      onPasteWithExpansion,
-      onPasteWithoutExpansion,
     };
   }, [
     propsRef,
@@ -2159,11 +2133,10 @@ function useDataGrid<TData>({
     onCellEditingStop,
     onCellsCopy,
     onCellsCut,
+    onCellsPaste,
     onSelectionClear,
     onContextMenuOpenChange,
     onPasteDialogOpenChange,
-    onPasteWithExpansion,
-    onPasteWithoutExpansion,
   ]);
 
   const getMemoizedCoreRowModel = React.useMemo(() => getCoreRowModel(), []);

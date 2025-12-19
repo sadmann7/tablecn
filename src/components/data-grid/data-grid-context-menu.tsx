@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAsRef } from "@/hooks/use-as-ref";
 import { parseCellKey } from "@/lib/data-grid";
 import type { ContextMenuState, UpdateCell } from "@/types/data-grid";
 
@@ -93,6 +94,16 @@ function ContextMenuImpl<TData>({
   onCellsCopy,
   onCellsCut,
 }: ContextMenuProps<TData>) {
+  const propsRef = useAsRef({
+    dataGridRef,
+    selectionState,
+    onDataUpdate,
+    onRowsDelete,
+    onCellsCopy,
+    onCellsCut,
+    columns,
+  });
+
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
       position: "fixed",
@@ -115,20 +126,22 @@ function ContextMenuImpl<TData>({
   > = React.useCallback(
     (event) => {
       event.preventDefault();
-      dataGridRef?.current?.focus();
+      propsRef.current.dataGridRef?.current?.focus();
     },
-    [dataGridRef],
+    [propsRef],
   );
 
   const onCopy = React.useCallback(() => {
-    onCellsCopy?.();
-  }, [onCellsCopy]);
+    propsRef.current.onCellsCopy?.();
+  }, [propsRef]);
 
   const onCut = React.useCallback(() => {
-    onCellsCut?.();
-  }, [onCellsCut]);
+    propsRef.current.onCellsCut?.();
+  }, [propsRef]);
 
   const onClear = React.useCallback(() => {
+    const { selectionState, columns, onDataUpdate } = propsRef.current;
+
     if (
       !selectionState?.selectedCells ||
       selectionState.selectedCells.size === 0
@@ -165,9 +178,11 @@ function ContextMenuImpl<TData>({
     toast.success(
       `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,
     );
-  }, [onDataUpdate, selectionState, columns]);
+  }, [propsRef]);
 
   const onDelete = React.useCallback(async () => {
+    const { selectionState, onRowsDelete } = propsRef.current;
+
     if (
       !selectionState?.selectedCells ||
       selectionState.selectedCells.size === 0
@@ -186,7 +201,7 @@ function ContextMenuImpl<TData>({
     await onRowsDelete?.(rowIndicesArray);
 
     toast.success(`${rowCount} row${rowCount !== 1 ? "s" : ""} deleted`);
-  }, [onRowsDelete, selectionState]);
+  }, [propsRef]);
 
   return (
     <DropdownMenu

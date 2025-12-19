@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAsRef } from "@/hooks/use-as-ref";
 import { cn } from "@/lib/utils";
 import type { PasteDialogState } from "@/types/data-grid";
 
@@ -24,8 +25,7 @@ export function DataGridPasteDialog<TData>({
   pasteDialog,
 }: DataGridPasteDialogProps<TData>) {
   const onPasteDialogOpenChange = tableMeta?.onPasteDialogOpenChange;
-  const onPasteWithExpansion = tableMeta?.onPasteWithExpansion;
-  const onPasteWithoutExpansion = tableMeta?.onPasteWithoutExpansion;
+  const onCellsPaste = tableMeta?.onCellsPaste;
 
   if (!pasteDialog.open) return null;
 
@@ -33,19 +33,13 @@ export function DataGridPasteDialog<TData>({
     <PasteDialog
       pasteDialog={pasteDialog}
       onPasteDialogOpenChange={onPasteDialogOpenChange}
-      onPasteWithExpansion={onPasteWithExpansion}
-      onPasteWithoutExpansion={onPasteWithoutExpansion}
+      onCellsPaste={onCellsPaste}
     />
   );
 }
 
 interface PasteDialogProps
-  extends Pick<
-      TableMeta<unknown>,
-      | "onPasteDialogOpenChange"
-      | "onPasteWithExpansion"
-      | "onPasteWithoutExpansion"
-    >,
+  extends Pick<TableMeta<unknown>, "onPasteDialogOpenChange" | "onCellsPaste">,
     Required<Pick<TableMeta<unknown>, "pasteDialog">> {}
 
 const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
@@ -59,25 +53,32 @@ const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
 function PasteDialogImpl({
   pasteDialog,
   onPasteDialogOpenChange,
-  onPasteWithExpansion,
-  onPasteWithoutExpansion,
+  onCellsPaste,
 }: PasteDialogProps) {
+  const propsRef = useAsRef({
+    onPasteDialogOpenChange,
+    onCellsPaste,
+  });
+
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
 
+  const onOpenChange = React.useCallback(
+    (open: boolean) => {
+      propsRef.current.onPasteDialogOpenChange?.(open);
+    },
+    [propsRef],
+  );
+
   const onCancel = React.useCallback(() => {
-    onPasteDialogOpenChange?.(false);
-  }, [onPasteDialogOpenChange]);
+    propsRef.current.onPasteDialogOpenChange?.(false);
+  }, [propsRef]);
 
   const onContinue = React.useCallback(() => {
-    if (expandRadioRef.current?.checked) {
-      onPasteWithExpansion?.();
-    } else {
-      onPasteWithoutExpansion?.();
-    }
-  }, [onPasteWithExpansion, onPasteWithoutExpansion]);
+    propsRef.current.onCellsPaste?.(expandRadioRef.current?.checked ?? false);
+  }, [propsRef]);
 
   return (
-    <Dialog open={pasteDialog.open} onOpenChange={onPasteDialogOpenChange}>
+    <Dialog open={pasteDialog.open} onOpenChange={onOpenChange}>
       <DialogContent data-grid-popover="">
         <DialogHeader>
           <DialogTitle>Do you want to add more rows?</DialogTitle>

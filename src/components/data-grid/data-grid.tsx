@@ -7,6 +7,7 @@ import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-me
 import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
+import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
 import { flexRender, getCommonPinningStyles } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
@@ -15,17 +16,11 @@ import type { Direction } from "@/types/data-grid";
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 
 interface DataGridProps<TData>
-  extends Omit<
-      ReturnType<typeof useDataGrid<TData>>,
-      "dir" | "virtualTotalSize" | "virtualItems" | "measureElement"
-    >,
+  extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
   dir?: Direction;
   height?: number;
   stretchColumns?: boolean;
-  virtualTotalSize: number;
-  virtualItems: ReturnType<typeof useDataGrid<TData>>["virtualItems"];
-  measureElement: ReturnType<typeof useDataGrid<TData>>["measureElement"];
 }
 
 export function DataGrid<TData>({
@@ -50,7 +45,7 @@ export function DataGrid<TData>({
   rowHeight,
   contextMenu,
   pasteDialog,
-  onRowAdd,
+  onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
   className,
@@ -61,6 +56,15 @@ export function DataGrid<TData>({
   const columnVisibility = table.getState().columnVisibility;
   const columnPinning = table.getState().columnPinning;
 
+  const onRowAddRef = useAsRef(onRowAddProp);
+
+  const onRowAdd = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      onRowAddRef.current?.(event);
+    },
+    [onRowAddRef],
+  );
+
   const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -68,16 +72,16 @@ export function DataGrid<TData>({
     [],
   );
 
-  const onAddRowKeyDown = React.useCallback(
+  const onFooterCellKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!onRowAdd) return;
+      if (!onRowAddRef.current) return;
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        onRowAdd();
+        onRowAddRef.current();
       }
     },
-    [onRowAdd],
+    [onRowAddRef],
   );
 
   return (
@@ -97,7 +101,7 @@ export function DataGrid<TData>({
       <div
         role="grid"
         aria-label="Data grid"
-        aria-rowcount={rows.length + (onRowAdd ? 1 : 0)}
+        aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
         aria-colcount={columns.length}
         data-slot="grid"
         tabIndex={0}
@@ -218,7 +222,7 @@ export function DataGrid<TData>({
             );
           })}
         </div>
-        {onRowAdd && (
+        {!readOnly && onRowAdd && (
           <div
             role="rowgroup"
             data-slot="grid-footer"
@@ -241,7 +245,7 @@ export function DataGrid<TData>({
                   minWidth: table.getTotalSize(),
                 }}
                 onClick={onRowAdd}
-                onKeyDown={onAddRowKeyDown}
+                onKeyDown={onFooterCellKeyDown}
               >
                 <div className="sticky start-0 flex items-center gap-2 px-3 text-muted-foreground">
                   <Plus className="size-3.5" />
