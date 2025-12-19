@@ -47,6 +47,7 @@ export const insertSkatersSchema = z.object({
 
 export const updateSkaterSchema = z.object({
   name: z.string().nullable().optional(),
+  order: z.number().optional(),
   email: z.string().nullable().optional(),
   stance: z.enum(skaters.stance.enumValues).optional(),
   style: z.enum(skaters.style.enumValues).optional(),
@@ -56,7 +57,6 @@ export const updateSkaterSchema = z.object({
   isPro: z.boolean().optional(),
   tricks: z.array(z.string()).nullable().optional(),
   media: z.array(mediaSchema).nullable().optional(),
-  order: z.number().optional(),
 });
 
 export const updateSkatersSchema = z.object({
@@ -65,7 +65,7 @@ export const updateSkatersSchema = z.object({
       z.object({
         id: z.string(),
         changes: updateSkaterSchema,
-      })
+      }),
     )
     .min(1),
 });
