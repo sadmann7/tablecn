@@ -30,7 +30,7 @@ export async function seedSkaters(input: { count: number }) {
     const allSkaters: Skater[] = [];
 
     for (let i = 0; i < count; i++) {
-      allSkaters.push(generateRandomSkater());
+      allSkaters.push(generateRandomSkater({ order: i }));
     }
 
     await db.delete(skaters);

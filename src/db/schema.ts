@@ -53,6 +53,7 @@ export const skaters = pgTable("skaters", {
   id: varchar("id", { length: 30 })
     .$defaultFn(() => generateId())
     .primaryKey(),
+  order: integer("order").notNull().default(0),
   name: varchar("name", { length: 128 }),
   email: varchar("email", { length: 256 }),
   stance: varchar("stance", {

@@ -38,6 +38,7 @@ import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
+import { generateId } from "@/lib/id";
 import { useUploadThing } from "@/lib/uploadthing";
 import type { SkaterSchema } from "../lib/validation";
 
@@ -86,23 +87,21 @@ export function DataGridLiveDemo() {
   use(skatersCollection.preload());
 
   const windowSize = useWindowSize();
-  const [sorting, setSorting] = React.useState<SortingState>([
-    { id: "createdAt", desc: false },
-  ]);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
 
   const { data = [] } = useLiveQuery(
     (q) => {
       let query = q.from({ skater: skatersCollection });
 
-      if (sorting.length > 0) {
-        for (const sort of sorting) {
-          const field = sort.id as keyof SkaterSchema;
-          const direction = sort.desc ? "desc" : "asc";
-          query = query.orderBy((t) => t.skater[field], direction);
-        }
-      } else {
-        query = query.orderBy((t) => t.skater.createdAt, "asc");
+      // Apply user-specified sorting first (primary)
+      for (const sort of sorting) {
+        const field = sort.id as keyof SkaterSchema;
+        const direction = sort.desc ? "desc" : "asc";
+        query = query.orderBy((t) => t.skater[field], direction);
       }
+
+      // Always sort by order as implicit default / tiebreaker
+      query = query.orderBy((t) => t.skater.order, "asc");
 
       return query;
     },
@@ -228,19 +227,6 @@ export function DataGridLiveDemo() {
         },
       },
       {
-        id: "createdAt",
-        accessorKey: "createdAt",
-        header: "Date Added",
-        minSize: 170,
-        filterFn,
-        meta: {
-          label: "Date Added",
-          cell: {
-            variant: "date",
-          },
-        },
-      },
-      {
         id: "isPro",
         accessorKey: "isPro",
         header: "Pro",
@@ -281,7 +267,15 @@ export function DataGridLiveDemo() {
       // Diff and update changed skaters via TanStack DB for optimistic updates
       for (const skater of newData) {
         const existingSkater = data.find((s) => s.id === skater.id);
-        if (!existingSkater) continue;
+
+        // For new rows (not yet in our stale closure data), still update them
+        // because onRowsAdd already created them in the collection
+        if (!existingSkater) {
+          skatersCollection.update(skater.id, (draft) => {
+            Object.assign(draft, skater);
+          });
+          continue;
+        }
 
         // Check if any field changed using JSON comparison for arrays/objects
         const hasChanges = (
@@ -311,35 +305,41 @@ export function DataGridLiveDemo() {
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
+      const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
       const newSkater = generateRandomSkater();
-      skatersCollection.insert(newSkater);
+      skatersCollection.insert({ ...newSkater, order: maxOrder + 1 });
 
       return {
         rowIndex: data.length,
         columnId: "name",
       };
-    }, [data.length]);
+    }, [data]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
-    React.useCallback((count: number) => {
-      for (let i = 0; i < count; i++) {
-        skatersCollection.insert({
-          id: crypto.randomUUID(),
-          name: null,
-          email: null,
-          stance: "regular",
-          style: "street",
-          status: "amateur",
-          yearsSkating: 0,
-          startedSkating: null,
-          isPro: false,
-          tricks: null,
-          media: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
-    }, []);
+    React.useCallback(
+      (count: number) => {
+        const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
+        for (let i = 0; i < count; i++) {
+          skatersCollection.insert({
+            id: generateId(), // Use same ID format as database (12 char nanoid)
+            name: null,
+            email: null,
+            stance: "regular",
+            style: "street",
+            status: "amateur",
+            yearsSkating: 0,
+            startedSkating: null,
+            isPro: false,
+            tricks: null,
+            media: null,
+            order: maxOrder + i + 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        }
+      },
+      [data],
+    );
 
   const onRowsDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onRowsDelete"]
