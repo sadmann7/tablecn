@@ -140,6 +140,7 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
     isPro: faker.datatype.boolean({ probability: 0.3 }),
     tricks,
     media,
+    order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...input,

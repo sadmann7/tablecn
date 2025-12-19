@@ -11,6 +11,7 @@ const mediaSchema = z.object({
 
 export const skaterSchema = z.object({
   id: z.string(),
+  order: z.number(),
   name: z.string().nullable(),
   email: z.string().nullable(),
   stance: z.enum(skaters.stance.enumValues),
@@ -27,6 +28,7 @@ export const skaterSchema = z.object({
 
 export const insertSkaterSchema = z.object({
   id: z.string().optional(),
+  order: z.number().optional(),
   name: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
   stance: z.enum(skaters.stance.enumValues).optional(),
@@ -54,6 +56,7 @@ export const updateSkaterSchema = z.object({
   isPro: z.boolean().optional(),
   tricks: z.array(z.string()).nullable().optional(),
   media: z.array(mediaSchema).nullable().optional(),
+  order: z.number().optional(),
 });
 
 export const updateSkatersSchema = z.object({
@@ -62,7 +65,7 @@ export const updateSkatersSchema = z.object({
       z.object({
         id: z.string(),
         changes: updateSkaterSchema,
-      }),
+      })
     )
     .min(1),
 });
