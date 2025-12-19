@@ -1,19 +1,19 @@
 import { Suspense } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DataGridSkeleton,
+  DataGridSkeletonGrid,
+  DataGridSkeletonToolbar,
+} from "@/components/data-grid/data-grid-skeleton";
 import { DataGridDemo } from "./components/data-grid-demo";
 
 export default async function DataGridPage() {
   return (
     <Suspense
       fallback={
-        <div className="container flex h-[calc(100dvh-5.5rem)] flex-col gap-4 py-4">
-          <div className="flex items-center gap-2 self-end">
-            <Skeleton className="h-7 w-18" />
-            <Skeleton className="h-7 w-18" />
-            <Skeleton className="h-7 w-18" />
-          </div>
-          <Skeleton className="h-full w-full" />
-        </div>
+        <DataGridSkeleton className="container flex flex-col gap-4 py-4">
+          <DataGridSkeletonToolbar actionCount={5} />
+          <DataGridSkeletonGrid />
+        </DataGridSkeleton>
       }
     >
       <DataGridDemo />

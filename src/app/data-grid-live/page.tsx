@@ -1,7 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DataGridSkeleton,
+  DataGridSkeletonGrid,
+  DataGridSkeletonToolbar,
+} from "@/components/data-grid/data-grid-skeleton";
 
 // Dynamic import with ssr: false is required because:
 // 1. useLiveQuery uses useSyncExternalStore which needs getServerSnapshot for SSR
@@ -14,15 +18,10 @@ const DataGridLiveDemo = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="container flex h-[calc(100dvh-5.5rem)] flex-col gap-4 py-4">
-        <div className="flex items-center gap-2 self-end">
-          <Skeleton className="h-7 w-20" />
-          <Skeleton className="h-7 w-20" />
-          <Skeleton className="h-7 w-20" />
-          <Skeleton className="hidden h-7 w-20 lg:block" />
-        </div>
-        <Skeleton className="size-full" />
-      </div>
+      <DataGridSkeleton className="container flex flex-col gap-4 py-4">
+        <DataGridSkeletonToolbar actionCount={4} />
+        <DataGridSkeletonGrid />
+      </DataGridSkeleton>
     ),
   },
 );

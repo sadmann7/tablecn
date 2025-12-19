@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "data-grid-skeleton",
+  "type": "registry:component",
+  "title": "Data Grid Skeleton",
+  "description": "A composable skeleton component for the data grid with individual parts like toolbar, header, rows, and pagination",
+  "dependencies": [],
+  "registryDependencies": [
+    "skeleton"
+  ],
+  "files": [
+    {
+      "path": "src/components/data-grid/data-grid-skeleton.tsx",
+      "content": "import type * as React from \"react\";\nimport { Skeleton } from \"@/components/ui/skeleton\";\nimport { cn } from \"@/lib/utils\";\n\ninterface DivProps extends React.ComponentProps<\"div\"> {}\n\nfunction DataGridSkeleton({ className, ...props }: DivProps) {\n  return (\n    <div\n      data-slot=\"grid-skeleton\"\n      className={cn(\n        \"flex h-[calc(100dvh-3rem)] w-full flex-col gap-4 has-[>[data-slot=grid-skeleton-toolbar]]:h-[calc(100dvh-5.5rem)]\",\n        className,\n      )}\n      {...props}\n    />\n  );\n}\n\ninterface DataGridSkeletonToolbarProps extends DivProps {\n  align?: \"start\" | \"center\" | \"end\";\n  actionCount?: number;\n}\n\nfunction DataGridSkeletonToolbar({\n  align = \"end\",\n  actionCount = 4,\n  className,\n  ...props\n}: DataGridSkeletonToolbarProps) {\n  return (\n    <div\n      data-slot=\"grid-skeleton-toolbar\"\n      className={cn(\n        \"flex items-center gap-2\",\n        {\n          \"justify-start\": align === \"start\",\n          \"justify-center\": align === \"center\",\n          \"justify-end\": align === \"end\",\n        },\n        className,\n      )}\n      {...props}\n    >\n      {Array.from({ length: actionCount }).map((_, i) => (\n        <Skeleton key={i} className=\"h-7 w-20 shrink-0\" />\n      ))}\n    </div>\n  );\n}\n\nfunction DataGridSkeletonGrid({ className, ...props }: DivProps) {\n  return (\n    <Skeleton\n      data-slot=\"grid-skeleton-grid\"\n      className={cn(\"flex-1 rounded-md\", className)}\n      {...props}\n    />\n  );\n}\n\nexport { DataGridSkeleton, DataGridSkeletonGrid, DataGridSkeletonToolbar };\n",
+      "type": "registry:component",
+      "target": "src/components/data-grid/data-grid-skeleton.tsx"
+    }
+  ]
+}

@@ -571,6 +571,21 @@
           "target": "src/types/data-grid.ts"
         }
       ]
+    },
+    {
+      "name": "data-grid-skeleton",
+      "type": "registry:component",
+      "title": "Data Grid Skeleton",
+      "description": "A composable skeleton component for the data grid with individual parts like toolbar, header, rows, and pagination",
+      "registryDependencies": ["skeleton"],
+      "dependencies": [],
+      "files": [
+        {
+          "path": "src/components/data-grid/data-grid-skeleton.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-skeleton.tsx"
+        }
+      ]
     }
   ]
 }
