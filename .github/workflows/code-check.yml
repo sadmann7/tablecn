@@ -22,7 +22,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.3.0
+          version: 10.26.1
       - uses: ./.github/setup
 
       - name: Check formatting
@@ -37,7 +37,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.3.0
+          version: 10.26.1
       - uses: ./.github/setup
 
       - run: pnpm lint
@@ -51,7 +51,21 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.3.0
+          version: 10.26.1
       - uses: ./.github/setup
 
       - run: pnpm typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+      - uses: ./.github/setup
+
+      - run: pnpm test
