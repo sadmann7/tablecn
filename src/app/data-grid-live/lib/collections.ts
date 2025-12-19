@@ -32,8 +32,7 @@ export const skatersCollection = createCollection(
         .filter((modified): modified is SkaterSchema => modified != null)
         .map(
           ({
-            // Exclude auto-generated fields
-            id: _id,
+            // Exclude auto-generated timestamp fields (but keep id!)
             createdAt: _createdAt,
             updatedAt: _updatedAt,
             ...data

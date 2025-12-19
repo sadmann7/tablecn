@@ -26,6 +26,7 @@ export const skaterSchema = z.object({
 });
 
 export const insertSkaterSchema = z.object({
+  id: z.string().optional(),
   name: z.string().nullable().optional(),
   email: z.string().nullable().optional(),
   stance: z.enum(skaters.stance.enumValues).optional(),

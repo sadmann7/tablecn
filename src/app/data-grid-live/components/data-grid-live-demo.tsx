@@ -38,6 +38,7 @@ import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
+import { generateId } from "@/lib/id";
 import { useUploadThing } from "@/lib/uploadthing";
 import type { SkaterSchema } from "../lib/validation";
 
@@ -281,7 +282,15 @@ export function DataGridLiveDemo() {
       // Diff and update changed skaters via TanStack DB for optimistic updates
       for (const skater of newData) {
         const existingSkater = data.find((s) => s.id === skater.id);
-        if (!existingSkater) continue;
+
+        // For new rows (not yet in our stale closure data), still update them
+        // because onRowsAdd already created them in the collection
+        if (!existingSkater) {
+          skatersCollection.update(skater.id, (draft) => {
+            Object.assign(draft, skater);
+          });
+          continue;
+        }
 
         // Check if any field changed using JSON comparison for arrays/objects
         const hasChanges = (
@@ -324,7 +333,7 @@ export function DataGridLiveDemo() {
     React.useCallback((count: number) => {
       for (let i = 0; i < count; i++) {
         skatersCollection.insert({
-          id: crypto.randomUUID(),
+          id: generateId(), // Use same ID format as database (12 char nanoid)
           name: null,
           email: null,
           stance: "regular",
