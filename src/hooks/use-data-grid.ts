@@ -2216,7 +2216,6 @@ function useDataGrid<TData>({
     getScrollElement: () => dataGridRef.current,
     estimateSize: () => rowHeightValue,
     overscan,
-    isScrollingResetDelay: 150,
     measureElement:
       typeof window !== "undefined" &&
       navigator.userAgent.indexOf("Firefox") === -1
@@ -2320,7 +2319,7 @@ function useDataGrid<TData>({
           cellElement.focus();
           releaseFocusGuard();
         } else if (retryCount > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 50));
+          await new Promise((resolve) => requestAnimationFrame(resolve));
           await onScrollAndFocus(retryCount - 1);
         } else {
           dataGridRef.current?.focus();
