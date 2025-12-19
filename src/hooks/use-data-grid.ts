@@ -168,6 +168,7 @@ function useDataGrid<TData>({
   });
 
   const listenersRef = useLazyRef(() => new Set<() => void>());
+
   const stateRef = useLazyRef<DataGridState>(() => {
     return {
       sorting: initialState?.sorting ?? [],
