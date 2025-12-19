@@ -432,14 +432,6 @@
           "path": "src/components/data-grid/data-grid-select-column.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-select-column.tsx"
-        },
-        {
-          "path": "src/hooks/use-as-ref.ts",
-          "type": "registry:hook"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },
