@@ -817,7 +817,7 @@ function DataGridFilterInput<TData>({
               ) : (
                 <>
                   {selectedOptionsWithIcons.length > 0 && (
-                    <div className="-space-x-2 flex items-center rtl:space-x-reverse">
+                    <div className="flex items-center -space-x-2 rtl:space-x-reverse">
                       {selectedOptionsWithIcons.map(
                         (selectedOption) =>
                           selectedOption.icon && (

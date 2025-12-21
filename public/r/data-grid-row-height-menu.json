@@ -1,7 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "data-grid-row-height-menu",
-  "type": "registry:component",
   "title": "Data Grid Row Height Menu",
   "description": "A row height menu component for the data grid to adjust row sizes",
   "dependencies": [
@@ -18,5 +17,6 @@
       "type": "registry:component",
       "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
     }
-  ]
+  ],
+  "type": "registry:component"
 }

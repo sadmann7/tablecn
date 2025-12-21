@@ -12,7 +12,7 @@ function DataGridSelectCheckbox({
   return (
     <Checkbox
       className={cn(
-        "after:-inset-2.5 relative transition-[shadow,border] after:absolute after:content-[''] hover:border-primary/40",
+        "relative transition-[shadow,border] after:absolute after:-inset-2.5 after:content-[''] hover:border-primary/40",
         className,
       )}
       {...props}

@@ -1,7 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "data-table",
-  "type": "registry:component",
   "title": "Data Table",
   "description": "A feature-rich data table component with server-side filtering, sorting, and pagination",
   "dependencies": [
@@ -119,5 +118,6 @@
       "type": "registry:file",
       "target": "src/types/data-table.ts"
     }
-  ]
+  ],
+  "type": "registry:component"
 }

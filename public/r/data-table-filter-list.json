@@ -1,7 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "data-table-filter-list",
-  "type": "registry:component",
   "title": "Data Table Filter List",
   "description": "A filter list component for the data table",
   "dependencies": [
@@ -97,5 +96,6 @@
       "type": "registry:file",
       "target": "src/types/data-table.ts"
     }
-  ]
+  ],
+  "type": "registry:component"
 }
