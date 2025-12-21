@@ -1281,7 +1281,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "example"
+      // Search for "Kickflip"
       act(() => {
         result.current.searchState?.onSearch("Kickflip");
       });
@@ -1305,7 +1305,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "example"
+      // Search for "Kickflip"
       act(() => {
         result.current.searchState?.onSearch("Kickflip");
       });
@@ -1334,7 +1334,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "example"
+      // Search for "Kickflip"
       act(() => {
         result.current.searchState?.onSearch("Kickflip");
       });
@@ -1681,7 +1681,7 @@ describe("useDataGrid", () => {
 
       // Set a filter
       act(() => {
-        result.current.table.setColumnFilters([{ id: "name", value: "John" }]);
+        result.current.table.setColumnFilters([{ id: "name", value: "Tony" }]);
       });
 
       expect(onColumnFiltersChange).toHaveBeenCalled();
@@ -1711,14 +1711,14 @@ describe("useDataGrid", () => {
             data: testData,
             columns: testColumns,
             initialState: {
-              columnFilters: [{ id: "name", value: "John" }],
+              columnFilters: [{ id: "name", value: "Tony" }],
             },
           }),
         { wrapper: createWrapper() },
       );
 
       const filters = result.current.table.getState().columnFilters;
-      expect(filters).toEqual([{ id: "name", value: "John" }]);
+      expect(filters).toEqual([{ id: "name", value: "Tony" }]);
     });
   });
 
