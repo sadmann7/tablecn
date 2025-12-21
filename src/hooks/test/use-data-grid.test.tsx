@@ -20,20 +20,20 @@ vi.mock("@radix-ui/react-direction", () => ({
 interface TestData {
   id: string;
   name: string;
-  age: number;
-  email: string;
+  trick: string;
+  score: number;
 }
 
 const testData: TestData[] = [
-  { id: "1", name: "John Doe", age: 30, email: "john@example.com" },
-  { id: "2", name: "Jane Smith", age: 25, email: "jane@example.com" },
-  { id: "3", name: "Bob Johnson", age: 35, email: "bob@example.com" },
+  { id: "1", name: "Tony Hawk", trick: "900", score: 95 },
+  { id: "2", name: "Rodney Mullen", trick: "Kickflip", score: 98 },
+  { id: "3", name: "Nyjah Huston", trick: "Switch Heel", score: 92 },
 ];
 
 const testColumns: ColumnDef<TestData>[] = [
   { id: "name", accessorKey: "name" },
-  { id: "age", accessorKey: "age", meta: { cell: { variant: "number" } } },
-  { id: "email", accessorKey: "email" },
+  { id: "trick", accessorKey: "trick" },
+  { id: "score", accessorKey: "score", meta: { cell: { variant: "number" } } },
 ];
 
 function createWrapper() {
@@ -199,12 +199,12 @@ describe("useDataGrid", () => {
       });
 
       act(() => {
-        result.current.tableMeta.onCellClick?.(1, "email");
+        result.current.tableMeta.onCellClick?.(1, "trick");
       });
 
       expect(result.current.focusedCell).toEqual({
         rowIndex: 1,
-        columnId: "email",
+        columnId: "trick",
       });
     });
   });
@@ -375,7 +375,7 @@ describe("useDataGrid", () => {
         await result.current.tableMeta.onCellsCopy?.();
       });
 
-      expect(mockClipboard.writeText).toHaveBeenCalledWith("John Doe");
+      expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
     });
 
     it("should not cut in readOnly mode", async () => {
@@ -652,7 +652,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.searchState?.onSearch("John");
+        result.current.searchState?.onSearch("Tony");
       });
 
       expect(result.current.searchState?.searchMatches.length).toBeGreaterThan(
@@ -673,7 +673,7 @@ describe("useDataGrid", () => {
 
       // First search for something
       act(() => {
-        result.current.searchState?.onSearch("John");
+        result.current.searchState?.onSearch("Tony");
       });
 
       expect(result.current.searchState?.searchMatches.length).toBeGreaterThan(
@@ -811,8 +811,8 @@ describe("useDataGrid", () => {
 
       // Should have size vars for each column
       expect(result.current.columnSizeVars["--col-name-size"]).toBeDefined();
-      expect(result.current.columnSizeVars["--col-age-size"]).toBeDefined();
-      expect(result.current.columnSizeVars["--col-email-size"]).toBeDefined();
+      expect(result.current.columnSizeVars["--col-trick-size"]).toBeDefined();
+      expect(result.current.columnSizeVars["--col-score-size"]).toBeDefined();
     });
   });
 
@@ -932,7 +932,7 @@ describe("useDataGrid", () => {
 
       // Focus a number cell
       act(() => {
-        result.current.tableMeta.onCellClick?.(0, "age");
+        result.current.tableMeta.onCellClick?.(0, "score");
       });
 
       // Paste
@@ -987,7 +987,7 @@ describe("useDataGrid", () => {
 
       // Focus a number cell
       act(() => {
-        result.current.tableMeta.onCellClick?.(0, "age");
+        result.current.tableMeta.onCellClick?.(0, "score");
       });
 
       // Paste invalid number
@@ -1056,7 +1056,7 @@ describe("useDataGrid", () => {
         await result.current.tableMeta.onCellsCut?.();
       });
 
-      expect(mockClipboard.writeText).toHaveBeenCalledWith("John Doe");
+      expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
     });
 
     it("should copy selected cells when multiple cells are selected", async () => {
@@ -1143,7 +1143,7 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellClick?.(1, "email", mockEvent);
+        result.current.tableMeta.onCellClick?.(1, "trick", mockEvent);
       });
 
       expect(result.current.tableMeta.getIsCellSelected?.(0, "name")).toBe(
@@ -1174,7 +1174,7 @@ describe("useDataGrid", () => {
 
       // Mouse enter to extend selection
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.(1, "age", {
+        result.current.tableMeta.onCellMouseEnter?.(1, "score", {
           button: 0,
         } as unknown as React.MouseEvent);
       });
@@ -1283,7 +1283,7 @@ describe("useDataGrid", () => {
 
       // Search for "example"
       act(() => {
-        result.current.searchState?.onSearch("example");
+        result.current.searchState?.onSearch("Kickflip");
       });
 
       // Navigate to next match
@@ -1307,7 +1307,7 @@ describe("useDataGrid", () => {
 
       // Search for "example"
       act(() => {
-        result.current.searchState?.onSearch("example");
+        result.current.searchState?.onSearch("Kickflip");
       });
 
       // Navigate to next first
@@ -1336,7 +1336,7 @@ describe("useDataGrid", () => {
 
       // Search for "example"
       act(() => {
-        result.current.searchState?.onSearch("example");
+        result.current.searchState?.onSearch("Kickflip");
       });
 
       const matchCount = result.current.searchState?.searchMatches.length ?? 0;
@@ -1365,7 +1365,7 @@ describe("useDataGrid", () => {
 
       // Search for something
       act(() => {
-        result.current.searchState?.onSearch("John");
+        result.current.searchState?.onSearch("Tony");
       });
 
       expect(result.current.searchMatchesByRow).toBeDefined();
@@ -1384,7 +1384,7 @@ describe("useDataGrid", () => {
 
       // Search for something
       act(() => {
-        result.current.searchState?.onSearch("John");
+        result.current.searchState?.onSearch("Tony");
       });
 
       expect(result.current.activeSearchMatch).toBeDefined();
@@ -1428,7 +1428,7 @@ describe("useDataGrid", () => {
 
       // Search for something
       act(() => {
-        result.current.searchState?.onSearch("John");
+        result.current.searchState?.onSearch("Tony");
       });
 
       // Close search
@@ -1618,7 +1618,7 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
-            autoFocus: { rowIndex: 1, columnId: "email" },
+            autoFocus: { rowIndex: 1, columnId: "trick" },
           }),
         { wrapper: createWrapper() },
       );
@@ -1694,14 +1694,14 @@ describe("useDataGrid", () => {
             data: testData,
             columns: testColumns,
             initialState: {
-              sorting: [{ id: "age", desc: true }],
+              sorting: [{ id: "score", desc: true }],
             },
           }),
         { wrapper: createWrapper() },
       );
 
       const sorting = result.current.table.getState().sorting;
-      expect(sorting).toEqual([{ id: "age", desc: true }]);
+      expect(sorting).toEqual([{ id: "score", desc: true }]);
     });
 
     it("should maintain filter state", () => {
@@ -1856,7 +1856,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellMouseEnter?.(1, "email", {
+        result.current.tableMeta.onCellMouseEnter?.(1, "trick", {
           button: 0,
         } as unknown as React.MouseEvent);
         await Promise.resolve();
