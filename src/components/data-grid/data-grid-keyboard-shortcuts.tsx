@@ -356,7 +356,7 @@ function DataGridKeyboardShortcutsImpl({
         </DialogHeader>
         <div className="px-6">
           <div className="relative">
-            <SearchIcon className="-translate-y-1/2 absolute start-3 top-1/2 size-3.5 text-muted-foreground" />
+            <SearchIcon className="absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               ref={inputRef}
               placeholder="Search shortcuts..."

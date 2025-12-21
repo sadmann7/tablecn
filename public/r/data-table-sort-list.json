@@ -1,7 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "data-table-sort-list",
-  "type": "registry:component",
   "title": "Data Table Sort List",
   "description": "A sort list component for the data table",
   "dependencies": [
@@ -45,5 +44,6 @@
       "type": "registry:file",
       "target": "src/types/data-table.ts"
     }
-  ]
+  ],
+  "type": "registry:component"
 }

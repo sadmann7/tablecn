@@ -1,7 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "data-grid-skeleton",
-  "type": "registry:component",
   "title": "Data Grid Skeleton",
   "description": "A composable skeleton component for the data grid with toolbar and grid parts",
   "dependencies": [],
@@ -15,5 +14,6 @@
       "type": "registry:component",
       "target": "src/components/data-grid/data-grid-skeleton.tsx"
     }
-  ]
+  ],
+  "type": "registry:component"
 }

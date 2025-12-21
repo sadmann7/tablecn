@@ -1,7 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry-item.json",
   "name": "data-grid-view-menu",
-  "type": "registry:component",
   "title": "Data Grid View Menu",
   "description": "A view menu component for the data grid to toggle column visibility",
   "dependencies": [
@@ -21,5 +20,6 @@
       "type": "registry:component",
       "target": "src/components/data-grid/data-grid-view-menu.tsx"
     }
-  ]
+  ],
+  "type": "registry:component"
 }
