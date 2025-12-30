@@ -3015,9 +3015,11 @@ function useDataGrid<TData>({
         if (isInDataGrid || isInSearchInput || !isInInput) {
           event.preventDefault();
           event.stopPropagation();
-          onSearchOpenChange(true);
 
-          if (!isInDataGrid && !isInSearchInput) {
+          const currentSearchOpen = store.getState().searchOpen;
+          onSearchOpenChange(!currentSearchOpen);
+
+          if (!currentSearchOpen && !isInDataGrid && !isInSearchInput) {
             requestAnimationFrame(() => {
               dataGridElement.focus();
             });
