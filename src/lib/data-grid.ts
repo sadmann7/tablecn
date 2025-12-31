@@ -3,11 +3,19 @@ import {
   BaselineIcon,
   CalendarIcon,
   CheckSquareIcon,
+  File,
+  FileArchive,
+  FileAudio,
   FileIcon,
+  FileImage,
+  FileSpreadsheet,
+  FileText,
+  FileVideo,
   HashIcon,
   LinkIcon,
   ListChecksIcon,
   ListIcon,
+  Presentation,
   TextInitialIcon,
 } from "lucide-react";
 import type * as React from "react";
@@ -251,4 +259,89 @@ export function getColumnVariant(variant?: CellOpts["variant"]): {
     default:
       return null;
   }
+}
+
+export function getUrlHref(urlString: string): string {
+  if (!urlString || urlString.trim() === "") return "";
+
+  const trimmed = urlString.trim();
+
+  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
+  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
+    return "";
+  }
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  return `http://${trimmed}`;
+}
+
+export function parseLocalDate(dateStr: unknown): Date | null {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  if (typeof dateStr !== "string") return null;
+  const [year, month, day] = dateStr.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  // Verify date wasn't auto-corrected (e.g. Feb 30 -> Mar 1)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
+
+export function formatDateToString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function formatDateForDisplay(dateStr: unknown): string {
+  if (!dateStr) return "";
+  const date = parseLocalDate(dateStr);
+  if (!date) return typeof dateStr === "string" ? dateStr : "";
+  return date.toLocaleDateString();
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes <= 0 || !Number.isFinite(bytes)) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.min(
+    sizes.length - 1,
+    Math.floor(Math.log(bytes) / Math.log(k)),
+  );
+  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+}
+
+export function getFileIcon(
+  type: string,
+): React.ComponentType<React.SVGProps<SVGSVGElement>> {
+  if (type.startsWith("image/")) return FileImage;
+  if (type.startsWith("video/")) return FileVideo;
+  if (type.startsWith("audio/")) return FileAudio;
+  if (type.includes("pdf")) return FileText;
+  if (type.includes("zip") || type.includes("rar")) return FileArchive;
+  if (
+    type.includes("word") ||
+    type.includes("document") ||
+    type.includes("doc")
+  )
+    return FileText;
+  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
+    return FileSpreadsheet;
+  if (
+    type.includes("presentation") ||
+    type.includes("powerpoint") ||
+    type.includes("ppt")
+  )
+    return Presentation;
+  return File;
 }
