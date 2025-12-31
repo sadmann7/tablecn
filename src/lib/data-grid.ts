@@ -284,7 +284,16 @@ export function parseLocalDate(dateStr: unknown): Date | null {
   if (typeof dateStr !== "string") return null;
   const [year, month, day] = dateStr.split("-").map(Number);
   if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day);
+  const date = new Date(year, month - 1, day);
+  // Verify date wasn't auto-corrected (e.g. Feb 30 -> Mar 1)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
 }
 
 export function formatDateToString(date: Date): string {
@@ -302,10 +311,13 @@ export function formatDateForDisplay(dateStr: unknown): string {
 }
 
 export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
+  if (bytes <= 0 || !Number.isFinite(bytes)) return "0 B";
   const k = 1024;
   const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const i = Math.min(
+    sizes.length - 1,
+    Math.floor(Math.log(bytes) / Math.log(k)),
+  );
   return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
 }
 
