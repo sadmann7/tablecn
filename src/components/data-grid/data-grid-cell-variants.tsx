@@ -1,18 +1,6 @@
 "use client";
 
-import {
-  Check,
-  File,
-  FileArchive,
-  FileAudio,
-  FileImage,
-  FileSpreadsheet,
-  FileText,
-  FileVideo,
-  Presentation,
-  Upload,
-  X,
-} from "lucide-react";
+import { Check, Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
@@ -45,7 +33,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getCellKey, getLineCount } from "@/lib/data-grid";
+import {
+  formatDateForDisplay,
+  formatDateToString,
+  formatFileSize,
+  getCellKey,
+  getFileIcon,
+  getLineCount,
+  getUrlHref,
+  parseLocalDate,
+} from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { DataGridCellProps, FileCellData } from "@/types/data-grid";
 
@@ -492,23 +489,6 @@ export function NumberCell<TData>({
       )}
     </DataGridCellWrapper>
   );
-}
-
-function getUrlHref(urlString: string): string {
-  if (!urlString || urlString.trim() === "") return "";
-
-  const trimmed = urlString.trim();
-
-  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
-    return "";
-  }
-
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-
-  return `http://${trimmed}`;
 }
 
 export function UrlCell<TData>({
@@ -1253,12 +1233,6 @@ export function MultiSelectCell<TData>({
   );
 }
 
-function formatDateForDisplay(dateStr: string) {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString();
-}
-
 export function DateCell<TData>({
   cell,
   tableMeta,
@@ -1282,13 +1256,15 @@ export function DateCell<TData>({
     setValue(initialValue ?? "");
   }
 
-  const selectedDate = value ? new Date(value) : undefined;
+  // Parse date as local time to avoid timezone shifts
+  const selectedDate = value ? (parseLocalDate(value) ?? undefined) : undefined;
 
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
       if (!date || readOnly) return;
 
-      const formattedDate = date.toISOString().split("T")[0] ?? "";
+      // Format using local date components to avoid timezone issues
+      const formattedDate = formatDateToString(date);
       setValue(formattedDate);
       tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
       tableMeta?.onCellEditingStop?.();
@@ -1365,39 +1341,6 @@ export function DateCell<TData>({
       </Popover>
     </DataGridCellWrapper>
   );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
-}
-
-function getFileIcon(
-  type: string,
-): React.ComponentType<React.SVGProps<SVGSVGElement>> {
-  if (type.startsWith("image/")) return FileImage;
-  if (type.startsWith("video/")) return FileVideo;
-  if (type.startsWith("audio/")) return FileAudio;
-  if (type.includes("pdf")) return FileText;
-  if (type.includes("zip") || type.includes("rar")) return FileArchive;
-  if (
-    type.includes("word") ||
-    type.includes("document") ||
-    type.includes("doc")
-  )
-    return FileText;
-  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
-    return FileSpreadsheet;
-  if (
-    type.includes("presentation") ||
-    type.includes("powerpoint") ||
-    type.includes("ppt")
-  )
-    return Presentation;
-  return File;
 }
 
 export function FileCell<TData>({
