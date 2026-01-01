@@ -6,7 +6,7 @@ import type {
   FilterVariant,
 } from "@/types/data-table";
 
-export function getCommonPinningStyles<TData>({
+export function getColumnPinningStyle<TData>({
   column,
   withBorder = false,
 }: {

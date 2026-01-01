@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getCommonPinningStyles } from "@/lib/data-table";
+import { getColumnPinningStyle } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData> extends React.ComponentProps<"div"> {
@@ -41,7 +41,7 @@ export function DataTable<TData>({
                     key={header.id}
                     colSpan={header.colSpan}
                     style={{
-                      ...getCommonPinningStyles({ column: header.column }),
+                      ...getColumnPinningStyle({ column: header.column }),
                     }}
                   >
                     {header.isPlaceholder
@@ -66,7 +66,7 @@ export function DataTable<TData>({
                     <TableCell
                       key={cell.id}
                       style={{
-                        ...getCommonPinningStyles({ column: cell.column }),
+                        ...getColumnPinningStyle({ column: cell.column }),
                       }}
                     >
                       {flexRender(
