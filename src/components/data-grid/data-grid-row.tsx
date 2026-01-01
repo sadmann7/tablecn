@@ -13,7 +13,8 @@ import { useComposedRefs } from "@/lib/compose-refs";
 import {
   flexRender,
   getCellKey,
-  getCommonPinningStyles,
+  getColumnBorderVisibility,
+  getColumnPinningStyle,
   getRowHeightValue,
 } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
@@ -128,8 +129,18 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if direction changed
+  if (prev.dir !== next.dir) {
+    return false;
+  }
+
   // Re-render if adjustLayout state changed
   if (prev.adjustLayout !== next.adjustLayout) {
+    return false;
+  }
+
+  // Re-render if stretchColumns changed
+  if (prev.stretchColumns !== next.stretchColumns) {
     return false;
   }
 
@@ -228,6 +239,14 @@ function DataGridRowImpl<TData>({
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
 
+        const nextCell = visibleCells[colIndex + 1];
+        const isLastColumn = colIndex === visibleCells.length - 1;
+        const { showEndBorder, showStartBorder } = getColumnBorderVisibility({
+          column: cell.column,
+          nextColumn: nextCell?.column,
+          isLastColumn,
+        });
+
         return (
           <div
             key={cell.id}
@@ -238,10 +257,11 @@ function DataGridRowImpl<TData>({
             tabIndex={-1}
             className={cn({
               grow: stretchColumns && columnId !== "select",
-              "border-e": columnId !== "select",
+              "border-e": showEndBorder && columnId !== "select",
+              "border-s": showStartBorder && columnId !== "select",
             })}
             style={{
-              ...getCommonPinningStyles({ column: cell.column, dir }),
+              ...getColumnPinningStyle({ column: cell.column, dir }),
               width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >

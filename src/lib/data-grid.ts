@@ -99,12 +99,43 @@ export function getLineCount(rowHeight: RowHeightValue): number {
   return lineCountMap[rowHeight];
 }
 
-export function getCommonPinningStyles<TData>(params: {
+export function getColumnBorderVisibility<TData>(params: {
+  column: Column<TData>;
+  nextColumn?: Column<TData>;
+  isLastColumn: boolean;
+}): {
+  showEndBorder: boolean;
+  showStartBorder: boolean;
+} {
+  const { column, nextColumn, isLastColumn } = params;
+
+  const isPinned = column.getIsPinned();
+  const isFirstRightPinnedColumn =
+    isPinned === "right" && column.getIsFirstColumn("right");
+  const isLastRightPinnedColumn =
+    isPinned === "right" && column.getIsLastColumn("right");
+
+  const nextIsPinned = nextColumn?.getIsPinned();
+  const isBeforeRightPinned =
+    nextIsPinned === "right" && nextColumn?.getIsFirstColumn("right");
+
+  const showEndBorder =
+    !isBeforeRightPinned && (isLastColumn || !isLastRightPinnedColumn);
+
+  const showStartBorder = isFirstRightPinnedColumn;
+
+  return {
+    showEndBorder,
+    showStartBorder,
+  };
+}
+
+export function getColumnPinningStyle<TData>(params: {
   column: Column<TData>;
   withBorder?: boolean;
   dir?: Direction;
 }): React.CSSProperties {
-  const { column, withBorder = false, dir = "ltr" } = params;
+  const { column, dir = "ltr", withBorder = false } = params;
 
   const isPinned = column.getIsPinned();
   const isLastLeftPinnedColumn =
