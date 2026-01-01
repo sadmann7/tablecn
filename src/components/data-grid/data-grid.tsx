@@ -48,7 +48,7 @@ export function DataGrid<TData>({
   onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
-  isFirefox = false,
+  adjustLayout = false,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -56,11 +56,6 @@ export function DataGrid<TData>({
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = table.getState().columnVisibility;
   const columnPinning = table.getState().columnPinning;
-
-  const adjustLayout =
-    isFirefox &&
-    ((columnPinning.left?.length ?? 0) > 0 ||
-      (columnPinning.right?.length ?? 0) > 0);
 
   const onRowAddRef = useAsRef(onRowAddProp);
 

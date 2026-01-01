@@ -2223,6 +2223,16 @@ function useDataGrid<TData>({
     React.useCallback(() => false, []),
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: columnPinning is used for calculating the adjustLayout
+  const adjustLayout = React.useMemo(() => {
+    const columnPinning = table.getState().columnPinning;
+    return (
+      isFirefox &&
+      ((columnPinning.left?.length ?? 0) > 0 ||
+        (columnPinning.right?.length ?? 0) > 0)
+    );
+  }, [isFirefox, table.getState().columnPinning]);
+
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => dataGridRef.current,
@@ -3255,7 +3265,7 @@ function useDataGrid<TData>({
       contextMenu,
       pasteDialog,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
-      isFirefox,
+      adjustLayout,
     }),
     [
       propsRef,
@@ -3277,7 +3287,7 @@ function useDataGrid<TData>({
       contextMenu,
       pasteDialog,
       onRowAdd,
-      isFirefox,
+      adjustLayout,
     ],
   );
 }
