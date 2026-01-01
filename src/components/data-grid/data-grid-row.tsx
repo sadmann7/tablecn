@@ -40,6 +40,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   dir: Direction;
   readOnly: boolean;
   stretchColumns: boolean;
+  adjustLayout: boolean;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -127,6 +128,11 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if adjustLayout state changed
+  if (prev.adjustLayout !== next.adjustLayout) {
+    return false;
+  }
+
   // Skip re-render - props are equal
   return true;
 }) as typeof DataGridRowImpl;
@@ -148,6 +154,7 @@ function DataGridRowImpl<TData>({
   dir,
   readOnly,
   stretchColumns,
+  adjustLayout,
   className,
   style,
   ref,
@@ -193,12 +200,15 @@ function DataGridRowImpl<TData>({
       {...props}
       ref={rowRef}
       className={cn(
-        "absolute flex w-full border-b will-change-transform",
+        "absolute flex w-full border-b",
+        !adjustLayout && "will-change-transform",
         className,
       )}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
-        transform: `translateY(${virtualItem.start}px)`,
+        ...(adjustLayout
+          ? { top: `${virtualItem.start}px` }
+          : { transform: `translateY(${virtualItem.start}px)` }),
         ...style,
       }}
     >

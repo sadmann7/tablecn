@@ -48,6 +48,7 @@ export function DataGrid<TData>({
   onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
+  adjustLayout = false,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -183,7 +184,7 @@ export function DataGrid<TData>({
           className="relative grid"
           style={{
             height: `${virtualTotalSize}px`,
-            contain: "strict",
+            contain: adjustLayout ? "layout paint" : "strict",
           }}
         >
           {virtualItems.map((virtualItem) => {
@@ -218,6 +219,7 @@ export function DataGrid<TData>({
                 dir={dir}
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}
+                adjustLayout={adjustLayout}
               />
             );
           })}
