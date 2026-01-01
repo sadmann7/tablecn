@@ -25,10 +25,10 @@ import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   getCellKey,
   getIsFileCellData,
+  getIsFirefox,
   getIsInPopover,
   getRowHeightValue,
   getScrollDirection,
-  isFirefox,
   matchSelectOption,
   parseCellKey,
   scrollCellIntoView,
@@ -2219,7 +2219,7 @@ function useDataGrid<TData>({
     estimateSize: () => rowHeightValue,
     overscan,
     measureElement:
-      typeof window !== "undefined" && !isFirefox()
+      typeof window !== "undefined" && !getIsFirefox()
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
   });

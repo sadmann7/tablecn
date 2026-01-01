@@ -101,7 +101,7 @@ export function getLineCount(rowHeight: RowHeightValue): number {
 
 let isFirefoxCache: boolean | null = null;
 
-export function isFirefox(): boolean {
+export function getIsFirefox(): boolean {
   if (isFirefoxCache !== null) return isFirefoxCache;
 
   if (typeof navigator === "undefined") {
@@ -118,13 +118,28 @@ export function getVirtualRowPositionStyle(
 ): React.CSSProperties {
   // Firefox has issues with transform + position: sticky on child elements
   // Use top positioning for Firefox, transform for other browsers (better performance)
-  if (isFirefox()) {
+  if (getIsFirefox()) {
     return { top: `${position}px` };
   }
 
   return {
     transform: `translateY(${position}px)`,
-    willChange: "transform" as const,
+    willChange: "transform",
+  };
+}
+
+export function getVirtualContainerStyle(
+  totalSize: number,
+): React.CSSProperties {
+  // Firefox has issues with CSS contain creating new containing blocks
+  // that break position: sticky on child elements
+  if (getIsFirefox()) {
+    return { height: `${totalSize}px` };
+  }
+
+  return {
+    height: `${totalSize}px`,
+    contain: "strict",
   };
 }
 
