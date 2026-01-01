@@ -28,6 +28,7 @@ import {
   getIsInPopover,
   getRowHeightValue,
   getScrollDirection,
+  isFirefox,
   matchSelectOption,
   parseCellKey,
   scrollCellIntoView,
@@ -2218,8 +2219,7 @@ function useDataGrid<TData>({
     estimateSize: () => rowHeightValue,
     overscan,
     measureElement:
-      typeof window !== "undefined" &&
-      navigator.userAgent.indexOf("Firefox") === -1
+      typeof window !== "undefined" && !isFirefox()
         ? (element) => element?.getBoundingClientRect().height
         : undefined,
   });
