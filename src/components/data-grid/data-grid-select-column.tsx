@@ -12,17 +12,15 @@ import { cn } from "@/lib/utils";
 interface DataGridSelectCheckboxProps
   extends React.ComponentProps<typeof Checkbox> {
   rowNumber?: number;
-  showNumber?: boolean;
 }
 
 function DataGridSelectCheckbox({
   rowNumber,
-  showNumber,
   checked,
   className,
   ...props
 }: DataGridSelectCheckboxProps) {
-  if (showNumber && rowNumber !== undefined) {
+  if (rowNumber !== undefined) {
     return (
       <div className="group relative">
         <div
@@ -126,7 +124,6 @@ function DataGridSelectCell<TData>({
       onCheckedChange={onCheckedChange}
       onClick={onClick}
       rowNumber={rowNumber}
-      showNumber={enableRowMarkers}
     />
   );
 }
