@@ -40,7 +40,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   dir: Direction;
   readOnly: boolean;
   stretchColumns: boolean;
-  isFirefox: boolean;
+  adjustLayout: boolean;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -128,8 +128,8 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
-  // Re-render if Firefox state changed
-  if (prev.isFirefox !== next.isFirefox) {
+  // Re-render if adjustLayout state changed
+  if (prev.adjustLayout !== next.adjustLayout) {
     return false;
   }
 
@@ -154,7 +154,7 @@ function DataGridRowImpl<TData>({
   dir,
   readOnly,
   stretchColumns,
-  isFirefox,
+  adjustLayout,
   className,
   style,
   ref,
@@ -188,13 +188,6 @@ function DataGridRowImpl<TData>({
     [row, columnVisibility, columnPinning],
   );
 
-  // Firefox fix: position: sticky doesn't work with transform on parent
-  // Use top instead of transform when columns are pinned in Firefox
-  // Short-circuit: only check pinned columns if Firefox
-  // See: https://bugzilla.mozilla.org/show_bug.cgi?id=1488080
-  const useTopPositioning =
-    isFirefox && (columnPinning.left?.length || columnPinning.right?.length);
-
   return (
     <div
       key={row.id}
@@ -208,15 +201,12 @@ function DataGridRowImpl<TData>({
       ref={rowRef}
       className={cn(
         "absolute flex w-full border-b",
-        !useTopPositioning && "will-change-transform",
+        !adjustLayout && "will-change-transform",
         className,
       )}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
-        // Use top instead of transform for Firefox compatibility with sticky positioning
-        // Transform breaks position: sticky in Firefox when combined with flexbox
-        // See: https://bugzilla.mozilla.org/show_bug.cgi?id=1488080
-        ...(useTopPositioning
+        ...(adjustLayout
           ? { top: `${virtualItem.start}px` }
           : { transform: `translateY(${virtualItem.start}px)` }),
         ...style,
