@@ -87,8 +87,16 @@ function DataGridSelectCell<TData>({
   table,
   enableRowMarkers,
 }: DataGridSelectCellProps<TData>) {
-  const rowNumber = row.index + 1;
   const onRowSelect = table.options.meta?.onRowSelect;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rowNumber is memoized to avoid re-rendering the component when the row number changes
+  const rowNumber = React.useMemo(() => {
+    if (!enableRowMarkers) return undefined;
+
+    const rows = table.getRowModel().rows;
+    const visualIndex = rows.findIndex((r) => r.id === row.id);
+    return visualIndex !== -1 ? visualIndex + 1 : row.index + 1;
+  }, [enableRowMarkers, table.getRowModel().rows, row]);
 
   const onCheckedChange = React.useCallback(
     (value: boolean) => {
