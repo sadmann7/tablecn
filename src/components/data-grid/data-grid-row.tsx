@@ -15,6 +15,7 @@ import {
   getCellKey,
   getCommonPinningStyles,
   getRowHeightValue,
+  getVirtualRowPositionStyle,
 } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type {
@@ -56,7 +57,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
-  // Re-render if virtual position changed (handles top position updates)
+  // Re-render if virtual position changed (handles position updates)
   if (prev.virtualItem.start !== next.virtualItem.start) {
     return false;
   }
@@ -195,7 +196,7 @@ function DataGridRowImpl<TData>({
       className={cn("absolute flex w-full border-b", className)}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
-        top: `${virtualItem.start}px`,
+        ...getVirtualRowPositionStyle(virtualItem.start),
         ...style,
       }}
     >

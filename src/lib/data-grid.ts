@@ -99,6 +99,33 @@ export function getLineCount(rowHeight: RowHeightValue): number {
   return lineCountMap[rowHeight];
 }
 
+let isFirefoxCache: boolean | null = null;
+
+function isFirefox(): boolean {
+  if (isFirefoxCache !== null) return isFirefoxCache;
+  
+  if (typeof navigator === "undefined") {
+    isFirefoxCache = false;
+    return false;
+  }
+  
+  isFirefoxCache = /firefox/i.test(navigator.userAgent);
+  return isFirefoxCache;
+}
+
+export function getVirtualRowPositionStyle(position: number): React.CSSProperties {
+  // Firefox has issues with transform + position: sticky on child elements
+  // Use top positioning for Firefox, transform for other browsers (better performance)
+  if (isFirefox()) {
+    return { top: `${position}px` };
+  }
+  
+  return { 
+    transform: `translateY(${position}px)`,
+    willChange: "transform" as const,
+  };
+}
+
 export function getCommonPinningStyles<TData>(params: {
   column: Column<TData>;
   withBorder?: boolean;
