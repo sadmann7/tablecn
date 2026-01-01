@@ -44,6 +44,7 @@ function DataGridDemoImpl({
         left: ["select"],
       },
     },
+    dir,
     enableSearch: true,
     enablePaste: true,
     ...props,
@@ -88,7 +89,7 @@ export function DataGridDemo() {
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
-      getDataGridSelectColumn<Person>(),
+      getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
       {
         id: "name",
         accessorKey: "name",
