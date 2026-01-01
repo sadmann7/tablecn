@@ -48,6 +48,7 @@ export function DataGrid<TData>({
   onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
+  isFirefox = false,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -55,6 +56,12 @@ export function DataGrid<TData>({
   const readOnly = tableMeta?.readOnly ?? false;
   const columnVisibility = table.getState().columnVisibility;
   const columnPinning = table.getState().columnPinning;
+
+  // Firefox fix: Adjust containment when columns are pinned
+  // Short-circuit: only check pinned columns if Firefox
+  // See: https://bugzilla.mozilla.org/show_bug.cgi?id=1488080
+  const shouldAdjustContainment =
+    isFirefox && (columnPinning.left?.length || columnPinning.right?.length);
 
   const onRowAddRef = useAsRef(onRowAddProp);
 
@@ -183,7 +190,10 @@ export function DataGrid<TData>({
           className="relative grid"
           style={{
             height: `${virtualTotalSize}px`,
-            contain: "strict",
+            // Firefox fix: contain: strict (size containment) breaks sticky positioning with pinned columns
+            // Exclude size containment when columns are pinned in Firefox to allow sticky to work properly
+            // See: https://bugzilla.mozilla.org/show_bug.cgi?id=1488080
+            contain: shouldAdjustContainment ? "layout paint" : "strict",
           }}
         >
           {virtualItems.map((virtualItem) => {
@@ -218,6 +228,7 @@ export function DataGrid<TData>({
                 dir={dir}
                 readOnly={readOnly}
                 stretchColumns={stretchColumns}
+                isFirefox={isFirefox}
               />
             );
           })}

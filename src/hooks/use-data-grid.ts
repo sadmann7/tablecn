@@ -2212,16 +2212,25 @@ function useDataGrid<TData>({
     return colSizes;
   }, [table.getState().columnSizingInfo, table.getState().columnSizing]);
 
+  const isFirefox = React.useSyncExternalStore(
+    React.useCallback(() => () => {}, []),
+    React.useCallback(() => {
+      if (typeof window === "undefined" || typeof navigator === "undefined") {
+        return false;
+      }
+      return navigator.userAgent.indexOf("Firefox") !== -1;
+    }, []),
+    React.useCallback(() => false, []),
+  );
+
   const rowVirtualizer = useVirtualizer({
     count: table.getRowModel().rows.length,
     getScrollElement: () => dataGridRef.current,
     estimateSize: () => rowHeightValue,
     overscan,
-    measureElement:
-      typeof window !== "undefined" &&
-      navigator.userAgent.indexOf("Firefox") === -1
-        ? (element) => element?.getBoundingClientRect().height
-        : undefined,
+    measureElement: !isFirefox
+      ? (element) => element?.getBoundingClientRect().height
+      : undefined,
   });
 
   if (!rowVirtualizerRef.current) {
@@ -3246,6 +3255,7 @@ function useDataGrid<TData>({
       contextMenu,
       pasteDialog,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
+      isFirefox,
     }),
     [
       propsRef,
@@ -3267,6 +3277,7 @@ function useDataGrid<TData>({
       contextMenu,
       pasteDialog,
       onRowAdd,
+      isFirefox,
     ],
   );
 }
