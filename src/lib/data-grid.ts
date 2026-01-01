@@ -113,36 +113,6 @@ export function getIsFirefox(): boolean {
   return isFirefoxCache;
 }
 
-export function getVirtualRowPositionStyle(
-  position: number,
-): React.CSSProperties {
-  // Firefox has issues with transform + position: sticky on child elements
-  // Use top positioning for Firefox, transform for other browsers (better performance)
-  if (getIsFirefox()) {
-    return { top: `${position}px` };
-  }
-
-  return {
-    transform: `translateY(${position}px)`,
-    willChange: "transform",
-  };
-}
-
-export function getVirtualContainerStyle(
-  totalSize: number,
-): React.CSSProperties {
-  // Firefox has issues with CSS contain creating new containing blocks
-  // that break position: sticky on child elements
-  if (getIsFirefox()) {
-    return { height: `${totalSize}px` };
-  }
-
-  return {
-    height: `${totalSize}px`,
-    contain: "strict",
-  };
-}
-
 export function getCommonPinningStyles<TData>(params: {
   column: Column<TData>;
   withBorder?: boolean;

@@ -14,8 +14,8 @@ import {
   flexRender,
   getCellKey,
   getCommonPinningStyles,
+  getIsFirefox,
   getRowHeightValue,
-  getVirtualRowPositionStyle,
 } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type {
@@ -196,7 +196,13 @@ function DataGridRowImpl<TData>({
       className={cn("absolute flex w-full border-b", className)}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
-        ...getVirtualRowPositionStyle(virtualItem.start),
+        // Firefox has issues with transform + position: sticky on child elements
+        ...(getIsFirefox()
+          ? { top: `${virtualItem.start}px` }
+          : {
+              transform: `translateY(${virtualItem.start}px)`,
+              willChange: "transform",
+            }),
         ...style,
       }}
     >

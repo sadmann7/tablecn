@@ -9,11 +9,7 @@ import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
-import {
-  flexRender,
-  getCommonPinningStyles,
-  getVirtualContainerStyle,
-} from "@/lib/data-grid";
+import { flexRender, getCommonPinningStyles, getIsFirefox } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
 import type { Direction } from "@/types/data-grid";
 
@@ -185,7 +181,11 @@ export function DataGrid<TData>({
           role="rowgroup"
           data-slot="grid-body"
           className="relative grid"
-          style={getVirtualContainerStyle(virtualTotalSize)}
+          style={{
+            height: `${virtualTotalSize}px`,
+            // Firefox has issues with CSS contain + position: sticky
+            ...(!getIsFirefox() && { contain: "strict" }),
+          }}
         >
           {virtualItems.map((virtualItem) => {
             const row = rows[virtualItem.index];
