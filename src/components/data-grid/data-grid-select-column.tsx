@@ -22,13 +22,13 @@ function DataGridSelectCheckbox({
   className,
   ...props
 }: DataGridSelectCheckboxProps) {
-  if (showNumber && !Number.isNaN(rowNumber)) {
+  if (showNumber && rowNumber !== undefined) {
     return (
       <div className="group relative">
         <div
           aria-hidden="true"
           data-state={checked ? "checked" : "unchecked"}
-          className="pointer-events-none absolute top-0 left-0 flex size-4 items-center justify-center text-muted-foreground text-xs tabular-nums transition-opacity group-hover:opacity-0 data-[state=checked]:opacity-0"
+          className="pointer-events-none absolute start-0 top-0 flex size-4 items-center justify-center text-muted-foreground text-xs tabular-nums transition-opacity group-hover:opacity-0 data-[state=checked]:opacity-0"
         >
           {rowNumber}
         </div>
@@ -77,13 +77,17 @@ function DataGridSelectHeader<TData>({
   );
 }
 
+interface DataGridSelectCellProps<TData>
+  extends Pick<CellContext<TData, unknown>, "row" | "table"> {
+  enableRowMarkers?: boolean;
+}
+
 function DataGridSelectCell<TData>({
   row,
   table,
   enableRowMarkers,
-}: Pick<CellContext<TData, unknown>, "row" | "table"> & {
-  enableRowMarkers?: boolean;
-}) {
+}: DataGridSelectCellProps<TData>) {
+  const rowNumber = row.index + 1;
   const onRowSelect = table.options.meta?.onRowSelect;
 
   const onCheckedChange = React.useCallback(
@@ -109,22 +113,19 @@ function DataGridSelectCell<TData>({
 
   return (
     <DataGridSelectCheckbox
-      aria-label="Select row"
+      aria-label={`Select row ${rowNumber}`}
       checked={row.getIsSelected()}
       onCheckedChange={onCheckedChange}
       onClick={onClick}
-      rowNumber={row.index + 1}
+      rowNumber={rowNumber}
       showNumber={enableRowMarkers}
     />
   );
 }
 
-interface GetDataGridSelectColumnOptions {
+interface GetDataGridSelectColumnOptions<TData>
+  extends Omit<Partial<ColumnDef<TData>>, "id" | "header" | "cell"> {
   enableRowMarkers?: boolean;
-  size?: number;
-  enableHiding?: boolean;
-  enableResizing?: boolean;
-  enableSorting?: boolean;
 }
 
 export function getDataGridSelectColumn<TData>({
@@ -133,7 +134,8 @@ export function getDataGridSelectColumn<TData>({
   enableResizing = false,
   enableSorting = false,
   enableRowMarkers = false,
-}: GetDataGridSelectColumnOptions = {}): ColumnDef<TData> {
+  ...props
+}: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<TData> {
   return {
     id: "select",
     header: ({ table }) => <DataGridSelectHeader table={table} />,
@@ -148,5 +150,6 @@ export function getDataGridSelectColumn<TData>({
     enableHiding,
     enableResizing,
     enableSorting,
+    ...props,
   };
 }
