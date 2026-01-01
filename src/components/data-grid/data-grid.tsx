@@ -183,7 +183,6 @@ export function DataGrid<TData>({
           className="relative grid"
           style={{
             height: `${virtualTotalSize}px`,
-            contain: "strict",
           }}
         >
           {virtualItems.map((virtualItem) => {

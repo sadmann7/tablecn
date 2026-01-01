@@ -56,7 +56,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
-  // Re-render if virtual position changed (handles transform updates)
+  // Re-render if virtual position changed (handles top position updates)
   if (prev.virtualItem.start !== next.virtualItem.start) {
     return false;
   }
@@ -192,13 +192,10 @@ function DataGridRowImpl<TData>({
       tabIndex={-1}
       {...props}
       ref={rowRef}
-      className={cn(
-        "absolute flex w-full border-b will-change-transform",
-        className,
-      )}
+      className={cn("absolute flex w-full border-b", className)}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
-        transform: `translateY(${virtualItem.start}px)`,
+        top: `${virtualItem.start}px`,
         ...style,
       }}
     >
