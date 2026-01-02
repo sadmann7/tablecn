@@ -9,6 +9,31 @@ import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
+interface DataGridSelectHitboxProps {
+  htmlFor: string;
+  debug?: boolean;
+  children: React.ReactNode;
+}
+
+function DataGridSelectHitbox({
+  htmlFor,
+  debug,
+  children,
+}: DataGridSelectHitboxProps) {
+  return (
+    <div className="group relative -mx-3 -my-1.5 h-[calc(100%+0.75rem)] px-3 py-1.5">
+      {children}
+      <label
+        htmlFor={htmlFor}
+        className={cn(
+          "absolute inset-0 cursor-pointer",
+          debug && "border border-red-500 border-dashed bg-red-500/20",
+        )}
+      />
+    </div>
+  );
+}
+
 interface DataGridSelectCheckboxProps
   extends Omit<React.ComponentProps<typeof Checkbox>, "id"> {
   rowNumber?: number;
@@ -26,7 +51,7 @@ function DataGridSelectCheckbox({
 
   if (rowNumber !== undefined) {
     return (
-      <div className="group relative -mx-3 -my-1.5 h-[calc(100%+0.75rem)] px-3 py-1.5">
+      <DataGridSelectHitbox htmlFor={id} debug={debug}>
         <div
           aria-hidden="true"
           data-state={checked ? "checked" : "unchecked"}
@@ -44,19 +69,12 @@ function DataGridSelectCheckbox({
           checked={checked}
           {...props}
         />
-        <label
-          htmlFor={id}
-          className={cn(
-            "absolute inset-0 cursor-pointer",
-            debug && "border border-red-500",
-          )}
-        />
-      </div>
+      </DataGridSelectHitbox>
     );
   }
 
   return (
-    <div className="relative -mx-3 -my-1.5 h-[calc(100%+0.75rem)] px-3 py-1.5">
+    <DataGridSelectHitbox htmlFor={id} debug={debug}>
       <Checkbox
         id={id}
         className={cn(
@@ -66,14 +84,7 @@ function DataGridSelectCheckbox({
         checked={checked}
         {...props}
       />
-      <label
-        htmlFor={id}
-        className={cn(
-          "absolute inset-0 cursor-pointer",
-          debug && "border border-red-500",
-        )}
-      />
-    </div>
+    </DataGridSelectHitbox>
   );
 }
 
@@ -118,7 +129,7 @@ function DataGridSelectCell<TData>({
 }: DataGridSelectCellProps<TData>) {
   const meta = table.options.meta;
   const rowNumber = enableRowMarkers
-    ? meta?.getVisualRowIndex?.(row.id)
+    ? (meta?.getVisualRowIndex?.(row.id) ?? row.index + 1)
     : undefined;
 
   const onCheckedChange = React.useCallback(
