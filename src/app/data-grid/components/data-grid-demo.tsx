@@ -89,10 +89,7 @@ export function DataGridDemo() {
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
     () => [
-      getDataGridSelectColumn<Person>({
-        debug: true,
-        enableRowMarkers: true,
-      }),
+      getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
       {
         id: "name",
         accessorKey: "name",
