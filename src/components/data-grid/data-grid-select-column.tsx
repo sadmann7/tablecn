@@ -9,7 +9,7 @@ import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
-type HitboxSize = "sm" | "default" | "lg";
+type HitboxSize = "default" | "sm" | "lg";
 
 interface DataGridSelectHitboxProps {
   htmlFor: string;
