@@ -54,8 +54,10 @@ function DataGridSelectCheckbox({
       <DataGridSelectHitbox htmlFor={id} debug={debug}>
         <div
           aria-hidden="true"
-          data-state={checked ? "checked" : "unchecked"}
-          className="pointer-events-none absolute start-3 top-1.5 flex size-4 items-center justify-center text-muted-foreground text-xs tabular-nums transition-opacity group-hover:opacity-0 data-[state=checked]:opacity-0"
+          className={cn(
+            "pointer-events-none absolute start-3 top-1.5 flex size-4 items-center justify-center text-muted-foreground text-xs tabular-nums transition-opacity group-hover:opacity-0",
+            checked && "opacity-0",
+          )}
         >
           {rowNumber}
         </div>
