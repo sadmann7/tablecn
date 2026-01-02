@@ -10,54 +10,82 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface DataGridSelectCheckboxProps
-  extends React.ComponentProps<typeof Checkbox> {
+  extends Omit<React.ComponentProps<typeof Checkbox>, "id"> {
   rowNumber?: number;
+  debug?: boolean;
 }
 
 function DataGridSelectCheckbox({
   rowNumber,
   checked,
   className,
+  debug,
   ...props
 }: DataGridSelectCheckboxProps) {
+  const id = React.useId();
+
   if (rowNumber !== undefined) {
     return (
-      <div className="group relative">
+      <div className="group relative -mx-3 -my-1.5 h-[calc(100%+0.75rem)] px-3 py-1.5">
         <div
           aria-hidden="true"
           data-state={checked ? "checked" : "unchecked"}
-          className="pointer-events-none absolute start-0 top-0 flex size-4 items-center justify-center text-muted-foreground text-xs tabular-nums transition-opacity group-hover:opacity-0 data-[state=checked]:opacity-0"
+          className="pointer-events-none absolute start-3 top-1.5 flex size-4 items-center justify-center text-muted-foreground text-xs tabular-nums transition-opacity group-hover:opacity-0 data-[state=checked]:opacity-0"
         >
           {rowNumber}
         </div>
         <Checkbox
+          id={id}
           className={cn(
-            "relative transition-[shadow,border,opacity] after:absolute after:-inset-2.5 after:content-[''] hover:border-primary/40",
+            "relative transition-[shadow,border,opacity] hover:border-primary/40",
             "opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100",
             className,
           )}
           checked={checked}
           {...props}
         />
+        <label
+          htmlFor={id}
+          className={cn(
+            "absolute inset-0 cursor-pointer",
+            debug && "border border-red-500",
+          )}
+        />
       </div>
     );
   }
 
   return (
-    <Checkbox
-      className={cn(
-        "relative transition-[shadow,border] after:absolute after:-inset-2.5 after:content-[''] hover:border-primary/40",
-        className,
-      )}
-      checked={checked}
-      {...props}
-    />
+    <div className="relative -mx-3 -my-1.5 h-[calc(100%+0.75rem)] px-3 py-1.5">
+      <Checkbox
+        id={id}
+        className={cn(
+          "relative transition-[shadow,border] hover:border-primary/40",
+          className,
+        )}
+        checked={checked}
+        {...props}
+      />
+      <label
+        htmlFor={id}
+        className={cn(
+          "absolute inset-0 cursor-pointer",
+          debug && "border border-red-500",
+        )}
+      />
+    </div>
   );
+}
+
+interface DataGridSelectHeaderProps<TData>
+  extends Pick<HeaderContext<TData, unknown>, "table"> {
+  debug?: boolean;
 }
 
 function DataGridSelectHeader<TData>({
   table,
-}: Pick<HeaderContext<TData, unknown>, "table">) {
+  debug,
+}: DataGridSelectHeaderProps<TData>) {
   const onCheckedChange = React.useCallback(
     (value: boolean) => table.toggleAllPageRowsSelected(value),
     [table],
@@ -71,6 +99,7 @@ function DataGridSelectHeader<TData>({
         (table.getIsSomePageRowsSelected() && "indeterminate")
       }
       onCheckedChange={onCheckedChange}
+      debug={debug}
     />
   );
 }
@@ -78,12 +107,14 @@ function DataGridSelectHeader<TData>({
 interface DataGridSelectCellProps<TData>
   extends Pick<CellContext<TData, unknown>, "row" | "table"> {
   enableRowMarkers?: boolean;
+  debug?: boolean;
 }
 
 function DataGridSelectCell<TData>({
   row,
   table,
   enableRowMarkers,
+  debug,
 }: DataGridSelectCellProps<TData>) {
   const meta = table.options.meta;
   const rowNumber = enableRowMarkers
@@ -118,6 +149,7 @@ function DataGridSelectCell<TData>({
       onCheckedChange={onCheckedChange}
       onClick={onClick}
       rowNumber={rowNumber}
+      debug={debug}
     />
   );
 }
@@ -125,6 +157,7 @@ function DataGridSelectCell<TData>({
 interface GetDataGridSelectColumnOptions<TData>
   extends Omit<Partial<ColumnDef<TData>>, "id" | "header" | "cell"> {
   enableRowMarkers?: boolean;
+  debug?: boolean;
 }
 
 export function getDataGridSelectColumn<TData>({
@@ -133,16 +166,18 @@ export function getDataGridSelectColumn<TData>({
   enableResizing = false,
   enableSorting = false,
   enableRowMarkers = false,
+  debug = false,
   ...props
 }: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<TData> {
   return {
     id: "select",
-    header: ({ table }) => <DataGridSelectHeader table={table} />,
+    header: ({ table }) => <DataGridSelectHeader table={table} debug={debug} />,
     cell: ({ row, table }) => (
       <DataGridSelectCell
         row={row}
         table={table}
         enableRowMarkers={enableRowMarkers}
+        debug={debug}
       />
     ),
     size,
