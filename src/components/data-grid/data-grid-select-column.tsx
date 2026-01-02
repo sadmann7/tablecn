@@ -9,19 +9,30 @@ import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
+type HitboxSize = "sm" | "default" | "lg";
+
 interface DataGridSelectHitboxProps {
   htmlFor: string;
-  debug?: boolean;
   children: React.ReactNode;
+  size?: HitboxSize;
+  debug?: boolean;
 }
 
 function DataGridSelectHitbox({
   htmlFor,
-  debug,
   children,
+  size = "default",
+  debug,
 }: DataGridSelectHitboxProps) {
   return (
-    <div className="group relative -mx-3 -my-1.5 h-[calc(100%+0.75rem)] px-3 py-1.5">
+    <div
+      className={cn(
+        "group relative -my-1.5 h-[calc(100%+0.75rem)] py-1.5",
+        size === "sm" && "-ms-3 ps-3",
+        size === "default" && "-ms-3 -me-0.5 ps-3 pe-0.5",
+        size === "lg" && "-mx-3 px-3",
+      )}
+    >
       {children}
       <label
         htmlFor={htmlFor}
@@ -37,11 +48,13 @@ function DataGridSelectHitbox({
 interface DataGridSelectCheckboxProps
   extends Omit<React.ComponentProps<typeof Checkbox>, "id"> {
   rowNumber?: number;
+  hitboxSize?: HitboxSize;
   debug?: boolean;
 }
 
 function DataGridSelectCheckbox({
   rowNumber,
+  hitboxSize,
   checked,
   className,
   debug,
@@ -51,7 +64,7 @@ function DataGridSelectCheckbox({
 
   if (rowNumber !== undefined) {
     return (
-      <DataGridSelectHitbox htmlFor={id} debug={debug}>
+      <DataGridSelectHitbox htmlFor={id} size={hitboxSize} debug={debug}>
         <div
           aria-hidden="true"
           className={cn(
@@ -76,7 +89,7 @@ function DataGridSelectCheckbox({
   }
 
   return (
-    <DataGridSelectHitbox htmlFor={id} debug={debug}>
+    <DataGridSelectHitbox htmlFor={id} size={hitboxSize} debug={debug}>
       <Checkbox
         id={id}
         className={cn(
@@ -92,11 +105,13 @@ function DataGridSelectCheckbox({
 
 interface DataGridSelectHeaderProps<TData>
   extends Pick<HeaderContext<TData, unknown>, "table"> {
+  hitboxSize?: HitboxSize;
   debug?: boolean;
 }
 
 function DataGridSelectHeader<TData>({
   table,
+  hitboxSize,
   debug,
 }: DataGridSelectHeaderProps<TData>) {
   const onCheckedChange = React.useCallback(
@@ -112,6 +127,7 @@ function DataGridSelectHeader<TData>({
         (table.getIsSomePageRowsSelected() && "indeterminate")
       }
       onCheckedChange={onCheckedChange}
+      hitboxSize={hitboxSize}
       debug={debug}
     />
   );
@@ -120,6 +136,7 @@ function DataGridSelectHeader<TData>({
 interface DataGridSelectCellProps<TData>
   extends Pick<CellContext<TData, unknown>, "row" | "table"> {
   enableRowMarkers?: boolean;
+  hitboxSize?: HitboxSize;
   debug?: boolean;
 }
 
@@ -127,6 +144,7 @@ function DataGridSelectCell<TData>({
   row,
   table,
   enableRowMarkers,
+  hitboxSize,
   debug,
 }: DataGridSelectCellProps<TData>) {
   const meta = table.options.meta;
@@ -162,6 +180,7 @@ function DataGridSelectCell<TData>({
       onCheckedChange={onCheckedChange}
       onClick={onClick}
       rowNumber={rowNumber}
+      hitboxSize={hitboxSize}
       debug={debug}
     />
   );
@@ -170,6 +189,7 @@ function DataGridSelectCell<TData>({
 interface GetDataGridSelectColumnOptions<TData>
   extends Omit<Partial<ColumnDef<TData>>, "id" | "header" | "cell"> {
   enableRowMarkers?: boolean;
+  hitboxSize?: HitboxSize;
   debug?: boolean;
 }
 
@@ -179,17 +199,25 @@ export function getDataGridSelectColumn<TData>({
   enableResizing = false,
   enableSorting = false,
   enableRowMarkers = false,
+  hitboxSize = "default",
   debug = false,
   ...props
 }: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<TData> {
   return {
     id: "select",
-    header: ({ table }) => <DataGridSelectHeader table={table} debug={debug} />,
+    header: ({ table }) => (
+      <DataGridSelectHeader
+        table={table}
+        hitboxSize={hitboxSize}
+        debug={debug}
+      />
+    ),
     cell: ({ row, table }) => (
       <DataGridSelectCell
         row={row}
         table={table}
         enableRowMarkers={enableRowMarkers}
+        hitboxSize={hitboxSize}
         debug={debug}
       />
     ),
