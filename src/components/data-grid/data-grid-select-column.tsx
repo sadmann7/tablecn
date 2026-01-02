@@ -20,7 +20,7 @@ function DataGridSelectCheckbox({
   className,
   ...props
 }: DataGridSelectCheckboxProps) {
-  if (rowNumber) {
+  if (rowNumber !== undefined) {
     return (
       <div className="group relative">
         <div
@@ -85,36 +85,30 @@ function DataGridSelectCell<TData>({
   table,
   enableRowMarkers,
 }: DataGridSelectCellProps<TData>) {
-  const onRowSelect = table.options.meta?.onRowSelect;
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: rowNumber is memoized to avoid re-rendering the component when the row number changes
-  const rowNumber = React.useMemo(() => {
-    if (!enableRowMarkers) return undefined;
-
-    const rows = table.getRowModel().rows;
-    const visualIndex = rows.findIndex((r) => r.id === row.id);
-    return visualIndex !== -1 ? visualIndex + 1 : row.index + 1;
-  }, [enableRowMarkers, table.getRowModel().rows, row]);
+  const meta = table.options.meta;
+  const rowNumber = enableRowMarkers
+    ? meta?.getVisualRowIndex?.(row.id)
+    : undefined;
 
   const onCheckedChange = React.useCallback(
     (value: boolean) => {
-      if (onRowSelect) {
-        onRowSelect(row.index, value, false);
+      if (meta?.onRowSelect) {
+        meta.onRowSelect(row.index, value, false);
       } else {
         row.toggleSelected(value);
       }
     },
-    [onRowSelect, row],
+    [meta, row],
   );
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (event.shiftKey) {
         event.preventDefault();
-        onRowSelect?.(row.index, !row.getIsSelected(), true);
+        meta?.onRowSelect?.(row.index, !row.getIsSelected(), true);
       }
     },
-    [onRowSelect, row],
+    [meta, row],
   );
 
   return (

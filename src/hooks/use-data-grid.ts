@@ -7,6 +7,7 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
+  type Row,
   type RowSelectionState,
   type SortingState,
   type TableMeta,
@@ -313,6 +314,31 @@ function useDataGrid<TData>({
     prevCellSelectionMapRef.current = stableMap;
     return stableMap;
   }, [selectionState.selectedCells, prevCellSelectionMapRef]);
+
+  const visualRowIndexCacheRef = React.useRef<{
+    rows: Row<TData>[] | null;
+    map: Map<string, number>;
+  } | null>(null);
+
+  // Pre-compute visual row index map for O(1) lookups (used by select column)
+  // Cache is invalidated when row model identity changes (sorting/filtering)
+  const getVisualRowIndex = React.useCallback(
+    (rowId: string): number | undefined => {
+      const rows = tableRef.current?.getRowModel().rows;
+      if (!rows) return undefined;
+
+      if (visualRowIndexCacheRef.current?.rows !== rows) {
+        const map = new Map<string, number>();
+        for (const [i, row] of rows.entries()) {
+          map.set(row.id, i + 1);
+        }
+        visualRowIndexCacheRef.current = { rows, map };
+      }
+
+      return visualRowIndexCacheRef.current.map.get(rowId);
+    },
+    [],
+  );
 
   const columnIds = React.useMemo(() => {
     return columns
@@ -2087,6 +2113,7 @@ function useDataGrid<TData>({
       getIsCellSelected,
       getIsSearchMatch,
       getIsActiveSearchMatch,
+      getVisualRowIndex,
       onRowHeightChange,
       onRowSelect,
       onDataUpdate,
@@ -2119,6 +2146,7 @@ function useDataGrid<TData>({
     getIsCellSelected,
     getIsSearchMatch,
     getIsActiveSearchMatch,
+    getVisualRowIndex,
     onRowHeightChange,
     onRowSelect,
     onDataUpdate,
