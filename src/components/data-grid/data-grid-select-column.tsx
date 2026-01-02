@@ -21,15 +21,15 @@ interface DataGridSelectHitboxProps {
 function DataGridSelectHitbox({
   htmlFor,
   children,
-  size = "default",
+  size,
   debug,
 }: DataGridSelectHitboxProps) {
   return (
     <div
       className={cn(
         "group relative -my-1.5 h-[calc(100%+0.75rem)] py-1.5",
-        size === "sm" && "-ms-3 -me-1.5 ps-3 pe-1.5",
         size === "default" && "-ms-3 -me-2 ps-3 pe-2",
+        size === "sm" && "-ms-3 -me-1.5 ps-3 pe-1.5",
         size === "lg" && "-mx-3 px-3",
       )}
     >
@@ -55,9 +55,9 @@ interface DataGridSelectCheckboxProps
 function DataGridSelectCheckbox({
   rowNumber,
   hitboxSize,
+  debug,
   checked,
   className,
-  debug,
   ...props
 }: DataGridSelectCheckboxProps) {
   const id = React.useId();
@@ -135,16 +135,16 @@ function DataGridSelectHeader<TData>({
 
 interface DataGridSelectCellProps<TData>
   extends Pick<CellContext<TData, unknown>, "row" | "table"> {
-  enableRowMarkers?: boolean;
   hitboxSize?: HitboxSize;
+  enableRowMarkers?: boolean;
   debug?: boolean;
 }
 
 function DataGridSelectCell<TData>({
   row,
   table,
-  enableRowMarkers,
   hitboxSize,
+  enableRowMarkers,
   debug,
 }: DataGridSelectCellProps<TData>) {
   const meta = table.options.meta;
@@ -195,11 +195,11 @@ interface GetDataGridSelectColumnOptions<TData>
 
 export function getDataGridSelectColumn<TData>({
   size = 40,
+  hitboxSize = "default",
   enableHiding = false,
   enableResizing = false,
   enableSorting = false,
   enableRowMarkers = false,
-  hitboxSize = "default",
   debug = false,
   ...props
 }: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<TData> {
