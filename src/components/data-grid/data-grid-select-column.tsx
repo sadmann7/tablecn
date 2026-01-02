@@ -20,7 +20,7 @@ function DataGridSelectCheckbox({
   className,
   ...props
 }: DataGridSelectCheckboxProps) {
-  if (rowNumber !== undefined) {
+  if (rowNumber) {
     return (
       <div className="group relative">
         <div
@@ -108,7 +108,7 @@ function DataGridSelectCell<TData>({
   );
 
   const onClick = React.useCallback(
-    (event: React.MouseEvent) => {
+    (event: React.MouseEvent<HTMLButtonElement>) => {
       if (event.shiftKey) {
         event.preventDefault();
         onRowSelect?.(row.index, !row.getIsSelected(), true);
@@ -119,7 +119,7 @@ function DataGridSelectCell<TData>({
 
   return (
     <DataGridSelectCheckbox
-      aria-label={`Select row ${rowNumber}`}
+      aria-label={rowNumber ? `Select row ${rowNumber}` : "Select row"}
       checked={row.getIsSelected()}
       onCheckedChange={onCheckedChange}
       onClick={onClick}
