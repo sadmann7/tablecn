@@ -1840,29 +1840,20 @@ function useDataGrid<TData>({
       event.preventDefault();
 
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
-        if (propsRef.current.enableSingleCellSelection) {
-          const cellKey = getCellKey(rowIndex, columnId);
-          store.batch(() => {
-            store.setState("selectionState", {
-              selectedCells: new Set([cellKey]),
-              selectionRange: null,
-              isSelecting: false,
-            });
-            store.setState("rowSelection", {});
+        const cellKey = getCellKey(rowIndex, columnId);
+        store.batch(() => {
+          store.setState("selectionState", {
+            selectedCells: propsRef.current.enableSingleCellSelection
+              ? new Set([cellKey])
+              : new Set(),
+            selectionRange: {
+              start: { rowIndex, columnId },
+              end: { rowIndex, columnId },
+            },
+            isSelecting: true,
           });
-        } else {
-          store.batch(() => {
-            store.setState("selectionState", {
-              selectedCells: new Set(),
-              selectionRange: {
-                start: { rowIndex, columnId },
-                end: { rowIndex, columnId },
-              },
-              isSelecting: true,
-            });
-            store.setState("rowSelection", {});
-          });
-        }
+          store.setState("rowSelection", {});
+        });
       }
     },
     [store, propsRef],
