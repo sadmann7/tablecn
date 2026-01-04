@@ -4,6 +4,8 @@
   },
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "biomejs.biome",
+  "eslint.enable": false,
+  "oxc.enable": false,
   "tailwindCSS.validate": true,
   "tailwindCSS.lint.cssConflict": "ignore",
   "tailwindCSS.experimental.classRegex": [
