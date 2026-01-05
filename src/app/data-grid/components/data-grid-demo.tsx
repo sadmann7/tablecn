@@ -2,7 +2,7 @@
 
 import { DirectionProvider } from "@radix-ui/react-direction";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Languages } from "lucide-react";
+import { Languages, Redo2, Undo2 } from "lucide-react";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
@@ -11,12 +11,19 @@ import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-heig
 import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
+import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
+import { useUndoRedo } from "@/hooks/use-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
-import type { Direction } from "@/types/data-grid";
+import type { Direction, UpdateCell } from "@/types/data-grid";
 import {
   departments,
   initialData,
@@ -29,12 +36,22 @@ interface DataGridDemoImplProps extends UseDataGridProps<Person> {
   dir: Direction;
   onDirChange: (dir: Direction) => void;
   height: number;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onUndoRedoKeyDown: (event: React.KeyboardEvent | KeyboardEvent) => void;
 }
 
 function DataGridDemoImpl({
   dir,
   onDirChange,
   height,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onUndoRedoKeyDown,
   ...props
 }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
@@ -50,6 +67,16 @@ function DataGridDemoImpl({
     ...props,
   });
 
+  // Handle undo/redo keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      onUndoRedoKeyDown(event);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onUndoRedoKeyDown]);
+
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div
@@ -57,6 +84,42 @@ function DataGridDemoImpl({
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
+                disabled={!canUndo}
+                onClick={onUndo}
+                aria-label="Undo"
+              >
+                <Undo2 className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Undo (Ctrl+Z)</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
+                disabled={!canRedo}
+                onClick={onRedo}
+                aria-label="Redo"
+              >
+                <Redo2 className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Redo (Ctrl+Shift+Z)</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <Toggle
           aria-label="Toggle text direction"
           dir={dir}
@@ -74,7 +137,10 @@ function DataGridDemoImpl({
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />
       </div>
-      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
+      <DataGridKeyboardShortcuts
+        enableSearch={!!dataGridProps.searchState}
+        enableUndoRedo
+      />
       <DataGrid {...dataGridProps} table={table} height={height} />
     </div>
   );
@@ -84,6 +150,22 @@ export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
   const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
+
+  const {
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    trackCellUpdate,
+    trackCellsUpdate,
+    trackRowsAdd,
+    trackRowsDelete,
+    onKeyDown: onUndoRedoKeyDown,
+  } = useUndoRedo({
+    data,
+    onDataChange: setData,
+    getRowId: (row) => row.id,
+  });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
@@ -281,50 +363,66 @@ export function DataGridDemo() {
       //   body: JSON.stringify({ name: 'New Person' })
       // });
 
+      const newRow: Person = {
+        id: generateId(),
+      };
+
+      const newRowIndex = data.length;
+
       // For this demo, just add a new row to the data
-      setData((prev) => [
-        ...prev,
-        {
-          id: generateId(),
-        },
-      ]);
+      setData((prev) => [...prev, newRow]);
+
+      // Track for undo/redo
+      trackRowsAdd({ startIndex: newRowIndex, rows: [newRow] });
 
       return {
-        rowIndex: data.length,
+        rowIndex: newRowIndex,
         columnId: "name",
       };
-    }, [data.length]);
+    }, [data.length, trackRowsAdd]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
-    React.useCallback((count: number) => {
-      // Called when paste operation needs to create multiple rows at once
-      // This is more efficient than calling onRowAdd multiple times - only a single API call needed
-      // In a real app, you would make a server call here:
-      // await fetch('/api/people/bulk', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ count })
-      // });
+    React.useCallback(
+      (count: number) => {
+        // Called when paste operation needs to create multiple rows at once
+        // This is more efficient than calling onRowAdd multiple times - only a single API call needed
+        // In a real app, you would make a server call here:
+        // await fetch('/api/people/bulk', {
+        //   method: 'POST',
+        //   body: JSON.stringify({ count })
+        // });
 
-      // For this demo, create multiple rows in a single state update
-      setData((prev) => {
-        const newRows = Array.from({ length: count }, () => ({
+        const startIndex = data.length;
+        const newRows: Person[] = Array.from({ length: count }, () => ({
           id: generateId(),
         }));
-        return [...prev, ...newRows];
-      });
-    }, []);
+
+        // For this demo, create multiple rows in a single state update
+        setData((prev) => [...prev, ...newRows]);
+
+        // Track for undo/redo
+        trackRowsAdd({ startIndex, rows: newRows });
+      },
+      [data.length, trackRowsAdd],
+    );
 
   const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
-    React.useCallback((rows) => {
-      // In a real app, you would make a server call here:
-      // await fetch('/api/people', {
-      //   method: 'DELETE',
-      //   body: JSON.stringify({ ids: rows.map(r => r.id) })
-      // });
+    React.useCallback(
+      (rows, rowIndices) => {
+        // In a real app, you would make a server call here:
+        // await fetch('/api/people', {
+        //   method: 'DELETE',
+        //   body: JSON.stringify({ ids: rows.map(r => r.id) })
+        // });
 
-      // For this demo, just filter out the deleted rows
-      setData((prev) => prev.filter((row) => !rows.includes(row)));
-    }, []);
+        // Track for undo/redo (before deletion to capture the rows)
+        trackRowsDelete({ indices: rowIndices, rows });
+
+        // For this demo, just filter out the deleted rows
+        setData((prev) => prev.filter((row) => !rows.includes(row)));
+      },
+      [trackRowsDelete],
+    );
 
   const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
     React.useCallback(
@@ -379,13 +477,71 @@ export function DataGridDemo() {
       );
     }, []);
 
+  // Wrapper for onDataChange that tracks cell updates for undo/redo
+  const onDataChange = React.useCallback(
+    (newData: Person[]) => {
+      // Find which cells changed by comparing old and new data
+      const cellUpdates: Array<{
+        rowIndex: number;
+        columnId: string;
+        previousValue: unknown;
+        newValue: unknown;
+      }> = [];
+
+      // Compare each row to find changed cells
+      const maxLength = Math.max(data.length, newData.length);
+      for (let rowIndex = 0; rowIndex < maxLength; rowIndex++) {
+        const oldRow = data[rowIndex];
+        const newRow = newData[rowIndex];
+
+        // Skip if both rows exist and we need to compare columns
+        if (oldRow && newRow) {
+          // Get all keys from both rows
+          const allKeys = new Set([
+            ...Object.keys(oldRow),
+            ...Object.keys(newRow),
+          ]);
+
+          for (const key of allKeys) {
+            const oldValue = (oldRow as unknown as Record<string, unknown>)[key];
+            const newValue = (newRow as unknown as Record<string, unknown>)[key];
+
+            if (!Object.is(oldValue, newValue)) {
+              cellUpdates.push({
+                rowIndex,
+                columnId: key,
+                previousValue: oldValue,
+                newValue,
+              });
+            }
+          }
+        }
+      }
+
+      // Track cell updates if there are any
+      if (cellUpdates.length > 0) {
+        if (cellUpdates.length === 1) {
+          const update = cellUpdates[0];
+          if (update) {
+            trackCellUpdate(update);
+          }
+        } else {
+          trackCellsUpdate(cellUpdates);
+        }
+      }
+
+      setData(newData);
+    },
+    [data, trackCellUpdate, trackCellsUpdate],
+  );
+
   const height = Math.max(400, windowSize.height - 150);
 
   return (
     <DirectionProvider dir={dir}>
       <DataGridDemoImpl
         data={data}
-        onDataChange={setData}
+        onDataChange={onDataChange}
         columns={columns}
         onRowAdd={onRowAdd}
         onRowsAdd={onRowsAdd}
@@ -395,6 +551,11 @@ export function DataGridDemo() {
         height={height}
         dir={dir}
         onDirChange={setDir}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        onUndoRedoKeyDown={onUndoRedoKeyDown}
       />
     </DirectionProvider>
   );
