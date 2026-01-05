@@ -7,7 +7,7 @@ import { useLazyRef } from "@/hooks/use-lazy-ref";
 
 const DEFAULT_MAX_HISTORY = 100;
 
-interface UndoableOperation<TData> {
+interface HistoryEntry<TData> {
   type: "cells_update" | "rows_add" | "rows_delete";
   timestamp: number;
   description?: string;
@@ -23,21 +23,21 @@ interface CellUpdate {
 }
 
 interface UndoRedoState<TData> {
-  undoStack: UndoableOperation<TData>[];
-  redoStack: UndoableOperation<TData>[];
+  undoStack: HistoryEntry<TData>[];
+  redoStack: HistoryEntry<TData>[];
 }
 
 interface UndoRedoStore<TData> {
   subscribe: (callback: () => void) => () => void;
   getState: () => UndoRedoState<TData>;
-  pushOperation: (operation: UndoableOperation<TData>) => void;
-  undo: () => UndoableOperation<TData> | null;
-  redo: () => UndoableOperation<TData> | null;
+  push: (entry: HistoryEntry<TData>) => void;
+  undo: () => HistoryEntry<TData> | null;
+  redo: () => HistoryEntry<TData> | null;
   clear: () => void;
   notify: () => void;
 }
 
-function useUndoRedoStore<T>(
+function useStore<T>(
   store: UndoRedoStore<T>,
   selector: (state: UndoRedoState<T>) => boolean,
 ): boolean {
@@ -96,9 +96,9 @@ export function useDataGridUndoRedo<TData>({
         return () => listenersRef.current.delete(callback);
       },
       getState: () => stateRef.current,
-      pushOperation: (operation) => {
+      push: (entry) => {
         const state = stateRef.current;
-        const newUndoStack = [...state.undoStack, operation];
+        const newUndoStack = [...state.undoStack, entry];
 
         if (newUndoStack.length > maxHistory) {
           newUndoStack.shift();
@@ -114,29 +114,29 @@ export function useDataGridUndoRedo<TData>({
         const state = stateRef.current;
         if (state.undoStack.length === 0) return null;
 
-        const operation = state.undoStack[state.undoStack.length - 1];
-        if (!operation) return null;
+        const entry = state.undoStack[state.undoStack.length - 1];
+        if (!entry) return null;
 
         stateRef.current = {
           undoStack: state.undoStack.slice(0, -1),
-          redoStack: [...state.redoStack, operation],
+          redoStack: [...state.redoStack, entry],
         };
         store.notify();
-        return operation;
+        return entry;
       },
       redo: () => {
         const state = stateRef.current;
         if (state.redoStack.length === 0) return null;
 
-        const operation = state.redoStack[state.redoStack.length - 1];
-        if (!operation) return null;
+        const entry = state.redoStack[state.redoStack.length - 1];
+        if (!entry) return null;
 
         stateRef.current = {
-          undoStack: [...state.undoStack, operation],
+          undoStack: [...state.undoStack, entry],
           redoStack: state.redoStack.slice(0, -1),
         };
         store.notify();
-        return operation;
+        return entry;
       },
       clear: () => {
         stateRef.current = {
@@ -153,32 +153,26 @@ export function useDataGridUndoRedo<TData>({
     };
   }, [listenersRef, stateRef, maxHistory]);
 
-  const canUndo = useUndoRedoStore(
-    store,
-    (state) => state.undoStack.length > 0,
-  );
-  const canRedo = useUndoRedoStore(
-    store,
-    (state) => state.redoStack.length > 0,
-  );
+  const canUndo = useStore(store, (state) => state.undoStack.length > 0);
+  const canRedo = useStore(store, (state) => state.redoStack.length > 0);
 
   const undo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
 
-    const operation = store.undo();
-    if (!operation) return;
+    const entry = store.undo();
+    if (!entry) return;
 
-    const newData = operation.undo(propsRef.current.data);
+    const newData = entry.undo(propsRef.current.data);
     propsRef.current.onDataChange(newData);
   }, [store, propsRef]);
 
   const redo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
 
-    const operation = store.redo();
-    if (!operation) return;
+    const entry = store.redo();
+    if (!entry) return;
 
-    const newData = operation.redo(propsRef.current.data);
+    const newData = entry.redo(propsRef.current.data);
     propsRef.current.onDataChange(newData);
   }, [store, propsRef]);
 
@@ -195,7 +189,7 @@ export function useDataGridUndoRedo<TData>({
       );
       if (filteredUpdates.length === 0) return;
 
-      const operation: UndoableOperation<TData> = {
+      const entry: HistoryEntry<TData> = {
         type: "cells_update",
         timestamp: Date.now(),
         description: `Update ${filteredUpdates.length} cell(s)`,
@@ -227,7 +221,7 @@ export function useDataGridUndoRedo<TData>({
         },
       };
 
-      store.pushOperation(operation);
+      store.push(entry);
     },
     [store, propsRef],
   );
@@ -243,7 +237,7 @@ export function useDataGridUndoRedo<TData>({
         (row) => JSON.parse(JSON.stringify(row)) as TData,
       );
 
-      const operation: UndoableOperation<TData> = {
+      const entry: HistoryEntry<TData> = {
         type: "rows_add",
         timestamp: Date.now(),
         description: `Add ${rows.length} row(s)`,
@@ -272,7 +266,7 @@ export function useDataGridUndoRedo<TData>({
         },
       };
 
-      store.pushOperation(operation);
+      store.push(entry);
     },
     [store, propsRef],
   );
@@ -296,7 +290,7 @@ export function useDataGridUndoRedo<TData>({
       }
       rowsWithIndices.sort((a, b) => a.index - b.index);
 
-      const operation: UndoableOperation<TData> = {
+      const entry: HistoryEntry<TData> = {
         type: "rows_delete",
         timestamp: Date.now(),
         description: `Delete ${rows.length} row(s)`,
@@ -319,7 +313,7 @@ export function useDataGridUndoRedo<TData>({
         },
       };
 
-      store.pushOperation(operation);
+      store.push(entry);
     },
     [store, propsRef],
   );
