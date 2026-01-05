@@ -416,7 +416,6 @@ export function DataGridLiveDemo() {
     },
     onSortingChange: setSorting,
     manualSorting: true,
-    enableSingleCellSelection: true,
     enableSearch: true,
     enablePaste: true,
   });
