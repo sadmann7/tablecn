@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { useDataGrid } from "@/hooks/use-data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { UpdateCell } from "@/types/data-grid";
+import type { CellUpdate } from "@/types/data-grid";
 
 interface Person {
   id: string;
@@ -237,7 +237,9 @@ export function DataGridRenderDemo() {
             "age",
             "salary",
           ] as const;
-          const updates: UpdateCell[] = [];
+
+          const updates: CellUpdate[] = [];
+
           for (let i = 0; i < count; i++) {
             const rowIndex = Math.floor(i / columnsToFill.length);
             const colIndex = i % columnsToFill.length;
@@ -319,7 +321,7 @@ export function DataGridRenderDemo() {
             col: (typeof columnsToFill)[number],
           ) => string | number,
         ) {
-          const updates: UpdateCell[] = [];
+          const updates: CellUpdate[] = [];
           for (let i = startCell; i < endCell; i++) {
             const rowIndex = Math.floor(i / columnsToFill.length);
             const colIndex = i % columnsToFill.length;

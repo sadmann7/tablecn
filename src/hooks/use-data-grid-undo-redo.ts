@@ -16,7 +16,7 @@ interface HistoryEntry<TData> {
   redo: (currentData: TData[]) => TData[];
 }
 
-interface CellUpdate {
+interface UndoRedoCellUpdate {
   rowIndex: number;
   columnId: string;
   previousValue: unknown;
@@ -50,7 +50,7 @@ function useStore<T>(
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
-export interface UseDataGridUndoRedoProps<TData> {
+interface UseDataGridUndoRedoProps<TData> {
   data: TData[];
   onDataChange: (data: TData[]) => void;
   getRowId?: (row: TData) => string;
@@ -58,18 +58,18 @@ export interface UseDataGridUndoRedoProps<TData> {
   enabled?: boolean;
 }
 
-export interface UseDataGridUndoRedoReturn<TData> {
+interface UseDataGridUndoRedoReturn<TData> {
   canUndo: boolean;
   canRedo: boolean;
   undo: () => void;
   redo: () => void;
   clearHistory: () => void;
-  trackCellsUpdate: (updates: CellUpdate[]) => void;
+  trackCellsUpdate: (updates: UndoRedoCellUpdate[]) => void;
   trackRowsAdd: (params: { startIndex: number; rows: TData[] }) => void;
   trackRowsDelete: (params: { indices: number[]; rows: TData[] }) => void;
 }
 
-export function useDataGridUndoRedo<TData>({
+function useDataGridUndoRedo<TData>({
   data,
   onDataChange,
   getRowId,
@@ -196,7 +196,7 @@ export function useDataGridUndoRedo<TData>({
   }, [store]);
 
   const trackCellsUpdate = React.useCallback(
-    (updates: CellUpdate[]) => {
+    (updates: UndoRedoCellUpdate[]) => {
       if (!propsRef.current.enabled || updates.length === 0) return;
 
       const filteredUpdates = updates.filter(
@@ -382,3 +382,10 @@ export function useDataGridUndoRedo<TData>({
     ],
   );
 }
+
+export {
+  useDataGridUndoRedo,
+  //
+  type UseDataGridUndoRedoProps,
+  type UndoRedoCellUpdate,
+};

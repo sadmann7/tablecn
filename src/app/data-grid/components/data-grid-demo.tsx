@@ -2,7 +2,7 @@
 
 import { DirectionProvider } from "@radix-ui/react-direction";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Languages, Redo2, Undo2 } from "lucide-react";
+import { Languages } from "lucide-react";
 import * as React from "react";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
@@ -11,19 +11,16 @@ import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-heig
 import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
-import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
-import { useDataGridUndoRedo } from "@/hooks/use-data-grid-undo-redo";
+import {
+  type UndoRedoCellUpdate,
+  useDataGridUndoRedo,
+} from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
-import type { Direction, UpdateCell } from "@/types/data-grid";
+import type { Direction } from "@/types/data-grid";
 import {
   departments,
   initialData,
@@ -36,20 +33,12 @@ interface DataGridDemoImplProps extends UseDataGridProps<Person> {
   dir: Direction;
   onDirChange: (dir: Direction) => void;
   height: number;
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
 }
 
 function DataGridDemoImpl({
   dir,
   onDirChange,
   height,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
   ...props
 }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
@@ -72,42 +61,6 @@ function DataGridDemoImpl({
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
-                disabled={!canUndo}
-                onClick={onUndo}
-                aria-label="Undo"
-              >
-                <Undo2 className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Undo (Ctrl+Z)</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
-                disabled={!canRedo}
-                onClick={onRedo}
-                aria-label="Redo"
-              >
-                <Redo2 className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Redo (Ctrl+Shift+Z)</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
         <Toggle
           aria-label="Toggle text direction"
           dir={dir}
@@ -139,19 +92,12 @@ export function DataGridDemo() {
   const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
-  const {
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-    trackCellsUpdate,
-    trackRowsAdd,
-    trackRowsDelete,
-  } = useDataGridUndoRedo({
-    data,
-    onDataChange: setData,
-    getRowId: (row) => row.id,
-  });
+  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
+    useDataGridUndoRedo({
+      data,
+      onDataChange: setData,
+      getRowId: (row) => row.id,
+    });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
@@ -467,12 +413,7 @@ export function DataGridDemo() {
   const onDataChange = React.useCallback(
     (newData: Person[]) => {
       // Find which cells changed by comparing old and new data
-      const cellUpdates: Array<{
-        rowIndex: number;
-        columnId: string;
-        previousValue: unknown;
-        newValue: unknown;
-      }> = [];
+      const cellUpdates: Array<UndoRedoCellUpdate> = [];
 
       // Compare each row to find changed cells
       const maxLength = Math.max(data.length, newData.length);
@@ -534,10 +475,6 @@ export function DataGridDemo() {
         height={height}
         dir={dir}
         onDirChange={setDir}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        onUndo={undo}
-        onRedo={redo}
       />
     </DirectionProvider>
   );

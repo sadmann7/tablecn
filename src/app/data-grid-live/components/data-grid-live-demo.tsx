@@ -6,6 +6,7 @@ import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { use } from "react";
 import { toast } from "sonner";
+
 import { skatersCollection } from "@/app/data-grid-live/lib/collections";
 import {
   generateRandomSkater,
@@ -36,6 +37,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
+import {
+  type UndoRedoCellUpdate,
+  useDataGridUndoRedo,
+} from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -109,6 +114,51 @@ export function DataGridLiveDemo() {
   );
 
   const { startUpload } = useUploadThing("skaterMedia");
+
+  // Undo/redo support - wraps data changes to track history
+  // and allows reverting changes via keyboard shortcuts
+  const undoRedoOnDataChange = React.useCallback(
+    (newData: SkaterSchema[]) => {
+      for (const skater of newData) {
+        const existingSkater = data.find((s) => s.id === skater.id);
+        if (!existingSkater) {
+          skatersCollection.update(skater.id, (draft) => {
+            Object.assign(draft, skater);
+          });
+          continue;
+        }
+
+        const hasChanges = (
+          Object.keys(skater) as Array<keyof SkaterSchema>
+        ).some((key) => {
+          const existingValue =
+            existingSkater[key] instanceof Date
+              ? (existingSkater[key] as Date).toISOString()
+              : existingSkater[key];
+          const newValue =
+            skater[key] instanceof Date
+              ? (skater[key] as Date).toISOString()
+              : skater[key];
+
+          return JSON.stringify(existingValue) !== JSON.stringify(newValue);
+        });
+
+        if (hasChanges) {
+          skatersCollection.update(skater.id, (draft) => {
+            Object.assign(draft, skater);
+          });
+        }
+      }
+    },
+    [data],
+  );
+
+  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
+    useDataGridUndoRedo({
+      data,
+      onDataChange: undoRedoOnDataChange,
+      getRowId: (row) => row.id,
+    });
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
@@ -264,9 +314,13 @@ export function DataGridLiveDemo() {
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
     (newData) => {
+      // Track cell updates for undo/redo
+      const cellUpdates: Array<UndoRedoCellUpdate> = [];
+
       // Diff and update changed skaters via TanStack DB for optimistic updates
       for (const skater of newData) {
         const existingSkater = data.find((s) => s.id === skater.id);
+        const rowIndex = data.findIndex((s) => s.id === skater.id);
 
         // For new rows (not yet in our stale closure data), still update them
         // because onRowsAdd already created them in the collection
@@ -278,9 +332,7 @@ export function DataGridLiveDemo() {
         }
 
         // Check if any field changed using JSON comparison for arrays/objects
-        const hasChanges = (
-          Object.keys(skater) as Array<keyof SkaterSchema>
-        ).some((key) => {
+        for (const key of Object.keys(skater) as Array<keyof SkaterSchema>) {
           const existingValue =
             existingSkater[key] instanceof Date
               ? (existingSkater[key] as Date).toISOString()
@@ -290,38 +342,55 @@ export function DataGridLiveDemo() {
               ? (skater[key] as Date).toISOString()
               : skater[key];
 
-          return JSON.stringify(existingValue) !== JSON.stringify(newValue);
-        });
+          if (JSON.stringify(existingValue) !== JSON.stringify(newValue)) {
+            cellUpdates.push({
+              rowIndex,
+              columnId: key,
+              previousValue: existingSkater[key],
+              newValue: skater[key],
+            });
 
-        if (hasChanges) {
-          skatersCollection.update(skater.id, (draft) => {
-            Object.assign(draft, skater);
-          });
+            skatersCollection.update(skater.id, (draft) => {
+              (draft as Record<string, unknown>)[key] = skater[key];
+            });
+          }
         }
       }
+
+      // Track cell updates if there are any
+      if (cellUpdates.length > 0) {
+        trackCellsUpdate(cellUpdates);
+      }
     },
-    [data],
+    [data, trackCellsUpdate],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
       const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
       const newSkater = generateRandomSkater();
-      skatersCollection.insert({ ...newSkater, order: maxOrder + 1 });
+      const skaterWithOrder = { ...newSkater, order: maxOrder + 1 };
+
+      skatersCollection.insert(skaterWithOrder);
+
+      // Track for undo/redo
+      trackRowsAdd({ startIndex: data.length, rows: [skaterWithOrder] });
 
       return {
         rowIndex: data.length,
         columnId: "name",
       };
-    }, [data]);
+    }, [data, trackRowsAdd]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
     React.useCallback(
       (count: number) => {
         const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
+        const newRows: SkaterSchema[] = [];
+
         for (let i = 0; i < count; i++) {
-          skatersCollection.insert({
-            id: generateId(), // Use same ID format as database (12 char nanoid)
+          const newSkater: SkaterSchema = {
+            id: generateId(),
             name: null,
             email: null,
             stance: "regular",
@@ -335,18 +404,29 @@ export function DataGridLiveDemo() {
             order: maxOrder + i + 1,
             createdAt: new Date(),
             updatedAt: new Date(),
-          });
+          };
+          newRows.push(newSkater);
+          skatersCollection.insert(newSkater);
         }
+
+        // Track for undo/redo
+        trackRowsAdd({ startIndex: data.length, rows: newRows });
       },
-      [data],
+      [data, trackRowsAdd],
     );
 
   const onRowsDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onRowsDelete"]
-  > = React.useCallback((rowsToDelete) => {
-    // Use batch delete - single transaction for all deletions
-    skatersCollection.delete(rowsToDelete.map((skater) => skater.id));
-  }, []);
+  > = React.useCallback(
+    (rowsToDelete, rowIndices) => {
+      // Track for undo/redo (before deletion to capture the rows)
+      trackRowsDelete({ indices: rowIndices, rows: rowsToDelete });
+
+      // Use batch delete - single transaction for all deletions
+      skatersCollection.delete(rowsToDelete.map((skater) => skater.id));
+    },
+    [trackRowsDelete],
+  );
 
   const onFilesUpload: NonNullable<
     UseDataGridProps<SkaterSchema>["onFilesUpload"]
@@ -465,10 +545,9 @@ export function DataGridLiveDemo() {
     table.toggleAllRowsSelected(false);
   }, [table, dataGridProps.tableMeta]);
 
+  const height = Math.max(400, windowSize.height - 150);
   const selectedCellCount =
     dataGridProps.tableMeta.selectionState?.selectedCells.size ?? 0;
-
-  const height = Math.max(400, windowSize.height - 150);
 
   return (
     <div className="container flex flex-col gap-4 py-4">
@@ -477,7 +556,7 @@ export function DataGridLiveDemo() {
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
-        <DataGridKeyboardShortcuts />
+        <DataGridKeyboardShortcuts enableUndoRedo />
         <DataGridFilterMenu table={table} align="end" />
         <DataGridSortMenu table={table} align="end" />
         <DataGridRowHeightMenu table={table} align="end" />
