@@ -66,7 +66,6 @@ export interface UseDataGridUndoRedoReturn<TData> {
   trackCellsUpdate: (updates: CellUpdate[]) => void;
   trackRowsAdd: (params: { startIndex: number; rows: TData[] }) => void;
   trackRowsDelete: (params: { indices: number[]; rows: TData[] }) => void;
-  onKeyDown: (event: React.KeyboardEvent | KeyboardEvent) => void;
 }
 
 export function useDataGridUndoRedo<TData>({
@@ -325,10 +324,10 @@ export function useDataGridUndoRedo<TData>({
     [store, propsRef],
   );
 
-  const onKeyDown = React.useCallback(
-    (event: React.KeyboardEvent | KeyboardEvent) => {
-      if (!propsRef.current.enabled) return;
+  React.useEffect(() => {
+    if (!enabled) return;
 
+    function onKeyDown(event: KeyboardEvent) {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey;
 
       if (isCtrlOrCmd && event.key.toLowerCase() === "z" && !event.shiftKey) {
@@ -345,19 +344,32 @@ export function useDataGridUndoRedo<TData>({
         redo();
         return;
       }
-    },
-    [propsRef, undo, redo],
-  );
+    }
 
-  return {
-    canUndo,
-    canRedo,
-    undo,
-    redo,
-    clearHistory,
-    trackCellsUpdate,
-    trackRowsAdd,
-    trackRowsDelete,
-    onKeyDown,
-  };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [enabled, undo, redo]);
+
+  return React.useMemo(
+    () => ({
+      canUndo,
+      canRedo,
+      undo,
+      redo,
+      clearHistory,
+      trackCellsUpdate,
+      trackRowsAdd,
+      trackRowsDelete,
+    }),
+    [
+      canUndo,
+      canRedo,
+      undo,
+      redo,
+      clearHistory,
+      trackCellsUpdate,
+      trackRowsAdd,
+      trackRowsDelete,
+    ],
+  );
 }

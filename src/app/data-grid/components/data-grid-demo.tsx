@@ -40,7 +40,6 @@ interface DataGridDemoImplProps extends UseDataGridProps<Person> {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
-  onUndoRedoKeyDown: (event: React.KeyboardEvent | KeyboardEvent) => void;
 }
 
 function DataGridDemoImpl({
@@ -51,7 +50,6 @@ function DataGridDemoImpl({
   canRedo,
   onUndo,
   onRedo,
-  onUndoRedoKeyDown,
   ...props
 }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
@@ -66,16 +64,6 @@ function DataGridDemoImpl({
     enablePaste: true,
     ...props,
   });
-
-  // Handle undo/redo keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      onUndoRedoKeyDown(event);
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onUndoRedoKeyDown]);
 
   return (
     <div className="container flex flex-col gap-4 py-4">
@@ -159,7 +147,6 @@ export function DataGridDemo() {
     trackCellsUpdate,
     trackRowsAdd,
     trackRowsDelete,
-    onKeyDown: onUndoRedoKeyDown,
   } = useDataGridUndoRedo({
     data,
     onDataChange: setData,
@@ -551,7 +538,6 @@ export function DataGridDemo() {
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
-        onUndoRedoKeyDown={onUndoRedoKeyDown}
       />
     </DirectionProvider>
   );
