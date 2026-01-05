@@ -79,11 +79,7 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
         <Suspense>
           <UploadThingSSR />
         </Suspense>
-        <Script
-          defer
-          data-site-id={siteConfig.url}
-          src="https://assets.onedollarstats.com/stonks.js"
-        />
+        <Script defer src="https://assets.onedollarstats.com/stonks.js" />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -135,6 +135,7 @@ interface UseDataGridProps<TData>
   overscan?: number;
   dir?: Direction;
   autoFocus?: boolean | Partial<CellPosition>;
+  enableSingleCellSelection?: boolean;
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
   enablePaste?: boolean;
@@ -1839,9 +1840,12 @@ function useDataGrid<TData>({
       event.preventDefault();
 
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        const cellKey = getCellKey(rowIndex, columnId);
         store.batch(() => {
           store.setState("selectionState", {
-            selectedCells: new Set(),
+            selectedCells: propsRef.current.enableSingleCellSelection
+              ? new Set([cellKey])
+              : new Set(),
             selectionRange: {
               start: { rowIndex, columnId },
               end: { rowIndex, columnId },
@@ -1852,11 +1856,11 @@ function useDataGrid<TData>({
         });
       }
     },
-    [store],
+    [store, propsRef],
   );
 
   const onCellMouseEnter = React.useCallback(
-    (rowIndex: number, columnId: string, _event: React.MouseEvent) => {
+    (rowIndex: number, columnId: string) => {
       const currentState = store.getState();
       if (
         currentState.selectionState.isSelecting &&

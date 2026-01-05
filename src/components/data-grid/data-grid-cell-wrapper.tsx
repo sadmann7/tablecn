@@ -150,14 +150,11 @@ export function DataGridCellWrapper<TData>({
     [tableMeta, rowIndex, columnId, isEditing],
   );
 
-  const onMouseEnter = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        tableMeta?.onCellMouseEnter?.(rowIndex, columnId, event);
-      }
-    },
-    [tableMeta, rowIndex, columnId, isEditing],
-  );
+  const onMouseEnter = React.useCallback(() => {
+    if (!isEditing) {
+      tableMeta?.onCellMouseEnter?.(rowIndex, columnId);
+    }
+  }, [tableMeta, rowIndex, columnId, isEditing]);
 
   const onMouseUp = React.useCallback(() => {
     if (!isEditing) {
