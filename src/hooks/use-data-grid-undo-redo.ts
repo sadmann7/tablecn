@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
@@ -8,9 +9,9 @@ import { useLazyRef } from "@/hooks/use-lazy-ref";
 const DEFAULT_MAX_HISTORY = 100;
 
 interface HistoryEntry<TData> {
-  type: "cells_update" | "rows_add" | "rows_delete";
+  variant: "cells_update" | "rows_add" | "rows_delete";
+  count: number;
   timestamp: number;
-  description?: string;
   undo: (currentData: TData[]) => TData[];
   redo: (currentData: TData[]) => TData[];
 }
@@ -160,20 +161,34 @@ export function useDataGridUndoRedo<TData>({
     if (!propsRef.current.enabled) return;
 
     const entry = store.undo();
-    if (!entry) return;
+    if (!entry) {
+      toast.info("No actions to undo");
+      return;
+    }
 
     const newData = entry.undo(propsRef.current.data);
     propsRef.current.onDataChange(newData);
+
+    toast.success(
+      `${entry.count} action${entry.count !== 1 ? "s" : ""} undone`,
+    );
   }, [store, propsRef]);
 
   const redo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
 
     const entry = store.redo();
-    if (!entry) return;
+    if (!entry) {
+      toast.info("No actions to redo");
+      return;
+    }
 
     const newData = entry.redo(propsRef.current.data);
     propsRef.current.onDataChange(newData);
+
+    toast.success(
+      `${entry.count} action${entry.count !== 1 ? "s" : ""} redone`,
+    );
   }, [store, propsRef]);
 
   const clearHistory = React.useCallback(() => {
@@ -190,9 +205,9 @@ export function useDataGridUndoRedo<TData>({
       if (filteredUpdates.length === 0) return;
 
       const entry: HistoryEntry<TData> = {
-        type: "cells_update",
+        variant: "cells_update",
+        count: filteredUpdates.length,
         timestamp: Date.now(),
-        description: `Update ${filteredUpdates.length} cell(s)`,
         undo: (currentData) => {
           const newData = [...currentData];
           for (const update of filteredUpdates) {
@@ -238,9 +253,9 @@ export function useDataGridUndoRedo<TData>({
       );
 
       const entry: HistoryEntry<TData> = {
-        type: "rows_add",
+        variant: "rows_add",
+        count: rows.length,
         timestamp: Date.now(),
-        description: `Add ${rows.length} row(s)`,
         undo: (currentData) => {
           const newData = [...currentData];
           const sortedIndices = [...indices].sort((a, b) => b - a);
@@ -291,9 +306,9 @@ export function useDataGridUndoRedo<TData>({
       rowsWithIndices.sort((a, b) => a.index - b.index);
 
       const entry: HistoryEntry<TData> = {
-        type: "rows_delete",
+        variant: "rows_delete",
+        count: rows.length,
         timestamp: Date.now(),
-        description: `Delete ${rows.length} row(s)`,
         undo: (currentData) => {
           const newData = [...currentData];
           for (const { index, row } of rowsWithIndices) {
