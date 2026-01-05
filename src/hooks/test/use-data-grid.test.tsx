@@ -1174,9 +1174,7 @@ describe("useDataGrid", () => {
 
       // Mouse enter to extend selection
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.(1, "score", {
-          button: 0,
-        } as unknown as React.MouseEvent);
+        result.current.tableMeta.onCellMouseEnter?.(1, "score");
       });
 
       // Mouse up to end selection
@@ -1856,9 +1854,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellMouseEnter?.(1, "trick", {
-          button: 0,
-        } as unknown as React.MouseEvent);
+        result.current.tableMeta.onCellMouseEnter?.(1, "trick");
         await Promise.resolve();
       });
 

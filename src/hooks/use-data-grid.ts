@@ -1860,7 +1860,7 @@ function useDataGrid<TData>({
   );
 
   const onCellMouseEnter = React.useCallback(
-    (rowIndex: number, columnId: string, _event: React.MouseEvent) => {
+    (rowIndex: number, columnId: string) => {
       const currentState = store.getState();
       if (
         currentState.selectionState.isSelecting &&

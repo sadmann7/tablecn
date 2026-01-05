@@ -45,7 +45,6 @@ function DataGridDemoImpl({
       },
     },
     dir,
-    enableSingleCellSelection: true,
     enableSearch: true,
     enablePaste: true,
     ...props,

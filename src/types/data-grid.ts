@@ -95,11 +95,7 @@ declare module "@tanstack/react-table" {
       columnId: string,
       event: React.MouseEvent,
     ) => void;
-    onCellMouseEnter?: (
-      rowIndex: number,
-      columnId: string,
-      event: React.MouseEvent,
-    ) => void;
+    onCellMouseEnter?: (rowIndex: number, columnId: string) => void;
     onCellMouseUp?: () => void;
     onCellContextMenu?: (
       rowIndex: number,

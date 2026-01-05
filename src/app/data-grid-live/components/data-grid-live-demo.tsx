@@ -414,8 +414,9 @@ export function DataGridLiveDemo() {
       },
       sorting,
     },
-    manualSorting: true,
     onSortingChange: setSorting,
+    manualSorting: true,
+    enableSingleCellSelection: true,
     enableSearch: true,
     enablePaste: true,
   });
@@ -465,6 +466,9 @@ export function DataGridLiveDemo() {
     table.toggleAllRowsSelected(false);
   }, [table, dataGridProps.tableMeta]);
 
+  const selectedCellCount =
+    dataGridProps.tableMeta.selectionState?.selectedCells.size ?? 0;
+
   const height = Math.max(400, windowSize.height - 150);
 
   return (
@@ -483,16 +487,17 @@ export function DataGridLiveDemo() {
       <DataGrid {...dataGridProps} table={table} height={height} />
       <ActionBar
         data-grid-popover
-        open={table.getSelectedRowModel().rows.length > 0}
+        open={selectedCellCount > 0}
         onOpenChange={(open) => {
-          if (!open) table.toggleAllRowsSelected(false);
+          if (!open) {
+            table.toggleAllRowsSelected(false);
+            dataGridProps.tableMeta.onSelectionClear?.();
+          }
         }}
       >
         <ActionBarSelection>
-          <span className="font-medium">
-            {table.getSelectedRowModel().rows.length}
-          </span>
-          <span>selected</span>
+          <span className="font-medium">{selectedCellCount}</span>
+          <span>cells selected</span>
           <ActionBarSeparator />
           <ActionBarClose>
             <X />
