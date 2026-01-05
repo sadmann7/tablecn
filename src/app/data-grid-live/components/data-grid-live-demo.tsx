@@ -497,7 +497,7 @@ export function DataGridLiveDemo() {
       >
         <ActionBarSelection>
           <span className="font-medium">{selectedCellCount}</span>
-          <span>cells selected</span>
+          <span>{selectedCellCount === 1 ? "cell" : "cells"} selected</span>
           <ActionBarSeparator />
           <ActionBarClose>
             <X />
