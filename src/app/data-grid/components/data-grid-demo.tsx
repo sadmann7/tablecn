@@ -19,7 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
-import { useUndoRedo } from "@/hooks/use-undo-redo";
+import { useDataGridUndoRedo } from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -161,7 +161,7 @@ export function DataGridDemo() {
     trackRowsAdd,
     trackRowsDelete,
     onKeyDown: onUndoRedoKeyDown,
-  } = useUndoRedo({
+  } = useDataGridUndoRedo({
     data,
     onDataChange: setData,
     getRowId: (row) => row.id,
@@ -503,8 +503,12 @@ export function DataGridDemo() {
           ]);
 
           for (const key of allKeys) {
-            const oldValue = (oldRow as unknown as Record<string, unknown>)[key];
-            const newValue = (newRow as unknown as Record<string, unknown>)[key];
+            const oldValue = (oldRow as unknown as Record<string, unknown>)[
+              key
+            ];
+            const newValue = (newRow as unknown as Record<string, unknown>)[
+              key
+            ];
 
             if (!Object.is(oldValue, newValue)) {
               cellUpdates.push({
