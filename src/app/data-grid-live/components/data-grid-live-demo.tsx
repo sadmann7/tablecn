@@ -119,34 +119,46 @@ export function DataGridLiveDemo() {
   // and allows reverting changes via keyboard shortcuts
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
-      for (const skater of newData) {
-        const existingSkater = data.find((s) => s.id === skater.id);
-        if (!existingSkater) {
-          skatersCollection.update(skater.id, (draft) => {
-            Object.assign(draft, skater);
-          });
-          continue;
+      const currentIds = new Set(data.map((s) => s.id));
+      const newIds = new Set(newData.map((s) => s.id));
+
+      // Delete rows that exist in current but not in new (undo add / redo delete)
+      for (const skater of data) {
+        if (!newIds.has(skater.id)) {
+          skatersCollection.delete(skater.id);
         }
+      }
 
-        const hasChanges = (
-          Object.keys(skater) as Array<keyof SkaterSchema>
-        ).some((key) => {
-          const existingValue =
-            existingSkater[key] instanceof Date
-              ? (existingSkater[key] as Date).toISOString()
-              : existingSkater[key];
-          const newValue =
-            skater[key] instanceof Date
-              ? (skater[key] as Date).toISOString()
-              : skater[key];
+      // Insert or update rows
+      for (const skater of newData) {
+        if (!currentIds.has(skater.id)) {
+          // Insert new row (undo delete / redo add)
+          skatersCollection.insert(skater);
+        } else {
+          // Update existing row
+          const existingSkater = data.find((s) => s.id === skater.id);
+          if (!existingSkater) continue;
 
-          return JSON.stringify(existingValue) !== JSON.stringify(newValue);
-        });
+          const hasChanges = (
+            Object.keys(skater) as Array<keyof SkaterSchema>
+          ).some((key) => {
+            const existingValue =
+              existingSkater[key] instanceof Date
+                ? (existingSkater[key] as Date).toISOString()
+                : existingSkater[key];
+            const newValue =
+              skater[key] instanceof Date
+                ? (skater[key] as Date).toISOString()
+                : skater[key];
 
-        if (hasChanges) {
-          skatersCollection.update(skater.id, (draft) => {
-            Object.assign(draft, skater);
+            return JSON.stringify(existingValue) !== JSON.stringify(newValue);
           });
+
+          if (hasChanges) {
+            skatersCollection.update(skater.id, (draft) => {
+              Object.assign(draft, skater);
+            });
+          }
         }
       }
     },
