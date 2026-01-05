@@ -8,7 +8,7 @@ import { useLazyRef } from "@/hooks/use-lazy-ref";
 const DEFAULT_MAX_HISTORY = 100;
 
 interface UndoableOperation<TData> {
-  type: "cell_update" | "cells_update" | "rows_add" | "rows_delete";
+  type: "cells_update" | "rows_add" | "rows_delete";
   timestamp: number;
   description?: string;
   undo: (currentData: TData[]) => TData[];
@@ -63,12 +63,6 @@ export interface UseDataGridUndoRedoReturn<TData> {
   undo: () => void;
   redo: () => void;
   clearHistory: () => void;
-  trackCellUpdate: (params: {
-    rowIndex: number;
-    columnId: string;
-    previousValue: unknown;
-    newValue: unknown;
-  }) => void;
   trackCellsUpdate: (updates: CellUpdate[]) => void;
   trackRowsAdd: (params: { startIndex: number; rows: TData[] }) => void;
   trackRowsDelete: (params: { indices: number[]; rows: TData[] }) => void;
@@ -192,52 +186,6 @@ export function useDataGridUndoRedo<TData>({
   const clearHistory = React.useCallback(() => {
     store.clear();
   }, [store]);
-
-  const trackCellUpdate = React.useCallback(
-    (params: {
-      rowIndex: number;
-      columnId: string;
-      previousValue: unknown;
-      newValue: unknown;
-    }) => {
-      if (!propsRef.current.enabled) return;
-
-      const { rowIndex, columnId, previousValue, newValue } = params;
-
-      if (Object.is(previousValue, newValue)) return;
-
-      const operation: UndoableOperation<TData> = {
-        type: "cell_update",
-        timestamp: Date.now(),
-        description: `Update cell at row ${rowIndex}, column ${columnId}`,
-        undo: (currentData) => {
-          const newData = [...currentData];
-          const row = newData[rowIndex];
-          if (row) {
-            newData[rowIndex] = {
-              ...row,
-              [columnId]: previousValue,
-            };
-          }
-          return newData;
-        },
-        redo: (currentData) => {
-          const newData = [...currentData];
-          const row = newData[rowIndex];
-          if (row) {
-            newData[rowIndex] = {
-              ...row,
-              [columnId]: newValue,
-            };
-          }
-          return newData;
-        },
-      };
-
-      store.pushOperation(operation);
-    },
-    [store, propsRef],
-  );
 
   const trackCellsUpdate = React.useCallback(
     (updates: CellUpdate[]) => {
@@ -407,11 +355,9 @@ export function useDataGridUndoRedo<TData>({
     undo,
     redo,
     clearHistory,
-    trackCellUpdate,
     trackCellsUpdate,
     trackRowsAdd,
     trackRowsDelete,
     onKeyDown,
   };
 }
-

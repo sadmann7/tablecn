@@ -156,7 +156,6 @@ export function DataGridDemo() {
     canRedo,
     undo,
     redo,
-    trackCellUpdate,
     trackCellsUpdate,
     trackRowsAdd,
     trackRowsDelete,
@@ -524,19 +523,12 @@ export function DataGridDemo() {
 
       // Track cell updates if there are any
       if (cellUpdates.length > 0) {
-        if (cellUpdates.length === 1) {
-          const update = cellUpdates[0];
-          if (update) {
-            trackCellUpdate(update);
-          }
-        } else {
-          trackCellsUpdate(cellUpdates);
-        }
+        trackCellsUpdate(cellUpdates);
       }
 
       setData(newData);
     },
-    [data, trackCellUpdate, trackCellsUpdate],
+    [data, trackCellsUpdate],
   );
 
   const height = Math.max(400, windowSize.height - 150);
