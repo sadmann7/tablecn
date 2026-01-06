@@ -92,13 +92,6 @@ export function DataGridDemo() {
   const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo({
-      data,
-      onDataChange: setData,
-      getRowId: (row) => row.id,
-    });
-
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
   const columns = React.useMemo<ColumnDef<Person>[]>(
@@ -285,6 +278,13 @@ export function DataGridDemo() {
     ],
     [filterFn],
   );
+
+  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
+    useDataGridUndoRedo({
+      data,
+      onDataChange: setData,
+      getRowId: (row) => row.id,
+    });
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
     React.useCallback(() => {
