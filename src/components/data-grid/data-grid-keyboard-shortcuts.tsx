@@ -343,7 +343,14 @@ function DataGridKeyboardShortcutsImpl({
         ],
       },
     ],
-    [modKey, enableSearch, enableUndoRedo, enablePaste, enableRowAdd, enableRowsDelete],
+    [
+      modKey,
+      enableSearch,
+      enableUndoRedo,
+      enablePaste,
+      enableRowAdd,
+      enableRowsDelete,
+    ],
   );
 
   const filteredGroups = React.useMemo(() => {

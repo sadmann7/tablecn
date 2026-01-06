@@ -567,7 +567,7 @@ export function DataGridLiveDemo() {
         className="flex items-center gap-2 self-end"
       >
         <DataGridKeyboardShortcuts
-          enableSearch={!!dataGridProps.searchState}
+          enableSearch
           enableUndoRedo
           enablePaste
           enableRowAdd
