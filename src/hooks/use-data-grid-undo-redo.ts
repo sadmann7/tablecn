@@ -53,7 +53,6 @@ function useStore<T>(
 interface UseDataGridUndoRedoProps<TData> {
   data: TData[];
   onDataChange: (data: TData[]) => void;
-  getRowId?: (row: TData) => string;
   maxHistory?: number;
   enabled?: boolean;
 }
@@ -72,14 +71,12 @@ interface UseDataGridUndoRedoReturn<TData> {
 function useDataGridUndoRedo<TData>({
   data,
   onDataChange,
-  getRowId,
   maxHistory = DEFAULT_MAX_HISTORY,
   enabled = true,
 }: UseDataGridUndoRedoProps<TData>): UseDataGridUndoRedoReturn<TData> {
   const propsRef = useAsRef({
     data,
     onDataChange,
-    getRowId,
     enabled,
   });
 

@@ -283,7 +283,6 @@ export function DataGridDemo() {
     useDataGridUndoRedo({
       data,
       onDataChange: setData,
-      getRowId: (row) => row.id,
     });
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =

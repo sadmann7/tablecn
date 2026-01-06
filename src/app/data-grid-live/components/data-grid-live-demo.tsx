@@ -319,7 +319,6 @@ export function DataGridLiveDemo() {
     useDataGridUndoRedo({
       data,
       onDataChange: undoRedoOnDataChange,
-      getRowId: (row) => row.id,
     });
 
   const onDataChange: NonNullable<
