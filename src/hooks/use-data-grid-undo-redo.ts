@@ -77,6 +77,7 @@ function useDataGridUndoRedo<TData>({
   const propsRef = useAsRef({
     data,
     onDataChange,
+    maxHistory,
     enabled,
   });
 
@@ -98,7 +99,7 @@ function useDataGridUndoRedo<TData>({
         const state = stateRef.current;
         const newUndoStack = [...state.undoStack, entry];
 
-        if (newUndoStack.length > maxHistory) {
+        if (newUndoStack.length > propsRef.current.maxHistory) {
           newUndoStack.shift();
         }
 
@@ -149,7 +150,7 @@ function useDataGridUndoRedo<TData>({
         }
       },
     };
-  }, [listenersRef, stateRef, maxHistory]);
+  }, [listenersRef, stateRef, propsRef]);
 
   const canUndo = useStore(store, (state) => state.undoStack.length > 0);
   const canRedo = useStore(store, (state) => state.redoStack.length > 0);
