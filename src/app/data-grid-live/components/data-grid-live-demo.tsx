@@ -115,63 +115,6 @@ export function DataGridLiveDemo() {
 
   const { startUpload } = useUploadThing("skaterMedia");
 
-  // Undo/redo support - wraps data changes to track history
-  // and allows reverting changes via keyboard shortcuts
-  const undoRedoOnDataChange = React.useCallback(
-    (newData: SkaterSchema[]) => {
-      const currentIds = new Set(data.map((s) => s.id));
-      const newIds = new Set(newData.map((s) => s.id));
-
-      // Delete rows that exist in current but not in new (undo add / redo delete)
-      for (const skater of data) {
-        if (!newIds.has(skater.id)) {
-          skatersCollection.delete(skater.id);
-        }
-      }
-
-      // Insert or update rows
-      for (const skater of newData) {
-        if (!currentIds.has(skater.id)) {
-          // Insert new row (undo delete / redo add)
-          skatersCollection.insert(skater);
-        } else {
-          // Update existing row
-          const existingSkater = data.find((s) => s.id === skater.id);
-          if (!existingSkater) continue;
-
-          const hasChanges = (
-            Object.keys(skater) as Array<keyof SkaterSchema>
-          ).some((key) => {
-            const existingValue =
-              existingSkater[key] instanceof Date
-                ? (existingSkater[key] as Date).toISOString()
-                : existingSkater[key];
-            const newValue =
-              skater[key] instanceof Date
-                ? (skater[key] as Date).toISOString()
-                : skater[key];
-
-            return JSON.stringify(existingValue) !== JSON.stringify(newValue);
-          });
-
-          if (hasChanges) {
-            skatersCollection.update(skater.id, (draft) => {
-              Object.assign(draft, skater);
-            });
-          }
-        }
-      }
-    },
-    [data],
-  );
-
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo({
-      data,
-      onDataChange: undoRedoOnDataChange,
-      getRowId: (row) => row.id,
-    });
-
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
   const columns = React.useMemo<ColumnDef<SkaterSchema>[]>(
@@ -321,6 +264,63 @@ export function DataGridLiveDemo() {
     ],
     [filterFn],
   );
+
+  // Undo/redo support - wraps data changes to track history
+  // and allows reverting changes via keyboard shortcuts
+  const undoRedoOnDataChange = React.useCallback(
+    (newData: SkaterSchema[]) => {
+      const currentIds = new Set(data.map((s) => s.id));
+      const newIds = new Set(newData.map((s) => s.id));
+
+      // Delete rows that exist in current but not in new (undo add / redo delete)
+      for (const skater of data) {
+        if (!newIds.has(skater.id)) {
+          skatersCollection.delete(skater.id);
+        }
+      }
+
+      // Insert or update rows
+      for (const skater of newData) {
+        if (!currentIds.has(skater.id)) {
+          // Insert new row (undo delete / redo add)
+          skatersCollection.insert(skater);
+        } else {
+          // Update existing row
+          const existingSkater = data.find((s) => s.id === skater.id);
+          if (!existingSkater) continue;
+
+          const hasChanges = (
+            Object.keys(skater) as Array<keyof SkaterSchema>
+          ).some((key) => {
+            const existingValue =
+              existingSkater[key] instanceof Date
+                ? (existingSkater[key] as Date).toISOString()
+                : existingSkater[key];
+            const newValue =
+              skater[key] instanceof Date
+                ? (skater[key] as Date).toISOString()
+                : skater[key];
+
+            return JSON.stringify(existingValue) !== JSON.stringify(newValue);
+          });
+
+          if (hasChanges) {
+            skatersCollection.update(skater.id, (draft) => {
+              Object.assign(draft, skater);
+            });
+          }
+        }
+      }
+    },
+    [data],
+  );
+
+  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
+    useDataGridUndoRedo({
+      data,
+      onDataChange: undoRedoOnDataChange,
+      getRowId: (row) => row.id,
+    });
 
   const onDataChange: NonNullable<
     UseDataGridProps<SkaterSchema>["onDataChange"]
@@ -490,7 +490,7 @@ export function DataGridLiveDemo() {
     }
   }, []);
 
-  const { table, ...dataGridProps } = useDataGrid({
+  const { table, tableMeta, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
@@ -549,17 +549,16 @@ export function DataGridLiveDemo() {
 
     const rowIndices = selectedRows.map((row) => row.index);
 
-    dataGridProps.tableMeta.onRowsDelete?.(rowIndices);
+    tableMeta.onRowsDelete?.(rowIndices);
 
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
     table.toggleAllRowsSelected(false);
-  }, [table, dataGridProps.tableMeta]);
+  }, [table, tableMeta]);
 
   const height = Math.max(400, windowSize.height - 150);
-  const selectedCellCount =
-    dataGridProps.tableMeta.selectionState?.selectedCells.size ?? 0;
+  const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
 
   return (
     <div className="container flex flex-col gap-4 py-4">
@@ -574,14 +573,19 @@ export function DataGridLiveDemo() {
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />
       </div>
-      <DataGrid {...dataGridProps} table={table} height={height} />
+      <DataGrid
+        {...dataGridProps}
+        table={table}
+        tableMeta={tableMeta}
+        height={height}
+      />
       <ActionBar
         data-grid-popover
         open={selectedCellCount > 0}
         onOpenChange={(open) => {
           if (!open) {
             table.toggleAllRowsSelected(false);
-            dataGridProps.tableMeta.onSelectionClear?.();
+            tableMeta.onSelectionClear?.();
           }
         }}
       >
