@@ -60,9 +60,9 @@ interface UseDataGridUndoRedoProps<TData> {
 interface UseDataGridUndoRedoReturn<TData> {
   canUndo: boolean;
   canRedo: boolean;
-  undo: () => void;
-  redo: () => void;
-  clearHistory: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onClear: () => void;
   trackCellsUpdate: (updates: UndoRedoCellUpdate[]) => void;
   trackRowsAdd: (params: { startIndex: number; rows: TData[] }) => void;
   trackRowsDelete: (params: { indices: number[]; rows: TData[] }) => void;
@@ -154,7 +154,7 @@ function useDataGridUndoRedo<TData>({
   const canUndo = useStore(store, (state) => state.undoStack.length > 0);
   const canRedo = useStore(store, (state) => state.redoStack.length > 0);
 
-  const undo = React.useCallback(() => {
+  const onUndo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
 
     const entry = store.undo();
@@ -171,7 +171,7 @@ function useDataGridUndoRedo<TData>({
     );
   }, [store, propsRef]);
 
-  const redo = React.useCallback(() => {
+  const onRedo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
 
     const entry = store.redo();
@@ -188,7 +188,7 @@ function useDataGridUndoRedo<TData>({
     );
   }, [store, propsRef]);
 
-  const clearHistory = React.useCallback(() => {
+  const onClear = React.useCallback(() => {
     store.clear();
   }, [store]);
 
@@ -338,7 +338,7 @@ function useDataGridUndoRedo<TData>({
 
       if (isCtrlOrCmd && event.key.toLowerCase() === "z" && !event.shiftKey) {
         event.preventDefault();
-        undo();
+        onUndo();
         return;
       }
 
@@ -347,22 +347,22 @@ function useDataGridUndoRedo<TData>({
         (isCtrlOrCmd && event.key.toLowerCase() === "y")
       ) {
         event.preventDefault();
-        redo();
+        onRedo();
         return;
       }
     }
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [enabled, undo, redo]);
+  }, [enabled, onUndo, onRedo]);
 
   return React.useMemo(
     () => ({
       canUndo,
       canRedo,
-      undo,
-      redo,
-      clearHistory,
+      onUndo,
+      onRedo,
+      onClear,
       trackCellsUpdate,
       trackRowsAdd,
       trackRowsDelete,
@@ -370,9 +370,9 @@ function useDataGridUndoRedo<TData>({
     [
       canUndo,
       canRedo,
-      undo,
-      redo,
-      clearHistory,
+      onUndo,
+      onRedo,
+      onClear,
       trackCellsUpdate,
       trackRowsAdd,
       trackRowsDelete,
