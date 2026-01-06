@@ -566,7 +566,13 @@ export function DataGridLiveDemo() {
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
-        <DataGridKeyboardShortcuts enableUndoRedo />
+        <DataGridKeyboardShortcuts
+          enableSearch
+          enableUndoRedo
+          enablePaste
+          enableRowAdd
+          enableRowsDelete
+        />
         <DataGridFilterMenu table={table} align="end" />
         <DataGridSortMenu table={table} align="end" />
         <DataGridRowHeightMenu table={table} align="end" />

@@ -79,8 +79,11 @@ function DataGridDemoImpl({
         <DataGridViewMenu table={table} align="end" />
       </div>
       <DataGridKeyboardShortcuts
-        enableSearch={!!dataGridProps.searchState}
+        enableSearch
         enableUndoRedo
+        enablePaste
+        enableRowAdd
+        enableRowsDelete
       />
       <DataGrid {...dataGridProps} table={table} height={height} />
     </div>
