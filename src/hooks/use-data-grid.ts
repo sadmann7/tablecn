@@ -2472,8 +2472,6 @@ function useDataGrid<TData>({
         return;
       }
 
-      // ⌘+Delete/Backspace to delete selected rows - must be before focusedCell check
-      // to allow deleting rows selected via checkboxes without a focused cell
       if (
         isCtrlPressed &&
         (key === "Backspace" || key === "Delete") &&
@@ -2482,7 +2480,6 @@ function useDataGrid<TData>({
       ) {
         const rowIndices = new Set<number>();
 
-        // First check for row selection (via checkboxes)
         const selectedRowIds = Object.keys(currentState.rowSelection);
         if (selectedRowIds.length > 0) {
           const currentTable = tableRef.current;
@@ -2492,16 +2489,12 @@ function useDataGrid<TData>({
               rowIndices.add(row.index);
             }
           }
-        }
-        // Then check for cell selection
-        else if (currentState.selectionState.selectedCells.size > 0) {
+        } else if (currentState.selectionState.selectedCells.size > 0) {
           for (const cellKey of currentState.selectionState.selectedCells) {
             const { rowIndex } = parseCellKey(cellKey);
             rowIndices.add(rowIndex);
           }
-        }
-        // Finally check for focused cell
-        else if (currentState.focusedCell) {
+        } else if (currentState.focusedCell) {
           rowIndices.add(currentState.focusedCell.rowIndex);
         }
 
