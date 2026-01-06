@@ -342,10 +342,9 @@ function useDataGridUndoRedo<TData>({
           activeElement.tagName === "TEXTAREA";
         const isContentEditable =
           activeElement.getAttribute("contenteditable") === "true";
+        const isInPopover = getIsInPopover(activeElement);
 
-        if (isInput || isContentEditable || getIsInPopover(activeElement)) {
-          return;
-        }
+        if (isInput || isContentEditable || isInPopover) return;
       }
 
       if (key === "z" && !event.shiftKey) {
@@ -357,7 +356,6 @@ function useDataGridUndoRedo<TData>({
       if ((key === "z" && event.shiftKey) || key === "y") {
         event.preventDefault();
         onRedo();
-        return;
       }
     }
 
