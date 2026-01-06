@@ -221,6 +221,7 @@ export function LongTextCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const pendingCharRef = React.useRef<string | null>(null);
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const prevInitialValueRef = React.useRef(initialValue);
@@ -275,7 +276,24 @@ export function LongTextCell<TData>({
       textareaRef.current.focus();
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
-      textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+
+      // Insert pending character using execCommand so it's part of undo history
+      // Use requestAnimationFrame to ensure focus has fully settled
+      if (pendingCharRef.current) {
+        const char = pendingCharRef.current;
+        pendingCharRef.current = null;
+        requestAnimationFrame(() => {
+          if (
+            textareaRef.current &&
+            document.activeElement === textareaRef.current
+          ) {
+            document.execCommand("insertText", false, char);
+            textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+          }
+        });
+      } else {
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+      }
     }
   }, []);
 
@@ -289,8 +307,9 @@ export function LongTextCell<TData>({
         !event.ctrlKey &&
         !event.metaKey
       ) {
-        // Append the typed character to the value instead of replacing it like ShortTextCell
-        setValue((prev) => prev + event.key);
+        // Store the character to be inserted after textarea focuses
+        // This ensures it's part of the textarea's undo history
+        pendingCharRef.current = event.key;
       }
     },
     [isFocused, isEditing, readOnly],
