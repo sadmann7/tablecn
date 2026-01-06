@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
+import { getIsInPopover } from "@/lib/data-grid";
 
 const DEFAULT_MAX_HISTORY = 100;
 
@@ -330,20 +331,31 @@ function useDataGridUndoRedo<TData>({
 
     function onKeyDown(event: KeyboardEvent) {
       const isCtrlOrCmd = event.ctrlKey || event.metaKey;
+      const key = event.key.toLowerCase();
 
-      if (isCtrlOrCmd && event.key.toLowerCase() === "z" && !event.shiftKey) {
+      if (!isCtrlOrCmd || (key !== "z" && key !== "y")) return;
+
+      const activeElement = document.activeElement;
+      if (activeElement) {
+        const isInput =
+          activeElement.tagName === "INPUT" ||
+          activeElement.tagName === "TEXTAREA";
+        const isContentEditable =
+          activeElement.getAttribute("contenteditable") === "true";
+        const isInPopover = getIsInPopover(activeElement);
+
+        if (isInput || isContentEditable || isInPopover) return;
+      }
+
+      if (key === "z" && !event.shiftKey) {
         event.preventDefault();
         onUndo();
         return;
       }
 
-      if (
-        (isCtrlOrCmd && event.key.toLowerCase() === "z" && event.shiftKey) ||
-        (isCtrlOrCmd && event.key.toLowerCase() === "y")
-      ) {
+      if ((key === "z" && event.shiftKey) || key === "y") {
         event.preventDefault();
         onRedo();
-        return;
       }
     }
 
