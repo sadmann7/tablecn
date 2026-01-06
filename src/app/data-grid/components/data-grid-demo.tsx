@@ -81,6 +81,9 @@ function DataGridDemoImpl({
       <DataGridKeyboardShortcuts
         enableSearch={!!dataGridProps.searchState}
         enableUndoRedo
+        enablePaste={!!props.onDataChange}
+        enableRowAdd={!!props.onRowAdd}
+        enableRowsDelete={!!props.onRowsDelete}
       />
       <DataGrid {...dataGridProps} table={table} height={height} />
     </div>
