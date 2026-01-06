@@ -870,7 +870,7 @@ export function SelectCell<TData>({
         event.preventDefault();
         setValue(initialValue);
         tableMeta?.onCellEditingStop?.();
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
@@ -1052,7 +1052,7 @@ export function MultiSelectCell<TData>({
         setSelectedValues(cellValue);
         setSearchValue("");
         tableMeta?.onCellEditingStop?.();
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         setSearchValue("");
         tableMeta?.onCellEditingStop?.({
@@ -1289,7 +1289,7 @@ export function DateCell<TData>({
         event.preventDefault();
         setValue(initialValue);
         tableMeta?.onCellEditingStop?.();
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
@@ -1809,11 +1809,16 @@ export function FileCell<TData>({
         } else if (event.key === " ") {
           event.preventDefault();
           onDropzoneClick();
+        } else if (event.key === "Tab") {
+          event.preventDefault();
+          tableMeta?.onCellEditingStop?.({
+            direction: event.shiftKey ? "left" : "right",
+          });
         }
       } else if (isFocused && event.key === "Enter") {
         event.preventDefault();
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
-      } else if (!isEditing && isFocused && event.key === "Tab") {
+      } else if (isFocused && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",
