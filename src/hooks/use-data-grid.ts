@@ -1,5 +1,3 @@
-"use client";
-
 import { useDirection } from "@radix-ui/react-direction";
 import {
   type ColumnDef,
@@ -35,6 +33,7 @@ import {
 } from "@/lib/data-grid";
 import type {
   CellPosition,
+  CellUpdate,
   ContextMenuState,
   Direction,
   FileCellData,
@@ -43,7 +42,6 @@ import type {
   RowHeightValue,
   SearchState,
   SelectionState,
-  UpdateCell,
 } from "@/types/data-grid";
 
 const DEFAULT_ROW_HEIGHT = "short";
@@ -119,7 +117,7 @@ interface UseDataGridProps<TData>
   ) => Partial<CellPosition> | Promise<Partial<CellPosition> | null> | null;
   onRowsAdd?: (count: number) => void | Promise<void>;
   onRowsDelete?: (rows: TData[], rowIndices: number[]) => void | Promise<void>;
-  onPaste?: (updates: Array<UpdateCell>) => void | Promise<void>;
+  onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
   onFilesUpload?: (params: {
     files: File[];
     rowIndex: number;
@@ -356,7 +354,7 @@ function useDataGrid<TData>({
   }, [columnIds]);
 
   const onDataUpdate = React.useCallback(
-    (updates: UpdateCell | Array<UpdateCell>) => {
+    (updates: CellUpdate | Array<CellUpdate>) => {
       if (propsRef.current.readOnly) return;
 
       const updateArray = Array.isArray(updates) ? updates : [updates];
@@ -369,7 +367,7 @@ function useDataGrid<TData>({
 
       const rowUpdatesMap = new Map<
         number,
-        Array<Omit<UpdateCell, "rowIndex">>
+        Array<Omit<CellUpdate, "rowIndex">>
       >();
 
       for (const update of updateArray) {
@@ -817,7 +815,7 @@ function useDataGrid<TData>({
           }
         }
 
-        const updates: Array<UpdateCell> = [];
+        const updates: Array<CellUpdate> = [];
         const tableColumns = currentTable?.getAllColumns() ?? [];
         let cellsUpdated = 0;
         let endRowIndex = startRowIndex;

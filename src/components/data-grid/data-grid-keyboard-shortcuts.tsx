@@ -28,17 +28,22 @@ interface ShortcutGroup {
 
 interface DataGridKeyboardShortcutsProps {
   enableSearch?: boolean;
+  enableUndoRedo?: boolean;
 }
 
 export const DataGridKeyboardShortcuts = React.memo(
   DataGridKeyboardShortcutsImpl,
   (prev, next) => {
-    return prev.enableSearch === next.enableSearch;
+    return (
+      prev.enableSearch === next.enableSearch &&
+      prev.enableUndoRedo === next.enableUndoRedo
+    );
   },
 );
 
 function DataGridKeyboardShortcutsImpl({
   enableSearch = false,
+  enableUndoRedo = false,
 }: DataGridKeyboardShortcutsProps) {
   const dir = useDirection();
   const [open, setOpen] = React.useState(false);
@@ -230,6 +235,18 @@ function DataGridKeyboardShortcutsImpl({
             keys: [modKey, "Backspace"],
             description: "Delete selected rows",
           },
+          ...(enableUndoRedo
+            ? [
+                {
+                  keys: [modKey, "Z"],
+                  description: "Undo last action",
+                },
+                {
+                  keys: [modKey, "Shift", "Z"],
+                  description: "Redo last action",
+                },
+              ]
+            : []),
         ],
       },
       ...(enableSearch
@@ -301,7 +318,7 @@ function DataGridKeyboardShortcutsImpl({
         ],
       },
     ],
-    [modKey, enableSearch],
+    [modKey, enableSearch, enableUndoRedo],
   );
 
   const filteredGroups = React.useMemo(() => {

@@ -13,6 +13,10 @@ import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
+import {
+  type UndoRedoCellUpdate,
+  useDataGridUndoRedo,
+} from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -74,7 +78,10 @@ function DataGridDemoImpl({
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />
       </div>
-      <DataGridKeyboardShortcuts enableSearch={!!dataGridProps.searchState} />
+      <DataGridKeyboardShortcuts
+        enableSearch={!!dataGridProps.searchState}
+        enableUndoRedo
+      />
       <DataGrid {...dataGridProps} table={table} height={height} />
     </div>
   );
@@ -272,6 +279,12 @@ export function DataGridDemo() {
     [filterFn],
   );
 
+  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
+    useDataGridUndoRedo({
+      data,
+      onDataChange: setData,
+    });
+
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
     React.useCallback(() => {
       // Called when user manually adds a single row (e.g., clicking "Add Row" button)
@@ -281,50 +294,66 @@ export function DataGridDemo() {
       //   body: JSON.stringify({ name: 'New Person' })
       // });
 
+      const newRow: Person = {
+        id: generateId(),
+      };
+
+      const newRowIndex = data.length;
+
       // For this demo, just add a new row to the data
-      setData((prev) => [
-        ...prev,
-        {
-          id: generateId(),
-        },
-      ]);
+      setData((prev) => [...prev, newRow]);
+
+      // Track for undo/redo
+      trackRowsAdd({ startIndex: newRowIndex, rows: [newRow] });
 
       return {
-        rowIndex: data.length,
+        rowIndex: newRowIndex,
         columnId: "name",
       };
-    }, [data.length]);
+    }, [data.length, trackRowsAdd]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
-    React.useCallback((count: number) => {
-      // Called when paste operation needs to create multiple rows at once
-      // This is more efficient than calling onRowAdd multiple times - only a single API call needed
-      // In a real app, you would make a server call here:
-      // await fetch('/api/people/bulk', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ count })
-      // });
+    React.useCallback(
+      (count: number) => {
+        // Called when paste operation needs to create multiple rows at once
+        // This is more efficient than calling onRowAdd multiple times - only a single API call needed
+        // In a real app, you would make a server call here:
+        // await fetch('/api/people/bulk', {
+        //   method: 'POST',
+        //   body: JSON.stringify({ count })
+        // });
 
-      // For this demo, create multiple rows in a single state update
-      setData((prev) => {
-        const newRows = Array.from({ length: count }, () => ({
+        const startIndex = data.length;
+        const newRows: Person[] = Array.from({ length: count }, () => ({
           id: generateId(),
         }));
-        return [...prev, ...newRows];
-      });
-    }, []);
+
+        // For this demo, create multiple rows in a single state update
+        setData((prev) => [...prev, ...newRows]);
+
+        // Track for undo/redo
+        trackRowsAdd({ startIndex, rows: newRows });
+      },
+      [data.length, trackRowsAdd],
+    );
 
   const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
-    React.useCallback((rows) => {
-      // In a real app, you would make a server call here:
-      // await fetch('/api/people', {
-      //   method: 'DELETE',
-      //   body: JSON.stringify({ ids: rows.map(r => r.id) })
-      // });
+    React.useCallback(
+      (rows, rowIndices) => {
+        // In a real app, you would make a server call here:
+        // await fetch('/api/people', {
+        //   method: 'DELETE',
+        //   body: JSON.stringify({ ids: rows.map(r => r.id) })
+        // });
 
-      // For this demo, just filter out the deleted rows
-      setData((prev) => prev.filter((row) => !rows.includes(row)));
-    }, []);
+        // Track for undo/redo (before deletion to capture the rows)
+        trackRowsDelete({ indices: rowIndices, rows });
+
+        // For this demo, just filter out the deleted rows
+        setData((prev) => prev.filter((row) => !rows.includes(row)));
+      },
+      [trackRowsDelete],
+    );
 
   const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
     React.useCallback(
@@ -379,13 +408,63 @@ export function DataGridDemo() {
       );
     }, []);
 
+  // Wrapper for onDataChange that tracks cell updates for undo/redo
+  const onDataChange = React.useCallback(
+    (newData: Person[]) => {
+      // Find which cells changed by comparing old and new data
+      const cellUpdates: Array<UndoRedoCellUpdate> = [];
+
+      // Compare each row to find changed cells
+      const maxLength = Math.max(data.length, newData.length);
+      for (let rowIndex = 0; rowIndex < maxLength; rowIndex++) {
+        const oldRow = data[rowIndex];
+        const newRow = newData[rowIndex];
+
+        // Skip if both rows exist and we need to compare columns
+        if (oldRow && newRow) {
+          // Get all keys from both rows
+          const allKeys = new Set([
+            ...Object.keys(oldRow),
+            ...Object.keys(newRow),
+          ]);
+
+          for (const key of allKeys) {
+            const oldValue = (oldRow as unknown as Record<string, unknown>)[
+              key
+            ];
+            const newValue = (newRow as unknown as Record<string, unknown>)[
+              key
+            ];
+
+            if (!Object.is(oldValue, newValue)) {
+              cellUpdates.push({
+                rowIndex,
+                columnId: key,
+                previousValue: oldValue,
+                newValue,
+              });
+            }
+          }
+        }
+      }
+
+      // Track cell updates if there are any
+      if (cellUpdates.length > 0) {
+        trackCellsUpdate(cellUpdates);
+      }
+
+      setData(newData);
+    },
+    [data, trackCellsUpdate],
+  );
+
   const height = Math.max(400, windowSize.height - 150);
 
   return (
     <DirectionProvider dir={dir}>
       <DataGridDemoImpl
         data={data}
-        onDataChange={setData}
+        onDataChange={onDataChange}
         columns={columns}
         onRowAdd={onRowAdd}
         onRowsAdd={onRowsAdd}
