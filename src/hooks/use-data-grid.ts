@@ -2452,25 +2452,9 @@ function useDataGrid<TData>({
         return;
       }
 
-      if (currentState.editingCell) {
-        if (key === "Escape") {
-          event.preventDefault();
-          onCellEditingStop();
-          return;
-        }
-        if (key === "Enter" && !shiftKey && !altKey) {
-          event.preventDefault();
-          onCellEditingStop({ moveToNextRow: true });
-          return;
-        }
-        if (key === "Tab") {
-          event.preventDefault();
-          const direction = shiftKey ? "left" : "right";
-          onCellEditingStop({ direction });
-          return;
-        }
-        return;
-      }
+      // Cell editing keyboard events (Enter, Tab, Escape) are handled by the cell variants
+      // to ensure proper value commitment before navigation
+      if (currentState.editingCell) return;
 
       if (
         isCtrlPressed &&
@@ -3004,7 +2988,6 @@ function useDataGrid<TData>({
       onSearchOpenChange,
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
-      onCellEditingStop,
       onRowsDelete,
       restoreFocus,
       onScrollToRow,
