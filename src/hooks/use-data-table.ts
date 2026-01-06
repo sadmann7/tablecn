@@ -1,5 +1,3 @@
-"use client";
-
 import {
   type ColumnFiltersState,
   getCoreRowModel,
@@ -311,5 +309,8 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     },
   });
 
-  return { table, shallow, debounceMs, throttleMs };
+  return React.useMemo(
+    () => ({ table, shallow, debounceMs, throttleMs }),
+    [table, shallow, debounceMs, throttleMs],
+  );
 }

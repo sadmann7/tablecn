@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -244,11 +242,11 @@ function useDataGridUndoRedo<TData>({
       if (!propsRef.current.enabled || params.rows.length === 0) return;
 
       const { startIndex, rows } = params;
-      const indices = rows.map((_, i) => startIndex + i);
 
-      const rowsCopy = rows.map(
-        (row) => JSON.parse(JSON.stringify(row)) as TData,
-      );
+      const indicesAsc = rows.map((_, i) => startIndex + i);
+      const indicesDesc = [...indicesAsc].sort((a, b) => b - a);
+
+      const rowsCopy = rows.map((row) => structuredClone(row));
 
       const entry: HistoryEntry<TData> = {
         variant: "rows_add",
@@ -256,23 +254,18 @@ function useDataGridUndoRedo<TData>({
         timestamp: Date.now(),
         undo: (currentData) => {
           const newData = [...currentData];
-          const sortedIndices = [...indices].sort((a, b) => b - a);
-          for (const index of sortedIndices) {
+          for (const index of indicesDesc) {
             newData.splice(index, 1);
           }
           return newData;
         },
         redo: (currentData) => {
           const newData = [...currentData];
-          for (let i = 0; i < indices.length; i++) {
-            const index = indices[i];
+          for (let i = 0; i < indicesAsc.length; i++) {
+            const index = indicesAsc[i];
             const row = rowsCopy[i];
             if (index !== undefined && row) {
-              newData.splice(
-                index,
-                0,
-                JSON.parse(JSON.stringify(row)) as TData,
-              );
+              newData.splice(index, 0, structuredClone(row));
             }
           }
           return newData;
@@ -297,11 +290,15 @@ function useDataGridUndoRedo<TData>({
         if (index !== undefined && row !== undefined) {
           rowsWithIndices.push({
             index,
-            row: JSON.parse(JSON.stringify(row)) as TData,
+            row: structuredClone(row),
           });
         }
       }
       rowsWithIndices.sort((a, b) => a.index - b.index);
+
+      const indicesDesc = rowsWithIndices
+        .map((item) => item.index)
+        .sort((a, b) => b - a);
 
       const entry: HistoryEntry<TData> = {
         variant: "rows_delete",
@@ -310,16 +307,13 @@ function useDataGridUndoRedo<TData>({
         undo: (currentData) => {
           const newData = [...currentData];
           for (const { index, row } of rowsWithIndices) {
-            newData.splice(index, 0, JSON.parse(JSON.stringify(row)) as TData);
+            newData.splice(index, 0, structuredClone(row));
           }
           return newData;
         },
         redo: (currentData) => {
           const newData = [...currentData];
-          const sortedIndices = rowsWithIndices
-            .map((item) => item.index)
-            .sort((a, b) => b - a);
-          for (const index of sortedIndices) {
+          for (const index of indicesDesc) {
             newData.splice(index, 1);
           }
           return newData;
@@ -384,6 +378,5 @@ function useDataGridUndoRedo<TData>({
 export {
   useDataGridUndoRedo,
   //
-  type UseDataGridUndoRedoProps,
   type UndoRedoCellUpdate,
 };
