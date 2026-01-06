@@ -235,6 +235,10 @@ function DataGridKeyboardShortcutsImpl({
             keys: [modKey, "Backspace"],
             description: "Delete selected rows",
           },
+          {
+            keys: [modKey, "Delete"],
+            description: "Delete selected rows",
+          },
           ...(enableUndoRedo
             ? [
                 {
