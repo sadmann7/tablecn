@@ -6,6 +6,7 @@ import { useLazyRef } from "@/hooks/use-lazy-ref";
 import { getIsInPopover } from "@/lib/data-grid";
 
 const DEFAULT_MAX_HISTORY = 100;
+const BATCH_TIMEOUT = 300;
 
 interface HistoryEntry<TData> {
   variant: "cells_update" | "rows_add" | "rows_delete";
@@ -25,6 +26,7 @@ interface UndoRedoCellUpdate {
 interface UndoRedoState<TData> {
   undoStack: HistoryEntry<TData>[];
   redoStack: HistoryEntry<TData>[];
+  hasPendingChanges: boolean;
 }
 
 interface UndoRedoStore<TData> {
@@ -34,6 +36,7 @@ interface UndoRedoStore<TData> {
   undo: () => HistoryEntry<TData> | null;
   redo: () => HistoryEntry<TData> | null;
   clear: () => void;
+  setPendingChanges: (value: boolean) => void;
   notify: () => void;
 }
 
@@ -85,7 +88,16 @@ function useDataGridUndoRedo<TData>({
   const stateRef = useLazyRef<UndoRedoState<TData>>(() => ({
     undoStack: [],
     redoStack: [],
+    hasPendingChanges: false,
   }));
+
+  const pendingBatchRef = React.useRef<{
+    updates: UndoRedoCellUpdate[];
+    timeoutId: ReturnType<typeof setTimeout> | null;
+  }>({
+    updates: [],
+    timeoutId: null,
+  });
 
   const store = React.useMemo<UndoRedoStore<TData>>(() => {
     return {
@@ -105,6 +117,7 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: newUndoStack,
           redoStack: [],
+          hasPendingChanges: false,
         };
         store.notify();
       },
@@ -118,6 +131,7 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: state.undoStack.slice(0, -1),
           redoStack: [...state.redoStack, entry],
+          hasPendingChanges: false,
         };
         store.notify();
         return entry;
@@ -132,6 +146,7 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: [...state.undoStack, entry],
           redoStack: state.redoStack.slice(0, -1),
+          hasPendingChanges: false,
         };
         store.notify();
         return entry;
@@ -140,6 +155,15 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: [],
           redoStack: [],
+          hasPendingChanges: false,
+        };
+        store.notify();
+      },
+      setPendingChanges: (value) => {
+        if (stateRef.current.hasPendingChanges === value) return;
+        stateRef.current = {
+          ...stateRef.current,
+          hasPendingChanges: value,
         };
         store.notify();
       },
@@ -151,11 +175,63 @@ function useDataGridUndoRedo<TData>({
     };
   }, [listenersRef, stateRef, propsRef]);
 
-  const canUndo = useStore(store, (state) => state.undoStack.length > 0);
+  const canUndo = useStore(
+    store,
+    (state) => state.undoStack.length > 0 || state.hasPendingChanges,
+  );
   const canRedo = useStore(store, (state) => state.redoStack.length > 0);
+
+  const onCommit = React.useCallback(() => {
+    const pending = pendingBatchRef.current;
+    if (pending.updates.length === 0) return;
+
+    if (pending.timeoutId) {
+      clearTimeout(pending.timeoutId);
+      pending.timeoutId = null;
+    }
+
+    const updates = pending.updates;
+    pending.updates = [];
+
+    const entry: HistoryEntry<TData> = {
+      variant: "cells_update",
+      count: updates.length,
+      timestamp: Date.now(),
+      undo: (currentData) => {
+        const newData = [...currentData];
+        for (const update of updates) {
+          const row = newData[update.rowIndex];
+          if (row) {
+            newData[update.rowIndex] = {
+              ...row,
+              [update.columnId]: update.previousValue,
+            };
+          }
+        }
+        return newData;
+      },
+      redo: (currentData) => {
+        const newData = [...currentData];
+        for (const update of updates) {
+          const row = newData[update.rowIndex];
+          if (row) {
+            newData[update.rowIndex] = {
+              ...row,
+              [update.columnId]: update.newValue,
+            };
+          }
+        }
+        return newData;
+      },
+    };
+
+    store.push(entry);
+  }, [store]);
 
   const onUndo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
+
+    onCommit();
 
     const entry = store.undo();
     if (!entry) {
@@ -169,10 +245,12 @@ function useDataGridUndoRedo<TData>({
     toast.success(
       `${entry.count} action${entry.count !== 1 ? "s" : ""} undone`,
     );
-  }, [store, propsRef]);
+  }, [store, propsRef, onCommit]);
 
   const onRedo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
+
+    onCommit();
 
     const entry = store.redo();
     if (!entry) {
@@ -186,9 +264,16 @@ function useDataGridUndoRedo<TData>({
     toast.success(
       `${entry.count} action${entry.count !== 1 ? "s" : ""} redone`,
     );
-  }, [store, propsRef]);
+  }, [store, propsRef, onCommit]);
 
   const onClear = React.useCallback(() => {
+    const pending = pendingBatchRef.current;
+    if (pending.timeoutId) {
+      clearTimeout(pending.timeoutId);
+      pending.timeoutId = null;
+    }
+    pending.updates = [];
+
     store.clear();
   }, [store]);
 
@@ -201,46 +286,42 @@ function useDataGridUndoRedo<TData>({
       );
       if (filteredUpdates.length === 0) return;
 
-      const entry: HistoryEntry<TData> = {
-        variant: "cells_update",
-        count: filteredUpdates.length,
-        timestamp: Date.now(),
-        undo: (currentData) => {
-          const newData = [...currentData];
-          for (const update of filteredUpdates) {
-            const row = newData[update.rowIndex];
-            if (row) {
-              newData[update.rowIndex] = {
-                ...row,
-                [update.columnId]: update.previousValue,
-              };
-            }
-          }
-          return newData;
-        },
-        redo: (currentData) => {
-          const newData = [...currentData];
-          for (const update of filteredUpdates) {
-            const row = newData[update.rowIndex];
-            if (row) {
-              newData[update.rowIndex] = {
-                ...row,
-                [update.columnId]: update.newValue,
-              };
-            }
-          }
-          return newData;
-        },
-      };
+      const pending = pendingBatchRef.current;
 
-      store.push(entry);
+      for (const update of filteredUpdates) {
+        const existingIdx = pending.updates.findIndex(
+          (u) =>
+            u.rowIndex === update.rowIndex && u.columnId === update.columnId,
+        );
+
+        if (existingIdx !== -1) {
+          const existing = pending.updates[existingIdx];
+          if (existing) {
+            pending.updates[existingIdx] = {
+              ...existing,
+              newValue: update.newValue,
+            };
+          }
+        } else {
+          pending.updates.push(update);
+        }
+      }
+
+      store.setPendingChanges(true);
+
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId);
+      }
+      pending.timeoutId = setTimeout(onCommit, BATCH_TIMEOUT);
     },
-    [store, propsRef],
+    [store, propsRef, onCommit],
   );
 
   const trackRowsAdd = React.useCallback(
     (params: { startIndex: number; rows: TData[] }) => {
       if (!propsRef.current.enabled || params.rows.length === 0) return;
+
+      onCommit();
 
       const { startIndex, rows } = params;
 
@@ -275,12 +356,14 @@ function useDataGridUndoRedo<TData>({
 
       store.push(entry);
     },
-    [store, propsRef],
+    [store, propsRef, onCommit],
   );
 
   const trackRowsDelete = React.useCallback(
     (params: { indices: number[]; rows: TData[] }) => {
       if (!propsRef.current.enabled || params.indices.length === 0) return;
+
+      onCommit();
 
       const { indices, rows } = params;
 
@@ -323,8 +406,17 @@ function useDataGridUndoRedo<TData>({
 
       store.push(entry);
     },
-    [store, propsRef],
+    [store, propsRef, onCommit],
   );
+
+  React.useEffect(() => {
+    const pending = pendingBatchRef.current;
+    return () => {
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId);
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!enabled) return;
