@@ -6,6 +6,7 @@ import { useLazyRef } from "@/hooks/use-lazy-ref";
 import { getIsInPopover } from "@/lib/data-grid";
 
 const DEFAULT_MAX_HISTORY = 100;
+const BATCH_TIMEOUT = 300;
 
 interface HistoryEntry<TData> {
   variant: "cells_update" | "rows_add" | "rows_delete";
@@ -16,30 +17,32 @@ interface HistoryEntry<TData> {
 }
 
 interface UndoRedoCellUpdate {
-  rowIndex: number;
+  rowId: string;
   columnId: string;
   previousValue: unknown;
   newValue: unknown;
 }
 
-interface UndoRedoState<TData> {
+interface StoreState<TData> {
   undoStack: HistoryEntry<TData>[];
   redoStack: HistoryEntry<TData>[];
+  hasPendingChanges: boolean;
 }
 
-interface UndoRedoStore<TData> {
+interface Store<TData> {
   subscribe: (callback: () => void) => () => void;
-  getState: () => UndoRedoState<TData>;
+  getState: () => StoreState<TData>;
   push: (entry: HistoryEntry<TData>) => void;
   undo: () => HistoryEntry<TData> | null;
   redo: () => HistoryEntry<TData> | null;
   clear: () => void;
+  setPendingChanges: (value: boolean) => void;
   notify: () => void;
 }
 
 function useStore<T>(
-  store: UndoRedoStore<T>,
-  selector: (state: UndoRedoState<T>) => boolean,
+  store: Store<T>,
+  selector: (state: StoreState<T>) => boolean,
 ): boolean {
   const getSnapshot = React.useCallback(
     () => selector(store.getState()),
@@ -49,9 +52,28 @@ function useStore<T>(
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
+function buildIndexById<TData>(
+  data: TData[],
+  getRowId: (row: TData) => string,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (row) {
+      map.set(getRowId(row), i);
+    }
+  }
+  return map;
+}
+
+function getPendingKey(rowId: string, columnId: string): string {
+  return `${rowId}\0${columnId}`;
+}
+
 interface UseDataGridUndoRedoProps<TData> {
   data: TData[];
   onDataChange: (data: TData[]) => void;
+  getRowId: (row: TData) => string;
   maxHistory?: number;
   enabled?: boolean;
 }
@@ -63,31 +85,44 @@ interface UseDataGridUndoRedoReturn<TData> {
   onRedo: () => void;
   onClear: () => void;
   trackCellsUpdate: (updates: UndoRedoCellUpdate[]) => void;
-  trackRowsAdd: (params: { startIndex: number; rows: TData[] }) => void;
-  trackRowsDelete: (params: { indices: number[]; rows: TData[] }) => void;
+  trackRowsAdd: (rows: TData[]) => void;
+  trackRowsDelete: (rows: TData[]) => void;
 }
 
 function useDataGridUndoRedo<TData>({
   data,
   onDataChange,
+  getRowId,
   maxHistory = DEFAULT_MAX_HISTORY,
   enabled = true,
 }: UseDataGridUndoRedoProps<TData>): UseDataGridUndoRedoReturn<TData> {
   const propsRef = useAsRef({
     data,
     onDataChange,
+    getRowId,
     maxHistory,
     enabled,
   });
 
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
-  const stateRef = useLazyRef<UndoRedoState<TData>>(() => ({
+  const stateRef = useLazyRef<StoreState<TData>>(() => ({
     undoStack: [],
     redoStack: [],
+    hasPendingChanges: false,
   }));
 
-  const store = React.useMemo<UndoRedoStore<TData>>(() => {
+  const pendingBatchRef = React.useRef<{
+    byKey: Map<string, UndoRedoCellUpdate>;
+    timeoutId: ReturnType<typeof setTimeout> | null;
+  }>({
+    byKey: new Map(),
+    timeoutId: null,
+  });
+
+  const pendingNotifyRef = React.useRef(false);
+
+  const store = React.useMemo<Store<TData>>(() => {
     return {
       subscribe: (callback) => {
         listenersRef.current.add(callback);
@@ -105,6 +140,7 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: newUndoStack,
           redoStack: [],
+          hasPendingChanges: false,
         };
         store.notify();
       },
@@ -118,6 +154,7 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: state.undoStack.slice(0, -1),
           redoStack: [...state.redoStack, entry],
+          hasPendingChanges: false,
         };
         store.notify();
         return entry;
@@ -132,6 +169,7 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: [...state.undoStack, entry],
           redoStack: state.redoStack.slice(0, -1),
+          hasPendingChanges: false,
         };
         store.notify();
         return entry;
@@ -140,8 +178,24 @@ function useDataGridUndoRedo<TData>({
         stateRef.current = {
           undoStack: [],
           redoStack: [],
+          hasPendingChanges: false,
         };
         store.notify();
+      },
+      setPendingChanges: (value) => {
+        if (stateRef.current.hasPendingChanges === value) return;
+        stateRef.current = {
+          ...stateRef.current,
+          hasPendingChanges: value,
+        };
+
+        if (!pendingNotifyRef.current) {
+          pendingNotifyRef.current = true;
+          queueMicrotask(() => {
+            pendingNotifyRef.current = false;
+            store.notify();
+          });
+        }
       },
       notify: () => {
         for (const listener of listenersRef.current) {
@@ -151,11 +205,72 @@ function useDataGridUndoRedo<TData>({
     };
   }, [listenersRef, stateRef, propsRef]);
 
-  const canUndo = useStore(store, (state) => state.undoStack.length > 0);
+  const canUndo = useStore(
+    store,
+    (state) => state.undoStack.length > 0 || state.hasPendingChanges,
+  );
   const canRedo = useStore(store, (state) => state.redoStack.length > 0);
+
+  const onCommit = React.useCallback(() => {
+    const pending = pendingBatchRef.current;
+    if (pending.byKey.size === 0) return;
+
+    if (pending.timeoutId) {
+      clearTimeout(pending.timeoutId);
+      pending.timeoutId = null;
+    }
+
+    const updates = Array.from(pending.byKey.values());
+    pending.byKey.clear();
+
+    const { getRowId } = propsRef.current;
+
+    const entry: HistoryEntry<TData> = {
+      variant: "cells_update",
+      count: updates.length,
+      timestamp: Date.now(),
+      undo: (currentData) => {
+        const newData = [...currentData];
+        const indexById = buildIndexById(newData, getRowId);
+
+        for (const update of updates) {
+          const index = indexById.get(update.rowId);
+          if (index !== undefined) {
+            const row = newData[index];
+            if (row) {
+              newData[index] = {
+                ...row,
+                [update.columnId]: update.previousValue,
+              };
+            }
+          }
+        }
+        return newData;
+      },
+      redo: (currentData) => {
+        const newData = [...currentData];
+        const indexById = buildIndexById(newData, getRowId);
+
+        for (const update of updates) {
+          const index = indexById.get(update.rowId);
+          if (index !== undefined) {
+            const row = newData[index];
+            if (row) {
+              newData[index] = { ...row, [update.columnId]: update.newValue };
+            }
+          }
+        }
+        return newData;
+      },
+    };
+
+    store.push(entry);
+  }, [store, propsRef]);
 
   const onUndo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
+
+    onCommit();
 
     const entry = store.undo();
     if (!entry) {
@@ -169,10 +284,12 @@ function useDataGridUndoRedo<TData>({
     toast.success(
       `${entry.count} action${entry.count !== 1 ? "s" : ""} undone`,
     );
-  }, [store, propsRef]);
+  }, [store, propsRef, onCommit]);
 
   const onRedo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
+
+    onCommit();
 
     const entry = store.redo();
     if (!entry) {
@@ -186,9 +303,16 @@ function useDataGridUndoRedo<TData>({
     toast.success(
       `${entry.count} action${entry.count !== 1 ? "s" : ""} redone`,
     );
-  }, [store, propsRef]);
+  }, [store, propsRef, onCommit]);
 
   const onClear = React.useCallback(() => {
+    const pending = pendingBatchRef.current;
+    if (pending.timeoutId) {
+      clearTimeout(pending.timeoutId);
+      pending.timeoutId = null;
+    }
+    pending.byKey.clear();
+
     store.clear();
   }, [store]);
 
@@ -201,105 +325,82 @@ function useDataGridUndoRedo<TData>({
       );
       if (filteredUpdates.length === 0) return;
 
-      const entry: HistoryEntry<TData> = {
-        variant: "cells_update",
-        count: filteredUpdates.length,
-        timestamp: Date.now(),
-        undo: (currentData) => {
-          const newData = [...currentData];
-          for (const update of filteredUpdates) {
-            const row = newData[update.rowIndex];
-            if (row) {
-              newData[update.rowIndex] = {
-                ...row,
-                [update.columnId]: update.previousValue,
-              };
-            }
-          }
-          return newData;
-        },
-        redo: (currentData) => {
-          const newData = [...currentData];
-          for (const update of filteredUpdates) {
-            const row = newData[update.rowIndex];
-            if (row) {
-              newData[update.rowIndex] = {
-                ...row,
-                [update.columnId]: update.newValue,
-              };
-            }
-          }
-          return newData;
-        },
-      };
+      const pending = pendingBatchRef.current;
 
-      store.push(entry);
+      for (const update of filteredUpdates) {
+        const key = getPendingKey(update.rowId, update.columnId);
+        const existing = pending.byKey.get(key);
+
+        if (existing) {
+          pending.byKey.set(key, { ...existing, newValue: update.newValue });
+        } else {
+          pending.byKey.set(key, update);
+        }
+      }
+
+      store.setPendingChanges(true);
+
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId);
+      }
+      pending.timeoutId = setTimeout(onCommit, BATCH_TIMEOUT);
     },
-    [store, propsRef],
+    [store, propsRef, onCommit],
   );
 
   const trackRowsAdd = React.useCallback(
-    (params: { startIndex: number; rows: TData[] }) => {
-      if (!propsRef.current.enabled || params.rows.length === 0) return;
+    (rows: TData[]) => {
+      if (!propsRef.current.enabled || rows.length === 0) return;
 
-      const { startIndex, rows } = params;
+      onCommit();
 
-      const indicesAsc = rows.map((_, i) => startIndex + i);
-      const indicesDesc = [...indicesAsc].sort((a, b) => b - a);
+      const { getRowId } = propsRef.current;
 
-      const rowsCopy = rows.map((row) => structuredClone(row));
+      const rowIds = new Set(rows.map((row) => getRowId(row)));
+      const rowsCopy = rows.map((row) => ({ ...row }));
 
       const entry: HistoryEntry<TData> = {
         variant: "rows_add",
         count: rows.length,
         timestamp: Date.now(),
         undo: (currentData) => {
-          const newData = [...currentData];
-          for (const index of indicesDesc) {
-            newData.splice(index, 1);
-          }
-          return newData;
+          return currentData.filter((row) => !rowIds.has(getRowId(row)));
         },
         redo: (currentData) => {
-          const newData = [...currentData];
-          for (let i = 0; i < indicesAsc.length; i++) {
-            const index = indicesAsc[i];
-            const row = rowsCopy[i];
-            if (index !== undefined && row) {
-              newData.splice(index, 0, structuredClone(row));
-            }
-          }
-          return newData;
+          return [...currentData, ...rowsCopy.map((row) => ({ ...row }))];
         },
       };
 
       store.push(entry);
     },
-    [store, propsRef],
+    [store, propsRef, onCommit],
   );
 
   const trackRowsDelete = React.useCallback(
-    (params: { indices: number[]; rows: TData[] }) => {
-      if (!propsRef.current.enabled || params.indices.length === 0) return;
+    (rows: TData[]) => {
+      if (!propsRef.current.enabled || rows.length === 0) return;
 
-      const { indices, rows } = params;
+      onCommit();
 
-      const rowsWithIndices: Array<{ index: number; row: TData }> = [];
-      for (let i = 0; i < indices.length; i++) {
-        const index = indices[i];
-        const row = rows[i];
-        if (index !== undefined && row !== undefined) {
-          rowsWithIndices.push({
-            index,
-            row: structuredClone(row),
+      const { getRowId, data: currentData } = propsRef.current;
+
+      const indexById = buildIndexById(currentData, getRowId);
+
+      const rowsWithPositions: Array<{ index: number; row: TData }> = [];
+      for (const row of rows) {
+        const rowId = getRowId(row);
+        const currentIndex = indexById.get(rowId);
+        if (currentIndex !== undefined) {
+          rowsWithPositions.push({
+            index: currentIndex,
+            row: { ...row },
           });
         }
       }
-      rowsWithIndices.sort((a, b) => a.index - b.index);
 
-      const indicesDesc = rowsWithIndices
-        .map((item) => item.index)
-        .sort((a, b) => b - a);
+      rowsWithPositions.sort((a, b) => a.index - b.index);
+
+      const rowIds = new Set(rows.map((row) => getRowId(row)));
 
       const entry: HistoryEntry<TData> = {
         variant: "rows_delete",
@@ -307,24 +408,30 @@ function useDataGridUndoRedo<TData>({
         timestamp: Date.now(),
         undo: (currentData) => {
           const newData = [...currentData];
-          for (const { index, row } of rowsWithIndices) {
-            newData.splice(index, 0, structuredClone(row));
+          for (const { index, row } of rowsWithPositions) {
+            const insertIndex = Math.min(index, newData.length);
+            newData.splice(insertIndex, 0, { ...row });
           }
           return newData;
         },
         redo: (currentData) => {
-          const newData = [...currentData];
-          for (const index of indicesDesc) {
-            newData.splice(index, 1);
-          }
-          return newData;
+          return currentData.filter((row) => !rowIds.has(getRowId(row)));
         },
       };
 
       store.push(entry);
     },
-    [store, propsRef],
+    [store, propsRef, onCommit],
   );
+
+  React.useEffect(() => {
+    const pending = pendingBatchRef.current;
+    return () => {
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId);
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     if (!enabled) return;
