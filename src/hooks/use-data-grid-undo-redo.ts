@@ -189,7 +189,14 @@ function useDataGridUndoRedo<TData>({
 
   const onCommit = React.useCallback(() => {
     const pending = pendingBatchRef.current;
-    if (pending.updates.length === 0) return;
+    console.log("[undo-redo] onCommit called", {
+      pendingUpdates: pending.updates.length,
+    });
+
+    if (pending.updates.length === 0) {
+      console.log("[undo-redo] onCommit: no pending updates, returning");
+      return;
+    }
 
     if (pending.timeoutId) {
       clearTimeout(pending.timeoutId);
@@ -243,15 +250,29 @@ function useDataGridUndoRedo<TData>({
       },
     };
 
+    console.log("[undo-redo] onCommit: pushing entry to stack", {
+      count: entry.count,
+    });
     store.push(entry);
   }, [store, propsRef]);
 
   const onUndo = React.useCallback(() => {
+    console.log("[undo-redo] onUndo called", {
+      enabled: propsRef.current.enabled,
+      undoStackLength: store.getState().undoStack.length,
+      hasPendingChanges: store.getState().hasPendingChanges,
+    });
+
     if (!propsRef.current.enabled) return;
 
     onCommit();
 
     const entry = store.undo();
+    console.log("[undo-redo] onUndo: after commit", {
+      undoStackLength: store.getState().undoStack.length,
+      entry: entry ? { variant: entry.variant, count: entry.count } : null,
+    });
+
     if (!entry) {
       toast.info("No actions to undo");
       return;
@@ -297,12 +318,28 @@ function useDataGridUndoRedo<TData>({
 
   const trackCellsUpdate = React.useCallback(
     (updates: UndoRedoCellUpdate[]) => {
-      if (!propsRef.current.enabled || updates.length === 0) return;
+      console.log("[undo-redo] trackCellsUpdate called", { updates });
+
+      if (!propsRef.current.enabled || updates.length === 0) {
+        console.log(
+          "[undo-redo] trackCellsUpdate: early return (disabled or empty)",
+        );
+        return;
+      }
 
       const filteredUpdates = updates.filter(
         (u) => !Object.is(u.previousValue, u.newValue),
       );
-      if (filteredUpdates.length === 0) return;
+      if (filteredUpdates.length === 0) {
+        console.log(
+          "[undo-redo] trackCellsUpdate: all updates filtered out (no actual changes)",
+        );
+        return;
+      }
+
+      console.log("[undo-redo] trackCellsUpdate: adding to pending batch", {
+        filteredUpdates,
+      });
 
       const pending = pendingBatchRef.current;
 
