@@ -23,15 +23,15 @@ interface UndoRedoCellUpdate {
   newValue: unknown;
 }
 
-interface UndoRedoState<TData> {
+interface StoreState<TData> {
   undoStack: HistoryEntry<TData>[];
   redoStack: HistoryEntry<TData>[];
   hasPendingChanges: boolean;
 }
 
-interface UndoRedoStore<TData> {
+interface Store<TData> {
   subscribe: (callback: () => void) => () => void;
-  getState: () => UndoRedoState<TData>;
+  getState: () => StoreState<TData>;
   push: (entry: HistoryEntry<TData>) => void;
   undo: () => HistoryEntry<TData> | null;
   redo: () => HistoryEntry<TData> | null;
@@ -40,9 +40,9 @@ interface UndoRedoStore<TData> {
   notify: () => void;
 }
 
-function useStoreSelector<T>(
-  store: UndoRedoStore<T>,
-  selector: (state: UndoRedoState<T>) => boolean,
+function useStore<T>(
+  store: Store<T>,
+  selector: (state: StoreState<T>) => boolean,
 ): boolean {
   const getSnapshot = React.useCallback(
     () => selector(store.getState()),
@@ -50,6 +50,24 @@ function useStoreSelector<T>(
   );
 
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
+}
+
+function buildIndexById<TData>(
+  data: TData[],
+  getRowId: (row: TData) => string,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (row) {
+      map.set(getRowId(row), i);
+    }
+  }
+  return map;
+}
+
+function getPendingKey(rowId: string, columnId: string): string {
+  return `${rowId}\0${columnId}`;
 }
 
 interface UseDataGridUndoRedoProps<TData> {
@@ -88,21 +106,23 @@ function useDataGridUndoRedo<TData>({
 
   const listenersRef = useLazyRef(() => new Set<() => void>());
 
-  const stateRef = useLazyRef<UndoRedoState<TData>>(() => ({
+  const stateRef = useLazyRef<StoreState<TData>>(() => ({
     undoStack: [],
     redoStack: [],
     hasPendingChanges: false,
   }));
 
   const pendingBatchRef = React.useRef<{
-    updates: UndoRedoCellUpdate[];
+    byKey: Map<string, UndoRedoCellUpdate>;
     timeoutId: ReturnType<typeof setTimeout> | null;
   }>({
-    updates: [],
+    byKey: new Map(),
     timeoutId: null,
   });
 
-  const store = React.useMemo<UndoRedoStore<TData>>(() => {
+  const pendingNotifyRef = React.useRef(false);
+
+  const store = React.useMemo<Store<TData>>(() => {
     return {
       subscribe: (callback) => {
         listenersRef.current.add(callback);
@@ -168,7 +188,14 @@ function useDataGridUndoRedo<TData>({
           ...stateRef.current,
           hasPendingChanges: value,
         };
-        store.notify();
+
+        if (!pendingNotifyRef.current) {
+          pendingNotifyRef.current = true;
+          queueMicrotask(() => {
+            pendingNotifyRef.current = false;
+            store.notify();
+          });
+        }
       },
       notify: () => {
         for (const listener of listenersRef.current) {
@@ -178,26 +205,23 @@ function useDataGridUndoRedo<TData>({
     };
   }, [listenersRef, stateRef, propsRef]);
 
-  const canUndo = useStoreSelector(
+  const canUndo = useStore(
     store,
     (state) => state.undoStack.length > 0 || state.hasPendingChanges,
   );
-  const canRedo = useStoreSelector(
-    store,
-    (state) => state.redoStack.length > 0,
-  );
+  const canRedo = useStore(store, (state) => state.redoStack.length > 0);
 
   const onCommit = React.useCallback(() => {
     const pending = pendingBatchRef.current;
-    if (pending.updates.length === 0) return;
+    if (pending.byKey.size === 0) return;
 
     if (pending.timeoutId) {
       clearTimeout(pending.timeoutId);
       pending.timeoutId = null;
     }
 
-    const updates = pending.updates;
-    pending.updates = [];
+    const updates = Array.from(pending.byKey.values());
+    pending.byKey.clear();
 
     const { getRowId } = propsRef.current;
 
@@ -207,11 +231,11 @@ function useDataGridUndoRedo<TData>({
       timestamp: Date.now(),
       undo: (currentData) => {
         const newData = [...currentData];
+        const indexById = buildIndexById(newData, getRowId);
+
         for (const update of updates) {
-          const index = newData.findIndex(
-            (row) => getRowId(row) === update.rowId,
-          );
-          if (index !== -1) {
+          const index = indexById.get(update.rowId);
+          if (index !== undefined) {
             const row = newData[index];
             if (row) {
               newData[index] = {
@@ -225,17 +249,14 @@ function useDataGridUndoRedo<TData>({
       },
       redo: (currentData) => {
         const newData = [...currentData];
+        const indexById = buildIndexById(newData, getRowId);
+
         for (const update of updates) {
-          const index = newData.findIndex(
-            (row) => getRowId(row) === update.rowId,
-          );
-          if (index !== -1) {
+          const index = indexById.get(update.rowId);
+          if (index !== undefined) {
             const row = newData[index];
             if (row) {
-              newData[index] = {
-                ...row,
-                [update.columnId]: update.newValue,
-              };
+              newData[index] = { ...row, [update.columnId]: update.newValue };
             }
           }
         }
@@ -290,7 +311,7 @@ function useDataGridUndoRedo<TData>({
       clearTimeout(pending.timeoutId);
       pending.timeoutId = null;
     }
-    pending.updates = [];
+    pending.byKey.clear();
 
     store.clear();
   }, [store]);
@@ -307,20 +328,13 @@ function useDataGridUndoRedo<TData>({
       const pending = pendingBatchRef.current;
 
       for (const update of filteredUpdates) {
-        const existingIdx = pending.updates.findIndex(
-          (u) => u.rowId === update.rowId && u.columnId === update.columnId,
-        );
+        const key = getPendingKey(update.rowId, update.columnId);
+        const existing = pending.byKey.get(key);
 
-        if (existingIdx !== -1) {
-          const existing = pending.updates[existingIdx];
-          if (existing) {
-            pending.updates[existingIdx] = {
-              ...existing,
-              newValue: update.newValue,
-            };
-          }
+        if (existing) {
+          pending.byKey.set(key, { ...existing, newValue: update.newValue });
         } else {
-          pending.updates.push(update);
+          pending.byKey.set(key, update);
         }
       }
 
@@ -342,21 +356,18 @@ function useDataGridUndoRedo<TData>({
 
       const { getRowId } = propsRef.current;
 
-      // Store row IDs and cloned row data for redo
       const rowIds = new Set(rows.map((row) => getRowId(row)));
-      const rowsCopy = rows.map((row) => structuredClone(row));
+      const rowsCopy = rows.map((row) => ({ ...row }));
 
       const entry: HistoryEntry<TData> = {
         variant: "rows_add",
         count: rows.length,
         timestamp: Date.now(),
         undo: (currentData) => {
-          // Remove rows by ID (handles sorting/filtering)
           return currentData.filter((row) => !rowIds.has(getRowId(row)));
         },
         redo: (currentData) => {
-          // Append cloned rows at end
-          return [...currentData, ...rowsCopy];
+          return [...currentData, ...rowsCopy.map((row) => ({ ...row }))];
         },
       };
 
@@ -373,22 +384,20 @@ function useDataGridUndoRedo<TData>({
 
       const { getRowId, data: currentData } = propsRef.current;
 
-      // Store row data with their current positions for restoration
+      const indexById = buildIndexById(currentData, getRowId);
+
       const rowsWithPositions: Array<{ index: number; row: TData }> = [];
       for (const row of rows) {
         const rowId = getRowId(row);
-        const currentIndex = currentData.findIndex(
-          (r) => getRowId(r) === rowId,
-        );
-        if (currentIndex !== -1) {
+        const currentIndex = indexById.get(rowId);
+        if (currentIndex !== undefined) {
           rowsWithPositions.push({
             index: currentIndex,
-            row: structuredClone(row),
+            row: { ...row },
           });
         }
       }
 
-      // Sort by index ascending for correct insertion order on undo
       rowsWithPositions.sort((a, b) => a.index - b.index);
 
       const rowIds = new Set(rows.map((row) => getRowId(row)));
@@ -398,17 +407,14 @@ function useDataGridUndoRedo<TData>({
         count: rows.length,
         timestamp: Date.now(),
         undo: (currentData) => {
-          // Restore rows at their original positions
           const newData = [...currentData];
           for (const { index, row } of rowsWithPositions) {
-            // Clamp index to valid range in case data has changed
             const insertIndex = Math.min(index, newData.length);
-            newData.splice(insertIndex, 0, structuredClone(row));
+            newData.splice(insertIndex, 0, { ...row });
           }
           return newData;
         },
         redo: (currentData) => {
-          // Remove rows by ID (handles sorting/filtering)
           return currentData.filter((row) => !rowIds.has(getRowId(row)));
         },
       };
@@ -492,5 +498,4 @@ export {
   useDataGridUndoRedo,
   //
   type UndoRedoCellUpdate,
-  type UseDataGridUndoRedoProps,
 };
