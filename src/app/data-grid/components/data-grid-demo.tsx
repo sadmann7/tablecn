@@ -414,11 +414,6 @@ export function DataGridDemo() {
   // Wrapper for onDataChange that tracks cell updates for undo/redo
   const onDataChange = React.useCallback(
     (newData: Person[]) => {
-      console.log("[demo] onDataChange called", {
-        dataLength: data.length,
-        newDataLength: newData.length,
-      });
-
       // Find which cells changed by comparing old and new data
       const cellUpdates: Array<UndoRedoCellUpdate> = [];
 
@@ -457,9 +452,6 @@ export function DataGridDemo() {
       }
 
       // Track cell updates if there are any
-      console.log("[demo] onDataChange: detected cell updates", {
-        cellUpdates,
-      });
       if (cellUpdates.length > 0) {
         trackCellsUpdate(cellUpdates);
       }
