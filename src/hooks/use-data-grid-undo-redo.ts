@@ -17,7 +17,7 @@ interface HistoryEntry<TData> {
 }
 
 interface UndoRedoCellUpdate {
-  rowIndex: number;
+  rowId: string;
   columnId: string;
   previousValue: unknown;
   newValue: unknown;
@@ -40,7 +40,7 @@ interface UndoRedoStore<TData> {
   notify: () => void;
 }
 
-function useStore<T>(
+function useStoreSelector<T>(
   store: UndoRedoStore<T>,
   selector: (state: UndoRedoState<T>) => boolean,
 ): boolean {
@@ -55,6 +55,7 @@ function useStore<T>(
 interface UseDataGridUndoRedoProps<TData> {
   data: TData[];
   onDataChange: (data: TData[]) => void;
+  getRowId: (row: TData) => string;
   maxHistory?: number;
   enabled?: boolean;
 }
@@ -66,19 +67,21 @@ interface UseDataGridUndoRedoReturn<TData> {
   onRedo: () => void;
   onClear: () => void;
   trackCellsUpdate: (updates: UndoRedoCellUpdate[]) => void;
-  trackRowsAdd: (params: { startIndex: number; rows: TData[] }) => void;
-  trackRowsDelete: (params: { indices: number[]; rows: TData[] }) => void;
+  trackRowsAdd: (rows: TData[]) => void;
+  trackRowsDelete: (rows: TData[]) => void;
 }
 
 function useDataGridUndoRedo<TData>({
   data,
   onDataChange,
+  getRowId,
   maxHistory = DEFAULT_MAX_HISTORY,
   enabled = true,
 }: UseDataGridUndoRedoProps<TData>): UseDataGridUndoRedoReturn<TData> {
   const propsRef = useAsRef({
     data,
     onDataChange,
+    getRowId,
     maxHistory,
     enabled,
   });
@@ -175,11 +178,14 @@ function useDataGridUndoRedo<TData>({
     };
   }, [listenersRef, stateRef, propsRef]);
 
-  const canUndo = useStore(
+  const canUndo = useStoreSelector(
     store,
     (state) => state.undoStack.length > 0 || state.hasPendingChanges,
   );
-  const canRedo = useStore(store, (state) => state.redoStack.length > 0);
+  const canRedo = useStoreSelector(
+    store,
+    (state) => state.redoStack.length > 0,
+  );
 
   const onCommit = React.useCallback(() => {
     const pending = pendingBatchRef.current;
@@ -193,6 +199,8 @@ function useDataGridUndoRedo<TData>({
     const updates = pending.updates;
     pending.updates = [];
 
+    const { getRowId } = propsRef.current;
+
     const entry: HistoryEntry<TData> = {
       variant: "cells_update",
       count: updates.length,
@@ -200,12 +208,17 @@ function useDataGridUndoRedo<TData>({
       undo: (currentData) => {
         const newData = [...currentData];
         for (const update of updates) {
-          const row = newData[update.rowIndex];
-          if (row) {
-            newData[update.rowIndex] = {
-              ...row,
-              [update.columnId]: update.previousValue,
-            };
+          const index = newData.findIndex(
+            (row) => getRowId(row) === update.rowId,
+          );
+          if (index !== -1) {
+            const row = newData[index];
+            if (row) {
+              newData[index] = {
+                ...row,
+                [update.columnId]: update.previousValue,
+              };
+            }
           }
         }
         return newData;
@@ -213,12 +226,17 @@ function useDataGridUndoRedo<TData>({
       redo: (currentData) => {
         const newData = [...currentData];
         for (const update of updates) {
-          const row = newData[update.rowIndex];
-          if (row) {
-            newData[update.rowIndex] = {
-              ...row,
-              [update.columnId]: update.newValue,
-            };
+          const index = newData.findIndex(
+            (row) => getRowId(row) === update.rowId,
+          );
+          if (index !== -1) {
+            const row = newData[index];
+            if (row) {
+              newData[index] = {
+                ...row,
+                [update.columnId]: update.newValue,
+              };
+            }
           }
         }
         return newData;
@@ -226,7 +244,7 @@ function useDataGridUndoRedo<TData>({
     };
 
     store.push(entry);
-  }, [store]);
+  }, [store, propsRef]);
 
   const onUndo = React.useCallback(() => {
     if (!propsRef.current.enabled) return;
@@ -290,8 +308,7 @@ function useDataGridUndoRedo<TData>({
 
       for (const update of filteredUpdates) {
         const existingIdx = pending.updates.findIndex(
-          (u) =>
-            u.rowIndex === update.rowIndex && u.columnId === update.columnId,
+          (u) => u.rowId === update.rowId && u.columnId === update.columnId,
         );
 
         if (existingIdx !== -1) {
@@ -318,16 +335,15 @@ function useDataGridUndoRedo<TData>({
   );
 
   const trackRowsAdd = React.useCallback(
-    (params: { startIndex: number; rows: TData[] }) => {
-      if (!propsRef.current.enabled || params.rows.length === 0) return;
+    (rows: TData[]) => {
+      if (!propsRef.current.enabled || rows.length === 0) return;
 
       onCommit();
 
-      const { startIndex, rows } = params;
+      const { getRowId } = propsRef.current;
 
-      const indicesAsc = rows.map((_, i) => startIndex + i);
-      const indicesDesc = [...indicesAsc].sort((a, b) => b - a);
-
+      // Store row IDs and cloned row data for redo
+      const rowIds = new Set(rows.map((row) => getRowId(row)));
       const rowsCopy = rows.map((row) => structuredClone(row));
 
       const entry: HistoryEntry<TData> = {
@@ -335,22 +351,12 @@ function useDataGridUndoRedo<TData>({
         count: rows.length,
         timestamp: Date.now(),
         undo: (currentData) => {
-          const newData = [...currentData];
-          for (const index of indicesDesc) {
-            newData.splice(index, 1);
-          }
-          return newData;
+          // Remove rows by ID (handles sorting/filtering)
+          return currentData.filter((row) => !rowIds.has(getRowId(row)));
         },
         redo: (currentData) => {
-          const newData = [...currentData];
-          for (let i = 0; i < indicesAsc.length; i++) {
-            const index = indicesAsc[i];
-            const row = rowsCopy[i];
-            if (index !== undefined && row) {
-              newData.splice(index, 0, structuredClone(row));
-            }
-          }
-          return newData;
+          // Append cloned rows at end
+          return [...currentData, ...rowsCopy];
         },
       };
 
@@ -360,47 +366,50 @@ function useDataGridUndoRedo<TData>({
   );
 
   const trackRowsDelete = React.useCallback(
-    (params: { indices: number[]; rows: TData[] }) => {
-      if (!propsRef.current.enabled || params.indices.length === 0) return;
+    (rows: TData[]) => {
+      if (!propsRef.current.enabled || rows.length === 0) return;
 
       onCommit();
 
-      const { indices, rows } = params;
+      const { getRowId, data: currentData } = propsRef.current;
 
-      const rowsWithIndices: Array<{ index: number; row: TData }> = [];
-      for (let i = 0; i < indices.length; i++) {
-        const index = indices[i];
-        const row = rows[i];
-        if (index !== undefined && row !== undefined) {
-          rowsWithIndices.push({
-            index,
+      // Store row data with their current positions for restoration
+      const rowsWithPositions: Array<{ index: number; row: TData }> = [];
+      for (const row of rows) {
+        const rowId = getRowId(row);
+        const currentIndex = currentData.findIndex(
+          (r) => getRowId(r) === rowId,
+        );
+        if (currentIndex !== -1) {
+          rowsWithPositions.push({
+            index: currentIndex,
             row: structuredClone(row),
           });
         }
       }
-      rowsWithIndices.sort((a, b) => a.index - b.index);
 
-      const indicesDesc = rowsWithIndices
-        .map((item) => item.index)
-        .sort((a, b) => b - a);
+      // Sort by index ascending for correct insertion order on undo
+      rowsWithPositions.sort((a, b) => a.index - b.index);
+
+      const rowIds = new Set(rows.map((row) => getRowId(row)));
 
       const entry: HistoryEntry<TData> = {
         variant: "rows_delete",
         count: rows.length,
         timestamp: Date.now(),
         undo: (currentData) => {
+          // Restore rows at their original positions
           const newData = [...currentData];
-          for (const { index, row } of rowsWithIndices) {
-            newData.splice(index, 0, structuredClone(row));
+          for (const { index, row } of rowsWithPositions) {
+            // Clamp index to valid range in case data has changed
+            const insertIndex = Math.min(index, newData.length);
+            newData.splice(insertIndex, 0, structuredClone(row));
           }
           return newData;
         },
         redo: (currentData) => {
-          const newData = [...currentData];
-          for (const index of indicesDesc) {
-            newData.splice(index, 1);
-          }
-          return newData;
+          // Remove rows by ID (handles sorting/filtering)
+          return currentData.filter((row) => !rowIds.has(getRowId(row)));
         },
       };
 
@@ -483,4 +492,5 @@ export {
   useDataGridUndoRedo,
   //
   type UndoRedoCellUpdate,
+  type UseDataGridUndoRedoProps,
 };

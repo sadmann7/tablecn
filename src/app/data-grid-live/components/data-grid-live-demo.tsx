@@ -319,6 +319,7 @@ export function DataGridLiveDemo() {
     useDataGridUndoRedo({
       data,
       onDataChange: undoRedoOnDataChange,
+      getRowId: (row) => row.id,
     });
 
   const onDataChange: NonNullable<
@@ -331,7 +332,6 @@ export function DataGridLiveDemo() {
       // Diff and update changed skaters via TanStack DB for optimistic updates
       for (const skater of newData) {
         const existingSkater = data.find((s) => s.id === skater.id);
-        const rowIndex = data.findIndex((s) => s.id === skater.id);
 
         // For new rows (not yet in our stale closure data), still update them
         // because onRowsAdd already created them in the collection
@@ -355,7 +355,7 @@ export function DataGridLiveDemo() {
 
           if (JSON.stringify(existingValue) !== JSON.stringify(newValue)) {
             cellUpdates.push({
-              rowIndex,
+              rowId: existingSkater.id,
               columnId: key,
               previousValue: existingSkater[key],
               newValue: skater[key],
@@ -385,7 +385,7 @@ export function DataGridLiveDemo() {
       skatersCollection.insert(skaterWithOrder);
 
       // Track for undo/redo
-      trackRowsAdd({ startIndex: data.length, rows: [skaterWithOrder] });
+      trackRowsAdd([skaterWithOrder]);
 
       return {
         rowIndex: data.length,
@@ -421,7 +421,7 @@ export function DataGridLiveDemo() {
         }
 
         // Track for undo/redo
-        trackRowsAdd({ startIndex: data.length, rows: newRows });
+        trackRowsAdd(newRows);
       },
       [data, trackRowsAdd],
     );
@@ -429,9 +429,9 @@ export function DataGridLiveDemo() {
   const onRowsDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onRowsDelete"]
   > = React.useCallback(
-    (rowsToDelete, rowIndices) => {
+    (rowsToDelete) => {
       // Track for undo/redo (before deletion to capture the rows)
-      trackRowsDelete({ indices: rowIndices, rows: rowsToDelete });
+      trackRowsDelete(rowsToDelete);
 
       // Use batch delete - single transaction for all deletions
       skatersCollection.delete(rowsToDelete.map((skater) => skater.id));

@@ -286,6 +286,7 @@ export function DataGridDemo() {
     useDataGridUndoRedo({
       data,
       onDataChange: setData,
+      getRowId: (row) => row.id,
     });
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
@@ -307,7 +308,7 @@ export function DataGridDemo() {
       setData((prev) => [...prev, newRow]);
 
       // Track for undo/redo
-      trackRowsAdd({ startIndex: newRowIndex, rows: [newRow] });
+      trackRowsAdd([newRow]);
 
       return {
         rowIndex: newRowIndex,
@@ -326,7 +327,6 @@ export function DataGridDemo() {
         //   body: JSON.stringify({ count })
         // });
 
-        const startIndex = data.length;
         const newRows: Person[] = Array.from({ length: count }, () => ({
           id: generateId(),
         }));
@@ -335,14 +335,14 @@ export function DataGridDemo() {
         setData((prev) => [...prev, ...newRows]);
 
         // Track for undo/redo
-        trackRowsAdd({ startIndex, rows: newRows });
+        trackRowsAdd(newRows);
       },
-      [data.length, trackRowsAdd],
+      [trackRowsAdd],
     );
 
   const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
     React.useCallback(
-      (rows, rowIndices) => {
+      (rows) => {
         // In a real app, you would make a server call here:
         // await fetch('/api/people', {
         //   method: 'DELETE',
@@ -350,7 +350,7 @@ export function DataGridDemo() {
         // });
 
         // Track for undo/redo (before deletion to capture the rows)
-        trackRowsDelete({ indices: rowIndices, rows });
+        trackRowsDelete(rows);
 
         // For this demo, just filter out the deleted rows
         setData((prev) => prev.filter((row) => !rows.includes(row)));
@@ -441,7 +441,7 @@ export function DataGridDemo() {
 
             if (!Object.is(oldValue, newValue)) {
               cellUpdates.push({
-                rowIndex,
+                rowId: oldRow.id,
                 columnId: key,
                 previousValue: oldValue,
                 newValue,
