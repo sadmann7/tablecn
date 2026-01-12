@@ -5,8 +5,6 @@ import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import * as React from "react";
 import { use } from "react";
 import { toast } from "sonner";
-
-import { skatersCollection } from "@/app/data-grid-live/lib/collections";
 import {
   generateRandomSkater,
   getSkaterStatusIcon,
@@ -14,7 +12,6 @@ import {
   getStyleIcon,
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
-import { DataGridActionBar } from "@/components/data-grid/data-grid-action-bar";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
@@ -31,7 +28,9 @@ import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import { useUploadThing } from "@/lib/uploadthing";
+import { skatersCollection } from "../lib/collections";
 import type { SkaterSchema } from "../lib/validation";
+import { DataGridActionBar } from "./data-grid-action-bar";
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
