@@ -2,7 +2,6 @@
 
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
-import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { use } from "react";
 import { toast } from "sonner";
@@ -15,26 +14,13 @@ import {
   getStyleIcon,
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { DataGridActionBar } from "@/components/data-grid/data-grid-action-bar";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
-import {
-  ActionBar,
-  ActionBarClose,
-  ActionBarGroup,
-  ActionBarItem,
-  ActionBarSelection,
-  ActionBarSeparator,
-} from "@/components/ui/action-bar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import {
@@ -511,11 +497,8 @@ export function DataGridLiveDemo() {
     enablePaste: true,
   });
 
-  const updateSelectedSkaters = React.useCallback(
-    (
-      field: "status" | "style",
-      value: SkaterSchema["status"] | SkaterSchema["style"],
-    ) => {
+  const onStatusUpdate = React.useCallback(
+    (value: string) => {
       const selectedRows = table.getSelectedRowModel().rows;
       if (selectedRows.length === 0) {
         toast.error("No skaters selected");
@@ -527,7 +510,7 @@ export function DataGridLiveDemo() {
         selectedRows.map((row) => row.original.id),
         (drafts) => {
           for (const draft of drafts) {
-            draft[field] = value as never;
+            draft.status = value as never;
           }
         },
       );
@@ -539,7 +522,32 @@ export function DataGridLiveDemo() {
     [table],
   );
 
-  const deleteSelectedSkaters = React.useCallback(() => {
+  const onStyleUpdate = React.useCallback(
+    (value: string) => {
+      const selectedRows = table.getSelectedRowModel().rows;
+      if (selectedRows.length === 0) {
+        toast.error("No skaters selected");
+        return;
+      }
+
+      // Use batch update - single transaction for all updates
+      skatersCollection.update(
+        selectedRows.map((row) => row.original.id),
+        (drafts) => {
+          for (const draft of drafts) {
+            draft.style = value as never;
+          }
+        },
+      );
+
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
+      );
+    },
+    [table],
+  );
+
+  const onDelete = React.useCallback(() => {
     const selectedRows = table.getSelectedRowModel().rows;
     if (selectedRows.length === 0) {
       toast.error("No skaters selected");
@@ -584,72 +592,16 @@ export function DataGridLiveDemo() {
         tableMeta={tableMeta}
         height={height}
       />
-      <ActionBar
-        data-grid-popover
-        open={selectedCellCount > 0}
-        onOpenChange={(open) => {
-          if (!open) {
-            table.toggleAllRowsSelected(false);
-            tableMeta.onSelectionClear?.();
-          }
-        }}
-      >
-        <ActionBarSelection>
-          <span className="font-medium">{selectedCellCount}</span>
-          <span>{selectedCellCount === 1 ? "cell" : "cells"} selected</span>
-          <ActionBarSeparator />
-          <ActionBarClose>
-            <X />
-          </ActionBarClose>
-        </ActionBarSelection>
-        <ActionBarSeparator />
-        <ActionBarGroup>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <ActionBarItem variant="secondary" size="sm">
-                <CheckCircle2 />
-                Status
-              </ActionBarItem>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent data-grid-popover>
-              {statusOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => updateSelectedSkaters("status", option.value)}
-                >
-                  {option.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <ActionBarItem variant="secondary" size="sm">
-                <Palette />
-                Style
-              </ActionBarItem>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent data-grid-popover>
-              {styleOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => updateSelectedSkaters("style", option.value)}
-                >
-                  {option.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <ActionBarItem
-            variant="destructive"
-            size="sm"
-            onClick={deleteSelectedSkaters}
-          >
-            <Trash2 />
-            Delete
-          </ActionBarItem>
-        </ActionBarGroup>
-      </ActionBar>
+      <DataGridActionBar
+        table={table}
+        tableMeta={tableMeta}
+        selectedCellCount={selectedCellCount}
+        statusOptions={statusOptions}
+        styleOptions={styleOptions}
+        onStatusUpdate={onStatusUpdate}
+        onStyleUpdate={onStyleUpdate}
+        onDelete={onDelete}
+      />
     </div>
   );
 }
