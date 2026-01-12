@@ -18,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAsRef } from "@/hooks/use-as-ref";
 import type { CellSelectOption } from "@/types/data-grid";
 
 interface DataGridActionBarProps<TData> {
@@ -41,6 +42,16 @@ export function DataGridActionBar<TData>({
   onStyleUpdate,
   onDelete,
 }: DataGridActionBarProps<TData>) {
+  const propsRef = useAsRef({
+    table,
+    tableMeta,
+    selectedCellCount,
+    statusOptions,
+    styleOptions,
+    onStatusUpdate,
+    onStyleUpdate,
+    onDelete,
+  });
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (!open) {
