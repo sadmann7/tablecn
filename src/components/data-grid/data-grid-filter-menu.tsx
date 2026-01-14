@@ -78,32 +78,37 @@ export function DataGridFilterMenu<TData>({
 
   const columnFilters = table.getState().columnFilters;
 
-  const { columnLabels, columns, columnVariants } = React.useMemo(() => {
-    const labels = new Map<string, string>();
-    const variants = new Map<string, string>();
-    const filteringIds = new Set(columnFilters.map((f) => f.id));
-    const availableColumns: { id: string; label: string }[] = [];
+  const { columnLabels, columns, columnVariants, columnFilterOperators } =
+    React.useMemo(() => {
+      const labels = new Map<string, string>();
+      const variants = new Map<string, string>();
+      const filterOperators = new Map<string, FilterOperator[] | undefined>();
+      const filteringIds = new Set(columnFilters.map((f) => f.id));
+      const availableColumns: { id: string; label: string }[] = [];
 
-    for (const column of table.getAllColumns()) {
-      if (!column.getCanFilter()) continue;
+      for (const column of table.getAllColumns()) {
+        if (!column.getCanFilter()) continue;
 
-      const label = column.columnDef.meta?.label ?? column.id;
-      const variant = column.columnDef.meta?.cell?.variant ?? "short-text";
+        const label = column.columnDef.meta?.label ?? column.id;
+        const variant = column.columnDef.meta?.cell?.variant ?? "short-text";
+        const operators = column.columnDef.meta?.filterOperators;
 
-      labels.set(column.id, label);
-      variants.set(column.id, variant);
+        labels.set(column.id, label);
+        variants.set(column.id, variant);
+        filterOperators.set(column.id, operators);
 
-      if (!filteringIds.has(column.id)) {
-        availableColumns.push({ id: column.id, label });
+        if (!filteringIds.has(column.id)) {
+          availableColumns.push({ id: column.id, label });
+        }
       }
-    }
 
-    return {
-      columnLabels: labels,
-      columns: availableColumns,
-      columnVariants: variants,
-    };
-  }, [columnFilters, table]);
+      return {
+        columnLabels: labels,
+        columns: availableColumns,
+        columnVariants: variants,
+        columnFilterOperators: filterOperators,
+      };
+    }, [columnFilters, table]);
 
   const onFilterAdd = React.useCallback(() => {
     const firstColumn = columns[0];
@@ -249,6 +254,7 @@ export function DataGridFilterMenu<TData>({
               >
                 {columnFilters.map((filter, index) => (
                   <DataGridFilterItem
+                    columnFilterOperators={columnFilterOperators}
                     key={filter.id}
                     filter={filter}
                     index={index}
@@ -310,6 +316,7 @@ interface DataGridFilterItemProps<TData> {
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   columnVariants: Map<string, string>;
+  columnFilterOperators: Map<string, FilterOperator[] | undefined>;
   table: Table<TData>;
   onFilterUpdate: (filterId: string, updates: Partial<ColumnFilter>) => void;
   onFilterRemove: (filterId: string) => void;
@@ -323,6 +330,7 @@ function DataGridFilterItem<TData>({
   columns,
   columnLabels,
   columnVariants,
+  columnFilterOperators,
   table,
   onFilterUpdate,
   onFilterRemove,
@@ -339,7 +347,11 @@ function DataGridFilterItem<TData>({
   const filterValue = filter.value as FilterValue | undefined;
   const operator = filterValue?.operator ?? getDefaultOperator(variant);
 
-  const operators = getOperatorsForVariant(variant);
+  const allowedOperators = columnFilterOperators.get(filter.id);
+  const allOperators = getOperatorsForVariant(variant);
+  const operators = allowedOperators
+    ? allOperators.filter((op) => allowedOperators.includes(op.value))
+    : allOperators;
   const needsValue = !OPERATORS_WITHOUT_VALUE.includes(operator);
 
   const column = table.getColumn(filter.id);
