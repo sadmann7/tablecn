@@ -52,7 +52,7 @@ const SCROLL_SYNC_RETRY_COUNT = 16;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
-const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
+const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
@@ -350,7 +350,7 @@ function useDataGrid<TData>({
   }, [columns]);
 
   const navigableColumnIds = React.useMemo(() => {
-    return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
+    return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
   }, [columnIds]);
 
   const onDataUpdate = React.useCallback(
@@ -549,13 +549,16 @@ function useDataGrid<TData>({
     if (!rows) return null;
 
     const selectedColumnIds: string[] = [];
+    const seenColumnIds = new Set<string>();
     const cellData = new Map<string, string>();
     const rowIndices = new Set<number>();
 
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
 
-      if (columnId && !selectedColumnIds.includes(columnId)) {
+      // Use Set for O(1) lookup while preserving insertion order in array
+      if (columnId && !seenColumnIds.has(columnId)) {
+        seenColumnIds.add(columnId);
         selectedColumnIds.push(columnId);
       }
 
@@ -2225,7 +2228,7 @@ function useDataGrid<TData>({
           return undefined;
         })
         .filter((id): id is string => Boolean(id))
-        .filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
+        .filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
 
       const targetColumnId = columnId ?? navigableIds[0];
 
