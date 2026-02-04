@@ -1038,15 +1038,18 @@ export function MultiSelectCell<TData>({
   const onValueChange = React.useCallback(
     (value: string) => {
       if (readOnly) return;
+      let newValues: string[] = [];
       setSelectedValues((curr) => {
-        const newValues = curr.includes(value)
+        newValues = curr.includes(value)
           ? curr.filter((v) => v !== value)
           : [...curr, value];
-        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
         return newValues;
       });
+      queueMicrotask(() => {
+        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        inputRef.current?.focus();
+      });
       setSearchValue("");
-      queueMicrotask(() => inputRef.current?.focus());
     },
     [tableMeta, rowIndex, columnId, readOnly],
   );
@@ -1056,13 +1059,15 @@ export function MultiSelectCell<TData>({
       if (readOnly) return;
       event?.stopPropagation();
       event?.preventDefault();
+      let newValues: string[] = [];
       setSelectedValues((curr) => {
-        const newValues = curr.filter((v) => v !== valueToRemove);
-        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        newValues = curr.filter((v) => v !== valueToRemove);
         return newValues;
       });
-      // Focus back on input after removing
-      setTimeout(() => inputRef.current?.focus(), 0);
+      queueMicrotask(() => {
+        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        inputRef.current?.focus();
+      });
     },
     [tableMeta, rowIndex, columnId, readOnly],
   );
@@ -1115,12 +1120,17 @@ export function MultiSelectCell<TData>({
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Backspace" && searchValue === "") {
         event.preventDefault();
+        let newValues: string[] | null = null;
         setSelectedValues((curr) => {
           if (curr.length === 0) return curr;
-          const newValues = curr.slice(0, -1);
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
-          setTimeout(() => inputRef.current?.focus(), 0);
+          newValues = curr.slice(0, -1);
           return newValues;
+        });
+        queueMicrotask(() => {
+          if (newValues !== null) {
+            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+          }
+          inputRef.current?.focus();
         });
       }
       if (event.key === "Escape") {
