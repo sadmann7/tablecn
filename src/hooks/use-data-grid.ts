@@ -23,6 +23,7 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect"
 import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   getCellKey,
+  getEmptyCellValue,
   getIsFileCellData,
   getIsInPopover,
   getRowHeightValue,
@@ -67,14 +68,6 @@ const VALID_BOOLEANS = new Set([
   "checked",
   "unchecked",
 ]);
-
-// Helper to get empty value for a cell variant
-function getEmptyValueForVariant(variant: string | undefined): unknown {
-  if (variant === "multi-select" || variant === "file") return [];
-  if (variant === "number" || variant === "date") return null;
-  if (variant === "checkbox") return false;
-  return "";
-}
 
 interface DataGridState {
   sorting: SortingState;
@@ -564,7 +557,6 @@ function useDataGrid<TData>({
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
 
-      // Use Set for O(1) lookup while preserving insertion order in array
       if (columnId && !seenColumnIds.has(columnId)) {
         seenColumnIds.add(columnId);
         selectedColumnIds.push(columnId);
@@ -997,14 +989,13 @@ function useDataGrid<TData>({
           const allUpdates = [...updates];
 
           if (currentState.cutCells.size > 0) {
-            // Build column map for O(1) lookups
             const columnById = new Map(tableColumns.map((c) => [c.id, c]));
 
             for (const cellKey of currentState.cutCells) {
               const { rowIndex, columnId } = parseCellKey(cellKey);
               const column = columnById.get(columnId);
               const cellVariant = column?.columnDef?.meta?.cell?.variant;
-              const emptyValue = getEmptyValueForVariant(cellVariant);
+              const emptyValue = getEmptyCellValue(cellVariant);
               allUpdates.push({ rowIndex, columnId, value: emptyValue });
             }
 
@@ -1522,7 +1513,6 @@ function useDataGrid<TData>({
         const row = rows[rowIndex];
         if (!row) continue;
 
-        // Build cell map once per row for O(1) lookups
         const cellById = new Map(
           row.getVisibleCells().map((c) => [c.column.id, c]),
         );
@@ -1606,7 +1596,6 @@ function useDataGrid<TData>({
     }
   }, [store, focusCell]);
 
-  // Build Set once when searchMatches changes for O(1) lookups
   const searchMatchSet = React.useMemo(() => {
     return new Set(
       searchMatches.map((m) => getCellKey(m.rowIndex, m.columnId)),
@@ -2028,7 +2017,6 @@ function useDataGrid<TData>({
       ...propsRef.current.meta,
       dataGridRef,
       cellMapRef,
-      // Use getters for frequently changing state values to avoid recreating meta
       get focusedCell() {
         return store.getState().focusedCell;
       },
@@ -2497,14 +2485,13 @@ function useDataGrid<TData>({
 
           const currentTable = tableRef.current;
           const tableColumns = currentTable?.getAllColumns() ?? [];
-          // Build column map for O(1) lookups
           const columnById = new Map(tableColumns.map((c) => [c.id, c]));
 
           for (const cellKey of cellsToClear) {
             const { rowIndex, columnId } = parseCellKey(cellKey);
             const column = columnById.get(columnId);
             const cellVariant = column?.columnDef?.meta?.cell?.variant;
-            const emptyValue = getEmptyValueForVariant(cellVariant);
+            const emptyValue = getEmptyCellValue(cellVariant);
             updates.push({ rowIndex, columnId, value: emptyValue });
           }
 
