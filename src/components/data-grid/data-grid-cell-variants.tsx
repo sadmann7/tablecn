@@ -873,7 +873,10 @@ export function SelectCell<TData>({
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const options = cellOpts?.variant === "select" ? cellOpts.options : [];
+  const options = React.useMemo(
+    () => (cellOpts?.variant === "select" ? cellOpts.options : []),
+    [cellOpts],
+  );
   const optionByValue = React.useMemo(
     () => new Map(options.map((option) => [option.value, option])),
     [options],
@@ -1017,7 +1020,10 @@ export function MultiSelectCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
+  const options = React.useMemo(
+    () => (cellOpts?.variant === "multi-select" ? cellOpts.options : []),
+    [cellOpts],
+  );
   const optionByValue = React.useMemo(
     () => new Map(options.map((option) => [option.value, option])),
     [options],
