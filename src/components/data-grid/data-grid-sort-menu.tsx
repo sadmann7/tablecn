@@ -42,7 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const SORT_SHORTCUT_KEY = "s";
-const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
+const REMOVE_SORT_SHORTCUTS = new Set(["backspace", "delete"]);
 
 const SORT_ORDERS = [
   { label: "Asc", value: "asc" },
@@ -156,7 +156,7 @@ export function DataGridSortMenu<TData>({
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
       if (
-        REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase()) &&
+        REMOVE_SORT_SHORTCUTS.has(event.key.toLowerCase()) &&
         sorting.length > 0
       ) {
         event.preventDefault();
@@ -313,7 +313,7 @@ function DataTableSortItem({
         return;
       }
 
-      if (REMOVE_SORT_SHORTCUTS.includes(event.key.toLowerCase())) {
+      if (REMOVE_SORT_SHORTCUTS.has(event.key.toLowerCase())) {
         event.preventDefault();
         onSortRemove(sort.id);
       }

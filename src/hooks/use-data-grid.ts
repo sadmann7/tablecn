@@ -23,6 +23,7 @@ import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect"
 import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   getCellKey,
+  getEmptyCellValue,
   getIsFileCellData,
   getIsInPopover,
   getRowHeightValue,
@@ -52,7 +53,7 @@ const SCROLL_SYNC_RETRY_COUNT = 16;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
-const NON_NAVIGABLE_COLUMN_IDS = ["select", "actions"];
+const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
@@ -350,7 +351,7 @@ function useDataGrid<TData>({
   }, [columns]);
 
   const navigableColumnIds = React.useMemo(() => {
-    return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
+    return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
   }, [columnIds]);
 
   const onDataUpdate = React.useCallback(
@@ -527,12 +528,12 @@ function useDataGrid<TData>({
     [columnIds, store],
   );
 
-  const onCellsCopy = React.useCallback(async () => {
+  const serializeCellsToTsv = React.useCallback(() => {
     const currentState = store.getState();
 
     let selectedCellsArray: string[];
     if (!currentState.selectionState.selectedCells.size) {
-      if (!currentState.focusedCell) return;
+      if (!currentState.focusedCell) return null;
       const focusedCellKey = getCellKey(
         currentState.focusedCell.rowIndex,
         currentState.focusedCell.columnId,
@@ -546,25 +547,35 @@ function useDataGrid<TData>({
 
     const currentTable = tableRef.current;
     const rows = currentTable?.getRowModel().rows;
-    if (!rows) return;
+    if (!rows) return null;
 
     const selectedColumnIds: string[] = [];
-
-    for (const cellKey of selectedCellsArray) {
-      const { columnId } = parseCellKey(cellKey);
-      if (columnId && !selectedColumnIds.includes(columnId)) {
-        selectedColumnIds.push(columnId);
-      }
-    }
-
+    const seenColumnIds = new Set<string>();
     const cellData = new Map<string, string>();
+    const rowIndices = new Set<number>();
+    const rowCellMaps = new Map<
+      number,
+      Map<string, ReturnType<Row<TData>["getVisibleCells"]>[number]>
+    >();
+
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
+
+      if (columnId && !seenColumnIds.has(columnId)) {
+        seenColumnIds.add(columnId);
+        selectedColumnIds.push(columnId);
+      }
+
+      rowIndices.add(rowIndex);
+
       const row = rows[rowIndex];
       if (row) {
-        const cell = row
-          .getVisibleCells()
-          .find((c) => c.column.id === columnId);
+        let cellMap = rowCellMaps.get(rowIndex);
+        if (!cellMap) {
+          cellMap = new Map(row.getVisibleCells().map((c) => [c.column.id, c]));
+          rowCellMaps.set(rowIndex, cellMap);
+        }
+        const cell = cellMap.get(columnId);
         if (cell) {
           const value = cell.getValue();
           const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
@@ -583,12 +594,9 @@ function useDataGrid<TData>({
       }
     }
 
-    const rowIndices = new Set<number>();
     const colIndices = new Set<number>();
-
     for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      rowIndices.add(rowIndex);
+      const { columnId } = parseCellKey(cellKey);
       const colIndex = selectedColumnIds.indexOf(columnId);
       if (colIndex >= 0) {
         colIndices.add(colIndex);
@@ -609,6 +617,15 @@ function useDataGrid<TData>({
           .join("\t"),
       )
       .join("\n");
+
+    return { tsvData, selectedCellsArray };
+  }, [store]);
+
+  const onCellsCopy = React.useCallback(async () => {
+    const result = serializeCellsToTsv();
+    if (!result) return;
+
+    const { tsvData, selectedCellsArray } = result;
 
     try {
       await navigator.clipboard.writeText(tsvData);
@@ -628,92 +645,15 @@ function useDataGrid<TData>({
         error instanceof Error ? error.message : "Failed to copy to clipboard",
       );
     }
-  }, [store]);
+  }, [store, serializeCellsToTsv]);
 
   const onCellsCut = React.useCallback(async () => {
     if (propsRef.current.readOnly) return;
 
-    const currentState = store.getState();
+    const result = serializeCellsToTsv();
+    if (!result) return;
 
-    let selectedCellsArray: string[];
-    if (!currentState.selectionState.selectedCells.size) {
-      if (!currentState.focusedCell) return;
-      const focusedCellKey = getCellKey(
-        currentState.focusedCell.rowIndex,
-        currentState.focusedCell.columnId,
-      );
-      selectedCellsArray = [focusedCellKey];
-    } else {
-      selectedCellsArray = Array.from(
-        currentState.selectionState.selectedCells,
-      );
-    }
-
-    const currentTable = tableRef.current;
-    const rows = currentTable?.getRowModel().rows;
-    if (!rows) return;
-
-    const selectedColumnIds: string[] = [];
-
-    for (const cellKey of selectedCellsArray) {
-      const { columnId } = parseCellKey(cellKey);
-      if (columnId && !selectedColumnIds.includes(columnId)) {
-        selectedColumnIds.push(columnId);
-      }
-    }
-
-    const cellData = new Map<string, string>();
-    for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      const row = rows[rowIndex];
-      if (row) {
-        const cell = row
-          .getVisibleCells()
-          .find((c) => c.column.id === columnId);
-        if (cell) {
-          const value = cell.getValue();
-          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
-
-          let serializedValue = "";
-          if (cellVariant === "file" || cellVariant === "multi-select") {
-            serializedValue = value ? JSON.stringify(value) : "";
-          } else if (value instanceof Date) {
-            serializedValue = value.toISOString();
-          } else {
-            serializedValue = String(value ?? "");
-          }
-
-          cellData.set(cellKey, serializedValue);
-        }
-      }
-    }
-
-    const rowIndices = new Set<number>();
-    const colIndices = new Set<number>();
-
-    for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      rowIndices.add(rowIndex);
-      const colIndex = selectedColumnIds.indexOf(columnId);
-      if (colIndex >= 0) {
-        colIndices.add(colIndex);
-      }
-    }
-
-    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
-    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
-    const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
-
-    const tsvData = sortedRowIndices
-      .map((rowIndex) =>
-        sortedColumnIds
-          .map((columnId) => {
-            const cellKey = `${rowIndex}:${columnId}`;
-            return cellData.get(cellKey) ?? "";
-          })
-          .join("\t"),
-      )
-      .join("\n");
+    const { tsvData, selectedCellsArray } = result;
 
     try {
       await navigator.clipboard.writeText(tsvData);
@@ -730,7 +670,7 @@ function useDataGrid<TData>({
         error instanceof Error ? error.message : "Failed to cut to clipboard",
       );
     }
-  }, [store, propsRef]);
+  }, [store, propsRef, serializeCellsToTsv]);
 
   const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
     if (element && document.activeElement !== element) {
@@ -1056,21 +996,13 @@ function useDataGrid<TData>({
           const allUpdates = [...updates];
 
           if (currentState.cutCells.size > 0) {
+            const columnById = new Map(tableColumns.map((c) => [c.id, c]));
+
             for (const cellKey of currentState.cutCells) {
               const { rowIndex, columnId } = parseCellKey(cellKey);
-
-              const column = tableColumns.find((c) => c.id === columnId);
+              const column = columnById.get(columnId);
               const cellVariant = column?.columnDef?.meta?.cell?.variant;
-
-              let emptyValue: unknown = "";
-              if (cellVariant === "multi-select" || cellVariant === "file") {
-                emptyValue = [];
-              } else if (cellVariant === "number" || cellVariant === "date") {
-                emptyValue = null;
-              } else if (cellVariant === "checkbox") {
-                emptyValue = false;
-              }
-
+              const emptyValue = getEmptyCellValue(cellVariant);
               allUpdates.push({ rowIndex, columnId, value: emptyValue });
             }
 
@@ -1588,10 +1520,12 @@ function useDataGrid<TData>({
         const row = rows[rowIndex];
         if (!row) continue;
 
+        const cellById = new Map(
+          row.getVisibleCells().map((c) => [c.column.id, c]),
+        );
+
         for (const columnId of columnIds) {
-          const cell = row
-            .getVisibleCells()
-            .find((c) => c.column.id === columnId);
+          const cell = cellById.get(columnId);
           if (!cell) continue;
 
           const value = cell.getValue();
@@ -1669,14 +1603,17 @@ function useDataGrid<TData>({
     }
   }, [store, focusCell]);
 
+  const searchMatchSet = React.useMemo(() => {
+    return new Set(
+      searchMatches.map((m) => getCellKey(m.rowIndex, m.columnId)),
+    );
+  }, [searchMatches]);
+
   const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      const currentSearchMatches = store.getState().searchMatches;
-      return currentSearchMatches.some(
-        (match) => match.rowIndex === rowIndex && match.columnId === columnId,
-      );
+      return searchMatchSet.has(getCellKey(rowIndex, columnId));
     },
-    [store],
+    [searchMatchSet],
   );
 
   const getIsActiveSearchMatch = React.useCallback(
@@ -2087,7 +2024,6 @@ function useDataGrid<TData>({
       ...propsRef.current.meta,
       dataGridRef,
       cellMapRef,
-      // Use getters for frequently changing state values to avoid recreating meta
       get focusedCell() {
         return store.getState().focusedCell;
       },
@@ -2291,7 +2227,7 @@ function useDataGrid<TData>({
           return undefined;
         })
         .filter((id): id is string => Boolean(id))
-        .filter((c) => !NON_NAVIGABLE_COLUMN_IDS.includes(c));
+        .filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
 
       const targetColumnId = columnId ?? navigableIds[0];
 
@@ -2556,22 +2492,13 @@ function useDataGrid<TData>({
 
           const currentTable = tableRef.current;
           const tableColumns = currentTable?.getAllColumns() ?? [];
+          const columnById = new Map(tableColumns.map((c) => [c.id, c]));
 
           for (const cellKey of cellsToClear) {
             const { rowIndex, columnId } = parseCellKey(cellKey);
-
-            const column = tableColumns.find((c) => c.id === columnId);
+            const column = columnById.get(columnId);
             const cellVariant = column?.columnDef?.meta?.cell?.variant;
-
-            let emptyValue: unknown = "";
-            if (cellVariant === "multi-select" || cellVariant === "file") {
-              emptyValue = [];
-            } else if (cellVariant === "number" || cellVariant === "date") {
-              emptyValue = null;
-            } else if (cellVariant === "checkbox") {
-              emptyValue = false;
-            }
-
+            const emptyValue = getEmptyCellValue(cellVariant);
             updates.push({ rowIndex, columnId, value: emptyValue });
           }
 

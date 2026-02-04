@@ -874,6 +874,10 @@ export function SelectCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
+  const optionByValue = React.useMemo(
+    () => new Map(options.map((option) => [option.value, option])),
+    [options],
+  );
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -918,8 +922,7 @@ export function SelectCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta],
   );
 
-  const displayLabel =
-    options.find((opt) => opt.value === value)?.label ?? value;
+  const displayLabel = optionByValue.get(value)?.label ?? value;
 
   return (
     <DataGridCellWrapper<TData>
@@ -1015,6 +1018,10 @@ export function MultiSelectCell<TData>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
+  const optionByValue = React.useMemo(
+    () => new Map(options.map((option) => [option.value, option])),
+    [options],
+  );
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const prevCellValueRef = React.useRef(cellValue);
@@ -1031,16 +1038,20 @@ export function MultiSelectCell<TData>({
   const onValueChange = React.useCallback(
     (value: string) => {
       if (readOnly) return;
-      const newValues = selectedValues.includes(value)
-        ? selectedValues.filter((v) => v !== value)
-        : [...selectedValues, value];
-
-      setSelectedValues(newValues);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+      let newValues: string[] = [];
+      setSelectedValues((curr) => {
+        newValues = curr.includes(value)
+          ? curr.filter((v) => v !== value)
+          : [...curr, value];
+        return newValues;
+      });
+      queueMicrotask(() => {
+        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        inputRef.current?.focus();
+      });
       setSearchValue("");
-      queueMicrotask(() => inputRef.current?.focus());
     },
-    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const removeValue = React.useCallback(
@@ -1048,13 +1059,17 @@ export function MultiSelectCell<TData>({
       if (readOnly) return;
       event?.stopPropagation();
       event?.preventDefault();
-      const newValues = selectedValues.filter((v) => v !== valueToRemove);
-      setSelectedValues(newValues);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
-      // Focus back on input after removing
-      setTimeout(() => inputRef.current?.focus(), 0);
+      let newValues: string[] = [];
+      setSelectedValues((curr) => {
+        newValues = curr.filter((v) => v !== valueToRemove);
+        return newValues;
+      });
+      queueMicrotask(() => {
+        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        inputRef.current?.focus();
+      });
     },
-    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const clearAll = React.useCallback(() => {
@@ -1103,30 +1118,36 @@ export function MultiSelectCell<TData>({
 
   const onInputKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
-      // Handle backspace when input is empty - remove last selected item
-      if (
-        event.key === "Backspace" &&
-        searchValue === "" &&
-        selectedValues.length > 0
-      ) {
+      if (event.key === "Backspace" && searchValue === "") {
         event.preventDefault();
-        const lastValue = selectedValues[selectedValues.length - 1];
-        if (lastValue) {
-          removeValue(lastValue);
-        }
+        let newValues: string[] | null = null;
+        setSelectedValues((curr) => {
+          if (curr.length === 0) return curr;
+          newValues = curr.slice(0, -1);
+          return newValues;
+        });
+        queueMicrotask(() => {
+          if (newValues !== null) {
+            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+          }
+          inputRef.current?.focus();
+        });
       }
-      // Prevent escape from propagating to close the popover immediately
-      // Let the command handle it first
       if (event.key === "Escape") {
         event.stopPropagation();
       }
     },
-    [searchValue, selectedValues, removeValue],
+    [searchValue, tableMeta, rowIndex, columnId],
   );
 
   const displayLabels = selectedValues
-    .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
+    .map((val) => optionByValue.get(val)?.label ?? val)
     .filter(Boolean);
+
+  const selectedValuesSet = React.useMemo(
+    () => new Set(selectedValues),
+    [selectedValues],
+  );
 
   const lineCount = getLineCount(rowHeight);
 
@@ -1169,8 +1190,7 @@ export function MultiSelectCell<TData>({
             <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
-                  const option = options.find((opt) => opt.value === value);
-                  const label = option?.label ?? value;
+                  const label = optionByValue.get(value)?.label ?? value;
 
                   return (
                     <Badge
@@ -1205,7 +1225,7 @@ export function MultiSelectCell<TData>({
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
                   {options.map((option) => {
-                    const isSelected = selectedValues.includes(option.value);
+                    const isSelected = selectedValuesSet.has(option.value);
 
                     return (
                       <CommandItem

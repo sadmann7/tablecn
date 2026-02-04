@@ -292,6 +292,15 @@ export function getColumnVariant(variant?: CellOpts["variant"]): {
   }
 }
 
+export function getEmptyCellValue(
+  variant: CellOpts["variant"] | undefined,
+): unknown {
+  if (variant === "multi-select" || variant === "file") return [];
+  if (variant === "number" || variant === "date") return null;
+  if (variant === "checkbox") return false;
+  return "";
+}
+
 export function getUrlHref(urlString: string): string {
   if (!urlString || urlString.trim() === "") return "";
 

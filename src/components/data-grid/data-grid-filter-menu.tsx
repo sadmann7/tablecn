@@ -53,9 +53,14 @@ import { cn } from "@/lib/utils";
 import type { FilterOperator, FilterValue } from "@/types/data-grid";
 
 const FILTER_SHORTCUT_KEY = "f";
-const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
+const REMOVE_FILTER_SHORTCUTS = new Set(["backspace", "delete"]);
 const FILTER_DEBOUNCE_MS = 300;
-const OPERATORS_WITHOUT_VALUE = ["isEmpty", "isNotEmpty", "isTrue", "isFalse"];
+const OPERATORS_WITHOUT_VALUE = new Set([
+  "isEmpty",
+  "isNotEmpty",
+  "isTrue",
+  "isFalse",
+]);
 
 interface DataGridFilterMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
@@ -177,7 +182,7 @@ export function DataGridFilterMenu<TData>({
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
       if (
-        REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase()) &&
+        REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase()) &&
         columnFilters.length > 0
       ) {
         event.preventDefault();
@@ -340,7 +345,7 @@ function DataGridFilterItem<TData>({
   const operator = filterValue?.operator ?? getDefaultOperator(variant);
 
   const operators = getOperatorsForVariant(variant);
-  const needsValue = !OPERATORS_WITHOUT_VALUE.includes(operator);
+  const needsValue = !OPERATORS_WITHOUT_VALUE.has(operator);
 
   const column = table.getColumn(filter.id);
 
@@ -357,7 +362,7 @@ function DataGridFilterItem<TData>({
         return;
       }
 
-      if (REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase())) {
+      if (REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase())) {
         event.preventDefault();
         onFilterRemove(filter.id);
       }
