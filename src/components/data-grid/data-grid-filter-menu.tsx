@@ -55,7 +55,12 @@ import type { FilterOperator, FilterValue } from "@/types/data-grid";
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = new Set(["backspace", "delete"]);
 const FILTER_DEBOUNCE_MS = 300;
-const OPERATORS_WITHOUT_VALUE = new Set(["isEmpty", "isNotEmpty", "isTrue", "isFalse"]);
+const OPERATORS_WITHOUT_VALUE = new Set([
+  "isEmpty",
+  "isNotEmpty",
+  "isTrue",
+  "isFalse",
+]);
 
 interface DataGridFilterMenuProps<TData>
   extends React.ComponentProps<typeof PopoverContent> {
