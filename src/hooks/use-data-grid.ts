@@ -68,6 +68,14 @@ const VALID_BOOLEANS = new Set([
   "unchecked",
 ]);
 
+// Helper to get empty value for a cell variant
+function getEmptyValueForVariant(variant: string | undefined): unknown {
+  if (variant === "multi-select" || variant === "file") return [];
+  if (variant === "number" || variant === "date") return null;
+  if (variant === "checkbox") return false;
+  return "";
+}
+
 interface DataGridState {
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
@@ -989,21 +997,14 @@ function useDataGrid<TData>({
           const allUpdates = [...updates];
 
           if (currentState.cutCells.size > 0) {
+            // Build column map for O(1) lookups
+            const columnById = new Map(tableColumns.map((c) => [c.id, c]));
+
             for (const cellKey of currentState.cutCells) {
               const { rowIndex, columnId } = parseCellKey(cellKey);
-
-              const column = tableColumns.find((c) => c.id === columnId);
+              const column = columnById.get(columnId);
               const cellVariant = column?.columnDef?.meta?.cell?.variant;
-
-              let emptyValue: unknown = "";
-              if (cellVariant === "multi-select" || cellVariant === "file") {
-                emptyValue = [];
-              } else if (cellVariant === "number" || cellVariant === "date") {
-                emptyValue = null;
-              } else if (cellVariant === "checkbox") {
-                emptyValue = false;
-              }
-
+              const emptyValue = getEmptyValueForVariant(cellVariant);
               allUpdates.push({ rowIndex, columnId, value: emptyValue });
             }
 
@@ -1521,10 +1522,13 @@ function useDataGrid<TData>({
         const row = rows[rowIndex];
         if (!row) continue;
 
+        // Build cell map once per row for O(1) lookups
+        const cellById = new Map(
+          row.getVisibleCells().map((c) => [c.column.id, c]),
+        );
+
         for (const columnId of columnIds) {
-          const cell = row
-            .getVisibleCells()
-            .find((c) => c.column.id === columnId);
+          const cell = cellById.get(columnId);
           if (!cell) continue;
 
           const value = cell.getValue();
@@ -2493,22 +2497,14 @@ function useDataGrid<TData>({
 
           const currentTable = tableRef.current;
           const tableColumns = currentTable?.getAllColumns() ?? [];
+          // Build column map for O(1) lookups
+          const columnById = new Map(tableColumns.map((c) => [c.id, c]));
 
           for (const cellKey of cellsToClear) {
             const { rowIndex, columnId } = parseCellKey(cellKey);
-
-            const column = tableColumns.find((c) => c.id === columnId);
+            const column = columnById.get(columnId);
             const cellVariant = column?.columnDef?.meta?.cell?.variant;
-
-            let emptyValue: unknown = "";
-            if (cellVariant === "multi-select" || cellVariant === "file") {
-              emptyValue = [];
-            } else if (cellVariant === "number" || cellVariant === "date") {
-              emptyValue = null;
-            } else if (cellVariant === "checkbox") {
-              emptyValue = false;
-            }
-
+            const emptyValue = getEmptyValueForVariant(cellVariant);
             updates.push({ rowIndex, columnId, value: emptyValue });
           }
 
