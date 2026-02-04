@@ -15,9 +15,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "@tanstack/query-db-collection",
       "@tanstack/react-db",
-      "tanstack/react-query",
-      "tanstack/react-table",
-      "tanstack/react-virtual",
+      "@tanstack/react-query",
+      "@tanstack/react-table",
+      "@tanstack/react-virtual",
     ],
   },
 };

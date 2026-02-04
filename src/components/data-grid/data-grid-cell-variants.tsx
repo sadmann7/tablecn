@@ -874,6 +874,10 @@ export function SelectCell<TData>({
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "select" ? cellOpts.options : [];
+  const optionByValue = React.useMemo(
+    () => new Map(options.map((option) => [option.value, option])),
+    [options],
+  );
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -918,8 +922,7 @@ export function SelectCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta],
   );
 
-  const displayLabel =
-    options.find((opt) => opt.value === value)?.label ?? value;
+  const displayLabel = optionByValue.get(value)?.label ?? value;
 
   return (
     <DataGridCellWrapper<TData>
@@ -1015,6 +1018,10 @@ export function MultiSelectCell<TData>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = cellOpts?.variant === "multi-select" ? cellOpts.options : [];
+  const optionByValue = React.useMemo(
+    () => new Map(options.map((option) => [option.value, option])),
+    [options],
+  );
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const prevCellValueRef = React.useRef(cellValue);
@@ -1131,8 +1138,13 @@ export function MultiSelectCell<TData>({
   );
 
   const displayLabels = selectedValues
-    .map((val) => options.find((opt) => opt.value === val)?.label ?? val)
+    .map((val) => optionByValue.get(val)?.label ?? val)
     .filter(Boolean);
+
+  const selectedValuesSet = React.useMemo(
+    () => new Set(selectedValues),
+    [selectedValues],
+  );
 
   const lineCount = getLineCount(rowHeight);
 
@@ -1175,8 +1187,7 @@ export function MultiSelectCell<TData>({
             <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
-                  const option = options.find((opt) => opt.value === value);
-                  const label = option?.label ?? value;
+                  const label = optionByValue.get(value)?.label ?? value;
 
                   return (
                     <Badge
@@ -1211,7 +1222,7 @@ export function MultiSelectCell<TData>({
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
                   {options.map((option) => {
-                    const isSelected = selectedValues.includes(option.value);
+                    const isSelected = selectedValuesSet.has(option.value);
 
                     return (
                       <CommandItem
