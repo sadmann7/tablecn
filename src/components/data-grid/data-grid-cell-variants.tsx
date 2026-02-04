@@ -1113,23 +1113,16 @@ export function MultiSelectCell<TData>({
 
   const onInputKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
-      // Handle backspace when input is empty - remove last selected item
       if (event.key === "Backspace" && searchValue === "") {
+        event.preventDefault();
         setSelectedValues((curr) => {
           if (curr.length === 0) return curr;
-          event.preventDefault();
-          const lastValue = curr[curr.length - 1];
-          if (lastValue) {
-            const newValues = curr.slice(0, -1);
-            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
-            setTimeout(() => inputRef.current?.focus(), 0);
-            return newValues;
-          }
-          return curr;
+          const newValues = curr.slice(0, -1);
+          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+          setTimeout(() => inputRef.current?.focus(), 0);
+          return newValues;
         });
       }
-      // Prevent escape from propagating to close the popover immediately
-      // Let the command handle it first
       if (event.key === "Escape") {
         event.stopPropagation();
       }

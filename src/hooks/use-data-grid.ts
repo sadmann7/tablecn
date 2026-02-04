@@ -553,6 +553,10 @@ function useDataGrid<TData>({
     const seenColumnIds = new Set<string>();
     const cellData = new Map<string, string>();
     const rowIndices = new Set<number>();
+    const rowCellMaps = new Map<
+      number,
+      Map<string, ReturnType<Row<TData>["getVisibleCells"]>[number]>
+    >();
 
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
@@ -566,8 +570,11 @@ function useDataGrid<TData>({
 
       const row = rows[rowIndex];
       if (row) {
-        const visibleCells = row.getVisibleCells();
-        const cellMap = new Map(visibleCells.map((c) => [c.column.id, c]));
+        let cellMap = rowCellMaps.get(rowIndex);
+        if (!cellMap) {
+          cellMap = new Map(row.getVisibleCells().map((c) => [c.column.id, c]));
+          rowCellMaps.set(rowIndex, cellMap);
+        }
         const cell = cellMap.get(columnId);
         if (cell) {
           const value = cell.getValue();
