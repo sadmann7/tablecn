@@ -527,12 +527,12 @@ function useDataGrid<TData>({
     [columnIds, store],
   );
 
-  const onCellsCopy = React.useCallback(async () => {
+  const serializeCellsToTsv = React.useCallback(() => {
     const currentState = store.getState();
 
     let selectedCellsArray: string[];
     if (!currentState.selectionState.selectedCells.size) {
-      if (!currentState.focusedCell) return;
+      if (!currentState.focusedCell) return null;
       const focusedCellKey = getCellKey(
         currentState.focusedCell.rowIndex,
         currentState.focusedCell.columnId,
@@ -546,25 +546,26 @@ function useDataGrid<TData>({
 
     const currentTable = tableRef.current;
     const rows = currentTable?.getRowModel().rows;
-    if (!rows) return;
+    if (!rows) return null;
 
     const selectedColumnIds: string[] = [];
+    const cellData = new Map<string, string>();
+    const rowIndices = new Set<number>();
 
     for (const cellKey of selectedCellsArray) {
-      const { columnId } = parseCellKey(cellKey);
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+
       if (columnId && !selectedColumnIds.includes(columnId)) {
         selectedColumnIds.push(columnId);
       }
-    }
 
-    const cellData = new Map<string, string>();
-    for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+
       const row = rows[rowIndex];
       if (row) {
-        const cell = row
-          .getVisibleCells()
-          .find((c) => c.column.id === columnId);
+        const visibleCells = row.getVisibleCells();
+        const cellMap = new Map(visibleCells.map((c) => [c.column.id, c]));
+        const cell = cellMap.get(columnId);
         if (cell) {
           const value = cell.getValue();
           const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
@@ -583,12 +584,9 @@ function useDataGrid<TData>({
       }
     }
 
-    const rowIndices = new Set<number>();
     const colIndices = new Set<number>();
-
     for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      rowIndices.add(rowIndex);
+      const { columnId } = parseCellKey(cellKey);
       const colIndex = selectedColumnIds.indexOf(columnId);
       if (colIndex >= 0) {
         colIndices.add(colIndex);
@@ -609,6 +607,15 @@ function useDataGrid<TData>({
           .join("\t"),
       )
       .join("\n");
+
+    return { tsvData, selectedCellsArray };
+  }, [store]);
+
+  const onCellsCopy = React.useCallback(async () => {
+    const result = serializeCellsToTsv();
+    if (!result) return;
+
+    const { tsvData, selectedCellsArray } = result;
 
     try {
       await navigator.clipboard.writeText(tsvData);
@@ -628,92 +635,15 @@ function useDataGrid<TData>({
         error instanceof Error ? error.message : "Failed to copy to clipboard",
       );
     }
-  }, [store]);
+  }, [store, serializeCellsToTsv]);
 
   const onCellsCut = React.useCallback(async () => {
     if (propsRef.current.readOnly) return;
 
-    const currentState = store.getState();
+    const result = serializeCellsToTsv();
+    if (!result) return;
 
-    let selectedCellsArray: string[];
-    if (!currentState.selectionState.selectedCells.size) {
-      if (!currentState.focusedCell) return;
-      const focusedCellKey = getCellKey(
-        currentState.focusedCell.rowIndex,
-        currentState.focusedCell.columnId,
-      );
-      selectedCellsArray = [focusedCellKey];
-    } else {
-      selectedCellsArray = Array.from(
-        currentState.selectionState.selectedCells,
-      );
-    }
-
-    const currentTable = tableRef.current;
-    const rows = currentTable?.getRowModel().rows;
-    if (!rows) return;
-
-    const selectedColumnIds: string[] = [];
-
-    for (const cellKey of selectedCellsArray) {
-      const { columnId } = parseCellKey(cellKey);
-      if (columnId && !selectedColumnIds.includes(columnId)) {
-        selectedColumnIds.push(columnId);
-      }
-    }
-
-    const cellData = new Map<string, string>();
-    for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      const row = rows[rowIndex];
-      if (row) {
-        const cell = row
-          .getVisibleCells()
-          .find((c) => c.column.id === columnId);
-        if (cell) {
-          const value = cell.getValue();
-          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
-
-          let serializedValue = "";
-          if (cellVariant === "file" || cellVariant === "multi-select") {
-            serializedValue = value ? JSON.stringify(value) : "";
-          } else if (value instanceof Date) {
-            serializedValue = value.toISOString();
-          } else {
-            serializedValue = String(value ?? "");
-          }
-
-          cellData.set(cellKey, serializedValue);
-        }
-      }
-    }
-
-    const rowIndices = new Set<number>();
-    const colIndices = new Set<number>();
-
-    for (const cellKey of selectedCellsArray) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
-      rowIndices.add(rowIndex);
-      const colIndex = selectedColumnIds.indexOf(columnId);
-      if (colIndex >= 0) {
-        colIndices.add(colIndex);
-      }
-    }
-
-    const sortedRowIndices = Array.from(rowIndices).sort((a, b) => a - b);
-    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
-    const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
-
-    const tsvData = sortedRowIndices
-      .map((rowIndex) =>
-        sortedColumnIds
-          .map((columnId) => {
-            const cellKey = `${rowIndex}:${columnId}`;
-            return cellData.get(cellKey) ?? "";
-          })
-          .join("\t"),
-      )
-      .join("\n");
+    const { tsvData, selectedCellsArray } = result;
 
     try {
       await navigator.clipboard.writeText(tsvData);
@@ -730,7 +660,7 @@ function useDataGrid<TData>({
         error instanceof Error ? error.message : "Failed to cut to clipboard",
       );
     }
-  }, [store, propsRef]);
+  }, [store, propsRef, serializeCellsToTsv]);
 
   const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
     if (element && document.activeElement !== element) {
@@ -1669,14 +1599,18 @@ function useDataGrid<TData>({
     }
   }, [store, focusCell]);
 
+  // Build Set once when searchMatches changes for O(1) lookups
+  const searchMatchSet = React.useMemo(() => {
+    return new Set(
+      searchMatches.map((m) => getCellKey(m.rowIndex, m.columnId)),
+    );
+  }, [searchMatches]);
+
   const getIsSearchMatch = React.useCallback(
     (rowIndex: number, columnId: string) => {
-      const currentSearchMatches = store.getState().searchMatches;
-      return currentSearchMatches.some(
-        (match) => match.rowIndex === rowIndex && match.columnId === columnId,
-      );
+      return searchMatchSet.has(getCellKey(rowIndex, columnId));
     },
-    [store],
+    [searchMatchSet],
   );
 
   const getIsActiveSearchMatch = React.useCallback(

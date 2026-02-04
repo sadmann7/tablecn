@@ -1031,16 +1031,17 @@ export function MultiSelectCell<TData>({
   const onValueChange = React.useCallback(
     (value: string) => {
       if (readOnly) return;
-      const newValues = selectedValues.includes(value)
-        ? selectedValues.filter((v) => v !== value)
-        : [...selectedValues, value];
-
-      setSelectedValues(newValues);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+      setSelectedValues((curr) => {
+        const newValues = curr.includes(value)
+          ? curr.filter((v) => v !== value)
+          : [...curr, value];
+        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        return newValues;
+      });
       setSearchValue("");
       queueMicrotask(() => inputRef.current?.focus());
     },
-    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const removeValue = React.useCallback(
@@ -1048,13 +1049,15 @@ export function MultiSelectCell<TData>({
       if (readOnly) return;
       event?.stopPropagation();
       event?.preventDefault();
-      const newValues = selectedValues.filter((v) => v !== valueToRemove);
-      setSelectedValues(newValues);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+      setSelectedValues((curr) => {
+        const newValues = curr.filter((v) => v !== valueToRemove);
+        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        return newValues;
+      });
       // Focus back on input after removing
       setTimeout(() => inputRef.current?.focus(), 0);
     },
-    [selectedValues, tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly],
   );
 
   const clearAll = React.useCallback(() => {
@@ -1104,16 +1107,19 @@ export function MultiSelectCell<TData>({
   const onInputKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       // Handle backspace when input is empty - remove last selected item
-      if (
-        event.key === "Backspace" &&
-        searchValue === "" &&
-        selectedValues.length > 0
-      ) {
-        event.preventDefault();
-        const lastValue = selectedValues[selectedValues.length - 1];
-        if (lastValue) {
-          removeValue(lastValue);
-        }
+      if (event.key === "Backspace" && searchValue === "") {
+        setSelectedValues((curr) => {
+          if (curr.length === 0) return curr;
+          event.preventDefault();
+          const lastValue = curr[curr.length - 1];
+          if (lastValue) {
+            const newValues = curr.slice(0, -1);
+            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+            setTimeout(() => inputRef.current?.focus(), 0);
+            return newValues;
+          }
+          return curr;
+        });
       }
       // Prevent escape from propagating to close the popover immediately
       // Let the command handle it first
@@ -1121,7 +1127,7 @@ export function MultiSelectCell<TData>({
         event.stopPropagation();
       }
     },
-    [searchValue, selectedValues, removeValue],
+    [searchValue, tableMeta, rowIndex, columnId],
   );
 
   const displayLabels = selectedValues
