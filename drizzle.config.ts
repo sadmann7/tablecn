@@ -1,5 +1,4 @@
 import type { Config } from "drizzle-kit";
-import { env } from "@/env.js";
 
 import { DATABASE_PREFIX } from "@/lib/constants";
 
@@ -8,7 +7,7 @@ export default {
   dialect: "postgresql",
   out: "./drizzle",
   dbCredentials: {
-    url: env.DATABASE_URL,
+    url: process.env.DATABASE_URL!,
   },
   tablesFilter: [`${DATABASE_PREFIX}_*`],
 } satisfies Config;

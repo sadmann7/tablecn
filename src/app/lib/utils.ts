@@ -32,18 +32,6 @@ const availableTricks = [
   "Smith Grind",
 ] as const;
 
-const sampleMedia = [
-  { name: "trick_clip.mp4", type: "video/mp4", sizeRange: [5000, 50000] },
-  { name: "skate_edit.mp4", type: "video/mp4", sizeRange: [10000, 100000] },
-  { name: "photo_1.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
-  { name: "photo_2.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
-  {
-    name: "sponsor_contract.pdf",
-    type: "application/pdf",
-    sizeRange: [100, 500],
-  },
-] as const;
-
 export function generateRandomSkater(input?: Partial<Skater>): Skater {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
@@ -53,23 +41,6 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
     trickCount > 0
       ? faker.helpers.arrayElements([...availableTricks], trickCount)
       : null;
-
-  const hasMedia = faker.datatype.boolean({ probability: 0.3 });
-  const media = hasMedia
-    ? faker.helpers
-        .arrayElements(sampleMedia, { min: 1, max: 2 })
-        .map((file, index) => ({
-          id: `media-${generateId("media")}-${index}`,
-          name: file.name,
-          size:
-            faker.number.int({
-              min: file.sizeRange[0],
-              max: file.sizeRange[1],
-            }) * 1024,
-          type: file.type,
-          url: `https://example.com/media/${file.name}`,
-        }))
-    : null;
 
   return {
     id: generateId("skater"),
@@ -85,7 +56,6 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
     }),
     isPro: faker.datatype.boolean({ probability: 0.3 }),
     tricks,
-    media,
     order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),

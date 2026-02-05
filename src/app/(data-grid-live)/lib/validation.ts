@@ -1,14 +1,6 @@
 import { z } from "zod";
 import { skaters } from "@/db/schema";
 
-const mediaSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  size: z.number(),
-  type: z.string(),
-  url: z.string().optional(),
-});
-
 export const skaterSchema = z.object({
   id: z.string(),
   order: z.number(),
@@ -21,7 +13,6 @@ export const skaterSchema = z.object({
   startedSkating: z.coerce.date().nullable(),
   isPro: z.boolean(),
   tricks: z.array(z.string()).nullable(),
-  media: z.array(mediaSchema).nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date().nullable(),
 });
@@ -38,7 +29,6 @@ export const insertSkaterSchema = z.object({
   startedSkating: z.coerce.date().nullable().optional(),
   isPro: z.boolean().optional(),
   tricks: z.array(z.string()).nullable().optional(),
-  media: z.array(mediaSchema).nullable().optional(),
 });
 
 export const insertSkatersSchema = z.object({
@@ -56,7 +46,6 @@ export const updateSkaterSchema = z.object({
   startedSkating: z.coerce.date().nullable().optional(),
   isPro: z.boolean().optional(),
   tricks: z.array(z.string()).nullable().optional(),
-  media: z.array(mediaSchema).nullable().optional(),
 });
 
 export const updateSkatersSchema = z.object({

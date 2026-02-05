@@ -41,7 +41,6 @@ export const skaters = pgTable("skaters", {
   startedSkating: timestamp("started_skating"),
   isPro: boolean("is_pro").notNull().default(false),
   tricks: jsonb("tricks").$type<string[]>(),
-  media: jsonb("media").$type<Array<FileCellData>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .default(sql`current_timestamp`)

@@ -27,7 +27,6 @@ import {
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
-import { useUploadThing } from "@/lib/uploadthing";
 import { skatersCollection } from "../lib/collections";
 import type { SkaterSchema } from "../lib/validation";
 import { DataGridActionBar } from "./data-grid-action-bar";
@@ -97,8 +96,6 @@ export function DataGridLiveDemo() {
     },
     [sorting],
   );
-
-  const { startUpload } = useUploadThing("skaterMedia");
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
@@ -226,23 +223,6 @@ export function DataGridLiveDemo() {
           label: "Pro",
           cell: {
             variant: "checkbox",
-          },
-        },
-      },
-      {
-        id: "media",
-        accessorKey: "media",
-        header: "Media",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Media",
-          cell: {
-            variant: "file",
-            maxFileSize: 10 * 1024 * 1024,
-            maxFiles: 5,
-            accept: "image/*,pdf/*,audio/*,video/*",
-            multiple: true,
           },
         },
       },
@@ -396,7 +376,6 @@ export function DataGridLiveDemo() {
             startedSkating: null,
             isPro: false,
             tricks: null,
-            media: null,
             order: maxOrder + i + 1,
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -424,64 +403,12 @@ export function DataGridLiveDemo() {
     [trackRowsDelete],
   );
 
-  const onFilesUpload: NonNullable<
-    UseDataGridProps<SkaterSchema>["onFilesUpload"]
-  > = React.useCallback(
-    async ({ files }) => {
-      // Try to upload via UploadThing, fall back to simulation if not configured
-      try {
-        const uploadedFiles = await startUpload(files);
-
-        if (uploadedFiles) {
-          return uploadedFiles.map((file) => ({
-            id: file.key,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: file.ufsUrl,
-          }));
-        }
-      } catch {
-        // UploadThing not configured, fall back to simulation
-      }
-
-      // Simulate upload for demo/development without UploadThing
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
-      return files.map((file) => ({
-        id: crypto.randomUUID(),
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        url: URL.createObjectURL(file),
-      }));
-    },
-    [startUpload],
-  );
-
-  const onFilesDelete: NonNullable<
-    UseDataGridProps<SkaterSchema>["onFilesDelete"]
-  > = React.useCallback(async ({ fileIds }) => {
-    // Try to delete from UploadThing, silently fail if not configured
-    try {
-      await fetch("/api/uploadthing/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileKeys: fileIds }),
-      });
-    } catch {
-      // UploadThing not configured or delete failed, ignore
-    }
-  }, []);
-
   const { table, tableMeta, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
     onRowsAdd,
     onRowsDelete,
-    onFilesUpload,
-    onFilesDelete,
     columns,
     getRowId: (row) => row.id,
     initialState: {
