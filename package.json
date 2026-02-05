@@ -71,11 +71,9 @@
     "react-day-picker": "9.13.0",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.71.1",
-    "server-only": "^0.0.1",
     "shadcn": "3.6.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "vaul": "^1.1.2",
     "zod": "^4.3.5"
   },
   "devDependencies": {
