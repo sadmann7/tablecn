@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
 import { UTApi } from "uploadthing/server";
-import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const utapi = new UTApi();
 
 export async function POST(request: Request) {
-  const rateLimit = await checkRateLimit();
-  if (!rateLimit.success) {
-    return rateLimitResponse(rateLimit);
-  }
-
   try {
     const { fileKeys } = (await request.json()) as { fileKeys: string[] };
 

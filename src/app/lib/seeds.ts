@@ -1,27 +1,7 @@
 import { db } from "@/db/index";
-import { type Skater, skaters, type Task, tasks } from "@/db/schema";
+import { type Skater, skaters } from "@/db/schema";
 
-import { generateRandomSkater, generateRandomTask } from "./utils";
-
-export async function seedTasks(input: { count: number }) {
-  const count = input.count ?? 100;
-
-  try {
-    const allTasks: Task[] = [];
-
-    for (let i = 0; i < count; i++) {
-      allTasks.push(generateRandomTask());
-    }
-
-    await db.delete(tasks);
-
-    console.log("📝 Inserting tasks", allTasks.length);
-
-    await db.insert(tasks).values(allTasks).onConflictDoNothing();
-  } catch (err) {
-    console.error(err);
-  }
-}
+import { generateRandomSkater } from "./utils";
 
 export async function seedSkaters(input: { count: number }) {
   const count = input.count ?? 100;

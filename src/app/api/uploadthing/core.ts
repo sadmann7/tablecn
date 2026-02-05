@@ -1,6 +1,4 @@
 import { createUploadthing, type FileRouter } from "uploadthing/next";
-import { UploadThingError } from "uploadthing/server";
-import { checkRateLimit } from "@/lib/rate-limit";
 
 const f = createUploadthing();
 
@@ -11,14 +9,7 @@ export const ourFileRouter = {
     audio: { maxFileSize: "8MB", maxFileCount: 5 },
     video: { maxFileSize: "8MB", maxFileCount: 5 },
   })
-    .middleware(async ({ req }) => {
-      const limit = await checkRateLimit(req);
-      if (!limit.success) {
-        throw new UploadThingError(
-          "Rate limit exceeded, please try again later.",
-        );
-      }
-
+    .middleware(async () => {
       return {};
     })
     .onUploadComplete(async ({ file }) => {

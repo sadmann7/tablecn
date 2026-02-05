@@ -16,11 +16,6 @@ export function SiteHeader() {
             <LayoutGrid />
           </Link>
         </Button>
-        <nav className="flex w-full items-center text-sm">
-          <ActiveLink href="/data-grid">Data Grid</ActiveLink>
-          <ActiveLink href="/data-grid-live">Data Grid Live</ActiveLink>
-          <DocsLink />
-        </nav>
         <nav className="flex flex-1 items-center md:justify-end">
           <Button variant="ghost" size="icon" className="size-8" asChild>
             <Link

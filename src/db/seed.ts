@@ -1,7 +1,6 @@
-import { seedSkaters, seedTasks } from "@/app/lib/seeds";
+import { seedSkaters } from "@/app/lib/seeds";
 
 const SEED_FUNCTIONS = {
-  tasks: () => seedTasks({ count: 100 }),
   skaters: () => seedSkaters({ count: 100 }),
 } as const;
 
