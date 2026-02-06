@@ -12,6 +12,7 @@ import {
   getStyleIcon,
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { DataGridExportMenu } from "@/components/data-grid/data-grid-export-menu";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import {
   DataGridFilterPresets,
@@ -591,6 +592,12 @@ export function DataGridLiveDemo() {
             enablePaste
             enableRowAdd
             enableRowsDelete
+          />
+          <DataGridExportMenu
+            table={table}
+            filename="skaters"
+            excludeColumns={["select"]}
+            align="end"
           />
           <DataGridFilterMenu table={table} align="end" />
           <DataGridSortMenu table={table} align="end" />
