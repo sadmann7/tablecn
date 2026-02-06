@@ -147,6 +147,8 @@ export function ShortTextCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId],
   );
 
+  const isFirstEditRef = React.useRef(true);
+  
   React.useEffect(() => {
     if (isEditing && cellRef.current) {
       cellRef.current.focus();
@@ -155,14 +157,18 @@ export function ShortTextCell<TData>({
         cellRef.current.textContent = value;
       }
 
-      if (cellRef.current.textContent) {
+      // Only set cursor position on first edit, not on subsequent value changes
+      if (isFirstEditRef.current && cellRef.current.textContent) {
         const range = document.createRange();
         const selection = window.getSelection();
         range.selectNodeContents(cellRef.current);
         range.collapse(false);
         selection?.removeAllRanges();
         selection?.addRange(range);
+        isFirstEditRef.current = false;
       }
+    } else if (!isEditing) {
+      isFirstEditRef.current = true;
     }
   }, [isEditing, value]);
 
@@ -667,6 +673,8 @@ export function UrlCell<TData>({
     [isEditing, value],
   );
 
+  const isFirstEditRefUrl = React.useRef(true);
+  
   React.useEffect(() => {
     if (isEditing && cellRef.current) {
       cellRef.current.focus();
@@ -675,14 +683,18 @@ export function UrlCell<TData>({
         cellRef.current.textContent = value;
       }
 
-      if (cellRef.current.textContent) {
+      // Only set cursor position on first edit, not on subsequent value changes
+      if (isFirstEditRefUrl.current && cellRef.current.textContent) {
         const range = document.createRange();
         const selection = window.getSelection();
         range.selectNodeContents(cellRef.current);
         range.collapse(false);
         selection?.removeAllRanges();
         selection?.addRange(range);
+        isFirstEditRefUrl.current = false;
       }
+    } else if (!isEditing) {
+      isFirstEditRefUrl.current = true;
     }
   }, [isEditing, value]);
 
