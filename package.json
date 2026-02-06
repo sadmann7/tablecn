@@ -16,7 +16,6 @@
     "typecheck": "tsc --noEmit",
     "check": "pnpm lint && pnpm typecheck",
     "shadcn": "pnpm dlx shadcn@latest",
-    "build:registry": "shadcn build",
     "db:start": "docker compose up -d",
     "db:stop": "docker compose down",
     "db:generate": "dotenv drizzle-kit generate",
