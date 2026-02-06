@@ -578,7 +578,8 @@ export function DataGridLiveDemo() {
   const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
 
   return (
-    <div className="container flex flex-col gap-4 py-4">
+    <div className="flex flex-col gap-4 p-4">
+      {/* Maybe use "container" in classname for the parent div */}
       <div
         role="toolbar"
         aria-orientation="horizontal"

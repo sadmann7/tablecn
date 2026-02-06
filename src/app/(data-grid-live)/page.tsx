@@ -18,7 +18,7 @@ export default dynamic(
   {
     ssr: false,
     loading: () => (
-      <DataGridSkeleton className="container flex flex-col gap-4 py-4">
+      <DataGridSkeleton className="flex flex-col gap-4 p-4">
         <DataGridSkeletonToolbar actionCount={4} />
         <DataGridSkeletonGrid />
       </DataGridSkeleton>
