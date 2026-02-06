@@ -13,6 +13,10 @@ import {
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
+import {
+  DataGridFilterPresets,
+  type FilterPreset,
+} from "@/components/data-grid/data-grid-filter-presets";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
@@ -71,6 +75,47 @@ const trickSelectOptions = trickOptions.map((trick) => ({
   label: trick,
   value: trick,
 }));
+
+const filterPresets: FilterPreset<SkaterSchema>[] = [
+  {
+    id: "all",
+    label: "All Skaters",
+    filters: [],
+    columnVisibility: {},
+    sorting: [],
+  },
+  {
+    id: "pros",
+    label: "Pro Skaters",
+    filters: [{ id: "isPro", value: true }],
+    sorting: [{ id: "yearsSkating", desc: true }],
+    className:
+      "border-blue-300 text-blue-700 hover:bg-blue-100 hover:text-blue-800 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950 dark:hover:text-blue-300",
+    activeClassName:
+      "bg-blue-600 text-white ring-blue-400 hover:bg-blue-700 dark:bg-blue-700 dark:text-white dark:ring-blue-500 dark:hover:bg-blue-800",
+  },
+  {
+    id: "street",
+    label: "Street Style",
+    filters: [{ id: "style", value: "street" }],
+    columnVisibility: { stance: false, startedSkating: false, isPro: false },
+    sorting: [{ id: "name", desc: true }],
+    className:
+      "border-green-300 text-green-700 hover:bg-green-100 hover:text-green-800 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950 dark:hover:text-green-300",
+    activeClassName:
+      "bg-green-600 text-white ring-green-400 hover:bg-green-700 dark:bg-green-700 dark:text-white dark:ring-green-500 dark:hover:bg-green-800",
+  },
+  {
+    id: "veterans",
+    label: "10+ Years",
+    filters: [],
+    sorting: [{ id: "yearsSkating", desc: true }],
+    className:
+      "border-orange-300 text-orange-700 hover:bg-orange-100 hover:text-orange-800 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950 dark:hover:text-orange-300",
+    activeClassName:
+      "bg-orange-600 text-white ring-orange-400 hover:bg-orange-700 dark:bg-orange-700 dark:text-white dark:ring-orange-500 dark:hover:bg-orange-800",
+  },
+];
 
 export function DataGridLiveDemo() {
   use(skatersCollection.preload());
@@ -498,26 +543,31 @@ export function DataGridLiveDemo() {
       <div
         role="toolbar"
         aria-orientation="horizontal"
-        className="flex items-center gap-2 self-end"
+        className="flex items-center gap-2"
       >
-        <DataGridKeyboardShortcuts
-          enableSearch
-          enableUndoRedo
-          enablePaste
-          enableRowAdd
-          enableRowsDelete
-        />
-        <DataGridFilterMenu table={table} align="end" />
-        <DataGridSortMenu table={table} align="end" />
-        <DataGridRowHeightMenu table={table} align="end" />
-        <DataGridViewMenu table={table} align="end" />
+        <DataGridFilterPresets table={table} presets={filterPresets} />
+        <div className="ml-auto flex items-center gap-2">
+          <DataGridKeyboardShortcuts
+            enableSearch
+            enableUndoRedo
+            enablePaste
+            enableRowAdd
+            enableRowsDelete
+          />
+          <DataGridFilterMenu table={table} align="end" />
+          <DataGridSortMenu table={table} align="end" />
+          <DataGridRowHeightMenu table={table} align="end" />
+          <DataGridViewMenu table={table} align="end" />
+        </div>
       </div>
       <DataGrid
         {...dataGridProps}
         table={table}
         tableMeta={tableMeta}
         height={height}
-        getRowClassName={({ isPro }) => (isPro ? "bg-green-500/10" : "")}
+        getRowClassName={({ status }) =>
+          status === "amateur" ? "bg-green-500/10" : ""
+        }
       />
       <DataGridActionBar
         table={table}
