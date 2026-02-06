@@ -1,8 +1,6 @@
 import { LayoutGrid } from "lucide-react";
 import Link from "next/link";
-import { ActiveLink } from "@/components/active-link";
 import { Icons } from "@/components/icons";
-import { DocsLink } from "@/components/layouts/docs-link";
 import { ModeToggle } from "@/components/layouts/mode-toggle";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/config/site";

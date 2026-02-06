@@ -1,113 +1,66 @@
-# [tablecn](https://tablecn.com)
+# Data Grid Live
 
-This is a shadcn table component with server-side sorting, filtering, and pagination. It is bootstrapped with `create-t3-app`.
+A feature-rich data grid component built with Next.js, shadcn/ui, and TanStack Table with real-time PostgreSQL persistence.
 
-[![tablecn](./public/images/screenshot.png)](https://tablecn.com)
+## Prerequisites
 
-[![Vercel OSS Program](https://vercel.com/oss/program-badge.svg)](https://vercel.com/oss)
+- Node.js 18+
+- pnpm
+- Docker (for local PostgreSQL)
 
-## Documentation
+## Quick Start
 
-See the [documentation](https://diceui.com/docs/components/data-table) to get started.
-
-## Tech Stack
-
-- **Framework:** [Next.js](https://nextjs.org)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com)
-- **UI Components:** [shadcn/ui](https://ui.shadcn.com)
-- **Table package:** [TanStack/react-table](https://tanstack.com/table/latest)
-- **Database:** [PlanetScale](https://planetscale.com)
-- **ORM:** [Drizzle ORM](https://orm.drizzle.team)
-- **Validation:** [Zod](https://zod.dev)
-
-## Features
-
-- [x] Server-side pagination, sorting, and filtering
-- [x] Customizable columns
-- [x] Auto generated filters from column definitions
-- [x] Dynamic `Data-Table-Toolbar` with search, filters, and actions
-- [x] `Notion/Airtable` like advanced filtering
-- [x] `Linear` like filter menu for command palette filtering
-- [x] Action bar on row selection
-
-## Running Locally
-
-### Quick Setup (with docker)
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/sadmann7/tablecn
-   cd tablecn
-   ```
-
-2. **Copy the environment variables**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Run the setup**
+1. **Install dependencies and start development**
 
    ```bash
    pnpm ollie
    ```
 
-   This will install dependencies, start the Docker PostgreSQL instance, set up the database schema, and seed it with sample data.
+   This command will:
+   - Install all dependencies
+   - Start Docker PostgreSQL instance
+   - Set up database schema
+   - Seed sample data
+   - Start development server
 
-### Manual Setup
+2. **Open the app**
 
-1. **Clone the repository**
+   Visit [http://localhost:3000/data-grid-live](http://localhost:3000/data-grid-live)
 
-   ```bash
-   git clone https://github.com/sadmann7/tablecn
-   cd tablecn
-   ```
+## Environment Variables
 
-2. **Install dependencies**
+Copy `.env.example` to `.env`:
 
-   ```bash
-   pnpm install
-   ```
+```bash
+cp .env.example .env
+```
 
-3. **Set up environment variables**
+The default configuration uses Docker PostgreSQL. Update `DATABASE_URL` if using a different database.
 
-   ```bash
-   cp .env.example .env
-   ```
+## Database Commands
 
-   Update the `.env` file with your database credentials.
+```bash
+pnpm db:start    # Start PostgreSQL container
+pnpm db:stop     # Stop PostgreSQL container
+pnpm db:setup    # Create schema and seed data
+pnpm db:reset    # Reset database (deletes all data)
+pnpm db:studio   # Open Drizzle Studio
+```
 
-4. **Choose your database approach:**
+## Development Commands
 
-   **Option A: Use Docker PostgreSQL**
+```bash
+pnpm dev         # Start dev server
+pnpm build       # Build for production
+pnpm start       # Start production server
+pnpm lint        # Run linter
+pnpm typecheck   # Run TypeScript checks
+```
 
-   ```bash
-   # Start PostgreSQL container
-   pnpm db:start
-   
-   # Set up database schema and seed data
-   pnpm db:setup
-   
-   # Start development server
-   pnpm dev
-   ```
+## Tech Stack
 
-   **Option B: Use existing PostgreSQL database**
-
-   ```bash
-   # Update .env with your database URL
-   # Then set up database schema and seed data
-   pnpm db:setup
-   
-   # Start development server
-   pnpm dev
-   ```
-
-## How do I deploy this?
-
-Follow the deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
-
-## Credits
-
-- [shadcn/ui](https://github.com/shadcn-ui/ui/tree/main/apps/v4/app/(app)/examples/tasks) - For the initial implementation of the data table.
+- **Framework:** Next.js 16
+- **UI:** shadcn/ui + Tailwind CSS
+- **Table:** TanStack Table
+- **Database:** PostgreSQL + Drizzle ORM
+- **State:** TanStack Query + TanStack DB
