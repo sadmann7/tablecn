@@ -31,6 +31,7 @@ import {
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
+import type { CellSelectOptionColor } from "@/types/data-grid";
 import { skatersCollection } from "../lib/collections";
 import type { SkaterSchema } from "../lib/validation";
 import { DataGridActionBar } from "./data-grid-action-bar";
@@ -39,18 +40,41 @@ const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
   value: stance,
   icon: getStanceIcon(stance),
+  color: (
+    { regular: "blue", goofy: "purple" } satisfies Record<
+      string,
+      CellSelectOptionColor
+    >
+  )[stance],
 }));
 
 const styleOptions = skaters.style.enumValues.map((style) => ({
   label: style.charAt(0).toUpperCase() + style.slice(1).replace("-", " "),
   value: style,
   icon: getStyleIcon(style),
+  color: (
+    {
+      street: "green",
+      vert: "orange",
+      park: "cyan",
+      freestyle: "indigo",
+      "all-around": "amber",
+    } satisfies Record<string, CellSelectOptionColor>
+  )[style],
 }));
 
 const statusOptions = skaters.status.enumValues.map((status) => ({
   label: status.charAt(0).toUpperCase() + status.slice(1),
   value: status,
   icon: getSkaterStatusIcon(status),
+  color: (
+    {
+      amateur: "secondary",
+      sponsored: "blue",
+      pro: "green",
+      legend: "yellow",
+    } satisfies Record<string, CellSelectOptionColor>
+  )[status],
 }));
 
 const trickOptions = [

@@ -4,11 +4,27 @@ export type Direction = "ltr" | "rtl";
 
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
+export type CellSelectOptionColor =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "blue"
+  | "green"
+  | "red"
+  | "yellow"
+  | "purple"
+  | "orange"
+  | "pink"
+  | "indigo"
+  | "cyan"
+  | "amber";
+
 export interface CellSelectOption {
   label: string;
   value: string;
   icon?: React.FC<React.SVGProps<SVGSVGElement>>;
   count?: number;
+  color?: CellSelectOptionColor;
 }
 
 export type CellOpts =
