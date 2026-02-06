@@ -42,6 +42,7 @@ interface DataGridRowProps<TData> extends React.ComponentProps<"div"> {
   readOnly: boolean;
   stretchColumns: boolean;
   adjustLayout: boolean;
+  getRowClassName?: (data: TData) => string;
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
@@ -144,6 +145,11 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
+  // Re-render if getRowClassName changed
+  if (prev.getRowClassName !== next.getRowClassName) {
+    return false;
+  }
+
   // Skip re-render - props are equal
   return true;
 }) as typeof DataGridRowImpl;
@@ -166,6 +172,7 @@ function DataGridRowImpl<TData>({
   readOnly,
   stretchColumns,
   adjustLayout,
+  getRowClassName,
   className,
   style,
   ref,
@@ -213,6 +220,7 @@ function DataGridRowImpl<TData>({
       className={cn(
         "absolute flex w-full border-b [content-visibility:auto]",
         !adjustLayout && "will-change-transform",
+        getRowClassName?.(row.original),
         className,
       )}
       style={{

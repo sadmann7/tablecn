@@ -139,6 +139,7 @@ interface UseDataGridProps<TData>
   enableSearch?: boolean;
   enablePaste?: boolean;
   readOnly?: boolean;
+  getRowClassName?: (data: TData) => string;
 }
 
 function useDataGrid<TData>({
@@ -148,6 +149,7 @@ function useDataGrid<TData>({
   overscan = OVERSCAN,
   dir: dirProp,
   initialState,
+  getRowClassName,
   ...props
 }: UseDataGridProps<TData>) {
   const dir = useDirection(dirProp);
@@ -3215,6 +3217,7 @@ function useDataGrid<TData>({
       pasteDialog,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
       adjustLayout,
+      getRowClassName,
     }),
     [
       propsRef,
@@ -3237,6 +3240,7 @@ function useDataGrid<TData>({
       pasteDialog,
       onRowAdd,
       adjustLayout,
+      getRowClassName,
     ],
   );
 }

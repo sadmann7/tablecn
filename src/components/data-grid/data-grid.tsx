@@ -53,6 +53,7 @@ export function DataGrid<TData>({
   height = 600,
   stretchColumns = false,
   adjustLayout = false,
+  getRowClassName,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -238,6 +239,7 @@ export function DataGrid<TData>({
                 adjustLayout={adjustLayout}
                 stretchColumns={stretchColumns}
                 readOnly={readOnly}
+                getRowClassName={getRowClassName}
               />
             );
           })}

@@ -517,6 +517,7 @@ export function DataGridLiveDemo() {
         table={table}
         tableMeta={tableMeta}
         height={height}
+        getRowClassName={({ isPro }) => (isPro ? "bg-green-500/10" : "")}
       />
       <DataGridActionBar
         table={table}
