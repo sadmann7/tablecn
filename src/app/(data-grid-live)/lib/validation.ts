@@ -13,6 +13,7 @@ export const skaterSchema = z.object({
   startedSkating: z.coerce.date().nullable(),
   isPro: z.boolean(),
   tricks: z.array(z.string()).nullable(),
+  notes: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date().nullable(),
 });
@@ -29,6 +30,7 @@ export const insertSkaterSchema = z.object({
   startedSkating: z.coerce.date().nullable().optional(),
   isPro: z.boolean().optional(),
   tricks: z.array(z.string()).nullable().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 export const insertSkatersSchema = z.object({
@@ -46,6 +48,7 @@ export const updateSkaterSchema = z.object({
   startedSkating: z.coerce.date().nullable().optional(),
   isPro: z.boolean().optional(),
   tricks: z.array(z.string()).nullable().optional(),
+  notes: z.string().nullable().optional(),
 });
 
 export const updateSkatersSchema = z.object({

@@ -3,6 +3,7 @@ import {
   boolean,
   integer,
   jsonb,
+  text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -41,6 +42,7 @@ export const skaters = pgTable("skaters", {
   startedSkating: timestamp("started_skating"),
   isPro: boolean("is_pro").notNull().default(false),
   tricks: jsonb("tricks").$type<string[]>(),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .default(sql`current_timestamp`)

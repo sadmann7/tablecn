@@ -230,6 +230,19 @@ export function DataGridLiveDemo() {
         },
       },
       {
+        id: "notes",
+        accessorKey: "notes",
+        header: "Notes",
+        minSize: 300,
+        filterFn,
+        meta: {
+          label: "Notes",
+          cell: {
+            variant: "long-text",
+          },
+        },
+      },
+      {
         id: "yearsSkating",
         accessorKey: "yearsSkating",
         header: "Years Skating",
@@ -421,6 +434,7 @@ export function DataGridLiveDemo() {
             startedSkating: null,
             isPro: false,
             tricks: null,
+            notes: null,
             order: maxOrder + i + 1,
             createdAt: new Date(),
             updatedAt: new Date(),
