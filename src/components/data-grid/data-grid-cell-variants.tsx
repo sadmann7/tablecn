@@ -148,7 +148,7 @@ export function ShortTextCell<TData>({
   );
 
   const isFirstEditRef = React.useRef(true);
-  
+
   React.useEffect(() => {
     if (isEditing && cellRef.current) {
       cellRef.current.focus();
@@ -674,7 +674,7 @@ export function UrlCell<TData>({
   );
 
   const isFirstEditRefUrl = React.useRef(true);
-  
+
   React.useEffect(() => {
     if (isEditing && cellRef.current) {
       cellRef.current.focus();
@@ -937,7 +937,9 @@ export function SelectCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta],
   );
 
-  const displayLabel = optionByValue.get(value)?.label ?? value;
+  const matchedOption = optionByValue.get(value);
+  const displayLabel = matchedOption?.label ?? value;
+  const displayColor = matchedOption?.color ?? "secondary";
 
   return (
     <DataGridCellWrapper<TData>
@@ -968,7 +970,7 @@ export function SelectCell<TData>({
           >
             {displayLabel ? (
               <Badge
-                variant="secondary"
+                variant={displayColor}
                 className="whitespace-pre-wrap px-1.5 py-px"
               >
                 <SelectValue />
@@ -995,7 +997,7 @@ export function SelectCell<TData>({
       ) : displayLabel ? (
         <Badge
           data-slot="grid-cell-content"
-          variant="secondary"
+          variant={displayColor}
           className="whitespace-pre-wrap px-1.5 py-px"
         >
           {displayLabel}
@@ -1208,12 +1210,14 @@ export function MultiSelectCell<TData>({
             <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
-                  const label = optionByValue.get(value)?.label ?? value;
+                  const option = optionByValue.get(value);
+                  const label = option?.label ?? value;
+                  const color = option?.color ?? "secondary";
 
                   return (
                     <Badge
                       key={value}
-                      variant="secondary"
+                      variant={color}
                       className="gap-1 px-1.5 py-px"
                     >
                       {label}
@@ -1286,15 +1290,20 @@ export function MultiSelectCell<TData>({
       ) : null}
       {displayLabels.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1 overflow-hidden">
-          {visibleLabels.map((label, index) => (
-            <Badge
-              key={selectedValues[index]}
-              variant="secondary"
-              className="px-1.5 py-px"
-            >
-              {label}
-            </Badge>
-          ))}
+          {visibleLabels.map((label, index) => {
+            const optColor =
+              optionByValue.get(selectedValues[index] ?? "")?.color ??
+              "secondary";
+            return (
+              <Badge
+                key={selectedValues[index]}
+                variant={optColor}
+                className="px-1.5 py-px"
+              >
+                {label}
+              </Badge>
+            );
+          })}
           {hiddenBadgeCount > 0 && (
             <Badge
               variant="outline"
