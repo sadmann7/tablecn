@@ -90,6 +90,23 @@ export function DataGridFilterPresets<TData>({
     onPresetChange?.(null);
   }, [table, onPresetChange]);
 
+  // Check if any filters, sorting, or column visibility changes are applied
+  const hasFiltersApplied = React.useMemo(() => {
+    const currentFilters = table.getState().columnFilters;
+    const currentVisibility = table.getState().columnVisibility;
+    const currentSorting = table.getState().sorting;
+
+    return (
+      currentFilters.length > 0 ||
+      Object.keys(currentVisibility).length > 0 ||
+      currentSorting.length > 0
+    );
+  }, [
+    table.getState().columnFilters,
+    table.getState().columnVisibility,
+    table.getState().sorting,
+  ]);
+
   return (
     <div className={cn("flex items-center gap-2", className)} {...props}>
       {presets.map((preset) => {
@@ -112,7 +129,7 @@ export function DataGridFilterPresets<TData>({
           </Button>
         );
       })}
-      {activePreset && (
+      {hasFiltersApplied && (
         <Button variant="ghost" size="sm" onClick={clearPreset}>
           Clear
         </Button>
