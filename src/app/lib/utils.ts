@@ -56,6 +56,10 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
     }),
     isPro: faker.datatype.boolean({ probability: 0.3 }),
     tricks,
+    notes:
+      faker.helpers.maybe(() => faker.lorem.sentences({ min: 1, max: 3 }), {
+        probability: 0.4,
+      }) ?? null,
     order: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
