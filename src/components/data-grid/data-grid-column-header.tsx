@@ -11,6 +11,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   EyeOffIcon,
+  Lock,
   PinIcon,
   PinOffIcon,
   XIcon,
@@ -58,6 +59,12 @@ export function DataGridColumnHeader<TData, TValue>({
 
   const cellVariant = column.columnDef.meta?.cell;
   const columnVariant = getColumnVariant(cellVariant?.variant);
+
+  // Check if column is readonly
+  const isReadOnly =
+    cellVariant && "readOnly" in cellVariant
+      ? (cellVariant.readOnly ?? false)
+      : false;
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "left";
@@ -142,6 +149,18 @@ export function DataGridColumnHeader<TData, TValue>({
             )}
             <span className="truncate">{label}</span>
           </div>
+          {isReadOnly && (
+            <Tooltip delayDuration={100}>
+              <TooltipTrigger asChild>
+                <div className="pointer-events-none self-start">
+                  <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Read-only column</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           <ChevronDownIcon className="shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent

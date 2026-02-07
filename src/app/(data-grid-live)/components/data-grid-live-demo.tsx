@@ -195,6 +195,7 @@ export function DataGridLiveDemo() {
           label: "Email",
           cell: {
             variant: "short-text",
+            readOnly: true,
           },
         },
       },

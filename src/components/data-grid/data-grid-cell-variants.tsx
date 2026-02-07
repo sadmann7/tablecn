@@ -193,7 +193,7 @@ export function ShortTextCell<TData>({
       <div
         role="textbox"
         data-slot="grid-cell-content"
-        contentEditable={isEditing}
+        contentEditable={isEditing && !readOnly}
         tabIndex={-1}
         ref={cellRef}
         onBlur={onBlur}
@@ -400,6 +400,7 @@ export function LongTextCell<TData>({
           onBlur={onBlur}
           onChange={onChange}
           onKeyDown={onKeyDown}
+          readOnly={readOnly}
         />
       </PopoverContent>
     </Popover>
@@ -527,6 +528,7 @@ export function NumberCell<TData>({
           className="w-full border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           onBlur={onBlur}
           onChange={onChange}
+          readOnly={readOnly}
         />
       ) : (
         <span data-slot="grid-cell-content">{value}</span>
@@ -739,7 +741,7 @@ export function UrlCell<TData>({
         <div
           role="textbox"
           data-slot="grid-cell-content"
-          contentEditable={isEditing}
+          contentEditable={isEditing && !readOnly}
           tabIndex={-1}
           ref={cellRef}
           onBlur={onBlur}
@@ -961,8 +963,9 @@ export function SelectCell<TData>({
         <Select
           value={value}
           onValueChange={onValueChange}
-          open={isEditing}
+          open={isEditing && !readOnly}
           onOpenChange={onOpenChange}
+          disabled={readOnly}
         >
           <SelectTrigger
             size="sm"
@@ -1196,7 +1199,7 @@ export function MultiSelectCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
-        <Popover open={isEditing} onOpenChange={onOpenChange}>
+        <Popover open={isEditing && !readOnly} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
             <div className="absolute inset-0" />
           </PopoverAnchor>
@@ -1400,13 +1403,13 @@ export function DateCell<TData>({
       readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
-      <Popover open={isEditing} onOpenChange={onOpenChange}>
+      <Popover open={isEditing && !readOnly} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
           <span data-slot="grid-cell-content">
             {formatDateForDisplay(value)}
           </span>
         </PopoverAnchor>
-        {isEditing && (
+        {isEditing && !readOnly && (
           <PopoverContent
             data-grid-cell-editor=""
             align="start"
@@ -1968,7 +1971,7 @@ export function FileCell<TData>({
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
-        <Popover open={isEditing} onOpenChange={onOpenChange}>
+        <Popover open={isEditing && !readOnly} onOpenChange={onOpenChange}>
           <PopoverAnchor asChild>
             <div className="absolute inset-0" />
           </PopoverAnchor>

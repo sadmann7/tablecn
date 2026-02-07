@@ -247,6 +247,11 @@ function DataGridRowImpl<TData>({
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
 
+        // Compute effective readOnly: table-level OR column-level
+        const cellOpts = cell.column.columnDef.meta?.cell;
+        const columnReadOnly = cellOpts && "readOnly" in cellOpts ? cellOpts.readOnly ?? false : false;
+        const cellReadOnly = readOnly || columnReadOnly;
+
         const nextCell = visibleCells[colIndex + 1];
         const isLastColumn = colIndex === visibleCells.length - 1;
         const { showEndBorder, showStartBorder } = getColumnBorderVisibility({
@@ -293,7 +298,7 @@ function DataGridRowImpl<TData>({
                 isSelected={isCellSelected}
                 isSearchMatch={isSearchMatch}
                 isActiveSearchMatch={isActiveSearchMatch}
-                readOnly={readOnly}
+                readOnly={cellReadOnly}
               />
             )}
           </div>

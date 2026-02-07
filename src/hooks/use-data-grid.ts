@@ -368,12 +368,22 @@ function useDataGrid<TData>({
       const currentData = propsRef.current.data;
       const rows = currentTable?.getRowModel().rows;
 
+      const isColumnReadOnly = (columnId: string) => {
+        const column = currentTable?.getColumn(columnId);
+        const cellOpts = column?.columnDef.meta?.cell;
+        return cellOpts && "readOnly" in cellOpts
+          ? (cellOpts.readOnly ?? false)
+          : false;
+      };
+
       const rowUpdatesMap = new Map<
         number,
         Array<Omit<CellUpdate, "rowIndex">>
       >();
 
       for (const update of updateArray) {
+        if (isColumnReadOnly(update.columnId)) continue;
+
         if (!rows || !currentTable) {
           const existingUpdates = rowUpdatesMap.get(update.rowIndex) ?? [];
           existingUpdates.push({

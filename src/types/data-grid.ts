@@ -30,32 +30,40 @@ export interface CellSelectOption {
 export type CellOpts =
   | {
       variant: "short-text";
+      readOnly?: boolean;
     }
   | {
       variant: "long-text";
+      readOnly?: boolean;
     }
   | {
       variant: "number";
       min?: number;
       max?: number;
       step?: number;
+      readOnly?: boolean;
     }
   | {
       variant: "select";
       options: CellSelectOption[];
+      readOnly?: boolean;
     }
   | {
       variant: "multi-select";
       options: CellSelectOption[];
+      readOnly?: boolean;
     }
   | {
       variant: "checkbox";
+      readOnly?: boolean;
     }
   | {
       variant: "date";
+      readOnly?: boolean;
     }
   | {
       variant: "url";
+      readOnly?: boolean;
     }
   | {
       variant: "file";
@@ -63,6 +71,7 @@ export type CellOpts =
       maxFiles?: number;
       accept?: string;
       multiple?: boolean;
+      readOnly?: boolean;
     };
 
 export interface CellUpdate {
