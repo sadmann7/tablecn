@@ -1456,6 +1456,8 @@ export function DateCell<TData>({
               defaultMonth={selectedDate ?? new Date()}
               selected={selectedDate}
               onSelect={onDateSelect}
+              startMonth={new Date(2000, 0)}
+              endMonth={new Date(new Date().getFullYear() + 5, 11)}
             />
           </PopoverContent>
         )}
