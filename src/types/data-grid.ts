@@ -60,6 +60,7 @@ export type CellOpts =
   | {
       variant: "date";
       readOnly?: boolean;
+      showStatusIndicator?: boolean;
     }
   | {
       variant: "url";

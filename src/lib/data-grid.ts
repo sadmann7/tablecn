@@ -350,6 +350,31 @@ export function formatDateForDisplay(dateStr: unknown): string {
   return date.toLocaleDateString();
 }
 
+export function getDateStatus(
+  dateStr: unknown,
+): "future" | "upcoming" | "past" | null {
+  if (!dateStr) return null;
+  const date = parseLocalDate(dateStr);
+  if (!date) return null;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const diffInMs = targetDate.getTime() - today.getTime();
+  const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+
+  if (diffInDays < 0) {
+    return "past";
+  }
+  if (diffInDays <= 7) {
+    return "upcoming";
+  }
+  return "future";
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes <= 0 || !Number.isFinite(bytes)) return "0 B";
   const k = 1024;

@@ -294,6 +294,7 @@ export function DataGridLiveDemo() {
           label: "Skating Since",
           cell: {
             variant: "date",
+            showStatusIndicator: true,
           },
         },
       },

@@ -38,6 +38,7 @@ import {
   formatDateToString,
   formatFileSize,
   getCellKey,
+  getDateStatus,
   getFileIcon,
   getLineCount,
   getUrlHref,
@@ -1355,6 +1356,16 @@ export function DateCell<TData>({
   // Parse date as local time to avoid timezone shifts
   const selectedDate = value ? (parseLocalDate(value) ?? undefined) : undefined;
 
+  // Get showStatusIndicator from cell meta
+  const cellMeta = cell.column.columnDef.meta?.cell;
+  const showStatusIndicator =
+    cellMeta && "showStatusIndicator" in cellMeta
+      ? cellMeta.showStatusIndicator
+      : false;
+
+  // Calculate date status for indicator
+  const dateStatus = showStatusIndicator ? getDateStatus(value) : null;
+
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
       if (!date || readOnly) return;
@@ -1413,8 +1424,22 @@ export function DateCell<TData>({
     >
       <Popover open={isEditing && !readOnly} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
-          <span data-slot="grid-cell-content">
-            {formatDateForDisplay(value)}
+          <span className="flex items-center gap-1.5">
+            {dateStatus ? (
+              <span
+                className={cn(
+                  "h-2 w-2 flex-shrink-0 rounded-full",
+                  dateStatus === "future" && "bg-green-500 dark:bg-green-400",
+                  dateStatus === "upcoming" &&
+                    "bg-orange-500 dark:bg-orange-400",
+                  dateStatus === "past" && "bg-red-500 dark:bg-red-400",
+                )}
+                aria-hidden="true"
+              />
+            ) : null}
+            <span data-slot="grid-cell-content">
+              {formatDateForDisplay(value)}
+            </span>
           </span>
         </PopoverAnchor>
         {isEditing && !readOnly && (
