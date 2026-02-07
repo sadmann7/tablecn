@@ -140,7 +140,11 @@ export function DataGridColumnHeader<TData, TValue>({
             {columnVariant && (
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
-                  <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
+                  {isReadOnly ? (
+                    <Lock className="size-3.5 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
+                  )}
                 </TooltipTrigger>
                 <TooltipContent side="top">
                   <p>{columnVariant.label}</p>
@@ -149,18 +153,6 @@ export function DataGridColumnHeader<TData, TValue>({
             )}
             <span className="truncate">{label}</span>
           </div>
-          {isReadOnly && (
-            <Tooltip delayDuration={100}>
-              <TooltipTrigger asChild>
-                <div className="pointer-events-none self-start">
-                  <Lock className="size-3.5 shrink-0 text-muted-foreground" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>Read-only column</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
           <ChevronDownIcon className="shrink-0 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent
