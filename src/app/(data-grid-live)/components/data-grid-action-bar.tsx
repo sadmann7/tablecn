@@ -23,7 +23,6 @@ import type { CellSelectOption } from "@/types/data-grid";
 interface DataGridActionBarProps<TData> {
   table: Table<TData>;
   tableMeta: TableMeta<TData>;
-  selectedCellCount: number;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
   onStatusUpdate?: (value: string) => void;
@@ -34,7 +33,6 @@ interface DataGridActionBarProps<TData> {
 export function DataGridActionBar<TData>({
   table,
   tableMeta,
-  selectedCellCount,
   statusOptions,
   styleOptions,
   onStatusUpdate,
@@ -51,15 +49,17 @@ export function DataGridActionBar<TData>({
     [table, tableMeta],
   );
 
+  const selectedRowCount = table.getSelectedRowModel().rows.length;
+
   return (
     <ActionBar
       data-grid-popover
-      open={selectedCellCount > 0}
+      open={selectedRowCount > 0}
       onOpenChange={onOpenChange}
     >
       <ActionBarSelection>
-        <span className="font-medium">{selectedCellCount}</span>
-        <span>{selectedCellCount === 1 ? "cell" : "cells"} selected</span>
+        <span className="font-medium">{selectedRowCount}</span>
+        <span>{selectedRowCount === 1 ? "row" : "rows"} selected</span>
         <ActionBarSeparator />
         <ActionBarClose>
           <X />
