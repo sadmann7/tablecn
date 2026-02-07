@@ -76,8 +76,9 @@ export function ShortTextCell<TData>({
   const onBlur = React.useCallback(() => {
     // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
-    if (!readOnly && currentValue !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
+    const valueToSave = currentValue || null;
+    if (!readOnly && valueToSave !== initialValue) {
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: valueToSave });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
@@ -96,22 +97,24 @@ export function ShortTextCell<TData>({
         if (event.key === "Enter") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent ?? "";
-          if (currentValue !== initialValue) {
+          const valueToSave = currentValue || null;
+          if (valueToSave !== initialValue) {
             tableMeta?.onDataUpdate?.({
               rowIndex,
               columnId,
-              value: currentValue,
+              value: valueToSave,
             });
           }
           tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent ?? "";
-          if (currentValue !== initialValue) {
+          const valueToSave = currentValue || null;
+          if (valueToSave !== initialValue) {
             tableMeta?.onDataUpdate?.({
               rowIndex,
               columnId,
-              value: currentValue,
+              value: valueToSave,
             });
           }
           tableMeta?.onCellEditingStop?.({
@@ -238,14 +241,16 @@ export function LongTextCell<TData>({
 
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     if (!readOnly) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      const valueToSave = newValue || null;
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: valueToSave });
     }
   }, 300);
 
   const onSave = React.useCallback(() => {
     // Immediately save any pending changes and close the popover
     if (!readOnly && value !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+      const valueToSave = value || null;
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: valueToSave });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
@@ -266,7 +271,8 @@ export function LongTextCell<TData>({
       } else {
         // Immediately save any pending changes when closing
         if (!readOnly && value !== initialValue) {
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+          const valueToSave = value || null;
+          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: valueToSave });
         }
         tableMeta?.onCellEditingStop?.();
       }
@@ -324,7 +330,8 @@ export function LongTextCell<TData>({
   const onBlur = React.useCallback(() => {
     // Immediately save any pending changes on blur
     if (!readOnly && value !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+      const valueToSave = value || null;
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: valueToSave });
     }
     tableMeta?.onCellEditingStop?.();
   }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
@@ -350,7 +357,8 @@ export function LongTextCell<TData>({
         event.preventDefault();
         // Save any pending changes
         if (value !== initialValue) {
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+          const valueToSave = value || null;
+          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: valueToSave });
         }
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "left" : "right",

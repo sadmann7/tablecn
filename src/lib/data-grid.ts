@@ -298,7 +298,7 @@ export function getEmptyCellValue(
   if (variant === "multi-select" || variant === "file") return [];
   if (variant === "number" || variant === "date") return null;
   if (variant === "checkbox") return false;
-  return "";
+  return null;
 }
 
 export function getUrlHref(urlString: string): string {
