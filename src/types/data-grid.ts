@@ -21,7 +21,7 @@ export type CellSelectOptionColor =
 
 export interface CellSelectOption {
   label: string;
-  value: string;
+  value: string | number;
   icon?: React.FC<React.SVGProps<SVGSVGElement>>;
   count?: number;
   color?: CellSelectOptionColor;

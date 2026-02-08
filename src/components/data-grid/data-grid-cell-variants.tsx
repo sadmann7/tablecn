@@ -892,7 +892,7 @@ export function SelectCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as string;
+  const initialValue = cell.getValue() as string | number;
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
@@ -901,7 +901,7 @@ export function SelectCell<TData>({
     [cellOpts],
   );
   const optionByValue = React.useMemo(
-    () => new Map(options.map((option) => [option.value, option])),
+    () => new Map(options.map((option) => [String(option.value), option])),
     [options],
   );
 
@@ -914,11 +914,14 @@ export function SelectCell<TData>({
   const onValueChange = React.useCallback(
     (newValue: string) => {
       if (readOnly) return;
-      setValue(newValue);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      // Find the original option to get the correct type (string or number)
+      const option = options.find((opt) => String(opt.value) === newValue);
+      const typedValue = option ? option.value : newValue;
+      setValue(typedValue);
+      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: typedValue });
       tableMeta?.onCellEditingStop?.();
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly, options],
   );
 
   const onOpenChange = React.useCallback(
@@ -948,8 +951,8 @@ export function SelectCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta],
   );
 
-  const matchedOption = optionByValue.get(value);
-  const displayLabel = matchedOption?.label ?? value;
+  const matchedOption = optionByValue.get(String(value));
+  const displayLabel = matchedOption?.label ?? String(value);
   const displayColor = matchedOption?.color ?? "secondary";
 
   return (
@@ -970,7 +973,7 @@ export function SelectCell<TData>({
     >
       {isEditing ? (
         <Select
-          value={value}
+          value={String(value)}
           onValueChange={onValueChange}
           open={isEditing && !readOnly}
           onOpenChange={onOpenChange}
@@ -1000,7 +1003,7 @@ export function SelectCell<TData>({
             className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
           >
             {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <SelectItem key={String(option.value)} value={String(option.value)}>
                 {option.label}
               </SelectItem>
             ))}
@@ -1033,7 +1036,7 @@ export function MultiSelectCell<TData>({
   readOnly,
 }: DataGridCellProps<TData>) {
   const cellValue = React.useMemo(() => {
-    const value = cell.getValue() as string[];
+    const value = cell.getValue() as (string | number)[];
     return value ?? [];
   }, [cell]);
 
@@ -1041,7 +1044,7 @@ export function MultiSelectCell<TData>({
   const prevCellKeyRef = React.useRef(cellKey);
 
   const [selectedValues, setSelectedValues] =
-    React.useState<string[]>(cellValue);
+    React.useState<(string | number)[]>(cellValue);
   const [searchValue, setSearchValue] = React.useState("");
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -1051,7 +1054,7 @@ export function MultiSelectCell<TData>({
     [cellOpts],
   );
   const optionByValue = React.useMemo(
-    () => new Map(options.map((option) => [option.value, option])),
+    () => new Map(options.map((option) => [String(option.value), option])),
     [options],
   );
   const sideOffset = -(containerRef.current?.clientHeight ?? 0);
@@ -1070,11 +1073,14 @@ export function MultiSelectCell<TData>({
   const onValueChange = React.useCallback(
     (value: string) => {
       if (readOnly) return;
-      let newValues: string[] = [];
+      // Find the original option to get the correct type (string or number)
+      const option = options.find((opt) => String(opt.value) === value);
+      const typedValue = option ? option.value : value;
+      let newValues: (string | number)[] = [];
       setSelectedValues((curr) => {
-        newValues = curr.includes(value)
-          ? curr.filter((v) => v !== value)
-          : [...curr, value];
+        newValues = curr.some((v) => String(v) === value)
+          ? curr.filter((v) => String(v) !== value)
+          : [...curr, typedValue];
         return newValues;
       });
       queueMicrotask(() => {
@@ -1083,15 +1089,15 @@ export function MultiSelectCell<TData>({
       });
       setSearchValue("");
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowIndex, columnId, readOnly, options],
   );
 
   const removeValue = React.useCallback(
-    (valueToRemove: string, event?: React.MouseEvent) => {
+    (valueToRemove: string | number, event?: React.MouseEvent) => {
       if (readOnly) return;
       event?.stopPropagation();
       event?.preventDefault();
-      let newValues: string[] = [];
+      let newValues: (string | number)[] = [];
       setSelectedValues((curr) => {
         newValues = curr.filter((v) => v !== valueToRemove);
         return newValues;
@@ -1152,7 +1158,7 @@ export function MultiSelectCell<TData>({
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Backspace" && searchValue === "") {
         event.preventDefault();
-        let newValues: string[] | null = null;
+        let newValues: (string | number)[] | null = null;
         setSelectedValues((curr) => {
           if (curr.length === 0) return curr;
           newValues = curr.slice(0, -1);
@@ -1173,11 +1179,11 @@ export function MultiSelectCell<TData>({
   );
 
   const displayLabels = selectedValues
-    .map((val) => optionByValue.get(val)?.label ?? val)
+    .map((val) => optionByValue.get(String(val))?.label ?? String(val))
     .filter(Boolean);
 
   const selectedValuesSet = React.useMemo(
-    () => new Set(selectedValues),
+    () => new Set(selectedValues.map(String)),
     [selectedValues],
   );
 
@@ -1222,13 +1228,13 @@ export function MultiSelectCell<TData>({
             <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
-                  const option = optionByValue.get(value);
-                  const label = option?.label ?? value;
+                  const option = optionByValue.get(String(value));
+                  const label = option?.label ?? String(value);
                   const color = option?.color ?? "secondary";
 
                   return (
                     <Badge
-                      key={value}
+                      key={String(value)}
                       variant={color}
                       className="gap-1 px-1.5 py-px"
                     >
@@ -1259,13 +1265,13 @@ export function MultiSelectCell<TData>({
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
                   {options.map((option) => {
-                    const isSelected = selectedValuesSet.has(option.value);
+                    const isSelected = selectedValuesSet.has(String(option.value));
 
                     return (
                       <CommandItem
-                        key={option.value}
+                        key={String(option.value)}
                         value={option.label}
-                        onSelect={() => onValueChange(option.value)}
+                        onSelect={() => onValueChange(String(option.value))}
                       >
                         <div
                           className={cn(
@@ -1303,12 +1309,13 @@ export function MultiSelectCell<TData>({
       {displayLabels.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1 overflow-hidden">
           {visibleLabels.map((label, index) => {
+            const value = selectedValues[index];
             const optColor =
-              optionByValue.get(selectedValues[index] ?? "")?.color ??
+              optionByValue.get(String(value ?? ""))?.color ??
               "secondary";
             return (
               <Badge
-                key={selectedValues[index]}
+                key={String(value)}
                 variant={optColor}
                 className="px-1.5 py-px"
               >
