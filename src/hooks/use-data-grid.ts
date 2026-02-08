@@ -1952,12 +1952,24 @@ function useDataGrid<TData>({
     (rowIndex: number, selected: boolean, shiftKey: boolean) => {
       const currentState = store.getState();
       const rows = tableRef.current?.getRowModel().rows ?? [];
-      const currentRow = rows[rowIndex];
+
+      // Find the row by its original data index (row.index) rather than
+      // using it as an array position, since client-side filtering can
+      // cause getRowModel().rows to be a subset of the original data.
+      const currentRow = rows.find((r) => r.index === rowIndex);
       if (!currentRow) return;
 
+      const currentRowModelIndex = rows.indexOf(currentRow);
+
       if (shiftKey && currentState.lastClickedRowIndex !== null) {
-        const startIndex = Math.min(currentState.lastClickedRowIndex, rowIndex);
-        const endIndex = Math.max(currentState.lastClickedRowIndex, rowIndex);
+        const startIndex = Math.min(
+          currentState.lastClickedRowIndex,
+          currentRowModelIndex,
+        );
+        const endIndex = Math.max(
+          currentState.lastClickedRowIndex,
+          currentRowModelIndex,
+        );
 
         const newRowSelection: RowSelectionState = {
           ...currentState.rowSelection,
@@ -1978,7 +1990,7 @@ function useDataGrid<TData>({
         });
       }
 
-      store.setState("lastClickedRowIndex", rowIndex);
+      store.setState("lastClickedRowIndex", currentRowModelIndex);
     },
     [store, onRowSelectionChange],
   );
@@ -2188,7 +2200,11 @@ function useDataGrid<TData>({
       colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
     }
     return colSizes;
-  }, [table.getState().columnSizingInfo, table.getState().columnSizing, table.getState().columnVisibility]);
+  }, [
+    table.getState().columnSizingInfo,
+    table.getState().columnSizing,
+    table.getState().columnVisibility,
+  ]);
 
   const isFirefox = React.useSyncExternalStore(
     React.useCallback(() => () => {}, []),
