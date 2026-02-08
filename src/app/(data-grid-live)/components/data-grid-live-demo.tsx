@@ -172,7 +172,10 @@ export function DataGridLiveDemo() {
 
   const columns = React.useMemo<ColumnDef<SkaterSchema>[]>(
     () => [
-      getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
+      getDataGridSelectColumn<SkaterSchema>({
+        enableRowMarkers: true,
+        enableSelectAll: false,
+      }),
       {
         id: "name",
         accessorKey: "name",

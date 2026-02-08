@@ -107,6 +107,7 @@ interface DataGridSelectHeaderProps<TData>
   extends Pick<HeaderContext<TData, unknown>, "table"> {
   hitboxSize?: HitboxSize;
   readOnly?: boolean;
+  enableSelectAll?: boolean;
   debug?: boolean;
 }
 
@@ -114,6 +115,7 @@ function DataGridSelectHeader<TData>({
   table,
   hitboxSize,
   readOnly,
+  enableSelectAll = true,
   debug,
 }: DataGridSelectHeaderProps<TData>) {
   const onCheckedChange = React.useCallback(
@@ -121,7 +123,7 @@ function DataGridSelectHeader<TData>({
     [table],
   );
 
-  if (readOnly) {
+  if (readOnly || !enableSelectAll) {
     return (
       <div className="mt-1 flex items-center ps-1 text-muted-foreground text-sm">
         #
@@ -209,6 +211,7 @@ function DataGridSelectCell<TData>({
 interface GetDataGridSelectColumnOptions<TData>
   extends Omit<Partial<ColumnDef<TData>>, "id" | "header" | "cell"> {
   enableRowMarkers?: boolean;
+  enableSelectAll?: boolean;
   readOnly?: boolean;
   hitboxSize?: HitboxSize;
   debug?: boolean;
@@ -221,6 +224,7 @@ export function getDataGridSelectColumn<TData>({
   enableResizing = false,
   enableSorting = false,
   enableRowMarkers = false,
+  enableSelectAll = true,
   readOnly = false,
   debug = false,
   ...props
@@ -232,6 +236,7 @@ export function getDataGridSelectColumn<TData>({
         table={table}
         hitboxSize={hitboxSize}
         readOnly={readOnly}
+        enableSelectAll={enableSelectAll}
         debug={debug}
       />
     ),
