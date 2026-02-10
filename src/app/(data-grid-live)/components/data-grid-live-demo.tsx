@@ -2,6 +2,8 @@
 
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { useQueryState } from "nuqs";
 import * as React from "react";
 import { use } from "react";
 import { toast } from "sonner";
@@ -24,6 +26,7 @@ import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-heig
 import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
+import { Button } from "@/components/ui/button";
 import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import {
@@ -33,6 +36,7 @@ import {
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
+import { cn } from "@/lib/utils";
 import type { CellSelectOptionColor } from "@/types/data-grid";
 import { skatersCollection } from "../lib/collections";
 import type { SkaterSchema } from "../lib/validation";
@@ -146,6 +150,7 @@ const filterPresets: FilterPreset<SkaterSchema>[] = [
 export function DataGridLiveDemo() {
   use(skatersCollection.preload());
 
+  const [fullscreen, setFullscreen] = useQueryState("fullscreen");
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -583,8 +588,7 @@ export function DataGridLiveDemo() {
   const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <div className="flex flex-col gap-4 p-4">
-      {/* Maybe use "container" in classname for the parent div */}
+    <div className={cn("flex flex-col gap-4 p-4", !fullscreen && "container")}>
       <DataGridPersistence table={table} storageKey="data-grid-live" />
       <div
         role="toolbar"
@@ -610,6 +614,18 @@ export function DataGridLiveDemo() {
           <DataGridSortMenu table={table} align="end" />
           <DataGridRowHeightMenu table={table} align="end" />
           <DataGridViewMenu table={table} align="end" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setFullscreen(fullscreen === "true" ? null : "true")}
+            title={fullscreen === "true" ? "Exit fullscreen" : "Enter fullscreen"}
+          >
+            {fullscreen === "true" ? (
+              <Minimize2 className="size-4" />
+            ) : (
+              <Maximize2 className="size-4" />
+            )}
+          </Button>
         </div>
       </div>
       <DataGrid
