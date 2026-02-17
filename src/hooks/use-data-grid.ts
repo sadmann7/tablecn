@@ -1932,8 +1932,10 @@ function useDataGrid<TData>({
         store.setState("focusedCell", null);
         store.setState("editingCell", null);
       });
+
+      propsRef.current.onRowSelectionChange?.(updater);
     },
-    [store, columnIds],
+    [store, columnIds, propsRef],
   );
 
   const onRowSelect = React.useCallback(
