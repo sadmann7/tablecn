@@ -107,7 +107,7 @@ export function DataGridRenderDemo() {
             onCheckedChange={(value) => {
               const onRowSelect = table.options.meta?.onRowSelect;
               if (onRowSelect) {
-                onRowSelect(row.index, !!value, false);
+                onRowSelect(row.id, !!value, false);
               } else {
                 row.toggleSelected(!!value);
               }
@@ -117,7 +117,7 @@ export function DataGridRenderDemo() {
                 event.preventDefault();
                 const onRowSelect = table.options.meta?.onRowSelect;
                 if (onRowSelect) {
-                  onRowSelect(row.index, !row.getIsSelected(), true);
+                  onRowSelect(row.id, !row.getIsSelected(), true);
                 }
               }
             }}

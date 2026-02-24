@@ -167,7 +167,7 @@ function DataGridSelectCell<TData>({
   const onCheckedChange = React.useCallback(
     (value: boolean) => {
       if (meta?.onRowSelect) {
-        meta.onRowSelect(row.index, value, false);
+        meta.onRowSelect(row.id, value, false);
       } else {
         row.toggleSelected(value);
       }
@@ -179,7 +179,7 @@ function DataGridSelectCell<TData>({
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (event.shiftKey) {
         event.preventDefault();
-        meta?.onRowSelect?.(row.index, !row.getIsSelected(), true);
+        meta?.onRowSelect?.(row.id, !row.getIsSelected(), true);
       }
     },
     [meta, row],
