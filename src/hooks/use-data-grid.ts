@@ -30,6 +30,7 @@ import {
   getScrollDirection,
   matchSelectOption,
   parseCellKey,
+  parseTsv,
   scrollCellIntoView,
 } from "@/lib/data-grid";
 import type {
@@ -699,10 +700,7 @@ function useDataGrid<TData>({
           if (!clipboardText) return;
         }
 
-        const pastedRows = clipboardText
-          .split("\n")
-          .filter((row) => row.length > 0);
-        const pastedData = pastedRows.map((row) => row.split("\t"));
+        const pastedData = parseTsv(clipboardText, navigableColumnIds.length);
 
         const startRowIndex = currentState.focusedCell.rowIndex;
         const startColIndex = navigableColumnIds.indexOf(

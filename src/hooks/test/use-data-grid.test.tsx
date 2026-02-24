@@ -1033,6 +1033,51 @@ describe("useDataGrid", () => {
         ]),
       );
     });
+
+    it("should preserve multiline content within cells when pasting", async () => {
+      const onPaste = vi.fn().mockResolvedValue(undefined);
+      mockClipboard.readText.mockResolvedValue(
+        "Alice\tKickflip\t95\nBob\tTrick with\nmultiple\nlines\t98",
+      );
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onPaste,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.(0, "name");
+      });
+
+      await act(async () => {
+        await result.current.tableMeta.onCellsPaste?.();
+      });
+
+      expect(onPaste).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            rowIndex: 0,
+            columnId: "score",
+            value: 95,
+          }),
+          expect.objectContaining({
+            rowIndex: 1,
+            columnId: "trick",
+            value: "Trick with\nmultiple\nlines",
+          }),
+          expect.objectContaining({
+            rowIndex: 1,
+            columnId: "score",
+            value: 98,
+          }),
+        ]),
+      );
+    });
   });
 
   describe("cut operations", () => {
