@@ -3288,69 +3288,49 @@ function useDataGrid<TData>({
         return;
       }
 
-      const totalRows = tbl.getRowModel().rows.length;
-      const clampedY = Math.max(dataTop, Math.min(mouseY, dataBottom));
-      const absY = container.scrollTop + (clampedY - dataTop);
-      const rowIndex = Math.max(
-        0,
-        Math.min(Math.floor(absY / rh), totalRows - 1),
-      );
-
+      // Use elementFromPoint to find the cell under the clamped mouse position
+      // This works correctly in both LTR and RTL without complex calculations
       const clampedX = Math.max(rect.left, Math.min(mouseX, rect.right));
-      const relX = clampedX - rect.left;
-
+      const clampedY = Math.max(dataTop, Math.min(mouseY, dataBottom));
+      const elementUnderMouse = document.elementFromPoint(clampedX, clampedY);
+      
+      let rowIndex: number;
       let columnId: string;
 
-      // Determine which zone the mouse is in (left pinned, center, right pinned)
-      // In RTL, the visual zones swap
-      const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;
-      const rightZoneWidth = isActuallyRtl ? cachedLpw : cachedRpw;
+      // Try to find the cell element in cellMapRef by checking if the element or its parents match
+      let targetCell: { rowIndex: number; columnId: string } | null = null;
+      if (elementUnderMouse) {
+        let el: Element | null = elementUnderMouse;
+        // Walk up the DOM tree to find a cell wrapper
+        while (el && el !== container) {
+          for (const [key, cellEl] of cellMapRef.current.entries()) {
+            if (cellEl === el || cellEl.contains(el)) {
+              const parsed = parseCellKey(key);
+              targetCell = parsed;
+              break;
+            }
+          }
+          if (targetCell) break;
+          el = el.parentElement;
+        }
+      }
 
-      if (relX < leftZoneWidth) {
-        // Mouse is in the left visual zone
-        const columns = isActuallyRtl
-          ? tbl.getRightVisibleLeafColumns()
-          : tbl.getLeftVisibleLeafColumns();
-        columnId = columns[0]?.id ?? colIds[0] ?? "";
-        let cx = 0;
-        for (const col of columns) {
-          if (relX < cx + col.getSize()) {
-            columnId = col.id;
-            break;
-          }
-          cx += col.getSize();
-        }
-      } else if (relX > rect.width - rightZoneWidth) {
-        // Mouse is in the right visual zone
-        const columns = isActuallyRtl
-          ? tbl.getLeftVisibleLeafColumns()
-          : tbl.getRightVisibleLeafColumns();
-        columnId = columns[0]?.id ?? colIds[colIds.length - 1] ?? "";
-        let cx = rect.width - rightZoneWidth;
-        for (const col of columns) {
-          if (relX < cx + col.getSize()) {
-            columnId = col.id;
-            break;
-          }
-          cx += col.getSize();
-        }
+      if (targetCell) {
+        rowIndex = targetCell.rowIndex;
+        columnId = targetCell.columnId;
       } else {
-        // Mouse is in the scrollable center zone
-        const center = tbl.getCenterVisibleLeafColumns();
-        const scrollLeft = isActuallyRtl && hasNegativeScroll
-          ? -container.scrollLeft
-          : Math.abs(container.scrollLeft);
-        const absX = scrollLeft + (relX - leftZoneWidth);
-        columnId =
-          center[center.length - 1]?.id ?? colIds[colIds.length - 1] ?? "";
-        let cw = 0;
-        for (const col of center) {
-          cw += col.getSize();
-          if (absX < cw) {
-            columnId = col.id;
-            break;
-          }
-        }
+        // Fallback: calculate position from scroll offset (original logic)
+        const totalRows = tbl.getRowModel().rows.length;
+        const absY = container.scrollTop + (clampedY - dataTop);
+        rowIndex = Math.max(0, Math.min(Math.floor(absY / rh), totalRows - 1));
+        
+        // For column, use the first visible column as fallback
+        const allCols = [
+          ...tbl.getLeftVisibleLeafColumns(),
+          ...tbl.getCenterVisibleLeafColumns(),
+          ...tbl.getRightVisibleLeafColumns(),
+        ];
+        columnId = allCols[0]?.id ?? colIds[0] ?? "";
       }
 
       const st = store.getState();
