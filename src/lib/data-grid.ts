@@ -257,10 +257,12 @@ export function scrollCellIntoView<TData>(params: {
 }
 
 export function getIsInPopover(element: unknown): boolean {
+  if (!(element instanceof Element)) return false;
   return (
-    element instanceof Element &&
-    (element.closest("[data-grid-cell-editor]") ||
-      element.closest("[data-grid-popover]")) !== null
+    element.closest("[data-grid-cell-editor]") !== null ||
+    element.closest("[data-grid-popover]") !== null ||
+    element.closest("[data-slot='dropdown-menu-content']") !== null ||
+    element.closest("[data-slot='popover-content']") !== null
   );
 }
 
