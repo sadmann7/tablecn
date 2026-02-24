@@ -30,10 +30,16 @@ const testData: TestData[] = [
   { id: "3", name: "Nyjah Huston", trick: "Switch Heel", score: 92 },
 ];
 
+// Simple filter function for testing
+const simpleFilterFn = (row: { getValue: (id: string) => unknown }, _columnId: string, filterValue: string) => {
+  const value = String(row.getValue(_columnId) ?? "");
+  return value.toLowerCase().includes(filterValue.toLowerCase());
+};
+
 const testColumns: ColumnDef<TestData>[] = [
-  { id: "name", accessorKey: "name" },
-  { id: "trick", accessorKey: "trick" },
-  { id: "score", accessorKey: "score", meta: { cell: { variant: "number" } } },
+  { id: "name", accessorKey: "name", filterFn: simpleFilterFn },
+  { id: "trick", accessorKey: "trick", filterFn: simpleFilterFn },
+  { id: "score", accessorKey: "score", meta: { cell: { variant: "number" } }, filterFn: simpleFilterFn },
 ];
 
 function createWrapper() {
@@ -511,6 +517,122 @@ describe("useDataGrid", () => {
       });
 
       expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("should update data correctly when filtering is applied", () => {
+      const onDataChange = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+            initialState: {
+              columnFilters: [
+                { id: "name", value: "Hawk" }, // Filter to only show Tony Hawk
+              ],
+            },
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      // Get filtered rows - should only have 1 row (Tony Hawk)
+      const filteredRows = result.current.table.getRowModel().rows;
+      expect(filteredRows.length).toBe(1);
+      expect(filteredRows[0]?.original.name).toBe("Tony Hawk");
+
+      // Update the visible filtered row at visual index 0
+      act(() => {
+        result.current.tableMeta.onDataUpdate?.({
+          rowIndex: 0,
+          columnId: "score",
+          value: 100,
+        });
+      });
+
+      // onDataChange should be called with ALL rows (not just filtered)
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
+      
+      // Should have all 3 rows
+      expect(updatedData).toHaveLength(3);
+      
+      // Tony Hawk (at index 0 in full dataset) should be updated
+      expect(updatedData[0]).toMatchObject({
+        id: "1",
+        name: "Tony Hawk",
+        score: 100, // Updated value
+      });
+      
+      // Other rows should remain unchanged
+      expect(updatedData[1]).toMatchObject({
+        id: "2",
+        name: "Rodney Mullen",
+        score: 98, // Original value
+      });
+      expect(updatedData[2]).toMatchObject({
+        id: "3",
+        name: "Nyjah Huston",
+        score: 92, // Original value
+      });
+    });
+
+    it("should update multiple filtered rows correctly", () => {
+      const onDataChange = vi.fn();
+
+      const extendedData: TestData[] = [
+        ...testData,
+        { id: "4", name: "Bob Burnquist", trick: "Loop", score: 90 },
+        { id: "5", name: "Bam Margera", trick: "Tailslide", score: 85 },
+      ];
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: extendedData,
+            columns: testColumns,
+            onDataChange,
+            initialState: {
+              columnFilters: [
+                { id: "name", value: "B" }, // Filter to show names containing 'B'
+              ],
+            },
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      // Get filtered rows - should have 2 rows (Bob and Bam)
+      const filteredRows = result.current.table.getRowModel().rows;
+      expect(filteredRows.length).toBe(2);
+
+      // Update first filtered row (Bob at visual index 0, actual index 3)
+      act(() => {
+        result.current.tableMeta.onDataUpdate?.({
+          rowIndex: 0,
+          columnId: "score",
+          value: 95,
+        });
+      });
+
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
+      
+      // Should have all 5 rows
+      expect(updatedData).toHaveLength(5);
+      
+      // Bob (at index 3) should be updated
+      expect(updatedData[3]).toMatchObject({
+        id: "4",
+        name: "Bob Burnquist",
+        score: 95, // Updated value
+      });
+      
+      // Other rows should remain unchanged
+      expect(updatedData[0]?.score).toBe(95); // Tony
+      expect(updatedData[1]?.score).toBe(98); // Rodney
+      expect(updatedData[2]?.score).toBe(92); // Nyjah
+      expect(updatedData[4]?.score).toBe(85); // Bam
     });
   });
 
