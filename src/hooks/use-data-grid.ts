@@ -3337,10 +3337,25 @@ function useDataGrid<TData>({
       } else {
         // Mouse is in the scrollable center zone
         const center = tbl.getCenterVisibleLeafColumns();
-        const scrollLeft = isActuallyRtl && hasNegativeScroll
-          ? -container.scrollLeft
-          : Math.abs(container.scrollLeft);
-        const absX = scrollLeft + (relX - leftZoneWidth);
+        const centerZoneWidth =
+          rect.width - leftZoneWidth - rightZoneWidth;
+        const distFromVisualLeft = relX - leftZoneWidth;
+
+        // In LTR, absX measures from logical start (visual left).
+        // In RTL, logical start is on the visual right, so we flip.
+        let absX: number;
+        if (isActuallyRtl) {
+          const scrollFromRight = hasNegativeScroll
+            ? -container.scrollLeft
+            : container.scrollWidth -
+              container.clientWidth -
+              container.scrollLeft;
+          absX =
+            scrollFromRight + (centerZoneWidth - distFromVisualLeft);
+        } else {
+          absX = container.scrollLeft + distFromVisualLeft;
+        }
+
         columnId =
           center[center.length - 1]?.id ?? colIds[colIds.length - 1] ?? "";
         let cw = 0;
