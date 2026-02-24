@@ -3241,10 +3241,20 @@ function useDataGrid<TData>({
       }
 
       const rect = cachedRect;
+      const { dir } = dragDepsRef.current;
+      const hasNegativeScroll = container.scrollLeft < 0;
+      const isActuallyRtl = dir === "rtl" || hasNegativeScroll;
+
       const dataTop = rect.top + cachedHdrH;
       const dataBottom = rect.bottom - cachedFtrH;
-      const scrollAreaLeft = rect.left + cachedLpw;
-      const scrollAreaRight = rect.right - cachedRpw;
+
+      // In RTL, pinned columns swap their viewport positions
+      const scrollAreaLeft = isActuallyRtl
+        ? rect.left + cachedRpw
+        : rect.left + cachedLpw;
+      const scrollAreaRight = isActuallyRtl
+        ? rect.right - cachedLpw
+        : rect.right - cachedRpw;
 
       let dy = 0;
       let dx = 0;
@@ -3291,22 +3301,33 @@ function useDataGrid<TData>({
 
       let columnId: string;
 
-      if (relX < cachedLpw) {
-        const leftPinned = tbl.getLeftVisibleLeafColumns();
-        columnId = leftPinned[0]?.id ?? colIds[0] ?? "";
+      // Determine which zone the mouse is in (left pinned, center, right pinned)
+      // In RTL, the visual zones swap
+      const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;
+      const rightZoneWidth = isActuallyRtl ? cachedLpw : cachedRpw;
+
+      if (relX < leftZoneWidth) {
+        // Mouse is in the left visual zone
+        const columns = isActuallyRtl
+          ? tbl.getRightVisibleLeafColumns()
+          : tbl.getLeftVisibleLeafColumns();
+        columnId = columns[0]?.id ?? colIds[0] ?? "";
         let cx = 0;
-        for (const col of leftPinned) {
+        for (const col of columns) {
           if (relX < cx + col.getSize()) {
             columnId = col.id;
             break;
           }
           cx += col.getSize();
         }
-      } else if (relX > rect.width - cachedRpw) {
-        const rightPinned = tbl.getRightVisibleLeafColumns();
-        columnId = rightPinned[0]?.id ?? colIds[colIds.length - 1] ?? "";
-        let cx = rect.width - cachedRpw;
-        for (const col of rightPinned) {
+      } else if (relX > rect.width - rightZoneWidth) {
+        // Mouse is in the right visual zone
+        const columns = isActuallyRtl
+          ? tbl.getLeftVisibleLeafColumns()
+          : tbl.getRightVisibleLeafColumns();
+        columnId = columns[0]?.id ?? colIds[colIds.length - 1] ?? "";
+        let cx = rect.width - rightZoneWidth;
+        for (const col of columns) {
           if (relX < cx + col.getSize()) {
             columnId = col.id;
             break;
@@ -3314,13 +3335,12 @@ function useDataGrid<TData>({
           cx += col.getSize();
         }
       } else {
+        // Mouse is in the scrollable center zone
         const center = tbl.getCenterVisibleLeafColumns();
-        const { dir } = dragDepsRef.current;
-        let scrollLeft = container.scrollLeft;
-        if (dir === "rtl" && scrollLeft < 0) {
-          scrollLeft = -scrollLeft;
-        }
-        const absX = Math.abs(scrollLeft) + (relX - cachedLpw);
+        const scrollLeft = isActuallyRtl && hasNegativeScroll
+          ? -container.scrollLeft
+          : Math.abs(container.scrollLeft);
+        const absX = scrollLeft + (relX - leftZoneWidth);
         columnId =
           center[center.length - 1]?.id ?? colIds[colIds.length - 1] ?? "";
         let cw = 0;
