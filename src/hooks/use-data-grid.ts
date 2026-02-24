@@ -560,9 +560,18 @@ function useDataGrid<TData>({
       number,
       Map<string, ReturnType<Row<TData>["getVisibleCells"]>[number]>
     >();
+    const navigableCells: string[] = [];
 
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
+      
+      // Skip non-navigable columns (like "select", "actions")
+      if (columnId && NON_NAVIGABLE_COLUMN_IDS.has(columnId)) {
+        continue;
+      }
+      
+      // Track navigable cells for accurate counts
+      navigableCells.push(cellKey);
 
       if (columnId && !seenColumnIds.has(columnId)) {
         seenColumnIds.add(columnId);
@@ -598,7 +607,7 @@ function useDataGrid<TData>({
     }
 
     const colIndices = new Set<number>();
-    for (const cellKey of selectedCellsArray) {
+    for (const cellKey of navigableCells) {
       const { columnId } = parseCellKey(cellKey);
       const colIndex = selectedColumnIds.indexOf(columnId);
       if (colIndex >= 0) {
@@ -621,7 +630,7 @@ function useDataGrid<TData>({
       )
       .join("\n");
 
-    return { tsvData, selectedCellsArray };
+    return { tsvData, selectedCellsArray: navigableCells };
   }, [store]);
 
   const onCellsCopy = React.useCallback(async () => {
