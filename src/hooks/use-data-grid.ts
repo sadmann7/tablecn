@@ -3202,7 +3202,7 @@ function useDataGrid<TData>({
     let cachedLpw = 0;
     let cachedRpw = 0;
 
-    function speed(dist: number): number {
+    function getAutoScrollSpeed(dist: number): number {
       const t = Math.min(dist / (AUTO_SCROLL_EDGE_ZONE * 3), 1);
       return Math.round(
         AUTO_SCROLL_MIN_SPEED +
@@ -3230,13 +3230,11 @@ function useDataGrid<TData>({
       const container = dataGridRef.current;
       const tbl = tableRef.current;
 
-      // Stop immediately if required refs are missing (happens in tests or during unmount)
       if (!container || !tbl) {
-        stopAutoScroll();
+        onAutoScrollStop();
         return;
       }
 
-      // Wait for mouse position and cached layout before proceeding
       if (!mouseReady || !cachedRect) {
         rafId = requestAnimationFrame(tick);
         return;
@@ -3251,11 +3249,14 @@ function useDataGrid<TData>({
       let dy = 0;
       let dx = 0;
 
-      if (mouseY < dataTop) dy = -speed(dataTop - mouseY);
-      else if (mouseY > dataBottom) dy = speed(mouseY - dataBottom);
+      if (mouseY < dataTop) dy = -getAutoScrollSpeed(dataTop - mouseY);
+      else if (mouseY > dataBottom)
+        dy = getAutoScrollSpeed(mouseY - dataBottom);
 
-      if (mouseX < scrollAreaLeft) dx = -speed(scrollAreaLeft - mouseX);
-      else if (mouseX > scrollAreaRight) dx = speed(mouseX - scrollAreaRight);
+      if (mouseX < scrollAreaLeft)
+        dx = -getAutoScrollSpeed(scrollAreaLeft - mouseX);
+      else if (mouseX > scrollAreaRight)
+        dx = getAutoScrollSpeed(mouseX - scrollAreaRight);
 
       if (dx === 0 && dy === 0) {
         rafId = requestAnimationFrame(tick);
@@ -3351,7 +3352,7 @@ function useDataGrid<TData>({
     }
 
     function onUp() {
-      stopAutoScroll();
+      onAutoScrollStop();
       const st = store.getState();
       if (st.selectionState.isSelecting) {
         store.setState("selectionState", {
@@ -3361,13 +3362,12 @@ function useDataGrid<TData>({
       }
     }
 
-    function startAutoScroll() {
+    function onAutoScrollStart() {
       if (active) return;
-      
-      // Don't start if container doesn't exist (e.g., during tests or early render)
+
       const container = dataGridRef.current;
       if (!container) return;
-      
+
       active = true;
       mouseReady = false;
       cachedRect = null;
@@ -3381,7 +3381,7 @@ function useDataGrid<TData>({
       });
     }
 
-    function stopAutoScroll() {
+    function onAutoScrollStop() {
       if (!active) return;
       active = false;
       cachedRect = null;
@@ -3393,17 +3393,17 @@ function useDataGrid<TData>({
       }
     }
 
-    if (store.getState().selectionState.isSelecting) startAutoScroll();
+    if (store.getState().selectionState.isSelecting) onAutoScrollStart();
 
-    const unsubscribe = store.subscribe(() => {
+    const onUnsubscribe = store.subscribe(() => {
       const st = store.getState();
-      if (st.selectionState.isSelecting && !active) startAutoScroll();
-      else if (!st.selectionState.isSelecting && active) stopAutoScroll();
+      if (st.selectionState.isSelecting && !active) onAutoScrollStart();
+      else if (!st.selectionState.isSelecting && active) onAutoScrollStop();
     });
 
     return () => {
-      stopAutoScroll();
-      unsubscribe();
+      onAutoScrollStop();
+      onUnsubscribe();
     };
   }, [store, dragDepsRef]);
 
