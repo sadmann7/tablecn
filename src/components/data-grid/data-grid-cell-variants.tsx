@@ -63,6 +63,7 @@ export function ShortTextCell<TData>({
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const prevIsEditingRef = React.useRef(isEditing);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -148,7 +149,10 @@ export function ShortTextCell<TData>({
   );
 
   React.useEffect(() => {
-    if (isEditing && cellRef.current) {
+    const wasEditing = prevIsEditingRef.current;
+    prevIsEditingRef.current = isEditing;
+
+    if (isEditing && !wasEditing && cellRef.current) {
       cellRef.current.focus();
 
       if (!cellRef.current.textContent && value) {
@@ -546,6 +550,7 @@ export function UrlCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const prevIsEditingRef = React.useRef(isEditing);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -668,7 +673,10 @@ export function UrlCell<TData>({
   );
 
   React.useEffect(() => {
-    if (isEditing && cellRef.current) {
+    const wasEditing = prevIsEditingRef.current;
+    prevIsEditingRef.current = isEditing;
+
+    if (isEditing && !wasEditing && cellRef.current) {
       cellRef.current.focus();
 
       if (!cellRef.current.textContent && value) {
