@@ -1447,12 +1447,14 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
+            getRowId: (row) => row.id,
           }),
         { wrapper: createWrapper() },
       );
 
+      const firstRowId = result.current.table.getRowModel().rows[0]?.id;
       act(() => {
-        result.current.tableMeta.onRowSelect?.(0, true, false);
+        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", true, false);
       });
 
       const rowSelection = result.current.table.getState().rowSelection;
@@ -1465,18 +1467,23 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
+            getRowId: (row) => row.id,
           }),
         { wrapper: createWrapper() },
       );
 
+      const rows = result.current.table.getRowModel().rows;
+      const firstRowId = rows[0]?.id;
+      const thirdRowId = rows[2]?.id;
+
       // Select first row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(0, true, false);
+        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", true, false);
       });
 
       // Select third row with shift
       act(() => {
-        result.current.tableMeta.onRowSelect?.(2, true, true);
+        result.current.tableMeta.onRowSelect?.(thirdRowId ?? "3", true, true);
       });
 
       const rowSelection = result.current.table.getState().rowSelection;
@@ -1489,23 +1496,59 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
+            getRowId: (row) => row.id,
           }),
         { wrapper: createWrapper() },
       );
 
+      const firstRowId = result.current.table.getRowModel().rows[0]?.id;
+
       // Select row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(0, true, false);
+        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", true, false);
       });
 
       // Deselect row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(0, false, false);
+        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", false, false);
       });
 
       const rowSelection = result.current.table.getState().rowSelection;
-      const row = result.current.table.getRowModel().rows[0];
-      expect(rowSelection[row?.id ?? "0"]).toBeFalsy();
+      expect(rowSelection[firstRowId ?? "1"]).toBeFalsy();
+    });
+
+    it("should select correct row when filtering is applied", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            getRowId: (row) => row.id,
+            initialState: {
+              columnFilters: [{ id: "name", value: "Tony" }],
+            },
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      // With filter "name contains Tony", only Tony Hawk (id: "1") should be visible
+      const rows = result.current.table.getRowModel().rows;
+      expect(rows.length).toBe(1);
+      const visibleRowId = rows[0]?.id;
+      expect(visibleRowId).toBe("1");
+
+      // Select the visible (filtered) row
+      act(() => {
+        result.current.tableMeta.onRowSelect?.(
+          visibleRowId ?? "1",
+          true,
+          false,
+        );
+      });
+
+      const rowSelection = result.current.table.getState().rowSelection;
+      expect(rowSelection["1"]).toBe(true);
+      expect(Object.keys(rowSelection).length).toBe(1);
     });
   });
 
