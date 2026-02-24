@@ -83,7 +83,7 @@ interface DataGridState {
   searchMatches: CellPosition[];
   matchIndex: number;
   searchOpen: boolean;
-  lastClickedRowIndex: number | null;
+  lastClickedRowId: string | null;
   pasteDialog: PasteDialogState;
 }
 
@@ -195,7 +195,7 @@ function useDataGrid<TData>({
       searchMatches: [],
       matchIndex: -1,
       searchOpen: false,
-      lastClickedRowIndex: null,
+      lastClickedRowId: null,
       pasteDialog: {
         open: false,
         rowsNeeded: 0,
@@ -1944,45 +1944,48 @@ function useDataGrid<TData>({
         store.setState("focusedCell", null);
         store.setState("editingCell", null);
       });
+
+      propsRef.current.onRowSelectionChange?.(updater);
     },
-    [store, columnIds],
+    [store, columnIds, propsRef],
   );
 
   const onRowSelect = React.useCallback(
-    (rowIndex: number, selected: boolean, shiftKey: boolean) => {
+    (rowId: string, selected: boolean, shiftKey: boolean) => {
       const currentState = store.getState();
       const rows = tableRef.current?.getRowModel().rows ?? [];
-
-      // Find the row by its original data index (row.index) rather than
-      // using it as an array position, since client-side filtering can
-      // cause getRowModel().rows to be a subset of the original data.
-      const currentRow = rows.find((r) => r.index === rowIndex);
+      const currentRowIndex = rows.findIndex((r) => r.id === rowId);
+      const currentRow = currentRowIndex >= 0 ? rows[currentRowIndex] : null;
       if (!currentRow) return;
 
       const currentRowModelIndex = rows.indexOf(currentRow);
 
-      if (shiftKey && currentState.lastClickedRowIndex !== null) {
-        const startIndex = Math.min(
-          currentState.lastClickedRowIndex,
-          currentRowModelIndex,
+      if (shiftKey && currentState.lastClickedRowId !== null) {
+        const lastClickedRowIndex = rows.findIndex(
+          (r) => r.id === currentState.lastClickedRowId,
         );
-        const endIndex = Math.max(
-          currentState.lastClickedRowIndex,
-          currentRowModelIndex,
-        );
+        if (lastClickedRowIndex >= 0) {
+          const startIndex = Math.min(lastClickedRowIndex, currentRowIndex);
+          const endIndex = Math.max(lastClickedRowIndex, currentRowIndex);
 
-        const newRowSelection: RowSelectionState = {
-          ...currentState.rowSelection,
-        };
+          const newRowSelection: RowSelectionState = {
+            ...currentState.rowSelection,
+          };
 
-        for (let i = startIndex; i <= endIndex; i++) {
-          const row = rows[i];
-          if (row) {
-            newRowSelection[row.id] = selected;
+          for (let i = startIndex; i <= endIndex; i++) {
+            const row = rows[i];
+            if (row) {
+              newRowSelection[row.id] = selected;
+            }
           }
-        }
 
-        onRowSelectionChange(newRowSelection);
+          onRowSelectionChange(newRowSelection);
+        } else {
+          onRowSelectionChange({
+            ...currentState.rowSelection,
+            [currentRow.id]: selected,
+          });
+        }
       } else {
         onRowSelectionChange({
           ...currentState.rowSelection,
@@ -1990,7 +1993,7 @@ function useDataGrid<TData>({
         });
       }
 
-      store.setState("lastClickedRowIndex", currentRowModelIndex);
+      store.setState("lastClickedRowId", rowId);
     },
     [store, onRowSelectionChange],
   );
