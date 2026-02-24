@@ -3296,80 +3296,91 @@ function useDataGrid<TData>({
         Math.min(Math.floor(absY / rh), totalRows - 1),
       );
 
-      const clampedX = Math.max(rect.left, Math.min(mouseX, rect.right));
-      const relX = clampedX - rect.left;
+      const st = store.getState();
+      const range = st.selectionState.selectionRange;
 
-      let columnId: string;
+      // When only scrolling vertically, keep the current column from the
+      // selection range. Column resolution from pixel math is fragile in
+      // RTL due to browser differences in scrollLeft. onCellMouseEnter
+      // already tracks the column accurately when the mouse moves horizontally.
+      let columnId: string | undefined;
 
-      // Determine which zone the mouse is in (left pinned, center, right pinned)
-      // In RTL, the visual zones swap
-      const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;
-      const rightZoneWidth = isActuallyRtl ? cachedLpw : cachedRpw;
+      if (dx !== 0) {
+        const clampedX = Math.max(
+          rect.left,
+          Math.min(mouseX, rect.right),
+        );
+        const relX = clampedX - rect.left;
 
-      if (relX < leftZoneWidth) {
-        // Mouse is in the left visual zone
-        const columns = isActuallyRtl
-          ? tbl.getRightVisibleLeafColumns()
-          : tbl.getLeftVisibleLeafColumns();
-        columnId = columns[0]?.id ?? colIds[0] ?? "";
-        let cx = 0;
-        for (const col of columns) {
-          if (relX < cx + col.getSize()) {
-            columnId = col.id;
-            break;
+        const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;
+        const rightZoneWidth = isActuallyRtl ? cachedLpw : cachedRpw;
+
+        if (relX < leftZoneWidth) {
+          const columns = isActuallyRtl
+            ? tbl.getRightVisibleLeafColumns()
+            : tbl.getLeftVisibleLeafColumns();
+          columnId = columns[0]?.id ?? colIds[0] ?? "";
+          let cx = 0;
+          for (const col of columns) {
+            if (relX < cx + col.getSize()) {
+              columnId = col.id;
+              break;
+            }
+            cx += col.getSize();
           }
-          cx += col.getSize();
-        }
-      } else if (relX > rect.width - rightZoneWidth) {
-        // Mouse is in the right visual zone
-        const columns = isActuallyRtl
-          ? tbl.getLeftVisibleLeafColumns()
-          : tbl.getRightVisibleLeafColumns();
-        columnId = columns[0]?.id ?? colIds[colIds.length - 1] ?? "";
-        let cx = rect.width - rightZoneWidth;
-        for (const col of columns) {
-          if (relX < cx + col.getSize()) {
-            columnId = col.id;
-            break;
+        } else if (relX > rect.width - rightZoneWidth) {
+          const columns = isActuallyRtl
+            ? tbl.getLeftVisibleLeafColumns()
+            : tbl.getRightVisibleLeafColumns();
+          columnId =
+            columns[0]?.id ?? colIds[colIds.length - 1] ?? "";
+          let cx = rect.width - rightZoneWidth;
+          for (const col of columns) {
+            if (relX < cx + col.getSize()) {
+              columnId = col.id;
+              break;
+            }
+            cx += col.getSize();
           }
-          cx += col.getSize();
-        }
-      } else {
-        // Mouse is in the scrollable center zone
-        const center = tbl.getCenterVisibleLeafColumns();
-        const centerZoneWidth =
-          rect.width - leftZoneWidth - rightZoneWidth;
-        const distFromVisualLeft = relX - leftZoneWidth;
-
-        // In LTR, absX measures from logical start (visual left).
-        // In RTL, logical start is on the visual right, so we flip.
-        let absX: number;
-        if (isActuallyRtl) {
-          const scrollFromRight = hasNegativeScroll
-            ? -container.scrollLeft
-            : container.scrollWidth -
-              container.clientWidth -
-              container.scrollLeft;
-          absX =
-            scrollFromRight + (centerZoneWidth - distFromVisualLeft);
         } else {
-          absX = container.scrollLeft + distFromVisualLeft;
-        }
+          const center = tbl.getCenterVisibleLeafColumns();
+          const centerZoneWidth =
+            rect.width - leftZoneWidth - rightZoneWidth;
+          const distFromVisualLeft = relX - leftZoneWidth;
 
-        columnId =
-          center[center.length - 1]?.id ?? colIds[colIds.length - 1] ?? "";
-        let cw = 0;
-        for (const col of center) {
-          cw += col.getSize();
-          if (absX < cw) {
-            columnId = col.id;
-            break;
+          let absX: number;
+          if (isActuallyRtl) {
+            const scrollFromRight = hasNegativeScroll
+              ? -container.scrollLeft
+              : container.scrollWidth -
+                container.clientWidth -
+                container.scrollLeft;
+            absX =
+              scrollFromRight +
+              (centerZoneWidth - distFromVisualLeft);
+          } else {
+            absX = container.scrollLeft + distFromVisualLeft;
+          }
+
+          columnId =
+            center[center.length - 1]?.id ??
+            colIds[colIds.length - 1] ??
+            "";
+          let cw = 0;
+          for (const col of center) {
+            cw += col.getSize();
+            if (absX < cw) {
+              columnId = col.id;
+              break;
+            }
           }
         }
       }
 
-      const st = store.getState();
-      const range = st.selectionState.selectionRange;
+      // Fall back to current selection column when only scrolling vertically
+      if (!columnId) {
+        columnId = range?.end.columnId ?? colIds[0] ?? "";
+      }
       if (
         range &&
         (rowIndex !== range.end.rowIndex || columnId !== range.end.columnId)
