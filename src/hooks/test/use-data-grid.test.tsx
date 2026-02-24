@@ -31,7 +31,11 @@ const testData: TestData[] = [
 ];
 
 // Simple filter function for testing
-const simpleFilterFn = (row: { getValue: (id: string) => unknown }, _columnId: string, filterValue: string) => {
+const simpleFilterFn = (
+  row: { getValue: (id: string) => unknown },
+  _columnId: string,
+  filterValue: string,
+) => {
   const value = String(row.getValue(_columnId) ?? "");
   return value.toLowerCase().includes(filterValue.toLowerCase());
 };
@@ -39,7 +43,12 @@ const simpleFilterFn = (row: { getValue: (id: string) => unknown }, _columnId: s
 const testColumns: ColumnDef<TestData>[] = [
   { id: "name", accessorKey: "name", filterFn: simpleFilterFn },
   { id: "trick", accessorKey: "trick", filterFn: simpleFilterFn },
-  { id: "score", accessorKey: "score", meta: { cell: { variant: "number" } }, filterFn: simpleFilterFn },
+  {
+    id: "score",
+    accessorKey: "score",
+    meta: { cell: { variant: "number" } },
+    filterFn: simpleFilterFn,
+  },
 ];
 
 function createWrapper() {
@@ -554,17 +563,17 @@ describe("useDataGrid", () => {
       // onDataChange should be called with ALL rows (not just filtered)
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
-      
+
       // Should have all 3 rows
       expect(updatedData).toHaveLength(3);
-      
+
       // Tony Hawk (at index 0 in full dataset) should be updated
       expect(updatedData[0]).toMatchObject({
         id: "1",
         name: "Tony Hawk",
         score: 100, // Updated value
       });
-      
+
       // Other rows should remain unchanged
       expect(updatedData[1]).toMatchObject({
         id: "2",
@@ -617,17 +626,17 @@ describe("useDataGrid", () => {
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
-      
+
       // Should have all 5 rows
       expect(updatedData).toHaveLength(5);
-      
+
       // Bob (at index 3) should be updated
       expect(updatedData[3]).toMatchObject({
         id: "4",
         name: "Bob Burnquist",
         score: 95, // Updated value
       });
-      
+
       // Other rows should remain unchanged
       expect(updatedData[0]?.score).toBe(95); // Tony
       expect(updatedData[1]?.score).toBe(98); // Rodney
