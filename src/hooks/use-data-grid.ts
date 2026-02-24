@@ -564,13 +564,11 @@ function useDataGrid<TData>({
 
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
-      
-      // Skip non-navigable columns (like "select", "actions")
+
       if (columnId && NON_NAVIGABLE_COLUMN_IDS.has(columnId)) {
         continue;
       }
-      
-      // Track navigable cells for accurate counts
+
       navigableCells.push(cellKey);
 
       if (columnId && !seenColumnIds.has(columnId)) {
