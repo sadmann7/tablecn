@@ -92,7 +92,7 @@ function DataGridDemoImpl({
 
 export function DataGridDemo() {
   const [data, setData] = React.useState<Person[]>(initialData);
-  const [dir, setDir] = React.useState<Direction>("rtl");
+  const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
