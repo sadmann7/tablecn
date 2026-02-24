@@ -3228,13 +3228,16 @@ function useDataGrid<TData>({
     function tick() {
       if (!active) return;
       const container = dataGridRef.current;
-      if (!container || !mouseReady || !cachedRect) {
-        rafId = requestAnimationFrame(tick);
+      const tbl = tableRef.current;
+
+      // Stop immediately if required refs are missing (happens in tests or during unmount)
+      if (!container || !tbl) {
+        stopAutoScroll();
         return;
       }
 
-      const tbl = tableRef.current;
-      if (!tbl) {
+      // Wait for mouse position and cached layout before proceeding
+      if (!mouseReady || !cachedRect) {
         rafId = requestAnimationFrame(tick);
         return;
       }
@@ -3360,6 +3363,11 @@ function useDataGrid<TData>({
 
     function startAutoScroll() {
       if (active) return;
+      
+      // Don't start if container doesn't exist (e.g., during tests or early render)
+      const container = dataGridRef.current;
+      if (!container) return;
+      
       active = true;
       mouseReady = false;
       cachedRect = null;
@@ -3367,8 +3375,8 @@ function useDataGrid<TData>({
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
       rafId = requestAnimationFrame(() => {
-        const container = dataGridRef.current;
-        if (container) cacheLayout(container);
+        const currentContainer = dataGridRef.current;
+        if (currentContainer) cacheLayout(currentContainer);
         rafId = requestAnimationFrame(tick);
       });
     }
