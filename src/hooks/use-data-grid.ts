@@ -3248,7 +3248,6 @@ function useDataGrid<TData>({
       const dataTop = rect.top + cachedHdrH;
       const dataBottom = rect.bottom - cachedFtrH;
 
-      // In RTL, pinned columns swap their viewport positions
       const scrollAreaLeft = isActuallyRtl
         ? rect.left + cachedRpw
         : rect.left + cachedLpw;
@@ -3282,8 +3281,8 @@ function useDataGrid<TData>({
         return;
       }
 
-      const { rowHeightValue: rh, columnIds: colIds } = dragDepsRef.current;
-      if (colIds.length === 0) {
+      const { rowHeightValue: rh, columnIds } = dragDepsRef.current;
+      if (columnIds.length === 0) {
         rafId = requestAnimationFrame(tick);
         return;
       }
@@ -3299,17 +3298,10 @@ function useDataGrid<TData>({
       const st = store.getState();
       const range = st.selectionState.selectionRange;
 
-      // When only scrolling vertically, keep the current column from the
-      // selection range. Column resolution from pixel math is fragile in
-      // RTL due to browser differences in scrollLeft. onCellMouseEnter
-      // already tracks the column accurately when the mouse moves horizontally.
       let columnId: string | undefined;
 
       if (dx !== 0) {
-        const clampedX = Math.max(
-          rect.left,
-          Math.min(mouseX, rect.right),
-        );
+        const clampedX = Math.max(rect.left, Math.min(mouseX, rect.right));
         const relX = clampedX - rect.left;
 
         const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;
@@ -3319,7 +3311,7 @@ function useDataGrid<TData>({
           const columns = isActuallyRtl
             ? tbl.getRightVisibleLeafColumns()
             : tbl.getLeftVisibleLeafColumns();
-          columnId = columns[0]?.id ?? colIds[0] ?? "";
+          columnId = columns[0]?.id ?? columnIds[0] ?? "";
           let cx = 0;
           for (const col of columns) {
             if (relX < cx + col.getSize()) {
@@ -3332,8 +3324,7 @@ function useDataGrid<TData>({
           const columns = isActuallyRtl
             ? tbl.getLeftVisibleLeafColumns()
             : tbl.getRightVisibleLeafColumns();
-          columnId =
-            columns[0]?.id ?? colIds[colIds.length - 1] ?? "";
+          columnId = columns[0]?.id ?? columnIds[columnIds.length - 1] ?? "";
           let cx = rect.width - rightZoneWidth;
           for (const col of columns) {
             if (relX < cx + col.getSize()) {
@@ -3344,8 +3335,7 @@ function useDataGrid<TData>({
           }
         } else {
           const center = tbl.getCenterVisibleLeafColumns();
-          const centerZoneWidth =
-            rect.width - leftZoneWidth - rightZoneWidth;
+          const centerZoneWidth = rect.width - leftZoneWidth - rightZoneWidth;
           const distFromVisualLeft = relX - leftZoneWidth;
 
           let absX: number;
@@ -3355,16 +3345,14 @@ function useDataGrid<TData>({
               : container.scrollWidth -
                 container.clientWidth -
                 container.scrollLeft;
-            absX =
-              scrollFromRight +
-              (centerZoneWidth - distFromVisualLeft);
+            absX = scrollFromRight + (centerZoneWidth - distFromVisualLeft);
           } else {
             absX = container.scrollLeft + distFromVisualLeft;
           }
 
           columnId =
             center[center.length - 1]?.id ??
-            colIds[colIds.length - 1] ??
+            columnIds[columnIds.length - 1] ??
             "";
           let cw = 0;
           for (const col of center) {
@@ -3377,10 +3365,10 @@ function useDataGrid<TData>({
         }
       }
 
-      // Fall back to current selection column when only scrolling vertically
       if (!columnId) {
-        columnId = range?.end.columnId ?? colIds[0] ?? "";
+        columnId = range?.end.columnId ?? columnIds[0] ?? "";
       }
+
       if (
         range &&
         (rowIndex !== range.end.rowIndex || columnId !== range.end.columnId)
@@ -3477,7 +3465,6 @@ function useDataGrid<TData>({
     table.getState().sorting,
   ]);
 
-  // Calculate virtual values outside of child render to avoid flushSync issues
   const virtualTotalSize = rowVirtualizer.getTotalSize();
   const virtualItems = rowVirtualizer.getVirtualItems();
   const measureElement = rowVirtualizer.measureElement;
