@@ -55,6 +55,10 @@ const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
+const AUTO_SCROLL_EDGE_ZONE = 40;
+const AUTO_SCROLL_MIN_SPEED = 4;
+const AUTO_SCROLL_MAX_SPEED = 25;
+const AUTO_SCROLL_SELECTION_THROTTLE_MS = 50;
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
@@ -528,6 +532,13 @@ function useDataGrid<TData>({
     },
     [columnIds, store],
   );
+
+  const dragDepsRef = useAsRef({
+    selectRange,
+    dir,
+    rowHeightValue,
+    columnIds,
+  });
 
   const serializeCellsToTsv = React.useCallback(() => {
     const currentState = store.getState();
@@ -3176,6 +3187,219 @@ function useDataGrid<TData>({
       onUnsubscribe();
     };
   }, [store]);
+
+  React.useEffect(() => {
+    const EDGE_ZONE = AUTO_SCROLL_EDGE_ZONE;
+    const MIN_SPEED = AUTO_SCROLL_MIN_SPEED;
+    const MAX_SPEED = AUTO_SCROLL_MAX_SPEED;
+    const SELECTION_THROTTLE_MS = AUTO_SCROLL_SELECTION_THROTTLE_MS;
+
+    let rafId: number | null = null;
+    let mouseX = 0;
+    let mouseY = 0;
+    let mouseReady = false;
+    let active = false;
+    let lastSelectionTime = 0;
+
+    let cachedRect: DOMRect | null = null;
+    let cachedHdrH = 0;
+    let cachedFtrH = 0;
+    let cachedLpw = 0;
+    let cachedRpw = 0;
+
+    function speed(dist: number): number {
+      const t = Math.min(dist / (EDGE_ZONE * 3), 1);
+      return Math.round(MIN_SPEED + (MAX_SPEED - MIN_SPEED) * t);
+    }
+
+    function cacheLayout(container: HTMLDivElement) {
+      cachedRect = container.getBoundingClientRect();
+      cachedHdrH = headerRef.current?.getBoundingClientRect().height ?? 0;
+      cachedFtrH = footerRef.current?.getBoundingClientRect().height ?? 0;
+      const tbl = tableRef.current;
+      if (tbl) {
+        cachedLpw = tbl
+          .getLeftVisibleLeafColumns()
+          .reduce((s, c) => s + c.getSize(), 0);
+        cachedRpw = tbl
+          .getRightVisibleLeafColumns()
+          .reduce((s, c) => s + c.getSize(), 0);
+      }
+    }
+
+    function tick() {
+      if (!active) return;
+      const container = dataGridRef.current;
+      if (!container || !mouseReady || !cachedRect) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const tbl = tableRef.current;
+      if (!tbl) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const rect = cachedRect;
+      const dataTop = rect.top + cachedHdrH;
+      const dataBottom = rect.bottom - cachedFtrH;
+      const scrollAreaLeft = rect.left + cachedLpw;
+      const scrollAreaRight = rect.right - cachedRpw;
+
+      let dy = 0;
+      let dx = 0;
+
+      if (mouseY < dataTop) dy = -speed(dataTop - mouseY);
+      else if (mouseY > dataBottom) dy = speed(mouseY - dataBottom);
+
+      if (mouseX < scrollAreaLeft) dx = -speed(scrollAreaLeft - mouseX);
+      else if (mouseX > scrollAreaRight) dx = speed(mouseX - scrollAreaRight);
+
+      if (dx === 0 && dy === 0) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      container.scrollTop += dy;
+      container.scrollLeft += dx;
+
+      const now = performance.now();
+      if (now - lastSelectionTime < SELECTION_THROTTLE_MS) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const { rowHeightValue: rh, columnIds: colIds } = dragDepsRef.current;
+      if (colIds.length === 0) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const totalRows = tbl.getRowModel().rows.length;
+      const clampedY = Math.max(dataTop, Math.min(mouseY, dataBottom));
+      const absY = container.scrollTop + (clampedY - dataTop);
+      const rowIndex = Math.max(
+        0,
+        Math.min(Math.floor(absY / rh), totalRows - 1),
+      );
+
+      const clampedX = Math.max(rect.left, Math.min(mouseX, rect.right));
+      const relX = clampedX - rect.left;
+
+      let columnId: string;
+
+      if (relX < cachedLpw) {
+        const leftPinned = tbl.getLeftVisibleLeafColumns();
+        columnId = leftPinned[0]?.id ?? colIds[0] ?? "";
+        let cx = 0;
+        for (const col of leftPinned) {
+          if (relX < cx + col.getSize()) {
+            columnId = col.id;
+            break;
+          }
+          cx += col.getSize();
+        }
+      } else if (relX > rect.width - cachedRpw) {
+        const rightPinned = tbl.getRightVisibleLeafColumns();
+        columnId = rightPinned[0]?.id ?? colIds[colIds.length - 1] ?? "";
+        let cx = rect.width - cachedRpw;
+        for (const col of rightPinned) {
+          if (relX < cx + col.getSize()) {
+            columnId = col.id;
+            break;
+          }
+          cx += col.getSize();
+        }
+      } else {
+        const center = tbl.getCenterVisibleLeafColumns();
+        const absX = Math.abs(container.scrollLeft) + (relX - cachedLpw);
+        columnId =
+          center[center.length - 1]?.id ?? colIds[colIds.length - 1] ?? "";
+        let cw = 0;
+        for (const col of center) {
+          cw += col.getSize();
+          if (absX < cw) {
+            columnId = col.id;
+            break;
+          }
+        }
+      }
+
+      const st = store.getState();
+      const range = st.selectionState.selectionRange;
+      if (
+        range &&
+        (rowIndex !== range.end.rowIndex || columnId !== range.end.columnId)
+      ) {
+        dragDepsRef.current.selectRange(
+          range.start,
+          { rowIndex, columnId },
+          true,
+        );
+        lastSelectionTime = now;
+      }
+
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function onMove(event: MouseEvent) {
+      mouseX = event.clientX;
+      mouseY = event.clientY;
+      mouseReady = true;
+    }
+
+    function onUp() {
+      stopAutoScroll();
+      const st = store.getState();
+      if (st.selectionState.isSelecting) {
+        store.setState("selectionState", {
+          ...st.selectionState,
+          isSelecting: false,
+        });
+      }
+    }
+
+    function startAutoScroll() {
+      if (active) return;
+      active = true;
+      mouseReady = false;
+      cachedRect = null;
+      lastSelectionTime = 0;
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+      rafId = requestAnimationFrame(() => {
+        const container = dataGridRef.current;
+        if (container) cacheLayout(container);
+        rafId = requestAnimationFrame(tick);
+      });
+    }
+
+    function stopAutoScroll() {
+      if (!active) return;
+      active = false;
+      cachedRect = null;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    }
+
+    if (store.getState().selectionState.isSelecting) startAutoScroll();
+
+    const unsubscribe = store.subscribe(() => {
+      const st = store.getState();
+      if (st.selectionState.isSelecting && !active) startAutoScroll();
+      else if (!st.selectionState.isSelecting && active) stopAutoScroll();
+    });
+
+    return () => {
+      stopAutoScroll();
+      unsubscribe();
+    };
+  }, [store, dragDepsRef]);
 
   useIsomorphicLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
