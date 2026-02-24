@@ -3315,7 +3315,12 @@ function useDataGrid<TData>({
         }
       } else {
         const center = tbl.getCenterVisibleLeafColumns();
-        const absX = Math.abs(container.scrollLeft) + (relX - cachedLpw);
+        const { dir } = dragDepsRef.current;
+        let scrollLeft = container.scrollLeft;
+        if (dir === "rtl" && scrollLeft < 0) {
+          scrollLeft = -scrollLeft;
+        }
+        const absX = Math.abs(scrollLeft) + (relX - cachedLpw);
         columnId =
           center[center.length - 1]?.id ?? colIds[colIds.length - 1] ?? "";
         let cw = 0;
