@@ -1539,7 +1539,11 @@ describe("useDataGrid", () => {
 
       // Select the visible (filtered) row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(visibleRowId ?? "1", true, false);
+        result.current.tableMeta.onRowSelect?.(
+          visibleRowId ?? "1",
+          true,
+          false,
+        );
       });
 
       const rowSelection = result.current.table.getState().rowSelection;
