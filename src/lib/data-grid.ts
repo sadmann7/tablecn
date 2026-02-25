@@ -328,38 +328,39 @@ export function parseTsv(
   }
 
   const lines = text.split("\n");
-  let maxTabs = 0;
+  let maxTabCount = 0;
   for (const line of lines) {
     const n = countTabs(line);
-    if (n > maxTabs) maxTabs = n;
+    if (n > maxTabCount) maxTabCount = n;
   }
-  const cols = maxTabs > 0 ? maxTabs + 1 : fallbackColumnCount;
-  if (cols <= 0) return [];
+  const columnCount = maxTabCount > 0 ? maxTabCount + 1 : fallbackColumnCount;
+  if (columnCount <= 0) return [];
 
+  const expectedTabCount = columnCount - 1;
   const rows: string[][] = [];
   let buf = "";
-  let bufTabs = 0;
+  let bufTabCount = 0;
 
   for (const line of lines) {
     const tc = countTabs(line);
 
-    if (tc === cols - 1) {
-      if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
+    if (tc === expectedTabCount) {
+      if (buf && bufTabCount === expectedTabCount) rows.push(buf.split("\t"));
       buf = "";
-      bufTabs = 0;
+      bufTabCount = 0;
       rows.push(line.split("\t"));
     } else {
       buf = buf ? `${buf}\n${line}` : line;
-      bufTabs += tc;
-      if (bufTabs === cols - 1) {
+      bufTabCount += tc;
+      if (bufTabCount === expectedTabCount) {
         rows.push(buf.split("\t"));
         buf = "";
-        bufTabs = 0;
+        bufTabCount = 0;
       }
     }
   }
 
-  if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
+  if (buf && bufTabCount === expectedTabCount) rows.push(buf.split("\t"));
 
   return rows.length > 0
     ? rows
