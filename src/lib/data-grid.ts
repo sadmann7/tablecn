@@ -266,6 +266,67 @@ export function parseTsv(
   text: string,
   fallbackColumnCount: number,
 ): string[][] {
+  if (text.startsWith('"') || text.includes('\t"')) {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentField = "";
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < text.length) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (inQuotes) {
+        if (char === '"' && nextChar === '"') {
+          currentField += '"';
+          i += 2;
+        } else if (char === '"') {
+          inQuotes = false;
+          i++;
+        } else {
+          currentField += char;
+          i++;
+        }
+      } else {
+        if (char === '"' && currentField === "") {
+          inQuotes = true;
+          i++;
+        } else if (char === "\t") {
+          currentRow.push(currentField);
+          currentField = "";
+          i++;
+        } else if (char === "\n") {
+          currentRow.push(currentField);
+          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = "";
+          i++;
+        } else if (char === "\r" && nextChar === "\n") {
+          currentRow.push(currentField);
+          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = "";
+          i += 2;
+        } else {
+          currentField += char;
+          i++;
+        }
+      }
+    }
+
+    currentRow.push(currentField);
+    if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+      rows.push(currentRow);
+    }
+
+    return rows;
+  }
+
   const lines = text.split("\n");
   let maxTabs = 0;
   for (const line of lines) {
@@ -277,26 +338,28 @@ export function parseTsv(
 
   const rows: string[][] = [];
   let buf = "";
+  let bufTabs = 0;
 
   for (const line of lines) {
     const tc = countTabs(line);
 
     if (tc === cols - 1) {
-      if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
+      if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
       buf = "";
+      bufTabs = 0;
       rows.push(line.split("\t"));
-    } else if (tc === 0 && rows.length > 0 && !buf) {
-      const last = rows[rows.length - 1];
-      if (last) {
-        const cell = last[cols - 1];
-        if (cell !== undefined) last[cols - 1] = `${cell}\n${line}`;
-      }
     } else {
       buf = buf ? `${buf}\n${line}` : line;
+      bufTabs += tc;
+      if (bufTabs === cols - 1) {
+        rows.push(buf.split("\t"));
+        buf = "";
+        bufTabs = 0;
+      }
     }
   }
 
-  if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
+  if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
 
   return rows.length > 0
     ? rows
