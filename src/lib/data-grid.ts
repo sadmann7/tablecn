@@ -355,14 +355,12 @@ export function parseTsv(
       if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
       buf = "";
       rows.push(line.split("\t"));
-    } else if (tc === 0 && rows.length > 0 && !buf) {
-      const last = rows[rows.length - 1];
-      if (last) {
-        const cell = last[cols - 1];
-        if (cell !== undefined) last[cols - 1] = `${cell}\n${line}`;
-      }
     } else {
       buf = buf ? `${buf}\n${line}` : line;
+      if (countTabs(buf) === cols - 1) {
+        rows.push(buf.split("\t"));
+        buf = "";
+      }
     }
   }
 
