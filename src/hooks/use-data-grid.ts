@@ -399,23 +399,25 @@ function useDataGrid<TData>({
         }
       }
 
-      const tableRowCount = rows?.length ?? currentData.length;
-      const newData: TData[] = new Array(tableRowCount);
+      const newData: TData[] = new Array(currentData.length);
 
-      for (let i = 0; i < tableRowCount; i++) {
+      for (let i = 0; i < currentData.length; i++) {
         const updates = rowUpdatesMap.get(i);
         const existingRow = currentData[i];
-        const tableRow = rows?.[i];
+
+        if (!existingRow) {
+          newData[i] = existingRow as TData;
+          continue;
+        }
 
         if (updates) {
-          const baseRow = existingRow ?? tableRow?.original ?? ({} as TData);
-          const updatedRow = { ...baseRow } as Record<string, unknown>;
+          const updatedRow = { ...existingRow } as Record<string, unknown>;
           for (const { columnId, value } of updates) {
             updatedRow[columnId] = value;
           }
           newData[i] = updatedRow as TData;
         } else {
-          newData[i] = existingRow ?? tableRow?.original ?? ({} as TData);
+          newData[i] = existingRow;
         }
       }
 
@@ -558,9 +560,16 @@ function useDataGrid<TData>({
       number,
       Map<string, ReturnType<Row<TData>["getVisibleCells"]>[number]>
     >();
+    const navigableCells: string[] = [];
 
     for (const cellKey of selectedCellsArray) {
       const { rowIndex, columnId } = parseCellKey(cellKey);
+
+      if (columnId && NON_NAVIGABLE_COLUMN_IDS.has(columnId)) {
+        continue;
+      }
+
+      navigableCells.push(cellKey);
 
       if (columnId && !seenColumnIds.has(columnId)) {
         seenColumnIds.add(columnId);
@@ -596,7 +605,7 @@ function useDataGrid<TData>({
     }
 
     const colIndices = new Set<number>();
-    for (const cellKey of selectedCellsArray) {
+    for (const cellKey of navigableCells) {
       const { columnId } = parseCellKey(cellKey);
       const colIndex = selectedColumnIds.indexOf(columnId);
       if (colIndex >= 0) {
@@ -619,7 +628,7 @@ function useDataGrid<TData>({
       )
       .join("\n");
 
-    return { tsvData, selectedCellsArray };
+    return { tsvData, selectedCellsArray: navigableCells };
   }, [store]);
 
   const onCellsCopy = React.useCallback(async () => {
@@ -1941,14 +1950,18 @@ function useDataGrid<TData>({
       const currentState = store.getState();
       const rows = tableRef.current?.getRowModel().rows ?? [];
       const currentRowIndex = rows.findIndex((r) => r.id === rowId);
-      const currentRow = currentRowIndex >= 0 ? rows[currentRowIndex] : null;
-      if (!currentRow) return;
+      if (currentRowIndex === -1) return;
 
       if (shiftKey && currentState.lastClickedRowId !== null) {
         const lastClickedRowIndex = rows.findIndex(
           (r) => r.id === currentState.lastClickedRowId,
         );
-        if (lastClickedRowIndex >= 0) {
+        if (lastClickedRowIndex === -1) {
+          onRowSelectionChange({
+            ...currentState.rowSelection,
+            [rowId]: selected,
+          });
+        } else {
           const startIndex = Math.min(lastClickedRowIndex, currentRowIndex);
           const endIndex = Math.max(lastClickedRowIndex, currentRowIndex);
 
@@ -1964,16 +1977,11 @@ function useDataGrid<TData>({
           }
 
           onRowSelectionChange(newRowSelection);
-        } else {
-          onRowSelectionChange({
-            ...currentState.rowSelection,
-            [currentRow.id]: selected,
-          });
         }
       } else {
         onRowSelectionChange({
           ...currentState.rowSelection,
-          [currentRow.id]: selected,
+          [rowId]: selected,
         });
       }
 
