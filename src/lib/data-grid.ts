@@ -262,20 +262,11 @@ function countTabs(s: string): number {
   return n;
 }
 
-function hasQuotedFields(text: string): boolean {
-  const lines = text.split("\n", 5);
-  for (const line of lines) {
-    if (line.startsWith('"')) return true;
-    if (line.includes('\t"')) return true;
-  }
-  return false;
-}
-
 export function parseTsv(
   text: string,
   fallbackColumnCount: number,
 ): string[][] {
-  if (hasQuotedFields(text)) {
+  if (text.startsWith('"') || text.includes('\t"')) {
     const rows: string[][] = [];
     let currentRow: string[] = [];
     let currentField = "";
