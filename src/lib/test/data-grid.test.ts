@@ -34,7 +34,8 @@ describe("parseTsv", () => {
 
   describe("quoted fields (standard TSV)", () => {
     it("should handle quoted multiline content", () => {
-      const text = 'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98';
+      const text =
+        'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98';
       expect(parseTsv(text, 3)).toEqual([
         ["Alice", "Kickflip", "95"],
         ["Bob", "Trick with\nmultiple\nlines", "98"],
@@ -53,16 +54,13 @@ describe("parseTsv", () => {
 
     it("should handle mixed quoted and unquoted fields", () => {
       const text = 'plain\t"quoted\nfield"\t123';
-      expect(parseTsv(text, 3)).toEqual([
-        ["plain", "quoted\nfield", "123"],
-      ]);
+      expect(parseTsv(text, 3)).toEqual([["plain", "quoted\nfield", "123"]]);
     });
   });
 
   describe("unquoted multiline (tab counting)", () => {
     it("should handle multiline in last column", () => {
-      const text =
-        "Alice\tKickflip\t95\nBob\tTrick with\nmultiple\nlines\t98";
+      const text = "Alice\tKickflip\t95\nBob\tTrick with\nmultiple\nlines\t98";
       expect(parseTsv(text, 3)).toEqual([
         ["Alice", "Kickflip", "95"],
         ["Bob", "Trick with\nmultiple\nlines", "98"],
@@ -100,11 +98,10 @@ describe("parseTsv", () => {
 
   describe("data with JSON values (no false positives)", () => {
     it("should use tab counting when quotes are inside field values not delimiters", () => {
-      const text =
-        'Alice\t["React","Node.js"]\t95\nBob\t["Python"]\t88';
+      const text = 'Alice\t["React","Node.js"]\t95\nBob\t["Python"]\t88';
       expect(parseTsv(text, 3)).toEqual([
-        ['Alice', '["React","Node.js"]', "95"],
-        ['Bob', '["Python"]', "88"],
+        ["Alice", '["React","Node.js"]', "95"],
+        ["Bob", '["Python"]', "88"],
       ]);
     });
 
@@ -112,7 +109,7 @@ describe("parseTsv", () => {
       const text = [
         'Alice\tShort note\t["React"]\t1',
         "Bob\tLine 1",
-        "Line 2\t[\"Python\"]\t2",
+        'Line 2\t["Python"]\t2',
         'Charlie\tPlain\t["SQL"]\t3',
       ].join("\n");
       expect(parseTsv(text, 4)).toEqual([
