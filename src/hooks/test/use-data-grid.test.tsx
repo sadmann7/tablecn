@@ -1168,7 +1168,7 @@ describe("useDataGrid", () => {
     it("should preserve multiline content within cells when pasting", async () => {
       const onPaste = vi.fn().mockResolvedValue(undefined);
       mockClipboard.readText.mockResolvedValue(
-        "Alice\tKickflip\t95\nBob\tTrick with\nmultiple\nlines\t98",
+        'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98',
       );
 
       const { result } = renderHook(
