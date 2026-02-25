@@ -406,7 +406,7 @@ function useDataGrid<TData>({
         const existingRow = currentData[i];
 
         if (!existingRow) {
-          newData[i] = {} as TData;
+          newData[i] = existingRow as TData;
           continue;
         }
 
@@ -1950,14 +1950,18 @@ function useDataGrid<TData>({
       const currentState = store.getState();
       const rows = tableRef.current?.getRowModel().rows ?? [];
       const currentRowIndex = rows.findIndex((r) => r.id === rowId);
-      const currentRow = currentRowIndex >= 0 ? rows[currentRowIndex] : null;
-      if (!currentRow) return;
+      if (currentRowIndex === -1) return;
 
       if (shiftKey && currentState.lastClickedRowId !== null) {
         const lastClickedRowIndex = rows.findIndex(
           (r) => r.id === currentState.lastClickedRowId,
         );
-        if (lastClickedRowIndex >= 0) {
+        if (lastClickedRowIndex === -1) {
+          onRowSelectionChange({
+            ...currentState.rowSelection,
+            [rowId]: selected,
+          });
+        } else {
           const startIndex = Math.min(lastClickedRowIndex, currentRowIndex);
           const endIndex = Math.max(lastClickedRowIndex, currentRowIndex);
 
@@ -1973,16 +1977,11 @@ function useDataGrid<TData>({
           }
 
           onRowSelectionChange(newRowSelection);
-        } else {
-          onRowSelectionChange({
-            ...currentState.rowSelection,
-            [currentRow.id]: selected,
-          });
         }
       } else {
         onRowSelectionChange({
           ...currentState.rowSelection,
-          [currentRow.id]: selected,
+          [rowId]: selected,
         });
       }
 

@@ -63,7 +63,7 @@ export function ShortTextCell<TData>({
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const prevIsEditingRef = React.useRef(isEditing);
+  const prevIsEditingRef = React.useRef(false);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -428,7 +428,7 @@ export function NumberCell<TData>({
   const max = numberCellOpts?.max;
   const step = numberCellOpts?.step;
 
-  const prevIsEditingRef = React.useRef(isEditing);
+  const prevIsEditingRef = React.useRef(false);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -550,7 +550,7 @@ export function UrlCell<TData>({
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const prevIsEditingRef = React.useRef(isEditing);
+  const prevIsEditingRef = React.useRef(false);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
