@@ -256,51 +256,65 @@ export function scrollCellIntoView<TData>(params: {
   container.scrollLeft += scrollDelta;
 }
 
-function countTabs(s: string): number {
-  let n = 0;
-  for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
-  return n;
-}
-
-export function parseTsv(
-  text: string,
-  fallbackColumnCount: number,
-): string[][] {
-  const lines = text.split("\n");
-  let maxTabs = 0;
-  for (const line of lines) {
-    const n = countTabs(line);
-    if (n > maxTabs) maxTabs = n;
-  }
-  const cols = maxTabs > 0 ? maxTabs + 1 : fallbackColumnCount;
-  if (cols <= 0) return [];
-
+export function parseTsvText(text: string): string[][] {
   const rows: string[][] = [];
-  let buf = "";
+  let currentRow: string[] = [];
+  let currentField = "";
+  let inQuotes = false;
+  let i = 0;
 
-  for (const line of lines) {
-    const tc = countTabs(line);
+  while (i < text.length) {
+    const char = text[i];
+    const nextChar = text[i + 1];
 
-    if (tc === cols - 1) {
-      if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
-      buf = "";
-      rows.push(line.split("\t"));
-    } else if (tc === 0 && rows.length > 0 && !buf) {
-      const last = rows[rows.length - 1];
-      if (last) {
-        const cell = last[cols - 1];
-        if (cell !== undefined) last[cols - 1] = `${cell}\n${line}`;
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentField += '"';
+        i += 2;
+      } else if (char === '"') {
+        inQuotes = false;
+        i++;
+      } else {
+        currentField += char;
+        i++;
       }
     } else {
-      buf = buf ? `${buf}\n${line}` : line;
+      if (char === '"' && currentField === "") {
+        inQuotes = true;
+        i++;
+      } else if (char === "\t") {
+        currentRow.push(currentField);
+        currentField = "";
+        i++;
+      } else if (char === "\n") {
+        currentRow.push(currentField);
+        if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentField = "";
+        i++;
+      } else if (char === "\r" && nextChar === "\n") {
+        currentRow.push(currentField);
+        if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        currentField = "";
+        i += 2;
+      } else {
+        currentField += char;
+        i++;
+      }
     }
   }
 
-  if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
+  currentRow.push(currentField);
+  if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+    rows.push(currentRow);
+  }
 
-  return rows.length > 0
-    ? rows
-    : lines.filter((l) => l.length > 0).map((l) => l.split("\t"));
+  return rows;
 }
 
 export function getIsInPopover(element: unknown): boolean {
