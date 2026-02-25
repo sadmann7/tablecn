@@ -317,6 +317,63 @@ export function parseTsvText(text: string): string[][] {
   return rows;
 }
 
+function countTabs(s: string): number {
+  let n = 0;
+  for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
+  return n;
+}
+
+function parseTsvWithTabCounting(
+  text: string,
+  fallbackColumnCount: number,
+): string[][] {
+  const lines = text.split("\n");
+  let maxTabs = 0;
+  for (const line of lines) {
+    const n = countTabs(line);
+    if (n > maxTabs) maxTabs = n;
+  }
+  const cols = maxTabs > 0 ? maxTabs + 1 : fallbackColumnCount;
+  if (cols <= 0) return [];
+
+  const rows: string[][] = [];
+  let buf = "";
+
+  for (const line of lines) {
+    const tc = countTabs(line);
+
+    if (tc === cols - 1) {
+      if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
+      buf = "";
+      rows.push(line.split("\t"));
+    } else if (tc === 0 && rows.length > 0 && !buf) {
+      const last = rows[rows.length - 1];
+      if (last) {
+        const cell = last[cols - 1];
+        if (cell !== undefined) last[cols - 1] = `${cell}\n${line}`;
+      }
+    } else {
+      buf = buf ? `${buf}\n${line}` : line;
+    }
+  }
+
+  if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
+
+  return rows.length > 0
+    ? rows
+    : lines.filter((l) => l.length > 0).map((l) => l.split("\t"));
+}
+
+export function parseTsv(
+  text: string,
+  fallbackColumnCount: number,
+): string[][] {
+  if (text.includes('"')) {
+    return parseTsvText(text);
+  }
+  return parseTsvWithTabCounting(text, fallbackColumnCount);
+}
+
 export function getIsInPopover(element: unknown): boolean {
   if (!(element instanceof Element)) return false;
 
