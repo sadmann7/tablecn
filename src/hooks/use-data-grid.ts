@@ -55,6 +55,10 @@ const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
+const AUTO_SCROLL_EDGE_ZONE = 50;
+const AUTO_SCROLL_MIN_SPEED = 8;
+const AUTO_SCROLL_MAX_SPEED = 40;
+const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
@@ -406,7 +410,7 @@ function useDataGrid<TData>({
         const existingRow = currentData[i];
 
         if (!existingRow) {
-          newData[i] = existingRow as TData;
+          newData[i] = {} as TData;
           continue;
         }
 
@@ -530,6 +534,13 @@ function useDataGrid<TData>({
     },
     [columnIds, store],
   );
+
+  const dragDepsRef = useAsRef({
+    selectRange,
+    dir,
+    rowHeightValue,
+    columnIds,
+  });
 
   const serializeCellsToTsv = React.useCallback(() => {
     const currentState = store.getState();
@@ -1950,18 +1961,14 @@ function useDataGrid<TData>({
       const currentState = store.getState();
       const rows = tableRef.current?.getRowModel().rows ?? [];
       const currentRowIndex = rows.findIndex((r) => r.id === rowId);
-      if (currentRowIndex === -1) return;
+      const currentRow = currentRowIndex >= 0 ? rows[currentRowIndex] : null;
+      if (!currentRow) return;
 
       if (shiftKey && currentState.lastClickedRowId !== null) {
         const lastClickedRowIndex = rows.findIndex(
           (r) => r.id === currentState.lastClickedRowId,
         );
-        if (lastClickedRowIndex === -1) {
-          onRowSelectionChange({
-            ...currentState.rowSelection,
-            [rowId]: selected,
-          });
-        } else {
+        if (lastClickedRowIndex >= 0) {
           const startIndex = Math.min(lastClickedRowIndex, currentRowIndex);
           const endIndex = Math.max(lastClickedRowIndex, currentRowIndex);
 
@@ -1977,11 +1984,16 @@ function useDataGrid<TData>({
           }
 
           onRowSelectionChange(newRowSelection);
+        } else {
+          onRowSelectionChange({
+            ...currentState.rowSelection,
+            [currentRow.id]: selected,
+          });
         }
       } else {
         onRowSelectionChange({
           ...currentState.rowSelection,
-          [rowId]: selected,
+          [currentRow.id]: selected,
         });
       }
 
@@ -3185,6 +3197,264 @@ function useDataGrid<TData>({
     };
   }, [store]);
 
+  React.useEffect(() => {
+    let rafId: number | null = null;
+    let mouseX = 0;
+    let mouseY = 0;
+    let mouseReady = false;
+    let active = false;
+    let lastSelectionTime = 0;
+
+    let cachedRect: DOMRect | null = null;
+    let cachedHdrH = 0;
+    let cachedFtrH = 0;
+    let cachedLpw = 0;
+    let cachedRpw = 0;
+
+    function getAutoScrollSpeed(dist: number): number {
+      const t = Math.min(dist / (AUTO_SCROLL_EDGE_ZONE * 3), 1);
+      return Math.round(
+        AUTO_SCROLL_MIN_SPEED +
+          (AUTO_SCROLL_MAX_SPEED - AUTO_SCROLL_MIN_SPEED) * t,
+      );
+    }
+
+    function cacheLayout(container: HTMLDivElement) {
+      cachedRect = container.getBoundingClientRect();
+      cachedHdrH = headerRef.current?.getBoundingClientRect().height ?? 0;
+      cachedFtrH = footerRef.current?.getBoundingClientRect().height ?? 0;
+      const tbl = tableRef.current;
+      if (tbl) {
+        cachedLpw = tbl
+          .getLeftVisibleLeafColumns()
+          .reduce((s, c) => s + c.getSize(), 0);
+        cachedRpw = tbl
+          .getRightVisibleLeafColumns()
+          .reduce((s, c) => s + c.getSize(), 0);
+      }
+    }
+
+    function tick() {
+      if (!active) return;
+      const container = dataGridRef.current;
+      const tbl = tableRef.current;
+
+      if (!container || !tbl) {
+        onAutoScrollStop();
+        return;
+      }
+
+      if (!mouseReady || !cachedRect) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const rect = cachedRect;
+      const { dir } = dragDepsRef.current;
+      const hasNegativeScroll = container.scrollLeft < 0;
+      const isActuallyRtl = dir === "rtl" || hasNegativeScroll;
+
+      const dataTop = rect.top + cachedHdrH;
+      const dataBottom = rect.bottom - cachedFtrH;
+
+      const scrollAreaLeft = isActuallyRtl
+        ? rect.left + cachedRpw
+        : rect.left + cachedLpw;
+      const scrollAreaRight = isActuallyRtl
+        ? rect.right - cachedLpw
+        : rect.right - cachedRpw;
+
+      let dy = 0;
+      let dx = 0;
+
+      if (mouseY < dataTop) dy = -getAutoScrollSpeed(dataTop - mouseY);
+      else if (mouseY > dataBottom)
+        dy = getAutoScrollSpeed(mouseY - dataBottom);
+
+      if (mouseX < scrollAreaLeft)
+        dx = -getAutoScrollSpeed(scrollAreaLeft - mouseX);
+      else if (mouseX > scrollAreaRight)
+        dx = getAutoScrollSpeed(mouseX - scrollAreaRight);
+
+      if (dx === 0 && dy === 0) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      container.scrollTop += dy;
+      container.scrollLeft += dx;
+
+      const now = performance.now();
+      if (now - lastSelectionTime < AUTO_SCROLL_SELECTION_THROTTLE_MS) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const { rowHeightValue: rh, columnIds } = dragDepsRef.current;
+      if (columnIds.length === 0) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const totalRows = tbl.getRowModel().rows.length;
+      const clampedY = Math.max(dataTop, Math.min(mouseY, dataBottom));
+      const absY = container.scrollTop + (clampedY - dataTop);
+      const rowIndex = Math.max(
+        0,
+        Math.min(Math.floor(absY / rh), totalRows - 1),
+      );
+
+      const st = store.getState();
+      const range = st.selectionState.selectionRange;
+
+      let columnId: string | undefined;
+
+      if (dx !== 0) {
+        const clampedX = Math.max(rect.left, Math.min(mouseX, rect.right));
+        const relX = clampedX - rect.left;
+
+        const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;
+        const rightZoneWidth = isActuallyRtl ? cachedLpw : cachedRpw;
+
+        if (relX < leftZoneWidth) {
+          const columns = isActuallyRtl
+            ? tbl.getRightVisibleLeafColumns()
+            : tbl.getLeftVisibleLeafColumns();
+          columnId = columns[0]?.id ?? columnIds[0] ?? "";
+          let cx = 0;
+          for (const col of columns) {
+            if (relX < cx + col.getSize()) {
+              columnId = col.id;
+              break;
+            }
+            cx += col.getSize();
+          }
+        } else if (relX > rect.width - rightZoneWidth) {
+          const columns = isActuallyRtl
+            ? tbl.getLeftVisibleLeafColumns()
+            : tbl.getRightVisibleLeafColumns();
+          columnId = columns[0]?.id ?? columnIds[columnIds.length - 1] ?? "";
+          let cx = rect.width - rightZoneWidth;
+          for (const col of columns) {
+            if (relX < cx + col.getSize()) {
+              columnId = col.id;
+              break;
+            }
+            cx += col.getSize();
+          }
+        } else {
+          const center = tbl.getCenterVisibleLeafColumns();
+          const centerZoneWidth = rect.width - leftZoneWidth - rightZoneWidth;
+          const distFromVisualLeft = relX - leftZoneWidth;
+
+          let absX: number;
+          if (isActuallyRtl) {
+            const scrollFromRight = hasNegativeScroll
+              ? -container.scrollLeft
+              : container.scrollWidth -
+                container.clientWidth -
+                container.scrollLeft;
+            absX = scrollFromRight + (centerZoneWidth - distFromVisualLeft);
+          } else {
+            absX = container.scrollLeft + distFromVisualLeft;
+          }
+
+          columnId =
+            center[center.length - 1]?.id ??
+            columnIds[columnIds.length - 1] ??
+            "";
+          let cw = 0;
+          for (const col of center) {
+            cw += col.getSize();
+            if (absX < cw) {
+              columnId = col.id;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!columnId) {
+        columnId = range?.end.columnId ?? columnIds[0] ?? "";
+      }
+
+      if (
+        range &&
+        (rowIndex !== range.end.rowIndex || columnId !== range.end.columnId)
+      ) {
+        dragDepsRef.current.selectRange(
+          range.start,
+          { rowIndex, columnId },
+          true,
+        );
+        lastSelectionTime = now;
+      }
+
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function onMove(event: MouseEvent) {
+      mouseX = event.clientX;
+      mouseY = event.clientY;
+      mouseReady = true;
+    }
+
+    function onUp() {
+      onAutoScrollStop();
+      const st = store.getState();
+      if (st.selectionState.isSelecting) {
+        store.setState("selectionState", {
+          ...st.selectionState,
+          isSelecting: false,
+        });
+      }
+    }
+
+    function onAutoScrollStart() {
+      if (active) return;
+
+      const container = dataGridRef.current;
+      if (!container) return;
+
+      active = true;
+      mouseReady = false;
+      cachedRect = null;
+      lastSelectionTime = 0;
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+      rafId = requestAnimationFrame(() => {
+        const currentContainer = dataGridRef.current;
+        if (currentContainer) cacheLayout(currentContainer);
+        rafId = requestAnimationFrame(tick);
+      });
+    }
+
+    function onAutoScrollStop() {
+      if (!active) return;
+      active = false;
+      cachedRect = null;
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    }
+
+    if (store.getState().selectionState.isSelecting) onAutoScrollStart();
+
+    const onUnsubscribe = store.subscribe(() => {
+      const st = store.getState();
+      if (st.selectionState.isSelecting && !active) onAutoScrollStart();
+      else if (!st.selectionState.isSelecting && active) onAutoScrollStop();
+    });
+
+    return () => {
+      onAutoScrollStop();
+      onUnsubscribe();
+    };
+  }, [store, dragDepsRef]);
+
   useIsomorphicLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
@@ -3204,7 +3474,6 @@ function useDataGrid<TData>({
     table.getState().sorting,
   ]);
 
-  // Calculate virtual values outside of child render to avoid flushSync issues
   const virtualTotalSize = rowVirtualizer.getTotalSize();
   const virtualItems = rowVirtualizer.getVirtualItems();
   const measureElement = rowVirtualizer.measureElement;
