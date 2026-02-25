@@ -333,9 +333,10 @@ export function parseTsv(
     const n = countTabs(line);
     if (n > maxTabs) maxTabs = n;
   }
-  const cols = maxTabs > 0 ? maxTabs + 1 : fallbackColumnCount;
-  if (cols <= 0) return [];
+  const columnCount = maxTabs > 0 ? maxTabs + 1 : fallbackColumnCount;
+  if (columnCount <= 0) return [];
 
+  const expectedTabs = columnCount - 1;
   const rows: string[][] = [];
   let buf = "";
   let bufTabs = 0;
@@ -343,15 +344,15 @@ export function parseTsv(
   for (const line of lines) {
     const tc = countTabs(line);
 
-    if (tc === cols - 1) {
-      if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
+    if (tc === expectedTabs) {
+      if (buf && bufTabs === expectedTabs) rows.push(buf.split("\t"));
       buf = "";
       bufTabs = 0;
       rows.push(line.split("\t"));
     } else {
       buf = buf ? `${buf}\n${line}` : line;
       bufTabs += tc;
-      if (bufTabs === cols - 1) {
+      if (bufTabs === expectedTabs) {
         rows.push(buf.split("\t"));
         buf = "";
         bufTabs = 0;
@@ -359,7 +360,7 @@ export function parseTsv(
     }
   }
 
-  if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
+  if (buf && bufTabs === expectedTabs) rows.push(buf.split("\t"));
 
   return rows.length > 0
     ? rows
