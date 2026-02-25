@@ -256,7 +256,7 @@ export function scrollCellIntoView<TData>(params: {
   container.scrollLeft += scrollDelta;
 }
 
-export function parseTsvText(text: string): string[][] {
+function parseTsvWithQuotes(text: string): string[][] {
   const rows: string[][] = [];
   let currentRow: string[] = [];
   let currentField = "";
@@ -369,7 +369,7 @@ export function parseTsv(
   fallbackColumnCount: number,
 ): string[][] {
   if (text.includes('"')) {
-    return parseTsvText(text);
+    return parseTsvWithQuotes(text);
   }
   return parseTsvWithTabCounting(text, fallbackColumnCount);
 }
