@@ -347,24 +347,28 @@ export function parseTsv(
 
   const rows: string[][] = [];
   let buf = "";
+  let bufTabs = 0;
 
   for (const line of lines) {
     const tc = countTabs(line);
 
     if (tc === cols - 1) {
-      if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
+      if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
       buf = "";
+      bufTabs = 0;
       rows.push(line.split("\t"));
     } else {
       buf = buf ? `${buf}\n${line}` : line;
-      if (countTabs(buf) === cols - 1) {
+      bufTabs += tc;
+      if (bufTabs === cols - 1) {
         rows.push(buf.split("\t"));
         buf = "";
+        bufTabs = 0;
       }
     }
   }
 
-  if (buf && countTabs(buf) === cols - 1) rows.push(buf.split("\t"));
+  if (buf && bufTabs === cols - 1) rows.push(buf.split("\t"));
 
   return rows.length > 0
     ? rows
