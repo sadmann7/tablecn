@@ -256,77 +256,77 @@ export function scrollCellIntoView<TData>(params: {
   container.scrollLeft += scrollDelta;
 }
 
-function parseTsvWithQuotes(text: string): string[][] {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentField = "";
-  let inQuotes = false;
-  let i = 0;
-
-  while (i < text.length) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (inQuotes) {
-      if (char === '"' && nextChar === '"') {
-        currentField += '"';
-        i += 2;
-      } else if (char === '"') {
-        inQuotes = false;
-        i++;
-      } else {
-        currentField += char;
-        i++;
-      }
-    } else {
-      if (char === '"' && currentField === "") {
-        inQuotes = true;
-        i++;
-      } else if (char === "\t") {
-        currentRow.push(currentField);
-        currentField = "";
-        i++;
-      } else if (char === "\n") {
-        currentRow.push(currentField);
-        if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-        currentField = "";
-        i++;
-      } else if (char === "\r" && nextChar === "\n") {
-        currentRow.push(currentField);
-        if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-        currentField = "";
-        i += 2;
-      } else {
-        currentField += char;
-        i++;
-      }
-    }
-  }
-
-  currentRow.push(currentField);
-  if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-    rows.push(currentRow);
-  }
-
-  return rows;
-}
-
 function countTabs(s: string): number {
   let n = 0;
   for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
   return n;
 }
 
-function parseTsvWithTabCounting(
+export function parseTsv(
   text: string,
   fallbackColumnCount: number,
 ): string[][] {
+  if (text.includes('"')) {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentField = "";
+    let inQuotes = false;
+    let i = 0;
+
+    while (i < text.length) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (inQuotes) {
+        if (char === '"' && nextChar === '"') {
+          currentField += '"';
+          i += 2;
+        } else if (char === '"') {
+          inQuotes = false;
+          i++;
+        } else {
+          currentField += char;
+          i++;
+        }
+      } else {
+        if (char === '"' && currentField === "") {
+          inQuotes = true;
+          i++;
+        } else if (char === "\t") {
+          currentRow.push(currentField);
+          currentField = "";
+          i++;
+        } else if (char === "\n") {
+          currentRow.push(currentField);
+          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = "";
+          i++;
+        } else if (char === "\r" && nextChar === "\n") {
+          currentRow.push(currentField);
+          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentField = "";
+          i += 2;
+        } else {
+          currentField += char;
+          i++;
+        }
+      }
+    }
+
+    currentRow.push(currentField);
+    if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+      rows.push(currentRow);
+    }
+
+    return rows;
+  }
+
   const lines = text.split("\n");
   let maxTabs = 0;
   for (const line of lines) {
@@ -362,16 +362,6 @@ function parseTsvWithTabCounting(
   return rows.length > 0
     ? rows
     : lines.filter((l) => l.length > 0).map((l) => l.split("\t"));
-}
-
-export function parseTsv(
-  text: string,
-  fallbackColumnCount: number,
-): string[][] {
-  if (text.includes('"')) {
-    return parseTsvWithQuotes(text);
-  }
-  return parseTsvWithTabCounting(text, fallbackColumnCount);
 }
 
 export function getIsInPopover(element: unknown): boolean {
