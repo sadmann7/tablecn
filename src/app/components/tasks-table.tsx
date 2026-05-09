@@ -21,6 +21,7 @@ import { useFeatureFlags } from "./feature-flags-provider";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { getTasksTableColumns } from "./tasks-table-columns";
 import { UpdateTaskSheet } from "./update-task-sheet";
+import { toast } from "sonner";
 
 interface TasksTableProps {
   promises: Promise<
@@ -44,6 +45,19 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     estimatedHoursRange,
   ] = React.use(promises);
 
+  const dataOrderKey = React.useMemo(
+    () => data.map((row) => row.id).join(),
+    [data],
+  );
+
+  const [orderOverride, setOrderOverride] = React.useState<Task[] | null>(null);
+
+  React.useEffect(() => {
+    setOrderOverride(null);
+  }, [dataOrderKey]);
+
+  const tableData = orderOverride ?? data;
+
   const [rowAction, setRowAction] =
     React.useState<DataTableRowAction<Task> | null>(null);
 
@@ -59,7 +73,7 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
   );
 
   const { table, shallow, debounceMs, throttleMs } = useDataTable({
-    data,
+    data: tableData,
     columns,
     pageCount,
     enableAdvancedFilter,
@@ -73,11 +87,26 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     clearOnDefault: true,
   });
 
+  const onRowReorder = React.useCallback((orderedRowIds: string[]) => {
+    setOrderOverride((prev) => {
+      const source = prev ?? data;
+      const rowMap = new Map(source.map((row) => [String(row.id), row]));
+      const next = orderedRowIds
+        .map((id) => rowMap.get(id))
+        .filter((row): row is Task => row !== undefined);
+      if (next.length !== source.length) return prev;
+      return next;
+    });
+    toast.success("Rows reordered successfully");
+  }, [data]);
+
   return (
     <>
       <DataTable
         table={table}
         actionBar={<TasksTableActionBar table={table} />}
+        enableRowDragAndDrop={true}
+        onRowReorder={onRowReorder}
       >
         {enableAdvancedFilter ? (
           <DataTableAdvancedToolbar table={table}>

@@ -34,6 +34,7 @@ import type { DataTableRowAction } from "@/types/data-table";
 
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
+import { DataTableDragHandle } from "@/components/data-table/data-table-drag-handle";
 
 interface GetTasksTableColumnsProps {
   statusCounts: Record<Task["status"], number>;
@@ -51,6 +52,14 @@ export function getTasksTableColumns({
   setRowAction,
 }: GetTasksTableColumnsProps): ColumnDef<Task>[] {
   return [
+    {
+      id: 'drag',
+      header: () => null,
+      cell: ({ row }) => <DataTableDragHandle label="Drag to reorder" />,
+      size: 36,
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       id: "select",
       header: ({ table }) => (
