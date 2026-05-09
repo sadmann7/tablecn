@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/components/data-table/data-table-advanced-toolbar";
 import { DataTableFilterList } from "@/components/data-table/data-table-filter-list";
@@ -21,7 +22,6 @@ import { useFeatureFlags } from "./feature-flags-provider";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { getTasksTableColumns } from "./tasks-table-columns";
 import { UpdateTaskSheet } from "./update-task-sheet";
-import { toast } from "sonner";
 
 interface TasksTableProps {
   promises: Promise<
@@ -45,16 +45,7 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     estimatedHoursRange,
   ] = React.use(promises);
 
-  const dataOrderKey = React.useMemo(
-    () => data.map((row) => row.id).join(),
-    [data],
-  );
-
   const [orderOverride, setOrderOverride] = React.useState<Task[] | null>(null);
-
-  React.useEffect(() => {
-    setOrderOverride(null);
-  }, [dataOrderKey]);
 
   const tableData = orderOverride ?? data;
 
@@ -87,18 +78,21 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     clearOnDefault: true,
   });
 
-  const onRowReorder = React.useCallback((orderedRowIds: string[]) => {
-    setOrderOverride((prev) => {
-      const source = prev ?? data;
-      const rowMap = new Map(source.map((row) => [String(row.id), row]));
-      const next = orderedRowIds
-        .map((id) => rowMap.get(id))
-        .filter((row): row is Task => row !== undefined);
-      if (next.length !== source.length) return prev;
-      return next;
-    });
-    toast.success("Rows reordered successfully");
-  }, [data]);
+  const onRowReorder = React.useCallback(
+    (orderedRowIds: string[]) => {
+      setOrderOverride((prev) => {
+        const source = prev ?? data;
+        const rowMap = new Map(source.map((row) => [String(row.id), row]));
+        const next = orderedRowIds
+          .map((id) => rowMap.get(id))
+          .filter((row): row is Task => row !== undefined);
+        if (next.length !== source.length) return prev;
+        return next;
+      });
+      toast.success("Rows reordered successfully");
+    },
+    [data],
+  );
 
   return (
     <>

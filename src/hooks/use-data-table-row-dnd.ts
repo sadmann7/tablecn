@@ -1,45 +1,51 @@
-'use client'
+"use client";
 
-import * as React from 'react'
 import {
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  closestCenter,
-  useSensor,
-  useSensors,
   type CollisionDetection,
+  closestCenter,
   type DragEndEvent,
+  KeyboardSensor,
   type Modifier,
+  MouseSensor,
   type SensorDescriptor,
   type SensorOptions,
-} from '@dnd-kit/core'
-import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers'
-import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import type { Row } from '@tanstack/react-table'
-import { useMounted } from './use-mounted'
+  TouchSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from "@dnd-kit/modifiers";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import type { Row } from "@tanstack/react-table";
+import * as React from "react";
+import { useMounted } from "./use-mounted";
 
-const DEFAULT_DRAG_MODIFIERS: Modifier[] = [restrictToVerticalAxis, restrictToParentElement]
+const DEFAULT_DRAG_MODIFIERS: Modifier[] = [
+  restrictToVerticalAxis,
+  restrictToParentElement,
+];
 
 interface UseDataTableRowDndOptions<TData> {
-  rows: Row<TData>[]
+  rows: Row<TData>[];
   /** External enable flag (e.g. controlled by a server mutation pending state). */
-  enabled?: boolean
+  enabled?: boolean;
   /** Called with the new visible-row order after a drop. */
-  onRowReorder?: (orderedRowIds: string[]) => void
+  onRowReorder?: (orderedRowIds: string[]) => void;
   /** Override default modifiers (vertical-axis + parent-bounded). */
-  modifiers?: Modifier[]
+  modifiers?: Modifier[];
 }
 
 interface UseDataTableRowDndResult {
   /** True only after mount AND when `enabled` is true. SSR-safe. */
-  active: boolean
+  active: boolean;
   /** Stable, ordered list of TanStack `row.id`s for the current page. */
-  rowIds: string[]
-  sensors: SensorDescriptor<SensorOptions>[]
-  modifiers: Modifier[]
-  collisionDetection: CollisionDetection
-  handleDragEnd: (event: DragEndEvent) => void
+  rowIds: string[];
+  sensors: SensorDescriptor<SensorOptions>[];
+  modifiers: Modifier[];
+  collisionDetection: CollisionDetection;
+  handleDragEnd: (event: DragEndEvent) => void;
 }
 
 /**
@@ -53,29 +59,33 @@ export function useDataTableRowDnd<TData>({
   onRowReorder,
   modifiers = DEFAULT_DRAG_MODIFIERS,
 }: UseDataTableRowDndOptions<TData>): UseDataTableRowDndResult {
-  const mounted = useMounted()
+  const mounted = useMounted();
 
-  const rowIds = React.useMemo(() => rows.map((row) => row.id), [rows])
+  const rowIds = React.useMemo(() => rows.map((row) => row.id), [rows]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  )
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
 
   const handleDragEnd = React.useCallback(
     (event: DragEndEvent) => {
-      const { active, over } = event
-      if (!over || active.id === over.id) return
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
 
-      const oldIndex = rowIds.indexOf(String(active.id))
-      const newIndex = rowIds.indexOf(String(over.id))
-      if (oldIndex === -1 || newIndex === -1) return
+      const oldIndex = rowIds.indexOf(String(active.id));
+      const newIndex = rowIds.indexOf(String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return;
 
-      onRowReorder?.(arrayMove(rowIds, oldIndex, newIndex))
+      onRowReorder?.(arrayMove(rowIds, oldIndex, newIndex));
     },
     [rowIds, onRowReorder],
-  )
+  );
 
   return {
     active: enabled && mounted,
@@ -84,5 +94,5 @@ export function useDataTableRowDnd<TData>({
     modifiers,
     collisionDetection: closestCenter,
     handleDragEnd,
-  }
+  };
 }
