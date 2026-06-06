@@ -410,7 +410,7 @@ function useDataGrid<TData>({
         const updates = rowUpdatesMap.get(i);
         const existingRow = currentData[i];
 
-        if (!existingRow) continue;
+        if (existingRow == null) continue;
 
         if (updates) {
           const updatedRow = { ...existingRow } as Record<string, unknown>;
