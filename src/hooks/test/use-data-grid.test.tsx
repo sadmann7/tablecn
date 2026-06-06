@@ -1466,9 +1466,9 @@ describe("useDataGrid", () => {
       });
 
       // (0, "name") is now inside the committed selection range.
-      expect(
-        result.current.tableMeta.getIsCellSelected?.(0, "name"),
-      ).toBe(true);
+      expect(result.current.tableMeta.getIsCellSelected?.(0, "name")).toBe(
+        true,
+      );
 
       // Simulate the user releasing the mouse outside the grid.  The
       // document-level mouseup listener (registered by onAutoScrollStart)
@@ -1483,9 +1483,9 @@ describe("useDataGrid", () => {
         result.current.tableMeta.onCellMouseEnter?.(2, "score");
       });
 
-      expect(
-        result.current.tableMeta.getIsCellSelected?.(2, "score"),
-      ).toBe(false);
+      expect(result.current.tableMeta.getIsCellSelected?.(2, "score")).toBe(
+        false,
+      );
     });
 
     it("should select column when enableColumnSelection is true", () => {
