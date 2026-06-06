@@ -242,7 +242,6 @@
       "dependencies": [
         "@tanstack/react-table",
         "lucide-react",
-        "motion",
         "nuqs"
       ],
       "files": [
