@@ -80,6 +80,16 @@ describe("useDataGrid", () => {
       return 0;
     });
 
+    // Mock ResizeObserver (not implemented in jsdom)
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+        unobserve() {}
+      },
+    );
+
     // Mock scrollIntoView
     Element.prototype.scrollIntoView = vi.fn();
 
@@ -99,6 +109,7 @@ describe("useDataGrid", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   describe("initialization", () => {
@@ -1405,6 +1416,75 @@ describe("useDataGrid", () => {
 
       expect(result.current.tableMeta.getIsCellSelected?.(0, "name")).toBe(
         true,
+      );
+    });
+
+    it("should stop selection when document mouseup fires during auto-scroll", () => {
+      // Initialize the hook with the synchronous RAF from beforeEach so that
+      // all setup effects complete before we take over RAF scheduling.
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      // Defer RAF from this point forward so that onAutoScrollStart can
+      // register the document mouseup listener without tick() immediately
+      // calling onAutoScrollStop (which would remove the listener).
+      const pendingRafs: FrameRequestCallback[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+        pendingRafs.push(cb);
+        return pendingRafs.length;
+      });
+      vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+
+      // Give onAutoScrollStart a real container so it doesn't bail early.
+      const mockContainer = document.createElement("div");
+      (
+        result.current.dataGridRef as React.MutableRefObject<HTMLDivElement>
+      ).current = mockContainer;
+
+      // Start the drag — this sets isSelecting:true which triggers
+      // onAutoScrollStart, which synchronously registers the document mouseup
+      // listener before queuing the deferred RAF.
+      act(() => {
+        result.current.tableMeta.onCellMouseDown?.(0, "name", {
+          button: 0,
+          preventDefault: vi.fn(),
+          ctrlKey: false,
+          metaKey: false,
+          shiftKey: false,
+        } as unknown as React.MouseEvent);
+      });
+
+      // Extend the selection so selectRange populates selectedCells.
+      act(() => {
+        result.current.tableMeta.onCellMouseEnter?.(1, "score");
+      });
+
+      // (0, "name") is now inside the committed selection range.
+      expect(result.current.tableMeta.getIsCellSelected?.(0, "name")).toBe(
+        true,
+      );
+
+      // Simulate the user releasing the mouse outside the grid.  The
+      // document-level mouseup listener (registered by onAutoScrollStart)
+      // should flip isSelecting to false.
+      act(() => {
+        document.dispatchEvent(new MouseEvent("mouseup"));
+      });
+
+      // A subsequent onCellMouseEnter must be a no-op because isSelecting is
+      // now false — so row 2 should never enter the selected set.
+      act(() => {
+        result.current.tableMeta.onCellMouseEnter?.(2, "score");
+      });
+
+      expect(result.current.tableMeta.getIsCellSelected?.(2, "score")).toBe(
+        false,
       );
     });
 
