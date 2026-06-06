@@ -1,29 +1,25 @@
-import { customAlphabet } from "nanoid";
-
-const prefixes: Record<string, unknown> = {};
+const DEFAULT_ALPHABET =
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 interface GenerateIdOptions {
+  alphabet?: string;
   length?: number;
-  separator?: string;
 }
 
 export function generateId(
-  prefixOrOptions?: keyof typeof prefixes | GenerateIdOptions,
+  prefixOrOptions?: string | GenerateIdOptions,
   inputOptions: GenerateIdOptions = {},
-) {
-  const finalOptions =
+): string {
+  const options =
     typeof prefixOrOptions === "object" ? prefixOrOptions : inputOptions;
 
-  const prefix =
-    typeof prefixOrOptions === "object" ? undefined : prefixOrOptions;
+  const { alphabet = DEFAULT_ALPHABET, length = 12 } = options;
 
-  const { length = 12, separator = "_" } = finalOptions;
-  const id = customAlphabet(
-    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
-    length,
-  )();
+  const chars = new Array(length);
 
-  return prefix && prefix in prefixes
-    ? `${prefixes[prefix]}${separator}${id}`
-    : id;
+  for (let i = 0; i < length; i++) {
+    chars[i] = alphabet[(Math.random() * alphabet.length) | 0];
+  }
+
+  return chars.join("");
 }

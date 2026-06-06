@@ -1,4 +1,3 @@
-import { useDirection } from "@radix-ui/react-direction";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -17,6 +16,7 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
+import { useDirection } from "@/components/ui/direction";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";

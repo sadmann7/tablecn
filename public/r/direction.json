@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "direction",
+  "title": "Direction",
+  "description": "A direction provider for RTL/LTR support",
+  "dependencies": [
+    "radix-ui"
+  ],
+  "files": [
+    {
+      "path": "src/components/ui/direction.tsx",
+      "content": "\"use client\";\r\n\r\nimport { Direction } from \"radix-ui\";\r\nimport type * as React from \"react\";\r\n\r\nfunction DirectionProvider({\r\n  dir,\r\n  direction,\r\n  children,\r\n  ...props\r\n}: React.ComponentProps<typeof Direction.Provider> & {\r\n  direction?: React.ComponentProps<typeof Direction.Provider>[\"dir\"];\r\n}) {\r\n  return (\r\n    <Direction.Provider dir={direction ?? dir} {...props}>\r\n      {children}\r\n    </Direction.Provider>\r\n  );\r\n}\r\n\r\nconst useDirection = Direction.useDirection;\r\n\r\nexport { DirectionProvider, useDirection };\r\n",
+      "type": "registry:ui",
+      "target": "src/components/ui/direction.tsx"
+    }
+  ],
+  "type": "registry:ui"
+}

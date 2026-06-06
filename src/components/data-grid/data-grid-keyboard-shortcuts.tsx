@@ -1,6 +1,5 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
 import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useDirection } from "@/components/ui/direction";
 import { Input } from "@/components/ui/input";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Separator } from "@/components/ui/separator";
