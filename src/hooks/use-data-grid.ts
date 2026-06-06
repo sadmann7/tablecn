@@ -56,6 +56,7 @@ const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
 const AUTO_SCROLL_EDGE_ZONE = 50;
+const AUTO_SCROLL_SPEED_RAMP_ZONE = AUTO_SCROLL_EDGE_ZONE * 3;
 const AUTO_SCROLL_MIN_SPEED = 8;
 const AUTO_SCROLL_MAX_SPEED = 40;
 const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
@@ -409,10 +410,7 @@ function useDataGrid<TData>({
         const updates = rowUpdatesMap.get(i);
         const existingRow = currentData[i];
 
-        if (!existingRow) {
-          newData[i] = {} as TData;
-          continue;
-        }
+        if (!existingRow) continue;
 
         if (updates) {
           const updatedRow = { ...existingRow } as Record<string, unknown>;
@@ -3204,6 +3202,7 @@ function useDataGrid<TData>({
     let mouseReady = false;
     let active = false;
     let lastSelectionTime = 0;
+    let resizeObserver: ResizeObserver | null = null;
 
     let cachedRect: DOMRect | null = null;
     let cachedHdrH = 0;
@@ -3212,7 +3211,7 @@ function useDataGrid<TData>({
     let cachedRpw = 0;
 
     function getAutoScrollSpeed(dist: number): number {
-      const t = Math.min(dist / (AUTO_SCROLL_EDGE_ZONE * 3), 1);
+      const t = Math.min(dist / AUTO_SCROLL_SPEED_RAMP_ZONE, 1);
       return Math.round(
         AUTO_SCROLL_MIN_SPEED +
           (AUTO_SCROLL_MAX_SPEED - AUTO_SCROLL_MIN_SPEED) * t,
@@ -3422,6 +3421,11 @@ function useDataGrid<TData>({
       lastSelectionTime = 0;
       document.addEventListener("mousemove", onMove);
       document.addEventListener("mouseup", onUp);
+      resizeObserver = new ResizeObserver(() => {
+        const currentContainer = dataGridRef.current;
+        if (currentContainer) cacheLayout(currentContainer);
+      });
+      resizeObserver.observe(container);
       rafId = requestAnimationFrame(() => {
         const currentContainer = dataGridRef.current;
         if (currentContainer) cacheLayout(currentContainer);
@@ -3435,6 +3439,8 @@ function useDataGrid<TData>({
       cachedRect = null;
       document.removeEventListener("mousemove", onMove);
       document.removeEventListener("mouseup", onUp);
+      resizeObserver?.disconnect();
+      resizeObserver = null;
       if (rafId !== null) {
         cancelAnimationFrame(rafId);
         rafId = null;
