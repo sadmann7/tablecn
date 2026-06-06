@@ -158,12 +158,7 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@tanstack/react-table",
-        "lucide-react",
-        "nanoid",
-        "nuqs"
-      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
       "files": [
         {
           "path": "src/components/data-table/data-table-filter-list.tsx",
@@ -248,7 +243,6 @@
         "@tanstack/react-table",
         "lucide-react",
         "motion",
-        "nanoid",
         "nuqs"
       ],
       "files": [

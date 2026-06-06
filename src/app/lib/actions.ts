@@ -1,13 +1,13 @@
 "use server";
 
 import { asc, eq, inArray, not } from "drizzle-orm";
-import { customAlphabet } from "nanoid";
 import { updateTag } from "next/cache";
 import { db } from "@/db/index";
 import { type Task, tasks } from "@/db/schema";
 import { takeFirstOrThrow } from "@/db/utils";
 
 import { getErrorMessage } from "@/lib/handle-error";
+import { generateId } from "@/lib/id";
 
 import { generateRandomTask } from "./utils";
 import type { CreateTaskSchema, UpdateTaskSchema } from "./validations";
@@ -38,7 +38,7 @@ export async function createTask(input: CreateTaskSchema) {
       const newTask = await tx
         .insert(tasks)
         .values({
-          code: `TASK-${customAlphabet("0123456789", 4)()}`,
+          code: `TASK-${generateId({ alphabet: "0123456789", length: 4 })}`,
           title: input.title,
           status: input.status,
           label: input.label,

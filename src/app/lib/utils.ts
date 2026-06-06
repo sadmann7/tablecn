@@ -13,7 +13,6 @@ import {
   type LucideIcon,
   Timer,
 } from "lucide-react";
-import { customAlphabet } from "nanoid";
 import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 
 import { generateId } from "@/lib/id";
@@ -21,7 +20,7 @@ import { generateId } from "@/lib/id";
 export function generateRandomTask(input?: Partial<Task>): Task {
   return {
     id: generateId("task"),
-    code: `TASK-${customAlphabet("0123456789", 4)()}`,
+    code: `TASK-${generateId({ alphabet: "0123456789", length: 4 })}`,
     title: faker.hacker
       .phrase()
       .replace(/^./, (letter) => letter.toUpperCase()),

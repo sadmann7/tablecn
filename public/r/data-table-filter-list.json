@@ -6,7 +6,6 @@
   "dependencies": [
     "@tanstack/react-table",
     "lucide-react",
-    "nanoid",
     "nuqs"
   ],
   "registryDependencies": [
@@ -76,7 +75,7 @@
     },
     {
       "path": "src/lib/id.ts",
-      "content": "import { customAlphabet } from \"nanoid\";\n\nconst prefixes: Record<string, unknown> = {};\n\ninterface GenerateIdOptions {\n  length?: number;\n  separator?: string;\n}\n\nexport function generateId(\n  prefixOrOptions?: keyof typeof prefixes | GenerateIdOptions,\n  inputOptions: GenerateIdOptions = {},\n) {\n  const finalOptions =\n    typeof prefixOrOptions === \"object\" ? prefixOrOptions : inputOptions;\n\n  const prefix =\n    typeof prefixOrOptions === \"object\" ? undefined : prefixOrOptions;\n\n  const { length = 12, separator = \"_\" } = finalOptions;\n  const id = customAlphabet(\n    \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\",\n    length,\n  )();\n\n  return prefix && prefix in prefixes\n    ? `${prefixes[prefix]}${separator}${id}`\n    : id;\n}\n",
+      "content": "const DEFAULT_ALPHABET =\n  \"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\";\n\ninterface GenerateIdOptions {\n  alphabet?: string;\n  length?: number;\n}\n\nexport function generateId(\n  prefixOrOptions?: string | GenerateIdOptions,\n  inputOptions: GenerateIdOptions = {},\n): string {\n  const options =\n    typeof prefixOrOptions === \"object\" ? prefixOrOptions : inputOptions;\n\n  const { alphabet = DEFAULT_ALPHABET, length = 12 } = options;\n\n  const chars = new Array(length);\n\n  for (let i = 0; i < length; i++) {\n    chars[i] = alphabet[(Math.random() * alphabet.length) | 0];\n  }\n\n  return chars.join(\"\");\n}\n",
       "type": "registry:lib"
     },
     {
