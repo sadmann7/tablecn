@@ -13,7 +13,7 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock useDirection
-vi.mock("@radix-ui/react-direction", () => ({
+vi.mock("@/components/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
 
@@ -2126,11 +2126,6 @@ describe("useDataGrid", () => {
 
   describe("direction (RTL) support", () => {
     it("should handle RTL direction", () => {
-      // Mock useDirection to return rtl
-      vi.mock("@radix-ui/react-direction", () => ({
-        useDirection: () => "rtl",
-      }));
-
       const { result } = renderHook(
         () =>
           useDataGrid({

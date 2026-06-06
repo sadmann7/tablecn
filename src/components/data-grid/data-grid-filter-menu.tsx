@@ -1,6 +1,5 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
 import type { Column, ColumnFilter, Table } from "@tanstack/react-table";
 import {
   CalendarIcon,
@@ -11,7 +10,6 @@ import {
   Trash2,
 } from "lucide-react";
 import * as React from "react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -23,6 +21,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useDirection } from "@/components/ui/direction";
 import { Input } from "@/components/ui/input";
 import {
   Popover,

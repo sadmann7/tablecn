@@ -1,6 +1,5 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
 import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
 import {
   ArrowDownUp,
@@ -9,7 +8,6 @@ import {
   Trash2,
 } from "lucide-react";
 import * as React from "react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +18,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useDirection } from "@/components/ui/direction";
 import {
   Popover,
   PopoverContent,

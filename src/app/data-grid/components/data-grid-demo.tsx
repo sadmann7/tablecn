@@ -1,6 +1,5 @@
 "use client";
 
-import { DirectionProvider } from "@radix-ui/react-direction";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Languages } from "lucide-react";
 import * as React from "react";
@@ -11,6 +10,7 @@ import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-heig
 import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
+import { DirectionProvider } from "@/components/ui/direction";
 import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import {

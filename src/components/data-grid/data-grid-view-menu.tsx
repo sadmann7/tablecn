@@ -1,6 +1,5 @@
 "use client";
 
-import { useDirection } from "@radix-ui/react-direction";
 import type { Table } from "@tanstack/react-table";
 import { Check, Settings2 } from "lucide-react";
 import * as React from "react";
@@ -13,6 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { useDirection } from "@/components/ui/direction";
 import {
   Popover,
   PopoverContent,

@@ -325,7 +325,6 @@
         "tooltip"
       ],
       "dependencies": [
-        "@radix-ui/react-direction",
         "@tanstack/react-table",
         "@tanstack/react-virtual",
         "lucide-react",
@@ -376,6 +375,11 @@
           "path": "src/components/data-grid/data-grid-search.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-search.tsx"
+        },
+        {
+          "path": "src/components/ui/direction.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/direction.tsx"
         },
         {
           "path": "src/hooks/use-as-ref.ts",
@@ -447,16 +451,17 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@radix-ui/react-direction",
-        "@tanstack/react-table",
-        "lucide-react"
-      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
           "path": "src/components/data-grid/data-grid-sort-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-sort-menu.tsx"
+        },
+        {
+          "path": "src/components/ui/direction.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/direction.tsx"
         },
         {
           "path": "src/components/ui/sortable.tsx",
@@ -490,16 +495,17 @@
       "title": "Data Grid View Menu",
       "description": "A view menu component for the data grid to toggle column visibility",
       "registryDependencies": ["button", "command", "popover"],
-      "dependencies": [
-        "@radix-ui/react-direction",
-        "@tanstack/react-table",
-        "lucide-react"
-      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
           "path": "src/components/data-grid/data-grid-view-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-view-menu.tsx"
+        },
+        {
+          "path": "src/components/ui/direction.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/direction.tsx"
         }
       ]
     },
@@ -509,12 +515,17 @@
       "title": "Data Grid Keyboard Shortcuts",
       "description": "A keyboard shortcuts dialog component for the data grid showing all available shortcuts",
       "registryDependencies": ["button", "dialog", "input", "kbd", "separator"],
-      "dependencies": ["@radix-ui/react-direction", "lucide-react"],
+      "dependencies": ["lucide-react"],
       "files": [
         {
           "path": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx"
+        },
+        {
+          "path": "src/components/ui/direction.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/direction.tsx"
         }
       ]
     },
@@ -532,16 +543,17 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@radix-ui/react-direction",
-        "@tanstack/react-table",
-        "lucide-react"
-      ],
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
           "path": "src/components/data-grid/data-grid-filter-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-filter-menu.tsx"
+        },
+        {
+          "path": "src/components/ui/direction.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/direction.tsx"
         },
         {
           "path": "src/components/ui/sortable.tsx",
