@@ -35,7 +35,6 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.2.2",
-    "@radix-ui/react-slot": "^1.2.5",
     "@t3-oss/env-nextjs": "^0.13.10",
     "@tanstack/query-db-collection": "^1.0.16",
     "@tanstack/react-db": "^0.1.64",
