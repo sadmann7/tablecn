@@ -15,12 +15,8 @@ export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
 
   if (!next.searchOpen) return true;
 
-  if (
-    prev.searchQuery !== next.searchQuery ||
-    prev.matchIndex !== next.matchIndex
-  ) {
-    return false;
-  }
+  // Exclude searchQuery because the input is uncontrolled and hasQuery state handles status text.
+  if (prev.matchIndex !== next.matchIndex) return false;
 
   if (prev.searchMatches.length !== next.searchMatches.length) return false;
 
@@ -62,6 +58,7 @@ function DataGridSearchImpl({
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
+  const [hasQuery, setHasQuery] = React.useState(searchQuery.length > 0);
 
   React.useEffect(() => {
     if (searchOpen) {
@@ -84,14 +81,6 @@ function DataGridSearchImpl({
     document.addEventListener("keydown", onEscape);
     return () => document.removeEventListener("keydown", onEscape);
   }, [searchOpen, propsRef]);
-
-  React.useEffect(() => {
-    if (inputRef.current && !isComposingRef.current) {
-      if (inputRef.current.value !== searchQuery) {
-        inputRef.current.value = searchQuery;
-      }
-    }
-  }, [searchQuery]);
 
   const debouncedSearch = useDebouncedCallback((query: string) => {
     propsRef.current.onSearch(query);
@@ -122,6 +111,7 @@ function DataGridSearchImpl({
   function onChange(event: React.ChangeEvent<HTMLInputElement>) {
     if (isComposingRef.current) return;
     const value = event.target.value;
+    setHasQuery(value.length > 0);
     propsRef.current.onSearchQueryChange(value);
     debouncedSearch(value);
   }
@@ -217,7 +207,7 @@ function DataGridSearchImpl({
           <span>
             {matchIndex + 1} of {searchMatches.length}
           </span>
-        ) : searchQuery ? (
+        ) : hasQuery ? (
           <span>No results</span>
         ) : (
           <span>Type to search</span>
