@@ -8,6 +8,24 @@ import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import type { SearchState } from "@/types/data-grid";
 
+function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (target.hasPointerCapture(event.pointerId)) {
+    target.releasePointerCapture(event.pointerId);
+  }
+
+  // Prevent the trigger from stealing focus away from the input
+  if (
+    event.button === 0 &&
+    event.ctrlKey === false &&
+    event.pointerType === "mouse" &&
+    !(event.target instanceof HTMLInputElement)
+  ) {
+    event.preventDefault();
+  }
+}
+
 interface DataGridSearchProps extends SearchState {}
 
 export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
@@ -15,12 +33,8 @@ export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
 
   if (!next.searchOpen) return true;
 
-  if (
-    prev.searchQuery !== next.searchQuery ||
-    prev.matchIndex !== next.matchIndex
-  ) {
-    return false;
-  }
+  // Exclude searchQuery because the input is uncontrolled, and hasQuery state handles the status text
+  if (prev.matchIndex !== next.matchIndex) return false;
 
   if (prev.searchMatches.length !== next.searchMatches.length) return false;
 
@@ -61,13 +75,19 @@ function DataGridSearchImpl({
   });
 
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const isComposingRef = React.useRef(false);
+  const [hasQuery, setHasQuery] = React.useState(searchQuery.length > 0);
 
   React.useEffect(() => {
     if (searchOpen) {
       requestAnimationFrame(() => {
         inputRef.current?.focus();
       });
+      return;
     }
+
+    isComposingRef.current = false;
+    setHasQuery(false);
   }, [searchOpen]);
 
   React.useEffect(() => {
@@ -84,81 +104,51 @@ function DataGridSearchImpl({
     return () => document.removeEventListener("keydown", onEscape);
   }, [searchOpen, propsRef]);
 
-  const onKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
-      event.stopPropagation();
-
-      if (event.key === "Enter") {
-        event.preventDefault();
-        if (event.shiftKey) {
-          propsRef.current.onNavigateToPrevMatch();
-        } else {
-          propsRef.current.onNavigateToNextMatch();
-        }
-      }
-    },
-    [propsRef],
-  );
-
   const debouncedSearch = useDebouncedCallback((query: string) => {
     propsRef.current.onSearch(query);
   }, 150);
 
-  const onChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const value = event.target.value;
-      propsRef.current.onSearchQueryChange(value);
-      debouncedSearch(value);
-    },
-    [propsRef, debouncedSearch],
-  );
+  function onCompositionStart() {
+    isComposingRef.current = true;
+  }
 
-  const onTriggerPointerDown = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) => {
-      // prevent implicit pointer capture
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      if (target.hasPointerCapture(event.pointerId)) {
-        target.releasePointerCapture(event.pointerId);
+  function onCompositionEnd() {
+    isComposingRef.current = false;
+  }
+
+  function onKeyDown(event: React.KeyboardEvent) {
+    event.stopPropagation();
+
+    if (event.key === "Enter") {
+      if (event.nativeEvent.isComposing) return;
+      event.preventDefault();
+      if (event.shiftKey) {
+        propsRef.current.onNavigateToPrevMatch();
+      } else {
+        propsRef.current.onNavigateToNextMatch();
       }
+    }
+  }
 
-      // Only prevent default if we're not clicking on the input
-      // This allows text selection in the input while still preventing focus stealing elsewhere
-      if (
-        event.button === 0 &&
-        event.ctrlKey === false &&
-        event.pointerType === "mouse" &&
-        !(event.target instanceof HTMLInputElement)
-      ) {
-        event.preventDefault();
-      }
-    },
-    [],
-  );
+  function onChange(event: React.ChangeEvent<HTMLInputElement>) {
+    if (isComposingRef.current) return;
+    const value = event.target.value;
+    setHasQuery(value.length > 0);
+    propsRef.current.onSearchQueryChange(value);
+    debouncedSearch(value);
+  }
 
-  const onPrevMatchPointerDown = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) =>
-      onTriggerPointerDown(event),
-    [onTriggerPointerDown],
-  );
-
-  const onNextMatchPointerDown = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) =>
-      onTriggerPointerDown(event),
-    [onTriggerPointerDown],
-  );
-
-  const onClose = React.useCallback(() => {
+  function onClose() {
     propsRef.current.onSearchOpenChange(false);
-  }, [propsRef]);
+  }
 
-  const onPrevMatch = React.useCallback(() => {
+  function onPrevMatch() {
     propsRef.current.onNavigateToPrevMatch();
-  }, [propsRef]);
+  }
 
-  const onNextMatch = React.useCallback(() => {
+  function onNextMatch() {
     propsRef.current.onNavigateToNextMatch();
-  }, [propsRef]);
+  }
 
   if (!searchOpen) return null;
 
@@ -177,9 +167,11 @@ function DataGridSearchImpl({
           placeholder="Find in table..."
           className="h-8 w-64"
           ref={inputRef}
-          value={searchQuery}
+          defaultValue={searchQuery}
           onChange={onChange}
           onKeyDown={onKeyDown}
+          onCompositionStart={onCompositionStart}
+          onCompositionEnd={onCompositionEnd}
         />
         <div className="flex items-center gap-1">
           <Button
@@ -188,7 +180,7 @@ function DataGridSearchImpl({
             size="icon"
             className="size-7"
             onClick={onPrevMatch}
-            onPointerDown={onPrevMatchPointerDown}
+            onPointerDown={onTriggerPointerDown}
             disabled={searchMatches.length === 0}
           >
             <ChevronUp />
@@ -199,7 +191,7 @@ function DataGridSearchImpl({
             size="icon"
             className="size-7"
             onClick={onNextMatch}
-            onPointerDown={onNextMatchPointerDown}
+            onPointerDown={onTriggerPointerDown}
             disabled={searchMatches.length === 0}
           >
             <ChevronDown />
@@ -220,7 +212,7 @@ function DataGridSearchImpl({
           <span>
             {matchIndex + 1} of {searchMatches.length}
           </span>
-        ) : searchQuery ? (
+        ) : hasQuery ? (
           <span>No results</span>
         ) : (
           <span>Type to search</span>
