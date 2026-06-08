@@ -8,6 +8,24 @@ import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import type { SearchState } from "@/types/data-grid";
 
+function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (target.hasPointerCapture(event.pointerId)) {
+    target.releasePointerCapture(event.pointerId);
+  }
+
+  // Prevent the trigger from stealing focus away from the input.
+  if (
+    event.button === 0 &&
+    event.ctrlKey === false &&
+    event.pointerType === "mouse" &&
+    !(event.target instanceof HTMLInputElement)
+  ) {
+    event.preventDefault();
+  }
+}
+
 interface DataGridSearchProps extends SearchState {}
 
 export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
@@ -114,23 +132,6 @@ function DataGridSearchImpl({
     setHasQuery(value.length > 0);
     propsRef.current.onSearchQueryChange(value);
     debouncedSearch(value);
-  }
-
-  function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (target.hasPointerCapture(event.pointerId)) {
-      target.releasePointerCapture(event.pointerId);
-    }
-
-    if (
-      event.button === 0 &&
-      event.ctrlKey === false &&
-      event.pointerType === "mouse" &&
-      !(event.target instanceof HTMLInputElement)
-    ) {
-      event.preventDefault();
-    }
   }
 
   function onClose() {
