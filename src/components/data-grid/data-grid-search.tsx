@@ -83,7 +83,11 @@ function DataGridSearchImpl({
       requestAnimationFrame(() => {
         inputRef.current?.focus();
       });
+      return;
     }
+
+    isComposingRef.current = false;
+    setHasQuery(false);
   }, [searchOpen]);
 
   React.useEffect(() => {
