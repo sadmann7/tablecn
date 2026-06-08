@@ -15,7 +15,7 @@ function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     target.releasePointerCapture(event.pointerId);
   }
 
-  // Prevent the trigger from stealing focus away from the input.
+  // Prevent the trigger from stealing focus away from the input
   if (
     event.button === 0 &&
     event.ctrlKey === false &&
@@ -33,7 +33,7 @@ export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
 
   if (!next.searchOpen) return true;
 
-  // Exclude searchQuery because the input is uncontrolled and hasQuery state handles status text.
+  // Exclude searchQuery because the input is uncontrolled, and hasQuery state handles the status text
   if (prev.matchIndex !== next.matchIndex) return false;
 
   if (prev.searchMatches.length !== next.searchMatches.length) return false;
