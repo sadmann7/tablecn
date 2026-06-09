@@ -112,8 +112,12 @@ function DataGridSearchImpl({
     isComposingRef.current = true;
   }
 
-  function onCompositionEnd() {
+  function onCompositionEnd(event: React.CompositionEvent<HTMLInputElement>) {
     isComposingRef.current = false;
+    const value = event.currentTarget.value;
+    setHasQuery(value.length > 0);
+    propsRef.current.onSearchQueryChange(value);
+    debouncedSearch(value);
   }
 
   function onKeyDown(event: React.KeyboardEvent) {
