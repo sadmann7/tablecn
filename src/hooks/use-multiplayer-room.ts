@@ -6,13 +6,13 @@ import PartySocket from "partysocket";
 import * as React from "react";
 import { skaterSchema } from "@/app/data-grid-live/lib/validation";
 import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
+import { env } from "@/env";
 import { generateId } from "@/lib/id";
 
-const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
+const PARTYKIT_HOST = env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 const STORAGE_KEY = "multiplayer-identity";
 
 interface Identity {
-  id: string;
   name: string;
   color: string;
 }
@@ -27,11 +27,7 @@ function getOrCreateIdentity(): Identity {
     ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
   const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
   const color = COLORS[Math.floor(Math.random() * COLORS.length)] ?? "#3b82f6";
-  const identity: Identity = {
-    id: generateId(),
-    name: `${adj} ${animal}`,
-    color,
-  };
+  const identity: Identity = { name: `${adj} ${animal}`, color };
 
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
@@ -74,7 +70,7 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     const socket = new PartySocket({
       host: PARTYKIT_HOST,
       room: roomId,
-      id: identity.id,
+      id: generateId(),
       query: { name: identity.name, color: identity.color },
     });
     socketRef.current = socket;
