@@ -1,6 +1,6 @@
 "use client";
 
-import { TRICKS } from "@party/seeds";
+import { TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import * as React from "react";
