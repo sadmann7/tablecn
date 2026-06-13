@@ -8,6 +8,7 @@
     "build": "next build",
     "dev": "next dev",
     "dev:multiplayer": "concurrently \"next dev\" \"partykit dev\"",
+    "deploy:multiplayer": "partykit deploy",
     "test": "vitest run",
     "dev:docker": "pnpm db:start && pnpm dev",
     "start": "next start",
