@@ -79,10 +79,6 @@ const trickSelectOptions = trickOptions.map((trick) => ({
   value: trick,
 }));
 
-interface DataGridMultiplayerDemoProps {
-  roomId: string;
-}
-
 function toWire(row: SkaterSchema): Record<string, unknown> {
   return {
     ...row,
@@ -90,6 +86,10 @@ function toWire(row: SkaterSchema): Record<string, unknown> {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt?.toISOString() ?? null,
   };
+}
+
+interface DataGridMultiplayerDemoProps {
+  roomId: string;
 }
 
 export function DataGridMultiplayerDemo({
@@ -503,19 +503,20 @@ export function DataGridMultiplayerDemo({
   const height = Math.max(400, windowSize.height - 200);
   const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
 
-  // Build cellKey → presence map so DataGridCellWrapper can apply colored rings.
-  // `data` is intentional: `table` object reference is stable even when sort order
-  // changes, so we use `data` as a proxy to recompute when row order actually changes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
+  // biome-ignore lint/correctness/useExhaustiveDependencies: data is a proxy for row-order changes
   const remoteCells = React.useMemo(() => {
     const map = new Map<string, DataGridCellPresence>();
     const rows = table.getRowModel().rows;
+
     for (const [userId, user] of Object.entries(users)) {
       if (userId === currentUserId) continue;
+
       const { rowId, columnId } = user.activeCell;
       if (!rowId || !columnId) continue;
+
       const rowIndex = rows.findIndex((r) => r.id === rowId);
       if (rowIndex === -1) continue;
+
       map.set(getCellKey(rowIndex, columnId), {
         color: user.color,
         name: user.name,

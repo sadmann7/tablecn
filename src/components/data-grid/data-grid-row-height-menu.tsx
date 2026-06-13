@@ -11,6 +11,7 @@ import * as React from "react";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -76,15 +77,14 @@ export function DataGridRowHeightMenu<TData>({
         </SelectValue>
       </SelectTrigger>
       <SelectContent {...props}>
-        {rowHeights.map((option) => {
-          const OptionIcon = option.icon;
-          return (
+        <SelectGroup>
+          {rowHeights.map((option) => (
             <SelectItem key={option.value} value={option.value}>
-              <OptionIcon className="size-4" />
+              <option.icon />
               {option.label}
             </SelectItem>
-          );
-        })}
+          ))}
+        </SelectGroup>
       </SelectContent>
     </Select>
   );
