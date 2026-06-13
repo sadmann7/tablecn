@@ -6,18 +6,20 @@ import PartySocket from "partysocket";
 import * as React from "react";
 import { skaterSchema } from "@/app/data-grid-live/lib/validation";
 import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
+import { generateId } from "@/lib/id";
 
 const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 const STORAGE_KEY = "multiplayer-identity";
 
 interface Identity {
+  id: string;
   name: string;
   color: string;
 }
 
 function getOrCreateIdentity(): Identity {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
     if (stored) return JSON.parse(stored) as Identity;
   } catch {}
 
@@ -25,12 +27,16 @@ function getOrCreateIdentity(): Identity {
     ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
   const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
   const color = COLORS[Math.floor(Math.random() * COLORS.length)] ?? "#3b82f6";
-  const identity: Identity = { name: `${adj} ${animal}`, color };
+  const identity: Identity = {
+    id: generateId(),
+    name: `${adj} ${animal}`,
+    color,
+  };
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
   } catch {
-    // Fail silently if localStorage is not available
+    // Fail silently if sessionStorage is not available
   }
 
   return identity;
@@ -68,6 +74,7 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     const socket = new PartySocket({
       host: PARTYKIT_HOST,
       room: roomId,
+      id: identity.id,
       query: { name: identity.name, color: identity.color },
     });
     socketRef.current = socket;
