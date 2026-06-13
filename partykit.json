@@ -1,4 +1,5 @@
 {
   "name": "tablecn",
-  "main": "party/index.ts"
+  "main": "party/index.ts",
+  "compatibilityDate": "2026-06-13"
 }
