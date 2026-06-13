@@ -7,7 +7,6 @@
     "clean": "rimraf --glob **/node_modules **/dist **/.next pnpm-lock.yaml **/.tsbuildinfo",
     "build": "next build",
     "dev": "next dev",
-    "dev:party": "partykit dev",
     "dev:multiplayer": "concurrently \"next dev\" \"partykit dev\"",
     "test": "vitest run",
     "dev:docker": "pnpm db:start && pnpm dev",
