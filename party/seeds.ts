@@ -1,26 +1,6 @@
 import { faker } from "@faker-js/faker";
+import { STANCES, STATUSES, STYLES, TRICKS } from "./constants";
 import type { RowPayload } from "./types";
-
-const STANCES = ["regular", "goofy"] as const;
-const STYLES = ["street", "vert", "park", "freestyle", "all-around"] as const;
-const STATUSES = ["amateur", "sponsored", "pro", "legend"] as const;
-export const TRICKS = [
-  "Kickflip",
-  "Heelflip",
-  "Tre Flip",
-  "Hardflip",
-  "Varial Flip",
-  "360 Flip",
-  "Ollie",
-  "Nollie",
-  "Pop Shove-it",
-  "FS Boardslide",
-  "BS Boardslide",
-  "50-50 Grind",
-  "5-0 Grind",
-  "Crooked Grind",
-  "Smith Grind",
-] as const;
 
 function generateSeedRow(order: number): RowPayload {
   const firstName = faker.person.firstName();
