@@ -41,7 +41,6 @@ function getOrCreateIdentity(): Identity {
 function parseRow(raw: RowPayload) {
   const result = skaterSchema.safeParse(raw);
   if (result.success) return result.data;
-  console.warn("[multiplayer] Failed to parse row:", raw, result.error.issues);
   return null;
 }
 
