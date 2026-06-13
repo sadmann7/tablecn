@@ -19,6 +19,9 @@ export function SiteHeader() {
         <nav className="flex w-full items-center text-sm">
           <ActiveLink href="/data-grid">Data Grid</ActiveLink>
           <ActiveLink href="/data-grid-live">Data Grid Live</ActiveLink>
+          <ActiveLink href="/data-grid-multiplayer">
+            Data Grid Multiplayer
+          </ActiveLink>
           <DocsLink />
         </nav>
         <nav className="flex flex-1 items-center md:justify-end">

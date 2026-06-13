@@ -1,19 +1,12 @@
 "use client";
 
-import * as React from "react";
+import type { UserPresence } from "@party/types";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { UserPresence } from "../../../../party/types";
-
-interface PresenceAvatarsProps {
-  users: Record<string, UserPresence>;
-  currentUserId: string;
-  onUserClick?: (userId: string, user: UserPresence) => void;
-}
 
 function getInitials(name: string): string {
   return name
@@ -22,6 +15,12 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+interface PresenceAvatarsProps {
+  users: Record<string, UserPresence>;
+  currentUserId: string;
+  onUserClick?: (userId: string, user: UserPresence) => void;
 }
 
 export function PresenceAvatars({
@@ -33,7 +32,6 @@ export function PresenceAvatars({
 
   return (
     <div className="flex items-center gap-2">
-      {/* Avatar stack */}
       {userList.length > 0 && (
         <div className="flex items-center">
           {userList.slice(0, 6).map(([userId, user], i) => (
@@ -44,7 +42,9 @@ export function PresenceAvatars({
                   className={cn(
                     "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-background font-semibold text-[10px] text-white transition-transform hover:z-10 hover:scale-110",
                     i > 0 && "-ml-2",
-                    userId === currentUserId || !user.activeCell.rowId ? "cursor-default" : "cursor-pointer",
+                    userId === currentUserId || !user.activeCell.rowId
+                      ? "cursor-default"
+                      : "cursor-pointer",
                   )}
                   style={{ backgroundColor: user.color, zIndex: i }}
                   onClick={() => {

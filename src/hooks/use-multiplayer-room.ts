@@ -1,18 +1,17 @@
 "use client";
 
+import type { RowPayload, ServerMessage, UserPresence } from "@party/types";
 import PartySocket from "partysocket";
 import * as React from "react";
+import { skaterSchema } from "@/app/data-grid-live/lib/validation";
 import {
   multiplayerCollection,
   remoteIds,
 } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
-import { skaterSchema } from "@/app/data-grid-live/lib/validation";
-import type { RowPayload, ServerMessage, UserPresence } from "../../party/types";
 
 const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 
-const log = (...args: unknown[]) =>
-  console.log("[multiplayer]", ...args);
+const log = (...args: unknown[]) => console.log("[multiplayer]", ...args);
 
 /** Parse a wire row (ISO date strings) back to SkaterSchema (Date objects). */
 function parseRow(raw: RowPayload) {
@@ -75,7 +74,10 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
         }
 
         case "cell-update": {
-          log(`Remote cell-update row=${msg.rowId} col=${msg.columnId} val=`, msg.value);
+          log(
+            `Remote cell-update row=${msg.rowId} col=${msg.columnId} val=`,
+            msg.value,
+          );
           // Add to remoteIds BEFORE calling update so onUpdate skips Postgres
           remoteIds.add(msg.rowId);
           log("remoteIds after add:", [...remoteIds]);
@@ -85,7 +87,9 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
             const raw = msg.value;
             // Re-inflate date strings → Date objects
             if (
-              (key === "startedSkating" || key === "createdAt" || key === "updatedAt") &&
+              (key === "startedSkating" ||
+                key === "createdAt" ||
+                key === "updatedAt") &&
               typeof raw === "string"
             ) {
               (draft as Record<string, unknown>)[key] = new Date(raw);

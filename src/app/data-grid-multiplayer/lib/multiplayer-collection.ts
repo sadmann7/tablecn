@@ -1,16 +1,17 @@
+import type { RowPayload } from "@party/types";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { createCollection } from "@tanstack/react-db";
 import { QueryClient } from "@tanstack/react-query";
-import { getAbsoluteUrl } from "@/lib/utils";
 import {
   type SkaterSchema,
   skaterSchema,
 } from "@/app/data-grid-live/lib/validation";
-import type { RowPayload } from "../../../../party/types";
+import { getAbsoluteUrl } from "@/lib/utils";
 
 export const queryClient = new QueryClient();
 
-const log = (...args: unknown[]) => console.log("[multiplayer-collection]", ...args);
+const log = (...args: unknown[]) =>
+  console.log("[multiplayer-collection]", ...args);
 
 // Row IDs that arrived via WebSocket from another user.
 // Prevents re-persisting to Postgres what the sender already persisted.
@@ -33,7 +34,9 @@ function toWire(row: SkaterSchema): RowPayload {
 // -----------------------------------------------------------------
 export interface BroadcastCallbacks {
   onAfterInsert?: (rows: RowPayload[]) => void;
-  onAfterUpdate?: (changes: Array<{ id: string; column: string; value: unknown }>) => void;
+  onAfterUpdate?: (
+    changes: Array<{ id: string; column: string; value: unknown }>,
+  ) => void;
   onAfterDelete?: (ids: string[]) => void;
 }
 
@@ -87,7 +90,10 @@ export const multiplayerCollection = createCollection(
       // where receivers refetch before the row is visible in Postgres.
       const fullRows = transaction.mutations
         .map((m) => m?.modified)
-        .filter((m): m is SkaterSchema => m != null && toInsert.some((t) => t.id === m.id));
+        .filter(
+          (m): m is SkaterSchema =>
+            m != null && toInsert.some((t) => t.id === m.id),
+        );
       if (fullRows.length > 0) {
         log(`onInsert: broadcasting ${fullRows.length} row(s)`);
         broadcastCallbacks.onAfterInsert?.(fullRows.map(toWire));
@@ -97,7 +103,12 @@ export const multiplayerCollection = createCollection(
     onUpdate: async ({ transaction }) => {
       const updates = transaction.mutations
         .filter(
-          (m): m is typeof m & { key: string; changes: Partial<SkaterSchema> } => {
+          (
+            m,
+          ): m is typeof m & {
+            key: string;
+            changes: Partial<SkaterSchema>;
+          } => {
             if (!m?.key || !m.changes) return false;
             if (remoteIds.has(m.key)) {
               log(`onUpdate: skipping remote row id=${m.key}`);
@@ -123,7 +134,8 @@ export const multiplayerCollection = createCollection(
       if (!response.ok) throw new Error("Failed to update skaters");
 
       // Broadcast individual cell changes after Postgres write
-      const cellChanges: Array<{ id: string; column: string; value: unknown }> = [];
+      const cellChanges: Array<{ id: string; column: string; value: unknown }> =
+        [];
       for (const { id, changes } of updates) {
         for (const [column, value] of Object.entries(changes)) {
           cellChanges.push({
