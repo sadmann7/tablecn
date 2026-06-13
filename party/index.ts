@@ -1,6 +1,6 @@
-// PartyKit server — in-memory source of truth for the multiplayer demo.
-// Each room starts with seed data and holds all mutations in memory.
-// Data is ephemeral: cleared when the last user leaves (Durable Object hibernates).
+// PartyKit server is the source of truth for the multiplayer demo.
+// Rows are persisted in Durable Object storage so data survives hibernation.
+// Each room seeds from party/seeds.ts on first use and stores mutations from there.
 
 import type * as Party from "partykit/server";
 import { seedRows } from "./seeds";
@@ -94,10 +94,10 @@ export default class SkaterRoom implements Party.Server {
 
   constructor(readonly room: Party.Room) {}
 
-  onConnect(conn: Party.Connection) {
-    // Seed with data on first connection
+  async onConnect(conn: Party.Connection) {
     if (this.state.rows.length === 0) {
-      this.state.rows = [...seedRows];
+      const stored = await this.room.storage.get<RowPayload[]>("rows");
+      this.state.rows = stored ?? [...seedRows];
     }
 
     const color = pickColor(this.state.usedColors);
@@ -146,6 +146,7 @@ export default class SkaterRoom implements Party.Server {
     switch (msg.type) {
       case "row-add": {
         this.state.rows.push(msg.row);
+        void this.room.storage.put("rows", this.state.rows);
         this.room.broadcast(
           JSON.stringify({
             type: "row-add",
@@ -159,6 +160,7 @@ export default class SkaterRoom implements Party.Server {
 
       case "rows-add": {
         this.state.rows.push(...msg.rows);
+        void this.room.storage.put("rows", this.state.rows);
         this.room.broadcast(
           JSON.stringify({
             type: "rows-add",
@@ -173,6 +175,7 @@ export default class SkaterRoom implements Party.Server {
       case "cell-update": {
         const row = this.state.rows.find((r) => r.id === msg.rowId);
         if (row) row[msg.columnId] = msg.value;
+        void this.room.storage.put("rows", this.state.rows);
         this.room.broadcast(
           JSON.stringify({
             type: "cell-update",
@@ -190,6 +193,7 @@ export default class SkaterRoom implements Party.Server {
         this.state.rows = this.state.rows.filter(
           (r) => !msg.ids.includes(r.id as string),
         );
+        void this.room.storage.put("rows", this.state.rows);
         this.room.broadcast(
           JSON.stringify({
             type: "rows-delete",
