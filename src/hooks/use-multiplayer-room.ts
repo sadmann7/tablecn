@@ -1,5 +1,6 @@
 "use client";
 
+import { ADJECTIVES, ANIMALS, COLORS } from "@party/constants";
 import type { RowPayload, ServerMessage, UserPresence } from "@party/types";
 import PartySocket from "partysocket";
 import * as React from "react";
@@ -7,6 +8,33 @@ import { skaterSchema } from "@/app/data-grid-live/lib/validation";
 import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
 
 const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
+const STORAGE_KEY = "multiplayer-identity";
+
+interface Identity {
+  name: string;
+  color: string;
+}
+
+function getOrCreateIdentity(): Identity {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return JSON.parse(stored) as Identity;
+  } catch {}
+
+  const adj =
+    ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
+  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
+  const color = COLORS[Math.floor(Math.random() * COLORS.length)] ?? "#3b82f6";
+  const identity: Identity = { name: `${adj} ${animal}`, color };
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
+  } catch {
+    // Fail silently if localStorage is not available
+  }
+
+  return identity;
+}
 
 function parseRow(raw: RowPayload) {
   const result = skaterSchema.safeParse(raw);
@@ -15,7 +43,7 @@ function parseRow(raw: RowPayload) {
   return null;
 }
 
-export interface UseMultiplayerRoomReturn {
+interface UseMultiplayerRoomReturn {
   isConnected: boolean;
   users: Record<string, UserPresence>;
   currentUserId: string;
@@ -35,8 +63,13 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
 
   React.useEffect(() => {
     const knownIds = new Set<string>();
+    const identity = getOrCreateIdentity();
 
-    const socket = new PartySocket({ host: PARTYKIT_HOST, room: roomId });
+    const socket = new PartySocket({
+      host: PARTYKIT_HOST,
+      room: roomId,
+      query: { name: identity.name, color: identity.color },
+    });
     socketRef.current = socket;
 
     socket.addEventListener("open", () => setIsConnected(true));

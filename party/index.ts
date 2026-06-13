@@ -3,6 +3,7 @@
 // Each room seeds from party/seeds.ts on first use and stores mutations from there.
 
 import type * as Party from "partykit/server";
+import { ADJECTIVES, ANIMALS, COLORS } from "./constants";
 import { seedRows } from "./seeds";
 import type {
   ClientMessage,
@@ -10,65 +11,6 @@ import type {
   ServerMessage,
   UserPresence,
 } from "./types";
-
-const ADJECTIVES = [
-  "Swift",
-  "Bold",
-  "Calm",
-  "Daring",
-  "Eager",
-  "Fierce",
-  "Gentle",
-  "Happy",
-  "Icy",
-  "Jolly",
-  "Kind",
-  "Lively",
-  "Merry",
-  "Noble",
-  "Odd",
-  "Proud",
-  "Quiet",
-  "Rapid",
-  "Silly",
-  "Tiny",
-];
-
-const ANIMALS = [
-  "Badger",
-  "Bear",
-  "Crane",
-  "Deer",
-  "Eagle",
-  "Fox",
-  "Goat",
-  "Hawk",
-  "Ibis",
-  "Jay",
-  "Kite",
-  "Lamb",
-  "Mink",
-  "Newt",
-  "Otter",
-  "Puma",
-  "Quail",
-  "Raven",
-  "Seal",
-  "Tiger",
-];
-
-const COLORS = [
-  "#ef4444",
-  "#f97316",
-  "#eab308",
-  "#22c55e",
-  "#06b6d4",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-  "#f59e0b",
-];
 
 interface RoomState {
   users: Record<string, UserPresence>;
@@ -115,11 +57,15 @@ export default class SkaterRoom implements Party.Server {
   }
 
   onConnect(conn: Party.Connection) {
-    const color = pickColor(this.state.usedColors);
-    this.state.usedColors.push(color);
+    const url = new URL(conn.uri);
+    const name = url.searchParams.get("name") ?? generateUserName();
+    const color =
+      url.searchParams.get("color") ?? pickColor(this.state.usedColors);
+    if (!this.state.usedColors.includes(color))
+      this.state.usedColors.push(color);
 
     const user: UserPresence = {
-      name: generateUserName(),
+      name,
       color,
       activeCell: { rowId: null, columnId: null },
     };

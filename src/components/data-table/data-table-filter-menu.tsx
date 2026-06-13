@@ -1,14 +1,7 @@
 "use client";
 
 import type { Column, Table } from "@tanstack/react-table";
-import {
-  BadgeCheck,
-  CalendarIcon,
-  Check,
-  ListFilter,
-  Text,
-  X,
-} from "lucide-react";
+import { BadgeCheck, CalendarIcon, ListFilter, Text, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 
@@ -32,6 +25,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -399,7 +393,7 @@ function DataTableFilterItem<TData>({
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
-              className="rounded-none rounded-l-md border border-r-0 font-normal dark:bg-input/30"
+              className="rounded-none rounded-l-md border border-input border-r-0 font-normal dark:bg-input/30"
             >
               {columnMeta?.icon && (
                 <columnMeta.icon className="text-muted-foreground" />
@@ -417,6 +411,7 @@ function DataTableFilterItem<TData>({
                     <CommandItem
                       key={column.id}
                       value={column.id}
+                      data-checked={column.id === filter.id}
                       onSelect={() => {
                         onFilterUpdate(filter.filterId, {
                           id: column.id as Extract<keyof TData, string>,
@@ -436,12 +431,6 @@ function DataTableFilterItem<TData>({
                       <span className="truncate">
                         {column.columnDef.meta?.label ?? column.id}
                       </span>
-                      <Check
-                        className={cn(
-                          "ml-auto",
-                          column.id === filter.id ? "opacity-100" : "opacity-0",
-                        )}
-                      />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -470,15 +459,17 @@ function DataTableFilterItem<TData>({
             <SelectValue placeholder={filter.operator} />
           </SelectTrigger>
           <SelectContent id={operatorListboxId}>
-            {filterOperators.map((operator) => (
-              <SelectItem
-                key={operator.value}
-                className="lowercase"
-                value={operator.value}
-              >
-                {operator.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {filterOperators.map((operator) => (
+                <SelectItem
+                  key={operator.value}
+                  className="lowercase"
+                  value={operator.value}
+                >
+                  {operator.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         {onFilterInputRender({
@@ -492,7 +483,7 @@ function DataTableFilterItem<TData>({
         <Button
           aria-controls={filterItemId}
           variant="ghost"
-          className="h-full rounded-none rounded-r-md border border-l-0 px-1.5 font-normal dark:bg-input/30"
+          className="h-full rounded-none rounded-r-md border border-input border-l-0 px-1.5 font-normal dark:bg-input/30"
           onClick={() => onFilterRemove(filter.filterId)}
         >
           <X className="size-3.5" />
@@ -536,6 +527,7 @@ function FilterValueSelector<TData>({
             <CommandItem
               key={option.value}
               value={option.value}
+              className="[&>svg:last-child]:hidden"
               onSelect={() => onSelect(option.value)}
             >
               {option.icon && <option.icon />}
@@ -617,7 +609,7 @@ function onFilterInputRender<TData>({
           filter.operator === "isEmpty" ? "empty" : "not empty"
         }`}
         aria-live="polite"
-        className="h-full w-16 rounded-none border bg-transparent px-1.5 py-0.5 text-muted-foreground dark:bg-input/30"
+        className="h-full w-16 rounded-none border border-input bg-transparent px-1.5 py-0.5 text-muted-foreground dark:bg-input/30"
       />
     );
   }
@@ -679,8 +671,10 @@ function onFilterInputRender<TData>({
             <SelectValue placeholder={filter.value ? "True" : "False"} />
           </SelectTrigger>
           <SelectContent id={inputListboxId}>
-            <SelectItem value="true">True</SelectItem>
-            <SelectItem value="false">False</SelectItem>
+            <SelectGroup>
+              <SelectItem value="true">True</SelectItem>
+              <SelectItem value="false">False</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       );
@@ -706,7 +700,7 @@ function onFilterInputRender<TData>({
               id={inputId}
               aria-controls={inputListboxId}
               variant="ghost"
-              className="h-full min-w-16 rounded-none border px-1.5 font-normal dark:bg-input/30"
+              className="h-full min-w-16 rounded-none border border-input px-1.5 font-normal dark:bg-input/30"
             >
               {selectedOptions.length === 0 ? (
                 filter.variant === "multiSelect" ? (
@@ -747,34 +741,29 @@ function onFilterInputRender<TData>({
               <CommandList>
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup>
-                  {options.map((option) => (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      onSelect={() => {
-                        const value =
-                          filter.variant === "multiSelect"
-                            ? selectedValues.includes(option.value)
+                  {options.map((option) => {
+                    const isMultiSelect = filter.variant === "multiSelect";
+                    const isSelected = selectedValues.includes(option.value);
+
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        value={option.value}
+                        data-checked={isMultiSelect ? isSelected : undefined}
+                        onSelect={() => {
+                          const value = isMultiSelect
+                            ? isSelected
                               ? selectedValues.filter((v) => v !== option.value)
                               : [...selectedValues, option.value]
                             : option.value;
-                        onFilterUpdate(filter.filterId, { value });
-                      }}
-                    >
-                      {option.icon && <option.icon />}
-                      <span className="truncate">{option.label}</span>
-                      {filter.variant === "multiSelect" && (
-                        <Check
-                          className={cn(
-                            "ml-auto",
-                            selectedValues.includes(option.value)
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        />
-                      )}
-                    </CommandItem>
-                  ))}
+                          onFilterUpdate(filter.filterId, { value });
+                        }}
+                      >
+                        {option.icon && <option.icon />}
+                        <span className="truncate">{option.label}</span>
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               </CommandList>
             </Command>

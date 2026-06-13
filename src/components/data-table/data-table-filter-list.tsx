@@ -44,6 +44,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -415,11 +416,13 @@ function DataTableFilterItem<TData>({
                 position="popper"
                 className="min-w-(--radix-select-trigger-width) lowercase"
               >
-                {dataTableConfig.joinOperators.map((joinOperator) => (
-                  <SelectItem key={joinOperator} value={joinOperator}>
-                    {joinOperator}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {dataTableConfig.joinOperators.map((joinOperator) => (
+                    <SelectItem key={joinOperator} value={joinOperator}>
+                      {joinOperator}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           ) : (
@@ -508,15 +511,17 @@ function DataTableFilterItem<TData>({
             </div>
           </SelectTrigger>
           <SelectContent id={operatorListboxId}>
-            {filterOperators.map((operator) => (
-              <SelectItem
-                key={operator.value}
-                value={operator.value}
-                className="lowercase"
-              >
-                {operator.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {filterOperators.map((operator) => (
+                <SelectItem
+                  key={operator.value}
+                  value={operator.value}
+                  className="lowercase"
+                >
+                  {operator.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <div className="min-w-36 max-w-60 flex-1">
@@ -650,8 +655,10 @@ function onFilterInputRender<TData>({
             <SelectValue placeholder={filter.value ? "True" : "False"} />
           </SelectTrigger>
           <SelectContent id={inputListboxId}>
-            <SelectItem value="true">True</SelectItem>
-            <SelectItem value="false">False</SelectItem>
+            <SelectGroup>
+              <SelectItem value="true">True</SelectItem>
+              <SelectItem value="false">False</SelectItem>
+            </SelectGroup>
           </SelectContent>
         </Select>
       );
