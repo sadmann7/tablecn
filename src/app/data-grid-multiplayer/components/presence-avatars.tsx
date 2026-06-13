@@ -12,6 +12,7 @@ import type { UserPresence } from "../../../../party/types";
 interface PresenceAvatarsProps {
   users: Record<string, UserPresence>;
   currentUserId: string;
+  onUserClick?: (userId: string, user: UserPresence) => void;
 }
 
 function getInitials(name: string): string {
@@ -26,6 +27,7 @@ function getInitials(name: string): string {
 export function PresenceAvatars({
   users,
   currentUserId,
+  onUserClick,
 }: PresenceAvatarsProps) {
   const userList = Object.entries(users);
 
@@ -37,18 +39,23 @@ export function PresenceAvatars({
           {userList.slice(0, 6).map(([userId, user], i) => (
             <Tooltip key={userId}>
               <TooltipTrigger asChild>
-                <div
+                <button
+                  type="button"
                   className={cn(
                     "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-background font-semibold text-[10px] text-white transition-transform hover:z-10 hover:scale-110",
                     i > 0 && "-ml-2",
+                    userId === currentUserId || !user.activeCell.rowId ? "cursor-default" : "cursor-pointer",
                   )}
                   style={{ backgroundColor: user.color, zIndex: i }}
+                  onClick={() => {
+                    if (userId !== currentUserId) onUserClick?.(userId, user);
+                  }}
                 >
                   {getInitials(user.name)}
                   {userId === currentUserId && (
                     <span className="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border border-background bg-green-500" />
                   )}
-                </div>
+                </button>
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 {user.name}

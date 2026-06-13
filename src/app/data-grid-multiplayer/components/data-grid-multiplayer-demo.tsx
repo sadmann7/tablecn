@@ -499,6 +499,19 @@ export function DataGridMultiplayerDemo({
     table.toggleAllRowsSelected(false);
   }, [table, tableMeta]);
 
+  // --- Jump to user's active cell ---
+
+  const onUserClick = React.useCallback(
+    (_userId: string, user: { activeCell: { rowId: string | null; columnId: string | null } }) => {
+      const { rowId, columnId } = user.activeCell;
+      if (!rowId || !columnId) return;
+      const rowIndex = table.getRowModel().rows.findIndex((r) => r.id === rowId);
+      if (rowIndex === -1) return;
+      tableMeta.scrollToCell?.(rowIndex, columnId);
+    },
+    [table, tableMeta],
+  );
+
   // --- Share link ---
 
   const onCopyLink = React.useCallback(() => {
@@ -536,7 +549,7 @@ export function DataGridMultiplayerDemo({
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <PresenceAvatars users={users} currentUserId={currentUserId} />
+        <PresenceAvatars users={users} currentUserId={currentUserId} onUserClick={onUserClick} />
         <div
           role="toolbar"
           aria-orientation="horizontal"
