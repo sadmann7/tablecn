@@ -13,12 +13,12 @@ import {
   getStyleIcon,
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
+import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
+import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import {
   type DataGridCellPresence,
   DataGridPresenceProvider,
-} from "@/components/data-grid/data-grid-cell-presence";
-import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
-import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
+} from "@/components/data-grid/data-grid-presence";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
 import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
@@ -129,20 +129,27 @@ export function DataGridMultiplayerDemo({
       const currentIds = new Set(data.map((s) => s.id));
       const newIds = new Set(newData.map((s) => s.id));
 
+      const deletedIds: string[] = [];
       for (const skater of data) {
-        if (!newIds.has(skater.id)) multiplayerCollection.delete(skater.id);
+        if (!newIds.has(skater.id)) {
+          multiplayerCollection.delete(skater.id);
+          deletedIds.push(skater.id);
+        }
       }
+      if (deletedIds.length > 0) sendRowsDelete(deletedIds);
 
+      const insertedRows: SkaterSchema[] = [];
       for (const skater of newData) {
         if (!currentIds.has(skater.id)) {
           multiplayerCollection.insert(skater);
+          insertedRows.push(skater);
         } else {
           const existing = data.find((s) => s.id === skater.id);
           if (!existing) continue;
 
-          const hasChanges = (
+          const changedKeys = (
             Object.keys(skater) as Array<keyof SkaterSchema>
-          ).some((key) => {
+          ).filter((key) => {
             const ev =
               existing[key] instanceof Date
                 ? (existing[key] as Date).toISOString()
@@ -154,15 +161,23 @@ export function DataGridMultiplayerDemo({
             return JSON.stringify(ev) !== JSON.stringify(nv);
           });
 
-          if (hasChanges) {
+          if (changedKeys.length > 0) {
             multiplayerCollection.update(skater.id, (draft) => {
               Object.assign(draft, skater);
             });
+            for (const key of changedKeys) {
+              const nv =
+                skater[key] instanceof Date
+                  ? (skater[key] as Date).toISOString()
+                  : skater[key];
+              sendCellUpdate(skater.id, key, nv);
+            }
           }
         }
       }
+      if (insertedRows.length > 0) sendRowsAdd(insertedRows.map(toWire));
     },
-    [data],
+    [data, sendRowsDelete, sendRowsAdd, sendCellUpdate],
   );
 
   const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =

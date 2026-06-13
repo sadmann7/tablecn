@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useDataGridCellPresence } from "@/components/data-grid/data-grid-cell-presence";
+import { useDataGridPresence } from "@/components/data-grid/data-grid-presence";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { getCellKey } from "@/lib/data-grid";
 import { cn } from "@/lib/utils";
@@ -29,9 +29,7 @@ export function DataGridCellWrapper<TData>({
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const cellMapRef = tableMeta?.cellMapRef;
-  const remotePresence = useDataGridCellPresence(
-    getCellKey(rowIndex, columnId),
-  );
+  const cellPresence = useDataGridPresence(getCellKey(rowIndex, columnId));
 
   const onCellChange = React.useCallback(
     (node: HTMLDivElement | null) => {
@@ -179,8 +177,8 @@ export function DataGridCellWrapper<TData>({
       className={cn(
         "size-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
-          "ring-1 ring-inset": isFocused || !!remotePresence,
-          "ring-ring": isFocused && !remotePresence,
+          "ring-1 ring-inset": isFocused || !!cellPresence,
+          "ring-ring": isFocused && !cellPresence,
           "bg-yellow-100 dark:bg-yellow-900/30":
             isSearchMatch && !isActiveSearchMatch,
           "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
@@ -198,8 +196,8 @@ export function DataGridCellWrapper<TData>({
         className,
       )}
       style={
-        remotePresence
-          ? ({ "--tw-ring-color": remotePresence.color } as React.CSSProperties)
+        cellPresence
+          ? ({ "--tw-ring-color": cellPresence.color } as React.CSSProperties)
           : undefined
       }
       onClick={onClick}

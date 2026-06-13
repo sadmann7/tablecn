@@ -326,6 +326,11 @@
           "target": "src/components/data-grid/data-grid.tsx"
         },
         {
+          "path": "src/components/data-grid/data-grid-presence.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-presence.tsx"
+        },
+        {
           "path": "src/components/data-grid/data-grid-cell.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-cell.tsx"

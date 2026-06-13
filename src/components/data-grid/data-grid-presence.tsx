@@ -28,13 +28,13 @@ function DataGridPresenceProvider({
   );
 }
 
-function useDataGridCellPresence(cellKey: string): DataGridCellPresence | null {
+function useDataGridPresence(cellKey: string): DataGridCellPresence | null {
   const map = React.useContext(DataGridCellPresenceContext);
   return map?.get(cellKey) ?? null;
 }
 
 export {
   DataGridPresenceProvider,
-  useDataGridCellPresence,
+  useDataGridPresence,
   type DataGridCellPresence,
 };
