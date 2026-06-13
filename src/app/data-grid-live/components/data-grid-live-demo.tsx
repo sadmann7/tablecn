@@ -32,6 +32,24 @@ import { skatersCollection } from "../lib/collections";
 import type { SkaterSchema } from "../lib/validation";
 import { DataGridActionBar } from "./data-grid-action-bar";
 
+const TRICKS = [
+  "Kickflip",
+  "Heelflip",
+  "Tre Flip",
+  "Hardflip",
+  "Varial Flip",
+  "360 Flip",
+  "Ollie",
+  "Nollie",
+  "Pop Shove-it",
+  "FS Boardslide",
+  "BS Boardslide",
+  "50-50 Grind",
+  "5-0 Grind",
+  "Crooked Grind",
+  "Smith Grind",
+] as const;
+
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
   value: stance,
@@ -50,25 +68,7 @@ const statusOptions = skaters.status.enumValues.map((status) => ({
   icon: getSkaterStatusIcon(status),
 }));
 
-const trickOptions = [
-  "Kickflip",
-  "Heelflip",
-  "Tre Flip",
-  "Hardflip",
-  "Varial Flip",
-  "360 Flip",
-  "Ollie",
-  "Nollie",
-  "Pop Shove-it",
-  "FS Boardslide",
-  "BS Boardslide",
-  "50-50 Grind",
-  "5-0 Grind",
-  "Crooked Grind",
-  "Smith Grind",
-] as const;
-
-const trickSelectOptions = trickOptions.map((trick) => ({
+const trickOptions = TRICKS.map((trick) => ({
   label: trick,
   value: trick,
 }));
@@ -183,7 +183,7 @@ export function DataGridLiveDemo() {
           label: "Tricks",
           cell: {
             variant: "multi-select",
-            options: trickSelectOptions,
+            options: trickOptions,
           },
         },
       },
