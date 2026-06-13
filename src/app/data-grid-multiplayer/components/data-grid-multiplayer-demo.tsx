@@ -114,7 +114,6 @@ export function DataGridMultiplayerDemo({
   // --- Multiplayer ---
 
   const {
-    isConnected,
     users,
     currentUserId,
     sendCellUpdate,
@@ -537,11 +536,7 @@ export function DataGridMultiplayerDemo({
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <PresenceAvatars
-          users={users}
-          currentUserId={currentUserId}
-          isConnected={isConnected}
-        />
+        <PresenceAvatars users={users} currentUserId={currentUserId} />
         <div
           role="toolbar"
           aria-orientation="horizontal"
@@ -568,7 +563,6 @@ export function DataGridMultiplayerDemo({
           <DataGridViewMenu table={table} align="end" />
         </div>
       </div>
-      <ActiveCellPresence users={users} currentUserId={currentUserId} />
       <DataGridCellPresenceProvider value={remoteCells}>
         <DataGrid
           {...dataGridProps}
@@ -592,50 +586,3 @@ export function DataGridMultiplayerDemo({
   );
 }
 
-function ActiveCellPresence({
-  users,
-  currentUserId,
-}: {
-  users: Record<
-    string,
-    {
-      name: string;
-      color: string;
-      activeCell: { rowId: string | null; columnId: string | null };
-    }
-  >;
-  currentUserId: string;
-}) {
-  const activeEditors = Object.entries(users).filter(
-    ([userId, user]) =>
-      userId !== currentUserId && user.activeCell.rowId !== null,
-  );
-
-  if (activeEditors.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {activeEditors.map(([userId, user]) => (
-        <div
-          key={userId}
-          className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs"
-          style={{
-            borderColor: `${user.color}40`,
-            background: `${user.color}10`,
-          }}
-        >
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ background: user.color }}
-          />
-          <span className="font-medium" style={{ color: user.color }}>
-            {user.name}
-          </span>
-          <span className="text-muted-foreground">
-            is on <span className="font-mono">{user.activeCell.columnId}</span>
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}

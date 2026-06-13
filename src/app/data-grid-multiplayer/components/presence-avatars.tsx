@@ -12,7 +12,6 @@ import type { UserPresence } from "../../../../party/types";
 interface PresenceAvatarsProps {
   users: Record<string, UserPresence>;
   currentUserId: string;
-  isConnected: boolean;
 }
 
 function getInitials(name: string): string {
@@ -27,25 +26,11 @@ function getInitials(name: string): string {
 export function PresenceAvatars({
   users,
   currentUserId,
-  isConnected,
 }: PresenceAvatarsProps) {
   const userList = Object.entries(users);
 
   return (
     <div className="flex items-center gap-2">
-      {/* Connection indicator */}
-      <div className="flex items-center gap-1.5">
-        <div
-          className={cn(
-            "h-2 w-2 rounded-full transition-colors",
-            isConnected ? "bg-green-500" : "bg-muted-foreground",
-          )}
-        />
-        <span className="text-muted-foreground text-xs">
-          {isConnected ? "Live" : "Connecting…"}
-        </span>
-      </div>
-
       {/* Avatar stack */}
       {userList.length > 0 && (
         <div className="flex items-center">
