@@ -3,30 +3,21 @@
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
-import {
-  DataGridSkeleton,
-  DataGridSkeletonGrid,
-  DataGridSkeletonToolbar,
-} from "@/components/data-grid/data-grid-skeleton";
 import { generateId } from "@/lib/id";
+import { DataGridMultiplayerSkeleton } from "./data-grid-multiplayer-skeleton";
 
 const DataGridMultiplayerDemo = dynamic(
   () =>
-    import("./components/data-grid-multiplayer-demo").then(
+    import("./data-grid-multiplayer-demo").then(
       (mod) => mod.DataGridMultiplayerDemo,
     ),
   {
     ssr: false,
-    loading: () => (
-      <DataGridSkeleton className="container flex flex-col gap-4 py-4">
-        <DataGridSkeletonToolbar actionCount={5} />
-        <DataGridSkeletonGrid />
-      </DataGridSkeleton>
-    ),
+    loading: () => <DataGridMultiplayerSkeleton />,
   },
 );
 
-export function DataGridMultiplayerPageClient() {
+export function DataGridMultiplayerRoom() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const roomId = searchParams.get("room");
@@ -42,12 +33,7 @@ export function DataGridMultiplayerPageClient() {
   }, [roomId, router]);
 
   if (!roomId) {
-    return (
-      <DataGridSkeleton className="container flex flex-col gap-4 py-4">
-        <DataGridSkeletonToolbar actionCount={5} />
-        <DataGridSkeletonGrid />
-      </DataGridSkeleton>
-    );
+    return <DataGridMultiplayerSkeleton />;
   }
 
   return <DataGridMultiplayerDemo roomId={roomId} />;
