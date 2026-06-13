@@ -3,7 +3,6 @@
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import * as React from "react";
-import { use } from "react";
 import { toast } from "sonner";
 import { DataGridActionBar } from "@/app/data-grid-live/components/data-grid-action-bar";
 import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
@@ -16,7 +15,7 @@ import {
 import { DataGrid } from "@/components/data-grid/data-grid";
 import {
   type DataGridCellPresence,
-  DataGridCellPresenceProvider,
+  DataGridPresenceProvider,
 } from "@/components/data-grid/data-grid-cell-presence";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
@@ -36,10 +35,7 @@ import { useWindowSize } from "@/hooks/use-window-size";
 import { getCellKey } from "@/lib/data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
-import {
-  broadcastCallbacks,
-  multiplayerCollection,
-} from "../lib/multiplayer-collection";
+import { multiplayerCollection } from "../lib/multiplayer-collection";
 import { PresenceAvatars } from "./presence-avatars";
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
@@ -87,11 +83,18 @@ interface DataGridMultiplayerDemoProps {
   roomId: string;
 }
 
+function toWire(row: SkaterSchema): Record<string, unknown> {
+  return {
+    ...row,
+    startedSkating: row.startedSkating?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt?.toISOString() ?? null,
+  };
+}
+
 export function DataGridMultiplayerDemo({
   roomId,
 }: DataGridMultiplayerDemoProps) {
-  use(multiplayerCollection.preload());
-
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
@@ -111,8 +114,6 @@ export function DataGridMultiplayerDemo({
     [sorting],
   );
 
-  // --- Multiplayer ---
-
   const {
     users,
     currentUserId,
@@ -122,37 +123,6 @@ export function DataGridMultiplayerDemo({
     sendRowsDelete,
     sendActiveCell,
   } = useMultiplayerRoom(roomId);
-
-  // Register broadcast callbacks once WS functions are available.
-  // The collection handlers call these AFTER Postgres write succeeds,
-  // so receivers never race against an in-flight DB write.
-  React.useEffect(() => {
-    broadcastCallbacks.onAfterInsert = (rows) => {
-      if (rows.length === 1 && rows[0]) {
-        sendRowAdd(rows[0]);
-      } else {
-        sendRowsAdd(rows);
-      }
-    };
-
-    broadcastCallbacks.onAfterUpdate = (cellChanges) => {
-      for (const { id, column, value } of cellChanges) {
-        sendCellUpdate(id, column, value);
-      }
-    };
-
-    broadcastCallbacks.onAfterDelete = (ids) => {
-      sendRowsDelete(ids);
-    };
-
-    return () => {
-      broadcastCallbacks.onAfterInsert = undefined;
-      broadcastCallbacks.onAfterUpdate = undefined;
-      broadcastCallbacks.onAfterDelete = undefined;
-    };
-  }, [sendRowAdd, sendRowsAdd, sendCellUpdate, sendRowsDelete]);
-
-  // --- Undo/Redo ---
 
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
@@ -201,8 +171,6 @@ export function DataGridMultiplayerDemo({
       onDataChange: undoRedoOnDataChange,
       getRowId: (row) => row.id,
     });
-
-  // --- Grid columns ---
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
@@ -300,8 +268,6 @@ export function DataGridMultiplayerDemo({
     [filterFn],
   );
 
-  // --- onDataChange: persist to Postgres. Broadcast happens in onUpdate handler. ---
-
   const onDataChange: NonNullable<
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
@@ -336,20 +302,20 @@ export function DataGridMultiplayerDemo({
               newValue: skater[key],
             });
 
-            // Persist to Postgres. onUpdate handler broadcasts AFTER write.
             multiplayerCollection.update(skater.id, (draft) => {
               (draft as Record<string, unknown>)[key] = skater[key];
             });
+
+            // Broadcast immediately, no Postgres round-trip needed
+            sendCellUpdate(existing.id, key, nv);
           }
         }
       }
 
       if (cellUpdates.length > 0) trackCellsUpdate(cellUpdates);
     },
-    [data, trackCellsUpdate],
+    [data, trackCellsUpdate, sendCellUpdate],
   );
-
-  // --- Row add/delete. Broadcast happens in onInsert/onDelete handlers. ---
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
@@ -359,11 +325,12 @@ export function DataGridMultiplayerDemo({
         order: maxOrder + 1,
       };
 
-      multiplayerCollection.insert(newSkater); // onInsert → Postgres → broadcast
+      multiplayerCollection.insert(newSkater);
+      sendRowAdd(toWire(newSkater));
       trackRowsAdd([newSkater]);
 
       return { rowIndex: data.length, columnId: "name" };
-    }, [data, trackRowsAdd]);
+    }, [data, trackRowsAdd, sendRowAdd]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
     React.useCallback(
@@ -389,25 +356,26 @@ export function DataGridMultiplayerDemo({
             updatedAt: new Date(),
           };
           newRows.push(newSkater);
-          multiplayerCollection.insert(newSkater); // onInsert → Postgres → broadcast
+          multiplayerCollection.insert(newSkater);
         }
 
+        sendRowsAdd(newRows.map(toWire));
         trackRowsAdd(newRows);
       },
-      [data, trackRowsAdd],
+      [data, trackRowsAdd, sendRowsAdd],
     );
 
   const onRowsDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onRowsDelete"]
   > = React.useCallback(
     (rowsToDelete) => {
+      const ids = rowsToDelete.map((s) => s.id);
       trackRowsDelete(rowsToDelete);
-      multiplayerCollection.delete(rowsToDelete.map((s) => s.id)); // onDelete → Postgres → broadcast
+      multiplayerCollection.delete(ids);
+      sendRowsDelete(ids);
     },
-    [trackRowsDelete],
+    [trackRowsDelete, sendRowsDelete],
   );
-
-  // --- Grid ---
 
   const { table, tableMeta, ...dataGridProps } = useDataGrid({
     data,
@@ -423,8 +391,6 @@ export function DataGridMultiplayerDemo({
     enableSearch: true,
     enablePaste: true,
   });
-
-  // --- Active cell presence ---
 
   const focusedRowIndex = tableMeta.focusedCell?.rowIndex ?? null;
   const focusedColumnId = tableMeta.focusedCell?.columnId ?? null;
@@ -442,8 +408,6 @@ export function DataGridMultiplayerDemo({
     }
   }, [focusedRowIndex, focusedColumnId, sendActiveCell]);
 
-  // --- Action bar. Batch updates broadcast via onUpdate after Postgres write. ---
-
   const onStatusUpdate = React.useCallback(
     (value: string) => {
       const selectedRows = table.getSelectedRowModel().rows;
@@ -452,17 +416,16 @@ export function DataGridMultiplayerDemo({
         return;
       }
 
-      multiplayerCollection.update(
-        selectedRows.map((row) => row.original.id),
-        (drafts) => {
-          for (const draft of drafts) draft.status = value as never;
-        },
-      );
+      const ids = selectedRows.map((row) => row.original.id);
+      multiplayerCollection.update(ids, (drafts) => {
+        for (const draft of drafts) draft.status = value as never;
+      });
+      for (const id of ids) sendCellUpdate(id, "status", value);
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table],
+    [table, sendCellUpdate],
   );
 
   const onStyleUpdate = React.useCallback(
@@ -473,17 +436,16 @@ export function DataGridMultiplayerDemo({
         return;
       }
 
-      multiplayerCollection.update(
-        selectedRows.map((row) => row.original.id),
-        (drafts) => {
-          for (const draft of drafts) draft.style = value as never;
-        },
-      );
+      const ids = selectedRows.map((row) => row.original.id);
+      multiplayerCollection.update(ids, (drafts) => {
+        for (const draft of drafts) draft.style = value as never;
+      });
+      for (const id of ids) sendCellUpdate(id, "style", value);
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table],
+    [table, sendCellUpdate],
   );
 
   const onDelete = React.useCallback(() => {
@@ -498,8 +460,6 @@ export function DataGridMultiplayerDemo({
     );
     table.toggleAllRowsSelected(false);
   }, [table, tableMeta]);
-
-  // --- Jump to user's active cell ---
 
   const onUserClick = React.useCallback(
     (
@@ -516,8 +476,6 @@ export function DataGridMultiplayerDemo({
     },
     [table, tableMeta],
   );
-
-  // --- Share link ---
 
   const onCopyLink = React.useCallback(() => {
     if (typeof window === "undefined") return;
@@ -585,15 +543,14 @@ export function DataGridMultiplayerDemo({
           <DataGridViewMenu table={table} align="end" />
         </div>
       </div>
-      <DataGridCellPresenceProvider value={remoteCells}>
+      <DataGridPresenceProvider value={remoteCells}>
         <DataGrid
           {...dataGridProps}
           table={table}
           tableMeta={tableMeta}
           height={height}
         />
-      </DataGridCellPresenceProvider>
-
+      </DataGridPresenceProvider>
       <DataGridActionBar
         table={table}
         tableMeta={tableMeta}

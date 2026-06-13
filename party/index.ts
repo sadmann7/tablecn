@@ -1,8 +1,9 @@
-// PartyKit server — presence-only broadcast layer.
-// Postgres (via Next.js API) is the source of truth for row data.
-// This server only tracks who is in the room and relays patches between clients.
+// PartyKit server — in-memory source of truth for the multiplayer demo.
+// Each room starts with seed data and holds all mutations in memory.
+// Data is ephemeral: cleared when the last user leaves (Durable Object hibernates).
 
 import type * as Party from "partykit/server";
+import { seedRows } from "./seeds";
 import type {
   ClientMessage,
   RowPayload,
@@ -72,6 +73,7 @@ const COLORS = [
 interface RoomState {
   users: Record<string, UserPresence>;
   usedColors: string[];
+  rows: RowPayload[];
 }
 
 function generateUserName(): string {
@@ -88,11 +90,16 @@ function pickColor(usedColors: string[]): string {
 }
 
 export default class SkaterRoom implements Party.Server {
-  state: RoomState = { users: {}, usedColors: [] };
+  state: RoomState = { users: {}, usedColors: [], rows: [] };
 
   constructor(readonly room: Party.Room) {}
 
   onConnect(conn: Party.Connection) {
+    // Seed with data on first connection
+    if (this.state.rows.length === 0) {
+      this.state.rows = [...seedRows];
+    }
+
     const color = pickColor(this.state.usedColors);
     this.state.usedColors.push(color);
 
@@ -107,6 +114,7 @@ export default class SkaterRoom implements Party.Server {
       type: "snapshot",
       users: this.state.users,
       userId: conn.id,
+      rows: this.state.rows,
     };
     conn.send(JSON.stringify(snapshot));
 
@@ -136,62 +144,76 @@ export default class SkaterRoom implements Party.Server {
     }
 
     switch (msg.type) {
-      case "cell-update": {
-        const out: ServerMessage = {
-          type: "cell-update",
-          rowId: msg.rowId,
-          columnId: msg.columnId,
-          value: msg.value,
-          userId: sender.id,
-        };
-        this.room.broadcast(JSON.stringify(out), [sender.id]);
-        break;
-      }
-
       case "row-add": {
-        // Forward the full row payload so receivers can insert directly
-        // without a refetch (avoids race conditions with Postgres writes).
-        const out: ServerMessage = {
-          type: "row-add",
-          row: msg.row as RowPayload,
-          userId: sender.id,
-        };
-        this.room.broadcast(JSON.stringify(out), [sender.id]);
+        this.state.rows.push(msg.row);
+        this.room.broadcast(
+          JSON.stringify({
+            type: "row-add",
+            row: msg.row,
+            userId: sender.id,
+          } satisfies ServerMessage),
+          [sender.id],
+        );
         break;
       }
 
       case "rows-add": {
-        const out: ServerMessage = {
-          type: "rows-add",
-          rows: msg.rows as RowPayload[],
-          userId: sender.id,
-        };
-        this.room.broadcast(JSON.stringify(out), [sender.id]);
+        this.state.rows.push(...msg.rows);
+        this.room.broadcast(
+          JSON.stringify({
+            type: "rows-add",
+            rows: msg.rows,
+            userId: sender.id,
+          } satisfies ServerMessage),
+          [sender.id],
+        );
+        break;
+      }
+
+      case "cell-update": {
+        const row = this.state.rows.find((r) => r.id === msg.rowId);
+        if (row) row[msg.columnId] = msg.value;
+        this.room.broadcast(
+          JSON.stringify({
+            type: "cell-update",
+            rowId: msg.rowId,
+            columnId: msg.columnId,
+            value: msg.value,
+            userId: sender.id,
+          } satisfies ServerMessage),
+          [sender.id],
+        );
         break;
       }
 
       case "rows-delete": {
-        const out: ServerMessage = {
-          type: "rows-delete",
-          ids: msg.ids,
-          userId: sender.id,
-        };
-        this.room.broadcast(JSON.stringify(out), [sender.id]);
+        this.state.rows = this.state.rows.filter(
+          (r) => !msg.ids.includes(r.id as string),
+        );
+        this.room.broadcast(
+          JSON.stringify({
+            type: "rows-delete",
+            ids: msg.ids,
+            userId: sender.id,
+          } satisfies ServerMessage),
+          [sender.id],
+        );
         break;
       }
 
       case "active-cell": {
         const user = this.state.users[sender.id];
-        if (user) {
+        if (user)
           user.activeCell = { rowId: msg.rowId, columnId: msg.columnId };
-        }
-        const out: ServerMessage = {
-          type: "active-cell",
-          userId: sender.id,
-          rowId: msg.rowId,
-          columnId: msg.columnId,
-        };
-        this.room.broadcast(JSON.stringify(out), [sender.id]);
+        this.room.broadcast(
+          JSON.stringify({
+            type: "active-cell",
+            userId: sender.id,
+            rowId: msg.rowId,
+            columnId: msg.columnId,
+          } satisfies ServerMessage),
+          [sender.id],
+        );
         break;
       }
     }

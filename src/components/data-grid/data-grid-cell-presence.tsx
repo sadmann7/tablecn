@@ -12,15 +12,15 @@ const DataGridCellPresenceContext = React.createContext<Map<
   DataGridCellPresence
 > | null>(null);
 
-interface DataGridCellPresenceProviderProps {
+interface DataGridPresenceProviderProps {
   value: Map<string, DataGridCellPresence>;
   children: React.ReactNode;
 }
 
-function DataGridCellPresenceProvider({
+function DataGridPresenceProvider({
   value,
   children,
-}: DataGridCellPresenceProviderProps) {
+}: DataGridPresenceProviderProps) {
   return (
     <DataGridCellPresenceContext.Provider value={value}>
       {children}
@@ -34,7 +34,7 @@ function useDataGridCellPresence(cellKey: string): DataGridCellPresence | null {
 }
 
 export {
-  DataGridCellPresenceProvider,
+  DataGridPresenceProvider,
   useDataGridCellPresence,
   type DataGridCellPresence,
 };

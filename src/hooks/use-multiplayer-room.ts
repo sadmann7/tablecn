@@ -4,10 +4,7 @@ import type { RowPayload, ServerMessage, UserPresence } from "@party/types";
 import PartySocket from "partysocket";
 import * as React from "react";
 import { skaterSchema } from "@/app/data-grid-live/lib/validation";
-import {
-  multiplayerCollection,
-  remoteIds,
-} from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
+import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
 
 const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 
@@ -41,6 +38,10 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
 
   React.useEffect(() => {
     log(`Connecting to room "${roomId}" at ${PARTYKIT_HOST}`);
+
+    // Track all IDs inserted this session so we can clean up on unmount / room change
+    const knownIds = new Set<string>();
+
     const socket = new PartySocket({ host: PARTYKIT_HOST, room: roomId });
     socketRef.current = socket;
 
@@ -69,23 +70,24 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
         case "snapshot": {
           setCurrentUserId(msg.userId);
           setUsers(msg.users);
-          log(`Snapshot: ${Object.keys(msg.users).length} user(s) in room`);
+          // Populate collection with server's current rows
+          for (const raw of msg.rows) {
+            const row = parseRow(raw);
+            if (row) {
+              multiplayerCollection.insert(row);
+              knownIds.add(row.id);
+            }
+          }
+          log(
+            `Snapshot: ${Object.keys(msg.users).length} user(s), ${msg.rows.length} row(s)`,
+          );
           break;
         }
 
         case "cell-update": {
-          log(
-            `Remote cell-update row=${msg.rowId} col=${msg.columnId} val=`,
-            msg.value,
-          );
-          // Add to remoteIds BEFORE calling update so onUpdate skips Postgres
-          remoteIds.add(msg.rowId);
-          log("remoteIds after add:", [...remoteIds]);
-
           multiplayerCollection.update(msg.rowId, (draft) => {
             const key = msg.columnId as keyof typeof draft;
             const raw = msg.value;
-            // Re-inflate date strings → Date objects
             if (
               (key === "startedSkating" ||
                 key === "createdAt" ||
@@ -101,38 +103,28 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
         }
 
         case "row-add": {
-          // Full row payload arrives — insert directly without a refetch.
-          // This avoids the race condition where Postgres might not have
-          // committed yet by the time a plain invalidateQueries fires.
           const row = parseRow(msg.row);
-          if (!row) break;
-
-          log("Remote row-add id=", row.id);
-          remoteIds.add(row.id);
-          log("remoteIds after add:", [...remoteIds]);
-          multiplayerCollection.insert(row);
+          if (row) {
+            multiplayerCollection.insert(row);
+            knownIds.add(row.id);
+          }
           break;
         }
 
         case "rows-add": {
-          log(`Remote rows-add: ${msg.rows.length} row(s)`);
-          for (const rawRow of msg.rows) {
-            const row = parseRow(rawRow);
-            if (!row) continue;
-            remoteIds.add(row.id);
-            multiplayerCollection.insert(row);
+          for (const raw of msg.rows) {
+            const row = parseRow(raw);
+            if (row) {
+              multiplayerCollection.insert(row);
+              knownIds.add(row.id);
+            }
           }
-          log("remoteIds after adds:", [...remoteIds]);
           break;
         }
 
         case "rows-delete": {
-          log("Remote rows-delete ids=", msg.ids);
-          for (const id of msg.ids) {
-            remoteIds.add(id);
-            multiplayerCollection.delete(id);
-          }
-          log("remoteIds after deletes:", [...remoteIds]);
+          multiplayerCollection.delete(msg.ids);
+          for (const id of msg.ids) knownIds.delete(id);
           break;
         }
 
@@ -174,12 +166,13 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       socket.close();
       socketRef.current = null;
       setIsConnected(false);
+      // Clear collection rows from this session
+      if (knownIds.size > 0) multiplayerCollection.delete([...knownIds]);
     };
   }, [roomId]);
 
   const sendCellUpdate = React.useCallback(
     (rowId: string, columnId: string, value: unknown) => {
-      log(`→ cell-update row=${rowId} col=${columnId} val=`, value);
       socketRef.current?.send(
         JSON.stringify({ type: "cell-update", rowId, columnId, value }),
       );
@@ -187,19 +180,15 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     [],
   );
 
-  // Sends the full serialized row so receivers can insert without a refetch
   const sendRowAdd = React.useCallback((row: RowPayload) => {
-    log("→ row-add id=", row.id);
     socketRef.current?.send(JSON.stringify({ type: "row-add", row }));
   }, []);
 
   const sendRowsAdd = React.useCallback((rows: RowPayload[]) => {
-    log(`→ rows-add: ${rows.length} row(s)`);
     socketRef.current?.send(JSON.stringify({ type: "rows-add", rows }));
   }, []);
 
   const sendRowsDelete = React.useCallback((ids: string[]) => {
-    log("→ rows-delete ids=", ids);
     socketRef.current?.send(JSON.stringify({ type: "rows-delete", ids }));
   }, []);
 
