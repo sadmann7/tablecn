@@ -14,6 +14,10 @@ import {
   getStyleIcon,
 } from "@/app/lib/utils";
 import { DataGrid } from "@/components/data-grid/data-grid";
+import {
+  type DataGridCellPresence,
+  DataGridCellPresenceProvider,
+} from "@/components/data-grid/data-grid-cell-presence";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
@@ -29,6 +33,7 @@ import {
 } from "@/hooks/use-data-grid-undo-redo";
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
+import { getCellKey } from "@/lib/data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import {
@@ -56,18 +61,35 @@ const statusOptions = skaters.status.enumValues.map((status) => ({
 }));
 
 const trickOptions = [
-  "Kickflip", "Heelflip", "Tre Flip", "Hardflip", "Varial Flip",
-  "360 Flip", "Ollie", "Nollie", "Pop Shove-it", "FS Boardslide",
-  "BS Boardslide", "50-50 Grind", "5-0 Grind", "Crooked Grind", "Smith Grind",
+  "Kickflip",
+  "Heelflip",
+  "Tre Flip",
+  "Hardflip",
+  "Varial Flip",
+  "360 Flip",
+  "Ollie",
+  "Nollie",
+  "Pop Shove-it",
+  "FS Boardslide",
+  "BS Boardslide",
+  "50-50 Grind",
+  "5-0 Grind",
+  "Crooked Grind",
+  "Smith Grind",
 ] as const;
 
-const trickSelectOptions = trickOptions.map((trick) => ({ label: trick, value: trick }));
+const trickSelectOptions = trickOptions.map((trick) => ({
+  label: trick,
+  value: trick,
+}));
 
 interface DataGridMultiplayerDemoProps {
   roomId: string;
 }
 
-export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps) {
+export function DataGridMultiplayerDemo({
+  roomId,
+}: DataGridMultiplayerDemoProps) {
   use(multiplayerCollection.preload());
 
   const windowSize = useWindowSize();
@@ -78,7 +100,10 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
       let query = q.from({ skater: multiplayerCollection });
       for (const sort of sorting) {
         const field = sort.id as keyof SkaterSchema;
-        query = query.orderBy((t) => t.skater[field], sort.desc ? "desc" : "asc");
+        query = query.orderBy(
+          (t) => t.skater[field],
+          sort.desc ? "desc" : "asc",
+        );
       }
       query = query.orderBy((t) => t.skater.order, "asc");
       return query;
@@ -146,9 +171,17 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
           const existing = data.find((s) => s.id === skater.id);
           if (!existing) continue;
 
-          const hasChanges = (Object.keys(skater) as Array<keyof SkaterSchema>).some((key) => {
-            const ev = existing[key] instanceof Date ? (existing[key] as Date).toISOString() : existing[key];
-            const nv = skater[key] instanceof Date ? (skater[key] as Date).toISOString() : skater[key];
+          const hasChanges = (
+            Object.keys(skater) as Array<keyof SkaterSchema>
+          ).some((key) => {
+            const ev =
+              existing[key] instanceof Date
+                ? (existing[key] as Date).toISOString()
+                : existing[key];
+            const nv =
+              skater[key] instanceof Date
+                ? (skater[key] as Date).toISOString()
+                : skater[key];
             return JSON.stringify(ev) !== JSON.stringify(nv);
           });
 
@@ -163,11 +196,12 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
     [data],
   );
 
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } = useDataGridUndoRedo({
-    data,
-    onDataChange: undoRedoOnDataChange,
-    getRowId: (row) => row.id,
-  });
+  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
+    useDataGridUndoRedo({
+      data,
+      onDataChange: undoRedoOnDataChange,
+      getRowId: (row) => row.id,
+    });
 
   // --- Grid columns ---
 
@@ -177,39 +211,90 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
     () => [
       getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
       {
-        id: "name", accessorKey: "name", header: "Name", minSize: 200, filterFn,
+        id: "name",
+        accessorKey: "name",
+        header: "Name",
+        minSize: 200,
+        filterFn,
         meta: { label: "Name", cell: { variant: "short-text" } },
       },
       {
-        id: "email", accessorKey: "email", header: "Email", minSize: 250, filterFn,
+        id: "email",
+        accessorKey: "email",
+        header: "Email",
+        minSize: 250,
+        filterFn,
         meta: { label: "Email", cell: { variant: "short-text" } },
       },
       {
-        id: "stance", accessorKey: "stance", header: "Stance", minSize: 140, filterFn,
-        meta: { label: "Stance", cell: { variant: "select", options: stanceOptions } },
+        id: "stance",
+        accessorKey: "stance",
+        header: "Stance",
+        minSize: 140,
+        filterFn,
+        meta: {
+          label: "Stance",
+          cell: { variant: "select", options: stanceOptions },
+        },
       },
       {
-        id: "style", accessorKey: "style", header: "Style", minSize: 160, filterFn,
-        meta: { label: "Style", cell: { variant: "select", options: styleOptions } },
+        id: "style",
+        accessorKey: "style",
+        header: "Style",
+        minSize: 160,
+        filterFn,
+        meta: {
+          label: "Style",
+          cell: { variant: "select", options: styleOptions },
+        },
       },
       {
-        id: "status", accessorKey: "status", header: "Status", minSize: 160, filterFn,
-        meta: { label: "Status", cell: { variant: "select", options: statusOptions } },
+        id: "status",
+        accessorKey: "status",
+        header: "Status",
+        minSize: 160,
+        filterFn,
+        meta: {
+          label: "Status",
+          cell: { variant: "select", options: statusOptions },
+        },
       },
       {
-        id: "tricks", accessorKey: "tricks", header: "Tricks", minSize: 240, filterFn,
-        meta: { label: "Tricks", cell: { variant: "multi-select", options: trickSelectOptions } },
+        id: "tricks",
+        accessorKey: "tricks",
+        header: "Tricks",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Tricks",
+          cell: { variant: "multi-select", options: trickSelectOptions },
+        },
       },
       {
-        id: "yearsSkating", accessorKey: "yearsSkating", header: "Years Skating", minSize: 160, filterFn,
-        meta: { label: "Years Skating", cell: { variant: "number", min: 0, max: 50, step: 1 } },
+        id: "yearsSkating",
+        accessorKey: "yearsSkating",
+        header: "Years Skating",
+        minSize: 160,
+        filterFn,
+        meta: {
+          label: "Years Skating",
+          cell: { variant: "number", min: 0, max: 50, step: 1 },
+        },
       },
       {
-        id: "startedSkating", accessorKey: "startedSkating", header: "Skating Since", minSize: 170, filterFn,
+        id: "startedSkating",
+        accessorKey: "startedSkating",
+        header: "Skating Since",
+        minSize: 170,
+        filterFn,
         meta: { label: "Skating Since", cell: { variant: "date" } },
       },
       {
-        id: "isPro", accessorKey: "isPro", header: "Pro", minSize: 90, filterFn,
+        id: "isPro",
+        accessorKey: "isPro",
+        header: "Pro",
+        minSize: 90,
+        filterFn,
         meta: { label: "Pro", cell: { variant: "checkbox" } },
       },
     ],
@@ -218,7 +303,9 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
 
   // --- onDataChange: persist to Postgres. Broadcast happens in onUpdate handler. ---
 
-  const onDataChange: NonNullable<UseDataGridProps<SkaterSchema>["onDataChange"]> = React.useCallback(
+  const onDataChange: NonNullable<
+    UseDataGridProps<SkaterSchema>["onDataChange"]
+  > = React.useCallback(
     (newData) => {
       const cellUpdates: Array<UndoRedoCellUpdate> = [];
 
@@ -233,8 +320,14 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
         }
 
         for (const key of Object.keys(skater) as Array<keyof SkaterSchema>) {
-          const ev = existing[key] instanceof Date ? (existing[key] as Date).toISOString() : existing[key];
-          const nv = skater[key] instanceof Date ? (skater[key] as Date).toISOString() : skater[key];
+          const ev =
+            existing[key] instanceof Date
+              ? (existing[key] as Date).toISOString()
+              : existing[key];
+          const nv =
+            skater[key] instanceof Date
+              ? (skater[key] as Date).toISOString()
+              : skater[key];
 
           if (JSON.stringify(ev) !== JSON.stringify(nv)) {
             cellUpdates.push({
@@ -259,48 +352,55 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
 
   // --- Row add/delete. Broadcast happens in onInsert/onDelete handlers. ---
 
-  const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> = React.useCallback(() => {
-    const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
-    const newSkater: SkaterSchema = { ...generateRandomSkater(), order: maxOrder + 1 };
-
-    multiplayerCollection.insert(newSkater); // onInsert → Postgres → broadcast
-    trackRowsAdd([newSkater]);
-
-    return { rowIndex: data.length, columnId: "name" };
-  }, [data, trackRowsAdd]);
-
-  const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> = React.useCallback(
-    (count: number) => {
+  const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
+    React.useCallback(() => {
       const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
-      const newRows: SkaterSchema[] = [];
+      const newSkater: SkaterSchema = {
+        ...generateRandomSkater(),
+        order: maxOrder + 1,
+      };
 
-      for (let i = 0; i < count; i++) {
-        const newSkater: SkaterSchema = {
-          id: generateId(),
-          name: null,
-          email: null,
-          stance: "regular",
-          style: "street",
-          status: "amateur",
-          yearsSkating: 0,
-          startedSkating: null,
-          isPro: false,
-          tricks: null,
-          media: null,
-          order: maxOrder + i + 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        newRows.push(newSkater);
-        multiplayerCollection.insert(newSkater); // onInsert → Postgres → broadcast
-      }
+      multiplayerCollection.insert(newSkater); // onInsert → Postgres → broadcast
+      trackRowsAdd([newSkater]);
 
-      trackRowsAdd(newRows);
-    },
-    [data, trackRowsAdd],
-  );
+      return { rowIndex: data.length, columnId: "name" };
+    }, [data, trackRowsAdd]);
 
-  const onRowsDelete: NonNullable<UseDataGridProps<SkaterSchema>["onRowsDelete"]> = React.useCallback(
+  const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
+    React.useCallback(
+      (count: number) => {
+        const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
+        const newRows: SkaterSchema[] = [];
+
+        for (let i = 0; i < count; i++) {
+          const newSkater: SkaterSchema = {
+            id: generateId(),
+            name: null,
+            email: null,
+            stance: "regular",
+            style: "street",
+            status: "amateur",
+            yearsSkating: 0,
+            startedSkating: null,
+            isPro: false,
+            tricks: null,
+            media: null,
+            order: maxOrder + i + 1,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          newRows.push(newSkater);
+          multiplayerCollection.insert(newSkater); // onInsert → Postgres → broadcast
+        }
+
+        trackRowsAdd(newRows);
+      },
+      [data, trackRowsAdd],
+    );
+
+  const onRowsDelete: NonNullable<
+    UseDataGridProps<SkaterSchema>["onRowsDelete"]
+  > = React.useCallback(
     (rowsToDelete) => {
       trackRowsDelete(rowsToDelete);
       multiplayerCollection.delete(rowsToDelete.map((s) => s.id)); // onDelete → Postgres → broadcast
@@ -330,7 +430,9 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
   const focusedRowIndex = tableMeta.focusedCell?.rowIndex ?? null;
   const focusedColumnId = tableMeta.focusedCell?.columnId ?? null;
   const tableRef = React.useRef(table);
-  React.useEffect(() => { tableRef.current = table; });
+  React.useEffect(() => {
+    tableRef.current = table;
+  });
 
   React.useEffect(() => {
     if (focusedRowIndex !== null && focusedColumnId !== null) {
@@ -346,13 +448,20 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
   const onStatusUpdate = React.useCallback(
     (value: string) => {
       const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) { toast.error("No skaters selected"); return; }
+      if (selectedRows.length === 0) {
+        toast.error("No skaters selected");
+        return;
+      }
 
       multiplayerCollection.update(
         selectedRows.map((row) => row.original.id),
-        (drafts) => { for (const draft of drafts) draft.status = value as never; },
+        (drafts) => {
+          for (const draft of drafts) draft.status = value as never;
+        },
       );
-      toast.success(`${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`);
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
+      );
     },
     [table],
   );
@@ -360,22 +469,34 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
   const onStyleUpdate = React.useCallback(
     (value: string) => {
       const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) { toast.error("No skaters selected"); return; }
+      if (selectedRows.length === 0) {
+        toast.error("No skaters selected");
+        return;
+      }
 
       multiplayerCollection.update(
         selectedRows.map((row) => row.original.id),
-        (drafts) => { for (const draft of drafts) draft.style = value as never; },
+        (drafts) => {
+          for (const draft of drafts) draft.style = value as never;
+        },
       );
-      toast.success(`${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`);
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
+      );
     },
     [table],
   );
 
   const onDelete = React.useCallback(() => {
     const selectedRows = table.getSelectedRowModel().rows;
-    if (selectedRows.length === 0) { toast.error("No skaters selected"); return; }
+    if (selectedRows.length === 0) {
+      toast.error("No skaters selected");
+      return;
+    }
     tableMeta.onRowsDelete?.(selectedRows.map((row) => row.index));
-    toast.success(`${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`);
+    toast.success(
+      `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
+    );
     table.toggleAllRowsSelected(false);
   }, [table, tableMeta]);
 
@@ -384,22 +505,62 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
   const onCopyLink = React.useCallback(() => {
     if (typeof window === "undefined") return;
     const url = `${window.location.origin}/data-grid-multiplayer?room=${roomId}`;
-    void navigator.clipboard.writeText(url).then(() => toast.success("Room link copied"));
+    void navigator.clipboard
+      .writeText(url)
+      .then(() => toast.success("Room link copied"));
   }, [roomId]);
 
   const height = Math.max(400, windowSize.height - 200);
   const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
 
+  // Build cellKey → presence map so DataGridCellWrapper can apply colored rings.
+  // `data` is intentional: `table` object reference is stable even when sort order
+  // changes, so we use `data` as a proxy to recompute when row order actually changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see comment above
+  const remoteCells = React.useMemo(() => {
+    const map = new Map<string, DataGridCellPresence>();
+    const rows = table.getRowModel().rows;
+    for (const [userId, user] of Object.entries(users)) {
+      if (userId === currentUserId) continue;
+      const { rowId, columnId } = user.activeCell;
+      if (!rowId || !columnId) continue;
+      const rowIndex = rows.findIndex((r) => r.id === rowId);
+      if (rowIndex === -1) continue;
+      map.set(getCellKey(rowIndex, columnId), {
+        color: user.color,
+        name: user.name,
+      });
+    }
+    return map;
+  }, [users, currentUserId, data, table]);
+
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <PresenceAvatars users={users} currentUserId={currentUserId} isConnected={isConnected} />
-        <div role="toolbar" aria-orientation="horizontal" className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onCopyLink} className="h-8 gap-1.5 text-xs">
+        <PresenceAvatars
+          users={users}
+          currentUserId={currentUserId}
+          isConnected={isConnected}
+        />
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2"
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onCopyLink}
+            className="h-8 gap-1.5 text-xs"
+          >
             Share room
           </Button>
           <DataGridKeyboardShortcuts
-            enableSearch enableUndoRedo enablePaste enableRowAdd enableRowsDelete
+            enableSearch
+            enableUndoRedo
+            enablePaste
+            enableRowAdd
+            enableRowsDelete
           />
           <DataGridFilterMenu table={table} align="end" />
           <DataGridSortMenu table={table} align="end" />
@@ -407,10 +568,15 @@ export function DataGridMultiplayerDemo({ roomId }: DataGridMultiplayerDemoProps
           <DataGridViewMenu table={table} align="end" />
         </div>
       </div>
-
       <ActiveCellPresence users={users} currentUserId={currentUserId} />
-
-      <DataGrid {...dataGridProps} table={table} tableMeta={tableMeta} height={height} />
+      <DataGridCellPresenceProvider value={remoteCells}>
+        <DataGrid
+          {...dataGridProps}
+          table={table}
+          tableMeta={tableMeta}
+          height={height}
+        />
+      </DataGridCellPresenceProvider>
 
       <DataGridActionBar
         table={table}
@@ -430,11 +596,19 @@ function ActiveCellPresence({
   users,
   currentUserId,
 }: {
-  users: Record<string, { name: string; color: string; activeCell: { rowId: string | null; columnId: string | null } }>;
+  users: Record<
+    string,
+    {
+      name: string;
+      color: string;
+      activeCell: { rowId: string | null; columnId: string | null };
+    }
+  >;
   currentUserId: string;
 }) {
   const activeEditors = Object.entries(users).filter(
-    ([userId, user]) => userId !== currentUserId && user.activeCell.rowId !== null,
+    ([userId, user]) =>
+      userId !== currentUserId && user.activeCell.rowId !== null,
   );
 
   if (activeEditors.length === 0) return null;
@@ -445,10 +619,18 @@ function ActiveCellPresence({
         <div
           key={userId}
           className="flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs"
-          style={{ borderColor: `${user.color}40`, background: `${user.color}10` }}
+          style={{
+            borderColor: `${user.color}40`,
+            background: `${user.color}10`,
+          }}
         >
-          <span className="h-2 w-2 rounded-full" style={{ background: user.color }} />
-          <span className="font-medium" style={{ color: user.color }}>{user.name}</span>
+          <span
+            className="h-2 w-2 rounded-full"
+            style={{ background: user.color }}
+          />
+          <span className="font-medium" style={{ color: user.color }}>
+            {user.name}
+          </span>
           <span className="text-muted-foreground">
             is on <span className="font-mono">{user.activeCell.columnId}</span>
           </span>
