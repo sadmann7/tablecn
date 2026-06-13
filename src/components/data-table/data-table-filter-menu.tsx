@@ -1,14 +1,7 @@
 "use client";
 
 import type { Column, Table } from "@tanstack/react-table";
-import {
-  BadgeCheck,
-  CalendarIcon,
-  Check,
-  ListFilter,
-  Text,
-  X,
-} from "lucide-react";
+import { BadgeCheck, CalendarIcon, ListFilter, Text, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 
@@ -417,6 +410,7 @@ function DataTableFilterItem<TData>({
                     <CommandItem
                       key={column.id}
                       value={column.id}
+                      data-checked={column.id === filter.id}
                       onSelect={() => {
                         onFilterUpdate(filter.filterId, {
                           id: column.id as Extract<keyof TData, string>,
@@ -436,12 +430,6 @@ function DataTableFilterItem<TData>({
                       <span className="truncate">
                         {column.columnDef.meta?.label ?? column.id}
                       </span>
-                      <Check
-                        className={cn(
-                          "ml-auto",
-                          column.id === filter.id ? "opacity-100" : "opacity-0",
-                        )}
-                      />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -536,6 +524,7 @@ function FilterValueSelector<TData>({
             <CommandItem
               key={option.value}
               value={option.value}
+              className="[&>svg:last-child]:hidden"
               onSelect={() => onSelect(option.value)}
             >
               {option.icon && <option.icon />}
@@ -747,34 +736,29 @@ function onFilterInputRender<TData>({
               <CommandList>
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup>
-                  {options.map((option) => (
-                    <CommandItem
-                      key={option.value}
-                      value={option.value}
-                      onSelect={() => {
-                        const value =
-                          filter.variant === "multiSelect"
-                            ? selectedValues.includes(option.value)
+                  {options.map((option) => {
+                    const isMultiSelect = filter.variant === "multiSelect";
+                    const isSelected = selectedValues.includes(option.value);
+
+                    return (
+                      <CommandItem
+                        key={option.value}
+                        value={option.value}
+                        data-checked={isMultiSelect ? isSelected : undefined}
+                        onSelect={() => {
+                          const value = isMultiSelect
+                            ? isSelected
                               ? selectedValues.filter((v) => v !== option.value)
                               : [...selectedValues, option.value]
                             : option.value;
-                        onFilterUpdate(filter.filterId, { value });
-                      }}
-                    >
-                      {option.icon && <option.icon />}
-                      <span className="truncate">{option.label}</span>
-                      {filter.variant === "multiSelect" && (
-                        <Check
-                          className={cn(
-                            "ml-auto",
-                            selectedValues.includes(option.value)
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        />
-                      )}
-                    </CommandItem>
-                  ))}
+                          onFilterUpdate(filter.filterId, { value });
+                        }}
+                      >
+                        {option.icon && <option.icon />}
+                        <span className="truncate">{option.label}</span>
+                      </CommandItem>
+                    );
+                  })}
                 </CommandGroup>
               </CommandList>
             </Command>

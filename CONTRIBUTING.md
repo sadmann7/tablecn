@@ -27,6 +27,22 @@ Install the project dependencies:
 pnpm install
 ```
 
+### Start the dev server
+
+For the standard data table and data grid demos:
+
+```shell
+pnpm dev
+```
+
+For the multiplayer demo (requires PartyKit):
+
+```shell
+pnpm dev:multiplayer
+```
+
+This starts both the Next.js server and the PartyKit WebSocket server concurrently.
+
 ### Create a branch
 
 Create and check out your feature branch:

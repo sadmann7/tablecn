@@ -59,8 +59,10 @@ export default class SkaterRoom implements Party.Server {
   onConnect(conn: Party.Connection) {
     const url = new URL(conn.uri);
     const name = url.searchParams.get("name") ?? generateUserName();
-    const color = url.searchParams.get("color") ?? pickColor(this.state.usedColors);
-    if (!this.state.usedColors.includes(color)) this.state.usedColors.push(color);
+    const color =
+      url.searchParams.get("color") ?? pickColor(this.state.usedColors);
+    if (!this.state.usedColors.includes(color))
+      this.state.usedColors.push(color);
 
     const user: UserPresence = {
       name,

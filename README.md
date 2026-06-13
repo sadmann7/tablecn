@@ -32,7 +32,7 @@ See the [documentation](https://diceui.com/docs/components/data-table) to get st
 
 ## Running Locally
 
-### Quick Setup (with docker)
+### Quick Setup (with Docker)
 
 1. **Clone the repository**
 
@@ -83,30 +83,46 @@ See the [documentation](https://diceui.com/docs/components/data-table) to get st
    **Option A: Use Docker PostgreSQL**
 
    ```bash
-   # Start PostgreSQL container
-   pnpm db:start
-   
-   # Set up database schema and seed data
-   pnpm db:setup
-   
-   # Start development server
-   pnpm dev
+   pnpm db:start   # start the PostgreSQL container
+   pnpm db:setup   # push schema and seed data
+   pnpm dev        # start the Next.js dev server
    ```
 
    **Option B: Use existing PostgreSQL database**
 
    ```bash
-   # Update .env with your database URL
-   # Then set up database schema and seed data
+   # Update .env with your DATABASE_URL, then:
    pnpm db:setup
-   
-   # Start development server
    pnpm dev
    ```
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `pnpm dev` | Start the Next.js dev server |
+| `pnpm dev:multiplayer` | Start Next.js + PartyKit dev servers together |
+| `pnpm dev:docker` | Start Docker PostgreSQL then Next.js |
+| `pnpm build` | Production build |
+| `pnpm check` | Run Biome lint + TypeScript type-check |
+| `pnpm lint` | Lint with Biome |
+| `pnpm lint:fix` | Lint and auto-fix |
+| `pnpm typecheck` | TypeScript type-check only |
+| `pnpm test` | Run tests with Vitest |
+| `pnpm db:start` | Start the Docker PostgreSQL container |
+| `pnpm db:stop` | Stop the Docker PostgreSQL container |
+| `pnpm db:setup` | Push schema + seed the database |
+| `pnpm db:reset` | Wipe and re-seed the database |
+| `pnpm db:generate` | Generate Drizzle migrations |
+| `pnpm db:migrate` | Run pending migrations |
+| `pnpm build:registry` | Build the shadcn component registry |
+| `pnpm ollie` | Full first-time setup (install + db:start + db:setup) |
 
 ## How do I deploy this?
 
 Follow the deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+
+The multiplayer demo uses [PartyKit](https://partykit.io) as a separate deployment. Run `pnpm dlx partykit deploy` from the project root and set `NEXT_PUBLIC_PARTYKIT_HOST` in your Vercel environment variables.
 
 ## Credits
 
