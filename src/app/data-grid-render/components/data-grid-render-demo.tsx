@@ -458,7 +458,6 @@ export function DataGridRenderDemo() {
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
-              size="sm"
               onClick={() => onCellsUpdate(cellCount)}
               disabled={isUpdatePending}
             >
@@ -471,7 +470,6 @@ export function DataGridRenderDemo() {
             </Button>
             <Button
               variant="outline"
-              size="sm"
               onClick={() => onRapidCellsUpdate(cellCount)}
               disabled={isRapidUpdating}
             >

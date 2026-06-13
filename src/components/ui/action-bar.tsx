@@ -574,7 +574,6 @@ function ActionBarItem(props: ActionBarItemProps) {
       type="button"
       data-slot="action-bar-item"
       variant="secondary"
-      size="sm"
       disabled={disabled}
       tabIndex={isTabStop ? 0 : -1}
       {...itemProps}

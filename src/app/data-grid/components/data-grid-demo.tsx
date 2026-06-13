@@ -65,7 +65,6 @@ function DataGridDemoImpl({
           aria-label="Toggle text direction"
           dir={dir}
           variant="outline"
-          size="sm"
           className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
           pressed={dir === "rtl"}
           onPressedChange={(pressed) => onDirChange(pressed ? "rtl" : "ltr")}

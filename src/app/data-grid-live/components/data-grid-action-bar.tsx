@@ -70,7 +70,7 @@ export function DataGridActionBar<TData>({
         {statusOptions && statusOptions.length > 0 && onStatusUpdate && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <ActionBarItem variant="secondary" size="sm">
+              <ActionBarItem variant="secondary">
                 <CheckCircle2 />
                 Status
               </ActionBarItem>
@@ -90,7 +90,7 @@ export function DataGridActionBar<TData>({
         {styleOptions && styleOptions.length > 0 && onStyleUpdate && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <ActionBarItem variant="secondary" size="sm">
+              <ActionBarItem variant="secondary">
                 <Palette />
                 Style
               </ActionBarItem>
@@ -108,7 +108,7 @@ export function DataGridActionBar<TData>({
           </DropdownMenu>
         )}
         {onDelete && (
-          <ActionBarItem variant="destructive" size="sm" onClick={onDelete}>
+          <ActionBarItem variant="destructive" onClick={onDelete}>
             <Trash2 />
             Delete
           </ActionBarItem>

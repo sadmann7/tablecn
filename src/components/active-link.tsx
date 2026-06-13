@@ -5,9 +5,11 @@ import { useSelectedLayoutSegment } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface ActiveLinkProps extends React.ComponentProps<typeof Link> {}
-
-export function ActiveLink({ href, className, ...props }: ActiveLinkProps) {
+export function ActiveLink({
+  href,
+  className,
+  ...props
+}: React.ComponentProps<typeof Link>) {
   const segment = useSelectedLayoutSegment();
 
   const hrefSegment =
@@ -16,7 +18,7 @@ export function ActiveLink({ href, className, ...props }: ActiveLinkProps) {
   const isActive = hrefSegment ? segment === hrefSegment : segment === null;
 
   return (
-    <Button variant="ghost" size="sm" asChild>
+    <Button variant="ghost" asChild>
       <Link
         data-state={isActive ? "active" : "inactive"}
         href={href}

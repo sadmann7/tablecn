@@ -68,7 +68,7 @@ export function DeleteTasksDialog({
       <Dialog {...props}>
         {showTrigger ? (
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline">
               <Trash className="mr-2 size-4" aria-hidden="true" />
               Delete ({tasks.length})
             </Button>
@@ -111,7 +111,7 @@ export function DeleteTasksDialog({
     <Drawer {...props}>
       {showTrigger ? (
         <DrawerTrigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="outline">
             <Trash className="mr-2 size-4" aria-hidden="true" />
             Delete ({tasks.length})
           </Button>

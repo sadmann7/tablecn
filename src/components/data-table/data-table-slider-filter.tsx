@@ -143,11 +143,7 @@ export function DataTableSliderFilter<TData>({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-dashed font-normal"
-        >
+        <Button variant="outline" className="border-dashed font-normal">
           {columnFilterValue ? (
             <div
               role="button"
@@ -245,7 +241,6 @@ export function DataTableSliderFilter<TData>({
         <Button
           aria-label={`Clear ${title} filter`}
           variant="outline"
-          size="sm"
           onClick={onReset}
         >
           Clear

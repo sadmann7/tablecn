@@ -27,6 +27,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -42,7 +43,6 @@ import { cn } from "@/lib/utils";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = new Set(["backspace", "delete"]);
-
 const SORT_ORDERS = [
   { label: "Asc", value: "asc" },
   { label: "Desc", value: "desc" },
@@ -57,6 +57,7 @@ interface DataGridSortMenuProps<TData>
 export function DataGridSortMenu<TData>({
   table,
   disabled,
+  className,
   ...props
 }: DataGridSortMenuProps<TData>) {
   const dir = useDirection();
@@ -176,7 +177,6 @@ export function DataGridSortMenu<TData>({
           <Button
             dir={dir}
             variant="outline"
-            size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
@@ -197,7 +197,10 @@ export function DataGridSortMenu<TData>({
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
           dir={dir}
-          className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
+          className={cn(
+            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]",
+            className,
+          )}
           {...props}
         >
           <div className="flex flex-col gap-1">
@@ -239,7 +242,6 @@ export function DataGridSortMenu<TData>({
           )}
           <div className="flex w-full items-center gap-2">
             <Button
-              size="sm"
               className="rounded"
               ref={addButtonRef}
               onClick={onSortAdd}
@@ -250,7 +252,6 @@ export function DataGridSortMenu<TData>({
             {sorting.length > 0 && (
               <Button
                 variant="outline"
-                size="sm"
                 className="rounded"
                 onClick={onSortingReset}
               >
@@ -335,7 +336,6 @@ function DataTableSortItem({
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               variant="outline"
-              size="sm"
               className="w-44 justify-between rounded font-normal"
             >
               <span className="truncate">{columnLabels.get(sort.id)}</span>
@@ -376,7 +376,6 @@ function DataTableSortItem({
         >
           <SelectTrigger
             aria-controls={directionListboxId}
-            size="sm"
             className="w-24 rounded"
           >
             <SelectValue />
@@ -385,11 +384,13 @@ function DataTableSortItem({
             id={directionListboxId}
             className="min-w-(--radix-select-trigger-width)"
           >
-            {SORT_ORDERS.map((order) => (
-              <SelectItem key={order.value} value={order.value}>
-                {order.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {SORT_ORDERS.map((order) => (
+                <SelectItem key={order.value} value={order.value}>
+                  {order.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <Button

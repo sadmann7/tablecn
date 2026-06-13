@@ -1,7 +1,7 @@
 "use client";
 
 import type { Table } from "@tanstack/react-table";
-import { Check, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +53,6 @@ export function DataGridViewMenu<TData>({
           role="combobox"
           dir={dir}
           variant="outline"
-          size="sm"
           className="ms-auto hidden h-8 font-normal lg:flex"
           disabled={disabled}
         >
@@ -74,6 +73,7 @@ export function DataGridViewMenu<TData>({
               {columns.map((column) => (
                 <CommandItem
                   key={column.id}
+                  data-checked={column.getIsVisible()}
                   onSelect={() =>
                     column.toggleVisibility(!column.getIsVisible())
                   }
@@ -81,12 +81,6 @@ export function DataGridViewMenu<TData>({
                   <span className="truncate">
                     {column.columnDef.meta?.label ?? column.id}
                   </span>
-                  <Check
-                    className={cn(
-                      "ms-auto size-4 shrink-0",
-                      column.getIsVisible() ? "opacity-100" : "opacity-0",
-                    )}
-                  />
                 </CommandItem>
               ))}
             </CommandGroup>

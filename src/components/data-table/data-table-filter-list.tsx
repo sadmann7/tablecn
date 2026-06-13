@@ -225,7 +225,6 @@ export function DataTableFilterList<TData>({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
@@ -288,7 +287,6 @@ export function DataTableFilterList<TData>({
           ) : null}
           <div className="flex w-full items-center gap-2">
             <Button
-              size="sm"
               className="rounded"
               ref={addButtonRef}
               onClick={onFilterAdd}
@@ -298,7 +296,6 @@ export function DataTableFilterList<TData>({
             {filters.length > 0 ? (
               <Button
                 variant="outline"
-                size="sm"
                 className="rounded"
                 onClick={onFiltersReset}
               >
@@ -409,7 +406,6 @@ function DataTableFilterItem<TData>({
               <SelectTrigger
                 aria-label="Select join operator"
                 aria-controls={joinOperatorListboxId}
-                size="sm"
                 className="rounded lowercase"
               >
                 <SelectValue placeholder={joinOperator} />
@@ -437,7 +433,6 @@ function DataTableFilterItem<TData>({
             <Button
               aria-controls={fieldListboxId}
               variant="outline"
-              size="sm"
               className="w-32 justify-between rounded font-normal"
             >
               <span className="truncate">
@@ -506,7 +501,6 @@ function DataTableFilterItem<TData>({
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
-            size="sm"
             className="w-32 rounded lowercase"
           >
             <div className="truncate">
@@ -651,7 +645,6 @@ function onFilterInputRender<TData>({
             id={inputId}
             aria-controls={inputListboxId}
             aria-label={`${columnMeta?.label} boolean filter`}
-            size="sm"
             className="w-full rounded"
           >
             <SelectValue placeholder={filter.value ? "True" : "False"} />
@@ -695,7 +688,6 @@ function onFilterInputRender<TData>({
               aria-controls={inputListboxId}
               aria-label={`${columnMeta?.label} filter value${multiple ? "s" : ""}`}
               variant="outline"
-              size="sm"
               className="w-full rounded font-normal"
             >
               <FacetedBadgeList
@@ -766,7 +758,6 @@ function onFilterInputRender<TData>({
               aria-controls={inputListboxId}
               aria-label={`${columnMeta?.label} date filter`}
               variant="outline"
-              size="sm"
               className={cn(
                 "w-full justify-start rounded text-left font-normal",
                 !filter.value && "text-muted-foreground",

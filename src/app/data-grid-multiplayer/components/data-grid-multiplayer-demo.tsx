@@ -539,7 +539,6 @@ export function DataGridMultiplayerDemo({
         >
           <Button
             variant="outline"
-            size="sm"
             onClick={onCopyLink}
             className="h-8 gap-1.5 text-xs"
           >

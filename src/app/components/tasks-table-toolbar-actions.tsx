@@ -29,7 +29,6 @@ export function TasksTableToolbarActions({
       <CreateTaskSheet />
       <Button
         variant="outline"
-        size="sm"
         onClick={() =>
           exportTableToCSV(table, {
             filename: "tasks",

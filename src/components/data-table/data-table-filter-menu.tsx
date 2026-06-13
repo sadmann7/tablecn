@@ -64,6 +64,7 @@ export function DataTableFilterMenu<TData>({
   throttleMs = THROTTLE_MS,
   shallow = true,
   disabled,
+  className,
   ...props
 }: DataTableFilterMenuProps<TData>) {
   const id = React.useId();
@@ -260,7 +261,10 @@ export function DataTableFilterMenu<TData>({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-full max-w-(--radix-popover-content-available-width) p-0"
+          className={cn(
+            "w-full max-w-(--radix-popover-content-available-width) p-0",
+            className,
+          )}
           {...props}
         >
           <Command loop className="[&_[cmdk-input-wrapper]_svg]:hidden">
@@ -395,7 +399,6 @@ function DataTableFilterItem<TData>({
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
-              size="sm"
               className="rounded-none rounded-l-md border border-r-0 font-normal dark:bg-input/30"
             >
               {columnMeta?.icon && (
@@ -489,7 +492,6 @@ function DataTableFilterItem<TData>({
         <Button
           aria-controls={filterItemId}
           variant="ghost"
-          size="sm"
           className="h-full rounded-none rounded-r-md border border-l-0 px-1.5 font-normal dark:bg-input/30"
           onClick={() => onFilterRemove(filter.filterId)}
         >
@@ -704,7 +706,6 @@ function onFilterInputRender<TData>({
               id={inputId}
               aria-controls={inputListboxId}
               variant="ghost"
-              size="sm"
               className="h-full min-w-16 rounded-none border px-1.5 font-normal dark:bg-input/30"
             >
               {selectedOptions.length === 0 ? (
@@ -814,7 +815,6 @@ function onFilterInputRender<TData>({
               id={inputId}
               aria-controls={inputListboxId}
               variant="ghost"
-              size="sm"
               className={cn(
                 "h-full rounded-none border px-1.5 font-normal dark:bg-input/30",
                 !filter.value && "text-muted-foreground",

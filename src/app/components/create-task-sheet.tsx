@@ -49,7 +49,7 @@ export function CreateTaskSheet() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline">
           <Plus />
           New task
         </Button>
