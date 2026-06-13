@@ -36,7 +36,7 @@ import { getCellKey } from "@/lib/data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import { multiplayerCollection } from "../lib/multiplayer-collection";
-import { PresenceAvatars } from "./presence-avatars";
+import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
@@ -527,7 +527,7 @@ export function DataGridMultiplayerDemo({
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <PresenceAvatars
+        <DataGridPresenceAvatars
           users={users}
           currentUserId={currentUserId}
           onUserClick={onUserClick}

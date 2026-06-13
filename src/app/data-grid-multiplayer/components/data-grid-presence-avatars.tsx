@@ -17,17 +17,17 @@ function getInitials(name: string): string {
     .slice(0, 2);
 }
 
-interface PresenceAvatarsProps {
+interface DataGridPresenceAvatarsProps {
   users: Record<string, UserPresence>;
   currentUserId: string;
   onUserClick?: (userId: string, user: UserPresence) => void;
 }
 
-export function PresenceAvatars({
+export function DataGridPresenceAvatars({
   users,
   currentUserId,
   onUserClick,
-}: PresenceAvatarsProps) {
+}: DataGridPresenceAvatarsProps) {
   const userList = Object.entries(users);
 
   return (

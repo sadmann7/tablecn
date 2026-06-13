@@ -8,13 +8,10 @@ import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplay
 
 const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 
-const log = (...args: unknown[]) => console.log("[multiplayer]", ...args);
-
-/** Parse a wire row (ISO date strings) back to SkaterSchema (Date objects). */
 function parseRow(raw: RowPayload) {
   const result = skaterSchema.safeParse(raw);
   if (result.success) return result.data;
-  log("⚠️ Failed to parse row:", raw, result.error.flatten());
+  console.warn("[multiplayer] Failed to parse row:", raw, result.error.issues);
   return null;
 }
 
@@ -37,40 +34,26 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
   const socketRef = React.useRef<PartySocket | null>(null);
 
   React.useEffect(() => {
-    log(`Connecting to room "${roomId}" at ${PARTYKIT_HOST}`);
-
-    // Track all IDs inserted this session so we can clean up on unmount / room change
     const knownIds = new Set<string>();
 
     const socket = new PartySocket({ host: PARTYKIT_HOST, room: roomId });
     socketRef.current = socket;
 
-    socket.addEventListener("open", () => {
-      log("Connected");
-      setIsConnected(true);
-    });
-
-    socket.addEventListener("close", () => {
-      log("Disconnected");
-      setIsConnected(false);
-    });
+    socket.addEventListener("open", () => setIsConnected(true));
+    socket.addEventListener("close", () => setIsConnected(false));
 
     socket.addEventListener("message", (evt: MessageEvent) => {
       let msg: ServerMessage;
       try {
         msg = JSON.parse(evt.data as string) as ServerMessage;
       } catch {
-        log("Failed to parse message:", evt.data);
         return;
       }
-
-      log("← received:", msg.type, msg);
 
       switch (msg.type) {
         case "snapshot": {
           setCurrentUserId(msg.userId);
           setUsers(msg.users);
-          // Populate collection with server's current rows
           for (const raw of msg.rows) {
             const row = parseRow(raw);
             if (row) {
@@ -78,9 +61,6 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
               knownIds.add(row.id);
             }
           }
-          log(
-            `Snapshot: ${Object.keys(msg.users).length} user(s), ${msg.rows.length} row(s)`,
-          );
           break;
         }
 
@@ -144,13 +124,11 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
         }
 
         case "user-join": {
-          log(`User joined: ${msg.user.name} (${msg.userId})`);
           setUsers((prev) => ({ ...prev, [msg.userId]: msg.user }));
           break;
         }
 
         case "user-leave": {
-          log(`User left: ${msg.userId}`);
           setUsers((prev) => {
             const next = { ...prev };
             delete next[msg.userId];
@@ -162,44 +140,36 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     });
 
     return () => {
-      log("Closing socket");
       socket.close();
       socketRef.current = null;
       setIsConnected(false);
-      // Clear collection rows from this session
       if (knownIds.size > 0) multiplayerCollection.delete([...knownIds]);
     };
   }, [roomId]);
 
-  const sendCellUpdate = React.useCallback(
-    (rowId: string, columnId: string, value: unknown) => {
-      socketRef.current?.send(
-        JSON.stringify({ type: "cell-update", rowId, columnId, value }),
-      );
-    },
-    [],
-  );
+  function sendCellUpdate(rowId: string, columnId: string, value: unknown) {
+    socketRef.current?.send(
+      JSON.stringify({ type: "cell-update", rowId, columnId, value }),
+    );
+  }
 
-  const sendRowAdd = React.useCallback((row: RowPayload) => {
+  function sendRowAdd(row: RowPayload) {
     socketRef.current?.send(JSON.stringify({ type: "row-add", row }));
-  }, []);
+  }
 
-  const sendRowsAdd = React.useCallback((rows: RowPayload[]) => {
+  function sendRowsAdd(rows: RowPayload[]) {
     socketRef.current?.send(JSON.stringify({ type: "rows-add", rows }));
-  }, []);
+  }
 
-  const sendRowsDelete = React.useCallback((ids: string[]) => {
+  function sendRowsDelete(ids: string[]) {
     socketRef.current?.send(JSON.stringify({ type: "rows-delete", ids }));
-  }, []);
+  }
 
-  const sendActiveCell = React.useCallback(
-    (rowId: string | null, columnId: string | null) => {
-      socketRef.current?.send(
-        JSON.stringify({ type: "active-cell", rowId, columnId }),
-      );
-    },
-    [],
-  );
+  function sendActiveCell(rowId: string | null, columnId: string | null) {
+    socketRef.current?.send(
+      JSON.stringify({ type: "active-cell", rowId, columnId }),
+    );
+  }
 
   return {
     isConnected,
