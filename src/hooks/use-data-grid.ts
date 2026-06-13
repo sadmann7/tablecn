@@ -1681,7 +1681,7 @@ function useDataGrid<TData>({
     });
   }, [store]);
 
-  const scrollToTargetCell = React.useCallback(
+  const scrollToCell = React.useCallback(
     (rowIndex: number, columnId: string) => {
       requestAnimationFrame(() => {
         const container = dataGridRef.current;
@@ -1729,14 +1729,14 @@ function useDataGrid<TData>({
             isSelecting: false,
           });
           focusCell(rowIndex, columnId);
-          scrollToTargetCell(rowIndex, columnId);
+          scrollToCell(rowIndex, columnId);
           return;
         }
 
         if (event.shiftKey && currentState.focusedCell) {
           event.preventDefault();
           selectRange(currentState.focusedCell, { rowIndex, columnId });
-          scrollToTargetCell(rowIndex, columnId);
+          scrollToCell(rowIndex, columnId);
           return;
         }
       }
@@ -1754,7 +1754,7 @@ function useDataGrid<TData>({
           onSelectionClear();
         } else {
           focusCell(rowIndex, columnId);
-          scrollToTargetCell(rowIndex, columnId);
+          scrollToCell(rowIndex, columnId);
           return;
         }
       } else if (hasSelectedRows && columnId !== "select") {
@@ -1768,13 +1768,13 @@ function useDataGrid<TData>({
         onCellEditingStart(rowIndex, columnId);
       } else {
         focusCell(rowIndex, columnId);
-        scrollToTargetCell(rowIndex, columnId);
+        scrollToCell(rowIndex, columnId);
       }
     },
     [
       store,
       focusCell,
-      scrollToTargetCell,
+      scrollToCell,
       onCellEditingStart,
       selectRange,
       onSelectionClear,
@@ -2090,8 +2090,46 @@ function useDataGrid<TData>({
       getIsActiveSearchMatch,
       getVisualRowIndex,
       scrollToCell: (rowIndex, columnId, align = "auto") => {
+        const container = dataGridRef.current;
+        if (!container) return;
+
         rowVirtualizerRef.current?.scrollToIndex(rowIndex, { align });
-        scrollToTargetCell(rowIndex, columnId);
+
+        const scrollRowIntoView = (retries = 1) => {
+          requestAnimationFrame(() => {
+            const targetRow = rowMapRef.current.get(rowIndex);
+            if (!targetRow) {
+              if (retries > 0) scrollRowIntoView(retries - 1);
+              return;
+            }
+
+            const headerBottom =
+              headerRef.current?.getBoundingClientRect().bottom ??
+              container.getBoundingClientRect().top;
+
+            const viewportTop = headerBottom + VIEWPORT_OFFSET;
+
+            const rowRect = targetRow.getBoundingClientRect();
+
+            if (rowRect.top < viewportTop) {
+              container.scrollTop -= viewportTop - rowRect.top;
+            }
+
+            const cellKey = getCellKey(rowIndex, columnId);
+            const targetCell = cellMapRef.current.get(cellKey);
+            if (targetCell) {
+              scrollCellIntoView({
+                container,
+                targetCell,
+                tableRef,
+                viewportOffset: VIEWPORT_OFFSET,
+                isRtl: dir === "rtl",
+              });
+            }
+          });
+        };
+
+        scrollRowIntoView();
       },
       onRowHeightChange,
       onRowSelect,
@@ -2122,7 +2160,7 @@ function useDataGrid<TData>({
   }, [
     propsRef,
     store,
-    scrollToTargetCell,
+    dir,
     getIsCellSelected,
     getIsSearchMatch,
     getIsActiveSearchMatch,
@@ -2249,6 +2287,18 @@ function useDataGrid<TData>({
     measureElement: !isFirefox
       ? (element) => element?.getBoundingClientRect().height
       : undefined,
+    scrollPaddingStart:
+      (headerRef.current?.getBoundingClientRect().bottom ?? 0) -
+      (dataGridRef.current?.getBoundingClientRect().top ?? 0) +
+      VIEWPORT_OFFSET,
+    // Add extra row buffer to absorb virtual position drift after render measurements
+    scrollPaddingEnd:
+      (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
+      (footerRef.current?.getBoundingClientRect().top ??
+        dataGridRef.current?.getBoundingClientRect().bottom ??
+        0) +
+      rowHeightValue +
+      VIEWPORT_OFFSET,
   });
 
   if (!rowVirtualizerRef.current) {
