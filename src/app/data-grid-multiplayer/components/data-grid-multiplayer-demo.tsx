@@ -299,7 +299,7 @@ export function DataGridMultiplayerDemo({
               (draft as Record<string, unknown>)[key] = skater[key];
             });
 
-            // Broadcast immediately, no Postgres round-trip needed
+            // Broadcast immediately, no postgres round-trip needed
             sendCellUpdate(existing.id, key, nv);
           }
         }
