@@ -15,6 +15,7 @@ docker-data
 
 # next.js
 /.next/
+/.partykit/
 /out/
 next-env.d.ts
 

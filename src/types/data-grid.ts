@@ -74,6 +74,11 @@ declare module "@tanstack/react-table" {
     getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
     getVisualRowIndex?: (rowId: string) => number | undefined;
+    scrollToCell?: (
+      rowIndex: number,
+      columnId: string,
+      align?: "auto" | "start" | "center" | "end",
+    ) => void;
     rowHeight?: RowHeightValue;
     onRowHeightChange?: (value: RowHeightValue) => void;
     onRowSelect?: (rowId: string, checked: boolean, shiftKey: boolean) => void;

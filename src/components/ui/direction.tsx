@@ -7,14 +7,13 @@ function DirectionProvider({
   dir,
   direction,
   children,
-  ...props
-}: React.ComponentProps<typeof Direction.Provider> & {
-  direction?: React.ComponentProps<typeof Direction.Provider>["dir"];
+}: React.ComponentProps<typeof Direction.DirectionProvider> & {
+  direction?: React.ComponentProps<typeof Direction.DirectionProvider>["dir"];
 }) {
   return (
-    <Direction.Provider dir={direction ?? dir} {...props}>
+    <Direction.DirectionProvider dir={direction ?? dir}>
       {children}
-    </Direction.Provider>
+    </Direction.DirectionProvider>
   );
 }
 

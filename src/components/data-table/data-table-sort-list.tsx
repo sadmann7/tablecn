@@ -53,6 +53,7 @@ interface DataTableSortListProps<TData>
 export function DataTableSortList<TData>({
   table,
   disabled,
+  className,
   ...props
 }: DataTableSortListProps<TData>) {
   const id = React.useId();
@@ -170,7 +171,6 @@ export function DataTableSortList<TData>({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
@@ -190,7 +190,10 @@ export function DataTableSortList<TData>({
         <PopoverContent
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
-          className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
+          className={cn(
+            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]",
+            className,
+          )}
           {...props}
         >
           <div className="flex flex-col gap-1">
@@ -231,7 +234,6 @@ export function DataTableSortList<TData>({
           )}
           <div className="flex w-full items-center gap-2">
             <Button
-              size="sm"
               className="rounded"
               ref={addButtonRef}
               onClick={onSortAdd}
@@ -242,7 +244,6 @@ export function DataTableSortList<TData>({
             {sorting.length > 0 && (
               <Button
                 variant="outline"
-                size="sm"
                 className="rounded"
                 onClick={onSortingReset}
               >
@@ -325,7 +326,6 @@ function DataTableSortItem({
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               variant="outline"
-              size="sm"
               className="w-44 justify-between rounded font-normal"
             >
               <span className="truncate">{columnLabels.get(sort.id)}</span>
@@ -365,7 +365,6 @@ function DataTableSortItem({
         >
           <SelectTrigger
             aria-controls={directionListboxId}
-            size="sm"
             className="w-24 rounded"
           >
             <SelectValue />

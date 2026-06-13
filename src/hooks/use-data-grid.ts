@@ -1681,32 +1681,33 @@ function useDataGrid<TData>({
     });
   }, [store]);
 
+  const scrollToTargetCell = React.useCallback(
+    (rowIndex: number, columnId: string) => {
+      requestAnimationFrame(() => {
+        const container = dataGridRef.current;
+        const cellKey = getCellKey(rowIndex, columnId);
+        const targetCell = cellMapRef.current.get(cellKey);
+
+        if (container && targetCell) {
+          scrollCellIntoView({
+            container,
+            targetCell,
+            tableRef,
+            viewportOffset: VIEWPORT_OFFSET,
+            isRtl: dir === "rtl",
+          });
+        }
+      });
+    },
+    [dir],
+  );
+
   const onCellClick = React.useCallback(
     (rowIndex: number, columnId: string, event?: React.MouseEvent) => {
-      if (event?.button === 2) {
-        return;
-      }
+      if (event?.button === 2) return;
 
       const currentState = store.getState();
       const currentFocused = currentState.focusedCell;
-
-      function scrollToCell() {
-        requestAnimationFrame(() => {
-          const container = dataGridRef.current;
-          const cellKey = getCellKey(rowIndex, columnId);
-          const targetCell = cellMapRef.current.get(cellKey);
-
-          if (container && targetCell) {
-            scrollCellIntoView({
-              container,
-              targetCell,
-              tableRef,
-              viewportOffset: VIEWPORT_OFFSET,
-              isRtl: dir === "rtl",
-            });
-          }
-        });
-      }
 
       if (event) {
         if (event.ctrlKey || event.metaKey) {
@@ -1728,14 +1729,14 @@ function useDataGrid<TData>({
             isSelecting: false,
           });
           focusCell(rowIndex, columnId);
-          scrollToCell();
+          scrollToTargetCell(rowIndex, columnId);
           return;
         }
 
         if (event.shiftKey && currentState.focusedCell) {
           event.preventDefault();
           selectRange(currentState.focusedCell, { rowIndex, columnId });
-          scrollToCell();
+          scrollToTargetCell(rowIndex, columnId);
           return;
         }
       }
@@ -1753,7 +1754,7 @@ function useDataGrid<TData>({
           onSelectionClear();
         } else {
           focusCell(rowIndex, columnId);
-          scrollToCell();
+          scrollToTargetCell(rowIndex, columnId);
           return;
         }
       } else if (hasSelectedRows && columnId !== "select") {
@@ -1767,10 +1768,17 @@ function useDataGrid<TData>({
         onCellEditingStart(rowIndex, columnId);
       } else {
         focusCell(rowIndex, columnId);
-        scrollToCell();
+        scrollToTargetCell(rowIndex, columnId);
       }
     },
-    [store, focusCell, onCellEditingStart, selectRange, onSelectionClear, dir],
+    [
+      store,
+      focusCell,
+      scrollToTargetCell,
+      onCellEditingStart,
+      selectRange,
+      onSelectionClear,
+    ],
   );
 
   const onCellDoubleClick = React.useCallback(
@@ -2081,6 +2089,10 @@ function useDataGrid<TData>({
       getIsSearchMatch,
       getIsActiveSearchMatch,
       getVisualRowIndex,
+      scrollToCell: (rowIndex, columnId, align = "auto") => {
+        rowVirtualizerRef.current?.scrollToIndex(rowIndex, { align });
+        scrollToTargetCell(rowIndex, columnId);
+      },
       onRowHeightChange,
       onRowSelect,
       onDataUpdate,
@@ -2110,6 +2122,7 @@ function useDataGrid<TData>({
   }, [
     propsRef,
     store,
+    scrollToTargetCell,
     getIsCellSelected,
     getIsSearchMatch,
     getIsActiveSearchMatch,

@@ -22,7 +22,7 @@
     },
     {
       "path": "src/components/ui/direction.tsx",
-      "content": "\"use client\";\n\nimport { Direction } from \"radix-ui\";\nimport type * as React from \"react\";\n\nfunction DirectionProvider({\n  dir,\n  direction,\n  children,\n  ...props\n}: React.ComponentProps<typeof Direction.Provider> & {\n  direction?: React.ComponentProps<typeof Direction.Provider>[\"dir\"];\n}) {\n  return (\n    <Direction.Provider dir={direction ?? dir} {...props}>\n      {children}\n    </Direction.Provider>\n  );\n}\n\nconst useDirection = Direction.useDirection;\n\nexport { DirectionProvider, useDirection };\n",
+      "content": "\"use client\";\n\nimport { Direction } from \"radix-ui\";\nimport type * as React from \"react\";\n\nfunction DirectionProvider({\n  dir,\n  direction,\n  children,\n}: React.ComponentProps<typeof Direction.DirectionProvider> & {\n  direction?: React.ComponentProps<typeof Direction.DirectionProvider>[\"dir\"];\n}) {\n  return (\n    <Direction.DirectionProvider dir={direction ?? dir}>\n      {children}\n    </Direction.DirectionProvider>\n  );\n}\n\nconst useDirection = Direction.useDirection;\n\nexport { DirectionProvider, useDirection };\n",
       "type": "registry:ui",
       "target": "src/components/ui/direction.tsx"
     }

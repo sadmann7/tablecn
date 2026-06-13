@@ -76,11 +76,7 @@ export function DataTableFacetedFilter<TData, TValue>({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-dashed font-normal"
-        >
+        <Button variant="outline" className="border-dashed font-normal">
           {selectedValues?.size > 0 ? (
             <div
               role="button"
@@ -145,13 +141,14 @@ export function DataTableFacetedFilter<TData, TValue>({
                 return (
                   <CommandItem
                     key={option.value}
+                    className="[&>svg:last-child]:hidden"
                     onSelect={() => onItemSelect(option, isSelected)}
                   >
                     <div
                       className={cn(
                         "flex size-4 items-center justify-center rounded-sm border border-primary",
                         isSelected
-                          ? "bg-primary"
+                          ? "bg-primary text-primary-foreground"
                           : "opacity-50 [&_svg]:invisible",
                       )}
                     >

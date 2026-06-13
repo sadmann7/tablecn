@@ -1,7 +1,7 @@
 "use client";
 
 import type { Table } from "@tanstack/react-table";
-import { Check, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +28,7 @@ interface DataTableViewOptionsProps<TData>
 export function DataTableViewOptions<TData>({
   table,
   disabled,
+  className,
   ...props
 }: DataTableViewOptionsProps<TData>) {
   const columns = React.useMemo(
@@ -48,7 +49,6 @@ export function DataTableViewOptions<TData>({
           aria-label="Toggle columns"
           role="combobox"
           variant="outline"
-          size="sm"
           className="ml-auto hidden h-8 font-normal lg:flex"
           disabled={disabled}
         >
@@ -56,7 +56,7 @@ export function DataTableViewOptions<TData>({
           View
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-44 p-0" {...props}>
+      <PopoverContent className={cn("w-44 p-0", className)} {...props}>
         <Command>
           <CommandInput placeholder="Search columns..." />
           <CommandList>
@@ -65,6 +65,7 @@ export function DataTableViewOptions<TData>({
               {columns.map((column) => (
                 <CommandItem
                   key={column.id}
+                  data-checked={column.getIsVisible()}
                   onSelect={() =>
                     column.toggleVisibility(!column.getIsVisible())
                   }
@@ -72,12 +73,6 @@ export function DataTableViewOptions<TData>({
                   <span className="truncate">
                     {column.columnDef.meta?.label ?? column.id}
                   </span>
-                  <Check
-                    className={cn(
-                      "ml-auto size-4 shrink-0",
-                      column.getIsVisible() ? "opacity-100" : "opacity-0",
-                    )}
-                  />
                 </CommandItem>
               ))}
             </CommandGroup>

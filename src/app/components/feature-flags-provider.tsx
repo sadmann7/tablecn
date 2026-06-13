@@ -76,7 +76,6 @@ export function FeatureFlagsProvider({ children }: FeatureFlagsProviderProps) {
         <ToggleGroup
           type="single"
           variant="outline"
-          size="sm"
           value={filterFlag}
           onValueChange={onFilterFlagChange}
           className="w-fit gap-0"

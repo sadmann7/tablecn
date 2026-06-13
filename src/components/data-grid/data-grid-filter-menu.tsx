@@ -31,6 +31,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -202,7 +203,6 @@ export function DataGridFilterMenu<TData>({
           <Button
             dir={dir}
             variant="outline"
-            size="sm"
             className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
@@ -271,7 +271,6 @@ export function DataGridFilterMenu<TData>({
           )}
           <div className="flex w-full items-center gap-2">
             <Button
-              size="sm"
               className="rounded"
               ref={addButtonRef}
               onClick={onFilterAdd}
@@ -282,7 +281,6 @@ export function DataGridFilterMenu<TData>({
             {columnFilters.length > 0 && (
               <Button
                 variant="outline"
-                size="sm"
                 className="rounded"
                 onClick={onFiltersReset}
               >
@@ -431,7 +429,6 @@ function DataGridFilterItem<TData>({
               aria-controls={fieldListboxId}
               dir={dir}
               variant="outline"
-              size="sm"
               className="w-32 justify-between rounded font-normal"
             >
               <span className="truncate">{columnLabels.get(filter.id)}</span>
@@ -496,7 +493,6 @@ function DataGridFilterItem<TData>({
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
-            size="sm"
             className="w-32 rounded lowercase"
           >
             <div className="truncate">
@@ -504,11 +500,17 @@ function DataGridFilterItem<TData>({
             </div>
           </SelectTrigger>
           <SelectContent id={operatorListboxId}>
-            {operators.map((op) => (
-              <SelectItem key={op.value} value={op.value} className="lowercase">
-                {op.label}
-              </SelectItem>
-            ))}
+            <SelectGroup>
+              {operators.map((op) => (
+                <SelectItem
+                  key={op.value}
+                  value={op.value}
+                  className="lowercase"
+                >
+                  {op.label}
+                </SelectItem>
+              ))}
+            </SelectGroup>
           </SelectContent>
         </Select>
         <div className="min-w-36 max-w-60 flex-1">
@@ -695,7 +697,6 @@ function DataGridFilterInput<TData>({
               aria-controls={inputListboxId}
               dir={dir}
               variant="outline"
-              size="sm"
               className={cn(
                 "h-8 w-full justify-start rounded font-normal",
                 !startDate && "text-muted-foreground",
@@ -751,7 +752,6 @@ function DataGridFilterInput<TData>({
             aria-controls={inputListboxId}
             dir={dir}
             variant="outline"
-            size="sm"
             className={cn(
               "h-8 w-full justify-start rounded font-normal",
               !dateValue && "text-muted-foreground",
@@ -813,7 +813,6 @@ function DataGridFilterInput<TData>({
               aria-controls={inputListboxId}
               dir={dir}
               variant="outline"
-              size="sm"
               className="h-8 w-full justify-start rounded font-normal"
             >
               {selectedOptions.length === 0 ? (
@@ -906,7 +905,6 @@ function DataGridFilterInput<TData>({
             aria-controls={inputListboxId}
             dir={dir}
             variant="outline"
-            size="sm"
             className="h-8 w-full justify-start rounded font-normal"
           >
             {selectedOption ? (

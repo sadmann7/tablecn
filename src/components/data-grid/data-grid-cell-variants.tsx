@@ -958,10 +958,7 @@ export function SelectCell<TData>({
           open={isEditing}
           onOpenChange={onOpenChange}
         >
-          <SelectTrigger
-            size="sm"
-            className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden"
-          >
+          <SelectTrigger className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden">
             {displayLabel ? (
               <Badge
                 variant="secondary"
@@ -2026,7 +2023,6 @@ export function FileCell<TData>({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="sm"
                       className="h-6 text-muted-foreground text-xs"
                       onClick={clearAll}
                       disabled={isPending}
