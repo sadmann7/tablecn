@@ -2249,6 +2249,12 @@ function useDataGrid<TData>({
     measureElement: !isFirefox
       ? (element) => element?.getBoundingClientRect().height
       : undefined,
+    scrollPaddingStart:
+      (headerRef.current?.getBoundingClientRect().height ?? 0) +
+      VIEWPORT_OFFSET,
+    scrollPaddingEnd:
+      (footerRef.current?.getBoundingClientRect().height ?? 0) +
+      VIEWPORT_OFFSET,
   });
 
   if (!rowVirtualizerRef.current) {
