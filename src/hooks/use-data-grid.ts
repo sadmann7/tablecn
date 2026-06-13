@@ -2090,8 +2090,51 @@ function useDataGrid<TData>({
       getIsActiveSearchMatch,
       getVisualRowIndex,
       scrollToCell: (rowIndex, columnId, align = "auto") => {
+        const container = dataGridRef.current;
+        if (!container) return;
+
         rowVirtualizerRef.current?.scrollToIndex(rowIndex, { align });
-        scrollToTargetCell(rowIndex, columnId);
+
+        const correctVertical = (retries = 1) => {
+          requestAnimationFrame(() => {
+            const targetRow = rowMapRef.current.get(rowIndex);
+            if (!targetRow) {
+              if (retries > 0) correctVertical(retries - 1);
+              return;
+            }
+
+            // Use the actual header bottom / footer top from the DOM so that
+            // borders, scrollbars and any other layout quirks are accounted for.
+            const headerBottom =
+              headerRef.current?.getBoundingClientRect().bottom ??
+              container.getBoundingClientRect().top;
+
+            const viewportTop = headerBottom + VIEWPORT_OFFSET;
+
+            const rowRect = targetRow.getBoundingClientRect();
+            // Only correct for header clipping (upward scroll). Footer clipping
+            // is handled by scrollPaddingEnd with a 1-row buffer so it never
+            // needs a post-scroll correction (which would read stale positions
+            // after measurement updates and over-shoot by ~1 row).
+            if (rowRect.top < viewportTop) {
+              container.scrollTop -= viewportTop - rowRect.top;
+            }
+
+            const cellKey = getCellKey(rowIndex, columnId);
+            const targetCell = cellMapRef.current.get(cellKey);
+            if (targetCell) {
+              scrollCellIntoView({
+                container,
+                targetCell,
+                tableRef,
+                viewportOffset: VIEWPORT_OFFSET,
+                isRtl: dir === "rtl",
+              });
+            }
+          });
+        };
+
+        correctVertical();
       },
       onRowHeightChange,
       onRowSelect,
@@ -2122,7 +2165,7 @@ function useDataGrid<TData>({
   }, [
     propsRef,
     store,
-    scrollToTargetCell,
+    dir,
     getIsCellSelected,
     getIsSearchMatch,
     getIsActiveSearchMatch,
@@ -2250,10 +2293,19 @@ function useDataGrid<TData>({
       ? (element) => element?.getBoundingClientRect().height
       : undefined,
     scrollPaddingStart:
-      (headerRef.current?.getBoundingClientRect().height ?? 0) +
+      (headerRef.current?.getBoundingClientRect().bottom ?? 0) -
+      (dataGridRef.current?.getBoundingClientRect().top ?? 0) +
       VIEWPORT_OFFSET,
+    // Extra rowHeightValue buffer keeps the target row clearly above the sticky
+    // footer even when virtual positions shift after newly-rendered rows are
+    // measured. Without this, correctVertical's footer check fires on stale
+    // positions and over-shoots by ~1 row.
     scrollPaddingEnd:
-      (footerRef.current?.getBoundingClientRect().height ?? 0) +
+      (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
+      (footerRef.current?.getBoundingClientRect().top ??
+        dataGridRef.current?.getBoundingClientRect().bottom ??
+        0) +
+      rowHeightValue +
       VIEWPORT_OFFSET,
   });
 
