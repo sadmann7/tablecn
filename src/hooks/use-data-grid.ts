@@ -2291,7 +2291,7 @@ function useDataGrid<TData>({
       (headerRef.current?.getBoundingClientRect().bottom ?? 0) -
       (dataGridRef.current?.getBoundingClientRect().top ?? 0) +
       VIEWPORT_OFFSET,
-    // Add extra row buffer to absorb virtual position drift from post-render measurements
+    // Add extra row buffer to absorb virtual position drift after render measurements
     scrollPaddingEnd:
       (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
       (footerRef.current?.getBoundingClientRect().top ??
