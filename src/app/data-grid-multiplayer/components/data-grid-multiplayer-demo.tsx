@@ -293,9 +293,7 @@ export function DataGridMultiplayerDemo({
         const existing = data.find((s) => s.id === skater.id);
 
         if (!existing) {
-          multiplayerCollection.update(skater.id, (draft) => {
-            Object.assign(draft, skater);
-          });
+          multiplayerCollection.insert(skater);
           continue;
         }
 
