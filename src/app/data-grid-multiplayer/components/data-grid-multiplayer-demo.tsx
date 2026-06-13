@@ -36,7 +36,10 @@ import { useWindowSize } from "@/hooks/use-window-size";
 import { getCellKey } from "@/lib/data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
-import { multiplayerCollection } from "../lib/multiplayer-collection";
+import {
+  multiplayerCollection,
+  serializeSkater,
+} from "../lib/multiplayer-collection";
 import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
@@ -62,15 +65,6 @@ const trickOptions = TRICKS.map((trick) => ({
   value: trick,
 }));
 
-function toWire(row: SkaterSchema): Record<string, unknown> {
-  return {
-    ...row,
-    startedSkating: row.startedSkating?.toISOString() ?? null,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt?.toISOString() ?? null,
-  };
-}
-
 interface DataGridMultiplayerDemoProps {
   roomId: string;
 }
@@ -86,11 +80,13 @@ export function DataGridMultiplayerDemo({
       let query = q.from({ skater: multiplayerCollection });
       for (const sort of sorting) {
         const field = sort.id as keyof SkaterSchema;
+
         query = query.orderBy(
           (t) => t.skater[field],
           sort.desc ? "desc" : "asc",
         );
       }
+
       query = query.orderBy((t) => t.skater.order, "asc");
       return query;
     },
@@ -158,7 +154,8 @@ export function DataGridMultiplayerDemo({
           }
         }
       }
-      if (insertedRows.length > 0) sendRowsAdd(insertedRows.map(toWire));
+      if (insertedRows.length > 0)
+        sendRowsAdd(insertedRows.map(serializeSkater));
     },
     [data, sendRowsDelete, sendRowsAdd, sendCellUpdate],
   );
@@ -322,7 +319,7 @@ export function DataGridMultiplayerDemo({
       };
 
       multiplayerCollection.insert(newSkater);
-      sendRowAdd(toWire(newSkater));
+      sendRowAdd(serializeSkater(newSkater));
       trackRowsAdd([newSkater]);
 
       return { rowIndex: data.length, columnId: "name" };
@@ -355,7 +352,7 @@ export function DataGridMultiplayerDemo({
           multiplayerCollection.insert(newSkater);
         }
 
-        sendRowsAdd(newRows.map(toWire));
+        sendRowsAdd(newRows.map(serializeSkater));
         trackRowsAdd(newRows);
       },
       [data, trackRowsAdd, sendRowsAdd],
