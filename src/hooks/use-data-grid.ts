@@ -1681,7 +1681,7 @@ function useDataGrid<TData>({
     });
   }, [store]);
 
-  const scrollToTargetCell = React.useCallback(
+  const scrollToCell = React.useCallback(
     (rowIndex: number, columnId: string) => {
       requestAnimationFrame(() => {
         const container = dataGridRef.current;
@@ -1729,14 +1729,14 @@ function useDataGrid<TData>({
             isSelecting: false,
           });
           focusCell(rowIndex, columnId);
-          scrollToTargetCell(rowIndex, columnId);
+          scrollToCell(rowIndex, columnId);
           return;
         }
 
         if (event.shiftKey && currentState.focusedCell) {
           event.preventDefault();
           selectRange(currentState.focusedCell, { rowIndex, columnId });
-          scrollToTargetCell(rowIndex, columnId);
+          scrollToCell(rowIndex, columnId);
           return;
         }
       }
@@ -1754,7 +1754,7 @@ function useDataGrid<TData>({
           onSelectionClear();
         } else {
           focusCell(rowIndex, columnId);
-          scrollToTargetCell(rowIndex, columnId);
+          scrollToCell(rowIndex, columnId);
           return;
         }
       } else if (hasSelectedRows && columnId !== "select") {
@@ -1768,13 +1768,13 @@ function useDataGrid<TData>({
         onCellEditingStart(rowIndex, columnId);
       } else {
         focusCell(rowIndex, columnId);
-        scrollToTargetCell(rowIndex, columnId);
+        scrollToCell(rowIndex, columnId);
       }
     },
     [
       store,
       focusCell,
-      scrollToTargetCell,
+      scrollToCell,
       onCellEditingStart,
       selectRange,
       onSelectionClear,
@@ -2095,16 +2095,14 @@ function useDataGrid<TData>({
 
         rowVirtualizerRef.current?.scrollToIndex(rowIndex, { align });
 
-        const correctVertical = (retries = 1) => {
+        const scrollRowIntoView = (retries = 1) => {
           requestAnimationFrame(() => {
             const targetRow = rowMapRef.current.get(rowIndex);
             if (!targetRow) {
-              if (retries > 0) correctVertical(retries - 1);
+              if (retries > 0) scrollRowIntoView(retries - 1);
               return;
             }
 
-            // Use the actual header bottom / footer top from the DOM so that
-            // borders, scrollbars and any other layout quirks are accounted for.
             const headerBottom =
               headerRef.current?.getBoundingClientRect().bottom ??
               container.getBoundingClientRect().top;
@@ -2112,10 +2110,7 @@ function useDataGrid<TData>({
             const viewportTop = headerBottom + VIEWPORT_OFFSET;
 
             const rowRect = targetRow.getBoundingClientRect();
-            // Only correct for header clipping (upward scroll). Footer clipping
-            // is handled by scrollPaddingEnd with a 1-row buffer so it never
-            // needs a post-scroll correction (which would read stale positions
-            // after measurement updates and over-shoot by ~1 row).
+
             if (rowRect.top < viewportTop) {
               container.scrollTop -= viewportTop - rowRect.top;
             }
@@ -2134,7 +2129,7 @@ function useDataGrid<TData>({
           });
         };
 
-        correctVertical();
+        scrollRowIntoView();
       },
       onRowHeightChange,
       onRowSelect,
@@ -2296,10 +2291,7 @@ function useDataGrid<TData>({
       (headerRef.current?.getBoundingClientRect().bottom ?? 0) -
       (dataGridRef.current?.getBoundingClientRect().top ?? 0) +
       VIEWPORT_OFFSET,
-    // Extra rowHeightValue buffer keeps the target row clearly above the sticky
-    // footer even when virtual positions shift after newly-rendered rows are
-    // measured. Without this, correctVertical's footer check fires on stale
-    // positions and over-shoots by ~1 row.
+    // Add extra row buffer to absorb virtual position drift from post-render measurements
     scrollPaddingEnd:
       (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
       (footerRef.current?.getBoundingClientRect().top ??
