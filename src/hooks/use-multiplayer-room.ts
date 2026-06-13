@@ -6,8 +6,10 @@ import PartySocket from "partysocket";
 import * as React from "react";
 import { skaterSchema } from "@/app/data-grid-live/lib/validation";
 import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
+import { env } from "@/env";
+import { generateId } from "@/lib/id";
 
-const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
+const PARTYKIT_HOST = env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 const STORAGE_KEY = "multiplayer-identity";
 
 interface Identity {
@@ -17,7 +19,7 @@ interface Identity {
 
 function getOrCreateIdentity(): Identity {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = sessionStorage.getItem(STORAGE_KEY);
     if (stored) return JSON.parse(stored) as Identity;
   } catch {}
 
@@ -28,9 +30,9 @@ function getOrCreateIdentity(): Identity {
   const identity: Identity = { name: `${adj} ${animal}`, color };
 
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
   } catch {
-    // Fail silently if localStorage is not available
+    // Fail silently if sessionStorage is not available
   }
 
   return identity;
@@ -39,7 +41,6 @@ function getOrCreateIdentity(): Identity {
 function parseRow(raw: RowPayload) {
   const result = skaterSchema.safeParse(raw);
   if (result.success) return result.data;
-  console.warn("[multiplayer] Failed to parse row:", raw, result.error.issues);
   return null;
 }
 
@@ -68,6 +69,7 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     const socket = new PartySocket({
       host: PARTYKIT_HOST,
       room: roomId,
+      id: generateId(),
       query: { name: identity.name, color: identity.color },
     });
     socketRef.current = socket;
