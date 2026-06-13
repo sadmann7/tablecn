@@ -54,7 +54,7 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
         case "snapshot": {
           setCurrentUserId(msg.userId);
           setUsers(msg.users);
-          for (const raw of msg.rows) {
+          for (const raw of msg.rows ?? []) {
             const row = parseRow(raw);
             if (row) {
               multiplayerCollection.insert(row);
