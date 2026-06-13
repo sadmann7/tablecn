@@ -1,5 +1,6 @@
 "use client";
 
+import { TRICKS } from "@party/seeds";
 import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import * as React from "react";
@@ -56,25 +57,7 @@ const statusOptions = skaters.status.enumValues.map((status) => ({
   icon: getSkaterStatusIcon(status),
 }));
 
-const trickOptions = [
-  "Kickflip",
-  "Heelflip",
-  "Tre Flip",
-  "Hardflip",
-  "Varial Flip",
-  "360 Flip",
-  "Ollie",
-  "Nollie",
-  "Pop Shove-it",
-  "FS Boardslide",
-  "BS Boardslide",
-  "50-50 Grind",
-  "5-0 Grind",
-  "Crooked Grind",
-  "Smith Grind",
-] as const;
-
-const trickSelectOptions = trickOptions.map((trick) => ({
+const trickOptions = TRICKS.map((trick) => ({
   label: trick,
   value: trick,
 }));
@@ -249,7 +232,7 @@ export function DataGridMultiplayerDemo({
         filterFn,
         meta: {
           label: "Tricks",
-          cell: { variant: "multi-select", options: trickSelectOptions },
+          cell: { variant: "multi-select", options: trickOptions },
         },
       },
       {

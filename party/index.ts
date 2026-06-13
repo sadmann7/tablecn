@@ -94,12 +94,27 @@ export default class SkaterRoom implements Party.Server {
 
   constructor(readonly room: Party.Room) {}
 
-  async onConnect(conn: Party.Connection) {
-    if (this.state.rows.length === 0) {
-      const stored = await this.room.storage.get<RowPayload[]>("rows");
-      this.state.rows = stored ?? [...seedRows];
+  // Runs before any connection is accepted — the room waits for this to complete.
+  async onStart() {
+    const stored = await this.room.storage.get<RowPayload[]>("rows");
+    if (Array.isArray(stored) && stored.length > 0) {
+      this.state.rows = stored;
+    } else {
+      // Deep-clone so per-room mutations never bleed into the shared module-level array.
+      // Persist immediately so a hibernation before any mutation doesn't re-seed with new IDs.
+      this.state.rows = structuredClone(seedRows);
+      await this.room.storage.put("rows", this.state.rows);
     }
+  }
 
+  // Surface storage write failures rather than silently swallowing them.
+  private persistRows() {
+    this.room.storage
+      .put("rows", this.state.rows)
+      .catch((err) => console.error("[party] Failed to persist rows:", err));
+  }
+
+  onConnect(conn: Party.Connection) {
     const color = pickColor(this.state.usedColors);
     this.state.usedColors.push(color);
 
@@ -146,7 +161,7 @@ export default class SkaterRoom implements Party.Server {
     switch (msg.type) {
       case "row-add": {
         this.state.rows.push(msg.row);
-        void this.room.storage.put("rows", this.state.rows);
+        this.persistRows();
         this.room.broadcast(
           JSON.stringify({
             type: "row-add",
@@ -160,7 +175,7 @@ export default class SkaterRoom implements Party.Server {
 
       case "rows-add": {
         this.state.rows.push(...msg.rows);
-        void this.room.storage.put("rows", this.state.rows);
+        this.persistRows();
         this.room.broadcast(
           JSON.stringify({
             type: "rows-add",
@@ -175,7 +190,7 @@ export default class SkaterRoom implements Party.Server {
       case "cell-update": {
         const row = this.state.rows.find((r) => r.id === msg.rowId);
         if (row) row[msg.columnId] = msg.value;
-        void this.room.storage.put("rows", this.state.rows);
+        this.persistRows();
         this.room.broadcast(
           JSON.stringify({
             type: "cell-update",
@@ -193,7 +208,7 @@ export default class SkaterRoom implements Party.Server {
         this.state.rows = this.state.rows.filter(
           (r) => !msg.ids.includes(r.id as string),
         );
-        void this.room.storage.put("rows", this.state.rows);
+        this.persistRows();
         this.room.broadcast(
           JSON.stringify({
             type: "rows-delete",

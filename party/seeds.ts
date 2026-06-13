@@ -1,174 +1,56 @@
+import { faker } from "@faker-js/faker";
 import type { RowPayload } from "./types";
 
-function id() {
-  return Math.random().toString(36).slice(2, 13);
+const STANCES = ["regular", "goofy"] as const;
+const STYLES = ["street", "vert", "park", "freestyle", "all-around"] as const;
+const STATUSES = ["amateur", "sponsored", "pro", "legend"] as const;
+export const TRICKS = [
+  "Kickflip",
+  "Heelflip",
+  "Tre Flip",
+  "Hardflip",
+  "Varial Flip",
+  "360 Flip",
+  "Ollie",
+  "Nollie",
+  "Pop Shove-it",
+  "FS Boardslide",
+  "BS Boardslide",
+  "50-50 Grind",
+  "5-0 Grind",
+  "Crooked Grind",
+  "Smith Grind",
+] as const;
+
+function generateSeedRow(order: number): RowPayload {
+  const firstName = faker.person.firstName();
+  const lastName = faker.person.lastName();
+  const trickCount = faker.number.int({ min: 0, max: 6 });
+  const now = new Date().toISOString();
+
+  return {
+    id: faker.string.alphanumeric(11),
+    name: `${firstName} ${lastName}`,
+    email: faker.internet.email({ firstName, lastName }).toLowerCase(),
+    stance: faker.helpers.arrayElement([...STANCES]),
+    style: faker.helpers.arrayElement([...STYLES]),
+    status: faker.helpers.arrayElement([...STATUSES]),
+    yearsSkating: faker.number.int({ min: 1, max: 25 }),
+    startedSkating: faker.date
+      .between({ from: "2000-01-01", to: "2023-01-01" })
+      .toISOString(),
+    isPro: faker.datatype.boolean({ probability: 0.3 }),
+    tricks:
+      trickCount > 0
+        ? faker.helpers.arrayElements([...TRICKS], trickCount)
+        : null,
+    media: null,
+    order,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
-function iso(date: Date): string {
-  return date.toISOString();
-}
-
-const now = new Date();
-
-export const seedRows: RowPayload[] = [
-  {
-    id: id(),
-    name: "Tony Hawk",
-    email: "tony@hawk.com",
-    stance: "regular",
-    style: "vert",
-    status: "legend",
-    yearsSkating: 45,
-    isPro: true,
-    tricks: ["900", "Kickflip", "Heelflip"],
-    startedSkating: iso(new Date("1979-01-01")),
-    order: 1,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Rodney Mullen",
-    email: "rodney@mullen.com",
-    stance: "regular",
-    style: "street",
-    status: "legend",
-    yearsSkating: 43,
-    isPro: true,
-    tricks: ["Kickflip", "Hardflip", "360 Flip"],
-    startedSkating: iso(new Date("1981-01-01")),
-    order: 2,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Nyjah Huston",
-    email: "nyjah@huston.com",
-    stance: "regular",
-    style: "street",
-    status: "pro",
-    yearsSkating: 22,
-    isPro: true,
-    tricks: ["Tre Flip", "FS Boardslide", "Crooked Grind"],
-    startedSkating: iso(new Date("2002-01-01")),
-    order: 3,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Leticia Bufoni",
-    email: "leticia@bufoni.com",
-    stance: "regular",
-    style: "street",
-    status: "pro",
-    yearsSkating: 18,
-    isPro: true,
-    tricks: ["Kickflip", "Heelflip", "Smith Grind"],
-    startedSkating: iso(new Date("2006-01-01")),
-    order: 4,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Bob Burnquist",
-    email: "bob@burnquist.com",
-    stance: "goofy",
-    style: "vert",
-    status: "legend",
-    yearsSkating: 35,
-    isPro: true,
-    tricks: ["900", "Varial Flip", "Heelflip"],
-    startedSkating: iso(new Date("1989-01-01")),
-    order: 5,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Sky Brown",
-    email: "sky@brown.com",
-    stance: "goofy",
-    style: "park",
-    status: "sponsored",
-    yearsSkating: 8,
-    isPro: true,
-    tricks: ["Heelflip", "Ollie", "50-50 Grind"],
-    startedSkating: iso(new Date("2016-01-01")),
-    order: 6,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Shane O'Neill",
-    email: "shane@oneill.com",
-    stance: "regular",
-    style: "street",
-    status: "pro",
-    yearsSkating: 20,
-    isPro: true,
-    tricks: ["360 Flip", "Hardflip", "BS Boardslide"],
-    startedSkating: iso(new Date("2004-01-01")),
-    order: 7,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Jamie Foy",
-    email: "jamie@foy.com",
-    stance: "regular",
-    style: "street",
-    status: "pro",
-    yearsSkating: 12,
-    isPro: false,
-    tricks: ["Tre Flip", "Nollie", "Crooked Grind"],
-    startedSkating: iso(new Date("2012-01-01")),
-    order: 8,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Alex Sorgente",
-    email: "alex@sorgente.com",
-    stance: "regular",
-    style: "park",
-    status: "sponsored",
-    yearsSkating: 14,
-    isPro: false,
-    tricks: ["Kickflip", "Pop Shove-it", "Smith Grind"],
-    startedSkating: iso(new Date("2010-01-01")),
-    order: 9,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-  {
-    id: id(),
-    name: "Yuto Horigome",
-    email: "yuto@horigome.com",
-    stance: "regular",
-    style: "street",
-    status: "pro",
-    yearsSkating: 16,
-    isPro: true,
-    tricks: ["Hardflip", "Varial Flip", "5-0 Grind"],
-    startedSkating: iso(new Date("2008-01-01")),
-    order: 10,
-    createdAt: iso(now),
-    updatedAt: iso(now),
-    media: null,
-  },
-];
+export const seedRows: RowPayload[] = Array.from({ length: 20 }, (_, i) =>
+  generateSeedRow(i + 1),
+);
