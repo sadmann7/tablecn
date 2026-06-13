@@ -21,8 +21,8 @@ src/
 │   └── data-grid-render/         # Data Grid cell renderer showcase (internal)
 │
 ├── components/
-│   ├── data-table/               # Data Table UI components (toolbar, filters, pagination…)
-│   ├── data-grid/                # Data Grid UI components (cells, menus, presence…)
+│   ├── data-table/               # Data Table ui components (toolbar, filters, pagination…)
+│   ├── data-grid/                # Data Grid ui components (cells, menus, presence…)
 │   ├── layouts/                  # Site header and mobile navigation
 │   └── ui/                       # shadcn/ui primitives
 │

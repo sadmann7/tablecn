@@ -10,3 +10,12 @@ export const multiplayerCollection = createCollection(
     getKey: (item: SkaterSchema) => item.id,
   }),
 );
+
+export function serializeSkater(row: SkaterSchema): Record<string, unknown> {
+  return {
+    ...row,
+    startedSkating: row.startedSkating?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt?.toISOString() ?? null,
+  };
+}
