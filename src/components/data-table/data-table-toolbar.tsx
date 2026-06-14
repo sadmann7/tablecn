@@ -24,10 +24,7 @@ export function DataTableToolbar<TData>({
 }: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0;
 
-  const columns = React.useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanFilter()),
-    [table],
-  );
+  const columns = table.getAllColumns().filter((column) => column.getCanFilter())
 
   const onReset = React.useCallback(() => {
     table.resetColumnFilters();
