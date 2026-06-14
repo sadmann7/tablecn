@@ -410,7 +410,8 @@ export function getEmptyCellValue(
   variant: CellOpts["variant"] | undefined,
 ): unknown {
   if (variant === "multi-select" || variant === "file") return [];
-  if (variant === "number" || variant === "date") return null;
+  if (variant === "number" || variant === "date" || variant === "select")
+    return null;
   if (variant === "checkbox") return false;
   return "";
 }

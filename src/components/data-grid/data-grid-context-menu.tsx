@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAsRef } from "@/hooks/use-as-ref";
-import { parseCellKey } from "@/lib/data-grid";
+import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid";
 import type { CellUpdate, ContextMenuState } from "@/types/data-grid";
 
 interface DataGridContextMenuProps<TData> {
@@ -161,14 +161,7 @@ function ContextMenuImpl<TData>({
       });
       const cellVariant = column?.meta?.cell?.variant;
 
-      let emptyValue: unknown = "";
-      if (cellVariant === "multi-select" || cellVariant === "file") {
-        emptyValue = [];
-      } else if (cellVariant === "number" || cellVariant === "date") {
-        emptyValue = null;
-      } else if (cellVariant === "checkbox") {
-        emptyValue = false;
-      }
+      const emptyValue = getEmptyCellValue(cellVariant);
 
       updates.push({ rowIndex, columnId, value: emptyValue });
     }
