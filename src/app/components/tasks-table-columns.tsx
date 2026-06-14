@@ -12,6 +12,7 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
+import { DataTableDragHandle } from "@/components/data-table/data-table-drag-handle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,7 +32,6 @@ import { type Task, tasks } from "@/db/schema";
 import { formatDate } from "@/lib/format";
 import { getErrorMessage } from "@/lib/handle-error";
 import type { DataTableRowAction } from "@/types/data-table";
-
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
 
@@ -51,6 +51,14 @@ export function getTasksTableColumns({
   setRowAction,
 }: GetTasksTableColumnsProps): ColumnDef<Task>[] {
   return [
+    {
+      id: "drag",
+      header: () => null,
+      cell: () => <DataTableDragHandle label="Drag to reorder" />,
+      size: 36,
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       id: "select",
       header: ({ table }) => (
