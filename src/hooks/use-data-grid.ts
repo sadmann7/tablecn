@@ -404,9 +404,6 @@ function useDataGrid<TData>({
         }
       }
 
-      // Determine the full range of indices to cover — including any rows
-      // that were just added by onRowsAdd and are in the table but may not
-      // yet be reflected in propsRef.current.data (stale closure timing).
       const maxUpdateIndex =
         rowUpdatesMap.size > 0
           ? Math.max(...Array.from(rowUpdatesMap.keys()))
@@ -733,8 +730,7 @@ function useDataGrid<TData>({
           navigableColumnIds.length,
         );
 
-        // When clipboard has exactly one cell and the user has multiple cells
-        // selected, fill the entire selection with that single value.
+        // Fill entire selection when clipboard has a single value and multiple cells are selected
         const selectionCells = currentState.selectionState.selectedCells;
         const isSingleCellClipboard =
           rawPastedData.length === 1 && (rawPastedData[0]?.length ?? 0) === 1;
@@ -1133,7 +1129,7 @@ function useDataGrid<TData>({
   );
 
   // Release focus guard after delay to allow async data re-renders to settle.
-  // 300ms accounts for db sync and virtualized cell mounting.
+  // 300ms accounts for db sync and virtualized cell mounting
   const releaseFocusGuard = React.useCallback((immediate = false) => {
     if (immediate) {
       focusGuardRef.current = false;
@@ -1409,7 +1405,7 @@ function useDataGrid<TData>({
               });
             }
           } else {
-            // Fallback: use direct scroll calculation when virtualizer is not available
+            // Use direct scroll calculation when virtualizer is not available
             const rowHeightValue = getRowHeightValue(rowHeight);
             const estimatedScrollTop = newRowIndex * rowHeightValue;
             container.scrollTop = estimatedScrollTop;
@@ -1694,7 +1690,6 @@ function useDataGrid<TData>({
   );
 
   // Compute search match data for targeted row re-renders
-  // Maps rowIndex -> Set of columnIds that have matches in that row
   const searchMatchesByRow = React.useMemo(() => {
     if (searchMatches.length === 0) return null;
     const rowMap = new Map<number, Set<string>>();
@@ -2096,8 +2091,8 @@ function useDataGrid<TData>({
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
-      // Note: cell is rendered directly in DataGridRow to bypass flexRender's
-      // unstable cell.getContext() (see TanStack Table issue #4794)
+      // Cell is rendered directly in DataGridRow to bypass flexRender's
+      // unstable cell.getContext() (https://github.com/TanStack/table/issues/4794)
       minSize: MIN_COLUMN_SIZE,
       maxSize: MAX_COLUMN_SIZE,
     }),
@@ -2421,10 +2416,10 @@ function useDataGrid<TData>({
 
           if (!isFullyVisible) {
             if (rowRect.top < viewportTop) {
-              // Row is partially hidden by header - scroll up
+              // Scroll up as row is partially hidden by header
               container.scrollTop -= viewportTop - rowRect.top;
             } else if (rowRect.bottom > viewportBottom) {
-              // Row is partially hidden by footer - scroll down
+              // Scroll down as row is partially hidden by footer
               container.scrollTop += rowRect.bottom - viewportBottom;
             }
           }
@@ -2476,7 +2471,6 @@ function useDataGrid<TData>({
 
       onSelectionClear();
 
-      // Trust the returned rowIndex from the callback
       // onScrollToRow will handle retries if the row isn't rendered yet
       const targetRowIndex = result.rowIndex ?? initialRowCount;
       const targetColumnId = result.columnId;
