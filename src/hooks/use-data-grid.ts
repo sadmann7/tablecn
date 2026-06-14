@@ -3640,8 +3640,4 @@ function useDataGrid<TData>({
   );
 }
 
-export {
-  useDataGrid,
-  //
-  type UseDataGridProps,
-};
+export { type UseDataGridProps, useDataGrid };

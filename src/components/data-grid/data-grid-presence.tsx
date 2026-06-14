@@ -34,7 +34,7 @@ function useDataGridPresence(cellKey: string): DataGridCellPresence | null {
 }
 
 export {
+  type DataGridCellPresence,
   DataGridPresenceProvider,
   useDataGridPresence,
-  type DataGridCellPresence,
 };
