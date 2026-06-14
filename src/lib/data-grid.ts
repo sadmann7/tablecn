@@ -327,7 +327,7 @@ export function parseTsv(
     return rows;
   }
 
-  const lines = text.split("\n");
+  const lines = text.split("\n").map((l) => l.replace(/\r$/, ""));
   let maxTabCount = 0;
   for (const line of lines) {
     const n = countTabs(line);
