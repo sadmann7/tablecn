@@ -147,27 +147,27 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
 }
 
 export function getSkaterStatusIcon(status: Skater["status"]) {
-  const statusIcons: Record<Skater["status"], LucideIcon> = {
+  const statusIcons: Record<NonNullable<Skater["status"]>, LucideIcon> = {
     amateur: Circle,
     sponsored: Timer,
     pro: CheckCircle2,
     legend: CircleCheck,
   };
 
-  return statusIcons[status];
+  return status ? statusIcons[status] : undefined;
 }
 
 export function getStanceIcon(stance: Skater["stance"]) {
-  const stanceIcons: Record<Skater["stance"], LucideIcon> = {
+  const stanceIcons: Record<NonNullable<Skater["stance"]>, LucideIcon> = {
     regular: ArrowRightIcon,
     goofy: ArrowDownIcon,
   };
 
-  return stanceIcons[stance];
+  return stance ? stanceIcons[stance] : undefined;
 }
 
 export function getStyleIcon(style: Skater["style"]) {
-  const styleIcons: Record<Skater["style"], LucideIcon> = {
+  const styleIcons: Record<NonNullable<Skater["style"]>, LucideIcon> = {
     street: CircleCheck,
     vert: ArrowUpIcon,
     park: Circle,
@@ -175,5 +175,5 @@ export function getStyleIcon(style: Skater["style"]) {
     "all-around": CheckCircle2,
   };
 
-  return styleIcons[style];
+  return style ? styleIcons[style] : undefined;
 }

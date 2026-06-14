@@ -59,22 +59,16 @@ export const skaters = pgTable("skaters", {
   stance: varchar("stance", {
     length: 30,
     enum: ["regular", "goofy"],
-  })
-    .notNull()
-    .default("regular"),
+  }),
   style: varchar("style", {
     length: 30,
     enum: ["street", "vert", "park", "freestyle", "all-around"],
-  })
-    .notNull()
-    .default("street"),
+  }),
   status: varchar("status", {
     length: 30,
     enum: ["amateur", "sponsored", "pro", "legend"],
-  })
-    .notNull()
-    .default("amateur"),
-  yearsSkating: integer("years_skating").notNull().default(0),
+  }),
+  yearsSkating: integer("years_skating"),
   startedSkating: timestamp("started_skating"),
   isPro: boolean("is_pro").notNull().default(false),
   tricks: jsonb("tricks").$type<string[]>(),

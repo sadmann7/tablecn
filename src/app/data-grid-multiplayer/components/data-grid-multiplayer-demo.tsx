@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import { DataGridActionBar } from "@/app/data-grid-live/components/data-grid-action-bar";
 import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
 import {
-  generateRandomSkater,
   getSkaterStatusIcon,
   getStanceIcon,
   getStyleIcon,
@@ -313,8 +312,20 @@ export function DataGridMultiplayerDemo({
     React.useCallback(() => {
       const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
       const newSkater: SkaterSchema = {
-        ...generateRandomSkater(),
+        id: generateId(),
+        name: null,
+        email: null,
+        stance: null,
+        style: null,
+        status: null,
+        yearsSkating: null,
+        startedSkating: null,
+        isPro: false,
+        tricks: null,
+        media: null,
         order: maxOrder + 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       multiplayerCollection.insert(newSkater);
@@ -335,10 +346,10 @@ export function DataGridMultiplayerDemo({
             id: generateId(),
             name: null,
             email: null,
-            stance: "regular",
-            style: "street",
-            status: "amateur",
-            yearsSkating: 0,
+            stance: null,
+            style: null,
+            status: null,
+            yearsSkating: null,
             startedSkating: null,
             isPro: false,
             tricks: null,
