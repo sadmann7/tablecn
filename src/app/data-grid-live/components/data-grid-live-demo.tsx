@@ -300,7 +300,7 @@ export function DataGridLiveDemo() {
   );
 
   const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo({
+    useDataGridUndoRedo<SkaterSchema>({
       data,
       onDataChange: undoRedoOnDataChange,
       getRowId: (row) => row.id,
