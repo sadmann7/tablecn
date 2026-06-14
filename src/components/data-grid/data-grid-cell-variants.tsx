@@ -878,7 +878,8 @@ export function SelectCell<TData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellProps<TData>) {
-  const initialValue = cell.getValue() as string;
+  const initialValue = (cell.getValue() ?? undefined) as string | undefined;
+
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
@@ -934,7 +935,9 @@ export function SelectCell<TData>({
     [isEditing, isFocused, initialValue, tableMeta],
   );
 
-  const displayLabel = optionByValue.get(value)?.label ?? value;
+  const displayLabel = value
+    ? (optionByValue.get(value)?.label ?? value)
+    : null;
 
   return (
     <DataGridCellWrapper<TData>

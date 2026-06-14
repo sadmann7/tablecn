@@ -6,7 +6,6 @@ import * as React from "react";
 import { use } from "react";
 import { toast } from "sonner";
 import {
-  generateRandomSkater,
   getSkaterStatusIcon,
   getStanceIcon,
   getStyleIcon,
@@ -364,13 +363,27 @@ export function DataGridLiveDemo() {
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(() => {
       const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
-      const newSkater = generateRandomSkater();
-      const skaterWithOrder = { ...newSkater, order: maxOrder + 1 };
+      const newSkater: SkaterSchema = {
+        id: generateId(),
+        name: null,
+        email: null,
+        stance: null,
+        style: null,
+        status: null,
+        yearsSkating: null,
+        startedSkating: null,
+        isPro: false,
+        tricks: null,
+        media: null,
+        order: maxOrder + 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      skatersCollection.insert(skaterWithOrder);
+      skatersCollection.insert(newSkater);
 
       // Track for undo/redo
-      trackRowsAdd([skaterWithOrder]);
+      trackRowsAdd([newSkater]);
 
       return {
         rowIndex: data.length,
@@ -389,10 +402,10 @@ export function DataGridLiveDemo() {
             id: generateId(),
             name: null,
             email: null,
-            stance: "regular",
-            style: "street",
-            status: "amateur",
-            yearsSkating: 0,
+            stance: null,
+            style: null,
+            status: null,
+            yearsSkating: null,
             startedSkating: null,
             isPro: false,
             tricks: null,
