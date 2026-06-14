@@ -404,11 +404,18 @@ function useDataGrid<TData>({
         }
       }
 
-      const newData: TData[] = new Array(currentData.length);
+      const maxUpdateIndex =
+        rowUpdatesMap.size > 0
+          ? Math.max(...Array.from(rowUpdatesMap.keys()))
+          : -1;
+      const dataLength = Math.max(currentData.length, maxUpdateIndex + 1);
 
-      for (let i = 0; i < currentData.length; i++) {
+      const newData: TData[] = new Array(dataLength);
+
+      for (let i = 0; i < dataLength; i++) {
         const updates = rowUpdatesMap.get(i);
-        const existingRow = currentData[i];
+        // Fall back to the table's row data for rows not yet in currentData
+        const existingRow = currentData[i] ?? rows?.[i]?.original;
 
         if (existingRow == null) continue;
 
@@ -718,12 +725,49 @@ function useDataGrid<TData>({
           if (!clipboardText) return;
         }
 
-        const pastedData = parseTsv(clipboardText, navigableColumnIds.length);
+        const rawPastedData = parseTsv(
+          clipboardText,
+          navigableColumnIds.length,
+        );
 
-        const startRowIndex = currentState.focusedCell.rowIndex;
-        const startColIndex = navigableColumnIds.indexOf(
+        // Fill entire selection when clipboard has a single value and multiple cells are selected
+        const selectionCells = currentState.selectionState.selectedCells;
+        const isSingleCellClipboard =
+          rawPastedData.length === 1 && (rawPastedData[0]?.length ?? 0) === 1;
+
+        let pastedData = rawPastedData;
+        let startRowIndex = currentState.focusedCell.rowIndex;
+        let startColIndex = navigableColumnIds.indexOf(
           currentState.focusedCell.columnId,
         );
+
+        if (isSingleCellClipboard && selectionCells.size > 1) {
+          const singleValue = rawPastedData[0]?.[0] ?? "";
+          let minRow = Infinity;
+          let maxRow = -Infinity;
+          let minColIdx = Infinity;
+          let maxColIdx = -Infinity;
+
+          for (const cellKey of selectionCells) {
+            const { rowIndex, columnId } = parseCellKey(cellKey);
+            const colIdx = navigableColumnIds.indexOf(columnId);
+            if (colIdx === -1) continue;
+            minRow = Math.min(minRow, rowIndex);
+            maxRow = Math.max(maxRow, rowIndex);
+            minColIdx = Math.min(minColIdx, colIdx);
+            maxColIdx = Math.max(maxColIdx, colIdx);
+          }
+
+          if (minRow !== Infinity) {
+            startRowIndex = minRow;
+            startColIndex = minColIdx;
+            const numRows = maxRow - minRow + 1;
+            const numCols = maxColIdx - minColIdx + 1;
+            pastedData = Array.from({ length: numRows }, () =>
+              Array.from({ length: numCols }, () => singleValue),
+            );
+          }
+        }
 
         if (startColIndex === -1) return;
 
@@ -855,7 +899,7 @@ function useDataGrid<TData>({
               case "select": {
                 const options = cellOpts?.options ?? [];
                 if (!pastedValue) {
-                  processedValue = "";
+                  processedValue = null;
                 } else {
                   const matched = matchSelectOption(pastedValue, options);
                   if (matched) processedValue = matched;
@@ -1085,7 +1129,7 @@ function useDataGrid<TData>({
   );
 
   // Release focus guard after delay to allow async data re-renders to settle.
-  // 300ms accounts for db sync and virtualized cell mounting.
+  // 300ms accounts for db sync and virtualized cell mounting
   const releaseFocusGuard = React.useCallback((immediate = false) => {
     if (immediate) {
       focusGuardRef.current = false;
@@ -1361,7 +1405,7 @@ function useDataGrid<TData>({
               });
             }
           } else {
-            // Fallback: use direct scroll calculation when virtualizer is not available
+            // Use direct scroll calculation when virtualizer is not available
             const rowHeightValue = getRowHeightValue(rowHeight);
             const estimatedScrollTop = newRowIndex * rowHeightValue;
             container.scrollTop = estimatedScrollTop;
@@ -1646,7 +1690,6 @@ function useDataGrid<TData>({
   );
 
   // Compute search match data for targeted row re-renders
-  // Maps rowIndex -> Set of columnIds that have matches in that row
   const searchMatchesByRow = React.useMemo(() => {
     if (searchMatches.length === 0) return null;
     const rowMap = new Map<number, Set<string>>();
@@ -2048,8 +2091,8 @@ function useDataGrid<TData>({
 
   const defaultColumn: Partial<ColumnDef<TData>> = React.useMemo(
     () => ({
-      // Note: cell is rendered directly in DataGridRow to bypass flexRender's
-      // unstable cell.getContext() (see TanStack Table issue #4794)
+      // Cell is rendered directly in DataGridRow to bypass flexRender's
+      // unstable cell.getContext() (https://github.com/TanStack/table/issues/4794)
       minSize: MIN_COLUMN_SIZE,
       maxSize: MAX_COLUMN_SIZE,
     }),
@@ -2373,10 +2416,10 @@ function useDataGrid<TData>({
 
           if (!isFullyVisible) {
             if (rowRect.top < viewportTop) {
-              // Row is partially hidden by header - scroll up
+              // Scroll up as row is partially hidden by header
               container.scrollTop -= viewportTop - rowRect.top;
             } else if (rowRect.bottom > viewportBottom) {
-              // Row is partially hidden by footer - scroll down
+              // Scroll down as row is partially hidden by footer
               container.scrollTop += rowRect.bottom - viewportBottom;
             }
           }
@@ -2428,7 +2471,6 @@ function useDataGrid<TData>({
 
       onSelectionClear();
 
-      // Trust the returned rowIndex from the callback
       // onScrollToRow will handle retries if the row isn't rendered yet
       const targetRowIndex = result.rowIndex ?? initialRowCount;
       const targetColumnId = result.columnId;
