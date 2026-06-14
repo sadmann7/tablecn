@@ -1,0 +1,8 @@
+minimumReleaseAge: 1440
+
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  msw: true
+  sharp: true
+  workerd: true
