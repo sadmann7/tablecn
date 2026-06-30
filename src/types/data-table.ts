@@ -5,6 +5,8 @@ import type { FilterItemSchema } from "@/lib/parsers";
 declare module "@tanstack/react-table" {
   interface TableMeta<TData extends RowData> {
     queryKeys?: QueryKeys;
+    stickyHeader?: boolean;
+    maxHeight?: string;
   }
 
   interface ColumnMeta<TData extends RowData, TValue> {

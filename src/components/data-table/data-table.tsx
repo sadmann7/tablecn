@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getColumnPinningStyle } from "@/lib/data-table";
+import { getColumnPinningStyle, getStickyHeaderStyle } from "@/lib/data-table";
 import { cn } from "@/lib/utils";
 
 interface DataTableProps<TData> extends React.ComponentProps<"div"> {
@@ -25,6 +25,8 @@ export function DataTable<TData>({
   className,
   ...props
 }: DataTableProps<TData>) {
+  const { stickyHeader = false, maxHeight } = table.options.meta ?? {};
+
   return (
     <div
       className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
@@ -32,7 +34,11 @@ export function DataTable<TData>({
     >
       {children}
       <div className="overflow-hidden rounded-md border">
-        <Table>
+        <Table
+          containerStyle={
+            stickyHeader ? { overflowY: "auto", maxHeight } : undefined
+          }
+        >
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
@@ -42,6 +48,10 @@ export function DataTable<TData>({
                     colSpan={header.colSpan}
                     style={{
                       ...getColumnPinningStyle({ column: header.column }),
+                      ...getStickyHeaderStyle({
+                        column: header.column,
+                        enabled: stickyHeader,
+                      }),
                     }}
                   >
                     {header.isPlaceholder

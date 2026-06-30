@@ -37,6 +37,23 @@ export function getColumnPinningStyle<TData>({
   };
 }
 
+export function getStickyHeaderStyle<TData>({
+  column,
+  enabled = false,
+}: {
+  column: Column<TData>;
+  enabled?: boolean;
+}): React.CSSProperties {
+  if (!enabled) return {};
+
+  return {
+    position: "sticky",
+    top: 0,
+    background: "var(--background)",
+    zIndex: column.getIsPinned() ? 3 : 2,
+  };
+}
+
 export function getFilterOperators(filterVariant: FilterVariant) {
   const operatorMap: Record<
     FilterVariant,
