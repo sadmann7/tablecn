@@ -10,21 +10,21 @@ import type { VirtualItem } from "@tanstack/react-virtual";
 import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useComposedRefs } from "@/lib/compose-refs";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import {
   flexRender,
   getCellKey,
   getColumnBorderVisibility,
   getColumnPinningStyle,
   getRowHeightValue,
-} from "@/lib/data-grid";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
-import { cn } from "@/lib/utils";
+} from "@/lib/data-grid-helpers";
 import type {
   CellPosition,
   DataGridTableMeta,
   Direction,
   RowHeightValue,
-} from "@/types/data-grid";
+} from "@/lib/data-grid-types";
+import { cn } from "@/lib/utils";
 
 interface DataGridRowProps<TData extends RowData>
   extends React.ComponentProps<"div"> {

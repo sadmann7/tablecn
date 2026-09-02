@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTsv } from "@/lib/data-grid";
+import { parseTsv } from "@/lib/data-grid-helpers";
 
 describe("parseTsv", () => {
   describe("basic parsing", () => {

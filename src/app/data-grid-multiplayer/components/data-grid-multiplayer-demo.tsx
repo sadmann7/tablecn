@@ -32,9 +32,9 @@ import {
 } from "@/hooks/use-data-grid-undo-redo";
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
-import { getCellKey } from "@/lib/data-grid";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
+import { getCellKey } from "@/lib/data-grid-helpers";
 import { generateId } from "@/lib/id";
 import {
   multiplayerCollection,

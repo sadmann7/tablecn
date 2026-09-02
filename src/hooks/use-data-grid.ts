@@ -19,6 +19,10 @@ import { useAsRef } from "@/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
+  type DataGridFeatures,
+  dataGridFeatures,
+} from "@/lib/data-grid-features";
+import {
   getCellKey,
   getEmptyCellValue,
   getIsFileCellData,
@@ -29,11 +33,7 @@ import {
   parseCellKey,
   parseTsv,
   scrollCellIntoView,
-} from "@/lib/data-grid";
-import {
-  type DataGridFeatures,
-  dataGridFeatures,
-} from "@/lib/data-grid-features";
+} from "@/lib/data-grid-helpers";
 import type {
   CellPosition,
   CellUpdate,
@@ -46,7 +46,7 @@ import type {
   RowHeightValue,
   SearchState,
   SelectionState,
-} from "@/types/data-grid";
+} from "@/lib/data-grid-types";
 
 const DEFAULT_ROW_HEIGHT = "short";
 const OVERSCAN = 6;

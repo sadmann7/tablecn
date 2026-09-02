@@ -9,7 +9,7 @@ import { DataTableSortList } from "@/components/data-table/data-table-sort-list"
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import type { Task } from "@/db/schema";
 import { useDataTable } from "@/hooks/use-data-table";
-import type { DataTableRowAction, QueryKeys } from "@/types/data-table";
+import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
 import type {
   getEstimatedHoursRange,
   getTaskPriorityCounts,

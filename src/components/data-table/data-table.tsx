@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getColumnPinningStyle } from "@/lib/data-table";
+import { getColumnPinningStyle } from "@/lib/data-table-helpers";
 import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
 
