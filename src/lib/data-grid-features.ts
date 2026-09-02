@@ -12,10 +12,7 @@ import {
   rowSortingFeature,
   tableFeatures,
 } from "@tanstack/react-table";
-import type {
-  DataGridColumnMeta,
-  DataGridTableMeta,
-} from "@/lib/data-grid-types";
+import type { DataGridColumnMeta, DataGridTableMeta } from "@/types/data-grid";
 
 export const dataGridFeatures = tableFeatures({
   columnFilteringFeature,

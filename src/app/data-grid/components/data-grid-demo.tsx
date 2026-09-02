@@ -20,8 +20,8 @@ import {
 import { useWindowSize } from "@/hooks/use-window-size";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { Direction } from "@/lib/data-grid-types";
 import { generateId } from "@/lib/id";
+import type { Direction } from "@/types/data-grid";
 import {
   departments,
   initialData,

@@ -54,9 +54,9 @@ import {
   getDefaultOperator,
   getOperatorsForVariant,
 } from "@/lib/data-grid-filters";
-import type { FilterOperator, FilterValue } from "@/lib/data-grid-types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import type { FilterOperator, FilterValue } from "@/types/data-grid";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = new Set(["backspace", "delete"]);

@@ -22,12 +22,12 @@ import {
 import * as React from "react";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import type { ExtendedColumnSort, QueryKeys } from "@/lib/data-table-types";
 import { getSortingStateParser } from "@/lib/parsers";
 import {
   type DataTableFeatures,
   dataTableFeatures,
 } from "@/lib/table-features";
+import type { ExtendedColumnSort, QueryKeys } from "@/types/data-table";
 
 const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";

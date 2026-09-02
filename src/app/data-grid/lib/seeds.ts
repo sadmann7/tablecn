@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import type { FileCellData } from "@/lib/data-grid-types";
 import { generateId } from "@/lib/id";
+import type { FileCellData } from "@/types/data-grid";
 
 export interface Person {
   id: string;

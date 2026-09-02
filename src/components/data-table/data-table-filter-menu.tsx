@@ -35,15 +35,12 @@ import {
   getDefaultFilterOperator,
   getFilterOperators,
 } from "@/lib/data-table-helpers";
-import type {
-  ExtendedColumnFilter,
-  FilterOperator,
-} from "@/lib/data-table-types";
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
 import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
+import type { ExtendedColumnFilter, FilterOperator } from "@/types/data-table";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;

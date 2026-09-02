@@ -15,8 +15,8 @@ import {
   getColumnBorderVisibility,
   getColumnPinningStyle,
 } from "@/lib/data-grid-helpers";
-import type { Direction } from "@/lib/data-grid-types";
 import { cn } from "@/lib/utils";
+import type { Direction } from "@/types/data-grid";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 

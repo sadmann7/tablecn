@@ -6,8 +6,8 @@ import * as React from "react";
 import { useDataGridPresence } from "@/components/data-grid/data-grid-presence";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { getCellKey } from "@/lib/data-grid-helpers";
-import type { DataGridCellProps } from "@/lib/data-grid-types";
 import { cn } from "@/lib/utils";
+import type { DataGridCellProps } from "@/types/data-grid";
 
 interface DataGridCellWrapperProps<TData extends RowData>
   extends DataGridCellProps<TData>,

@@ -18,7 +18,7 @@ import type {
   CellUpdate,
   ContextMenuState,
   DataGridTableMeta,
-} from "@/lib/data-grid-types";
+} from "@/types/data-grid";
 
 interface DataGridContextMenuProps<TData extends RowData> {
   tableMeta: DataGridTableMeta;

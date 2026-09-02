@@ -28,10 +28,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type Task, tasks } from "@/db/schema";
-import type { DataTableRowAction } from "@/lib/data-table-types";
 import { formatDate } from "@/lib/format";
 import { getErrorMessage } from "@/lib/handle-error";
 import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableRowAction } from "@/types/data-table";
 
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";

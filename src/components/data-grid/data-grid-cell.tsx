@@ -15,7 +15,7 @@ import {
   ShortTextCell,
   UrlCell,
 } from "@/components/data-grid/data-grid-cell-variants";
-import type { DataGridCellProps } from "@/lib/data-grid-types";
+import type { DataGridCellProps } from "@/types/data-grid";
 
 export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   // Fast path: check stable primitive props first
