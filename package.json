@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "clean": "rimraf --glob **/node_modules **/dist **/.next pnpm-lock.yaml **/.tsbuildinfo",
-    "build": "next build",
+    "build": "pnpm build:registry && next build",
     "dev": "next dev",
     "dev:multiplayer": "concurrently \"next dev\" \"partykit dev\"",
     "deploy:multiplayer": "partykit deploy",
