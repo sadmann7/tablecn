@@ -1,5 +1,7 @@
 "use client";
 
+import type { RowData } from "@tanstack/react-table";
+
 import { Check, Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -47,7 +49,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { DataGridCellProps, FileCellData } from "@/types/data-grid";
 
-export function ShortTextCell<TData>({
+export function ShortTextCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -209,7 +211,7 @@ export function ShortTextCell<TData>({
   );
 }
 
-export function LongTextCell<TData>({
+export function LongTextCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -405,7 +407,7 @@ export function LongTextCell<TData>({
   );
 }
 
-export function NumberCell<TData>({
+export function NumberCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -534,7 +536,7 @@ export function NumberCell<TData>({
   );
 }
 
-export function UrlCell<TData>({
+export function UrlCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -754,7 +756,7 @@ export function UrlCell<TData>({
   );
 }
 
-export function CheckboxCell<TData>({
+export function CheckboxCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -865,7 +867,7 @@ export function CheckboxCell<TData>({
   );
 }
 
-export function SelectCell<TData>({
+export function SelectCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -1004,7 +1006,7 @@ export function SelectCell<TData>({
   );
 }
 
-export function MultiSelectCell<TData>({
+export function MultiSelectCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -1308,7 +1310,7 @@ export function MultiSelectCell<TData>({
   );
 }
 
-export function DateCell<TData>({
+export function DateCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,
@@ -1418,7 +1420,7 @@ export function DateCell<TData>({
   );
 }
 
-export function FileCell<TData>({
+export function FileCell<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,

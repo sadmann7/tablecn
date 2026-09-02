@@ -33,6 +33,7 @@ import {
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getCellKey } from "@/lib/data-grid";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import {
@@ -168,7 +169,7 @@ export function DataGridMultiplayerDemo({
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
-  const columns = React.useMemo<ColumnDef<SkaterSchema>[]>(
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
     () => [
       getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
       {
@@ -388,7 +389,10 @@ export function DataGridMultiplayerDemo({
     onRowsDelete,
     columns,
     getRowId: (row) => row.id,
-    initialState: { columnPinning: { left: ["select"] }, sorting },
+    initialState: {
+      columnPinning: { start: ["select"], end: [] },
+      sorting,
+    },
     onSortingChange: setSorting,
     manualSorting: true,
     enableSearch: true,

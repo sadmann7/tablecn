@@ -5,12 +5,13 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Task } from "@/db/schema";
 import { exportTableToCSV } from "@/lib/export";
+import type { DataTableFeatures } from "@/lib/table-features";
 
 import { CreateTaskSheet } from "./create-task-sheet";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
 
 interface TasksTableToolbarActionsProps {
-  table: Table<Task>;
+  table: Table<DataTableFeatures, Task>;
 }
 
 export function TasksTableToolbarActions({

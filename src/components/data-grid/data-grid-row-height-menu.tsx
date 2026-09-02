@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
+import type { RowData, Table } from "@tanstack/react-table";
 import {
   AlignVerticalSpaceAroundIcon,
   ChevronsDownUpIcon,
@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 const rowHeights = [
   {
@@ -40,13 +41,13 @@ const rowHeights = [
   },
 ] as const;
 
-interface DataGridRowHeightMenuProps<TData>
+interface DataGridRowHeightMenuProps<TData extends RowData>
   extends React.ComponentProps<typeof SelectContent> {
-  table: Table<TData>;
+  table: Table<DataGridFeatures, TData>;
   disabled?: boolean;
 }
 
-export function DataGridRowHeightMenu<TData>({
+export function DataGridRowHeightMenu<TData extends RowData>({
   table,
   disabled,
   ...props

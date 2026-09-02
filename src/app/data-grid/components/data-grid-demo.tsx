@@ -18,6 +18,7 @@ import {
   useDataGridUndoRedo,
 } from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import type { Direction } from "@/types/data-grid";
@@ -45,7 +46,8 @@ function DataGridDemoImpl({
     getRowId: (row) => row.id,
     initialState: {
       columnPinning: {
-        left: ["select"],
+        start: ["select"],
+        end: [],
       },
     },
     dir,
@@ -96,7 +98,7 @@ export function DataGridDemo() {
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
-  const columns = React.useMemo<ColumnDef<Person>[]>(
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(
     () => [
       getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
       {

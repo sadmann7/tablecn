@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table, TableMeta } from "@tanstack/react-table";
+import type { RowData, Table } from "@tanstack/react-table";
 import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 
@@ -18,11 +18,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { CellSelectOption } from "@/types/data-grid";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { CellSelectOption, DataGridTableMeta } from "@/types/data-grid";
 
-interface DataGridActionBarProps<TData> {
-  table: Table<TData>;
-  tableMeta: TableMeta<TData>;
+interface DataGridActionBarProps<TData extends RowData> {
+  table: Table<DataGridFeatures, TData>;
+  tableMeta: DataGridTableMeta;
   selectedCellCount: number;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
@@ -31,7 +32,7 @@ interface DataGridActionBarProps<TData> {
   onDelete?: () => void;
 }
 
-export function DataGridActionBar<TData>({
+export function DataGridActionBar<TData extends RowData>({
   table,
   tableMeta,
   selectedCellCount,

@@ -1,5 +1,7 @@
 "use client";
 
+import type { RowData } from "@tanstack/react-table";
+
 import * as React from "react";
 
 import {
@@ -45,7 +47,7 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   return true;
 }) as typeof DataGridCellImpl;
 
-function DataGridCellImpl<TData>({
+function DataGridCellImpl<TData extends RowData>({
   cell,
   tableMeta,
   rowIndex,

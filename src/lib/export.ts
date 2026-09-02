@@ -1,7 +1,8 @@
-import type { Table } from "@tanstack/react-table";
+import type { RowData, Table } from "@tanstack/react-table";
+import type { DataTableFeatures } from "@/lib/table-features";
 
-export function exportTableToCSV<TData>(
-  table: Table<TData>,
+export function exportTableToCSV<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
   opts: {
     filename?: string;
     excludeColumns?: (keyof TData | "select" | "actions")[];

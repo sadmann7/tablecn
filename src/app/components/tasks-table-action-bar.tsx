@@ -20,10 +20,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { type Task, tasks } from "@/db/schema";
 import { exportTableToCSV } from "@/lib/export";
+import type { DataTableFeatures } from "@/lib/table-features";
 import { deleteTasks, updateTasks } from "../lib/actions";
 
 interface TasksTableActionBarProps {
-  table: Table<Task>;
+  table: Table<DataTableFeatures, Task>;
 }
 
 export function TasksTableActionBar({ table }: TasksTableActionBarProps) {

@@ -1,4 +1,5 @@
-import type { FilterFn, Row } from "@tanstack/react-table";
+import type { FilterFn, Row, RowData } from "@tanstack/react-table";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   BooleanFilterOperator,
   DateFilterOperator,
@@ -108,8 +109,15 @@ export function getOperatorsForVariant(variant: string): ReadonlyArray<{
   }
 }
 
-export function getFilterFn<TData>(): FilterFn<TData> {
-  return (row: Row<TData>, columnId: string, filterValue: unknown): boolean => {
+export function getFilterFn<TData extends RowData>(): FilterFn<
+  DataGridFeatures,
+  TData
+> {
+  return (
+    row: Row<DataGridFeatures, TData>,
+    columnId: string,
+    filterValue: unknown,
+  ): boolean => {
     if (!filterValue || typeof filterValue !== "object") {
       return true;
     }

@@ -41,7 +41,7 @@
     "@tanstack/query-db-collection": "^1.0.40",
     "@tanstack/react-db": "^0.1.86",
     "@tanstack/react-query": "^5.101.0",
-    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-table": "^9.1.2",
     "@tanstack/react-virtual": "^3.14.2",
     "@uploadthing/react": "^7.3.3",
     "@upstash/ratelimit": "^2.0.8",

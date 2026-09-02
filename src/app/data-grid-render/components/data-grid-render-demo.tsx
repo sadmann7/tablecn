@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDataGrid } from "@/hooks/use-data-grid";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import type { CellUpdate } from "@/types/data-grid";
 
@@ -82,7 +83,7 @@ export function DataGridRenderDemo() {
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
-  const columns = React.useMemo<ColumnDef<Person>[]>(
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(
     () => [
       {
         id: "select",
