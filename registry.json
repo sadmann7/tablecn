@@ -19,7 +19,9 @@
         "select",
         "separator",
         "slider",
-        "table"
+        "table",
+        "label",
+        "skeleton"
       ],
       "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
       "files": [
@@ -101,6 +103,10 @@
           "path": "src/types/data-table.ts",
           "type": "registry:file",
           "target": "src/types/data-table.ts"
+        },
+        {
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -141,6 +147,14 @@
           "path": "src/types/data-table.ts",
           "type": "registry:file",
           "target": "src/types/data-table.ts"
+        },
+        {
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -222,6 +236,15 @@
           "path": "src/types/data-table.ts",
           "type": "registry:file",
           "target": "src/types/data-table.ts"
+        },
+        {
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/components/data-table/data-table-view-options.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-view-options.tsx"
         }
       ]
     },
@@ -289,6 +312,15 @@
           "path": "src/types/data-table.ts",
           "type": "registry:file",
           "target": "src/types/data-table.ts"
+        },
+        {
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/components/data-table/data-table-view-options.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-view-options.tsx"
         }
       ]
     },
@@ -415,6 +447,10 @@
           "path": "src/types/data-grid.ts",
           "type": "registry:file",
           "target": "src/types/data-grid.ts"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -430,6 +466,15 @@
           "path": "src/components/data-grid/data-grid-select-column.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-select-column.tsx"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/types/data-grid.ts",
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -465,6 +510,15 @@
         {
           "path": "src/lib/compose-refs.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/types/data-grid.ts",
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -480,6 +534,15 @@
           "path": "src/components/data-grid/data-grid-row-height-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/types/data-grid.ts",
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -500,6 +563,15 @@
           "path": "src/components/ui/direction.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/direction.tsx"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/types/data-grid.ts",
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -575,6 +647,14 @@
           "path": "src/types/data-grid.ts",
           "type": "registry:file",
           "target": "src/types/data-grid.ts"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/hooks/use-callback-ref.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -612,6 +692,23 @@
         {
           "path": "src/hooks/use-lazy-ref.ts",
           "type": "registry:hook"
+        },
+        {
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
+        },
+        {
+          "path": "src/lib/data-grid.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/types/data-grid.ts",
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     }
