@@ -70,7 +70,7 @@ export function useDataTable<TData extends RowData>(
 ) {
   const {
     columns,
-    pageCount = -1,
+    pageCount,
     initialState,
     queryKeys,
     history = "replace",
@@ -167,9 +167,9 @@ export function useDataTable<TData extends RowData>(
     (updaterOrValue: Updater<SortingState>) => {
       if (typeof updaterOrValue === "function") {
         const newSorting = updaterOrValue(sorting);
-        setSorting(newSorting as ExtendedColumnSort<TData>[]);
+        void setSorting(newSorting as ExtendedColumnSort<TData>[]);
       } else {
-        setSorting(updaterOrValue as ExtendedColumnSort<TData>[]);
+        void setSorting(updaterOrValue as ExtendedColumnSort<TData>[]);
       }
     },
     [sorting, setSorting],

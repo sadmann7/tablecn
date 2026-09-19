@@ -56,7 +56,7 @@ export function FeatureFlagsProvider({ children }: FeatureFlagsProviderProps) {
 
   const onFilterFlagChange = React.useCallback(
     (value: FilterFlag) => {
-      setFilterFlag(value);
+      void setFilterFlag(value);
     },
     [setFilterFlag],
   );

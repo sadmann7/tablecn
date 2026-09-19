@@ -208,7 +208,7 @@ export function DataGridSortMenu<TData extends RowData>({
           aria-describedby={descriptionId}
           dir={dir}
           className={cn(
-            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]",
+            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-95",
             className,
           )}
           {...props}
@@ -233,7 +233,7 @@ export function DataGridSortMenu<TData extends RowData>({
             <SortableContent asChild>
               <div
                 role="list"
-                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
+                className="flex max-h-75 flex-col gap-2 overflow-y-auto p-1"
               >
                 {sorting.map((sort) => (
                   <DataTableSortItem

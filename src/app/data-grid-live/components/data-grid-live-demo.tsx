@@ -84,7 +84,7 @@ export function DataGridLiveDemo() {
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { data = [] } = useLiveQuery(
+  const { data } = useLiveQuery(
     (q) => {
       let query = q.from({ skater: skatersCollection });
 
@@ -575,7 +575,7 @@ export function DataGridLiveDemo() {
 
     const rowIndices = selectedRows.map((row) => row.index);
 
-    tableMeta.onRowsDelete?.(rowIndices);
+    void tableMeta.onRowsDelete?.(rowIndices);
 
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,

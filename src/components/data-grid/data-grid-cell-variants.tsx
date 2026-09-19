@@ -392,12 +392,12 @@ export function LongTextCell<TData extends RowData>({
         align="start"
         side="bottom"
         sideOffset={sideOffset}
-        className="w-[400px] rounded-none p-0"
+        className="w-100 rounded-none p-0"
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <Textarea
           placeholder="Enter text..."
-          className="max-h-[300px] min-h-[150px] resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
           ref={textareaRef}
           value={value}
           onBlur={onBlur}
@@ -771,13 +771,13 @@ export function CheckboxCell<TData extends RowData>({
   readOnly,
 }: Omit<DataGridCellProps<TData>, "isEditing">) {
   const initialValue = cell.getValue() as boolean;
-  const [value, setValue] = React.useState(Boolean(initialValue));
+  const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
-    setValue(Boolean(initialValue));
+    setValue(initialValue);
   }
 
   const onCheckedChange = React.useCallback(
@@ -1205,7 +1205,7 @@ export function MultiSelectCell<TData extends RowData>({
             data-grid-cell-editor=""
             align="start"
             sideOffset={sideOffset}
-            className="w-[300px] rounded-none p-0"
+            className="w-75 rounded-none p-0"
             onOpenAutoFocus={onOpenAutoFocus}
           >
             <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
@@ -1244,7 +1244,7 @@ export function MultiSelectCell<TData extends RowData>({
               </div>
               <CommandList className="max-h-full">
                 <CommandEmpty>No options found.</CommandEmpty>
-                <CommandGroup className="max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto">
+                <CommandGroup className="max-h-75 scroll-py-1 overflow-x-hidden overflow-y-auto">
                   {options.map((option) => {
                     const isSelected = selectedValuesSet.has(option.value);
 
@@ -1778,7 +1778,7 @@ export function FileCell<TData extends RowData>({
 
       const droppedFiles = Array.from(event.dataTransfer.files);
       if (droppedFiles.length > 0) {
-        addFiles(droppedFiles, false);
+        void addFiles(droppedFiles, false);
       }
     },
     [addFiles],
@@ -1819,7 +1819,7 @@ export function FileCell<TData extends RowData>({
       setIsDragging(false);
 
       const droppedFiles = Array.from(event.dataTransfer.files);
-      addFiles(droppedFiles, false);
+      void addFiles(droppedFiles, false);
     },
     [addFiles],
   );
@@ -1841,7 +1841,7 @@ export function FileCell<TData extends RowData>({
   const onFileInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files ?? []);
-      addFiles(selectedFiles, false);
+      void addFiles(selectedFiles, false);
       event.target.value = "";
     },
     [addFiles],
@@ -1970,7 +1970,7 @@ export function FileCell<TData extends RowData>({
             data-grid-cell-editor=""
             align="start"
             sideOffset={sideOffset}
-            className="w-[400px] rounded-none p-0"
+            className="w-100 rounded-none p-0"
             onEscapeKeyDown={onEscapeKeyDown}
             onOpenAutoFocus={onOpenAutoFocus}
           >
@@ -2040,7 +2040,7 @@ export function FileCell<TData extends RowData>({
                       Clear all
                     </Button>
                   </div>
-                  <div className="max-h-[200px] space-y-1 overflow-y-auto">
+                  <div className="max-h-50 space-y-1 overflow-y-auto">
                     {files.map((file) => {
                       const FileIcon = getFileIcon(file.type);
                       const isFileUploading = uploadingFiles.has(file.id);
@@ -2117,7 +2117,7 @@ export function FileCell<TData extends RowData>({
                 className="gap-1 px-1.5 py-px"
               >
                 {FileIcon && <FileIcon className="size-3 shrink-0" />}
-                <span className="max-w-[100px] truncate">{file.name}</span>
+                <span className="max-w-25 truncate">{file.name}</span>
               </Badge>
             );
           })}

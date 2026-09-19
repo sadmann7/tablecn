@@ -253,7 +253,7 @@ export function filterColumns<T extends Table>({
         return not(isEmpty(column));
 
       default:
-        throw new Error(`Unsupported operator: ${filter.operator}`);
+        throw new Error("Unsupported operator");
     }
   });
 

@@ -57,7 +57,7 @@ export function DataGrid<TData extends RowData>({
   onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
-  adjustLayout = false,
+  adjustLayout,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -70,7 +70,7 @@ export function DataGrid<TData extends RowData>({
 
   const onRowAdd = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      onRowAddRef.current?.(event);
+      void onRowAddRef.current?.(event);
     },
     [onRowAddRef],
   );
@@ -88,7 +88,7 @@ export function DataGrid<TData extends RowData>({
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        onRowAddRef.current();
+        void onRowAddRef.current();
       }
     },
     [onRowAddRef],
@@ -272,7 +272,7 @@ export function DataGrid<TData extends RowData>({
                 onClick={onRowAdd}
                 onKeyDown={onFooterCellKeyDown}
               >
-                <div className="sticky start-0 flex items-center gap-2 px-3 text-muted-foreground">
+                <div className="sticky inset-s-0 flex items-center gap-2 px-3 text-muted-foreground">
                   <Plus className="size-3.5" />
                   <span className="text-sm">Add row</span>
                 </div>

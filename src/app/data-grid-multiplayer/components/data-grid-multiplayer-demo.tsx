@@ -79,7 +79,7 @@ export function DataGridMultiplayerDemo({
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { data = [] } = useLiveQuery(
+  const { data } = useLiveQuery(
     (q) => {
       let query = q.from({ skater: multiplayerCollection });
       for (const sort of sorting) {
@@ -465,7 +465,7 @@ export function DataGridMultiplayerDemo({
       toast.error("No skaters selected");
       return;
     }
-    tableMeta.onRowsDelete?.(selectedRows.map((row) => row.index));
+    void tableMeta.onRowsDelete?.(selectedRows.map((row) => row.index));
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );

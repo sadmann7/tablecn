@@ -234,7 +234,7 @@ export function DataGridFilterMenu<TData extends RowData>({
           aria-describedby={descriptionId}
           dir={dir}
           className={cn(
-            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[480px]",
+            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-120",
             className,
           )}
           {...props}
@@ -259,7 +259,7 @@ export function DataGridFilterMenu<TData extends RowData>({
             <SortableContent asChild>
               <div
                 role="list"
-                className="flex max-h-[400px] flex-col gap-2 overflow-y-auto p-1"
+                className="flex max-h-100 flex-col gap-2 overflow-y-auto p-1"
               >
                 {columnFilters.map((filter, index) => (
                   <DataGridFilterItem
@@ -302,7 +302,7 @@ export function DataGridFilterMenu<TData extends RowData>({
       </Popover>
       <SortableOverlay>
         <div dir={dir} className="flex items-center gap-2">
-          <div className="h-8 min-w-[72px] rounded-sm bg-primary/10" />
+          <div className="h-8 min-w-18 rounded-sm bg-primary/10" />
           <div className="h-8 w-32 rounded-sm bg-primary/10" />
           <div className="h-8 w-32 rounded-sm bg-primary/10" />
           <div className="h-8 w-36 rounded-sm bg-primary/10" />
@@ -425,7 +425,7 @@ function DataGridFilterItem<TData extends RowData>({
         className="flex items-center gap-2"
         onKeyDown={onItemKeyDown}
       >
-        <div className="min-w-[72px] text-center">
+        <div className="min-w-18 text-center">
           {index === 0 ? (
             <span className="text-sm text-muted-foreground">Where</span>
           ) : (
@@ -931,7 +931,7 @@ function DataGridFilterInput<TData extends RowData>({
           id={inputListboxId}
           dir={dir}
           align="start"
-          className="w-[200px] p-0"
+          className="w-50 p-0"
         >
           <Command>
             <CommandInput placeholder="Search options..." />

@@ -11,6 +11,8 @@ import type {
   TextFilterOperator,
 } from "@/lib/data-grid-types";
 
+import { stringifyUnknown } from "@/lib/data-grid-utils";
+
 export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
   label: string;
   value: TextFilterOperator;
@@ -158,9 +160,8 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
       return true;
     }
 
-    const cellValueStr = String(cellValue ?? "").toLowerCase();
-    const filterValueStr =
-      typeof value === "string" ? value.toLowerCase() : String(value);
+    const cellValueStr = stringifyUnknown(cellValue).toLowerCase();
+    const filterValueStr = stringifyUnknown(value).toLowerCase();
 
     if (operator === "contains") {
       return cellValueStr.includes(filterValueStr);
@@ -254,34 +255,38 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
 
     if (operator === "is") {
       if (Array.isArray(cellValue)) {
-        return cellValue.some((v) => String(v) === String(value));
+        return cellValue.some(
+          (v) => stringifyUnknown(v) === stringifyUnknown(value),
+        );
       }
-      return String(cellValue) === String(value);
+      return stringifyUnknown(cellValue) === stringifyUnknown(value);
     }
 
     if (operator === "isNot") {
       if (Array.isArray(cellValue)) {
-        return !cellValue.some((v) => String(v) === String(value));
+        return !cellValue.some(
+          (v) => stringifyUnknown(v) === stringifyUnknown(value),
+        );
       }
-      return String(cellValue) !== String(value);
+      return stringifyUnknown(cellValue) !== stringifyUnknown(value);
     }
 
     if (operator === "isAnyOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return cellValue.some((v) =>
-          value.some((fv) => String(v) === String(fv)),
+          value.some((fv) => stringifyUnknown(v) === fv),
         );
       }
-      return value.some((fv) => String(cellValue) === String(fv));
+      return value.some((fv) => stringifyUnknown(cellValue) === fv);
     }
 
     if (operator === "isNoneOf" && Array.isArray(value)) {
       if (Array.isArray(cellValue)) {
         return !cellValue.some((v) =>
-          value.some((fv) => String(v) === String(fv)),
+          value.some((fv) => stringifyUnknown(v) === fv),
         );
       }
-      return !value.some((fv) => String(cellValue) === String(fv));
+      return !value.some((fv) => stringifyUnknown(cellValue) === fv);
     }
 
     return true;

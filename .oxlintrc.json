@@ -42,12 +42,16 @@
     "typescript/no-misused-spread": "warn",
     "typescript/no-base-to-string": "warn",
     "typescript/no-duplicate-type-constituents": "warn",
+    "no-shadow": "off",
+    "no-new": "off",
+    "no-underscore-dangle": "off",
     "react/exhaustive-deps": "off",
     "react/memo-dependencies": "off",
     "react/rules-of-hooks": "warn",
     "react/react-in-jsx-scope": "off",
     "react/no-array-index-key": "off",
     "react/no-danger": "off",
+    "react/no-unstable-nested-components": "off",
     "react/refs": "off",
     "react/set-state-in-effect": "off",
     "react/set-state-in-render": "off",
@@ -60,13 +64,18 @@
     "nextjs/no-img-element": "off",
     "nextjs/no-html-link-for-pages": "off",
     "nextjs/no-assign-module-variable": "off",
+    "import/no-named-as-default": "off",
     "import/no-unassigned-import": [
       "warn",
       {
         "allow": [
           "**/*.css",
           "@testing-library/jest-dom",
-          "@testing-library/jest-dom/**"
+          "@testing-library/jest-dom/**",
+          "@testing-library/dom",
+          "@total-typescript/ts-reset",
+          "server-only",
+          "./src/env.js"
         ]
       }
     ],

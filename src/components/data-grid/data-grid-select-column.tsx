@@ -75,7 +75,7 @@ function DataGridSelectCheckbox({
         <div
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute start-3 top-1.5 flex size-4 items-center justify-center text-xs text-muted-foreground tabular-nums transition-opacity group-hover:opacity-0",
+            "pointer-events-none absolute inset-s-3 top-1.5 flex size-4 items-center justify-center text-xs text-muted-foreground tabular-nums transition-opacity group-hover:opacity-0",
             checked && "opacity-0",
           )}
         >

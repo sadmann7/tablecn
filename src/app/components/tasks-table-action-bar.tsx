@@ -60,7 +60,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
         }
         toast.success("Tasks updated");
       }
-      update();
+      void update();
     },
     [rows],
   );
@@ -84,7 +84,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
       }
       table.toggleAllRowsSelected(false);
     }
-    remove();
+    void remove();
   }, [rows, table]);
 
   return (
