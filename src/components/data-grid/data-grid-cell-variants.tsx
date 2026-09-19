@@ -5,6 +5,9 @@ import type { RowData } from "@tanstack/react-table";
 import { Check, Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+
+import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
+
 import { DataGridCellWrapper } from "@/components/data-grid/data-grid-cell-wrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +39,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 import {
   formatDateForDisplay,
   formatDateToString,
@@ -525,7 +527,7 @@ export function NumberCell<TData extends RowData>({
           min={min}
           max={max}
           step={step}
-          className="w-full border-none bg-transparent p-0 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="w-full [appearance:textfield] border-none bg-transparent p-0 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           onBlur={onBlur}
           onChange={onChange}
         />
@@ -728,7 +730,7 @@ export function UrlCell<TData extends RowData>({
             href={urlHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 data-invalid:cursor-not-allowed data-focused:text-foreground data-invalid:text-destructive data-focused:decoration-foreground/50 data-invalid:decoration-destructive/50 data-focused:hover:decoration-foreground/70 data-invalid:hover:decoration-destructive/70"
+            className="truncate text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 data-focused:text-foreground data-focused:decoration-foreground/50 data-focused:hover:decoration-foreground/70 data-invalid:cursor-not-allowed data-invalid:text-destructive data-invalid:decoration-destructive/50 data-invalid:hover:decoration-destructive/70"
             onClick={onLinkClick}
           >
             {displayValue}
@@ -968,7 +970,7 @@ export function SelectCell<TData extends RowData>({
             {displayLabel ? (
               <Badge
                 variant="secondary"
-                className="whitespace-pre-wrap px-1.5 py-px"
+                className="px-1.5 py-px whitespace-pre-wrap"
               >
                 <SelectValue />
               </Badge>
@@ -997,7 +999,7 @@ export function SelectCell<TData extends RowData>({
         <Badge
           data-slot="grid-cell-content"
           variant="secondary"
-          className="whitespace-pre-wrap px-1.5 py-px"
+          className="px-1.5 py-px whitespace-pre-wrap"
         >
           {displayLabel}
         </Badge>
@@ -1242,7 +1244,7 @@ export function MultiSelectCell<TData extends RowData>({
               </div>
               <CommandList className="max-h-full">
                 <CommandEmpty>No options found.</CommandEmpty>
-                <CommandGroup className="max-h-[300px] scroll-py-1 overflow-y-auto overflow-x-hidden">
+                <CommandGroup className="max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto">
                   {options.map((option) => {
                     const isSelected = selectedValuesSet.has(option.value);
 
@@ -1986,7 +1988,7 @@ export function FileCell<TData extends RowData>({
                 data-invalid={error ? "" : undefined}
                 data-disabled={isPending ? "" : undefined}
                 tabIndex={isDragging || isPending ? -1 : 0}
-                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 outline-none transition-colors hover:bg-accent/30 focus-visible:border-ring/50 data-disabled:pointer-events-none data-dragging:border-primary/30 data-invalid:border-destructive data-dragging:bg-accent/30 data-disabled:opacity-50 data-invalid:ring-destructive/20"
+                className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-md border-2 border-dashed p-6 transition-colors outline-none hover:bg-accent/30 focus-visible:border-ring/50 data-dragging:border-primary/30 data-dragging:bg-accent/30 data-invalid:border-destructive data-invalid:ring-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50"
                 ref={dropzoneRef}
                 onClick={onDropzoneClick}
                 onDragEnter={onDropzoneDragEnter}
@@ -2000,11 +2002,11 @@ export function FileCell<TData extends RowData>({
                   <p className="font-medium">
                     {isDragging ? "Drop files here" : "Drag files here"}
                   </p>
-                  <p className="text-muted-foreground text-xs">
+                  <p className="text-xs text-muted-foreground">
                     or click to browse
                   </p>
                 </div>
-                <p id={descriptionId} className="text-muted-foreground text-xs">
+                <p id={descriptionId} className="text-xs text-muted-foreground">
                   {maxFileSize
                     ? `Max size: ${formatFileSize(maxFileSize)}${maxFiles ? ` • Max ${maxFiles} files` : ""}`
                     : maxFiles
@@ -2025,13 +2027,13 @@ export function FileCell<TData extends RowData>({
               {files.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-muted-foreground text-xs">
+                    <p className="text-xs font-medium text-muted-foreground">
                       {files.length} {files.length === 1 ? "file" : "files"}
                     </p>
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-6 text-muted-foreground text-xs"
+                      className="h-6 text-xs text-muted-foreground"
                       onClick={clearAll}
                       disabled={isPending}
                     >
@@ -2056,7 +2058,7 @@ export function FileCell<TData extends RowData>({
                           )}
                           <div className="flex-1 overflow-hidden">
                             <p className="truncate text-sm">{file.name}</p>
-                            <p className="text-muted-foreground text-xs">
+                            <p className="text-xs text-muted-foreground">
                               {isFileUploading
                                 ? "Uploading..."
                                 : isFileDeleting
@@ -2085,7 +2087,7 @@ export function FileCell<TData extends RowData>({
         </Popover>
       ) : null}
       {isDraggingOver ? (
-        <div className="flex items-center justify-center gap-2 text-primary text-sm">
+        <div className="flex items-center justify-center gap-2 text-sm text-primary">
           <Upload className="size-4" />
           <span>Drop files here</span>
         </div>

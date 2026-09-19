@@ -1,9 +1,11 @@
 "use client";
 
-import { ADJECTIVES, ANIMALS, COLORS } from "@party/constants";
 import type { RowPayload, ServerMessage, UserPresence } from "@party/types";
+
+import { ADJECTIVES, ANIMALS, COLORS } from "@party/constants";
 import PartySocket from "partysocket";
 import * as React from "react";
+
 import { skaterSchema } from "@/app/data-grid-live/lib/validation";
 import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
 import { env } from "@/env";

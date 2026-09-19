@@ -12,14 +12,14 @@ export function MobileNav() {
         <SheetClose key={navLink.href} asChild>
           <ActiveLink
             href={navLink.href}
-            className="h-auto w-full justify-start px-0 py-2 font-normal text-base hover:bg-transparent dark:hover:bg-transparent"
+            className="h-auto w-full justify-start px-0 py-2 text-base font-normal hover:bg-transparent dark:hover:bg-transparent"
           >
             {navLink.label}
           </ActiveLink>
         </SheetClose>
       ))}
       <SheetClose asChild>
-        <DocsLink className="h-auto w-full justify-start px-0 py-2 font-normal text-base hover:bg-transparent dark:hover:bg-transparent" />
+        <DocsLink className="h-auto w-full justify-start px-0 py-2 text-base font-normal hover:bg-transparent dark:hover:bg-transparent" />
       </SheetClose>
     </nav>
   );

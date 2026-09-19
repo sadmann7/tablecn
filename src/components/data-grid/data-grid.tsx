@@ -1,16 +1,19 @@
 "use client";
 
 import type { RowData } from "@tanstack/react-table";
+
 import { Plus } from "lucide-react";
 import * as React from "react";
+
+import type { useDataGrid } from "@/hooks/use-data-grid";
+import type { Direction } from "@/lib/data-grid-types";
+
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-menu";
 import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import { useAsRef } from "@/hooks/use-as-ref";
-import type { useDataGrid } from "@/hooks/use-data-grid";
-import type { Direction } from "@/lib/data-grid-types";
 import {
   flexRender,
   getColumnBorderVisibility,
@@ -21,7 +24,8 @@ import { cn } from "@/lib/utils";
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 
 interface DataGridProps<TData extends RowData>
-  extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
+  extends
+    Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
   dir?: Direction;
   height?: number;
@@ -112,7 +116,7 @@ export function DataGrid<TData extends RowData>({
         data-slot="grid"
         tabIndex={0}
         ref={dataGridRef}
-        className="relative grid select-none overflow-auto rounded-md border focus:outline-none"
+        className="relative grid overflow-auto rounded-md border select-none focus:outline-none"
         style={{
           ...columnSizeVars,
           maxHeight: `${height}px`,

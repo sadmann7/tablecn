@@ -1,10 +1,14 @@
 "use client";
 
-import { useLiveQuery } from "@tanstack/react-db";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
+
+import { useLiveQuery } from "@tanstack/react-db";
 import * as React from "react";
 import { use } from "react";
 import { toast } from "sonner";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+
 import {
   getSkaterStatusIcon,
   getStanceIcon,
@@ -24,12 +28,13 @@ import {
   useDataGridUndoRedo,
 } from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import { useUploadThing } from "@/lib/uploadthing";
-import { skatersCollection } from "../lib/collections";
+
 import type { SkaterSchema } from "../lib/validation";
+
+import { skatersCollection } from "../lib/collections";
 import { DataGridActionBar } from "./data-grid-action-bar";
 
 const TRICKS = [

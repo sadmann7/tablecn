@@ -1,5 +1,6 @@
 import { LayoutGrid, Menu } from "lucide-react";
 import Link from "next/link";
+
 import { ActiveLink } from "@/components/active-link";
 import { Icons } from "@/components/icons";
 import { DocsLink } from "@/components/layouts/docs-link";
@@ -17,7 +18,7 @@ import { siteConfig } from "@/config/site";
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 w-full border-border/40 border-b bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
       <div className="container flex h-14 items-center gap-2">
         <Sheet>
           <SheetTrigger asChild>

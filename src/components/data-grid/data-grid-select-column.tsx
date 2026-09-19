@@ -6,9 +6,12 @@ import type {
   HeaderContext,
   RowData,
 } from "@tanstack/react-table";
+
 import * as React from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 type HitboxSize = "default" | "sm" | "lg";
@@ -40,15 +43,17 @@ function DataGridSelectHitbox({
         htmlFor={htmlFor}
         className={cn(
           "absolute inset-0 cursor-pointer",
-          debug && "border border-red-500 border-dashed bg-red-500/20",
+          debug && "border border-dashed border-red-500 bg-red-500/20",
         )}
       />
     </div>
   );
 }
 
-interface DataGridSelectCheckboxProps
-  extends Omit<React.ComponentProps<typeof Checkbox>, "id"> {
+interface DataGridSelectCheckboxProps extends Omit<
+  React.ComponentProps<typeof Checkbox>,
+  "id"
+> {
   rowNumber?: number;
   hitboxSize?: HitboxSize;
   debug?: boolean;
@@ -70,7 +75,7 @@ function DataGridSelectCheckbox({
         <div
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute start-3 top-1.5 flex size-4 items-center justify-center text-muted-foreground text-xs tabular-nums transition-opacity group-hover:opacity-0",
+            "pointer-events-none absolute start-3 top-1.5 flex size-4 items-center justify-center text-xs text-muted-foreground tabular-nums transition-opacity group-hover:opacity-0",
             checked && "opacity-0",
           )}
         >
@@ -105,8 +110,10 @@ function DataGridSelectCheckbox({
   );
 }
 
-interface DataGridSelectHeaderProps<TData extends RowData>
-  extends Pick<HeaderContext<DataGridFeatures, TData, unknown>, "table"> {
+interface DataGridSelectHeaderProps<TData extends RowData> extends Pick<
+  HeaderContext<DataGridFeatures, TData>,
+  "table"
+> {
   hitboxSize?: HitboxSize;
   readOnly?: boolean;
   debug?: boolean;
@@ -125,7 +132,7 @@ function DataGridSelectHeader<TData extends RowData>({
 
   if (readOnly) {
     return (
-      <div className="mt-1 flex items-center ps-1 text-muted-foreground text-sm">
+      <div className="mt-1 flex items-center ps-1 text-sm text-muted-foreground">
         #
       </div>
     );
@@ -145,8 +152,10 @@ function DataGridSelectHeader<TData extends RowData>({
   );
 }
 
-interface DataGridSelectCellProps<TData extends RowData>
-  extends Pick<CellContext<DataGridFeatures, TData, unknown>, "row" | "table"> {
+interface DataGridSelectCellProps<TData extends RowData> extends Pick<
+  CellContext<DataGridFeatures, TData>,
+  "row" | "table"
+> {
   hitboxSize?: HitboxSize;
   enableRowMarkers?: boolean;
   readOnly?: boolean;
@@ -189,7 +198,7 @@ function DataGridSelectCell<TData extends RowData>({
 
   if (readOnly) {
     return (
-      <div className="flex items-center ps-1 text-muted-foreground text-xs tabular-nums">
+      <div className="flex items-center ps-1 text-xs text-muted-foreground tabular-nums">
         {rowNumber ?? row.index + 1}
       </div>
     );
@@ -208,11 +217,10 @@ function DataGridSelectCell<TData extends RowData>({
   );
 }
 
-interface GetDataGridSelectColumnOptions<TData extends RowData>
-  extends Omit<
-    Partial<ColumnDef<DataGridFeatures, TData>>,
-    "id" | "header" | "cell"
-  > {
+interface GetDataGridSelectColumnOptions<TData extends RowData> extends Omit<
+  Partial<ColumnDef<DataGridFeatures, TData>>,
+  "id" | "header" | "cell"
+> {
   enableRowMarkers?: boolean;
   readOnly?: boolean;
   hitboxSize?: HitboxSize;

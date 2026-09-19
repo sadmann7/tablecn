@@ -1,6 +1,8 @@
 import { faker } from "@faker-js/faker";
-import { STANCES, STATUSES, STYLES, TRICKS } from "./constants";
+
 import type { RowPayload } from "./types";
+
+import { STANCES, STATUSES, STYLES, TRICKS } from "./constants";
 
 function generateSeedRow(order: number): RowPayload {
   const firstName = faker.person.firstName();

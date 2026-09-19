@@ -13,15 +13,7 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
-import { useDirection } from "@/components/ui/direction";
 
-import { useAsRef } from "@/hooks/use-as-ref";
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
-import { useLazyRef } from "@/hooks/use-lazy-ref";
-import {
-  type DataGridFeatures,
-  dataGridFeatures,
-} from "@/lib/data-grid-features";
 import type {
   CellPosition,
   CellUpdate,
@@ -35,6 +27,15 @@ import type {
   SearchState,
   SelectionState,
 } from "@/lib/data-grid-types";
+
+import { useDirection } from "@/components/ui/direction";
+import { useAsRef } from "@/hooks/use-as-ref";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { useLazyRef } from "@/hooks/use-lazy-ref";
+import {
+  type DataGridFeatures,
+  dataGridFeatures,
+} from "@/lib/data-grid-features";
 import {
   getCellKey,
   getEmptyCellValue,
@@ -130,8 +131,10 @@ function useStore<T>(
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
-interface UseDataGridProps<TData extends RowData>
-  extends Omit<TableOptions<DataGridFeatures, TData>, "features"> {
+interface UseDataGridProps<TData extends RowData> extends Omit<
+  TableOptions<DataGridFeatures, TData>,
+  "features"
+> {
   onDataChange?: (data: TData[]) => void;
   onRowAdd?: (
     event?: React.MouseEvent<HTMLDivElement>,
@@ -2298,7 +2301,6 @@ function useDataGrid<TData extends RowData>({
     tableRef.current = table;
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnResizing and columnSizing are used for calculating the column size vars
   const columnSizeVars = React.useMemo(() => {
     const headers = table.getFlatHeaders();
     const colSizes: { [key: string]: number } = {};

@@ -7,8 +7,10 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
-import { pgTable } from "@/db/utils";
+
 import type { FileCellData } from "@/lib/data-grid-types";
+
+import { pgTable } from "@/db/utils";
 import { generateId } from "@/lib/id";
 
 // For data-table

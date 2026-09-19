@@ -1,4 +1,5 @@
 import { z } from "zod";
+
 import { skaters } from "@/db/schema";
 
 const mediaSchema = z.object({

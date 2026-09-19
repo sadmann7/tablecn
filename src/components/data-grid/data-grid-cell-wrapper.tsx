@@ -3,15 +3,16 @@
 import type { RowData } from "@tanstack/react-table";
 
 import * as React from "react";
+
+import type { DataGridCellProps } from "@/lib/data-grid-types";
+
 import { useDataGridPresence } from "@/components/data-grid/data-grid-presence";
 import { useComposedRefs } from "@/lib/compose-refs";
-import type { DataGridCellProps } from "@/lib/data-grid-types";
 import { getCellKey } from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
 
 interface DataGridCellWrapperProps<TData extends RowData>
-  extends DataGridCellProps<TData>,
-    React.ComponentProps<"div"> {}
+  extends DataGridCellProps<TData>, React.ComponentProps<"div"> {}
 
 export function DataGridCellWrapper<TData extends RowData>({
   tableMeta,

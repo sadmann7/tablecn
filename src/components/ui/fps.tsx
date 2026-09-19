@@ -3,10 +3,11 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
+
 import { cn } from "@/lib/utils";
 
 const fpsVariants = cva(
-  "z-50 flex shrink-0 items-center gap-2 rounded-sm border bg-background/80 px-3 py-1.5 font-mono text-foreground text-sm backdrop-blur-sm",
+  "z-50 flex shrink-0 items-center gap-2 rounded-sm border bg-background/80 px-3 py-1.5 font-mono text-sm text-foreground backdrop-blur-sm",
   {
     variants: {
       strategy: {
@@ -34,7 +35,8 @@ const fpsVariants = cva(
 );
 
 interface FpsProps
-  extends React.ComponentProps<"div">,
+  extends
+    React.ComponentProps<"div">,
     Omit<VariantProps<typeof fpsVariants>, "status"> {
   label?: string;
   updateInterval?: number;

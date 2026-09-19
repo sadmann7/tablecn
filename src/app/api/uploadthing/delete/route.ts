@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { UTApi } from "uploadthing/server";
+
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 const utapi = new UTApi();

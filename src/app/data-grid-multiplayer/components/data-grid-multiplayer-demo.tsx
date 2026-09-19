@@ -1,12 +1,16 @@
 "use client";
 
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
+
 import { TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import * as React from "react";
 import { toast } from "sonner";
-import { DataGridActionBar } from "@/app/data-grid-live/components/data-grid-action-bar";
+
 import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+
+import { DataGridActionBar } from "@/app/data-grid-live/components/data-grid-action-bar";
 import {
   getSkaterStatusIcon,
   getStanceIcon,
@@ -32,10 +36,10 @@ import {
 } from "@/hooks/use-data-grid-undo-redo";
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { getCellKey } from "@/lib/data-grid-utils";
 import { generateId } from "@/lib/id";
+
 import {
   multiplayerCollection,
   serializeSkater,
@@ -495,7 +499,6 @@ export function DataGridMultiplayerDemo({
   const height = Math.max(400, windowSize.height - 200);
   const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: data is a proxy for row-order changes
   const remoteCells = React.useMemo(() => {
     const map = new Map<string, DataGridCellPresence>();
     const rows = table.getRowModel().rows;

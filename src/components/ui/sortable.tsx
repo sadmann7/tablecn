@@ -39,6 +39,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Slot as SlotPrimitive } from "radix-ui";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
+
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
 
@@ -455,7 +456,7 @@ function SortableItem(props: SortableItemProps) {
         ref={composedRef}
         style={composedStyle}
         className={cn(
-          "focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1",
+          "focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-hidden",
           {
             "touch-none select-none": asHandle,
             "cursor-default": context.flatCursor,
@@ -525,8 +526,10 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-interface SortableOverlayProps
-  extends Omit<React.ComponentProps<typeof DragOverlay>, "children"> {
+interface SortableOverlayProps extends Omit<
+  React.ComponentProps<typeof DragOverlay>,
+  "children"
+> {
   container?: Element | DocumentFragment | null;
   children?:
     | ((params: { value: UniqueIdentifier }) => React.ReactNode)

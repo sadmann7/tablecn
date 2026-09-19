@@ -3,14 +3,16 @@
 // Each room seeds from party/seeds.ts on first use and stores mutations from there.
 
 import type * as Party from "partykit/server";
-import { ADJECTIVES, ANIMALS, COLORS } from "./constants";
-import { seedRows } from "./seeds";
+
 import type {
   ClientMessage,
   RowPayload,
   ServerMessage,
   UserPresence,
 } from "./types";
+
+import { ADJECTIVES, ANIMALS, COLORS } from "./constants";
+import { seedRows } from "./seeds";
 
 interface RoomState {
   users: Record<string, UserPresence>;

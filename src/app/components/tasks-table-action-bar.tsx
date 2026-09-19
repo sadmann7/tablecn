@@ -1,9 +1,13 @@
 "use client";
 
 import type { Table } from "@tanstack/react-table";
+
 import { ArrowUp, CheckCircle2, Download, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+
+import type { DataTableFeatures } from "@/lib/table-features";
+
 import {
   ActionBar,
   ActionBarClose,
@@ -20,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { type Task, tasks } from "@/db/schema";
 import { exportTableToCSV } from "@/lib/export";
-import type { DataTableFeatures } from "@/lib/table-features";
+
 import { deleteTasks, updateTasks } from "../lib/actions";
 
 interface TasksTableActionBarProps {

@@ -6,6 +6,7 @@ import type {
   SortDirection,
   Table,
 } from "@tanstack/react-table";
+
 import {
   ArrowDownUp,
   ChevronsUpDown,
@@ -13,6 +14,9 @@ import {
   Trash2,
 } from "lucide-react";
 import * as React from "react";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +48,6 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/components/ui/sortable";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { cn } from "@/lib/utils";
 
 const SORT_SHORTCUT_KEY = "s";
@@ -54,8 +57,9 @@ const SORT_ORDERS = [
   { label: "Desc", value: "desc" },
 ];
 
-interface DataGridSortMenuProps<TData extends RowData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataGridSortMenuProps<
+  TData extends RowData,
+> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataGridFeatures, TData>;
   disabled?: boolean;
 }
@@ -192,7 +196,7 @@ export function DataGridSortMenu<TData extends RowData>({
             {sorting.length > 0 && (
               <Badge
                 variant="secondary"
-                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
+                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono text-[10.4px] font-normal"
               >
                 {sorting.length}
               </Badge>
@@ -210,13 +214,13 @@ export function DataGridSortMenu<TData extends RowData>({
           {...props}
         >
           <div className="flex flex-col gap-1">
-            <h4 id={labelId} className="font-medium leading-none">
+            <h4 id={labelId} className="leading-none font-medium">
               {sorting.length > 0 ? "Sort by" : "No sorting applied"}
             </h4>
             <p
               id={descriptionId}
               className={cn(
-                "text-muted-foreground text-sm",
+                "text-sm text-muted-foreground",
                 sorting.length > 0 && "sr-only",
               )}
             >

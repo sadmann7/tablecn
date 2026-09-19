@@ -1,4 +1,5 @@
 import type { Cell, RowData } from "@tanstack/react-table";
+
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 export type Direction = "ltr" | "rtl";
@@ -184,7 +185,7 @@ export interface SearchState {
 }
 
 export interface DataGridCellProps<TData extends RowData> {
-  cell: Cell<DataGridFeatures, TData, unknown>;
+  cell: Cell<DataGridFeatures, TData>;
   tableMeta: DataGridTableMeta;
   rowIndex: number;
   columnId: string;

@@ -1,19 +1,18 @@
+import type { Metadata, Viewport } from "next";
+
+import { Inter } from "next/font/google";
+import Script from "next/script";
 import { Suspense } from "react";
 
 import { SiteHeader } from "@/components/layouts/site-header";
 import { ThemeProvider } from "@/components/providers";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
+import "@/styles/globals.css";
+import { Toaster } from "@/components/ui/sonner";
 import { UploadThingSSR } from "@/components/uploadthing-ssr";
 import { siteConfig } from "@/config/site";
-import { cn } from "@/lib/utils";
-
-import "@/styles/globals.css";
-
-import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
-import Script from "next/script";
-import { Toaster } from "@/components/ui/sonner";
 import { fontMono, fontSans } from "@/lib/fonts";
+import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 

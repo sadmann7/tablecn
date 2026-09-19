@@ -2,6 +2,7 @@
 
 import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -423,10 +424,10 @@ function DataGridKeyboardShortcutsImpl({
                 <SearchIcon className="pointer-events-none size-6" />
               </div>
               <div className="flex flex-col gap-1">
-                <div className="font-medium text-lg tracking-tight">
+                <div className="text-lg font-medium tracking-tight">
                   No shortcuts found
                 </div>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-muted-foreground">
                   Try searching for a different term.
                 </p>
               </div>
@@ -435,7 +436,7 @@ function DataGridKeyboardShortcutsImpl({
             <div className="flex flex-col gap-6">
               {filteredGroups.map((shortcutGroup) => (
                 <div key={shortcutGroup.title} className="flex flex-col gap-2">
-                  <h3 className="font-semibold text-foreground text-sm">
+                  <h3 className="text-sm font-semibold text-foreground">
                     {shortcutGroup.title}
                   </h3>
                   <div className="divide-y divide-border rounded-md border">
@@ -468,7 +469,7 @@ function ShortcutCard({
         {keys.map((key, index) => (
           <React.Fragment key={key}>
             {index > 0 && (
-              <span className="text-muted-foreground text-xs">+</span>
+              <span className="text-xs text-muted-foreground">+</span>
             )}
             <Kbd>{key}</Kbd>
           </React.Fragment>

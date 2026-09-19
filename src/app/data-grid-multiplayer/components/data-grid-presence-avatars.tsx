@@ -1,6 +1,7 @@
 "use client";
 
 import type { UserPresence } from "@party/types";
+
 import {
   Tooltip,
   TooltipContent,
@@ -40,7 +41,7 @@ export function DataGridPresenceAvatars({
                 <button
                   type="button"
                   className={cn(
-                    "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-background font-semibold text-[10px] text-white transition-transform hover:z-10 hover:scale-110",
+                    "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-background text-[10px] font-semibold text-white transition-transform hover:z-10 hover:scale-110",
                     i > 0 && "-ml-2",
                     userId === currentUserId || !user.activeCell.rowId
                       ? "cursor-default"
@@ -64,7 +65,7 @@ export function DataGridPresenceAvatars({
             </Tooltip>
           ))}
           {userList.length > 6 && (
-            <div className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted font-semibold text-[10px] text-muted-foreground">
+            <div className="-ml-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-semibold text-muted-foreground">
               +{userList.length - 6}
             </div>
           )}

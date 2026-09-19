@@ -1,4 +1,6 @@
 import type { Column, RowData, Table } from "@tanstack/react-table";
+import type * as React from "react";
+
 import {
   BaselineIcon,
   CalendarIcon,
@@ -18,7 +20,7 @@ import {
   Presentation,
   TextInitialIcon,
 } from "lucide-react";
-import type * as React from "react";
+
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellOpts,

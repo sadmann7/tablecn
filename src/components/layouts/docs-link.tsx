@@ -1,6 +1,7 @@
 "use client";
 
 import { useSelectedLayoutSegment } from "next/navigation";
+
 import { ActiveLink } from "@/components/active-link";
 
 export function DocsLink({

@@ -3,12 +3,14 @@
 import type { RowData, Table } from "@tanstack/react-table";
 import type * as React from "react";
 
-import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import type { DataTableFeatures } from "@/lib/table-features";
+
+import { DataTableViewOptions } from "@/components/data-table/data-table-view-options";
 import { cn } from "@/lib/utils";
 
-interface DataTableAdvancedToolbarProps<TData extends RowData>
-  extends React.ComponentProps<"div"> {
+interface DataTableAdvancedToolbarProps<
+  TData extends RowData,
+> extends React.ComponentProps<"div"> {
   table: Table<DataTableFeatures, TData>;
 }
 
