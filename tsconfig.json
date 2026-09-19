@@ -26,34 +26,6 @@
     "incremental": true,
     /* Path Aliases */
     "paths": {
-      "@/hooks/use-as-ref": ["./src/registry/hooks/use-as-ref.ts"],
-      "@/hooks/use-badge-overflow": [
-        "./src/registry/hooks/use-badge-overflow.ts"
-      ],
-      "@/hooks/use-callback-ref": ["./src/registry/hooks/use-callback-ref.ts"],
-      "@/hooks/use-data-grid-undo-redo": [
-        "./src/registry/hooks/use-data-grid-undo-redo.ts"
-      ],
-      "@/hooks/use-data-grid": ["./src/registry/hooks/use-data-grid.ts"],
-      "@/hooks/use-data-table": ["./src/registry/hooks/use-data-table.ts"],
-      "@/hooks/use-debounced-callback": [
-        "./src/registry/hooks/use-debounced-callback.ts"
-      ],
-      "@/hooks/use-isomorphic-layout-effect": [
-        "./src/registry/hooks/use-isomorphic-layout-effect.ts"
-      ],
-      "@/hooks/use-lazy-ref": ["./src/registry/hooks/use-lazy-ref.ts"],
-      "@/lib/compose-refs": ["./src/registry/lib/compose-refs.ts"],
-      "@/lib/data-grid-features": ["./src/registry/lib/data-grid-features.ts"],
-      "@/lib/data-grid-filters": ["./src/registry/lib/data-grid-filters.ts"],
-      "@/lib/data-grid-types": ["./src/registry/lib/data-grid-types.ts"],
-      "@/lib/data-grid-utils": ["./src/registry/lib/data-grid-utils.ts"],
-      "@/lib/data-table-types": ["./src/registry/lib/data-table-types.ts"],
-      "@/lib/data-table-utils": ["./src/registry/lib/data-table-utils.ts"],
-      "@/lib/format": ["./src/registry/lib/format.ts"],
-      "@/lib/id": ["./src/registry/lib/id.ts"],
-      "@/lib/parsers": ["./src/registry/lib/parsers.ts"],
-      "@/lib/table-features": ["./src/registry/lib/table-features.ts"],
       "@/*": ["./src/*"],
       "@party/*": ["./party/*"]
     }

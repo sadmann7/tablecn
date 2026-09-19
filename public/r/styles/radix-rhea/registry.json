@@ -75,44 +75,32 @@
           "target": "src/components/data-table/data-table-skeleton.tsx"
         },
         {
-          "path": "src/registry/hooks/use-callback-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-callback-ref.ts"
+          "path": "src/hooks/use-data-table.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-data-table.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-data-table.ts"
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-debounced-callback.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-debounced-callback.ts"
+          "path": "src/lib/data-table-utils.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-utils.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-utils.ts"
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/format.ts",
-          "type": "registry:lib",
-          "target": "src/lib/format.ts"
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/parsers.ts",
-          "type": "registry:lib",
-          "target": "src/lib/parsers.ts"
+          "path": "src/lib/data-table-types.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-types.ts"
-        },
-        {
-          "path": "src/registry/lib/table-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/table-features.ts"
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -144,34 +132,28 @@
           "target": "src/components/ui/sortable.tsx"
         },
         {
-          "path": "src/registry/lib/compose-refs.ts",
-          "type": "registry:lib",
-          "target": "src/lib/compose-refs.ts"
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-utils.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-utils.ts"
+          "path": "src/lib/data-table-utils.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-types.ts"
+          "path": "src/lib/data-table-types.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/table-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/table-features.ts"
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/parsers.ts",
-          "type": "registry:lib",
-          "target": "src/lib/parsers.ts"
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-isomorphic-layout-effect.ts"
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -221,49 +203,36 @@
           "target": "src/components/ui/faceted.tsx"
         },
         {
-          "path": "src/registry/hooks/use-callback-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-callback-ref.ts"
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-debounced-callback.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-debounced-callback.ts"
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/compose-refs.ts",
-          "type": "registry:lib",
-          "target": "src/lib/compose-refs.ts"
+          "path": "src/lib/data-table-utils.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-utils.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-utils.ts"
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/format.ts",
-          "type": "registry:lib",
-          "target": "src/lib/format.ts"
+          "path": "src/lib/id.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/id.ts",
-          "type": "registry:lib",
-          "target": "src/lib/id.ts"
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/parsers.ts",
-          "type": "registry:lib",
-          "target": "src/lib/parsers.ts"
+          "path": "src/lib/data-table-types.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-types.ts"
-        },
-        {
-          "path": "src/registry/lib/table-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/table-features.ts"
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
         },
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
@@ -271,9 +240,8 @@
           "target": "src/components/data-table/data-table-view-options.tsx"
         },
         {
-          "path": "src/registry/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-isomorphic-layout-effect.ts"
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -313,44 +281,32 @@
           "target": "src/components/data-table/data-table-advanced-toolbar.tsx"
         },
         {
-          "path": "src/registry/hooks/use-callback-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-callback-ref.ts"
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-debounced-callback.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-debounced-callback.ts"
+          "path": "src/lib/data-table-utils.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-utils.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-utils.ts"
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/format.ts",
-          "type": "registry:lib",
-          "target": "src/lib/format.ts"
+          "path": "src/lib/id.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/id.ts",
-          "type": "registry:lib",
-          "target": "src/lib/id.ts"
+          "path": "src/lib/parsers.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/parsers.ts",
-          "type": "registry:lib",
-          "target": "src/lib/parsers.ts"
+          "path": "src/lib/data-table-types.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-table-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-table-types.ts"
-        },
-        {
-          "path": "src/registry/lib/table-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/table-features.ts"
+          "path": "src/lib/table-features.ts",
+          "type": "registry:lib"
         },
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
@@ -443,59 +399,44 @@
           "target": "src/components/ui/direction.tsx"
         },
         {
-          "path": "src/registry/hooks/use-as-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-as-ref.ts"
+          "path": "src/hooks/use-as-ref.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-badge-overflow.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-badge-overflow.ts"
+          "path": "src/hooks/use-badge-overflow.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-callback-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-callback-ref.ts"
+          "path": "src/hooks/use-data-grid.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-data-grid.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-data-grid.ts"
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-debounced-callback.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-debounced-callback.ts"
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-isomorphic-layout-effect.ts"
+          "path": "src/hooks/use-lazy-ref.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-lazy-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-lazy-ref.ts"
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/compose-refs.ts",
-          "type": "registry:lib",
-          "target": "src/lib/compose-refs.ts"
+          "path": "src/lib/data-grid-utils.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-utils.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-utils.ts"
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-types.ts"
-        },
-        {
-          "path": "src/registry/lib/data-grid-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-features.ts"
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -517,14 +458,12 @@
           "target": "src/components/data-grid/data-grid-select-column.tsx"
         },
         {
-          "path": "src/registry/lib/data-grid-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-features.ts"
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-types.ts"
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -561,24 +500,20 @@
           "target": "src/components/ui/sortable.tsx"
         },
         {
-          "path": "src/registry/lib/compose-refs.ts",
-          "type": "registry:lib",
-          "target": "src/lib/compose-refs.ts"
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-features.ts"
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-types.ts"
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-isomorphic-layout-effect.ts"
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -601,14 +536,12 @@
           "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
         },
         {
-          "path": "src/registry/lib/data-grid-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-features.ts"
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-types.ts"
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -638,14 +571,12 @@
           "target": "src/components/ui/direction.tsx"
         },
         {
-          "path": "src/registry/lib/data-grid-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-features.ts"
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-types.ts"
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -712,44 +643,32 @@
           "target": "src/components/ui/sortable.tsx"
         },
         {
-          "path": "src/registry/hooks/use-debounced-callback.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-debounced-callback.ts"
+          "path": "src/hooks/use-debounced-callback.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/lib/compose-refs.ts",
-          "type": "registry:lib",
-          "target": "src/lib/compose-refs.ts"
+          "path": "src/lib/compose-refs.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-filters.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-filters.ts"
+          "path": "src/lib/data-grid-filters.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/format.ts",
-          "type": "registry:lib",
-          "target": "src/lib/format.ts"
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-types.ts"
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-features.ts"
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/hooks/use-callback-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-callback-ref.ts"
-        },
-        {
-          "path": "src/registry/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-isomorphic-layout-effect.ts"
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -781,39 +700,32 @@
       ],
       "files": [
         {
-          "path": "src/registry/hooks/use-data-grid-undo-redo.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-data-grid-undo-redo.ts"
+          "path": "src/hooks/use-data-grid-undo-redo.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-as-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-as-ref.ts"
+          "path": "src/hooks/use-as-ref.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-lazy-ref.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-lazy-ref.ts"
+          "path": "src/hooks/use-lazy-ref.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook",
-          "target": "src/hooks/use-isomorphic-layout-effect.ts"
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         },
         {
-          "path": "src/registry/lib/data-grid-utils.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-utils.ts"
+          "path": "src/lib/data-grid-utils.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-features.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-features.ts"
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
         },
         {
-          "path": "src/registry/lib/data-grid-types.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-types.ts"
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
         }
       ]
     }
