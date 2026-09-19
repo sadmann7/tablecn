@@ -11,8 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAsRef } from "@/hooks/use-as-ref";
+import type {
+  DataGridTableMeta,
+  PasteDialogState,
+} from "@/lib/data-grid-types";
 import { cn } from "@/lib/utils";
-import type { DataGridTableMeta, PasteDialogState } from "@/types/data-grid";
 
 interface DataGridPasteDialogProps {
   tableMeta: DataGridTableMeta;

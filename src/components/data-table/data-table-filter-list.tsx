@@ -56,23 +56,23 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/components/ui/sortable";
-import { dataTableConfig } from "@/config/data-table";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import {
-  getDefaultFilterOperator,
-  getFilterOperators,
-} from "@/lib/data-table-helpers";
-import { formatDate } from "@/lib/format";
-import { generateId } from "@/lib/id";
-import { getFiltersStateParser } from "@/lib/parsers";
-import type { DataTableFeatures } from "@/lib/table-features";
-import { cn } from "@/lib/utils";
 import type {
   DataTableColumnMeta,
   ExtendedColumnFilter,
   FilterOperator,
   JoinOperator,
-} from "@/types/data-table";
+} from "@/lib/data-table-types";
+import {
+  dataTableConfig,
+  getDefaultFilterOperator,
+  getFilterOperators,
+} from "@/lib/data-table-utils";
+import { formatDate } from "@/lib/format";
+import { generateId } from "@/lib/id";
+import { getFiltersStateParser } from "@/lib/parsers";
+import type { DataTableFeatures } from "@/lib/table-features";
+import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;

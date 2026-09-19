@@ -21,9 +21,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import type { Option } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
-import type { Option } from "@/types/data-table";
 
 interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
   column?: Column<DataTableFeatures, TData, TValue>;

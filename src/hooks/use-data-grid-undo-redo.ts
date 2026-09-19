@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
-import { getIsInPopover } from "@/lib/data-grid-helpers";
+import { getIsInPopover } from "@/lib/data-grid-utils";
 
 const DEFAULT_MAX_HISTORY = 100;
 const BATCH_TIMEOUT = 300;

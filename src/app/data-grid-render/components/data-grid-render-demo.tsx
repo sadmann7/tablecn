@@ -19,7 +19,7 @@ import {
 import { useDataGrid } from "@/hooks/use-data-grid";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { CellUpdate } from "@/types/data-grid";
+import type { CellUpdate } from "@/lib/data-grid-types";
 
 interface Person {
   id: string;

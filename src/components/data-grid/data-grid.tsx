@@ -10,13 +10,13 @@ import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import { useAsRef } from "@/hooks/use-as-ref";
 import type { useDataGrid } from "@/hooks/use-data-grid";
+import type { Direction } from "@/lib/data-grid-types";
 import {
   flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
-} from "@/lib/data-grid-helpers";
+} from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
-import type { Direction } from "@/types/data-grid";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 

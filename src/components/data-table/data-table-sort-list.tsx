@@ -44,7 +44,7 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/components/ui/sortable";
-import { dataTableConfig } from "@/config/data-table";
+import { dataTableConfig } from "@/lib/data-table-utils";
 import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
 

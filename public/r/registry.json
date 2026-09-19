@@ -83,7 +83,7 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/lib/data-table-helpers.ts",
+          "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
         {
@@ -95,11 +95,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/config/data-table.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/types/data-table.ts",
+          "path": "src/lib/data-table-types.ts",
           "type": "registry:lib"
         },
         {
@@ -137,11 +133,11 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/config/data-table.ts",
+          "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-table.ts",
+          "path": "src/lib/data-table-types.ts",
           "type": "registry:lib"
         },
         {
@@ -208,7 +204,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/data-table-helpers.ts",
+          "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
         {
@@ -224,11 +220,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/config/data-table.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/types/data-table.ts",
+          "path": "src/lib/data-table-types.ts",
           "type": "registry:lib"
         },
         {
@@ -282,7 +274,7 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/lib/data-table-helpers.ts",
+          "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
         {
@@ -298,11 +290,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/config/data-table.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/types/data-table.ts",
+          "path": "src/lib/data-table-types.ts",
           "type": "registry:lib"
         },
         {
@@ -432,11 +420,11 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/data-grid-helpers.ts",
+          "path": "src/lib/data-grid-utils.ts",
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-grid.ts",
+          "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
         },
         {
@@ -463,7 +451,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-grid.ts",
+          "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
         }
       ]
@@ -506,7 +494,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-grid.ts",
+          "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
         }
       ]
@@ -529,7 +517,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-grid.ts",
+          "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
         }
       ]
@@ -557,7 +545,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-grid.ts",
+          "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
         }
       ]
@@ -631,7 +619,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-grid.ts",
+          "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
         },
         {
@@ -684,7 +672,7 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/lib/data-grid-helpers.ts",
+          "path": "src/lib/data-grid-utils.ts",
           "type": "registry:lib"
         },
         {
@@ -692,7 +680,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/types/data-grid.ts",
+          "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
         }
       ]
