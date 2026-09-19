@@ -2,15 +2,16 @@
 
 import { asc, eq, inArray, not } from "drizzle-orm";
 import { updateTag } from "next/cache";
+
 import { db } from "@/db/index";
 import { type Task, tasks } from "@/db/schema";
 import { takeFirstOrThrow } from "@/db/utils";
-
 import { getErrorMessage } from "@/lib/handle-error";
 import { generateId } from "@/lib/id";
 
-import { generateRandomTask } from "./utils";
 import type { CreateTaskSchema, UpdateTaskSchema } from "./validations";
+
+import { generateRandomTask } from "./utils";
 
 export async function seedTasks(input: { count: number }) {
   const count = input.count ?? 100;

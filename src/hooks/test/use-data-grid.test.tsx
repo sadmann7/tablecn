@@ -1,9 +1,13 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { act, renderHook } from "@testing-library/react";
 import type * as React from "react";
+
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useDataGrid } from "@/hooks/use-data-grid";
+
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+
+import { useDataGrid } from "@/hooks/use-data-grid";
+import { stringifyUnknown } from "@/lib/data-grid-utils";
 
 // Mock toast
 vi.mock("sonner", () => ({
@@ -37,7 +41,7 @@ const simpleFilterFn = (
   _columnId: string,
   filterValue: string,
 ) => {
-  const value = String(row.getValue(_columnId) ?? "");
+  const value = stringifyUnknown(row.getValue(_columnId));
   return value.toLowerCase().includes(filterValue.toLowerCase());
 };
 
@@ -399,7 +403,7 @@ describe("useDataGrid", () => {
 
       // Copy
       await act(async () => {
-        await result.current.tableMeta.onCellsCopy?.();
+        result.current.tableMeta.onCellsCopy?.();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
@@ -423,7 +427,7 @@ describe("useDataGrid", () => {
 
       // Try to cut
       await act(async () => {
-        await result.current.tableMeta.onCellsCut?.();
+        result.current.tableMeta.onCellsCut?.();
       });
 
       expect(mockClipboard.writeText).not.toHaveBeenCalled();
@@ -451,7 +455,7 @@ describe("useDataGrid", () => {
 
       // Try to paste
       await act(async () => {
-        await result.current.tableMeta.onCellsPaste?.();
+        result.current.tableMeta.onCellsPaste?.();
       });
 
       expect(onDataChange).not.toHaveBeenCalled();
@@ -1080,7 +1084,7 @@ describe("useDataGrid", () => {
 
       // Paste
       await act(async () => {
-        await result.current.tableMeta.onCellsPaste?.();
+        result.current.tableMeta.onCellsPaste?.();
       });
 
       expect(onDataChange).toHaveBeenCalled();
@@ -1110,7 +1114,7 @@ describe("useDataGrid", () => {
       // Paste will be called internally and should work
       await act(async () => {
         mockClipboard.readText.mockResolvedValue("Test\nValue\nNew");
-        await result.current.tableMeta.onCellsPaste?.(false);
+        result.current.tableMeta.onCellsPaste?.(false);
       });
     });
 
@@ -1135,7 +1139,7 @@ describe("useDataGrid", () => {
 
       // Paste invalid number
       await act(async () => {
-        await result.current.tableMeta.onCellsPaste?.();
+        result.current.tableMeta.onCellsPaste?.();
       });
 
       // Should skip the invalid cell
@@ -1163,7 +1167,7 @@ describe("useDataGrid", () => {
 
       // Paste
       await act(async () => {
-        await result.current.tableMeta.onCellsPaste?.();
+        result.current.tableMeta.onCellsPaste?.();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1198,7 +1202,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        await result.current.tableMeta.onCellsPaste?.();
+        result.current.tableMeta.onCellsPaste?.();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1243,7 +1247,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        await result.current.tableMeta.onCellsPaste?.();
+        result.current.tableMeta.onCellsPaste?.();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1286,7 +1290,7 @@ describe("useDataGrid", () => {
 
       // Cut
       await act(async () => {
-        await result.current.tableMeta.onCellsCut?.();
+        result.current.tableMeta.onCellsCut?.();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
@@ -1317,7 +1321,7 @@ describe("useDataGrid", () => {
 
       // Copy
       await act(async () => {
-        await result.current.tableMeta.onCellsCopy?.();
+        result.current.tableMeta.onCellsCopy?.();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalled();
@@ -2288,7 +2292,7 @@ describe("useDataGrid", () => {
 
       // Paste should work
       await act(async () => {
-        await result.current.tableMeta.onCellsPaste?.();
+        result.current.tableMeta.onCellsPaste?.();
       });
 
       expect(onDataChange).toHaveBeenCalled();

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+
 import { DataGridMultiplayerRoom } from "./components/data-grid-multiplayer-room";
 import { DataGridMultiplayerSkeleton } from "./components/data-grid-multiplayer-skeleton";
 

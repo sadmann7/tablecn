@@ -1,4 +1,6 @@
 import type { Column, RowData, Table } from "@tanstack/react-table";
+import type * as React from "react";
+
 import {
   BaselineIcon,
   CalendarIcon,
@@ -18,7 +20,7 @@ import {
   Presentation,
   TextInitialIcon,
 } from "lucide-react";
-import type * as React from "react";
+
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellOpts,
@@ -27,6 +29,20 @@ import type {
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
+
+export function stringifyUnknown(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (value instanceof Date) return value.toISOString();
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 export function flexRender<TProps extends object>(
   Comp: ((props: TProps) => React.ReactNode) | string | undefined,

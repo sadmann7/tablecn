@@ -13,15 +13,7 @@ import {
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
-import { useDirection } from "@/components/ui/direction";
 
-import { useAsRef } from "@/hooks/use-as-ref";
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
-import { useLazyRef } from "@/hooks/use-lazy-ref";
-import {
-  type DataGridFeatures,
-  dataGridFeatures,
-} from "@/lib/data-grid-features";
 import type {
   CellPosition,
   CellUpdate,
@@ -35,6 +27,15 @@ import type {
   SearchState,
   SelectionState,
 } from "@/lib/data-grid-types";
+
+import { useDirection } from "@/components/ui/direction";
+import { useAsRef } from "@/hooks/use-as-ref";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { useLazyRef } from "@/hooks/use-lazy-ref";
+import {
+  type DataGridFeatures,
+  dataGridFeatures,
+} from "@/lib/data-grid-features";
 import {
   getCellKey,
   getEmptyCellValue,
@@ -46,6 +47,7 @@ import {
   parseCellKey,
   parseTsv,
   scrollCellIntoView,
+  stringifyUnknown,
 } from "@/lib/data-grid-utils";
 
 const DEFAULT_ROW_HEIGHT = "short";
@@ -130,8 +132,10 @@ function useStore<T>(
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
-interface UseDataGridProps<TData extends RowData>
-  extends Omit<TableOptions<DataGridFeatures, TData>, "features"> {
+interface UseDataGridProps<TData extends RowData> extends Omit<
+  TableOptions<DataGridFeatures, TData>,
+  "features"
+> {
   onDataChange?: (data: TData[]) => void;
   onRowAdd?: (
     event?: React.MouseEvent<HTMLDivElement>,
@@ -425,7 +429,7 @@ function useDataGrid<TData extends RowData>({
           : -1;
       const dataLength = Math.max(currentData.length, maxUpdateIndex + 1);
 
-      const newData: TData[] = new Array(dataLength);
+      const newData: TData[] = Array.from({ length: dataLength });
 
       for (let i = 0; i < dataLength; i++) {
         const updates = rowUpdatesMap.get(i);
@@ -435,7 +439,10 @@ function useDataGrid<TData extends RowData>({
         if (existingRow == null) continue;
 
         if (updates) {
-          const updatedRow = { ...existingRow } as Record<string, unknown>;
+          const updatedRow = Object.assign(
+            {},
+            existingRow as Record<string, unknown>,
+          );
           for (const { columnId, value } of updates) {
             updatedRow[columnId] = value;
           }
@@ -630,7 +637,7 @@ function useDataGrid<TData extends RowData>({
           } else if (value instanceof Date) {
             serializedValue = value.toISOString();
           } else {
-            serializedValue = String(value ?? "");
+            serializedValue = stringifyUnknown(value);
           }
 
           cellData.set(cellKey, serializedValue);
@@ -1607,7 +1614,7 @@ function useDataGrid<TData extends RowData>({
           if (!cell) continue;
 
           const value = cell.getValue();
-          const stringValue = String(value ?? "").toLowerCase();
+          const stringValue = stringifyUnknown(value).toLowerCase();
 
           if (stringValue.includes(lowerQuery)) {
             matches.push({ rowIndex, columnId });
@@ -2298,7 +2305,6 @@ function useDataGrid<TData extends RowData>({
     tableRef.current = table;
   }
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnResizing and columnSizing are used for calculating the column size vars
   const columnSizeVars = React.useMemo(() => {
     const headers = table.getFlatHeaders();
     const colSizes: { [key: string]: number } = {};
@@ -2482,7 +2488,7 @@ function useDataGrid<TData extends RowData>({
       const targetRowIndex = result.rowIndex ?? initialRowCount;
       const targetColumnId = result.columnId;
 
-      onScrollToRow({
+      void onScrollToRow({
         rowIndex: targetRowIndex,
         columnId: targetColumnId,
       });
@@ -2561,7 +2567,7 @@ function useDataGrid<TData extends RowData>({
 
         if (rowIndices.size > 0) {
           event.preventDefault();
-          onRowsDelete(Array.from(rowIndices));
+          void onRowsDelete(Array.from(rowIndices));
         }
         return;
       }
@@ -2578,7 +2584,7 @@ function useDataGrid<TData extends RowData>({
 
       if (isCtrlPressed && !shiftKey && key === "c") {
         event.preventDefault();
-        onCellsCopy();
+        void onCellsCopy();
         return;
       }
 
@@ -2589,7 +2595,7 @@ function useDataGrid<TData extends RowData>({
         !propsRef.current.readOnly
       ) {
         event.preventDefault();
-        onCellsCut();
+        void onCellsCut();
         return;
       }
 
@@ -2601,7 +2607,7 @@ function useDataGrid<TData extends RowData>({
         !propsRef.current.readOnly
       ) {
         event.preventDefault();
-        onCellsPaste();
+        void onCellsPaste();
         return;
       }
 
@@ -2675,7 +2681,7 @@ function useDataGrid<TData extends RowData>({
             const targetRowIndex = result.rowIndex ?? initialRowCount;
             const targetColumnId = result.columnId ?? currentColumnId;
 
-            onScrollToRow({
+            void onScrollToRow({
               rowIndex: targetRowIndex,
               columnId: targetColumnId,
             });

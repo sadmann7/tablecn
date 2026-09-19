@@ -6,6 +6,7 @@ import type {
   RowData,
   Table,
 } from "@tanstack/react-table";
+
 import {
   CalendarIcon,
   Check,
@@ -15,6 +16,10 @@ import {
   Trash2,
 } from "lucide-react";
 import * as React from "react";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { FilterOperator, FilterValue } from "@/lib/data-grid-types";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,12 +54,10 @@ import {
   SortableOverlay,
 } from "@/components/ui/sortable";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
 import {
   getDefaultOperator,
   getOperatorsForVariant,
 } from "@/lib/data-grid-filters";
-import type { FilterOperator, FilterValue } from "@/lib/data-grid-types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -68,8 +71,9 @@ const OPERATORS_WITHOUT_VALUE = new Set([
   "isFalse",
 ]);
 
-interface DataGridFilterMenuProps<TData extends RowData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataGridFilterMenuProps<
+  TData extends RowData,
+> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataGridFeatures, TData>;
   disabled?: boolean;
 }
@@ -218,7 +222,7 @@ export function DataGridFilterMenu<TData extends RowData>({
             {columnFilters.length > 0 && (
               <Badge
                 variant="secondary"
-                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
+                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono text-[10.4px] font-normal"
               >
                 {columnFilters.length}
               </Badge>
@@ -230,19 +234,19 @@ export function DataGridFilterMenu<TData extends RowData>({
           aria-describedby={descriptionId}
           dir={dir}
           className={cn(
-            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[480px]",
+            "flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-120",
             className,
           )}
           {...props}
         >
           <div className="flex flex-col gap-1">
-            <h4 id={labelId} className="font-medium leading-none">
+            <h4 id={labelId} className="leading-none font-medium">
               {columnFilters.length > 0 ? "Filter by" : "No filters applied"}
             </h4>
             <p
               id={descriptionId}
               className={cn(
-                "text-muted-foreground text-sm",
+                "text-sm text-muted-foreground",
                 columnFilters.length > 0 && "sr-only",
               )}
             >
@@ -255,7 +259,7 @@ export function DataGridFilterMenu<TData extends RowData>({
             <SortableContent asChild>
               <div
                 role="list"
-                className="flex max-h-[400px] flex-col gap-2 overflow-y-auto p-1"
+                className="flex max-h-100 flex-col gap-2 overflow-y-auto p-1"
               >
                 {columnFilters.map((filter, index) => (
                   <DataGridFilterItem
@@ -298,7 +302,7 @@ export function DataGridFilterMenu<TData extends RowData>({
       </Popover>
       <SortableOverlay>
         <div dir={dir} className="flex items-center gap-2">
-          <div className="h-8 min-w-[72px] rounded-sm bg-primary/10" />
+          <div className="h-8 min-w-18 rounded-sm bg-primary/10" />
           <div className="h-8 w-32 rounded-sm bg-primary/10" />
           <div className="h-8 w-32 rounded-sm bg-primary/10" />
           <div className="h-8 w-36 rounded-sm bg-primary/10" />
@@ -421,11 +425,11 @@ function DataGridFilterItem<TData extends RowData>({
         className="flex items-center gap-2"
         onKeyDown={onItemKeyDown}
       >
-        <div className="min-w-[72px] text-center">
+        <div className="min-w-18 text-center">
           {index === 0 ? (
-            <span className="text-muted-foreground text-sm">Where</span>
+            <span className="text-sm text-muted-foreground">Where</span>
           ) : (
-            <span className="text-muted-foreground text-sm">And</span>
+            <span className="text-sm text-muted-foreground">And</span>
           )}
         </div>
         <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
@@ -519,7 +523,7 @@ function DataGridFilterItem<TData extends RowData>({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <div className="min-w-36 max-w-60 flex-1">
+        <div className="max-w-60 min-w-36 flex-1">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}
@@ -927,7 +931,7 @@ function DataGridFilterInput<TData extends RowData>({
           id={inputListboxId}
           dir={dir}
           align="start"
-          className="w-[200px] p-0"
+          className="w-50 p-0"
         >
           <Command>
             <CommandInput placeholder="Search options..." />

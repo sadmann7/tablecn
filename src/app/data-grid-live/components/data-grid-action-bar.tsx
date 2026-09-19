@@ -1,8 +1,15 @@
 "use client";
 
 import type { RowData, Table } from "@tanstack/react-table";
+
 import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type {
+  CellSelectOption,
+  DataGridTableMeta,
+} from "@/lib/data-grid-types";
 
 import {
   ActionBar,
@@ -18,11 +25,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  CellSelectOption,
-  DataGridTableMeta,
-} from "@/lib/data-grid-types";
 
 interface DataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;

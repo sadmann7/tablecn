@@ -1,0 +1,98 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "import", "nextjs"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "settings": {
+    "react": {
+      "version": "19.2.7"
+    }
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/build/**",
+    "**/.next/**",
+    "**/.turbo/**",
+    "**/.source/**",
+    "**/__registry__/**",
+    "**/__index__.tsx",
+    "**/public/**",
+    "pnpm-lock.yaml"
+  ],
+  "rules": {
+    "no-unused-vars": "warn",
+    "typescript/no-unused-vars": "warn",
+    "typescript/no-explicit-any": "warn",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/unbound-method": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/consistent-return": "off",
+    "typescript/no-unnecessary-boolean-literal-compare": "off",
+    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/no-floating-promises": "warn",
+    "typescript/restrict-template-expressions": "warn",
+    "typescript/no-redundant-type-constituents": "warn",
+    "typescript/no-useless-default-assignment": "warn",
+    "typescript/require-array-sort-compare": "warn",
+    "typescript/no-misused-spread": "warn",
+    "typescript/no-base-to-string": "warn",
+    "typescript/no-duplicate-type-constituents": "warn",
+    "no-shadow": "off",
+    "no-new": "off",
+    "no-underscore-dangle": "off",
+    "react/exhaustive-deps": "off",
+    "react/memo-dependencies": "off",
+    "react/rules-of-hooks": "warn",
+    "react/react-in-jsx-scope": "off",
+    "react/no-array-index-key": "off",
+    "react/no-danger": "off",
+    "react/no-unstable-nested-components": "off",
+    "react/refs": "off",
+    "react/set-state-in-effect": "off",
+    "react/set-state-in-render": "off",
+    "react/immutability": "off",
+    "react/incompatible-library": "off",
+    "react/purity": "off",
+    "react/preserve-manual-memoization": "off",
+    "react/use-memo": "off",
+    "react/static-components": "off",
+    "nextjs/no-img-element": "off",
+    "nextjs/no-html-link-for-pages": "off",
+    "nextjs/no-assign-module-variable": "off",
+    "import/no-named-as-default": "off",
+    "import/no-unassigned-import": [
+      "warn",
+      {
+        "allow": [
+          "**/*.css",
+          "@testing-library/jest-dom",
+          "@testing-library/jest-dom/**",
+          "@testing-library/dom",
+          "@total-typescript/ts-reset",
+          "server-only",
+          "./src/env.js"
+        ]
+      }
+    ],
+    "unicorn/no-new-array": "warn",
+    "unicorn/no-invalid-remove-event-listener": "warn",
+    "unicorn/no-array-sort": "off"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.{test,spec}.{ts,tsx}"],
+      "env": {
+        "vitest": true
+      },
+      "rules": {
+        "unicorn/consistent-function-scoping": "off",
+        "no-shadow": "off"
+      }
+    }
+  ]
+}

@@ -5,6 +5,9 @@ import { Loader } from "lucide-react";
 import * as React from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+
+import type { Task } from "@/db/schema";
+
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,14 +18,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import type { Task } from "@/db/schema";
 
 import { updateTask } from "../lib/actions";
 import { type UpdateTaskSchema, updateTaskSchema } from "../lib/validations";
 import { TaskForm } from "./task-form";
 
-interface UpdateTaskSheetProps
-  extends React.ComponentPropsWithRef<typeof Sheet> {
+interface UpdateTaskSheetProps extends React.ComponentPropsWithRef<
+  typeof Sheet
+> {
   task: Task | null;
 }
 

@@ -15,14 +15,15 @@ import {
   parseAsInteger,
   parseAsString,
   type SingleParser,
-  type UseQueryStateOptions,
   useQueryState,
+  type UseQueryStateOptions,
   useQueryStates,
 } from "nuqs";
 import * as React from "react";
 
-import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import type { ExtendedColumnSort, QueryKeys } from "@/lib/data-table-types";
+
+import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { getSortingStateParser } from "@/lib/parsers";
 import {
   type DataTableFeatures,
@@ -39,7 +40,8 @@ const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 
 interface UseDataTableProps<TData extends RowData>
-  extends Omit<
+  extends
+    Omit<
       TableOptions<DataTableFeatures, TData>,
       | "state"
       | "pageCount"
@@ -68,7 +70,7 @@ export function useDataTable<TData extends RowData>(
 ) {
   const {
     columns,
-    pageCount = -1,
+    pageCount,
     initialState,
     queryKeys,
     history = "replace",
@@ -165,9 +167,9 @@ export function useDataTable<TData extends RowData>(
     (updaterOrValue: Updater<SortingState>) => {
       if (typeof updaterOrValue === "function") {
         const newSorting = updaterOrValue(sorting);
-        setSorting(newSorting as ExtendedColumnSort<TData>[]);
+        void setSorting(newSorting as ExtendedColumnSort<TData>[]);
       } else {
-        setSorting(updaterOrValue as ExtendedColumnSort<TData>[]);
+        void setSorting(updaterOrValue as ExtendedColumnSort<TData>[]);
       }
     },
     [sorting, setSorting],

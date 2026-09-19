@@ -1,16 +1,19 @@
 "use client";
 
 import type { RowData } from "@tanstack/react-table";
+
 import { Plus } from "lucide-react";
 import * as React from "react";
+
+import type { useDataGrid } from "@/hooks/use-data-grid";
+import type { Direction } from "@/lib/data-grid-types";
+
 import { DataGridColumnHeader } from "@/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/components/data-grid/data-grid-context-menu";
 import { DataGridPasteDialog } from "@/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/components/data-grid/data-grid-search";
 import { useAsRef } from "@/hooks/use-as-ref";
-import type { useDataGrid } from "@/hooks/use-data-grid";
-import type { Direction } from "@/lib/data-grid-types";
 import {
   flexRender,
   getColumnBorderVisibility,
@@ -21,7 +24,8 @@ import { cn } from "@/lib/utils";
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 
 interface DataGridProps<TData extends RowData>
-  extends Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
+  extends
+    Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
   dir?: Direction;
   height?: number;
@@ -53,7 +57,7 @@ export function DataGrid<TData extends RowData>({
   onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
-  adjustLayout = false,
+  adjustLayout,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -66,7 +70,7 @@ export function DataGrid<TData extends RowData>({
 
   const onRowAdd = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      onRowAddRef.current?.(event);
+      void onRowAddRef.current?.(event);
     },
     [onRowAddRef],
   );
@@ -84,7 +88,7 @@ export function DataGrid<TData extends RowData>({
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        onRowAddRef.current();
+        void onRowAddRef.current();
       }
     },
     [onRowAddRef],
@@ -112,7 +116,7 @@ export function DataGrid<TData extends RowData>({
         data-slot="grid"
         tabIndex={0}
         ref={dataGridRef}
-        className="relative grid select-none overflow-auto rounded-md border focus:outline-none"
+        className="relative grid overflow-auto rounded-md border select-none focus:outline-none"
         style={{
           ...columnSizeVars,
           maxHeight: `${height}px`,
@@ -268,7 +272,7 @@ export function DataGrid<TData extends RowData>({
                 onClick={onRowAdd}
                 onKeyDown={onFooterCellKeyDown}
               >
-                <div className="sticky start-0 flex items-center gap-2 px-3 text-muted-foreground">
+                <div className="sticky inset-s-0 flex items-center gap-2 px-3 text-muted-foreground">
                   <Plus className="size-3.5" />
                   <span className="text-sm">Add row</span>
                 </div>

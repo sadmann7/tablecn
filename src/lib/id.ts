@@ -15,11 +15,8 @@ export function generateId(
 
   const { alphabet = DEFAULT_ALPHABET, length = 12 } = options;
 
-  const chars = new Array(length);
-
-  for (let i = 0; i < length; i++) {
-    chars[i] = alphabet[(Math.random() * alphabet.length) | 0];
-  }
-
-  return chars.join("");
+  return Array.from(
+    { length },
+    () => alphabet[(Math.random() * alphabet.length) | 0],
+  ).join("");
 }

@@ -1,10 +1,13 @@
 import type { RowData, Table } from "@tanstack/react-table";
+
 import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
+
+import type { DataTableFeatures } from "@/lib/table-features";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,11 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
 
-interface DataTablePaginationProps<TData extends RowData>
-  extends React.ComponentProps<"div"> {
+interface DataTablePaginationProps<
+  TData extends RowData,
+> extends React.ComponentProps<"div"> {
   table: Table<DataTableFeatures, TData>;
   pageSizeOptions?: number[];
 }
@@ -38,13 +41,13 @@ export function DataTablePagination<TData extends RowData>({
       )}
       {...props}
     >
-      <div className="flex-1 whitespace-nowrap text-muted-foreground text-sm">
+      <div className="flex-1 text-sm whitespace-nowrap text-muted-foreground">
         {table.getFilteredSelectedRowModel().rows.length} of{" "}
         {table.getFilteredRowModel().rows.length} row(s) selected.
       </div>
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center space-x-2">
-          <p className="whitespace-nowrap font-medium text-sm">Rows per page</p>
+          <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
           <Select
             value={`${table.store.state.pagination.pageSize}`}
             onValueChange={(value) => {
@@ -67,7 +70,7 @@ export function DataTablePagination<TData extends RowData>({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center justify-center font-medium text-sm">
+        <div className="flex items-center justify-center text-sm font-medium">
           Page {table.store.state.pagination.pageIndex + 1} of{" "}
           {table.getPageCount()}
         </div>

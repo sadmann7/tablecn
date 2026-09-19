@@ -1,9 +1,14 @@
 "use client";
 
-import { faker } from "@faker-js/faker";
 import type { ColumnDef } from "@tanstack/react-table";
+
+import { faker } from "@faker-js/faker";
 import { Loader, RocketIcon, SquarePen } from "lucide-react";
 import * as React from "react";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { CellUpdate } from "@/lib/data-grid-types";
+
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,9 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDataGrid } from "@/hooks/use-data-grid";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { CellUpdate } from "@/lib/data-grid-types";
 
 interface Person {
   id: string;
@@ -429,10 +432,10 @@ export function DataGridRenderDemo() {
       <div className="rounded-lg border bg-background">
         <div className="flex items-center justify-between border-b p-6">
           <div>
-            <h2 className="font-semibold text-2xl">
+            <h2 className="text-2xl font-semibold">
               Data Grid Render Performance Test
             </h2>
-            <p className="mt-1 text-muted-foreground text-sm">
+            <p className="mt-1 text-sm text-muted-foreground">
               Test how many times components render when updating multiple cells
             </p>
           </div>

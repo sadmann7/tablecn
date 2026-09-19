@@ -7,9 +7,9 @@ import type {
   RowData,
 } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
+
 import * as React from "react";
-import { DataGridCell } from "@/components/data-grid/data-grid-cell";
-import { useComposedRefs } from "@/lib/compose-refs";
+
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellPosition,
@@ -17,6 +17,9 @@ import type {
   Direction,
   RowHeightValue,
 } from "@/lib/data-grid-types";
+
+import { DataGridCell } from "@/components/data-grid/data-grid-cell";
+import { useComposedRefs } from "@/lib/compose-refs";
 import {
   flexRender,
   getCellKey,
@@ -26,8 +29,9 @@ import {
 } from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
 
-interface DataGridRowProps<TData extends RowData>
-  extends React.ComponentProps<"div"> {
+interface DataGridRowProps<
+  TData extends RowData,
+> extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
   tableMeta: DataGridTableMeta;
   virtualItem: VirtualItem;
@@ -196,7 +200,6 @@ function DataGridRowImpl<TData extends RowData>({
 
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  // biome-ignore lint/correctness/useExhaustiveDependencies: columnVisibility and columnPinning are used for calculating the visible cells
   const visibleCells = React.useMemo(
     () => row.getVisibleCells(),
     [row, columnVisibility, columnPinning],

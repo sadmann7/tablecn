@@ -13,8 +13,8 @@ import {
   type LucideIcon,
   Timer,
 } from "lucide-react";
-import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 
+import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 import { generateId } from "@/lib/id";
 
 export function generateRandomTask(input?: Partial<Task>): Task {

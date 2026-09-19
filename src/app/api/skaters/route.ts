@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
+
 import {
   deleteSkatersSchema,
   insertSkaterSchema,

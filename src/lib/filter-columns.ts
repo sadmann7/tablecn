@@ -17,11 +17,13 @@ import {
   type SQL,
   type Table,
 } from "drizzle-orm";
-import { isEmpty } from "@/db/utils";
+
 import type {
   ExtendedColumnFilter,
   JoinOperator,
 } from "@/lib/data-table-types";
+
+import { isEmpty } from "@/db/utils";
 
 export function filterColumns<T extends Table>({
   table,
@@ -251,7 +253,7 @@ export function filterColumns<T extends Table>({
         return not(isEmpty(column));
 
       default:
-        throw new Error(`Unsupported operator: ${filter.operator}`);
+        throw new Error("Unsupported operator");
     }
   });
 

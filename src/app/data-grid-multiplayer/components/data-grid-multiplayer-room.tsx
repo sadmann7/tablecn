@@ -3,7 +3,9 @@
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
+
 import { generateId } from "@/lib/id";
+
 import { DataGridMultiplayerSkeleton } from "./data-grid-multiplayer-skeleton";
 
 const DataGridMultiplayerDemo = dynamic(

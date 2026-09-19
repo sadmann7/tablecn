@@ -1,6 +1,7 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -11,6 +12,10 @@ import {
 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+
+import type { DataTableRowAction } from "@/lib/data-table-types";
+import type { DataTableFeatures } from "@/lib/table-features";
+
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,10 +33,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type Task, tasks } from "@/db/schema";
-import type { DataTableRowAction } from "@/lib/data-table-types";
 import { formatDate } from "@/lib/format";
 import { getErrorMessage } from "@/lib/handle-error";
-import type { DataTableFeatures } from "@/lib/table-features";
 
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";

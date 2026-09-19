@@ -3,6 +3,7 @@
 import { Fps } from "@/components/ui/fps";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMounted } from "@/hooks/use-mounted";
+
 import { DataGridRenderDemo } from "./components/data-grid-render-demo";
 
 export default function DataGridRenderPage() {

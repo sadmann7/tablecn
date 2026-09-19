@@ -1,9 +1,16 @@
 "use client";
 
 import type { Column, RowData, Table } from "@tanstack/react-table";
+
 import { BadgeCheck, CalendarIcon, ListFilter, Text, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import * as React from "react";
+
+import type {
+  ExtendedColumnFilter,
+  FilterOperator,
+} from "@/lib/data-table-types";
+import type { DataTableFeatures } from "@/lib/table-features";
 
 import { DataTableRangeFilter } from "@/components/data-table/data-table-range-filter";
 import { Button } from "@/components/ui/button";
@@ -31,10 +38,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import type {
-  ExtendedColumnFilter,
-  FilterOperator,
-} from "@/lib/data-table-types";
 import {
   getDefaultFilterOperator,
   getFilterOperators,
@@ -42,7 +45,6 @@ import {
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
-import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 300;
@@ -50,8 +52,9 @@ const THROTTLE_MS = 50;
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
-interface DataTableFilterMenuProps<TData extends RowData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataTableFilterMenuProps<
+  TData extends RowData,
+> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataTableFeatures, TData>;
   debounceMs?: number;
   throttleMs?: number;
@@ -402,7 +405,7 @@ function DataTableFilterItem<TData extends RowData>({
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
-              className="rounded-none rounded-l-md border border-input border-r-0 font-normal dark:bg-input/30"
+              className="rounded-none rounded-l-md border border-r-0 border-input font-normal dark:bg-input/30"
             >
               {columnMeta?.icon && (
                 <columnMeta.icon className="text-muted-foreground" />
@@ -492,7 +495,7 @@ function DataTableFilterItem<TData extends RowData>({
         <Button
           aria-controls={filterItemId}
           variant="ghost"
-          className="h-full rounded-none rounded-r-md border border-input border-l-0 px-1.5 font-normal dark:bg-input/30"
+          className="h-full rounded-none rounded-r-md border border-l-0 border-input px-1.5 font-normal dark:bg-input/30"
           onClick={() => onFilterRemove(filter.filterId)}
         >
           <X className="size-3.5" />

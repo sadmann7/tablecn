@@ -8,6 +8,7 @@ import type {
   SortingState,
   Table,
 } from "@tanstack/react-table";
+
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -17,6 +18,8 @@ import {
   XIcon,
 } from "lucide-react";
 import * as React from "react";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import {
   DropdownMenu,
@@ -31,12 +34,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getColumnVariant } from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
 
-interface DataGridColumnHeaderProps<TData extends RowData, TValue>
-  extends React.ComponentProps<typeof DropdownMenuTrigger> {
+interface DataGridColumnHeaderProps<
+  TData extends RowData,
+  TValue,
+> extends React.ComponentProps<typeof DropdownMenuTrigger> {
   header: Header<DataGridFeatures, TData, TValue>;
   table: Table<DataGridFeatures, TData>;
 }
@@ -149,7 +153,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
           {column.getCanSort() && (
             <>
               <DropdownMenuCheckboxItem
-                className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2 [&_svg]:text-muted-foreground"
+                className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
                 checked={column.getIsSorted() === "asc"}
                 onSelect={() => onSortingChange("asc")}
               >
@@ -157,7 +161,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                 Sort asc
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
-                className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2 [&_svg]:text-muted-foreground"
+                className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
                 checked={column.getIsSorted() === "desc"}
                 onSelect={() => onSortingChange("desc")}
               >
@@ -252,8 +256,10 @@ const DataGridColumnResizer = React.memo(
   },
 ) as typeof DataGridColumnResizerImpl;
 
-interface DataGridColumnResizerProps<TData extends RowData, TValue>
-  extends DataGridColumnHeaderProps<TData, TValue> {
+interface DataGridColumnResizerProps<
+  TData extends RowData,
+  TValue,
+> extends DataGridColumnHeaderProps<TData, TValue> {
   label: string;
 }
 
@@ -278,7 +284,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
       aria-valuemax={defaultColumnDef.maxSize}
       tabIndex={0}
       className={cn(
-        "absolute -end-px top-0 z-50 h-full w-0.5 cursor-ew-resize touch-none select-none bg-border transition-opacity after:absolute after:inset-y-0 after:start-1/2 after:h-full after:w-[18px] after:-translate-x-1/2 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
+        "absolute -inset-e-px top-0 z-50 h-full w-0.5 cursor-ew-resize touch-none bg-border transition-opacity select-none after:absolute after:inset-y-0 after:inset-s-1/2 after:h-full after:w-4.5 after:-translate-x-1/2 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
         header.column.getIsResizing()
           ? "bg-primary"
           : "opacity-0 hover:opacity-100",

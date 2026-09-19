@@ -56,7 +56,7 @@ export function FeatureFlagsProvider({ children }: FeatureFlagsProviderProps) {
 
   const onFilterFlagChange = React.useCallback(
     (value: FilterFlag) => {
-      setFilterFlag(value);
+      void setFilterFlag(value);
     },
     [setFilterFlag],
   );
@@ -84,7 +84,7 @@ export function FeatureFlagsProvider({ children }: FeatureFlagsProviderProps) {
             <Tooltip key={flag.value} delayDuration={700}>
               <ToggleGroupItem
                 value={flag.value}
-                className="whitespace-nowrap not-first:not-last:rounded-none not-first:border-l-0 px-3 text-xs first:rounded-r-none last:rounded-l-none data-[state=on]:bg-accent/70 data-[state=on]:hover:bg-accent/90"
+                className="px-3 text-xs whitespace-nowrap not-first:border-l-0 not-first:not-last:rounded-none first:rounded-r-none last:rounded-l-none data-[state=on]:bg-accent/70 data-[state=on]:hover:bg-accent/90"
                 asChild
               >
                 <TooltipTrigger>
@@ -99,7 +99,7 @@ export function FeatureFlagsProvider({ children }: FeatureFlagsProviderProps) {
                 className="flex flex-col gap-1.5 border bg-background py-2 font-semibold text-foreground [&>span]:hidden"
               >
                 <div>{flag.tooltipTitle}</div>
-                <p className="text-balance text-muted-foreground text-xs">
+                <p className="text-xs text-balance text-muted-foreground">
                   {flag.tooltipDescription}
                 </p>
               </TooltipContent>

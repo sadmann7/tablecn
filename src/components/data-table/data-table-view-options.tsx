@@ -1,8 +1,12 @@
 "use client";
 
 import type { RowData, Table } from "@tanstack/react-table";
+
 import { Settings2 } from "lucide-react";
 import * as React from "react";
+
+import type { DataTableFeatures } from "@/lib/table-features";
+
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -17,11 +21,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
 
-interface DataTableViewOptionsProps<TData extends RowData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataTableViewOptionsProps<
+  TData extends RowData,
+> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataTableFeatures, TData>;
   disabled?: boolean;
 }

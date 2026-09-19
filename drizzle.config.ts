@@ -1,6 +1,6 @@
 import type { Config } from "drizzle-kit";
-import { env } from "@/env.js";
 
+import { env } from "@/env.js";
 import { DATABASE_PREFIX } from "@/lib/constants";
 
 export default {

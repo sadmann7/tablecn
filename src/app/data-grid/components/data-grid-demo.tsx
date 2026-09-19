@@ -1,8 +1,13 @@
 "use client";
 
 import type { ColumnDef } from "@tanstack/react-table";
+
 import { Languages } from "lucide-react";
 import * as React from "react";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { Direction } from "@/lib/data-grid-types";
+
 import { DataGrid } from "@/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
@@ -18,10 +23,9 @@ import {
   useDataGridUndoRedo,
 } from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import type { Direction } from "@/lib/data-grid-types";
 import { generateId } from "@/lib/id";
+
 import {
   departments,
   initialData,

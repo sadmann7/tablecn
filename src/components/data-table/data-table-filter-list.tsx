@@ -1,6 +1,7 @@
 "use client";
 
 import type { Column, RowData, Table } from "@tanstack/react-table";
+
 import {
   CalendarIcon,
   Check,
@@ -11,6 +12,14 @@ import {
 } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
+
+import type {
+  DataTableColumnMeta,
+  ExtendedColumnFilter,
+  FilterOperator,
+  JoinOperator,
+} from "@/lib/data-table-types";
+import type { DataTableFeatures } from "@/lib/table-features";
 
 import { DataTableRangeFilter } from "@/components/data-table/data-table-range-filter";
 import { Badge } from "@/components/ui/badge";
@@ -57,12 +66,6 @@ import {
   SortableOverlay,
 } from "@/components/ui/sortable";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import type {
-  DataTableColumnMeta,
-  ExtendedColumnFilter,
-  FilterOperator,
-  JoinOperator,
-} from "@/lib/data-table-types";
 import {
   dataTableConfig,
   getDefaultFilterOperator,
@@ -71,7 +74,6 @@ import {
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
-import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 300;
@@ -79,8 +81,9 @@ const THROTTLE_MS = 50;
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
-interface DataTableFilterListProps<TData extends RowData>
-  extends React.ComponentProps<typeof PopoverContent> {
+interface DataTableFilterListProps<
+  TData extends RowData,
+> extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataTableFeatures, TData>;
   debounceMs?: number;
   throttleMs?: number;
@@ -240,7 +243,7 @@ export function DataTableFilterList<TData extends RowData>({
             {filters.length > 0 && (
               <Badge
                 variant="secondary"
-                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono font-normal text-[10.4px]"
+                className="h-[18.24px] rounded-[3.2px] px-[5.12px] font-mono text-[10.4px] font-normal"
               >
                 {filters.length}
               </Badge>
@@ -250,17 +253,17 @@ export function DataTableFilterList<TData extends RowData>({
         <PopoverContent
           aria-describedby={descriptionId}
           aria-labelledby={labelId}
-          className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-[380px]"
+          className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-95"
           {...props}
         >
           <div className="flex flex-col gap-1">
-            <h4 id={labelId} className="font-medium leading-none">
+            <h4 id={labelId} className="leading-none font-medium">
               {filters.length > 0 ? "Filters" : "No filters applied"}
             </h4>
             <p
               id={descriptionId}
               className={cn(
-                "text-muted-foreground text-sm",
+                "text-sm text-muted-foreground",
                 filters.length > 0 && "sr-only",
               )}
             >
@@ -273,7 +276,7 @@ export function DataTableFilterList<TData extends RowData>({
             <SortableContent asChild>
               <div
                 role="list"
-                className="flex max-h-[300px] flex-col gap-2 overflow-y-auto p-1"
+                className="flex max-h-75 flex-col gap-2 overflow-y-auto p-1"
               >
                 {filters.map((filter, index) => (
                   <DataTableFilterItem<TData>
@@ -313,7 +316,7 @@ export function DataTableFilterList<TData extends RowData>({
       </Popover>
       <SortableOverlay>
         <div className="flex items-center gap-2">
-          <div className="h-8 min-w-[72px] rounded-sm bg-primary/10" />
+          <div className="h-8 min-w-18 rounded-sm bg-primary/10" />
           <div className="h-8 w-32 rounded-sm bg-primary/10" />
           <div className="h-8 w-32 rounded-sm bg-primary/10" />
           <div className="h-8 min-w-36 flex-1 rounded-sm bg-primary/10" />
@@ -401,9 +404,9 @@ function DataTableFilterItem<TData extends RowData>({
         className="flex items-center gap-2"
         onKeyDown={onItemKeyDown}
       >
-        <div className="min-w-[72px] text-center">
+        <div className="min-w-18 text-center">
           {index === 0 ? (
-            <span className="text-muted-foreground text-sm">Where</span>
+            <span className="text-sm text-muted-foreground">Where</span>
           ) : index === 1 ? (
             <Select
               value={joinOperator}
@@ -431,7 +434,7 @@ function DataTableFilterItem<TData extends RowData>({
               </SelectContent>
             </Select>
           ) : (
-            <span className="text-muted-foreground text-sm">
+            <span className="text-sm text-muted-foreground">
               {joinOperator}
             </span>
           )}
@@ -529,7 +532,7 @@ function DataTableFilterItem<TData extends RowData>({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <div className="min-w-36 max-w-60 flex-1">
+        <div className="max-w-60 min-w-36 flex-1">
           {onFilterInputRender({
             filter,
             inputId,
@@ -711,7 +714,7 @@ function onFilterInputRender<TData extends RowData>({
               />
             </Button>
           </FacetedTrigger>
-          <FacetedContent id={inputListboxId} className="w-[200px]">
+          <FacetedContent id={inputListboxId} className="w-50">
             <FacetedInput
               aria-label={`Search ${columnMeta?.label} options`}
               placeholder={columnMeta?.placeholder ?? "Search options..."}

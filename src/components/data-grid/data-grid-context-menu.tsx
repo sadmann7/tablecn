@@ -1,9 +1,18 @@
 "use client";
 
 import type { ColumnDef, RowData } from "@tanstack/react-table";
+
 import { CopyIcon, EraserIcon, ScissorsIcon, Trash2Icon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type {
+  CellUpdate,
+  ContextMenuState,
+  DataGridTableMeta,
+} from "@/lib/data-grid-types";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,12 +21,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAsRef } from "@/hooks/use-as-ref";
-import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  CellUpdate,
-  ContextMenuState,
-  DataGridTableMeta,
-} from "@/lib/data-grid-types";
 import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-utils";
 
 interface DataGridContextMenuProps<TData extends RowData> {
@@ -58,7 +61,8 @@ export function DataGridContextMenu<TData extends RowData>({
 }
 
 interface ContextMenuProps<TData extends RowData>
-  extends Pick<
+  extends
+    Pick<
       DataGridTableMeta,
       | "dataGridRef"
       | "onContextMenuOpenChange"
