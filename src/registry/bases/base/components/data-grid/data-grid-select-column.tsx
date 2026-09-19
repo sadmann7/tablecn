@@ -186,8 +186,10 @@ function DataGridSelectCell<TData extends RowData>({
     [meta, row],
   );
 
-  const onClick = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+  const onClick = React.useCallback<
+    NonNullable<React.ComponentProps<typeof Checkbox>["onClick"]>
+  >(
+    (event) => {
       if (event.shiftKey) {
         event.preventDefault();
         meta?.onRowSelect?.(row.id, !row.getIsSelected(), true);

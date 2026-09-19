@@ -103,8 +103,12 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const onTriggerPointerDown = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) => {
+  const onTriggerPointerDown = React.useCallback<
+    NonNullable<
+      React.ComponentProps<typeof DropdownMenuTrigger>["onPointerDown"]
+    >
+  >(
+    (event) => {
       onPointerDown?.(event);
       if (event.defaultPrevented) return;
 
@@ -133,7 +137,6 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
               <TooltipProvider delay={100}>
                 <Tooltip>
                   <TooltipTrigger
-                    nativeButton={false}
                     render={
                       <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
                     }
