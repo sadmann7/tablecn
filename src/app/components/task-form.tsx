@@ -3,6 +3,7 @@
 import type * as React from "react";
 import type { FieldPath, FieldValues, UseFormReturn } from "react-hook-form";
 
+import { tasks } from "@/db/schema";
 import {
   Form,
   FormControl,
@@ -10,8 +11,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from "@/registry/bases/radix/ui/form";
+import { Input } from "@/registry/bases/radix/ui/input";
 import {
   Select,
   SelectContent,
@@ -19,9 +20,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { tasks } from "@/db/schema";
+} from "@/registry/bases/radix/ui/select";
+import { Textarea } from "@/registry/bases/radix/ui/textarea";
 
 interface TaskFormProps<T extends FieldValues> extends Omit<
   React.ComponentPropsWithRef<"form">,

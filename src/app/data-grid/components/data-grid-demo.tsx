@@ -8,15 +8,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 
-import { DataGrid } from "@/components/data-grid/data-grid";
-import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
-import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
-import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
-import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
-import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
-import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
-import { DirectionProvider } from "@/components/ui/direction";
-import { Toggle } from "@/components/ui/toggle";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import {
   type UndoRedoCellUpdate,
@@ -25,6 +16,15 @@ import {
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
+import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
+import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
+import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
+import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
+import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
+import { DataGridViewMenu } from "@/registry/bases/radix/components/data-grid/data-grid-view-menu";
+import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
+import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
 import {
   departments,

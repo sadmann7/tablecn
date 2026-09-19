@@ -23,7 +23,9 @@ const PRIMITIVES = [
   "slider",
 ];
 
-const OUT = path.join(process.cwd(), "src/registry/bases/base/components/ui");
+const BASE_UI = "@/registry/bases/base/ui";
+
+const OUT = path.join(process.cwd(), "src/registry/bases/base/ui");
 
 interface RegistryItem {
   files?: { path: string; content?: string }[];
@@ -48,8 +50,10 @@ async function vendor(name: string) {
     // IconPlaceholder lives in shadcn's docs app, not in their registry output.
     .replaceAll(
       'from "@/app/(create)/components/icon-placeholder"',
-      'from "@/registry/bases/base/components/ui/icon-placeholder"',
-    );
+      `from "${BASE_UI}/icon-placeholder"`,
+    )
+    // Primitives that pull in siblings reference upstream's own tree layout.
+    .replaceAll(`@/registry/${SOURCE_STYLE}/ui`, BASE_UI);
 
   writeFileSync(path.join(OUT, `${name}.tsx`), source);
   console.log(`  ${name}.tsx`);

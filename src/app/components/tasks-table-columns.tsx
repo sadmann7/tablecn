@@ -16,10 +16,13 @@ import { toast } from "sonner";
 import type { DataTableRowAction } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { type Task, tasks } from "@/db/schema";
+import { formatDate } from "@/lib/format";
+import { getErrorMessage } from "@/lib/handle-error";
+import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-table/data-table-column-header";
+import { Badge } from "@/registry/bases/radix/ui/badge";
+import { Button } from "@/registry/bases/radix/ui/button";
+import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,10 +34,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { type Task, tasks } from "@/db/schema";
-import { formatDate } from "@/lib/format";
-import { getErrorMessage } from "@/lib/handle-error";
+} from "@/registry/bases/radix/ui/dropdown-menu";
 
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";

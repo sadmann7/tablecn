@@ -18,13 +18,13 @@ import {
   ActionBarItem,
   ActionBarSelection,
   ActionBarSeparator,
-} from "@/components/ui/action-bar";
+} from "@/registry/bases/radix/ui/action-bar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/registry/bases/radix/ui/dropdown-menu";
 
 interface DataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;

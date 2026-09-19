@@ -8,15 +8,15 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { Calendar } from "@/components/ui/calendar";
 import { formatDate } from "@/lib/format";
-import { Button } from "@/registry/bases/base/components/ui/button";
+import { Button } from "@/registry/bases/base/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/registry/bases/base/components/ui/popover";
-import { Separator } from "@/registry/bases/base/components/ui/separator";
+} from "@/registry/bases/base/ui/popover";
+import { Separator } from "@/registry/bases/base/ui/separator";
+import { Calendar } from "@/registry/bases/radix/ui/calendar";
 
 type DateSelection = Date[] | DateRange;
 

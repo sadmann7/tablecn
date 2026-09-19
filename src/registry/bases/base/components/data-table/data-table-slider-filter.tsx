@@ -7,17 +7,17 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Button } from "@/registry/bases/base/components/ui/button";
-import { Label } from "@/registry/bases/base/components/ui/label";
+import { Button } from "@/registry/bases/base/ui/button";
+import { Label } from "@/registry/bases/base/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/registry/bases/base/components/ui/popover";
-import { Separator } from "@/registry/bases/base/components/ui/separator";
-import { Slider } from "@/registry/bases/base/components/ui/slider";
+} from "@/registry/bases/base/ui/popover";
+import { Separator } from "@/registry/bases/base/ui/separator";
+import { Slider } from "@/registry/bases/base/ui/slider";
+import { Input } from "@/registry/bases/radix/ui/input";
 
 interface Range {
   min: number;
@@ -126,7 +126,7 @@ export function DataTableSliderFilter<TData extends RowData>({
   );
 
   const onSliderValueChange = React.useCallback(
-    (value: RangeValue) => {
+    (value: number | readonly number[]) => {
       if (Array.isArray(value) && value.length === 2) {
         column.setFilterValue(value);
       }

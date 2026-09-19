@@ -16,22 +16,10 @@ import * as React from "react";
 import type {
   DataTableColumnMeta,
   ExtendedColumnFilter,
-  FilterOperator,
   JoinOperator,
 } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { DataTableRangeFilter } from "@/components/data-table/data-table-range-filter";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   dataTableConfig,
@@ -42,8 +30,8 @@ import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/registry/bases/base/components/ui/badge";
-import { Button } from "@/registry/bases/base/components/ui/button";
+import { Badge } from "@/registry/bases/base/ui/badge";
+import { Button } from "@/registry/bases/base/ui/button";
 import {
   Faceted,
   FacetedBadgeList,
@@ -54,12 +42,12 @@ import {
   FacetedItem,
   FacetedList,
   FacetedTrigger,
-} from "@/registry/bases/base/components/ui/faceted";
+} from "@/registry/bases/base/ui/faceted";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/registry/bases/base/components/ui/popover";
+} from "@/registry/bases/base/ui/popover";
 import {
   Select,
   SelectContent,
@@ -67,14 +55,25 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/registry/bases/base/components/ui/select";
+} from "@/registry/bases/base/ui/select";
 import {
   Sortable,
   SortableContent,
   SortableItem,
   SortableItemHandle,
   SortableOverlay,
-} from "@/registry/bases/base/components/ui/sortable";
+} from "@/registry/bases/base/ui/sortable";
+import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
+import { Calendar } from "@/registry/bases/radix/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/registry/bases/radix/ui/command";
+import { Input } from "@/registry/bases/radix/ui/input";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
@@ -418,7 +417,10 @@ function DataTableFilterItem<TData extends RowData>({
         ) : index === 1 ? (
           <Select
             value={joinOperator}
-            onValueChange={(value: JoinOperator) => setJoinOperator(value)}
+            onValueChange={(value) => {
+              if (value == null) return;
+              setJoinOperator(value);
+            }}
           >
             <SelectTrigger
               aria-label="Select join operator"
@@ -429,7 +431,7 @@ function DataTableFilterItem<TData extends RowData>({
             </SelectTrigger>
             <SelectContent
               id={joinOperatorListboxId}
-              position="popper"
+              alignItemWithTrigger={false}
               className="min-w-(--anchor-width) lowercase"
             >
               <SelectGroup>
@@ -504,13 +506,14 @@ function DataTableFilterItem<TData extends RowData>({
         open={showOperatorSelector}
         onOpenChange={setShowOperatorSelector}
         value={filter.operator}
-        onValueChange={(value: FilterOperator) =>
+        onValueChange={(value) => {
+          if (value == null) return;
           onFilterUpdate(filter.filterId, {
             operator: value,
             value:
               value === "isEmpty" || value === "isNotEmpty" ? "" : filter.value,
-          })
-        }
+          });
+        }}
       >
         <SelectTrigger
           aria-controls={operatorListboxId}
@@ -651,11 +654,12 @@ function onFilterInputRender<TData extends RowData>({
           open={showValueSelector}
           onOpenChange={setShowValueSelector}
           value={filter.value}
-          onValueChange={(value) =>
+          onValueChange={(value) => {
+            if (value == null) return;
             onFilterUpdate(filter.filterId, {
               value,
-            })
-          }
+            });
+          }}
         >
           <SelectTrigger
             id={inputId}

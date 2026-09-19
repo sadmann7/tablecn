@@ -16,18 +16,6 @@ import {
   getStanceIcon,
   getStyleIcon,
 } from "@/app/lib/utils";
-import { DataGrid } from "@/components/data-grid/data-grid";
-import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
-import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
-import {
-  type DataGridCellPresence,
-  DataGridPresenceProvider,
-} from "@/components/data-grid/data-grid-presence";
-import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
-import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
-import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
-import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
-import { Button } from "@/components/ui/button";
 import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import {
@@ -39,6 +27,18 @@ import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { getCellKey } from "@/lib/data-grid-utils";
 import { generateId } from "@/lib/id";
+import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
+import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
+import {
+  type DataGridCellPresence,
+  DataGridPresenceProvider,
+} from "@/registry/bases/radix/components/data-grid/data-grid-presence";
+import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
+import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
+import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
+import { DataGridViewMenu } from "@/registry/bases/radix/components/data-grid/data-grid-view-menu";
+import { Button } from "@/registry/bases/radix/ui/button";
 
 import {
   multiplayerCollection,

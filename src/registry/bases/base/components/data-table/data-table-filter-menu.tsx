@@ -6,23 +6,9 @@ import { BadgeCheck, CalendarIcon, ListFilter, Text, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 
-import type {
-  ExtendedColumnFilter,
-  FilterOperator,
-} from "@/lib/data-table-types";
+import type { ExtendedColumnFilter } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { DataTableRangeFilter } from "@/components/data-table/data-table-range-filter";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   getDefaultFilterOperator,
@@ -32,12 +18,12 @@ import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
 import { cn } from "@/lib/utils";
-import { Button } from "@/registry/bases/base/components/ui/button";
+import { Button } from "@/registry/bases/base/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/registry/bases/base/components/ui/popover";
+} from "@/registry/bases/base/ui/popover";
 import {
   Select,
   SelectContent,
@@ -45,7 +31,18 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/registry/bases/base/components/ui/select";
+} from "@/registry/bases/base/ui/select";
+import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
+import { Calendar } from "@/registry/bases/radix/ui/calendar";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/registry/bases/radix/ui/command";
+import { Input } from "@/registry/bases/radix/ui/input";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
@@ -455,15 +452,16 @@ function DataTableFilterItem<TData extends RowData>({
           open={showOperatorSelector}
           onOpenChange={setShowOperatorSelector}
           value={filter.operator}
-          onValueChange={(value: FilterOperator) =>
+          onValueChange={(value) => {
+            if (value == null) return;
             onFilterUpdate(filter.filterId, {
               operator: value,
               value:
                 value === "isEmpty" || value === "isNotEmpty"
                   ? ""
                   : filter.value,
-            })
-          }
+            });
+          }}
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
@@ -672,9 +670,10 @@ function onFilterInputRender<TData extends RowData>({
           open={showValueSelector}
           onOpenChange={setShowValueSelector}
           value={typeof filter.value === "string" ? filter.value : "true"}
-          onValueChange={(value: "true" | "false") =>
-            onFilterUpdate(filter.filterId, { value })
-          }
+          onValueChange={(value) => {
+            if (value == null) return;
+            onFilterUpdate(filter.filterId, { value });
+          }}
         >
           <SelectTrigger
             id={inputId}

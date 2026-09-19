@@ -7,6 +7,13 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
+import { cn } from "@/lib/utils";
+import { Button } from "@/registry/bases/base/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/registry/bases/base/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -14,14 +21,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { cn } from "@/lib/utils";
-import { Button } from "@/registry/bases/base/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/components/ui/popover";
+} from "@/registry/bases/radix/ui/command";
 
 interface DataTableViewOptionsProps<
   TData extends RowData,

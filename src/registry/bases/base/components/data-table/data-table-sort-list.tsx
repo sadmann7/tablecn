@@ -1,11 +1,6 @@
 "use client";
 
-import type {
-  ColumnSort,
-  RowData,
-  SortDirection,
-  Table,
-} from "@tanstack/react-table";
+import type { ColumnSort, RowData, Table } from "@tanstack/react-table";
 
 import {
   ArrowDownUp,
@@ -17,23 +12,15 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { dataTableConfig } from "@/lib/data-table-utils";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/registry/bases/base/components/ui/badge";
-import { Button } from "@/registry/bases/base/components/ui/button";
+import { Badge } from "@/registry/bases/base/ui/badge";
+import { Button } from "@/registry/bases/base/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/registry/bases/base/components/ui/popover";
+} from "@/registry/bases/base/ui/popover";
 import {
   Select,
   SelectContent,
@@ -41,14 +28,22 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/registry/bases/base/components/ui/select";
+} from "@/registry/bases/base/ui/select";
 import {
   Sortable,
   SortableContent,
   SortableItem,
   SortableItemHandle,
   SortableOverlay,
-} from "@/registry/bases/base/components/ui/sortable";
+} from "@/registry/bases/base/ui/sortable";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/registry/bases/radix/ui/command";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
@@ -376,9 +371,10 @@ function DataTableSortItem({
         open={showDirectionSelector}
         onOpenChange={setShowDirectionSelector}
         value={sort.desc ? "desc" : "asc"}
-        onValueChange={(value: SortDirection) =>
-          onSortUpdate(sort.id, { desc: value === "desc" })
-        }
+        onValueChange={(value) => {
+          if (value == null) return;
+          onSortUpdate(sort.id, { desc: value === "desc" });
+        }}
       >
         <SelectTrigger
           aria-controls={directionListboxId}

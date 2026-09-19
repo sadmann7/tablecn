@@ -1,8 +1,8 @@
 "use client";
 
-import { Fps } from "@/components/ui/fps";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useMounted } from "@/hooks/use-mounted";
+import { Fps } from "@/registry/bases/radix/ui/fps";
+import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 
 import { DataGridRenderDemo } from "./components/data-grid-render-demo";
 

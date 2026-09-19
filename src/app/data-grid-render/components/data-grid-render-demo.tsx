@@ -9,9 +9,11 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellUpdate } from "@/lib/data-grid-types";
 
-import { DataGrid } from "@/components/data-grid/data-grid";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useDataGrid } from "@/hooks/use-data-grid";
+import { getFilterFn } from "@/lib/data-grid-filters";
+import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { Button } from "@/registry/bases/radix/ui/button";
+import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -20,9 +22,7 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useDataGrid } from "@/hooks/use-data-grid";
-import { getFilterFn } from "@/lib/data-grid-filters";
+} from "@/registry/bases/radix/ui/select";
 
 interface Person {
   id: string;

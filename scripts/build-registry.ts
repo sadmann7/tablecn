@@ -7,9 +7,10 @@
  * placeholder in a consumer's registry URL resolves for every official style id
  * instead of 404ing.
  *
- * Base resolution: a file is taken from the base tree when a counterpart exists
- * there, otherwise it falls back to the app source. That keeps base-agnostic
- * files (hooks, lib, calendar/command/input consumers) in exactly one place.
+ * Base resolution: registry.json points at the radix tree, and a file is swapped
+ * to its base-tree counterpart when one exists. Files outside the bases (hooks,
+ * lib) and primitives with no base variant stay shared, so base-agnostic code
+ * lives in exactly one place.
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -37,7 +38,8 @@ const DEFAULT_BASE = DEFAULT_STYLE_ID.split("-")[0] as Base;
 const ROOT = process.cwd();
 const OUT_ROOT = path.join(ROOT, "public/r");
 const STYLES_ROOT = path.join(OUT_ROOT, "styles");
-const BASE_TREE = "src/registry/bases/base";
+const RADIX_TREE = "src/registry/bases/radix/";
+const BASE_TREE = "src/registry/bases/base/";
 
 interface RegistryFile {
   path: string;
@@ -62,7 +64,7 @@ interface Registry {
 function resolveFile(file: RegistryFile, base: Base): RegistryFile {
   if (base === "radix") return file;
 
-  const override = file.path.replace(/^src\//, `${BASE_TREE}/`);
+  const override = file.path.replace(RADIX_TREE, BASE_TREE);
 
   return existsSync(path.join(ROOT, override))
     ? { ...file, path: override }

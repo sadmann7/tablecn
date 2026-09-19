@@ -6,7 +6,7 @@ import {
   DataGridSkeleton,
   DataGridSkeletonGrid,
   DataGridSkeletonToolbar,
-} from "@/components/data-grid/data-grid-skeleton";
+} from "@/registry/bases/radix/components/data-grid/data-grid-skeleton";
 
 // Dynamic import with ssr: false is required because:
 // 1. useLiveQuery uses useSyncExternalStore which needs getServerSnapshot for SSR

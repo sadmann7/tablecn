@@ -8,7 +8,7 @@ import {
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useState } from "react";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/registry/bases/radix/ui/tooltip";
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   const [queryClient] = useState(

@@ -18,7 +18,7 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock useDirection
-vi.mock("@/components/ui/direction", () => ({
+vi.mock("@/registry/bases/radix/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
 

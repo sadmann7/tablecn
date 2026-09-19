@@ -9,7 +9,8 @@ import { toast } from "sonner";
 import type { Task } from "@/db/schema";
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { Button } from "@/components/ui/button";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -19,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/registry/bases/radix/ui/dialog";
 import {
   Drawer,
   DrawerClose,
@@ -29,8 +30,7 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer";
-import { useMediaQuery } from "@/hooks/use-media-query";
+} from "@/registry/bases/radix/ui/drawer";
 
 import { deleteTasks } from "../lib/actions";
 

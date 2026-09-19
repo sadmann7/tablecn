@@ -8,6 +8,15 @@ import * as React from "react";
 import type { Option } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/table-features";
 
+import { cn } from "@/lib/utils";
+import { Badge } from "@/registry/bases/base/ui/badge";
+import { Button } from "@/registry/bases/base/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/registry/bases/base/ui/popover";
+import { Separator } from "@/registry/bases/base/ui/separator";
 import {
   Command,
   CommandEmpty,
@@ -16,16 +25,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/ui/command";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/registry/bases/base/components/ui/badge";
-import { Button } from "@/registry/bases/base/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/components/ui/popover";
-import { Separator } from "@/registry/bases/base/components/ui/separator";
+} from "@/registry/bases/radix/ui/command";
 
 interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
   column?: Column<DataTableFeatures, TData, TValue>;
