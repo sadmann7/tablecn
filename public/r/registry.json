@@ -96,11 +96,13 @@
         },
         {
           "path": "src/config/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
         },
         {
           "path": "src/types/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
         },
         {
           "path": "src/lib/table-features.ts",
@@ -138,11 +140,13 @@
         },
         {
           "path": "src/config/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
         },
         {
           "path": "src/types/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
         },
         {
           "path": "src/lib/table-features.ts",
@@ -225,11 +229,13 @@
         },
         {
           "path": "src/config/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
         },
         {
           "path": "src/types/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
         },
         {
           "path": "src/lib/table-features.ts",
@@ -299,11 +305,13 @@
         },
         {
           "path": "src/config/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/config/data-table.ts"
         },
         {
           "path": "src/types/data-table.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-table.ts"
         },
         {
           "path": "src/lib/table-features.ts",
@@ -437,7 +445,8 @@
         },
         {
           "path": "src/types/data-grid.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         },
         {
           "path": "src/lib/data-grid-features.ts",
@@ -464,7 +473,8 @@
         },
         {
           "path": "src/types/data-grid.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -507,7 +517,8 @@
         },
         {
           "path": "src/types/data-grid.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -530,7 +541,8 @@
         },
         {
           "path": "src/types/data-grid.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -558,7 +570,8 @@
         },
         {
           "path": "src/types/data-grid.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     },
@@ -632,7 +645,8 @@
         },
         {
           "path": "src/types/data-grid.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         },
         {
           "path": "src/lib/data-grid-features.ts",
@@ -693,7 +707,8 @@
         },
         {
           "path": "src/types/data-grid.ts",
-          "type": "registry:lib"
+          "type": "registry:file",
+          "target": "src/types/data-grid.ts"
         }
       ]
     }
