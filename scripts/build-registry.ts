@@ -75,21 +75,23 @@ function resolveFile(file: RegistryFile, base: Base): RegistryFile {
  * Base UI is a peer of the base tree, not of registry.json, so the dependency is
  * added per item based on what its resolved files actually import.
  */
-function withBaseUiDependency(
+function withImportedDependencies(
   dependencies: string[] | undefined,
   files: RegistryFile[] | undefined,
 ) {
-  const importsBaseUi = files?.some((file) =>
-    readFileSync(path.join(ROOT, file.path), "utf8").includes(
-      '"@base-ui/react',
-    ),
-  );
+  const contents =
+    files?.map((file) => readFileSync(path.join(ROOT, file.path), "utf8")) ??
+    [];
 
-  if (!importsBaseUi) return dependencies;
+  const next = [...(dependencies ?? [])];
 
-  const next = dependencies ?? [];
+  for (const pkg of ["@base-ui/react", "@base-ui/utils"] as const) {
+    if (contents.some((content) => content.includes(`"${pkg}`))) {
+      if (!next.includes(pkg)) next.push(pkg);
+    }
+  }
 
-  return next.includes("@base-ui/react") ? next : [...next, "@base-ui/react"];
+  return next.length > 0 ? next : dependencies;
 }
 
 function buildBase(base: Base, outDir: string) {
@@ -102,7 +104,7 @@ function buildBase(base: Base, outDir: string) {
 
     return {
       ...item,
-      dependencies: withBaseUiDependency(item.dependencies, files),
+      dependencies: withImportedDependencies(item.dependencies, files),
       files,
     };
   });

@@ -2,11 +2,11 @@
 
 import type { RowData } from "@tanstack/react-table";
 
+import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
-import { useComposedRefs } from "@/lib/compose-refs";
 import { getCellKey } from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
 import { useDataGridPresence } from "@/registry/bases/radix/components/data-grid/data-grid-presence";

@@ -132,10 +132,6 @@
           "target": "src/components/ui/sortable.tsx"
         },
         {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
-        },
-        {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
@@ -205,10 +201,6 @@
         {
           "path": "src/hooks/use-debounced-callback.ts",
           "type": "registry:hook"
-        },
-        {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
         },
         {
           "path": "src/lib/data-table-utils.ts",
@@ -423,10 +415,6 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
-        },
-        {
           "path": "src/lib/data-grid-utils.ts",
           "type": "registry:lib"
         },
@@ -498,10 +486,6 @@
           "path": "src/registry/bases/radix/ui/sortable.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/sortable.tsx"
-        },
-        {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
         },
         {
           "path": "src/lib/data-grid-features.ts",
@@ -645,10 +629,6 @@
         {
           "path": "src/hooks/use-debounced-callback.ts",
           "type": "registry:hook"
-        },
-        {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
         },
         {
           "path": "src/lib/data-grid-filters.ts",

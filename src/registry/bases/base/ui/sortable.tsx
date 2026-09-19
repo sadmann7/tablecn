@@ -42,7 +42,6 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
-import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
 
 const orientationConfig = {
@@ -432,8 +431,6 @@ function SortableItem(props: SortableItemProps) {
     [disabled, asHandle, setNodeRef, setActivatorNodeRef],
   );
 
-  const composedRef = useComposedRefs(ref, onNodeRefChange);
-
   const composedStyle = React.useMemo<React.CSSProperties>(() => {
     return {
       transform: CSS.Translate.toString(transform),
@@ -459,10 +456,10 @@ function SortableItem(props: SortableItemProps) {
 
   const element = useRender({
     defaultTagName: "div",
+    ref: [ref ?? null, onNodeRefChange],
     props: mergeProps<"div">(
       {
         id,
-        ref: composedRef,
         style: composedStyle,
         className: cn(
           "focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-hidden",
@@ -516,19 +513,17 @@ function SortableItemHandle(props: SortableItemHandleProps) {
     [isDisabled, setActivatorNodeRef],
   );
 
-  const composedRef = useComposedRefs(ref, onActivatorNodeRef);
-
   const handleProps = isDisabled
     ? undefined
     : { ...itemContext.attributes, ...itemContext.listeners };
 
   return useRender({
     defaultTagName: "button",
+    ref: [ref ?? null, onActivatorNodeRef],
     props: mergeProps<"button">(
       {
         type: "button",
         "aria-controls": itemContext.id,
-        ref: composedRef,
         disabled: isDisabled,
         className: cn(
           "select-none disabled:pointer-events-none disabled:opacity-50",

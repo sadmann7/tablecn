@@ -8,6 +8,7 @@ import type {
 } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 
+import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -18,7 +19,6 @@ import type {
   RowHeightValue,
 } from "@/lib/data-grid-types";
 
-import { useComposedRefs } from "@/lib/compose-refs";
 import {
   flexRender,
   getCellKey,
