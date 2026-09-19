@@ -22,6 +22,7 @@ import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
 import { cn } from "@/lib/utils";
+import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
@@ -55,7 +56,6 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/registry/bases/base/ui/sortable";
-import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
 import {
   Command,

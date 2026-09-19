@@ -17,6 +17,7 @@ import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
 import { cn } from "@/lib/utils";
+import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
   Popover,
@@ -31,7 +32,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/base/ui/select";
-import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
 import {
   Command,

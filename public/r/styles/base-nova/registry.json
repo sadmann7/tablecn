@@ -30,17 +30,17 @@
       ],
       "files": [
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-column-header.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-column-header.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-column-header.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-pagination.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-pagination.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-pagination.tsx"
         },
@@ -55,7 +55,7 @@
           "target": "src/components/data-table/data-table-faceted-filter.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-toolbar.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-toolbar.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-toolbar.tsx"
         },
@@ -70,7 +70,7 @@
           "target": "src/components/data-table/data-table-date-filter.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-skeleton.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-skeleton.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-skeleton.tsx"
         },
@@ -189,12 +189,12 @@
           "target": "src/components/data-table/data-table-filter-list.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-range-filter.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-range-filter.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-range-filter.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-advanced-toolbar.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-advanced-toolbar.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-advanced-toolbar.tsx"
         },
@@ -281,12 +281,12 @@
           "target": "src/components/data-table/data-table-filter-menu.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-range-filter.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-range-filter.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-range-filter.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-advanced-toolbar.tsx",
+          "path": "src/registry/bases/base/components/data-table/data-table-advanced-toolbar.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-advanced-toolbar.tsx"
         },
