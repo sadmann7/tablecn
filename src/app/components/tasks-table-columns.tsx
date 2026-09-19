@@ -17,8 +17,8 @@ import type { DataTableRowAction } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/table-features";
 
 import { type Task, tasks } from "@/db/schema";
+import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
-import { getErrorMessage } from "@/lib/handle-error";
 import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-table/data-table-column-header";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";

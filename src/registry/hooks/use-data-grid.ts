@@ -3649,4 +3649,4 @@ function useDataGrid<TData extends RowData>({
   );
 }
 
-export { type UseDataGridProps, useDataGrid };
+export { useDataGrid, type UseDataGridProps };

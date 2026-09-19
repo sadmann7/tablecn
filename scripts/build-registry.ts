@@ -8,9 +8,9 @@
  * instead of 404ing.
  *
  * Base resolution: registry.json points at the radix tree, and a file is swapped
- * to its base-tree counterpart when one exists. Files outside the bases (hooks,
- * lib) and primitives with no base variant stay shared, so base-agnostic code
- * lives in exactly one place.
+ * to its base-tree counterpart when one exists. Shared hooks and lib live in
+ * `src/registry/{hooks,lib}` (not under a base), and site-only helpers stay in
+ * `src/hooks` / `src/lib`.
  */
 import { execFileSync } from "node:child_process";
 import {
