@@ -40,6 +40,7 @@ import { Slot as SlotPrimitive } from "radix-ui";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useComposedRefs } from "@/lib/compose-refs";
 import { cn } from "@/lib/utils";
 
@@ -543,7 +544,7 @@ function SortableOverlay(props: SortableOverlayProps) {
 
   const [mounted, setMounted] = React.useState(false);
 
-  React.useLayoutEffect(() => setMounted(true), []);
+  useIsomorphicLayoutEffect(() => setMounted(true), []);
 
   const container =
     containerProp ?? (mounted ? globalThis.document?.body : null);

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "radix-nova"
+  },
+  {
+    "name": "radix-vega"
+  },
+  {
+    "name": "radix-maia"
+  },
+  {
+    "name": "radix-lyra"
+  },
+  {
+    "name": "radix-mira"
+  },
+  {
+    "name": "radix-luma"
+  },
+  {
+    "name": "radix-sera"
+  },
+  {
+    "name": "radix-rhea"
+  },
+  {
+    "name": "base-nova"
+  },
+  {
+    "name": "base-vega"
+  },
+  {
+    "name": "base-maia"
+  },
+  {
+    "name": "base-lyra"
+  },
+  {
+    "name": "base-mira"
+  },
+  {
+    "name": "base-luma"
+  },
+  {
+    "name": "base-sera"
+  },
+  {
+    "name": "base-rhea"
+  }
+]

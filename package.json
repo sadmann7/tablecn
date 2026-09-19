@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit",
     "check": "oxlint . && oxfmt --check && tsc --noEmit",
     "shadcn": "pnpm dlx shadcn@latest",
-    "build:registry": "shadcn build",
+    "build:registry": "tsx scripts/build-registry.ts",
     "db:start": "docker compose up -d",
     "db:stop": "docker compose down",
     "db:generate": "dotenv drizzle-kit generate",
@@ -31,9 +31,11 @@
     "db:seed": "dotenv tsx src/db/seed.ts",
     "db:setup": "pnpm db:push && pnpm db:seed",
     "db:reset": "pnpm db:stop && rimraf docker-data && pnpm db:start && sleep 10 && pnpm db:setup",
-    "db:studio": "dotenv drizzle-kit studio"
+    "db:studio": "dotenv drizzle-kit studio",
+    "vendor:base-ui": "tsx scripts/vendor-base-ui.ts"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/modifiers": "^9.0.0",
     "@dnd-kit/sortable": "^10.0.0",
