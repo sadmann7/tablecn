@@ -15,6 +15,8 @@ const SOURCE_STYLE = "base-nova";
 const PRIMITIVES = [
   "badge",
   "button",
+  "checkbox",
+  "dialog",
   "direction",
   "dropdown-menu",
   "label",
@@ -22,6 +24,7 @@ const PRIMITIVES = [
   "select",
   "separator",
   "slider",
+  "tooltip",
 ];
 
 const BASE_UI = "@/registry/bases/base/ui";

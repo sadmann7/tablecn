@@ -211,7 +211,7 @@ function FacetedContent(props: React.ComponentProps<typeof PopoverContent>) {
     <PopoverContent
       {...contentProps}
       align="start"
-      className={cn("w-[200px] origin-(--transform-origin) p-0", className)}
+      className={cn("w-50 origin-(--transform-origin) p-0", className)}
     >
       <Command>{children}</Command>
     </PopoverContent>
