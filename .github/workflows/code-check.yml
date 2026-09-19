@@ -19,10 +19,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.6.0
       - uses: ./.github/setup
 
       - name: Check formatting
@@ -34,10 +30,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.6.0
       - uses: ./.github/setup
 
       - run: pnpm lint
@@ -48,10 +40,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.6.0
       - uses: ./.github/setup
 
       - run: pnpm typecheck
@@ -62,10 +50,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 11.6.0
       - uses: ./.github/setup
 
       - run: pnpm test
