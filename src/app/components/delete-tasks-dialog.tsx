@@ -27,12 +27,13 @@ import {
 } from "@/components/ui/drawer";
 import type { Task } from "@/db/schema";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import type { DataTableFeatures } from "@/lib/table-features";
 
 import { deleteTasks } from "../lib/actions";
 
 interface DeleteTasksDialogProps
   extends React.ComponentPropsWithoutRef<typeof Dialog> {
-  tasks: Row<Task>["original"][];
+  tasks: Row<DataTableFeatures, Task>["original"][];
   showTrigger?: boolean;
   onSuccess?: () => void;
 }

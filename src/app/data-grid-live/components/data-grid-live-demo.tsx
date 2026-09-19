@@ -24,6 +24,7 @@ import {
   useDataGridUndoRedo,
 } from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import { useUploadThing } from "@/lib/uploadthing";
@@ -101,7 +102,7 @@ export function DataGridLiveDemo() {
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
-  const columns = React.useMemo<ColumnDef<SkaterSchema>[]>(
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
     () => [
       getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
       {
@@ -499,7 +500,8 @@ export function DataGridLiveDemo() {
     getRowId: (row) => row.id,
     initialState: {
       columnPinning: {
-        left: ["select"],
+        start: ["select"],
+        end: [],
       },
       sorting,
     },

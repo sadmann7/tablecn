@@ -1,21 +1,20 @@
 import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
 import type { DataTableConfig } from "@/config/data-table";
 import type { FilterItemSchema } from "@/lib/parsers";
+import type { DataTableFeatures } from "@/lib/table-features";
 
-declare module "@tanstack/react-table" {
-  interface TableMeta<TData extends RowData> {
-    queryKeys?: QueryKeys;
-  }
+export interface DataTableMeta {
+  queryKeys?: QueryKeys;
+}
 
-  interface ColumnMeta<TData extends RowData, TValue> {
-    label?: string;
-    placeholder?: string;
-    variant?: FilterVariant;
-    options?: Option[];
-    range?: [number, number];
-    unit?: string;
-    icon?: React.ComponentType<React.ComponentProps<"svg">>;
-  }
+export interface DataTableColumnMeta {
+  label?: string;
+  placeholder?: string;
+  variant?: FilterVariant;
+  options?: Option[];
+  range?: [number, number];
+  unit?: string;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
 export interface QueryKeys {
@@ -45,7 +44,7 @@ export interface ExtendedColumnFilter<TData> extends FilterItemSchema {
   id: Extract<keyof TData, string>;
 }
 
-export interface DataTableRowAction<TData> {
-  row: Row<TData>;
+export interface DataTableRowAction<TData extends RowData> {
+  row: Row<DataTableFeatures, TData>;
   variant: "update" | "delete";
 }

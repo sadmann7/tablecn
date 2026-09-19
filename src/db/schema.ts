@@ -8,7 +8,6 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { pgTable } from "@/db/utils";
-
 import { generateId } from "@/lib/id";
 import type { FileCellData } from "@/types/data-grid";
 

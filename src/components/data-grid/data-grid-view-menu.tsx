@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
+import type { RowData, Table } from "@tanstack/react-table";
 import { Settings2 } from "lucide-react";
 import * as React from "react";
 import { Button } from "@/components/ui/button";
@@ -18,15 +18,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { cn } from "@/lib/utils";
 
-interface DataGridViewMenuProps<TData>
+interface DataGridViewMenuProps<TData extends RowData>
   extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<TData>;
+  table: Table<DataGridFeatures, TData>;
   disabled?: boolean;
 }
 
-export function DataGridViewMenu<TData>({
+export function DataGridViewMenu<TData extends RowData>({
   table,
   disabled,
   className,

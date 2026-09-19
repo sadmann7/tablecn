@@ -1,6 +1,11 @@
 "use client";
 
-import type { ColumnSort, SortDirection, Table } from "@tanstack/react-table";
+import type {
+  ColumnSort,
+  RowData,
+  SortDirection,
+  Table,
+} from "@tanstack/react-table";
 import {
   ArrowDownUp,
   ChevronsUpDown,
@@ -40,18 +45,19 @@ import {
   SortableOverlay,
 } from "@/components/ui/sortable";
 import { dataTableConfig } from "@/config/data-table";
+import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 
-interface DataTableSortListProps<TData>
+interface DataTableSortListProps<TData extends RowData>
   extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<TData>;
+  table: Table<DataTableFeatures, TData>;
   disabled?: boolean;
 }
 
-export function DataTableSortList<TData>({
+export function DataTableSortList<TData extends RowData>({
   table,
   disabled,
   className,
@@ -63,7 +69,7 @@ export function DataTableSortList<TData>({
   const [open, setOpen] = React.useState(false);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
-  const sorting = table.getState().sorting;
+  const sorting = table.store.state.sorting;
   const onSortingChange = table.setSorting;
 
   const { columnLabels, columns } = React.useMemo(() => {

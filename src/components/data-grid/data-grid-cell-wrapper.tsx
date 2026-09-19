@@ -1,17 +1,19 @@
 "use client";
 
+import type { RowData } from "@tanstack/react-table";
+
 import * as React from "react";
 import { useDataGridPresence } from "@/components/data-grid/data-grid-presence";
 import { useComposedRefs } from "@/lib/compose-refs";
-import { getCellKey } from "@/lib/data-grid";
+import { getCellKey } from "@/lib/data-grid-helpers";
 import { cn } from "@/lib/utils";
 import type { DataGridCellProps } from "@/types/data-grid";
 
-interface DataGridCellWrapperProps<TData>
+interface DataGridCellWrapperProps<TData extends RowData>
   extends DataGridCellProps<TData>,
     React.ComponentProps<"div"> {}
 
-export function DataGridCellWrapper<TData>({
+export function DataGridCellWrapper<TData extends RowData>({
   tableMeta,
   rowIndex,
   columnId,

@@ -1,4 +1,4 @@
-import type { Column, Table } from "@tanstack/react-table";
+import type { Column, RowData, Table } from "@tanstack/react-table";
 import {
   BaselineIcon,
   CalendarIcon,
@@ -19,6 +19,7 @@ import {
   TextInitialIcon,
 } from "lucide-react";
 import type * as React from "react";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellOpts,
   CellPosition,
@@ -99,9 +100,9 @@ export function getLineCount(rowHeight: RowHeightValue): number {
   return lineCountMap[rowHeight];
 }
 
-export function getColumnBorderVisibility<TData>(params: {
-  column: Column<TData>;
-  nextColumn?: Column<TData>;
+export function getColumnBorderVisibility<TData extends RowData>(params: {
+  column: Column<DataGridFeatures, TData>;
+  nextColumn?: Column<DataGridFeatures, TData>;
   isLastColumn: boolean;
 }): {
   showEndBorder: boolean;
@@ -111,13 +112,13 @@ export function getColumnBorderVisibility<TData>(params: {
 
   const isPinned = column.getIsPinned();
   const isFirstRightPinnedColumn =
-    isPinned === "right" && column.getIsFirstColumn("right");
+    isPinned === "end" && column.getIsFirstColumn("end");
   const isLastRightPinnedColumn =
-    isPinned === "right" && column.getIsLastColumn("right");
+    isPinned === "end" && column.getIsLastColumn("end");
 
   const nextIsPinned = nextColumn?.getIsPinned();
   const isBeforeRightPinned =
-    nextIsPinned === "right" && nextColumn?.getIsFirstColumn("right");
+    nextIsPinned === "end" && nextColumn?.getIsFirstColumn("end");
 
   const showEndBorder =
     !isBeforeRightPinned && (isLastColumn || !isLastRightPinnedColumn);
@@ -130,8 +131,8 @@ export function getColumnBorderVisibility<TData>(params: {
   };
 }
 
-export function getColumnPinningStyle<TData>(params: {
-  column: Column<TData>;
+export function getColumnPinningStyle<TData extends RowData>(params: {
+  column: Column<DataGridFeatures, TData>;
   withBorder?: boolean;
   dir?: Direction;
 }): React.CSSProperties {
@@ -139,16 +140,16 @@ export function getColumnPinningStyle<TData>(params: {
 
   const isPinned = column.getIsPinned();
   const isLastLeftPinnedColumn =
-    isPinned === "left" && column.getIsLastColumn("left");
+    isPinned === "start" && column.getIsLastColumn("start");
   const isFirstRightPinnedColumn =
-    isPinned === "right" && column.getIsFirstColumn("right");
+    isPinned === "end" && column.getIsFirstColumn("end");
 
   const isRtl = dir === "rtl";
 
   const leftPosition =
-    isPinned === "left" ? `${column.getStart("left")}px` : undefined;
+    isPinned === "start" ? `${column.getStart("start")}px` : undefined;
   const rightPosition =
-    isPinned === "right" ? `${column.getAfter("right")}px` : undefined;
+    isPinned === "end" ? `${column.getAfter("end")}px` : undefined;
 
   return {
     boxShadow: withBorder
@@ -188,10 +189,10 @@ export function getScrollDirection(
   return undefined;
 }
 
-export function scrollCellIntoView<TData>(params: {
+export function scrollCellIntoView<TData extends RowData>(params: {
   container: HTMLDivElement;
   targetCell: HTMLDivElement;
-  tableRef: React.RefObject<Table<TData> | null>;
+  tableRef: React.RefObject<Table<DataGridFeatures, TData> | null>;
   viewportOffset: number;
   direction?: "left" | "right" | "home" | "end";
   isRtl: boolean;
@@ -206,8 +207,8 @@ export function scrollCellIntoView<TData>(params: {
   const isActuallyRtl = isRtl || hasNegativeScroll;
 
   const currentTable = tableRef.current;
-  const leftPinnedColumns = currentTable?.getLeftVisibleLeafColumns() ?? [];
-  const rightPinnedColumns = currentTable?.getRightVisibleLeafColumns() ?? [];
+  const leftPinnedColumns = currentTable?.getStartVisibleLeafColumns() ?? [];
+  const rightPinnedColumns = currentTable?.getEndVisibleLeafColumns() ?? [];
 
   const leftPinnedWidth = leftPinnedColumns.reduce(
     (sum, c) => sum + c.getSize(),

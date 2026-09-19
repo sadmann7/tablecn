@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import type * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useDataGrid } from "@/hooks/use-data-grid";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 // Mock toast
 vi.mock("sonner", () => ({
@@ -40,7 +41,7 @@ const simpleFilterFn = (
   return value.toLowerCase().includes(filterValue.toLowerCase());
 };
 
-const testColumns: ColumnDef<TestData>[] = [
+const testColumns: ColumnDef<DataGridFeatures, TestData>[] = [
   { id: "name", accessorKey: "name", filterFn: simpleFilterFn },
   { id: "trick", accessorKey: "trick", filterFn: simpleFilterFn },
   {
@@ -156,7 +157,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.table.getState().sorting).toEqual([
+      expect(result.current.table.state.sorting).toEqual([
         { id: "name", desc: false },
       ]);
     });
@@ -1758,7 +1759,7 @@ describe("useDataGrid", () => {
         result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", true, false);
       });
 
-      const rowSelection = result.current.table.getState().rowSelection;
+      const rowSelection = result.current.table.state.rowSelection;
       expect(Object.keys(rowSelection).length).toBeGreaterThan(0);
     });
 
@@ -1787,7 +1788,7 @@ describe("useDataGrid", () => {
         result.current.tableMeta.onRowSelect?.(thirdRowId ?? "3", true, true);
       });
 
-      const rowSelection = result.current.table.getState().rowSelection;
+      const rowSelection = result.current.table.state.rowSelection;
       expect(Object.keys(rowSelection).length).toBeGreaterThanOrEqual(2);
     });
 
@@ -1814,7 +1815,7 @@ describe("useDataGrid", () => {
         result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", false, false);
       });
 
-      const rowSelection = result.current.table.getState().rowSelection;
+      const rowSelection = result.current.table.state.rowSelection;
       expect(rowSelection[firstRowId ?? "1"]).toBeFalsy();
     });
 
@@ -1847,7 +1848,7 @@ describe("useDataGrid", () => {
         );
       });
 
-      const rowSelection = result.current.table.getState().rowSelection;
+      const rowSelection = result.current.table.state.rowSelection;
       expect(rowSelection["1"]).toBe(true);
       expect(Object.keys(rowSelection).length).toBe(1);
     });
@@ -2042,7 +2043,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      const sorting = result.current.table.getState().sorting;
+      const sorting = result.current.table.state.sorting;
       expect(sorting).toEqual([{ id: "score", desc: true }]);
     });
 
@@ -2059,7 +2060,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      const filters = result.current.table.getState().columnFilters;
+      const filters = result.current.table.state.columnFilters;
       expect(filters).toEqual([{ id: "name", value: "Tony" }]);
     });
   });
