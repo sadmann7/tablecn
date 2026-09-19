@@ -95,11 +95,6 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/config/data-table.ts",
-          "type": "registry:file",
-          "target": "src/config/data-table.ts"
-        },
-        {
           "path": "src/types/data-table.ts",
           "type": "registry:file",
           "target": "src/types/data-table.ts"
@@ -139,9 +134,8 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/config/data-table.ts",
-          "type": "registry:file",
-          "target": "src/config/data-table.ts"
+          "path": "src/lib/data-table-helpers.ts",
+          "type": "registry:lib"
         },
         {
           "path": "src/types/data-table.ts",
@@ -228,11 +222,6 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/config/data-table.ts",
-          "type": "registry:file",
-          "target": "src/config/data-table.ts"
-        },
-        {
           "path": "src/types/data-table.ts",
           "type": "registry:file",
           "target": "src/types/data-table.ts"
@@ -302,11 +291,6 @@
         {
           "path": "src/lib/parsers.ts",
           "type": "registry:lib"
-        },
-        {
-          "path": "src/config/data-table.ts",
-          "type": "registry:file",
-          "target": "src/config/data-table.ts"
         },
         {
           "path": "src/types/data-table.ts",
