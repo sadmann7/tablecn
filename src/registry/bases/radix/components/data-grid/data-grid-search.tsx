@@ -1,6 +1,5 @@
 "use client";
 
-import { ChevronDown, ChevronUp, X } from "lucide-react";
 import * as React from "react";
 
 import type { SearchState } from "@/lib/data-grid-types";
@@ -9,6 +8,7 @@ import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
   const target = event.target;
@@ -189,7 +189,13 @@ function DataGridSearchImpl({
             onPointerDown={onTriggerPointerDown}
             disabled={searchMatches.length === 0}
           >
-            <ChevronUp />
+            <IconPlaceholder
+              lucide="ChevronUp"
+              tabler="IconChevronUp"
+              hugeicons="ArrowUp01Icon"
+              phosphor="CaretUpIcon"
+              remixicon="RiArrowUpSLine"
+            />
           </Button>
           <Button
             aria-label="Next match"
@@ -200,7 +206,13 @@ function DataGridSearchImpl({
             onPointerDown={onTriggerPointerDown}
             disabled={searchMatches.length === 0}
           >
-            <ChevronDown />
+            <IconPlaceholder
+              lucide="ChevronDown"
+              tabler="IconChevronDown"
+              hugeicons="ArrowDown01Icon"
+              phosphor="CaretDownIcon"
+              remixicon="RiArrowDownSLine"
+            />
           </Button>
           <Button
             aria-label="Close search"
@@ -209,7 +221,13 @@ function DataGridSearchImpl({
             className="size-7"
             onClick={onClose}
           >
-            <X />
+            <IconPlaceholder
+              lucide="X"
+              tabler="IconX"
+              hugeicons="Cancel01Icon"
+              phosphor="XIcon"
+              remixicon="RiCloseLine"
+            />
           </Button>
         </div>
       </div>

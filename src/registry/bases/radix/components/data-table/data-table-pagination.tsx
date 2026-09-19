@@ -1,12 +1,5 @@
 import type { RowData, Table } from "@tanstack/react-table";
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
-
 import type { DataTableFeatures } from "@/lib/table-features";
 
 import { cn } from "@/lib/utils";
@@ -19,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/radix/ui/select";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataTablePaginationProps<
   TData extends RowData,
@@ -83,7 +77,13 @@ export function DataTablePagination<TData extends RowData>({
             onClick={() => table.setPageIndex(0)}
             disabled={!table.getCanPreviousPage()}
           >
-            <ChevronsLeft />
+            <IconPlaceholder
+              lucide="ChevronsLeft"
+              tabler="IconChevronsLeft"
+              hugeicons="ArrowLeftDoubleIcon"
+              phosphor="CaretDoubleLeftIcon"
+              remixicon="RiSkipLeftLine"
+            />
           </Button>
           <Button
             aria-label="Go to previous page"
@@ -93,7 +93,13 @@ export function DataTablePagination<TData extends RowData>({
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
-            <ChevronLeft />
+            <IconPlaceholder
+              lucide="ChevronLeft"
+              tabler="IconChevronLeft"
+              hugeicons="ArrowLeft01Icon"
+              phosphor="CaretLeftIcon"
+              remixicon="RiArrowLeftSLine"
+            />
           </Button>
           <Button
             aria-label="Go to next page"
@@ -103,7 +109,13 @@ export function DataTablePagination<TData extends RowData>({
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
-            <ChevronRight />
+            <IconPlaceholder
+              lucide="ChevronRight"
+              tabler="IconChevronRight"
+              hugeicons="ArrowRight01Icon"
+              phosphor="CaretRightIcon"
+              remixicon="RiArrowRightSLine"
+            />
           </Button>
           <Button
             aria-label="Go to last page"
@@ -113,7 +125,13 @@ export function DataTablePagination<TData extends RowData>({
             onClick={() => table.setPageIndex(table.getPageCount() - 1)}
             disabled={!table.getCanNextPage()}
           >
-            <ChevronsRight />
+            <IconPlaceholder
+              lucide="ChevronsRight"
+              tabler="IconChevronsRight"
+              hugeicons="ArrowRightDoubleIcon"
+              phosphor="CaretDoubleRightIcon"
+              remixicon="RiSkipRightLine"
+            />
           </Button>
         </div>
       </div>

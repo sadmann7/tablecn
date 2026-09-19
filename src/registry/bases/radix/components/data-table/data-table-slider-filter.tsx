@@ -2,7 +2,6 @@
 
 import type { Column, RowData } from "@tanstack/react-table";
 
-import { PlusCircle, XCircle } from "lucide-react";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
@@ -18,6 +17,7 @@ import {
 } from "@/registry/bases/radix/ui/popover";
 import { Separator } from "@/registry/bases/radix/ui/separator";
 import { Slider } from "@/registry/bases/radix/ui/slider";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface Range {
   min: number;
@@ -156,10 +156,22 @@ export function DataTableSliderFilter<TData extends RowData>({
               className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
               onClick={onReset}
             >
-              <XCircle />
+              <IconPlaceholder
+                lucide="XCircle"
+                tabler="IconCircleX"
+                hugeicons="Cancel01Icon"
+                phosphor="XCircleIcon"
+                remixicon="RiCloseCircleLine"
+              />
             </div>
           ) : (
-            <PlusCircle />
+            <IconPlaceholder
+              lucide="PlusCircle"
+              tabler="IconCirclePlus"
+              hugeicons="PlusSignCircleIcon"
+              phosphor="PlusCircleIcon"
+              remixicon="RiAddCircleLine"
+            />
           )}
           <span>{title}</span>
           {columnFilterValue ? (

@@ -2,7 +2,6 @@
 
 import type { Column, RowData, Table } from "@tanstack/react-table";
 
-import { BadgeCheck, CalendarIcon, ListFilter, Text, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 
@@ -46,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/radix/ui/select";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
@@ -248,7 +248,13 @@ export function DataTableFilterMenu<TData extends RowData>({
           className="size-8"
           onClick={onFiltersReset}
         >
-          <X />
+          <IconPlaceholder
+            lucide="X"
+            tabler="IconX"
+            hugeicons="Cancel01Icon"
+            phosphor="XIcon"
+            remixicon="RiCloseLine"
+          />
         </Button>
       )}
       <Popover open={open} onOpenChange={onOpenChange}>
@@ -262,7 +268,14 @@ export function DataTableFilterMenu<TData extends RowData>({
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
-            <ListFilter className="text-muted-foreground" />
+            <IconPlaceholder
+              lucide="ListFilter"
+              tabler="IconListDetails"
+              hugeicons="LeftToRightListBulletIcon"
+              phosphor="ListIcon"
+              remixicon="RiListUnordered"
+              className="text-muted-foreground"
+            />
             {filters.length > 0 ? null : "Filter"}
           </Button>
         </PopoverTrigger>
@@ -498,7 +511,14 @@ function DataTableFilterItem<TData extends RowData>({
           className="h-full rounded-none rounded-r-md border border-l-0 border-input px-1.5 font-normal dark:bg-input/30"
           onClick={() => onFilterRemove(filter.filterId)}
         >
-          <X className="size-3.5" />
+          <IconPlaceholder
+            lucide="X"
+            tabler="IconX"
+            hugeicons="Cancel01Icon"
+            phosphor="XIcon"
+            remixicon="RiCloseLine"
+            className="size-3.5"
+          />
         </Button>
       </div>
     );
@@ -578,12 +598,24 @@ function FilterValueSelector<TData extends RowData>({
           >
             {isEmpty ? (
               <>
-                <Text />
+                <IconPlaceholder
+                  lucide="Text"
+                  tabler="IconTextCaption"
+                  hugeicons="TextCheckIcon"
+                  phosphor="TextTIcon"
+                  remixicon="RiTextWrap"
+                />
                 <span>Type to add filter...</span>
               </>
             ) : (
               <>
-                <BadgeCheck />
+                <IconPlaceholder
+                  lucide="BadgeCheck"
+                  tabler="IconRosetteDiscountCheck"
+                  hugeicons="CheckmarkBadgeIcon"
+                  phosphor="CheckCircleIcon"
+                  remixicon="RiCheckboxCircleLine"
+                />
                 <span className="truncate">Filter by &quot;{value}&quot;</span>
               </>
             )}
@@ -821,7 +853,14 @@ function onFilterInputRender<TData extends RowData>({
                 !filter.value && "text-muted-foreground",
               )}
             >
-              <CalendarIcon className="size-3.5" />
+              <IconPlaceholder
+                lucide="CalendarIcon"
+                tabler="IconCalendar"
+                hugeicons="CalendarIcon"
+                phosphor="CalendarIcon"
+                remixicon="RiCalendarLine"
+                className="size-3.5"
+              />
               <span className="truncate">{displayValue}</span>
             </Button>
           </PopoverTrigger>

@@ -2,7 +2,6 @@
 
 import type { RowData, Table } from "@tanstack/react-table";
 
-import { Settings2 } from "lucide-react";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
@@ -22,6 +21,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/registry/bases/radix/ui/command";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataTableViewOptionsProps<
   TData extends RowData,
@@ -60,7 +60,14 @@ export function DataTableViewOptions<TData extends RowData>({
           />
         }
       >
-        <Settings2 className="text-muted-foreground" />
+        <IconPlaceholder
+          lucide="Settings2"
+          tabler="IconSettings"
+          hugeicons="Settings05Icon"
+          phosphor="GearIcon"
+          remixicon="RiSettingsLine"
+          className="text-muted-foreground"
+        />
         View
       </PopoverTrigger>
       <PopoverContent className={cn("w-44 p-0", className)} {...props}>

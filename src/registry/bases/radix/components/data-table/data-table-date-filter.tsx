@@ -3,7 +3,6 @@
 import type { Column, RowData } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
 
-import { CalendarIcon, XCircle } from "lucide-react";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
@@ -17,6 +16,7 @@ import {
   PopoverTrigger,
 } from "@/registry/bases/radix/ui/popover";
 import { Separator } from "@/registry/bases/radix/ui/separator";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 type DateSelection = Date[] | DateRange;
 
@@ -187,10 +187,22 @@ export function DataTableDateFilter<TData extends RowData>({
               onClick={onReset}
               className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
             >
-              <XCircle />
+              <IconPlaceholder
+                lucide="XCircle"
+                tabler="IconCircleX"
+                hugeicons="Cancel01Icon"
+                phosphor="XCircleIcon"
+                remixicon="RiCloseCircleLine"
+              />
             </div>
           ) : (
-            <CalendarIcon />
+            <IconPlaceholder
+              lucide="CalendarIcon"
+              tabler="IconCalendar"
+              hugeicons="CalendarIcon"
+              phosphor="CalendarIcon"
+              remixicon="RiCalendarLine"
+            />
           )}
           {label}
         </Button>

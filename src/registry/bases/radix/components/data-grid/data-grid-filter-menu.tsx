@@ -7,14 +7,6 @@ import type {
   Table,
 } from "@tanstack/react-table";
 
-import {
-  CalendarIcon,
-  Check,
-  ChevronsUpDown,
-  GripVertical,
-  ListFilter,
-  Trash2,
-} from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -60,6 +52,7 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/registry/bases/radix/ui/sortable";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = new Set(["backspace", "delete"]);
@@ -217,7 +210,14 @@ export function DataGridFilterMenu<TData extends RowData>({
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
-            <ListFilter className="text-muted-foreground" />
+            <IconPlaceholder
+              lucide="ListFilter"
+              tabler="IconListDetails"
+              hugeicons="LeftToRightListBulletIcon"
+              phosphor="ListIcon"
+              remixicon="RiListUnordered"
+              className="text-muted-foreground"
+            />
             Filter
             {columnFilters.length > 0 && (
               <Badge
@@ -442,7 +442,14 @@ function DataGridFilterItem<TData extends RowData>({
               className="w-32 justify-between rounded font-normal"
             >
               <span className="truncate">{columnLabels.get(filter.id)}</span>
-              <ChevronsUpDown className="opacity-50" />
+              <IconPlaceholder
+                lucide="ChevronsUpDown"
+                tabler="IconSelector"
+                hugeicons="UnfoldMoreIcon"
+                phosphor="CaretUpDownIcon"
+                remixicon="RiArrowUpDownLine"
+                className="opacity-50"
+              />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -482,7 +489,12 @@ function DataGridFilterItem<TData extends RowData>({
                       }}
                     >
                       <span className="truncate">{column.label}</span>
-                      <Check
+                      <IconPlaceholder
+                        lucide="Check"
+                        tabler="IconCheck"
+                        hugeicons="Tick02Icon"
+                        phosphor="CheckIcon"
+                        remixicon="RiCheckLine"
                         className={cn(
                           "ms-auto",
                           column.id === filter.id ? "opacity-100" : "opacity-0",
@@ -554,11 +566,23 @@ function DataGridFilterItem<TData extends RowData>({
           className="size-8 rounded"
           onClick={() => onFilterRemove(filter.id)}
         >
-          <Trash2 />
+          <IconPlaceholder
+            lucide="Trash2"
+            tabler="IconTrash"
+            hugeicons="Delete02Icon"
+            phosphor="TrashIcon"
+            remixicon="RiDeleteBinLine"
+          />
         </Button>
         <SortableItemHandle asChild>
           <Button variant="outline" size="icon" className="size-8 rounded">
-            <GripVertical />
+            <IconPlaceholder
+              lucide="GripVertical"
+              tabler="IconGripVertical"
+              hugeicons="DragDropVerticalIcon"
+              phosphor="DotsSixVerticalIcon"
+              remixicon="RiDraggable"
+            />
           </Button>
         </SortableItemHandle>
       </div>
@@ -712,7 +736,13 @@ function DataGridFilterInput<TData extends RowData>({
                 !startDate && "text-muted-foreground",
               )}
             >
-              <CalendarIcon />
+              <IconPlaceholder
+                lucide="CalendarIcon"
+                tabler="IconCalendar"
+                hugeicons="CalendarIcon"
+                phosphor="CalendarIcon"
+                remixicon="RiCalendarLine"
+              />
               <span className="truncate">{displayValue}</span>
             </Button>
           </PopoverTrigger>
@@ -767,7 +797,13 @@ function DataGridFilterInput<TData extends RowData>({
               !dateValue && "text-muted-foreground",
             )}
           >
-            <CalendarIcon />
+            <IconPlaceholder
+              lucide="CalendarIcon"
+              tabler="IconCalendar"
+              hugeicons="CalendarIcon"
+              phosphor="CalendarIcon"
+              remixicon="RiCalendarLine"
+            />
             <span className="truncate">
               {dateValue
                 ? formatDate(dateValue, { month: "short" })
@@ -886,7 +922,12 @@ function DataGridFilterInput<TData extends RowData>({
                             {option.count}
                           </span>
                         )}
-                        <Check
+                        <IconPlaceholder
+                          lucide="Check"
+                          tabler="IconCheck"
+                          hugeicons="Tick02Icon"
+                          phosphor="CheckIcon"
+                          remixicon="RiCheckLine"
                           className={cn(
                             "ms-auto",
                             isSelected ? "opacity-100" : "opacity-0",
@@ -954,7 +995,12 @@ function DataGridFilterInput<TData extends RowData>({
                         {option.count}
                       </span>
                     )}
-                    <Check
+                    <IconPlaceholder
+                      lucide="Check"
+                      tabler="IconCheck"
+                      hugeicons="Tick02Icon"
+                      phosphor="CheckIcon"
+                      remixicon="RiCheckLine"
                       className={cn(
                         "ms-auto",
                         value === option.value ? "opacity-100" : "opacity-0",

@@ -2,14 +2,6 @@
 
 import type { Column, RowData } from "@tanstack/react-table";
 
-import {
-  ChevronDown,
-  ChevronsUpDown,
-  ChevronUp,
-  EyeOff,
-  X,
-} from "lucide-react";
-
 import type { DataTableFeatures } from "@/lib/table-features";
 
 import { cn } from "@/lib/utils";
@@ -20,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataTableColumnHeaderProps<
   TData extends RowData,
@@ -51,11 +44,29 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
         {label}
         {column.getCanSort() &&
           (column.getIsSorted() === "desc" ? (
-            <ChevronDown />
+            <IconPlaceholder
+              lucide="ChevronDown"
+              tabler="IconChevronDown"
+              hugeicons="ArrowDown01Icon"
+              phosphor="CaretDownIcon"
+              remixicon="RiArrowDownSLine"
+            />
           ) : column.getIsSorted() === "asc" ? (
-            <ChevronUp />
+            <IconPlaceholder
+              lucide="ChevronUp"
+              tabler="IconChevronUp"
+              hugeicons="ArrowUp01Icon"
+              phosphor="CaretUpIcon"
+              remixicon="RiArrowUpSLine"
+            />
           ) : (
-            <ChevronsUpDown />
+            <IconPlaceholder
+              lucide="ChevronsUpDown"
+              tabler="IconSelector"
+              hugeicons="UnfoldMoreIcon"
+              phosphor="CaretUpDownIcon"
+              remixicon="RiArrowUpDownLine"
+            />
           ))}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-28">
@@ -66,7 +77,13 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
               checked={column.getIsSorted() === "asc"}
               onClick={() => column.toggleSorting(false)}
             >
-              <ChevronUp />
+              <IconPlaceholder
+                lucide="ChevronUp"
+                tabler="IconChevronUp"
+                hugeicons="ArrowUp01Icon"
+                phosphor="CaretUpIcon"
+                remixicon="RiArrowUpSLine"
+              />
               Asc
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
@@ -74,7 +91,13 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
               checked={column.getIsSorted() === "desc"}
               onClick={() => column.toggleSorting(true)}
             >
-              <ChevronDown />
+              <IconPlaceholder
+                lucide="ChevronDown"
+                tabler="IconChevronDown"
+                hugeicons="ArrowDown01Icon"
+                phosphor="CaretDownIcon"
+                remixicon="RiArrowDownSLine"
+              />
               Desc
             </DropdownMenuCheckboxItem>
             {column.getIsSorted() && (
@@ -82,7 +105,13 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
                 className="pl-2 [&_svg]:text-muted-foreground"
                 onClick={() => column.clearSorting()}
               >
-                <X />
+                <IconPlaceholder
+                  lucide="X"
+                  tabler="IconX"
+                  hugeicons="Cancel01Icon"
+                  phosphor="XIcon"
+                  remixicon="RiCloseLine"
+                />
                 Reset
               </DropdownMenuItem>
             )}
@@ -94,7 +123,13 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
             checked={!column.getIsVisible()}
             onClick={() => column.toggleVisibility(false)}
           >
-            <EyeOff />
+            <IconPlaceholder
+              lucide="EyeOff"
+              tabler="IconEyeClosed"
+              hugeicons="ViewOffIcon"
+              phosphor="EyeSlashIcon"
+              remixicon="RiEyeOffLine"
+            />
             Hide
           </DropdownMenuCheckboxItem>
         )}

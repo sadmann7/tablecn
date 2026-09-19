@@ -2,7 +2,6 @@
 
 import type { RowData } from "@tanstack/react-table";
 
-import { Check, Upload, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -50,6 +49,7 @@ import {
 } from "@/registry/bases/radix/ui/select";
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 export function ShortTextCell<TData extends RowData>({
   cell,
@@ -1228,7 +1228,14 @@ export function MultiSelectCell<TData extends RowData>({
                           event.stopPropagation();
                         }}
                       >
-                        <X className="size-3" />
+                        <IconPlaceholder
+                          lucide="X"
+                          tabler="IconX"
+                          hugeicons="Cancel01Icon"
+                          phosphor="XIcon"
+                          remixicon="RiCloseLine"
+                          className="size-3"
+                        />
                       </button>
                     </Badge>
                   );
@@ -1262,7 +1269,14 @@ export function MultiSelectCell<TData extends RowData>({
                               : "opacity-50 [&_svg]:invisible",
                           )}
                         >
-                          <Check className="size-3" />
+                          <IconPlaceholder
+                            lucide="Check"
+                            tabler="IconCheck"
+                            hugeicons="Tick02Icon"
+                            phosphor="CheckIcon"
+                            remixicon="RiCheckLine"
+                            className="size-3"
+                          />
                         </div>
                         <span>{option.label}</span>
                       </CommandItem>
@@ -1997,7 +2011,14 @@ export function FileCell<TData extends RowData>({
                 onDrop={onDropzoneDrop}
                 onKeyDown={onDropzoneKeyDown}
               >
-                <Upload className="size-8 text-muted-foreground" />
+                <IconPlaceholder
+                  lucide="Upload"
+                  tabler="IconCloudUpload"
+                  hugeicons="CloudUploadIcon"
+                  phosphor="CloudArrowUpIcon"
+                  remixicon="RiUploadCloudLine"
+                  className="size-8 text-muted-foreground"
+                />
                 <div className="text-center text-sm">
                   <p className="font-medium">
                     {isDragging ? "Drop files here" : "Drag files here"}
@@ -2074,7 +2095,14 @@ export function FileCell<TData extends RowData>({
                             onClick={() => removeFile(file.id)}
                             disabled={isPending}
                           >
-                            <X className="size-3" />
+                            <IconPlaceholder
+                              lucide="X"
+                              tabler="IconX"
+                              hugeicons="Cancel01Icon"
+                              phosphor="XIcon"
+                              remixicon="RiCloseLine"
+                              className="size-3"
+                            />
                           </Button>
                         </div>
                       );
@@ -2088,7 +2116,14 @@ export function FileCell<TData extends RowData>({
       ) : null}
       {isDraggingOver ? (
         <div className="flex items-center justify-center gap-2 text-sm text-primary">
-          <Upload className="size-4" />
+          <IconPlaceholder
+            lucide="Upload"
+            tabler="IconCloudUpload"
+            hugeicons="CloudUploadIcon"
+            phosphor="CloudArrowUpIcon"
+            remixicon="RiUploadCloudLine"
+            className="size-4"
+          />
           <span>Drop files here</span>
         </div>
       ) : files.length > 0 ? (

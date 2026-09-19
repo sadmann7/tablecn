@@ -1,6 +1,5 @@
 "use client";
 
-import { SearchIcon, XIcon } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -16,6 +15,7 @@ import { useDirection } from "@/registry/bases/radix/ui/direction";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
 import { Separator } from "@/registry/bases/radix/ui/separator";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const SHORTCUT_KEY = "/";
 
@@ -394,7 +394,13 @@ function DataGridKeyboardShortcutsImpl({
       >
         <DialogClose className="absolute inset-e-6 top-6" asChild>
           <Button variant="ghost" size="icon" className="size-6">
-            <XIcon />
+            <IconPlaceholder
+              lucide="XIcon"
+              tabler="IconX"
+              hugeicons="Cancel01Icon"
+              phosphor="XIcon"
+              remixicon="RiCloseLine"
+            />
           </Button>
         </DialogClose>
         <DialogHeader className="px-6">
@@ -406,7 +412,14 @@ function DataGridKeyboardShortcutsImpl({
         </DialogHeader>
         <div className="px-6">
           <div className="relative">
-            <SearchIcon className="absolute inset-s-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <IconPlaceholder
+              lucide="SearchIcon"
+              tabler="IconSearch"
+              hugeicons="Search01Icon"
+              phosphor="MagnifyingGlassIcon"
+              remixicon="RiSearchLine"
+              className="absolute inset-s-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+            />
             <Input
               ref={inputRef}
               placeholder="Search shortcuts..."
@@ -421,7 +434,14 @@ function DataGridKeyboardShortcutsImpl({
           {filteredGroups.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
-                <SearchIcon className="pointer-events-none size-6" />
+                <IconPlaceholder
+                  lucide="SearchIcon"
+                  tabler="IconSearch"
+                  hugeicons="Search01Icon"
+                  phosphor="MagnifyingGlassIcon"
+                  remixicon="RiSearchLine"
+                  className="pointer-events-none size-6"
+                />
               </div>
               <div className="flex flex-col gap-1">
                 <div className="text-lg font-medium tracking-tight">

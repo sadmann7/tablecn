@@ -1,6 +1,5 @@
 "use client";
 
-import { Check, ChevronsUpDown } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -19,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/registry/bases/radix/ui/popover";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 type FacetedValue<Multiple extends boolean> = Multiple extends true
   ? string[]
@@ -163,7 +163,14 @@ function FacetedBadgeList(props: FacetedBadgeListProps) {
         className="flex w-full items-center gap-1 text-muted-foreground"
       >
         {placeholder}
-        <ChevronsUpDown className="ml-auto size-4 shrink-0 opacity-50" />
+        <IconPlaceholder
+          lucide="ChevronsUpDown"
+          tabler="IconSelector"
+          hugeicons="UnfoldMoreIcon"
+          phosphor="CaretUpDownIcon"
+          remixicon="RiArrowUpDownLine"
+          className="ml-auto size-4 shrink-0 opacity-50"
+        />
       </div>
     );
   }
@@ -259,7 +266,14 @@ function FacetedItem(props: FacetedItemProps) {
             : "opacity-50 [&_svg]:invisible",
         )}
       >
-        <Check className="size-4" />
+        <IconPlaceholder
+          lucide="Check"
+          tabler="IconCheck"
+          hugeicons="Tick02Icon"
+          phosphor="CheckIcon"
+          remixicon="RiCheckLine"
+          className="size-4"
+        />
       </span>
       {children}
     </CommandItem>

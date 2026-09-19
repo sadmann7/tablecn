@@ -15,6 +15,7 @@ const SOURCE_STYLE = "base-nova";
 const PRIMITIVES = [
   "badge",
   "button",
+  "direction",
   "dropdown-menu",
   "label",
   "popover",
@@ -50,7 +51,7 @@ async function vendor(name: string) {
     // IconPlaceholder lives in shadcn's docs app, not in their registry output.
     .replaceAll(
       'from "@/app/(create)/components/icon-placeholder"',
-      `from "${BASE_UI}/icon-placeholder"`,
+      'from "@/registry/icon-placeholder"',
     )
     // Primitives that pull in siblings reference upstream's own tree layout.
     .replaceAll(`@/registry/${SOURCE_STYLE}/ui`, BASE_UI);

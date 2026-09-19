@@ -2,7 +2,6 @@
 
 import type { ColumnDef, RowData } from "@tanstack/react-table";
 
-import { CopyIcon, EraserIcon, ScissorsIcon, Trash2Icon } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -22,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataGridContextMenuProps<TData extends RowData> {
   tableMeta: DataGridTableMeta;
@@ -218,22 +218,46 @@ function ContextMenuImpl<TData extends RowData>({
         onCloseAutoFocus={onCloseAutoFocus}
       >
         <DropdownMenuItem onSelect={onCopy}>
-          <CopyIcon />
+          <IconPlaceholder
+            lucide="CopyIcon"
+            tabler="IconCopy"
+            hugeicons="Copy01Icon"
+            phosphor="CopyIcon"
+            remixicon="RiFileCopyLine"
+          />
           Copy
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onCut} disabled={tableMeta?.readOnly}>
-          <ScissorsIcon />
+          <IconPlaceholder
+            lucide="ScissorsIcon"
+            tabler="IconCut"
+            hugeicons="ScissorIcon"
+            phosphor="ScissorsIcon"
+            remixicon="RiScissorsLine"
+          />
           Cut
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onClear} disabled={tableMeta?.readOnly}>
-          <EraserIcon />
+          <IconPlaceholder
+            lucide="EraserIcon"
+            tabler="IconEraser"
+            hugeicons="DeleteIcon"
+            phosphor="EraserIcon"
+            remixicon="RiEraserLine"
+          />
           Clear
         </DropdownMenuItem>
         {onRowsDelete && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-              <Trash2Icon />
+              <IconPlaceholder
+                lucide="Trash2Icon"
+                tabler="IconTrash"
+                hugeicons="Delete02Icon"
+                phosphor="TrashIcon"
+                remixicon="RiDeleteBinLine"
+              />
               Delete rows
             </DropdownMenuItem>
           </>

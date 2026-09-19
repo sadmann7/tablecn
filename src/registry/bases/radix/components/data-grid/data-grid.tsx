@@ -2,7 +2,6 @@
 
 import type { RowData } from "@tanstack/react-table";
 
-import { Plus } from "lucide-react";
 import * as React from "react";
 
 import type { useDataGrid } from "@/hooks/use-data-grid";
@@ -20,6 +19,7 @@ import { DataGridContextMenu } from "@/registry/bases/radix/components/data-grid
 import { DataGridPasteDialog } from "@/registry/bases/radix/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/registry/bases/radix/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/registry/bases/radix/components/data-grid/data-grid-search";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 
@@ -273,7 +273,14 @@ export function DataGrid<TData extends RowData>({
                 onKeyDown={onFooterCellKeyDown}
               >
                 <div className="sticky inset-s-0 flex items-center gap-2 px-3 text-muted-foreground">
-                  <Plus className="size-3.5" />
+                  <IconPlaceholder
+                    lucide="Plus"
+                    tabler="IconPlus"
+                    hugeicons="PlusSignIcon"
+                    phosphor="PlusIcon"
+                    remixicon="RiAddLine"
+                    className="size-3.5"
+                  />
                   <span className="text-sm">Add row</span>
                 </div>
               </div>

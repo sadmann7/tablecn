@@ -2,7 +2,6 @@
 
 import type { Column, RowData, Table } from "@tanstack/react-table";
 
-import { X } from "lucide-react";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
@@ -14,6 +13,7 @@ import { DataTableSliderFilter } from "@/registry/bases/radix/components/data-ta
 import { DataTableViewOptions } from "@/registry/bases/radix/components/data-table/data-table-view-options";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataTableToolbarProps<
   TData extends RowData,
@@ -59,7 +59,13 @@ export function DataTableToolbar<TData extends RowData>({
             className="border-dashed"
             onClick={onReset}
           >
-            <X />
+            <IconPlaceholder
+              lucide="X"
+              tabler="IconX"
+              hugeicons="Cancel01Icon"
+              phosphor="XIcon"
+              remixicon="RiCloseLine"
+            />
             Reset
           </Button>
         )}

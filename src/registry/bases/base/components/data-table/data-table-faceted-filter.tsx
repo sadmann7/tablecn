@@ -2,7 +2,6 @@
 
 import type { Column, RowData } from "@tanstack/react-table";
 
-import { Check, PlusCircle, XCircle } from "lucide-react";
 import * as React from "react";
 
 import type { Option } from "@/lib/data-table-types";
@@ -26,6 +25,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/registry/bases/radix/ui/command";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
   column?: Column<DataTableFeatures, TData, TValue>;
@@ -91,10 +91,22 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
             className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
             onClick={onReset}
           >
-            <XCircle />
+            <IconPlaceholder
+              lucide="XCircle"
+              tabler="IconCircleX"
+              hugeicons="Cancel01Icon"
+              phosphor="XCircleIcon"
+              remixicon="RiCloseCircleLine"
+            />
           </div>
         ) : (
-          <PlusCircle />
+          <IconPlaceholder
+            lucide="PlusCircle"
+            tabler="IconCirclePlus"
+            hugeicons="PlusSignCircleIcon"
+            phosphor="PlusCircleIcon"
+            remixicon="RiAddCircleLine"
+          />
         )}
         {title}
         {selectedValues?.size > 0 && (
@@ -157,7 +169,13 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
                           : "opacity-50 [&_svg]:invisible",
                       )}
                     >
-                      <Check />
+                      <IconPlaceholder
+                        lucide="Check"
+                        tabler="IconCheck"
+                        hugeicons="Tick02Icon"
+                        phosphor="CheckIcon"
+                        remixicon="RiCheckLine"
+                      />
                     </div>
                     {option.icon && <option.icon />}
                     <span className="truncate">{option.label}</span>

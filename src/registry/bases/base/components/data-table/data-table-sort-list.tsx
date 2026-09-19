@@ -2,12 +2,6 @@
 
 import type { ColumnSort, RowData, Table } from "@tanstack/react-table";
 
-import {
-  ArrowDownUp,
-  ChevronsUpDown,
-  GripVertical,
-  Trash2,
-} from "lucide-react";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
@@ -44,6 +38,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/registry/bases/radix/ui/command";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
@@ -183,7 +178,14 @@ export function DataTableSortList<TData extends RowData>({
             />
           }
         >
-          <ArrowDownUp className="text-muted-foreground" />
+          <IconPlaceholder
+            lucide="ArrowDownUp"
+            tabler="IconArrowsLeftRight"
+            hugeicons="ArrowDataTransferHorizontalIcon"
+            phosphor="ArrowsVerticalIcon"
+            remixicon="RiArrowUpDownLine"
+            className="text-muted-foreground"
+          />
           Sort
           {sorting.length > 0 && (
             <Badge
@@ -345,7 +347,14 @@ function DataTableSortItem({
           }
         >
           <span className="truncate">{columnLabels.get(sort.id)}</span>
-          <ChevronsUpDown className="opacity-50" />
+          <IconPlaceholder
+            lucide="ChevronsUpDown"
+            tabler="IconSelector"
+            hugeicons="UnfoldMoreIcon"
+            phosphor="CaretUpDownIcon"
+            remixicon="RiArrowUpDownLine"
+            className="opacity-50"
+          />
         </PopoverTrigger>
         <PopoverContent id={fieldListboxId} className="w-(--anchor-width) p-0">
           <Command>
@@ -402,7 +411,13 @@ function DataTableSortItem({
         className="size-8 shrink-0 rounded"
         onClick={() => onSortRemove(sort.id)}
       >
-        <Trash2 />
+        <IconPlaceholder
+          lucide="Trash2"
+          tabler="IconTrash"
+          hugeicons="Delete02Icon"
+          phosphor="TrashIcon"
+          remixicon="RiDeleteBinLine"
+        />
       </Button>
       <SortableItemHandle
         render={
@@ -413,7 +428,13 @@ function DataTableSortItem({
           />
         }
       >
-        <GripVertical />
+        <IconPlaceholder
+          lucide="GripVertical"
+          tabler="IconGripVertical"
+          hugeicons="DragDropVerticalIcon"
+          phosphor="DotsSixVerticalIcon"
+          remixicon="RiDraggable"
+        />
       </SortableItemHandle>
     </SortableItem>
   );

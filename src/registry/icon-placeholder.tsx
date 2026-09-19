@@ -2,12 +2,7 @@ import type * as React from "react";
 
 import * as icons from "lucide-react";
 
-/**
- * shadcn's published Base UI primitives reference this helper to swap icons per
- * the user's configured icon library. It is not part of their registry output,
- * so the base tree ships a lucide-only stand-in to keep those files compiling.
- */
-interface IconPlaceholderProps extends React.SVGProps<SVGSVGElement> {
+interface IconPlaceholderProps extends React.ComponentProps<"svg"> {
   lucide: string;
   tabler?: string;
   hugeicons?: string;
@@ -17,10 +12,10 @@ interface IconPlaceholderProps extends React.SVGProps<SVGSVGElement> {
 
 function IconPlaceholder({
   lucide,
-  tabler,
-  hugeicons,
-  phosphor,
-  remixicon,
+  tabler: _tabler,
+  hugeicons: _hugeicons,
+  phosphor: _phosphor,
+  remixicon: _remixicon,
   ...props
 }: IconPlaceholderProps) {
   const iconsByName = icons as unknown as Record<

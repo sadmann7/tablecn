@@ -2,12 +2,6 @@
 
 import type { RowData, Table } from "@tanstack/react-table";
 
-import {
-  AlignVerticalSpaceAroundIcon,
-  ChevronsDownUpIcon,
-  EqualIcon,
-  MinusIcon,
-} from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -20,27 +14,64 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/radix/ui/select";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const rowHeights = [
   {
     label: "Short",
     value: "short" as const,
-    icon: MinusIcon,
+    icon: (props: React.ComponentProps<"svg">) => (
+      <IconPlaceholder
+        lucide="MinusIcon"
+        tabler="IconMinus"
+        hugeicons="MinusSignIcon"
+        phosphor="MinusIcon"
+        remixicon="RiSubtractLine"
+        {...props}
+      />
+    ),
   },
   {
     label: "Medium",
     value: "medium" as const,
-    icon: EqualIcon,
+    icon: (props: React.ComponentProps<"svg">) => (
+      <IconPlaceholder
+        lucide="EqualIcon"
+        tabler="IconMinus"
+        hugeicons="MinusSignIcon"
+        phosphor="MinusIcon"
+        remixicon="RiSubtractLine"
+        {...props}
+      />
+    ),
   },
   {
     label: "Tall",
     value: "tall" as const,
-    icon: AlignVerticalSpaceAroundIcon,
+    icon: (props: React.ComponentProps<"svg">) => (
+      <IconPlaceholder
+        lucide="AlignVerticalSpaceAroundIcon"
+        tabler="IconLayoutRows"
+        hugeicons="LayoutIcon"
+        phosphor="RowsIcon"
+        remixicon="RiLayoutLine"
+        {...props}
+      />
+    ),
   },
   {
     label: "Extra Tall",
     value: "extra-tall" as const,
-    icon: ChevronsDownUpIcon,
+    icon: (props: React.ComponentProps<"svg">) => (
+      <IconPlaceholder
+        lucide="ChevronsDownUpIcon"
+        tabler="IconSelector"
+        hugeicons="UnfoldMoreIcon"
+        phosphor="ArrowsVerticalIcon"
+        remixicon="RiArrowUpDownLine"
+        {...props}
+      />
+    ),
   },
 ] as const;
 
@@ -64,7 +95,16 @@ export function DataGridRowHeightMenu<TData extends RowData>({
       rowHeights.find((opt) => opt.value === rowHeight) ?? {
         label: "Short",
         value: "short" as const,
-        icon: MinusIcon,
+        icon: (props: React.ComponentProps<"svg">) => (
+          <IconPlaceholder
+            lucide="MinusIcon"
+            tabler="IconMinus"
+            hugeicons="MinusSignIcon"
+            phosphor="MinusIcon"
+            remixicon="RiSubtractLine"
+            {...props}
+          />
+        ),
       }
     );
   }, [rowHeight]);

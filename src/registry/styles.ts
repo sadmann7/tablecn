@@ -30,4 +30,4 @@ function getStyleIds() {
   return BASES.flatMap((base) => STYLES.map((style) => `${base}-${style}`));
 }
 
-export { type Base, BASES, DEFAULT_STYLE_ID, getStyleIds, type Style, STYLES };
+export { BASES, DEFAULT_STYLE_ID, getStyleIds, STYLES, type Base, type Style };

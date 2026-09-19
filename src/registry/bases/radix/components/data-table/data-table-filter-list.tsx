@@ -2,14 +2,6 @@
 
 import type { Column, RowData, Table } from "@tanstack/react-table";
 
-import {
-  CalendarIcon,
-  Check,
-  ChevronsUpDown,
-  GripVertical,
-  ListFilter,
-  Trash2,
-} from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
@@ -75,6 +67,7 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/registry/bases/radix/ui/sortable";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
@@ -238,7 +231,14 @@ export function DataTableFilterList<TData extends RowData>({
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
-            <ListFilter className="text-muted-foreground" />
+            <IconPlaceholder
+              lucide="ListFilter"
+              tabler="IconListDetails"
+              hugeicons="LeftToRightListBulletIcon"
+              phosphor="ListIcon"
+              remixicon="RiListUnordered"
+              className="text-muted-foreground"
+            />
             Filter
             {filters.length > 0 && (
               <Badge
@@ -450,7 +450,14 @@ function DataTableFilterItem<TData extends RowData>({
                 {columns.find((column) => column.id === filter.id)?.columnDef
                   .meta?.label ?? "Select field"}
               </span>
-              <ChevronsUpDown className="opacity-50" />
+              <IconPlaceholder
+                lucide="ChevronsUpDown"
+                tabler="IconSelector"
+                hugeicons="UnfoldMoreIcon"
+                phosphor="CaretUpDownIcon"
+                remixicon="RiArrowUpDownLine"
+                className="opacity-50"
+              />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -483,7 +490,12 @@ function DataTableFilterItem<TData extends RowData>({
                       <span className="truncate">
                         {column.columnDef.meta?.label}
                       </span>
-                      <Check
+                      <IconPlaceholder
+                        lucide="Check"
+                        tabler="IconCheck"
+                        hugeicons="Tick02Icon"
+                        phosphor="CheckIcon"
+                        remixicon="RiCheckLine"
                         className={cn(
                           "ml-auto",
                           column.id === filter.id ? "opacity-100" : "opacity-0",
@@ -550,11 +562,23 @@ function DataTableFilterItem<TData extends RowData>({
           className="size-8 rounded"
           onClick={() => onFilterRemove(filter.filterId)}
         >
-          <Trash2 />
+          <IconPlaceholder
+            lucide="Trash2"
+            tabler="IconTrash"
+            hugeicons="Delete02Icon"
+            phosphor="TrashIcon"
+            remixicon="RiDeleteBinLine"
+          />
         </Button>
         <SortableItemHandle asChild>
           <Button variant="outline" size="icon" className="size-8 rounded">
-            <GripVertical />
+            <IconPlaceholder
+              lucide="GripVertical"
+              tabler="IconGripVertical"
+              hugeicons="DragDropVerticalIcon"
+              phosphor="DotsSixVerticalIcon"
+              remixicon="RiDraggable"
+            />
           </Button>
         </SortableItemHandle>
       </div>
@@ -778,7 +802,13 @@ function onFilterInputRender<TData extends RowData>({
                 !filter.value && "text-muted-foreground",
               )}
             >
-              <CalendarIcon />
+              <IconPlaceholder
+                lucide="CalendarIcon"
+                tabler="IconCalendar"
+                hugeicons="CalendarIcon"
+                phosphor="CalendarIcon"
+                remixicon="RiCalendarLine"
+              />
               <span className="truncate">{displayValue}</span>
             </Button>
           </PopoverTrigger>

@@ -7,12 +7,6 @@ import type {
   Table,
 } from "@tanstack/react-table";
 
-import {
-  ArrowDownUp,
-  ChevronsUpDown,
-  GripVertical,
-  Trash2,
-} from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -49,6 +43,7 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/registry/bases/radix/ui/sortable";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = new Set(["backspace", "delete"]);
@@ -191,7 +186,14 @@ export function DataGridSortMenu<TData extends RowData>({
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
-            <ArrowDownUp className="text-muted-foreground" />
+            <IconPlaceholder
+              lucide="ArrowDownUp"
+              tabler="IconArrowsLeftRight"
+              hugeicons="ArrowDataTransferHorizontalIcon"
+              phosphor="ArrowsVerticalIcon"
+              remixicon="RiArrowUpDownLine"
+              className="text-muted-foreground"
+            />
             Sort
             {sorting.length > 0 && (
               <Badge
@@ -349,7 +351,14 @@ function DataTableSortItem({
               className="w-44 justify-between rounded font-normal"
             >
               <span className="truncate">{columnLabels.get(sort.id)}</span>
-              <ChevronsUpDown className="opacity-50" />
+              <IconPlaceholder
+                lucide="ChevronsUpDown"
+                tabler="IconSelector"
+                hugeicons="UnfoldMoreIcon"
+                phosphor="CaretUpDownIcon"
+                remixicon="RiArrowUpDownLine"
+                className="opacity-50"
+              />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -410,7 +419,13 @@ function DataTableSortItem({
           className="size-8 shrink-0 rounded"
           onClick={() => onSortRemove(sort.id)}
         >
-          <Trash2 />
+          <IconPlaceholder
+            lucide="Trash2"
+            tabler="IconTrash"
+            hugeicons="Delete02Icon"
+            phosphor="TrashIcon"
+            remixicon="RiDeleteBinLine"
+          />
         </Button>
         <SortableItemHandle asChild>
           <Button
@@ -418,7 +433,13 @@ function DataTableSortItem({
             size="icon"
             className="size-8 shrink-0 rounded"
           >
-            <GripVertical />
+            <IconPlaceholder
+              lucide="GripVertical"
+              tabler="IconGripVertical"
+              hugeicons="DragDropVerticalIcon"
+              phosphor="DotsSixVerticalIcon"
+              remixicon="RiDraggable"
+            />
           </Button>
         </SortableItemHandle>
       </div>

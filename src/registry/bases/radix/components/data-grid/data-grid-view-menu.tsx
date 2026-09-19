@@ -2,7 +2,6 @@
 
 import type { RowData, Table } from "@tanstack/react-table";
 
-import { Settings2 } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -23,6 +22,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/registry/bases/radix/ui/popover";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataGridViewMenuProps<
   TData extends RowData,
@@ -61,7 +61,14 @@ export function DataGridViewMenu<TData extends RowData>({
           className="ms-auto hidden h-8 font-normal lg:flex"
           disabled={disabled}
         >
-          <Settings2 className="text-muted-foreground" />
+          <IconPlaceholder
+            lucide="Settings2"
+            tabler="IconSettings"
+            hugeicons="Settings05Icon"
+            phosphor="GearIcon"
+            remixicon="RiSettingsLine"
+            className="text-muted-foreground"
+          />
           View
         </Button>
       </PopoverTrigger>

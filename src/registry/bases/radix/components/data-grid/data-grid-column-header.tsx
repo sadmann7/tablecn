@@ -9,14 +9,6 @@ import type {
   Table,
 } from "@tanstack/react-table";
 
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  EyeOffIcon,
-  PinIcon,
-  PinOffIcon,
-  XIcon,
-} from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -36,6 +28,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/registry/bases/radix/ui/tooltip";
+import { IconPlaceholder } from "@/registry/icon-placeholder";
 
 interface DataGridColumnHeaderProps<
   TData extends RowData,
@@ -147,7 +140,14 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
             )}
             <span className="truncate">{label}</span>
           </div>
-          <ChevronDownIcon className="shrink-0 text-muted-foreground" />
+          <IconPlaceholder
+            lucide="ChevronDownIcon"
+            tabler="IconChevronDown"
+            hugeicons="ArrowDown01Icon"
+            phosphor="CaretDownIcon"
+            remixicon="RiArrowDownSLine"
+            className="shrink-0 text-muted-foreground"
+          />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={0} className="w-60">
           {column.getCanSort() && (
@@ -157,7 +157,13 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                 checked={column.getIsSorted() === "asc"}
                 onSelect={() => onSortingChange("asc")}
               >
-                <ChevronUpIcon />
+                <IconPlaceholder
+                  lucide="ChevronUpIcon"
+                  tabler="IconChevronUp"
+                  hugeicons="ArrowUp01Icon"
+                  phosphor="CaretUpIcon"
+                  remixicon="RiArrowUpSLine"
+                />
                 Sort asc
               </DropdownMenuCheckboxItem>
               <DropdownMenuCheckboxItem
@@ -165,12 +171,24 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                 checked={column.getIsSorted() === "desc"}
                 onSelect={() => onSortingChange("desc")}
               >
-                <ChevronDownIcon />
+                <IconPlaceholder
+                  lucide="ChevronDownIcon"
+                  tabler="IconChevronDown"
+                  hugeicons="ArrowDown01Icon"
+                  phosphor="CaretDownIcon"
+                  remixicon="RiArrowDownSLine"
+                />
                 Sort desc
               </DropdownMenuCheckboxItem>
               {column.getIsSorted() && (
                 <DropdownMenuItem onSelect={onSortRemove}>
-                  <XIcon />
+                  <IconPlaceholder
+                    lucide="XIcon"
+                    tabler="IconX"
+                    hugeicons="Cancel01Icon"
+                    phosphor="XIcon"
+                    remixicon="RiCloseLine"
+                  />
                   Remove sort
                 </DropdownMenuItem>
               )}
@@ -185,7 +203,13 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                   className="[&_svg]:text-muted-foreground"
                   onSelect={onUnpin}
                 >
-                  <PinOffIcon />
+                  <IconPlaceholder
+                    lucide="PinOffIcon"
+                    tabler="IconPinnedOff"
+                    hugeicons="BookmarkIcon"
+                    phosphor="PushPinSlashIcon"
+                    remixicon="RiUnpinLine"
+                  />
                   Unpin from left
                 </DropdownMenuItem>
               ) : (
@@ -193,7 +217,13 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                   className="[&_svg]:text-muted-foreground"
                   onSelect={onLeftPin}
                 >
-                  <PinIcon />
+                  <IconPlaceholder
+                    lucide="PinIcon"
+                    tabler="IconPin"
+                    hugeicons="BookmarkIcon"
+                    phosphor="PushPinIcon"
+                    remixicon="RiPushpinLine"
+                  />
                   Pin to left
                 </DropdownMenuItem>
               )}
@@ -202,7 +232,13 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                   className="[&_svg]:text-muted-foreground"
                   onSelect={onUnpin}
                 >
-                  <PinOffIcon />
+                  <IconPlaceholder
+                    lucide="PinOffIcon"
+                    tabler="IconPinnedOff"
+                    hugeicons="BookmarkIcon"
+                    phosphor="PushPinSlashIcon"
+                    remixicon="RiUnpinLine"
+                  />
                   Unpin from right
                 </DropdownMenuItem>
               ) : (
@@ -210,7 +246,13 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                   className="[&_svg]:text-muted-foreground"
                   onSelect={onRightPin}
                 >
-                  <PinIcon />
+                  <IconPlaceholder
+                    lucide="PinIcon"
+                    tabler="IconPin"
+                    hugeicons="BookmarkIcon"
+                    phosphor="PushPinIcon"
+                    remixicon="RiPushpinLine"
+                  />
                   Pin to right
                 </DropdownMenuItem>
               )}
@@ -223,7 +265,13 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
                 className="[&_svg]:text-muted-foreground"
                 onSelect={() => column.toggleVisibility(false)}
               >
-                <EyeOffIcon />
+                <IconPlaceholder
+                  lucide="EyeOffIcon"
+                  tabler="IconEyeClosed"
+                  hugeicons="ViewOffIcon"
+                  phosphor="EyeSlashIcon"
+                  remixicon="RiEyeOffLine"
+                />
                 Hide column
               </DropdownMenuItem>
             </>
