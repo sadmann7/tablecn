@@ -17,7 +17,10 @@ import {
   rowSortingFeature,
   tableFeatures,
 } from "@tanstack/react-table";
-import type { DataTableColumnMeta, DataTableMeta } from "@/types/data-table";
+import type {
+  DataTableColumnMeta,
+  DataTableMeta,
+} from "@/lib/data-table-types";
 
 export const dataTableFeatures = tableFeatures({
   columnFilteringFeature,

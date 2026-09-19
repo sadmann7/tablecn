@@ -11,20 +11,20 @@ import * as React from "react";
 import { DataGridCell } from "@/components/data-grid/data-grid-cell";
 import { useComposedRefs } from "@/lib/compose-refs";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type {
+  CellPosition,
+  DataGridTableMeta,
+  Direction,
+  RowHeightValue,
+} from "@/lib/data-grid-types";
 import {
   flexRender,
   getCellKey,
   getColumnBorderVisibility,
   getColumnPinningStyle,
   getRowHeightValue,
-} from "@/lib/data-grid-helpers";
+} from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
-import type {
-  CellPosition,
-  DataGridTableMeta,
-  Direction,
-  RowHeightValue,
-} from "@/types/data-grid";
 
 interface DataGridRowProps<TData extends RowData>
   extends React.ComponentProps<"div"> {

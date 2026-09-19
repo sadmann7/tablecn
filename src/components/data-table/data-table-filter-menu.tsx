@@ -31,16 +31,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import type {
+  ExtendedColumnFilter,
+  FilterOperator,
+} from "@/lib/data-table-types";
 import {
   getDefaultFilterOperator,
   getFilterOperators,
-} from "@/lib/data-table-helpers";
+} from "@/lib/data-table-utils";
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
 import type { DataTableFeatures } from "@/lib/table-features";
 import { cn } from "@/lib/utils";
-import type { ExtendedColumnFilter, FilterOperator } from "@/types/data-table";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;

@@ -13,12 +13,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAsRef } from "@/hooks/use-as-ref";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-helpers";
 import type {
   CellUpdate,
   ContextMenuState,
   DataGridTableMeta,
-} from "@/types/data-grid";
+} from "@/lib/data-grid-types";
+import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-utils";
 
 interface DataGridContextMenuProps<TData extends RowData> {
   tableMeta: DataGridTableMeta;

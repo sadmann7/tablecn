@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 import {
   formatDateForDisplay,
   formatDateToString,
@@ -45,9 +46,8 @@ import {
   getLineCount,
   getUrlHref,
   parseLocalDate,
-} from "@/lib/data-grid-helpers";
+} from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
-import type { DataGridCellProps, FileCellData } from "@/types/data-grid";
 
 export function ShortTextCell<TData extends RowData>({
   cell,

@@ -34,7 +34,7 @@ import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getCellKey } from "@/lib/data-grid-helpers";
+import { getCellKey } from "@/lib/data-grid-utils";
 import { generateId } from "@/lib/id";
 import {
   multiplayerCollection,

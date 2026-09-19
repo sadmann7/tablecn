@@ -8,8 +8,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { pgTable } from "@/db/utils";
+import type { FileCellData } from "@/lib/data-grid-types";
 import { generateId } from "@/lib/id";
-import type { FileCellData } from "@/types/data-grid";
 
 // For data-table
 export const tasks = pgTable("tasks", {

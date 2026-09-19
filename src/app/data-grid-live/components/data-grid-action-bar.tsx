@@ -19,7 +19,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { CellSelectOption, DataGridTableMeta } from "@/types/data-grid";
+import type {
+  CellSelectOption,
+  DataGridTableMeta,
+} from "@/lib/data-grid-types";
 
 interface DataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;

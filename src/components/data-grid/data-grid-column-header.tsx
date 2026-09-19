@@ -32,7 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import { getColumnVariant } from "@/lib/data-grid-helpers";
+import { getColumnVariant } from "@/lib/data-grid-utils";
 import { cn } from "@/lib/utils";
 
 interface DataGridColumnHeaderProps<TData extends RowData, TValue>
