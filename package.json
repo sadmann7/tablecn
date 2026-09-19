@@ -21,6 +21,7 @@
     "check": "oxlint . && oxfmt --check && tsc --noEmit",
     "shadcn": "pnpm dlx shadcn@latest",
     "build:registry": "tsx scripts/build-registry.ts",
+    "clean:registry": "tsx scripts/clean-registry.ts",
     "db:start": "docker compose up -d",
     "db:stop": "docker compose down",
     "db:generate": "dotenv drizzle-kit generate",
@@ -31,8 +32,7 @@
     "db:seed": "dotenv tsx src/db/seed.ts",
     "db:setup": "pnpm db:push && pnpm db:seed",
     "db:reset": "pnpm db:stop && rimraf docker-data && pnpm db:start && sleep 10 && pnpm db:setup",
-    "db:studio": "dotenv drizzle-kit studio",
-    "vendor:base-ui": "tsx scripts/vendor-base-ui.ts"
+    "db:studio": "dotenv drizzle-kit studio"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

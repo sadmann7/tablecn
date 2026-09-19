@@ -32,12 +32,11 @@ import {
   getStyleIds,
   STYLES,
 } from "../src/registry/styles";
+import { OUT_ROOT, STYLES_ROOT, wipeRegistryOutput } from "./clean-registry";
 
 const DEFAULT_BASE = DEFAULT_STYLE_ID.split("-")[0] as Base;
 
 const ROOT = process.cwd();
-const OUT_ROOT = path.join(ROOT, "public/r");
-const STYLES_ROOT = path.join(OUT_ROOT, "styles");
 const RADIX_TREE = "src/registry/bases/radix/";
 const BASE_TREE = "src/registry/bases/base/";
 
@@ -127,7 +126,7 @@ function buildBase(base: Base, outDir: string) {
 }
 
 function main() {
-  rmSync(STYLES_ROOT, { recursive: true, force: true });
+  wipeRegistryOutput();
   mkdirSync(STYLES_ROOT, { recursive: true });
 
   const scratch = mkdtempSync(path.join(tmpdir(), "tablecn-registry-"));
