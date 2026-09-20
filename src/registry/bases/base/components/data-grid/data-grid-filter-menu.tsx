@@ -52,7 +52,7 @@ import {
   CommandList,
 } from "@/registry/bases/radix/ui/command";
 import { Input } from "@/registry/bases/radix/ui/input";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = new Set(["backspace", "delete"]);

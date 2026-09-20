@@ -18,7 +18,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/registry/bases/radix/ui/command";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 type FacetedValue<Multiple extends boolean> = Multiple extends true
   ? string[]

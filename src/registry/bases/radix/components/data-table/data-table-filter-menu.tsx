@@ -45,7 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/radix/ui/select";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;

@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridContextMenuProps<TData extends RowData> {
   tableMeta: DataGridTableMeta;

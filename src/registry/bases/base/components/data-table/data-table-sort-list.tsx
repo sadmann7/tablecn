@@ -38,7 +38,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/registry/bases/radix/ui/command";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];

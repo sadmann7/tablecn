@@ -19,7 +19,7 @@ import { DataGridContextMenu } from "@/registry/bases/base/components/data-grid/
 import { DataGridPasteDialog } from "@/registry/bases/base/components/data-grid/data-grid-paste-dialog";
 import { DataGridRow } from "@/registry/bases/base/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/registry/bases/base/components/data-grid/data-grid-search";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const EMPTY_CELL_SELECTION_SET = new Set<string>();
 

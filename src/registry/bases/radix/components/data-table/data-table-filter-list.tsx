@@ -67,7 +67,7 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/registry/bases/radix/ui/sortable";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;

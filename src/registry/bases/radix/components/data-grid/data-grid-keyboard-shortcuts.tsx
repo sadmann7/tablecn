@@ -15,7 +15,7 @@ import { useDirection } from "@/registry/bases/radix/ui/direction";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
 import { Separator } from "@/registry/bases/radix/ui/separator";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const SHORTCUT_KEY = "/";
 

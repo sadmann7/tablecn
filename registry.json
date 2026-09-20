@@ -23,7 +23,13 @@
         "label",
         "skeleton"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs", "cn"],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "nuqs",
+        "cn",
+        "zod"
+      ],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table.tsx",
@@ -112,7 +118,16 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "cn",
+        "@dnd-kit/core",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/sortable",
+        "@dnd-kit/utilities",
+        "zod"
+      ],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-sort-list.tsx",
@@ -160,7 +175,17 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs", "cn"],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "nuqs",
+        "cn",
+        "@dnd-kit/core",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/sortable",
+        "@dnd-kit/utilities",
+        "zod"
+      ],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-filter-list.tsx",
@@ -240,7 +265,13 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs", "cn"],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "nuqs",
+        "cn",
+        "zod"
+      ],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-filter-menu.tsx",
@@ -449,7 +480,15 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "cn",
+        "@dnd-kit/core",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/sortable",
+        "@dnd-kit/utilities"
+      ],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-sort-menu.tsx",
@@ -565,7 +604,15 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
+      "dependencies": [
+        "@tanstack/react-table",
+        "lucide-react",
+        "cn",
+        "@dnd-kit/core",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/sortable",
+        "@dnd-kit/utilities"
+      ],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-filter-menu.tsx",
