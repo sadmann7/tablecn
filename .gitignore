@@ -42,3 +42,10 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# generated registry output (rebuilt by `pnpm build:registry` on every deploy).
+# styles/index.json is the published style-id list; everything else under
+# public/r is produced from registry.json + the authored base trees.
+/public/r/styles/*
+!/public/r/styles/index.json
+/public/r/*.json

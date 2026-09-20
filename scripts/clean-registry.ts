@@ -2,7 +2,8 @@
  * Removes leftover generated registry files so a deleted item or old style
  * id cannot linger under `public/r` after the next build.
  *
- * `pnpm build:registry` wipes the output first, then regenerates. This script
+ * `pnpm build:registry` wipes the output first, then regenerates. Generated
+ * JSON under `public/r` is gitignored except `styles/index.json`. This script
  * is the standalone / surgical version: it keeps current items and only deletes
  * paths that are no longer expected.
  *

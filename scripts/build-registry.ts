@@ -5,7 +5,8 @@
  * Styles are purely CSS for our components, so the JSON for a given base is
  * byte-identical across styles. The per-style copies exist so the `{style}`
  * placeholder in a consumer's registry URL resolves for every official style id
- * instead of 404ing.
+ * instead of 404ing. They are written to `public/r` at build time and are not
+ * committed — same as shadcn's `registry:build` on deploy.
  *
  * Base resolution: registry.json points at the radix tree, and a file is swapped
  * to its base-tree counterpart when one exists. Files outside the bases (hooks,
