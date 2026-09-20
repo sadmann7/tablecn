@@ -17,7 +17,7 @@ import {
 } from "@/registry/bases/radix/ui/popover";
 import { Separator } from "@/registry/bases/radix/ui/separator";
 import { Slider } from "@/registry/bases/radix/ui/slider";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface Range {
   min: number;

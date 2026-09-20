@@ -85,7 +85,16 @@ function withImportedDependencies(
 
   const next = [...(dependencies ?? [])];
 
-  for (const pkg of ["@base-ui/react", "@base-ui/utils", "cn"] as const) {
+  for (const pkg of [
+    "@base-ui/react",
+    "@base-ui/utils",
+    "@dnd-kit/core",
+    "@dnd-kit/modifiers",
+    "@dnd-kit/sortable",
+    "@dnd-kit/utilities",
+    "cn",
+    "zod",
+  ] as const) {
     if (contents.some((content) => content.includes(`"${pkg}`))) {
       if (!next.includes(pkg)) next.push(pkg);
     }

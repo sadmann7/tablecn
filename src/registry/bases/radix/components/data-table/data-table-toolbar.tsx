@@ -13,7 +13,7 @@ import { DataTableSliderFilter } from "@/registry/bases/radix/components/data-ta
 import { DataTableViewOptions } from "@/registry/bases/radix/components/data-table/data-table-view-options";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataTableToolbarProps<
   TData extends RowData,

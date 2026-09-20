@@ -16,7 +16,7 @@ import {
 } from "@/registry/bases/base/ui/popover";
 import { Separator } from "@/registry/bases/base/ui/separator";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 type DateSelection = Date[] | DateRange;
 

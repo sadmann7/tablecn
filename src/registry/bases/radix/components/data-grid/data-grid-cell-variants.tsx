@@ -49,7 +49,7 @@ import {
 } from "@/registry/bases/radix/ui/select";
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 export function ShortTextCell<TData extends RowData>({
   cell,

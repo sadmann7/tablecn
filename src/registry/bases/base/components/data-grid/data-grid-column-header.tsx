@@ -29,7 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/registry/bases/base/ui/tooltip";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridColumnHeaderProps<
   TData extends RowData,

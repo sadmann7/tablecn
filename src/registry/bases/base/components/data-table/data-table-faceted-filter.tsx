@@ -25,7 +25,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/registry/bases/radix/ui/command";
-import { IconPlaceholder } from "@/registry/icon-placeholder";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
   column?: Column<DataTableFeatures, TData, TValue>;
