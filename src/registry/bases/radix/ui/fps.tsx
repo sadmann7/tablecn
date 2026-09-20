@@ -1,10 +1,9 @@
 "use client";
 
 import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "cn";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-
-import { cn } from "@/lib/utils";
 
 const fpsVariants = cva(
   "z-50 flex shrink-0 items-center gap-2 rounded-sm border bg-background/80 px-3 py-1.5 font-mono text-sm text-foreground backdrop-blur-sm",

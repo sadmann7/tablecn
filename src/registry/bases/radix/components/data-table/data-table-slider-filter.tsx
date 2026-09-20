@@ -2,11 +2,11 @@
 
 import type { Column, RowData } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { Label } from "@/registry/bases/radix/ui/label";

@@ -1,4 +1,5 @@
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
+
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import {
   Table,

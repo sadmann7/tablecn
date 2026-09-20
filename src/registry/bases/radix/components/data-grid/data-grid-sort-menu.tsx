@@ -7,11 +7,11 @@ import type {
   Table,
 } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { cn } from "@/lib/utils";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {

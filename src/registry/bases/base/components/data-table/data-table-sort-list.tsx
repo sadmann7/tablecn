@@ -2,12 +2,12 @@
 
 import type { ColumnSort, RowData, Table } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
 import { dataTableConfig } from "@/lib/data-table-utils";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {

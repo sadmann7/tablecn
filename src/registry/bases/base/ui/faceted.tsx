@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "cn";
 import * as React from "react";
 
-import { cn } from "@/lib/utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import {
   Popover,

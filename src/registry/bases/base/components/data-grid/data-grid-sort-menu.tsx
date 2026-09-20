@@ -2,11 +2,11 @@
 
 import type { ColumnSort, RowData, Table } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { cn } from "@/lib/utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import { useDirection } from "@/registry/bases/base/ui/direction";

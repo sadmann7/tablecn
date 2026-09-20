@@ -9,6 +9,7 @@ import type {
 import type { VirtualItem } from "@tanstack/react-virtual";
 
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -26,7 +27,6 @@ import {
   getColumnPinningStyle,
   getRowHeightValue,
 } from "@/lib/data-grid-utils";
-import { cn } from "@/lib/utils";
 import { DataGridCell } from "@/registry/bases/base/components/data-grid/data-grid-cell";
 
 interface DataGridRowProps<

@@ -2,9 +2,10 @@
 
 import type { Column, RowData } from "@tanstack/react-table";
 
+import { cn } from "cn";
+
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,

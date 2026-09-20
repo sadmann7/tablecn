@@ -5,11 +5,11 @@ import {
   type RowData,
   type Table as TanstackTable,
 } from "@tanstack/react-table";
+import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
 import { getColumnPinningStyle } from "@/lib/data-table-utils";
-import { cn } from "@/lib/utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
 import {
   Table,

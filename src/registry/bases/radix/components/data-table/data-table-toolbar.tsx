@@ -2,11 +2,11 @@
 
 import type { Column, RowData, Table } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { cn } from "@/lib/utils";
 import { DataTableDateFilter } from "@/registry/bases/radix/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/radix/components/data-table/data-table-faceted-filter";
 import { DataTableSliderFilter } from "@/registry/bases/radix/components/data-table/data-table-slider-filter";

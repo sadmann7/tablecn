@@ -2,6 +2,7 @@
 
 import type { RowData } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -19,7 +20,6 @@ import {
   getUrlHref,
   parseLocalDate,
 } from "@/lib/data-grid-utils";
-import { cn } from "@/lib/utils";
 import { DataGridCellWrapper } from "@/registry/bases/radix/components/data-grid/data-grid-cell-wrapper";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";

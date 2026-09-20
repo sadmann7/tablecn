@@ -3,8 +3,8 @@
 import type * as React from "react";
 
 import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "cn";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
