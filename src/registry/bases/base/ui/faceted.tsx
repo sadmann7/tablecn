@@ -5,11 +5,6 @@ import * as React from "react";
 
 import { Badge } from "@/registry/bases/base/ui/badge";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/ui/popover";
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -17,7 +12,12 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/registry/bases/radix/ui/command";
+} from "@/registry/bases/base/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/registry/bases/base/ui/popover";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 type FacetedValue<Multiple extends boolean> = Multiple extends true

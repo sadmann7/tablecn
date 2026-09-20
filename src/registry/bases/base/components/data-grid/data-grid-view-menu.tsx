@@ -8,12 +8,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
-import { useDirection } from "@/registry/bases/base/ui/direction";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -21,7 +15,13 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/registry/bases/radix/ui/command";
+} from "@/registry/bases/base/ui/command";
+import { useDirection } from "@/registry/bases/base/ui/direction";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/registry/bases/base/ui/popover";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridViewMenuProps<

@@ -2,7 +2,7 @@ import type * as React from "react";
 
 import { cn } from "cn";
 
-import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
+import { Skeleton } from "@/registry/bases/base/ui/skeleton";
 
 interface DivProps extends React.ComponentProps<"div"> {}
 

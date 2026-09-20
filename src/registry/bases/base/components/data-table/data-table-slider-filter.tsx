@@ -8,6 +8,7 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/table-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
+import { Input } from "@/registry/bases/base/ui/input";
 import { Label } from "@/registry/bases/base/ui/label";
 import {
   Popover,
@@ -16,7 +17,6 @@ import {
 } from "@/registry/bases/base/ui/popover";
 import { Separator } from "@/registry/bases/base/ui/separator";
 import { Slider } from "@/registry/bases/base/ui/slider";
-import { Input } from "@/registry/bases/radix/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface Range {

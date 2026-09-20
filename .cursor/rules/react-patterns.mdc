@@ -1,20 +1,75 @@
 ---
-description: 
+description: React patterns and best practices
 globs: 
 alwaysApply: true
 ---
 
-# React Patterns and Best Practices
+# React Patterns
+
+## Code Style and Structure
+
+- Write concise, technical TypeScript code with accurate examples.
+- Use functional and declarative programming patterns; avoid classes.
+- Prefer iteration and modularization over code duplication.
+- Use descriptive variable names with auxiliary verbs (e.g., isLoading, hasError).
+- Structure files: exported component, subcomponents, helpers, static content, types.
+- Use console.log({ value }) instead of console.log(value)
+- Use onCallback instead of handleCallback
+- Use flex and gap instead of space-x-n and space-y-n
+- Use cn to compose class names
+- Just pass ref directly to the component because of react 19
+
+## Naming Conventions
+
+- Use lowercase with dashes for directories (e.g., components/auth-wizard).
+- Favor named exports for components.
+
+## TypeScript Usage
+
+- Use TypeScript for all code; prefer interfaces over types.
+- Avoid enums; use maps instead.
+- Use functional components with TypeScript interfaces.
+
+## Syntax and Formatting
+
+- Use the "function" keyword for pure functions.
+- Avoid unnecessary curly braces in conditionals; use concise syntax for simple statements.
+- Use declarative JSX.
+
+## UI and Styling
+
+- Use Shadcn UI, Base UI, Radix, and Tailwind for components and styling.
+- Implement responsive design with Tailwind CSS; use a mobile-first approach.
+
+## Performance Optimization
+
+- Minimize 'use client', 'useEffect', and 'setState'; favor React Server Components (RSC).
+- Wrap client components in Suspense with fallback.
+- Use dynamic loading for non-critical components.
+- Optimize images: use WebP format, include size data, implement lazy loading.
+
+## Key Conventions
+
+- Optimize Web Vitals (LCP, CLS, FID).
+- Limit 'use client':
+  - Favor server components and Next.js SSR.
+  - Use only for Web API access in small components.
+  - Avoid for data fetching or state management.
+- Follow Next.js docs for Data Fetching, Rendering, and Routing.
+
+Make sure not to start the dev server or run type of lint checking on agent mode.
+
+## React Patterns and Best Practices
 
 ## Core Philosophy
 
-- **UIs are thin wrappers over data** - avoid using local state (like useState) unless absolutely necessary and it's independent of business logic
+- **UIs are thin wrappers over data**: avoid using local state (like useState) unless absolutely necessary and it's independent of business logic
 - Even when local state seems needed, consider if you can flatten the UI state into a basic calculation
 - useState is only necessary if it's truly reactive and cannot be derived
 
 ## State Management
 
-- **Choose state machines over multiple useStates** - multiple useState calls make code harder to reason about
+- **Choose state machines over multiple useStates**: multiple useState calls make code harder to reason about
 - Prefer a single state object with reducers for complex state logic
 - Co-locate related state rather than spreading it across multiple useState calls
 
@@ -23,18 +78,18 @@ alwaysApply: true
 - **Create new component abstractions when nesting conditional logic**
 - Move complex logic to new components rather than deeply nested conditionals
 - Use ternaries only for small, easily readable logic
-- Avoid top-level if/else statements in JSX - extract to components instead
+- Avoid top-level if/else statements in JSX; extract to components instead
 
 ## Side Effects and Dependencies
 
-- **Avoid putting dependent logic in useEffects** - it causes misdirection about what the logic is doing
+- **Avoid putting dependent logic in useEffects**: it causes misdirection about what the logic is doing
 - Choose to explicitly define logic rather than depend on implicit reactive behavior
 - When useEffect is necessary, be explicit about dependencies and cleanup
 - Prefer derived state and event handlers over effect-driven logic
 
 ## Timing and Async Patterns
 
-- **setTimeouts are flaky and usually a hack** - always provide a comment explaining why setTimeout is needed
+- **setTimeouts are flaky and usually a hack**: always provide a comment explaining why setTimeout is needed
 - Consider alternatives like:
   - Proper loading states
   - Suspense boundaries
@@ -89,8 +144,8 @@ function createStore<T>(
   }>
 ): Store<T> {
   const store: Store<T> = {
-      subscribe: (cb) => {
-          listenersRef.current.add(cb);
+    subscribe: (cb) => {
+      listenersRef.current.add(cb);
       return () => listenersRef.current.delete(cb);
     },
     getState: () => stateRef.current,
@@ -114,15 +169,10 @@ function useStoreSelector<T, U>(
   store: Store<T>,
   selector: (state: T) => U
 ): U {
-  const getSnapshot = React.useCallback(
-    () => selector(store.snapshot()),
-    [store, selector]
-  );
-  
   return React.useSyncExternalStore(
     store.subscribe,
-    getSnapshot,
-    getSnapshot
+    () => selector(store.getState()),
+    () => selector(store.getState()),
   );
 }
 ```
@@ -172,4 +222,264 @@ useEffect(() => {
 
 ```tsx
 const theme = user?.preferences?.theme ?? 'default';
+```
+
+## You Might Not Need an Effect
+
+> Reference: [You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
+
+Effects are an escape hatch for synchronizing with **external systems** (non-React widgets, network, browser DOM). If there is no external system involved, you shouldn't need an Effect.
+
+### When to remove Effects
+
+- **Don't transform data for rendering in Effects**: calculate at the top level of your component; it re-runs automatically when props/state change
+- **Don't handle user events in Effects**: use the corresponding event handler where you know exactly what happened
+- **Don't update state based on props or state**: derive it during rendering instead of using Effect + setState (avoids extra render passes)
+- **Don't chain Effects** that each adjust state to trigger each other; calculate what you can during rendering and do the rest in event handlers
+- **Don't notify parent components about state changes via Effects**: call the parent's callback in the same event handler that updates state, so React batches both updates in one pass
+- **Don't pass data from child to parent via Effects**: lift the data fetching to the parent and pass it down as props
+
+### When Effects are appropriate
+
+- Synchronizing with external systems (jQuery widgets, browser APIs, network)
+- Analytics events that fire because the component was **displayed** (not because of a user action)
+- Data fetching (but always add cleanup to avoid race conditions, and prefer framework-level solutions)
+
+### Patterns to use instead of Effects
+
+| Instead of... | Do this |
+| --- | --- |
+| Effect + setState for derived values | `const fullName = firstName + ' ' + lastName;` |
+| Effect to cache expensive calculations | `const result = useMemo(() => expensiveFn(a, b), [a, b]);` |
+| Effect to reset state when a prop changes | Pass a `key` prop to force remounting |
+| Effect to adjust partial state on prop change | Store the selected **ID** instead of the selected **item**, and derive the item during render |
+| Effect to share logic between event handlers | Extract a plain function and call it from both handlers |
+| Effect to subscribe to an external store | Use `useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)` |
+
+### ❌ Avoid: Resetting state via Effect
+
+```tsx
+useEffect(() => {
+  setComment('');
+}, [userId]);
+```
+
+### ✅ Prefer: Key-based reset
+
+```tsx
+<Profile userId={userId} key={userId} />
+```
+
+### ❌ Avoid: Storing derived state + syncing with Effect
+
+```tsx
+const [visibleTodos, setVisibleTodos] = useState([]);
+useEffect(() => {
+  setVisibleTodos(getFilteredTodos(todos, filter));
+}, [todos, filter]);
+```
+
+### ✅ Prefer: Calculate during rendering
+
+```tsx
+const visibleTodos = getFilteredTodos(todos, filter);
+```
+
+### ❌ Avoid: Event-specific logic in an Effect
+
+```tsx
+useEffect(() => {
+  if (product.isInCart) {
+    showNotification(`Added ${product.name} to the cart!`);
+  }
+}, [product]);
+```
+
+### ✅ Prefer: Logic in the event handler
+
+```tsx
+function onProductBuy() {
+  addToCart(product);
+  showNotification(`Added ${product.name} to the cart!`);
+}
+```
+
+### ❌ Avoid: Chained Effects
+
+```tsx
+useEffect(() => { if (card?.gold) setGoldCardCount(c => c + 1); }, [card]);
+useEffect(() => { if (goldCardCount > 3) { setRound(r => r + 1); setGoldCardCount(0); } }, [goldCardCount]);
+useEffect(() => { if (round > 5) setIsGameOver(true); }, [round]);
+```
+
+### ✅ Prefer: Derive + compute in event handler
+
+```tsx
+const isGameOver = round > 5;
+
+function onCardPlace(nextCard) {
+  setCard(nextCard);
+  if (nextCard.gold) {
+    if (goldCardCount < 3) setGoldCardCount(goldCardCount + 1);
+    else { setGoldCardCount(0); setRound(round + 1); }
+  }
+}
+```
+
+### Data fetching: always add cleanup
+
+```tsx
+useEffect(() => {
+  let ignore = false;
+  fetchResults(query, page).then(json => {
+    if (!ignore) setResults(json);
+  });
+  return () => { ignore = true; };
+}, [query, page]);
+```
+
+## useMemo
+
+> Reference: [useMemo](https://react.dev/reference/react/useMemo)
+
+`useMemo` caches the **result** of a calculation between re-renders.
+
+### When to use useMemo
+
+- The calculation is **noticeably slow** (~1ms+ measured with `console.time`) and its dependencies rarely change
+- The result is passed as a prop to a `memo`-wrapped component (referential stability matters)
+- The value is used as a dependency of another Hook (useMemo, useCallback, useEffect)
+
+### When NOT to use useMemo
+
+- The calculation is cheap; just compute it inline
+- You're not passing the result to a memoized child or using it as a Hook dependency
+- A dependency changes on every render anyway (memoization is broken)
+
+### Prefer alternatives to useMemo
+
+1. **Accept JSX as children**: wrapper components that accept `children` let React skip re-rendering children when wrapper state updates
+2. **Keep state local**: don't lift transient state (forms, hover) higher than necessary
+3. **Keep rendering pure**: if re-rendering causes bugs, fix the bug instead of adding memoization
+4. **Remove unnecessary Effects** that update state, since chains of Effect-driven updates are the most common performance problem
+5. **Move objects/functions inside Effects** instead of memoizing them outside
+
+### ❌ Avoid: Effect + setState for derived computation
+
+```tsx
+const [visibleTodos, setVisibleTodos] = useState([]);
+useEffect(() => {
+  setVisibleTodos(getFilteredTodos(todos, filter));
+}, [todos, filter]);
+```
+
+### ✅ Prefer: Inline calculation (if cheap)
+
+```tsx
+const visibleTodos = getFilteredTodos(todos, filter);
+```
+
+### ✅ Prefer: useMemo (if expensive)
+
+```tsx
+const visibleTodos = useMemo(
+  () => getFilteredTodos(todos, filter),
+  [todos, filter]
+);
+```
+
+### ❌ Avoid: Object dependency that breaks memoization
+
+```tsx
+const searchOptions = { matchMode: 'whole-word', text };
+const visibleItems = useMemo(() => searchItems(allItems, searchOptions), [allItems, searchOptions]);
+```
+
+### ✅ Prefer: Move object inside useMemo
+
+```tsx
+const visibleItems = useMemo(() => {
+  const searchOptions = { matchMode: 'whole-word', text };
+  return searchItems(allItems, searchOptions);
+}, [allItems, text]);
+```
+
+## useCallback
+
+> Reference: [useCallback](https://react.dev/reference/react/useCallback)
+
+`useCallback` caches the **function itself** between re-renders. It is equivalent to `useMemo(() => fn, deps)`.
+
+### When to use useCallback
+
+- Passing a function as a prop to a `memo`-wrapped component (so it can skip re-rendering)
+- The function is used as a dependency of another Hook (useEffect, useMemo, useCallback)
+- Writing a custom Hook that returns functions (always wrap returned functions in useCallback)
+
+### When NOT to use useCallback
+
+- The child component is not wrapped in `memo`; useCallback has no benefit
+- A dependency changes on every render anyway
+- The function is only used locally and not passed as a prop or Hook dependency
+
+### ❌ Avoid: useCallback without memo on the child
+
+```tsx
+function Parent() {
+  const onClick = useCallback(() => { /* ... */ }, []);
+  return <Child onClick={onClick} />; // Child is NOT memo-wrapped, useCallback is pointless
+}
+```
+
+### ✅ Prefer: useCallback paired with memo
+
+```tsx
+const Child = memo(function Child({ onClick }) { /* ... */ });
+
+function Parent() {
+  const onClick = useCallback(() => { /* ... */ }, [dep]);
+  return <Child onClick={onClick} />;
+}
+```
+
+### ✅ Prefer: Move functions inside Effects instead of wrapping in useCallback
+
+```tsx
+// Instead of useCallback + function dependency in Effect:
+useEffect(() => {
+  function createOptions() {
+    return { serverUrl: 'https://localhost:1234', roomId };
+  }
+  const connection = createConnection(createOptions());
+  connection.connect();
+  return () => connection.disconnect();
+}, [roomId]);
+```
+
+### Use updater functions to remove state dependencies
+
+```tsx
+// ❌ Depends on todos
+const onTodoAdd = useCallback((text) => {
+  setTodos([...todos, { id: nextId++, text }]);
+}, [todos]);
+
+// ✅ No dependency on todos
+const onTodoAdd = useCallback((text) => {
+  setTodos(todos => [...todos, { id: nextId++, text }]);
+}, []);
+```
+
+### Custom Hooks should wrap returned functions
+
+```tsx
+function useRouter() {
+  const { dispatch } = useContext(RouterStateContext);
+
+  const navigate = useCallback((url) => {
+    dispatch({ type: 'navigate', url });
+  }, [dispatch]);
+
+  return { navigate };
+}
 ```

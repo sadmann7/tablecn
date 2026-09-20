@@ -7,7 +7,7 @@ import type { SearchState } from "@/lib/data-grid-types";
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { Button } from "@/registry/bases/base/ui/button";
-import { Input } from "@/registry/bases/radix/ui/input";
+import { Input } from "@/registry/bases/base/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {

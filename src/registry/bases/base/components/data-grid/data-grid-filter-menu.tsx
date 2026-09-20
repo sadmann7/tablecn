@@ -21,7 +21,16 @@ import {
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/registry/bases/base/ui/command";
 import { useDirection } from "@/registry/bases/base/ui/direction";
+import { Input } from "@/registry/bases/base/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -43,15 +52,6 @@ import {
   SortableOverlay,
 } from "@/registry/bases/base/ui/sortable";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/radix/ui/command";
-import { Input } from "@/registry/bases/radix/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const FILTER_SHORTCUT_KEY = "f";

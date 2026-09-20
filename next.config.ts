@@ -1,10 +1,11 @@
-import type { NextConfig } from "next";
-
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
  * for Docker builds.
  */
-// Import environment validation synchronously
+
+import type { NextConfig } from "next";
+
+import { DEFAULT_STYLE_ID } from "./src/lib/constants";
 import "./src/env.js";
 
 const nextConfig: NextConfig = {
@@ -26,7 +27,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/r/:name.json",
-        destination: "/r/styles/base-nova/:name.json",
+        destination: `/r/styles/${DEFAULT_STYLE_ID}/:name.json`,
       },
     ];
   },

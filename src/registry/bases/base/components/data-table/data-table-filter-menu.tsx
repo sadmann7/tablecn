@@ -20,6 +20,15 @@ import { getFiltersStateParser } from "@/lib/parsers";
 import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/registry/bases/base/ui/command";
+import { Input } from "@/registry/bases/base/ui/input";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -33,15 +42,6 @@ import {
   SelectValue,
 } from "@/registry/bases/base/ui/select";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/radix/ui/command";
-import { Input } from "@/registry/bases/radix/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const DEBOUNCE_MS = 300;
