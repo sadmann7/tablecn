@@ -9,18 +9,18 @@ import type { DataTableFeatures } from "@/lib/table-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/ui/popover";
-import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/registry/bases/radix/ui/command";
+} from "@/registry/bases/base/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/registry/bases/base/ui/popover";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataTableViewOptionsProps<

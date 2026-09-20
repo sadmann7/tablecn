@@ -8,7 +8,7 @@ import * as React from "react";
 import type { ExtendedColumnFilter } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { Input } from "@/registry/bases/radix/ui/input";
+import { Input } from "@/registry/bases/base/ui/input";
 
 interface DataTableRangeFilterProps<
   TData extends RowData,

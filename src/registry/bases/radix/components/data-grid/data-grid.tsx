@@ -5,8 +5,8 @@ import type { RowData } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
-import type { useDataGrid } from "@/hooks/use-data-grid";
 import type { Direction } from "@/lib/data-grid-types";
+import type { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import {

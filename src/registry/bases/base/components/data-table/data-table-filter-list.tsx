@@ -26,6 +26,14 @@ import { DataTableRangeFilter } from "@/registry/bases/base/components/data-tabl
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/registry/bases/base/ui/command";
+import {
   Faceted,
   FacetedBadgeList,
   FacetedContent,
@@ -36,6 +44,7 @@ import {
   FacetedList,
   FacetedTrigger,
 } from "@/registry/bases/base/ui/faceted";
+import { Input } from "@/registry/bases/base/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -57,15 +66,6 @@ import {
   SortableOverlay,
 } from "@/registry/bases/base/ui/sortable";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/radix/ui/command";
-import { Input } from "@/registry/bases/radix/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const DEBOUNCE_MS = 300;

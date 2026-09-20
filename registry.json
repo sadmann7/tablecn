@@ -77,8 +77,9 @@
           "target": "src/components/data-table/data-table-skeleton.tsx"
         },
         {
-          "path": "src/hooks/use-data-table.ts",
-          "type": "registry:hook"
+          "path": "src/registry/bases/radix/hooks/use-data-table.ts",
+          "type": "registry:hook",
+          "target": "src/hooks/use-data-table.ts"
         },
         {
           "path": "src/hooks/use-debounced-callback.ts",
@@ -416,8 +417,9 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/hooks/use-data-grid.ts",
-          "type": "registry:hook"
+          "path": "src/registry/bases/radix/hooks/use-data-grid.ts",
+          "type": "registry:hook",
+          "target": "src/hooks/use-data-grid.ts"
         },
         {
           "path": "src/hooks/use-debounced-callback.ts",

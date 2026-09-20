@@ -80,11 +80,11 @@ function listDirs(dir: string): string[] {
 function remove(target: string, dryRun: boolean, silent = false) {
   const relative = path.relative(ROOT, target);
   if (dryRun) {
-    console.log(`would remove ${relative}`);
+    console.log(`  ✓ would remove ${relative}`);
     return;
   }
   rmSync(target, { recursive: true, force: true });
-  if (!silent) console.log(`removed ${relative}`);
+  if (!silent) console.log(`  ✓ Removed ${relative}`);
 }
 
 function wipeRegistryOutput(dryRun = false) {
@@ -100,12 +100,18 @@ function wipeRegistryOutput(dryRun = false) {
 
 function cleanStaleRegistryOutput(dryRun = false) {
   if (!existsSync(OUT_ROOT)) {
-    console.log("public/r is already empty.");
-    return 0;
+    console.log("📁 public/r is already empty. Nothing to clean.");
+    return { files: 0, dirs: 0 };
   }
 
   const expected = getExpectedFiles();
   const staleFiles = listFiles(OUT_ROOT).filter((file) => !expected.has(file));
+
+  if (staleFiles.length > 0) {
+    console.log(
+      `\n🗑️  ${dryRun ? "Would remove" : "Removing"} ${staleFiles.length} orphaned file(s)...`,
+    );
+  }
 
   for (const file of staleFiles) {
     remove(file, dryRun);
@@ -116,13 +122,15 @@ function cleanStaleRegistryOutput(dryRun = false) {
     .filter((dir) => !expectedDirs.has(dir))
     .sort((a, b) => b.length - a.length);
 
+  const emptyDirs: string[] = [];
   for (const dir of staleDirs) {
     if (!existsSync(dir)) continue;
     if (readdirSync(dir).length > 0) continue;
+    emptyDirs.push(dir);
     remove(dir, dryRun);
   }
 
-  return staleFiles.length + staleDirs.length;
+  return { files: staleFiles.length, dirs: emptyDirs.length };
 }
 
 function main() {
@@ -130,19 +138,52 @@ function main() {
   const dryRun = args.has("--dry-run");
   const wipeAll = args.has("--all");
 
+  console.log(
+    dryRun
+      ? "🧹 Starting registry cleanup (dry run)..."
+      : "🧹 Starting registry cleanup...",
+  );
+
   if (wipeAll) {
     const removed = wipeRegistryOutput(dryRun);
-    if (removed === 0) console.log("public/r is already empty.");
-    else if (!dryRun) console.log(`Wiped ${removed} entries from public/r.`);
+    if (removed === 0) {
+      console.log("📁 public/r is already empty. Nothing to clean.");
+      return;
+    }
+
+    console.log(
+      dryRun
+        ? `\n🎉 Would wipe ${removed} entries from public/r.`
+        : `\n🎉 Wiped ${removed} entries from public/r.`,
+    );
     return;
   }
 
-  const removed = cleanStaleRegistryOutput(dryRun);
-  if (removed === 0) console.log("No stale registry files.");
+  const expectedStyleDirs = BASES.length * STYLES.length;
+  const { files, dirs } = cleanStaleRegistryOutput(dryRun);
+  const removed = files + dirs;
+
+  if (removed === 0) {
+    console.log("\n🎉 Cleanup completed! No stale registry files.");
+  } else {
+    console.log(
+      `\n🎉 Cleanup completed! ${dryRun ? "Would remove" : "Removed"} ${removed} orphaned item(s).`,
+    );
+  }
+
+  console.log("\n📊 Summary:");
+  console.log(`  - Expected style directories: ${expectedStyleDirs}`);
+  console.log(`  - Orphaned files ${dryRun ? "found" : "removed"}: ${files}`);
+  console.log(`  - Empty directories ${dryRun ? "found" : "removed"}: ${dirs}`);
 }
 
 export { cleanStaleRegistryOutput, OUT_ROOT, STYLES_ROOT, wipeRegistryOutput };
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  main();
+  try {
+    main();
+  } catch (error) {
+    console.error("❌ Error during cleanup:", error);
+    process.exit(1);
+  }
 }

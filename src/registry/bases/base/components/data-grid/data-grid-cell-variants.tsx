@@ -25,6 +25,15 @@ import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import { Checkbox } from "@/registry/bases/base/ui/checkbox";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/registry/bases/base/ui/command";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -37,18 +46,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/base/ui/select";
+import { Skeleton } from "@/registry/bases/base/ui/skeleton";
+import { Textarea } from "@/registry/bases/base/ui/textarea";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/registry/bases/radix/ui/command";
-import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
-import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 export function ShortTextCell<TData extends RowData>({

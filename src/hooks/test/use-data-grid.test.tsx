@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { useDataGrid } from "@/hooks/use-data-grid";
 import { stringifyUnknown } from "@/lib/data-grid-utils";
+import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
 // Mock toast
 vi.mock("sonner", () => ({

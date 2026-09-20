@@ -11,12 +11,6 @@ import type { DataTableFeatures } from "@/lib/table-features";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/ui/popover";
-import { Separator } from "@/registry/bases/base/ui/separator";
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -24,7 +18,13 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/registry/bases/radix/ui/command";
+} from "@/registry/bases/base/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/registry/bases/base/ui/popover";
+import { Separator } from "@/registry/bases/base/ui/separator";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataTableFacetedFilterProps<TData extends RowData, TValue> {

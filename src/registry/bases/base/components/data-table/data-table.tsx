@@ -18,7 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/registry/bases/radix/ui/table";
+} from "@/registry/bases/base/ui/table";
 
 interface DataTableProps<
   TData extends RowData,

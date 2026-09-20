@@ -11,6 +11,14 @@ import { dataTableConfig } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/registry/bases/base/ui/command";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -30,14 +38,6 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/registry/bases/base/ui/sortable";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/radix/ui/command";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const SORT_SHORTCUT_KEY = "s";

@@ -5,13 +5,13 @@ import * as React from "react";
 import type { Task } from "@/db/schema";
 import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
 
-import { useDataTable } from "@/hooks/use-data-table";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
 import { DataTableFilterList } from "@/registry/bases/radix/components/data-table/data-table-filter-list";
 import { DataTableFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-filter-menu";
 import { DataTableSortList } from "@/registry/bases/radix/components/data-table/data-table-sort-list";
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
+import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 
 import type {
   getEstimatedHoursRange,

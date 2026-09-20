@@ -12,7 +12,7 @@ import { DataTableFacetedFilter } from "@/registry/bases/base/components/data-ta
 import { DataTableSliderFilter } from "@/registry/bases/base/components/data-table/data-table-slider-filter";
 import { DataTableViewOptions } from "@/registry/bases/base/components/data-table/data-table-view-options";
 import { Button } from "@/registry/bases/base/ui/button";
-import { Input } from "@/registry/bases/radix/ui/input";
+import { Input } from "@/registry/bases/base/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataTableToolbarProps<

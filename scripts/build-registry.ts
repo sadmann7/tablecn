@@ -30,10 +30,8 @@ import path from "node:path";
 
 import { BASES } from "../registry/bases";
 import { STYLES } from "../registry/styles";
+import { DEFAULT_BASE } from "../src/lib/constants";
 import { OUT_ROOT, STYLES_ROOT, wipeRegistryOutput } from "./clean-registry";
-
-const DEFAULT_STYLE = "nova";
-const DEFAULT_BASE = "base";
 
 const STYLE_COMBINATIONS = BASES.flatMap((base) =>
   STYLES.map((style) => ({
@@ -143,17 +141,22 @@ function buildBase(baseName: string, outDir: string) {
 }
 
 function main() {
+  const totalStart = performance.now();
+
+  console.log("🧹 Cleaning registry output...");
   wipeRegistryOutput();
   mkdirSync(STYLES_ROOT, { recursive: true });
 
   const scratch = mkdtempSync(path.join(tmpdir(), "tablecn-registry-"));
 
   try {
+    console.log(`💅 Building ${STYLE_COMBINATIONS.length} style variants...`);
+
     for (const base of BASES) {
       const baseDir = path.join(scratch, base.name);
       mkdirSync(baseDir, { recursive: true });
 
-      const overrideCount = buildBase(base.name, baseDir);
+      buildBase(base.name, baseDir);
       const built = path.join(baseDir, "r");
 
       for (const style of STYLES) {
@@ -167,15 +170,16 @@ function main() {
       if (base.name === DEFAULT_BASE) {
         cpSync(built, OUT_ROOT, { recursive: true });
       }
-
-      console.log(
-        `${base.name}: ${overrideCount} base-tree file(s), ${STYLES.length} style ids`,
-      );
     }
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
 
+  for (const style of STYLE_COMBINATIONS) {
+    console.log(`   ✅ ${style.name}`);
+  }
+
+  console.log("📦 Writing styles index...");
   writeFileSync(
     path.join(STYLES_ROOT, "index.json"),
     `${JSON.stringify(
@@ -185,9 +189,13 @@ function main() {
     )}\n`,
   );
 
-  console.log(
-    `\nPublished ${STYLE_COMBINATIONS.length} style ids (default: ${DEFAULT_BASE}-${DEFAULT_STYLE}).`,
-  );
+  const elapsed = ((performance.now() - totalStart) / 1000).toFixed(2);
+  console.log(`\n✅ Build complete in ${elapsed}s!`);
 }
 
-main();
+try {
+  main();
+} catch (error) {
+  console.error("❌ Registry build failed:", error);
+  process.exit(1);
+}
