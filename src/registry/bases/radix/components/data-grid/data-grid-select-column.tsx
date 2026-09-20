@@ -7,11 +7,11 @@ import type {
   RowData,
 } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { cn } from "@/lib/utils";
 import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 
 type HitboxSize = "default" | "sm" | "lg";

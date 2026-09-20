@@ -2,6 +2,7 @@
 
 import type { RowData } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type { useDataGrid } from "@/hooks/use-data-grid";
@@ -13,7 +14,6 @@ import {
   getColumnBorderVisibility,
   getColumnPinningStyle,
 } from "@/lib/data-grid-utils";
-import { cn } from "@/lib/utils";
 import { DataGridColumnHeader } from "@/registry/bases/radix/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/registry/bases/radix/components/data-grid/data-grid-context-menu";
 import { DataGridPasteDialog } from "@/registry/bases/radix/components/data-grid/data-grid-paste-dialog";

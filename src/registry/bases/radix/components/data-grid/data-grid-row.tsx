@@ -8,6 +8,7 @@ import type {
 } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 
+import { cn } from "cn";
 import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
@@ -26,7 +27,6 @@ import {
   getColumnPinningStyle,
   getRowHeightValue,
 } from "@/lib/data-grid-utils";
-import { cn } from "@/lib/utils";
 import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
 
 interface DataGridRowProps<

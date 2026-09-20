@@ -38,11 +38,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { cn } from "cn";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
-import { cn } from "@/lib/utils";
 
 const orientationConfig = {
   vertical: {

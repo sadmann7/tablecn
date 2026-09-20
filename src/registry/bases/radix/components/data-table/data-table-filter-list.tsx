@@ -2,6 +2,7 @@
 
 import type { Column, RowData, Table } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
@@ -22,7 +23,6 @@ import {
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
 import { getFiltersStateParser } from "@/lib/parsers";
-import { cn } from "@/lib/utils";
 import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";

@@ -23,7 +23,7 @@
         "label",
         "skeleton"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table.tsx",
@@ -112,7 +112,7 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-sort-list.tsx",
@@ -160,7 +160,7 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-filter-list.tsx",
@@ -240,7 +240,7 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-filter-menu.tsx",
@@ -317,7 +317,8 @@
         "@tanstack/react-table",
         "@tanstack/react-virtual",
         "lucide-react",
-        "sonner"
+        "sonner",
+        "cn"
       ],
       "files": [
         {
@@ -419,7 +420,7 @@
       "title": "Data Grid Select Column",
       "description": "A reusable select column definition for the data grid with checkbox selection and shift-click support",
       "registryDependencies": ["checkbox"],
-      "dependencies": ["@tanstack/react-table"],
+      "dependencies": ["@tanstack/react-table", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-select-column.tsx",
@@ -448,7 +449,7 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-sort-menu.tsx",
@@ -508,7 +509,7 @@
       "title": "Data Grid View Menu",
       "description": "A view menu component for the data grid to toggle column visibility",
       "registryDependencies": ["button", "command", "popover"],
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-view-menu.tsx",
@@ -564,7 +565,7 @@
         "popover",
         "select"
       ],
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-filter-menu.tsx",
@@ -613,7 +614,7 @@
       "title": "Data Grid Skeleton",
       "description": "A composable skeleton component for the data grid with toolbar and grid parts",
       "registryDependencies": ["skeleton"],
-      "dependencies": [],
+      "dependencies": ["cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-skeleton.tsx",

@@ -3,12 +3,12 @@
 import type { RowData } from "@tanstack/react-table";
 
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
+import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
 import { getCellKey } from "@/lib/data-grid-utils";
-import { cn } from "@/lib/utils";
 import { useDataGridPresence } from "@/registry/bases/base/components/data-grid/data-grid-presence";
 
 interface DataGridCellWrapperProps<TData extends RowData>

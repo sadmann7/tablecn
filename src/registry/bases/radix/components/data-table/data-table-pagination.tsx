@@ -1,8 +1,9 @@
 import type { RowData, Table } from "@tanstack/react-table";
 
+import { cn } from "cn";
+
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Select,

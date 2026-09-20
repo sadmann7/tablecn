@@ -3,9 +3,10 @@
 import type { RowData, Table } from "@tanstack/react-table";
 import type * as React from "react";
 
+import { cn } from "cn";
+
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { cn } from "@/lib/utils";
 import { DataTableViewOptions } from "@/registry/bases/base/components/data-table/data-table-view-options";
 
 interface DataTableAdvancedToolbarProps<

@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import * as React from "react";
 
 import type {
@@ -8,7 +9,6 @@ import type {
 } from "@/lib/data-grid-types";
 
 import { useAsRef } from "@/hooks/use-as-ref";
-import { cn } from "@/lib/utils";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
   Dialog,
