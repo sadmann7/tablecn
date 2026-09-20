@@ -15,7 +15,8 @@ import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { getStyleIds } from "../src/registry/styles";
+import { BASES } from "../registry/bases";
+import { STYLES } from "../registry/styles";
 
 const ROOT = process.cwd();
 const OUT_ROOT = path.join(ROOT, "public/r");
@@ -44,10 +45,13 @@ function getExpectedFiles() {
     files.add(path.join(OUT_ROOT, `${name}.json`));
   }
 
-  for (const styleId of getStyleIds()) {
-    files.add(path.join(STYLES_ROOT, styleId, "registry.json"));
-    for (const name of items) {
-      files.add(path.join(STYLES_ROOT, styleId, `${name}.json`));
+  for (const base of BASES) {
+    for (const style of STYLES) {
+      const styleId = `${base.name}-${style.name}`;
+      files.add(path.join(STYLES_ROOT, styleId, "registry.json"));
+      for (const name of items) {
+        files.add(path.join(STYLES_ROOT, styleId, `${name}.json`));
+      }
     }
   }
 
