@@ -18,7 +18,7 @@
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
     "typecheck": "tsc --noEmit",
-    "check": "oxlint . && oxfmt --check && tsc --noEmit",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck",
     "shadcn": "pnpm dlx shadcn@latest",
     "build:registry": "tsx --tsconfig ./tsconfig.scripts.json scripts/build-registry.ts",
     "clean:registry": "tsx --tsconfig ./tsconfig.scripts.json scripts/clean-registry.ts",

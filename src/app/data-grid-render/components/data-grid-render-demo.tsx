@@ -9,9 +9,9 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellUpdate } from "@/lib/data-grid-types";
 
-import { useDataGrid } from "@/hooks/use-data-grid";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 import {

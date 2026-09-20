@@ -8,7 +8,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 
-import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import {
   type UndoRedoCellUpdate,
   useDataGridUndoRedo,
@@ -23,6 +22,10 @@ import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-gr
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/registry/bases/radix/components/data-grid/data-grid-view-menu";
+import {
+  type UseDataGridProps,
+  useDataGrid,
+} from "@/registry/bases/radix/hooks/use-data-grid";
 import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
 import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
