@@ -26,53 +26,49 @@
       "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
       "files": [
         {
-          "path": "src/components/data-table/data-table.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-column-header.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-column-header.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-column-header.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-pagination.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-pagination.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-pagination.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-view-options.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-view-options.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-faceted-filter.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-faceted-filter.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-faceted-filter.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-toolbar.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-toolbar.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-toolbar.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-slider-filter.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-slider-filter.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-slider-filter.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-date-filter.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-date-filter.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-date-filter.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-skeleton.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-skeleton.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-skeleton.tsx"
-        },
-        {
-          "path": "src/hooks/use-callback-ref.ts",
-          "type": "registry:hook"
         },
         {
           "path": "src/hooks/use-data-table.ts",
@@ -119,18 +115,14 @@
       "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
-          "path": "src/components/data-table/data-table-sort-list.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-sort-list.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-sort-list.tsx"
         },
         {
-          "path": "src/components/ui/sortable.tsx",
+          "path": "src/registry/bases/radix/ui/sortable.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/sortable.tsx"
-        },
-        {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
         },
         {
           "path": "src/lib/data-table-utils.ts",
@@ -147,6 +139,10 @@
         {
           "path": "src/lib/parsers.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -167,41 +163,33 @@
       "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
       "files": [
         {
-          "path": "src/components/data-table/data-table-filter-list.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-filter-list.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-filter-list.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-range-filter.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-range-filter.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-range-filter.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-advanced-toolbar.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-advanced-toolbar.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-advanced-toolbar.tsx"
         },
         {
-          "path": "src/components/ui/sortable.tsx",
+          "path": "src/registry/bases/radix/ui/sortable.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/sortable.tsx"
         },
         {
-          "path": "src/components/ui/faceted.tsx",
+          "path": "src/registry/bases/radix/ui/faceted.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/faceted.tsx"
         },
         {
-          "path": "src/hooks/use-callback-ref.ts",
-          "type": "registry:hook"
-        },
-        {
           "path": "src/hooks/use-debounced-callback.ts",
           "type": "registry:hook"
-        },
-        {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
         },
         {
           "path": "src/lib/data-table-utils.ts",
@@ -228,9 +216,13 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/components/data-table/data-table-view-options.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-view-options.tsx"
+        },
+        {
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -251,23 +243,19 @@
       "dependencies": ["@tanstack/react-table", "lucide-react", "nuqs"],
       "files": [
         {
-          "path": "src/components/data-table/data-table-filter-menu.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-filter-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-filter-menu.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-range-filter.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-range-filter.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-range-filter.tsx"
         },
         {
-          "path": "src/components/data-table/data-table-advanced-toolbar.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-advanced-toolbar.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-advanced-toolbar.tsx"
-        },
-        {
-          "path": "src/hooks/use-callback-ref.ts",
-          "type": "registry:hook"
         },
         {
           "path": "src/hooks/use-debounced-callback.ts",
@@ -298,7 +286,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/components/data-table/data-table-view-options.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-view-options.tsx"
         }
@@ -333,57 +321,57 @@
       ],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-presence.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-presence.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-presence.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-cell.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-cell.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-cell.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-cell-wrapper.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-cell-wrapper.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-cell-wrapper.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-cell-variants.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-cell-variants.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-cell-variants.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-column-header.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-column-header.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-column-header.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-context-menu.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-context-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-context-menu.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-paste-dialog.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-paste-dialog.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-paste-dialog.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-row.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-row.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-row.tsx"
         },
         {
-          "path": "src/components/data-grid/data-grid-search.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-search.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-search.tsx"
         },
         {
-          "path": "src/components/ui/direction.tsx",
+          "path": "src/registry/bases/radix/ui/direction.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/direction.tsx"
         },
@@ -393,10 +381,6 @@
         },
         {
           "path": "src/hooks/use-badge-overflow.ts",
-          "type": "registry:hook"
-        },
-        {
-          "path": "src/hooks/use-callback-ref.ts",
           "type": "registry:hook"
         },
         {
@@ -414,10 +398,6 @@
         {
           "path": "src/hooks/use-lazy-ref.ts",
           "type": "registry:hook"
-        },
-        {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
         },
         {
           "path": "src/lib/data-grid-utils.ts",
@@ -442,7 +422,7 @@
       "dependencies": ["@tanstack/react-table"],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid-select-column.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-select-column.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-select-column.tsx"
         },
@@ -471,23 +451,19 @@
       "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid-sort-menu.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-sort-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-sort-menu.tsx"
         },
         {
-          "path": "src/components/ui/direction.tsx",
+          "path": "src/registry/bases/radix/ui/direction.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/direction.tsx"
         },
         {
-          "path": "src/components/ui/sortable.tsx",
+          "path": "src/registry/bases/radix/ui/sortable.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/sortable.tsx"
-        },
-        {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
         },
         {
           "path": "src/lib/data-grid-features.ts",
@@ -496,6 +472,10 @@
         {
           "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -508,7 +488,7 @@
       "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid-row-height-menu.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-row-height-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-row-height-menu.tsx"
         },
@@ -531,12 +511,12 @@
       "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid-view-menu.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-view-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-view-menu.tsx"
         },
         {
-          "path": "src/components/ui/direction.tsx",
+          "path": "src/registry/bases/radix/ui/direction.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/direction.tsx"
         },
@@ -559,12 +539,12 @@
       "dependencies": ["lucide-react"],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-keyboard-shortcuts.tsx"
         },
         {
-          "path": "src/components/ui/direction.tsx",
+          "path": "src/registry/bases/radix/ui/direction.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/direction.tsx"
         }
@@ -587,17 +567,17 @@
       "dependencies": ["@tanstack/react-table", "lucide-react"],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid-filter-menu.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-filter-menu.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-filter-menu.tsx"
         },
         {
-          "path": "src/components/ui/direction.tsx",
+          "path": "src/registry/bases/radix/ui/direction.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/direction.tsx"
         },
         {
-          "path": "src/components/ui/sortable.tsx",
+          "path": "src/registry/bases/radix/ui/sortable.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/sortable.tsx"
         },
@@ -606,13 +586,8 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/lib/compose-refs.ts",
-          "type": "registry:lib"
-        },
-        {
           "path": "src/lib/data-grid-filters.ts",
-          "type": "registry:lib",
-          "target": "src/lib/data-grid-filters.ts"
+          "type": "registry:lib"
         },
         {
           "path": "src/lib/format.ts",
@@ -627,7 +602,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/hooks/use-callback-ref.ts",
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
           "type": "registry:hook"
         }
       ]
@@ -641,7 +616,7 @@
       "dependencies": [],
       "files": [
         {
-          "path": "src/components/data-grid/data-grid-skeleton.tsx",
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-skeleton.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-skeleton.tsx"
         }

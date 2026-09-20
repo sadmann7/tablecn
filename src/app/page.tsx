@@ -2,9 +2,9 @@ import { Suspense } from "react";
 
 import type { SearchParams } from "@/types";
 
-import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { Shell } from "@/components/shell";
 import { getValidFilters } from "@/lib/data-table-utils";
+import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
 import { FeatureFlagsProvider } from "./components/feature-flags-provider";
 import { TasksTable } from "./components/tasks-table";

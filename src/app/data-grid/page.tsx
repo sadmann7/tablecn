@@ -4,7 +4,7 @@ import {
   DataGridSkeleton,
   DataGridSkeletonGrid,
   DataGridSkeletonToolbar,
-} from "@/components/data-grid/data-grid-skeleton";
+} from "@/registry/bases/radix/components/data-grid/data-grid-skeleton";
 
 import { DataGridDemo } from "./components/data-grid-demo";
 

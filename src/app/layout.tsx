@@ -7,12 +7,12 @@ import { Suspense } from "react";
 import { SiteHeader } from "@/components/layouts/site-header";
 import { ThemeProvider } from "@/components/providers";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
-import "@/styles/globals.css";
-import { Toaster } from "@/components/ui/sonner";
 import { UploadThingSSR } from "@/components/uploadthing-ssr";
 import { siteConfig } from "@/config/site";
 import { fontMono, fontSans } from "@/lib/fonts";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/registry/bases/radix/ui/sonner";
+import "@/styles/globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 

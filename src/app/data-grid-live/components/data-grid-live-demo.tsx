@@ -14,13 +14,6 @@ import {
   getStanceIcon,
   getStyleIcon,
 } from "@/app/lib/utils";
-import { DataGrid } from "@/components/data-grid/data-grid";
-import { DataGridFilterMenu } from "@/components/data-grid/data-grid-filter-menu";
-import { DataGridKeyboardShortcuts } from "@/components/data-grid/data-grid-keyboard-shortcuts";
-import { DataGridRowHeightMenu } from "@/components/data-grid/data-grid-row-height-menu";
-import { getDataGridSelectColumn } from "@/components/data-grid/data-grid-select-column";
-import { DataGridSortMenu } from "@/components/data-grid/data-grid-sort-menu";
-import { DataGridViewMenu } from "@/components/data-grid/data-grid-view-menu";
 import { skaters } from "@/db/schema";
 import { type UseDataGridProps, useDataGrid } from "@/hooks/use-data-grid";
 import {
@@ -31,6 +24,13 @@ import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import { useUploadThing } from "@/lib/uploadthing";
+import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
+import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
+import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
+import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
+import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
+import { DataGridViewMenu } from "@/registry/bases/radix/components/data-grid/data-grid-view-menu";
 
 import type { SkaterSchema } from "../lib/validation";
 

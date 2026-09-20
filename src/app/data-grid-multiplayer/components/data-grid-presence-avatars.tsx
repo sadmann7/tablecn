@@ -2,12 +2,12 @@
 
 import type { UserPresence } from "@party/types";
 
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from "@/registry/bases/radix/ui/tooltip";
 
 function getInitials(name: string): string {
   return name

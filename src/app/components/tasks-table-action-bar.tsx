@@ -8,6 +8,8 @@ import { toast } from "sonner";
 
 import type { DataTableFeatures } from "@/lib/table-features";
 
+import { type Task, tasks } from "@/db/schema";
+import { exportTableToCSV } from "@/lib/export";
 import {
   ActionBar,
   ActionBarClose,
@@ -15,15 +17,13 @@ import {
   ActionBarItem,
   ActionBarSelection,
   ActionBarSeparator,
-} from "@/components/ui/action-bar";
+} from "@/registry/bases/radix/ui/action-bar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { type Task, tasks } from "@/db/schema";
-import { exportTableToCSV } from "@/lib/export";
+} from "@/registry/bases/radix/ui/dropdown-menu";
 
 import { deleteTasks, updateTasks } from "../lib/actions";
 

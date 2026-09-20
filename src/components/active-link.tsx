@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Button } from "@/registry/bases/radix/ui/button";
 
 export function ActiveLink({
   href,

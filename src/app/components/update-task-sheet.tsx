@@ -8,7 +8,7 @@ import { toast } from "sonner";
 
 import type { Task } from "@/db/schema";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Sheet,
   SheetClose,
@@ -17,7 +17,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@/registry/bases/radix/ui/sheet";
 
 import { updateTask } from "../lib/actions";
 import { type UpdateTaskSchema, updateTaskSchema } from "../lib/validations";

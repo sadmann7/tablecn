@@ -7,8 +7,8 @@ import { Download } from "lucide-react";
 import type { Task } from "@/db/schema";
 import type { DataTableFeatures } from "@/lib/table-features";
 
-import { Button } from "@/components/ui/button";
 import { exportTableToCSV } from "@/lib/export";
+import { Button } from "@/registry/bases/radix/ui/button";
 
 import { CreateTaskSheet } from "./create-task-sheet";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";

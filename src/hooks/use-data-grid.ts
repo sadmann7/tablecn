@@ -28,7 +28,6 @@ import type {
   SelectionState,
 } from "@/lib/data-grid-types";
 
-import { useDirection } from "@/components/ui/direction";
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
@@ -49,6 +48,7 @@ import {
   scrollCellIntoView,
   stringifyUnknown,
 } from "@/lib/data-grid-utils";
+import { useDirection } from "@/registry/bases/radix/ui/direction";
 
 const DEFAULT_ROW_HEIGHT = "short";
 const OVERSCAN = 6;
@@ -3649,4 +3649,4 @@ function useDataGrid<TData extends RowData>({
   );
 }
 
-export { type UseDataGridProps, useDataGrid };
+export { useDataGrid, type UseDataGridProps };

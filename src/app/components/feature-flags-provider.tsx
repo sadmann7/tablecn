@@ -3,13 +3,16 @@
 import { useQueryState } from "nuqs";
 import * as React from "react";
 
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { type FlagConfig, flagConfig } from "@/config/flag";
+import {
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/registry/bases/radix/ui/toggle-group";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { type FlagConfig, flagConfig } from "@/config/flag";
+} from "@/registry/bases/radix/ui/tooltip";
 
 type FilterFlag = FlagConfig["featureFlags"][number]["value"];
 
