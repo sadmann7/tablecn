@@ -1,4 +1,3 @@
-// Must live at registry/icons/icon-placeholder so `shadcn add` can strip the import.
 import type * as React from "react";
 
 import * as icons from "lucide-react";
