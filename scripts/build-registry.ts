@@ -12,6 +12,8 @@
  * to its base-tree counterpart when one exists. Files outside the bases (hooks,
  * lib) and primitives with no base variant stay shared, so base-agnostic code
  * lives in exactly one place.
+ *
+ * @see https://github.com/shadcn-ui/ui/blob/main/apps/v4/scripts/build-registry.mts
  */
 import { execFileSync } from "node:child_process";
 import {
@@ -26,16 +28,21 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import {
-  type Base,
-  BASES,
-  DEFAULT_STYLE_ID,
-  getStyleIds,
-  STYLES,
-} from "../src/registry/styles";
+import { BASES } from "../registry/bases";
+import { STYLES } from "../registry/styles";
 import { OUT_ROOT, STYLES_ROOT, wipeRegistryOutput } from "./clean-registry";
 
-const DEFAULT_BASE = DEFAULT_STYLE_ID.split("-")[0] as Base;
+const DEFAULT_STYLE = "nova";
+const DEFAULT_BASE = "base";
+
+const STYLE_COMBINATIONS = BASES.flatMap((base) =>
+  STYLES.map((style) => ({
+    base,
+    style,
+    name: `${base.name}-${style.name}`,
+    title: `${base.title} ${style.title}`,
+  })),
+);
 
 const ROOT = process.cwd();
 const RADIX_TREE = "src/registry/bases/radix/";
@@ -61,8 +68,8 @@ interface Registry {
  * Repoints a file at the base tree when an override exists there.
  * `target` is deliberately untouched so consumers get the same paths either way.
  */
-function resolveFile(file: RegistryFile, base: Base): RegistryFile {
-  if (base === "radix") return file;
+function resolveFile(file: RegistryFile, baseName: string): RegistryFile {
+  if (baseName === "radix") return file;
 
   const override = file.path.replace(RADIX_TREE, BASE_TREE);
 
@@ -103,13 +110,13 @@ function withImportedDependencies(
   return next.length > 0 ? next : dependencies;
 }
 
-function buildBase(base: Base, outDir: string) {
+function buildBase(baseName: string, outDir: string) {
   const registry = JSON.parse(
     readFileSync(path.join(ROOT, "registry.json"), "utf8"),
   ) as Registry;
 
   const items = registry.items.map((item) => {
-    const files = item.files?.map((file) => resolveFile(file, base));
+    const files = item.files?.map((file) => resolveFile(file, baseName));
 
     return {
       ...item,
@@ -143,45 +150,43 @@ function main() {
 
   try {
     for (const base of BASES) {
-      const baseDir = path.join(scratch, base);
+      const baseDir = path.join(scratch, base.name);
       mkdirSync(baseDir, { recursive: true });
 
-      const overrideCount = buildBase(base, baseDir);
+      const overrideCount = buildBase(base.name, baseDir);
       const built = path.join(baseDir, "r");
 
       for (const style of STYLES) {
-        cpSync(built, path.join(STYLES_ROOT, `${base}-${style}`), {
+        cpSync(built, path.join(STYLES_ROOT, `${base.name}-${style.name}`), {
           recursive: true,
         });
       }
 
       // Flat `/r/{name}.json` keeps serving the default base so existing
       // DiceUI redirects and style-less installs keep working.
-      if (base === DEFAULT_BASE) {
+      if (base.name === DEFAULT_BASE) {
         cpSync(built, OUT_ROOT, { recursive: true });
       }
 
       console.log(
-        `${base}: ${overrideCount} base-tree file(s), ${STYLES.length} style ids`,
+        `${base.name}: ${overrideCount} base-tree file(s), ${STYLES.length} style ids`,
       );
     }
   } finally {
     rmSync(scratch, { recursive: true, force: true });
   }
 
-  const ids = getStyleIds();
-
   writeFileSync(
     path.join(STYLES_ROOT, "index.json"),
     `${JSON.stringify(
-      ids.map((name) => ({ name })),
+      STYLE_COMBINATIONS.map(({ name }) => ({ name })),
       null,
       2,
     )}\n`,
   );
 
   console.log(
-    `\nPublished ${ids.length} style ids (default: ${DEFAULT_BASE}).`,
+    `\nPublished ${STYLE_COMBINATIONS.length} style ids (default: ${DEFAULT_BASE}-${DEFAULT_STYLE}).`,
   );
 }
 
