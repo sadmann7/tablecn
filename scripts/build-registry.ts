@@ -169,8 +169,9 @@ function baseTree(baseName: string) {
 }
 
 /**
- * Base UI is a peer of the base tree, not of registry.json, so the dependency is
- * added per item based on what its resolved files actually import.
+ * Base UI and React Aria are peers of their base trees, not of registry.json, so
+ * each dependency is added per item based on what its resolved files actually
+ * import.
  */
 function withImportedDependencies(
   dependencies: string[] | undefined,
@@ -189,6 +190,9 @@ function withImportedDependencies(
     "@dnd-kit/utilities",
     "@base-ui/react",
     "@base-ui/utils",
+    "react-aria",
+    "react-aria-components",
+    "@internationalized/date",
     "zod",
   ] as const) {
     if (contents.some((content) => importsPackage(content, pkg))) {
