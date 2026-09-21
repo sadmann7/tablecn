@@ -1,0 +1,263 @@
+"use client";
+
+import type { ColumnDef, RowData } from "@tanstack/react-table";
+
+import * as React from "react";
+import { Button as ButtonPrimitive } from "react-aria-components";
+import { toast } from "sonner";
+
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type {
+  CellUpdate,
+  ContextMenuState,
+  DataGridTableMeta,
+} from "@/lib/data-grid-types";
+
+import { useAsRef } from "@/hooks/use-as-ref";
+import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-utils";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/registry/bases/aria/ui/dropdown-menu";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
+
+interface DataGridContextMenuProps<TData extends RowData> {
+  tableMeta: DataGridTableMeta;
+  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
+  contextMenu: ContextMenuState;
+}
+
+export function DataGridContextMenu<TData extends RowData>({
+  tableMeta,
+  columns,
+  contextMenu,
+}: DataGridContextMenuProps<TData>) {
+  const onContextMenuOpenChange = tableMeta?.onContextMenuOpenChange;
+  const selectionState = tableMeta?.selectionState;
+  const dataGridRef = tableMeta?.dataGridRef;
+  const onDataUpdate = tableMeta?.onDataUpdate;
+  const onRowsDelete = tableMeta?.onRowsDelete;
+  const onCellsCopy = tableMeta?.onCellsCopy;
+  const onCellsCut = tableMeta?.onCellsCut;
+
+  if (!contextMenu.open) return null;
+
+  return (
+    <ContextMenu
+      tableMeta={tableMeta}
+      columns={columns}
+      dataGridRef={dataGridRef}
+      contextMenu={contextMenu}
+      onContextMenuOpenChange={onContextMenuOpenChange}
+      selectionState={selectionState}
+      onDataUpdate={onDataUpdate}
+      onRowsDelete={onRowsDelete}
+      onCellsCopy={onCellsCopy}
+      onCellsCut={onCellsCut}
+    />
+  );
+}
+
+interface ContextMenuProps<TData extends RowData>
+  extends
+    Pick<
+      DataGridTableMeta,
+      | "dataGridRef"
+      | "onContextMenuOpenChange"
+      | "selectionState"
+      | "onDataUpdate"
+      | "onRowsDelete"
+      | "onCellsCopy"
+      | "onCellsCut"
+      | "readOnly"
+    >,
+    Required<Pick<DataGridTableMeta, "contextMenu">> {
+  tableMeta: DataGridTableMeta;
+  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
+}
+
+const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
+  if (prev.contextMenu.open !== next.contextMenu.open) return false;
+  if (!next.contextMenu.open) return true;
+  if (prev.contextMenu.x !== next.contextMenu.x) return false;
+  if (prev.contextMenu.y !== next.contextMenu.y) return false;
+
+  const prevSize = prev.selectionState?.selectedCells?.size ?? 0;
+  const nextSize = next.selectionState?.selectedCells?.size ?? 0;
+  if (prevSize !== nextSize) return false;
+
+  return true;
+}) as typeof ContextMenuImpl;
+
+function ContextMenuImpl<TData extends RowData>({
+  tableMeta,
+  columns,
+  dataGridRef,
+  contextMenu,
+  onContextMenuOpenChange,
+  selectionState,
+  onDataUpdate,
+  onRowsDelete,
+  onCellsCopy,
+  onCellsCut,
+}: ContextMenuProps<TData>) {
+  const propsRef = useAsRef({
+    dataGridRef,
+    selectionState,
+    onDataUpdate,
+    onRowsDelete,
+    onCellsCopy,
+    onCellsCut,
+    columns,
+  });
+
+  const triggerStyle = React.useMemo<React.CSSProperties>(
+    () => ({
+      position: "fixed",
+      left: `${contextMenu.x}px`,
+      top: `${contextMenu.y}px`,
+      width: "1px",
+      height: "1px",
+      padding: 0,
+      margin: 0,
+      border: "none",
+      background: "transparent",
+      pointerEvents: "none",
+      opacity: 0,
+    }),
+    [contextMenu.x, contextMenu.y],
+  );
+
+  const onOpenChange = React.useCallback(
+    (isOpen: boolean) => {
+      onContextMenuOpenChange?.(isOpen);
+      // Focus is restored to the trigger, which unmounts with the menu
+      if (!isOpen) propsRef.current.dataGridRef?.current?.focus();
+    },
+    [onContextMenuOpenChange, propsRef],
+  );
+
+  const onCopy = React.useCallback(() => {
+    propsRef.current.onCellsCopy?.();
+  }, [propsRef]);
+
+  const onCut = React.useCallback(() => {
+    propsRef.current.onCellsCut?.();
+  }, [propsRef]);
+
+  const onClear = React.useCallback(() => {
+    const { selectionState, columns, onDataUpdate } = propsRef.current;
+
+    if (
+      !selectionState?.selectedCells ||
+      selectionState.selectedCells.size === 0
+    )
+      return;
+
+    const updates: Array<CellUpdate> = [];
+
+    for (const cellKey of selectionState.selectedCells) {
+      const { rowIndex, columnId } = parseCellKey(cellKey);
+
+      // Get column from columns array
+      const column = columns.find((col) => {
+        if (col.id) return col.id === columnId;
+        if ("accessorKey" in col) return col.accessorKey === columnId;
+        return false;
+      });
+      const cellVariant = column?.meta?.cell?.variant;
+
+      const emptyValue = getEmptyCellValue(cellVariant);
+
+      updates.push({ rowIndex, columnId, value: emptyValue });
+    }
+
+    onDataUpdate?.(updates);
+
+    toast.success(
+      `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,
+    );
+  }, [propsRef]);
+
+  const onDelete = React.useCallback(async () => {
+    const { selectionState, onRowsDelete } = propsRef.current;
+
+    if (
+      !selectionState?.selectedCells ||
+      selectionState.selectedCells.size === 0
+    )
+      return;
+
+    const rowIndices = new Set<number>();
+    for (const cellKey of selectionState.selectedCells) {
+      const { rowIndex } = parseCellKey(cellKey);
+      rowIndices.add(rowIndex);
+    }
+
+    const rowIndicesArray = Array.from(rowIndices).sort((a, b) => a - b);
+    const rowCount = rowIndicesArray.length;
+
+    await onRowsDelete?.(rowIndicesArray);
+
+    toast.success(`${rowCount} row${rowCount !== 1 ? "s" : ""} deleted`);
+  }, [propsRef]);
+
+  return (
+    <DropdownMenuTrigger isOpen={contextMenu.open} onOpenChange={onOpenChange}>
+      <ButtonPrimitive style={triggerStyle} />
+      <DropdownMenu
+        data-grid-popover=""
+        placement="bottom start"
+        className="w-48"
+      >
+        <DropdownMenuItem onAction={onCopy}>
+          <IconPlaceholder
+            lucide="CopyIcon"
+            tabler="IconCopy"
+            hugeicons="Copy01Icon"
+            phosphor="CopyIcon"
+            remixicon="RiFileCopyLine"
+          />
+          Copy
+        </DropdownMenuItem>
+        <DropdownMenuItem onAction={onCut} isDisabled={tableMeta?.readOnly}>
+          <IconPlaceholder
+            lucide="ScissorsIcon"
+            tabler="IconCut"
+            hugeicons="ScissorIcon"
+            phosphor="ScissorsIcon"
+            remixicon="RiScissorsLine"
+          />
+          Cut
+        </DropdownMenuItem>
+        <DropdownMenuItem onAction={onClear} isDisabled={tableMeta?.readOnly}>
+          <IconPlaceholder
+            lucide="EraserIcon"
+            tabler="IconEraser"
+            hugeicons="DeleteIcon"
+            phosphor="EraserIcon"
+            remixicon="RiEraserLine"
+          />
+          Clear
+        </DropdownMenuItem>
+        {onRowsDelete && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onAction={onDelete}>
+              <IconPlaceholder
+                lucide="Trash2Icon"
+                tabler="IconTrash"
+                hugeicons="Delete02Icon"
+                phosphor="TrashIcon"
+                remixicon="RiDeleteBinLine"
+              />
+              Delete rows
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenu>
+    </DropdownMenuTrigger>
+  );
+}
