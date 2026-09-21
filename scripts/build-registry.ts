@@ -104,6 +104,7 @@ function withImportedDependencies(
     "@base-ui/react",
     "@base-ui/utils",
     "react-aria-components",
+    "@internationalized/date",
     "@dnd-kit/core",
     "@dnd-kit/modifiers",
     "@dnd-kit/sortable",

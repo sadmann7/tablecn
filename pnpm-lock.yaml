@@ -187,6 +187,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.9.1
         version: 5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.17.7)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.5)
+      '@internationalized/date':
+        specifier: ^3.12.4
+        version: 3.12.4
       '@t3-oss/env-nextjs':
         specifier: ^0.13.11
         version: 0.13.11(typescript@7.0.2)(zod@4.6.5)
