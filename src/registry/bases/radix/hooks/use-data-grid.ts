@@ -486,18 +486,21 @@ function useDataGrid<TData extends RowData>({
     const rowCount = rows.length ?? propsRef.current.data.length;
 
     for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
-      for (const columnId of columnIds) {
+      for (const columnId of navigableColumnIds) {
         allCells.add(getCellKey(rowIndex, columnId));
       }
     }
 
-    const firstColumnId = columnIds[0];
-    const lastColumnId = columnIds[columnIds.length - 1];
+    const firstColumnId = navigableColumnIds[0];
+    const lastColumnId = navigableColumnIds[navigableColumnIds.length - 1];
 
     store.setState("selectionState", {
       selectedCells: allCells,
       selectionRange:
-        columnIds.length > 0 && rowCount > 0 && firstColumnId && lastColumnId
+        navigableColumnIds.length > 0 &&
+        rowCount > 0 &&
+        firstColumnId &&
+        lastColumnId
           ? {
               start: { rowIndex: 0, columnId: firstColumnId },
               end: { rowIndex: rowCount - 1, columnId: lastColumnId },
@@ -505,7 +508,7 @@ function useDataGrid<TData extends RowData>({
           : null,
       isSelecting: false,
     });
-  }, [columnIds, propsRef, store]);
+  }, [navigableColumnIds, propsRef, store]);
 
   const selectColumn = React.useCallback(
     (columnId: string) => {
@@ -2010,7 +2013,7 @@ function useDataGrid<TData extends RowData>({
         const rowIndex = rows.findIndex((r) => r.id === rowId);
         if (rowIndex === -1) continue;
 
-        for (const columnId of columnIds) {
+        for (const columnId of navigableColumnIds) {
           selectedCells.add(getCellKey(rowIndex, columnId));
         }
       }
@@ -2028,7 +2031,7 @@ function useDataGrid<TData extends RowData>({
 
       propsRef.current.onRowSelectionChange?.(updater);
     },
-    [store, columnIds, propsRef],
+    [store, navigableColumnIds, propsRef],
   );
 
   const onRowSelect = React.useCallback(
