@@ -1528,7 +1528,7 @@ describe("useDataGrid", () => {
       );
     });
 
-    it("should select data cells with Cmd+A and skip the select column", () => {
+    it("should select data cells with Cmd+A and skip non-navigable columns", () => {
       const gridRef: {
         current?: ReturnType<typeof useDataGrid<TestData>>;
       } = {};
@@ -1565,7 +1565,6 @@ describe("useDataGrid", () => {
         );
       });
 
-      // 2 rows × 2 data columns. select and actions are not cells.
       expect(grid?.tableMeta.selectionState?.selectedCells.size).toBe(4);
       expect(grid?.tableMeta.getIsCellSelected?.(0, "name")).toBe(true);
       expect(grid?.tableMeta.getIsCellSelected?.(1, "trick")).toBe(true);
@@ -1577,7 +1576,7 @@ describe("useDataGrid", () => {
       });
     });
 
-    it("should not count the select column when selecting rows", () => {
+    it("should not count non-navigable columns when selecting rows", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
