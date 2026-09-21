@@ -103,6 +103,7 @@ function withImportedDependencies(
   for (const pkg of [
     "@base-ui/react",
     "@base-ui/utils",
+    "react-aria",
     "react-aria-components",
     "@internationalized/date",
     "@dnd-kit/core",

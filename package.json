@@ -67,6 +67,7 @@
     "postgres": "^3.4.9",
     "radix-ui": "^1.6.7",
     "react": "^19.3.0",
+    "react-aria": "^3.52.1",
     "react-aria-components": "^1.21.1",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.3.0",
