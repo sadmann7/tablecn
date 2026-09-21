@@ -1,7 +1,8 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type * as React from "react";
 
-import { act, renderHook } from "@testing-library/react";
+import { act, render, renderHook } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -54,6 +55,13 @@ const testColumns: ColumnDef<DataGridFeatures, TestData>[] = [
     meta: { cell: { variant: "number" } },
     filterFn: simpleFilterFn,
   },
+];
+
+const columnsWithSelect: ColumnDef<DataGridFeatures, TestData>[] = [
+  { id: "select" },
+  { id: "name", accessorKey: "name" },
+  { id: "trick", accessorKey: "trick" },
+  { id: "actions" },
 ];
 
 function createWrapper() {
@@ -1516,6 +1524,84 @@ describe("useDataGrid", () => {
         true,
       );
       expect(result.current.tableMeta.getIsCellSelected?.(2, "name")).toBe(
+        true,
+      );
+    });
+
+    it("should select data cells with Cmd+A and skip the select column", () => {
+      const gridRef: {
+        current?: ReturnType<typeof useDataGrid<TestData>>;
+      } = {};
+
+      function Harness() {
+        const api = useDataGrid({
+          data: testData.slice(0, 2),
+          columns: columnsWithSelect,
+        });
+
+        useEffect(() => {
+          gridRef.current = api;
+        });
+
+        return <div ref={api.dataGridRef} />;
+      }
+
+      const { container } = render(<Harness />);
+      const grid = gridRef.current;
+      const gridElement = container.firstElementChild as HTMLElement;
+
+      act(() => {
+        grid?.tableMeta.onCellClick?.(0, "name");
+      });
+
+      act(() => {
+        gridElement.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "a",
+            metaKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      });
+
+      // 2 rows × 2 data columns. select and actions are not cells.
+      expect(grid?.tableMeta.selectionState?.selectedCells.size).toBe(4);
+      expect(grid?.tableMeta.getIsCellSelected?.(0, "name")).toBe(true);
+      expect(grid?.tableMeta.getIsCellSelected?.(1, "trick")).toBe(true);
+      expect(grid?.tableMeta.getIsCellSelected?.(0, "select")).toBe(false);
+      expect(grid?.tableMeta.getIsCellSelected?.(1, "actions")).toBe(false);
+      expect(grid?.tableMeta.selectionState?.selectionRange).toEqual({
+        start: { rowIndex: 0, columnId: "name" },
+        end: { rowIndex: 1, columnId: "trick" },
+      });
+    });
+
+    it("should not count the select column when selecting rows", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData.slice(0, 2),
+            columns: columnsWithSelect,
+            getRowId: (row) => row.id,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.toggleAllRowsSelected(true);
+      });
+
+      expect(result.current.tableMeta.selectionState?.selectedCells.size).toBe(
+        4,
+      );
+      expect(result.current.tableMeta.getIsCellSelected?.(0, "select")).toBe(
+        false,
+      );
+      expect(result.current.tableMeta.getIsCellSelected?.(0, "actions")).toBe(
+        false,
+      );
+      expect(result.current.tableMeta.getIsCellSelected?.(1, "name")).toBe(
         true,
       );
     });
