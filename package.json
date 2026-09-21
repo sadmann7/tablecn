@@ -42,6 +42,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@hookform/resolvers": "^5.9.1",
+    "@internationalized/date": "^3.12.4",
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tanstack/query-db-collection": "^1.2.15",
     "@tanstack/react-db": "^0.4.1",
