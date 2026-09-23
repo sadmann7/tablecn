@@ -6,7 +6,7 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { ExtendedColumnFilter } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Input } from "@/registry/bases/base/ui/input";
 

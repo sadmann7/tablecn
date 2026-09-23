@@ -1,12 +1,12 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
+import { Subscribe, type Table } from "@tanstack/react-table";
 
 import { ArrowUp, CheckCircle2, Download, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
 import { exportTableToCSV } from "@/lib/export";
@@ -32,6 +32,14 @@ interface TasksTableActionBarProps {
 }
 
 export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
+  return (
+    <Subscribe source={table.atoms.rowSelection}>
+      {() => <TasksTableActionBarContent table={table} />}
+    </Subscribe>
+  );
+}
+
+function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
   const rows = table.getFilteredSelectedRowModel().rows;
 
   const onOpenChange = React.useCallback(

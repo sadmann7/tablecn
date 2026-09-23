@@ -1,16 +1,18 @@
 "use client";
 
-import type {
-  ColumnSort,
-  RowData,
-  SortDirection,
-  Table,
+import {
+  type ColumnSort,
+  type RowData,
+  type SortDirection,
+  type SortingState,
+  Subscribe,
+  type Table,
 } from "@tanstack/react-table";
 
 import { cn } from "cn";
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { dataTableConfig } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/radix/ui/badge";
@@ -55,19 +57,33 @@ interface DataTableSortListProps<
   disabled?: boolean;
 }
 
-export function DataTableSortList<TData extends RowData>({
+export function DataTableSortList<TData extends RowData>(
+  props: DataTableSortListProps<TData>,
+) {
+  return (
+    <Subscribe source={props.table.atoms.sorting}>
+      {(sorting) => (
+        <DataTableSortListContent {...props} sorting={sorting} />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataTableSortListContent<TData extends RowData>({
   table,
   disabled,
   className,
+  sorting,
   ...props
-}: DataTableSortListProps<TData>) {
+}: DataTableSortListProps<TData> & {
+  sorting: SortingState;
+}) {
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
-  const sorting = table.store.state.sorting;
   const onSortingChange = table.setSorting;
 
   const { columnLabels, columns } = React.useMemo(() => {

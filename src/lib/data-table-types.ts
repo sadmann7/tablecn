@@ -2,7 +2,7 @@ import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
 
 import type { DataTableConfig } from "@/lib/data-table-utils";
 import type { FilterItemSchema } from "@/lib/parsers";
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 export interface DataTableMeta {
   queryKeys?: QueryKeys;

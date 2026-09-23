@@ -7,7 +7,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { Task } from "@/db/schema";
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Button } from "@/registry/bases/radix/ui/button";

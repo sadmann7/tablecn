@@ -1,6 +1,6 @@
 import type { RowData, Table } from "@tanstack/react-table";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 export function exportTableToCSV<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,

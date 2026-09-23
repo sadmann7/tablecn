@@ -5,7 +5,7 @@ import type { Table } from "@tanstack/react-table";
 import { Download } from "lucide-react";
 
 import type { Task } from "@/db/schema";
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { exportTableToCSV } from "@/lib/export";
 import { Button } from "@/registry/bases/radix/ui/button";

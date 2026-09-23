@@ -5,7 +5,7 @@ import type { Column, RowData, Table } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { DataTableDateFilter } from "@/registry/bases/base/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/base/components/data-table/data-table-faceted-filter";

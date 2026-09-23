@@ -5,7 +5,7 @@ import type { DateRange } from "react-day-picker";
 
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { formatDate } from "@/lib/format";
 import { Button } from "@/registry/bases/base/ui/button";

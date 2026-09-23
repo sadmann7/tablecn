@@ -12,7 +12,7 @@ import type {
   FilterOperator,
   JoinOperator,
 } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {

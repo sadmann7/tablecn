@@ -5,7 +5,7 @@ import type * as React from "react";
 
 import { cn } from "cn";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { DataTableViewOptions } from "@/registry/bases/radix/components/data-table/data-table-view-options";
 

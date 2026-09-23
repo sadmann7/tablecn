@@ -28,7 +28,7 @@ import { getSortingStateParser } from "@/lib/parsers";
 import {
   type DataTableFeatures,
   dataTableFeatures,
-} from "@/lib/table-features";
+} from "@/lib/data-table-features";
 
 const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";

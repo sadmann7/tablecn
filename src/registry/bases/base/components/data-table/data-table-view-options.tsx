@@ -5,7 +5,7 @@ import type { RowData, Table } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
 import {

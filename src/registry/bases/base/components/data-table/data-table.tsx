@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { cn } from "cn";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { getColumnPinningStyle } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/base/components/data-table/data-table-pagination";

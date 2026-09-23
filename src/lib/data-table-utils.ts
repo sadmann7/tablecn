@@ -5,7 +5,7 @@ import type {
   FilterOperator,
   FilterVariant,
 } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 export type DataTableConfig = typeof dataTableConfig;
 
