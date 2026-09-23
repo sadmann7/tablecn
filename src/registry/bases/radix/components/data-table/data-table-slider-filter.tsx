@@ -6,7 +6,6 @@ import {
   type RowData,
   Subscribe,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 

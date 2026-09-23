@@ -7,7 +7,6 @@ import {
   Subscribe,
   type Table,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 

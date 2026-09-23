@@ -1,7 +1,6 @@
 "use client";
 
 import { Subscribe, type Table } from "@tanstack/react-table";
-
 import { ArrowUp, CheckCircle2, Download, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";

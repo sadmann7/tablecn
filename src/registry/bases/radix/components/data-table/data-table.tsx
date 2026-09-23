@@ -1,7 +1,5 @@
 "use client";
 
-import { memo, type ComponentProps, type ReactNode } from "react";
-
 import {
   FlexRender,
   type Row,
@@ -11,6 +9,7 @@ import {
   type TableState,
 } from "@tanstack/react-table";
 import { cn } from "cn";
+import { memo, type ComponentProps, type ReactNode } from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -96,9 +95,7 @@ function DataTableHeader<TData extends RowData>({
                   colSpan={header.colSpan}
                   style={getColumnPinningStyle({ column: header.column })}
                 >
-                  {header.isPlaceholder ? null : (
-                    <FlexRender header={header} />
-                  )}
+                  {header.isPlaceholder ? null : <FlexRender header={header} />}
                 </TableHead>
               ))}
             </TableRow>

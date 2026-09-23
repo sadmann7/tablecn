@@ -6,12 +6,12 @@ import { cn } from "cn";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   DataTableColumnMeta,
   ExtendedColumnFilter,
   JoinOperator,
 } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {

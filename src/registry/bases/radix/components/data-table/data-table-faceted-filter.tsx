@@ -6,12 +6,11 @@ import {
   type RowData,
   Subscribe,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 
-import type { Option } from "@/lib/data-table-types";
 import type { DataTableFeatures } from "@/lib/data-table-features";
+import type { Option } from "@/lib/data-table-types";
 
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";

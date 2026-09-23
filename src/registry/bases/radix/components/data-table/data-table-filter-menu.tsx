@@ -6,11 +6,11 @@ import { cn } from "cn";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ExtendedColumnFilter,
   FilterOperator,
 } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {

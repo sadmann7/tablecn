@@ -1,13 +1,13 @@
 "use client";
 
+import type { DateRange } from "react-day-picker";
+
 import {
   type Column,
   type ColumnFiltersState,
   type RowData,
   Subscribe,
 } from "@tanstack/react-table";
-import type { DateRange } from "react-day-picker";
-
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";

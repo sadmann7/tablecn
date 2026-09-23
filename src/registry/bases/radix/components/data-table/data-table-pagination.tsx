@@ -6,7 +6,6 @@ import {
   type Table,
   type TableState,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";

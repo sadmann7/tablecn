@@ -22,11 +22,11 @@ import * as React from "react";
 import type { ExtendedColumnSort, QueryKeys } from "@/lib/data-table-types";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
-import { getSortingStateParser } from "@/lib/parsers";
 import {
   type DataTableFeatures,
   dataTableFeatures,
 } from "@/lib/data-table-features";
+import { getSortingStateParser } from "@/lib/parsers";
 
 const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";
@@ -283,7 +283,6 @@ export function useDataTable<TData extends RowData>(
         ...tableProps.defaultColumn,
         enableColumnFilter: false,
       },
-      enableRowSelection: true,
       onPaginationChange,
       onSortingChange,
       onColumnFiltersChange,

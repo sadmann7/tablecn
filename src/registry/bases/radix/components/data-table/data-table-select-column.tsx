@@ -6,9 +6,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 
-interface GetDataTableSelectColumnOptions<
-  TData extends RowData,
-> extends Omit<
+interface GetDataTableSelectColumnOptions<TData extends RowData> extends Omit<
   Partial<ColumnDef<DataTableFeatures, TData>>,
   "id" | "header" | "cell"
 > {}
@@ -57,7 +55,20 @@ export function getDataTableSelectColumn<TData extends RowData>({
             aria-label="Select row"
             className="translate-y-0.5"
             checked={isSelected}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            onClick={(event) => {
+              if (row.table.options.enableRowRangeSelection !== true) {
+                row.toggleSelected(!isSelected);
+                return;
+              }
+
+              if (event.shiftKey) event.preventDefault();
+
+              row.getToggleSelectedHandler()({
+                target: { checked: !isSelected },
+                shiftKey: event.shiftKey,
+                nativeEvent: event.nativeEvent,
+              });
+            }}
           />
         )}
       </Subscribe>

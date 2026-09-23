@@ -8,7 +8,6 @@ import {
   Subscribe,
   type Table,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 
@@ -62,9 +61,7 @@ export function DataTableSortList<TData extends RowData>(
 ) {
   return (
     <Subscribe source={props.table.atoms.sorting}>
-      {(sorting) => (
-        <DataTableSortListContent {...props} sorting={sorting} />
-      )}
+      {(sorting) => <DataTableSortListContent {...props} sorting={sorting} />}
     </Subscribe>
   );
 }
