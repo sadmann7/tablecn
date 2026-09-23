@@ -1,6 +1,7 @@
 import type { RowData, Table } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
+
 import {
   getCachedSelectedRow,
   syncSelectedRowCache,
@@ -72,7 +73,8 @@ function getExportRows<TData extends RowData>(
 
     return [
       {
-        getValue: (header: string) => readOriginalValue(table, original, header),
+        getValue: (header: string) =>
+          readOriginalValue(table, original, header),
       },
     ];
   });
@@ -86,11 +88,7 @@ function readOriginalValue<TData extends RowData>(
   const column = table.getColumn(header);
   if (column?.accessorFn) return column.accessorFn(original, 0);
 
-  if (
-    typeof original === "object" &&
-    original !== null &&
-    header in original
-  ) {
+  if (typeof original === "object" && original !== null && header in original) {
     return original[header as keyof TData];
   }
 }
