@@ -32,7 +32,7 @@ function selectPaginationState(state: TableState<DataTableFeatures>) {
   return {
     pageIndex: state.pagination.pageIndex,
     pageSize: state.pagination.pageSize,
-    rowSelection: state.rowSelection,
+    selectedRowCount: Object.keys(state.rowSelection).length,
   };
 }
 
@@ -44,11 +44,12 @@ export function DataTablePagination<TData extends RowData>({
 }: DataTablePaginationProps<TData>) {
   return (
     <Subscribe source={table.store} selector={selectPaginationState}>
-      {({ pageIndex, pageSize }) => (
+      {({ pageIndex, pageSize, selectedRowCount }) => (
         <DataTablePaginationContent
           table={table}
           pageIndex={pageIndex}
           pageSize={pageSize}
+          selectedRowCount={selectedRowCount}
           pageSizeOptions={pageSizeOptions}
           className={className}
           {...props}
@@ -62,16 +63,16 @@ function DataTablePaginationContent<TData extends RowData>({
   table,
   pageIndex,
   pageSize,
+  selectedRowCount,
   pageSizeOptions,
   className,
   ...props
 }: DataTablePaginationProps<TData> & {
   pageIndex: number;
   pageSize: number;
+  selectedRowCount: number;
   pageSizeOptions: number[];
 }) {
-  const selectedRowCount = table.getFilteredSelectedRowModel().rows.length;
-  const filteredRowCount = table.getFilteredRowModel().rows.length;
   const pageCount = table.getPageCount();
   const canPreviousPage = table.getCanPreviousPage();
   const canNextPage = table.getCanNextPage();
@@ -85,7 +86,7 @@ function DataTablePaginationContent<TData extends RowData>({
       {...props}
     >
       <div className="flex-1 text-sm whitespace-nowrap text-muted-foreground">
-        {selectedRowCount} of {filteredRowCount} row(s) selected.
+        {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected.
       </div>
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center space-x-2">

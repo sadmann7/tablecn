@@ -28,6 +28,8 @@ export function DataTablePagination<TData extends RowData>({
   className,
   ...props
 }: DataTablePaginationProps<TData>) {
+  const selectedRowCount = table.getSelectedRowIds().length;
+
   return (
     <div
       className={cn(
@@ -37,8 +39,7 @@ export function DataTablePagination<TData extends RowData>({
       {...props}
     >
       <div className="flex-1 text-sm whitespace-nowrap text-muted-foreground">
-        {table.getFilteredSelectedRowModel().rows.length} of{" "}
-        {table.getFilteredRowModel().rows.length} row(s) selected.
+        {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected.
       </div>
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center space-x-2">

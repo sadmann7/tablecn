@@ -4,6 +4,7 @@ import { Subscribe, type ColumnDef, type RowData } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { syncSelectedRowCache } from "@/lib/data-table-utils";
 import { Checkbox } from "@/registry/bases/base/ui/checkbox";
 
 interface GetDataTableSelectColumnOptions<TData extends RowData> extends Omit<
@@ -36,7 +37,10 @@ export function getDataTableSelectColumn<TData extends RowData>({
             className="translate-y-0.5"
             checked={checked}
             indeterminate={indeterminate}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(value)}
+            onCheckedChange={(value) => {
+              table.toggleAllPageRowsSelected(value);
+              syncSelectedRowCache(table);
+            }}
           />
         )}
       </Subscribe>
@@ -54,16 +58,17 @@ export function getDataTableSelectColumn<TData extends RowData>({
             onClick={(event) => {
               if (row.table.options.enableRowRangeSelection !== true) {
                 row.toggleSelected(!isSelected);
-                return;
+              } else {
+                if (event.shiftKey) event.preventDefault();
+
+                row.getToggleSelectedHandler()({
+                  target: { checked: !isSelected },
+                  shiftKey: event.shiftKey,
+                  nativeEvent: event.nativeEvent,
+                });
               }
 
-              if (event.shiftKey) event.preventDefault();
-
-              row.getToggleSelectedHandler()({
-                target: { checked: !isSelected },
-                shiftKey: event.shiftKey,
-                nativeEvent: event.nativeEvent,
-              });
+              syncSelectedRowCache(row.table);
             }}
           />
         )}

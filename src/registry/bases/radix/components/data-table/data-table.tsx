@@ -13,7 +13,10 @@ import { memo, type ComponentProps, type ReactNode } from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getColumnPinningStyle } from "@/lib/data-table-utils";
+import {
+  getColumnPinningStyle,
+  syncSelectedRowCache,
+} from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
 import {
   Table,
@@ -111,6 +114,7 @@ function DataTableBody<TData extends RowData>({
 }: {
   table: TanstackTable<DataTableFeatures, TData>;
 }) {
+  syncSelectedRowCache(table);
   const rows = table.getRowModel().rows;
 
   if (!rows.length) {
@@ -186,9 +190,7 @@ function DataTableActionBar<TData extends RowData>({
 }) {
   return (
     <Subscribe source={table.atoms.rowSelection}>
-      {() =>
-        table.getFilteredSelectedRowModel().rows.length > 0 ? actionBar : null
-      }
+      {(selection) => (Object.keys(selection).length > 0 ? actionBar : null)}
     </Subscribe>
   );
 }

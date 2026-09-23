@@ -9,7 +9,10 @@ import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getColumnPinningStyle } from "@/lib/data-table-utils";
+import {
+  getColumnPinningStyle,
+  syncSelectedRowCache,
+} from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/base/components/data-table/data-table-pagination";
 import {
   Table,
@@ -34,6 +37,8 @@ export function DataTable<TData extends RowData>({
   className,
   ...props
 }: DataTableProps<TData>) {
+  syncSelectedRowCache(table);
+
   return (
     <div
       className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
@@ -101,9 +106,7 @@ export function DataTable<TData extends RowData>({
       </div>
       <div className="flex flex-col gap-2.5">
         <DataTablePagination table={table} />
-        {actionBar &&
-          table.getFilteredSelectedRowModel().rows.length > 0 &&
-          actionBar}
+        {actionBar && table.getSelectedRowIds().length > 0 && actionBar}
       </div>
     </div>
   );

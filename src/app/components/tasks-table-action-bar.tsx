@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
+import { clearRowSelection } from "@/lib/data-table-utils";
 import { exportTableToCSV } from "@/lib/export";
 import {
   ActionBar,
@@ -39,13 +40,11 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
 }
 
 function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
-  const rows = table.getFilteredSelectedRowModel().rows;
+  const selectedIds = table.getSelectedRowIds();
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      if (!open) {
-        table.toggleAllRowsSelected(false);
-      }
+      if (!open) clearRowSelection(table);
     },
     [table],
   );
@@ -57,7 +56,7 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
     ) => {
       async function update() {
         const { error } = await updateTasks({
-          ids: rows.map((row) => row.original.id),
+          ids: selectedIds,
           [field]: value,
         });
 
@@ -69,7 +68,7 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
       }
       void update();
     },
-    [rows],
+    [selectedIds],
   );
 
   const onTaskExport = React.useCallback(() => {
@@ -82,22 +81,22 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
   const onTaskDelete = React.useCallback(() => {
     async function remove() {
       const { error } = await deleteTasks({
-        ids: rows.map((row) => row.original.id),
+        ids: selectedIds,
       });
 
       if (error) {
         toast.error(error);
         return;
       }
-      table.toggleAllRowsSelected(false);
+      clearRowSelection(table);
     }
     void remove();
-  }, [rows, table]);
+  }, [selectedIds, table]);
 
   return (
-    <ActionBar open={rows.length > 0} onOpenChange={onOpenChange}>
+    <ActionBar open={selectedIds.length > 0} onOpenChange={onOpenChange}>
       <ActionBarSelection>
-        <span className="font-medium">{rows.length}</span>
+        <span className="font-medium">{selectedIds.length}</span>
         <span>selected</span>
         <ActionBarSeparator />
         <ActionBarClose>
