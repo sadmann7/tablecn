@@ -9,9 +9,9 @@
  * committed — same as shadcn's `registry:build` on deploy.
  *
  * Base resolution: registry.json points at the radix tree, and a file is swapped
- * to its base-tree counterpart when one exists. Files outside the bases (hooks,
- * lib) and primitives with no base variant stay shared, so base-agnostic code
- * lives in exactly one place.
+ * to its counterpart in the built base's tree (`src/registry/bases/<base>/`)
+ * when one exists. Files outside the bases (hooks, lib) and primitives with no
+ * base variant stay shared, so base-agnostic code lives in exactly one place.
  *
  * @see https://github.com/shadcn-ui/ui/blob/main/apps/v4/scripts/build-registry.mts
  */
@@ -43,8 +43,10 @@ const STYLE_COMBINATIONS = BASES.flatMap((base) =>
 );
 
 const ROOT = process.cwd();
-const RADIX_TREE = "src/registry/bases/radix/";
-const BASE_TREE = "src/registry/bases/base/";
+
+function baseTree(baseName: string) {
+  return `src/registry/bases/${baseName}/`;
+}
 
 interface RegistryFile {
   path: string;
@@ -63,13 +65,13 @@ interface Registry {
 }
 
 /**
- * Repoints a file at the base tree when an override exists there.
+ * Repoints a file at the built base's tree when an override exists there.
  * `target` is deliberately untouched so consumers get the same paths either way.
  */
 function resolveFile(file: RegistryFile, baseName: string): RegistryFile {
   if (baseName === "radix") return file;
 
-  const override = file.path.replace(RADIX_TREE, BASE_TREE);
+  const override = file.path.replace(baseTree("radix"), baseTree(baseName));
 
   return existsSync(path.join(ROOT, override))
     ? { ...file, path: override }
@@ -77,8 +79,17 @@ function resolveFile(file: RegistryFile, baseName: string): RegistryFile {
 }
 
 /**
- * Base UI is a peer of the base tree, not of registry.json, so the dependency is
- * added per item based on what its resolved files actually import.
+ * A file imports a package when it names it exactly or a subpath of it; a bare
+ * prefix would make `"react-aria` match `"react-aria-components`.
+ */
+function importsPackage(content: string, pkg: string) {
+  return content.includes(`"${pkg}"`) || content.includes(`"${pkg}/`);
+}
+
+/**
+ * Base UI and React Aria are peers of their base trees, not of registry.json, so
+ * each dependency is added per item based on what its resolved files actually
+ * import.
  */
 function withImportedDependencies(
   dependencies: string[] | undefined,
@@ -93,6 +104,9 @@ function withImportedDependencies(
   for (const pkg of [
     "@base-ui/react",
     "@base-ui/utils",
+    "react-aria",
+    "react-aria-components",
+    "@internationalized/date",
     "@dnd-kit/core",
     "@dnd-kit/modifiers",
     "@dnd-kit/sortable",
@@ -100,7 +114,7 @@ function withImportedDependencies(
     "cn",
     "zod",
   ] as const) {
-    if (contents.some((content) => content.includes(`"${pkg}`))) {
+    if (contents.some((content) => importsPackage(content, pkg))) {
       if (!next.includes(pkg)) next.push(pkg);
     }
   }
@@ -125,7 +139,8 @@ function buildBase(baseName: string, outDir: string) {
 
   const overrides = items.flatMap(
     (item) =>
-      item.files?.filter((file) => file.path.startsWith(BASE_TREE)) ?? [],
+      item.files?.filter((file) => file.path.startsWith(baseTree(baseName))) ??
+      [],
   );
 
   const registryPath = path.join(outDir, "registry.input.json");
