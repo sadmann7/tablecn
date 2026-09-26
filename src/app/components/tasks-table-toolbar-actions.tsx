@@ -7,11 +7,6 @@ import { Download } from "lucide-react";
 import type { Task } from "@/db/schema";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import {
-  clearRowSelection,
-  getCachedSelectedRows,
-  syncSelectedRowCache,
-} from "@/lib/data-table-utils";
 import { exportTableToCSV } from "@/lib/export";
 import { Button } from "@/registry/bases/radix/ui/button";
 
@@ -25,15 +20,14 @@ interface TasksTableToolbarActionsProps {
 export function TasksTableToolbarActions({
   table,
 }: TasksTableToolbarActionsProps) {
-  syncSelectedRowCache(table);
-  const selectedTasks = getCachedSelectedRows(table);
+  const selectedTasks = table.getSelectedRows();
 
   return (
     <div className="flex items-center gap-2">
       {selectedTasks.length > 0 ? (
         <DeleteTasksDialog
           tasks={selectedTasks}
-          onSuccess={() => clearRowSelection(table)}
+          onSuccess={() => table.resetRowSelection(true)}
         />
       ) : null}
       <CreateTaskSheet />

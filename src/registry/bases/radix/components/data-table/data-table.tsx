@@ -12,10 +12,7 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import {
-  getColumnPinningStyle,
-  syncSelectedRowCache,
-} from "@/lib/data-table-utils";
+import { getColumnPinningStyle } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
 import {
   Table,
@@ -109,7 +106,6 @@ interface DataTableBodyProps<TData extends RowData> {
 function DataTableBody<TData extends RowData>({
   table,
 }: DataTableBodyProps<TData>) {
-  syncSelectedRowCache(table);
   const rows = table.getRowModel().rows;
 
   if (!rows.length) {

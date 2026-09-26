@@ -8,7 +8,6 @@ import { toast } from "sonner";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
-import { clearRowSelection } from "@/lib/data-table-utils";
 import { exportTableToCSV } from "@/lib/export";
 import {
   ActionBar,
@@ -44,7 +43,7 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      if (!open) clearRowSelection(table);
+      if (!open) table.resetRowSelection(true);
     },
     [table],
   );
@@ -88,7 +87,7 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
         toast.error(error);
         return;
       }
-      clearRowSelection(table);
+      table.resetRowSelection(true);
     }
     void remove();
   }, [selectedIds, table]);

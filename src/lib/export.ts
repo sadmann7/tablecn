@@ -2,11 +2,6 @@ import type { RowData, Table } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import {
-  getCachedSelectedRow,
-  syncSelectedRowCache,
-} from "@/lib/data-table-utils";
-
 export function exportTableToCSV<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,
   opts: {
@@ -21,17 +16,20 @@ export function exportTableToCSV<TData extends RowData>(
     onlySelected = false,
   } = opts;
 
-  const headers = table
+  const columns = table
     .getAllLeafColumns()
-    .map((column) => column.id)
-    .filter((id) => !excludeColumns.includes(id));
+    .filter((column) => !excludeColumns.includes(column.id));
+
+  const rows = onlySelected
+    ? table.getSelectedRows()
+    : table.getRowModel().rows.map((row) => row.original);
 
   const csvContent = [
-    headers.join(","),
-    ...getExportRows(table, onlySelected).map((row) =>
-      headers
-        .map((header) => {
-          const cellValue = row.getValue(header);
+    columns.map((column) => column.id).join(","),
+    ...rows.map((row, index) =>
+      columns
+        .map((column) => {
+          const cellValue = column.accessorFn?.(row, index);
           return typeof cellValue === "string"
             ? `"${cellValue.replace(/"/g, '""')}"`
             : cellValue;
@@ -50,45 +48,4 @@ export function exportTableToCSV<TData extends RowData>(
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
-
-function getExportRows<TData extends RowData>(
-  table: Table<DataTableFeatures, TData>,
-  onlySelected: boolean,
-) {
-  if (!onlySelected) return table.getRowModel().rows;
-
-  syncSelectedRowCache(table);
-
-  const liveRows = new Map(
-    table.getRowModel().rows.map((row) => [row.id, row]),
-  );
-
-  return table.getSelectedRowIds().flatMap((id) => {
-    const liveRow = liveRows.get(id);
-    if (liveRow) return [liveRow];
-
-    const original = getCachedSelectedRow(table, id);
-    if (original === undefined) return [];
-
-    return [
-      {
-        getValue: (header: string) =>
-          readOriginalValue(table, original, header),
-      },
-    ];
-  });
-}
-
-function readOriginalValue<TData extends RowData>(
-  table: Table<DataTableFeatures, TData>,
-  original: TData,
-  header: string,
-) {
-  const column = table.getColumn(header);
-  if (column?.accessorFn) return column.accessorFn(original, 0);
-
-  if (typeof original === "object" && original !== null && header in original) {
-    return original[header as keyof TData];
-  }
 }

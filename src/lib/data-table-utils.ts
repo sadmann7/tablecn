@@ -1,4 +1,4 @@
-import type { Column, RowData, Table } from "@tanstack/react-table";
+import type { Column, RowData } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
@@ -158,60 +158,4 @@ export function getValidFilters<TData>(
           filter.value !== null &&
           filter.value !== undefined),
   );
-}
-
-const selectedRowCache = new WeakMap<object, Map<string, RowData>>();
-
-function getSelectedRowCache<TData extends RowData>(
-  table: Table<DataTableFeatures, TData>,
-) {
-  let cache = selectedRowCache.get(table.store);
-  if (!cache) {
-    cache = new Map();
-    selectedRowCache.set(table.store, cache);
-  }
-  return cache;
-}
-
-export function syncSelectedRowCache<TData extends RowData>(
-  table: Table<DataTableFeatures, TData>,
-) {
-  const cache = getSelectedRowCache(table);
-  const selectedIds = new Set(table.getSelectedRowIds());
-
-  for (const id of cache.keys()) {
-    if (!selectedIds.has(id)) cache.delete(id);
-  }
-
-  for (const row of table.getRowModel().rows) {
-    if (selectedIds.has(row.id)) cache.set(row.id, row.original);
-  }
-}
-
-export function getCachedSelectedRow<TData extends RowData>(
-  table: Table<DataTableFeatures, TData>,
-  rowId: string,
-) {
-  return getSelectedRowCache(table).get(rowId) as TData | undefined;
-}
-
-export function getCachedSelectedRows<TData extends RowData>(
-  table: Table<DataTableFeatures, TData>,
-) {
-  const cache = getSelectedRowCache(table);
-  const rows: TData[] = [];
-
-  for (const id of table.getSelectedRowIds()) {
-    const row = cache.get(id);
-    if (row !== undefined) rows.push(row as TData);
-  }
-
-  return rows;
-}
-
-export function clearRowSelection<TData extends RowData>(
-  table: Table<DataTableFeatures, TData>,
-) {
-  table.toggleAllRowsSelected(false, { deselectAll: true });
-  syncSelectedRowCache(table);
 }
