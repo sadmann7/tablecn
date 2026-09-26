@@ -1,3 +1,5 @@
+import type * as React from "react";
+
 import { cn } from "cn";
 
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";

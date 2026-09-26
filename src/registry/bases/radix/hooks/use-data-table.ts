@@ -37,14 +37,6 @@ const ARRAY_SEPARATOR = ",";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 
-function selectDataTableState(state: TableState<DataTableFeatures>) {
-  return {
-    columnFilters: state.columnFilters,
-    pagination: state.pagination,
-    sorting: state.sorting,
-  };
-}
-
 interface UseDataTableProps<TData extends RowData>
   extends
     Omit<
@@ -300,7 +292,11 @@ export function useDataTable<TData extends RowData>(
         },
       },
     },
-    selectDataTableState,
+    (state) => ({
+      columnFilters: state.columnFilters,
+      pagination: state.pagination,
+      sorting: state.sorting,
+    }),
   );
 
   return React.useMemo(

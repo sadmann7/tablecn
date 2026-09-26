@@ -6,10 +6,9 @@ import {
   type RowData,
   Subscribe,
   type Table as TanstackTable,
-  type TableState,
 } from "@tanstack/react-table";
 import { cn } from "cn";
-import { memo, type ComponentProps, type ReactNode } from "react";
+import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -27,29 +26,11 @@ import {
   TableRow,
 } from "@/registry/bases/radix/ui/table";
 
-interface DataTableProps<TData extends RowData> extends ComponentProps<"div"> {
+interface DataTableProps<
+  TData extends RowData,
+> extends React.ComponentProps<"div"> {
   table: TanstackTable<DataTableFeatures, TData>;
-  actionBar?: ReactNode;
-}
-
-function selectTableLayout(state: TableState<DataTableFeatures>) {
-  return {
-    columnOrder: state.columnOrder,
-    columnPinning: state.columnPinning,
-    columnSizing: state.columnSizing,
-    columnVisibility: state.columnVisibility,
-  };
-}
-
-function selectHeaderState(state: TableState<DataTableFeatures>) {
-  return {
-    columnOrder: state.columnOrder,
-    columnPinning: state.columnPinning,
-    columnSizing: state.columnSizing,
-    columnVisibility: state.columnVisibility,
-    rowSelection: state.rowSelection,
-    sorting: state.sorting,
-  };
+  actionBar?: React.ReactNode;
 }
 
 export function DataTable<TData extends RowData>({
@@ -81,13 +62,25 @@ export function DataTable<TData extends RowData>({
   );
 }
 
+interface DataTableHeaderProps<TData extends RowData> {
+  table: TanstackTable<DataTableFeatures, TData>;
+}
+
 function DataTableHeader<TData extends RowData>({
   table,
-}: {
-  table: TanstackTable<DataTableFeatures, TData>;
-}) {
+}: DataTableHeaderProps<TData>) {
   return (
-    <Subscribe source={table.store} selector={selectHeaderState}>
+    <Subscribe
+      source={table.store}
+      selector={(state) => ({
+        columnOrder: state.columnOrder,
+        columnPinning: state.columnPinning,
+        columnSizing: state.columnSizing,
+        columnVisibility: state.columnVisibility,
+        rowSelection: state.rowSelection,
+        sorting: state.sorting,
+      })}
+    >
       {() => (
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -109,11 +102,13 @@ function DataTableHeader<TData extends RowData>({
   );
 }
 
+interface DataTableBodyProps<TData extends RowData> {
+  table: TanstackTable<DataTableFeatures, TData>;
+}
+
 function DataTableBody<TData extends RowData>({
   table,
-}: {
-  table: TanstackTable<DataTableFeatures, TData>;
-}) {
+}: DataTableBodyProps<TData>) {
   syncSelectedRowCache(table);
   const rows = table.getRowModel().rows;
 
@@ -145,13 +140,23 @@ function DataTableBody<TData extends RowData>({
   );
 }
 
+interface DataTableRowProps<TData extends RowData> {
+  row: Row<DataTableFeatures, TData>;
+}
+
 function DataTableRow<TData extends RowData>({
   row,
-}: {
-  row: Row<DataTableFeatures, TData>;
-}) {
+}: DataTableRowProps<TData>) {
   return (
-    <Subscribe source={row.table.store} selector={selectTableLayout}>
+    <Subscribe
+      source={row.table.store}
+      selector={(state) => ({
+        columnOrder: state.columnOrder,
+        columnPinning: state.columnPinning,
+        columnSizing: state.columnSizing,
+        columnVisibility: state.columnVisibility,
+      })}
+    >
       {() => {
         const cells = row.getVisibleCells().map((cell) => ({
           cell,
@@ -179,15 +184,17 @@ function DataTableRow<TData extends RowData>({
   );
 }
 
-const MemoizedDataTableRow = memo(DataTableRow) as typeof DataTableRow;
+const MemoizedDataTableRow = React.memo(DataTableRow) as typeof DataTableRow;
+
+interface DataTableActionBarProps<TData extends RowData> {
+  table: TanstackTable<DataTableFeatures, TData>;
+  actionBar: React.ReactNode;
+}
 
 function DataTableActionBar<TData extends RowData>({
   table,
   actionBar,
-}: {
-  table: TanstackTable<DataTableFeatures, TData>;
-  actionBar: ReactNode;
-}) {
+}: DataTableActionBarProps<TData>) {
   return (
     <Subscribe source={table.atoms.rowSelection}>
       {(selection) => (Object.keys(selection).length > 0 ? actionBar : null)}

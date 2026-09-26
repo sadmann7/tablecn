@@ -1,11 +1,8 @@
 "use client";
 
-import {
-  type Column,
-  type RowData,
-  Subscribe,
-  type TableState,
-} from "@tanstack/react-table";
+import type * as React from "react";
+
+import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -27,18 +24,6 @@ interface DataTableColumnHeaderProps<
   label: string;
 }
 
-function selectColumnHeaderState(
-  state: TableState<DataTableFeatures>,
-  columnId: string,
-) {
-  const currentSort = state.sorting.find((sort) => sort.id === columnId);
-
-  return {
-    isVisible: state.columnVisibility[columnId] !== false,
-    sorted: currentSort ? (currentSort.desc ? "desc" : "asc") : "none",
-  } as const;
-}
-
 export function DataTableColumnHeader<TData extends RowData, TValue>({
   column,
   label,
@@ -52,7 +37,14 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   return (
     <Subscribe
       source={column.table.store}
-      selector={(state) => selectColumnHeaderState(state, column.id)}
+      selector={(state) => {
+        const currentSort = state.sorting.find((sort) => sort.id === column.id);
+
+        return {
+          isVisible: state.columnVisibility[column.id] !== false,
+          sorted: currentSort ? (currentSort.desc ? "desc" : "asc") : "none",
+        } as const;
+      }}
     >
       {(headerState) => (
         <DataTableColumnHeaderMenu

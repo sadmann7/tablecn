@@ -1,11 +1,8 @@
 "use client";
 
-import {
-  type RowData,
-  Subscribe,
-  type Table,
-  type TableState,
-} from "@tanstack/react-table";
+import type * as React from "react";
+
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -28,14 +25,6 @@ interface DataTablePaginationProps<
   pageSizeOptions?: number[];
 }
 
-function selectPaginationState(state: TableState<DataTableFeatures>) {
-  return {
-    pageIndex: state.pagination.pageIndex,
-    pageSize: state.pagination.pageSize,
-    selectedRowCount: Object.keys(state.rowSelection).length,
-  };
-}
-
 export function DataTablePagination<TData extends RowData>({
   table,
   pageSizeOptions = [10, 20, 30, 40, 50],
@@ -43,7 +32,14 @@ export function DataTablePagination<TData extends RowData>({
   ...props
 }: DataTablePaginationProps<TData>) {
   return (
-    <Subscribe source={table.store} selector={selectPaginationState}>
+    <Subscribe
+      source={table.store}
+      selector={(state) => ({
+        pageIndex: state.pagination.pageIndex,
+        pageSize: state.pagination.pageSize,
+        selectedRowCount: Object.keys(state.rowSelection).length,
+      })}
+    >
       {({ pageIndex, pageSize, selectedRowCount }) => (
         <DataTablePaginationContent
           table={table}

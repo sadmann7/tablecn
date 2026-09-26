@@ -1,9 +1,7 @@
 import {
   type ColumnFiltersState,
-  type ColumnVisibilityState,
   type PaginationState,
   type RowData,
-  type RowSelectionState,
   type SortingState,
   type TableOptions,
   type TableState,
@@ -111,12 +109,6 @@ export function useDataTable<TData extends RowData>(
       startTransition,
     ],
   );
-
-  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>(
-    initialState?.rowSelection ?? {},
-  );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<ColumnVisibilityState>(initialState?.columnVisibility ?? {});
 
   const [page, setPage] = useQueryState(
     pageKey,
@@ -267,43 +259,45 @@ export function useDataTable<TData extends RowData>(
     [debouncedSetFilterValues, filterableColumns, enableAdvancedFilter],
   );
 
-  const table = useTable({
-    ...tableProps,
-    features: dataTableFeatures,
-    columns,
-    initialState,
-    pageCount,
-    state: {
-      pagination,
-      sorting,
-      columnVisibility,
-      rowSelection,
-      columnFilters,
-    },
-    defaultColumn: {
-      ...tableProps.defaultColumn,
-      enableColumnFilter: false,
-    },
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    onPaginationChange,
-    onSortingChange,
-    onColumnFiltersChange,
-    onColumnVisibilityChange: setColumnVisibility,
-    manualPagination: true,
-    manualSorting: true,
-    manualFiltering: true,
-    meta: {
-      ...tableProps.meta,
-      queryKeys: {
-        page: pageKey,
-        perPage: perPageKey,
-        sort: sortKey,
-        filters: filtersKey,
-        joinOperator: joinOperatorKey,
+  const table = useTable(
+    {
+      ...tableProps,
+      features: dataTableFeatures,
+      columns,
+      initialState,
+      pageCount,
+      state: {
+        pagination,
+        sorting,
+        columnFilters,
+      },
+      defaultColumn: {
+        ...tableProps.defaultColumn,
+        enableColumnFilter: false,
+      },
+      onPaginationChange,
+      onSortingChange,
+      onColumnFiltersChange,
+      manualPagination: true,
+      manualSorting: true,
+      manualFiltering: true,
+      meta: {
+        ...tableProps.meta,
+        queryKeys: {
+          page: pageKey,
+          perPage: perPageKey,
+          sort: sortKey,
+          filters: filtersKey,
+          joinOperator: joinOperatorKey,
+        },
       },
     },
-  });
+    (state) => ({
+      columnFilters: state.columnFilters,
+      pagination: state.pagination,
+      sorting: state.sorting,
+    }),
+  );
 
   return React.useMemo(
     () => ({ table, shallow, debounceMs, throttleMs }),
