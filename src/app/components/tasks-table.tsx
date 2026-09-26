@@ -75,6 +75,7 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     enableRowRangeSelection: true,
     shallow: false,
     clearOnDefault: true,
+    filterUrlFormat: "json",
   });
 
   return (

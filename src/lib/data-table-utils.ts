@@ -146,12 +146,13 @@ export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   return operators[0]?.value ?? (filterVariant === "text" ? "iLike" : "eq");
 }
 
-/**
- * Converts a simple toolbar filter (`column.setFilterValue(...)`) into the
- * operator-based wire format. Used when simple filters are serialized into
- * the `filters` URL param and by server helpers that receive per-column
- * params.
- */
+function toFilterString(value: unknown): string {
+  if (value == null) return "";
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value as string | number | boolean | bigint);
+}
+
 export function toColumnFilterItem(
   id: string,
   variant: FilterVariant,
@@ -163,7 +164,7 @@ export function toColumnFilterItem(
   const filterId = `${id}-filter`;
 
   if (variant === "select" || variant === "multiSelect") {
-    const values = (Array.isArray(value) ? value : [value]).map(String);
+    const values = (Array.isArray(value) ? value : [value]).map(toFilterString);
     return { id, variant, operator: "inArray", value: values, filterId };
   }
 
@@ -172,7 +173,7 @@ export function toColumnFilterItem(
       id,
       variant,
       operator: "isBetween",
-      value: value.map((item) => (item == null ? "" : String(item))),
+      value: value.map(toFilterString),
       filterId,
     };
   }
@@ -181,15 +182,11 @@ export function toColumnFilterItem(
     id,
     variant,
     operator: getDefaultFilterOperator(variant),
-    value: String(value),
+    value: toFilterString(value),
     filterId,
   };
 }
 
-/**
- * Inverse of `toColumnFilterItem`: the value a simple toolbar filter expects
- * for an operator-based filter item.
- */
 export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 

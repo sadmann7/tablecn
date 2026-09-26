@@ -3,7 +3,6 @@ import { Suspense } from "react";
 import type { Task } from "@/db/schema";
 import type { SearchParams } from "@/types";
 
-import { Shell } from "@/components/shell";
 import { getDataTableQuery } from "@/lib/parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
@@ -23,7 +22,7 @@ interface IndexPageProps {
 
 export default function IndexPage(props: IndexPageProps) {
   return (
-    <Shell>
+    <div className="container flex flex-col gap-4 py-4">
       <Suspense
         fallback={
           <DataTableSkeleton
@@ -46,7 +45,7 @@ export default function IndexPage(props: IndexPageProps) {
           <TasksTableWrapper {...props} />
         </FeatureFlagsProvider>
       </Suspense>
-    </Shell>
+    </div>
   );
 }
 

@@ -80,8 +80,8 @@ interface UseDataTableBaseProps<TData extends RowData> extends Omit<
   clearOnDefault?: boolean;
   scroll?: boolean;
   shallow?: boolean;
-  startTransition?: React.TransitionStartFunction;
   filterUrlFormat?: DataTableFilterUrlFormat;
+  startTransition?: React.TransitionStartFunction;
 }
 
 type UseDataTableProps<TData extends RowData> = UseDataTableBaseProps<TData> &
@@ -113,8 +113,8 @@ export function useDataTable<TData extends RowData>(
     clearOnDefault = false,
     scroll = false,
     shallow: shallowProp = true,
-    startTransition,
     filterUrlFormat = "keys",
+    startTransition,
     ...tableProps
   } = props;
   const isServer: boolean = mode === "server";
