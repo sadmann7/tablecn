@@ -2,6 +2,7 @@ import type { Column, RowData } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
+  ColumnFilterItem,
   ExtendedColumnFilter,
   FilterOperator,
   FilterVariant,
@@ -143,6 +144,72 @@ export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   const operators = getFilterOperators(filterVariant);
 
   return operators[0]?.value ?? (filterVariant === "text" ? "iLike" : "eq");
+}
+
+/**
+ * Converts a simple toolbar filter (`column.setFilterValue(...)`) into the
+ * operator-based wire format. Used when simple filters are serialized into
+ * the `filters` URL param and by server helpers that receive per-column
+ * params.
+ */
+export function toColumnFilterItem(
+  id: string,
+  variant: FilterVariant,
+  value: unknown,
+): ColumnFilterItem | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (Array.isArray(value) && value.length === 0) return null;
+
+  const filterId = `${id}-filter`;
+
+  if (variant === "select" || variant === "multiSelect") {
+    const values = (Array.isArray(value) ? value : [value]).map(String);
+    return { id, variant, operator: "inArray", value: values, filterId };
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      id,
+      variant,
+      operator: "isBetween",
+      value: value.map((item) => (item == null ? "" : String(item))),
+      filterId,
+    };
+  }
+
+  return {
+    id,
+    variant,
+    operator: getDefaultFilterOperator(variant),
+    value: String(value),
+    filterId,
+  };
+}
+
+/**
+ * Inverse of `toColumnFilterItem`: the value a simple toolbar filter expects
+ * for an operator-based filter item.
+ */
+export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
+  const { variant, value } = filter;
+
+  if (variant === "select" || variant === "multiSelect") {
+    return Array.isArray(value) ? value : [value];
+  }
+
+  if (variant === "range" || variant === "dateRange") {
+    return Array.isArray(value)
+      ? value.map((item) => (item === "" ? undefined : Number(item)))
+      : value;
+  }
+
+  if (variant === "date") {
+    return Array.isArray(value)
+      ? value.map((item) => (item === "" ? undefined : Number(item)))
+      : Number(value);
+  }
+
+  return value;
 }
 
 export function getValidFilters<TData>(

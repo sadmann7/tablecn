@@ -1,9 +1,12 @@
 "use client";
 
-import type { Column, RowData, Table } from "@tanstack/react-table";
-
+import {
+  type Column,
+  type RowData,
+  Subscribe,
+  type Table,
+} from "@tanstack/react-table";
 import { cn } from "cn";
-import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -14,7 +17,6 @@ import type {
   JoinOperator,
 } from "@/lib/data-table-types";
 
-import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   dataTableConfig,
   getDefaultFilterOperator,
@@ -22,7 +24,6 @@ import {
 } from "@/lib/data-table-utils";
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
-import { getFiltersStateParser } from "@/lib/parsers";
 import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -69,8 +70,6 @@ import {
 } from "@/registry/bases/radix/ui/sortable";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-const DEBOUNCE_MS = 300;
-const THROTTLE_MS = 50;
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
@@ -78,20 +77,47 @@ interface DataTableFilterListProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataTableFeatures, TData>;
-  debounceMs?: number;
-  throttleMs?: number;
-  shallow?: boolean;
   disabled?: boolean;
 }
 
 export function DataTableFilterList<TData extends RowData>({
   table,
-  debounceMs = DEBOUNCE_MS,
-  throttleMs = THROTTLE_MS,
-  shallow = true,
-  disabled,
   ...props
 }: DataTableFilterListProps<TData>) {
+  return (
+    <Subscribe
+      source={table.store}
+      selector={(state) => ({
+        filters: state.advancedFilters,
+        joinOperator: state.joinOperator,
+      })}
+    >
+      {({ filters, joinOperator }) => (
+        <DataTableFilterListContent
+          table={table}
+          filters={filters as ExtendedColumnFilter<TData>[]}
+          joinOperator={joinOperator}
+          {...props}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+interface DataTableFilterListContentProps<
+  TData extends RowData,
+> extends DataTableFilterListProps<TData> {
+  filters: ExtendedColumnFilter<TData>[];
+  joinOperator: JoinOperator;
+}
+
+function DataTableFilterListContent<TData extends RowData>({
+  table,
+  filters,
+  joinOperator,
+  disabled,
+  ...props
+}: DataTableFilterListContentProps<TData>) {
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -104,80 +130,50 @@ export function DataTableFilterList<TData extends RowData>({
       .filter((column) => column.columnDef.enableColumnFilter);
   }, [table]);
 
-  const [filters, setFilters] = useQueryState(
-    table.options.meta?.queryKeys?.filters ?? "filters",
-    getFiltersStateParser<TData>(columns.map((field) => field.id))
-      .withDefault([])
-      .withOptions({
-        clearOnDefault: true,
-        shallow,
-        throttleMs,
-      }),
-  );
-  const debouncedSetFilters = useDebouncedCallback(setFilters, debounceMs);
-
-  const [joinOperator, setJoinOperator] = useQueryState(
-    table.options.meta?.queryKeys?.joinOperator ?? "",
-    parseAsStringEnum(["and", "or"]).withDefault("and").withOptions({
-      clearOnDefault: true,
-      shallow,
-    }),
-  );
-
   const onFilterAdd = React.useCallback(() => {
     const column = columns[0];
 
     if (!column) return;
 
-    debouncedSetFilters([
-      ...filters,
-      {
-        id: column.id as Extract<keyof TData, string>,
-        value: "",
-        variant: column.columnDef.meta?.variant ?? "text",
-        operator: getDefaultFilterOperator(
-          column.columnDef.meta?.variant ?? "text",
-        ),
-        filterId: generateId({ length: 8 }),
-      },
-    ]);
-  }, [columns, filters, debouncedSetFilters]);
+    table.addAdvancedFilter({
+      id: column.id,
+      value: "",
+      variant: column.columnDef.meta?.variant ?? "text",
+      operator: getDefaultFilterOperator(
+        column.columnDef.meta?.variant ?? "text",
+      ),
+      filterId: generateId({ length: 8 }),
+    });
+  }, [columns, table]);
 
   const onFilterUpdate = React.useCallback(
     (
       filterId: string,
       updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
     ) => {
-      debouncedSetFilters((prevFilters) => {
-        const updatedFilters = prevFilters.map((filter) => {
-          if (filter.filterId === filterId) {
-            return { ...filter, ...updates } as ExtendedColumnFilter<TData>;
-          }
-          return filter;
-        });
-        return updatedFilters;
-      });
+      table.updateAdvancedFilter(filterId, updates);
     },
-    [debouncedSetFilters],
+    [table],
   );
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      const updatedFilters = filters.filter(
-        (filter) => filter.filterId !== filterId,
-      );
-      void setFilters(updatedFilters);
+      table.removeAdvancedFilter(filterId);
       requestAnimationFrame(() => {
         addButtonRef.current?.focus();
       });
     },
-    [filters, setFilters],
+    [table],
   );
 
   const onFiltersReset = React.useCallback(() => {
-    void setFilters(null);
-    void setJoinOperator("and");
-  }, [setFilters, setJoinOperator]);
+    table.resetAdvancedFilters(true);
+  }, [table]);
+
+  const setJoinOperator = React.useCallback(
+    (value: JoinOperator) => table.setJoinOperator(value),
+    [table],
+  );
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -220,7 +216,7 @@ export function DataTableFilterList<TData extends RowData>({
   return (
     <Sortable
       value={filters}
-      onValueChange={setFilters}
+      onValueChange={(value) => table.setAdvancedFilters(value)}
       getItemValue={(item) => item.filterId}
     >
       <Popover open={open} onOpenChange={setOpen}>
