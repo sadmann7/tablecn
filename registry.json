@@ -113,7 +113,7 @@
       "title": "Data Table Select Column",
       "description": "A reusable select column definition for the data table with checkbox selection",
       "registryDependencies": ["checkbox"],
-      "dependencies": ["@tanstack/react-table"],
+      "dependencies": ["@tanstack/react-table", "nuqs", "zod"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-select-column.tsx",
@@ -126,6 +126,14 @@
         },
         {
           "path": "src/lib/data-table-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/parsers.ts",
           "type": "registry:lib"
         }
       ]

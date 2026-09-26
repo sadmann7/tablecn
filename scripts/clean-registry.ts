@@ -36,14 +36,7 @@ function getItemNames() {
 
 function getExpectedFiles() {
   const items = getItemNames();
-  const files = new Set<string>([
-    path.join(OUT_ROOT, "registry.json"),
-    path.join(STYLES_ROOT, "index.json"),
-  ]);
-
-  for (const name of items) {
-    files.add(path.join(OUT_ROOT, `${name}.json`));
-  }
+  const files = new Set<string>([path.join(STYLES_ROOT, "index.json")]);
 
   for (const base of BASES) {
     for (const style of STYLES) {

@@ -1,7 +1,6 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
-
+import { Subscribe, type Table } from "@tanstack/react-table";
 import { Download } from "lucide-react";
 
 import type { Task } from "@/db/schema";
@@ -20,18 +19,22 @@ interface TasksTableToolbarActionsProps {
 export function TasksTableToolbarActions({
   table,
 }: TasksTableToolbarActionsProps) {
-  const selectedTasks = table
-    .getSelectedRowModel()
-    .rows.map((row) => row.original);
-
   return (
     <div className="flex items-center gap-2">
-      {selectedTasks.length > 0 ? (
-        <DeleteTasksDialog
-          tasks={selectedTasks}
-          onSuccess={() => table.resetRowSelection(true)}
-        />
-      ) : null}
+      <Subscribe source={table.atoms.rowSelection}>
+        {() => {
+          const selectedTasks = table
+            .getSelectedRowModel()
+            .rows.map((row) => row.original);
+
+          return selectedTasks.length > 0 ? (
+            <DeleteTasksDialog
+              tasks={selectedTasks}
+              onSuccess={() => table.resetRowSelection(true)}
+            />
+          ) : null;
+        }}
+      </Subscribe>
       <CreateTaskSheet />
       <Button
         variant="outline"
