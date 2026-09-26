@@ -4,7 +4,7 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
-import type { FilterFlag, TableMode } from "@/lib/flag";
+import type { Filter, Mode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
@@ -30,8 +30,8 @@ import { getTasksTableColumns } from "./tasks-table-columns";
 import { UpdateTaskSheet } from "./update-task-sheet";
 
 interface TasksTableProps {
-  mode: TableMode;
-  filterFlag: FilterFlag;
+  mode: Mode;
+  filter: Filter;
   promises: Promise<
     [
       Awaited<ReturnType<typeof getTasks>>,
@@ -45,11 +45,11 @@ interface TasksTableProps {
 
 export function TasksTable({
   mode,
-  filterFlag,
+  filter,
   promises,
   queryKeys,
 }: TasksTableProps) {
-  const enableAdvancedFilter = filterFlag !== "simple";
+  const enableAdvancedFilter = filter !== "simple";
 
   const [
     { data, pageCount },
@@ -101,7 +101,7 @@ export function TasksTable({
         {enableAdvancedFilter ? (
           <DataTableAdvancedToolbar table={table}>
             <DataTableSortList table={table} align="start" />
-            {filterFlag === "advancedFilters" ? (
+            {filter === "advanced" ? (
               <DataTableFilterList table={table} align="start" />
             ) : (
               <DataTableFilterMenu table={table} />

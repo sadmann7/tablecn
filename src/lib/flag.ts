@@ -15,7 +15,7 @@ export interface Flag<TValue extends string = string> {
   description: string;
 }
 
-export const tableModes = [
+export const modes = [
   {
     label: "Server",
     value: "server",
@@ -31,9 +31,9 @@ export const tableModes = [
   },
 ] as const satisfies readonly Flag[];
 
-export type TableMode = (typeof tableModes)[number]["value"];
+export type Mode = (typeof modes)[number]["value"];
 
-export const filterFlags = [
+export const filters = [
   {
     label: "Simple",
     value: "simple",
@@ -42,16 +42,16 @@ export const filterFlags = [
   },
   {
     label: "Advanced",
-    value: "advancedFilters",
+    value: "advanced",
     icon: FileSpreadsheetIcon,
     description: "Airtable like advanced filters for filtering rows.",
   },
   {
     label: "Command",
-    value: "commandFilters",
+    value: "command",
     icon: CommandIcon,
     description: "Linear like command palette for filtering rows.",
   },
 ] as const satisfies readonly Flag[];
 
-export type FilterFlag = (typeof filterFlags)[number]["value"];
+export type Filter = (typeof filters)[number]["value"];
