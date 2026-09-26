@@ -1973,7 +1973,10 @@ function useDataGrid<TData extends RowData>({
       const currentState = store.getState();
       const newSorting =
         typeof updater === "function" ? updater(currentState.sorting) : updater;
-      store.setState("sorting", newSorting);
+
+      store.batch(() => {
+        store.setState("sorting", newSorting);
+      });
 
       propsRef.current.onSortingChange?.(newSorting);
     },
@@ -1987,7 +1990,10 @@ function useDataGrid<TData extends RowData>({
         typeof updater === "function"
           ? updater(currentState.columnFilters)
           : updater;
-      store.setState("columnFilters", newColumnFilters);
+
+      store.batch(() => {
+        store.setState("columnFilters", newColumnFilters);
+      });
 
       propsRef.current.onColumnFiltersChange?.(newColumnFilters);
     },
