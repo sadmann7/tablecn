@@ -1,11 +1,10 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
-
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
 import {
@@ -76,19 +75,25 @@ export function DataTableViewOptions<TData extends RowData>({
           <CommandList>
             <CommandEmpty>No columns found.</CommandEmpty>
             <CommandGroup>
-              {columns.map((column) => (
-                <CommandItem
-                  key={column.id}
-                  data-checked={column.getIsVisible()}
-                  onSelect={() =>
-                    column.toggleVisibility(!column.getIsVisible())
-                  }
-                >
-                  <span className="truncate">
-                    {column.columnDef.meta?.label ?? column.id}
-                  </span>
-                </CommandItem>
-              ))}
+              <Subscribe source={table.atoms.columnVisibility}>
+                {(columnVisibility) =>
+                  columns.map((column) => {
+                    const isVisible = columnVisibility[column.id] !== false;
+
+                    return (
+                      <CommandItem
+                        key={column.id}
+                        data-checked={isVisible}
+                        onSelect={() => column.toggleVisibility(!isVisible)}
+                      >
+                        <span className="truncate">
+                          {column.columnDef.meta?.label ?? column.id}
+                        </span>
+                      </CommandItem>
+                    );
+                  })
+                }
+              </Subscribe>
             </CommandGroup>
           </CommandList>
         </Command>

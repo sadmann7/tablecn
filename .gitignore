@@ -48,4 +48,3 @@ yarn-error.log*
 # public/r is produced from registry.json + the authored base trees.
 /public/r/styles/*
 !/public/r/styles/index.json
-/public/r/*.json

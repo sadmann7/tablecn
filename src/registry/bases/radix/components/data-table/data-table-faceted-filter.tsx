@@ -1,12 +1,16 @@
 "use client";
 
-import type { Column, RowData } from "@tanstack/react-table";
-
+import {
+  type Column,
+  type ColumnFiltersState,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Option } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/table-features";
 
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -36,13 +40,40 @@ interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
 
 export function DataTableFacetedFilter<TData extends RowData, TValue>({
   column,
+  ...props
+}: DataTableFacetedFilterProps<TData, TValue>) {
+  if (!column) {
+    return <DataTableFacetedFilterContent column={column} {...props} />;
+  }
+
+  return (
+    <Subscribe
+      source={column.table.atoms.columnFilters}
+      selector={(filters: ColumnFiltersState) =>
+        filters.find((filter) => filter.id === column.id)?.value
+      }
+    >
+      {(columnFilterValue) => (
+        <DataTableFacetedFilterContent
+          column={column}
+          columnFilterValue={columnFilterValue}
+          {...props}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataTableFacetedFilterContent<TData extends RowData, TValue>({
+  column,
   title,
   options,
   multiple,
-}: DataTableFacetedFilterProps<TData, TValue>) {
+  columnFilterValue,
+}: DataTableFacetedFilterProps<TData, TValue> & {
+  columnFilterValue?: unknown;
+}) {
   const [open, setOpen] = React.useState(false);
-
-  const columnFilterValue = column?.getFilterValue();
   const selectedValues = new Set(
     Array.isArray(columnFilterValue) ? columnFilterValue : [],
   );

@@ -1,12 +1,11 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
-
+import { Subscribe, type Table } from "@tanstack/react-table";
 import { ArrowUp, CheckCircle2, Download, Trash2, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
 import { exportTableToCSV } from "@/lib/export";
@@ -32,13 +31,19 @@ interface TasksTableActionBarProps {
 }
 
 export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
-  const rows = table.getFilteredSelectedRowModel().rows;
+  return (
+    <Subscribe source={table.atoms.rowSelection}>
+      {() => <TasksTableActionBarContent table={table} />}
+    </Subscribe>
+  );
+}
+
+function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
+  const selectedIds = table.getSelectedRowModel().rows.map((row) => row.id);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      if (!open) {
-        table.toggleAllRowsSelected(false);
-      }
+      if (!open) table.resetRowSelection(true);
     },
     [table],
   );
@@ -50,7 +55,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
     ) => {
       async function update() {
         const { error } = await updateTasks({
-          ids: rows.map((row) => row.original.id),
+          ids: selectedIds,
           [field]: value,
         });
 
@@ -62,7 +67,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
       }
       void update();
     },
-    [rows],
+    [selectedIds],
   );
 
   const onTaskExport = React.useCallback(() => {
@@ -75,22 +80,22 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
   const onTaskDelete = React.useCallback(() => {
     async function remove() {
       const { error } = await deleteTasks({
-        ids: rows.map((row) => row.original.id),
+        ids: selectedIds,
       });
 
       if (error) {
         toast.error(error);
         return;
       }
-      table.toggleAllRowsSelected(false);
+      table.resetRowSelection(true);
     }
     void remove();
-  }, [rows, table]);
+  }, [selectedIds, table]);
 
   return (
-    <ActionBar open={rows.length > 0} onOpenChange={onOpenChange}>
+    <ActionBar open={selectedIds.length > 0} onOpenChange={onOpenChange}>
       <ActionBarSelection>
-        <span className="font-medium">{rows.length}</span>
+        <span className="font-medium">{selectedIds.length}</span>
         <span>selected</span>
         <ActionBarSeparator />
         <ActionBarClose>

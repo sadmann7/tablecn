@@ -1,11 +1,16 @@
 "use client";
 
-import type { Column, RowData } from "@tanstack/react-table";
 import type { DateRange } from "react-day-picker";
 
+import {
+  type Column,
+  type ColumnFiltersState,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { formatDate } from "@/lib/format";
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -61,11 +66,34 @@ interface DataTableDateFilterProps<TData extends RowData> {
 
 export function DataTableDateFilter<TData extends RowData>({
   column,
+  ...props
+}: DataTableDateFilterProps<TData>) {
+  return (
+    <Subscribe
+      source={column.table.atoms.columnFilters}
+      selector={(filters: ColumnFiltersState) =>
+        filters.find((filter) => filter.id === column.id)?.value
+      }
+    >
+      {(columnFilterValue) => (
+        <DataTableDateFilterContent
+          column={column}
+          columnFilterValue={columnFilterValue}
+          {...props}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataTableDateFilterContent<TData extends RowData>({
+  column,
   title,
   multiple,
-}: DataTableDateFilterProps<TData>) {
-  const columnFilterValue = column.getFilterValue();
-
+  columnFilterValue,
+}: DataTableDateFilterProps<TData> & {
+  columnFilterValue: unknown;
+}) {
   const selectedDates = React.useMemo<DateSelection>(() => {
     if (!columnFilterValue) {
       return multiple ? { from: undefined, to: undefined } : [];

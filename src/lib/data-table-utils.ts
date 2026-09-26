@@ -1,11 +1,11 @@
 import type { Column, RowData } from "@tanstack/react-table";
 
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ExtendedColumnFilter,
   FilterOperator,
   FilterVariant,
 } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/table-features";
 
 export type DataTableConfig = typeof dataTableConfig;
 

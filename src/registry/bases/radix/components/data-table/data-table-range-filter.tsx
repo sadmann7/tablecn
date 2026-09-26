@@ -5,8 +5,8 @@ import type { Column, RowData } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ExtendedColumnFilter } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/table-features";
 
 import { Input } from "@/registry/bases/radix/ui/input";
 

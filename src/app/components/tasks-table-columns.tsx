@@ -13,16 +13,16 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 
+import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { DataTableRowAction } from "@/lib/data-table-types";
-import type { DataTableFeatures } from "@/lib/table-features";
 
 import { type Task, tasks } from "@/db/schema";
 import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
 import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-table/data-table-column-header";
+import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
-import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,31 +55,7 @@ export function getTasksTableColumns({
   setRowAction,
 }: GetTasksTableColumnsProps): ColumnDef<DataTableFeatures, Task>[] {
   return [
-    {
-      id: "select",
-      header: ({ table }) => (
-        <Checkbox
-          aria-label="Select all"
-          className="translate-y-0.5"
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          aria-label="Select row"
-          className="translate-y-0.5"
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-        />
-      ),
-      enableHiding: false,
-      enableSorting: false,
-      size: 40,
-    },
+    getDataTableSelectColumn<Task>(),
     {
       id: "code",
       accessorKey: "code",

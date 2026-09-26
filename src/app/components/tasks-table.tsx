@@ -73,6 +73,7 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     },
     queryKeys,
     getRowId: (originalRow) => originalRow.id,
+    enableRowRangeSelection: true,
     shallow: false,
     clearOnDefault: true,
   });

@@ -1,11 +1,15 @@
 "use client";
 
-import type { Column, RowData } from "@tanstack/react-table";
-
+import {
+  type Column,
+  type ColumnFiltersState,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
@@ -57,11 +61,36 @@ interface DataTableSliderFilterProps<TData extends RowData> {
 
 export function DataTableSliderFilter<TData extends RowData>({
   column,
-  title,
+  ...props
 }: DataTableSliderFilterProps<TData>) {
+  return (
+    <Subscribe
+      source={column.table.atoms.columnFilters}
+      selector={(filters: ColumnFiltersState) =>
+        filters.find((filter) => filter.id === column.id)?.value
+      }
+    >
+      {(columnFilterValue) => (
+        <DataTableSliderFilterContent
+          column={column}
+          columnFilterValue={columnFilterValue}
+          {...props}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataTableSliderFilterContent<TData extends RowData>({
+  column,
+  title,
+  columnFilterValue: columnFilterValueProp,
+}: DataTableSliderFilterProps<TData> & {
+  columnFilterValue: unknown;
+}) {
   const id = React.useId();
 
-  const columnFilterValue = parseValuesAsNumbers(column.getFilterValue());
+  const columnFilterValue = parseValuesAsNumbers(columnFilterValueProp);
 
   const defaultRange = column.columnDef.meta?.range;
   const unit = column.columnDef.meta?.unit;

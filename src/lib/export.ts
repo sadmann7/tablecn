@@ -1,6 +1,6 @@
 import type { RowData, Table } from "@tanstack/react-table";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 export function exportTableToCSV<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,
@@ -16,20 +16,20 @@ export function exportTableToCSV<TData extends RowData>(
     onlySelected = false,
   } = opts;
 
-  const headers = table
+  const columns = table
     .getAllLeafColumns()
-    .map((column) => column.id)
-    .filter((id) => !excludeColumns.includes(id));
+    .filter((column) => !excludeColumns.includes(column.id));
+
+  const rows = (
+    onlySelected ? table.getSelectedRowModel() : table.getRowModel()
+  ).rows.map((row) => row.original);
 
   const csvContent = [
-    headers.join(","),
-    ...(onlySelected
-      ? table.getFilteredSelectedRowModel().rows
-      : table.getRowModel().rows
-    ).map((row) =>
-      headers
-        .map((header) => {
-          const cellValue = row.getValue(header);
+    columns.map((column) => column.id).join(","),
+    ...rows.map((row, index) =>
+      columns
+        .map((column) => {
+          const cellValue = column.accessorFn?.(row, index);
           return typeof cellValue === "string"
             ? `"${cellValue.replace(/"/g, '""')}"`
             : cellValue;

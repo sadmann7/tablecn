@@ -1,10 +1,11 @@
 "use client";
 
-import type { Column, RowData } from "@tanstack/react-table";
+import type * as React from "react";
 
+import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import { cn } from "cn";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
   DropdownMenu,
@@ -34,6 +35,43 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   }
 
   return (
+    <Subscribe
+      source={column.table.store}
+      selector={(state) => {
+        const currentSort = state.sorting.find((sort) => sort.id === column.id);
+
+        return {
+          isVisible: state.columnVisibility[column.id] !== false,
+          sorted: currentSort ? (currentSort.desc ? "desc" : "asc") : "none",
+        } as const;
+      }}
+    >
+      {(headerState) => (
+        <DataTableColumnHeaderMenu
+          column={column}
+          label={label}
+          className={className}
+          isVisible={headerState.isVisible}
+          sorted={headerState.sorted}
+          {...props}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
+  column,
+  label,
+  className,
+  isVisible,
+  sorted,
+  ...props
+}: DataTableColumnHeaderProps<TData, TValue> & {
+  isVisible: boolean;
+  sorted: "asc" | "desc" | "none";
+}) {
+  return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
@@ -44,7 +82,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
       >
         {label}
         {column.getCanSort() &&
-          (column.getIsSorted() === "desc" ? (
+          (sorted === "desc" ? (
             <IconPlaceholder
               lucide="ChevronDown"
               tabler="IconChevronDown"
@@ -52,7 +90,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
               phosphor="CaretDownIcon"
               remixicon="RiArrowDownSLine"
             />
-          ) : column.getIsSorted() === "asc" ? (
+          ) : sorted === "asc" ? (
             <IconPlaceholder
               lucide="ChevronUp"
               tabler="IconChevronUp"
@@ -75,7 +113,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
           <>
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
-              checked={column.getIsSorted() === "asc"}
+              checked={sorted === "asc"}
               onClick={() => column.toggleSorting(false)}
             >
               <IconPlaceholder
@@ -89,7 +127,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
-              checked={column.getIsSorted() === "desc"}
+              checked={sorted === "desc"}
               onClick={() => column.toggleSorting(true)}
             >
               <IconPlaceholder
@@ -101,7 +139,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
               />
               Desc
             </DropdownMenuCheckboxItem>
-            {column.getIsSorted() && (
+            {sorted !== "none" && (
               <DropdownMenuItem
                 className="pl-2 [&_svg]:text-muted-foreground"
                 onClick={() => column.clearSorting()}
@@ -121,7 +159,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
         {column.getCanHide() && (
           <DropdownMenuCheckboxItem
             className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
-            checked={!column.getIsVisible()}
+            checked={!isVisible}
             onClick={() => column.toggleVisibility(false)}
           >
             <IconPlaceholder

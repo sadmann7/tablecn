@@ -30,8 +30,7 @@ import path from "node:path";
 
 import { BASES } from "../registry/bases";
 import { STYLES } from "../registry/styles";
-import { DEFAULT_BASE } from "../src/lib/constants";
-import { OUT_ROOT, STYLES_ROOT, wipeRegistryOutput } from "./clean-registry";
+import { STYLES_ROOT, wipeRegistryOutput } from "./clean-registry";
 
 const STYLE_COMBINATIONS = BASES.flatMap((base) =>
   STYLES.map((style) => ({
@@ -163,12 +162,6 @@ function main() {
         cpSync(built, path.join(STYLES_ROOT, `${base.name}-${style.name}`), {
           recursive: true,
         });
-      }
-
-      // Flat `/r/{name}.json` keeps serving the default base so existing
-      // DiceUI redirects and style-less installs keep working.
-      if (base.name === DEFAULT_BASE) {
-        cpSync(built, OUT_ROOT, { recursive: true });
       }
     }
   } finally {

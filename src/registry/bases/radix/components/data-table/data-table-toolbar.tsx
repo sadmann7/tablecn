@@ -1,11 +1,16 @@
 "use client";
 
-import type { Column, RowData, Table } from "@tanstack/react-table";
-
+import {
+  type Column,
+  type ColumnFiltersState,
+  type RowData,
+  Subscribe,
+  type Table,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
-import type { DataTableFeatures } from "@/lib/table-features";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { DataTableDateFilter } from "@/registry/bases/radix/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/radix/components/data-table/data-table-faceted-filter";
@@ -27,8 +32,6 @@ export function DataTableToolbar<TData extends RowData>({
   className,
   ...props
 }: DataTableToolbarProps<TData>) {
-  const isFiltered = table.store.state.columnFilters.length > 0;
-
   const columns = React.useMemo(
     () => table.getAllColumns().filter((column) => column.getCanFilter()),
     [table],
@@ -52,23 +55,30 @@ export function DataTableToolbar<TData extends RowData>({
         {columns.map((column) => (
           <DataTableToolbarFilter key={column.id} column={column} />
         ))}
-        {isFiltered && (
-          <Button
-            aria-label="Reset filters"
-            variant="outline"
-            className="border-dashed"
-            onClick={onReset}
-          >
-            <IconPlaceholder
-              lucide="X"
-              tabler="IconX"
-              hugeicons="Cancel01Icon"
-              phosphor="XIcon"
-              remixicon="RiCloseLine"
-            />
-            Reset
-          </Button>
-        )}
+        <Subscribe
+          source={table.atoms.columnFilters}
+          selector={(filters) => filters.length > 0}
+        >
+          {(isFiltered) =>
+            isFiltered ? (
+              <Button
+                aria-label="Reset filters"
+                variant="outline"
+                className="border-dashed"
+                onClick={onReset}
+              >
+                <IconPlaceholder
+                  lucide="X"
+                  tabler="IconX"
+                  hugeicons="Cancel01Icon"
+                  phosphor="XIcon"
+                  remixicon="RiCloseLine"
+                />
+                Reset
+              </Button>
+            ) : null
+          }
+        </Subscribe>
       </div>
       <div className="flex items-center gap-2">
         {children}
@@ -93,10 +103,9 @@ function DataTableToolbarFilter<TData extends RowData>({
       switch (columnMeta.variant) {
         case "text":
           return (
-            <Input
+            <DataTableFilterInput
+              column={column}
               placeholder={columnMeta.placeholder ?? columnMeta.label}
-              value={(column.getFilterValue() as string) ?? ""}
-              onChange={(event) => column.setFilterValue(event.target.value)}
               className="h-8 w-40 lg:w-56"
             />
           );
@@ -104,12 +113,11 @@ function DataTableToolbarFilter<TData extends RowData>({
         case "number":
           return (
             <div className="relative">
-              <Input
+              <DataTableFilterInput
+                column={column}
                 type="number"
                 inputMode="numeric"
                 placeholder={columnMeta.placeholder ?? columnMeta.label}
-                value={(column.getFilterValue() as string) ?? ""}
-                onChange={(event) => column.setFilterValue(event.target.value)}
                 className={cn("h-8 w-30", columnMeta.unit && "pr-8")}
               />
               {columnMeta.unit && (
@@ -156,4 +164,52 @@ function DataTableToolbarFilter<TData extends RowData>({
 
     return onFilterRender();
   }
+}
+
+function readFilterInputValue(value: unknown) {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.join(",");
+  }
+
+  return "";
+}
+
+function DataTableFilterInput<TData extends RowData>({
+  column,
+  placeholder,
+  className,
+  type = "text",
+  inputMode,
+}: {
+  column: Column<DataTableFeatures, TData>;
+  placeholder?: string;
+  className?: string;
+  type?: React.HTMLInputTypeAttribute;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+}) {
+  return (
+    <Subscribe
+      source={column.table.atoms.columnFilters}
+      selector={(filters: ColumnFiltersState) =>
+        readFilterInputValue(
+          filters.find((filter) => filter.id === column.id)?.value,
+        )
+      }
+    >
+      {(value) => (
+        <Input
+          type={type}
+          inputMode={inputMode}
+          placeholder={placeholder}
+          value={value}
+          onChange={(event) => column.setFilterValue(event.target.value)}
+          className={className}
+        />
+      )}
+    </Subscribe>
+  );
 }

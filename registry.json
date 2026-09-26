@@ -102,7 +102,38 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/table-features.ts",
+          "path": "src/lib/data-table-features.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "data-table-select-column",
+      "type": "registry:component",
+      "title": "Data Table Select Column",
+      "description": "A reusable select column definition for the data table with checkbox selection",
+      "registryDependencies": ["checkbox"],
+      "dependencies": ["@tanstack/react-table", "nuqs", "zod"],
+      "files": [
+        {
+          "path": "src/registry/bases/radix/components/data-table/data-table-select-column.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-select-column.tsx"
+        },
+        {
+          "path": "src/lib/data-table-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/parsers.ts",
           "type": "registry:lib"
         }
       ]
@@ -149,7 +180,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/table-features.ts",
+          "path": "src/lib/data-table-features.ts",
           "type": "registry:lib"
         },
         {
@@ -238,7 +269,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/table-features.ts",
+          "path": "src/lib/data-table-features.ts",
           "type": "registry:lib"
         },
         {
@@ -314,7 +345,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/table-features.ts",
+          "path": "src/lib/data-table-features.ts",
           "type": "registry:lib"
         },
         {
