@@ -20,7 +20,9 @@ interface TasksTableToolbarActionsProps {
 export function TasksTableToolbarActions({
   table,
 }: TasksTableToolbarActionsProps) {
-  const selectedTasks = table.getSelectedRows();
+  const selectedTasks = table
+    .getSelectedRowModel()
+    .rows.map((row) => row.original);
 
   return (
     <div className="flex items-center gap-2">

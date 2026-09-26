@@ -20,9 +20,9 @@ export function exportTableToCSV<TData extends RowData>(
     .getAllLeafColumns()
     .filter((column) => !excludeColumns.includes(column.id));
 
-  const rows = onlySelected
-    ? table.getSelectedRows()
-    : table.getRowModel().rows.map((row) => row.original);
+  const rows = (
+    onlySelected ? table.getSelectedRowModel() : table.getRowModel()
+  ).rows.map((row) => row.original);
 
   const csvContent = [
     columns.map((column) => column.id).join(","),
