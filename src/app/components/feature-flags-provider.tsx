@@ -3,9 +3,7 @@
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
-import { type FlagConfig, flagConfig } from "@/config/flag";
-
-type FilterFlag = FlagConfig["featureFlags"][number]["value"];
+import { type FilterFlag, filterFlags } from "@/lib/flag";
 
 interface FeatureFlagsContextValue {
   filterFlag: FilterFlag | null;
@@ -29,7 +27,7 @@ export function useFilterFlag() {
   return useQueryState(
     "filterFlag",
     parseAsStringEnum<FilterFlag>(
-      flagConfig.featureFlags.map((flag) => flag.value),
+      filterFlags.map((flag) => flag.value),
     ).withOptions({ shallow: false }),
   );
 }

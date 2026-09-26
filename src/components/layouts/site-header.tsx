@@ -6,7 +6,7 @@ import { Icons } from "@/components/icons";
 import { DocsLink } from "@/components/layouts/docs-link";
 import { MobileNav } from "@/components/layouts/mobile-nav";
 import { ModeToggle } from "@/components/layouts/mode-toggle";
-import { siteConfig } from "@/config/site";
+import { siteConfig } from "@/lib/site";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Sheet,

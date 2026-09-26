@@ -5,8 +5,7 @@ import type * as React from "react";
 import { ListFilterIcon } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
-import { tableModes } from "@/app/lib/table-mode";
-import { flagConfig } from "@/config/flag";
+import { type Flag, filterFlags, tableModes } from "@/lib/flag";
 import { Separator } from "@/registry/bases/radix/ui/separator";
 import {
   ToggleGroup,
@@ -23,7 +22,7 @@ import { useFilterFlag } from "./feature-flags-provider";
 export function TasksTableControls() {
   const [mode, setMode] = useQueryState(
     "tableMode",
-    parseAsStringEnum([...tableModes])
+    parseAsStringEnum(tableModes.map((mode) => mode.value))
       .withDefault("server")
       .withOptions({ shallow: false, clearOnDefault: true }),
   );
@@ -40,19 +39,13 @@ export function TasksTableControls() {
           aria-label="Data mode"
           value={mode}
           onValueChange={(value) => {
-            if (value === "server" || value === "client") void setMode(value);
+            const next = tableModes.find((mode) => mode.value === value);
+            if (next) void setMode(next.value);
           }}
         >
-          <ControlItem
-            value="server"
-            label="Server"
-            description="Paginate, sort, and filter in the database."
-          />
-          <ControlItem
-            value="client"
-            label="Client"
-            description="Load all rows once, then paginate, sort, and filter in the browser."
-          />
+          {tableModes.map((mode) => (
+            <ControlItem key={mode.value} flag={mode} />
+          ))}
         </ToggleGroup>
       </ControlGroup>
       <Separator
@@ -69,26 +62,20 @@ export function TasksTableControls() {
           value={filterFlag ?? "simple"}
           onValueChange={(value) => {
             if (!value) return;
-            const flag = flagConfig.featureFlags.find(
-              (item) => item.value === value,
-            );
+            const flag = filterFlags.find((item) => item.value === value);
             void setFilterFlag(flag?.value ?? null);
           }}
         >
           <ControlItem
-            value="simple"
-            icon={ListFilterIcon}
-            label="Simple"
-            description="Faceted filters inline with the toolbar."
+            flag={{
+              value: "simple",
+              icon: ListFilterIcon,
+              label: "Simple",
+              description: "Faceted filters inline with the toolbar.",
+            }}
           />
-          {flagConfig.featureFlags.map((flag) => (
-            <ControlItem
-              key={flag.value}
-              value={flag.value}
-              icon={flag.icon}
-              label={flag.label.replace(/ filters$/, "")}
-              description={flag.tooltipDescription}
-            />
+          {filterFlags.map((flag) => (
+            <ControlItem key={flag.value} flag={flag} />
           ))}
         </ToggleGroup>
       </ControlGroup>
@@ -110,29 +97,19 @@ function ControlGroup({ label, children }: ControlGroupProps) {
   );
 }
 
-interface ControlItemProps {
-  value: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  label: string;
-  description: string;
-}
+function ControlItem({ flag }: { flag: Flag }) {
+  const Icon = flag.icon;
 
-function ControlItem({
-  value,
-  icon: Icon,
-  label,
-  description,
-}: ControlItemProps) {
   return (
     <Tooltip delayDuration={700}>
-      <ToggleGroupItem value={value} className="px-2.5 text-xs" asChild>
+      <ToggleGroupItem value={flag.value} className="px-2.5 text-xs" asChild>
         <TooltipTrigger>
-          {Icon && <Icon className="size-3.5" />}
-          {label}
+          <Icon className="size-3.5" />
+          {flag.label}
         </TooltipTrigger>
       </ToggleGroupItem>
       <TooltipContent side="bottom" sideOffset={6}>
-        {description}
+        {flag.description}
       </TooltipContent>
     </Tooltip>
   );

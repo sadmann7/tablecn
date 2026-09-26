@@ -115,9 +115,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     startTransition,
     ...tableProps
   } = props;
-  const isServer: boolean = mode === "server";
-  // A client table already has every row, so a deep (server) navigation
-  // would only refetch the same data.
+  const isServer = mode === "server";
   const shallow = isServer ? shallowProp : true;
   const usesJsonFilters = filterUrlFormat === "json";
 

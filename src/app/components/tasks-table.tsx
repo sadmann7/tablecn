@@ -4,6 +4,7 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
+import type { TableMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
@@ -22,7 +23,6 @@ import type {
   getTasks,
   getTaskStatusCounts,
 } from "../lib/queries";
-import type { TableMode } from "../lib/table-mode";
 
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
 import { useFeatureFlags } from "./feature-flags-provider";
