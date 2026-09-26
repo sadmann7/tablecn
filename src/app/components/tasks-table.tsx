@@ -11,13 +11,16 @@ import { DataTableFilterList } from "@/registry/bases/radix/components/data-tabl
 import { DataTableFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-filter-menu";
 import { DataTableSortList } from "@/registry/bases/radix/components/data-table/data-table-sort-list";
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
-import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
+import {
+  useDataTable,
+  UseDataTableProps,
+} from "@/registry/bases/radix/hooks/use-data-table";
 
 import type {
   getEstimatedHoursRange,
   getTaskPriorityCounts,
-  getTaskStatusCounts,
   getTasks,
+  getTaskStatusCounts,
 } from "../lib/queries";
 import type { TableMode } from "../lib/table-mode";
 
@@ -64,7 +67,7 @@ export function TasksTable({ mode, promises, queryKeys }: TasksTableProps) {
     [statusCounts, priorityCounts, estimatedHoursRange],
   );
 
-  const tableProps = {
+  const tableProps: Omit<UseDataTableProps<Task>, "mode" | "pageCount"> = {
     data,
     columns,
     initialState: {
@@ -76,7 +79,6 @@ export function TasksTable({ mode, promises, queryKeys }: TasksTableProps) {
     enableRowRangeSelection: true,
     shallow: false,
     clearOnDefault: true,
-    filterUrlFormat: "json" as const,
   };
 
   const { table } = useDataTable(

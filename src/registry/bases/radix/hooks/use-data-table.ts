@@ -98,9 +98,7 @@ type UseDataTableProps<TData extends RowData> = UseDataTableBaseProps<TData> &
       }
   );
 
-export function useDataTable<TData extends RowData>(
-  props: UseDataTableProps<TData>,
-) {
+function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   const {
     columns,
     mode = "server",
@@ -430,3 +428,5 @@ export function useDataTable<TData extends RowData>(
 
   return React.useMemo(() => ({ table }), [table]);
 }
+
+export { useDataTable, type UseDataTableProps };
