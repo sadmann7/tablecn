@@ -7,7 +7,10 @@ import { getDataTableQuery } from "@/lib/parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
 import { TasksTable } from "./components/tasks-table";
-import { TasksTableControls } from "./components/tasks-table-controls";
+import {
+  TasksTableControlMenu,
+  TasksTableControlMenuSkeleton,
+} from "./components/tasks-table-control-menu";
 import {
   getEstimatedHoursRange,
   getRecentTasks,
@@ -24,8 +27,8 @@ interface IndexPageProps {
 export default function IndexPage(props: IndexPageProps) {
   return (
     <div className="container flex flex-col gap-4 py-4">
-      <Suspense fallback={null}>
-        <TasksTableControls />
+      <Suspense fallback={<TasksTableControlMenuSkeleton />}>
+        <TasksTableControlMenu />
       </Suspense>
       <Suspense
         fallback={
@@ -56,13 +59,13 @@ async function TasksTableWrapper(props: IndexPageProps) {
   const search = searchParamsCache.parse(searchParams);
   const mode = search.tableMode;
 
-  const tasks =
+  const tasksPromise =
     mode === "client"
       ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
       : getTasks(getDataTableQuery<Task>(search, tasksFilterableColumns));
 
   const promises = Promise.all([
-    tasks,
+    tasksPromise,
     getTaskStatusCounts(),
     getTaskPriorityCounts(),
     getEstimatedHoursRange(),

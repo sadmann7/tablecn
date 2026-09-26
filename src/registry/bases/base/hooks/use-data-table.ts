@@ -117,7 +117,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   } = props;
   const isServer = mode === "server";
   const shallow = isServer ? shallowProp : true;
-  const usesJsonFilters = filterUrlFormat === "json";
+  const withJsonFilters = filterUrlFormat === "json";
 
   const pageKey = queryKeys?.page ?? PAGE_KEY;
   const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
@@ -271,7 +271,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   // Simple filters, "keys" format: one param per filterable column.
   const filterParsers = React.useMemo(() => {
-    if (usesJsonFilters) return {};
+    if (withJsonFilters) return {};
 
     return filterableColumns.reduce<
       Record<string, SingleParser<string> | SingleParser<string[]>>
@@ -291,7 +291,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
       return acc;
     }, {});
-  }, [filterableColumns, queryStateOptions, usesJsonFilters]);
+  }, [filterableColumns, queryStateOptions, withJsonFilters]);
 
   const [filterValues, setFilterValues] = useQueryStates(filterParsers);
 
@@ -304,7 +304,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   );
 
   const initialColumnFilters: ColumnFiltersState = React.useMemo(() => {
-    if (usesJsonFilters) {
+    if (withJsonFilters) {
       return urlFilters.map((filter) => ({
         id: filter.id,
         value: toColumnFilterValue(filter),
@@ -318,7 +318,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       },
       [],
     );
-  }, [filterValues, urlFilters, usesJsonFilters]);
+  }, [filterValues, urlFilters, withJsonFilters]);
 
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(initialColumnFilters);
@@ -331,7 +331,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
             ? updaterOrValue(prev)
             : updaterOrValue;
 
-        if (usesJsonFilters) {
+        if (withJsonFilters) {
           const items = next.flatMap((filter) => {
             const column = filterableColumns.find(
               (column) => column.id === filter.id,
@@ -372,7 +372,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       debouncedSetFilterValues,
       debouncedSetUrlFilters,
       filterableColumns,
-      usesJsonFilters,
+      withJsonFilters,
     ],
   );
 
