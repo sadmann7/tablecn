@@ -7,6 +7,8 @@ import { flagConfig } from "@/config/flag";
 import { type Task, tasks } from "@/db/schema";
 import { getDataTableSearchParams } from "@/lib/parsers";
 
+import { tableModes } from "./table-mode";
+
 /** Filterable task columns and their variants; mirrors `tasks-table-columns`. */
 export const tasksFilterableColumns = {
   title: "text",
@@ -20,6 +22,7 @@ export const searchParamsCache = createSearchParamsCache({
   filterFlag: parseAsStringEnum(
     flagConfig.featureFlags.map((flag) => flag.value),
   ),
+  tableMode: parseAsStringEnum([...tableModes]).withDefault("server"),
   ...getDataTableSearchParams<Task>({
     filterableColumns: tasksFilterableColumns,
     defaultSorting: [{ id: "createdAt", desc: true }],

@@ -254,8 +254,8 @@ function DataTableFilterMenuContent<TData extends RowData>({
             <Button
               aria-label="Open filter command menu"
               variant="outline"
-              size={filters.length > 0 ? "icon" : "sm"}
-              className={cn(filters.length > 0 && "size-8", "h-8 font-normal")}
+              size={filters.length > 0 ? "icon" : "default"}
+              className="font-normal"
               ref={triggerRef}
               onKeyDown={onTriggerKeyDown}
               disabled={disabled}

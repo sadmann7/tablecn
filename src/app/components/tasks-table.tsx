@@ -19,6 +19,7 @@ import type {
   getTaskStatusCounts,
   getTasks,
 } from "../lib/queries";
+import type { TableMode } from "../lib/table-mode";
 
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
 import { useFeatureFlags } from "./feature-flags-provider";
@@ -27,6 +28,7 @@ import { getTasksTableColumns } from "./tasks-table-columns";
 import { UpdateTaskSheet } from "./update-task-sheet";
 
 interface TasksTableProps {
+  mode: TableMode;
   promises: Promise<
     [
       Awaited<ReturnType<typeof getTasks>>,
@@ -38,7 +40,7 @@ interface TasksTableProps {
   queryKeys?: Partial<QueryKeys>;
 }
 
-export function TasksTable({ promises, queryKeys }: TasksTableProps) {
+export function TasksTable({ mode, promises, queryKeys }: TasksTableProps) {
   const { enableAdvancedFilter, filterFlag } = useFeatureFlags();
 
   const [
@@ -62,21 +64,26 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     [statusCounts, priorityCounts, estimatedHoursRange],
   );
 
-  const { table } = useDataTable({
+  const tableProps = {
     data,
     columns,
-    pageCount,
     initialState: {
-      sorting: [{ id: "createdAt", desc: true }],
+      sorting: [{ id: "createdAt" as const, desc: true }],
       columnPinning: { start: [], end: ["actions"] },
     },
     queryKeys,
-    getRowId: (originalRow) => originalRow.id,
+    getRowId: (originalRow: Task) => originalRow.id,
     enableRowRangeSelection: true,
     shallow: false,
     clearOnDefault: true,
-    filterUrlFormat: "json",
-  });
+    filterUrlFormat: "json" as const,
+  };
+
+  const { table } = useDataTable(
+    mode === "client"
+      ? { ...tableProps, mode: "client" }
+      : { ...tableProps, pageCount },
+  );
 
   return (
     <>

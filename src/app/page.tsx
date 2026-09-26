@@ -8,7 +8,9 @@ import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/
 
 import { FeatureFlagsProvider } from "./components/feature-flags-provider";
 import { TasksTable } from "./components/tasks-table";
+import { TasksTableControls } from "./components/tasks-table-controls";
 import {
+  getAllTasks,
   getEstimatedHoursRange,
   getTaskPriorityCounts,
   getTaskStatusCounts,
@@ -23,6 +25,9 @@ interface IndexPageProps {
 export default function IndexPage(props: IndexPageProps) {
   return (
     <div className="container flex flex-col gap-4 py-4">
+      <Suspense fallback={null}>
+        <TasksTableControls />
+      </Suspense>
       <Suspense
         fallback={
           <DataTableSkeleton
@@ -52,13 +57,19 @@ export default function IndexPage(props: IndexPageProps) {
 async function TasksTableWrapper(props: IndexPageProps) {
   const searchParams = await props.searchParams;
   const search = searchParamsCache.parse(searchParams);
+  const mode = search.tableMode;
+
+  const tasks =
+    mode === "client"
+      ? getAllTasks().then((data) => ({ data, pageCount: 0 }))
+      : getTasks(getDataTableQuery<Task>(search, tasksFilterableColumns));
 
   const promises = Promise.all([
-    getTasks(getDataTableQuery<Task>(search, tasksFilterableColumns)),
+    tasks,
     getTaskStatusCounts(),
     getTaskPriorityCounts(),
     getEstimatedHoursRange(),
   ]);
 
-  return <TasksTable promises={promises} />;
+  return <TasksTable key={mode} mode={mode} promises={promises} />;
 }

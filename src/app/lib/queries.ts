@@ -93,6 +93,18 @@ function sanitizeEnumFilters(filters: ExtendedColumnFilter<Task>[]) {
   });
 }
 
+/** Every task, unsorted by the URL. Client mode filters and paginates these. */
+export async function getAllTasks() {
+  cacheLife({ revalidate: 1, stale: 1, expire: 60 });
+  cacheTag("tasks");
+
+  try {
+    return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+  } catch {
+    return [];
+  }
+}
+
 export async function getTaskStatusCounts() {
   cacheLife("hours");
   cacheTag("task-status-counts");
