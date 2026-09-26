@@ -4,6 +4,7 @@ import {
   CommandIcon,
   FileSpreadsheetIcon,
   LaptopIcon,
+  ListFilterIcon,
   ServerIcon,
 } from "lucide-react";
 
@@ -33,6 +34,12 @@ export const tableModes = [
 export type TableMode = (typeof tableModes)[number]["value"];
 
 export const filterFlags = [
+  {
+    label: "Simple",
+    value: "simple",
+    icon: ListFilterIcon,
+    description: "Faceted filters inline with the toolbar.",
+  },
   {
     label: "Advanced",
     value: "advancedFilters",

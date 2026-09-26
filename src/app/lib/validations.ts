@@ -17,7 +17,9 @@ export const tasksFilterableColumns = {
 } satisfies Partial<Record<keyof Task, FilterVariant>>;
 
 export const searchParamsCache = createSearchParamsCache({
-  filterFlag: parseAsStringEnum(filterFlags.map((flag) => flag.value)),
+  filterFlag: parseAsStringEnum(
+    filterFlags.map((flag) => flag.value),
+  ).withDefault("simple"),
   tableMode: parseAsStringEnum(
     tableModes.map((mode) => mode.value),
   ).withDefault("server"),

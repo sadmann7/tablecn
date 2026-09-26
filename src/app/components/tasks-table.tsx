@@ -4,7 +4,7 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
-import type { TableMode } from "@/lib/flag";
+import type { FilterFlag, TableMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
@@ -25,13 +25,13 @@ import type {
 } from "../lib/queries";
 
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
-import { useFeatureFlags } from "./feature-flags-provider";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { getTasksTableColumns } from "./tasks-table-columns";
 import { UpdateTaskSheet } from "./update-task-sheet";
 
 interface TasksTableProps {
   mode: TableMode;
+  filterFlag: FilterFlag;
   promises: Promise<
     [
       Awaited<ReturnType<typeof getTasks>>,
@@ -43,8 +43,13 @@ interface TasksTableProps {
   queryKeys?: Partial<QueryKeys>;
 }
 
-export function TasksTable({ mode, promises, queryKeys }: TasksTableProps) {
-  const { enableAdvancedFilter, filterFlag } = useFeatureFlags();
+export function TasksTable({
+  mode,
+  filterFlag,
+  promises,
+  queryKeys,
+}: TasksTableProps) {
+  const enableAdvancedFilter = filterFlag !== "simple";
 
   const [
     { data, pageCount },

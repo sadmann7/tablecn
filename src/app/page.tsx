@@ -6,7 +6,6 @@ import type { SearchParams } from "@/types";
 import { getDataTableQuery } from "@/lib/parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
-import { FeatureFlagsProvider } from "./components/feature-flags-provider";
 import { TasksTable } from "./components/tasks-table";
 import { TasksTableControls } from "./components/tasks-table-controls";
 import {
@@ -46,9 +45,7 @@ export default function IndexPage(props: IndexPageProps) {
           />
         }
       >
-        <FeatureFlagsProvider>
-          <TasksTableWrapper {...props} />
-        </FeatureFlagsProvider>
+        <TasksTableWrapper {...props} />
       </Suspense>
     </div>
   );
@@ -71,5 +68,12 @@ async function TasksTableWrapper(props: IndexPageProps) {
     getEstimatedHoursRange(),
   ]);
 
-  return <TasksTable key={mode} mode={mode} promises={promises} />;
+  return (
+    <TasksTable
+      key={mode}
+      mode={mode}
+      filterFlag={search.filterFlag}
+      promises={promises}
+    />
+  );
 }

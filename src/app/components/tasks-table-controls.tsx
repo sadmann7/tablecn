@@ -2,7 +2,6 @@
 
 import type * as React from "react";
 
-import { ListFilterIcon } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
 import { type Flag, filterFlags, tableModes } from "@/lib/flag";
@@ -17,8 +16,6 @@ import {
   TooltipTrigger,
 } from "@/registry/bases/radix/ui/tooltip";
 
-import { useFilterFlag } from "./feature-flags-provider";
-
 export function TasksTableControls() {
   const [mode, setMode] = useQueryState(
     "tableMode",
@@ -26,7 +23,12 @@ export function TasksTableControls() {
       .withDefault("server")
       .withOptions({ shallow: false, clearOnDefault: true }),
   );
-  const [filterFlag, setFilterFlag] = useFilterFlag();
+  const [filterFlag, setFilterFlag] = useQueryState(
+    "filterFlag",
+    parseAsStringEnum(filterFlags.map((flag) => flag.value))
+      .withDefault("simple")
+      .withOptions({ shallow: false, clearOnDefault: true }),
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -59,21 +61,12 @@ export function TasksTableControls() {
           size="sm"
           spacing={0}
           aria-label="Filter variant"
-          value={filterFlag ?? "simple"}
+          value={filterFlag}
           onValueChange={(value) => {
-            if (!value) return;
             const flag = filterFlags.find((item) => item.value === value);
-            void setFilterFlag(flag?.value ?? null);
+            if (flag) void setFilterFlag(flag.value);
           }}
         >
-          <ControlItem
-            flag={{
-              value: "simple",
-              icon: ListFilterIcon,
-              label: "Simple",
-              description: "Faceted filters inline with the toolbar.",
-            }}
-          />
           {filterFlags.map((flag) => (
             <ControlItem key={flag.value} flag={flag} />
           ))}
@@ -97,7 +90,11 @@ function ControlGroup({ label, children }: ControlGroupProps) {
   );
 }
 
-function ControlItem({ flag }: { flag: Flag }) {
+interface ControlItemProps {
+  flag: Flag;
+}
+
+function ControlItem({ flag }: ControlItemProps) {
   const Icon = flag.icon;
 
   return (
