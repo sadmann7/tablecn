@@ -10,8 +10,8 @@ import { FeatureFlagsProvider } from "./components/feature-flags-provider";
 import { TasksTable } from "./components/tasks-table";
 import { TasksTableControls } from "./components/tasks-table-controls";
 import {
-  getAllTasks,
   getEstimatedHoursRange,
+  getRecentTasks,
   getTaskPriorityCounts,
   getTaskStatusCounts,
   getTasks,
@@ -61,7 +61,7 @@ async function TasksTableWrapper(props: IndexPageProps) {
 
   const tasks =
     mode === "client"
-      ? getAllTasks().then((data) => ({ data, pageCount: 0 }))
+      ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
       : getTasks(getDataTableQuery<Task>(search, tasksFilterableColumns));
 
   const promises = Promise.all([

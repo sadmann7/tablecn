@@ -71,7 +71,6 @@ const ENUM_COLUMNS = {
   label: tasks.label.enumValues,
 } as const;
 
-/** Drops values Postgres would reject for enum columns. */
 function sanitizeEnumFilters(filters: ExtendedColumnFilter<Task>[]) {
   return filters.flatMap((filter) => {
     const allowed: readonly string[] | undefined =
@@ -93,13 +92,16 @@ function sanitizeEnumFilters(filters: ExtendedColumnFilter<Task>[]) {
   });
 }
 
-/** Every task, unsorted by the URL. Client mode filters and paginates these. */
-export async function getAllTasks() {
+export async function getRecentTasks() {
   cacheLife({ revalidate: 1, stale: 1, expire: 60 });
   cacheTag("tasks");
 
   try {
-    return await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+    return await db
+      .select()
+      .from(tasks)
+      .orderBy(desc(tasks.createdAt))
+      .limit(1000);
   } catch {
     return [];
   }
