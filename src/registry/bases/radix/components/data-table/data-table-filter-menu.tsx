@@ -1,9 +1,12 @@
 "use client";
 
-import type { Column, RowData, Table } from "@tanstack/react-table";
-
+import {
+  type Column,
+  type RowData,
+  Subscribe,
+  type Table,
+} from "@tanstack/react-table";
 import { cn } from "cn";
-import { useQueryState } from "nuqs";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -12,14 +15,12 @@ import type {
   FilterOperator,
 } from "@/lib/data-table-types";
 
-import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   getDefaultFilterOperator,
   getFilterOperators,
 } from "@/lib/data-table-utils";
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
-import { getFiltersStateParser } from "@/lib/parsers";
 import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
@@ -47,8 +48,6 @@ import {
 } from "@/registry/bases/radix/ui/select";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-const DEBOUNCE_MS = 300;
-const THROTTLE_MS = 50;
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
@@ -56,21 +55,39 @@ interface DataTableFilterMenuProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataTableFeatures, TData>;
-  debounceMs?: number;
-  throttleMs?: number;
-  shallow?: boolean;
   disabled?: boolean;
 }
 
 export function DataTableFilterMenu<TData extends RowData>({
   table,
-  debounceMs = DEBOUNCE_MS,
-  throttleMs = THROTTLE_MS,
-  shallow = true,
+  ...props
+}: DataTableFilterMenuProps<TData>) {
+  return (
+    <Subscribe source={table.atoms.advancedFilters}>
+      {(filters) => (
+        <DataTableFilterMenuContent
+          table={table}
+          filters={filters as ExtendedColumnFilter<TData>[]}
+          {...props}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+interface DataTableFilterMenuContentProps<
+  TData extends RowData,
+> extends DataTableFilterMenuProps<TData> {
+  filters: ExtendedColumnFilter<TData>[];
+}
+
+function DataTableFilterMenuContent<TData extends RowData>({
+  table,
+  filters,
   disabled,
   className,
   ...props
-}: DataTableFilterMenuProps<TData>) {
+}: DataTableFilterMenuContentProps<TData>) {
   const id = React.useId();
 
   const columns = React.useMemo(() => {
@@ -113,18 +130,6 @@ export function DataTableFilterMenu<TData extends RowData>({
     [inputValue, selectedColumn],
   );
 
-  const [filters, setFilters] = useQueryState(
-    table.options.meta?.queryKeys?.filters ?? "filters",
-    getFiltersStateParser<TData>(columns.map((field) => field.id))
-      .withDefault([])
-      .withOptions({
-        clearOnDefault: true,
-        shallow,
-        throttleMs,
-      }),
-  );
-  const debouncedSetFilters = useDebouncedCallback(setFilters, debounceMs);
-
   const onFilterAdd = React.useCallback(
     (column: Column<DataTableFeatures, TData>, value: string) => {
       if (!value.trim() && column.columnDef.meta?.variant !== "boolean") {
@@ -134,38 +139,35 @@ export function DataTableFilterMenu<TData extends RowData>({
       const filterValue =
         column.columnDef.meta?.variant === "multiSelect" ? [value] : value;
 
-      const newFilter: ExtendedColumnFilter<TData> = {
-        id: column.id as Extract<keyof TData, string>,
+      table.addAdvancedFilter({
+        id: column.id,
         value: filterValue,
         variant: column.columnDef.meta?.variant ?? "text",
         operator: getDefaultFilterOperator(
           column.columnDef.meta?.variant ?? "text",
         ),
         filterId: generateId({ length: 8 }),
-      };
-
-      debouncedSetFilters([...filters, newFilter]);
+      });
       setOpen(false);
 
+      // Let the popover close before clearing the command state, otherwise
+      // the field list flashes while the exit animation runs.
       setTimeout(() => {
         setSelectedColumn(null);
         setInputValue("");
       }, 100);
     },
-    [filters, debouncedSetFilters],
+    [table],
   );
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      const updatedFilters = filters.filter(
-        (filter) => filter.filterId !== filterId,
-      );
-      debouncedSetFilters(updatedFilters);
+      table.removeAdvancedFilter(filterId);
       requestAnimationFrame(() => {
         triggerRef.current?.focus();
       });
     },
-    [filters, debouncedSetFilters],
+    [table],
   );
 
   const onFilterUpdate = React.useCallback(
@@ -173,22 +175,14 @@ export function DataTableFilterMenu<TData extends RowData>({
       filterId: string,
       updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
     ) => {
-      debouncedSetFilters((prevFilters) => {
-        const updatedFilters = prevFilters.map((filter) => {
-          if (filter.filterId === filterId) {
-            return { ...filter, ...updates } as ExtendedColumnFilter<TData>;
-          }
-          return filter;
-        });
-        return updatedFilters;
-      });
+      table.updateAdvancedFilter(filterId, updates);
     },
-    [debouncedSetFilters],
+    [table],
   );
 
   const onFiltersReset = React.useCallback(() => {
-    debouncedSetFilters([]);
-  }, [debouncedSetFilters]);
+    table.resetAdvancedFilters(true);
+  }, [table]);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

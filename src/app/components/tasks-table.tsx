@@ -62,11 +62,10 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     [statusCounts, priorityCounts, estimatedHoursRange],
   );
 
-  const { table, shallow, debounceMs, throttleMs } = useDataTable({
+  const { table } = useDataTable({
     data,
     columns,
     pageCount,
-    enableAdvancedFilter,
     initialState: {
       sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { start: [], end: ["actions"] },
@@ -88,20 +87,9 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
           <DataTableAdvancedToolbar table={table}>
             <DataTableSortList table={table} align="start" />
             {filterFlag === "advancedFilters" ? (
-              <DataTableFilterList
-                table={table}
-                shallow={shallow}
-                debounceMs={debounceMs}
-                throttleMs={throttleMs}
-                align="start"
-              />
+              <DataTableFilterList table={table} align="start" />
             ) : (
-              <DataTableFilterMenu
-                table={table}
-                shallow={shallow}
-                debounceMs={debounceMs}
-                throttleMs={throttleMs}
-              />
+              <DataTableFilterMenu table={table} />
             )}
           </DataTableAdvancedToolbar>
         ) : (

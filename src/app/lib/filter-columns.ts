@@ -31,7 +31,7 @@ export function filterColumns<T extends Table>({
   joinOperator,
 }: {
   table: T;
-  filters: ExtendedColumnFilter<T>[];
+  filters: ExtendedColumnFilter<T["$inferSelect"]>[];
   joinOperator: JoinOperator;
 }): SQL | undefined {
   const joinFn = joinOperator === "and" ? and : or;

@@ -104,6 +104,10 @@
         {
           "path": "src/lib/data-table-features.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-filters.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -113,7 +117,7 @@
       "title": "Data Table Select Column",
       "description": "A reusable select column definition for the data table with checkbox selection",
       "registryDependencies": ["checkbox"],
-      "dependencies": ["@tanstack/react-table", "nuqs", "zod"],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-select-column.tsx",
@@ -125,15 +129,15 @@
           "type": "registry:lib"
         },
         {
+          "path": "src/lib/data-table-filters.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "src/lib/data-table-types.ts",
           "type": "registry:lib"
         },
         {
           "path": "src/lib/data-table-utils.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/lib/parsers.ts",
           "type": "registry:lib"
         }
       ]
@@ -181,6 +185,10 @@
         },
         {
           "path": "src/lib/data-table-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-filters.ts",
           "type": "registry:lib"
         },
         {
@@ -273,6 +281,10 @@
           "type": "registry:lib"
         },
         {
+          "path": "src/lib/data-table-filters.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-view-options.tsx"
@@ -346,6 +358,10 @@
         },
         {
           "path": "src/lib/data-table-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-filters.ts",
           "type": "registry:lib"
         },
         {

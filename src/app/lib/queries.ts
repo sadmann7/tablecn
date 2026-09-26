@@ -1,91 +1,35 @@
 "use cache";
 
 import "server-only";
-import {
-  and,
-  asc,
-  count,
-  desc,
-  gt,
-  gte,
-  ilike,
-  inArray,
-  lte,
-  sql,
-} from "drizzle-orm";
+import { asc, count, desc, gt, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
+import type {
+  DataTableQuery,
+  ExtendedColumnFilter,
+} from "@/lib/data-table-types";
+
 import { db } from "@/db";
-import { tasks } from "@/db/schema";
-import { filterColumns } from "@/lib/filter-columns";
+import { type Task, tasks } from "@/db/schema";
 
-import type { GetTasksSchema } from "./validations";
+import { filterColumns } from "./filter-columns";
 
-export async function getTasks(input: GetTasksSchema) {
+export async function getTasks(input: DataTableQuery<Task>) {
   cacheLife({ revalidate: 1, stale: 1, expire: 60 });
   cacheTag("tasks");
 
   try {
     const offset = (input.page - 1) * input.perPage;
-    const advancedTable =
-      input.filterFlag === "advancedFilters" ||
-      input.filterFlag === "commandFilters";
 
-    const advancedWhere = filterColumns({
+    const where = filterColumns({
       table: tasks,
-      filters: input.filters,
+      filters: sanitizeEnumFilters(input.filters),
       joinOperator: input.joinOperator,
     });
 
-    const where = advancedTable
-      ? advancedWhere
-      : and(
-          input.title ? ilike(tasks.title, `%${input.title}%`) : undefined,
-          input.status.length > 0
-            ? inArray(tasks.status, input.status)
-            : undefined,
-          input.priority.length > 0
-            ? inArray(tasks.priority, input.priority)
-            : undefined,
-          input.estimatedHours.length > 0
-            ? and(
-                input.estimatedHours[0]
-                  ? gte(tasks.estimatedHours, input.estimatedHours[0])
-                  : undefined,
-                input.estimatedHours[1]
-                  ? lte(tasks.estimatedHours, input.estimatedHours[1])
-                  : undefined,
-              )
-            : undefined,
-          input.createdAt.length > 0
-            ? and(
-                input.createdAt[0]
-                  ? gte(
-                      tasks.createdAt,
-                      (() => {
-                        const date = new Date(input.createdAt[0]);
-                        date.setHours(0, 0, 0, 0);
-                        return date;
-                      })(),
-                    )
-                  : undefined,
-                input.createdAt[1]
-                  ? lte(
-                      tasks.createdAt,
-                      (() => {
-                        const date = new Date(input.createdAt[1]);
-                        date.setHours(23, 59, 59, 999);
-                        return date;
-                      })(),
-                    )
-                  : undefined,
-              )
-            : undefined,
-        );
-
     const orderBy =
-      input.sort.length > 0
-        ? input.sort.map((item) =>
+      input.sorting.length > 0
+        ? input.sorting.map((item) =>
             item.desc ? desc(tasks[item.id]) : asc(tasks[item.id]),
           )
         : [asc(tasks.createdAt)];
@@ -119,6 +63,34 @@ export async function getTasks(input: GetTasksSchema) {
   } catch {
     return { data: [], pageCount: 0 };
   }
+}
+
+const ENUM_COLUMNS = {
+  status: tasks.status.enumValues,
+  priority: tasks.priority.enumValues,
+  label: tasks.label.enumValues,
+} as const;
+
+/** Drops values Postgres would reject for enum columns. */
+function sanitizeEnumFilters(filters: ExtendedColumnFilter<Task>[]) {
+  return filters.flatMap((filter) => {
+    const allowed: readonly string[] | undefined =
+      ENUM_COLUMNS[filter.id as keyof typeof ENUM_COLUMNS];
+    if (!allowed) return [filter];
+
+    const values = (
+      Array.isArray(filter.value) ? filter.value : [filter.value]
+    ).filter((value) => allowed.includes(value));
+
+    if (values.length === 0) return [];
+
+    return [
+      {
+        ...filter,
+        value: Array.isArray(filter.value) ? values : (values[0] ?? ""),
+      },
+    ];
+  });
 }
 
 export async function getTaskStatusCounts() {

@@ -2,7 +2,6 @@ import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { DataTableConfig } from "@/lib/data-table-utils";
-import type { FilterItemSchema } from "@/lib/parsers";
 
 export interface DataTableMeta {
   queryKeys?: QueryKeys;
@@ -41,8 +40,35 @@ export interface ExtendedColumnSort<TData> extends Omit<ColumnSort, "id"> {
   id: Extract<keyof TData, string>;
 }
 
-export interface ExtendedColumnFilter<TData> extends FilterItemSchema {
+/**
+ * A single filter condition. This is the wire format shared by the URL, the
+ * table's `advancedFilters` state slice, and server adapters.
+ */
+export interface ColumnFilterItem {
+  id: string;
+  value: string | string[];
+  variant: FilterVariant;
+  operator: FilterOperator;
+  filterId: string;
+}
+
+export interface ExtendedColumnFilter<TData> extends Omit<
+  ColumnFilterItem,
+  "id"
+> {
   id: Extract<keyof TData, string>;
+}
+
+/**
+ * Everything a server needs to answer a data table request, independent of
+ * the database or ORM used to answer it.
+ */
+export interface DataTableQuery<TData = unknown> {
+  page: number;
+  perPage: number;
+  sorting: ExtendedColumnSort<TData>[];
+  filters: ExtendedColumnFilter<TData>[];
+  joinOperator: JoinOperator;
 }
 
 export interface DataTableRowAction<TData extends RowData> {

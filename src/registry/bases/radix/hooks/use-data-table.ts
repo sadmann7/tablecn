@@ -12,6 +12,7 @@ import {
   parseAsArrayOf,
   parseAsInteger,
   parseAsString,
+  parseAsStringEnum,
   type SingleParser,
   useQueryState,
   type UseQueryStateOptions,
@@ -19,14 +20,26 @@ import {
 } from "nuqs";
 import * as React from "react";
 
-import type { ExtendedColumnSort, QueryKeys } from "@/lib/data-table-types";
+import type {
+  ColumnFilterItem,
+  ExtendedColumnFilter,
+  ExtendedColumnSort,
+  JoinOperator,
+  QueryKeys,
+} from "@/lib/data-table-types";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   type DataTableFeatures,
   dataTableFeatures,
 } from "@/lib/data-table-features";
-import { getSortingStateParser } from "@/lib/parsers";
+import { dataTableFilterFn } from "@/lib/data-table-filters";
+import {
+  dataTableConfig,
+  toColumnFilterItem,
+  toColumnFilterValue,
+} from "@/lib/data-table-utils";
+import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
 
 const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";
@@ -37,18 +50,26 @@ const ARRAY_SEPARATOR = ",";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 
-interface UseDataTableProps<TData extends RowData>
-  extends
-    Omit<
-      TableOptions<DataTableFeatures, TData>,
-      | "state"
-      | "pageCount"
-      | "features"
-      | "manualFiltering"
-      | "manualPagination"
-      | "manualSorting"
-    >,
-    Required<Pick<TableOptions<DataTableFeatures, TData>, "pageCount">> {
+/**
+ * How simple (toolbar) column filters are written to the URL.
+ *
+ * - `"keys"`: one query param per column, e.g. `?status=todo,done&title=fix`.
+ *   Server code receives them per column.
+ * - `"json"`: merged into the `filters` param as operator-based filter
+ *   items, so simple and advanced filters share one server contract.
+ */
+type DataTableFilterUrlFormat = "keys" | "json";
+
+interface UseDataTableBaseProps<TData extends RowData> extends Omit<
+  TableOptions<DataTableFeatures, TData>,
+  | "state"
+  | "pageCount"
+  | "features"
+  | "manualFiltering"
+  | "manualPagination"
+  | "manualSorting"
+  | "manualAdvancedFiltering"
+> {
   initialState?: Omit<Partial<TableState<DataTableFeatures>>, "sorting"> & {
     sorting?: ExtendedColumnSort<TData>[];
   };
@@ -57,17 +78,32 @@ interface UseDataTableProps<TData extends RowData>
   debounceMs?: number;
   throttleMs?: number;
   clearOnDefault?: boolean;
-  enableAdvancedFilter?: boolean;
   scroll?: boolean;
   shallow?: boolean;
   startTransition?: React.TransitionStartFunction;
+  filterUrlFormat?: DataTableFilterUrlFormat;
 }
+
+type UseDataTableProps<TData extends RowData> = UseDataTableBaseProps<TData> &
+  (
+    | {
+        /** The server paginates, sorts and filters. `data` is one page. */
+        mode?: "server";
+        pageCount: number;
+      }
+    | {
+        /** TanStack paginates, sorts and filters `data` in the browser. */
+        mode: "client";
+        pageCount?: never;
+      }
+  );
 
 export function useDataTable<TData extends RowData>(
   props: UseDataTableProps<TData>,
 ) {
   const {
     columns,
+    mode = "server",
     pageCount,
     initialState,
     queryKeys,
@@ -75,12 +111,18 @@ export function useDataTable<TData extends RowData>(
     debounceMs = DEBOUNCE_MS,
     throttleMs = THROTTLE_MS,
     clearOnDefault = false,
-    enableAdvancedFilter = false,
     scroll = false,
-    shallow = true,
+    shallow: shallowProp = true,
     startTransition,
+    filterUrlFormat = "keys",
     ...tableProps
   } = props;
+  const isServer: boolean = mode === "server";
+  // A client table already has every row, so a deep (server) navigation
+  // would only refetch the same data.
+  const shallow = isServer ? shallowProp : true;
+  const usesJsonFilters = filterUrlFormat === "json";
+
   const pageKey = queryKeys?.page ?? PAGE_KEY;
   const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
   const sortKey = queryKeys?.sort ?? SORT_KEY;
@@ -130,14 +172,13 @@ export function useDataTable<TData extends RowData>(
 
   const onPaginationChange = React.useCallback(
     (updaterOrValue: Updater<PaginationState>) => {
-      if (typeof updaterOrValue === "function") {
-        const newPagination = updaterOrValue(pagination);
-        void setPage(newPagination.pageIndex + 1);
-        void setPerPage(newPagination.pageSize);
-      } else {
-        void setPage(updaterOrValue.pageIndex + 1);
-        void setPerPage(updaterOrValue.pageSize);
-      }
+      const next =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(pagination)
+          : updaterOrValue;
+
+      void setPage(next.pageIndex + 1);
+      void setPerPage(next.pageSize);
     },
     [pagination, setPage, setPerPage],
   );
@@ -157,39 +198,104 @@ export function useDataTable<TData extends RowData>(
 
   const onSortingChange = React.useCallback(
     (updaterOrValue: Updater<SortingState>) => {
-      if (typeof updaterOrValue === "function") {
-        const newSorting = updaterOrValue(sorting);
-        void setSorting(newSorting as ExtendedColumnSort<TData>[]);
-      } else {
-        void setSorting(updaterOrValue as ExtendedColumnSort<TData>[]);
-      }
+      const next =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(sorting)
+          : updaterOrValue;
+
+      void setSorting(next as ExtendedColumnSort<TData>[]);
     },
     [sorting, setSorting],
   );
 
-  const filterableColumns = React.useMemo(() => {
-    if (enableAdvancedFilter) return [];
+  const filterableColumns = React.useMemo(
+    () => columns.filter((column) => column.enableColumnFilter),
+    [columns],
+  );
 
-    return columns.filter((column) => column.enableColumnFilter);
-  }, [columns, enableAdvancedFilter]);
+  const filterableColumnIds = React.useMemo(
+    () => filterableColumns.map((column) => column.id).filter(Boolean),
+    [filterableColumns],
+  );
 
+  // Advanced filters: operator-based filter items in the `filters` param.
+  const [urlFilters, setUrlFilters] = useQueryState(
+    filtersKey,
+    getFiltersStateParser<TData>(filterableColumnIds as string[])
+      .withOptions(queryStateOptions)
+      .withDefault(
+        (initialState?.advancedFilters ?? []) as ExtendedColumnFilter<TData>[],
+      ),
+  );
+
+  const [joinOperator, setJoinOperator] = useQueryState(
+    joinOperatorKey,
+    parseAsStringEnum([...dataTableConfig.joinOperators])
+      .withOptions(queryStateOptions)
+      .withDefault(initialState?.joinOperator ?? "and"),
+  );
+
+  const debouncedSetUrlFilters = useDebouncedCallback(
+    (filters: ColumnFilterItem[]) => {
+      void setPage(1);
+      void setUrlFilters(filters as ExtendedColumnFilter<TData>[]);
+    },
+    debounceMs,
+  );
+
+  const [advancedFilters, setAdvancedFilters] =
+    React.useState<ColumnFilterItem[]>(urlFilters);
+
+  const onAdvancedFiltersChange = React.useCallback(
+    (updaterOrValue: Updater<ColumnFilterItem[]>) => {
+      setAdvancedFilters((prev) => {
+        const next =
+          typeof updaterOrValue === "function"
+            ? updaterOrValue(prev)
+            : updaterOrValue;
+
+        debouncedSetUrlFilters(next);
+        return next;
+      });
+    },
+    [debouncedSetUrlFilters],
+  );
+
+  const onJoinOperatorChange = React.useCallback(
+    (updaterOrValue: Updater<JoinOperator>) => {
+      const next =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(joinOperator)
+          : updaterOrValue;
+
+      void setJoinOperator(next);
+    },
+    [joinOperator, setJoinOperator],
+  );
+
+  // Simple filters, "keys" format: one param per filterable column.
   const filterParsers = React.useMemo(() => {
-    if (enableAdvancedFilter) return {};
+    if (usesJsonFilters) return {};
 
     return filterableColumns.reduce<
       Record<string, SingleParser<string> | SingleParser<string[]>>
     >((acc, column) => {
-      if (column.meta?.options) {
-        acc[column.id ?? ""] = parseAsArrayOf(
-          parseAsString,
-          ARRAY_SEPARATOR,
-        ).withOptions(queryStateOptions);
-      } else {
-        acc[column.id ?? ""] = parseAsString.withOptions(queryStateOptions);
-      }
+      if (!column.id) return acc;
+
+      const isMultiValue =
+        column.meta?.options !== undefined ||
+        column.meta?.variant === "range" ||
+        column.meta?.variant === "dateRange";
+
+      acc[column.id] = isMultiValue
+        ? parseAsArrayOf(parseAsString, ARRAY_SEPARATOR).withOptions(
+            queryStateOptions,
+          )
+        : parseAsString.withOptions(queryStateOptions);
+
       return acc;
     }, {});
-  }, [filterableColumns, queryStateOptions, enableAdvancedFilter]);
+  }, [filterableColumns, queryStateOptions, usesJsonFilters]);
 
   const [filterValues, setFilterValues] = useQueryStates(filterParsers);
 
@@ -202,45 +308,55 @@ export function useDataTable<TData extends RowData>(
   );
 
   const initialColumnFilters: ColumnFiltersState = React.useMemo(() => {
-    if (enableAdvancedFilter) return [];
+    if (usesJsonFilters) {
+      return urlFilters.map((filter) => ({
+        id: filter.id,
+        value: toColumnFilterValue(filter),
+      }));
+    }
 
     return Object.entries(filterValues).reduce<ColumnFiltersState>(
       (filters, [key, value]) => {
-        if (value !== null) {
-          const processedValue = Array.isArray(value)
-            ? value
-            : typeof value === "string" && /[^a-zA-Z0-9]/.test(value)
-              ? value.split(/[^a-zA-Z0-9]+/).filter(Boolean)
-              : [value];
-
-          filters.push({
-            id: key,
-            value: processedValue,
-          });
-        }
+        if (value !== null) filters.push({ id: key, value });
         return filters;
       },
       [],
     );
-  }, [filterValues, enableAdvancedFilter]);
+  }, [filterValues, urlFilters, usesJsonFilters]);
 
   const [columnFilters, setColumnFilters] =
     React.useState<ColumnFiltersState>(initialColumnFilters);
 
   const onColumnFiltersChange = React.useCallback(
     (updaterOrValue: Updater<ColumnFiltersState>) => {
-      if (enableAdvancedFilter) return;
-
       setColumnFilters((prev) => {
         const next =
           typeof updaterOrValue === "function"
             ? updaterOrValue(prev)
             : updaterOrValue;
 
+        if (usesJsonFilters) {
+          const items = next.flatMap((filter) => {
+            const column = filterableColumns.find(
+              (column) => column.id === filter.id,
+            );
+            const item = toColumnFilterItem(
+              filter.id,
+              column?.meta?.variant ?? "text",
+              filter.value,
+            );
+            return item ? [item] : [];
+          });
+
+          setAdvancedFilters(items);
+          debouncedSetUrlFilters(items);
+          return next;
+        }
+
         const filterUpdates = next.reduce<
           Record<string, string | string[] | null>
         >((acc, filter) => {
-          if (filterableColumns.find((column) => column.id === filter.id)) {
+          if (filterableColumns.some((column) => column.id === filter.id)) {
             acc[filter.id] = filter.value as string | string[];
           }
           return acc;
@@ -256,7 +372,12 @@ export function useDataTable<TData extends RowData>(
         return next;
       });
     },
-    [debouncedSetFilterValues, filterableColumns, enableAdvancedFilter],
+    [
+      debouncedSetFilterValues,
+      debouncedSetUrlFilters,
+      filterableColumns,
+      usesJsonFilters,
+    ],
   );
 
   const table = useTable(
@@ -265,22 +386,28 @@ export function useDataTable<TData extends RowData>(
       features: dataTableFeatures,
       columns,
       initialState,
-      pageCount,
+      ...(isServer ? { pageCount } : {}),
       state: {
         pagination,
         sorting,
         columnFilters,
+        advancedFilters,
+        joinOperator,
       },
       defaultColumn: {
+        ...(isServer ? {} : { filterFn: dataTableFilterFn }),
         ...tableProps.defaultColumn,
         enableColumnFilter: false,
       },
       onPaginationChange,
       onSortingChange,
       onColumnFiltersChange,
-      manualPagination: true,
-      manualSorting: true,
-      manualFiltering: true,
+      onAdvancedFiltersChange,
+      onJoinOperatorChange,
+      manualPagination: isServer,
+      manualSorting: isServer,
+      manualFiltering: isServer,
+      manualAdvancedFiltering: isServer,
       meta: {
         ...tableProps.meta,
         queryKeys: {
@@ -293,14 +420,13 @@ export function useDataTable<TData extends RowData>(
       },
     },
     (state) => ({
+      advancedFilters: state.advancedFilters,
       columnFilters: state.columnFilters,
+      joinOperator: state.joinOperator,
       pagination: state.pagination,
       sorting: state.sorting,
     }),
   );
 
-  return React.useMemo(
-    () => ({ table, shallow, debounceMs, throttleMs }),
-    [table, shallow, debounceMs, throttleMs],
-  );
+  return React.useMemo(() => ({ table }), [table]);
 }

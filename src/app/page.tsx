@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 
+import type { Task } from "@/db/schema";
 import type { SearchParams } from "@/types";
 
 import { Shell } from "@/components/shell";
-import { getValidFilters } from "@/lib/data-table-utils";
+import { getDataTableQuery } from "@/lib/parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
 import { FeatureFlagsProvider } from "./components/feature-flags-provider";
@@ -14,7 +15,7 @@ import {
   getTaskStatusCounts,
   getTasks,
 } from "./lib/queries";
-import { searchParamsCache } from "./lib/validations";
+import { searchParamsCache, tasksFilterableColumns } from "./lib/validations";
 
 interface IndexPageProps {
   searchParams: Promise<SearchParams>;
@@ -53,13 +54,8 @@ async function TasksTableWrapper(props: IndexPageProps) {
   const searchParams = await props.searchParams;
   const search = searchParamsCache.parse(searchParams);
 
-  const validFilters = getValidFilters(search.filters);
-
   const promises = Promise.all([
-    getTasks({
-      ...search,
-      filters: validFilters,
-    }),
+    getTasks(getDataTableQuery<Task>(search, tasksFilterableColumns)),
     getTaskStatusCounts(),
     getTaskPriorityCounts(),
     getEstimatedHoursRange(),
