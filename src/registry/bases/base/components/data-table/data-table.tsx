@@ -190,8 +190,11 @@ function DataTableActionBar<TData extends RowData>({
   actionBar,
 }: DataTableActionBarProps<TData>) {
   return (
-    <Subscribe source={table.atoms.rowSelection}>
-      {(selection) => (Object.keys(selection).length > 0 ? actionBar : null)}
+    <Subscribe
+      source={table.atoms.rowSelection}
+      selector={() => table.getSelectedRowModel().rows.length > 0}
+    >
+      {(hasSelectedRows) => (hasSelectedRows ? actionBar : null)}
     </Subscribe>
   );
 }

@@ -37,7 +37,7 @@ export function DataTablePagination<TData extends RowData>({
       selector={(state) => ({
         pageIndex: state.pagination.pageIndex,
         pageSize: state.pagination.pageSize,
-        selectedRowCount: Object.keys(state.rowSelection).length,
+        selectedRowCount: table.getSelectedRowModel().rows.length,
       })}
     >
       {({ pageIndex, pageSize, selectedRowCount }) => (
