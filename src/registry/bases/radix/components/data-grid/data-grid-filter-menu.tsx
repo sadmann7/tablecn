@@ -206,7 +206,6 @@ export function DataGridFilterMenu<TData extends RowData>({
           <Button
             dir={dir}
             variant="outline"
-            className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
@@ -222,7 +221,7 @@ export function DataGridFilterMenu<TData extends RowData>({
             {columnFilters.length > 0 && (
               <Badge
                 variant="secondary"
-                className="h-[18.24px] rounded-md px-[5.12px] font-mono text-[10.4px] font-normal"
+                className="h-[18.24px] px-[5.12px] font-mono text-[10.4px]"
               >
                 {columnFilters.length}
               </Badge>
@@ -281,7 +280,6 @@ export function DataGridFilterMenu<TData extends RowData>({
           )}
           <div className="flex w-full items-center gap-2">
             <Button
-              className="rounded"
               ref={addButtonRef}
               onClick={onFilterAdd}
               disabled={columns.length === 0}
@@ -289,11 +287,7 @@ export function DataGridFilterMenu<TData extends RowData>({
               Add filter
             </Button>
             {columnFilters.length > 0 && (
-              <Button
-                variant="outline"
-                className="rounded"
-                onClick={onFiltersReset}
-              >
+              <Button variant="outline" onClick={onFiltersReset}>
                 Reset filters
               </Button>
             )}
@@ -302,12 +296,12 @@ export function DataGridFilterMenu<TData extends RowData>({
       </Popover>
       <SortableOverlay>
         <div dir={dir} className="flex items-center gap-2">
-          <div className="h-8 min-w-18 rounded-sm bg-primary/10" />
-          <div className="h-8 w-32 rounded-sm bg-primary/10" />
-          <div className="h-8 w-32 rounded-sm bg-primary/10" />
-          <div className="h-8 w-36 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
+          <div className="h-8 min-w-18 rounded-lg bg-primary/10" />
+          <div className="h-8 w-32 rounded-lg bg-primary/10" />
+          <div className="h-8 w-32 rounded-lg bg-primary/10" />
+          <div className="h-8 max-w-60 min-w-36 flex-1 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
         </div>
       </SortableOverlay>
     </Sortable>
@@ -439,7 +433,7 @@ function DataGridFilterItem<TData extends RowData>({
               aria-controls={fieldListboxId}
               dir={dir}
               variant="outline"
-              className="w-32 justify-between rounded font-normal"
+              className="w-32 justify-between"
             >
               <span className="truncate">{columnLabels.get(filter.id)}</span>
               <IconPlaceholder
@@ -515,7 +509,7 @@ function DataGridFilterItem<TData extends RowData>({
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
-            className="w-32 rounded lowercase"
+            className="w-32 lowercase"
           >
             <div className="truncate">
               <SelectValue />
@@ -555,7 +549,7 @@ function DataGridFilterItem<TData extends RowData>({
               role="status"
               aria-label={`${columnLabels.get(filter.id)} filter is empty`}
               aria-live="polite"
-              className="h-8 w-full rounded border bg-transparent dark:bg-input/30"
+              className="h-8 w-full rounded-lg border border-input bg-transparent dark:bg-input/30"
             />
           )}
         </div>
@@ -563,7 +557,6 @@ function DataGridFilterItem<TData extends RowData>({
           aria-controls={filterItemId}
           variant="outline"
           size="icon"
-          className="size-8 rounded"
           onClick={() => onFilterRemove(filter.id)}
         >
           <IconPlaceholder
@@ -575,7 +568,7 @@ function DataGridFilterItem<TData extends RowData>({
           />
         </Button>
         <SortableItemHandle asChild>
-          <Button variant="outline" size="icon" className="size-8 rounded">
+          <Button variant="outline" size="icon">
             <IconPlaceholder
               lucide="GripVertical"
               tabler="IconGripVertical"
@@ -660,7 +653,7 @@ function DataGridFilterInput<TData extends RowData>({
               setLocalValue(newValue);
               debouncedOnChange(newValue);
             }}
-            className="h-8 w-full flex-1 rounded"
+            className="w-full flex-1"
           />
           <Input
             id={`${inputId}-end`}
@@ -674,7 +667,7 @@ function DataGridFilterInput<TData extends RowData>({
               setLocalEndValue(newValue);
               debouncedOnEndValueChange(newValue);
             }}
-            className="h-8 w-full flex-1 rounded"
+            className="w-full flex-1"
           />
         </div>
       );
@@ -693,7 +686,6 @@ function DataGridFilterInput<TData extends RowData>({
           setLocalValue(newValue);
           debouncedOnChange(newValue);
         }}
-        className="h-8 w-full rounded"
       />
     );
   }
@@ -732,7 +724,7 @@ function DataGridFilterInput<TData extends RowData>({
               dir={dir}
               variant="outline"
               className={cn(
-                "h-8 w-full justify-start rounded font-normal",
+                "w-full justify-start",
                 !startDate && "text-muted-foreground",
               )}
             >
@@ -793,7 +785,7 @@ function DataGridFilterInput<TData extends RowData>({
             dir={dir}
             variant="outline"
             className={cn(
-              "h-8 w-full justify-start rounded font-normal",
+              "w-full justify-start",
               !dateValue && "text-muted-foreground",
             )}
           >
@@ -859,7 +851,7 @@ function DataGridFilterInput<TData extends RowData>({
               aria-controls={inputListboxId}
               dir={dir}
               variant="outline"
-              className="h-8 w-full justify-start rounded font-normal"
+              className="w-full justify-start"
             >
               {selectedOptions.length === 0 ? (
                 <span className="text-muted-foreground">{placeholder}</span>
@@ -956,7 +948,7 @@ function DataGridFilterInput<TData extends RowData>({
             aria-controls={inputListboxId}
             dir={dir}
             variant="outline"
-            className="h-8 w-full justify-start rounded font-normal"
+            className="w-full justify-start"
           >
             {selectedOption ? (
               <>
@@ -1023,7 +1015,7 @@ function DataGridFilterInput<TData extends RowData>({
           id={inputId}
           type="text"
           placeholder="Start"
-          className="h-8 w-full flex-1 rounded"
+          className="w-full flex-1"
           value={(localValue as string | undefined) ?? ""}
           onChange={(event) => {
             const val = event.target.value;
@@ -1036,7 +1028,7 @@ function DataGridFilterInput<TData extends RowData>({
           id={`${inputId}-end`}
           type="text"
           placeholder="End"
-          className="h-8 w-full flex-1 rounded"
+          className="w-full flex-1"
           value={(localEndValue as string | undefined) ?? ""}
           onChange={(event) => {
             const val = event.target.value;
@@ -1054,7 +1046,6 @@ function DataGridFilterInput<TData extends RowData>({
       id={inputId}
       type="text"
       placeholder={placeholder}
-      className="h-8 w-full rounded"
       value={(localValue as string | undefined) ?? ""}
       onChange={(event) => {
         const val = event.target.value;

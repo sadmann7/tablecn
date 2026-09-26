@@ -223,7 +223,6 @@ function DataTableFilterListContent<TData extends RowData>({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
@@ -239,7 +238,7 @@ function DataTableFilterListContent<TData extends RowData>({
             {filters.length > 0 && (
               <Badge
                 variant="secondary"
-                className="h-[18.24px] rounded-md px-[5.12px] font-mono text-[10.4px] font-normal"
+                className="h-[18.24px] px-[5.12px] font-mono text-[10.4px]"
               >
                 {filters.length}
               </Badge>
@@ -291,19 +290,11 @@ function DataTableFilterListContent<TData extends RowData>({
             </SortableContent>
           ) : null}
           <div className="flex w-full items-center gap-2">
-            <Button
-              className="rounded"
-              ref={addButtonRef}
-              onClick={onFilterAdd}
-            >
+            <Button ref={addButtonRef} onClick={onFilterAdd}>
               Add filter
             </Button>
             {filters.length > 0 ? (
-              <Button
-                variant="outline"
-                className="rounded"
-                onClick={onFiltersReset}
-              >
+              <Button variant="outline" onClick={onFiltersReset}>
                 Reset filters
               </Button>
             ) : null}
@@ -312,12 +303,12 @@ function DataTableFilterListContent<TData extends RowData>({
       </Popover>
       <SortableOverlay>
         <div className="flex items-center gap-2">
-          <div className="h-8 min-w-18 rounded-sm bg-primary/10" />
-          <div className="h-8 w-32 rounded-sm bg-primary/10" />
-          <div className="h-8 w-32 rounded-sm bg-primary/10" />
-          <div className="h-8 min-w-36 flex-1 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
+          <div className="h-8 min-w-18 rounded-lg bg-primary/10" />
+          <div className="h-8 w-32 rounded-lg bg-primary/10" />
+          <div className="h-8 w-32 rounded-lg bg-primary/10" />
+          <div className="h-8 min-w-36 flex-1 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
         </div>
       </SortableOverlay>
     </Sortable>
@@ -411,7 +402,7 @@ function DataTableFilterItem<TData extends RowData>({
               <SelectTrigger
                 aria-label="Select join operator"
                 aria-controls={joinOperatorListboxId}
-                className="rounded lowercase"
+                className="lowercase"
               >
                 <SelectValue placeholder={joinOperator} />
               </SelectTrigger>
@@ -440,7 +431,7 @@ function DataTableFilterItem<TData extends RowData>({
             <Button
               aria-controls={fieldListboxId}
               variant="outline"
-              className="w-32 justify-between rounded font-normal"
+              className="w-32 justify-between"
             >
               <span className="truncate">
                 {columns.find((column) => column.id === filter.id)?.columnDef
@@ -520,7 +511,7 @@ function DataTableFilterItem<TData extends RowData>({
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
-            className="w-32 rounded lowercase"
+            className="w-32 lowercase"
           >
             <div className="truncate">
               <SelectValue placeholder={filter.operator} />
@@ -555,7 +546,6 @@ function DataTableFilterItem<TData extends RowData>({
           aria-controls={filterItemId}
           variant="outline"
           size="icon"
-          className="size-8 rounded"
           onClick={() => onFilterRemove(filter.filterId)}
         >
           <IconPlaceholder
@@ -567,7 +557,7 @@ function DataTableFilterItem<TData extends RowData>({
           />
         </Button>
         <SortableItemHandle asChild>
-          <Button variant="outline" size="icon" className="size-8 rounded">
+          <Button variant="outline" size="icon">
             <IconPlaceholder
               lucide="GripVertical"
               tabler="IconGripVertical"
@@ -611,7 +601,7 @@ function onFilterInputRender<TData extends RowData>({
           filter.operator === "isEmpty" ? "empty" : "not empty"
         }`}
         aria-live="polite"
-        className="h-8 w-full rounded border bg-transparent dark:bg-input/30"
+        className="h-8 w-full rounded-lg border border-input bg-transparent dark:bg-input/30"
       />
     );
   }
@@ -645,7 +635,6 @@ function onFilterInputRender<TData extends RowData>({
           aria-describedby={`${inputId}-description`}
           inputMode={isNumber ? "numeric" : undefined}
           placeholder={columnMeta?.placeholder ?? "Enter a value..."}
-          className="h-8 w-full rounded"
           defaultValue={
             typeof filter.value === "string" ? filter.value : undefined
           }
@@ -678,7 +667,7 @@ function onFilterInputRender<TData extends RowData>({
             id={inputId}
             aria-controls={inputListboxId}
             aria-label={`${columnMeta?.label} boolean filter`}
-            className="w-full rounded"
+            className="w-full"
           >
             <SelectValue placeholder={filter.value ? "True" : "False"} />
           </SelectTrigger>
@@ -723,7 +712,7 @@ function onFilterInputRender<TData extends RowData>({
               aria-controls={inputListboxId}
               aria-label={`${columnMeta?.label} filter value${multiple ? "s" : ""}`}
               variant="outline"
-              className="w-full rounded font-normal"
+              className="w-full"
             >
               <FacetedBadgeList
                 options={columnMeta?.options}
@@ -794,7 +783,7 @@ function onFilterInputRender<TData extends RowData>({
               aria-label={`${columnMeta?.label} date filter`}
               variant="outline"
               className={cn(
-                "w-full justify-start rounded text-left font-normal",
+                "w-full justify-start text-left",
                 !filter.value && "text-muted-foreground",
               )}
             >

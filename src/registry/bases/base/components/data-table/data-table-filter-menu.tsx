@@ -236,7 +236,6 @@ function DataTableFilterMenuContent<TData extends RowData>({
           aria-label="Reset all filters"
           variant="outline"
           size="icon"
-          className="size-8"
           onClick={onFiltersReset}
         >
           <IconPlaceholder
@@ -255,7 +254,6 @@ function DataTableFilterMenuContent<TData extends RowData>({
               aria-label="Open filter command menu"
               variant="outline"
               size={filters.length > 0 ? "icon" : "default"}
-              className="font-normal"
               ref={triggerRef}
               onKeyDown={onTriggerKeyDown}
               disabled={disabled}
@@ -409,7 +407,7 @@ function DataTableFilterItem<TData extends RowData>({
             render={
               <Button
                 variant="ghost"
-                className="rounded-none rounded-l-md border border-r-0 border-input font-normal dark:bg-input/30"
+                className="rounded-none rounded-l-md border border-r-0 border-input dark:bg-input/30"
               />
             }
           >
@@ -501,7 +499,7 @@ function DataTableFilterItem<TData extends RowData>({
         <Button
           aria-controls={filterItemId}
           variant="ghost"
-          className="h-full rounded-none rounded-r-md border border-l-0 border-input px-1.5 font-normal dark:bg-input/30"
+          className="h-full rounded-none rounded-r-md border border-l-0 border-input px-1.5 dark:bg-input/30"
           onClick={() => onFilterRemove(filter.filterId)}
         >
           <IconPlaceholder
@@ -739,7 +737,7 @@ function onFilterInputRender<TData extends RowData>({
                 id={inputId}
                 aria-controls={inputListboxId}
                 variant="ghost"
-                className="h-full min-w-16 rounded-none border border-input px-1.5 font-normal dark:bg-input/30"
+                className="h-full min-w-16 rounded-none border border-input px-1.5 dark:bg-input/30"
               />
             }
           >
@@ -846,7 +844,7 @@ function onFilterInputRender<TData extends RowData>({
                 aria-controls={inputListboxId}
                 variant="ghost"
                 className={cn(
-                  "h-full rounded-none border px-1.5 font-normal dark:bg-input/30",
+                  "h-full rounded-none border px-1.5 dark:bg-input/30",
                   !filter.value && "text-muted-foreground",
                 )}
               />

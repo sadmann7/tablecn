@@ -189,7 +189,6 @@ function DataTableSortListContent<TData extends RowData>({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
@@ -205,7 +204,7 @@ function DataTableSortListContent<TData extends RowData>({
             {sorting.length > 0 && (
               <Badge
                 variant="secondary"
-                className="h-[18.24px] rounded-md px-[5.12px] font-mono text-[10.4px] font-normal"
+                className="h-[18.24px] px-[5.12px] font-mono text-[10.4px]"
               >
                 {sorting.length}
               </Badge>
@@ -259,7 +258,6 @@ function DataTableSortListContent<TData extends RowData>({
           )}
           <div className="flex w-full items-center gap-2">
             <Button
-              className="rounded"
               ref={addButtonRef}
               onClick={onSortAdd}
               disabled={columns.length === 0}
@@ -267,11 +265,7 @@ function DataTableSortListContent<TData extends RowData>({
               Add sort
             </Button>
             {sorting.length > 0 && (
-              <Button
-                variant="outline"
-                className="rounded"
-                onClick={onSortingReset}
-              >
+              <Button variant="outline" onClick={onSortingReset}>
                 Reset sorting
               </Button>
             )}
@@ -280,10 +274,10 @@ function DataTableSortListContent<TData extends RowData>({
       </Popover>
       <SortableOverlay>
         <div className="flex items-center gap-2">
-          <div className="h-8 w-45 rounded-sm bg-primary/10" />
-          <div className="h-8 w-24 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
+          <div className="h-8 w-45 rounded-lg bg-primary/10" />
+          <div className="h-8 w-24 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
         </div>
       </SortableOverlay>
     </Sortable>
@@ -351,7 +345,7 @@ function DataTableSortItem({
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               variant="outline"
-              className="w-44 justify-between rounded font-normal"
+              className="w-44 justify-between"
             >
               <span className="truncate">{columnLabels.get(sort.id)}</span>
               <IconPlaceholder
@@ -395,10 +389,7 @@ function DataTableSortItem({
             onSortUpdate(sort.id, { desc: value === "desc" })
           }
         >
-          <SelectTrigger
-            aria-controls={directionListboxId}
-            className="w-24 rounded"
-          >
+          <SelectTrigger aria-controls={directionListboxId} className="w-24">
             <SelectValue />
           </SelectTrigger>
           <SelectContent
@@ -418,7 +409,7 @@ function DataTableSortItem({
           aria-controls={sortItemId}
           variant="outline"
           size="icon"
-          className="size-8 shrink-0 rounded"
+          className="shrink-0"
           onClick={() => onSortRemove(sort.id)}
         >
           <IconPlaceholder
@@ -430,11 +421,7 @@ function DataTableSortItem({
           />
         </Button>
         <SortableItemHandle asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0 rounded"
-          >
+          <Button variant="outline" size="icon" className="shrink-0">
             <IconPlaceholder
               lucide="GripVertical"
               tabler="IconGripVertical"

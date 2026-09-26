@@ -59,7 +59,7 @@ export function DataGridViewMenu<TData extends RowData>({
             role="combobox"
             dir={dir}
             variant="outline"
-            className="ms-auto hidden h-8 font-normal lg:flex"
+            className="ms-auto hidden lg:flex"
             disabled={disabled}
           />
         }

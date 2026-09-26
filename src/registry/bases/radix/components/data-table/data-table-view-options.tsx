@@ -53,7 +53,7 @@ export function DataTableViewOptions<TData extends RowData>({
           aria-label="Toggle columns"
           role="combobox"
           variant="outline"
-          className="ml-auto hidden h-8 font-normal lg:flex"
+          className="ml-auto hidden lg:flex"
           disabled={disabled}
         >
           <IconPlaceholder

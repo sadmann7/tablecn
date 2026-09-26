@@ -176,7 +176,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="border-dashed font-normal">
+        <Button variant="outline" className="border-dashed">
           {columnFilterValue ? (
             <div
               role="button"
@@ -238,7 +238,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[0]?.toString()}
                 onChange={onFromInputChange}
-                className={cn("h-8 w-24", unit && "pr-8")}
+                className={cn("w-24", unit && "pr-8")}
               />
               {unit && (
                 <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-sm text-muted-foreground">
@@ -262,7 +262,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[1]?.toString()}
                 onChange={onToInputChange}
-                className={cn("h-8 w-24", unit && "pr-8")}
+                className={cn("w-24", unit && "pr-8")}
               />
               {unit && (
                 <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-sm text-muted-foreground">

@@ -106,7 +106,7 @@ function DataTableToolbarFilter<TData extends RowData>({
             <DataTableFilterInput
               column={column}
               placeholder={columnMeta.placeholder ?? columnMeta.label}
-              className="h-8 w-40 lg:w-56"
+              className="w-40 lg:w-56"
             />
           );
 
@@ -118,7 +118,7 @@ function DataTableToolbarFilter<TData extends RowData>({
                 type="number"
                 inputMode="numeric"
                 placeholder={columnMeta.placeholder ?? columnMeta.label}
-                className={cn("h-8 w-30", columnMeta.unit && "pr-8")}
+                className={cn("w-30", columnMeta.unit && "pr-8")}
               />
               {columnMeta.unit && (
                 <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-sm text-muted-foreground">

@@ -110,7 +110,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="border-dashed font-normal">
+        <Button variant="outline" className="border-dashed">
           {selectedValues?.size > 0 ? (
             <div
               role="button"
@@ -143,18 +143,12 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
                 orientation="vertical"
                 className="mx-0.5 data-[orientation=vertical]:h-4"
               />
-              <Badge
-                variant="secondary"
-                className="rounded-sm px-1 font-normal lg:hidden"
-              >
+              <Badge variant="secondary" className="px-1 lg:hidden">
                 {selectedValues.size}
               </Badge>
               <div className="hidden items-center gap-1 lg:flex">
                 {selectedValues.size > 2 ? (
-                  <Badge
-                    variant="secondary"
-                    className="rounded-sm px-1 font-normal"
-                  >
+                  <Badge variant="secondary" className="px-1">
                     {selectedValues.size} selected
                   </Badge>
                 ) : (
@@ -164,7 +158,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
                       <Badge
                         variant="secondary"
                         key={option.value}
-                        className="rounded-sm px-1 font-normal"
+                        className="px-1"
                       >
                         {option.label}
                       </Badge>
