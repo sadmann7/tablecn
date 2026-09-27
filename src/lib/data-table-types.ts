@@ -7,10 +7,6 @@ import type {
   joinOperators,
 } from "@/lib/data-table-utils";
 
-export interface DataTableMeta {
-  queryKeys?: QueryKeys;
-}
-
 export interface DataTableColumnMeta {
   label?: string;
   placeholder?: string;

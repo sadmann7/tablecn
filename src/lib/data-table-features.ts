@@ -27,7 +27,6 @@ import {
 import type {
   ColumnFilterItem,
   DataTableColumnMeta,
-  DataTableMeta,
   FilterVariant,
   JoinOperator,
 } from "@/lib/data-table-types";
@@ -219,7 +218,6 @@ export const dataTableFeatures = tableFeatures({
   facetedMinMaxValues: createFacetedMinMaxValues(),
   paginatedRowModel: createPaginatedRowModel(),
   sortedRowModel: createSortedRowModel(),
-  tableMeta: metaHelper<DataTableMeta>(),
   columnMeta: metaHelper<DataTableColumnMeta>(),
 });
 

@@ -321,16 +321,6 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       manualPagination: isServer,
       manualSorting: isServer,
       manualFiltering: isServer,
-      meta: {
-        ...tableProps.meta,
-        queryKeys: {
-          page: pageKey,
-          perPage: perPageKey,
-          sort: sortKey,
-          filters: filtersKey,
-          joinOperator: joinOperatorKey,
-        },
-      },
     },
     (state) => ({
       filters: state.filters,
