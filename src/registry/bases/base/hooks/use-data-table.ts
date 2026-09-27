@@ -33,6 +33,7 @@ import {
 import {
   getCanWriteAsKeys,
   getIsMultiValueVariant,
+  getValidFilters,
   joinOperators,
   toColumnFilterItem,
 } from "@/lib/data-table-utils";
@@ -243,8 +244,11 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   const debouncedSetUrlFilters = useDebouncedCallback(
     (filters: ColumnFilterItem[]) => {
+      // Filters without a value don't filter, so they don't pick the format.
+      const validFilters = getValidFilters(filters);
       const withKeys =
-        !withJsonFilters && getCanWriteAsKeys(filters, filterableColumnIds);
+        !withJsonFilters &&
+        getCanWriteAsKeys(validFilters, filterableColumnIds);
 
       void setPage(1);
       void setUrlFilters(withKeys || filters.length === 0 ? null : filters);
@@ -253,7 +257,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
           filterableColumnIds.map((id) => [
             id,
             withKeys
-              ? (filters.find((filter) => filter.id === id)?.value ?? null)
+              ? (validFilters.find((filter) => filter.id === id)?.value ?? null)
               : null,
           ]),
         ) as typeof filterValues,

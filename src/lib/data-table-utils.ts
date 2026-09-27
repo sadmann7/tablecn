@@ -274,7 +274,7 @@ export function getValidFilters<TFilterItem extends ColumnFilterItem>(
       filter.operator === "isEmpty" ||
       filter.operator === "isNotEmpty" ||
       (Array.isArray(filter.value)
-        ? filter.value.length > 0
+        ? filter.value.some((value) => value !== "")
         : filter.value !== "" &&
           filter.value !== null &&
           filter.value !== undefined),
