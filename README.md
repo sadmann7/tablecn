@@ -6,7 +6,7 @@ Data table and data grid components built with shadcn/ui, featuring sorting, fil
 
 ## Documentation
 
-See the [documentation](https://diceui.com/docs/components/data-table) to get started.
+See the [documentation](https://diceui.com/docs/components/radix/data-table) to get started.
 
 ## Tech Stack
 
