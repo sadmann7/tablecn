@@ -49,30 +49,30 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 const SORT_SHORTCUT_KEY = "s";
 const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 
-interface DataTableSortListProps<
+interface DataTableSortMenuProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof PopoverContent> {
   table: Table<DataTableFeatures, TData>;
   disabled?: boolean;
 }
 
-export function DataTableSortList<TData extends RowData>(
-  props: DataTableSortListProps<TData>,
+export function DataTableSortMenu<TData extends RowData>(
+  props: DataTableSortMenuProps<TData>,
 ) {
   return (
     <Subscribe source={props.table.atoms.sorting}>
-      {(sorting) => <DataTableSortListContent {...props} sorting={sorting} />}
+      {(sorting) => <DataTableSortMenuContent {...props} sorting={sorting} />}
     </Subscribe>
   );
 }
 
-function DataTableSortListContent<TData extends RowData>({
+function DataTableSortMenuContent<TData extends RowData>({
   table,
   disabled,
   className,
   sorting,
   ...props
-}: DataTableSortListProps<TData> & {
+}: DataTableSortMenuProps<TData> & {
   sorting: SortingState;
 }) {
   const id = React.useId();

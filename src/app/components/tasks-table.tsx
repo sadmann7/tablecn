@@ -8,9 +8,9 @@ import type { Filter, Mode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
-import { DataTableFilterList } from "@/registry/bases/radix/components/data-table/data-table-filter-list";
+import { DataTableCommandFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-command-filter-menu";
 import { DataTableFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-filter-menu";
-import { DataTableSortList } from "@/registry/bases/radix/components/data-table/data-table-sort-list";
+import { DataTableSortMenu } from "@/registry/bases/radix/components/data-table/data-table-sort-menu";
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
 import {
   useDataTable,
@@ -100,16 +100,16 @@ export function TasksTable({
       >
         {enableAdvancedFilter ? (
           <DataTableAdvancedToolbar table={table}>
-            <DataTableSortList table={table} align="start" />
+            <DataTableSortMenu table={table} align="start" />
             {filter === "advanced" ? (
-              <DataTableFilterList table={table} align="start" />
-            ) : (
               <DataTableFilterMenu table={table} align="start" />
+            ) : (
+              <DataTableCommandFilterMenu table={table} align="start" />
             )}
           </DataTableAdvancedToolbar>
         ) : (
           <DataTableToolbar table={table}>
-            <DataTableSortList table={table} align="end" />
+            <DataTableSortMenu table={table} align="end" />
           </DataTableToolbar>
         )}
       </DataTable>

@@ -143,10 +143,10 @@
       ]
     },
     {
-      "name": "data-table-sort-list",
+      "name": "data-table-sort-menu",
       "type": "registry:component",
-      "title": "Data Table Sort List",
-      "description": "A sort list component for the data table",
+      "title": "Data Table Sort Menu",
+      "description": "A sort menu component for the data table",
       "registryDependencies": [
         "badge",
         "button",
@@ -166,9 +166,9 @@
       ],
       "files": [
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-sort-list.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-sort-menu.tsx",
           "type": "registry:component",
-          "target": "src/components/data-table/data-table-sort-list.tsx"
+          "target": "src/components/data-table/data-table-sort-menu.tsx"
         },
         {
           "path": "src/registry/bases/radix/ui/sortable.tsx",
@@ -202,10 +202,10 @@
       ]
     },
     {
-      "name": "data-table-filter-list",
+      "name": "data-table-filter-menu",
       "type": "registry:component",
-      "title": "Data Table Filter List",
-      "description": "A filter list component for the data table",
+      "title": "Data Table Filter Menu",
+      "description": "A filter menu component for the data table",
       "registryDependencies": [
         "badge",
         "button",
@@ -228,9 +228,9 @@
       ],
       "files": [
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-filter-list.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-filter-menu.tsx",
           "type": "registry:component",
-          "target": "src/components/data-table/data-table-filter-list.tsx"
+          "target": "src/components/data-table/data-table-filter-menu.tsx"
         },
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-range-filter.tsx",
@@ -296,10 +296,10 @@
       ]
     },
     {
-      "name": "data-table-filter-menu",
+      "name": "data-table-command-filter-menu",
       "type": "registry:component",
-      "title": "Data Table Filter Menu",
-      "description": "A filter menu component for the data table",
+      "title": "Data Table Command Filter Menu",
+      "description": "A command filter menu component for the data table",
       "registryDependencies": [
         "badge",
         "button",
@@ -318,9 +318,9 @@
       ],
       "files": [
         {
-          "path": "src/registry/bases/radix/components/data-table/data-table-filter-menu.tsx",
+          "path": "src/registry/bases/radix/components/data-table/data-table-command-filter-menu.tsx",
           "type": "registry:component",
-          "target": "src/components/data-table/data-table-filter-menu.tsx"
+          "target": "src/components/data-table/data-table-command-filter-menu.tsx"
         },
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-range-filter.tsx",
