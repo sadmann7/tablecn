@@ -711,7 +711,7 @@ function onFilterInputRender<TData extends RowData>({
               aria-controls={inputListboxId}
               aria-label={`${columnMeta?.label} filter value${multiple ? "s" : ""}`}
               variant="outline"
-              className="w-full"
+              className="w-full hover:bg-muted/50 aria-expanded:bg-background dark:aria-expanded:bg-input/30"
             >
               <FacetedBadgeList
                 options={columnMeta?.options}
@@ -733,11 +733,9 @@ function onFilterInputRender<TData extends RowData>({
                 {columnMeta?.options?.map((option) => (
                   <FacetedItem key={option.value} value={option.value}>
                     {option.icon && <option.icon />}
-                    <span>{option.label}</span>
+                    <span className="flex-1 truncate">{option.label}</span>
                     {option.count && (
-                      <span className="ml-auto font-mono text-xs">
-                        {option.count}
-                      </span>
+                      <span className="font-mono text-xs">{option.count}</span>
                     )}
                   </FacetedItem>
                 ))}

@@ -104,7 +104,7 @@ export function TasksTable({
             {filter === "advanced" ? (
               <DataTableFilterList table={table} align="start" />
             ) : (
-              <DataTableFilterMenu table={table} />
+              <DataTableFilterMenu table={table} align="start" />
             )}
           </DataTableAdvancedToolbar>
         ) : (

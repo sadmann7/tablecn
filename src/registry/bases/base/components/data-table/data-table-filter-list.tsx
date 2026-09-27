@@ -715,7 +715,7 @@ function onFilterInputRender<TData extends RowData>({
                 aria-controls={inputListboxId}
                 aria-label={`${columnMeta?.label} filter value${multiple ? "s" : ""}`}
                 variant="outline"
-                className="w-full"
+                className="w-full hover:bg-muted/50 aria-expanded:bg-background dark:aria-expanded:bg-input/30"
               />
             }
           >

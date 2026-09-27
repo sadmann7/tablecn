@@ -1,10 +1,9 @@
 "use client";
 
-import type * as React from "react";
-
 import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
 import { CheckIcon, SearchIcon } from "lucide-react";
+import * as React from "react";
 
 import {
   Dialog,
@@ -186,11 +185,11 @@ function CommandShortcut({
 export {
   Command,
   CommandDialog,
+  CommandInput,
+  CommandList,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
-  CommandList,
-  CommandSeparator,
   CommandShortcut,
+  CommandSeparator,
 };
