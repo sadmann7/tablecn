@@ -45,21 +45,12 @@ export interface FilterOperatorOption {
   value: FilterOperator;
 }
 
-/**
- * A single sort. `TColumnId` narrows the column id once a parser has checked it
- * against a known list of columns.
- */
 export interface ColumnSortItem<
   TColumnId extends string = string,
 > extends ColumnSort {
   id: TColumnId;
 }
 
-/**
- * A single filter condition. This is the wire format shared by the URL, the
- * table's `filters` state slice, and server adapters. `TColumnId` narrows the
- * column id once a parser has checked it against a known list of columns.
- */
 export interface ColumnFilterItem<TColumnId extends string = string> {
   id: TColumnId;
   value: string | string[];
@@ -68,10 +59,6 @@ export interface ColumnFilterItem<TColumnId extends string = string> {
   filterId: string;
 }
 
-/**
- * Everything a server needs to answer a data table request, independent of
- * the database or ORM used to answer it.
- */
 export interface DataTableQuery<
   TFilterColumnId extends string = string,
   TSortColumnId extends string = TFilterColumnId,

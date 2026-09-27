@@ -31,8 +31,8 @@ import {
   dataTableFeatures,
 } from "@/lib/data-table-features";
 import {
+  getCanWriteAsKeys,
   getIsMultiValueVariant,
-  getIsSimpleFilter,
   joinOperators,
   toColumnFilterItem,
 } from "@/lib/data-table-utils";
@@ -346,24 +346,6 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   );
 
   return React.useMemo(() => ({ table }), [table]);
-}
-
-/**
- * Per-column keys hold at most one toolbar filter per column, read back in
- * column order, so only write them when that round-trips exactly.
- */
-function getCanWriteAsKeys(filters: ColumnFilterItem[], columnIds: string[]) {
-  let lastIndex = -1;
-
-  return filters.every((filter) => {
-    const index = columnIds.indexOf(filter.id);
-    if (index <= lastIndex || !getIsSimpleFilter(filter)) return false;
-    if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
-      return false;
-    }
-    lastIndex = index;
-    return true;
-  });
 }
 
 export { useDataTable, type UseDataTableProps };

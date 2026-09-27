@@ -223,6 +223,27 @@ export function toColumnFilterItem<TColumnId extends string>(
   return { id, variant, operator, value: toFilterString(value), filterId };
 }
 
+/**
+ * Per-column keys hold at most one toolbar filter per column, read back in
+ * column order, so only write them when that round-trips exactly.
+ */
+export function getCanWriteAsKeys(
+  filters: ColumnFilterItem[],
+  columnIds: string[],
+) {
+  let lastIndex = -1;
+
+  return filters.every((filter) => {
+    const index = columnIds.indexOf(filter.id);
+    if (index <= lastIndex || !getIsSimpleFilter(filter)) return false;
+    if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
+      return false;
+    }
+    lastIndex = index;
+    return true;
+  });
+}
+
 export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 
