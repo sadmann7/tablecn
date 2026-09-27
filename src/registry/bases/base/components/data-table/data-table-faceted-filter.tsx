@@ -5,7 +5,7 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnFilterItem, Option } from "@/lib/data-table-types";
+import type { Option } from "@/lib/data-table-types";
 
 import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
@@ -44,9 +44,9 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
 
   return (
     <Subscribe
-      source={column.table.atoms.filters}
-      selector={(filters: ColumnFilterItem[]) =>
-        getSimpleFilter(filters, column.id)
+      source={column.table.atoms.columnFilters}
+      selector={() =>
+        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
       }
     >
       {(filter) => (
@@ -86,15 +86,9 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
           newSelectedValues.add(option.value);
         }
         const filterValues = Array.from(newSelectedValues);
-        column.table.setSimpleFilter(
-          column.id,
-          filterValues.length ? filterValues : undefined,
-        );
+        column.setFilterValue(filterValues.length ? filterValues : undefined);
       } else {
-        column.table.setSimpleFilter(
-          column.id,
-          isSelected ? undefined : [option.value],
-        );
+        column.setFilterValue(isSelected ? undefined : [option.value]);
         setOpen(false);
       }
     },
@@ -105,7 +99,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
     (event?: React.MouseEvent) => {
       event?.stopPropagation();
       if (!column) return;
-      column.table.setSimpleFilter(column.id, undefined);
+      column.setFilterValue(undefined);
     },
     [column],
   );

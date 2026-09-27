@@ -1,4 +1,5 @@
 import {
+  type ColumnFiltersState,
   type PaginationState,
   type RowData,
   type SortingState,
@@ -20,8 +21,8 @@ import {
 import * as React from "react";
 
 import type {
-  ColumnFilterItem,
   DataTableUrlFormat,
+  FilterVariant,
   JoinOperator,
   QueryKeys,
 } from "@/lib/data-table-types";
@@ -36,6 +37,7 @@ import {
   getIsMultiValueVariant,
   getValidFilters,
   joinOperators,
+  resolveColumnFilter,
   toColumnFilterItem,
 } from "@/lib/data-table-utils";
 import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
@@ -203,11 +205,30 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     [filterableColumns],
   );
 
+  const variantsByColumnId = React.useMemo(
+    () =>
+      new Map<string, FilterVariant>(
+        filterableColumns.map((column) => [column.id, column.variant]),
+      ),
+    [filterableColumns],
+  );
+
+  const resolveFilters = React.useCallback(
+    (filters: ColumnFiltersState) =>
+      filters.map((filter) =>
+        resolveColumnFilter(
+          filter,
+          variantsByColumnId.get(filter.id) ?? "text",
+        ),
+      ),
+    [variantsByColumnId],
+  );
+
   const [urlFilters, setUrlFilters] = useQueryState(
     filtersKey,
     getFiltersStateParser(filterableColumnIds)
       .withOptions(queryStateOptions)
-      .withDefault(initialState?.filters ?? []),
+      .withDefault(resolveFilters(initialState?.columnFilters ?? [])),
   );
 
   const filterParsers = React.useMemo(() => {
@@ -234,7 +255,8 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   );
 
   const debouncedSetUrlFilters = useDebouncedCallback(
-    (filters: ColumnFilterItem[]) => {
+    (columnFilters: ColumnFiltersState) => {
+      const filters = resolveFilters(columnFilters);
       // Filters without a value don't filter, so they don't pick the format.
       const validFilters = getValidFilters(filters);
       const withKeys =
@@ -258,21 +280,23 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   );
 
   // Same order as `getDataTableQuery`: `filters` items, then per-column keys.
-  const [filters, setFilters] = React.useState<ColumnFilterItem[]>(() => [
-    ...urlFilters,
-    ...filterableColumns.flatMap((column) => {
-      const item = toColumnFilterItem(
-        column.id,
-        column.variant,
-        filterValues[column.id],
-      );
-      return item ? [item] : [];
-    }),
-  ]);
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    () => [
+      ...urlFilters,
+      ...filterableColumns.flatMap((column) => {
+        const item = toColumnFilterItem(
+          column.id,
+          column.variant,
+          filterValues[column.id],
+        );
+        return item ? [item] : [];
+      }),
+    ],
+  );
 
-  const onFiltersChange = React.useCallback(
-    (updaterOrValue: Updater<ColumnFilterItem[]>) => {
-      setFilters((prev) => {
+  const onColumnFiltersChange = React.useCallback(
+    (updaterOrValue: Updater<ColumnFiltersState>) => {
+      setColumnFilters((prev) => {
         const next =
           typeof updaterOrValue === "function"
             ? updaterOrValue(prev)
@@ -307,23 +331,19 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       state: {
         pagination,
         sorting,
-        filters,
+        columnFilters,
         joinOperator,
-      },
-      defaultColumn: {
-        ...tableProps.defaultColumn,
-        enableColumnFilter: false,
       },
       onPaginationChange,
       onSortingChange,
-      onFiltersChange,
+      onColumnFiltersChange,
       onJoinOperatorChange,
       manualPagination: isServer,
       manualSorting: isServer,
       manualFiltering: isServer,
     },
     (state) => ({
-      filters: state.filters,
+      columnFilters: state.columnFilters,
       joinOperator: state.joinOperator,
       pagination: state.pagination,
       sorting: state.sorting,

@@ -10,7 +10,6 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/base/components/data-table/data-table-date-filter";
@@ -39,7 +38,8 @@ export function DataTableToolbar<TData extends RowData>({
   );
 
   const onReset = React.useCallback(() => {
-    table.resetFilters(true);
+    table.resetColumnFilters(true);
+    table.resetJoinOperator(true);
   }, [table]);
 
   return (
@@ -57,7 +57,7 @@ export function DataTableToolbar<TData extends RowData>({
           <DataTableToolbarFilter key={column.id} column={column} />
         ))}
         <Subscribe
-          source={table.atoms.filters}
+          source={table.atoms.columnFilters}
           selector={(filters) => filters.length > 0}
         >
           {(isFiltered) =>
@@ -179,38 +179,34 @@ function readFilterInputValue(value: unknown) {
   return "";
 }
 
+interface DataTableFilterInputProps<
+  TData extends RowData,
+> extends React.ComponentProps<"input"> {
+  column: Column<DataTableFeatures, TData>;
+}
+
 function DataTableFilterInput<TData extends RowData>({
   column,
-  placeholder,
-  className,
   type = "text",
-  inputMode,
-}: {
-  column: Column<DataTableFeatures, TData>;
-  placeholder?: string;
-  className?: string;
-  type?: React.HTMLInputTypeAttribute;
-  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
-}) {
+  ...props
+}: DataTableFilterInputProps<TData>) {
   return (
     <Subscribe
-      source={column.table.atoms.filters}
-      selector={(filters: ColumnFilterItem[]) =>
-        getSimpleFilter(filters, column.id)
+      source={column.table.atoms.columnFilters}
+      selector={() =>
+        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
       }
     >
       {(filter) => (
         <Input
           type={type}
-          inputMode={inputMode}
-          placeholder={placeholder}
+          {...props}
           value={readFilterInputValue(
             filter ? toColumnFilterValue(filter) : undefined,
           )}
           onChange={(event) =>
-            column.table.setSimpleFilter(column.id, event.target.value)
+            column.setFilterValue(event.target.value || undefined)
           }
-          className={className}
         />
       )}
     </Subscribe>

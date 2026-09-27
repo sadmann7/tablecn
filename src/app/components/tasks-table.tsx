@@ -92,6 +92,20 @@ export function TasksTable({
       : { ...tableProps, pageCount },
   );
 
+  const titleColumn = table.getColumn("title");
+  const statusColumn = table.getColumn("status");
+
+  console.log({
+    titleColumn,
+    statusColumn,
+    isTitleColumnFiltered: titleColumn?.getIsFiltered(),
+    titleColumnFilterValue: titleColumn?.getFilterValue(),
+    isTitleColumnSorted: titleColumn?.getIsSorted(),
+    isStatusColumnFiltered: statusColumn?.getIsFiltered(),
+    statusColumnFilterValue: statusColumn?.getFilterValue(),
+    isStatusColumnSorted: statusColumn?.getIsSorted(),
+  });
+
   return (
     <>
       <DataTable

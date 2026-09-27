@@ -6,7 +6,6 @@ import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { formatDate } from "@/lib/format";
@@ -67,9 +66,9 @@ export function DataTableDateFilter<TData extends RowData>({
 }: DataTableDateFilterProps<TData>) {
   return (
     <Subscribe
-      source={column.table.atoms.filters}
-      selector={(filters: ColumnFilterItem[]) =>
-        getSimpleFilter(filters, column.id)
+      source={column.table.atoms.columnFilters}
+      selector={() =>
+        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
       }
     >
       {(filter) => (
@@ -112,19 +111,16 @@ function DataTableDateFilterContent<TData extends RowData>({
   const onSelect = React.useCallback(
     (date: Date | DateRange | undefined) => {
       if (!date) {
-        column.table.setSimpleFilter(column.id, undefined);
+        column.setFilterValue(undefined);
         return;
       }
 
       if (multiple && !("getTime" in date)) {
         const from = date.from?.getTime();
         const to = date.to?.getTime();
-        column.table.setSimpleFilter(
-          column.id,
-          from || to ? [from, to] : undefined,
-        );
+        column.setFilterValue(from || to ? [from, to] : undefined);
       } else if (!multiple && "getTime" in date) {
-        column.table.setSimpleFilter(column.id, date.getTime());
+        column.setFilterValue(date.getTime());
       }
     },
     [column, multiple],
@@ -133,7 +129,7 @@ function DataTableDateFilterContent<TData extends RowData>({
   const onReset = React.useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation();
-      column.table.setSimpleFilter(column.id, undefined);
+      column.setFilterValue(undefined);
     },
     [column],
   );

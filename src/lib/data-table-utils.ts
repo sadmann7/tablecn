@@ -1,4 +1,4 @@
-import type { Column, RowData } from "@tanstack/react-table";
+import type { Column, ColumnFilter, RowData } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
@@ -224,22 +224,57 @@ export function toColumnFilterItem<TColumnId extends string>(
 }
 
 /**
- * Per-column keys hold at most one toolbar filter per column, read back in
- * column order, so only write them when that round-trips exactly.
+ * Fills in a `columnFilters` item. Toolbar filters (no `operator`) get the
+ * variant's toolbar operator, and their toolbar value becomes filter strings.
+ */
+export function resolveColumnFilter(
+  filter: ColumnFilter,
+  variant: FilterVariant,
+): ColumnFilterItem {
+  const filterId = filter.filterId ?? `${filter.id}-filter`;
+
+  if (filter.operator) {
+    return {
+      id: filter.id,
+      variant: filter.variant ?? variant,
+      operator: filter.operator,
+      value: Array.isArray(filter.value)
+        ? filter.value.map(toFilterString)
+        : toFilterString(filter.value),
+      filterId,
+    };
+  }
+
+  const item = toColumnFilterItem(filter.id, variant, filter.value);
+  if (item) return { ...item, filterId };
+
+  return {
+    id: filter.id,
+    variant,
+    operator: getSimpleFilterOperator(variant),
+    value: getIsMultiValueVariant(variant) ? [] : "",
+    filterId,
+  };
+}
+
+/**
+ * Per-column keys hold at most one toolbar filter per column, so only write
+ * them when each filter round-trips. They're read back in column order,
+ * which doesn't change what the filters match.
  */
 export function getCanWriteAsKeys(
   filters: ColumnFilterItem[],
   columnIds: string[],
 ) {
-  let lastIndex = -1;
+  const seenIds = new Set<string>();
 
   return filters.every((filter) => {
-    const index = columnIds.indexOf(filter.id);
-    if (index <= lastIndex || !getIsSimpleFilter(filter)) return false;
+    if (!columnIds.includes(filter.id) || seenIds.has(filter.id)) return false;
+    if (!getIsSimpleFilter(filter)) return false;
     if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
       return false;
     }
-    lastIndex = index;
+    seenIds.add(filter.id);
     return true;
   });
 }

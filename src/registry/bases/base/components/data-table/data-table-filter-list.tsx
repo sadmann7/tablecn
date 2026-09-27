@@ -87,7 +87,7 @@ export function DataTableFilterList<TData extends RowData>({
     <Subscribe
       source={table.store}
       selector={(state) => ({
-        filters: state.filters,
+        filters: table.getColumnFilterItems(),
         joinOperator: state.joinOperator,
       })}
     >
@@ -124,9 +124,7 @@ function DataTableFilterListContent<TData extends RowData>({
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const columns = React.useMemo(() => {
-    return table
-      .getAllColumns()
-      .filter((column) => column.columnDef.enableColumnFilter);
+    return table.getAllColumns().filter((column) => column.getCanFilter());
   }, [table]);
 
   const onFilterAdd = React.useCallback(() => {
@@ -134,7 +132,7 @@ function DataTableFilterListContent<TData extends RowData>({
 
     if (!column) return;
 
-    table.addFilter({
+    table.addColumnFilter({
       id: column.id,
       value: "",
       variant: column.columnDef.meta?.variant ?? "text",
@@ -150,14 +148,14 @@ function DataTableFilterListContent<TData extends RowData>({
       filterId: string,
       updates: Partial<Omit<ColumnFilterItem, "filterId">>,
     ) => {
-      table.updateFilter(filterId, updates);
+      table.updateColumnFilter(filterId, updates);
     },
     [table],
   );
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      table.removeFilter(filterId);
+      table.removeColumnFilter(filterId);
       requestAnimationFrame(() => {
         addButtonRef.current?.focus();
       });
@@ -166,7 +164,8 @@ function DataTableFilterListContent<TData extends RowData>({
   );
 
   const onFiltersReset = React.useCallback(() => {
-    table.resetFilters(true);
+    table.resetColumnFilters(true);
+    table.resetJoinOperator(true);
   }, [table]);
 
   const setJoinOperator = React.useCallback(
@@ -215,7 +214,7 @@ function DataTableFilterListContent<TData extends RowData>({
   return (
     <Sortable
       value={filters}
-      onValueChange={(value) => table.setFilters(value)}
+      onValueChange={(value) => table.setColumnFilters(value)}
       getItemValue={(item) => item.filterId}
     >
       <Popover open={open} onOpenChange={setOpen}>

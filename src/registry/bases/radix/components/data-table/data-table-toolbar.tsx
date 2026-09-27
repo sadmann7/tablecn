@@ -10,7 +10,6 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/radix/components/data-table/data-table-date-filter";
@@ -39,7 +38,8 @@ export function DataTableToolbar<TData extends RowData>({
   );
 
   const onReset = React.useCallback(() => {
-    table.resetFilters(true);
+    table.resetColumnFilters(true);
+    table.resetJoinOperator(true);
   }, [table]);
 
   return (
@@ -57,7 +57,7 @@ export function DataTableToolbar<TData extends RowData>({
           <DataTableToolbarFilter key={column.id} column={column} />
         ))}
         <Subscribe
-          source={table.atoms.filters}
+          source={table.atoms.columnFilters}
           selector={(filters) => filters.length > 0}
         >
           {(isFiltered) =>
@@ -194,9 +194,9 @@ function DataTableFilterInput<TData extends RowData>({
 }: DataTableFilterInputProps<TData>) {
   return (
     <Subscribe
-      source={column.table.atoms.filters}
-      selector={(filters: ColumnFilterItem[]) =>
-        getSimpleFilter(filters, column.id)
+      source={column.table.atoms.columnFilters}
+      selector={() =>
+        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
       }
     >
       {(filter) => (
@@ -208,7 +208,7 @@ function DataTableFilterInput<TData extends RowData>({
             filter ? toColumnFilterValue(filter) : undefined,
           )}
           onChange={(event) =>
-            column.table.setSimpleFilter(column.id, event.target.value)
+            column.setFilterValue(event.target.value || undefined)
           }
           {...props}
         />

@@ -60,7 +60,10 @@ export function DataTableFilterMenu<TData extends RowData>({
   ...props
 }: DataTableFilterMenuProps<TData>) {
   return (
-    <Subscribe source={table.atoms.filters}>
+    <Subscribe
+      source={table.atoms.columnFilters}
+      selector={() => table.getColumnFilterItems()}
+    >
       {(filters) => (
         <DataTableFilterMenuContent
           table={table}
@@ -88,9 +91,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
   const id = React.useId();
 
   const columns = React.useMemo(() => {
-    return table
-      .getAllColumns()
-      .filter((column) => column.columnDef.enableColumnFilter);
+    return table.getAllColumns().filter((column) => column.getCanFilter());
   }, [table]);
 
   const [open, setOpen] = React.useState(false);
@@ -136,7 +137,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
       const filterValue =
         column.columnDef.meta?.variant === "multiSelect" ? [value] : value;
 
-      table.addFilter({
+      table.addColumnFilter({
         id: column.id,
         value: filterValue,
         variant: column.columnDef.meta?.variant ?? "text",
@@ -159,7 +160,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      table.removeFilter(filterId);
+      table.removeColumnFilter(filterId);
       requestAnimationFrame(() => {
         triggerRef.current?.focus();
       });
@@ -172,13 +173,14 @@ function DataTableFilterMenuContent<TData extends RowData>({
       filterId: string,
       updates: Partial<Omit<ColumnFilterItem, "filterId">>,
     ) => {
-      table.updateFilter(filterId, updates);
+      table.updateColumnFilter(filterId, updates);
     },
     [table],
   );
 
   const onFiltersReset = React.useCallback(() => {
-    table.resetFilters(true);
+    table.resetColumnFilters(true);
+    table.resetJoinOperator(true);
   }, [table]);
 
   React.useEffect(() => {

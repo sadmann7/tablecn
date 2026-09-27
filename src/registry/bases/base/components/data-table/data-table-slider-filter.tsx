@@ -5,7 +5,6 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { Button } from "@/registry/bases/base/ui/button";
@@ -62,9 +61,9 @@ export function DataTableSliderFilter<TData extends RowData>({
 }: DataTableSliderFilterProps<TData>) {
   return (
     <Subscribe
-      source={column.table.atoms.filters}
-      selector={(filters: ColumnFilterItem[]) =>
-        getSimpleFilter(filters, column.id)
+      source={column.table.atoms.columnFilters}
+      selector={() =>
+        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
       }
     >
       {(filter) => (
@@ -135,7 +134,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
       if (!Number.isNaN(numValue) && numValue >= min && numValue <= range[1]) {
-        column.table.setSimpleFilter(column.id, [numValue, range[1]]);
+        column.setFilterValue([numValue, range[1]]);
       }
     },
     [column, min, range],
@@ -145,7 +144,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
       if (!Number.isNaN(numValue) && numValue <= max && numValue >= range[0]) {
-        column.table.setSimpleFilter(column.id, [range[0], numValue]);
+        column.setFilterValue([range[0], numValue]);
       }
     },
     [column, max, range],
@@ -154,7 +153,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const onSliderValueChange = React.useCallback(
     (value: number | readonly number[]) => {
       if (Array.isArray(value) && value.length === 2) {
-        column.table.setSimpleFilter(column.id, value);
+        column.setFilterValue(value);
       }
     },
     [column],
@@ -165,7 +164,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
       if (event.target instanceof HTMLDivElement) {
         event.stopPropagation();
       }
-      column.table.setSimpleFilter(column.id, undefined);
+      column.setFilterValue(undefined);
     },
     [column],
   );

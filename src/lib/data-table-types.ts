@@ -1,4 +1,9 @@
-import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
+import type {
+  ColumnFilter,
+  ColumnSort,
+  Row,
+  RowData,
+} from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
@@ -59,7 +64,22 @@ export interface ColumnSortItem<
   id: TColumnId;
 }
 
-export interface ColumnFilterItem<TColumnId extends string = string> {
+declare module "@tanstack/react-table" {
+  interface ColumnFilter {
+    /**
+     * Set by the filter list and menu. Toolbar filters leave it unset and
+     * apply their variant's toolbar operator.
+     */
+    operator?: FilterOperator;
+    variant?: FilterVariant;
+    filterId?: string;
+  }
+}
+
+/** A `columnFilters` item with every field resolved. */
+export interface ColumnFilterItem<
+  TColumnId extends string = string,
+> extends ColumnFilter {
   id: TColumnId;
   value: string | string[];
   variant: FilterVariant;
