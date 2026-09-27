@@ -8,6 +8,7 @@ import {
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useState } from "react";
 
+import { ThemeShortcut } from "@/components/theme-shortcut";
 import { TooltipProvider } from "@/registry/bases/radix/ui/tooltip";
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
@@ -27,7 +28,10 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
     <QueryClientProvider client={queryClient}>
       <NextThemesProvider {...props}>
         <TooltipProvider delayDuration={120}>
-          <NuqsAdapter>{children}</NuqsAdapter>
+          <NuqsAdapter>
+            <ThemeShortcut />
+            {children}
+          </NuqsAdapter>
         </TooltipProvider>
       </NextThemesProvider>
     </QueryClientProvider>

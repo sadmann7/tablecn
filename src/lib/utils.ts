@@ -13,3 +13,14 @@ export function getAbsoluteUrl(path: string) {
 
   return `${baseUrl}${normalizedPath}`;
 }
+
+export function getIsEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
+}
