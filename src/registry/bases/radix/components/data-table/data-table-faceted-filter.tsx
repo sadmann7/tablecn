@@ -7,7 +7,6 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Option } from "@/lib/data-table-types";
 
-import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
@@ -45,14 +44,12 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
   return (
     <Subscribe
       source={column.table.atoms.columnFilters}
-      selector={() =>
-        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
-      }
+      selector={() => column.getFilterValue()}
     >
-      {(filter) => (
+      {(filterValue) => (
         <DataTableFacetedFilterContent
           column={column}
-          columnFilterValue={filter ? toColumnFilterValue(filter) : undefined}
+          columnFilterValue={filterValue}
           {...props}
         />
       )}

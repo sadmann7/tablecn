@@ -7,7 +7,6 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
@@ -67,14 +66,12 @@ export function DataTableDateFilter<TData extends RowData>({
   return (
     <Subscribe
       source={column.table.atoms.columnFilters}
-      selector={() =>
-        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
-      }
+      selector={() => column.getFilterValue()}
     >
-      {(filter) => (
+      {(filterValue) => (
         <DataTableDateFilterContent
           column={column}
-          columnFilterValue={filter ? toColumnFilterValue(filter) : undefined}
+          columnFilterValue={filterValue}
           {...props}
         />
       )}

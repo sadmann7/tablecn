@@ -163,43 +163,32 @@ const MULTI_VALUE_VARIANTS: FilterVariant[] = [
   "dateRange",
 ];
 
-/** Whether a variant's toolbar filter holds a list, e.g. `?status=a,b`. */
+/** Whether a variant's filter value is a list, e.g. `?status=a,b`. */
 export function getIsMultiValueVariant(variant: FilterVariant) {
   return MULTI_VALUE_VARIANTS.includes(variant);
 }
 
-/** The operator a toolbar filter of this variant applies. */
-export function getSimpleFilterOperator(
-  variant: FilterVariant,
-): FilterOperator {
+/** The operator a value filter of this variant applies. */
+export function getValueFilterOperator(variant: FilterVariant): FilterOperator {
   if (variant === "select" || variant === "multiSelect") return "inArray";
   if (variant === "range" || variant === "dateRange") return "isBetween";
   return getDefaultFilterOperator(variant);
 }
 
 /**
- * Whether a filter is one the toolbar can show and edit: the variant's
- * default operator with a value of the matching shape.
+ * Whether a filter is a value filter: the one `column.getFilterValue()` and
+ * `column.setFilterValue()` read and write, with the variant's value operator
+ * and a value of the matching shape.
  */
-export function getIsSimpleFilter(filter: ColumnFilterItem) {
+export function getIsValueFilter(filter: ColumnFilterItem) {
   return (
-    filter.operator === getSimpleFilterOperator(filter.variant) &&
+    filter.operator === getValueFilterOperator(filter.variant) &&
     Array.isArray(filter.value) === getIsMultiValueVariant(filter.variant)
   );
 }
 
-/** The toolbar filter of a column, if it has one. */
-export function getSimpleFilter<TFilterItem extends ColumnFilterItem>(
-  filters: TFilterItem[],
-  columnId: string,
-): TFilterItem | undefined {
-  return filters.find(
-    (filter) => filter.id === columnId && getIsSimpleFilter(filter),
-  );
-}
-
 /**
- * Converts a toolbar value (e.g. `["todo", "done"]` or `[1, 5]`) to a
+ * Converts a filter value (e.g. `["todo", "done"]` or `[1, 5]`) to a
  * filter item. Returns `null` for empty values.
  */
 export function toColumnFilterItem<TColumnId extends string>(
@@ -209,7 +198,7 @@ export function toColumnFilterItem<TColumnId extends string>(
 ): ColumnFilterItem<TColumnId> | null {
   if (value === undefined || value === null || value === "") return null;
 
-  const operator = getSimpleFilterOperator(variant);
+  const operator = getValueFilterOperator(variant);
   const filterId = `${id}-filter`;
 
   if (getIsMultiValueVariant(variant)) {
@@ -224,8 +213,8 @@ export function toColumnFilterItem<TColumnId extends string>(
 }
 
 /**
- * Fills in a `columnFilters` item. Toolbar filters (no `operator`) get the
- * variant's toolbar operator, and their toolbar value becomes filter strings.
+ * Fills in a `columnFilters` item. Value filters (no `operator`) get the
+ * variant's value operator, and their value becomes filter strings.
  */
 export function resolveColumnFilter(
   filter: ColumnFilter,
@@ -251,14 +240,14 @@ export function resolveColumnFilter(
   return {
     id: filter.id,
     variant,
-    operator: getSimpleFilterOperator(variant),
+    operator: getValueFilterOperator(variant),
     value: getIsMultiValueVariant(variant) ? [] : "",
     filterId,
   };
 }
 
 /**
- * Per-column keys hold at most one toolbar filter per column, so only write
+ * Per-column keys hold at most one value filter per column, so only write
  * them when each filter round-trips. They're read back in column order,
  * which doesn't change what the filters match.
  */
@@ -270,7 +259,7 @@ export function getCanWriteAsKeys(
 
   return filters.every((filter) => {
     if (!columnIds.includes(filter.id) || seenIds.has(filter.id)) return false;
-    if (!getIsSimpleFilter(filter)) return false;
+    if (!getIsValueFilter(filter)) return false;
     if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
       return false;
     }

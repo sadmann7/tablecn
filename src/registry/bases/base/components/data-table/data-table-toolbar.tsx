@@ -11,7 +11,6 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/base/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/base/components/data-table/data-table-faceted-filter";
 import { DataTableSliderFilter } from "@/registry/bases/base/components/data-table/data-table-slider-filter";
@@ -193,17 +192,13 @@ function DataTableFilterInput<TData extends RowData>({
   return (
     <Subscribe
       source={column.table.atoms.columnFilters}
-      selector={() =>
-        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
-      }
+      selector={() => column.getFilterValue()}
     >
-      {(filter) => (
+      {(filterValue) => (
         <Input
           type={type}
           {...props}
-          value={readFilterInputValue(
-            filter ? toColumnFilterValue(filter) : undefined,
-          )}
+          value={readFilterInputValue(filterValue)}
           onChange={(event) =>
             column.setFilterValue(event.target.value || undefined)
           }

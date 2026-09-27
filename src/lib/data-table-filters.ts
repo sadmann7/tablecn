@@ -96,9 +96,8 @@ export function matchesFilter(
 }
 
 /**
- * The default `filterFn` of data table columns: applies a toolbar value with
- * the column variant's toolbar operator. Only `undefined` removes a filter, so
- * empty drafts in the filter list survive `setColumnFilters`.
+ * The default `filterFn` of data table columns: applies a value filter with
+ * the column variant's value operator. Only `undefined` removes a filter.
  */
 export const dataTableFilterFn = constructFilterFn({
   filter: (dataValue, filterValue, row, columnId) => {
@@ -113,7 +112,7 @@ export const dataTableFilterFn = constructFilterFn({
 
 /**
  * Filtered row model for `columnFilters` joined by `joinOperator`. Register it
- * in the `filteredRowModel` slot. Filters with an `operator` apply it; toolbar
+ * in the `filteredRowModel` slot. Filters with an `operator` apply it; value
  * filters use the column's `filterFn`. The global filter must also match.
  *
  * Like TanStack's, it records each column's result per row, which

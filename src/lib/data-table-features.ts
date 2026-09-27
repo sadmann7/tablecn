@@ -1,4 +1,5 @@
 import {
+  assignPrototypeAPIs,
   assignTableAPIs,
   type ColumnFilter,
   columnFacetingFeature,
@@ -38,7 +39,11 @@ import {
   createDataTableFilteredRowModel,
   dataTableFilterFn,
 } from "@/lib/data-table-filters";
-import { resolveColumnFilter } from "@/lib/data-table-utils";
+import {
+  getIsValueFilter,
+  resolveColumnFilter,
+  toColumnFilterValue,
+} from "@/lib/data-table-utils";
 
 interface TableState_DataTableFiltering {
   joinOperator: JoinOperator;
@@ -49,7 +54,6 @@ interface TableOptions_DataTableFiltering {
 }
 
 interface Table_DataTableFiltering {
-  /** `columnFilters` with every field resolved, for the filter list. */
   getColumnFilterItems: () => ColumnFilterItem[];
   addColumnFilter: (filter: ColumnFilterItem) => void;
   updateColumnFilter: (
@@ -114,9 +118,9 @@ interface DataTableFilteringColumn {
  * `columnFilteringFeature`, which stays the one filter state.
  *
  * `columnFilters` items may carry an `operator` (from the filter list and
- * menu). Toolbar filters set with `column.setFilterValue()` don't, and apply
- * their variant's toolbar operator through `dataTableFilterFn`, or through
- * the column's own `filterFn`.
+ * menu). Value filters set with `column.setFilterValue()` don't, and apply
+ * their variant's value operator through `dataTableFilterFn`, or through the
+ * column's own `filterFn`.
  */
 const dataTableFilteringFeature: TableFeature = {
   getInitialState: (initialState) => ({
@@ -130,11 +134,30 @@ const dataTableFilteringFeature: TableFeature = {
   getDefaultTableOptions: (table) => {
     const options: TableOptions_DataTableFiltering = {
       onJoinOperatorChange: makeStateUpdater(
-        "joinOperator" as never,
+        "joinOperator",
         table,
       ) as unknown as OnChangeFn<JoinOperator>,
     };
     return options;
+  },
+  assignColumnPrototype: (prototype, table) => {
+    const instance = table as unknown as DataTableFilteringInstance;
+
+    assignPrototypeAPIs("dataTableFilteringFeature", prototype, table, {
+      column_getFilterValue: {
+        fn: (column: { id: string }) =>
+          getValueFilter(
+            instance,
+            column.id,
+            instance.atoms.columnFilters.get(),
+          ).value,
+        memoDeps: () => [instance.atoms.columnFilters.get()],
+      },
+      column_setFilterValue: {
+        fn: (column: { id: string }, updater: Updater<unknown>) =>
+          setValueFilter(instance, column.id, updater),
+      },
+    });
   },
   constructTableAPIs: (table) => {
     const instance = table as unknown as DataTableFilteringInstance;
@@ -204,7 +227,59 @@ const dataTableFilteringFeature: TableFeature = {
 };
 
 /**
- * TanStack's `autoRemove` rules for toolbar filters. Filters with an
+ * A column's value filter and its value, e.g. `["todo"]` or `[1, 5]`. A
+ * column may also have operator filters, which this leaves out.
+ */
+function getValueFilter(
+  instance: DataTableFilteringInstance,
+  columnId: string,
+  filters: ColumnFilter[],
+) {
+  const variant =
+    instance.getColumn(columnId)?.columnDef.meta?.variant ?? "text";
+  const index = filters.findIndex(
+    (filter) =>
+      filter.id === columnId &&
+      getIsValueFilter(resolveColumnFilter(filter, variant)),
+  );
+  const filter = filters[index];
+  const value = filter
+    ? toColumnFilterValue(resolveColumnFilter(filter, variant))
+    : undefined;
+
+  return { index, filter, value };
+}
+
+/**
+ * `column.setFilterValue()`: sets only the column's value filter, so its
+ * operator filters survive. Like `column.getFilterValue()`, the updater gets
+ * the value filter's value.
+ */
+function setValueFilter(
+  instance: DataTableFilteringInstance,
+  columnId: string,
+  updater: Updater<unknown>,
+) {
+  instance.setColumnFilters((old) => {
+    const {
+      index,
+      filter: previous,
+      value: previousValue,
+    } = getValueFilter(instance, columnId, old);
+    const value = functionalUpdate(updater, previousValue);
+    const next: ColumnFilter = previous?.filterId
+      ? { id: columnId, value, filterId: previous.filterId }
+      : { id: columnId, value };
+
+    if (index === -1) return [...old, next];
+    return old.map((filter, filterIndex) =>
+      filterIndex === index ? next : filter,
+    );
+  });
+}
+
+/**
+ * TanStack's `autoRemove` rules for value filters. Filters with an
  * `operator` are only removed by an `undefined` value, so empty drafts in the
  * filter list survive a column `filterFn` whose `autoRemove` would drop them.
  */

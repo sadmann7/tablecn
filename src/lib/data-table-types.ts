@@ -45,10 +45,10 @@ export type JoinOperator = (typeof joinOperators)[number];
  * How filters and sorting are written to the URL. Both formats are always
  * read, so links keep working when the format changes.
  *
- * - `"compact"`: toolbar filters get one query param per column, e.g.
+ * - `"compact"`: value filters get one query param per column, e.g.
  *   `?status=todo,done&title=fix`, and sorting is `?sort=createdAt.desc`.
- *   Filters the toolbar can't express (other operators, several per column)
- *   fall back to JSON in the `filters` param.
+ *   Other filters (other operators, several per column) fall back to JSON
+ *   in the `filters` param.
  * - `"json"`: filters and sorting are written as JSON.
  */
 export type DataTableUrlFormat = "compact" | "json";
@@ -67,8 +67,9 @@ export interface ColumnSortItem<
 declare module "@tanstack/react-table" {
   interface ColumnFilter {
     /**
-     * Set by the filter list and menu. Toolbar filters leave it unset and
-     * apply their variant's toolbar operator.
+     * Set by the filter list and menu. Value filters, set with
+     * `column.setFilterValue()`, leave it unset and apply their variant's
+     * value operator.
      */
     operator?: FilterOperator;
     variant?: FilterVariant;

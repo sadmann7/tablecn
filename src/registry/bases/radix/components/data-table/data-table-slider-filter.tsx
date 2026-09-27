@@ -6,7 +6,6 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { Label } from "@/registry/bases/radix/ui/label";
@@ -62,14 +61,12 @@ export function DataTableSliderFilter<TData extends RowData>({
   return (
     <Subscribe
       source={column.table.atoms.columnFilters}
-      selector={() =>
-        getSimpleFilter(column.table.getColumnFilterItems(), column.id)
-      }
+      selector={() => column.getFilterValue()}
     >
-      {(filter) => (
+      {(filterValue) => (
         <DataTableSliderFilterContent
           column={column}
-          columnFilterValue={filter ? toColumnFilterValue(filter) : undefined}
+          columnFilterValue={filterValue}
           {...props}
         />
       )}
