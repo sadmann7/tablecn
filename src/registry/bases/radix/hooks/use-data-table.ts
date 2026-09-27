@@ -21,6 +21,7 @@ import * as React from "react";
 
 import type {
   ColumnFilterItem,
+  DataTableUrlFormat,
   JoinOperator,
   QueryKeys,
 } from "@/lib/data-table-types";
@@ -48,16 +49,6 @@ const ARRAY_SEPARATOR = ",";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 
-/**
- * How filters are written to the URL. Both formats are always read.
- *
- * - `"keys"`: toolbar filters get one query param per column, e.g.
- *   `?status=todo,done&title=fix`. Filters the toolbar can't express (other
- *   operators, several per column) fall back to the `filters` param.
- * - `"json"`: every filter goes into the `filters` param.
- */
-type DataTableFilterUrlFormat = "keys" | "json";
-
 interface UseDataTableBaseProps<TData extends RowData> extends Omit<
   TableOptions<DataTableFeatures, TData>,
   | "state"
@@ -75,7 +66,7 @@ interface UseDataTableBaseProps<TData extends RowData> extends Omit<
   clearOnDefault?: boolean;
   scroll?: boolean;
   shallow?: boolean;
-  filterUrlFormat?: DataTableFilterUrlFormat;
+  urlFormat?: DataTableUrlFormat;
   startTransition?: React.TransitionStartFunction;
 }
 
@@ -106,13 +97,13 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     clearOnDefault = false,
     scroll = false,
     shallow: shallowProp = true,
-    filterUrlFormat = "keys",
+    urlFormat = "compact",
     startTransition,
     ...tableProps
   } = props;
   const isServer = mode === "server";
   const shallow = isServer ? shallowProp : true;
-  const withJsonFilters = filterUrlFormat === "json";
+  const withJsonFilters = urlFormat === "json";
 
   const pageKey = queryKeys?.page ?? PAGE_KEY;
   const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
@@ -180,7 +171,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   const [sorting, setSorting] = useQueryState(
     sortKey,
-    getSortingStateParser(columnIds)
+    getSortingStateParser(columnIds, urlFormat)
       .withOptions(queryStateOptions)
       .withDefault(initialState?.sorting ?? []),
   );

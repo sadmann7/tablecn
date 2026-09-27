@@ -11,6 +11,7 @@ import type {
   ColumnFilterItem,
   ColumnSortItem,
   DataTableQuery,
+  DataTableUrlFormat,
   FilterVariant,
   JoinOperator,
 } from "@/lib/data-table-types";
@@ -30,35 +31,35 @@ const sortingItemSchema = z.object({
 });
 
 /**
- * Parses the `sort` param. Pass `columnIds` to reject unknown columns and to
- * narrow the parsed ids to them.
+ * Parses the `sort` param, either `createdAt.desc,title.asc` or JSON. Pass
+ * `columnIds` to reject unknown columns and to narrow the parsed ids to them.
+ * `urlFormat` only picks how sorting is written.
  */
 export const getSortingStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
+  urlFormat: DataTableUrlFormat = "compact",
 ) => {
   const validIds = toIdSet(columnIds);
 
   return createParser<ColumnSortItem<TColumnId>[]>({
     parse: (value) => {
-      try {
-        const result = z.array(sortingItemSchema).safeParse(JSON.parse(value));
-
-        if (!result.success || !getHasKnownIds(result.data, validIds)) {
-          return null;
-        }
-
-        return result.data;
-      } catch {
-        return null;
-      }
+      const sorting = parseSorting(value);
+      return sorting && getHasKnownIds(sorting, validIds) ? sorting : null;
     },
-    serialize: (value) => JSON.stringify(value),
-    eq: (a, b) =>
-      a.length === b.length &&
-      a.every(
-        (item, index) =>
-          item.id === b[index]?.id && item.desc === b[index]?.desc,
-      ),
+    serialize: (value) => {
+      if (urlFormat === "json") return JSON.stringify(value);
+
+      const compact = value
+        .map((item) => `${item.id}.${item.desc ? "desc" : "asc"}`)
+        .join(",");
+      const parsed = parseSorting(compact);
+
+      // Ids with a comma, or a first id starting with `[`, don't round-trip.
+      return parsed && getIsSameSorting(parsed, value)
+        ? compact
+        : JSON.stringify(value);
+    },
+    eq: getIsSameSorting,
   });
 };
 
@@ -196,6 +197,39 @@ export function getDataTableQuery<
     filters: getValidFilters([...search.filters, ...keyFilters]),
     joinOperator: search.joinOperator,
   };
+}
+
+function parseSorting(value: string): ColumnSortItem[] | null {
+  if (value.startsWith("[")) {
+    try {
+      const result = z.array(sortingItemSchema).safeParse(JSON.parse(value));
+      return result.success ? result.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const sorting: ColumnSortItem[] = [];
+
+  for (const part of value.split(",")) {
+    const index = part.lastIndexOf(".");
+    const order = part.slice(index + 1);
+
+    if (index <= 0 || (order !== "asc" && order !== "desc")) return null;
+
+    sorting.push({ id: part.slice(0, index), desc: order === "desc" });
+  }
+
+  return sorting;
+}
+
+function getIsSameSorting(a: ColumnSortItem[], b: ColumnSortItem[]) {
+  return (
+    a.length === b.length &&
+    a.every(
+      (item, index) => item.id === b[index]?.id && item.desc === b[index]?.desc,
+    )
+  );
 }
 
 function toIdSet<TColumnId extends string>(
