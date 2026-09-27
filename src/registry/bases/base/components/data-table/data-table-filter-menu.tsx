@@ -10,7 +10,7 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ExtendedColumnFilter } from "@/lib/data-table-types";
+import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import {
   getDefaultFilterOperator,
@@ -64,7 +64,7 @@ export function DataTableFilterMenu<TData extends RowData>({
       {(filters) => (
         <DataTableFilterMenuContent
           table={table}
-          filters={filters as ExtendedColumnFilter<TData>[]}
+          filters={filters}
           {...props}
         />
       )}
@@ -75,7 +75,7 @@ export function DataTableFilterMenu<TData extends RowData>({
 interface DataTableFilterMenuContentProps<
   TData extends RowData,
 > extends DataTableFilterMenuProps<TData> {
-  filters: ExtendedColumnFilter<TData>[];
+  filters: ColumnFilterItem[];
 }
 
 function DataTableFilterMenuContent<TData extends RowData>({
@@ -170,7 +170,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
   const onFilterUpdate = React.useCallback(
     (
       filterId: string,
-      updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
+      updates: Partial<Omit<ColumnFilterItem, "filterId">>,
     ) => {
       table.updateFilter(filterId, updates);
     },
@@ -334,12 +334,12 @@ function DataTableFilterMenuContent<TData extends RowData>({
 }
 
 interface DataTableFilterItemProps<TData extends RowData> {
-  filter: ExtendedColumnFilter<TData>;
+  filter: ColumnFilterItem;
   filterItemId: string;
   columns: Column<DataTableFeatures, TData>[];
   onFilterUpdate: (
     filterId: string,
-    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
+    updates: Partial<Omit<ColumnFilterItem, "filterId">>,
   ) => void;
   onFilterRemove: (filterId: string) => void;
 }
@@ -429,7 +429,7 @@ function DataTableFilterItem<TData extends RowData>({
                       data-checked={column.id === filter.id}
                       onSelect={() => {
                         onFilterUpdate(filter.filterId, {
-                          id: column.id as Extract<keyof TData, string>,
+                          id: column.id,
                           variant: column.columnDef.meta?.variant ?? "text",
                           operator: getDefaultFilterOperator(
                             column.columnDef.meta?.variant ?? "text",
@@ -625,12 +625,12 @@ function onFilterInputRender<TData extends RowData>({
   showValueSelector,
   setShowValueSelector,
 }: {
-  filter: ExtendedColumnFilter<TData>;
+  filter: ColumnFilterItem;
   column: Column<DataTableFeatures, TData>;
   inputId: string;
   onFilterUpdate: (
     filterId: string,
-    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
+    updates: Partial<Omit<ColumnFilterItem, "filterId">>,
   ) => void;
   showValueSelector: boolean;
   setShowValueSelector: (value: boolean) => void;

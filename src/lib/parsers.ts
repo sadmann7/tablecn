@@ -8,10 +8,11 @@ import {
 import { z } from "zod";
 
 import type {
+  ColumnFilterItem,
+  ColumnSortItem,
   DataTableQuery,
-  ExtendedColumnFilter,
-  ExtendedColumnSort,
   FilterVariant,
+  JoinOperator,
 } from "@/lib/data-table-types";
 
 import {
@@ -26,28 +27,25 @@ const sortingItemSchema = z.object({
   desc: z.boolean(),
 });
 
-export const getSortingStateParser = <TData>(
-  columnIds?: string[] | Set<string>,
+/**
+ * Parses the `sort` param. Pass `columnIds` to reject unknown columns and to
+ * narrow the parsed ids to them.
+ */
+export const getSortingStateParser = <TColumnId extends string = string>(
+  columnIds?: readonly TColumnId[] | Set<TColumnId>,
 ) => {
-  const validKeys = columnIds
-    ? columnIds instanceof Set
-      ? columnIds
-      : new Set(columnIds)
-    : null;
+  const validIds = toIdSet(columnIds);
 
-  return createParser({
+  return createParser<ColumnSortItem<TColumnId>[]>({
     parse: (value) => {
       try {
-        const parsed = JSON.parse(value);
-        const result = z.array(sortingItemSchema).safeParse(parsed);
+        const result = z.array(sortingItemSchema).safeParse(JSON.parse(value));
 
-        if (!result.success) return null;
-
-        if (validKeys && result.data.some((item) => !validKeys.has(item.id))) {
+        if (!result.success || !getHasKnownIds(result.data, validIds)) {
           return null;
         }
 
-        return result.data as ExtendedColumnSort<TData>[];
+        return result.data;
       } catch {
         return null;
       }
@@ -72,102 +70,25 @@ const filterItemSchema = z.object({
 
 export type FilterItemSchema = z.infer<typeof filterItemSchema>;
 
-interface DataTableSearchParamsOptions<TData> {
-  /**
-   * Filterable column ids mapped to their filter variant. Needed to read
-   * per-column params (`?status=todo,done`) and to reject unknown ids.
-   */
-  filterableColumns: Record<string, FilterVariant>;
-  defaultSorting?: ExtendedColumnSort<TData>[];
-  defaultPerPage?: number;
-}
-
 /**
- * The nuqs parsers for every URL param a data table writes. Spread the
- * result into `createSearchParamsCache`, or use the individual parsers.
+ * Parses the `filters` param. Pass `columnIds` to reject unknown columns and
+ * to narrow the parsed ids to them.
  */
-export function getDataTableSearchParams<TData>({
-  filterableColumns,
-  defaultSorting = [],
-  defaultPerPage = 10,
-}: DataTableSearchParamsOptions<TData>) {
-  const columnIds = Object.keys(filterableColumns);
-
-  const columnParsers = Object.fromEntries(
-    Object.entries(filterableColumns).map(([id, variant]) => [
-      id,
-      getIsMultiValueVariant(variant)
-        ? parseAsArrayOf(parseAsString).withDefault([])
-        : parseAsString.withDefault(""),
-    ]),
-  );
-
-  return {
-    page: parseAsInteger.withDefault(1),
-    perPage: parseAsInteger.withDefault(defaultPerPage),
-    sort: getSortingStateParser<TData>().withDefault(defaultSorting),
-    filters: getFiltersStateParser<TData>(columnIds).withDefault([]),
-    joinOperator: parseAsStringEnum([
-      ...dataTableConfig.joinOperators,
-    ]).withDefault("and"),
-    ...columnParsers,
-  };
-}
-
-/**
- * Normalizes parsed search params into one `DataTableQuery`, regardless of
- * whether filters arrived as per-column params or inside `filters`. This
- * mirrors how `useDataTable` reads the URL, so server and client agree.
- * Server adapters (Drizzle, Supabase, ...) only need to handle this shape.
- */
-export function getDataTableQuery<TData>(
-  search: Record<string, unknown>,
-  filterableColumns: Record<string, FilterVariant>,
-): DataTableQuery<TData> {
-  const itemFilters = Array.isArray(search.filters)
-    ? (search.filters as ExtendedColumnFilter<TData>[])
-    : [];
-
-  const keyFilters = Object.entries(filterableColumns).flatMap(
-    ([id, variant]) => {
-      const item = toColumnFilterItem(id, variant, search[id]);
-      return item ? [item as ExtendedColumnFilter<TData>] : [];
-    },
-  );
-
-  return {
-    page: typeof search.page === "number" ? search.page : 1,
-    perPage: typeof search.perPage === "number" ? search.perPage : 10,
-    sorting: Array.isArray(search.sort)
-      ? (search.sort as ExtendedColumnSort<TData>[])
-      : [],
-    filters: getValidFilters([...itemFilters, ...keyFilters]),
-    joinOperator: search.joinOperator === "or" ? "or" : "and",
-  };
-}
-
-export const getFiltersStateParser = <TData>(
-  columnIds?: string[] | Set<string>,
+export const getFiltersStateParser = <TColumnId extends string = string>(
+  columnIds?: readonly TColumnId[] | Set<TColumnId>,
 ) => {
-  const validKeys = columnIds
-    ? columnIds instanceof Set
-      ? columnIds
-      : new Set(columnIds)
-    : null;
+  const validIds = toIdSet(columnIds);
 
-  return createParser({
+  return createParser<ColumnFilterItem<TColumnId>[]>({
     parse: (value) => {
       try {
-        const parsed = JSON.parse(value);
-        const result = z.array(filterItemSchema).safeParse(parsed);
+        const result = z.array(filterItemSchema).safeParse(JSON.parse(value));
 
-        if (!result.success) return null;
-
-        if (validKeys && result.data.some((item) => !validKeys.has(item.id))) {
+        if (!result.success || !getHasKnownIds(result.data, validIds)) {
           return null;
         }
 
-        return result.data as ExtendedColumnFilter<TData>[];
+        return result.data;
       } catch {
         return null;
       }
@@ -184,3 +105,113 @@ export const getFiltersStateParser = <TData>(
       ),
   });
 };
+
+interface DataTableSearchParamsOptions<
+  TFilterColumnId extends string,
+  TSortColumnId extends string,
+> {
+  /**
+   * Filterable column ids mapped to their filter variant. Needed to read
+   * per-column params (`?status=todo,done`) and to reject unknown ids.
+   */
+  filterableColumns: Record<TFilterColumnId, FilterVariant>;
+  /** Sortable column ids. Without it, sorts on any id are accepted. */
+  sortableColumns?: readonly TSortColumnId[];
+  defaultSorting?: ColumnSortItem<NoInfer<TSortColumnId>>[];
+  defaultPerPage?: number;
+}
+
+/**
+ * The nuqs parsers for every URL param a data table writes. Spread the
+ * result into `createSearchParamsCache`, or use the individual parsers.
+ */
+export function getDataTableSearchParams<
+  TFilterColumnId extends string,
+  TSortColumnId extends string = string,
+>({
+  filterableColumns,
+  sortableColumns,
+  defaultSorting = [],
+  defaultPerPage = 10,
+}: DataTableSearchParamsOptions<TFilterColumnId, TSortColumnId>) {
+  const filterIds = Object.keys(filterableColumns) as TFilterColumnId[];
+
+  const columnParsers = Object.fromEntries(
+    filterIds.map((id) => [
+      id,
+      getIsMultiValueVariant(filterableColumns[id])
+        ? parseAsArrayOf(parseAsString).withDefault([])
+        : parseAsString.withDefault(""),
+    ]),
+  );
+
+  return {
+    page: parseAsInteger.withDefault(1),
+    perPage: parseAsInteger.withDefault(defaultPerPage),
+    sort: getSortingStateParser(sortableColumns).withDefault(defaultSorting),
+    filters: getFiltersStateParser(filterIds).withDefault([]),
+    joinOperator: parseAsStringEnum([
+      ...dataTableConfig.joinOperators,
+    ]).withDefault("and"),
+    ...columnParsers,
+  };
+}
+
+interface DataTableSearch<
+  TFilterColumnId extends string,
+  TSortColumnId extends string,
+> {
+  page: number;
+  perPage: number;
+  sort: ColumnSortItem<TSortColumnId>[];
+  filters: ColumnFilterItem<TFilterColumnId>[];
+  joinOperator: JoinOperator;
+}
+
+/**
+ * Normalizes parsed search params into one `DataTableQuery`, regardless of
+ * whether filters arrived as per-column params or inside `filters`. This
+ * mirrors how `useDataTable` reads the URL, so server and client agree.
+ * Server adapters (Drizzle, Supabase, ...) only need to handle this shape.
+ */
+export function getDataTableQuery<
+  TFilterColumnId extends string,
+  TSortColumnId extends string,
+>(
+  search: DataTableSearch<TFilterColumnId, TSortColumnId> &
+    Partial<Record<NoInfer<TFilterColumnId>, unknown>>,
+  filterableColumns: Record<TFilterColumnId, FilterVariant>,
+): DataTableQuery<TFilterColumnId, TSortColumnId> {
+  const filterIds = Object.keys(filterableColumns) as TFilterColumnId[];
+
+  const keyFilters = filterIds.flatMap((id) => {
+    const item = toColumnFilterItem(id, filterableColumns[id], search[id]);
+    return item ? [item] : [];
+  });
+
+  return {
+    page: search.page,
+    perPage: search.perPage,
+    sorting: search.sort,
+    filters: getValidFilters([...search.filters, ...keyFilters]),
+    joinOperator: search.joinOperator,
+  };
+}
+
+function toIdSet<TColumnId extends string>(
+  ids?: readonly TColumnId[] | Set<TColumnId>,
+) {
+  if (!ids) return null;
+  return ids instanceof Set ? ids : new Set(ids);
+}
+
+function getHasKnownIds<
+  TColumnItem extends { id: string },
+  TColumnId extends string,
+>(
+  items: TColumnItem[],
+  ids: ReadonlySet<TColumnId> | null,
+): items is (TColumnItem & { id: TColumnId })[] {
+  const knownIds: ReadonlySet<string> | null = ids;
+  return knownIds === null || items.every((item) => knownIds.has(item.id));
+}

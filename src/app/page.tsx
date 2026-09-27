@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 
-import type { Task } from "@/db/schema";
 import type { SearchParams } from "@/types";
 
 import { getDataTableQuery } from "@/lib/parsers";
@@ -62,7 +61,7 @@ async function TasksTableWrapper(props: IndexPageProps) {
   const tasksPromise =
     mode === "client"
       ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
-      : getTasks(getDataTableQuery<Task>(search, tasksFilterableColumns));
+      : getTasks(getDataTableQuery(search, tasksFilterableColumns));
 
   const promises = Promise.all([
     tasksPromise,

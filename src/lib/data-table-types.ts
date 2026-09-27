@@ -36,38 +36,41 @@ export type FilterOperator = DataTableConfig["operators"][number];
 export type FilterVariant = DataTableConfig["filterVariants"][number];
 export type JoinOperator = DataTableConfig["joinOperators"][number];
 
-export interface ExtendedColumnSort<TData> extends Omit<ColumnSort, "id"> {
-  id: Extract<keyof TData, string>;
+/**
+ * A single sort. `TColumnId` narrows the column id once a parser has checked it
+ * against a known list of columns.
+ */
+export interface ColumnSortItem<
+  TColumnId extends string = string,
+> extends ColumnSort {
+  id: TColumnId;
 }
 
 /**
  * A single filter condition. This is the wire format shared by the URL, the
- * table's `filters` state slice, and server adapters.
+ * table's `filters` state slice, and server adapters. `TColumnId` narrows the
+ * column id once a parser has checked it against a known list of columns.
  */
-export interface ColumnFilterItem {
-  id: string;
+export interface ColumnFilterItem<TColumnId extends string = string> {
+  id: TColumnId;
   value: string | string[];
   variant: FilterVariant;
   operator: FilterOperator;
   filterId: string;
 }
 
-export interface ExtendedColumnFilter<TData> extends Omit<
-  ColumnFilterItem,
-  "id"
-> {
-  id: Extract<keyof TData, string>;
-}
-
 /**
  * Everything a server needs to answer a data table request, independent of
  * the database or ORM used to answer it.
  */
-export interface DataTableQuery<TData = unknown> {
+export interface DataTableQuery<
+  TFilterColumnId extends string = string,
+  TSortColumnId extends string = TFilterColumnId,
+> {
   page: number;
   perPage: number;
-  sorting: ExtendedColumnSort<TData>[];
-  filters: ExtendedColumnFilter<TData>[];
+  sorting: ColumnSortItem<TSortColumnId>[];
+  filters: ColumnFilterItem<TFilterColumnId>[];
   joinOperator: JoinOperator;
 }
 

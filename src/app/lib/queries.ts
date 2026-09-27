@@ -4,17 +4,24 @@ import "server-only";
 import { asc, count, desc, gt, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 
-import type {
-  DataTableQuery,
-  ExtendedColumnFilter,
-} from "@/lib/data-table-types";
+import type { ColumnFilterItem, DataTableQuery } from "@/lib/data-table-types";
 
 import { db } from "@/db";
-import { type Task, tasks } from "@/db/schema";
+import { tasks } from "@/db/schema";
+
+import type {
+  tasksFilterableColumns,
+  tasksSortableColumns,
+} from "./validations";
 
 import { filterColumns } from "./filter-columns";
 
-export async function getTasks(input: DataTableQuery<Task>) {
+export async function getTasks(
+  input: DataTableQuery<
+    keyof typeof tasksFilterableColumns,
+    (typeof tasksSortableColumns)[number]
+  >,
+) {
   cacheLife({ revalidate: 1, stale: 1, expire: 60 });
   cacheTag("tasks");
 
@@ -71,7 +78,9 @@ const ENUM_COLUMNS = {
   label: tasks.label.enumValues,
 } as const;
 
-function sanitizeEnumFilters(filters: ExtendedColumnFilter<Task>[]) {
+function sanitizeEnumFilters<TColumnId extends string>(
+  filters: ColumnFilterItem<TColumnId>[],
+) {
   return filters.flatMap((filter) => {
     const allowed: readonly string[] | undefined =
       ENUM_COLUMNS[filter.id as keyof typeof ENUM_COLUMNS];

@@ -21,8 +21,6 @@ import * as React from "react";
 
 import type {
   ColumnFilterItem,
-  ExtendedColumnFilter,
-  ExtendedColumnSort,
   JoinOperator,
   QueryKeys,
 } from "@/lib/data-table-types";
@@ -68,9 +66,7 @@ interface UseDataTableBaseProps<TData extends RowData> extends Omit<
   | "manualPagination"
   | "manualSorting"
 > {
-  initialState?: Omit<Partial<TableState<DataTableFeatures>>, "sorting"> & {
-    sorting?: ExtendedColumnSort<TData>[];
-  };
+  initialState?: Partial<TableState<DataTableFeatures>>;
   queryKeys?: Partial<QueryKeys>;
   history?: "push" | "replace";
   debounceMs?: number;
@@ -178,14 +174,12 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   );
 
   const columnIds = React.useMemo(() => {
-    return new Set(
-      columns.map((column) => column.id).filter(Boolean) as string[],
-    );
+    return new Set(columns.flatMap((column) => (column.id ? [column.id] : [])));
   }, [columns]);
 
   const [sorting, setSorting] = useQueryState(
     sortKey,
-    getSortingStateParser<TData>(columnIds)
+    getSortingStateParser(columnIds)
       .withOptions(queryStateOptions)
       .withDefault(initialState?.sorting ?? []),
   );
@@ -197,7 +191,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
           ? updaterOrValue(sorting)
           : updaterOrValue;
 
-      void setSorting(next as ExtendedColumnSort<TData>[]);
+      void setSorting(next);
     },
     [sorting, setSorting],
   );
@@ -219,11 +213,9 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   const [urlFilters, setUrlFilters] = useQueryState(
     filtersKey,
-    getFiltersStateParser<TData>(filterableColumnIds)
+    getFiltersStateParser(filterableColumnIds)
       .withOptions(queryStateOptions)
-      .withDefault(
-        (initialState?.filters ?? []) as ExtendedColumnFilter<TData>[],
-      ),
+      .withDefault(initialState?.filters ?? []),
   );
 
   const filterParsers = React.useMemo(() => {
@@ -255,11 +247,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
         !withJsonFilters && getCanWriteAsKeys(filters, filterableColumnIds);
 
       void setPage(1);
-      void setUrlFilters(
-        withKeys || filters.length === 0
-          ? null
-          : (filters as ExtendedColumnFilter<TData>[]),
-      );
+      void setUrlFilters(withKeys || filters.length === 0 ? null : filters);
       void setFilterValues(
         Object.fromEntries(
           filterableColumnIds.map((id) => [

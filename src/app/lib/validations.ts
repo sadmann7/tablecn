@@ -16,6 +16,15 @@ export const tasksFilterableColumns = {
   createdAt: "dateRange",
 } satisfies Partial<Record<keyof Task, FilterVariant>>;
 
+/** Sortable task columns; mirrors `tasks-table-columns`. */
+export const tasksSortableColumns = [
+  "title",
+  "status",
+  "priority",
+  "estimatedHours",
+  "createdAt",
+] as const satisfies readonly (keyof Task)[];
+
 export const searchParamsCache = createSearchParamsCache({
   filter: parseAsStringEnum(filters.map((filter) => filter.value)).withDefault(
     "simple",
@@ -23,8 +32,9 @@ export const searchParamsCache = createSearchParamsCache({
   mode: parseAsStringEnum(modes.map((mode) => mode.value)).withDefault(
     "server",
   ),
-  ...getDataTableSearchParams<Task>({
+  ...getDataTableSearchParams({
     filterableColumns: tasksFilterableColumns,
+    sortableColumns: tasksSortableColumns,
     defaultSorting: [{ id: "createdAt", desc: true }],
   }),
 });

@@ -159,7 +159,7 @@ const MULTI_VALUE_VARIANTS: FilterVariant[] = [
   "dateRange",
 ];
 
-/** Whether a variant's toolbar filter holds a list, e.g. `?status=todo,done`. */
+/** Whether a variant's toolbar filter holds a list, e.g. `?status=a,b`. */
 export function getIsMultiValueVariant(variant: FilterVariant) {
   return MULTI_VALUE_VARIANTS.includes(variant);
 }
@@ -185,10 +185,10 @@ export function getIsSimpleFilter(filter: ColumnFilterItem) {
 }
 
 /** The toolbar filter of a column, if it has one. */
-export function getSimpleFilter<TFilter extends ColumnFilterItem>(
-  filters: TFilter[],
+export function getSimpleFilter<TFilterItem extends ColumnFilterItem>(
+  filters: TFilterItem[],
   columnId: string,
-): TFilter | undefined {
+): TFilterItem | undefined {
   return filters.find(
     (filter) => filter.id === columnId && getIsSimpleFilter(filter),
   );
@@ -198,11 +198,11 @@ export function getSimpleFilter<TFilter extends ColumnFilterItem>(
  * Converts a toolbar value (e.g. `["todo", "done"]` or `[1, 5]`) to a
  * filter item. Returns `null` for empty values.
  */
-export function toColumnFilterItem(
-  id: string,
+export function toColumnFilterItem<TColumnId extends string>(
+  id: TColumnId,
   variant: FilterVariant,
   value: unknown,
-): ColumnFilterItem | null {
+): ColumnFilterItem<TColumnId> | null {
   if (value === undefined || value === null || value === "") return null;
 
   const operator = getSimpleFilterOperator(variant);
@@ -241,9 +241,9 @@ export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
   return value;
 }
 
-export function getValidFilters<TFilter extends ColumnFilterItem>(
-  filters: TFilter[],
-): TFilter[] {
+export function getValidFilters<TFilterItem extends ColumnFilterItem>(
+  filters: TFilterItem[],
+): TFilterItem[] {
   return filters.filter(
     (filter) =>
       filter.operator === "isEmpty" ||
