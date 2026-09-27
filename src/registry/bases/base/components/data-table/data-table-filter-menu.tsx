@@ -465,6 +465,7 @@ function DataTableFilterItem<TData extends RowData>({
                 {columns.map((column) => (
                   <CommandItem
                     key={column.id}
+                    data-checked={column.id === filter.id}
                     value={column.id}
                     onSelect={(value) => {
                       onFilterUpdate(filter.filterId, {
@@ -482,17 +483,6 @@ function DataTableFilterItem<TData extends RowData>({
                     <span className="truncate">
                       {column.columnDef.meta?.label}
                     </span>
-                    <IconPlaceholder
-                      lucide="Check"
-                      tabler="IconCheck"
-                      hugeicons="Tick02Icon"
-                      phosphor="CheckIcon"
-                      remixicon="RiCheckLine"
-                      className={cn(
-                        "ml-auto",
-                        column.id === filter.id ? "opacity-100" : "opacity-0",
-                      )}
-                    />
                   </CommandItem>
                 ))}
               </CommandGroup>

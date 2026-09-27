@@ -426,8 +426,8 @@ function DataTableFilterItem<TData extends RowData>({
                   {columns.map((column) => (
                     <CommandItem
                       key={column.id}
-                      value={column.id}
                       data-checked={column.id === filter.id}
+                      value={column.id}
                       onSelect={() => {
                         onFilterUpdate(filter.filterId, {
                           id: column.id,
