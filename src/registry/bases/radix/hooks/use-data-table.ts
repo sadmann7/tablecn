@@ -57,27 +57,24 @@ const EMPTY_COLUMN_FILTERS: ColumnFiltersState = [];
 function useShallow<T extends object>(value: T): T {
   const ref = React.useRef(value);
   const previous = ref.current;
-  if (getIsShallowEqual(previous, value)) return previous;
+  const previousKeys = Object.keys(previous);
+  const nextKeys = Object.keys(value);
+  const isSame =
+    Object.is(previous, value) ||
+    (previousKeys.length === nextKeys.length &&
+      nextKeys.every(
+        (key) =>
+          Object.hasOwn(previous, key) &&
+          Object.is(
+            (previous as Record<string, unknown>)[key],
+            (value as Record<string, unknown>)[key],
+          ),
+      ));
+
+  if (isSame) return previous;
 
   ref.current = value;
   return value;
-}
-
-function getIsShallowEqual(previous: object, next: object) {
-  if (Object.is(previous, next)) return true;
-
-  const previousKeys = Object.keys(previous);
-  const nextKeys = Object.keys(next);
-  if (previousKeys.length !== nextKeys.length) return false;
-
-  return nextKeys.every(
-    (key) =>
-      Object.hasOwn(previous, key) &&
-      Object.is(
-        (previous as Record<string, unknown>)[key],
-        (next as Record<string, unknown>)[key],
-      ),
-  );
 }
 
 interface UseDataTableBaseProps<TData extends RowData> extends Omit<
@@ -113,27 +110,24 @@ type UseDataTableProps<TData extends RowData> = UseDataTableBaseProps<TData> &
       }
   );
 
-function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
-  const {
-    columns,
-    mode = "server",
-    pageCount,
-    initialState,
-    queryKeys,
-    history = "replace",
-    debounceMs = DEBOUNCE_MS,
-    throttleMs = THROTTLE_MS,
-    clearOnDefault = false,
-    scroll = false,
-    shallow: shallowProp = true,
-    urlFormat = "compact",
-    startTransition,
-    ...tableProps
-  } = props;
-
+function useDataTable<TData extends RowData>({
+  columns,
+  mode = "server",
+  pageCount,
+  initialState,
+  queryKeys,
+  history = "replace",
+  debounceMs = DEBOUNCE_MS,
+  throttleMs = THROTTLE_MS,
+  clearOnDefault = false,
+  scroll = false,
+  shallow: shallowProp = true,
+  urlFormat = "compact",
+  startTransition,
+  ...props
+}: UseDataTableProps<TData>) {
   const isServer = mode === "server";
   const shallow = isServer ? shallowProp : true;
-  const withJsonFilters = urlFormat === "json";
 
   const pageKey = queryKeys?.page ?? PAGE_KEY;
   const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
@@ -206,8 +200,8 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   const columnIndex = React.useMemo(() => {
     const sortableIds = new Set<string>();
-    const filterable: { id: string; variant: FilterVariant }[] = [];
-    const variants = new Map<string, FilterVariant>();
+    const filterableColumns: { id: string; variant: FilterVariant }[] = [];
+    const filterableVariants = new Map<string, FilterVariant>();
 
     for (const column of columns) {
       if (!column.id) continue;
@@ -215,17 +209,20 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       if (!column.enableColumnFilter) continue;
 
       const variant = column.meta?.variant ?? "text";
-      filterable.push({ id: column.id, variant });
-      variants.set(column.id, variant);
+      filterableColumns.push({ id: column.id, variant });
+      filterableVariants.set(column.id, variant);
     }
 
     return {
       sortableIds,
-      filterable,
-      filterableIds: filterable.map((column) => column.id),
-      resolve: (filters: ColumnFiltersState) =>
+      filterableColumns,
+      filterableIds: filterableColumns.map((column) => column.id),
+      resolveColumnFilters: (filters: ColumnFiltersState) =>
         filters.map((filter) =>
-          resolveColumnFilter(filter, variants.get(filter.id) ?? "text"),
+          resolveColumnFilter(
+            filter,
+            filterableVariants.get(filter.id) ?? "text",
+          ),
         ),
     };
   }, [columns]);
@@ -252,24 +249,24 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     [sorting, setSorting],
   );
 
-  const filtersParser = React.useMemo(
+  const jsonFiltersParser = React.useMemo(
     () =>
       getFiltersStateParser(columnIndex.filterableIds)
         .withOptions(queryStateOptions)
         .withDefault(
-          columnIndex.resolve(
+          columnIndex.resolveColumnFilters(
             initialStateRef.current?.columnFilters ?? EMPTY_COLUMN_FILTERS,
           ),
         ),
     [columnIndex, queryStateOptions],
   );
-  const filterParsers = React.useMemo(() => {
+  const valueFilterParsers = React.useMemo(() => {
     const parsers: Record<
       string,
       SingleParser<string> | SingleParser<string[]>
     > = {};
 
-    for (const column of columnIndex.filterable) {
+    for (const column of columnIndex.filterableColumns) {
       parsers[column.id] = getIsMultiValueVariant(column.variant)
         ? parseAsArrayOf(parseAsString, ARRAY_SEPARATOR).withOptions(
             queryStateOptions,
@@ -279,7 +276,6 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
     return parsers;
   }, [columnIndex, queryStateOptions]);
-
   const joinOperatorParser = React.useMemo(
     () =>
       parseAsStringEnum([...joinOperators])
@@ -288,33 +284,38 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     [queryStateOptions],
   );
 
-  const [urlFilters, setUrlFilters] = useQueryState(filtersKey, filtersParser);
-  const [filterValues, setFilterValues] = useQueryStates(filterParsers);
+  const [jsonFilters, setJsonFilters] = useQueryState(
+    filtersKey,
+    jsonFiltersParser,
+  );
+  const [valueFilters, setValueFilters] = useQueryStates(valueFilterParsers);
   const [joinOperator, setJoinOperator] = useQueryState(
     joinOperatorKey,
     joinOperatorParser,
   );
 
-  const debouncedSetUrlFilters = useDebouncedCallback(
+  const debouncedSyncFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState) => {
-      const filters = columnIndex.resolve(columnFilters);
+      const filters = columnIndex.resolveColumnFilters(columnFilters);
       const validFilters = getValidFilters(filters);
-      const withKeys =
-        !withJsonFilters &&
+      const writeAsValueFilters =
+        urlFormat !== "json" &&
         getCanWriteAsKeys(validFilters, columnIndex.filterableIds);
       const valueById = new Map(
         validFilters.map((filter) => [filter.id, filter.value]),
       );
 
       void setPage(1);
-      void setUrlFilters(withKeys || filters.length === 0 ? null : filters);
-      void setFilterValues(
+      void setJsonFilters(
+        writeAsValueFilters || filters.length === 0 ? null : filters,
+      );
+      void setValueFilters(
         Object.fromEntries(
           columnIndex.filterableIds.map((id) => [
             id,
-            withKeys ? (valueById.get(id) ?? null) : null,
+            writeAsValueFilters ? (valueById.get(id) ?? null) : null,
           ]),
-        ) as typeof filterValues,
+        ),
       );
     },
     debounceMs,
@@ -322,12 +323,12 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     () => [
-      ...urlFilters,
-      ...columnIndex.filterable.flatMap((column) => {
+      ...jsonFilters,
+      ...columnIndex.filterableColumns.flatMap((column) => {
         const item = toColumnFilterItem(
           column.id,
           column.variant,
-          filterValues[column.id],
+          valueFilters[column.id],
         );
         return item ? [item] : [];
       }),
@@ -342,11 +343,11 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
             ? updaterOrValue(prev)
             : updaterOrValue;
 
-        debouncedSetUrlFilters(next);
+        debouncedSyncFilters(next);
         return next;
       });
     },
-    [debouncedSetUrlFilters],
+    [debouncedSyncFilters],
   );
 
   const onJoinOperatorChange = React.useCallback(
@@ -361,11 +362,11 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     [joinOperator, setJoinOperator],
   );
 
-  const stableTableProps = useShallow(tableProps);
+  const stableProps = useShallow(props);
 
   const tableOptions = React.useMemo<TableOptions<DataTableFeatures, TData>>(
     () => ({
-      ...stableTableProps,
+      ...stableProps,
       features: dataTableFeatures,
       columns,
       initialState: initialStateRef.current,
@@ -385,7 +386,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       manualFiltering: isServer,
     }),
     [
-      stableTableProps,
+      stableProps,
       columns,
       isServer,
       pageCount,
