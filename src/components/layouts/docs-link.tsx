@@ -8,9 +8,10 @@ export function DocsLink({
   ...props
 }: Omit<React.ComponentProps<typeof ActiveLink>, "href" | "target" | "rel">) {
   const segment = useSelectedLayoutSegment();
-  const href = segment?.startsWith("data-grid")
-    ? "https://diceui.com/docs/components/data-grid"
-    : "https://diceui.com/docs/components/data-table";
+  const component = segment?.startsWith("data-grid")
+    ? "data-grid"
+    : "data-table";
+  const href = `https://diceui.com/docs/components/radix/${component}`;
 
   return (
     <ActiveLink
