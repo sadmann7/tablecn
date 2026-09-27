@@ -75,12 +75,10 @@ interface UseDataTableBaseProps<TData extends RowData> extends Omit<
 type UseDataTableProps<TData extends RowData> = UseDataTableBaseProps<TData> &
   (
     | {
-        /** The server paginates, sorts and filters. `data` is one page. */
         mode?: "server";
         pageCount: number;
       }
     | {
-        /** TanStack paginates, sorts and filters `data` in the browser. */
         mode: "client";
         pageCount?: never;
       }
@@ -140,6 +138,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     pageKey,
     parseAsInteger.withOptions(queryStateOptions).withDefault(1),
   );
+
   const [perPage, setPerPage] = useQueryState(
     perPageKey,
     parseAsInteger
