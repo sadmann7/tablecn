@@ -54,13 +54,13 @@ export function matchesFilter(
 
     case "eq":
       if (variant === "boolean") return toBoolean(cellValue) === value;
-      if (isDate) return isSameDay(cellValue, value);
+      if (isDate) return getIsSameDay(cellValue, value);
       if (isNumeric) return toNumber(cellValue) === toNumber(value);
       return stringify(cellValue) === String(value);
 
     case "ne":
       if (variant === "boolean") return toBoolean(cellValue) !== value;
-      if (isDate) return !isSameDay(cellValue, value);
+      if (isDate) return !getIsSameDay(cellValue, value);
       if (isNumeric) return toNumber(cellValue) !== toNumber(value);
       return stringify(cellValue) !== String(value);
 
@@ -79,16 +79,16 @@ export function matchesFilter(
       return compare(cellValue, value, operator, isDate);
 
     case "isBetween":
-      return isBetween(cellValue, value, isDate);
+      return getIsBetween(cellValue, value, isDate);
 
     case "isRelativeToToday":
-      return isRelativeToToday(cellValue, value);
+      return getIsRelativeToToday(cellValue, value);
 
     case "isEmpty":
-      return isEmptyValue(cellValue);
+      return getIsEmptyValue(cellValue);
 
     case "isNotEmpty":
-      return !isEmptyValue(cellValue);
+      return !getIsEmptyValue(cellValue);
 
     default:
       return true;
@@ -123,7 +123,7 @@ export function createDataTableFilteredRowModel<
   TData extends RowData,
 >() {
   return (table: Table<TFeatures, TData>) => {
-    const instance = table as unknown as FilteringInstance<TFeatures, TData>;
+    const instance = asFilteringTable(table);
 
     return tableMemo({
       feature: "dataTableFilteringFeature",
@@ -151,7 +151,7 @@ export function createDataTableFacetedRowModel<
   TData extends RowData,
 >() {
   return (table: Table<TFeatures, TData>, columnId: string) => {
-    const instance = table as unknown as FilteringInstance<TFeatures, TData>;
+    const instance = asFilteringTable(table);
 
     return tableMemo({
       feature: "columnFacetingFeature",
@@ -188,7 +188,12 @@ interface FilteringColumn<
   getCanGlobalFilter?: () => boolean;
 }
 
-interface FilteringInstance<
+/**
+ * Members a generic `Table` hides until its features are known, optional
+ * because these row models also run without global filtering or pagination.
+ * Comes first in `FilteringInstance`, so its `getColumn` overload wins.
+ */
+interface FilteringMembers<
   TFeatures extends TableFeatures,
   TData extends RowData,
 > {
@@ -204,6 +209,18 @@ interface FilteringInstance<
   getAllLeafColumns: () => FilteringColumn<TFeatures, TData>[];
   getGlobalFilterFn?: () => FilterFn<TFeatures, TData> | undefined;
   autoResetPageIndex?: () => void;
+}
+
+type FilteringInstance<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+> = FilteringMembers<TFeatures, TData> & Table<TFeatures, TData>;
+
+function asFilteringTable<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(table: Table<TFeatures, TData>) {
+  return table as FilteringInstance<TFeatures, TData>;
 }
 
 function getFilteredRowModel<
@@ -385,14 +402,13 @@ function filterRows<TFeatures extends TableFeatures, TData extends RowData>(
   passes: RowTest<TFeatures, TData>,
   instance: FilteringInstance<TFeatures, TData>,
 ): RowModel<TFeatures, TData> {
-  const table = instance as unknown as Table<TFeatures, TData>;
   const maxDepth = instance.options.maxLeafRowFilterDepth ?? 100;
   const flatRows: Row<TFeatures, TData>[] = [];
   const rowsById = makeObjectMap<Row<TFeatures, TData>>();
 
   function copyRow(row: Row<TFeatures, TData>) {
     const copy = constructRow(
-      table,
+      instance,
       row.id,
       row.original,
       row.index,
@@ -510,7 +526,7 @@ function endOfDay(time: number) {
   return date.getTime();
 }
 
-function isSameDay(cellValue: unknown, value: unknown) {
+function getIsSameDay(cellValue: unknown, value: unknown) {
   const cell = toTime(cellValue);
   const target = toTime(value);
   if (Number.isNaN(cell) || Number.isNaN(target)) return false;
@@ -554,7 +570,7 @@ function compare(
   }
 }
 
-function isBetween(cellValue: unknown, value: unknown, isDate: boolean) {
+function getIsBetween(cellValue: unknown, value: unknown, isDate: boolean) {
   if (!Array.isArray(value) || value.length !== 2) return true;
 
   const [rawStart, rawEnd] = value;
@@ -582,7 +598,7 @@ function isBetween(cellValue: unknown, value: unknown, isDate: boolean) {
   return (start === null || cell >= start) && (end === null || cell <= end);
 }
 
-function isRelativeToToday(cellValue: unknown, value: unknown) {
+function getIsRelativeToToday(cellValue: unknown, value: unknown) {
   if (typeof value !== "string") return true;
 
   const [amountRaw, unit] = value.split(" ");
@@ -615,7 +631,7 @@ function isRelativeToToday(cellValue: unknown, value: unknown) {
   return cell >= start && cell <= end;
 }
 
-function isEmptyValue(value: unknown) {
+function getIsEmptyValue(value: unknown) {
   return (
     value === null ||
     value === undefined ||

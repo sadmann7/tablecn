@@ -21,6 +21,7 @@ import {
   rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
+  type Table,
   type TableFeature,
   type TableFeatures,
   tableFeatures,
@@ -30,7 +31,6 @@ import {
 import type {
   ColumnFilterItem,
   DataTableColumnMeta,
-  FilterVariant,
   JoinOperator,
 } from "@/lib/data-table-types";
 
@@ -90,27 +90,14 @@ declare module "@tanstack/react-table" {
   }
 }
 
-interface DataTableFilteringInstance {
-  atoms: {
-    columnFilters: { get: () => ColumnFilter[] };
-    joinOperator: { get: () => JoinOperator };
-  };
-  initialState: Partial<TableState_DataTableFiltering>;
-  options: TableOptions_DataTableFiltering;
-  getColumn: (columnId: string) => DataTableFilteringColumn | undefined;
-  setColumnFilters: (updater: Updater<ColumnFilter[]>) => void;
-}
+type DataTableInstance = Table<DataTableFeatures, RowData>;
 
-interface DataTableFilteringColumn {
-  columnDef: { meta?: { variant?: FilterVariant } };
-  getFilterFn: () =>
-    | {
-        autoRemove?: (
-          value: unknown,
-          column: DataTableFilteringColumn,
-        ) => boolean;
-      }
-    | undefined;
+/**
+ * Feature hooks get a `Table` generic over any features. This feature is only
+ * registered in `dataTableFeatures`, so its hooks can use that table's types.
+ */
+function asDataTable(table: object) {
+  return table as DataTableInstance;
 }
 
 /**
@@ -124,7 +111,7 @@ interface DataTableFilteringColumn {
  */
 const dataTableFilteringFeature: TableFeature = {
   getInitialState: (initialState) => ({
-    joinOperator: "and" as JoinOperator,
+    joinOperator: "and",
     ...initialState,
   }),
   getDefaultColumnDef: () => ({
@@ -133,15 +120,12 @@ const dataTableFilteringFeature: TableFeature = {
   }),
   getDefaultTableOptions: (table) => {
     const options: TableOptions_DataTableFiltering = {
-      onJoinOperatorChange: makeStateUpdater(
-        "joinOperator",
-        table,
-      ) as unknown as OnChangeFn<JoinOperator>,
+      onJoinOperatorChange: makeStateUpdater("joinOperator", table),
     };
     return options;
   },
   assignColumnPrototype: (prototype, table) => {
-    const instance = table as unknown as DataTableFilteringInstance;
+    const instance = asDataTable(table);
 
     assignPrototypeAPIs("dataTableFilteringFeature", prototype, table, {
       column_getFilterValue: {
@@ -160,8 +144,7 @@ const dataTableFilteringFeature: TableFeature = {
     });
   },
   constructTableAPIs: (table) => {
-    const instance = table as unknown as DataTableFilteringInstance;
-
+    const instance = asDataTable(table);
     const resolve = (filter: ColumnFilter) =>
       resolveColumnFilter(
         filter,
@@ -231,7 +214,7 @@ const dataTableFilteringFeature: TableFeature = {
  * column may also have operator filters, which this leaves out.
  */
 function getValueFilter(
-  instance: DataTableFilteringInstance,
+  instance: DataTableInstance,
   columnId: string,
   filters: ColumnFilter[],
 ) {
@@ -256,7 +239,7 @@ function getValueFilter(
  * the value filter's value.
  */
 function setValueFilter(
-  instance: DataTableFilteringInstance,
+  instance: DataTableInstance,
   columnId: string,
   updater: Updater<unknown>,
 ) {
@@ -285,7 +268,7 @@ function setValueFilter(
  */
 function getShouldRemoveFilter(
   filter: ColumnFilter,
-  instance: DataTableFilteringInstance,
+  instance: DataTableInstance,
 ) {
   if (filter.value === undefined) return true;
   if (filter.operator) return false;
