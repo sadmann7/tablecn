@@ -1,5 +1,4 @@
 import {
-  type ColumnFiltersState,
   type PaginationState,
   type RowData,
   type SortingState,
@@ -33,11 +32,11 @@ import {
   type DataTableFeatures,
   dataTableFeatures,
 } from "@/lib/data-table-features";
-import { dataTableFilterFn } from "@/lib/data-table-filters";
 import {
   dataTableConfig,
+  getIsMultiValueVariant,
+  getIsSimpleFilter,
   toColumnFilterItem,
-  toColumnFilterValue,
 } from "@/lib/data-table-utils";
 import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
 
@@ -51,12 +50,12 @@ const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 
 /**
- * How simple (toolbar) column filters are written to the URL.
+ * How filters are written to the URL. Both formats are always read.
  *
- * - `"keys"`: one query param per column, e.g. `?status=todo,done&title=fix`.
- *   Server code receives them per column.
- * - `"json"`: merged into the `filters` param as operator-based filter
- *   items, so simple and advanced filters share one server contract.
+ * - `"keys"`: toolbar filters get one query param per column, e.g.
+ *   `?status=todo,done&title=fix`. Filters the toolbar can't express (other
+ *   operators, several per column) fall back to the `filters` param.
+ * - `"json"`: every filter goes into the `filters` param.
  */
 type DataTableFilterUrlFormat = "keys" | "json";
 
@@ -68,7 +67,6 @@ interface UseDataTableBaseProps<TData extends RowData> extends Omit<
   | "manualFiltering"
   | "manualPagination"
   | "manualSorting"
-  | "manualAdvancedFiltering"
 > {
   initialState?: Omit<Partial<TableState<DataTableFeatures>>, "sorting"> & {
     sorting?: ExtendedColumnSort<TData>[];
@@ -205,24 +203,44 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   );
 
   const filterableColumns = React.useMemo(
-    () => columns.filter((column) => column.enableColumnFilter),
+    () =>
+      columns.flatMap((column) =>
+        column.enableColumnFilter && column.id
+          ? [{ id: column.id, variant: column.meta?.variant ?? "text" }]
+          : [],
+      ),
     [columns],
   );
 
   const filterableColumnIds = React.useMemo(
-    () => filterableColumns.map((column) => column.id).filter(Boolean),
+    () => filterableColumns.map((column) => column.id),
     [filterableColumns],
   );
 
-  // Advanced filters: operator-based filter items in the `filters` param.
   const [urlFilters, setUrlFilters] = useQueryState(
     filtersKey,
-    getFiltersStateParser<TData>(filterableColumnIds as string[])
+    getFiltersStateParser<TData>(filterableColumnIds)
       .withOptions(queryStateOptions)
       .withDefault(
-        (initialState?.advancedFilters ?? []) as ExtendedColumnFilter<TData>[],
+        (initialState?.filters ?? []) as ExtendedColumnFilter<TData>[],
       ),
   );
+
+  const filterParsers = React.useMemo(() => {
+    return filterableColumns.reduce<
+      Record<string, SingleParser<string> | SingleParser<string[]>>
+    >((acc, column) => {
+      acc[column.id] = getIsMultiValueVariant(column.variant)
+        ? parseAsArrayOf(parseAsString, ARRAY_SEPARATOR).withOptions(
+            queryStateOptions,
+          )
+        : parseAsString.withOptions(queryStateOptions);
+
+      return acc;
+    }, {});
+  }, [filterableColumns, queryStateOptions]);
+
+  const [filterValues, setFilterValues] = useQueryStates(filterParsers);
 
   const [joinOperator, setJoinOperator] = useQueryState(
     joinOperatorKey,
@@ -233,18 +251,45 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   const debouncedSetUrlFilters = useDebouncedCallback(
     (filters: ColumnFilterItem[]) => {
+      const withKeys =
+        !withJsonFilters && getCanWriteAsKeys(filters, filterableColumnIds);
+
       void setPage(1);
-      void setUrlFilters(filters as ExtendedColumnFilter<TData>[]);
+      void setUrlFilters(
+        withKeys || filters.length === 0
+          ? null
+          : (filters as ExtendedColumnFilter<TData>[]),
+      );
+      void setFilterValues(
+        Object.fromEntries(
+          filterableColumnIds.map((id) => [
+            id,
+            withKeys
+              ? (filters.find((filter) => filter.id === id)?.value ?? null)
+              : null,
+          ]),
+        ) as typeof filterValues,
+      );
     },
     debounceMs,
   );
 
-  const [advancedFilters, setAdvancedFilters] =
-    React.useState<ColumnFilterItem[]>(urlFilters);
+  // Same order as `getDataTableQuery`: `filters` items, then per-column keys.
+  const [filters, setFilters] = React.useState<ColumnFilterItem[]>(() => [
+    ...urlFilters,
+    ...filterableColumns.flatMap((column) => {
+      const item = toColumnFilterItem(
+        column.id,
+        column.variant,
+        filterValues[column.id],
+      );
+      return item ? [item] : [];
+    }),
+  ]);
 
-  const onAdvancedFiltersChange = React.useCallback(
+  const onFiltersChange = React.useCallback(
     (updaterOrValue: Updater<ColumnFilterItem[]>) => {
-      setAdvancedFilters((prev) => {
+      setFilters((prev) => {
         const next =
           typeof updaterOrValue === "function"
             ? updaterOrValue(prev)
@@ -269,113 +314,6 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
     [joinOperator, setJoinOperator],
   );
 
-  // Simple filters, "keys" format: one param per filterable column.
-  const filterParsers = React.useMemo(() => {
-    if (withJsonFilters) return {};
-
-    return filterableColumns.reduce<
-      Record<string, SingleParser<string> | SingleParser<string[]>>
-    >((acc, column) => {
-      if (!column.id) return acc;
-
-      const isMultiValue =
-        column.meta?.options !== undefined ||
-        column.meta?.variant === "range" ||
-        column.meta?.variant === "dateRange";
-
-      acc[column.id] = isMultiValue
-        ? parseAsArrayOf(parseAsString, ARRAY_SEPARATOR).withOptions(
-            queryStateOptions,
-          )
-        : parseAsString.withOptions(queryStateOptions);
-
-      return acc;
-    }, {});
-  }, [filterableColumns, queryStateOptions, withJsonFilters]);
-
-  const [filterValues, setFilterValues] = useQueryStates(filterParsers);
-
-  const debouncedSetFilterValues = useDebouncedCallback(
-    (values: typeof filterValues) => {
-      void setPage(1);
-      void setFilterValues(values);
-    },
-    debounceMs,
-  );
-
-  const initialColumnFilters: ColumnFiltersState = React.useMemo(() => {
-    if (withJsonFilters) {
-      return urlFilters.map((filter) => ({
-        id: filter.id,
-        value: toColumnFilterValue(filter),
-      }));
-    }
-
-    return Object.entries(filterValues).reduce<ColumnFiltersState>(
-      (filters, [key, value]) => {
-        if (value !== null) filters.push({ id: key, value });
-        return filters;
-      },
-      [],
-    );
-  }, [filterValues, urlFilters, withJsonFilters]);
-
-  const [columnFilters, setColumnFilters] =
-    React.useState<ColumnFiltersState>(initialColumnFilters);
-
-  const onColumnFiltersChange = React.useCallback(
-    (updaterOrValue: Updater<ColumnFiltersState>) => {
-      setColumnFilters((prev) => {
-        const next =
-          typeof updaterOrValue === "function"
-            ? updaterOrValue(prev)
-            : updaterOrValue;
-
-        if (withJsonFilters) {
-          const items = next.flatMap((filter) => {
-            const column = filterableColumns.find(
-              (column) => column.id === filter.id,
-            );
-            const item = toColumnFilterItem(
-              filter.id,
-              column?.meta?.variant ?? "text",
-              filter.value,
-            );
-            return item ? [item] : [];
-          });
-
-          setAdvancedFilters(items);
-          debouncedSetUrlFilters(items);
-          return next;
-        }
-
-        const filterUpdates = next.reduce<
-          Record<string, string | string[] | null>
-        >((acc, filter) => {
-          if (filterableColumns.some((column) => column.id === filter.id)) {
-            acc[filter.id] = filter.value as string | string[];
-          }
-          return acc;
-        }, {});
-
-        for (const prevFilter of prev) {
-          if (!next.some((filter) => filter.id === prevFilter.id)) {
-            filterUpdates[prevFilter.id] = null;
-          }
-        }
-
-        debouncedSetFilterValues(filterUpdates);
-        return next;
-      });
-    },
-    [
-      debouncedSetFilterValues,
-      debouncedSetUrlFilters,
-      filterableColumns,
-      withJsonFilters,
-    ],
-  );
-
   const table = useTable(
     {
       ...tableProps,
@@ -386,24 +324,20 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       state: {
         pagination,
         sorting,
-        columnFilters,
-        advancedFilters,
+        filters,
         joinOperator,
       },
       defaultColumn: {
-        ...(isServer ? {} : { filterFn: dataTableFilterFn }),
         ...tableProps.defaultColumn,
         enableColumnFilter: false,
       },
       onPaginationChange,
       onSortingChange,
-      onColumnFiltersChange,
-      onAdvancedFiltersChange,
+      onFiltersChange,
       onJoinOperatorChange,
       manualPagination: isServer,
       manualSorting: isServer,
       manualFiltering: isServer,
-      manualAdvancedFiltering: isServer,
       meta: {
         ...tableProps.meta,
         queryKeys: {
@@ -416,8 +350,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
       },
     },
     (state) => ({
-      advancedFilters: state.advancedFilters,
-      columnFilters: state.columnFilters,
+      filters: state.filters,
       joinOperator: state.joinOperator,
       pagination: state.pagination,
       sorting: state.sorting,
@@ -425,6 +358,24 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
   );
 
   return React.useMemo(() => ({ table }), [table]);
+}
+
+/**
+ * Per-column keys hold at most one toolbar filter per column, read back in
+ * column order, so only write them when that round-trips exactly.
+ */
+function getCanWriteAsKeys(filters: ColumnFilterItem[], columnIds: string[]) {
+  let lastIndex = -1;
+
+  return filters.every((filter) => {
+    const index = columnIds.indexOf(filter.id);
+    if (index <= lastIndex || !getIsSimpleFilter(filter)) return false;
+    if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
+      return false;
+    }
+    lastIndex = index;
+    return true;
+  });
 }
 
 export { useDataTable, type UseDataTableProps };

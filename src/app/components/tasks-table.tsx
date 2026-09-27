@@ -76,11 +76,11 @@ export function TasksTable({
     data,
     columns,
     initialState: {
-      sorting: [{ id: "createdAt" as const, desc: true }],
+      sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { start: [], end: ["actions"] },
     },
     queryKeys,
-    getRowId: (originalRow: Task) => originalRow.id,
+    getRowId: (originalRow) => originalRow.id,
     enableRowRangeSelection: true,
     shallow: false,
     clearOnDefault: true,

@@ -1,16 +1,13 @@
 "use client";
 
-import {
-  type Column,
-  type ColumnFiltersState,
-  type RowData,
-  Subscribe,
-} from "@tanstack/react-table";
+import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
+import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { Label } from "@/registry/bases/radix/ui/label";
@@ -65,15 +62,15 @@ export function DataTableSliderFilter<TData extends RowData>({
 }: DataTableSliderFilterProps<TData>) {
   return (
     <Subscribe
-      source={column.table.atoms.columnFilters}
-      selector={(filters: ColumnFiltersState) =>
-        filters.find((filter) => filter.id === column.id)?.value
+      source={column.table.atoms.filters}
+      selector={(filters: ColumnFilterItem[]) =>
+        getSimpleFilter(filters, column.id)
       }
     >
-      {(columnFilterValue) => (
+      {(filter) => (
         <DataTableSliderFilterContent
           column={column}
-          columnFilterValue={columnFilterValue}
+          columnFilterValue={filter ? toColumnFilterValue(filter) : undefined}
           {...props}
         />
       )}
@@ -138,7 +135,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
       if (!Number.isNaN(numValue) && numValue >= min && numValue <= range[1]) {
-        column.setFilterValue([numValue, range[1]]);
+        column.table.setSimpleFilter(column.id, [numValue, range[1]]);
       }
     },
     [column, min, range],
@@ -148,7 +145,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
       if (!Number.isNaN(numValue) && numValue <= max && numValue >= range[0]) {
-        column.setFilterValue([range[0], numValue]);
+        column.table.setSimpleFilter(column.id, [range[0], numValue]);
       }
     },
     [column, max, range],
@@ -157,7 +154,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const onSliderValueChange = React.useCallback(
     (value: RangeValue) => {
       if (Array.isArray(value) && value.length === 2) {
-        column.setFilterValue(value);
+        column.table.setSimpleFilter(column.id, value);
       }
     },
     [column],
@@ -168,7 +165,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
       if (event.target instanceof HTMLDivElement) {
         event.stopPropagation();
       }
-      column.setFilterValue(undefined);
+      column.table.setSimpleFilter(column.id, undefined);
     },
     [column],
   );

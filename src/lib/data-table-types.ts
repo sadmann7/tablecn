@@ -42,7 +42,7 @@ export interface ExtendedColumnSort<TData> extends Omit<ColumnSort, "id"> {
 
 /**
  * A single filter condition. This is the wire format shared by the URL, the
- * table's `advancedFilters` state slice, and server adapters.
+ * table's `filters` state slice, and server adapters.
  */
 export interface ColumnFilterItem {
   id: string;

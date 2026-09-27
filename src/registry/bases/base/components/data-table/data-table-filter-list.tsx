@@ -87,7 +87,7 @@ export function DataTableFilterList<TData extends RowData>({
     <Subscribe
       source={table.store}
       selector={(state) => ({
-        filters: state.advancedFilters,
+        filters: state.filters,
         joinOperator: state.joinOperator,
       })}
     >
@@ -134,7 +134,7 @@ function DataTableFilterListContent<TData extends RowData>({
 
     if (!column) return;
 
-    table.addAdvancedFilter({
+    table.addFilter({
       id: column.id,
       value: "",
       variant: column.columnDef.meta?.variant ?? "text",
@@ -150,14 +150,14 @@ function DataTableFilterListContent<TData extends RowData>({
       filterId: string,
       updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
     ) => {
-      table.updateAdvancedFilter(filterId, updates);
+      table.updateFilter(filterId, updates);
     },
     [table],
   );
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      table.removeAdvancedFilter(filterId);
+      table.removeFilter(filterId);
       requestAnimationFrame(() => {
         addButtonRef.current?.focus();
       });
@@ -166,7 +166,7 @@ function DataTableFilterListContent<TData extends RowData>({
   );
 
   const onFiltersReset = React.useCallback(() => {
-    table.resetAdvancedFilters(true);
+    table.resetFilters(true);
   }, [table]);
 
   const setJoinOperator = React.useCallback(
@@ -215,7 +215,7 @@ function DataTableFilterListContent<TData extends RowData>({
   return (
     <Sortable
       value={filters}
-      onValueChange={(value) => table.setAdvancedFilters(value)}
+      onValueChange={(value) => table.setFilters(value)}
       getItemValue={(item) => item.filterId}
     >
       <Popover open={open} onOpenChange={setOpen}>

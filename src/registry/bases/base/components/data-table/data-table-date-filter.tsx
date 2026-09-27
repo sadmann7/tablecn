@@ -2,16 +2,13 @@
 
 import type { DateRange } from "react-day-picker";
 
-import {
-  type Column,
-  type ColumnFiltersState,
-  type RowData,
-  Subscribe,
-} from "@tanstack/react-table";
+import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
+import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
@@ -70,15 +67,15 @@ export function DataTableDateFilter<TData extends RowData>({
 }: DataTableDateFilterProps<TData>) {
   return (
     <Subscribe
-      source={column.table.atoms.columnFilters}
-      selector={(filters: ColumnFiltersState) =>
-        filters.find((filter) => filter.id === column.id)?.value
+      source={column.table.atoms.filters}
+      selector={(filters: ColumnFilterItem[]) =>
+        getSimpleFilter(filters, column.id)
       }
     >
-      {(columnFilterValue) => (
+      {(filter) => (
         <DataTableDateFilterContent
           column={column}
-          columnFilterValue={columnFilterValue}
+          columnFilterValue={filter ? toColumnFilterValue(filter) : undefined}
           {...props}
         />
       )}
@@ -115,16 +112,19 @@ function DataTableDateFilterContent<TData extends RowData>({
   const onSelect = React.useCallback(
     (date: Date | DateRange | undefined) => {
       if (!date) {
-        column.setFilterValue(undefined);
+        column.table.setSimpleFilter(column.id, undefined);
         return;
       }
 
       if (multiple && !("getTime" in date)) {
         const from = date.from?.getTime();
         const to = date.to?.getTime();
-        column.setFilterValue(from || to ? [from, to] : undefined);
+        column.table.setSimpleFilter(
+          column.id,
+          from || to ? [from, to] : undefined,
+        );
       } else if (!multiple && "getTime" in date) {
-        column.setFilterValue(date.getTime());
+        column.table.setSimpleFilter(column.id, date.getTime());
       }
     },
     [column, multiple],
@@ -133,7 +133,7 @@ function DataTableDateFilterContent<TData extends RowData>({
   const onReset = React.useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation();
-      column.setFilterValue(undefined);
+      column.table.setSimpleFilter(column.id, undefined);
     },
     [column],
   );

@@ -16,6 +16,7 @@ import type {
 
 import {
   dataTableConfig,
+  getIsMultiValueVariant,
   getValidFilters,
   toColumnFilterItem,
 } from "@/lib/data-table-utils";
@@ -71,13 +72,6 @@ const filterItemSchema = z.object({
 
 export type FilterItemSchema = z.infer<typeof filterItemSchema>;
 
-const MULTI_VALUE_VARIANTS: FilterVariant[] = [
-  "select",
-  "multiSelect",
-  "range",
-  "dateRange",
-];
-
 interface DataTableSearchParamsOptions<TData> {
   /**
    * Filterable column ids mapped to their filter variant. Needed to read
@@ -102,7 +96,7 @@ export function getDataTableSearchParams<TData>({
   const columnParsers = Object.fromEntries(
     Object.entries(filterableColumns).map(([id, variant]) => [
       id,
-      MULTI_VALUE_VARIANTS.includes(variant)
+      getIsMultiValueVariant(variant)
         ? parseAsArrayOf(parseAsString).withDefault([])
         : parseAsString.withDefault(""),
     ]),
@@ -122,18 +116,19 @@ export function getDataTableSearchParams<TData>({
 
 /**
  * Normalizes parsed search params into one `DataTableQuery`, regardless of
- * whether simple filters arrived as per-column params or inside `filters`.
+ * whether filters arrived as per-column params or inside `filters`. This
+ * mirrors how `useDataTable` reads the URL, so server and client agree.
  * Server adapters (Drizzle, Supabase, ...) only need to handle this shape.
  */
 export function getDataTableQuery<TData>(
   search: Record<string, unknown>,
   filterableColumns: Record<string, FilterVariant>,
 ): DataTableQuery<TData> {
-  const advancedFilters = Array.isArray(search.filters)
+  const itemFilters = Array.isArray(search.filters)
     ? (search.filters as ExtendedColumnFilter<TData>[])
     : [];
 
-  const simpleFilters = Object.entries(filterableColumns).flatMap(
+  const keyFilters = Object.entries(filterableColumns).flatMap(
     ([id, variant]) => {
       const item = toColumnFilterItem(id, variant, search[id]);
       return item ? [item as ExtendedColumnFilter<TData>] : [];
@@ -146,7 +141,7 @@ export function getDataTableQuery<TData>(
     sorting: Array.isArray(search.sort)
       ? (search.sort as ExtendedColumnSort<TData>[])
       : [],
-    filters: getValidFilters([...advancedFilters, ...simpleFilters]),
+    filters: getValidFilters([...itemFilters, ...keyFilters]),
     joinOperator: search.joinOperator === "or" ? "or" : "and",
   };
 }

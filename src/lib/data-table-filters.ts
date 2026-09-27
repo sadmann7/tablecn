@@ -1,6 +1,4 @@
 import {
-  createFilteredRowModel,
-  type FilterFn,
   type Row,
   type RowData,
   type RowModel,
@@ -9,14 +7,9 @@ import {
   tableMemo,
 } from "@tanstack/react-table";
 
-import type {
-  ColumnFilterItem,
-  FilterOperator,
-  FilterVariant,
-  JoinOperator,
-} from "@/lib/data-table-types";
+import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
-import { getDefaultFilterOperator } from "@/lib/data-table-utils";
+import { getValidFilters } from "@/lib/data-table-utils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -101,105 +94,49 @@ export function matchesFilters(
 }
 
 /**
- * Default `filterFn` for simple toolbar filters. It reads the column's
- * `meta.variant` and applies the variant's default operator, so text inputs,
- * faceted filters, sliders and date pickers filter client-side without any
- * per-column configuration.
- */
-export function dataTableFilterFn<
-  TFeatures extends TableFeatures,
-  TData extends RowData,
->(row: Row<TFeatures, TData>, columnId: string, filterValue: unknown) {
-  const column = row.table.getColumn(columnId);
-  const variant = (column?.columnDef.meta as { variant?: FilterVariant })
-    ?.variant;
-
-  if (!variant) return true;
-
-  return matchesFilter(
-    row.getValue(columnId),
-    toFilterItem(variant, filterValue),
-  );
-}
-
-dataTableFilterFn.autoRemove = (value: unknown) => isEmptyValue(value);
-
-dataTableFilterFn satisfies FilterFn<TableFeatures, RowData>;
-
-function toFilterItem(
-  variant: FilterVariant,
-  filterValue: unknown,
-): Pick<ColumnFilterItem, "operator" | "variant" | "value"> {
-  const isRange = Array.isArray(filterValue) && filterValue.length === 2;
-
-  let operator: FilterOperator;
-  if (isRange && variant !== "select" && variant !== "multiSelect") {
-    operator = "isBetween";
-  } else if (variant === "select" || variant === "multiSelect") {
-    operator = "inArray";
-  } else {
-    operator = getDefaultFilterOperator(variant);
-  }
-
-  const value = Array.isArray(filterValue)
-    ? filterValue.map((item) => stringify(item))
-    : stringify(filterValue);
-
-  return { operator, variant, value };
-}
-
-/**
- * Filtered row model that runs TanStack's column filtering and then the
- * `advancedFilters` slice. Register it in the `filteredRowModel` slot.
- * Returns the column-filtered rows untouched when `manualAdvancedFiltering`
- * is set.
+ * Filtered row model that evaluates the `filters` slice with its
+ * `joinOperator`. Register it in the `filteredRowModel` slot. TanStack skips
+ * it when `manualFiltering` is set, i.e. the server already filtered.
  */
 export function createDataTableFilteredRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
 >() {
-  const createInner = createFilteredRowModel<TFeatures, TData>();
-
   return (table: Table<TFeatures, TData>) => {
-    const getColumnFiltered = createInner(table);
-    const instance = table as unknown as AdvancedFilteringInstance;
+    const instance = table as unknown as FilteringInstance;
 
     return tableMemo({
-      feature: "advancedFilteringFeature",
+      feature: "dataTableFilteringFeature",
       table,
       fnName: "table.getFilteredRowModel",
       memoDeps: () => [
-        getColumnFiltered(),
-        instance.atoms.advancedFilters?.get(),
+        table.getPreFilteredRowModel(),
+        instance.atoms.filters?.get(),
         instance.atoms.joinOperator?.get(),
-        instance.options.manualAdvancedFiltering,
       ],
       fn: () =>
-        filterAdvanced(
-          getColumnFiltered(),
-          instance.atoms.advancedFilters?.get() ?? [],
+        filterRows(
+          table.getPreFilteredRowModel(),
+          getValidFilters(instance.atoms.filters?.get() ?? []),
           instance.atoms.joinOperator?.get() ?? "and",
-          instance.options.manualAdvancedFiltering === true,
         ),
     });
   };
 }
 
-interface AdvancedFilteringInstance {
+interface FilteringInstance {
   atoms: {
-    advancedFilters?: { get: () => ColumnFilterItem[] };
+    filters?: { get: () => ColumnFilterItem[] };
     joinOperator?: { get: () => JoinOperator };
   };
-  options: { manualAdvancedFiltering?: boolean };
 }
 
-function filterAdvanced<TFeatures extends TableFeatures, TData extends RowData>(
+function filterRows<TFeatures extends TableFeatures, TData extends RowData>(
   rowModel: RowModel<TFeatures, TData>,
   filters: ColumnFilterItem[],
   joinOperator: JoinOperator,
-  isManual: boolean,
 ): RowModel<TFeatures, TData> {
-  if (isManual || filters.length === 0) return rowModel;
+  if (filters.length === 0) return rowModel;
 
   const rows: Row<TFeatures, TData>[] = [];
   const rowsById: Record<string, Row<TFeatures, TData>> = {};

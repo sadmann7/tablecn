@@ -3,7 +3,6 @@ import type { Column, RowData } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnFilterItem,
-  ExtendedColumnFilter,
   FilterOperator,
   FilterVariant,
 } from "@/lib/data-table-types";
@@ -153,38 +152,71 @@ function toFilterString(value: unknown): string {
   return String(value as string | number | boolean | bigint);
 }
 
+const MULTI_VALUE_VARIANTS: FilterVariant[] = [
+  "select",
+  "multiSelect",
+  "range",
+  "dateRange",
+];
+
+/** Whether a variant's toolbar filter holds a list, e.g. `?status=todo,done`. */
+export function getIsMultiValueVariant(variant: FilterVariant) {
+  return MULTI_VALUE_VARIANTS.includes(variant);
+}
+
+/** The operator a toolbar filter of this variant applies. */
+export function getSimpleFilterOperator(
+  variant: FilterVariant,
+): FilterOperator {
+  if (variant === "select" || variant === "multiSelect") return "inArray";
+  if (variant === "range" || variant === "dateRange") return "isBetween";
+  return getDefaultFilterOperator(variant);
+}
+
+/**
+ * Whether a filter is one the toolbar can show and edit: the variant's
+ * default operator with a value of the matching shape.
+ */
+export function getIsSimpleFilter(filter: ColumnFilterItem) {
+  return (
+    filter.operator === getSimpleFilterOperator(filter.variant) &&
+    Array.isArray(filter.value) === getIsMultiValueVariant(filter.variant)
+  );
+}
+
+/** The toolbar filter of a column, if it has one. */
+export function getSimpleFilter<TFilter extends ColumnFilterItem>(
+  filters: TFilter[],
+  columnId: string,
+): TFilter | undefined {
+  return filters.find(
+    (filter) => filter.id === columnId && getIsSimpleFilter(filter),
+  );
+}
+
+/**
+ * Converts a toolbar value (e.g. `["todo", "done"]` or `[1, 5]`) to a
+ * filter item. Returns `null` for empty values.
+ */
 export function toColumnFilterItem(
   id: string,
   variant: FilterVariant,
   value: unknown,
 ): ColumnFilterItem | null {
   if (value === undefined || value === null || value === "") return null;
-  if (Array.isArray(value) && value.length === 0) return null;
 
+  const operator = getSimpleFilterOperator(variant);
   const filterId = `${id}-filter`;
 
-  if (variant === "select" || variant === "multiSelect") {
+  if (getIsMultiValueVariant(variant)) {
     const values = (Array.isArray(value) ? value : [value]).map(toFilterString);
-    return { id, variant, operator: "inArray", value: values, filterId };
+    if (values.every((item) => item === "")) return null;
+    return { id, variant, operator, value: values, filterId };
   }
 
-  if (Array.isArray(value)) {
-    return {
-      id,
-      variant,
-      operator: "isBetween",
-      value: value.map(toFilterString),
-      filterId,
-    };
-  }
+  if (Array.isArray(value)) return null;
 
-  return {
-    id,
-    variant,
-    operator: getDefaultFilterOperator(variant),
-    value: toFilterString(value),
-    filterId,
-  };
+  return { id, variant, operator, value: toFilterString(value), filterId };
 }
 
 export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
@@ -209,9 +241,9 @@ export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
   return value;
 }
 
-export function getValidFilters<TData>(
-  filters: ExtendedColumnFilter<TData>[],
-): ExtendedColumnFilter<TData>[] {
+export function getValidFilters<TFilter extends ColumnFilterItem>(
+  filters: TFilter[],
+): TFilter[] {
   return filters.filter(
     (filter) =>
       filter.operator === "isEmpty" ||

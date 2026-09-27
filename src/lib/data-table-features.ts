@@ -7,7 +7,6 @@ import {
   columnSizingFeature,
   columnVisibilityFeature,
   createFacetedMinMaxValues,
-  createFacetedRowModel,
   createFacetedUniqueValues,
   createPaginatedRowModel,
   createSortedRowModel,
@@ -29,88 +28,96 @@ import type {
   ColumnFilterItem,
   DataTableColumnMeta,
   DataTableMeta,
+  FilterVariant,
   JoinOperator,
 } from "@/lib/data-table-types";
 
 import { createDataTableFilteredRowModel } from "@/lib/data-table-filters";
+import { getIsSimpleFilter, toColumnFilterItem } from "@/lib/data-table-utils";
 
-interface TableState_AdvancedFiltering {
-  advancedFilters: ColumnFilterItem[];
+interface TableState_DataTableFiltering {
+  filters: ColumnFilterItem[];
   joinOperator: JoinOperator;
 }
 
-interface TableOptions_AdvancedFiltering {
-  onAdvancedFiltersChange?: OnChangeFn<ColumnFilterItem[]>;
+interface TableOptions_DataTableFiltering {
+  onFiltersChange?: OnChangeFn<ColumnFilterItem[]>;
   onJoinOperatorChange?: OnChangeFn<JoinOperator>;
-  /**
-   * Skip client-side evaluation of `advancedFilters`. Set this when the
-   * server already applied them.
-   */
-  manualAdvancedFiltering?: boolean;
 }
 
-interface Table_AdvancedFiltering {
-  getAdvancedFilters: () => ColumnFilterItem[];
-  setAdvancedFilters: (updater: Updater<ColumnFilterItem[]>) => void;
-  resetAdvancedFilters: (defaultState?: boolean) => void;
-  addAdvancedFilter: (filter: ColumnFilterItem) => void;
-  updateAdvancedFilter: (
+interface Table_DataTableFiltering {
+  getFilters: () => ColumnFilterItem[];
+  setFilters: (updater: Updater<ColumnFilterItem[]>) => void;
+  resetFilters: (defaultState?: boolean) => void;
+  addFilter: (filter: ColumnFilterItem) => void;
+  updateFilter: (
     filterId: string,
     updates: Partial<Omit<ColumnFilterItem, "filterId">>,
   ) => void;
-  removeAdvancedFilter: (filterId: string) => void;
+  removeFilter: (filterId: string) => void;
+  /**
+   * Sets a column's toolbar filter from a toolbar value (e.g. `["todo"]` or
+   * `[1, 5]`), keeping its position. An empty value removes it.
+   */
+  setSimpleFilter: (columnId: string, value: unknown) => void;
   getJoinOperator: () => JoinOperator;
   setJoinOperator: (updater: Updater<JoinOperator>) => void;
 }
 
 declare module "@tanstack/react-table" {
   interface Plugins {
-    advancedFilteringFeature: TableFeature;
+    dataTableFilteringFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
-    advancedFilteringFeature: TableState_AdvancedFiltering;
+    dataTableFilteringFeature: TableState_DataTableFiltering;
   }
 
   interface TableOptions_FeatureMap<
     in out TFeatures extends TableFeatures,
     in out TData extends RowData,
   > {
-    advancedFilteringFeature: TableOptions_AdvancedFiltering;
+    dataTableFilteringFeature: TableOptions_DataTableFiltering;
   }
 
   interface Table_FeatureMap<
     in out TFeatures extends TableFeatures,
     in out TData extends RowData,
   > {
-    advancedFilteringFeature: Table_AdvancedFiltering;
+    dataTableFilteringFeature: Table_DataTableFiltering;
   }
 }
 
-interface AdvancedFilteringInstance {
+interface DataTableFilteringInstance {
   atoms: {
-    advancedFilters: { get: () => ColumnFilterItem[] };
+    filters: { get: () => ColumnFilterItem[] };
     joinOperator: { get: () => JoinOperator };
   };
-  initialState: Partial<TableState_AdvancedFiltering>;
-  options: TableOptions_AdvancedFiltering;
+  initialState: Partial<TableState_DataTableFiltering>;
+  options: TableOptions_DataTableFiltering;
+  getColumn: (
+    columnId: string,
+  ) => { columnDef: { meta?: { variant?: FilterVariant } } } | undefined;
 }
 
 /**
- * Operator-based filters (`where status is not done and title contains x`)
- * as a table state slice, so filter UIs, URL sync and client-side filtering
- * all read and write the same state.
+ * The one filter state of a data table: operator-based filter items joined by
+ * `joinOperator`. The toolbar, filter list and filter menu all read and write
+ * it, and the URL and server adapters use the same shape.
+ *
+ * TanStack's `columnFilters` slice stays unused; `columnFilteringFeature` is
+ * only registered for `enableColumnFilter` and `column.getCanFilter()`.
  */
-const advancedFilteringFeature: TableFeature = {
+const dataTableFilteringFeature: TableFeature = {
   getInitialState: (initialState) => ({
-    advancedFilters: [],
+    filters: [],
     joinOperator: "and" as JoinOperator,
     ...initialState,
   }),
   getDefaultTableOptions: (table) => {
-    const options: TableOptions_AdvancedFiltering = {
-      onAdvancedFiltersChange: makeStateUpdater(
-        "advancedFilters" as never,
+    const options: TableOptions_DataTableFiltering = {
+      onFiltersChange: makeStateUpdater(
+        "filters" as never,
         table,
       ) as unknown as OnChangeFn<ColumnFilterItem[]>,
       onJoinOperatorChange: makeStateUpdater(
@@ -121,10 +128,10 @@ const advancedFilteringFeature: TableFeature = {
     return options;
   },
   constructTableAPIs: (table) => {
-    const instance = table as unknown as AdvancedFilteringInstance;
+    const instance = table as unknown as DataTableFilteringInstance;
 
-    const setAdvancedFilters = (updater: Updater<ColumnFilterItem[]>) =>
-      instance.options.onAdvancedFiltersChange?.((old) =>
+    const setFilters = (updater: Updater<ColumnFilterItem[]>) =>
+      instance.options.onFiltersChange?.((old) =>
         functionalUpdate(updater, old),
       );
 
@@ -133,16 +140,14 @@ const advancedFilteringFeature: TableFeature = {
         functionalUpdate(updater, old),
       );
 
-    assignTableAPIs("advancedFilteringFeature", table, {
-      table_getAdvancedFilters: {
-        fn: () => instance.atoms.advancedFilters.get(),
+    assignTableAPIs("dataTableFilteringFeature", table, {
+      table_getFilters: {
+        fn: () => instance.atoms.filters.get(),
       },
-      table_setAdvancedFilters: { fn: setAdvancedFilters },
-      table_resetAdvancedFilters: {
+      table_setFilters: { fn: setFilters },
+      table_resetFilters: {
         fn: (defaultState?: boolean) => {
-          setAdvancedFilters(
-            defaultState ? [] : (instance.initialState.advancedFilters ?? []),
-          );
+          setFilters(defaultState ? [] : (instance.initialState.filters ?? []));
           setJoinOperator(
             defaultState
               ? "and"
@@ -150,26 +155,45 @@ const advancedFilteringFeature: TableFeature = {
           );
         },
       },
-      table_addAdvancedFilter: {
-        fn: (filter: ColumnFilterItem) =>
-          setAdvancedFilters((old) => [...old, filter]),
+      table_addFilter: {
+        fn: (filter: ColumnFilterItem) => setFilters((old) => [...old, filter]),
       },
-      table_updateAdvancedFilter: {
+      table_updateFilter: {
         fn: (
           filterId: string,
           updates: Partial<Omit<ColumnFilterItem, "filterId">>,
         ) =>
-          setAdvancedFilters((old) =>
+          setFilters((old) =>
             old.map((filter) =>
               filter.filterId === filterId ? { ...filter, ...updates } : filter,
             ),
           ),
       },
-      table_removeAdvancedFilter: {
+      table_removeFilter: {
         fn: (filterId: string) =>
-          setAdvancedFilters((old) =>
+          setFilters((old) =>
             old.filter((filter) => filter.filterId !== filterId),
           ),
+      },
+      table_setSimpleFilter: {
+        fn: (columnId: string, value: unknown) => {
+          const variant =
+            instance.getColumn(columnId)?.columnDef.meta?.variant ?? "text";
+          const item = toColumnFilterItem(columnId, variant, value);
+
+          setFilters((old) => {
+            const index = old.findIndex(
+              (filter) => filter.id === columnId && getIsSimpleFilter(filter),
+            );
+
+            if (index === -1) return item ? [...old, item] : old;
+            if (!item) return old.filter((_, i) => i !== index);
+
+            return old.map((filter, i) =>
+              i === index ? { ...item, filterId: filter.filterId } : filter,
+            );
+          });
+        },
       },
       table_getJoinOperator: {
         fn: () => instance.atoms.joinOperator.get(),
@@ -189,9 +213,8 @@ export const dataTableFeatures = tableFeatures({
   rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
-  advancedFilteringFeature,
+  dataTableFilteringFeature,
   filteredRowModel: createDataTableFilteredRowModel(),
-  facetedRowModel: createFacetedRowModel(),
   facetedUniqueValues: createFacetedUniqueValues(),
   facetedMinMaxValues: createFacetedMinMaxValues(),
   paginatedRowModel: createPaginatedRowModel(),

@@ -60,7 +60,7 @@ export function DataTableFilterMenu<TData extends RowData>({
   ...props
 }: DataTableFilterMenuProps<TData>) {
   return (
-    <Subscribe source={table.atoms.advancedFilters}>
+    <Subscribe source={table.atoms.filters}>
       {(filters) => (
         <DataTableFilterMenuContent
           table={table}
@@ -136,7 +136,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
       const filterValue =
         column.columnDef.meta?.variant === "multiSelect" ? [value] : value;
 
-      table.addAdvancedFilter({
+      table.addFilter({
         id: column.id,
         value: filterValue,
         variant: column.columnDef.meta?.variant ?? "text",
@@ -159,7 +159,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
 
   const onFilterRemove = React.useCallback(
     (filterId: string) => {
-      table.removeAdvancedFilter(filterId);
+      table.removeFilter(filterId);
       requestAnimationFrame(() => {
         triggerRef.current?.focus();
       });
@@ -172,13 +172,13 @@ function DataTableFilterMenuContent<TData extends RowData>({
       filterId: string,
       updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
     ) => {
-      table.updateAdvancedFilter(filterId, updates);
+      table.updateFilter(filterId, updates);
     },
     [table],
   );
 
   const onFiltersReset = React.useCallback(() => {
-    table.resetAdvancedFilters(true);
+    table.resetFilters(true);
   }, [table]);
 
   React.useEffect(() => {

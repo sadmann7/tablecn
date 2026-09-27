@@ -2,7 +2,6 @@
 
 import {
   type Column,
-  type ColumnFiltersState,
   type RowData,
   Subscribe,
   type Table,
@@ -11,7 +10,9 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
+import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import { getSimpleFilter, toColumnFilterValue } from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/base/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/base/components/data-table/data-table-faceted-filter";
 import { DataTableSliderFilter } from "@/registry/bases/base/components/data-table/data-table-slider-filter";
@@ -38,7 +39,7 @@ export function DataTableToolbar<TData extends RowData>({
   );
 
   const onReset = React.useCallback(() => {
-    table.resetColumnFilters();
+    table.resetFilters(true);
   }, [table]);
 
   return (
@@ -56,7 +57,7 @@ export function DataTableToolbar<TData extends RowData>({
           <DataTableToolbarFilter key={column.id} column={column} />
         ))}
         <Subscribe
-          source={table.atoms.columnFilters}
+          source={table.atoms.filters}
           selector={(filters) => filters.length > 0}
         >
           {(isFiltered) =>
@@ -193,20 +194,22 @@ function DataTableFilterInput<TData extends RowData>({
 }) {
   return (
     <Subscribe
-      source={column.table.atoms.columnFilters}
-      selector={(filters: ColumnFiltersState) =>
-        readFilterInputValue(
-          filters.find((filter) => filter.id === column.id)?.value,
-        )
+      source={column.table.atoms.filters}
+      selector={(filters: ColumnFilterItem[]) =>
+        getSimpleFilter(filters, column.id)
       }
     >
-      {(value) => (
+      {(filter) => (
         <Input
           type={type}
           inputMode={inputMode}
           placeholder={placeholder}
-          value={value}
-          onChange={(event) => column.setFilterValue(event.target.value)}
+          value={readFilterInputValue(
+            filter ? toColumnFilterValue(filter) : undefined,
+          )}
+          onChange={(event) =>
+            column.table.setSimpleFilter(column.id, event.target.value)
+          }
           className={className}
         />
       )}
