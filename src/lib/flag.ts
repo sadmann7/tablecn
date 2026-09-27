@@ -35,10 +35,10 @@ export type Mode = (typeof modes)[number]["value"];
 
 export const filters = [
   {
-    label: "Simple",
-    value: "simple",
+    label: "Value",
+    value: "value",
     icon: ListFilterIcon,
-    description: "Faceted filters inline with the toolbar.",
+    description: "One value filter per column, shown inline.",
   },
   {
     label: "Advanced",

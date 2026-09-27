@@ -27,7 +27,7 @@ function TasksTableControlMenu() {
   const [filter, setFilter] = useQueryState(
     "filter",
     parseAsStringEnum(filters.map((filter) => filter.value))
-      .withDefault("simple")
+      .withDefault("value")
       .withOptions({ shallow: false, clearOnDefault: true }),
   );
 

@@ -49,7 +49,7 @@ export function TasksTable({
   promises,
   queryKeys,
 }: TasksTableProps) {
-  const enableAdvancedFilter = filter !== "simple";
+  const enableAdvancedFilter = filter !== "value";
 
   const [
     { data, pageCount },
@@ -91,20 +91,6 @@ export function TasksTable({
       ? { ...tableProps, mode: "client" }
       : { ...tableProps, pageCount },
   );
-
-  const titleColumn = table.getColumn("title");
-  const statusColumn = table.getColumn("status");
-
-  console.log({
-    titleColumn,
-    statusColumn,
-    isTitleColumnFiltered: titleColumn?.getIsFiltered(),
-    titleColumnFilterValue: titleColumn?.getFilterValue(),
-    isTitleColumnSorted: titleColumn?.getIsSorted(),
-    isStatusColumnFiltered: statusColumn?.getIsFiltered(),
-    statusColumnFilterValue: statusColumn?.getFilterValue(),
-    isStatusColumnSorted: statusColumn?.getIsSorted(),
-  });
 
   return (
     <>
