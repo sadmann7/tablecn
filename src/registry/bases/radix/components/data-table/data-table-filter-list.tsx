@@ -18,9 +18,9 @@ import type {
 } from "@/lib/data-table-types";
 
 import {
-  dataTableConfig,
   getDefaultFilterOperator,
   getFilterOperators,
+  joinOperators,
 } from "@/lib/data-table-utils";
 import { formatDate } from "@/lib/format";
 import { generateId } from "@/lib/id";
@@ -412,7 +412,7 @@ function DataTableFilterItem<TData extends RowData>({
                 className="min-w-(--radix-select-trigger-width) lowercase"
               >
                 <SelectGroup>
-                  {dataTableConfig.joinOperators.map((joinOperator) => (
+                  {joinOperators.map((joinOperator) => (
                     <SelectItem key={joinOperator} value={joinOperator}>
                       {joinOperator}
                     </SelectItem>

@@ -31,9 +31,9 @@ import {
   dataTableFeatures,
 } from "@/lib/data-table-features";
 import {
-  dataTableConfig,
   getIsMultiValueVariant,
   getIsSimpleFilter,
+  joinOperators,
   toColumnFilterItem,
 } from "@/lib/data-table-utils";
 import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
@@ -236,7 +236,7 @@ function useDataTable<TData extends RowData>(props: UseDataTableProps<TData>) {
 
   const [joinOperator, setJoinOperator] = useQueryState(
     joinOperatorKey,
-    parseAsStringEnum([...dataTableConfig.joinOperators])
+    parseAsStringEnum([...joinOperators])
       .withOptions(queryStateOptions)
       .withDefault(initialState?.joinOperator ?? "and"),
   );

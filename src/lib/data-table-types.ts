@@ -1,7 +1,11 @@
 import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { DataTableConfig } from "@/lib/data-table-utils";
+import type {
+  filterOperators,
+  filterVariants,
+  joinOperators,
+} from "@/lib/data-table-utils";
 
 export interface DataTableMeta {
   queryKeys?: QueryKeys;
@@ -32,9 +36,14 @@ export interface Option {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type FilterOperator = DataTableConfig["operators"][number];
-export type FilterVariant = DataTableConfig["filterVariants"][number];
-export type JoinOperator = DataTableConfig["joinOperators"][number];
+export type FilterOperator = (typeof filterOperators)[number];
+export type FilterVariant = (typeof filterVariants)[number];
+export type JoinOperator = (typeof joinOperators)[number];
+
+export interface FilterOperatorOption {
+  label: string;
+  value: FilterOperator;
+}
 
 /**
  * A single sort. `TColumnId` narrows the column id once a parser has checked it
