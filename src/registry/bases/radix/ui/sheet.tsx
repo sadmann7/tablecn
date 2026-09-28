@@ -1,10 +1,9 @@
 "use client";
 
-import type * as React from "react";
-
 import { cn } from "cn";
 import { XIcon } from "lucide-react";
 import { Dialog as SheetPrimitive } from "radix-ui";
+import * as React from "react";
 
 import { Button } from "@/registry/bases/radix/ui/button";
 
@@ -114,7 +113,7 @@ function SheetTitle({
     <SheetPrimitive.Title
       data-slot="sheet-title"
       className={cn(
-        "font-heading text-base font-medium text-foreground",
+        "cn-font-heading text-base font-medium text-foreground",
         className,
       )}
       {...props}
@@ -137,11 +136,11 @@ function SheetDescription({
 
 export {
   Sheet,
+  SheetTrigger,
   SheetClose,
   SheetContent,
-  SheetDescription,
-  SheetFooter,
   SheetHeader,
+  SheetFooter,
   SheetTitle,
-  SheetTrigger,
+  SheetDescription,
 };
