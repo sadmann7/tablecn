@@ -4,6 +4,7 @@ import type * as React from "react";
 import type { FieldPath, FieldValues, UseFormReturn } from "react-hook-form";
 
 import { tasks } from "@/db/schema";
+import { cn } from "@/lib/utils";
 import {
   Form,
   FormControl,
@@ -24,7 +25,7 @@ import {
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 
 interface TaskFormProps<T extends FieldValues> extends Omit<
-  React.ComponentPropsWithRef<"form">,
+  React.ComponentProps<"form">,
   "onSubmit"
 > {
   children: React.ReactNode;
@@ -36,12 +37,15 @@ export function TaskForm<T extends FieldValues>({
   form,
   onSubmit,
   children,
+  className,
+  ...props
 }: TaskFormProps<T>) {
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-col gap-4 px-4"
+        className={cn("flex flex-col gap-4", className)}
+        {...props}
       >
         <FormField
           control={form.control}
@@ -68,7 +72,7 @@ export function TaskForm<T extends FieldValues>({
               <FormLabel>Label</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger className="capitalize">
+                  <SelectTrigger className="w-full capitalize">
                     <SelectValue placeholder="Select a label" />
                   </SelectTrigger>
                 </FormControl>
@@ -98,7 +102,7 @@ export function TaskForm<T extends FieldValues>({
               <FormLabel>Status</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger className="capitalize">
+                  <SelectTrigger className="w-full capitalize">
                     <SelectValue placeholder="Select a status" />
                   </SelectTrigger>
                 </FormControl>
@@ -128,7 +132,7 @@ export function TaskForm<T extends FieldValues>({
               <FormLabel>Priority</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger className="capitalize">
+                  <SelectTrigger className="w-full capitalize">
                     <SelectValue placeholder="Select a priority" />
                   </SelectTrigger>
                 </FormControl>

@@ -62,8 +62,8 @@ export function CreateTaskSheet() {
             Fill in the details below to create a new task
           </SheetDescription>
         </SheetHeader>
-        <TaskForm form={form} onSubmit={onSubmit}>
-          <SheetFooter className="gap-2 pt-2 sm:space-x-0">
+        <TaskForm className="flex-1 px-4" form={form} onSubmit={onSubmit}>
+          <SheetFooter className="px-0">
             <SheetClose asChild>
               <Button type="button" variant="outline">
                 Cancel

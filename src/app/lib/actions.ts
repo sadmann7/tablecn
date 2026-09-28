@@ -94,6 +94,7 @@ export async function updateTask(input: UpdateTaskSchema & { id: string }) {
         label: input.label,
         status: input.status,
         priority: input.priority,
+        estimatedHours: input.estimatedHours,
       })
       .where(eq(tasks.id, input.id))
       .returning({
