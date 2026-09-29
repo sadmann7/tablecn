@@ -3,6 +3,7 @@
 import { useSelectedLayoutSegment } from "next/navigation";
 
 import { ActiveLink } from "@/components/active-link";
+import { DEFAULT_BASE } from "@/lib/constants";
 
 export function DocsLink({
   ...props
@@ -11,7 +12,7 @@ export function DocsLink({
   const component = segment?.startsWith("data-grid")
     ? "data-grid"
     : "data-table";
-  const href = `https://diceui.com/docs/components/radix/${component}`;
+  const href = `https://diceui.com/docs/components/${DEFAULT_BASE}/${component}`;
 
   return (
     <ActiveLink
