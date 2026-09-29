@@ -38,7 +38,6 @@ import {
 } from "@/registry/bases/radix/ui/command";
 import {
   Faceted,
-  FacetedBadgeList,
   FacetedContent,
   FacetedEmpty,
   FacetedGroup,
@@ -46,6 +45,7 @@ import {
   FacetedItem,
   FacetedList,
   FacetedTrigger,
+  FacetedValue,
 } from "@/registry/bases/radix/ui/faceted";
 import { Input } from "@/registry/bases/radix/ui/input";
 import {
@@ -693,6 +693,7 @@ function onFilterInputRender<TData extends RowData>({
               value,
             });
           }}
+          items={columnMeta?.options}
           multiple={multiple}
         >
           <FacetedTrigger asChild>
@@ -703,8 +704,7 @@ function onFilterInputRender<TData extends RowData>({
               variant="outline"
               className="w-full hover:bg-muted/50 aria-expanded:bg-background dark:aria-expanded:bg-input/30"
             >
-              <FacetedBadgeList
-                options={columnMeta?.options}
+              <FacetedValue
                 placeholder={
                   columnMeta?.placeholder ??
                   `Select option${multiple ? "s" : ""}...`

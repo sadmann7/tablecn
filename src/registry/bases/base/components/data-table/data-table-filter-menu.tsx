@@ -36,7 +36,6 @@ import {
 } from "@/registry/bases/base/ui/command";
 import {
   Faceted,
-  FacetedBadgeList,
   FacetedContent,
   FacetedEmpty,
   FacetedGroup,
@@ -44,6 +43,7 @@ import {
   FacetedItem,
   FacetedList,
   FacetedTrigger,
+  FacetedValue,
 } from "@/registry/bases/base/ui/faceted";
 import { Input } from "@/registry/bases/base/ui/input";
 import {
@@ -696,6 +696,7 @@ function onFilterInputRender<TData extends RowData>({
               value,
             });
           }}
+          items={columnMeta?.options}
           multiple={multiple}
         >
           <FacetedTrigger
@@ -709,8 +710,7 @@ function onFilterInputRender<TData extends RowData>({
               />
             }
           >
-            <FacetedBadgeList
-              options={columnMeta?.options}
+            <FacetedValue
               placeholder={
                 columnMeta?.placeholder ??
                 `Select option${multiple ? "s" : ""}...`
