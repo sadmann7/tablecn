@@ -47,6 +47,7 @@ interface FacetedStore {
   notify: () => void;
   setOpen: (open: boolean) => void;
   selectItem: (value: string) => void;
+  clear: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
 }
 
@@ -105,6 +106,12 @@ function createFacetedStore<Multiple extends boolean>(
       );
       store.setOpen(false);
     },
+    clear: () => {
+      const { onValueChange, multiple } = propsRef.current;
+      onValueChange?.(
+        (multiple ? [] : undefined) as FacetedValue<Multiple> | undefined,
+      );
+    },
     inputRef,
   };
 
@@ -117,6 +124,11 @@ function useStoreSelector<T>(
 ): T {
   const getSnapshot = () => selector(store.getState());
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
+}
+
+function getHasSelection(state: FacetedState) {
+  if (Array.isArray(state.value)) return state.value.length > 0;
+  return !!state.value;
 }
 
 function getIsValueSelected(state: FacetedState, value: string) {
@@ -441,6 +453,47 @@ function FacetedItem({
   );
 }
 
+function FacetedClear({
+  className,
+  children = "Clear",
+  onSelect,
+  onPointerDownCapture,
+  onMouseDown,
+  ...props
+}: React.ComponentProps<typeof CommandItem>) {
+  const store = useFacetedStore("FacetedClear");
+  const hasSelection = useStoreSelector(store, getHasSelection);
+  if (!hasSelection) return null;
+
+  return (
+    <CommandItem
+      data-slot="faceted-clear"
+      className={cn(
+        "justify-center text-center [&>svg:last-child]:hidden",
+        className,
+      )}
+      {...mergeProps<"div">(
+        {
+          onPointerDownCapture(event) {
+            event.preventDefault();
+          },
+          onMouseDown(event) {
+            event.preventDefault();
+          },
+        },
+        { onPointerDownCapture, onMouseDown },
+      )}
+      onSelect={(value) => {
+        onSelect?.(value);
+        store.clear();
+      }}
+      {...props}
+    >
+      {children}
+    </CommandItem>
+  );
+}
+
 function FacetedSeparator(
   props: React.ComponentProps<typeof CommandSeparator>,
 ) {
@@ -451,6 +504,7 @@ export {
   Faceted,
   FacetedBadge,
   FacetedBadgeList,
+  FacetedClear,
   FacetedContent,
   FacetedEmpty,
   FacetedGroup,

@@ -9,9 +9,9 @@ import type { Option } from "@/lib/data-table-types";
 
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
-import { CommandItem } from "@/registry/bases/radix/ui/command";
 import {
   Faceted,
+  FacetedClear,
   FacetedContent,
   FacetedEmpty,
   FacetedGroup,
@@ -159,22 +159,9 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
           <FacetedEmpty>No results found.</FacetedEmpty>
           <FacetedGroup className="max-h-75 scroll-py-1 overflow-x-hidden overflow-y-auto">
             {options.map((option) => (
-              <FacetedItem
-                key={option.value}
-                value={option.value}
-                className="[&>svg:last-child]:hidden"
-              >
-                <div className="flex size-4 items-center justify-center rounded-sm border border-primary opacity-50 group-data-[checked=true]/command-item:bg-primary group-data-[checked=true]/command-item:text-primary-foreground group-data-[checked=true]/command-item:opacity-100 [&_svg]:invisible group-data-[checked=true]/command-item:[&_svg]:visible">
-                  <IconPlaceholder
-                    lucide="Check"
-                    tabler="IconCheck"
-                    hugeicons="Tick02Icon"
-                    phosphor="CheckIcon"
-                    remixicon="RiCheckLine"
-                  />
-                </div>
+              <FacetedItem key={option.value} value={option.value}>
                 {option.icon && <option.icon />}
-                <span className="truncate">{option.label}</span>
+                <span className="flex-1 truncate">{option.label}</span>
                 {option.count !== undefined && (
                   <span className="ml-auto font-mono text-xs">
                     {option.count}
@@ -187,12 +174,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
             <>
               <FacetedSeparator />
               <FacetedGroup>
-                <CommandItem
-                  className="justify-center text-center"
-                  onSelect={() => onReset()}
-                >
-                  Clear filters
-                </CommandItem>
+                <FacetedClear>Clear filters</FacetedClear>
               </FacetedGroup>
             </>
           )}
