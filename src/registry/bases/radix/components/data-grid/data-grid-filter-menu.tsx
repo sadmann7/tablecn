@@ -299,7 +299,7 @@ export function DataGridFilterMenu<TData extends RowData>({
           <div className="h-8 min-w-18 rounded-lg bg-primary/10" />
           <div className="h-8 w-32 rounded-lg bg-primary/10" />
           <div className="h-8 w-32 rounded-lg bg-primary/10" />
-          <div className="h-8 max-w-60 min-w-36 flex-1 rounded-lg bg-primary/10" />
+          <div className="h-8 w-40 shrink-0 rounded-lg bg-primary/10" />
           <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
           <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
         </div>
@@ -529,7 +529,7 @@ function DataGridFilterItem<TData extends RowData>({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <div className="max-w-60 min-w-36 flex-1">
+        <div className="w-40 min-w-0 shrink-0">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}
