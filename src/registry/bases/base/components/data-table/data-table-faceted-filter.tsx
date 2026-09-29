@@ -7,7 +7,6 @@ import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Option } from "@/lib/data-table-types";
 
-import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
   Faceted,
@@ -20,6 +19,7 @@ import {
   FacetedList,
   FacetedSeparator,
   FacetedTrigger,
+  FacetedValue,
 } from "@/registry/bases/base/ui/faceted";
 import { Separator } from "@/registry/bases/base/ui/separator";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
@@ -74,9 +74,6 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
         (value): value is string => typeof value === "string",
       )
     : [];
-  const selectedOptions = options.filter((option) =>
-    selectedValues.includes(option.value),
-  );
   const hasSelection = selectedValues.length > 0;
 
   function onValueChange(value: string | string[] | undefined) {
@@ -93,6 +90,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
     <Faceted
       value={multiple ? selectedValues : selectedValues[0]}
       onValueChange={onValueChange}
+      items={options}
       multiple={multiple}
     >
       <FacetedTrigger
@@ -130,26 +128,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
               orientation="vertical"
               className="mx-0.5 data-[orientation=vertical]:h-4"
             />
-            <Badge variant="secondary" className="px-1 lg:hidden">
-              {selectedValues.length}
-            </Badge>
-            <div className="hidden items-center gap-1 lg:flex">
-              {selectedValues.length > 2 ? (
-                <Badge variant="secondary" className="px-1">
-                  {selectedValues.length} selected
-                </Badge>
-              ) : (
-                selectedOptions.map((option) => (
-                  <Badge
-                    key={option.value}
-                    variant="secondary"
-                    className="px-1"
-                  >
-                    {option.label}
-                  </Badge>
-                ))
-              )}
-            </div>
+            <FacetedValue />
           </>
         )}
       </FacetedTrigger>

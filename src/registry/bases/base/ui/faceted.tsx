@@ -23,7 +23,7 @@ import {
 } from "@/registry/bases/base/ui/popover";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-type FacetedValue<Multiple extends boolean> = Multiple extends true
+type FacetedSelection<Multiple extends boolean> = Multiple extends true
   ? string[]
   : string;
 
@@ -54,8 +54,8 @@ interface FacetedStore {
 interface FacetedController<Multiple extends boolean = boolean> {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  value?: FacetedValue<Multiple>;
-  onValueChange?: (value: FacetedValue<Multiple> | undefined) => void;
+  value?: FacetedSelection<Multiple>;
+  onValueChange?: (value: FacetedSelection<Multiple> | undefined) => void;
   multiple: Multiple;
 }
 
@@ -95,13 +95,13 @@ function createFacetedStore<Multiple extends boolean>(
         const nextValue = currentValue.includes(selectedValue)
           ? currentValue.filter((item) => item !== selectedValue)
           : [...currentValue, selectedValue];
-        onValueChange?.(nextValue as FacetedValue<Multiple>);
+        onValueChange?.(nextValue as FacetedSelection<Multiple>);
         return;
       }
 
       onValueChange?.(
         (value === selectedValue ? undefined : selectedValue) as
-          | FacetedValue<Multiple>
+          | FacetedSelection<Multiple>
           | undefined,
       );
       store.setOpen(false);
@@ -109,7 +109,7 @@ function createFacetedStore<Multiple extends boolean>(
     clear: () => {
       const { onValueChange, multiple } = propsRef.current;
       onValueChange?.(
-        (multiple ? [] : undefined) as FacetedValue<Multiple> | undefined,
+        (multiple ? [] : undefined) as FacetedSelection<Multiple> | undefined,
       );
     },
     inputRef,
@@ -169,8 +169,8 @@ interface FacetedProps<Multiple extends boolean = false> extends Omit<
   React.ComponentProps<typeof Popover>,
   "onOpenChange"
 > {
-  value?: FacetedValue<Multiple>;
-  onValueChange?: (value: FacetedValue<Multiple> | undefined) => void;
+  value?: FacetedSelection<Multiple>;
+  onValueChange?: (value: FacetedSelection<Multiple> | undefined) => void;
   onOpenChange?: (open: boolean) => void;
   items?: FacetedOption[];
   children?: React.ReactNode;
@@ -378,7 +378,7 @@ function FacetedContent({
       )}
       {...props}
     >
-      <Command>{children}</Command>
+      <Command className="p-0.5">{children}</Command>
     </PopoverContent>
   );
 }
@@ -497,7 +497,13 @@ function FacetedClear({
 function FacetedSeparator(
   props: React.ComponentProps<typeof CommandSeparator>,
 ) {
-  return <CommandSeparator data-slot="faceted-separator" {...props} />;
+  return (
+    <CommandSeparator
+      data-slot="faceted-separator"
+      className="mx-0 my-0.5 w-full"
+      {...props}
+    />
+  );
 }
 
 export {
