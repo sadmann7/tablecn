@@ -56,10 +56,10 @@ export default function IndexPage(props: IndexPageProps) {
 async function TasksTableWrapper(props: IndexPageProps) {
   const searchParams = await props.searchParams;
   const search = searchParamsCache.parse(searchParams);
-  const mode = search.mode;
+  const { dataMode } = search;
 
   const tasksPromise =
-    mode === "client"
+    dataMode === "client"
       ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
       : getTasks(getDataTableQuery(search, tasksFilterableColumns));
 
@@ -72,9 +72,9 @@ async function TasksTableWrapper(props: IndexPageProps) {
 
   return (
     <TasksTable
-      key={mode}
-      mode={mode}
-      filter={search.filter}
+      key={dataMode}
+      dataMode={dataMode}
+      filterMode={search.filterMode}
       promises={promises}
     />
   );

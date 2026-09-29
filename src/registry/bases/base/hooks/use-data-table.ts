@@ -4,7 +4,6 @@ import {
   type RowData,
   type SortingState,
   type TableOptions,
-  type TableState,
   type Updater,
   useTable,
 } from "@tanstack/react-table";
@@ -63,15 +62,14 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualPagination"
   | "manualSorting"
 > & {
-  initialState?: Partial<TableState<DataTableFeatures>>;
   queryKeys?: Partial<QueryKeys>;
   history?: "push" | "replace";
+  urlFormat?: DataTableUrlFormat;
   debounceMs?: number;
   throttleMs?: number;
   clearOnDefault?: boolean;
   scroll?: boolean;
   shallow?: boolean;
-  urlFormat?: DataTableUrlFormat;
   startTransition?: React.TransitionStartFunction;
 } & (
     | {
@@ -91,12 +89,12 @@ function useDataTable<TData extends RowData>({
   initialState,
   queryKeys,
   history = "replace",
+  urlFormat = "compact",
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
   clearOnDefault = false,
   scroll = false,
   shallow: shallowProp = true,
-  urlFormat = "compact",
   startTransition,
   ...props
 }: UseDataTableProps<TData>) {

@@ -15,7 +15,7 @@ export interface Flag<TValue extends string = string> {
   description: string;
 }
 
-export const modes = [
+export const DATA_MODES = [
   {
     label: "Server",
     value: "server",
@@ -31,14 +31,14 @@ export const modes = [
   },
 ] as const satisfies readonly Flag[];
 
-export type Mode = (typeof modes)[number]["value"];
+export type DataMode = (typeof DATA_MODES)[number]["value"];
 
-export const filters = [
+export const FILTER_MODES = [
   {
-    label: "Value",
-    value: "value",
+    label: "Inline",
+    value: "inline",
     icon: ListFilterIcon,
-    description: "One value filter per column, shown inline.",
+    description: "One filter per column, shown inline.",
   },
   {
     label: "Advanced",
@@ -54,4 +54,4 @@ export const filters = [
   },
 ] as const satisfies readonly Flag[];
 
-export type Filter = (typeof filters)[number]["value"];
+export type FilterMode = (typeof FILTER_MODES)[number]["value"];

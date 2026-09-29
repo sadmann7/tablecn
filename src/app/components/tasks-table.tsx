@@ -4,7 +4,7 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
-import type { Filter, Mode } from "@/lib/flag";
+import type { DataMode, FilterMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
@@ -30,8 +30,8 @@ import { getTasksTableColumns } from "./tasks-table-columns";
 import { UpdateTaskSheet } from "./update-task-sheet";
 
 interface TasksTableProps {
-  mode: Mode;
-  filter: Filter;
+  dataMode: DataMode;
+  filterMode: FilterMode;
   promises: Promise<
     [
       Awaited<ReturnType<typeof getTasks>>,
@@ -44,12 +44,12 @@ interface TasksTableProps {
 }
 
 export function TasksTable({
-  mode,
-  filter,
+  dataMode,
+  filterMode,
   promises,
   queryKeys,
 }: TasksTableProps) {
-  const enableAdvancedFilter = filter !== "value";
+  const enableAdvancedFilter = filterMode !== "inline";
 
   const [
     { data, pageCount },
@@ -87,7 +87,7 @@ export function TasksTable({
   };
 
   const { table } = useDataTable(
-    mode === "client"
+    dataMode === "client"
       ? { ...tableProps, mode: "client" }
       : { ...tableProps, pageCount },
   );
@@ -101,7 +101,7 @@ export function TasksTable({
         {enableAdvancedFilter ? (
           <DataTableAdvancedToolbar table={table}>
             <DataTableSortMenu table={table} align="start" />
-            {filter === "advanced" ? (
+            {filterMode === "advanced" ? (
               <DataTableFilterMenu table={table} align="start" />
             ) : (
               <DataTableCommandFilterMenu table={table} align="start" />

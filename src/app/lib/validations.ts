@@ -4,7 +4,7 @@ import * as z from "zod";
 import type { FilterVariant } from "@/lib/data-table-types";
 
 import { type Task, tasks } from "@/db/schema";
-import { filters, modes } from "@/lib/flag";
+import { DATA_MODES, FILTER_MODES } from "@/lib/flag";
 import { getDataTableSearchParams } from "@/lib/parsers";
 
 /** Filterable task columns and their variants; mirrors `tasks-table-columns`. */
@@ -26,12 +26,12 @@ export const tasksSortableColumns = [
 ] as const satisfies readonly (keyof Task)[];
 
 export const searchParamsCache = createSearchParamsCache({
-  filter: parseAsStringEnum(filters.map((filter) => filter.value)).withDefault(
-    "value",
-  ),
-  mode: parseAsStringEnum(modes.map((mode) => mode.value)).withDefault(
-    "server",
-  ),
+  filterMode: parseAsStringEnum(
+    FILTER_MODES.map((filterMode) => filterMode.value),
+  ).withDefault("inline"),
+  dataMode: parseAsStringEnum(
+    DATA_MODES.map((dataMode) => dataMode.value),
+  ).withDefault("server"),
   ...getDataTableSearchParams({
     filterableColumns: tasksFilterableColumns,
     sortableColumns: tasksSortableColumns,

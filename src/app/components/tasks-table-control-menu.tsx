@@ -4,7 +4,7 @@ import type * as React from "react";
 
 import { parseAsStringEnum, useQueryState } from "nuqs";
 
-import { type Flag, filters, modes } from "@/lib/flag";
+import { DATA_MODES, FILTER_MODES, type Flag } from "@/lib/flag";
 import { Separator } from "@/registry/bases/radix/ui/separator";
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import {
@@ -18,16 +18,16 @@ import {
 } from "@/registry/bases/radix/ui/tooltip";
 
 function TasksTableControlMenu() {
-  const [mode, setMode] = useQueryState(
-    "mode",
-    parseAsStringEnum(modes.map((mode) => mode.value))
+  const [dataMode, setDataMode] = useQueryState(
+    "dataMode",
+    parseAsStringEnum(DATA_MODES.map((dataMode) => dataMode.value))
       .withDefault("server")
       .withOptions({ shallow: false, clearOnDefault: true }),
   );
-  const [filter, setFilter] = useQueryState(
-    "filter",
-    parseAsStringEnum(filters.map((filter) => filter.value))
-      .withDefault("value")
+  const [filterMode, setFilterMode] = useQueryState(
+    "filterMode",
+    parseAsStringEnum(FILTER_MODES.map((filterMode) => filterMode.value))
+      .withDefault("inline")
       .withOptions({ shallow: false, clearOnDefault: true }),
   );
 
@@ -40,14 +40,14 @@ function TasksTableControlMenu() {
           size="sm"
           spacing={0}
           aria-label="Mode"
-          value={mode}
+          value={dataMode}
           onValueChange={(value) => {
-            const next = modes.find((item) => item.value === value);
-            if (next) void setMode(next.value);
+            const next = DATA_MODES.find((item) => item.value === value);
+            if (next) void setDataMode(next.value);
           }}
         >
-          {modes.map((mode) => (
-            <ControlItem key={mode.value} flag={mode} />
+          {DATA_MODES.map((dataMode) => (
+            <ControlItem key={dataMode.value} flag={dataMode} />
           ))}
         </ToggleGroup>
       </ControlGroup>
@@ -62,14 +62,14 @@ function TasksTableControlMenu() {
           size="sm"
           spacing={0}
           aria-label="Filter"
-          value={filter}
+          value={filterMode}
           onValueChange={(value) => {
-            const next = filters.find((item) => item.value === value);
-            if (next) void setFilter(next.value);
+            const next = FILTER_MODES.find((item) => item.value === value);
+            if (next) void setFilterMode(next.value);
           }}
         >
-          {filters.map((filter) => (
-            <ControlItem key={filter.value} flag={filter} />
+          {FILTER_MODES.map((filterMode) => (
+            <ControlItem key={filterMode.value} flag={filterMode} />
           ))}
         </ToggleGroup>
       </ControlGroup>
@@ -134,14 +134,14 @@ function TasksTableControlMenuSkeleton() {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
       <ControlGroup label="Mode">
-        <FlagGroupSkeleton flags={modes} />
+        <FlagGroupSkeleton flags={DATA_MODES} />
       </ControlGroup>
       <Separator
         orientation="vertical"
         className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
       />
       <ControlGroup label="Filter">
-        <FlagGroupSkeleton flags={filters} />
+        <FlagGroupSkeleton flags={FILTER_MODES} />
       </ControlGroup>
     </div>
   );
