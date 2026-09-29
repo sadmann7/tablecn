@@ -126,7 +126,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
           <>
             <Separator
               orientation="vertical"
-              className="mx-0.5 data-[orientation=vertical]:h-4"
+              className="mx-0.5 data-vertical:h-4 data-vertical:self-center"
             />
             <FacetedValue />
           </>
