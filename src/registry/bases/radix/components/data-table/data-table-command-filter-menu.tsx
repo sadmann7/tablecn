@@ -21,6 +21,7 @@ import {
   getDateFilterLabel,
   getFilterDates,
   getFilterOperators,
+  getIsEditableTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
   toFilterTimestamp,
@@ -65,6 +66,10 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
+
+function getIsRemoveKey(event: React.KeyboardEvent) {
+  return REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase());
+}
 
 type FilterUpdate = Partial<Omit<ColumnFilterItem, "filterId">>;
 type FilterSelector = "field" | "operator" | "value";
@@ -123,7 +128,24 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
   const triggerRef = React.useRef<HTMLButtonElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  useFilterShortcut(setOpen);
+  React.useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (getIsEditableTarget(event.target)) return;
+      if (
+        event.key.toLowerCase() !== FILTER_SHORTCUT_KEY ||
+        !(event.ctrlKey || event.metaKey) ||
+        !event.shiftKey
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      setOpen((open) => !open);
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const columns = React.useMemo(
     () => table.getAllColumns().filter((column) => column.getCanFilter()),
@@ -292,9 +314,8 @@ function DataTableFilterItem<TData extends RowData>({
   onFilterUpdate,
   onFilterRemove,
 }: DataTableFilterItemProps<TData>) {
-  const [openSelector, setOpenSelector] = React.useState<FilterSelector | null>(
-    null,
-  );
+  const [activeSelector, setActiveSelector] =
+    React.useState<FilterSelector | null>(null);
 
   const column = columns.find((column) => column.id === filter.id);
   if (!column) return null;
@@ -303,13 +324,14 @@ function DataTableFilterItem<TData extends RowData>({
 
   function getSelectorProps(selector: FilterSelector) {
     return {
-      open: openSelector === selector,
-      onOpenChange: (open: boolean) => setOpenSelector(open ? selector : null),
+      open: activeSelector === selector,
+      onOpenChange: (open: boolean) =>
+        setActiveSelector(open ? selector : null),
     };
   }
 
   function onItemKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (openSelector || getIsEditableTarget(event.target)) return;
+    if (activeSelector || getIsEditableTarget(event.target)) return;
     if (!getIsRemoveKey(event)) return;
 
     event.preventDefault();
@@ -916,39 +938,4 @@ function DateFilterValue<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
-}
-
-function useFilterShortcut(
-  setOpen: React.Dispatch<React.SetStateAction<boolean>>,
-) {
-  React.useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (getIsEditableTarget(event.target)) return;
-      if (
-        event.key.toLowerCase() !== FILTER_SHORTCUT_KEY ||
-        !(event.ctrlKey || event.metaKey) ||
-        !event.shiftKey
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      setOpen((open) => !open);
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [setOpen]);
-}
-
-function getIsEditableTarget(target: EventTarget | null) {
-  return (
-    target instanceof HTMLInputElement ||
-    target instanceof HTMLTextAreaElement ||
-    (target instanceof HTMLElement && target.isContentEditable)
-  );
-}
-
-function getIsRemoveKey(event: React.KeyboardEvent) {
-  return REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase());
 }

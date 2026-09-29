@@ -98,12 +98,12 @@ const booleanOperators = [
   { label: "Is not", value: "ne" },
 ] satisfies FilterOperatorOption[];
 
-const MULTI_VALUE_FILTER_VARIANTS: FilterVariant[] = [
+const MULTI_VALUE_FILTER_VARIANTS = [
   "select",
   "multiSelect",
   "range",
   "dateRange",
-];
+] satisfies FilterVariant[];
 
 const filterOperatorsByVariant: Record<FilterVariant, FilterOperatorOption[]> =
   {
@@ -156,6 +156,17 @@ export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   const operators = getFilterOperators(filterVariant);
 
   return operators[0]?.value ?? (filterVariant === "text" ? "iLike" : "eq");
+}
+
+export function getIsEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
 }
 
 export function getIsValuelessOperator(operator: FilterOperator) {
