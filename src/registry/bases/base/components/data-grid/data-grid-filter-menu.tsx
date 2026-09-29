@@ -558,7 +558,7 @@ function DataGridFilterItem<TData extends RowData>({
             role="status"
             aria-label={`${columnLabels.get(filter.id)} filter is empty`}
             aria-live="polite"
-            className="h-8 w-full rounded-lg border border-input bg-transparent dark:bg-input/30"
+            className="h-8 w-full rounded-lg border border-dashed border-input bg-transparent dark:bg-input/30"
           />
         )}
       </div>
