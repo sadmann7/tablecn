@@ -1,28 +1,26 @@
 "use client";
 
+import type * as React from "react";
+
 import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
-import { cn } from "cn";
-import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { Option } from "@/lib/data-table-types";
 
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
+import { CommandItem } from "@/registry/bases/base/ui/command";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/registry/bases/base/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/ui/popover";
+  Faceted,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedList,
+  FacetedSeparator,
+  FacetedTrigger,
+} from "@/registry/bases/base/ui/faceted";
 import { Separator } from "@/registry/bases/base/ui/separator";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
@@ -57,56 +55,48 @@ export function DataTableFacetedFilter<TData extends RowData, TValue>({
   );
 }
 
+interface DataTableFacetedFilterContentProps<
+  TData extends RowData,
+  TValue,
+> extends DataTableFacetedFilterProps<TData, TValue> {
+  columnFilterValue?: unknown;
+}
+
 function DataTableFacetedFilterContent<TData extends RowData, TValue>({
   column,
   title,
   options,
-  multiple,
+  multiple = false,
   columnFilterValue,
-}: DataTableFacetedFilterProps<TData, TValue> & {
-  columnFilterValue?: unknown;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const selectedValues = new Set(
-    Array.isArray(columnFilterValue) ? columnFilterValue : [],
+}: DataTableFacetedFilterContentProps<TData, TValue>) {
+  const selectedValues: string[] = Array.isArray(columnFilterValue)
+    ? columnFilterValue
+    : [];
+  const selectedOptions = options.filter((option) =>
+    selectedValues.includes(option.value),
   );
+  const hasSelection = selectedValues.length > 0;
 
-  const onItemSelect = React.useCallback(
-    (option: Option, isSelected: boolean) => {
-      if (!column) return;
+  function onValueChange(value: string | string[] | undefined) {
+    const values = Array.isArray(value) ? value : value ? [value] : [];
+    column?.setFilterValue(values.length > 0 ? values : undefined);
+  }
 
-      if (multiple) {
-        const newSelectedValues = new Set(selectedValues);
-        if (isSelected) {
-          newSelectedValues.delete(option.value);
-        } else {
-          newSelectedValues.add(option.value);
-        }
-        const filterValues = Array.from(newSelectedValues);
-        column.setFilterValue(filterValues.length ? filterValues : undefined);
-      } else {
-        column.setFilterValue(isSelected ? undefined : [option.value]);
-        setOpen(false);
-      }
-    },
-    [column, multiple, selectedValues],
-  );
-
-  const onReset = React.useCallback(
-    (event?: React.MouseEvent) => {
-      event?.stopPropagation();
-      if (!column) return;
-      column.setFilterValue(undefined);
-    },
-    [column],
-  );
+  function onReset(event?: React.MouseEvent) {
+    event?.stopPropagation();
+    column?.setFilterValue(undefined);
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
+    <Faceted
+      value={multiple ? selectedValues : selectedValues[0]}
+      onValueChange={onValueChange}
+      multiple={multiple}
+    >
+      <FacetedTrigger
         render={<Button variant="outline" className="border-dashed" />}
       >
-        {selectedValues?.size > 0 ? (
+        {hasSelection ? (
           <div
             role="button"
             aria-label={`Clear ${title} filter`}
@@ -132,95 +122,80 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
           />
         )}
         {title}
-        {selectedValues?.size > 0 && (
+        {hasSelection && (
           <>
             <Separator
               orientation="vertical"
               className="mx-0.5 data-[orientation=vertical]:h-4"
             />
             <Badge variant="secondary" className="px-1 lg:hidden">
-              {selectedValues.size}
+              {selectedValues.length}
             </Badge>
             <div className="hidden items-center gap-1 lg:flex">
-              {selectedValues.size > 2 ? (
+              {selectedValues.length > 2 ? (
                 <Badge variant="secondary" className="px-1">
-                  {selectedValues.size} selected
+                  {selectedValues.length} selected
                 </Badge>
               ) : (
-                options
-                  .filter((option) => selectedValues.has(option.value))
-                  .map((option) => (
-                    <Badge
-                      variant="secondary"
-                      key={option.value}
-                      className="px-1"
-                    >
-                      {option.label}
-                    </Badge>
-                  ))
+                selectedOptions.map((option) => (
+                  <Badge
+                    key={option.value}
+                    variant="secondary"
+                    className="px-1"
+                  >
+                    {option.label}
+                  </Badge>
+                ))
               )}
             </div>
           </>
         )}
-      </PopoverTrigger>
-      <PopoverContent className="w-50 p-0" align="start">
-        <Command>
-          <CommandInput placeholder={title} />
-          <CommandList className="max-h-full">
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup className="max-h-75 scroll-py-1 overflow-x-hidden overflow-y-auto">
-              {options.map((option) => {
-                const isSelected = selectedValues.has(option.value);
-
-                return (
-                  <CommandItem
-                    key={option.value}
-                    className="[&>svg:last-child]:hidden"
-                    onSelect={() => onItemSelect(option, isSelected)}
-                  >
-                    <div
-                      className={cn(
-                        "flex size-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50 [&_svg]:invisible",
-                      )}
-                    >
-                      <IconPlaceholder
-                        lucide="Check"
-                        tabler="IconCheck"
-                        hugeicons="Tick02Icon"
-                        phosphor="CheckIcon"
-                        remixicon="RiCheckLine"
-                      />
-                    </div>
-                    {option.icon && <option.icon />}
-                    <span className="truncate">{option.label}</span>
-                    {option.count && (
-                      <span className="ml-auto font-mono text-xs">
-                        {option.count}
-                      </span>
-                    )}
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            {selectedValues.size > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => onReset()}
-                    className="justify-center text-center"
-                  >
-                    Clear filters
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      </FacetedTrigger>
+      <FacetedContent className="w-50">
+        <FacetedInput placeholder={title} />
+        <FacetedList className="max-h-full">
+          <FacetedEmpty>No results found.</FacetedEmpty>
+          <FacetedGroup className="max-h-75 scroll-py-1 overflow-x-hidden overflow-y-auto">
+            {options.map((option) => (
+              <FacetedItem
+                key={option.value}
+                value={option.value}
+                className="[&>svg:last-child]:hidden"
+              >
+                <div className="flex size-4 items-center justify-center rounded-sm border border-primary opacity-50 group-data-[checked=true]/command-item:bg-primary group-data-[checked=true]/command-item:text-primary-foreground group-data-[checked=true]/command-item:opacity-100 [&_svg]:invisible group-data-[checked=true]/command-item:[&_svg]:visible">
+                  <IconPlaceholder
+                    lucide="Check"
+                    tabler="IconCheck"
+                    hugeicons="Tick02Icon"
+                    phosphor="CheckIcon"
+                    remixicon="RiCheckLine"
+                  />
+                </div>
+                {option.icon && <option.icon />}
+                <span className="truncate">{option.label}</span>
+                {option.count !== undefined && (
+                  <span className="ml-auto font-mono text-xs">
+                    {option.count}
+                  </span>
+                )}
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+          {hasSelection && (
+            <>
+              <FacetedSeparator />
+              <FacetedGroup>
+                <CommandItem
+                  className="justify-center text-center"
+                  onSelect={() => onReset()}
+                >
+                  Clear filters
+                </CommandItem>
+              </FacetedGroup>
+            </>
+          )}
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
   );
 }

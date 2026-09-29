@@ -365,39 +365,44 @@ function DataTableFilterItem<TData extends RowData>({
 
 interface FilterFieldOptionsProps<TData extends RowData> {
   columns: Column<DataTableFeatures, TData>[];
-  checkedColumnId?: string;
   onSelect: (column: Column<DataTableFeatures, TData>) => void;
 }
 
 function FilterFieldOptions<TData extends RowData>({
   columns,
-  checkedColumnId,
   onSelect,
 }: FilterFieldOptionsProps<TData>) {
   return (
     <>
       <CommandEmpty>No fields found.</CommandEmpty>
       <CommandGroup>
-        {columns.map((column) => {
-          const columnMeta = column.columnDef.meta;
-
-          return (
-            <CommandItem
-              key={column.id}
-              value={column.id}
-              data-checked={
-                checkedColumnId === undefined
-                  ? undefined
-                  : column.id === checkedColumnId
-              }
-              onSelect={() => onSelect(column)}
-            >
-              {columnMeta?.icon && <columnMeta.icon />}
-              <span className="truncate">{columnMeta?.label ?? column.id}</span>
-            </CommandItem>
-          );
-        })}
+        {columns.map((column) => (
+          <CommandItem
+            key={column.id}
+            value={column.id}
+            onSelect={() => onSelect(column)}
+          >
+            <ColumnLabel column={column} />
+          </CommandItem>
+        ))}
       </CommandGroup>
+    </>
+  );
+}
+
+interface ColumnLabelProps<TData extends RowData> {
+  column: Column<DataTableFeatures, TData>;
+}
+
+function ColumnLabel<TData extends RowData>({
+  column,
+}: ColumnLabelProps<TData>) {
+  const columnMeta = column.columnDef.meta;
+
+  return (
+    <>
+      {columnMeta?.icon && <columnMeta.icon />}
+      <span className="truncate">{columnMeta?.label ?? column.id}</span>
     </>
   );
 }
@@ -542,8 +547,18 @@ function FilterFieldSelector<TData extends RowData>({
   const columnMeta = column.columnDef.meta;
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
+    <Faceted
+      open={open}
+      onOpenChange={onOpenChange}
+      value={filter.id}
+      onValueChange={(columnId) => {
+        const column = columns.find((column) => column.id === columnId);
+        if (column) {
+          onFilterUpdate(filter.filterId, getColumnFilterDefaults(column));
+        }
+      }}
+    >
+      <FacetedTrigger asChild>
         <Button
           variant="ghost"
           className="rounded-none rounded-l-md border border-r-0 border-input dark:bg-input/30"
@@ -553,26 +568,21 @@ function FilterFieldSelector<TData extends RowData>({
           )}
           {columnMeta?.label ?? column.id}
         </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-0">
-        <Command loop>
-          <CommandInput placeholder="Search fields..." />
-          <CommandList>
-            <FilterFieldOptions
-              columns={columns}
-              checkedColumnId={filter.id}
-              onSelect={(column) => {
-                onFilterUpdate(
-                  filter.filterId,
-                  getColumnFilterDefaults(column),
-                );
-                onOpenChange(false);
-              }}
-            />
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      </FacetedTrigger>
+      <FacetedContent className="w-48">
+        <FacetedInput placeholder="Search fields..." />
+        <FacetedList>
+          <FacetedEmpty>No fields found.</FacetedEmpty>
+          <FacetedGroup>
+            {columns.map((column) => (
+              <FacetedItem key={column.id} value={column.id}>
+                <ColumnLabel column={column} />
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
   );
 }
 

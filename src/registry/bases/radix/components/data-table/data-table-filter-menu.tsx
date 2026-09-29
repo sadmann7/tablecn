@@ -32,14 +32,6 @@ import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/radix/ui/command";
-import {
   Faceted,
   FacetedContent,
   FacetedEmpty,
@@ -462,13 +454,19 @@ function FilterFieldSelector<TData extends RowData>({
   onFilterUpdate,
 }: FilterFieldSelectorProps<TData>) {
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          aria-controls={listboxId}
-          variant="outline"
-          className="w-32 justify-between"
-        >
+    <Faceted
+      open={open}
+      onOpenChange={onOpenChange}
+      value={filter.id}
+      onValueChange={(columnId) => {
+        const column = columns.find((column) => column.id === columnId);
+        if (column) {
+          onFilterUpdate(filter.filterId, getColumnFilterDefaults(column));
+        }
+      }}
+    >
+      <FacetedTrigger asChild>
+        <Button aria-controls={listboxId} variant="outline" className="w-32">
           <span className="truncate">
             {column.columnDef.meta?.label ?? "Select field"}
           </span>
@@ -481,36 +479,21 @@ function FilterFieldSelector<TData extends RowData>({
             className="opacity-50"
           />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent id={listboxId} align="start" className="w-40 p-0">
-        <Command>
-          <CommandInput placeholder="Search fields..." />
-          <CommandList>
-            <CommandEmpty>No fields found.</CommandEmpty>
-            <CommandGroup>
-              {columns.map((column) => (
-                <CommandItem
-                  key={column.id}
-                  data-checked={column.id === filter.id}
-                  value={column.id}
-                  onSelect={() => {
-                    onFilterUpdate(
-                      filter.filterId,
-                      getColumnFilterDefaults(column),
-                    );
-                    onOpenChange(false);
-                  }}
-                >
-                  <span className="truncate">
-                    {column.columnDef.meta?.label}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+      </FacetedTrigger>
+      <FacetedContent id={listboxId} className="w-40">
+        <FacetedInput placeholder="Search fields..." />
+        <FacetedList>
+          <FacetedEmpty>No fields found.</FacetedEmpty>
+          <FacetedGroup>
+            {columns.map((column) => (
+              <FacetedItem key={column.id} value={column.id}>
+                <span className="truncate">{column.columnDef.meta?.label}</span>
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
   );
 }
 
