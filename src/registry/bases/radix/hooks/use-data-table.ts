@@ -54,30 +54,7 @@ const DEFAULT_PAGE_SIZE = 10;
 const EMPTY_SORTING: SortingState = [];
 const EMPTY_COLUMN_FILTERS: ColumnFiltersState = [];
 
-function useShallow<T extends object>(value: T): T {
-  const ref = React.useRef(value);
-  const previous = ref.current;
-  const previousKeys = Object.keys(previous);
-  const nextKeys = Object.keys(value);
-  const isSame =
-    Object.is(previous, value) ||
-    (previousKeys.length === nextKeys.length &&
-      nextKeys.every(
-        (key) =>
-          Object.hasOwn(previous, key) &&
-          Object.is(
-            (previous as Record<string, unknown>)[key],
-            (value as Record<string, unknown>)[key],
-          ),
-      ));
-
-  if (isSame) return previous;
-
-  ref.current = value;
-  return value;
-}
-
-interface UseDataTableBaseProps<TData extends RowData> extends Omit<
+type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
   | "state"
   | "pageCount"
@@ -85,7 +62,7 @@ interface UseDataTableBaseProps<TData extends RowData> extends Omit<
   | "manualFiltering"
   | "manualPagination"
   | "manualSorting"
-> {
+> & {
   initialState?: Partial<TableState<DataTableFeatures>>;
   queryKeys?: Partial<QueryKeys>;
   history?: "push" | "replace";
@@ -96,10 +73,7 @@ interface UseDataTableBaseProps<TData extends RowData> extends Omit<
   shallow?: boolean;
   urlFormat?: DataTableUrlFormat;
   startTransition?: React.TransitionStartFunction;
-}
-
-type UseDataTableProps<TData extends RowData> = UseDataTableBaseProps<TData> &
-  (
+} & (
     | {
         mode?: "server";
         pageCount: number;
@@ -362,11 +336,9 @@ function useDataTable<TData extends RowData>({
     [joinOperator, setJoinOperator],
   );
 
-  const stableProps = useShallow(props);
-
-  const tableOptions = React.useMemo<TableOptions<DataTableFeatures, TData>>(
-    () => ({
-      ...stableProps,
+  const table = useTable(
+    {
+      ...props,
       features: dataTableFeatures,
       columns,
       initialState: initialStateRef.current,
@@ -384,34 +356,14 @@ function useDataTable<TData extends RowData>({
       manualPagination: isServer,
       manualSorting: isServer,
       manualFiltering: isServer,
-    }),
-    [
-      stableProps,
-      columns,
-      isServer,
-      pageCount,
-      pagination,
-      sorting,
-      columnFilters,
-      joinOperator,
-      onPaginationChange,
-      onSortingChange,
-      onColumnFiltersChange,
-      onJoinOperatorChange,
-    ],
-  );
-
-  const tableSelector = React.useCallback(
-    (state: TableState<DataTableFeatures>) => ({
+    },
+    (state) => ({
       columnFilters: state.columnFilters,
       joinOperator: state.joinOperator,
       pagination: state.pagination,
       sorting: state.sorting,
     }),
-    [],
   );
-
-  const table = useTable(tableOptions, tableSelector);
 
   return React.useMemo(() => ({ table }), [table]);
 }
