@@ -10,7 +10,7 @@ import type {
 
 import { formatDate } from "@/lib/format";
 
-export const filterVariants = [
+export const FILTER_VARIANTS = [
   "text",
   "number",
   "range",
@@ -21,7 +21,7 @@ export const filterVariants = [
   "multiSelect",
 ] as const;
 
-export const filterOperators = [
+export const FILTER_OPERATORS = [
   "iLike",
   "notILike",
   "eq",
@@ -38,14 +38,14 @@ export const filterOperators = [
   "isRelativeToToday",
 ] as const;
 
-export const joinOperators = ["and", "or"] as const;
+export const JOIN_OPERATORS = ["and", "or"] as const;
 
-export const sortOrders = [
+export const SORT_ORDERS = [
   { label: "Asc", value: "asc" },
   { label: "Desc", value: "desc" },
 ] as const;
 
-const textOperators = [
+const TEXT_OPERATORS = [
   { label: "Contains", value: "iLike" },
   { label: "Does not contain", value: "notILike" },
   { label: "Is", value: "eq" },
@@ -54,7 +54,7 @@ const textOperators = [
   { label: "Is not empty", value: "isNotEmpty" },
 ] satisfies FilterOperatorOption[];
 
-const numericOperators = [
+const NUMERIC_OPERATORS = [
   { label: "Is", value: "eq" },
   { label: "Is not", value: "ne" },
   { label: "Is less than", value: "lt" },
@@ -66,7 +66,7 @@ const numericOperators = [
   { label: "Is not empty", value: "isNotEmpty" },
 ] satisfies FilterOperatorOption[];
 
-const dateOperators = [
+const DATE_OPERATORS = [
   { label: "Is", value: "eq" },
   { label: "Is not", value: "ne" },
   { label: "Is before", value: "lt" },
@@ -79,21 +79,21 @@ const dateOperators = [
   { label: "Is not empty", value: "isNotEmpty" },
 ] satisfies FilterOperatorOption[];
 
-const selectOperators = [
+const SELECT_OPERATORS = [
   { label: "Is", value: "eq" },
   { label: "Is not", value: "ne" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ] satisfies FilterOperatorOption[];
 
-const multiSelectOperators = [
+const MULTI_SELECT_OPERATORS = [
   { label: "Has any of", value: "inArray" },
   { label: "Has none of", value: "notInArray" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ] satisfies FilterOperatorOption[];
 
-const booleanOperators = [
+const BOOLEAN_OPERATORS = [
   { label: "Is", value: "eq" },
   { label: "Is not", value: "ne" },
 ] satisfies FilterOperatorOption[];
@@ -105,17 +105,19 @@ const MULTI_VALUE_FILTER_VARIANTS = [
   "dateRange",
 ] satisfies FilterVariant[];
 
-const filterOperatorsByVariant: Record<FilterVariant, FilterOperatorOption[]> =
-  {
-    text: textOperators,
-    number: numericOperators,
-    range: numericOperators,
-    date: dateOperators,
-    dateRange: dateOperators,
-    boolean: booleanOperators,
-    select: selectOperators,
-    multiSelect: multiSelectOperators,
-  };
+const FILTER_OPERATORS_BY_VARIANT: Record<
+  FilterVariant,
+  FilterOperatorOption[]
+> = {
+  text: TEXT_OPERATORS,
+  number: NUMERIC_OPERATORS,
+  range: NUMERIC_OPERATORS,
+  date: DATE_OPERATORS,
+  dateRange: DATE_OPERATORS,
+  boolean: BOOLEAN_OPERATORS,
+  select: SELECT_OPERATORS,
+  multiSelect: MULTI_SELECT_OPERATORS,
+};
 
 export function getColumnPinningStyle<TData extends RowData>({
   column,
@@ -149,7 +151,7 @@ export function getColumnPinningStyle<TData extends RowData>({
 }
 
 export function getFilterOperators(filterVariant: FilterVariant) {
-  return filterOperatorsByVariant[filterVariant];
+  return FILTER_OPERATORS_BY_VARIANT[filterVariant] ?? [];
 }
 
 export function getDefaultFilterOperator(filterVariant: FilterVariant) {

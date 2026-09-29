@@ -12,7 +12,7 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { sortOrders } from "@/lib/data-table-utils";
+import { SORT_ORDERS } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
@@ -404,7 +404,7 @@ function DataTableSortItem({
           className="min-w-(--anchor-width)"
         >
           <SelectGroup>
-            {sortOrders.map((order) => (
+            {SORT_ORDERS.map((order) => (
               <SelectItem key={order.value} value={order.value}>
                 {order.label}
               </SelectItem>

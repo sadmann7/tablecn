@@ -36,7 +36,7 @@ import {
   getCanWriteAsKeys,
   getIsMultiValueVariant,
   getValidFilters,
-  joinOperators,
+  JOIN_OPERATORS,
   resolveColumnFilter,
   toColumnFilterItem,
 } from "@/lib/data-table-utils";
@@ -278,7 +278,7 @@ function useDataTable<TData extends RowData>({
   }, [columnIndex, queryStateOptions]);
   const joinOperatorParser = React.useMemo(
     () =>
-      parseAsStringEnum([...joinOperators])
+      parseAsStringEnum([...JOIN_OPERATORS])
         .withOptions(queryStateOptions)
         .withDefault(initialStateRef.current?.joinOperator ?? "and"),
     [queryStateOptions],

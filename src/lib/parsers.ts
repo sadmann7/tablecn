@@ -17,11 +17,11 @@ import type {
 } from "@/lib/data-table-types";
 
 import {
-  filterOperators,
-  filterVariants,
+  FILTER_OPERATORS,
+  FILTER_VARIANTS,
   getIsMultiValueVariant,
   getValidFilters,
-  joinOperators,
+  JOIN_OPERATORS,
   toColumnFilterItem,
 } from "@/lib/data-table-utils";
 
@@ -66,8 +66,8 @@ export const getSortingStateParser = <TColumnId extends string = string>(
 const filterItemSchema = z.object({
   id: z.string(),
   value: z.union([z.string(), z.array(z.string())]),
-  variant: z.enum(filterVariants),
-  operator: z.enum(filterOperators),
+  variant: z.enum(FILTER_VARIANTS),
+  operator: z.enum(FILTER_OPERATORS),
   filterId: z.string(),
 });
 
@@ -153,7 +153,7 @@ export function getDataTableSearchParams<
     perPage: parseAsInteger.withDefault(defaultPerPage),
     sort: getSortingStateParser(sortableColumns).withDefault(defaultSorting),
     filters: getFiltersStateParser(filterIds).withDefault([]),
-    joinOperator: parseAsStringEnum([...joinOperators]).withDefault("and"),
+    joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
     ...columnParsers,
   };
 }

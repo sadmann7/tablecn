@@ -20,7 +20,7 @@ import type {
 } from "@/lib/data-table-types";
 
 import {
-  filterVariants,
+  FILTER_VARIANTS,
   getValidFilters,
   resolveColumnFilter,
   toColumnFilterItem,
@@ -349,7 +349,7 @@ function getFilterVariant(meta: unknown): FilterVariant {
     typeof meta === "object" && meta && "variant" in meta
       ? meta.variant
       : undefined;
-  return filterVariants.find((item) => item === variant) ?? "text";
+  return FILTER_VARIANTS.find((item) => item === variant) ?? "text";
 }
 
 function getFilterTest<TFeatures extends TableFeatures, TData extends RowData>(

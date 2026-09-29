@@ -69,8 +69,10 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
   multiple = false,
   columnFilterValue,
 }: DataTableFacetedFilterContentProps<TData, TValue>) {
-  const selectedValues: string[] = Array.isArray(columnFilterValue)
-    ? columnFilterValue
+  const selectedValues = Array.isArray(columnFilterValue)
+    ? columnFilterValue.filter(
+        (value): value is string => typeof value === "string",
+      )
     : [];
   const selectedOptions = options.filter((option) =>
     selectedValues.includes(option.value),

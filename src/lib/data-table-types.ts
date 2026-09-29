@@ -7,9 +7,9 @@ import type {
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
-  filterOperators,
-  filterVariants,
-  joinOperators,
+  FILTER_OPERATORS,
+  FILTER_VARIANTS,
+  JOIN_OPERATORS,
 } from "@/lib/data-table-utils";
 
 export interface DataTableColumnMeta {
@@ -37,9 +37,9 @@ export interface Option {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type FilterOperator = (typeof filterOperators)[number];
-export type FilterVariant = (typeof filterVariants)[number];
-export type JoinOperator = (typeof joinOperators)[number];
+export type FilterOperator = (typeof FILTER_OPERATORS)[number];
+export type FilterVariant = (typeof FILTER_VARIANTS)[number];
+export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
 /**
  * How filters and sorting are written to the URL. Both formats are always

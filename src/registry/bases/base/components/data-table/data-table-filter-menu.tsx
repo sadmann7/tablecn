@@ -20,7 +20,7 @@ import {
   getIsEditableTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
-  joinOperators,
+  JOIN_OPERATORS,
   toFilterTimestamp,
 } from "@/lib/data-table-utils";
 import { generateId } from "@/lib/id";
@@ -445,7 +445,7 @@ function FilterJoinOperator({
         className="min-w-(--anchor-width) lowercase"
       >
         <SelectGroup>
-          {joinOperators.map((joinOperator) => (
+          {JOIN_OPERATORS.map((joinOperator) => (
             <SelectItem key={joinOperator} value={joinOperator}>
               {joinOperator}
             </SelectItem>
