@@ -170,7 +170,6 @@ interface FacetedProps<
   value?: FacetedSelection<Multiple>;
   onValueChange?: (value: FacetedSelection<Multiple> | undefined) => void;
   items?: FacetedOption[];
-  children?: React.ReactNode;
   multiple?: Multiple;
 }
 
@@ -181,7 +180,6 @@ function Faceted<Multiple extends boolean = false>({
   value,
   onValueChange,
   items = NO_ITEMS,
-  children,
   multiple = false as Multiple,
   ...props
 }: FacetedProps<Multiple>) {
@@ -228,9 +226,7 @@ function Faceted<Multiple extends boolean = false>({
         open={open}
         onOpenChange={store.setOpen}
         {...props}
-      >
-        {children}
-      </Popover>
+      />
     </FacetedStoreContext.Provider>
   );
 }
