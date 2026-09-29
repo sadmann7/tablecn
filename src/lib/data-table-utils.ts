@@ -8,6 +8,8 @@ import type {
   FilterVariant,
 } from "@/lib/data-table-types";
 
+import { formatDate } from "@/lib/format";
+
 export const filterVariants = [
   "text",
   "number",
@@ -96,6 +98,13 @@ const booleanOperators = [
   { label: "Is not", value: "ne" },
 ] satisfies FilterOperatorOption[];
 
+const MULTI_VALUE_FILTER_VARIANTS: FilterVariant[] = [
+  "select",
+  "multiSelect",
+  "range",
+  "dateRange",
+];
+
 const filterOperatorsByVariant: Record<FilterVariant, FilterOperatorOption[]> =
   {
     text: textOperators,
@@ -149,6 +158,57 @@ export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   return operators[0]?.value ?? (filterVariant === "text" ? "iLike" : "eq");
 }
 
+export function getIsValuelessOperator(operator: FilterOperator) {
+  return operator === "isEmpty" || operator === "isNotEmpty";
+}
+
+export function getColumnFilterDefaults<TData extends RowData>(
+  column: Column<DataTableFeatures, TData>,
+) {
+  const variant = column.columnDef.meta?.variant ?? "text";
+
+  return {
+    id: column.id,
+    variant,
+    operator: getDefaultFilterOperator(variant),
+    value: "",
+  };
+}
+
+export function getSelectFilterValue(filter: ColumnFilterItem) {
+  if (filter.variant === "multiSelect") {
+    return Array.isArray(filter.value) ? filter.value : [];
+  }
+
+  return typeof filter.value === "string" ? filter.value : undefined;
+}
+
+export function getFilterDates(value: ColumnFilterItem["value"]) {
+  return (Array.isArray(value) ? value : [value])
+    .filter(Boolean)
+    .map((timestamp) => new Date(Number(timestamp)));
+}
+
+export function toFilterTimestamp(date: Date | undefined) {
+  return date?.getTime().toString() ?? "";
+}
+
+export function getDateFilterLabel(filter: ColumnFilterItem) {
+  const [startDate, endDate] = getFilterDates(filter.value);
+  if (!startDate) return undefined;
+
+  const start = formatDate(startDate, { month: "short" });
+  if (
+    filter.operator !== "isBetween" ||
+    !endDate ||
+    startDate.toDateString() === endDate.toDateString()
+  ) {
+    return start;
+  }
+
+  return `${start} - ${formatDate(endDate, { month: "short" })}`;
+}
+
 function toFilterString(value: unknown): string {
   if (value == null) return "";
   if (value instanceof Date) return value.toISOString();
@@ -156,19 +216,10 @@ function toFilterString(value: unknown): string {
   return String(value as string | number | boolean | bigint);
 }
 
-const MULTI_VALUE_VARIANTS: FilterVariant[] = [
-  "select",
-  "multiSelect",
-  "range",
-  "dateRange",
-];
-
-/** Whether a variant's filter value is a list, e.g. `?status=a,b`. */
 export function getIsMultiValueVariant(variant: FilterVariant) {
-  return MULTI_VALUE_VARIANTS.includes(variant);
+  return MULTI_VALUE_FILTER_VARIANTS.includes(variant);
 }
 
-/** The operator a value filter of this variant applies. */
 export function getValueFilterOperator(variant: FilterVariant): FilterOperator {
   if (variant === "select" || variant === "multiSelect") return "inArray";
   if (variant === "range" || variant === "dateRange") return "isBetween";
@@ -295,8 +346,7 @@ export function getValidFilters<TFilterItem extends ColumnFilterItem>(
 ): TFilterItem[] {
   return filters.filter(
     (filter) =>
-      filter.operator === "isEmpty" ||
-      filter.operator === "isNotEmpty" ||
+      getIsValuelessOperator(filter.operator) ||
       (Array.isArray(filter.value)
         ? filter.value.some((value) => value !== "")
         : filter.value !== "" &&
