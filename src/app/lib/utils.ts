@@ -18,6 +18,8 @@ import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 import { generateId } from "@/lib/id";
 
 export function generateRandomTask(input?: Partial<Task>): Task {
+  const createdAt = faker.date.recent({ days: 30 });
+
   return {
     id: generateId("task"),
     code: `TASK-${generateId({ alphabet: "0123456789", length: 4 })}`,
@@ -29,8 +31,8 @@ export function generateRandomTask(input?: Partial<Task>): Task {
     label: faker.helpers.shuffle(tasks.label.enumValues)[0] ?? "bug",
     priority: faker.helpers.shuffle(tasks.priority.enumValues)[0] ?? "low",
     archived: faker.datatype.boolean({ probability: 0.2 }),
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt,
+    updatedAt: faker.date.between({ from: createdAt, to: new Date() }),
     ...input,
   };
 }
@@ -100,6 +102,7 @@ const sampleMedia = [
 export function generateRandomSkater(input?: Partial<Skater>): Skater {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
+  const createdAt = faker.date.recent({ days: 30 });
 
   const trickCount = faker.number.int({ min: 0, max: 8 });
   const tricks =
@@ -140,8 +143,8 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
     tricks,
     media,
     order: 0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt,
+    updatedAt: faker.date.between({ from: createdAt, to: new Date() }),
     ...input,
   };
 }
