@@ -175,6 +175,21 @@ export function getIsValuelessOperator(operator: FilterOperator) {
   return operator === "isEmpty" || operator === "isNotEmpty";
 }
 
+export function getFilterValueForOperator(
+  operator: FilterOperator,
+  value: string | string[],
+) {
+  if (getIsValuelessOperator(operator)) return "";
+
+  if (operator === "isBetween") {
+    return Array.isArray(value) ? value : [value, ""];
+  }
+
+  if (Array.isArray(value)) return value.find((item) => item !== "") ?? "";
+
+  return value;
+}
+
 export function getColumnFilterDefaults<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
 ) {

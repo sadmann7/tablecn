@@ -10,6 +10,11 @@ import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { Input } from "@/registry/bases/radix/ui/input";
 
+function getRangeFilterValues(value: string | string[]): [string, string] {
+  if (Array.isArray(value)) return [value[0] ?? "", value[1] ?? ""];
+  return [value, ""];
+}
+
 interface DataTableRangeFilterProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -56,16 +61,14 @@ export function DataTableRangeFilter<TData extends RowData>({
   );
 
   const value = React.useMemo(() => {
-    if (Array.isArray(filter.value)) return filter.value.map(formatValue);
-    return [formatValue(filter.value), ""];
+    const [start, end] = getRangeFilterValues(filter.value);
+    return [formatValue(start), formatValue(end)];
   }, [filter.value, formatValue]);
 
   const onRangeValueChange = React.useCallback(
     (value: string, isMin?: boolean) => {
       const numValue = Number(value);
-      const currentValues = Array.isArray(filter.value)
-        ? filter.value
-        : ["", ""];
+      const currentValues = getRangeFilterValues(filter.value);
       const otherValue = isMin
         ? (currentValues[1] ?? "")
         : (currentValues[0] ?? "");

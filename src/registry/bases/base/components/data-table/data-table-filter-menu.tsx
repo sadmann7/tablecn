@@ -17,6 +17,7 @@ import {
   getDateFilterLabel,
   getFilterDates,
   getFilterOperators,
+  getFilterValueForOperator,
   getIsEditableTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
@@ -550,7 +551,7 @@ function FilterOperatorSelector({
         if (operator == null) return;
         onFilterUpdate(filter.filterId, {
           operator,
-          value: getIsValuelessOperator(operator) ? "" : filter.value,
+          value: getFilterValueForOperator(operator, filter.value),
         });
       }}
     >

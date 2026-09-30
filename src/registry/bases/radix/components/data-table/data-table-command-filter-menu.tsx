@@ -21,6 +21,7 @@ import {
   getDateFilterLabel,
   getFilterDates,
   getFilterOperators,
+  getFilterValueForOperator,
   getIsEditableTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
@@ -627,7 +628,7 @@ function FilterOperatorSelector({
       onValueChange={(operator: FilterOperator) =>
         onFilterUpdate(filter.filterId, {
           operator,
-          value: getIsValuelessOperator(operator) ? "" : filter.value,
+          value: getFilterValueForOperator(operator, filter.value),
         })
       }
     >
