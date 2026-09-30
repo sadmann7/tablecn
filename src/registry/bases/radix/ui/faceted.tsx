@@ -79,6 +79,34 @@ function getIsValueSelected(
   return value === itemValue;
 }
 
+function getSelectedItems(
+  value: string | string[] | undefined,
+  items: FacetedOption[],
+) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+
+  return values.map((itemValue) => ({
+    value: itemValue,
+    label: items.find((item) => item.value === itemValue)?.label ?? itemValue,
+  }));
+}
+
+function getShouldRestoreInputFocus(event: React.FocusEvent<HTMLElement>) {
+  const target = event.target;
+  if (!(target instanceof Element)) return false;
+  if (target.closest("input, textarea, [contenteditable='true']")) return false;
+
+  const content = event.currentTarget;
+  if (target === content) return true;
+
+  const list = content.querySelector("[data-slot=faceted-list]");
+  if (list?.contains(target)) return true;
+
+  // cmdk's root is focusable, so clicks on the popup padding land there.
+  const command = content.querySelector("[data-slot=command]");
+  return target === command;
+}
+
 function createFacetedStore(
   propsRef: React.RefObject<FacetedController>,
   state: FacetedStoreState,
@@ -147,22 +175,6 @@ function useStoreSelector<T>(
 ): T {
   const getSnapshot = () => selector(store.getState());
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
-}
-
-function getShouldRestoreInputFocus(event: React.FocusEvent<HTMLElement>) {
-  const target = event.target;
-  if (!(target instanceof Element)) return false;
-  if (target.closest("input, textarea, [contenteditable='true']")) return false;
-
-  const content = event.currentTarget;
-  if (target === content) return true;
-
-  const list = content.querySelector("[data-slot=faceted-list]");
-  if (list?.contains(target)) return true;
-
-  // cmdk's root is focusable, so clicks on the popup padding land there.
-  const command = content.querySelector("[data-slot=command]");
-  return target === command;
 }
 
 const FacetedStoreContext = React.createContext<FacetedStore | null>(null);
@@ -245,18 +257,6 @@ function FacetedTrigger({
       {...props}
     />
   );
-}
-
-function getSelectedItems(
-  value: string | string[] | undefined,
-  items: FacetedOption[],
-) {
-  const values = Array.isArray(value) ? value : value ? [value] : [];
-
-  return values.map((itemValue) => ({
-    value: itemValue,
-    label: items.find((item) => item.value === itemValue)?.label ?? itemValue,
-  }));
 }
 
 interface FacetedValueProps {
