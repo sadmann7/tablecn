@@ -7,21 +7,16 @@ import { db } from "@/db/index";
 import { type Task, tasks } from "@/db/schema";
 import { takeFirstOrThrow } from "@/db/utils";
 import { getErrorMessage } from "@/lib/error";
-import { generateId } from "@/lib/id";
 
 import type { CreateTaskSchema, UpdateTaskSchema } from "./validations";
 
-import { generateRandomTask } from "./utils";
+import { generateRandomTasks, generateTaskCode } from "./utils";
 
 export async function seedTasks(input: { count: number }) {
   const count = input.count ?? 100;
 
   try {
-    const allTasks: Task[] = [];
-
-    for (let i = 0; i < count; i++) {
-      allTasks.push(generateRandomTask());
-    }
+    const allTasks = generateRandomTasks(count);
 
     await db.delete(tasks);
 
@@ -36,10 +31,12 @@ export async function seedTasks(input: { count: number }) {
 export async function createTask(input: CreateTaskSchema) {
   try {
     await db.transaction(async (tx) => {
+      const takenCodes = await tx.select({ code: tasks.code }).from(tasks);
+
       const newTask = await tx
         .insert(tasks)
         .values({
-          code: `TASK-${generateId({ alphabet: "0123456789", length: 4 })}`,
+          code: generateTaskCode(new Set(takenCodes.map(({ code }) => code))),
           title: input.title,
           status: input.status,
           label: input.label,
@@ -169,8 +166,15 @@ export async function deleteTask(input: { id: string }) {
     await db.transaction(async (tx) => {
       await tx.delete(tasks).where(eq(tasks.id, input.id));
 
+      const takenCodes = await tx.select({ code: tasks.code }).from(tasks);
+
       // Create a new task for the deleted one
-      await tx.insert(tasks).values(generateRandomTask());
+      await tx.insert(tasks).values(
+        generateRandomTasks(
+          1,
+          takenCodes.map(({ code }) => code),
+        ),
+      );
     });
 
     updateTag("tasks");
@@ -194,8 +198,15 @@ export async function deleteTasks(input: { ids: string[] }) {
     await db.transaction(async (tx) => {
       await tx.delete(tasks).where(inArray(tasks.id, input.ids));
 
+      const takenCodes = await tx.select({ code: tasks.code }).from(tasks);
+
       // Create new tasks for the deleted ones
-      await tx.insert(tasks).values(input.ids.map(() => generateRandomTask()));
+      await tx.insert(tasks).values(
+        generateRandomTasks(
+          input.ids.length,
+          takenCodes.map(({ code }) => code),
+        ),
+      );
     });
 
     updateTag("tasks");

@@ -17,12 +17,20 @@ import {
 import { type Skater, skaters, type Task, tasks } from "@/db/schema";
 import { generateId } from "@/lib/id";
 
+export function generateTaskCode(takenCodes?: Set<string>): string {
+  let code: string;
+  do {
+    code = `TASK-${generateId({ alphabet: "0123456789", length: 4 })}`;
+  } while (takenCodes?.has(code));
+  return code;
+}
+
 export function generateRandomTask(input?: Partial<Task>): Task {
   const createdAt = faker.date.recent({ days: 30 });
 
   return {
     id: generateId("task"),
-    code: `TASK-${generateId({ alphabet: "0123456789", length: 4 })}`,
+    code: generateTaskCode(),
     title: faker.hacker
       .phrase()
       .replace(/^./, (letter) => letter.toUpperCase()),
@@ -35,6 +43,19 @@ export function generateRandomTask(input?: Partial<Task>): Task {
     updatedAt: faker.date.between({ from: createdAt, to: new Date() }),
     ...input,
   };
+}
+
+export function generateRandomTasks(
+  count: number,
+  takenCodes: Iterable<string> = [],
+): Task[] {
+  const codes = new Set(takenCodes);
+
+  return Array.from({ length: count }, () => {
+    const code = generateTaskCode(codes);
+    codes.add(code);
+    return generateRandomTask({ code });
+  });
 }
 
 export function getStatusIcon(status: Task["status"]) {

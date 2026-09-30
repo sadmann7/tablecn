@@ -1,17 +1,13 @@
 import { db } from "@/db/index";
-import { type Skater, skaters, type Task, tasks } from "@/db/schema";
+import { type Skater, skaters, tasks } from "@/db/schema";
 
-import { generateRandomSkater, generateRandomTask } from "./utils";
+import { generateRandomSkater, generateRandomTasks } from "./utils";
 
 export async function seedTasks(input: { count: number }) {
   const count = input.count ?? 100;
 
   try {
-    const allTasks: Task[] = [];
-
-    for (let i = 0; i < count; i++) {
-      allTasks.push(generateRandomTask());
-    }
+    const allTasks = generateRandomTasks(count);
 
     await db.delete(tasks);
 

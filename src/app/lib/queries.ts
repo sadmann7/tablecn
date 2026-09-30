@@ -34,15 +34,6 @@ export async function getTasks(
       joinOperator: input.joinOperator,
     });
 
-    const orderBy = [
-      ...(input.sorting.length > 0
-        ? input.sorting.map((item) =>
-            item.desc ? desc(tasks[item.id]) : asc(tasks[item.id]),
-          )
-        : [asc(tasks.createdAt)]),
-      asc(tasks.id),
-    ];
-
     const { data, total } = await db.transaction(async (tx) => {
       const data = await tx
         .select()
@@ -50,7 +41,14 @@ export async function getTasks(
         .limit(input.perPage)
         .offset(offset)
         .where(where)
-        .orderBy(...orderBy);
+        .orderBy(
+          ...(input.sorting.length > 0
+            ? input.sorting.map((item) =>
+                item.desc ? desc(tasks[item.id]) : asc(tasks[item.id]),
+              )
+            : [asc(tasks.createdAt)]),
+          asc(tasks.id),
+        );
 
       const total = await tx
         .select({
