@@ -16,13 +16,15 @@ import { SORT_ORDERS } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/base/ui/command";
+  Faceted,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedList,
+  FacetedTrigger,
+} from "@/registry/bases/base/ui/faceted";
 import {
   Popover,
   PopoverContent,
@@ -346,14 +348,21 @@ function DataTableSortItem({
         />
       }
     >
-      <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-        <PopoverTrigger
+      <Faceted
+        open={showFieldSelector}
+        onOpenChange={setShowFieldSelector}
+        onValueChange={(columnId) => {
+          if (!columnId) return;
+          onSortUpdate(sort.id, { id: columnId });
+        }}
+      >
+        <FacetedTrigger
           render={
             <Button
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               variant="outline"
-              className="w-44 justify-between"
+              className="w-44"
             />
           }
         >
@@ -366,27 +375,25 @@ function DataTableSortItem({
             remixicon="RiArrowUpDownLine"
             className="opacity-50"
           />
-        </PopoverTrigger>
-        <PopoverContent id={fieldListboxId} className="w-(--anchor-width) p-0">
-          <Command>
-            <CommandInput placeholder="Search fields..." />
-            <CommandList>
-              <CommandEmpty>No fields found.</CommandEmpty>
-              <CommandGroup>
-                {columns.map((column) => (
-                  <CommandItem
-                    key={column.id}
-                    value={column.id}
-                    onSelect={(value) => onSortUpdate(sort.id, { id: value })}
-                  >
-                    <span className="truncate">{column.label}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+        </FacetedTrigger>
+        <FacetedContent id={fieldListboxId} className="w-(--anchor-width)">
+          <FacetedInput placeholder="Search fields..." />
+          <FacetedList>
+            <FacetedEmpty>No fields found.</FacetedEmpty>
+            <FacetedGroup>
+              {columns.map((column) => (
+                <FacetedItem
+                  key={column.id}
+                  value={column.id}
+                  keywords={[column.label]}
+                >
+                  <span className="truncate">{column.label}</span>
+                </FacetedItem>
+              ))}
+            </FacetedGroup>
+          </FacetedList>
+        </FacetedContent>
+      </Faceted>
       <Select
         open={showDirectionSelector}
         onOpenChange={setShowDirectionSelector}

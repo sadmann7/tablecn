@@ -17,13 +17,15 @@ import { SORT_ORDERS } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/radix/ui/command";
+  Faceted,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedList,
+  FacetedTrigger,
+} from "@/registry/bases/radix/ui/faceted";
 import {
   Popover,
   PopoverContent,
@@ -339,13 +341,20 @@ function DataTableSortItem({
         className="flex items-center gap-2"
         onKeyDown={onItemKeyDown}
       >
-        <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-          <PopoverTrigger asChild>
+        <Faceted
+          open={showFieldSelector}
+          onOpenChange={setShowFieldSelector}
+          onValueChange={(columnId) => {
+            if (!columnId) return;
+            onSortUpdate(sort.id, { id: columnId });
+          }}
+        >
+          <FacetedTrigger asChild>
             <Button
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               variant="outline"
-              className="w-44 justify-between"
+              className="w-44"
             >
               <span className="truncate">{columnLabels.get(sort.id)}</span>
               <IconPlaceholder
@@ -357,30 +366,28 @@ function DataTableSortItem({
                 className="opacity-50"
               />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent
+          </FacetedTrigger>
+          <FacetedContent
             id={fieldListboxId}
-            className="w-(--radix-popover-trigger-width) p-0"
+            className="w-(--radix-popover-trigger-width)"
           >
-            <Command>
-              <CommandInput placeholder="Search fields..." />
-              <CommandList>
-                <CommandEmpty>No fields found.</CommandEmpty>
-                <CommandGroup>
-                  {columns.map((column) => (
-                    <CommandItem
-                      key={column.id}
-                      value={column.id}
-                      onSelect={(value) => onSortUpdate(sort.id, { id: value })}
-                    >
-                      <span className="truncate">{column.label}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+            <FacetedInput placeholder="Search fields..." />
+            <FacetedList>
+              <FacetedEmpty>No fields found.</FacetedEmpty>
+              <FacetedGroup>
+                {columns.map((column) => (
+                  <FacetedItem
+                    key={column.id}
+                    value={column.id}
+                    keywords={[column.label]}
+                  >
+                    <span className="truncate">{column.label}</span>
+                  </FacetedItem>
+                ))}
+              </FacetedGroup>
+            </FacetedList>
+          </FacetedContent>
+        </Faceted>
         <Select
           open={showDirectionSelector}
           onOpenChange={setShowDirectionSelector}

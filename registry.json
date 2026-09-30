@@ -175,6 +175,11 @@
           "target": "src/components/ui/sortable.tsx"
         },
         {
+          "path": "src/registry/bases/radix/ui/faceted.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/faceted.tsx"
+        },
+        {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
