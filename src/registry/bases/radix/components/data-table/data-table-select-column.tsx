@@ -15,7 +15,7 @@ import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 
 function getHitboxClassName(debug?: boolean) {
   return cn(
-    "translate-y-0.5 cursor-pointer select-none after:-inset-2",
+    "select-none after:-inset-2",
     debug &&
       "after:border after:border-dashed after:border-red-500 after:bg-red-500/20",
   );
