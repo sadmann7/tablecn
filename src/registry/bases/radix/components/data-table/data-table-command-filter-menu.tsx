@@ -677,7 +677,7 @@ function FilterValueInput<TData extends RowData>(
           filter.operator === "isEmpty" ? "empty" : "not empty"
         }`}
         aria-live="polite"
-        className="h-full w-16 rounded-none border border-dashed border-input bg-transparent px-1.5 py-0.5 text-muted-foreground dark:bg-input/30"
+        className="h-full w-16 rounded-none border border-input bg-transparent px-1.5 py-0.5 text-muted-foreground dark:bg-input/30"
       />
     );
   }

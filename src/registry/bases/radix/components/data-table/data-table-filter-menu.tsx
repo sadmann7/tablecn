@@ -587,7 +587,7 @@ function FilterValueInput<TData extends RowData>(
           filter.operator === "isEmpty" ? "empty" : "not empty"
         }`}
         aria-live="polite"
-        className="h-8 w-full rounded-lg border border-dashed border-input bg-transparent dark:bg-input/30"
+        className="h-8 w-full rounded-lg border border-input bg-transparent dark:bg-input/30"
       />
     );
   }

@@ -8,34 +8,16 @@ import {
   type RowData,
 } from "@tanstack/react-table";
 import { cn } from "cn";
-import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Checkbox } from "@/registry/bases/radix/ui/checkbox";
 
-interface DataTableSelectHitboxProps {
-  htmlFor: string;
-  children: React.ReactNode;
-  debug?: boolean;
-}
-
-function DataTableSelectHitbox({
-  htmlFor,
-  children,
-  debug,
-}: DataTableSelectHitboxProps) {
-  return (
-    <div className="relative -m-2 inline-flex translate-y-0.5 p-2">
-      {children}
-      <label
-        htmlFor={htmlFor}
-        className={cn(
-          "absolute inset-0 cursor-pointer",
-          debug && "border border-dashed border-red-500 bg-red-500/20",
-        )}
-      />
-    </div>
+function getHitboxClassName(debug?: boolean) {
+  return cn(
+    "translate-y-0.5 cursor-pointer select-none after:-inset-2",
+    debug &&
+      "after:border after:border-dashed after:border-red-500 after:bg-red-500/20",
   );
 }
 
@@ -50,8 +32,6 @@ function DataTableSelectHeader<TData extends RowData>({
   table,
   debug,
 }: DataTableSelectHeaderProps<TData>) {
-  const id = React.useId();
-
   return (
     <Subscribe
       source={table.atoms.rowSelection}
@@ -64,17 +44,12 @@ function DataTableSelectHeader<TData extends RowData>({
       }
     >
       {(checked) => (
-        <DataTableSelectHitbox htmlFor={id} debug={debug}>
-          <Checkbox
-            id={id}
-            aria-label="Select all"
-            className="after:hidden"
-            checked={checked}
-            onCheckedChange={(value) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-          />
-        </DataTableSelectHitbox>
+        <Checkbox
+          aria-label="Select all"
+          className={getHitboxClassName(debug)}
+          checked={checked}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+        />
       )}
     </Subscribe>
   );
@@ -91,36 +66,31 @@ function DataTableSelectCell<TData extends RowData>({
   row,
   debug,
 }: DataTableSelectCellProps<TData>) {
-  const id = React.useId();
-
   return (
     <Subscribe
       source={row.table.atoms.rowSelection}
       selector={(selection) => selection[row.id] === true}
     >
       {(isSelected) => (
-        <DataTableSelectHitbox htmlFor={id} debug={debug}>
-          <Checkbox
-            id={id}
-            aria-label="Select row"
-            className="after:hidden"
-            checked={isSelected}
-            onClick={(event) => {
-              if (row.table.options.enableRowRangeSelection !== true) {
-                row.toggleSelected(!isSelected);
-                return;
-              }
+        <Checkbox
+          aria-label="Select row"
+          className={getHitboxClassName(debug)}
+          checked={isSelected}
+          onClick={(event) => {
+            if (row.table.options.enableRowRangeSelection !== true) {
+              row.toggleSelected(!isSelected);
+              return;
+            }
 
-              if (event.shiftKey) event.preventDefault();
+            if (event.shiftKey) event.preventDefault();
 
-              row.getToggleSelectedHandler()({
-                target: { checked: !isSelected },
-                shiftKey: event.shiftKey,
-                nativeEvent: event.nativeEvent,
-              });
-            }}
-          />
-        </DataTableSelectHitbox>
+            row.getToggleSelectedHandler()({
+              target: { checked: !isSelected },
+              shiftKey: event.shiftKey,
+              nativeEvent: event.nativeEvent,
+            });
+          }}
+        />
       )}
     </Subscribe>
   );

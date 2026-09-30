@@ -47,10 +47,7 @@ export function DataTableSkeleton({
         <div className="flex flex-1 items-center gap-2">
           {filterCount > 0
             ? Array.from({ length: filterCount }).map((_, i) => (
-                <Skeleton
-                  key={i}
-                  className="h-8 w-18 rounded-lg border-dashed"
-                />
+                <Skeleton key={i} className="h-8 w-18 rounded-lg" />
               ))
             : null}
         </div>
