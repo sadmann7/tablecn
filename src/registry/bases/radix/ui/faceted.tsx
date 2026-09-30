@@ -312,7 +312,10 @@ function FacetedBadgeList({
   return (
     <div
       data-slot="faceted-badge-list"
-      className={cn("flex w-full flex-wrap items-center gap-1", className)}
+      className={cn(
+        "flex w-max max-w-full flex-wrap items-center gap-1",
+        className,
+      )}
       {...props}
     />
   );

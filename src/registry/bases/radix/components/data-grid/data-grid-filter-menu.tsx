@@ -261,7 +261,7 @@ export function DataGridFilterMenu<TData extends RowData>({
             <SortableContent asChild>
               <div
                 role="list"
-                className="flex max-h-100 flex-col gap-2 overflow-y-auto p-1"
+                className="grid max-h-100 grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1"
               >
                 {columnFilters.map((filter, index) => (
                   <DataGridFilterItem
@@ -419,7 +419,7 @@ function DataGridFilterItem<TData extends RowData>({
         role="listitem"
         id={filterItemId}
         tabIndex={-1}
-        className="flex items-center gap-2"
+        className="col-span-full grid grid-cols-subgrid items-center"
         onKeyDown={onItemKeyDown}
       >
         <div className="min-w-18 text-center">
@@ -517,7 +517,7 @@ function DataGridFilterItem<TData extends RowData>({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <div className="w-40 min-w-0 shrink-0">
+        <div className="w-full min-w-0">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}

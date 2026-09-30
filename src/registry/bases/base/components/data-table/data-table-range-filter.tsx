@@ -102,6 +102,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         placeholder={min.toString()}
         min={min}
         max={max}
+        className="w-full min-w-24"
         defaultValue={value[0]}
         onChange={(event) => onRangeValueChange(event.target.value, true)}
       />
@@ -117,6 +118,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         placeholder={max.toString()}
         min={min}
         max={max}
+        className="w-full min-w-24"
         defaultValue={value[1]}
         onChange={(event) => onRangeValueChange(event.target.value)}
       />
