@@ -40,7 +40,7 @@ import {
   dataTableFilterFn,
 } from "@/lib/data-table-filters";
 import {
-  getIsValueFilter,
+  getIsPlainFilter,
   resolveColumnFilter,
   toColumnFilterValue,
 } from "@/lib/data-table-utils";
@@ -105,8 +105,8 @@ function asDataTable(table: object) {
  * `columnFilteringFeature`, which stays the one filter state.
  *
  * `columnFilters` items may carry an `operator` (from the filter list and
- * menu). Value filters set with `column.setFilterValue()` don't, and apply
- * their variant's value operator through `dataTableFilterFn`, or through the
+ * menu). Plain filters set with `column.setFilterValue()` don't, and apply
+ * their variant's plain operator through `dataTableFilterFn`, or through the
  * column's own `filterFn`.
  */
 const dataTableFilteringFeature: TableFeature = {
@@ -130,7 +130,7 @@ const dataTableFilteringFeature: TableFeature = {
     assignPrototypeAPIs("dataTableFilteringFeature", prototype, table, {
       column_getFilterValue: {
         fn: (column: { id: string }) =>
-          getValueFilter(
+          getPlainFilter(
             instance,
             column.id,
             instance.atoms.columnFilters.get(),
@@ -139,7 +139,7 @@ const dataTableFilteringFeature: TableFeature = {
       },
       column_setFilterValue: {
         fn: (column: { id: string }, updater: Updater<unknown>) =>
-          setValueFilter(instance, column.id, updater),
+          setPlainFilter(instance, column.id, updater),
       },
     });
   },
@@ -210,10 +210,10 @@ const dataTableFilteringFeature: TableFeature = {
 };
 
 /**
- * A column's value filter and its value, e.g. `["todo"]` or `[1, 5]`. A
+ * A column's plain filter and its value, e.g. `["todo"]` or `[1, 5]`. A
  * column may also have operator filters, which this leaves out.
  */
-function getValueFilter(
+function getPlainFilter(
   instance: DataTableInstance,
   columnId: string,
   filters: ColumnFilter[],
@@ -223,7 +223,7 @@ function getValueFilter(
   const index = filters.findIndex(
     (filter) =>
       filter.id === columnId &&
-      getIsValueFilter(resolveColumnFilter(filter, variant)),
+      getIsPlainFilter(resolveColumnFilter(filter, variant)),
   );
   const filter = filters[index];
   const value = filter
@@ -234,11 +234,11 @@ function getValueFilter(
 }
 
 /**
- * `column.setFilterValue()`: sets only the column's value filter, so its
+ * `column.setFilterValue()`: sets only the column's plain filter, so its
  * operator filters survive. Like `column.getFilterValue()`, the updater gets
- * the value filter's value.
+ * the plain filter's value.
  */
-function setValueFilter(
+function setPlainFilter(
   instance: DataTableInstance,
   columnId: string,
   updater: Updater<unknown>,
@@ -248,7 +248,7 @@ function setValueFilter(
       index,
       filter: previous,
       value: previousValue,
-    } = getValueFilter(instance, columnId, old);
+    } = getPlainFilter(instance, columnId, old);
     const value = functionalUpdate(updater, previousValue);
     const next: ColumnFilter = previous?.filterId
       ? { id: columnId, value, filterId: previous.filterId }
@@ -262,7 +262,7 @@ function setValueFilter(
 }
 
 /**
- * TanStack's `autoRemove` rules for value filters. Filters with an
+ * TanStack's `autoRemove` rules for plain filters. Filters with an
  * `operator` are only removed by an `undefined` value, so empty drafts in the
  * filter list survive a column `filterFn` whose `autoRemove` would drop them.
  */

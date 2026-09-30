@@ -45,7 +45,7 @@ export type JoinOperator = (typeof JOIN_OPERATORS)[number];
  * How filters and sorting are written to the URL. Both formats are always
  * read, so links keep working when the format changes.
  *
- * - `"compact"`: value filters get one query param per column, e.g.
+ * - `"compact"`: plain filters get one query param per column, e.g.
  *   `?status=todo,done&title=fix`, and sorting is `?sort=createdAt.desc`.
  *   Other filters (other operators, several per column) fall back to JSON
  *   in the `filters` param.
@@ -67,9 +67,9 @@ export interface ColumnSortItem<
 declare module "@tanstack/react-table" {
   interface ColumnFilter {
     /**
-     * Set by the filter list and menu. Value filters, set with
+     * Set by the filter list and menu. Plain filters, set with
      * `column.setFilterValue()`, leave it unset and apply their variant's
-     * value operator.
+     * plain operator.
      */
     operator?: FilterOperator;
     variant?: FilterVariant;

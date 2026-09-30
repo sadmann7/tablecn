@@ -35,10 +35,10 @@ export type DataMode = (typeof DATA_MODES)[number]["value"];
 
 export const FILTER_MODES = [
   {
-    label: "Inline",
-    value: "inline",
+    label: "Plain",
+    value: "plain",
     icon: ListFilterIcon,
-    description: "One filter per column, shown inline.",
+    description: "One filter per column.",
   },
   {
     label: "Advanced",

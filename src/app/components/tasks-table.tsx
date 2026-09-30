@@ -49,7 +49,7 @@ export function TasksTable({
   promises,
   queryKeys,
 }: TasksTableProps) {
-  const enableAdvancedFilter = filterMode !== "inline";
+  const enableAdvancedFilter = filterMode !== "plain";
 
   const [
     { data, pageCount },

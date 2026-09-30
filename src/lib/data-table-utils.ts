@@ -248,20 +248,20 @@ export function getIsMultiValueVariant(variant: FilterVariant) {
   return MULTI_VALUE_FILTER_VARIANTS.includes(variant);
 }
 
-export function getValueFilterOperator(variant: FilterVariant): FilterOperator {
+export function getPlainFilterOperator(variant: FilterVariant): FilterOperator {
   if (variant === "select" || variant === "multiSelect") return "inArray";
   if (variant === "range" || variant === "dateRange") return "isBetween";
   return getDefaultFilterOperator(variant);
 }
 
 /**
- * Whether a filter is a value filter: the one `column.getFilterValue()` and
- * `column.setFilterValue()` read and write, with the variant's value operator
+ * Whether a filter is a plain filter: the one `column.getFilterValue()` and
+ * `column.setFilterValue()` read and write, with the variant's plain operator
  * and a value of the matching shape.
  */
-export function getIsValueFilter(filter: ColumnFilterItem) {
+export function getIsPlainFilter(filter: ColumnFilterItem) {
   return (
-    filter.operator === getValueFilterOperator(filter.variant) &&
+    filter.operator === getPlainFilterOperator(filter.variant) &&
     Array.isArray(filter.value) === getIsMultiValueVariant(filter.variant)
   );
 }
@@ -277,7 +277,7 @@ export function toColumnFilterItem<TColumnId extends string>(
 ): ColumnFilterItem<TColumnId> | null {
   if (value === undefined || value === null || value === "") return null;
 
-  const operator = getValueFilterOperator(variant);
+  const operator = getPlainFilterOperator(variant);
   const filterId = `${id}-filter`;
 
   if (getIsMultiValueVariant(variant)) {
@@ -292,8 +292,8 @@ export function toColumnFilterItem<TColumnId extends string>(
 }
 
 /**
- * Fills in a `columnFilters` item. Value filters (no `operator`) get the
- * variant's value operator, and their value becomes filter strings.
+ * Fills in a `columnFilters` item. Plain filters (no `operator`) get the
+ * variant's plain operator, and their value becomes filter strings.
  */
 export function resolveColumnFilter(
   filter: ColumnFilter,
@@ -319,14 +319,14 @@ export function resolveColumnFilter(
   return {
     id: filter.id,
     variant,
-    operator: getValueFilterOperator(variant),
+    operator: getPlainFilterOperator(variant),
     value: getIsMultiValueVariant(variant) ? [] : "",
     filterId,
   };
 }
 
 /**
- * Per-column keys hold at most one value filter per column, so only write
+ * Per-column keys hold at most one plain filter per column, so only write
  * them when each filter round-trips. They're read back in column order,
  * which doesn't change what the filters match.
  */
@@ -338,7 +338,7 @@ export function getCanWriteAsKeys(
 
   return filters.every((filter) => {
     if (!columnIds.includes(filter.id) || seenIds.has(filter.id)) return false;
-    if (!getIsValueFilter(filter)) return false;
+    if (!getIsPlainFilter(filter)) return false;
     if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
       return false;
     }

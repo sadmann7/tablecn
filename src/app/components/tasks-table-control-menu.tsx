@@ -27,7 +27,7 @@ function TasksTableControlMenu() {
   const [filterMode, setFilterMode] = useQueryState(
     "filterMode",
     parseAsStringEnum(FILTER_MODES.map((filterMode) => filterMode.value))
-      .withDefault("inline")
+      .withDefault("plain")
       .withOptions({ shallow: false, clearOnDefault: true }),
   );
 

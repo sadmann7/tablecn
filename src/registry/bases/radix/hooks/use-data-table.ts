@@ -232,7 +232,7 @@ function useDataTable<TData extends RowData>({
         ),
     [columnIndex, queryStateOptions],
   );
-  const valueFilterParsers = React.useMemo(() => {
+  const plainFilterParsers = React.useMemo(() => {
     const parsers: Record<
       string,
       SingleParser<string> | SingleParser<string[]>
@@ -260,7 +260,7 @@ function useDataTable<TData extends RowData>({
     filtersKey,
     jsonFiltersParser,
   );
-  const [valueFilters, setValueFilters] = useQueryStates(valueFilterParsers);
+  const [plainFilters, setPlainFilters] = useQueryStates(plainFilterParsers);
   const [joinOperator, setJoinOperator] = useQueryState(
     joinOperatorKey,
     joinOperatorParser,
@@ -270,7 +270,7 @@ function useDataTable<TData extends RowData>({
     (columnFilters: ColumnFiltersState) => {
       const filters = columnIndex.resolveColumnFilters(columnFilters);
       const validFilters = getValidFilters(filters);
-      const writeAsValueFilters =
+      const writeAsPlainFilters =
         urlFormat !== "json" &&
         getCanWriteAsKeys(validFilters, columnIndex.filterableIds);
       const valueById = new Map(
@@ -279,13 +279,13 @@ function useDataTable<TData extends RowData>({
 
       void setPage(1);
       void setJsonFilters(
-        writeAsValueFilters || filters.length === 0 ? null : filters,
+        writeAsPlainFilters || filters.length === 0 ? null : filters,
       );
-      void setValueFilters(
+      void setPlainFilters(
         Object.fromEntries(
           columnIndex.filterableIds.map((id) => [
             id,
-            writeAsValueFilters ? (valueById.get(id) ?? null) : null,
+            writeAsPlainFilters ? (valueById.get(id) ?? null) : null,
           ]),
         ),
       );
@@ -300,7 +300,7 @@ function useDataTable<TData extends RowData>({
         const item = toColumnFilterItem(
           column.id,
           column.variant,
-          valueFilters[column.id],
+          plainFilters[column.id],
         );
         return item ? [item] : [];
       }),

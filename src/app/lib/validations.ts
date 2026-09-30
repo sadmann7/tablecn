@@ -28,7 +28,7 @@ export const tasksSortableColumns = [
 export const searchParamsCache = createSearchParamsCache({
   filterMode: parseAsStringEnum(
     FILTER_MODES.map((filterMode) => filterMode.value),
-  ).withDefault("inline"),
+  ).withDefault("plain"),
   dataMode: parseAsStringEnum(
     DATA_MODES.map((dataMode) => dataMode.value),
   ).withDefault("server"),
