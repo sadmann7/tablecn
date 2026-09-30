@@ -39,7 +39,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
 }
 
 function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
-  const selectedIds = table.getSelectedRowModel().rows.map((row) => row.id);
+  const selectedIds = table.getSelectedRowIds();
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
