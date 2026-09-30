@@ -39,7 +39,7 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
 }
 
 function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
-  const selectedIds = table.getSelectedRowIds();
+  const selectedRowIds = table.getSelectedRowIds();
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
@@ -49,25 +49,22 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
   );
 
   const onTaskUpdate = React.useCallback(
-    (
+    async (
       field: "status" | "priority",
       value: Task["status"] | Task["priority"],
     ) => {
-      async function update() {
-        const { error } = await updateTasks({
-          ids: selectedIds,
-          [field]: value,
-        });
+      const { error } = await updateTasks({
+        ids: selectedRowIds,
+        [field]: value,
+      });
 
-        if (error) {
-          toast.error(error);
-          return;
-        }
-        toast.success("Tasks updated");
+      if (error) {
+        toast.error(error);
+        return;
       }
-      void update();
+      toast.success("Tasks updated");
     },
-    [selectedIds],
+    [selectedRowIds],
   );
 
   const onTaskExport = React.useCallback(() => {
@@ -77,25 +74,22 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
     });
   }, [table]);
 
-  const onTaskDelete = React.useCallback(() => {
-    async function remove() {
-      const { error } = await deleteTasks({
-        ids: selectedIds,
-      });
+  const onTaskDelete = React.useCallback(async () => {
+    const { error } = await deleteTasks({
+      ids: selectedRowIds,
+    });
 
-      if (error) {
-        toast.error(error);
-        return;
-      }
-      table.resetRowSelection(true);
+    if (error) {
+      toast.error(error);
+      return;
     }
-    void remove();
-  }, [selectedIds, table]);
+    table.resetRowSelection(true);
+  }, [selectedRowIds, table]);
 
   return (
-    <ActionBar open={selectedIds.length > 0} onOpenChange={onOpenChange}>
+    <ActionBar open={selectedRowIds.length > 0} onOpenChange={onOpenChange}>
       <ActionBarSelection>
-        <span className="font-medium">{selectedIds.length}</span>
+        <span className="font-medium">{selectedRowIds.length}</span>
         <span>selected</span>
         <ActionBarSeparator />
         <ActionBarClose>
