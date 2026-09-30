@@ -55,6 +55,16 @@ export function DataTablePagination<TData extends RowData>({
   );
 }
 
+interface DataTablePaginationContentProps<
+  TData extends RowData,
+> extends React.ComponentProps<"div"> {
+  table: Table<DataTableFeatures, TData>;
+  pageIndex: number;
+  pageSize: number;
+  selectedRowCount: number;
+  pageSizeOptions: number[];
+}
+
 function DataTablePaginationContent<TData extends RowData>({
   table,
   pageIndex,
@@ -63,12 +73,7 @@ function DataTablePaginationContent<TData extends RowData>({
   pageSizeOptions,
   className,
   ...props
-}: DataTablePaginationProps<TData> & {
-  pageIndex: number;
-  pageSize: number;
-  selectedRowCount: number;
-  pageSizeOptions: number[];
-}) {
+}: DataTablePaginationContentProps<TData>) {
   const pageCount = table.getPageCount();
   const canPreviousPage = table.getCanPreviousPage();
   const canNextPage = table.getCanNextPage();
