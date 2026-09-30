@@ -36,7 +36,6 @@ export function getDataTableSelectColumn<TData extends RowData>({
         {(checked) => (
           <Checkbox
             aria-label="Select all"
-            className="translate-y-0.5"
             checked={checked}
             onCheckedChange={(value) =>
               table.toggleAllPageRowsSelected(!!value)
@@ -53,7 +52,6 @@ export function getDataTableSelectColumn<TData extends RowData>({
         {(isSelected) => (
           <Checkbox
             aria-label="Select row"
-            className="translate-y-0.5"
             checked={isSelected}
             onClick={(event) => {
               if (row.table.options.enableRowRangeSelection !== true) {
