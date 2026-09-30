@@ -1,10 +1,10 @@
 "use cache";
 
-import "server-only";
 import { asc, count, desc, gt, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
+import "server-only";
 
-import type { ColumnFilterItem, DataTableQuery } from "@/lib/data-table-types";
+import type { DataTableQuery } from "@/lib/data-table-types";
 
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
@@ -15,6 +15,7 @@ import type {
 } from "./validations";
 
 import { filterColumns } from "./filter-columns";
+import { sanitizeEnumFilters } from "./utils";
 
 export async function getTasks(
   input: DataTableQuery<
@@ -70,35 +71,6 @@ export async function getTasks(
   } catch {
     return { data: [], pageCount: 0 };
   }
-}
-
-const ENUM_COLUMNS = {
-  status: tasks.status.enumValues,
-  priority: tasks.priority.enumValues,
-  label: tasks.label.enumValues,
-} as const;
-
-function sanitizeEnumFilters<TColumnId extends string>(
-  filters: ColumnFilterItem<TColumnId>[],
-) {
-  return filters.flatMap((filter) => {
-    const allowed: readonly string[] | undefined =
-      ENUM_COLUMNS[filter.id as keyof typeof ENUM_COLUMNS];
-    if (!allowed) return [filter];
-
-    const values = (
-      Array.isArray(filter.value) ? filter.value : [filter.value]
-    ).filter((value) => allowed.includes(value));
-
-    if (values.length === 0) return [];
-
-    return [
-      {
-        ...filter,
-        value: Array.isArray(filter.value) ? values : (values[0] ?? ""),
-      },
-    ];
-  });
 }
 
 export async function getRecentTasks() {

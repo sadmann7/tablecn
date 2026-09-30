@@ -15,7 +15,38 @@ import {
 } from "lucide-react";
 
 import { type Skater, skaters, type Task, tasks } from "@/db/schema";
+import { ColumnFilterItem } from "@/lib/data-table-types";
 import { generateId } from "@/lib/id";
+
+const AVAILABLE_TRICKS = [
+  "Kickflip",
+  "Heelflip",
+  "Tre Flip",
+  "Hardflip",
+  "Varial Flip",
+  "360 Flip",
+  "Ollie",
+  "Nollie",
+  "Pop Shove-it",
+  "FS Boardslide",
+  "BS Boardslide",
+  "50-50 Grind",
+  "5-0 Grind",
+  "Crooked Grind",
+  "Smith Grind",
+] as const;
+
+const SAMPLE_MEDIA = [
+  { name: "trick_clip.mp4", type: "video/mp4", sizeRange: [5000, 50000] },
+  { name: "skate_edit.mp4", type: "video/mp4", sizeRange: [10000, 100000] },
+  { name: "photo_1.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
+  { name: "photo_2.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
+  {
+    name: "sponsor_contract.pdf",
+    type: "application/pdf",
+    sizeRange: [100, 500],
+  },
+] as const;
 
 export function generateTaskCode(takenCodes?: Set<string>): string {
   let code: string;
@@ -90,35 +121,34 @@ export function getLabelIcon(label: Task["label"]) {
   return labelIcons[label];
 }
 
-const availableTricks = [
-  "Kickflip",
-  "Heelflip",
-  "Tre Flip",
-  "Hardflip",
-  "Varial Flip",
-  "360 Flip",
-  "Ollie",
-  "Nollie",
-  "Pop Shove-it",
-  "FS Boardslide",
-  "BS Boardslide",
-  "50-50 Grind",
-  "5-0 Grind",
-  "Crooked Grind",
-  "Smith Grind",
-] as const;
+const ENUM_COLUMNS = {
+  status: tasks.status.enumValues,
+  priority: tasks.priority.enumValues,
+  label: tasks.label.enumValues,
+} as const;
 
-const sampleMedia = [
-  { name: "trick_clip.mp4", type: "video/mp4", sizeRange: [5000, 50000] },
-  { name: "skate_edit.mp4", type: "video/mp4", sizeRange: [10000, 100000] },
-  { name: "photo_1.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
-  { name: "photo_2.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
-  {
-    name: "sponsor_contract.pdf",
-    type: "application/pdf",
-    sizeRange: [100, 500],
-  },
-] as const;
+export function sanitizeEnumFilters<TColumnId extends string>(
+  filters: ColumnFilterItem<TColumnId>[],
+) {
+  return filters.flatMap((filter) => {
+    const allowed: readonly string[] | undefined =
+      ENUM_COLUMNS[filter.id as keyof typeof ENUM_COLUMNS];
+    if (!allowed) return [filter];
+
+    const values = (
+      Array.isArray(filter.value) ? filter.value : [filter.value]
+    ).filter((value) => allowed.includes(value));
+
+    if (values.length === 0) return [];
+
+    return [
+      {
+        ...filter,
+        value: Array.isArray(filter.value) ? values : (values[0] ?? ""),
+      },
+    ];
+  });
+}
 
 export function generateRandomSkater(input?: Partial<Skater>): Skater {
   const firstName = faker.person.firstName();
@@ -128,13 +158,13 @@ export function generateRandomSkater(input?: Partial<Skater>): Skater {
   const trickCount = faker.number.int({ min: 0, max: 8 });
   const tricks =
     trickCount > 0
-      ? faker.helpers.arrayElements([...availableTricks], trickCount)
+      ? faker.helpers.arrayElements([...AVAILABLE_TRICKS], trickCount)
       : null;
 
   const hasMedia = faker.datatype.boolean({ probability: 0.3 });
   const media = hasMedia
     ? faker.helpers
-        .arrayElements(sampleMedia, { min: 1, max: 2 })
+        .arrayElements(SAMPLE_MEDIA, { min: 1, max: 2 })
         .map((file, index) => ({
           id: `media-${generateId("media")}-${index}`,
           name: file.name,
