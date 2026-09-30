@@ -7,18 +7,14 @@ import { pgTableCreator } from "drizzle-orm/pg-core";
 
 import { DATABASE_PREFIX } from "@/lib/constants";
 
-/**
- * Allows a single database instance for multiple projects.
- * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
- */
 export const pgTable = pgTableCreator((name) => `${DATABASE_PREFIX}_${name}`);
 
-export function takeFirstOrNull<TData>(data: TData[]) {
-  return data[0] ?? null;
+export function takeFirstOrNull<TItem>(items: TItem[]) {
+  return items[0] ?? null;
 }
 
-export function takeFirstOrThrow<TData>(data: TData[], errorMessage?: string) {
-  const first = takeFirstOrNull(data);
+export function takeFirstOrThrow<TItem>(items: TItem[], errorMessage?: string) {
+  const first = takeFirstOrNull(items);
 
   if (!first) {
     throw new Error(errorMessage ?? "Item not found");
@@ -28,13 +24,26 @@ export function takeFirstOrThrow<TData>(data: TData[], errorMessage?: string) {
 }
 
 export function isEmpty<TColumn extends AnyColumn>(column: TColumn) {
-  return sql<boolean>`
-    case
-      when ${column} is null then true
-      when ${column} = '' then true
-      when ${column}::text = '[]' then true
-      when ${column}::text = '{}' then true
-      else false
-    end
-  `;
+  if (column.dataType === "string") {
+    return sql<boolean>`
+      case
+        when ${column} is null then true
+        when ${column} = '' then true
+        else false
+      end
+    `;
+  }
+
+  if (column.dataType === "array" || column.dataType === "json") {
+    return sql<boolean>`
+      case
+        when ${column} is null then true
+        when ${column}::text = '[]' then true
+        when ${column}::text = '{}' then true
+        else false
+      end
+    `;
+  }
+
+  return sql<boolean>`${column} is null`;
 }
