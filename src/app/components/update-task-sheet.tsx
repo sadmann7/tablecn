@@ -243,7 +243,7 @@ function UpdateTaskForm({ task, onSuccess }: UpdateTaskFormProps) {
         />
         <SheetFooter className="px-0">
           <Button disabled={isPending}>
-            {isPending && <Loader className="size-4 animate-spin" />}
+            {isPending && <Loader className="animate-spin" />}
             Save
           </Button>
           <SheetClose asChild>

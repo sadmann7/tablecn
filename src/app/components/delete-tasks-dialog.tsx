@@ -74,7 +74,7 @@ export function DeleteTasksDialog({
         {showTrigger ? (
           <DialogTrigger asChild>
             <Button variant="outline">
-              <Trash className="mr-2 size-4" aria-hidden="true" />
+              <Trash />
               Delete ({tasks.length})
             </Button>
           </DialogTrigger>
@@ -98,12 +98,7 @@ export function DeleteTasksDialog({
               onClick={onDelete}
               disabled={isDeletePending}
             >
-              {isDeletePending && (
-                <Loader
-                  className="mr-2 size-4 animate-spin"
-                  aria-hidden="true"
-                />
-              )}
+              {isDeletePending && <Loader className="animate-spin" />}
               Delete
             </Button>
           </DialogFooter>
@@ -117,7 +112,7 @@ export function DeleteTasksDialog({
       {showTrigger ? (
         <DrawerTrigger asChild>
           <Button variant="outline">
-            <Trash className="mr-2 size-4" aria-hidden="true" />
+            <Trash />
             Delete ({tasks.length})
           </Button>
         </DrawerTrigger>
@@ -141,9 +136,7 @@ export function DeleteTasksDialog({
             onClick={onDelete}
             disabled={isDeletePending}
           >
-            {isDeletePending && (
-              <Loader className="mr-2 size-4 animate-spin" aria-hidden="true" />
-            )}
+            {isDeletePending && <Loader className="animate-spin" />}
             Delete
           </Button>
         </DrawerFooter>

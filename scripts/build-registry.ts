@@ -96,7 +96,6 @@ function withImportedDependencies(
     "@dnd-kit/modifiers",
     "@dnd-kit/sortable",
     "@dnd-kit/utilities",
-    "cn",
     "zod",
   ] as const) {
     if (contents.some((content) => content.includes(`"${pkg}`))) {

@@ -1,32 +1,28 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
-
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/base/ui/command";
 import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/base/ui/popover";
+  Faceted,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedList,
+  FacetedTrigger,
+} from "@/registry/bases/base/ui/faceted";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridViewMenuProps<
   TData extends RowData,
-> extends React.ComponentProps<typeof PopoverContent> {
+> extends React.ComponentProps<typeof FacetedContent> {
   table: Table<DataGridFeatures, TData>;
   disabled?: boolean;
 }
@@ -51,56 +47,63 @@ export function DataGridViewMenu<TData extends RowData>({
   );
 
   return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            aria-label="Toggle columns"
-            role="combobox"
+    <Subscribe source={table.atoms.columnVisibility}>
+      {(columnVisibility) => (
+        <Faceted
+          multiple
+          value={columns
+            .filter((column) => columnVisibility[column.id] !== false)
+            .map((column) => column.id)}
+        >
+          <FacetedTrigger
+            render={
+              <Button
+                aria-label="Toggle columns"
+                role="combobox"
+                dir={dir}
+                variant="outline"
+                className="ms-auto hidden lg:flex"
+                disabled={disabled}
+              />
+            }
+          >
+            <IconPlaceholder
+              lucide="Settings2"
+              tabler="IconSettings"
+              hugeicons="Settings05Icon"
+              phosphor="GearIcon"
+              remixicon="RiSettingsLine"
+              className="text-muted-foreground"
+            />
+            View
+          </FacetedTrigger>
+          <FacetedContent
             dir={dir}
-            variant="outline"
-            className="ms-auto hidden lg:flex"
-            disabled={disabled}
-          />
-        }
-      >
-        <IconPlaceholder
-          lucide="Settings2"
-          tabler="IconSettings"
-          hugeicons="Settings05Icon"
-          phosphor="GearIcon"
-          remixicon="RiSettingsLine"
-          className="text-muted-foreground"
-        />
-        View
-      </PopoverTrigger>
-      <PopoverContent
-        dir={dir}
-        className={cn("w-44 p-0", className)}
-        {...props}
-      >
-        <Command>
-          <CommandInput placeholder="Search columns..." />
-          <CommandList>
-            <CommandEmpty>No columns found.</CommandEmpty>
-            <CommandGroup>
-              {columns.map((column) => (
-                <CommandItem
-                  key={column.id}
-                  data-checked={column.getIsVisible()}
-                  onSelect={() =>
-                    column.toggleVisibility(!column.getIsVisible())
-                  }
-                >
-                  <span className="truncate">
-                    {column.columnDef.meta?.label ?? column.id}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+            align="center"
+            className={cn("w-44", className)}
+            {...props}
+          >
+            <FacetedInput placeholder="Search columns..." />
+            <FacetedList>
+              <FacetedEmpty>No columns found.</FacetedEmpty>
+              <FacetedGroup>
+                {columns.map((column) => (
+                  <FacetedItem
+                    key={column.id}
+                    value={column.id}
+                    keywords={[column.columnDef.meta?.label ?? column.id]}
+                    onSelect={() => column.toggleVisibility()}
+                  >
+                    <span className="truncate">
+                      {column.columnDef.meta?.label ?? column.id}
+                    </span>
+                  </FacetedItem>
+                ))}
+              </FacetedGroup>
+            </FacetedList>
+          </FacetedContent>
+        </Faceted>
+      )}
+    </Subscribe>
   );
 }

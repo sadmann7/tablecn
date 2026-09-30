@@ -9,7 +9,6 @@
       "title": "Data Table",
       "description": "A feature-rich data table component with server-side filtering, sorting, and pagination",
       "registryDependencies": [
-        "badge",
         "button",
         "calendar",
         "command",
@@ -23,13 +22,7 @@
         "label",
         "skeleton"
       ],
-      "dependencies": [
-        "@tanstack/react-table",
-        "lucide-react",
-        "nuqs",
-        "cn",
-        "zod"
-      ],
+      "dependencies": ["@tanstack/react-table", "nuqs", "zod"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table.tsx",
@@ -91,10 +84,6 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
-        },
-        {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
@@ -148,6 +137,10 @@
         {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -165,13 +158,10 @@
       ],
       "dependencies": [
         "@tanstack/react-table",
-        "lucide-react",
-        "cn",
         "@dnd-kit/core",
         "@dnd-kit/modifiers",
         "@dnd-kit/sortable",
-        "@dnd-kit/utilities",
-        "zod"
+        "@dnd-kit/utilities"
       ],
       "files": [
         {
@@ -189,6 +179,10 @@
           "type": "registry:lib"
         },
         {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "src/lib/data-table-types.ts",
           "type": "registry:lib"
         },
@@ -198,10 +192,6 @@
         },
         {
           "path": "src/lib/data-table-filters.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/lib/parsers.ts",
           "type": "registry:lib"
         },
         {
@@ -226,14 +216,10 @@
       ],
       "dependencies": [
         "@tanstack/react-table",
-        "lucide-react",
-        "nuqs",
-        "cn",
         "@dnd-kit/core",
         "@dnd-kit/modifiers",
         "@dnd-kit/sortable",
-        "@dnd-kit/utilities",
-        "zod"
+        "@dnd-kit/utilities"
       ],
       "files": [
         {
@@ -262,10 +248,6 @@
           "target": "src/components/ui/faceted.tsx"
         },
         {
-          "path": "src/hooks/use-debounced-callback.ts",
-          "type": "registry:hook"
-        },
-        {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
@@ -275,10 +257,6 @@
         },
         {
           "path": "src/lib/id.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/lib/parsers.ts",
           "type": "registry:lib"
         },
         {
@@ -310,7 +288,6 @@
       "title": "Data Table Command Filter Menu",
       "description": "A command filter menu component for the data table",
       "registryDependencies": [
-        "badge",
         "button",
         "calendar",
         "command",
@@ -318,13 +295,7 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@tanstack/react-table",
-        "lucide-react",
-        "nuqs",
-        "cn",
-        "zod"
-      ],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-command-filter-menu.tsx",
@@ -347,14 +318,6 @@
           "target": "src/components/ui/faceted.tsx"
         },
         {
-          "path": "src/hooks/use-debounced-callback.ts",
-          "type": "registry:hook"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
-        },
-        {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
@@ -364,10 +327,6 @@
         },
         {
           "path": "src/lib/id.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/lib/parsers.ts",
           "type": "registry:lib"
         },
         {
@@ -405,7 +364,6 @@
         "input",
         "popover",
         "select",
-        "separator",
         "skeleton",
         "textarea",
         "tooltip"
@@ -413,9 +371,7 @@
       "dependencies": [
         "@tanstack/react-table",
         "@tanstack/react-virtual",
-        "lucide-react",
-        "sonner",
-        "cn"
+        "sonner"
       ],
       "files": [
         {
@@ -518,7 +474,7 @@
       "title": "Data Grid Select Column",
       "description": "A reusable select column definition for the data grid with checkbox selection and shift-click support",
       "registryDependencies": ["checkbox"],
-      "dependencies": ["@tanstack/react-table", "cn"],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-select-column.tsx",
@@ -549,8 +505,6 @@
       ],
       "dependencies": [
         "@tanstack/react-table",
-        "lucide-react",
-        "cn",
         "@dnd-kit/core",
         "@dnd-kit/modifiers",
         "@dnd-kit/sortable",
@@ -573,6 +527,11 @@
           "target": "src/components/ui/sortable.tsx"
         },
         {
+          "path": "src/registry/bases/radix/ui/faceted.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/faceted.tsx"
+        },
+        {
           "path": "src/lib/data-grid-features.ts",
           "type": "registry:lib"
         },
@@ -592,7 +551,7 @@
       "title": "Data Grid Row Height Menu",
       "description": "A row height menu component for the data grid to adjust row sizes",
       "registryDependencies": ["select"],
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-row-height-menu.tsx",
@@ -615,7 +574,7 @@
       "title": "Data Grid View Menu",
       "description": "A view menu component for the data grid to toggle column visibility",
       "registryDependencies": ["button", "command", "popover"],
-      "dependencies": ["@tanstack/react-table", "lucide-react", "cn"],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-view-menu.tsx",
@@ -626,6 +585,11 @@
           "path": "src/registry/bases/radix/ui/direction.tsx",
           "type": "registry:ui",
           "target": "src/components/ui/direction.tsx"
+        },
+        {
+          "path": "src/registry/bases/radix/ui/faceted.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/faceted.tsx"
         },
         {
           "path": "src/lib/data-grid-features.ts",
@@ -643,7 +607,6 @@
       "title": "Data Grid Keyboard Shortcuts",
       "description": "A keyboard shortcuts dialog component for the data grid showing all available shortcuts",
       "registryDependencies": ["button", "dialog", "input", "kbd", "separator"],
-      "dependencies": ["lucide-react"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts.tsx",
@@ -673,8 +636,6 @@
       ],
       "dependencies": [
         "@tanstack/react-table",
-        "lucide-react",
-        "cn",
         "@dnd-kit/core",
         "@dnd-kit/modifiers",
         "@dnd-kit/sortable",
@@ -697,11 +658,20 @@
           "target": "src/components/ui/sortable.tsx"
         },
         {
+          "path": "src/registry/bases/radix/ui/faceted.tsx",
+          "type": "registry:ui",
+          "target": "src/components/ui/faceted.tsx"
+        },
+        {
           "path": "src/hooks/use-debounced-callback.ts",
           "type": "registry:hook"
         },
         {
           "path": "src/lib/data-grid-filters.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-utils.ts",
           "type": "registry:lib"
         },
         {
@@ -728,7 +698,6 @@
       "title": "Data Grid Skeleton",
       "description": "A composable skeleton component for the data grid with toolbar and grid parts",
       "registryDependencies": ["skeleton"],
-      "dependencies": ["cn"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-skeleton.tsx",
@@ -743,7 +712,7 @@
       "title": "Use Data Grid Undo Redo",
       "description": "An undo/redo hook for the data grid with keyboard shortcuts and history management",
       "registryDependencies": [],
-      "dependencies": ["sonner"],
+      "dependencies": ["@tanstack/react-table", "sonner"],
       "files": [
         {
           "path": "src/hooks/use-data-grid-undo-redo.ts",

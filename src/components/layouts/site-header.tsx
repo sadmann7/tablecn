@@ -62,7 +62,7 @@ export function SiteHeader() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              <Icons.gitHub className="size-4" aria-hidden="true" />
+              <Icons.gitHub />
             </Link>
           </Button>
           <ModeToggle />
