@@ -1,4 +1,4 @@
-import type { ComponentType } from "react";
+import type * as React from "react";
 
 import {
   CommandIcon,
@@ -11,7 +11,7 @@ import {
 export interface Flag<TValue extends string = string> {
   label: string;
   value: TValue;
-  icon: ComponentType<{ className?: string }>;
+  icon: React.ComponentType<React.ComponentProps<"svg">>;
   description: string;
 }
 
@@ -38,19 +38,19 @@ export const FILTER_MODES = [
     label: "Plain",
     value: "plain",
     icon: ListFilterIcon,
-    description: "One filter per column.",
+    description: "Filter rows with inline inputs.",
   },
   {
     label: "Advanced",
     value: "advanced",
     icon: FileSpreadsheetIcon,
-    description: "Airtable like advanced filters for filtering rows.",
+    description: "Filter rows with an Airtable like filter builder.",
   },
   {
     label: "Command",
     value: "command",
     icon: CommandIcon,
-    description: "Linear like command palette for filtering rows.",
+    description: "Filter rows with a Linear like command palette.",
   },
 ] as const satisfies readonly Flag[];
 
