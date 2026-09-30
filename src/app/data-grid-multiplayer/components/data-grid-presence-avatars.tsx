@@ -2,7 +2,8 @@
 
 import type { UserPresence } from "@party/types";
 
-import { cn } from "@/lib/utils";
+import { cn } from "cn";
+
 import {
   Tooltip,
   TooltipContent,

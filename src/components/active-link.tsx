@@ -1,9 +1,9 @@
 "use client";
 
+import { cn } from "cn";
 import Link from "next/link";
 import { useSelectedLayoutSegment } from "next/navigation";
 
-import { cn } from "@/lib/utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 
 export function ActiveLink({

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import { cn } from "cn";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import { Suspense } from "react";
@@ -10,7 +11,6 @@ import { TailwindIndicator } from "@/components/tailwind-indicator";
 import { UploadThingSSR } from "@/components/uploadthing-ssr";
 import { fontMono, fontSans } from "@/lib/fonts";
 import { siteConfig } from "@/lib/site";
-import { cn } from "@/lib/utils";
 import { Toaster } from "@/registry/bases/radix/ui/sonner";
 import "@/styles/globals.css";
 
