@@ -52,7 +52,7 @@ interface FacetedController {
   onOpenChange?: (open: boolean) => void;
   value?: string | string[];
   onValueChange?: (value: string | string[] | undefined) => void;
-  valueControlled: boolean;
+  isControlled: boolean;
   multiple: boolean;
   items: FacetedOption[];
 }
@@ -61,7 +61,7 @@ function getSelection(
   state: FacetedState,
   props: FacetedController,
 ): string | string[] | undefined {
-  return props.valueControlled ? props.value : state.value;
+  return props.isControlled ? props.value : state.value;
 }
 
 function getHasSelection(value: string | string[] | undefined) {
@@ -90,6 +90,14 @@ function getSelectedItems(
   }));
 }
 
+function getIsFacetedSelectedValue<Multiple extends boolean>(
+  value: string | string[] | undefined,
+  multiple: Multiple,
+): value is FacetedSelectedValue<Multiple> | undefined {
+  if (value === undefined) return true;
+  return multiple ? Array.isArray(value) : typeof value === "string";
+}
+
 function createFacetedStore(
   propsRef: React.RefObject<FacetedController>,
   state: FacetedState,
@@ -98,7 +106,7 @@ function createFacetedStore(
 
   function commitValue(nextValue: string | string[] | undefined) {
     const props = propsRef.current;
-    if (!props.valueControlled && !Object.is(state.value, nextValue)) {
+    if (!props.isControlled && !Object.is(state.value, nextValue)) {
       state.value = nextValue;
       store.notify();
     }
@@ -200,9 +208,10 @@ function Faceted<Multiple extends boolean = false>(
     onOpenChange,
     value,
     onValueChange(nextValue) {
-      onValueChange?.(nextValue as FacetedSelectedValue<Multiple> | undefined);
+      if (!getIsFacetedSelectedValue(nextValue, multiple)) return;
+      onValueChange?.(nextValue);
     },
-    valueControlled: "value" in props,
+    isControlled: "value" in props,
     multiple,
     items,
   };
