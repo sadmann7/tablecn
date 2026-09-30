@@ -40,6 +40,7 @@ import {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedTrigger,
   FacetedValue,
@@ -511,6 +512,7 @@ function FilterFieldSelector<TData extends RowData>({
             {columns.map((column) => (
               <FacetedItem key={column.id} value={column.id}>
                 <span className="truncate">{column.columnDef.meta?.label}</span>
+                <FacetedItemIndicator />
               </FacetedItem>
             ))}
           </FacetedGroup>
@@ -725,9 +727,7 @@ function SelectFilterValue<TData extends RowData>({
               <FacetedItem key={option.value} value={option.value}>
                 {option.icon && <option.icon />}
                 <span className="flex-1 truncate">{option.label}</span>
-                {option.count !== undefined && (
-                  <span className="font-mono text-xs">{option.count}</span>
-                )}
+                <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
               </FacetedItem>
             ))}
           </FacetedGroup>

@@ -29,6 +29,7 @@ import {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedTrigger,
   FacetedValue,
@@ -493,6 +494,7 @@ function DataGridFilterItem<TData extends RowData>({
                   keywords={[column.label]}
                 >
                   <span className="truncate">{column.label}</span>
+                  <FacetedItemIndicator />
                 </FacetedItem>
               ))}
             </FacetedGroup>
@@ -872,11 +874,7 @@ function DataGridFilterInput<TData extends RowData>({
                   >
                     {option.icon && <option.icon />}
                     <span className="truncate">{option.label}</span>
-                    {option.count !== undefined && (
-                      <span className="ms-auto font-mono text-xs">
-                        {option.count}
-                      </span>
-                    )}
+                    <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
                   </FacetedItem>
                 ))}
               </FacetedGroup>
@@ -920,11 +918,7 @@ function DataGridFilterInput<TData extends RowData>({
                 >
                   {option.icon && <option.icon />}
                   <span className="truncate">{option.label}</span>
-                  {option.count !== undefined && (
-                    <span className="ms-auto font-mono text-xs">
-                      {option.count}
-                    </span>
-                  )}
+                  <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
                 </FacetedItem>
               ))}
             </FacetedGroup>

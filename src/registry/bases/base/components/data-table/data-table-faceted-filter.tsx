@@ -16,6 +16,7 @@ import {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedSeparator,
   FacetedTrigger,
@@ -141,11 +142,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
               <FacetedItem key={option.value} value={option.value}>
                 {option.icon && <option.icon />}
                 <span className="flex-1 truncate">{option.label}</span>
-                {option.count !== undefined && (
-                  <span className="ml-auto font-mono text-xs">
-                    {option.count}
-                  </span>
-                )}
+                <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
               </FacetedItem>
             ))}
           </FacetedGroup>

@@ -14,6 +14,7 @@ import {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedTrigger,
 } from "@/registry/bases/radix/ui/faceted";
@@ -89,6 +90,7 @@ export function DataTableViewOptions<TData extends RowData>({
                     <span className="truncate">
                       {column.columnDef.meta?.label ?? column.id}
                     </span>
+                    <FacetedItemIndicator />
                   </FacetedItem>
                 ))}
               </FacetedGroup>

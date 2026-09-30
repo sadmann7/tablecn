@@ -15,6 +15,7 @@ import {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedTrigger,
 } from "@/registry/bases/base/ui/faceted";
@@ -97,6 +98,7 @@ export function DataGridViewMenu<TData extends RowData>({
                     <span className="truncate">
                       {column.columnDef.meta?.label ?? column.id}
                     </span>
+                    <FacetedItemIndicator />
                   </FacetedItem>
                 ))}
               </FacetedGroup>

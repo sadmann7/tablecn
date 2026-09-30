@@ -2,6 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -10,7 +11,6 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem,
   CommandList,
   CommandSeparator,
 } from "@/registry/bases/base/ui/command";
@@ -384,13 +384,18 @@ function FacetedGroup(props: React.ComponentProps<typeof CommandGroup>) {
 }
 
 function FacetedCommandItem({
+  className,
   onPointerDownCapture,
   onMouseDown,
   onSelect,
   ...props
-}: React.ComponentProps<typeof CommandItem>) {
+}: React.ComponentProps<typeof CommandPrimitive.Item>) {
   return (
-    <CommandItem
+    <CommandPrimitive.Item
+      className={cn(
+        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
+        className,
+      )}
       {...mergeProps<"div">(
         {
           onPointerDownCapture(event) {
@@ -410,7 +415,9 @@ function FacetedCommandItem({
   );
 }
 
-interface FacetedItemProps extends React.ComponentProps<typeof CommandItem> {
+interface FacetedItemProps extends React.ComponentProps<
+  typeof CommandPrimitive.Item
+> {
   value: string;
 }
 
@@ -442,12 +449,43 @@ function FacetedItem({ value, onSelect, ...props }: FacetedItemProps) {
   );
 }
 
+function FacetedItemIndicator({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="faceted-item-indicator"
+      className={cn(
+        "ml-auto grid place-items-center *:col-start-1 *:row-start-1",
+        className,
+      )}
+      {...props}
+    >
+      {children != null && (
+        <span className="font-mono text-xs group-data-checked/command-item:invisible">
+          {children}
+        </span>
+      )}
+      <IconPlaceholder
+        lucide="Check"
+        tabler="IconCheck"
+        hugeicons="Tick02Icon"
+        phosphor="CheckIcon"
+        remixicon="RiCheckLine"
+        className="invisible group-data-checked/command-item:visible"
+      />
+    </span>
+  );
+}
+
 function FacetedClear({
   className,
   children = "Clear",
   onSelect,
   ...props
-}: React.ComponentProps<typeof CommandItem>) {
+}: React.ComponentProps<typeof CommandPrimitive.Item>) {
   const store = useFacetedStore("FacetedClear");
   const hasSelection = useFacetedStoreSelector(store, (state) =>
     getHasSelection(getSelection(state, store.getProps())),
@@ -458,10 +496,7 @@ function FacetedClear({
   return (
     <FacetedCommandItem
       data-slot="faceted-clear"
-      className={cn(
-        "justify-center text-center [&>svg:last-child]:hidden",
-        className,
-      )}
+      className={cn("justify-center text-center", className)}
       onSelect={(value) => {
         onSelect?.(value);
         store.clear();
@@ -495,6 +530,7 @@ export {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedSeparator,
   FacetedTrigger,

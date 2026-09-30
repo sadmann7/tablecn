@@ -46,6 +46,7 @@ import {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedTrigger,
 } from "@/registry/bases/radix/ui/faceted";
@@ -600,6 +601,7 @@ function FilterFieldSelector<TData extends RowData>({
             {columns.map((column) => (
               <FacetedItem key={column.id} value={column.id}>
                 <ColumnLabel column={column} />
+                <FacetedItemIndicator />
               </FacetedItem>
             ))}
           </FacetedGroup>
@@ -816,6 +818,7 @@ function SelectFilterValue<TData extends RowData>({
               <FacetedItem key={option.value} value={option.value}>
                 {option.icon && <option.icon />}
                 <span className="truncate">{option.label}</span>
+                <FacetedItemIndicator />
               </FacetedItem>
             ))}
           </FacetedGroup>

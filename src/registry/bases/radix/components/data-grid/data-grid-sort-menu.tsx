@@ -22,6 +22,7 @@ import {
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedTrigger,
 } from "@/registry/bases/radix/ui/faceted";
@@ -380,6 +381,7 @@ function DataTableSortItem({
                     keywords={[column.label]}
                   >
                     <span className="truncate">{column.label}</span>
+                    <FacetedItemIndicator />
                   </FacetedItem>
                 ))}
               </FacetedGroup>
