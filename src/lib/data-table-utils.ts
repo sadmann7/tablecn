@@ -181,6 +181,11 @@ export function getFilterValueForOperator(
 ) {
   if (getIsValuelessOperator(operator)) return "";
 
+  if (operator === "inArray" || operator === "notInArray") {
+    if (Array.isArray(value)) return value;
+    return value ? [value] : [];
+  }
+
   if (operator === "isBetween") {
     return Array.isArray(value) ? value : [value, ""];
   }
