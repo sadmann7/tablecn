@@ -301,7 +301,7 @@ export function DataGridFilterMenu<TData extends RowData>({
       <SortableOverlay>
         <div
           dir={dir}
-          className="grid size-full grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,1fr)_auto_auto] items-center gap-x-2"
+          className="grid size-full grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,1fr)_auto_auto] items-center gap-2"
         >
           <div className="h-8 rounded-lg bg-primary/10" />
           <div className="h-8 rounded-lg bg-primary/10" />
