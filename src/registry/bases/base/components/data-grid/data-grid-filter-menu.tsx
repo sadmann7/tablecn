@@ -303,13 +303,16 @@ export function DataGridFilterMenu<TData extends RowData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div dir={dir} className="flex items-center gap-2">
-          <div className="h-8 min-w-18 rounded-lg bg-primary/10" />
-          <div className="h-8 w-32 rounded-lg bg-primary/10" />
-          <div className="h-8 w-32 rounded-lg bg-primary/10" />
-          <div className="h-8 w-40 shrink-0 rounded-lg bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
+        <div
+          dir={dir}
+          className="grid size-full grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,1fr)_auto_auto] items-center gap-x-2"
+        >
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="size-8 rounded-lg bg-primary/10" />
+          <div className="size-8 rounded-lg bg-primary/10" />
         </div>
       </SortableOverlay>
     </Sortable>
