@@ -21,15 +21,19 @@ import {
 import { formatDate } from "@/lib/format";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/base/ui/command";
 import { useDirection } from "@/registry/bases/base/ui/direction";
+import {
+  Faceted,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedItemIndicator,
+  FacetedList,
+  FacetedTrigger,
+  FacetedValue,
+} from "@/registry/bases/base/ui/faceted";
 import { Input } from "@/registry/bases/base/ui/input";
 import {
   Popover,
@@ -207,7 +211,6 @@ export function DataGridFilterMenu<TData extends RowData>({
             <Button
               dir={dir}
               variant="outline"
-              className="font-normal"
               onKeyDown={onTriggerKeyDown}
               disabled={disabled}
             />
@@ -225,7 +228,7 @@ export function DataGridFilterMenu<TData extends RowData>({
           {columnFilters.length > 0 && (
             <Badge
               variant="secondary"
-              className="h-[18.24px] rounded-md px-[5.12px] font-mono text-[10.4px] font-normal"
+              className="h-[18.24px] px-[5.12px] font-mono text-[10.4px]"
             >
               {columnFilters.length}
             </Badge>
@@ -262,7 +265,7 @@ export function DataGridFilterMenu<TData extends RowData>({
               render={
                 <div
                   role="list"
-                  className="flex max-h-100 flex-col gap-2 overflow-y-auto p-1"
+                  className="grid max-h-100 grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1"
                 />
               }
             >
@@ -285,7 +288,6 @@ export function DataGridFilterMenu<TData extends RowData>({
           )}
           <div className="flex w-full items-center gap-2">
             <Button
-              className="rounded"
               ref={addButtonRef}
               onClick={onFilterAdd}
               disabled={columns.length === 0}
@@ -293,11 +295,7 @@ export function DataGridFilterMenu<TData extends RowData>({
               Add filter
             </Button>
             {columnFilters.length > 0 && (
-              <Button
-                variant="outline"
-                className="rounded"
-                onClick={onFiltersReset}
-              >
+              <Button variant="outline" onClick={onFiltersReset}>
                 Reset filters
               </Button>
             )}
@@ -305,13 +303,16 @@ export function DataGridFilterMenu<TData extends RowData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div dir={dir} className="flex items-center gap-2">
-          <div className="h-8 min-w-18 rounded-sm bg-primary/10" />
-          <div className="h-8 w-32 rounded-sm bg-primary/10" />
-          <div className="h-8 w-32 rounded-sm bg-primary/10" />
-          <div className="h-8 w-36 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
+        <div
+          dir={dir}
+          className="grid size-full grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,1fr)_auto_auto] items-center gap-2"
+        >
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="h-8 rounded-lg bg-primary/10" />
+          <div className="size-8 rounded-lg bg-primary/10" />
+          <div className="size-8 rounded-lg bg-primary/10" />
         </div>
       </SortableOverlay>
     </Sortable>
@@ -428,7 +429,7 @@ function DataGridFilterItem<TData extends RowData>({
           role="listitem"
           id={filterItemId}
           tabIndex={-1}
-          className="flex items-center gap-2"
+          className="col-span-full grid grid-cols-subgrid items-center"
           onKeyDown={onItemKeyDown}
         />
       }
@@ -440,15 +441,37 @@ function DataGridFilterItem<TData extends RowData>({
           <span className="text-sm text-muted-foreground">And</span>
         )}
       </div>
-      <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-        <PopoverTrigger
+      <Faceted
+        open={showFieldSelector}
+        onOpenChange={setShowFieldSelector}
+        onValueChange={(columnId) => {
+          if (!columnId) return;
+          const newVariant = columnVariants.get(columnId) ?? "short-text";
+          const newOperator = getDefaultOperator(newVariant);
+
+          table.setColumnFilters((prevFilters) =>
+            prevFilters.map((f) =>
+              f.id === filter.id
+                ? {
+                    id: columnId,
+                    value: {
+                      operator: newOperator,
+                      value: "",
+                    },
+                  }
+                : f,
+            ),
+          );
+        }}
+      >
+        <FacetedTrigger
           render={
             <Button
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               dir={dir}
               variant="outline"
-              className="w-32 justify-between rounded font-normal"
+              className="w-32"
             />
           }
         >
@@ -461,62 +484,26 @@ function DataGridFilterItem<TData extends RowData>({
             remixicon="RiArrowUpDownLine"
             className="opacity-50"
           />
-        </PopoverTrigger>
-        <PopoverContent
-          id={fieldListboxId}
-          dir={dir}
-          align="start"
-          className="w-40 p-0"
-        >
-          <Command>
-            <CommandInput placeholder="Search fields..." />
-            <CommandList>
-              <CommandEmpty>No fields found.</CommandEmpty>
-              <CommandGroup>
-                {columns.map((column) => (
-                  <CommandItem
-                    key={column.id}
-                    value={column.id}
-                    onSelect={(value) => {
-                      const newVariant =
-                        columnVariants.get(value) ?? "short-text";
-                      const newOperator = getDefaultOperator(newVariant);
-
-                      table.setColumnFilters((prevFilters) =>
-                        prevFilters.map((f) =>
-                          f.id === filter.id
-                            ? {
-                                id: value,
-                                value: {
-                                  operator: newOperator,
-                                  value: "",
-                                },
-                              }
-                            : f,
-                        ),
-                      );
-                      setShowFieldSelector(false);
-                    }}
-                  >
-                    <span className="truncate">{column.label}</span>
-                    <IconPlaceholder
-                      lucide="Check"
-                      tabler="IconCheck"
-                      hugeicons="Tick02Icon"
-                      phosphor="CheckIcon"
-                      remixicon="RiCheckLine"
-                      className={cn(
-                        "ms-auto",
-                        column.id === filter.id ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+        </FacetedTrigger>
+        <FacetedContent id={fieldListboxId} dir={dir} className="w-40">
+          <FacetedInput placeholder="Search fields..." />
+          <FacetedList>
+            <FacetedEmpty>No fields found.</FacetedEmpty>
+            <FacetedGroup>
+              {columns.map((column) => (
+                <FacetedItem
+                  key={column.id}
+                  value={column.id}
+                  keywords={[column.label]}
+                >
+                  <span className="truncate">{column.label}</span>
+                  <FacetedItemIndicator />
+                </FacetedItem>
+              ))}
+            </FacetedGroup>
+          </FacetedList>
+        </FacetedContent>
+      </Faceted>
       <Select
         open={showOperatorSelector}
         onOpenChange={setShowOperatorSelector}
@@ -528,7 +515,7 @@ function DataGridFilterItem<TData extends RowData>({
       >
         <SelectTrigger
           aria-controls={operatorListboxId}
-          className="w-32 rounded lowercase"
+          className="w-32 lowercase"
         >
           <div className="truncate">
             <SelectValue />
@@ -544,7 +531,7 @@ function DataGridFilterItem<TData extends RowData>({
           </SelectGroup>
         </SelectContent>
       </Select>
-      <div className="max-w-60 min-w-36 flex-1">
+      <div className="w-full min-w-0">
         {needsValue && column ? (
           <DataGridFilterInput
             key={filter.id}
@@ -564,7 +551,7 @@ function DataGridFilterItem<TData extends RowData>({
             role="status"
             aria-label={`${columnLabels.get(filter.id)} filter is empty`}
             aria-live="polite"
-            className="h-8 w-full rounded border bg-transparent dark:bg-input/30"
+            className="h-8 w-full rounded-lg border border-dashed border-input bg-transparent dark:bg-input/30"
           />
         )}
       </div>
@@ -572,7 +559,6 @@ function DataGridFilterItem<TData extends RowData>({
         aria-controls={filterItemId}
         variant="outline"
         size="icon"
-        className="size-8 rounded"
         onClick={() => onFilterRemove(filter.id)}
       >
         <IconPlaceholder
@@ -583,11 +569,7 @@ function DataGridFilterItem<TData extends RowData>({
           remixicon="RiDeleteBinLine"
         />
       </Button>
-      <SortableItemHandle
-        render={
-          <Button variant="outline" size="icon" className="size-8 rounded" />
-        }
-      >
+      <SortableItemHandle render={<Button variant="outline" size="icon" />}>
         <IconPlaceholder
           lucide="GripVertical"
           tabler="IconGripVertical"
@@ -670,7 +652,7 @@ function DataGridFilterInput<TData extends RowData>({
               setLocalValue(newValue);
               debouncedOnChange(newValue);
             }}
-            className="h-8 w-full flex-1 rounded"
+            className="w-full flex-1"
           />
           <Input
             id={`${inputId}-end`}
@@ -684,7 +666,7 @@ function DataGridFilterInput<TData extends RowData>({
               setLocalEndValue(newValue);
               debouncedOnEndValueChange(newValue);
             }}
-            className="h-8 w-full flex-1 rounded"
+            className="w-full flex-1"
           />
         </div>
       );
@@ -703,7 +685,6 @@ function DataGridFilterInput<TData extends RowData>({
           setLocalValue(newValue);
           debouncedOnChange(newValue);
         }}
-        className="h-8 w-full rounded"
       />
     );
   }
@@ -743,7 +724,7 @@ function DataGridFilterInput<TData extends RowData>({
                 dir={dir}
                 variant="outline"
                 className={cn(
-                  "h-8 w-full justify-start rounded font-normal",
+                  "w-full justify-start",
                   !startDate && "text-muted-foreground",
                 )}
               />
@@ -806,7 +787,7 @@ function DataGridFilterInput<TData extends RowData>({
               dir={dir}
               variant="outline"
               className={cn(
-                "h-8 w-full justify-start rounded font-normal",
+                "w-full justify-start",
                 !dateValue && "text-muted-foreground",
               )}
             />
@@ -857,180 +838,96 @@ function DataGridFilterInput<TData extends RowData>({
 
     if (isMultiValueOperator) {
       const selectedValues = Array.isArray(value) ? value : [];
-      const selectedOptions = selectOptions.filter((option) =>
-        selectedValues.includes(option.value),
-      );
-
-      const selectedOptionsWithIcons = selectedOptions.filter(
-        (selectedOption) => selectedOption.icon,
-      );
 
       return (
-        <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
-          <PopoverTrigger
+        <Faceted
+          open={showValueSelector}
+          onOpenChange={setShowValueSelector}
+          value={selectedValues}
+          onValueChange={(nextValue) => {
+            const values = nextValue ?? [];
+            onValueChange(values.length > 0 ? values : undefined);
+          }}
+          items={selectOptions}
+          multiple
+        >
+          <FacetedTrigger
             render={
               <Button
                 id={inputId}
                 aria-controls={inputListboxId}
                 dir={dir}
                 variant="outline"
-                className="h-8 w-full justify-start rounded font-normal"
+                className="w-full"
               />
             }
           >
-            {selectedOptions.length === 0 ? (
-              <span className="text-muted-foreground">{placeholder}</span>
-            ) : (
-              <>
-                {selectedOptionsWithIcons.length > 0 && (
-                  <div className="flex items-center -space-x-2 rtl:space-x-reverse">
-                    {selectedOptionsWithIcons.map(
-                      (selectedOption) =>
-                        selectedOption.icon && (
-                          <div
-                            key={selectedOption.value}
-                            className="rounded-full border bg-background p-0.5"
-                          >
-                            <selectedOption.icon className="size-3.5" />
-                          </div>
-                        ),
-                    )}
-                  </div>
-                )}
-                <span className="truncate">
-                  {selectedOptions.length > 1
-                    ? `${selectedOptions.length} selected`
-                    : selectedOptions[0]?.label}
-                </span>
-              </>
-            )}
-          </PopoverTrigger>
-          <PopoverContent
-            id={inputListboxId}
-            dir={dir}
-            align="start"
-            className="w-48 p-0"
-          >
-            <Command>
-              <CommandInput placeholder="Search options..." />
-              <CommandList>
-                <CommandEmpty>No options found.</CommandEmpty>
-                <CommandGroup>
-                  {selectOptions.map((option) => {
-                    const isSelected = selectedValues.includes(option.value);
-                    return (
-                      <CommandItem
-                        key={option.value}
-                        value={option.value}
-                        onSelect={() => {
-                          const newValues = isSelected
-                            ? selectedValues.filter((v) => v !== option.value)
-                            : [...selectedValues, option.value];
-                          onValueChange(
-                            newValues.length > 0 ? newValues : undefined,
-                          );
-                        }}
-                      >
-                        {option.icon && <option.icon />}
-                        <span className="truncate">{option.label}</span>
-                        {option.count && (
-                          <span className="ms-auto font-mono text-xs">
-                            {option.count}
-                          </span>
-                        )}
-                        <IconPlaceholder
-                          lucide="Check"
-                          tabler="IconCheck"
-                          hugeicons="Tick02Icon"
-                          phosphor="CheckIcon"
-                          remixicon="RiCheckLine"
-                          className={cn(
-                            "ms-auto",
-                            isSelected ? "opacity-100" : "opacity-0",
-                          )}
-                        />
-                      </CommandItem>
-                    );
-                  })}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+            <FacetedValue placeholder={placeholder} />
+          </FacetedTrigger>
+          <FacetedContent id={inputListboxId} dir={dir} className="w-48">
+            <FacetedInput placeholder="Search options..." />
+            <FacetedList>
+              <FacetedEmpty>No options found.</FacetedEmpty>
+              <FacetedGroup>
+                {selectOptions.map((option) => (
+                  <FacetedItem
+                    key={option.value}
+                    value={option.value}
+                    keywords={[option.label]}
+                  >
+                    {option.icon && <option.icon />}
+                    <span className="truncate">{option.label}</span>
+                    <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
+                  </FacetedItem>
+                ))}
+              </FacetedGroup>
+            </FacetedList>
+          </FacetedContent>
+        </Faceted>
       );
     }
 
-    const selectedOption = selectOptions.find(
-      (opt) => opt.value === (value as string),
-    );
-
     return (
-      <Popover open={showValueSelector} onOpenChange={setShowValueSelector}>
-        <PopoverTrigger
+      <Faceted
+        open={showValueSelector}
+        onOpenChange={setShowValueSelector}
+        value={typeof value === "string" ? value : undefined}
+        onValueChange={(nextValue) => onValueChange(nextValue)}
+        items={selectOptions}
+      >
+        <FacetedTrigger
           render={
             <Button
               id={inputId}
               aria-controls={inputListboxId}
               dir={dir}
               variant="outline"
-              className="h-8 w-full justify-start rounded font-normal"
+              className="w-full"
             />
           }
         >
-          {selectedOption ? (
-            <>
-              {selectedOption.icon && <selectedOption.icon />}
-              <span className="truncate">{selectedOption.label}</span>
-            </>
-          ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
-          )}
-        </PopoverTrigger>
-        <PopoverContent
-          id={inputListboxId}
-          dir={dir}
-          align="start"
-          className="w-50 p-0"
-        >
-          <Command>
-            <CommandInput placeholder="Search options..." />
-            <CommandList>
-              <CommandEmpty>No options found.</CommandEmpty>
-              <CommandGroup>
-                {selectOptions.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.value}
-                    onSelect={() => {
-                      onValueChange(option.value);
-                      setShowValueSelector(false);
-                    }}
-                  >
-                    {option.icon && <option.icon />}
-                    <span className="truncate">{option.label}</span>
-                    {option.count && (
-                      <span className="ms-auto font-mono text-xs">
-                        {option.count}
-                      </span>
-                    )}
-                    <IconPlaceholder
-                      lucide="Check"
-                      tabler="IconCheck"
-                      hugeicons="Tick02Icon"
-                      phosphor="CheckIcon"
-                      remixicon="RiCheckLine"
-                      className={cn(
-                        "ms-auto",
-                        value === option.value ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+          <FacetedValue placeholder={placeholder} />
+        </FacetedTrigger>
+        <FacetedContent id={inputListboxId} dir={dir} className="w-50">
+          <FacetedInput placeholder="Search options..." />
+          <FacetedList>
+            <FacetedEmpty>No options found.</FacetedEmpty>
+            <FacetedGroup>
+              {selectOptions.map((option) => (
+                <FacetedItem
+                  key={option.value}
+                  value={option.value}
+                  keywords={[option.label]}
+                >
+                  {option.icon && <option.icon />}
+                  <span className="truncate">{option.label}</span>
+                  <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
+                </FacetedItem>
+              ))}
+            </FacetedGroup>
+          </FacetedList>
+        </FacetedContent>
+      </Faceted>
     );
   }
 
@@ -1041,7 +938,7 @@ function DataGridFilterInput<TData extends RowData>({
           id={inputId}
           type="text"
           placeholder="Start"
-          className="h-8 w-full flex-1 rounded"
+          className="w-full flex-1"
           value={(localValue as string | undefined) ?? ""}
           onChange={(event) => {
             const val = event.target.value;
@@ -1054,7 +951,7 @@ function DataGridFilterInput<TData extends RowData>({
           id={`${inputId}-end`}
           type="text"
           placeholder="End"
-          className="h-8 w-full flex-1 rounded"
+          className="w-full flex-1"
           value={(localEndValue as string | undefined) ?? ""}
           onChange={(event) => {
             const val = event.target.value;
@@ -1072,7 +969,6 @@ function DataGridFilterInput<TData extends RowData>({
       id={inputId}
       type="text"
       placeholder={placeholder}
-      className="h-8 w-full rounded"
       value={(localValue as string | undefined) ?? ""}
       onChange={(event) => {
         const val = event.target.value;

@@ -1,94 +1,39 @@
 "use cache";
 
-import "server-only";
-import {
-  and,
-  asc,
-  count,
-  desc,
-  gt,
-  gte,
-  ilike,
-  inArray,
-  lte,
-  sql,
-} from "drizzle-orm";
+import { asc, count, desc, gt, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
+import "server-only";
+
+import type { DataTableQuery } from "@/lib/data-table-types";
 
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
-import { filterColumns } from "@/lib/filter-columns";
 
-import type { GetTasksSchema } from "./validations";
+import type {
+  tasksFilterableColumns,
+  tasksSortableColumns,
+} from "./validations";
 
-export async function getTasks(input: GetTasksSchema) {
+import { filterColumns } from "./filter-columns";
+import { sanitizeEnumFilters } from "./utils";
+
+export async function getTasks(
+  input: DataTableQuery<
+    keyof typeof tasksFilterableColumns,
+    (typeof tasksSortableColumns)[number]
+  >,
+) {
   cacheLife({ revalidate: 1, stale: 1, expire: 60 });
   cacheTag("tasks");
 
   try {
     const offset = (input.page - 1) * input.perPage;
-    const advancedTable =
-      input.filterFlag === "advancedFilters" ||
-      input.filterFlag === "commandFilters";
 
-    const advancedWhere = filterColumns({
+    const where = filterColumns({
       table: tasks,
-      filters: input.filters,
+      filters: sanitizeEnumFilters(input.filters),
       joinOperator: input.joinOperator,
     });
-
-    const where = advancedTable
-      ? advancedWhere
-      : and(
-          input.title ? ilike(tasks.title, `%${input.title}%`) : undefined,
-          input.status.length > 0
-            ? inArray(tasks.status, input.status)
-            : undefined,
-          input.priority.length > 0
-            ? inArray(tasks.priority, input.priority)
-            : undefined,
-          input.estimatedHours.length > 0
-            ? and(
-                input.estimatedHours[0]
-                  ? gte(tasks.estimatedHours, input.estimatedHours[0])
-                  : undefined,
-                input.estimatedHours[1]
-                  ? lte(tasks.estimatedHours, input.estimatedHours[1])
-                  : undefined,
-              )
-            : undefined,
-          input.createdAt.length > 0
-            ? and(
-                input.createdAt[0]
-                  ? gte(
-                      tasks.createdAt,
-                      (() => {
-                        const date = new Date(input.createdAt[0]);
-                        date.setHours(0, 0, 0, 0);
-                        return date;
-                      })(),
-                    )
-                  : undefined,
-                input.createdAt[1]
-                  ? lte(
-                      tasks.createdAt,
-                      (() => {
-                        const date = new Date(input.createdAt[1]);
-                        date.setHours(23, 59, 59, 999);
-                        return date;
-                      })(),
-                    )
-                  : undefined,
-              )
-            : undefined,
-        );
-
-    const orderBy =
-      input.sort.length > 0
-        ? input.sort.map((item) =>
-            item.desc ? desc(tasks[item.id]) : asc(tasks[item.id]),
-          )
-        : [asc(tasks.createdAt)];
 
     const { data, total } = await db.transaction(async (tx) => {
       const data = await tx
@@ -97,7 +42,14 @@ export async function getTasks(input: GetTasksSchema) {
         .limit(input.perPage)
         .offset(offset)
         .where(where)
-        .orderBy(...orderBy);
+        .orderBy(
+          ...(input.sorting.length > 0
+            ? input.sorting.map((item) =>
+                item.desc ? desc(tasks[item.id]) : asc(tasks[item.id]),
+              )
+            : [asc(tasks.createdAt)]),
+          asc(tasks.id),
+        );
 
       const total = await tx
         .select({
@@ -118,6 +70,21 @@ export async function getTasks(input: GetTasksSchema) {
     return { data, pageCount };
   } catch {
     return { data: [], pageCount: 0 };
+  }
+}
+
+export async function getRecentTasks() {
+  cacheLife({ revalidate: 1, stale: 1, expire: 60 });
+  cacheTag("tasks");
+
+  try {
+    return await db
+      .select()
+      .from(tasks)
+      .orderBy(desc(tasks.createdAt))
+      .limit(1000);
+  } catch {
+    return [];
   }
 }
 

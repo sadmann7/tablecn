@@ -37,7 +37,7 @@ export function DataTablePagination<TData extends RowData>({
       selector={(state) => ({
         pageIndex: state.pagination.pageIndex,
         pageSize: state.pagination.pageSize,
-        selectedRowCount: table.getSelectedRowModel().rows.length,
+        selectedRowCount: table.getSelectedRowIds().length,
       })}
     >
       {({ pageIndex, pageSize, selectedRowCount }) => (
@@ -55,6 +55,16 @@ export function DataTablePagination<TData extends RowData>({
   );
 }
 
+interface DataTablePaginationContentProps<
+  TData extends RowData,
+> extends React.ComponentProps<"div"> {
+  table: Table<DataTableFeatures, TData>;
+  pageIndex: number;
+  pageSize: number;
+  selectedRowCount: number;
+  pageSizeOptions: number[];
+}
+
 function DataTablePaginationContent<TData extends RowData>({
   table,
   pageIndex,
@@ -63,12 +73,7 @@ function DataTablePaginationContent<TData extends RowData>({
   pageSizeOptions,
   className,
   ...props
-}: DataTablePaginationProps<TData> & {
-  pageIndex: number;
-  pageSize: number;
-  selectedRowCount: number;
-  pageSizeOptions: number[];
-}) {
+}: DataTablePaginationContentProps<TData>) {
   const pageCount = table.getPageCount();
   const canPreviousPage = table.getCanPreviousPage();
   const canNextPage = table.getCanNextPage();
@@ -94,7 +99,7 @@ function DataTablePaginationContent<TData extends RowData>({
               table.setPageSize(Number(value));
             }}
           >
-            <SelectTrigger className="h-8 w-18 data-size:h-8">
+            <SelectTrigger className="w-18">
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
@@ -116,7 +121,7 @@ function DataTablePaginationContent<TData extends RowData>({
             aria-label="Go to first page"
             variant="outline"
             size="icon"
-            className="hidden size-8 lg:flex"
+            className="hidden lg:flex"
             onClick={() => table.setPageIndex(0)}
             disabled={!canPreviousPage}
           >
@@ -132,7 +137,6 @@ function DataTablePaginationContent<TData extends RowData>({
             aria-label="Go to previous page"
             variant="outline"
             size="icon"
-            className="size-8"
             onClick={() => table.previousPage()}
             disabled={!canPreviousPage}
           >
@@ -148,7 +152,6 @@ function DataTablePaginationContent<TData extends RowData>({
             aria-label="Go to next page"
             variant="outline"
             size="icon"
-            className="size-8"
             onClick={() => table.nextPage()}
             disabled={!canNextPage}
           >
@@ -164,7 +167,7 @@ function DataTablePaginationContent<TData extends RowData>({
             aria-label="Go to last page"
             variant="outline"
             size="icon"
-            className="hidden size-8 lg:flex"
+            className="hidden lg:flex"
             onClick={() => table.setPageIndex(pageCount - 1)}
             disabled={!canNextPage}
           >

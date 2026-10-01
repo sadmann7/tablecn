@@ -18,10 +18,7 @@ import {
   type Table,
 } from "drizzle-orm";
 
-import type {
-  ExtendedColumnFilter,
-  JoinOperator,
-} from "@/lib/data-table-types";
+import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import { isEmpty } from "@/db/utils";
 
@@ -31,7 +28,7 @@ export function filterColumns<T extends Table>({
   joinOperator,
 }: {
   table: T;
-  filters: ExtendedColumnFilter<T>[];
+  filters: ColumnFilterItem<Extract<keyof T["$inferSelect"], string>>[];
   joinOperator: JoinOperator;
 }): SQL | undefined {
   const joinFn = joinOperator === "and" ? and : or;

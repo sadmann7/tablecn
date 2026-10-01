@@ -192,7 +192,7 @@ function DataTableActionBar<TData extends RowData>({
   return (
     <Subscribe
       source={table.atoms.rowSelection}
-      selector={() => table.getSelectedRowModel().rows.length > 0}
+      selector={() => table.getSelectedRowIds().length > 0}
     >
       {(hasSelectedRows) => (hasSelectedRows ? actionBar : null)}
     </Subscribe>

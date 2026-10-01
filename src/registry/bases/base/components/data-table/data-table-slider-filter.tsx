@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  type Column,
-  type ColumnFiltersState,
-  type RowData,
-  Subscribe,
-} from "@tanstack/react-table";
+import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -66,14 +61,12 @@ export function DataTableSliderFilter<TData extends RowData>({
   return (
     <Subscribe
       source={column.table.atoms.columnFilters}
-      selector={(filters: ColumnFiltersState) =>
-        filters.find((filter) => filter.id === column.id)?.value
-      }
+      selector={() => column.getFilterValue()}
     >
-      {(columnFilterValue) => (
+      {(filterValue) => (
         <DataTableSliderFilterContent
           column={column}
-          columnFilterValue={columnFilterValue}
+          columnFilterValue={filterValue}
           {...props}
         />
       )}
@@ -176,9 +169,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
   return (
     <Popover>
       <PopoverTrigger
-        render={
-          <Button variant="outline" className="border-dashed font-normal" />
-        }
+        render={<Button variant="outline" className="border-dashed" />}
       >
         {columnFilterValue ? (
           <div
@@ -210,7 +201,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
           <>
             <Separator
               orientation="vertical"
-              className="mx-0.5 data-[orientation=vertical]:h-4"
+              className="mx-0.5 data-vertical:h-4 data-vertical:self-center"
             />
             {formatValue(columnFilterValue[0])} -{" "}
             {formatValue(columnFilterValue[1])}
@@ -240,7 +231,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[0]?.toString()}
                 onChange={onFromInputChange}
-                className={cn("h-8 w-24", unit && "pr-8")}
+                className={cn("w-24", unit && "pr-8")}
               />
               {unit && (
                 <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-sm text-muted-foreground">
@@ -264,7 +255,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[1]?.toString()}
                 onChange={onToInputChange}
-                className={cn("h-8 w-24", unit && "pr-8")}
+                className={cn("w-24", unit && "pr-8")}
               />
               {unit && (
                 <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-sm text-muted-foreground">

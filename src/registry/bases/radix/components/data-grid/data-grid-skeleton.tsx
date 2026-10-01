@@ -45,7 +45,7 @@ function DataGridSkeletonToolbar({
       {...props}
     >
       {Array.from({ length: actionCount }).map((_, i) => (
-        <Skeleton key={i} className="h-7 w-20 shrink-0" />
+        <Skeleton key={i} className="h-8 w-20 shrink-0 rounded-lg" />
       ))}
     </div>
   );

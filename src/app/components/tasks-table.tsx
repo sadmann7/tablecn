@@ -4,29 +4,34 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
+import type { DataMode, FilterMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
-import { DataTableFilterList } from "@/registry/bases/radix/components/data-table/data-table-filter-list";
+import { DataTableCommandFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-command-filter-menu";
 import { DataTableFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-filter-menu";
-import { DataTableSortList } from "@/registry/bases/radix/components/data-table/data-table-sort-list";
+import { DataTableSortMenu } from "@/registry/bases/radix/components/data-table/data-table-sort-menu";
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
-import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
+import {
+  useDataTable,
+  UseDataTableProps,
+} from "@/registry/bases/radix/hooks/use-data-table";
 
 import type {
   getEstimatedHoursRange,
   getTaskPriorityCounts,
-  getTaskStatusCounts,
   getTasks,
+  getTaskStatusCounts,
 } from "../lib/queries";
 
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
-import { useFeatureFlags } from "./feature-flags-provider";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { getTasksTableColumns } from "./tasks-table-columns";
 import { UpdateTaskSheet } from "./update-task-sheet";
 
 interface TasksTableProps {
+  dataMode: DataMode;
+  filterMode: FilterMode;
   promises: Promise<
     [
       Awaited<ReturnType<typeof getTasks>>,
@@ -38,8 +43,13 @@ interface TasksTableProps {
   queryKeys?: Partial<QueryKeys>;
 }
 
-export function TasksTable({ promises, queryKeys }: TasksTableProps) {
-  const { enableAdvancedFilter, filterFlag } = useFeatureFlags();
+export function TasksTable({
+  dataMode,
+  filterMode,
+  promises,
+  queryKeys,
+}: TasksTableProps) {
+  const enableAdvancedFilter = filterMode !== "plain";
 
   const [
     { data, pageCount },
@@ -62,11 +72,9 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     [statusCounts, priorityCounts, estimatedHoursRange],
   );
 
-  const { table, shallow, debounceMs, throttleMs } = useDataTable({
+  const tableProps: Omit<UseDataTableProps<Task>, "mode" | "pageCount"> = {
     data,
     columns,
-    pageCount,
-    enableAdvancedFilter,
     initialState: {
       sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { start: [], end: ["actions"] },
@@ -76,7 +84,13 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
     enableRowRangeSelection: true,
     shallow: false,
     clearOnDefault: true,
-  });
+  };
+
+  const { table } = useDataTable(
+    dataMode === "client"
+      ? { ...tableProps, mode: "client" }
+      : { ...tableProps, pageCount },
+  );
 
   return (
     <>
@@ -86,27 +100,16 @@ export function TasksTable({ promises, queryKeys }: TasksTableProps) {
       >
         {enableAdvancedFilter ? (
           <DataTableAdvancedToolbar table={table}>
-            <DataTableSortList table={table} align="start" />
-            {filterFlag === "advancedFilters" ? (
-              <DataTableFilterList
-                table={table}
-                shallow={shallow}
-                debounceMs={debounceMs}
-                throttleMs={throttleMs}
-                align="start"
-              />
+            <DataTableSortMenu table={table} align="start" />
+            {filterMode === "advanced" ? (
+              <DataTableFilterMenu table={table} align="start" />
             ) : (
-              <DataTableFilterMenu
-                table={table}
-                shallow={shallow}
-                debounceMs={debounceMs}
-                throttleMs={throttleMs}
-              />
+              <DataTableCommandFilterMenu table={table} align="start" />
             )}
           </DataTableAdvancedToolbar>
         ) : (
           <DataTableToolbar table={table}>
-            <DataTableSortList table={table} align="end" />
+            <DataTableSortMenu table={table} align="end" />
           </DataTableToolbar>
         )}
       </DataTable>

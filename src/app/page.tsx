@@ -2,19 +2,22 @@ import { Suspense } from "react";
 
 import type { SearchParams } from "@/types";
 
-import { Shell } from "@/components/shell";
-import { getValidFilters } from "@/lib/data-table-utils";
+import { getDataTableQuery } from "@/lib/parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
-import { FeatureFlagsProvider } from "./components/feature-flags-provider";
 import { TasksTable } from "./components/tasks-table";
 import {
+  TasksTableControlMenu,
+  TasksTableControlMenuSkeleton,
+} from "./components/tasks-table-control-menu";
+import {
   getEstimatedHoursRange,
+  getRecentTasks,
   getTaskPriorityCounts,
   getTaskStatusCounts,
   getTasks,
 } from "./lib/queries";
-import { searchParamsCache } from "./lib/validations";
+import { searchParamsCache, tasksFilterableColumns } from "./lib/validations";
 
 interface IndexPageProps {
   searchParams: Promise<SearchParams>;
@@ -22,7 +25,10 @@ interface IndexPageProps {
 
 export default function IndexPage(props: IndexPageProps) {
   return (
-    <Shell>
+    <div className="container flex flex-col gap-4 py-4">
+      <Suspense fallback={<TasksTableControlMenuSkeleton />}>
+        <TasksTableControlMenu />
+      </Suspense>
       <Suspense
         fallback={
           <DataTableSkeleton
@@ -41,29 +47,35 @@ export default function IndexPage(props: IndexPageProps) {
           />
         }
       >
-        <FeatureFlagsProvider>
-          <TasksTableWrapper {...props} />
-        </FeatureFlagsProvider>
+        <TasksTableWrapper {...props} />
       </Suspense>
-    </Shell>
+    </div>
   );
 }
 
 async function TasksTableWrapper(props: IndexPageProps) {
   const searchParams = await props.searchParams;
   const search = searchParamsCache.parse(searchParams);
+  const { dataMode } = search;
 
-  const validFilters = getValidFilters(search.filters);
+  const tasksPromise =
+    dataMode === "client"
+      ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
+      : getTasks(getDataTableQuery(search, tasksFilterableColumns));
 
   const promises = Promise.all([
-    getTasks({
-      ...search,
-      filters: validFilters,
-    }),
+    tasksPromise,
     getTaskStatusCounts(),
     getTaskPriorityCounts(),
     getEstimatedHoursRange(),
   ]);
 
-  return <TasksTable promises={promises} />;
+  return (
+    <TasksTable
+      key={dataMode}
+      dataMode={dataMode}
+      filterMode={search.filterMode}
+      promises={promises}
+    />
+  );
 }

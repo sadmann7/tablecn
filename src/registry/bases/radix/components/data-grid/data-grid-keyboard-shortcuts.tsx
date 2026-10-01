@@ -423,13 +423,13 @@ function DataGridKeyboardShortcutsImpl({
             <Input
               ref={inputRef}
               placeholder="Search shortcuts..."
-              className="h-8 ps-8"
+              className="ps-8"
               value={input}
               onChange={onInputChange}
             />
           </div>
         </div>
-        <Separator className="mx-auto data-[orientation=horizontal]:w-[calc(100%-(--spacing(12)))]" />
+        <Separator className="mx-auto data-horizontal:w-[calc(100%-(--spacing(12)))]" />
         <div className="h-[40vh] overflow-y-auto px-6">
           {filteredGroups.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 text-center">

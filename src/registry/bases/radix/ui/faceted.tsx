@@ -1,15 +1,16 @@
 "use client";
 
+import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
+import { Slot } from "radix-ui";
+import { composeEventHandlers } from "radix-ui/internal";
 import * as React from "react";
 
-import { Badge } from "@/registry/bases/radix/ui/badge";
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
-  CommandItem,
   CommandList,
   CommandSeparator,
 } from "@/registry/bases/radix/ui/command";
@@ -20,32 +21,168 @@ import {
 } from "@/registry/bases/radix/ui/popover";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-type FacetedValue<Multiple extends boolean> = Multiple extends true
+type FacetedSelectedValue<Multiple extends boolean> = Multiple extends true
   ? string[]
   : string;
 
-interface FacetedContextValue<Multiple extends boolean = boolean> {
-  value?: FacetedValue<Multiple>;
-  onItemSelect?: (value: string) => void;
-  multiple?: Multiple;
+interface FacetedOption {
+  label: string;
+  value: string;
 }
 
-const FacetedContext = React.createContext<FacetedContextValue | null>(null);
+const NO_ITEMS: FacetedOption[] = [];
 
-function useFacetedContext(name: string) {
-  const context = React.useContext(FacetedContext);
-  if (!context) {
-    throw new Error(`\`${name}\` must be within Faceted`);
+interface FacetedStoreState {
+  value: string | string[] | undefined;
+  open: boolean;
+}
+
+interface FacetedStore {
+  subscribe: (callback: () => void) => () => void;
+  getState: () => FacetedStoreState;
+  getProps: () => FacetedController;
+  notify: () => void;
+  setOpen: (open: boolean) => void;
+  selectItem: (value: string) => void;
+  clear: () => void;
+}
+
+interface FacetedController {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  value?: string | string[];
+  onValueChange?: (value: string | string[] | undefined) => void;
+  isControlled: boolean;
+  multiple: boolean;
+  items: FacetedOption[];
+}
+
+function getSelection(
+  state: FacetedStoreState,
+  props: FacetedController,
+): string | string[] | undefined {
+  return props.isControlled ? props.value : state.value;
+}
+
+function getHasSelection(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value.length > 0;
+  return !!value;
+}
+
+function getIsValueSelected(
+  value: string | string[] | undefined,
+  multiple: boolean,
+  itemValue: string,
+) {
+  if (multiple) return Array.isArray(value) && value.includes(itemValue);
+  return value === itemValue;
+}
+
+function getSelectedItems(
+  value: string | string[] | undefined,
+  items: FacetedOption[],
+) {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+
+  return values.map((itemValue) => ({
+    value: itemValue,
+    label: items.find((item) => item.value === itemValue)?.label ?? itemValue,
+  }));
+}
+
+function getIsFacetedSelectedValue<Multiple extends boolean>(
+  value: string | string[] | undefined,
+  multiple: Multiple,
+): value is FacetedSelectedValue<Multiple> | undefined {
+  if (value === undefined) return true;
+  return multiple ? Array.isArray(value) : typeof value === "string";
+}
+
+function createFacetedStore(
+  propsRef: React.RefObject<FacetedController>,
+  state: FacetedStoreState,
+): FacetedStore {
+  const listeners = new Set<() => void>();
+
+  function commitValue(nextValue: string | string[] | undefined) {
+    const props = propsRef.current;
+    if (!props.isControlled && !Object.is(state.value, nextValue)) {
+      state.value = nextValue;
+      store.notify();
+    }
+    props.onValueChange?.(nextValue);
   }
-  return context;
+
+  const store: FacetedStore = {
+    subscribe: (callback) => {
+      listeners.add(callback);
+      return () => listeners.delete(callback);
+    },
+    getState: () => state,
+    getProps: () => propsRef.current,
+    notify: () => {
+      for (const callback of listeners) {
+        callback();
+      }
+    },
+    setOpen: (open) => {
+      const { open: openProp, onOpenChange } = propsRef.current;
+      if (openProp === undefined && state.open !== open) {
+        state.open = open;
+        store.notify();
+      }
+      onOpenChange?.(open);
+    },
+    selectItem: (selectedValue) => {
+      const props = propsRef.current;
+      const currentValue = getSelection(state, props);
+
+      if (props.multiple) {
+        const selected = Array.isArray(currentValue) ? currentValue : [];
+        commitValue(
+          selected.includes(selectedValue)
+            ? selected.filter((item) => item !== selectedValue)
+            : [...selected, selectedValue],
+        );
+        return;
+      }
+
+      commitValue(currentValue === selectedValue ? undefined : selectedValue);
+      store.setOpen(false);
+    },
+    clear: () => {
+      commitValue(propsRef.current.multiple ? [] : undefined);
+    },
+  };
+
+  return store;
+}
+
+function useFacetedStoreSelector<T>(
+  store: FacetedStore,
+  selector: (state: FacetedStoreState) => T,
+): T {
+  const getSnapshot = () => selector(store.getState());
+  return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
+}
+
+const FacetedStoreContext = React.createContext<FacetedStore | null>(null);
+
+function useFacetedStore(name: string) {
+  const store = React.useContext(FacetedStoreContext);
+  if (!store) {
+    throw new Error(`\`${name}\` must be used within \`Faceted\`.`);
+  }
+  return store;
 }
 
 interface FacetedProps<
   Multiple extends boolean = false,
 > extends React.ComponentProps<typeof Popover> {
-  value?: FacetedValue<Multiple>;
-  onValueChange?: (value: FacetedValue<Multiple> | undefined) => void;
-  children?: React.ReactNode;
+  value?: FacetedSelectedValue<Multiple>;
+  defaultValue?: FacetedSelectedValue<Multiple>;
+  onValueChange?: (value: FacetedSelectedValue<Multiple> | undefined) => void;
+  items?: FacetedOption[];
   multiple?: Multiple;
 }
 
@@ -54,243 +191,344 @@ function Faceted<Multiple extends boolean = false>(
 ) {
   const {
     open: openProp,
-    onOpenChange: onOpenChangeProp,
+    defaultOpen = false,
+    onOpenChange,
     value,
+    defaultValue,
     onValueChange,
-    children,
-    multiple = false,
-    ...facetedProps
+    items = NO_ITEMS,
+    multiple = false as Multiple,
+    ...popoverProps
   } = props;
 
-  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(false);
-  const isControlled = openProp !== undefined;
-  const open = isControlled ? openProp : uncontrolledOpen;
-
-  const onOpenChange = React.useCallback(
-    (newOpen: boolean) => {
-      if (!isControlled) {
-        setUncontrolledOpen(newOpen);
-      }
-      onOpenChangeProp?.(newOpen);
+  const controller: FacetedController = {
+    open: openProp,
+    onOpenChange,
+    value,
+    onValueChange(nextValue) {
+      if (!getIsFacetedSelectedValue(nextValue, multiple)) return;
+      onValueChange?.(nextValue);
     },
-    [isControlled, onOpenChangeProp],
-  );
+    isControlled: "value" in props,
+    multiple,
+    items,
+  };
+  const propsRef = React.useRef(controller);
+  propsRef.current = controller;
 
-  const onItemSelect = React.useCallback(
-    (selectedValue: string) => {
-      if (!onValueChange) return;
-
-      if (multiple) {
-        const currentValue = (Array.isArray(value) ? value : []) as string[];
-        const newValue = currentValue.includes(selectedValue)
-          ? currentValue.filter((v) => v !== selectedValue)
-          : [...currentValue, selectedValue];
-        onValueChange(newValue as FacetedValue<Multiple>);
-      } else {
-        if (value === selectedValue) {
-          onValueChange(undefined);
-        } else {
-          onValueChange(selectedValue as FacetedValue<Multiple>);
-        }
-
-        requestAnimationFrame(() => onOpenChange(false));
-      }
-    },
-    [multiple, value, onValueChange, onOpenChange],
-  );
-
-  const contextValue = React.useMemo<FacetedContextValue<typeof multiple>>(
-    () => ({ value, onItemSelect, multiple }),
-    [value, onItemSelect, multiple],
-  );
+  const storeRef = React.useRef<FacetedStore | null>(null);
+  storeRef.current ??= createFacetedStore(propsRef, {
+    value: defaultValue,
+    open: defaultOpen,
+  });
+  const store = storeRef.current;
+  const open = useFacetedStoreSelector(store, (state) => state.open);
 
   return (
-    <FacetedContext.Provider value={contextValue}>
-      <Popover open={open} onOpenChange={onOpenChange} {...facetedProps}>
-        {children}
-      </Popover>
-    </FacetedContext.Provider>
+    <FacetedStoreContext.Provider value={store}>
+      <Popover
+        data-slot="faceted"
+        open={openProp ?? open}
+        onOpenChange={store.setOpen}
+        {...popoverProps}
+      />
+    </FacetedStoreContext.Provider>
   );
 }
 
-function FacetedTrigger(props: React.ComponentProps<typeof PopoverTrigger>) {
-  const { className, children, ...triggerProps } = props;
-
+function FacetedTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof PopoverTrigger>) {
   return (
     <PopoverTrigger
-      {...triggerProps}
+      data-slot="faceted-trigger"
       className={cn("justify-between text-left", className)}
-    >
-      {children}
-    </PopoverTrigger>
+      {...props}
+    />
   );
 }
 
-interface FacetedBadgeListProps extends React.ComponentProps<"div"> {
-  options?: { label: string; value: string }[];
-  max?: number;
-  badgeClassName?: string;
-  placeholder?: string;
+interface FacetedValueProps {
+  placeholder?: React.ReactNode;
+  children?: React.ReactNode | ((selected: FacetedOption[]) => React.ReactNode);
 }
 
-function FacetedBadgeList(props: FacetedBadgeListProps) {
-  const {
-    options = [],
-    max = 2,
-    placeholder = "Select options...",
-    className,
-    badgeClassName,
-    ...badgeListProps
-  } = props;
-
-  const context = useFacetedContext("FacetedBadgeList");
-  const values = Array.isArray(context.value)
-    ? context.value
-    : ([context.value].filter(Boolean) as string[]);
-
-  const getLabel = React.useCallback(
-    (value: string) => {
-      const option = options.find((opt) => opt.value === value);
-      return option?.label ?? value;
-    },
-    [options],
+function FacetedValue({
+  placeholder = "Select options...",
+  children,
+}: FacetedValueProps) {
+  const store = useFacetedStore("FacetedValue");
+  const value = useFacetedStoreSelector(store, (state) =>
+    getSelection(state, store.getProps()),
   );
+  const selected = getSelectedItems(value, store.getProps().items);
 
-  if (!values || values.length === 0) {
+  if (typeof children === "function") return children(selected);
+  if (children != null) return children;
+
+  if (selected.length === 0) {
     return (
-      <div
-        {...badgeListProps}
+      <span
+        data-slot="faceted-value"
         className="flex w-full items-center gap-1 text-muted-foreground"
       >
         {placeholder}
         <IconPlaceholder
-          lucide="ChevronsUpDown"
-          tabler="IconSelector"
-          hugeicons="UnfoldMoreIcon"
-          phosphor="CaretUpDownIcon"
-          remixicon="RiArrowUpDownLine"
-          className="ml-auto size-4 shrink-0 opacity-50"
+          lucide="ChevronDown"
+          tabler="IconChevronDown"
+          hugeicons="ArrowDown01Icon"
+          phosphor="CaretDownIcon"
+          remixicon="RiArrowDownSLine"
+          className="ml-auto size-4 shrink-0 text-muted-foreground"
         />
-      </div>
+      </span>
+    );
+  }
+
+  if (selected.length > 2) {
+    return (
+      <FacetedBadgeList>
+        <FacetedBadge>{selected.length} selected</FacetedBadge>
+      </FacetedBadgeList>
     );
   }
 
   return (
-    <div
-      {...badgeListProps}
-      className={cn("flex flex-wrap items-center gap-1", className)}
-    >
-      {values.length > max ? (
-        <Badge
-          variant="secondary"
-          className={cn("rounded-sm px-1 font-normal", badgeClassName)}
-        >
-          {values.length} selected
-        </Badge>
-      ) : (
-        values.map((value) => (
-          <Badge
-            key={value}
-            variant="secondary"
-            className={cn("rounded-sm px-1 font-normal", badgeClassName)}
-          >
-            <span className="truncate">{getLabel(value)}</span>
-          </Badge>
-        ))
-      )}
-    </div>
+    <FacetedBadgeList>
+      {selected.map((item) => (
+        <FacetedBadge key={item.value}>
+          <span className="truncate">{item.label}</span>
+        </FacetedBadge>
+      ))}
+    </FacetedBadgeList>
   );
 }
 
-function FacetedContent(props: React.ComponentProps<typeof PopoverContent>) {
-  const { className, children, ...contentProps } = props;
+function FacetedBadgeList({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="faceted-badge-list"
+      className={cn(
+        "flex w-max max-w-full flex-wrap items-center gap-1",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+interface FacetedBadgeProps extends React.ComponentProps<"span"> {
+  asChild?: boolean;
+}
+
+function FacetedBadge({
+  className,
+  asChild = false,
+  ...props
+}: FacetedBadgeProps) {
+  const Comp = asChild ? Slot.Root : "span";
 
   return (
+    <Comp
+      data-slot="faceted-badge"
+      className={cn(
+        "flex h-[calc(--spacing(5.25))] w-fit max-w-full min-w-0 items-center justify-center gap-1 rounded-sm bg-input/60 px-1.5 text-xs font-medium whitespace-nowrap text-foreground [&_svg]:pointer-events-none [&_svg]:size-3 [&_svg]:shrink-0",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function FacetedContent({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof PopoverContent>) {
+  return (
     <PopoverContent
-      {...contentProps}
+      data-slot="faceted-content"
       align="start"
       className={cn(
         "w-50 origin-(--radix-popover-content-transform-origin) p-0",
         className,
       )}
+      {...props}
     >
-      <Command>{children}</Command>
+      <Command className="p-0.5">{children}</Command>
     </PopoverContent>
   );
 }
 
-const FacetedInput = CommandInput;
+function FacetedInput({
+  ref,
+  ...props
+}: React.ComponentProps<typeof CommandInput>) {
+  return <CommandInput data-slot="faceted-input" ref={ref} {...props} />;
+}
 
-const FacetedList = CommandList;
+function FacetedList(props: React.ComponentProps<typeof CommandList>) {
+  return <CommandList data-slot="faceted-list" {...props} />;
+}
 
-const FacetedEmpty = CommandEmpty;
+function FacetedEmpty(props: React.ComponentProps<typeof CommandEmpty>) {
+  return <CommandEmpty data-slot="faceted-empty" {...props} />;
+}
 
-const FacetedGroup = CommandGroup;
+function FacetedGroup(props: React.ComponentProps<typeof CommandGroup>) {
+  return <CommandGroup data-slot="faceted-group" {...props} />;
+}
 
-interface FacetedItemProps extends React.ComponentProps<typeof CommandItem> {
+function FacetedCommandItem({
+  className,
+  onPointerDownCapture,
+  onMouseDown,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.Item>) {
+  return (
+    <CommandPrimitive.Item
+      className={cn(
+        "group/command-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
+        className,
+      )}
+      onPointerDownCapture={composeEventHandlers(
+        onPointerDownCapture,
+        (event) => {
+          // A focusable item steals the input on pointerdown.
+          event.preventDefault();
+        },
+      )}
+      onMouseDown={composeEventHandlers(onMouseDown, (event) => {
+        // iOS Safari can emit a synthetic mousedown without a pointerdown.
+        event.preventDefault();
+      })}
+      {...props}
+    />
+  );
+}
+
+interface FacetedItemProps extends React.ComponentProps<
+  typeof CommandPrimitive.Item
+> {
   value: string;
 }
 
-function FacetedItem(props: FacetedItemProps) {
-  const { value, onSelect, className, children, ...itemProps } = props;
-  const context = useFacetedContext("FacetedItem");
-
-  const isSelected = context.multiple
-    ? Array.isArray(context.value) && context.value.includes(value)
-    : context.value === value;
-
-  const onItemSelect = React.useCallback(
-    (currentValue: string) => {
-      if (onSelect) {
-        onSelect(currentValue);
-      } else if (context.onItemSelect) {
-        context.onItemSelect(currentValue);
-      }
-    },
-    [onSelect, context],
-  );
+function FacetedItem({ value, onSelect, ...props }: FacetedItemProps) {
+  const store = useFacetedStore("FacetedItem");
+  const isSelected = useFacetedStoreSelector(store, (state) => {
+    const props = store.getProps();
+    return getIsValueSelected(
+      getSelection(state, props),
+      props.multiple,
+      value,
+    );
+  });
 
   return (
-    <CommandItem
-      aria-selected={isSelected}
-      data-selected={isSelected}
-      className={cn("gap-2", className)}
-      onSelect={() => onItemSelect(value)}
-      {...itemProps}
-    >
-      <span
-        className={cn(
-          "flex size-4 items-center justify-center rounded-sm border border-primary",
-          isSelected
-            ? "bg-primary text-primary-foreground"
-            : "opacity-50 [&_svg]:invisible",
-        )}
-      >
-        <IconPlaceholder
-          lucide="Check"
-          tabler="IconCheck"
-          hugeicons="Tick02Icon"
-          phosphor="CheckIcon"
-          remixicon="RiCheckLine"
-          className="size-4"
-        />
-      </span>
-      {children}
-    </CommandItem>
+    <FacetedCommandItem
+      data-slot="faceted-item"
+      data-checked={isSelected || undefined}
+      aria-checked={isSelected}
+      onSelect={() => {
+        if (onSelect) {
+          onSelect(value);
+          return;
+        }
+        store.selectItem(value);
+      }}
+      {...props}
+    />
   );
 }
 
-const FacetedSeparator = CommandSeparator;
+function FacetedItemIndicator({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="faceted-item-indicator"
+      className={cn(
+        "ml-auto grid place-items-center *:col-start-1 *:row-start-1",
+        className,
+      )}
+      {...props}
+    >
+      {children != null && (
+        <span className="font-mono text-xs group-data-checked/command-item:invisible">
+          {children}
+        </span>
+      )}
+      <IconPlaceholder
+        lucide="Check"
+        tabler="IconCheck"
+        hugeicons="Tick02Icon"
+        phosphor="CheckIcon"
+        remixicon="RiCheckLine"
+        className="invisible group-data-checked/command-item:visible"
+      />
+    </span>
+  );
+}
+
+function FacetedClear({
+  className,
+  children = "Clear",
+  onSelect,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.Item>) {
+  const store = useFacetedStore("FacetedClear");
+  const hasSelection = useFacetedStoreSelector(store, (state) =>
+    getHasSelection(getSelection(state, store.getProps())),
+  );
+
+  if (!hasSelection) return null;
+
+  return (
+    <FacetedCommandItem
+      data-slot="faceted-clear"
+      className={cn("justify-center text-center", className)}
+      onSelect={(value) => {
+        onSelect?.(value);
+        store.clear();
+      }}
+      {...props}
+    >
+      {children}
+    </FacetedCommandItem>
+  );
+}
+
+function FacetedSeparator(
+  props: React.ComponentProps<typeof CommandSeparator>,
+) {
+  return (
+    <CommandSeparator
+      data-slot="faceted-separator"
+      className="mx-0 my-0.5 w-full"
+      {...props}
+    />
+  );
+}
 
 export {
   Faceted,
+  FacetedBadge,
   FacetedBadgeList,
+  FacetedClear,
   FacetedContent,
   FacetedEmpty,
   FacetedGroup,
   FacetedInput,
   FacetedItem,
+  FacetedItemIndicator,
   FacetedList,
   FacetedSeparator,
   FacetedTrigger,
+  FacetedValue,
 };

@@ -2,12 +2,7 @@
 
 import type { DateRange } from "react-day-picker";
 
-import {
-  type Column,
-  type ColumnFiltersState,
-  type RowData,
-  Subscribe,
-} from "@tanstack/react-table";
+import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -71,14 +66,12 @@ export function DataTableDateFilter<TData extends RowData>({
   return (
     <Subscribe
       source={column.table.atoms.columnFilters}
-      selector={(filters: ColumnFiltersState) =>
-        filters.find((filter) => filter.id === column.id)?.value
-      }
+      selector={() => column.getFilterValue()}
     >
-      {(columnFilterValue) => (
+      {(filterValue) => (
         <DataTableDateFilterContent
           column={column}
-          columnFilterValue={columnFilterValue}
+          columnFilterValue={filterValue}
           {...props}
         />
       )}
@@ -171,7 +164,7 @@ function DataTableDateFilterContent<TData extends RowData>({
             <>
               <Separator
                 orientation="vertical"
-                className="mx-0.5 data-[orientation=vertical]:h-4"
+                className="mx-0.5 data-vertical:h-4 data-vertical:self-center"
               />
               <span>{dateText}</span>
             </>
@@ -194,7 +187,7 @@ function DataTableDateFilterContent<TData extends RowData>({
           <>
             <Separator
               orientation="vertical"
-              className="mx-0.5 data-[orientation=vertical]:h-4"
+              className="mx-0.5 data-vertical:h-4 data-vertical:self-center"
             />
             <span>{dateText}</span>
           </>
@@ -206,7 +199,7 @@ function DataTableDateFilterContent<TData extends RowData>({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="border-dashed font-normal">
+        <Button variant="outline">
           {hasValue ? (
             <div
               role="button"

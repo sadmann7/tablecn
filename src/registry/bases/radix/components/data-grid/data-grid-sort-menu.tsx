@@ -14,15 +14,18 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/registry/bases/radix/ui/command";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
+import {
+  Faceted,
+  FacetedContent,
+  FacetedEmpty,
+  FacetedGroup,
+  FacetedInput,
+  FacetedItem,
+  FacetedItemIndicator,
+  FacetedList,
+  FacetedTrigger,
+} from "@/registry/bases/radix/ui/faceted";
 import {
   Popover,
   PopoverContent,
@@ -182,7 +185,6 @@ export function DataGridSortMenu<TData extends RowData>({
           <Button
             dir={dir}
             variant="outline"
-            className="font-normal"
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
@@ -198,7 +200,7 @@ export function DataGridSortMenu<TData extends RowData>({
             {sorting.length > 0 && (
               <Badge
                 variant="secondary"
-                className="h-[18.24px] rounded-md px-[5.12px] font-mono text-[10.4px] font-normal"
+                className="h-[18.24px] px-[5.12px] font-mono text-[10.4px]"
               >
                 {sorting.length}
               </Badge>
@@ -254,7 +256,6 @@ export function DataGridSortMenu<TData extends RowData>({
           )}
           <div className="flex w-full items-center gap-2">
             <Button
-              className="rounded"
               ref={addButtonRef}
               onClick={onSortAdd}
               disabled={columns.length === 0}
@@ -262,11 +263,7 @@ export function DataGridSortMenu<TData extends RowData>({
               Add sort
             </Button>
             {sorting.length > 0 && (
-              <Button
-                variant="outline"
-                className="rounded"
-                onClick={onSortingReset}
-              >
+              <Button variant="outline" onClick={onSortingReset}>
                 Reset sorting
               </Button>
             )}
@@ -275,10 +272,10 @@ export function DataGridSortMenu<TData extends RowData>({
       </Popover>
       <SortableOverlay>
         <div dir={dir} className="flex items-center gap-2">
-          <div className="h-8 w-44 rounded-sm bg-primary/10" />
-          <div className="h-8 w-24 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
-          <div className="size-8 shrink-0 rounded-sm bg-primary/10" />
+          <div className="h-8 w-44 rounded-lg bg-primary/10" />
+          <div className="h-8 w-24 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
+          <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
         </div>
       </SortableOverlay>
     </Sortable>
@@ -342,13 +339,20 @@ function DataTableSortItem({
         className="flex items-center gap-2"
         onKeyDown={onItemKeyDown}
       >
-        <Popover open={showFieldSelector} onOpenChange={setShowFieldSelector}>
-          <PopoverTrigger asChild>
+        <Faceted
+          open={showFieldSelector}
+          onOpenChange={setShowFieldSelector}
+          onValueChange={(columnId) => {
+            if (!columnId) return;
+            onSortUpdate(sort.id, { id: columnId });
+          }}
+        >
+          <FacetedTrigger asChild>
             <Button
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               variant="outline"
-              className="w-44 justify-between rounded font-normal"
+              className="w-44"
             >
               <span className="truncate">{columnLabels.get(sort.id)}</span>
               <IconPlaceholder
@@ -360,31 +364,30 @@ function DataTableSortItem({
                 className="opacity-50"
               />
             </Button>
-          </PopoverTrigger>
-          <PopoverContent
+          </FacetedTrigger>
+          <FacetedContent
             id={fieldListboxId}
             dir={dir}
-            className="w-(--radix-popover-trigger-width) p-0"
+            className="w-(--radix-popover-trigger-width)"
           >
-            <Command>
-              <CommandInput placeholder="Search fields..." />
-              <CommandList>
-                <CommandEmpty>No fields found.</CommandEmpty>
-                <CommandGroup>
-                  {columns.map((column) => (
-                    <CommandItem
-                      key={column.id}
-                      value={column.id}
-                      onSelect={(value) => onSortUpdate(sort.id, { id: value })}
-                    >
-                      <span className="truncate">{column.label}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+            <FacetedInput placeholder="Search fields..." />
+            <FacetedList>
+              <FacetedEmpty>No fields found.</FacetedEmpty>
+              <FacetedGroup>
+                {columns.map((column) => (
+                  <FacetedItem
+                    key={column.id}
+                    value={column.id}
+                    keywords={[column.label]}
+                  >
+                    <span className="truncate">{column.label}</span>
+                    <FacetedItemIndicator />
+                  </FacetedItem>
+                ))}
+              </FacetedGroup>
+            </FacetedList>
+          </FacetedContent>
+        </Faceted>
         <Select
           open={showDirectionSelector}
           onOpenChange={setShowDirectionSelector}
@@ -393,10 +396,7 @@ function DataTableSortItem({
             onSortUpdate(sort.id, { desc: value === "desc" })
           }
         >
-          <SelectTrigger
-            aria-controls={directionListboxId}
-            className="w-24 rounded"
-          >
+          <SelectTrigger aria-controls={directionListboxId} className="w-24">
             <SelectValue />
           </SelectTrigger>
           <SelectContent
@@ -416,7 +416,7 @@ function DataTableSortItem({
           aria-controls={sortItemId}
           variant="outline"
           size="icon"
-          className="size-8 shrink-0 rounded"
+          className="shrink-0"
           onClick={() => onSortRemove(sort.id)}
         >
           <IconPlaceholder
@@ -428,11 +428,7 @@ function DataTableSortItem({
           />
         </Button>
         <SortableItemHandle asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="size-8 shrink-0 rounded"
-          >
+          <Button variant="outline" size="icon" className="shrink-0">
             <IconPlaceholder
               lucide="GripVertical"
               tabler="IconGripVertical"

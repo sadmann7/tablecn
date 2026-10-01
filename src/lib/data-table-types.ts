@@ -1,12 +1,16 @@
-import type { ColumnSort, Row, RowData } from "@tanstack/react-table";
+import type {
+  ColumnFilter,
+  ColumnSort,
+  Row,
+  RowData,
+} from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { DataTableConfig } from "@/lib/data-table-utils";
-import type { FilterItemSchema } from "@/lib/parsers";
-
-export interface DataTableMeta {
-  queryKeys?: QueryKeys;
-}
+import type {
+  FILTER_OPERATORS,
+  FILTER_VARIANTS,
+  JOIN_OPERATORS,
+} from "@/lib/data-table-utils";
 
 export interface DataTableColumnMeta {
   label?: string;
@@ -33,16 +37,54 @@ export interface Option {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type FilterOperator = DataTableConfig["operators"][number];
-export type FilterVariant = DataTableConfig["filterVariants"][number];
-export type JoinOperator = DataTableConfig["joinOperators"][number];
+export type FilterOperator = (typeof FILTER_OPERATORS)[number];
+export type FilterVariant = (typeof FILTER_VARIANTS)[number];
+export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
-export interface ExtendedColumnSort<TData> extends Omit<ColumnSort, "id"> {
-  id: Extract<keyof TData, string>;
+export interface FilterOperatorOption {
+  label: string;
+  value: FilterOperator;
 }
 
-export interface ExtendedColumnFilter<TData> extends FilterItemSchema {
-  id: Extract<keyof TData, string>;
+export interface ColumnSortItem<
+  TColumnId extends string = string,
+> extends ColumnSort {
+  id: TColumnId;
+}
+
+declare module "@tanstack/react-table" {
+  interface ColumnFilter {
+    /**
+     * Set by the filter list and menu. Plain filters, set with
+     * `column.setFilterValue()`, leave it unset and apply their variant's
+     * plain operator.
+     */
+    operator?: FilterOperator;
+    variant?: FilterVariant;
+    filterId?: string;
+  }
+}
+
+/** A `columnFilters` item with every field resolved. */
+export interface ColumnFilterItem<
+  TColumnId extends string = string,
+> extends ColumnFilter {
+  id: TColumnId;
+  value: string | string[];
+  variant: FilterVariant;
+  operator: FilterOperator;
+  filterId: string;
+}
+
+export interface DataTableQuery<
+  TFilterColumnId extends string = string,
+  TSortColumnId extends string = TFilterColumnId,
+> {
+  page: number;
+  perPage: number;
+  sorting: ColumnSortItem<TSortColumnId>[];
+  filters: ColumnFilterItem<TFilterColumnId>[];
+  joinOperator: JoinOperator;
 }
 
 export interface DataTableRowAction<TData extends RowData> {

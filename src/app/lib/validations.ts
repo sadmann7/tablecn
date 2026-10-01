@@ -1,37 +1,42 @@
-import {
-  createSearchParamsCache,
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  parseAsStringEnum,
-} from "nuqs/server";
+import { createSearchParamsCache, parseAsStringEnum } from "nuqs/server";
 import * as z from "zod";
 
-import { flagConfig } from "@/config/flag";
+import type { FilterVariant } from "@/lib/data-table-types";
+
 import { type Task, tasks } from "@/db/schema";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
+import { DATA_MODES, FILTER_MODES } from "@/lib/flag";
+import { getDataTableSearchParams } from "@/lib/parsers";
+
+/** Filterable task columns and their variants; mirrors `tasks-table-columns`. */
+export const tasksFilterableColumns = {
+  title: "text",
+  status: "multiSelect",
+  priority: "multiSelect",
+  estimatedHours: "range",
+  createdAt: "dateRange",
+} satisfies Partial<Record<keyof Task, FilterVariant>>;
+
+/** Sortable task columns; mirrors `tasks-table-columns`. */
+export const tasksSortableColumns = [
+  "title",
+  "status",
+  "priority",
+  "estimatedHours",
+  "createdAt",
+] as const satisfies readonly (keyof Task)[];
 
 export const searchParamsCache = createSearchParamsCache({
-  filterFlag: parseAsStringEnum(
-    flagConfig.featureFlags.map((flag) => flag.value),
-  ),
-  page: parseAsInteger.withDefault(1),
-  perPage: parseAsInteger.withDefault(10),
-  sort: getSortingStateParser<Task>().withDefault([
-    { id: "createdAt", desc: true },
-  ]),
-  title: parseAsString.withDefault(""),
-  status: parseAsArrayOf(
-    parseAsStringEnum(tasks.status.enumValues),
-  ).withDefault([]),
-  priority: parseAsArrayOf(
-    parseAsStringEnum(tasks.priority.enumValues),
-  ).withDefault([]),
-  estimatedHours: parseAsArrayOf(parseAsInteger).withDefault([]),
-  createdAt: parseAsArrayOf(parseAsInteger).withDefault([]),
-  // advanced filter
-  filters: getFiltersStateParser().withDefault([]),
-  joinOperator: parseAsStringEnum(["and", "or"]).withDefault("and"),
+  filterMode: parseAsStringEnum(
+    FILTER_MODES.map((filterMode) => filterMode.value),
+  ).withDefault("plain"),
+  dataMode: parseAsStringEnum(
+    DATA_MODES.map((dataMode) => dataMode.value),
+  ).withDefault("server"),
+  ...getDataTableSearchParams({
+    filterableColumns: tasksFilterableColumns,
+    sortableColumns: tasksSortableColumns,
+    defaultSorting: [{ id: "createdAt", desc: true }],
+  }),
 });
 
 export const createTaskSchema = z.object({
@@ -50,8 +55,5 @@ export const updateTaskSchema = z.object({
   estimatedHours: z.number().optional(),
 });
 
-export type GetTasksSchema = Awaited<
-  ReturnType<typeof searchParamsCache.parse>
->;
 export type CreateTaskSchema = z.infer<typeof createTaskSchema>;
 export type UpdateTaskSchema = z.infer<typeof updateTaskSchema>;

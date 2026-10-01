@@ -6,19 +6,24 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ExtendedColumnFilter } from "@/lib/data-table-types";
+import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { Input } from "@/registry/bases/base/ui/input";
+
+function getRangeFilterValues(value: string | string[]): [string, string] {
+  if (Array.isArray(value)) return [value[0] ?? "", value[1] ?? ""];
+  return [value, ""];
+}
 
 interface DataTableRangeFilterProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
-  filter: ExtendedColumnFilter<TData>;
+  filter: ColumnFilterItem;
   column: Column<DataTableFeatures, TData>;
   inputId: string;
   onFilterUpdate: (
     filterId: string,
-    updates: Partial<Omit<ExtendedColumnFilter<TData>, "filterId">>,
+    updates: Partial<Omit<ColumnFilterItem, "filterId">>,
   ) => void;
 }
 
@@ -56,16 +61,14 @@ export function DataTableRangeFilter<TData extends RowData>({
   );
 
   const value = React.useMemo(() => {
-    if (Array.isArray(filter.value)) return filter.value.map(formatValue);
-    return [formatValue(filter.value), ""];
+    const [start, end] = getRangeFilterValues(filter.value);
+    return [formatValue(start), formatValue(end)];
   }, [filter.value, formatValue]);
 
   const onRangeValueChange = React.useCallback(
     (value: string, isMin?: boolean) => {
       const numValue = Number(value);
-      const currentValues = Array.isArray(filter.value)
-        ? filter.value
-        : ["", ""];
+      const currentValues = getRangeFilterValues(filter.value);
       const otherValue = isMin
         ? (currentValues[1] ?? "")
         : (currentValues[0] ?? "");
@@ -102,7 +105,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         placeholder={min.toString()}
         min={min}
         max={max}
-        className="h-8 w-full rounded"
+        className="w-full min-w-24"
         defaultValue={value[0]}
         onChange={(event) => onRangeValueChange(event.target.value, true)}
       />
@@ -118,7 +121,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         placeholder={max.toString()}
         min={min}
         max={max}
-        className="h-8 w-full rounded"
+        className="w-full min-w-24"
         defaultValue={value[1]}
         onChange={(event) => onRangeValueChange(event.target.value)}
       />

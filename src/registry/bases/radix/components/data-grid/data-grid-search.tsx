@@ -171,7 +171,7 @@ function DataGridSearchImpl({
           autoCapitalize="off"
           spellCheck={false}
           placeholder="Find in table..."
-          className="h-8 w-64"
+          className="w-64"
           ref={inputRef}
           defaultValue={searchQuery}
           onChange={onChange}

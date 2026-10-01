@@ -2,7 +2,7 @@
 
 import { ActiveLink } from "@/components/active-link";
 import { DocsLink } from "@/components/layouts/docs-link";
-import { siteConfig } from "@/config/site";
+import { siteConfig } from "@/lib/site";
 import { SheetClose } from "@/registry/bases/radix/ui/sheet";
 
 export function MobileNav() {
