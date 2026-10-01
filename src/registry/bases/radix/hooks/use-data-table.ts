@@ -20,7 +20,6 @@ import {
 import * as React from "react";
 
 import type {
-  DataTableUrlFormat,
   FilterVariant,
   JoinOperator,
   QueryKeys,
@@ -64,7 +63,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
 > & {
   queryKeys?: Partial<QueryKeys>;
   history?: "push" | "replace";
-  urlFormat?: DataTableUrlFormat;
   debounceMs?: number;
   throttleMs?: number;
   clearOnDefault?: boolean;
@@ -89,7 +87,6 @@ function useDataTable<TData extends RowData>({
   initialState,
   queryKeys,
   history = "replace",
-  urlFormat = "compact",
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
   clearOnDefault = false,
@@ -201,10 +198,10 @@ function useDataTable<TData extends RowData>({
 
   const sortingParser = React.useMemo(
     () =>
-      getSortingStateParser(columnIndex.sortableIds, urlFormat)
+      getSortingStateParser(columnIndex.sortableIds)
         .withOptions(queryStateOptions)
         .withDefault(initialStateRef.current?.sorting ?? EMPTY_SORTING),
-    [columnIndex, urlFormat, queryStateOptions],
+    [columnIndex, queryStateOptions],
   );
 
   const [sorting, setSorting] = useQueryState(sortKey, sortingParser);
@@ -270,9 +267,10 @@ function useDataTable<TData extends RowData>({
     (columnFilters: ColumnFiltersState) => {
       const filters = columnIndex.resolveColumnFilters(columnFilters);
       const validFilters = getValidFilters(filters);
-      const writeAsPlainFilters =
-        urlFormat !== "json" &&
-        getCanWriteAsKeys(validFilters, columnIndex.filterableIds);
+      const writeAsPlainFilters = getCanWriteAsKeys(
+        validFilters,
+        columnIndex.filterableIds,
+      );
       const valueById = new Map(
         validFilters.map((filter) => [filter.id, filter.value]),
       );

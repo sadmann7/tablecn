@@ -11,7 +11,6 @@ import type {
   ColumnFilterItem,
   ColumnSortItem,
   DataTableQuery,
-  DataTableUrlFormat,
   FilterVariant,
   JoinOperator,
 } from "@/lib/data-table-types";
@@ -31,13 +30,12 @@ const sortingItemSchema = z.object({
 });
 
 /**
- * Parses the `sort` param, either `createdAt.desc,title.asc` or JSON. Pass
- * `columnIds` to reject unknown columns and to narrow the parsed ids to them.
- * `urlFormat` only picks how sorting is written.
+ * Parses the `sort` param, either `createdAt.desc,title.asc` or JSON, and
+ * writes the compact form. Pass `columnIds` to reject unknown columns and to
+ * narrow the parsed ids to them.
  */
 export const getSortingStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
-  urlFormat: DataTableUrlFormat = "compact",
 ) => {
   const validIds = toIdSet(columnIds);
 
@@ -47,8 +45,6 @@ export const getSortingStateParser = <TColumnId extends string = string>(
       return sorting && getHasKnownIds(sorting, validIds) ? sorting : null;
     },
     serialize: (value) => {
-      if (urlFormat === "json") return JSON.stringify(value);
-
       const compact = value
         .map((item) => `${item.id}.${item.desc ? "desc" : "asc"}`)
         .join(",");

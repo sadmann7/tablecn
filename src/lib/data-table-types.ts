@@ -41,18 +41,6 @@ export type FilterOperator = (typeof FILTER_OPERATORS)[number];
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
-/**
- * How filters and sorting are written to the URL. Both formats are always
- * read, so links keep working when the format changes.
- *
- * - `"compact"`: plain filters get one query param per column, e.g.
- *   `?status=todo,done&title=fix`, and sorting is `?sort=createdAt.desc`.
- *   Other filters (other operators, several per column) fall back to JSON
- *   in the `filters` param.
- * - `"json"`: filters and sorting are written as JSON.
- */
-export type DataTableUrlFormat = "compact" | "json";
-
 export interface FilterOperatorOption {
   label: string;
   value: FilterOperator;

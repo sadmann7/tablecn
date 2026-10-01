@@ -331,23 +331,24 @@ export function resolveColumnFilter(
 }
 
 /**
- * Per-column keys hold at most one plain filter per column, so only write
- * them when each filter round-trips. They're read back in column order,
- * which doesn't change what the filters match.
+ * Per-column keys hold at most one plain filter per column and are read back
+ * in column order, so only write them when every filter round-trips and the
+ * filters are already in that order.
  */
 export function getCanWriteAsKeys(
   filters: ColumnFilterItem[],
   columnIds: string[],
 ) {
-  const seenIds = new Set<string>();
+  let lastIndex = -1;
 
   return filters.every((filter) => {
-    if (!columnIds.includes(filter.id) || seenIds.has(filter.id)) return false;
+    const index = columnIds.indexOf(filter.id);
+    if (index <= lastIndex) return false;
     if (!getIsPlainFilter(filter)) return false;
     if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
       return false;
     }
-    seenIds.add(filter.id);
+    lastIndex = index;
     return true;
   });
 }
