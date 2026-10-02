@@ -77,7 +77,7 @@ export function TasksTable({
     columns,
     initialState: {
       sorting: [{ id: "createdAt", desc: true }],
-      columnPinning: { start: [], end: ["actions"] },
+      columnPinning: { start: ["select"], end: ["actions"] },
     },
     queryKeys,
     getRowId: (originalRow) => originalRow.id,
