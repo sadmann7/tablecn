@@ -145,11 +145,11 @@ export function getColumnPinningStyle<TData extends RowData>({
           ? "4px 0 4px -4px var(--border) inset"
           : undefined
       : undefined,
-    left:
+    insetInlineStart:
       isPinned === "start"
         ? `var(${getColumnVar(column.id, "offset")})`
         : undefined,
-    right:
+    insetInlineEnd:
       isPinned === "end"
         ? `var(${getColumnVar(column.id, "offset")})`
         : undefined,
