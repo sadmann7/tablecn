@@ -13,16 +13,16 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import {
-  getColumnFilterDefaults,
+  getDefaultFilter,
   getDateFilterLabel,
   getFilterDates,
   getFilterOperators,
-  getFilterValueForOperator,
+  coerceFilterValue,
   getIsEditableTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
   JOIN_OPERATORS,
-  toFilterTimestamp,
+  getFilterTimestamp,
 } from "@/lib/data-table-utils";
 import { generateId } from "@/lib/id";
 import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
@@ -156,7 +156,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
     if (!column) return;
 
     table.addColumnFilter({
-      ...getColumnFilterDefaults(column),
+      ...getDefaultFilter(column),
       filterId: generateId({ length: 8 }),
     });
   }
@@ -490,7 +490,7 @@ function FilterFieldSelector<TData extends RowData>({
       onValueChange={(columnId) => {
         const column = columns.find((column) => column.id === columnId);
         if (column) {
-          onFilterUpdate(filter.filterId, getColumnFilterDefaults(column));
+          onFilterUpdate(filter.filterId, getDefaultFilter(column));
         }
       }}
     >
@@ -553,7 +553,7 @@ function FilterOperatorSelector({
         if (operator == null) return;
         onFilterUpdate(filter.filterId, {
           operator,
-          value: getFilterValueForOperator(operator, filter.value),
+          value: coerceFilterValue(operator, filter.value),
         });
       }}
     >
@@ -803,7 +803,10 @@ function DateFilterValue<TData extends RowData>({
             onSelect={(range) =>
               onFilterUpdate(filter.filterId, {
                 value: range
-                  ? [toFilterTimestamp(range.from), toFilterTimestamp(range.to)]
+                  ? [
+                      getFilterTimestamp(range.from),
+                      getFilterTimestamp(range.to),
+                    ]
                   : [],
               })
             }
@@ -817,7 +820,7 @@ function DateFilterValue<TData extends RowData>({
             selected={startDate}
             onSelect={(date) => {
               onFilterUpdate(filter.filterId, {
-                value: toFilterTimestamp(date),
+                value: getFilterTimestamp(date),
               });
               onOpenChange(false);
             }}

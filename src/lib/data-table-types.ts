@@ -16,13 +16,13 @@ export interface DataTableColumnMeta {
   label?: string;
   placeholder?: string;
   variant?: FilterVariant;
-  options?: Option[];
+  options?: FilterOption[];
   range?: [number, number];
   unit?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export interface QueryKeys {
+export interface DataTableQueryKeys {
   page: string;
   perPage: string;
   sort: string;
@@ -30,7 +30,7 @@ export interface QueryKeys {
   joinOperator: string;
 }
 
-export interface Option {
+export interface FilterOption {
   label: string;
   value: string;
   count?: number;

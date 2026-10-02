@@ -20,10 +20,11 @@ import type {
 } from "@/lib/data-table-types";
 
 import {
+  createPlainFilter,
   FILTER_VARIANTS,
-  getValidFilters,
-  resolveColumnFilter,
-  toColumnFilterItem,
+  getActiveFilters,
+  normalizeColumnFilter,
+  stringifyFilterValue,
 } from "@/lib/data-table-utils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -44,32 +45,34 @@ export function matchesFilter(
   switch (operator) {
     case "iLike":
       return typeof value === "string"
-        ? toText(cellValue).includes(value.toLowerCase())
+        ? getLowercaseText(cellValue).includes(value.toLowerCase())
         : true;
 
     case "notILike":
       return typeof value === "string"
-        ? !toText(cellValue).includes(value.toLowerCase())
+        ? !getLowercaseText(cellValue).includes(value.toLowerCase())
         : true;
 
     case "eq":
-      if (variant === "boolean") return toBoolean(cellValue) === value;
+      if (variant === "boolean") return getBooleanString(cellValue) === value;
       if (isDate) return getIsSameDay(cellValue, value);
-      if (isNumeric) return toNumber(cellValue) === toNumber(value);
-      return stringify(cellValue) === String(value);
+      if (isNumeric) return parseNumber(cellValue) === parseNumber(value);
+      return stringifyFilterValue(cellValue) === String(value);
 
     case "ne":
-      if (variant === "boolean") return toBoolean(cellValue) !== value;
+      if (variant === "boolean") return getBooleanString(cellValue) !== value;
       if (isDate) return !getIsSameDay(cellValue, value);
-      if (isNumeric) return toNumber(cellValue) !== toNumber(value);
-      return stringify(cellValue) !== String(value);
+      if (isNumeric) return parseNumber(cellValue) !== parseNumber(value);
+      return stringifyFilterValue(cellValue) !== String(value);
 
     case "inArray":
-      return Array.isArray(value) ? value.includes(stringify(cellValue)) : true;
+      return Array.isArray(value)
+        ? value.includes(stringifyFilterValue(cellValue))
+        : true;
 
     case "notInArray":
       return Array.isArray(value)
-        ? !value.includes(stringify(cellValue))
+        ? !value.includes(stringifyFilterValue(cellValue))
         : true;
 
     case "lt":
@@ -104,7 +107,7 @@ export const dataTableFilterFn = constructFilterFn({
     const variant = getFilterVariant(
       row.table.getColumn(columnId)?.columnDef.meta,
     );
-    const item = toColumnFilterItem(columnId, variant, filterValue);
+    const item = createPlainFilter(columnId, variant, filterValue);
     return !item || matchesFilter(dataValue, item);
   },
   autoRemove: (value) => value === undefined,
@@ -363,11 +366,11 @@ function getFilterTest<TFeatures extends TableFeatures, TData extends RowData>(
     return (row) => filterFn(row, column.id, value);
   }
 
-  const item = resolveColumnFilter(
+  const item = normalizeColumnFilter(
     filter,
     getFilterVariant(column.columnDef.meta),
   );
-  if (getValidFilters([item]).length === 0) return null;
+  if (getActiveFilters([item]).length === 0) return null;
 
   return (row) => matchesFilter(row.getValue(column.id), item);
 }
@@ -484,27 +487,20 @@ function filterRows<TFeatures extends TableFeatures, TData extends RowData>(
   return { rows: fromRoot(rows, 0), flatRows, rowsById };
 }
 
-function stringify(value: unknown): string {
-  if (value == null) return "";
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value as string | number | boolean | bigint);
+function getLowercaseText(value: unknown) {
+  return stringifyFilterValue(value).toLowerCase();
 }
 
-function toText(value: unknown) {
-  return stringify(value).toLowerCase();
-}
-
-function toBoolean(value: unknown) {
+function getBooleanString(value: unknown) {
   return value === true || value === "true" ? "true" : "false";
 }
 
-function toNumber(value: unknown) {
+function parseNumber(value: unknown) {
   if (value === "" || value == null) return Number.NaN;
   return typeof value === "number" ? value : Number(value);
 }
 
-function toTime(value: unknown) {
+function parseTime(value: unknown) {
   if (value instanceof Date) return value.getTime();
   if (typeof value === "number") return value;
   if (typeof value === "string" && value.trim() !== "") {
@@ -527,8 +523,8 @@ function endOfDay(time: number) {
 }
 
 function getIsSameDay(cellValue: unknown, value: unknown) {
-  const cell = toTime(cellValue);
-  const target = toTime(value);
+  const cell = parseTime(cellValue);
+  const target = parseTime(value);
   if (Number.isNaN(cell) || Number.isNaN(target)) return false;
   return cell >= startOfDay(target) && cell <= endOfDay(target);
 }
@@ -545,15 +541,15 @@ function compare(
   let target: number;
 
   if (isDate) {
-    cell = toTime(cellValue);
-    const time = toTime(value);
+    cell = parseTime(cellValue);
+    const time = parseTime(value);
     target =
       operator === "lt" || operator === "lte"
         ? endOfDay(time)
         : startOfDay(time);
   } else {
-    cell = toNumber(cellValue);
-    target = toNumber(value);
+    cell = parseNumber(cellValue);
+    target = parseNumber(value);
   }
 
   if (Number.isNaN(cell) || Number.isNaN(target)) return false;
@@ -574,22 +570,22 @@ function getIsBetween(cellValue: unknown, value: unknown, isDate: boolean) {
   if (!Array.isArray(value) || value.length !== 2) return true;
 
   const [rawStart, rawEnd] = value;
-  const hasStart = stringify(rawStart).trim() !== "";
-  const hasEnd = stringify(rawEnd).trim() !== "";
+  const hasStart = stringifyFilterValue(rawStart).trim() !== "";
+  const hasEnd = stringifyFilterValue(rawEnd).trim() !== "";
 
   if (!hasStart && !hasEnd) return true;
 
-  const cell = isDate ? toTime(cellValue) : toNumber(cellValue);
+  const cell = isDate ? parseTime(cellValue) : parseNumber(cellValue);
   if (Number.isNaN(cell)) return false;
 
   if (isDate) {
-    const start = hasStart ? startOfDay(toTime(rawStart)) : null;
-    const end = hasEnd ? endOfDay(toTime(rawEnd)) : null;
+    const start = hasStart ? startOfDay(parseTime(rawStart)) : null;
+    const end = hasEnd ? endOfDay(parseTime(rawEnd)) : null;
     return (start === null || cell >= start) && (end === null || cell <= end);
   }
 
-  const start = hasStart ? toNumber(rawStart) : null;
-  const end = hasEnd ? toNumber(rawEnd) : null;
+  const start = hasStart ? parseNumber(rawStart) : null;
+  const end = hasEnd ? parseNumber(rawEnd) : null;
 
   // Mirrors the server adapter: a single bound behaves like `eq`.
   if (start !== null && end === null) return cell === start;
@@ -626,7 +622,7 @@ function getIsRelativeToToday(cellValue: unknown, value: unknown) {
       return true;
   }
 
-  const cell = toTime(cellValue);
+  const cell = parseTime(cellValue);
   if (Number.isNaN(cell)) return false;
   return cell >= start && cell <= end;
 }

@@ -3,7 +3,10 @@
 import * as React from "react";
 
 import type { Task } from "@/db/schema";
-import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
+import type {
+  DataTableRowAction,
+  DataTableQueryKeys,
+} from "@/lib/data-table-types";
 import type { DataMode, FilterMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
@@ -40,7 +43,7 @@ interface TasksTableProps {
       Awaited<ReturnType<typeof getEstimatedHoursRange>>,
     ]
   >;
-  queryKeys?: Partial<QueryKeys>;
+  queryKeys?: Partial<DataTableQueryKeys>;
 }
 
 export function TasksTable({

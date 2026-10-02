@@ -41,8 +41,8 @@ import {
 } from "@/lib/data-table-filters";
 import {
   getIsPlainFilter,
-  resolveColumnFilter,
-  toColumnFilterValue,
+  normalizeColumnFilter,
+  getPlainFilterValue,
 } from "@/lib/data-table-utils";
 
 interface TableState_DataTableFiltering {
@@ -146,7 +146,7 @@ const dataTableFilteringFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataTable(table);
     const resolve = (filter: ColumnFilter) =>
-      resolveColumnFilter(
+      normalizeColumnFilter(
         filter,
         instance.getColumn(filter.id)?.columnDef.meta?.variant ?? "text",
       );
@@ -223,11 +223,11 @@ function getPlainFilter(
   const index = filters.findIndex(
     (filter) =>
       filter.id === columnId &&
-      getIsPlainFilter(resolveColumnFilter(filter, variant)),
+      getIsPlainFilter(normalizeColumnFilter(filter, variant)),
   );
   const filter = filters[index];
   const value = filter
-    ? toColumnFilterValue(resolveColumnFilter(filter, variant))
+    ? getPlainFilterValue(normalizeColumnFilter(filter, variant))
     : undefined;
 
   return { index, filter, value };

@@ -180,6 +180,7 @@ export function getFilterOperators(filterVariant: FilterVariant) {
   return FILTER_OPERATORS_BY_VARIANT[filterVariant] ?? [];
 }
 
+/** The operator a new filter starts with in the filter list and menu. */
 export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   const operators = getFilterOperators(filterVariant);
 
@@ -201,7 +202,7 @@ export function getIsValuelessOperator(operator: FilterOperator) {
   return operator === "isEmpty" || operator === "isNotEmpty";
 }
 
-export function getFilterValueForOperator(
+export function coerceFilterValue(
   operator: FilterOperator,
   value: string | string[],
 ) {
@@ -221,7 +222,7 @@ export function getFilterValueForOperator(
   return value;
 }
 
-export function getColumnFilterDefaults<TData extends RowData>(
+export function getDefaultFilter<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
 ) {
   const variant = column.columnDef.meta?.variant ?? "text";
@@ -248,7 +249,7 @@ export function getFilterDates(value: ColumnFilterItem["value"]) {
     .map((timestamp) => new Date(Number(timestamp)));
 }
 
-export function toFilterTimestamp(date: Date | undefined) {
+export function getFilterTimestamp(date: Date | undefined) {
   return date?.getTime().toString() ?? "";
 }
 
@@ -268,7 +269,7 @@ export function getDateFilterLabel(filter: ColumnFilterItem) {
   return `${start} - ${formatDate(endDate, { month: "short" })}`;
 }
 
-function toFilterString(value: unknown): string {
+export function stringifyFilterValue(value: unknown): string {
   if (value == null) return "";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "object") return JSON.stringify(value);
@@ -279,6 +280,10 @@ export function getIsMultiValueVariant(variant: FilterVariant) {
   return MULTI_VALUE_FILTER_VARIANTS.includes(variant);
 }
 
+/**
+ * The operator `column.setFilterValue()` applies. Selects match any of the
+ * values and ranges match between both bounds.
+ */
 export function getPlainFilterOperator(variant: FilterVariant): FilterOperator {
   if (variant === "select" || variant === "multiSelect") return "inArray";
   if (variant === "range" || variant === "dateRange") return "isBetween";
@@ -297,11 +302,15 @@ export function getIsPlainFilter(filter: ColumnFilterItem) {
   );
 }
 
+export function getPlainFilterId(columnId: string) {
+  return `${columnId}-filter`;
+}
+
 /**
- * Converts a filter value (e.g. `["todo", "done"]` or `[1, 5]`) to a
- * filter item. Returns `null` for empty values.
+ * Creates a plain filter from a column filter value (e.g. `["todo", "done"]`
+ * or `[1, 5]`). Returns `null` for empty values.
  */
-export function toColumnFilterItem<TColumnId extends string>(
+export function createPlainFilter<TColumnId extends string>(
   id: TColumnId,
   variant: FilterVariant,
   value: unknown,
@@ -309,28 +318,36 @@ export function toColumnFilterItem<TColumnId extends string>(
   if (value === undefined || value === null || value === "") return null;
 
   const operator = getPlainFilterOperator(variant);
-  const filterId = `${id}-filter`;
+  const filterId = getPlainFilterId(id);
 
   if (getIsMultiValueVariant(variant)) {
-    const values = (Array.isArray(value) ? value : [value]).map(toFilterString);
+    const values = (Array.isArray(value) ? value : [value]).map(
+      stringifyFilterValue,
+    );
     if (values.every((item) => item === "")) return null;
     return { id, variant, operator, value: values, filterId };
   }
 
   if (Array.isArray(value)) return null;
 
-  return { id, variant, operator, value: toFilterString(value), filterId };
+  return {
+    id,
+    variant,
+    operator,
+    value: stringifyFilterValue(value),
+    filterId,
+  };
 }
 
 /**
  * Fills in a `columnFilters` item. Plain filters (no `operator`) get the
  * variant's plain operator, and their value becomes filter strings.
  */
-export function resolveColumnFilter(
+export function normalizeColumnFilter(
   filter: ColumnFilter,
   variant: FilterVariant,
 ): ColumnFilterItem {
-  const filterId = filter.filterId ?? `${filter.id}-filter`;
+  const filterId = filter.filterId ?? getPlainFilterId(filter.id);
 
   if (filter.operator) {
     return {
@@ -338,13 +355,13 @@ export function resolveColumnFilter(
       variant: filter.variant ?? variant,
       operator: filter.operator,
       value: Array.isArray(filter.value)
-        ? filter.value.map(toFilterString)
-        : toFilterString(filter.value),
+        ? filter.value.map(stringifyFilterValue)
+        : stringifyFilterValue(filter.value),
       filterId,
     };
   }
 
-  const item = toColumnFilterItem(filter.id, variant, filter.value);
+  const item = createPlainFilter(filter.id, variant, filter.value);
   if (item) return { ...item, filterId };
 
   return {
@@ -357,11 +374,11 @@ export function resolveColumnFilter(
 }
 
 /**
- * Per-column keys hold at most one plain filter per column and are read back
- * in column order, so only write them when every filter round-trips and the
- * filters are already in that order.
+ * Per-column URL params hold at most one plain filter per column and are read
+ * back in column order, so only write them when every filter round-trips and
+ * the filters are already in that order.
  */
-export function getCanWriteAsKeys(
+export function getCanWritePlainFilters(
   filters: ColumnFilterItem[],
   columnIds: string[],
 ) {
@@ -371,7 +388,7 @@ export function getCanWriteAsKeys(
     const index = columnIds.indexOf(filter.id);
     if (index <= lastIndex) return false;
     if (!getIsPlainFilter(filter)) return false;
-    if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
+    if (!createPlainFilter(filter.id, filter.variant, filter.value)) {
       return false;
     }
     lastIndex = index;
@@ -379,7 +396,7 @@ export function getCanWriteAsKeys(
   });
 }
 
-export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
+export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 
   if (variant === "select" || variant === "multiSelect") {
@@ -401,7 +418,7 @@ export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
   return value;
 }
 
-export function getValidFilters<TFilterItem extends ColumnFilterItem>(
+export function getActiveFilters<TFilterItem extends ColumnFilterItem>(
   filters: TFilterItem[],
 ): TFilterItem[] {
   return filters.filter(

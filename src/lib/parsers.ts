@@ -19,9 +19,9 @@ import {
   FILTER_OPERATORS,
   FILTER_VARIANTS,
   getIsMultiValueVariant,
-  getValidFilters,
+  getActiveFilters,
   JOIN_OPERATORS,
-  toColumnFilterItem,
+  createPlainFilter,
 } from "@/lib/data-table-utils";
 
 const sortingItemSchema = z.object({
@@ -37,7 +37,7 @@ const sortingItemSchema = z.object({
 export const getSortingStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
 ) => {
-  const validIds = toIdSet(columnIds);
+  const validIds = getIdSet(columnIds);
 
   return createParser<ColumnSortItem<TColumnId>[]>({
     parse: (value) => {
@@ -76,7 +76,7 @@ export type FilterItemSchema = z.infer<typeof filterItemSchema>;
 export const getFiltersStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
 ) => {
-  const validIds = toIdSet(columnIds);
+  const validIds = getIdSet(columnIds);
 
   return createParser<ColumnFilterItem<TColumnId>[]>({
     parse: (value) => {
@@ -181,8 +181,8 @@ export function getDataTableQuery<
 ): DataTableQuery<TFilterColumnId, TSortColumnId> {
   const filterIds = Object.keys(filterableColumns) as TFilterColumnId[];
 
-  const keyFilters = filterIds.flatMap((id) => {
-    const item = toColumnFilterItem(id, filterableColumns[id], search[id]);
+  const plainFilters = filterIds.flatMap((id) => {
+    const item = createPlainFilter(id, filterableColumns[id], search[id]);
     return item ? [item] : [];
   });
 
@@ -190,7 +190,7 @@ export function getDataTableQuery<
     page: search.page,
     perPage: search.perPage,
     sorting: search.sort,
-    filters: getValidFilters([...search.filters, ...keyFilters]),
+    filters: getActiveFilters([...search.filters, ...plainFilters]),
     joinOperator: search.joinOperator,
   };
 }
@@ -228,7 +228,7 @@ function getIsSameSorting(a: ColumnSortItem[], b: ColumnSortItem[]) {
   );
 }
 
-function toIdSet<TColumnId extends string>(
+function getIdSet<TColumnId extends string>(
   ids?: readonly TColumnId[] | Set<TColumnId>,
 ) {
   if (!ids) return null;

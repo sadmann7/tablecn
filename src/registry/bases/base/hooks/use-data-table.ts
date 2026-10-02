@@ -22,7 +22,7 @@ import * as React from "react";
 import type {
   FilterVariant,
   JoinOperator,
-  QueryKeys,
+  DataTableQueryKeys,
 } from "@/lib/data-table-types";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -31,12 +31,12 @@ import {
   dataTableFeatures,
 } from "@/lib/data-table-features";
 import {
-  getCanWriteAsKeys,
+  getCanWritePlainFilters,
   getIsMultiValueVariant,
-  getValidFilters,
+  getActiveFilters,
   JOIN_OPERATORS,
-  resolveColumnFilter,
-  toColumnFilterItem,
+  normalizeColumnFilter,
+  createPlainFilter,
 } from "@/lib/data-table-utils";
 import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
 
@@ -61,7 +61,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualPagination"
   | "manualSorting"
 > & {
-  queryKeys?: Partial<QueryKeys>;
+  queryKeys?: Partial<DataTableQueryKeys>;
   history?: "push" | "replace";
   debounceMs?: number;
   throttleMs?: number;
@@ -186,9 +186,9 @@ function useDataTable<TData extends RowData>({
       sortableIds,
       filterableColumns,
       filterableIds: filterableColumns.map((column) => column.id),
-      resolveColumnFilters: (filters: ColumnFiltersState) =>
+      normalizeColumnFilters: (filters: ColumnFiltersState) =>
         filters.map((filter) =>
-          resolveColumnFilter(
+          normalizeColumnFilter(
             filter,
             filterableVariants.get(filter.id) ?? "text",
           ),
@@ -223,7 +223,7 @@ function useDataTable<TData extends RowData>({
       getFiltersStateParser(columnIndex.filterableIds)
         .withOptions(queryStateOptions)
         .withDefault(
-          columnIndex.resolveColumnFilters(
+          columnIndex.normalizeColumnFilters(
             initialStateRef.current?.columnFilters ?? EMPTY_COLUMN_FILTERS,
           ),
         ),
@@ -265,14 +265,14 @@ function useDataTable<TData extends RowData>({
 
   const debouncedSyncFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState) => {
-      const filters = columnIndex.resolveColumnFilters(columnFilters);
-      const validFilters = getValidFilters(filters);
-      const writeAsPlainFilters = getCanWriteAsKeys(
-        validFilters,
+      const filters = columnIndex.normalizeColumnFilters(columnFilters);
+      const activeFilters = getActiveFilters(filters);
+      const writeAsPlainFilters = getCanWritePlainFilters(
+        activeFilters,
         columnIndex.filterableIds,
       );
       const valueById = new Map(
-        validFilters.map((filter) => [filter.id, filter.value]),
+        activeFilters.map((filter) => [filter.id, filter.value]),
       );
 
       void setPage(1);
@@ -295,7 +295,7 @@ function useDataTable<TData extends RowData>({
     () => [
       ...jsonFilters,
       ...columnIndex.filterableColumns.flatMap((column) => {
-        const item = toColumnFilterItem(
+        const item = createPlainFilter(
           column.id,
           column.variant,
           plainFilters[column.id],
