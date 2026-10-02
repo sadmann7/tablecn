@@ -1,0 +1,109 @@
+.launch-stage[data-paused="true"] *,
+.launch-stage[data-paused="true"] *::before,
+.launch-stage[data-paused="true"] *::after {
+  animation-play-state: paused !important;
+}
+
+.launch-dots {
+  background-image: radial-gradient(
+    rgb(255 255 255 / 0.12) 1.5px,
+    transparent 0
+  );
+  background-size: 2.25rem 2.25rem;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.launch-light {
+  background: radial-gradient(
+    ellipse 60% 50% at 70% 0%,
+    rgb(52 211 153 / 0.1),
+    transparent 70%
+  );
+}
+
+.launch-rise {
+  animation: launch-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--launch-delay, 0ms);
+}
+
+.launch-flash {
+  animation: launch-flash 1200ms ease-out both;
+}
+
+.launch-keystroke {
+  animation: launch-keystroke 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.launch-logo {
+  animation: launch-logo 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--launch-delay, 0ms);
+}
+
+.launch-sweep {
+  background: linear-gradient(
+    100deg,
+    rgb(255 255 255 / 0.55) 30%,
+    white 50%,
+    rgb(255 255 255 / 0.55) 70%
+  );
+  background-size: 300% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: launch-sweep 2400ms ease-out both;
+  animation-delay: var(--launch-delay, 0ms);
+}
+
+@keyframes launch-rise {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(1.5rem);
+  }
+}
+
+@keyframes launch-flash {
+  from {
+    background-color: rgb(52 211 153 / 0.25);
+  }
+}
+
+@keyframes launch-keystroke {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+  15%,
+  70% {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes launch-logo {
+  from {
+    opacity: 0;
+    filter: blur(16px);
+    transform: scale(0.92);
+  }
+}
+
+@keyframes launch-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launch-rise,
+  .launch-logo,
+  .launch-keystroke,
+  .launch-sweep {
+    animation: none;
+  }
+}

@@ -338,7 +338,7 @@ function useDataTable<TData extends RowData>({
       features: dataTableFeatures,
       columns,
       initialState: initialStateRef.current,
-      ...(isServer ? { pageCount } : {}),
+      pageCount: isServer ? pageCount : undefined,
       state: {
         pagination,
         sorting,
