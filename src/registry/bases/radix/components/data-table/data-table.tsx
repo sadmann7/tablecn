@@ -26,6 +26,13 @@ import {
   TableRow,
 } from "@/registry/bases/radix/ui/table";
 
+const PINNED_CELL_CLASS_NAME = cn(
+  "bg-background transition-colors",
+  "group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
+  "group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
+  "group-data-[state=selected]/row:bg-muted",
+);
+
 interface DataTableProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -111,13 +118,16 @@ function DataTableHeader<TData extends RowData>({
       {() => (
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
+            <TableRow key={headerGroup.id} className="group/row">
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
                   colSpan={header.colSpan}
-                  className="overflow-hidden"
-                  style={getColumnPinningStyle({ column: header.column })}
+                  className={cn(
+                    "overflow-hidden",
+                    header.column.getIsPinned() && PINNED_CELL_CLASS_NAME,
+                  )}
+                  style={getColumnPinningStyle(header.column)}
                 >
                   {header.isPlaceholder ? null : <FlexRender header={header} />}
                 </TableHead>
@@ -186,7 +196,11 @@ function DataTableRow<TData extends RowData>({
       {() => {
         const cells = row.getVisibleCells().map((cell) => ({
           cell,
-          style: getColumnPinningStyle({ column: cell.column }),
+          className: cn(
+            "overflow-hidden",
+            cell.column.getIsPinned() && PINNED_CELL_CLASS_NAME,
+          ),
+          style: getColumnPinningStyle(cell.column),
         }));
 
         return (
@@ -195,13 +209,12 @@ function DataTableRow<TData extends RowData>({
             selector={(selection) => selection[row.id] === true}
           >
             {(isSelected) => (
-              <TableRow data-state={isSelected ? "selected" : undefined}>
-                {cells.map(({ cell, style }) => (
-                  <TableCell
-                    key={cell.id}
-                    className="overflow-hidden"
-                    style={style}
-                  >
+              <TableRow
+                data-state={isSelected ? "selected" : undefined}
+                className="group/row"
+              >
+                {cells.map(({ cell, className, style }) => (
+                  <TableCell key={cell.id} className={className} style={style}>
                     <FlexRender cell={cell} />
                   </TableCell>
                 ))}

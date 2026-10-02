@@ -132,27 +132,12 @@ function getColumnVar(columnId: string, property: "size" | "offset") {
   return `--column-${name}-${property}`;
 }
 
-export function getColumnPinningStyle<TData extends RowData>({
-  column,
-  withBorder = false,
-}: {
-  column: Column<DataTableFeatures, TData>;
-  withBorder?: boolean;
-}): React.CSSProperties {
+export function getColumnPinningStyle<TData extends RowData>(
+  column: Column<DataTableFeatures, TData>,
+): React.CSSProperties {
   const isPinned = column.getIsPinned();
-  const isLastLeftPinnedColumn =
-    isPinned === "start" && column.getIsLastColumn("start");
-  const isFirstRightPinnedColumn =
-    isPinned === "end" && column.getIsFirstColumn("end");
 
   return {
-    boxShadow: withBorder
-      ? isLastLeftPinnedColumn
-        ? "-4px 0 4px -4px var(--border) inset"
-        : isFirstRightPinnedColumn
-          ? "4px 0 4px -4px var(--border) inset"
-          : undefined
-      : undefined,
     insetInlineStart:
       isPinned === "start"
         ? `var(${getColumnVar(column.id, "offset")})`
@@ -163,7 +148,6 @@ export function getColumnPinningStyle<TData extends RowData>({
         : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
-    background: isPinned ? "var(--background)" : "var(--background)",
     width: `var(${getColumnVar(column.id, "size")})`,
     zIndex: isPinned ? 1 : undefined,
   };

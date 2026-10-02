@@ -61,6 +61,12 @@ export function TasksTable({
   const [rowAction, setRowAction] =
     React.useState<DataTableRowAction<Task> | null>(null);
 
+  const countsKey = JSON.stringify([
+    statusCounts,
+    priorityCounts,
+    estimatedHoursRange,
+  ]);
+
   const columns = React.useMemo(
     () =>
       getTasksTableColumns({
@@ -69,7 +75,7 @@ export function TasksTable({
         estimatedHoursRange,
         setRowAction,
       }),
-    [statusCounts, priorityCounts, estimatedHoursRange],
+    [countsKey],
   );
 
   const tableProps: Omit<UseDataTableProps<Task>, "mode" | "pageCount"> = {
@@ -81,9 +87,9 @@ export function TasksTable({
     },
     queryKeys,
     getRowId: (originalRow) => originalRow.id,
-    enableRowRangeSelection: true,
     shallow: false,
     clearOnDefault: true,
+    enableRowRangeSelection: true,
   };
 
   const { table } = useDataTable(
