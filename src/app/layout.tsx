@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
 import { cn } from "cn";
-import { Inter } from "next/font/google";
 import Script from "next/script";
 import { Suspense } from "react";
 
@@ -13,8 +12,6 @@ import { fontMono, fontSans } from "@/lib/fonts";
 import { siteConfig } from "@/lib/site";
 import { Toaster } from "@/registry/bases/radix/ui/sonner";
 import "@/styles/globals.css";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -77,16 +74,10 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("font-sans", inter.variable)}
+      className={cn("font-sans", fontSans.variable, fontMono.variable)}
     >
       <head />
-      <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          fontSans.variable,
-          fontMono.variable,
-        )}
-      >
+      <body className="min-h-screen bg-background font-sans antialiased">
         <Suspense>
           <UploadThingSSR />
         </Suspense>
