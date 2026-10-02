@@ -97,11 +97,13 @@ function DataTableLayout<TData extends RowData>({
   );
 }
 
+interface DataTableHeaderProps<TData extends RowData> {
+  table: TanstackTable<DataTableFeatures, TData>;
+}
+
 function DataTableHeader<TData extends RowData>({
   table,
-}: {
-  table: TanstackTable<DataTableFeatures, TData>;
-}) {
+}: DataTableHeaderProps<TData>) {
   return (
     <Subscribe
       source={table.store}
