@@ -12,7 +12,10 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getColumnPinningStyle } from "@/lib/data-table-utils";
+import {
+  getColumnPinningStyle,
+  getColumnSizingStyle,
+} from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
 import {
   Table,
@@ -44,10 +47,10 @@ export function DataTable<TData extends RowData>({
     >
       {children}
       <div className="overflow-hidden rounded-md border">
-        <Table>
+        <DataTableLayout table={table}>
           <DataTableHeader table={table} />
           <DataTableBody table={table} />
-        </Table>
+        </DataTableLayout>
       </div>
       <div className="flex flex-col gap-2.5">
         <DataTablePagination table={table} />
@@ -56,6 +59,34 @@ export function DataTable<TData extends RowData>({
         ) : null}
       </div>
     </div>
+  );
+}
+
+interface DataTableLayoutProps<TData extends RowData> {
+  table: TanstackTable<DataTableFeatures, TData>;
+  children: React.ReactNode;
+}
+
+function DataTableLayout<TData extends RowData>({
+  table,
+  children,
+}: DataTableLayoutProps<TData>) {
+  return (
+    <Subscribe
+      source={table.store}
+      selector={(state) => ({
+        columnOrder: state.columnOrder,
+        columnPinning: state.columnPinning,
+        columnSizing: state.columnSizing,
+        columnVisibility: state.columnVisibility,
+      })}
+    >
+      {() => (
+        <Table className="table-fixed" style={getColumnSizingStyle(table)}>
+          {children}
+        </Table>
+      )}
+    </Subscribe>
   );
 }
 
@@ -72,7 +103,6 @@ function DataTableHeader<TData extends RowData>({
       selector={(state) => ({
         columnOrder: state.columnOrder,
         columnPinning: state.columnPinning,
-        columnSizing: state.columnSizing,
         columnVisibility: state.columnVisibility,
         rowSelection: state.rowSelection,
         sorting: state.sorting,
@@ -86,6 +116,7 @@ function DataTableHeader<TData extends RowData>({
                 <TableHead
                   key={header.id}
                   colSpan={header.colSpan}
+                  className="overflow-hidden"
                   style={getColumnPinningStyle({ column: header.column })}
                 >
                   {header.isPlaceholder ? null : <FlexRender header={header} />}
@@ -149,7 +180,6 @@ function DataTableRow<TData extends RowData>({
       selector={(state) => ({
         columnOrder: state.columnOrder,
         columnPinning: state.columnPinning,
-        columnSizing: state.columnSizing,
         columnVisibility: state.columnVisibility,
       })}
     >
@@ -167,7 +197,11 @@ function DataTableRow<TData extends RowData>({
             {(isSelected) => (
               <TableRow data-state={isSelected ? "selected" : undefined}>
                 {cells.map(({ cell, style }) => (
-                  <TableCell key={cell.id} style={style}>
+                  <TableCell
+                    key={cell.id}
+                    className="overflow-hidden"
+                    style={style}
+                  >
                     <FlexRender cell={cell} />
                   </TableCell>
                 ))}

@@ -1,4 +1,9 @@
-import type { Column, ColumnFilter, RowData } from "@tanstack/react-table";
+import type {
+  Column,
+  ColumnFilter,
+  RowData,
+  Table,
+} from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
@@ -119,6 +124,14 @@ const FILTER_OPERATORS_BY_VARIANT: Record<
   multiSelect: MULTI_SELECT_OPERATORS,
 };
 
+function getColumnVar(columnId: string, property: "size" | "offset") {
+  const name = columnId.replace(
+    /[^a-zA-Z0-9-]/g,
+    (char) => `_${char.codePointAt(0)?.toString(16)}_`,
+  );
+  return `--column-${name}-${property}`;
+}
+
 export function getColumnPinningStyle<TData extends RowData>({
   column,
   withBorder = false,
@@ -140,14 +153,43 @@ export function getColumnPinningStyle<TData extends RowData>({
           ? "4px 0 4px -4px var(--border) inset"
           : undefined
       : undefined,
-    left: isPinned === "start" ? `${column.getStart("start")}px` : undefined,
-    right: isPinned === "end" ? `${column.getAfter("end")}px` : undefined,
+    insetInlineStart:
+      isPinned === "start"
+        ? `var(${getColumnVar(column.id, "offset")})`
+        : undefined,
+    insetInlineEnd:
+      isPinned === "end"
+        ? `var(${getColumnVar(column.id, "offset")})`
+        : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     background: isPinned ? "var(--background)" : "var(--background)",
-    width: column.getSize(),
+    width: `var(${getColumnVar(column.id, "size")})`,
     zIndex: isPinned ? 1 : undefined,
   };
+}
+
+export function getColumnSizingStyle<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+): React.CSSProperties {
+  const style: Record<string, string> = {
+    minWidth: `${table.getTotalSize()}px`,
+  };
+
+  for (const header of table.getFlatHeaders()) {
+    style[getColumnVar(header.column.id, "size")] = `${header.getSize()}px`;
+  }
+
+  for (const { column } of table.getLeafHeaders()) {
+    const isPinned = column.getIsPinned();
+    if (!isPinned) continue;
+
+    const offset =
+      isPinned === "start" ? column.getStart("start") : column.getAfter("end");
+    style[getColumnVar(column.id, "offset")] = `${offset}px`;
+  }
+
+  return style;
 }
 
 export function getFilterOperators(filterVariant: FilterVariant) {
