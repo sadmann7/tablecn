@@ -39,6 +39,11 @@ import {
 import { type LaunchTask, launchTasks, queryLaunchTasks } from "../lib/data";
 import { launchColumns } from "./launch-columns";
 import {
+  LaunchCamera,
+  type LaunchDirector,
+  useLaunchDirector,
+} from "./launch-director";
+import {
   LaunchBackdrop,
   LaunchIntroScene,
   LaunchKeystroke,
@@ -50,7 +55,7 @@ import {
 const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
 const BASE_FONT_SIZE = 16;
-const LAUNCH_DURATION = 27000;
+const LAUNCH_DURATION = 28200;
 const MAX_FRAME_MS = 1000;
 const INITIAL_SORTING: SortingState = [{ id: "createdAt", desc: true }];
 const INITIAL_PAGINATION: PaginationState = { pageIndex: 0, pageSize: 10 };
@@ -64,8 +69,8 @@ const SCENES = [
   { id: "client", start: 11400 },
   { id: "plain", start: 15600 },
   { id: "advanced", start: 17400 },
-  { id: "command", start: 20400 },
-  { id: "outro", start: 23400 },
+  { id: "command", start: 21600 },
+  { id: "outro", start: 24600 },
 ] as const;
 
 type LaunchSceneId = (typeof SCENES)[number]["id"];
@@ -188,6 +193,7 @@ export function LaunchDemo() {
   const isPending = isServerMode && server.request !== request;
   useLaunchServer({ table, request, isEnabled: isServerMode, dispatchServer });
 
+  const { director, refs } = useLaunchDirector();
   const {
     playback,
     progressRef,
@@ -196,7 +202,7 @@ export function LaunchDemo() {
     onSeek,
     onChromeToggle,
   } = useLaunchTimeline((step) =>
-    step.run({ table, dispatchDemo, dispatchServer }),
+    step.run({ table, director, dispatchDemo, dispatchServer }),
   );
   const scale = useStageScale();
 
@@ -211,52 +217,55 @@ export function LaunchDemo() {
       )}
     >
       <div
+        ref={refs.stage}
         data-paused={playback.isPaused}
         className="launch-stage relative h-270 w-480 shrink-0 overflow-hidden bg-[#09090b] font-sans"
       >
-        <LaunchBackdrop />
-        <LaunchScene
-          key={`${sceneKey}-scene`}
-          sceneId={scene.id}
-          columnCount={demo.columnCount}
-        />
-        <div
-          className="absolute top-27 left-180 w-282 transition-[transform,opacity,filter] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
-          style={WINDOW_SHOTS[scene.id]}
-        >
-          <LaunchWindow
-            search={request}
-            controls={
-              <LaunchControlBar
-                dataMode={demo.dataMode}
-                filterMode={demo.filterMode}
-                onDataModeChange={(dataMode) =>
-                  dispatchDemo({ type: "dataMode", dataMode })
-                }
-                onFilterModeChange={(filterMode) =>
-                  dispatchDemo({ type: "filterMode", filterMode })
-                }
-              />
-            }
-            network={
-              <LaunchNetwork
-                dataMode={demo.dataMode}
-                request={request}
-                isPending={isPending}
-                log={server.log}
-              />
-            }
+        <LaunchCamera refs={refs}>
+          <LaunchBackdrop />
+          <LaunchScene
+            key={`${sceneKey}-scene`}
+            sceneId={scene.id}
+            columnCount={demo.columnCount}
+          />
+          <div
+            className="absolute top-27 left-180 w-282 transition-[transform,opacity,filter] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            style={WINDOW_SHOTS[scene.id]}
           >
-            <div
-              data-pending={isPending}
-              className="transition-opacity duration-300 data-[pending=true]:opacity-50"
+            <LaunchWindow
+              search={request}
+              controls={
+                <LaunchControlBar
+                  dataMode={demo.dataMode}
+                  filterMode={demo.filterMode}
+                  onDataModeChange={(dataMode) =>
+                    dispatchDemo({ type: "dataMode", dataMode })
+                  }
+                  onFilterModeChange={(filterMode) =>
+                    dispatchDemo({ type: "filterMode", filterMode })
+                  }
+                />
+              }
+              network={
+                <LaunchNetwork
+                  dataMode={demo.dataMode}
+                  request={request}
+                  isPending={isPending}
+                  log={server.log}
+                />
+              }
             >
-              <DataTable table={table}>
-                <LaunchToolbar table={table} filterMode={demo.filterMode} />
-              </DataTable>
-            </div>
-          </LaunchWindow>
-        </div>
+              <div
+                data-pending={isPending}
+                className="transition-opacity duration-300 data-[pending=true]:opacity-50"
+              >
+                <DataTable table={table}>
+                  <LaunchToolbar table={table} filterMode={demo.filterMode} />
+                </DataTable>
+              </div>
+            </LaunchWindow>
+          </div>
+        </LaunchCamera>
         {demo.keystroke > 0 && (
           <LaunchKeystroke
             key={`${playback.cycle}-${demo.keystroke}`}
@@ -397,9 +406,17 @@ function LaunchToolbar({ table, filterMode }: LaunchToolbarProps) {
     <DataTableAdvancedToolbar table={table}>
       <DataTableSortMenu table={table} align="start" />
       {filterMode === "advanced" ? (
-        <DataTableFilterMenu table={table} align="start" />
+        <DataTableFilterMenu
+          table={table}
+          align="start"
+          updatePositionStrategy="always"
+        />
       ) : (
-        <DataTableCommandFilterMenu table={table} align="start" />
+        <DataTableCommandFilterMenu
+          table={table}
+          align="start"
+          updatePositionStrategy="always"
+        />
       )}
     </DataTableAdvancedToolbar>
   );
@@ -445,7 +462,10 @@ function LaunchUrl({ search }: LaunchUrlProps) {
   const urlFormat = getUrlFormat(search);
 
   return (
-    <div className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-lg bg-white/5 px-4 font-mono text-base">
+    <div
+      data-launch="url"
+      className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-lg bg-white/5 px-4 font-mono text-base"
+    >
       <span className="truncate text-white/50">
         tablecn.com/tasks
         {search && <span className="text-emerald-300">?{search}</span>}
@@ -524,6 +544,7 @@ function LaunchFlagGroup<TValue extends string>({
         {flags.map((flag) => (
           <ToggleGroupItem
             key={flag.value}
+            data-launch={`${label.toLowerCase()}-${flag.value}`}
             value={flag.value}
             className="px-2.5 text-xs"
           >
@@ -841,6 +862,7 @@ function useLaunchServer({
 
 interface LaunchStepContext {
   table: Table<DataTableFeatures, LaunchTask>;
+  director: LaunchDirector;
   dispatchDemo: React.Dispatch<LaunchDemoAction>;
   dispatchServer: React.Dispatch<LaunchServerAction>;
 }
@@ -857,8 +879,9 @@ interface LaunchStep {
 const LAUNCH_STEPS: LaunchStep[] = [
   {
     at: 0,
-    run: ({ table, dispatchDemo, dispatchServer }) => {
+    run: ({ table, director, dispatchDemo, dispatchServer }) => {
       closeFilterMenu();
+      director.reset();
       resetTable(table);
       dispatchDemo({ type: "reset" });
       dispatchServer({ type: "reset" });
@@ -900,30 +923,90 @@ const LAUNCH_STEPS: LaunchStep[] = [
   },
   { at: 16600, run: ({ table }) => setFilter(table, "priority", ["high"]) },
   {
+    at: 16800,
+    run: ({ director }) =>
+      director.moveCursor(getLaunchTarget("filter-advanced")),
+  },
+  {
+    at: 17300,
+    run: ({ director }) => director.click(getLaunchTarget("filter-advanced")),
+  },
+  {
     at: 17400,
     run: ({ dispatchDemo }) =>
       dispatchDemo({ type: "filterMode", filterMode: "advanced" }),
   },
-  { at: 18000, run: openFilterMenu },
+  {
+    at: 17700,
+    run: ({ director }) => {
+      const trigger = getFilterTrigger();
+      director.moveCursor(trigger);
+      director.focus(trigger, { offsetX: 16, offsetY: 6 });
+    },
+  },
+  {
+    at: 18300,
+    run: ({ director }) => {
+      const trigger = getFilterTrigger();
+      director.click(trigger);
+      trigger?.click();
+    },
+  },
   {
     at: 18800,
-    run: ({ table }) => setFilterOperator(table, "status", "notInArray"),
+    run: ({ director }) =>
+      director.moveCursor(getFilterOperatorTrigger("has any of")),
   },
-  { at: 20000, run: closeFilterMenu },
   {
-    at: 20400,
+    at: 19300,
+    run: ({ director }) => {
+      const trigger = getFilterOperatorTrigger("has any of");
+      director.click(trigger);
+      pressKey(trigger, "Enter");
+    },
+  },
+  {
+    at: 19750,
+    run: ({ director }) => director.moveCursor(getSelectOption("has none of")),
+  },
+  {
+    at: 20150,
+    run: ({ table, director }) => {
+      const option = getSelectOption("has none of");
+      if (!option) {
+        setFilterOperator(table, "status", "notInArray");
+        return;
+      }
+      director.click(option);
+      pressKey(option, "Enter");
+    },
+  },
+  {
+    at: 20500,
+    run: ({ director }) =>
+      director.focus(getLaunchTarget("url"), { scale: 1.5, offsetX: 12 }),
+  },
+  {
+    at: 21500,
+    run: ({ director }) => {
+      closeFilterMenu();
+      director.reset();
+    },
+  },
+  {
+    at: 21600,
     run: ({ dispatchDemo }) =>
       dispatchDemo({ type: "filterMode", filterMode: "command" }),
   },
-  { at: 21000, run: openFilterMenu },
-  { at: 21400, run: () => typeCommand("ti") },
-  { at: 21550, run: () => typeCommand("title") },
-  { at: 21900, run: pressCommandEnter },
-  { at: 22300, run: () => typeCommand("f") },
-  { at: 22450, run: () => typeCommand("fi") },
-  { at: 22600, run: () => typeCommand("fix") },
-  { at: 22900, run: pressCommandEnter },
-  { at: 23400, run: closeFilterMenu },
+  { at: 22200, run: openFilterMenu },
+  { at: 22600, run: () => typeCommand("ti") },
+  { at: 22750, run: () => typeCommand("title") },
+  { at: 23100, run: pressCommandEnter },
+  { at: 23500, run: () => typeCommand("f") },
+  { at: 23650, run: () => typeCommand("fi") },
+  { at: 23800, run: () => typeCommand("fix") },
+  { at: 24100, run: pressCommandEnter },
+  { at: 24600, run: closeFilterMenu },
 ];
 
 function resetTable(table: Table<DataTableFeatures, LaunchTask>) {
@@ -985,6 +1068,38 @@ function pressCommandEnter() {
   getCommandInput()?.dispatchEvent(
     new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
   );
+}
+
+function getLaunchTarget(name: string) {
+  return document.querySelector(`[data-launch="${name}"]`);
+}
+
+function getFilterTrigger() {
+  return Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[role=toolbar] button"),
+  ).find((button) => button.textContent?.startsWith("Filter"));
+}
+
+function getFilterOperatorTrigger(label: string) {
+  return Array.from(
+    document.querySelectorAll(
+      "[data-radix-popper-content-wrapper] [role=combobox]",
+    ),
+  ).find((element) =>
+    element.textContent?.toLowerCase().includes(label.toLowerCase()),
+  );
+}
+
+function getSelectOption(label: string) {
+  return Array.from(
+    document.querySelectorAll("[data-slot=select-content] [role=option]"),
+  ).find(
+    (element) => element.textContent?.toLowerCase() === label.toLowerCase(),
+  );
+}
+
+function pressKey(target: Element | null | undefined, key: string) {
+  target?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
 }
 
 function getCommandInput() {
