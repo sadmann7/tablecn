@@ -1,7 +1,6 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
-
+import { createColumnHelper } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -39,6 +38,8 @@ import {
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
 
+const columnHelper = createColumnHelper<DataTableFeatures, Task>();
+
 interface GetTasksTableColumnsProps {
   statusCounts: Record<Task["status"], number>;
   priorityCounts: Record<Task["priority"], number>;
@@ -53,26 +54,24 @@ export function getTasksTableColumns({
   priorityCounts,
   estimatedHoursRange,
   setRowAction,
-}: GetTasksTableColumnsProps): ColumnDef<DataTableFeatures, Task>[] {
-  return [
+}: GetTasksTableColumnsProps) {
+  return columnHelper.columns([
     getDataTableSelectColumn<Task>(),
-    {
+    columnHelper.accessor("code", {
       id: "code",
-      accessorKey: "code",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} label="Task" />
       ),
-      cell: ({ row }) => <div>{row.getValue("code")}</div>,
+      cell: ({ cell }) => <div>{cell.getValue()}</div>,
       enableSorting: false,
       enableHiding: false,
-    },
-    {
+    }),
+    columnHelper.accessor("title", {
       id: "title",
-      accessorKey: "title",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} label="Title" />
       ),
-      cell: ({ row }) => {
+      cell: ({ row, cell }) => {
         const label = tasks.label.enumValues.find(
           (label) => label === row.original.label,
         );
@@ -81,7 +80,7 @@ export function getTasksTableColumns({
           <div className="flex items-center gap-2">
             {label && <Badge variant="outline">{label}</Badge>}
             <span className="min-w-0 truncate font-medium">
-              {row.getValue("title")}
+              {cell.getValue()}
             </span>
           </div>
         );
@@ -94,16 +93,15 @@ export function getTasksTableColumns({
       },
       enableColumnFilter: true,
       size: 500,
-    },
-    {
+    }),
+    columnHelper.accessor("status", {
       id: "status",
-      accessorKey: "status",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} label="Status" />
       ),
       cell: ({ cell }) => {
         const status = tasks.status.enumValues.find(
-          (status) => status === cell.getValue<Task["status"]>(),
+          (status) => status === cell.getValue(),
         );
 
         if (!status) return null;
@@ -129,16 +127,15 @@ export function getTasksTableColumns({
         icon: CircleDashed,
       },
       enableColumnFilter: true,
-    },
-    {
+    }),
+    columnHelper.accessor("priority", {
       id: "priority",
-      accessorKey: "priority",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} label="Priority" />
       ),
       cell: ({ cell }) => {
         const priority = tasks.priority.enumValues.find(
-          (priority) => priority === cell.getValue<Task["priority"]>(),
+          (priority) => priority === cell.getValue(),
         );
 
         if (!priority) return null;
@@ -164,17 +161,15 @@ export function getTasksTableColumns({
         icon: ArrowUpDown,
       },
       enableColumnFilter: true,
-    },
-    {
+    }),
+    columnHelper.accessor("estimatedHours", {
       id: "estimatedHours",
-      accessorKey: "estimatedHours",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} label="Est. Hours" />
       ),
-      cell: ({ cell }) => {
-        const estimatedHours = cell.getValue<number>();
-        return <div className="w-20 text-right">{estimatedHours}</div>;
-      },
+      cell: ({ cell }) => (
+        <div className="w-20 text-right">{cell.getValue()}</div>
+      ),
       meta: {
         label: "Est. Hours",
         variant: "range",
@@ -183,22 +178,21 @@ export function getTasksTableColumns({
         icon: Clock,
       },
       enableColumnFilter: true,
-    },
-    {
+    }),
+    columnHelper.accessor("createdAt", {
       id: "createdAt",
-      accessorKey: "createdAt",
       header: ({ column }) => (
         <DataTableColumnHeader column={column} label="Created At" />
       ),
-      cell: ({ cell }) => formatDate(cell.getValue<Date>()),
+      cell: ({ cell }) => formatDate(cell.getValue()),
       meta: {
         label: "Created At",
         variant: "dateRange",
         icon: CalendarIcon,
       },
       enableColumnFilter: true,
-    },
-    {
+    }),
+    columnHelper.display({
       id: "actions",
       cell: function Cell({ row }) {
         const [isUpdatePending, startUpdateTransition] = React.useTransition();
@@ -265,6 +259,6 @@ export function getTasksTableColumns({
         );
       },
       size: 48,
-    },
-  ];
+    }),
+  ]);
 }
