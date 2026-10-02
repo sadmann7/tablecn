@@ -1,4 +1,9 @@
-import type { Column, ColumnFilter, RowData } from "@tanstack/react-table";
+import type {
+  Column,
+  ColumnFilter,
+  RowData,
+  Table,
+} from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
@@ -140,14 +145,42 @@ export function getColumnPinningStyle<TData extends RowData>({
           ? "4px 0 4px -4px var(--border) inset"
           : undefined
       : undefined,
-    left: isPinned === "start" ? `${column.getStart("start")}px` : undefined,
-    right: isPinned === "end" ? `${column.getAfter("end")}px` : undefined,
+    left:
+      isPinned === "start"
+        ? `var(${getColumnOffsetVar(column.id)})`
+        : undefined,
+    right:
+      isPinned === "end" ? `var(${getColumnOffsetVar(column.id)})` : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     background: isPinned ? "var(--background)" : "var(--background)",
-    width: column.getSize(),
     zIndex: isPinned ? 1 : undefined,
   };
+}
+
+/**
+ * Pinned column offsets as CSS variables, set once on the `<table>` so cells
+ * read them through `getColumnPinningStyle` without depending on sizing state.
+ */
+export function getColumnPinningOffsets<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+): React.CSSProperties {
+  const offsets: Record<string, string> = {};
+
+  for (const { column } of table.getLeafHeaders()) {
+    const isPinned = column.getIsPinned();
+    if (!isPinned) continue;
+
+    const offset =
+      isPinned === "start" ? column.getStart("start") : column.getAfter("end");
+    offsets[getColumnOffsetVar(column.id)] = `${offset}px`;
+  }
+
+  return offsets;
+}
+
+function getColumnOffsetVar(columnId: string) {
+  return `--column-${columnId.replace(/[^\w-]/g, "_")}-offset`;
 }
 
 export function getFilterOperators(filterVariant: FilterVariant) {

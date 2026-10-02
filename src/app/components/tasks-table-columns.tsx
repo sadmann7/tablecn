@@ -80,7 +80,7 @@ export function getTasksTableColumns({
         return (
           <div className="flex items-center gap-2">
             {label && <Badge variant="outline">{label}</Badge>}
-            <span className="max-w-125 truncate font-medium">
+            <span className="min-w-0 truncate font-medium">
               {row.getValue("title")}
             </span>
           </div>
@@ -93,6 +93,7 @@ export function getTasksTableColumns({
         icon: Text,
       },
       enableColumnFilter: true,
+      size: 360,
     },
     {
       id: "status",
@@ -263,7 +264,7 @@ export function getTasksTableColumns({
           </DropdownMenu>
         );
       },
-      size: 40,
+      size: 48,
     },
   ];
 }
