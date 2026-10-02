@@ -114,7 +114,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
               checked={sorted === "asc"}
-              onClick={() => column.toggleSorting(false)}
+              onClick={() => column.toggleSorting(false, true)}
             >
               <IconPlaceholder
                 lucide="ChevronUp"
@@ -128,7 +128,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
               checked={sorted === "desc"}
-              onClick={() => column.toggleSorting(true)}
+              onClick={() => column.toggleSorting(true, true)}
             >
               <IconPlaceholder
                 lucide="ChevronDown"
