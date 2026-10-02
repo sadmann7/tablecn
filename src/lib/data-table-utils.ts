@@ -124,6 +124,14 @@ const FILTER_OPERATORS_BY_VARIANT: Record<
   multiSelect: MULTI_SELECT_OPERATORS,
 };
 
+function getColumnVar(columnId: string, property: "size" | "offset") {
+  const name = columnId.replace(
+    /[^a-zA-Z0-9-]/g,
+    (char) => `_${char.codePointAt(0)?.toString(16)}_`,
+  );
+  return `--column-${name}-${property}`;
+}
+
 export function getColumnPinningStyle<TData extends RowData>({
   column,
   withBorder = false,
@@ -161,12 +169,6 @@ export function getColumnPinningStyle<TData extends RowData>({
   };
 }
 
-/**
- * Column sizes and pinned offsets as CSS variables on the `<table>`, so cells
- * read them through `getColumnPinningStyle` without depending on sizing state.
- * Columns only stretch past their sizes when the table fits its container, and
- * pinned offsets only apply when it overflows, so the offsets always match.
- */
 export function getColumnSizingStyle<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,
 ): React.CSSProperties {
@@ -188,10 +190,6 @@ export function getColumnSizingStyle<TData extends RowData>(
   }
 
   return style;
-}
-
-function getColumnVar(columnId: string, property: "size" | "offset") {
-  return `--column-${columnId.replace(/[^\w-]/g, "_")}-${property}`;
 }
 
 export function getFilterOperators(filterVariant: FilterVariant) {
