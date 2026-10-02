@@ -13,8 +13,8 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
-  getColumnPinningOffsets,
   getColumnPinningStyle,
+  getColumnSizingStyle,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/base/components/data-table/data-table-pagination";
 import {
@@ -82,12 +82,7 @@ function DataTableLayout<TData extends RowData>({
       })}
     >
       {() => (
-        <Table className="table-fixed" style={getColumnPinningOffsets(table)}>
-          <colgroup>
-            {table.getLeafHeaders().map((header) => (
-              <col key={header.id} style={{ width: header.getSize() }} />
-            ))}
-          </colgroup>
+        <Table className="table-fixed" style={getColumnSizingStyle(table)}>
           {children}
         </Table>
       )}

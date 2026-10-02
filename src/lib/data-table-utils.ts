@@ -147,25 +147,36 @@ export function getColumnPinningStyle<TData extends RowData>({
       : undefined,
     left:
       isPinned === "start"
-        ? `var(${getColumnOffsetVar(column.id)})`
+        ? `var(${getColumnVar(column.id, "offset")})`
         : undefined,
     right:
-      isPinned === "end" ? `var(${getColumnOffsetVar(column.id)})` : undefined,
+      isPinned === "end"
+        ? `var(${getColumnVar(column.id, "offset")})`
+        : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     background: isPinned ? "var(--background)" : "var(--background)",
+    width: `var(${getColumnVar(column.id, "size")})`,
     zIndex: isPinned ? 1 : undefined,
   };
 }
 
 /**
- * Pinned column offsets as CSS variables, set once on the `<table>` so cells
+ * Column sizes and pinned offsets as CSS variables on the `<table>`, so cells
  * read them through `getColumnPinningStyle` without depending on sizing state.
+ * Columns only stretch past their sizes when the table fits its container, and
+ * pinned offsets only apply when it overflows, so the offsets always match.
  */
-export function getColumnPinningOffsets<TData extends RowData>(
+export function getColumnSizingStyle<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,
 ): React.CSSProperties {
-  const offsets: Record<string, string> = {};
+  const style: Record<string, string> = {
+    minWidth: `${table.getTotalSize()}px`,
+  };
+
+  for (const header of table.getFlatHeaders()) {
+    style[getColumnVar(header.column.id, "size")] = `${header.getSize()}px`;
+  }
 
   for (const { column } of table.getLeafHeaders()) {
     const isPinned = column.getIsPinned();
@@ -173,14 +184,14 @@ export function getColumnPinningOffsets<TData extends RowData>(
 
     const offset =
       isPinned === "start" ? column.getStart("start") : column.getAfter("end");
-    offsets[getColumnOffsetVar(column.id)] = `${offset}px`;
+    style[getColumnVar(column.id, "offset")] = `${offset}px`;
   }
 
-  return offsets;
+  return style;
 }
 
-function getColumnOffsetVar(columnId: string) {
-  return `--column-${columnId.replace(/[^\w-]/g, "_")}-offset`;
+function getColumnVar(columnId: string, property: "size" | "offset") {
+  return `--column-${columnId.replace(/[^\w-]/g, "_")}-${property}`;
 }
 
 export function getFilterOperators(filterVariant: FilterVariant) {

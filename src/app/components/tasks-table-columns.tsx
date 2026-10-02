@@ -62,7 +62,7 @@ export function getTasksTableColumns({
       header: ({ column }) => (
         <DataTableColumnHeader column={column} label="Task" />
       ),
-      cell: ({ row }) => <div className="w-20">{row.getValue("code")}</div>,
+      cell: ({ row }) => <div>{row.getValue("code")}</div>,
       enableSorting: false,
       enableHiding: false,
     },
@@ -93,7 +93,7 @@ export function getTasksTableColumns({
         icon: Text,
       },
       enableColumnFilter: true,
-      size: 360,
+      size: 500,
     },
     {
       id: "status",
