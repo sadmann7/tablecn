@@ -15,6 +15,11 @@ html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
   transition: scale 1100ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/* A 3px focus ring is scaled with the menu and paints as a thick halo in Chrome. */
+html[data-launch-camera] [data-radix-popper-content-wrapper] :focus-visible {
+  box-shadow: none !important;
+}
+
 /* Item-aligned selects skip the popper wrapper and anchor at the trigger's top left. */
 html[data-launch-camera]
   [data-slot="select-content"][data-align-trigger="true"] {

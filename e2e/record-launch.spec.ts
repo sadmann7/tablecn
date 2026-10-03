@@ -13,6 +13,11 @@ interface CapturedFrame {
   timestamp: number;
 }
 
+interface PendingFrame {
+  data: string;
+  timestamp: number;
+}
+
 test("record one launch loop", async ({ page }) => {
   test.setTimeout(300_000);
 
@@ -68,32 +73,17 @@ async function startCapture(page: Page) {
   await mkdir(FRAMES, { recursive: true });
 
   const client = await page.context().newCDPSession(page);
-  const frames: CapturedFrame[] = [];
-  const writes: Promise<void>[] = [];
+  const pending: PendingFrame[] = [];
   let isStopped = false;
 
   client.on("Page.screencastFrame", (event) => {
     const frame = readScreencastFrame(event);
     if (!frame) return;
 
-    // Ack before copying the PNG. Decoding it here stalls the stream and the
-    // recording drops to the teens of frames per second.
+    // Ack before any copying. Decoding PNGs here stalls Chrome and the
+    // recording freezes for a few frames at a time.
     void client.send("Page.screencastFrameAck", { sessionId: frame.sessionId });
-    if (isStopped) return;
-
-    const file = path.join(
-      FRAMES,
-      `${String(frames.length).padStart(5, "0")}.png`,
-    );
-    frames.push({ file, timestamp: frame.timestamp });
-    const data = frame.data;
-    writes.push(
-      new Promise((resolve, reject) => {
-        setImmediate(() => {
-          writeFile(file, Buffer.from(data, "base64")).then(resolve, reject);
-        });
-      }),
-    );
+    if (!isStopped) pending.push(frame);
   });
 
   await client.send("Page.startScreencast", {
@@ -104,12 +94,18 @@ async function startCapture(page: Page) {
   });
 
   return {
-    latestTimestamp: () => frames.at(-1)?.timestamp ?? 0,
+    latestTimestamp: () => pending.at(-1)?.timestamp ?? 0,
     stop: async () => {
       isStopped = true;
       await client.send("Page.stopScreencast");
       await client.detach();
-      await Promise.all(writes);
+
+      const frames: CapturedFrame[] = [];
+      for (const [index, frame] of pending.entries()) {
+        const file = path.join(FRAMES, `${String(index).padStart(5, "0")}.png`);
+        frames.push({ file, timestamp: frame.timestamp });
+        await writeFile(file, Buffer.from(frame.data, "base64"));
+      }
       return frames;
     },
   };
