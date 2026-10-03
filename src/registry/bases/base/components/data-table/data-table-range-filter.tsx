@@ -15,6 +15,11 @@ function getRangeFilterValues(value: string | string[]): [string, string] {
   return [value, ""];
 }
 
+/** Number inputs only accept plain numbers, so skip rounding and grouping. */
+function getInputValue(value: string) {
+  return value === "" || Number.isNaN(Number(value)) ? "" : value;
+}
+
 interface DataTableRangeFilterProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -47,23 +52,7 @@ export function DataTableRangeFilter<TData extends RowData>({
     return [values[0], values[1]];
   }, [column]);
 
-  const formatValue = React.useCallback(
-    (value: string | number | undefined) => {
-      if (value === undefined || value === "") return "";
-      const numValue = Number(value);
-      return Number.isNaN(numValue)
-        ? ""
-        : numValue.toLocaleString(undefined, {
-            maximumFractionDigits: 0,
-          });
-    },
-    [],
-  );
-
-  const value = React.useMemo(() => {
-    const [start, end] = getRangeFilterValues(filter.value);
-    return [formatValue(start), formatValue(end)];
-  }, [filter.value, formatValue]);
+  const value = getRangeFilterValues(filter.value).map(getInputValue);
 
   const onRangeValueChange = React.useCallback(
     (value: string, isMin?: boolean) => {

@@ -23,6 +23,7 @@ import type {
   FilterVariant,
   JoinOperator,
   DataTableQueryKeys,
+  DataTableUrlFormat,
 } from "@/lib/data-table-types";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -62,6 +63,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualSorting"
 > & {
   queryKeys?: Partial<DataTableQueryKeys>;
+  urlFormat?: DataTableUrlFormat;
   history?: "push" | "replace";
   debounceMs?: number;
   throttleMs?: number;
@@ -86,6 +88,7 @@ function useDataTable<TData extends RowData>({
   pageCount,
   initialState,
   queryKeys,
+  urlFormat = "compact",
   history = "replace",
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
@@ -186,6 +189,7 @@ function useDataTable<TData extends RowData>({
       sortableIds,
       filterableColumns,
       filterableIds: filterableColumns.map((column) => column.id),
+      variantById: Object.fromEntries(filterableVariants),
       normalizeColumnFilters: (filters: ColumnFiltersState) =>
         filters.map((filter) =>
           normalizeColumnFilter(
@@ -198,10 +202,10 @@ function useDataTable<TData extends RowData>({
 
   const sortingParser = React.useMemo(
     () =>
-      getSortingStateParser(columnIndex.sortableIds)
+      getSortingStateParser(columnIndex.sortableIds, { urlFormat })
         .withOptions(queryStateOptions)
         .withDefault(initialStateRef.current?.sorting ?? EMPTY_SORTING),
-    [columnIndex, queryStateOptions],
+    [columnIndex, queryStateOptions, urlFormat],
   );
 
   const [sorting, setSorting] = useQueryState(sortKey, sortingParser);
@@ -220,14 +224,14 @@ function useDataTable<TData extends RowData>({
 
   const jsonFiltersParser = React.useMemo(
     () =>
-      getFiltersStateParser(columnIndex.filterableIds)
+      getFiltersStateParser(columnIndex.variantById, { urlFormat })
         .withOptions(queryStateOptions)
         .withDefault(
           columnIndex.normalizeColumnFilters(
             initialStateRef.current?.columnFilters ?? EMPTY_COLUMN_FILTERS,
           ),
         ),
-    [columnIndex, queryStateOptions],
+    [columnIndex, queryStateOptions, urlFormat],
   );
   const plainFilterParsers = React.useMemo(() => {
     const parsers: Record<

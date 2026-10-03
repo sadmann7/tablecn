@@ -41,6 +41,13 @@ export type FilterOperator = (typeof FILTER_OPERATORS)[number];
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
+/**
+ * How the `sort` and `filters` params are written. `compact` writes
+ * `createdAt.desc` and `status.inArray.todo|done`, falling back to JSON for
+ * values it can't hold. Both formats are always read.
+ */
+export type DataTableUrlFormat = "compact" | "json";
+
 export interface FilterOperatorOption {
   label: string;
   value: FilterOperator;

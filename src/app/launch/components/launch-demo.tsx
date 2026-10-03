@@ -335,7 +335,7 @@ function LaunchScene({ sceneId, columnCount }: LaunchSceneProps) {
         <LaunchStory
           eyebrow="Advanced filters"
           title="Build any query."
-          description="Operators, and/or logic, and reordering. JSON in the URL when plain params can't hold it."
+          description="Operators, and/or logic, and reordering. A compact filter list in the URL when plain params can't hold it."
           code={FILTER_CODE}
           highlightedLines={[1]}
         />
@@ -1108,7 +1108,7 @@ function getCommandInput() {
 
 function getUrlFormat(search: string) {
   const params = new URLSearchParams(search);
-  if (params.has("filters")) return "JSON filters";
+  if (params.has("filters")) return "Filter list";
   if (FILTER_PARAM_KEYS.some((key) => params.has(key))) return "Plain params";
   return null;
 }
