@@ -60,9 +60,13 @@ export function useLaunchDirector() {
 
   React.useEffect(() => {
     const root = document.documentElement;
+    const hadDark = root.classList.contains("dark");
+    // Menus portal to document.body, outside the stage's dark class.
+    root.classList.add("dark");
     root.dataset.launchCamera = "";
 
     return () => {
+      if (!hadDark) root.classList.remove("dark");
       delete root.dataset.launchCamera;
       root.style.removeProperty("--launch-camera-scale");
     };

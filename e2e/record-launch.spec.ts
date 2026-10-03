@@ -14,7 +14,7 @@ interface CapturedFrame {
 }
 
 test("record one launch loop", async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
 
   await page.goto("/launch");
   const stage = page.locator(".launch-stage");
@@ -76,6 +76,8 @@ async function startCapture(page: Page) {
     const frame = readScreencastFrame(event);
     if (!frame) return;
 
+    // Ack before copying the PNG. Decoding it here stalls the stream and the
+    // recording drops to the teens of frames per second.
     void client.send("Page.screencastFrameAck", { sessionId: frame.sessionId });
     if (isStopped) return;
 
@@ -84,7 +86,14 @@ async function startCapture(page: Page) {
       `${String(frames.length).padStart(5, "0")}.png`,
     );
     frames.push({ file, timestamp: frame.timestamp });
-    writes.push(writeFile(file, Buffer.from(frame.data, "base64")));
+    const data = frame.data;
+    writes.push(
+      new Promise((resolve, reject) => {
+        setImmediate(() => {
+          writeFile(file, Buffer.from(data, "base64")).then(resolve, reject);
+        });
+      }),
+    );
   });
 
   await client.send("Page.startScreencast", {
@@ -138,8 +147,8 @@ async function encodeLoop(
     "-i",
     listPath,
     "-an",
-    "-fps_mode",
-    "vfr",
+    "-vf",
+    "fps=60",
     "-c:v",
     "libvpx-vp9",
     "-pix_fmt",
