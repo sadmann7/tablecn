@@ -38,6 +38,7 @@ import {
   getColumnFilters,
   getColumnFiltersKey,
   getSortingStateParser,
+  sortColumnFiltersBySearch,
 } from "@/lib/parsers";
 
 const PAGE_KEY = "page";
@@ -266,6 +267,18 @@ function useDataTable<TData extends RowData>({
     setColumnFilters(urlFilters);
   }
 
+  // nuqs and the server render only see values per column, so filters read
+  // from the URL start in column order and take the URL's order once mounted.
+  React.useEffect(() => {
+    if (urlFilters.length < 2) return;
+
+    setColumnFilters((prev) =>
+      prev === urlFilters
+        ? sortColumnFiltersBySearch(urlFilters, window.location.search)
+        : prev,
+    );
+  }, [urlFilters]);
+
   const debouncedSyncFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState) => {
       // Filters without a value stay out of the URL, since `?title=` reads
@@ -273,16 +286,22 @@ function useDataTable<TData extends RowData>({
       const filters = getActiveFilters(
         columnIndex.normalizeColumnFilters(columnFilters),
       ).filter((filter) => Object.hasOwn(columnIndex.variantById, filter.id));
-      const params: Record<string, ColumnFilterItem[] | null> =
-        Object.fromEntries(columnIndex.filterableIds.map((id) => [id, null]));
+      // Params are written in insertion order, so columns land in the URL in
+      // the order their first filter appears.
+      const params = new Map<string, ColumnFilterItem[] | null>();
 
       for (const filter of filters) {
-        (params[filter.id] ??= []).push(filter);
+        const group = params.get(filter.id);
+        if (group) group.push(filter);
+        else params.set(filter.id, [filter]);
+      }
+      for (const id of columnIndex.filterableIds) {
+        if (!params.has(id)) params.set(id, null);
       }
 
       setSyncedFiltersKey(getColumnFiltersKey(filters));
       void setPage(1);
-      void setFilterParams(params);
+      void setFilterParams(Object.fromEntries(params));
     },
     debounceMs,
   );

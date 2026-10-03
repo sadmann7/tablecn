@@ -179,6 +179,26 @@ export function getColumnFilters<TColumnId extends string>(
 }
 
 /**
+ * Orders filters by where their column's param first appears in `search`,
+ * keeping the order within a column. Columns missing from `search` go last.
+ */
+export function sortColumnFiltersBySearch<TFilter extends ColumnFilterItem>(
+  filters: TFilter[],
+  search: string | URLSearchParams,
+) {
+  const positions = new Map<string, number>();
+  for (const key of new URLSearchParams(search).keys()) {
+    if (!positions.has(key)) positions.set(key, positions.size);
+  }
+
+  return [...filters].sort(
+    (a, b) =>
+      (positions.get(a.id) ?? Number.POSITIVE_INFINITY) -
+      (positions.get(b.id) ?? Number.POSITIVE_INFINITY),
+  );
+}
+
+/**
  * A key that changes only when the URL a set of filters writes changes, so
  * reordering filters across columns keeps it.
  */
