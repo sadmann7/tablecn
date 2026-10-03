@@ -21,6 +21,7 @@ import {
 import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import { isEmpty } from "@/db/utils";
+import { parseFilterDate } from "@/lib/data-table-utils";
 
 export function filterColumns<T extends Table>({
   table,
@@ -52,11 +53,11 @@ export function filterColumns<T extends Table>({
           return eq(column, filter.value === "true");
         }
         if (filter.variant === "date" || filter.variant === "dateRange") {
-          const date = new Date(Number(filter.value));
-          date.setHours(0, 0, 0, 0);
-          const end = new Date(date);
-          end.setHours(23, 59, 59, 999);
-          return and(gte(column, date), lte(column, end));
+          const start = getStartOfDay(filter.value);
+          const end = getEndOfDay(filter.value);
+          return start && end
+            ? and(gte(column, start), lte(column, end))
+            : undefined;
         }
         return eq(column, filter.value);
 
@@ -65,11 +66,11 @@ export function filterColumns<T extends Table>({
           return ne(column, filter.value === "true");
         }
         if (filter.variant === "date" || filter.variant === "dateRange") {
-          const date = new Date(Number(filter.value));
-          date.setHours(0, 0, 0, 0);
-          const end = new Date(date);
-          end.setHours(23, 59, 59, 999);
-          return or(lt(column, date), gt(column, end));
+          const start = getStartOfDay(filter.value);
+          const end = getEndOfDay(filter.value);
+          return start && end
+            ? or(lt(column, start), gt(column, end))
+            : undefined;
         }
         return ne(column, filter.value);
 
@@ -86,60 +87,23 @@ export function filterColumns<T extends Table>({
         return undefined;
 
       case "lt":
-        return filter.variant === "number" || filter.variant === "range"
-          ? lt(column, filter.value)
-          : filter.variant === "date" && typeof filter.value === "string"
-            ? lt(
-                column,
-                (() => {
-                  const date = new Date(Number(filter.value));
-                  date.setHours(23, 59, 59, 999);
-                  return date;
-                })(),
-              )
-            : undefined;
-
       case "lte":
-        return filter.variant === "number" || filter.variant === "range"
-          ? lte(column, filter.value)
-          : filter.variant === "date" && typeof filter.value === "string"
-            ? lte(
-                column,
-                (() => {
-                  const date = new Date(Number(filter.value));
-                  date.setHours(23, 59, 59, 999);
-                  return date;
-                })(),
-              )
-            : undefined;
-
       case "gt":
-        return filter.variant === "number" || filter.variant === "range"
-          ? gt(column, filter.value)
-          : filter.variant === "date" && typeof filter.value === "string"
-            ? gt(
-                column,
-                (() => {
-                  const date = new Date(Number(filter.value));
-                  date.setHours(0, 0, 0, 0);
-                  return date;
-                })(),
-              )
-            : undefined;
-
-      case "gte":
-        return filter.variant === "number" || filter.variant === "range"
-          ? gte(column, filter.value)
-          : filter.variant === "date" && typeof filter.value === "string"
-            ? gte(
-                column,
-                (() => {
-                  const date = new Date(Number(filter.value));
-                  date.setHours(0, 0, 0, 0);
-                  return date;
-                })(),
-              )
-            : undefined;
+      case "gte": {
+        const compare = { lt, lte, gt, gte }[filter.operator];
+        if (filter.variant === "number" || filter.variant === "range") {
+          return compare(column, filter.value);
+        }
+        if (filter.variant !== "date" || typeof filter.value !== "string") {
+          return undefined;
+        }
+        // `lt` and `lte` include the whole day, `gt` and `gte` start from it.
+        const date =
+          filter.operator === "lt" || filter.operator === "lte"
+            ? getEndOfDay(filter.value)
+            : getStartOfDay(filter.value);
+        return date ? compare(column, date) : undefined;
+      }
 
       case "isBetween":
         if (
@@ -147,27 +111,11 @@ export function filterColumns<T extends Table>({
           Array.isArray(filter.value) &&
           filter.value.length === 2
         ) {
+          const start = getStartOfDay(filter.value[0]);
+          const end = getEndOfDay(filter.value[1]);
           return and(
-            filter.value[0]
-              ? gte(
-                  column,
-                  (() => {
-                    const date = new Date(Number(filter.value[0]));
-                    date.setHours(0, 0, 0, 0);
-                    return date;
-                  })(),
-                )
-              : undefined,
-            filter.value[1]
-              ? lte(
-                  column,
-                  (() => {
-                    const date = new Date(Number(filter.value[1]));
-                    date.setHours(23, 59, 59, 999);
-                    return date;
-                  })(),
-                )
-              : undefined,
+            start ? gte(column, start) : undefined,
+            end ? lte(column, end) : undefined,
           );
         }
 
@@ -187,14 +135,6 @@ export function filterColumns<T extends Table>({
 
           if (firstValue === null && secondValue === null) {
             return undefined;
-          }
-
-          if (firstValue !== null && secondValue === null) {
-            return eq(column, firstValue);
-          }
-
-          if (firstValue === null && secondValue !== null) {
-            return eq(column, secondValue);
           }
 
           return and(
@@ -259,6 +199,16 @@ export function filterColumns<T extends Table>({
   );
 
   return validConditions.length > 0 ? joinFn(...validConditions) : undefined;
+}
+
+function getStartOfDay(value: unknown) {
+  const date = parseFilterDate(value);
+  return date ? startOfDay(date) : undefined;
+}
+
+function getEndOfDay(value: unknown) {
+  const date = parseFilterDate(value);
+  return date ? endOfDay(date) : undefined;
 }
 
 export function getColumn<T extends Table>(

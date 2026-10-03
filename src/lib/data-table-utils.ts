@@ -243,14 +243,75 @@ export function getSelectFilterValue(filter: ColumnFilterItem) {
   return typeof filter.value === "string" ? filter.value : undefined;
 }
 
-export function getFilterDates(value: ColumnFilterItem["value"]) {
-  return (Array.isArray(value) ? value : [value])
-    .filter(Boolean)
-    .map((timestamp) => new Date(Number(timestamp)));
+const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Reads a filter date: a calendar day like `2026-10-01`, a timestamp, or a
+ * `Date`. Calendar days resolve to local midnight, so every reader filters on
+ * the same day regardless of its time zone.
+ */
+export function parseFilterDate(value: unknown): Date | undefined {
+  if (value instanceof Date) return getValidDate(value);
+  if (typeof value === "number") return getValidDate(new Date(value));
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+
+  const text = value.trim();
+  const match = CALENDAR_DATE_PATTERN.exec(text);
+  if (match) {
+    const [, year, month, day] = match.map(Number);
+    if (year === undefined || month === undefined || day === undefined) {
+      return undefined;
+    }
+    const date = new Date(year, month - 1, day);
+    return date.getDate() === day ? date : undefined;
+  }
+
+  const numeric = Number(text);
+  return getValidDate(new Date(Number.isNaN(numeric) ? text : numeric));
 }
 
-export function getFilterTimestamp(date: Date | undefined) {
-  return date?.getTime().toString() ?? "";
+/** Writes a date as its local calendar day, e.g. `2026-10-01`. */
+export function formatFilterDate(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function getValidDate(date: Date) {
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function stringifyFilterDate(value: unknown) {
+  const date = parseFilterDate(value);
+  return date ? formatFilterDate(date) : "";
+}
+
+export function getIsDateVariant(variant: FilterVariant) {
+  return variant === "date" || variant === "dateRange";
+}
+
+/**
+ * Date filters store calendar days, except relative ones (`-7 days`), which
+ * keep their text.
+ */
+function getFilterValueStringifier(
+  variant: FilterVariant,
+  operator: FilterOperator,
+) {
+  return getIsDateVariant(variant) && operator !== "isRelativeToToday"
+    ? stringifyFilterDate
+    : stringifyFilterValue;
+}
+
+export function getFilterDates(value: ColumnFilterItem["value"]) {
+  return (Array.isArray(value) ? value : [value]).flatMap((item) => {
+    const date = parseFilterDate(item);
+    return date ? [date] : [];
+  });
+}
+
+export function getFilterDateValue(date: Date | undefined) {
+  return date ? formatFilterDate(date) : "";
 }
 
 export function getDateFilterLabel(filter: ColumnFilterItem) {
@@ -319,24 +380,17 @@ export function createPlainFilter<TColumnId extends string>(
 
   const operator = getPlainFilterOperator(variant);
   const filterId = getPlainFilterId(id);
+  const stringify = getFilterValueStringifier(variant, operator);
 
   if (getIsMultiValueVariant(variant)) {
-    const values = (Array.isArray(value) ? value : [value]).map(
-      stringifyFilterValue,
-    );
+    const values = (Array.isArray(value) ? value : [value]).map(stringify);
     if (values.every((item) => item === "")) return null;
     return { id, variant, operator, value: values, filterId };
   }
 
   if (Array.isArray(value)) return null;
 
-  return {
-    id,
-    variant,
-    operator,
-    value: stringifyFilterValue(value),
-    filterId,
-  };
+  return { id, variant, operator, value: stringify(value), filterId };
 }
 
 /**
@@ -350,13 +404,16 @@ export function normalizeColumnFilter(
   const filterId = filter.filterId ?? getPlainFilterId(filter.id);
 
   if (filter.operator) {
+    const filterVariant = filter.variant ?? variant;
+    const stringify = getFilterValueStringifier(filterVariant, filter.operator);
+
     return {
       id: filter.id,
-      variant: filter.variant ?? variant,
+      variant: filterVariant,
       operator: filter.operator,
       value: Array.isArray(filter.value)
-        ? filter.value.map(stringifyFilterValue)
-        : stringifyFilterValue(filter.value),
+        ? filter.value.map(stringify)
+        : stringify(filter.value),
       filterId,
     };
   }
@@ -380,16 +437,16 @@ export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
     return Array.isArray(value) ? value : [value];
   }
 
-  if (variant === "range" || variant === "dateRange") {
+  if (variant === "range") {
     return Array.isArray(value)
       ? value.map((item) => (item === "" ? undefined : Number(item)))
       : value;
   }
 
-  if (variant === "date") {
+  if (getIsDateVariant(variant)) {
     return Array.isArray(value)
-      ? value.map((item) => (item === "" ? undefined : Number(item)))
-      : Number(value);
+      ? value.map((item) => parseFilterDate(item)?.getTime())
+      : parseFilterDate(value)?.getTime();
   }
 
   return value;

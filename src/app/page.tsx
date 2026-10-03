@@ -17,7 +17,7 @@ import {
   getTaskStatusCounts,
   getTasks,
 } from "./lib/queries";
-import { searchParamsCache } from "./lib/validations";
+import { searchParamsCache, tasksFilterableColumns } from "./lib/validations";
 
 interface IndexPageProps {
   searchParams: Promise<SearchParams>;
@@ -61,7 +61,7 @@ async function TasksTableWrapper(props: IndexPageProps) {
   const tasksPromise =
     dataMode === "client"
       ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
-      : getTasks(getDataTableQuery(search));
+      : getTasks(getDataTableQuery(search, tasksFilterableColumns));
 
   const promises = Promise.all([
     tasksPromise,

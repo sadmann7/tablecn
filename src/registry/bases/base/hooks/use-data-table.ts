@@ -12,14 +12,15 @@ import {
   parseAsStringEnum,
   useQueryState,
   type UseQueryStateOptions,
+  useQueryStates,
 } from "nuqs";
 import * as React from "react";
 
 import type {
+  ColumnFilterItem,
   FilterVariant,
   JoinOperator,
   DataTableQueryKeys,
-  DataTableUrlFormat,
 } from "@/lib/data-table-types";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -27,13 +28,21 @@ import {
   type DataTableFeatures,
   dataTableFeatures,
 } from "@/lib/data-table-features";
-import { JOIN_OPERATORS, normalizeColumnFilter } from "@/lib/data-table-utils";
-import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
+import {
+  getActiveFilters,
+  JOIN_OPERATORS,
+  normalizeColumnFilter,
+} from "@/lib/data-table-utils";
+import {
+  getColumnFilterParser,
+  getColumnFilters,
+  getColumnFiltersKey,
+  getSortingStateParser,
+} from "@/lib/parsers";
 
 const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";
 const SORT_KEY = "sort";
-const FILTERS_KEY = "filters";
 const JOIN_OPERATOR_KEY = "joinOperator";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
@@ -51,7 +60,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualSorting"
 > & {
   queryKeys?: Partial<DataTableQueryKeys>;
-  urlFormat?: DataTableUrlFormat;
   history?: "push" | "replace";
   debounceMs?: number;
   throttleMs?: number;
@@ -76,7 +84,6 @@ function useDataTable<TData extends RowData>({
   pageCount,
   initialState,
   queryKeys,
-  urlFormat = "compact",
   history = "replace",
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
@@ -92,7 +99,6 @@ function useDataTable<TData extends RowData>({
   const pageKey = queryKeys?.page ?? PAGE_KEY;
   const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
   const sortKey = queryKeys?.sort ?? SORT_KEY;
-  const filtersKey = queryKeys?.filters ?? FILTERS_KEY;
   const joinOperatorKey = queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY;
 
   const queryStateOptions = React.useMemo<
@@ -172,6 +178,7 @@ function useDataTable<TData extends RowData>({
 
     return {
       sortableIds,
+      filterableIds: [...filterableVariants.keys()],
       variantById: Object.fromEntries(filterableVariants),
       normalizeColumnFilters: (filters: ColumnFiltersState) =>
         filters.map((filter) =>
@@ -185,10 +192,10 @@ function useDataTable<TData extends RowData>({
 
   const sortingParser = React.useMemo(
     () =>
-      getSortingStateParser(columnIndex.sortableIds, { urlFormat })
+      getSortingStateParser(columnIndex.sortableIds)
         .withOptions(queryStateOptions)
         .withDefault(initialStateRef.current?.sorting ?? EMPTY_SORTING),
-    [columnIndex, queryStateOptions, urlFormat],
+    [columnIndex, queryStateOptions],
   );
 
   const [sorting, setSorting] = useQueryState(sortKey, sortingParser);
@@ -205,16 +212,18 @@ function useDataTable<TData extends RowData>({
     [sorting, setSorting],
   );
 
-  const filtersParser = React.useMemo(
+  const filterParsers = React.useMemo(
     () =>
-      getFiltersStateParser(columnIndex.variantById, { urlFormat })
-        .withOptions(queryStateOptions)
-        .withDefault(
-          columnIndex.normalizeColumnFilters(
-            initialStateRef.current?.columnFilters ?? EMPTY_COLUMN_FILTERS,
-          ),
-        ),
-    [columnIndex, queryStateOptions, urlFormat],
+      Object.fromEntries(
+        columnIndex.filterableIds.map((id) => [
+          id,
+          getColumnFilterParser(
+            id,
+            columnIndex.variantById[id] ?? "text",
+          ).withOptions(queryStateOptions),
+        ]),
+      ),
+    [columnIndex, queryStateOptions],
   );
   const joinOperatorParser = React.useMemo(
     () =>
@@ -224,24 +233,59 @@ function useDataTable<TData extends RowData>({
     [queryStateOptions],
   );
 
-  const [urlFilters, setUrlFilters] = useQueryState(filtersKey, filtersParser);
+  const [filterParams, setFilterParams] = useQueryStates(filterParsers);
   const [joinOperator, setJoinOperator] = useQueryState(
     joinOperatorKey,
     joinOperatorParser,
   );
 
+  const urlFilters = React.useMemo(
+    () =>
+      getColumnFilters(
+        columnIndex.filterableIds,
+        (id) => filterParams[id] ?? [],
+      ),
+    [columnIndex, filterParams],
+  );
+  const urlFiltersKey = getColumnFiltersKey(urlFilters);
+
+  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
+    () =>
+      urlFilters.length > 0
+        ? urlFilters
+        : columnIndex.normalizeColumnFilters(
+            initialStateRef.current?.columnFilters ?? EMPTY_COLUMN_FILTERS,
+          ),
+  );
+  const [syncedFiltersKey, setSyncedFiltersKey] = React.useState(urlFiltersKey);
+
+  // The URL changed from outside (back/forward, an edited link), so it wins
+  // over the filters being edited.
+  if (urlFiltersKey !== syncedFiltersKey) {
+    setSyncedFiltersKey(urlFiltersKey);
+    setColumnFilters(urlFilters);
+  }
+
   const debouncedSyncFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState) => {
-      const filters = columnIndex.normalizeColumnFilters(columnFilters);
+      // Filters without a value stay out of the URL, since `?title=` reads
+      // back as no filter.
+      const filters = getActiveFilters(
+        columnIndex.normalizeColumnFilters(columnFilters),
+      ).filter((filter) => Object.hasOwn(columnIndex.variantById, filter.id));
+      const params: Record<string, ColumnFilterItem[] | null> =
+        Object.fromEntries(columnIndex.filterableIds.map((id) => [id, null]));
 
+      for (const filter of filters) {
+        (params[filter.id] ??= []).push(filter);
+      }
+
+      setSyncedFiltersKey(getColumnFiltersKey(filters));
       void setPage(1);
-      void setUrlFilters(filters.length === 0 ? null : filters);
+      void setFilterParams(params);
     },
     debounceMs,
   );
-
-  const [columnFilters, setColumnFilters] =
-    React.useState<ColumnFiltersState>(urlFilters);
 
   const onColumnFiltersChange = React.useCallback(
     (updaterOrValue: Updater<ColumnFiltersState>) => {

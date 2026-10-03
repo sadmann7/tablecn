@@ -26,7 +26,7 @@ import {
   getIsValuelessOperator,
   getSelectFilterValue,
   JOIN_OPERATORS,
-  getFilterTimestamp,
+  getFilterDateValue,
 } from "@/lib/data-table-utils";
 import { generateId } from "@/lib/id";
 import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
@@ -786,8 +786,8 @@ function DateFilterValue<TData extends RowData>({
               onFilterUpdate(filter.filterId, {
                 value: range
                   ? [
-                      getFilterTimestamp(range.from),
-                      getFilterTimestamp(range.to),
+                      getFilterDateValue(range.from),
+                      getFilterDateValue(range.to),
                     ]
                   : [],
               })
@@ -802,7 +802,7 @@ function DateFilterValue<TData extends RowData>({
             selected={startDate}
             onSelect={(date) => {
               onFilterUpdate(filter.filterId, {
-                value: getFilterTimestamp(date),
+                value: getFilterDateValue(date),
               });
               onOpenChange(false);
             }}

@@ -331,7 +331,7 @@ function LaunchScene({ sceneId, columnCount }: LaunchSceneProps) {
         <LaunchStory
           eyebrow="Advanced filters"
           title="Build any query."
-          description="Operators, and/or logic, and reordering. All in the same compact URL param."
+          description="Operators, and/or logic, and reordering. All in readable params like status=not.in.done."
           code={FILTER_CODE}
           highlightedLines={[1]}
         />

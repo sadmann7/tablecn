@@ -34,19 +34,24 @@ function getIsValidRange(value: unknown): value is RangeValue {
   );
 }
 
-function parseValuesAsNumbers(value: unknown): RangeValue | undefined {
-  if (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    value.every(
-      (v) =>
-        (typeof v === "string" || typeof v === "number") && !Number.isNaN(v),
-    )
-  ) {
-    return [Number(value[0]), Number(value[1])];
-  }
+function parseRangeBounds(
+  value: unknown,
+): [number | undefined, number | undefined] | undefined {
+  if (!Array.isArray(value) || value.length !== 2) return undefined;
 
-  return undefined;
+  const [start, end] = value.map(parseRangeBound);
+  if (start === null || end === null) return undefined;
+  if (start === undefined && end === undefined) return undefined;
+
+  return [start, end];
+}
+
+function parseRangeBound(value: unknown) {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "number" && typeof value !== "string") return null;
+
+  const number = Number(value);
+  return Number.isNaN(number) ? null : number;
 }
 
 interface DataTableSliderFilterProps<TData extends RowData> {
@@ -83,8 +88,6 @@ function DataTableSliderFilterContent<TData extends RowData>({
 }) {
   const id = React.useId();
 
-  const columnFilterValue = parseValuesAsNumbers(columnFilterValueProp);
-
   const defaultRange = column.columnDef.meta?.range;
   const unit = column.columnDef.meta?.unit;
 
@@ -119,9 +122,12 @@ function DataTableSliderFilterContent<TData extends RowData>({
     return { min: minValue, max: maxValue, step };
   }, [column, defaultRange]);
 
-  const range = React.useMemo((): RangeValue => {
-    return columnFilterValue ?? [min, max];
-  }, [columnFilterValue, min, max]);
+  // An open-ended bound, like `estimatedHours=,8`, shows as the column limit.
+  const bounds = parseRangeBounds(columnFilterValueProp);
+  const columnFilterValue: RangeValue | undefined = bounds
+    ? [bounds[0] ?? min, bounds[1] ?? max]
+    : undefined;
+  const range: RangeValue = columnFilterValue ?? [min, max];
 
   const formatValue = React.useCallback((value: number) => {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });

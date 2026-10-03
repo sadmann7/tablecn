@@ -24,6 +24,7 @@ import {
   FILTER_VARIANTS,
   getActiveFilters,
   normalizeColumnFilter,
+  parseFilterDate,
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
 
@@ -501,13 +502,7 @@ function parseNumber(value: unknown) {
 }
 
 function parseTime(value: unknown) {
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === "number") return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const numeric = Number(value);
-    return Number.isNaN(numeric) ? new Date(value).getTime() : numeric;
-  }
-  return Number.NaN;
+  return parseFilterDate(value)?.getTime() ?? Number.NaN;
 }
 
 function startOfDay(time: number) {
@@ -586,10 +581,6 @@ function getIsBetween(cellValue: unknown, value: unknown, isDate: boolean) {
 
   const start = hasStart ? parseNumber(rawStart) : null;
   const end = hasEnd ? parseNumber(rawEnd) : null;
-
-  // Mirrors the server adapter: a single bound behaves like `eq`.
-  if (start !== null && end === null) return cell === start;
-  if (start === null && end !== null) return cell === end;
 
   return (start === null || cell >= start) && (end === null || cell <= end);
 }

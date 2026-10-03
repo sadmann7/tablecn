@@ -1,11 +1,15 @@
-import { createParser, parseAsInteger, parseAsStringEnum } from "nuqs/server";
+import {
+  createParser,
+  parseAsInteger,
+  parseAsNativeArrayOf,
+  parseAsStringEnum,
+} from "nuqs/server";
 import { z } from "zod";
 
 import type {
   ColumnFilterItem,
   ColumnSortItem,
   DataTableQuery,
-  DataTableUrlFormat,
   FilterOperator,
   FilterVariant,
   JoinOperator,
@@ -13,11 +17,12 @@ import type {
 
 import {
   FILTER_OPERATORS,
-  FILTER_VARIANTS,
-  getFilterOperators,
   getActiveFilters,
+  getFilterOperators,
+  getIsValuelessOperator,
   getPlainFilterOperator,
   JOIN_OPERATORS,
+  normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
 const sortingItemSchema = z.object({
@@ -25,19 +30,13 @@ const sortingItemSchema = z.object({
   desc: z.boolean(),
 });
 
-interface UrlFormatOptions {
-  /** How the param is written. Both formats are always read. */
-  urlFormat?: DataTableUrlFormat;
-}
-
 /**
  * Parses the `sort` param, either `createdAt.desc,title.asc` or JSON, and
- * writes it in `urlFormat`. Pass `columnIds` to reject unknown columns and to
+ * writes the compact form. Pass `columnIds` to reject unknown columns and to
  * narrow the parsed ids to them.
  */
 export const getSortingStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
-  { urlFormat = "compact" }: UrlFormatOptions = {},
 ) => {
   const validIds = getIdSet(columnIds);
 
@@ -47,8 +46,6 @@ export const getSortingStateParser = <TColumnId extends string = string>(
       return sorting && getHasKnownIds(sorting, validIds) ? sorting : null;
     },
     serialize: (value) => {
-      if (urlFormat === "json") return JSON.stringify(value);
-
       const compact = value
         .map((item) => `${item.id}.${item.desc ? "desc" : "asc"}`)
         .join(",");
@@ -63,82 +60,151 @@ export const getSortingStateParser = <TColumnId extends string = string>(
   });
 };
 
-const filterOperatorSchema = z.enum(FILTER_OPERATORS);
+/** How each operator is written in a filter param, after PostgREST. */
+const URL_OPERATORS = {
+  iLike: "ilike",
+  notILike: "not.ilike",
+  eq: "eq",
+  ne: "neq",
+  inArray: "in",
+  notInArray: "not.in",
+  isEmpty: "is.empty",
+  isNotEmpty: "not.is.empty",
+  lt: "lt",
+  lte: "lte",
+  gt: "gt",
+  gte: "gte",
+  isBetween: "between",
+  isRelativeToToday: "rel",
+} satisfies Record<FilterOperator, string>;
 
-const filterItemSchema = z.object({
-  id: z.string(),
-  value: z.union([z.string(), z.array(z.string())]),
-  variant: z.enum(FILTER_VARIANTS).optional(),
-  operator: filterOperatorSchema,
-  filterId: z.string().optional(),
-});
+/** URL names and internal names, lowercased, so both read back. */
+const OPERATORS_BY_NAME = new Map(
+  FILTER_OPERATORS.flatMap((operator): [string, FilterOperator][] => [
+    [URL_OPERATORS[operator], operator],
+    [operator.toLowerCase(), operator],
+  ]),
+);
 
-export type FilterItemSchema = z.infer<typeof filterItemSchema>;
+const MAX_OPERATOR_PARTS = 3;
 
-const ARRAY_VALUE_OPERATORS = new Set<FilterOperator>([
+const LIST_OPERATORS = new Set<FilterOperator>([
   "inArray",
   "notInArray",
   "isBetween",
 ]);
 
 /**
- * Parses the `filters` param, either `status.inArray.todo|done,title.iLike.fix`
- * or JSON, and writes it in `urlFormat`. Pass `filterableColumns` to read
- * compact filters, which leave the variant to the column, and to reject
- * unknown columns and operators the variant doesn't support.
+ * Reads one filter param of a column, e.g. `todo,done` with the variant's
+ * default operator, or `not.in.todo,done`, `gte.2`, `between.2,8`, and
+ * `is.empty`. Operators are case-insensitive and also accept their internal
+ * names (`notInArray`). A param without an operator the variant supports is
+ * read as a value for the default operator.
  */
-export const getFiltersStateParser = <TColumnId extends string = string>(
-  filterableColumns?: Record<TColumnId, FilterVariant>,
-  { urlFormat = "compact" }: UrlFormatOptions = {},
-) =>
-  createParser<ColumnFilterItem<TColumnId>[]>({
-    parse: (value) => {
-      const items = value.startsWith("[")
-        ? parseJsonFilters(value)
-        : parseCompactFilters(value);
-      return items ? resolveFilters(items, filterableColumns) : null;
-    },
-    serialize: (value) => {
-      const json = JSON.stringify(
-        value.map(({ id, variant, operator, value }) => ({
-          id,
-          variant,
-          operator,
-          value,
-        })),
-      );
-      if (urlFormat === "json") return json;
+export function parseColumnFilter<TColumnId extends string>(
+  id: TColumnId,
+  variant: FilterVariant,
+  param: string,
+): ColumnFilterItem<TColumnId> {
+  const { operator, rawValue } = splitFilterOperator(param, variant);
 
-      const compact = value.map(serializeCompactFilter).join(",");
-      const parsed = parseCompactFilters(compact);
-
-      // Ids with `.` or `,`, values with `,` or `|`, array values on single
-      // value operators, or a first id starting with `[` don't round-trip.
-      return parsed && getIsSameFilters(parsed, value) ? compact : json;
+  const filter = normalizeColumnFilter(
+    {
+      id,
+      variant,
+      operator,
+      value: getIsValuelessOperator(operator)
+        ? ""
+        : LIST_OPERATORS.has(operator)
+          ? parseListValue(rawValue, operator)
+          : rawValue,
     },
-    eq: getIsSameFilters,
-  });
+    variant,
+  );
+
+  return { ...filter, id };
+}
+
+/**
+ * Writes one filter as a param, leaving out the operator when it's the
+ * variant's default and the value still reads back the same.
+ */
+export function serializeColumnFilter(filter: ColumnFilterItem) {
+  const name = URL_OPERATORS[filter.operator];
+  if (getIsValuelessOperator(filter.operator)) return name;
+
+  const rawValue = Array.isArray(filter.value)
+    ? joinListValue(filter.value)
+    : filter.value;
+
+  if (filter.operator === getPlainFilterOperator(filter.variant)) {
+    const implicit = parseColumnFilter(filter.id, filter.variant, rawValue);
+    if (getIsSameFilter(implicit, filter)) return rawValue;
+  }
+
+  return `${name}.${rawValue}`;
+}
+
+/**
+ * The parser for one column's filters. Each filter is its own param, so
+ * `?hours=gte.2&hours=lte.8` holds two.
+ */
+export function getColumnFilterParser<TColumnId extends string>(
+  id: TColumnId,
+  variant: FilterVariant,
+) {
+  return parseAsNativeArrayOf(
+    createParser<ColumnFilterItem<TColumnId>>({
+      parse: (param) => parseColumnFilter(id, variant, param),
+      serialize: serializeColumnFilter,
+      eq: (a, b) => serializeColumnFilter(a) === serializeColumnFilter(b),
+    }),
+  );
+}
+
+/**
+ * Joins per-column filters in column order, giving each a `filterId` that's
+ * stable for the same URL.
+ */
+export function getColumnFilters<TColumnId extends string>(
+  columnIds: readonly TColumnId[],
+  getFilters: (id: TColumnId) => ColumnFilterItem<TColumnId>[],
+) {
+  return columnIds.flatMap((id) =>
+    getFilters(id).map((filter, index) => ({
+      ...filter,
+      filterId: `${id}-${index}`,
+    })),
+  );
+}
+
+/**
+ * A key that changes only when the URL a set of filters writes changes, so
+ * reordering filters across columns keeps it.
+ */
+export function getColumnFiltersKey(filters: ColumnFilterItem[]) {
+  return filters
+    .map((filter) => `${filter.id}=${serializeColumnFilter(filter)}`)
+    .sort()
+    .join("&");
+}
 
 interface DataTableSearchParamsOptions<
   TFilterColumnId extends string,
   TSortColumnId extends string,
 > {
-  /**
-   * Filterable column ids mapped to their filter variant. Needed to read
-   * compact filters and to reject unknown ids.
-   */
+  /** Filterable column ids mapped to their filter variant. */
   filterableColumns: Record<TFilterColumnId, FilterVariant>;
   /** Sortable column ids. Without it, sorts on any id are accepted. */
   sortableColumns?: readonly TSortColumnId[];
   defaultSorting?: ColumnSortItem<NoInfer<TSortColumnId>>[];
   defaultPerPage?: number;
-  /** How `sort` and `filters` are written, e.g. by `createSerializer`. */
-  urlFormat?: DataTableUrlFormat;
 }
 
 /**
- * The nuqs parsers for every URL param a data table writes. Spread the
- * result into `createSearchParamsCache`, or use the individual parsers.
+ * The nuqs parsers for every URL param a data table writes, including one per
+ * filterable column. Spread the result into `createSearchParamsCache`, or use
+ * the individual parsers.
  */
 export function getDataTableSearchParams<
   TFilterColumnId extends string,
@@ -148,51 +214,166 @@ export function getDataTableSearchParams<
   sortableColumns,
   defaultSorting = [],
   defaultPerPage = 10,
-  urlFormat,
 }: DataTableSearchParamsOptions<TFilterColumnId, TSortColumnId>) {
   return {
     page: parseAsInteger.withDefault(1),
     perPage: parseAsInteger.withDefault(defaultPerPage),
-    sort: getSortingStateParser(sortableColumns, { urlFormat }).withDefault(
-      defaultSorting,
-    ),
-    filters: getFiltersStateParser(filterableColumns, {
-      urlFormat,
-    }).withDefault([]),
+    sort: getSortingStateParser(sortableColumns).withDefault(defaultSorting),
     joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
+    ...Object.fromEntries(
+      getColumnIds(filterableColumns).map((id) => [
+        id,
+        getColumnFilterParser(id, filterableColumns[id]),
+      ]),
+    ),
   };
 }
 
-interface DataTableSearch<
-  TFilterColumnId extends string,
-  TSortColumnId extends string,
-> {
+interface DataTableSearch<TSortColumnId extends string> {
   page: number;
   perPage: number;
   sort: ColumnSortItem<TSortColumnId>[];
-  filters: ColumnFilterItem<TFilterColumnId>[];
   joinOperator: JoinOperator;
 }
 
 /**
- * Normalizes parsed search params into one `DataTableQuery`, dropping filters
- * without a value the same way `useDataTable` does, so server and client
- * agree. Server adapters (Drizzle, Supabase, ...) only need to handle this
- * shape.
+ * Normalizes parsed search params into one `DataTableQuery`, joining the
+ * per-column filter params and dropping filters without a value the same way
+ * `useDataTable` does, so server and client agree. Server adapters (Drizzle,
+ * Supabase, ...) only need to handle this shape.
  */
 export function getDataTableQuery<
   TFilterColumnId extends string,
   TSortColumnId extends string,
 >(
-  search: DataTableSearch<TFilterColumnId, TSortColumnId>,
+  search: DataTableSearch<TSortColumnId> &
+    Partial<Record<NoInfer<TFilterColumnId>, unknown>>,
+  filterableColumns: Record<TFilterColumnId, FilterVariant>,
 ): DataTableQuery<TFilterColumnId, TSortColumnId> {
+  const filters = getColumnFilters(getColumnIds(filterableColumns), (id) => {
+    const value = search[id];
+    if (!Array.isArray(value)) return [];
+    return value.filter(getIsColumnFilterItem).map((item) => ({ ...item, id }));
+  });
+
   return {
     page: search.page,
     perPage: search.perPage,
     sorting: search.sort,
-    filters: getActiveFilters(search.filters),
+    filters: getActiveFilters(filters),
     joinOperator: search.joinOperator,
   };
+}
+
+/**
+ * Splits a leading operator off a param, trying the longest name first since
+ * some contain dots (`not.is.empty`). A word only counts as an operator when
+ * the variant supports it and a value follows, unless it takes none, so
+ * `title=in` and `title=in.progress` search for that text.
+ */
+function splitFilterOperator(param: string, variant: FilterVariant) {
+  const parts = param.split(".");
+
+  for (
+    let count = Math.min(MAX_OPERATOR_PARTS, parts.length);
+    count > 0;
+    count--
+  ) {
+    const operator = OPERATORS_BY_NAME.get(
+      parts.slice(0, count).join(".").toLowerCase(),
+    );
+    if (!operator || !getIsVariantOperator(variant, operator)) continue;
+    if (count === parts.length && !getIsValuelessOperator(operator)) continue;
+
+    return { operator, rawValue: parts.slice(count).join(".") };
+  }
+
+  return { operator: getPlainFilterOperator(variant), rawValue: param };
+}
+
+function getIsVariantOperator(
+  variant: FilterVariant,
+  operator: FilterOperator,
+) {
+  return (
+    operator === getPlainFilterOperator(variant) ||
+    getFilterOperators(variant).some((option) => option.value === operator)
+  );
+}
+
+/**
+ * Reads a comma separated list. Items are trimmed, and items holding a comma
+ * are quoted (`"a,b"`), with `""` for a quote inside.
+ */
+function parseListValue(rawValue: string, operator: FilterOperator) {
+  const items: string[] = [];
+  let item = "";
+  let isQuoted = false;
+  let wasQuoted = false;
+
+  for (let index = 0; index < rawValue.length; index++) {
+    const char = rawValue[index];
+
+    if (char === '"') {
+      if (isQuoted && rawValue[index + 1] === '"') {
+        item += char;
+        index++;
+      } else {
+        isQuoted = !isQuoted;
+        wasQuoted = true;
+      }
+    } else if (char === "," && !isQuoted) {
+      items.push(wasQuoted ? item : item.trim());
+      item = "";
+      wasQuoted = false;
+    } else {
+      item += char;
+    }
+  }
+  if (rawValue !== "") items.push(wasQuoted ? item : item.trim());
+
+  if (operator === "isBetween") return [items[0] ?? "", items[1] ?? ""];
+  return items.filter((value) => value !== "");
+}
+
+function joinListValue(values: string[]) {
+  return values
+    .map((value) =>
+      /[,"]/.test(value) || value !== value.trim()
+        ? `"${value.replaceAll('"', '""')}"`
+        : value,
+    )
+    .join(",");
+}
+
+function getIsSameFilter(a: ColumnFilterItem, b: ColumnFilterItem) {
+  if (a.operator !== b.operator) return false;
+  if (!Array.isArray(a.value) || !Array.isArray(b.value)) {
+    return a.value === b.value;
+  }
+  const otherValue = b.value;
+  return (
+    a.value.length === otherValue.length &&
+    a.value.every((item, index) => item === otherValue[index])
+  );
+}
+
+function getIsColumnFilterItem(value: unknown): value is ColumnFilterItem {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "operator" in value &&
+    "variant" in value &&
+    "value" in value
+  );
+}
+
+function getColumnIds<TColumnId extends string>(
+  columns: Record<TColumnId, FilterVariant>,
+) {
+  return Object.keys(columns).filter((id): id is TColumnId =>
+    Object.hasOwn(columns, id),
+  );
 }
 
 function parseSorting(value: string): ColumnSortItem[] | null {
@@ -217,129 +398,6 @@ function parseSorting(value: string): ColumnSortItem[] | null {
   }
 
   return sorting;
-}
-
-function parseJsonFilters(value: string): FilterItemSchema[] | null {
-  try {
-    const result = z.array(filterItemSchema).safeParse(JSON.parse(value));
-    return result.success ? result.data : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Reads `id.operator.value`, splitting on the first two dots only. */
-function parseCompactFilters(value: string): FilterItemSchema[] | null {
-  const items: FilterItemSchema[] = [];
-
-  for (const part of value.split(",")) {
-    const idEnd = part.indexOf(".");
-    if (idEnd <= 0) return null;
-
-    const operatorEnd = part.indexOf(".", idEnd + 1);
-    const operator = filterOperatorSchema.safeParse(
-      part.slice(idEnd + 1, operatorEnd === -1 ? undefined : operatorEnd),
-    );
-    if (!operator.success) return null;
-
-    const rawValue = operatorEnd === -1 ? "" : part.slice(operatorEnd + 1);
-
-    items.push({
-      id: part.slice(0, idEnd),
-      operator: operator.data,
-      value: !ARRAY_VALUE_OPERATORS.has(operator.data)
-        ? rawValue
-        : rawValue === ""
-          ? []
-          : rawValue.split("|"),
-    });
-  }
-
-  return items;
-}
-
-function serializeCompactFilter({ id, operator, value }: ColumnFilterItem) {
-  const rawValue = Array.isArray(value) ? value.join("|") : value;
-  return rawValue === ""
-    ? `${id}.${operator}`
-    : `${id}.${operator}.${rawValue}`;
-}
-
-/**
- * Takes each variant from its column, falling back to the one in legacy JSON,
- * and gives each filter a stable id for the filter list.
- */
-function resolveFilters<TColumnId extends string>(
-  items: FilterItemSchema[],
-  filterableColumns?: Record<TColumnId, FilterVariant>,
-): ColumnFilterItem<TColumnId>[] | null {
-  const variants: Partial<Record<string, FilterVariant>> | undefined =
-    filterableColumns;
-  const filters: ColumnFilterItem[] = [];
-
-  for (const [
-    index,
-    { id, operator, value, variant, filterId },
-  ] of items.entries()) {
-    const columnVariant = variants
-      ? Object.hasOwn(variants, id)
-        ? variants[id]
-        : undefined
-      : variant;
-
-    if (
-      !columnVariant ||
-      (operator !== getPlainFilterOperator(columnVariant) &&
-        !getFilterOperators(columnVariant).some(
-          (option) => option.value === operator,
-        ))
-    ) {
-      return null;
-    }
-
-    filters.push({
-      id,
-      variant: columnVariant,
-      operator,
-      value,
-      filterId: filterId ?? `${id}-${index}`,
-    });
-  }
-
-  return getHasKnownFilterIds(filters, filterableColumns) ? filters : null;
-}
-
-function getIsSameFilters(
-  a: Pick<ColumnFilterItem, "id" | "operator" | "value">[],
-  b: Pick<ColumnFilterItem, "id" | "operator" | "value">[],
-) {
-  return (
-    a.length === b.length &&
-    a.every((filter, index) => {
-      const other = b[index];
-      if (filter.id !== other?.id || filter.operator !== other.operator) {
-        return false;
-      }
-      const otherValue = other.value;
-      if (!Array.isArray(filter.value) || !Array.isArray(otherValue)) {
-        return filter.value === otherValue;
-      }
-      return (
-        filter.value.length === otherValue.length &&
-        filter.value.every((item, itemIndex) => item === otherValue[itemIndex])
-      );
-    })
-  );
-}
-
-function getHasKnownFilterIds<TColumnId extends string>(
-  filters: ColumnFilterItem[],
-  filterableColumns?: Record<TColumnId, FilterVariant>,
-): filters is ColumnFilterItem<TColumnId>[] {
-  return (
-    !filterableColumns ||
-    filters.every((filter) => Object.hasOwn(filterableColumns, filter.id))
-  );
 }
 
 function getIsSameSorting(a: ColumnSortItem[], b: ColumnSortItem[]) {

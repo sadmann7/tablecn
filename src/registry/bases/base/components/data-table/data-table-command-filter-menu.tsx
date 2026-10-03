@@ -21,7 +21,7 @@ import {
   getIsEditableTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
-  getFilterTimestamp,
+  getFilterDateValue,
 } from "@/lib/data-table-utils";
 import { generateId } from "@/lib/id";
 import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
@@ -487,7 +487,7 @@ function FilterValueOptions<TData extends RowData>({
           autoFocus
           captionLayout="dropdown"
           mode="single"
-          onSelect={(date) => onSelect(getFilterTimestamp(date))}
+          onSelect={(date) => onSelect(getFilterDateValue(date))}
         />
       );
 
@@ -926,8 +926,8 @@ function DateFilterValue<TData extends RowData>({
               onFilterUpdate(filter.filterId, {
                 value: range
                   ? [
-                      getFilterTimestamp(range.from),
-                      getFilterTimestamp(range.to),
+                      getFilterDateValue(range.from),
+                      getFilterDateValue(range.to),
                     ]
                   : [],
               })
@@ -942,7 +942,7 @@ function DateFilterValue<TData extends RowData>({
             selected={startDate}
             onSelect={(date) => {
               onFilterUpdate(filter.filterId, {
-                value: getFilterTimestamp(date),
+                value: getFilterDateValue(date),
               });
               onOpenChange(false);
             }}
