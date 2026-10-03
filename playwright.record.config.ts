@@ -14,7 +14,7 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     viewport,
     deviceScaleFactor: 1,
-    video: { mode: "on", size: viewport },
+    video: "off",
   },
   webServer: {
     command: "pnpm dev",
