@@ -1,10 +1,4 @@
-import {
-  createParser,
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  parseAsStringEnum,
-} from "nuqs/server";
+import { createParser, parseAsInteger, parseAsStringEnum } from "nuqs/server";
 import { z } from "zod";
 
 import type {
@@ -21,11 +15,9 @@ import {
   FILTER_OPERATORS,
   FILTER_VARIANTS,
   getFilterOperators,
-  getIsMultiValueVariant,
   getActiveFilters,
   getPlainFilterOperator,
   JOIN_OPERATORS,
-  createPlainFilter,
 } from "@/lib/data-table-utils";
 
 const sortingItemSchema = z.object({
@@ -133,7 +125,7 @@ interface DataTableSearchParamsOptions<
 > {
   /**
    * Filterable column ids mapped to their filter variant. Needed to read
-   * per-column params (`?status=todo,done`) and to reject unknown ids.
+   * compact filters and to reject unknown ids.
    */
   filterableColumns: Record<TFilterColumnId, FilterVariant>;
   /** Sortable column ids. Without it, sorts on any id are accepted. */
@@ -158,17 +150,6 @@ export function getDataTableSearchParams<
   defaultPerPage = 10,
   urlFormat,
 }: DataTableSearchParamsOptions<TFilterColumnId, TSortColumnId>) {
-  const filterIds = Object.keys(filterableColumns) as TFilterColumnId[];
-
-  const columnParsers = Object.fromEntries(
-    filterIds.map((id) => [
-      id,
-      getIsMultiValueVariant(filterableColumns[id])
-        ? parseAsArrayOf(parseAsString).withDefault([])
-        : parseAsString.withDefault(""),
-    ]),
-  );
-
   return {
     page: parseAsInteger.withDefault(1),
     perPage: parseAsInteger.withDefault(defaultPerPage),
@@ -179,7 +160,6 @@ export function getDataTableSearchParams<
       urlFormat,
     }).withDefault([]),
     joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
-    ...columnParsers,
   };
 }
 
@@ -195,31 +175,22 @@ interface DataTableSearch<
 }
 
 /**
- * Normalizes parsed search params into one `DataTableQuery`, regardless of
- * whether filters arrived as per-column params or inside `filters`. This
- * mirrors how `useDataTable` reads the URL, so server and client agree.
- * Server adapters (Drizzle, Supabase, ...) only need to handle this shape.
+ * Normalizes parsed search params into one `DataTableQuery`, dropping filters
+ * without a value the same way `useDataTable` does, so server and client
+ * agree. Server adapters (Drizzle, Supabase, ...) only need to handle this
+ * shape.
  */
 export function getDataTableQuery<
   TFilterColumnId extends string,
   TSortColumnId extends string,
 >(
-  search: DataTableSearch<TFilterColumnId, TSortColumnId> &
-    Partial<Record<NoInfer<TFilterColumnId>, unknown>>,
-  filterableColumns: Record<TFilterColumnId, FilterVariant>,
+  search: DataTableSearch<TFilterColumnId, TSortColumnId>,
 ): DataTableQuery<TFilterColumnId, TSortColumnId> {
-  const filterIds = Object.keys(filterableColumns) as TFilterColumnId[];
-
-  const plainFilters = filterIds.flatMap((id) => {
-    const item = createPlainFilter(id, filterableColumns[id], search[id]);
-    return item ? [item] : [];
-  });
-
   return {
     page: search.page,
     perPage: search.perPage,
     sorting: search.sort,
-    filters: getActiveFilters([...search.filters, ...plainFilters]),
+    filters: getActiveFilters(search.filters),
     joinOperator: search.joinOperator,
   };
 }

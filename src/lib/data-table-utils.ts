@@ -373,29 +373,6 @@ export function normalizeColumnFilter(
   };
 }
 
-/**
- * Per-column URL params hold at most one plain filter per column and are read
- * back in column order, so only write them when every filter round-trips and
- * the filters are already in that order.
- */
-export function getCanWritePlainFilters(
-  filters: ColumnFilterItem[],
-  columnIds: string[],
-) {
-  let lastIndex = -1;
-
-  return filters.every((filter) => {
-    const index = columnIds.indexOf(filter.id);
-    if (index <= lastIndex) return false;
-    if (!getIsPlainFilter(filter)) return false;
-    if (!createPlainFilter(filter.id, filter.variant, filter.value)) {
-      return false;
-    }
-    lastIndex = index;
-    return true;
-  });
-}
-
 export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 

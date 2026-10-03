@@ -8,14 +8,10 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import {
-  parseAsArrayOf,
   parseAsInteger,
-  parseAsString,
   parseAsStringEnum,
-  type SingleParser,
   useQueryState,
   type UseQueryStateOptions,
-  useQueryStates,
 } from "nuqs";
 import * as React from "react";
 
@@ -31,14 +27,7 @@ import {
   type DataTableFeatures,
   dataTableFeatures,
 } from "@/lib/data-table-features";
-import {
-  getCanWritePlainFilters,
-  getIsMultiValueVariant,
-  getActiveFilters,
-  JOIN_OPERATORS,
-  normalizeColumnFilter,
-  createPlainFilter,
-} from "@/lib/data-table-utils";
+import { JOIN_OPERATORS, normalizeColumnFilter } from "@/lib/data-table-utils";
 import { getFiltersStateParser, getSortingStateParser } from "@/lib/parsers";
 
 const PAGE_KEY = "page";
@@ -46,7 +35,6 @@ const PER_PAGE_KEY = "perPage";
 const SORT_KEY = "sort";
 const FILTERS_KEY = "filters";
 const JOIN_OPERATOR_KEY = "joinOperator";
-const ARRAY_SEPARATOR = ",";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 const DEFAULT_PAGE_SIZE = 10;
@@ -172,7 +160,6 @@ function useDataTable<TData extends RowData>({
 
   const columnIndex = React.useMemo(() => {
     const sortableIds = new Set<string>();
-    const filterableColumns: { id: string; variant: FilterVariant }[] = [];
     const filterableVariants = new Map<string, FilterVariant>();
 
     for (const column of columns) {
@@ -180,15 +167,11 @@ function useDataTable<TData extends RowData>({
       sortableIds.add(column.id);
       if (!column.enableColumnFilter) continue;
 
-      const variant = column.meta?.variant ?? "text";
-      filterableColumns.push({ id: column.id, variant });
-      filterableVariants.set(column.id, variant);
+      filterableVariants.set(column.id, column.meta?.variant ?? "text");
     }
 
     return {
       sortableIds,
-      filterableColumns,
-      filterableIds: filterableColumns.map((column) => column.id),
       variantById: Object.fromEntries(filterableVariants),
       normalizeColumnFilters: (filters: ColumnFiltersState) =>
         filters.map((filter) =>
@@ -222,7 +205,7 @@ function useDataTable<TData extends RowData>({
     [sorting, setSorting],
   );
 
-  const jsonFiltersParser = React.useMemo(
+  const filtersParser = React.useMemo(
     () =>
       getFiltersStateParser(columnIndex.variantById, { urlFormat })
         .withOptions(queryStateOptions)
@@ -233,22 +216,6 @@ function useDataTable<TData extends RowData>({
         ),
     [columnIndex, queryStateOptions, urlFormat],
   );
-  const plainFilterParsers = React.useMemo(() => {
-    const parsers: Record<
-      string,
-      SingleParser<string> | SingleParser<string[]>
-    > = {};
-
-    for (const column of columnIndex.filterableColumns) {
-      parsers[column.id] = getIsMultiValueVariant(column.variant)
-        ? parseAsArrayOf(parseAsString, ARRAY_SEPARATOR).withOptions(
-            queryStateOptions,
-          )
-        : parseAsString.withOptions(queryStateOptions);
-    }
-
-    return parsers;
-  }, [columnIndex, queryStateOptions]);
   const joinOperatorParser = React.useMemo(
     () =>
       parseAsStringEnum([...JOIN_OPERATORS])
@@ -257,11 +224,7 @@ function useDataTable<TData extends RowData>({
     [queryStateOptions],
   );
 
-  const [jsonFilters, setJsonFilters] = useQueryState(
-    filtersKey,
-    jsonFiltersParser,
-  );
-  const [plainFilters, setPlainFilters] = useQueryStates(plainFilterParsers);
+  const [urlFilters, setUrlFilters] = useQueryState(filtersKey, filtersParser);
   const [joinOperator, setJoinOperator] = useQueryState(
     joinOperatorKey,
     joinOperatorParser,
@@ -270,44 +233,15 @@ function useDataTable<TData extends RowData>({
   const debouncedSyncFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState) => {
       const filters = columnIndex.normalizeColumnFilters(columnFilters);
-      const activeFilters = getActiveFilters(filters);
-      const writeAsPlainFilters = getCanWritePlainFilters(
-        activeFilters,
-        columnIndex.filterableIds,
-      );
-      const valueById = new Map(
-        activeFilters.map((filter) => [filter.id, filter.value]),
-      );
 
       void setPage(1);
-      void setJsonFilters(
-        writeAsPlainFilters || filters.length === 0 ? null : filters,
-      );
-      void setPlainFilters(
-        Object.fromEntries(
-          columnIndex.filterableIds.map((id) => [
-            id,
-            writeAsPlainFilters ? (valueById.get(id) ?? null) : null,
-          ]),
-        ),
-      );
+      void setUrlFilters(filters.length === 0 ? null : filters);
     },
     debounceMs,
   );
 
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    () => [
-      ...jsonFilters,
-      ...columnIndex.filterableColumns.flatMap((column) => {
-        const item = createPlainFilter(
-          column.id,
-          column.variant,
-          plainFilters[column.id],
-        );
-        return item ? [item] : [];
-      }),
-    ],
-  );
+  const [columnFilters, setColumnFilters] =
+    React.useState<ColumnFiltersState>(urlFilters);
 
   const onColumnFiltersChange = React.useCallback(
     (updaterOrValue: Updater<ColumnFiltersState>) => {

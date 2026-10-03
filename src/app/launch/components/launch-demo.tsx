@@ -106,10 +106,6 @@ const COLUMN_SNIPPETS = [
   },
 ];
 
-const FILTER_PARAM_KEYS = COLUMN_SNIPPETS.flatMap(
-  (snippet) => snippet.columnIds,
-);
-
 const SERVER_CODE = [
   "const { table } = useDataTable({",
   "  data,",
@@ -325,7 +321,7 @@ function LaunchScene({ sceneId, columnCount }: LaunchSceneProps) {
         <LaunchStory
           eyebrow="Plain filters"
           title="Filter in the toolbar."
-          description="One control per column, with readable URL params."
+          description="One control per column, with every filter kept in the URL."
           code={FILTER_CODE}
           highlightedLines={[0]}
         />
@@ -335,7 +331,7 @@ function LaunchScene({ sceneId, columnCount }: LaunchSceneProps) {
         <LaunchStory
           eyebrow="Advanced filters"
           title="Build any query."
-          description="Operators, and/or logic, and reordering. A compact filter list in the URL when plain params can't hold it."
+          description="Operators, and/or logic, and reordering. All in the same compact URL param."
           code={FILTER_CODE}
           highlightedLines={[1]}
         />
@@ -459,8 +455,6 @@ interface LaunchUrlProps {
 }
 
 function LaunchUrl({ search }: LaunchUrlProps) {
-  const urlFormat = getUrlFormat(search);
-
   return (
     <div
       data-launch="url"
@@ -470,14 +464,6 @@ function LaunchUrl({ search }: LaunchUrlProps) {
         tablecn.com/tasks
         {search && <span className="text-emerald-300">?{search}</span>}
       </span>
-      {urlFormat && (
-        <span
-          key={urlFormat}
-          className="launch-flash ml-auto shrink-0 rounded-md border border-emerald-400/30 px-2 py-0.5 font-sans text-sm text-emerald-300"
-        >
-          {urlFormat}
-        </span>
-      )}
     </div>
   );
 }
@@ -1104,13 +1090,6 @@ function pressKey(target: Element | null | undefined, key: string) {
 
 function getCommandInput() {
   return document.querySelector<HTMLInputElement>("[cmdk-input]");
-}
-
-function getUrlFormat(search: string) {
-  const params = new URLSearchParams(search);
-  if (params.has("filters")) return "Filter list";
-  if (FILTER_PARAM_KEYS.some((key) => params.has(key))) return "Plain params";
-  return null;
 }
 
 function getRequestPath(request: string) {
