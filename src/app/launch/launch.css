@@ -29,12 +29,12 @@ html[data-launch-camera]
 }
 
 .launch-dots {
-  background-image: radial-gradient(
-    rgb(255 255 255 / 0.12) 1.5px,
-    transparent 0
-  );
-  background-size: 2.25rem 2.25rem;
-  mask-image: linear-gradient(to bottom, black, transparent 85%);
+  background-image: radial-gradient(rgb(255 255 255 / 0.14) 1px, transparent 0);
+  background-size: 36px 36px;
+}
+
+.launch-dots-fade {
+  background: linear-gradient(to bottom, transparent 70%, #09090b);
 }
 
 .launch-light {

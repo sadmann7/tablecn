@@ -53,3 +53,39 @@ jobs:
       - uses: ./.github/setup
 
       - run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-latest
+    name: E2E
+    services:
+      postgres:
+        image: postgres:17.4
+        env:
+          POSTGRES_USER: tablecn
+          POSTGRES_PASSWORD: securepassword
+          POSTGRES_DB: tablecn
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tablecn -d tablecn"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://tablecn:securepassword@localhost:5432/tablecn
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - uses: ./.github/setup
+
+      - name: Create the database
+        run: pnpm exec drizzle-kit push --force
+
+      - name: Seed
+        run: pnpm exec tsx src/db/seed.ts
+
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Test
+        run: pnpm test:e2e

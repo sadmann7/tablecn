@@ -14,10 +14,11 @@ const HIGHLIGHTS = [
 
 export function LaunchBackdrop() {
   return (
-    <>
+    <div className="pointer-events-none absolute inset-0">
       <div className="launch-dots absolute inset-0" />
       <div className="launch-light absolute inset-0" />
-    </>
+      <div className="launch-dots-fade absolute inset-0" />
+    </div>
   );
 }
 

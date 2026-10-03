@@ -215,10 +215,13 @@ export function LaunchDemo() {
       <div
         ref={refs.stage}
         data-paused={playback.isPaused}
+        data-scene={scene.id}
+        data-cycle={playback.cycle}
+        data-duration={LAUNCH_DURATION}
         className="launch-stage relative h-270 w-480 shrink-0 overflow-hidden bg-[#09090b] font-sans"
       >
+        <LaunchBackdrop />
         <LaunchCamera refs={refs}>
-          <LaunchBackdrop />
           <LaunchScene
             key={`${sceneKey}-scene`}
             sceneId={scene.id}

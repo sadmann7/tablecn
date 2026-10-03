@@ -10,6 +10,8 @@
     "dev:multiplayer": "concurrently \"next dev\" \"partykit dev\"",
     "deploy:multiplayer": "partykit deploy",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "launch:record": "playwright test -c playwright.record.config.ts",
     "dev:docker": "pnpm db:start && pnpm dev",
     "start": "next start",
     "ollie": "pnpm install && pnpm run db:start && pnpm run db:setup",
@@ -77,6 +79,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
