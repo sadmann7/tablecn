@@ -30,17 +30,17 @@ import {
   dataTableFeatures,
 } from "@/lib/data-table-features";
 import {
-  getActiveFilters,
-  JOIN_OPERATORS,
-  normalizeColumnFilter,
-} from "@/lib/data-table-utils";
-import {
   getColumnFilterParser,
   getColumnFilters,
   getColumnFiltersKey,
   getSortingStateParser,
   sortColumnFiltersBySearch,
-} from "@/lib/parsers";
+} from "@/lib/data-table-parsers";
+import {
+  getActiveFilters,
+  JOIN_OPERATORS,
+  normalizeColumnFilter,
+} from "@/lib/data-table-utils";
 
 const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";

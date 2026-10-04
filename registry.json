@@ -92,7 +92,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/parsers.ts",
+          "path": "src/lib/data-table-parsers.ts",
           "type": "registry:lib"
         },
         {

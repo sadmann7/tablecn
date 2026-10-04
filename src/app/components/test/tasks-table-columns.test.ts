@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { getTasksTableColumns } from "@/app/components/tasks-table-columns";
 import { tasksColumnConfigs } from "@/app/lib/validations";
-import { getFilterableColumns, getSortableColumns } from "@/lib/parsers";
+import {
+  getFilterableColumns,
+  getSortableColumns,
+} from "@/lib/data-table-parsers";
 
 vi.mock("@/app/lib/actions", () => ({ updateTask: vi.fn() }));
 

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 
 import type { SearchParams } from "@/types";
 
-import { getDataTableQuery } from "@/lib/parsers";
+import { getDataTableQuery } from "@/lib/data-table-parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
 import { TasksTable } from "./components/tasks-table";

@@ -8,8 +8,8 @@ import type {
 } from "@/lib/data-table-types";
 
 import { type Task, tasks } from "@/db/schema";
+import { getDataTableSearchParams } from "@/lib/data-table-parsers";
 import { DATA_MODES, FILTER_MODES } from "@/lib/flag";
-import { getDataTableSearchParams } from "@/lib/parsers";
 
 export const tasksColumnConfigs = {
   code: { isSortable: false },

@@ -2,11 +2,11 @@ import { createLoader } from "nuqs/server";
 import { describe, expect, it } from "vitest";
 
 import { tasksColumnConfigs, tasksDefaultSorting } from "@/app/lib/validations";
-import { matchesFilter } from "@/lib/data-table-filters";
-import { parseFilterDate } from "@/lib/data-table-utils";
 import {
-  getColumnOptions,
+  getColumnFilters,
+  getColumnFiltersKey,
   getColumnFilterParser,
+  getColumnOptions,
   getDataTableQuery,
   getDataTableSearchParams,
   getFilterableColumns,
@@ -15,7 +15,7 @@ import {
   parseColumnFilter,
   serializeColumnFilter,
   sortColumnFiltersBySearch,
-} from "@/lib/parsers";
+} from "@/lib/data-table-parsers";
 
 const loadSearch = createLoader(
   getDataTableSearchParams({
@@ -129,6 +129,31 @@ describe("parseColumnFilter", () => {
       parseColumnFilter("createdAt", "dateRange", "lte.2026-06-30"),
     ).toMatchObject({ operator: "lte", value: "2026-06-30" });
   });
+
+  it("parses quoted quotes, empty list items, and a single between bound", () => {
+    expect(
+      parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
+    ).toMatchObject({ value: ['say "hi"', "done"] });
+    expect(
+      parseColumnFilter("status", "multiSelect", "todo,,done"),
+    ).toMatchObject({ value: ["todo", "done"] });
+    expect(
+      parseColumnFilter("estimatedHours", "range", "between.5"),
+    ).toMatchObject({ operator: "isBetween", value: ["5", ""] });
+  });
+
+  it("drops filters without a value when parsing", () => {
+    const parser = getColumnFilterParser("title", "text");
+
+    expect(
+      parser
+        .parse(["ilike.", "the", "is.empty"])
+        ?.map((filter) => [filter.operator, filter.value]),
+    ).toEqual([
+      ["iLike", "the"],
+      ["isEmpty", ""],
+    ]);
+  });
 });
 
 describe("serializeColumnFilter", () => {
@@ -156,6 +181,16 @@ describe("serializeColumnFilter", () => {
         parseColumnFilter("status", "multiSelect", '"to,do",done'),
       ),
     ).toBe('"to,do",done');
+    expect(
+      serializeColumnFilter(
+        parseColumnFilter("title", "text", "ilike.eq.hello"),
+      ),
+    ).toBe("ilike.eq.hello");
+    expect(
+      serializeColumnFilter(
+        parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
+      ),
+    ).toBe('"say ""hi""",done');
   });
 
   it("serializes a column parser as one param per filter", () => {
@@ -167,19 +202,6 @@ describe("serializeColumnFilter", () => {
         parseColumnFilter("estimatedHours", "range", "lte.8"),
       ]),
     ).toEqual(["gte.2", "lte.8"]);
-  });
-
-  it("drops filters without a value when parsing", () => {
-    const parser = getColumnFilterParser("title", "text");
-
-    expect(
-      parser
-        .parse(["ilike.", "the", "is.empty"])
-        ?.map((filter) => [filter.operator, filter.value]),
-    ).toEqual([
-      ["iLike", "the"],
-      ["isEmpty", ""],
-    ]);
   });
 });
 
@@ -210,6 +232,47 @@ describe("getDataTableQuery", () => {
     );
 
     expect(query.joinOperator).toBe("and");
+    expect(loadSearch("?joinOperator=xor").joinOperator).toBe("and");
+  });
+});
+
+describe("getDataTableSearchParams", () => {
+  it("defaults page, page size, and sorting", () => {
+    const search = loadSearch("?page=no");
+
+    expect(search.page).toBe(1);
+    expect(search.perPage).toBe(10);
+    expect(search.sort).toEqual(tasksDefaultSorting);
+
+    const custom = createLoader(
+      getDataTableSearchParams({
+        columnConfigs: tasksColumnConfigs,
+        defaultPerPage: 25,
+        defaultSorting: [],
+      }),
+    )("?page=2&perPage=5");
+
+    expect(custom.page).toBe(2);
+    expect(custom.perPage).toBe(5);
+    expect(custom.sort).toEqual([]);
+  });
+});
+
+describe("getColumnFilters", () => {
+  it("numbers filters per column and builds a stable key", () => {
+    const title = parseColumnFilter("title", "text", "the");
+    const status = parseColumnFilter("status", "multiSelect", "todo");
+    const filters = getColumnFilters(["title", "status"] as const, (id) =>
+      id === "title" ? [title, title] : [status],
+    );
+
+    expect(filters.map((filter) => filter.filterId)).toEqual([
+      "title-0",
+      "title-1",
+      "status-0",
+    ]);
+    expect(getColumnFiltersKey([status, title])).toBe("status=todo&title=the");
+    expect(getColumnFiltersKey([])).toBe("");
   });
 });
 
@@ -227,6 +290,12 @@ describe("sortColumnFiltersBySearch", () => {
         "?createdAt=2026-10-01,2026-10-07&status=todo&title=the",
       ).map((filter) => filter.id),
     ).toEqual(["createdAt", "status", "title"]);
+    expect(
+      sortColumnFiltersBySearch(
+        filters,
+        new URLSearchParams("status=todo"),
+      ).map((filter) => filter.id),
+    ).toEqual(["status", "title", "createdAt"]);
   });
 });
 
@@ -252,73 +321,35 @@ describe("getSortingStateParser", () => {
     expect(commaParser.serialize([{ id: "a,b", desc: true }])).toBe(
       JSON.stringify([{ id: "a,b", desc: true }]),
     );
-  });
-});
-
-describe("matchesFilter", () => {
-  it("treats a calendar date as the local day", () => {
-    const morning = new Date(2026, 9, 3, 9, 30).getTime();
-    const nextDay = new Date(2026, 9, 4, 0, 30).getTime();
-
     expect(
-      matchesFilter(morning, {
-        operator: "eq",
-        variant: "date",
-        value: "2026-10-03",
-      }),
-    ).toBe(true);
+      getSortingStateParser().serialize([{ id: "[title]", desc: false }]),
+    ).toBe(JSON.stringify([{ id: "[title]", desc: false }]));
+    expect(parser.serialize([])).toBe("[]");
+  });
+
+  it("reads JSON sorting and rejects a broken list", () => {
+    expect(parser.parse('[{"id":"title","desc":true}]')).toEqual([
+      { id: "title", desc: true },
+    ]);
+    expect(parser.parse("[]")).toEqual([]);
+    expect(parser.parse("[")).toBeNull();
+    expect(parser.parse("title")).toBeNull();
+    expect(parser.parse(".desc")).toBeNull();
+    expect(getSortingStateParser().parse("missing.desc")).toEqual([
+      { id: "missing", desc: true },
+    ]);
     expect(
-      matchesFilter(nextDay, {
-        operator: "eq",
-        variant: "date",
-        value: "2026-10-03",
-      }),
-    ).toBe(false);
-  });
-
-  it("excludes the day itself from strict date comparisons", () => {
-    const dayBefore = new Date(2026, 9, 2, 12).getTime();
-    const sameDay = new Date(2026, 9, 3, 12).getTime();
-    const dayAfter = new Date(2026, 9, 4, 12).getTime();
-
-    function getMatches(operator: "lt" | "lte" | "gt" | "gte") {
-      return [dayBefore, sameDay, dayAfter].map((time) =>
-        matchesFilter(time, { operator, variant: "date", value: "2026-10-03" }),
-      );
-    }
-
-    expect(getMatches("lt")).toEqual([true, false, false]);
-    expect(getMatches("lte")).toEqual([true, true, false]);
-    expect(getMatches("gt")).toEqual([false, false, true]);
-    expect(getMatches("gte")).toEqual([false, true, true]);
-  });
-
-  it("treats a missing number bound as open", () => {
-    const atMostThree = {
-      operator: "isBetween" as const,
-      variant: "range" as const,
-      value: ["", "3"],
-    };
-    const atLeastTwo = {
-      operator: "isBetween" as const,
-      variant: "range" as const,
-      value: ["2", ""],
-    };
-
-    expect(matchesFilter(3, atMostThree)).toBe(true);
-    expect(matchesFilter(4, atMostThree)).toBe(false);
-    expect(matchesFilter(2, atLeastTwo)).toBe(true);
-    expect(matchesFilter(1, atLeastTwo)).toBe(false);
-  });
-});
-
-describe("parseFilterDate", () => {
-  it("rejects calendar dates that roll over", () => {
-    expect(parseFilterDate("2026-10-03")?.toDateString()).toBe(
-      new Date(2026, 9, 3).toDateString(),
+      getSortingStateParser(new Set(["title"])).parse("title.asc"),
+    ).toEqual([{ id: "title", desc: false }]);
+    expect(getSortingStateParser(new Set(["title"])).parse("missing.asc")).toBe(
+      null,
     );
-    expect(parseFilterDate("2026-13-01")).toBeUndefined();
-    expect(parseFilterDate("2026-00-31")).toBeUndefined();
-    expect(parseFilterDate("2026-02-30")).toBeUndefined();
+  });
+
+  it("treats the same sort list as equal", () => {
+    const sorting = [{ id: "title" as const, desc: true }];
+    expect(parser.eq(sorting, [{ id: "title", desc: true }])).toBe(true);
+    expect(parser.eq(sorting, [{ id: "title", desc: false }])).toBe(false);
+    expect(parser.eq(sorting, [])).toBe(false);
   });
 });
