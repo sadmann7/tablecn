@@ -171,7 +171,10 @@ function useDataTable<TData extends RowData>({
 
     for (const column of columns) {
       if (!column.id) continue;
-      sortableIds.add(column.id);
+      const hasAccessor = "accessorKey" in column || "accessorFn" in column;
+      if (hasAccessor && column.enableSorting !== false) {
+        sortableIds.add(column.id);
+      }
       if (!column.enableColumnFilter) continue;
 
       filterableVariants.set(column.id, column.meta?.variant ?? "text");

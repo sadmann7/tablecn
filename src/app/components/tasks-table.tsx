@@ -27,6 +27,7 @@ import type {
   getTaskStatusCounts,
 } from "../lib/queries";
 
+import { tasksDefaultSorting } from "../lib/validations";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { getTasksTableColumns } from "./tasks-table-columns";
@@ -85,7 +86,7 @@ export function TasksTable({
     data,
     columns,
     initialState: {
-      sorting: [{ id: "createdAt", desc: true }],
+      sorting: tasksDefaultSorting,
       columnPinning: { start: ["select"], end: ["actions"] },
     },
     queryKeys,

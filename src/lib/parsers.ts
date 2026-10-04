@@ -9,10 +9,14 @@ import { z } from "zod";
 import type {
   ColumnFilterItem,
   ColumnSortItem,
-  DataTableQuery,
+  DataTableColumnConfig,
+  DataTableColumnsConfig,
+  DataTableColumnsQuery,
+  FilterableColumnId,
   FilterOperator,
   FilterVariant,
   JoinOperator,
+  SortableColumnId,
 } from "@/lib/data-table-types";
 
 import {
@@ -163,31 +167,58 @@ export function getColumnFiltersKey(filters: ColumnFilterItem[]) {
     .join("&");
 }
 
+export function getFilterableColumns<TColumns extends DataTableColumnsConfig>(
+  columns: TColumns,
+) {
+  const entries = getKeys<keyof TColumns & string>(columns).flatMap((id) => {
+    const variant = columns[id]?.variant;
+    return variant ? [[id, variant] as const] : [];
+  });
+
+  return Object.fromEntries(entries) as Record<
+    FilterableColumnId<TColumns>,
+    FilterVariant
+  >;
+}
+
+export function getSortableColumns<TColumns extends DataTableColumnsConfig>(
+  columns: TColumns,
+) {
+  return getKeys<keyof TColumns & string>(columns).filter(
+    (id): id is SortableColumnId<TColumns> => columns[id]?.sortable !== false,
+  );
+}
+
+export function getColumnConfigProps(column: DataTableColumnConfig) {
+  return {
+    enableColumnFilter: column.variant !== undefined,
+    enableSorting: column.sortable !== false,
+  };
+}
+
 interface DataTableSearchParamsOptions<
-  TFilterColumnId extends string,
-  TSortColumnId extends string,
+  TColumns extends DataTableColumnsConfig,
 > {
-  filterableColumns: Record<TFilterColumnId, FilterVariant>;
-  sortableColumns?: readonly TSortColumnId[];
-  defaultSorting?: ColumnSortItem<NoInfer<TSortColumnId>>[];
+  columns: TColumns;
+  defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumns>>>[];
   defaultPerPage?: number;
 }
 
 export function getDataTableSearchParams<
-  TFilterColumnId extends string,
-  TSortColumnId extends string = string,
+  const TColumns extends DataTableColumnsConfig,
 >({
-  filterableColumns,
-  sortableColumns,
+  columns,
   defaultSorting = [],
   defaultPerPage = 10,
-}: DataTableSearchParamsOptions<TFilterColumnId, TSortColumnId>) {
+}: DataTableSearchParamsOptions<TColumns>) {
   return {
     page: parseAsInteger.withDefault(1),
     perPage: parseAsInteger.withDefault(defaultPerPage),
-    sort: getSortingStateParser(sortableColumns).withDefault(defaultSorting),
+    sort: getSortingStateParser(getSortableColumns(columns)).withDefault(
+      defaultSorting,
+    ),
     joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
-    ...getFilterParsers(filterableColumns),
+    ...getFilterParsers(getFilterableColumns(columns)),
   };
 }
 
@@ -199,17 +230,19 @@ interface DataTableSearch<TSortColumnId extends string> {
 }
 
 /** Joins the per-column filter params read by `getDataTableSearchParams`. */
-export function getDataTableQuery<
-  TFilterColumnId extends string,
-  TSortColumnId extends string,
->(
-  search: DataTableSearch<TSortColumnId> &
-    Record<TFilterColumnId, ColumnFilterItem<TFilterColumnId>[]>,
-  filterableColumns: Record<TFilterColumnId, FilterVariant>,
-): DataTableQuery<TFilterColumnId, TSortColumnId> {
+export function getDataTableQuery<TColumns extends DataTableColumnsConfig>(
+  search: NoInfer<
+    DataTableSearch<SortableColumnId<TColumns>> &
+      Record<
+        FilterableColumnId<TColumns>,
+        ColumnFilterItem<FilterableColumnId<TColumns>>[]
+      >
+  >,
+  columns: TColumns,
+): DataTableColumnsQuery<TColumns> {
   const filtersById: Record<
-    TFilterColumnId,
-    ColumnFilterItem<TFilterColumnId>[]
+    FilterableColumnId<TColumns>,
+    ColumnFilterItem<FilterableColumnId<TColumns>>[]
   > = search;
 
   return {
@@ -217,7 +250,7 @@ export function getDataTableQuery<
     perPage: search.perPage,
     sorting: search.sort,
     filters: getColumnFilters(
-      getKeys(filterableColumns),
+      getKeys(getFilterableColumns(columns)),
       (id) => filtersById[id],
     ),
     joinOperator: search.joinOperator,

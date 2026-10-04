@@ -1,29 +1,28 @@
 import { createSearchParamsCache, parseAsStringEnum } from "nuqs/server";
 import * as z from "zod";
 
-import type { FilterVariant } from "@/lib/data-table-types";
+import type {
+  ColumnSortItem,
+  DataTableColumnConfig,
+  SortableColumnId,
+} from "@/lib/data-table-types";
 
 import { type Task, tasks } from "@/db/schema";
 import { DATA_MODES, FILTER_MODES } from "@/lib/flag";
 import { getDataTableSearchParams } from "@/lib/parsers";
 
-/** Filterable task columns and their variants; mirrors `tasks-table-columns`. */
-export const tasksFilterableColumns = {
-  title: "text",
-  status: "multiSelect",
-  priority: "multiSelect",
-  estimatedHours: "range",
-  createdAt: "dateRange",
-} satisfies Partial<Record<keyof Task, FilterVariant>>;
+export const tasksColumns = {
+  code: { sortable: false },
+  title: { variant: "text" },
+  status: { variant: "multiSelect" },
+  priority: { variant: "multiSelect" },
+  estimatedHours: { variant: "range" },
+  createdAt: { variant: "dateRange" },
+} as const satisfies Partial<Record<keyof Task, DataTableColumnConfig>>;
 
-/** Sortable task columns; mirrors `tasks-table-columns`. */
-export const tasksSortableColumns = [
-  "title",
-  "status",
-  "priority",
-  "estimatedHours",
-  "createdAt",
-] as const satisfies readonly (keyof Task)[];
+export const tasksDefaultSorting = [
+  { id: "createdAt", desc: true },
+] satisfies ColumnSortItem<SortableColumnId<typeof tasksColumns>>[];
 
 export const searchParamsCache = createSearchParamsCache({
   filterMode: parseAsStringEnum(
@@ -33,9 +32,8 @@ export const searchParamsCache = createSearchParamsCache({
     DATA_MODES.map((dataMode) => dataMode.value),
   ).withDefault("server"),
   ...getDataTableSearchParams({
-    filterableColumns: tasksFilterableColumns,
-    sortableColumns: tasksSortableColumns,
-    defaultSorting: [{ id: "createdAt", desc: true }],
+    columns: tasksColumns,
+    defaultSorting: tasksDefaultSorting,
   }),
 });
 

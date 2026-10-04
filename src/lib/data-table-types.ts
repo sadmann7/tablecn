@@ -51,19 +51,6 @@ export interface ColumnSortItem<
   id: TColumnId;
 }
 
-declare module "@tanstack/react-table" {
-  interface ColumnFilter {
-    /**
-     * Set by the filter list and menu. Plain filters, set with
-     * `column.setFilterValue()`, leave it unset and apply their variant's
-     * plain operator.
-     */
-    operator?: FilterOperator;
-    variant?: FilterVariant;
-    filterId?: string;
-  }
-}
-
 export interface ColumnFilterItem<
   TColumnId extends string = string,
 > extends ColumnFilter {
@@ -73,6 +60,31 @@ export interface ColumnFilterItem<
   operator: FilterOperator;
   filterId: string;
 }
+
+declare module "@tanstack/react-table" {
+  interface ColumnFilter extends Partial<
+    Pick<ColumnFilterItem, "operator" | "variant" | "filterId">
+  > {}
+}
+
+export interface DataTableColumnConfig {
+  variant?: FilterVariant;
+  sortable?: boolean;
+}
+
+export type DataTableColumnsConfig = Record<string, DataTableColumnConfig>;
+
+export type FilterableColumnId<TColumns extends DataTableColumnsConfig> = {
+  [K in keyof TColumns]: TColumns[K] extends { variant: FilterVariant }
+    ? K
+    : never;
+}[keyof TColumns] &
+  string;
+
+export type SortableColumnId<TColumns extends DataTableColumnsConfig> = {
+  [K in keyof TColumns]: TColumns[K] extends { sortable: false } ? never : K;
+}[keyof TColumns] &
+  string;
 
 export interface DataTableQuery<
   TFilterColumnId extends string = string,
@@ -84,6 +96,9 @@ export interface DataTableQuery<
   filters: ColumnFilterItem<TFilterColumnId>[];
   joinOperator: JoinOperator;
 }
+
+export type DataTableColumnsQuery<TColumns extends DataTableColumnsConfig> =
+  DataTableQuery<FilterableColumnId<TColumns>, SortableColumnId<TColumns>>;
 
 export interface DataTableRowAction<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;

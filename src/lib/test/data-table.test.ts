@@ -1,15 +1,15 @@
 import { createLoader } from "nuqs/server";
 import { describe, expect, it } from "vitest";
 
-import {
-  tasksFilterableColumns,
-  tasksSortableColumns,
-} from "@/app/lib/validations";
+import { tasksColumns, tasksDefaultSorting } from "@/app/lib/validations";
 import { matchesFilter } from "@/lib/data-table-filters";
 import {
+  getColumnConfigProps,
   getColumnFilterParser,
   getDataTableQuery,
   getDataTableSearchParams,
+  getFilterableColumns,
+  getSortableColumns,
   getSortingStateParser,
   parseColumnFilter,
   serializeColumnFilter,
@@ -18,11 +18,38 @@ import {
 
 const loadSearch = createLoader(
   getDataTableSearchParams({
-    filterableColumns: tasksFilterableColumns,
-    sortableColumns: tasksSortableColumns,
-    defaultSorting: [{ id: "createdAt", desc: true }],
+    columns: tasksColumns,
+    defaultSorting: tasksDefaultSorting,
   }),
 );
+
+describe("column config", () => {
+  const columns = {
+    name: { variant: "text" },
+    age: { variant: "range", sortable: false },
+    id: { sortable: false },
+    createdAt: {},
+  } as const;
+
+  it("filters columns with a variant and sorts unless opted out", () => {
+    expect(getFilterableColumns(columns)).toEqual({
+      name: "text",
+      age: "range",
+    });
+    expect(getSortableColumns(columns)).toEqual(["name", "createdAt"]);
+  });
+
+  it("maps a column config to TanStack column options", () => {
+    expect(getColumnConfigProps(columns.age)).toEqual({
+      enableColumnFilter: true,
+      enableSorting: false,
+    });
+    expect(getColumnConfigProps(columns.createdAt)).toEqual({
+      enableColumnFilter: false,
+      enableSorting: true,
+    });
+  });
+});
 
 describe("parseColumnFilter", () => {
   it("uses the variant default when the param has no operator", () => {
@@ -160,7 +187,7 @@ describe("getDataTableQuery", () => {
     const search = loadSearch(
       "?status=not.in.todo&estimatedHours=gte.2&estimatedHours=LTE.8&title=ilike.the&createdAt=2026-01-01,2026-12-31&priority=bogus.xyz&joinOperator=or&title=",
     );
-    const query = getDataTableQuery(search, tasksFilterableColumns);
+    const query = getDataTableQuery(search, tasksColumns);
 
     expect(query.joinOperator).toBe("or");
     expect(
@@ -176,10 +203,7 @@ describe("getDataTableQuery", () => {
   });
 
   it("defaults the join operator to and", () => {
-    const query = getDataTableQuery(
-      loadSearch("?status=todo"),
-      tasksFilterableColumns,
-    );
+    const query = getDataTableQuery(loadSearch("?status=todo"), tasksColumns);
 
     expect(query.joinOperator).toBe("and");
   });
@@ -203,7 +227,7 @@ describe("sortColumnFiltersBySearch", () => {
 });
 
 describe("getSortingStateParser", () => {
-  const parser = getSortingStateParser(tasksSortableColumns);
+  const parser = getSortingStateParser(getSortableColumns(tasksColumns));
 
   it("reads the compact form and rejects unknown columns", () => {
     expect(parser.parse("createdAt.desc,title.asc")).toEqual([
