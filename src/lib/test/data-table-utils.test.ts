@@ -94,6 +94,12 @@ describe("filter dates", () => {
     expect(parseFilterDate("2026-10-03T15:00:00.000Z")?.toISOString()).toBe(
       "2026-10-03T15:00:00.000Z",
     );
+    expect(parseFilterDate("2026-10-03")?.toDateString()).toBe(
+      new Date(2026, 9, 3).toDateString(),
+    );
+    expect(parseFilterDate("2026-13-01")).toBeUndefined();
+    expect(parseFilterDate("2026-00-31")).toBeUndefined();
+    expect(parseFilterDate("2026-02-30")).toBeUndefined();
   });
 
   it("formats a calendar day and labels a range", () => {

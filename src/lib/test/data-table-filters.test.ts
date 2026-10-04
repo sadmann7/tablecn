@@ -74,6 +74,35 @@ describe("matchesFilter", () => {
       match(later, "isBetween", "dateRange", ["2026-10-01", "2026-10-07"]),
     ).toBe(false);
     expect(match(day, "isBetween", "date", ["", "2026-10-03"])).toBe(true);
+    expect(match(3, "isBetween", "range", ["", "3"])).toBe(true);
+    expect(match(4, "isBetween", "range", ["", "3"])).toBe(false);
+    expect(match(2, "isBetween", "range", ["2", ""])).toBe(true);
+    expect(match(1, "isBetween", "range", ["2", ""])).toBe(false);
+  });
+
+  it("treats a calendar date as the local day", () => {
+    const morning = new Date(2026, 9, 3, 9, 30).getTime();
+    const nextDay = new Date(2026, 9, 4, 0, 30).getTime();
+
+    expect(match(morning, "eq", "date", "2026-10-03")).toBe(true);
+    expect(match(nextDay, "eq", "date", "2026-10-03")).toBe(false);
+  });
+
+  it("excludes the day itself from strict date comparisons", () => {
+    const dayBefore = new Date(2026, 9, 2, 12).getTime();
+    const sameDay = new Date(2026, 9, 3, 12).getTime();
+    const dayAfter = new Date(2026, 9, 4, 12).getTime();
+
+    function getMatches(operator: "lt" | "lte" | "gt" | "gte") {
+      return [dayBefore, sameDay, dayAfter].map((time) =>
+        match(time, operator, "date", "2026-10-03"),
+      );
+    }
+
+    expect(getMatches("lt")).toEqual([true, false, false]);
+    expect(getMatches("lte")).toEqual([true, true, false]);
+    expect(getMatches("gt")).toEqual([false, false, true]);
+    expect(getMatches("gte")).toEqual([false, true, true]);
   });
 
   it("matches a day, week, or month counted from today", () => {

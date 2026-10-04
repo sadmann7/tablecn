@@ -2,8 +2,6 @@ import { createLoader } from "nuqs/server";
 import { describe, expect, it } from "vitest";
 
 import { tasksColumnConfigs, tasksDefaultSorting } from "@/app/lib/validations";
-import { matchesFilter } from "@/lib/data-table-filters";
-import { parseFilterDate } from "@/lib/data-table-utils";
 import {
   getColumnFilters,
   getColumnFiltersKey,
@@ -131,6 +129,31 @@ describe("parseColumnFilter", () => {
       parseColumnFilter("createdAt", "dateRange", "lte.2026-06-30"),
     ).toMatchObject({ operator: "lte", value: "2026-06-30" });
   });
+
+  it("parses quoted quotes, empty list items, and a single between bound", () => {
+    expect(
+      parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
+    ).toMatchObject({ value: ['say "hi"', "done"] });
+    expect(
+      parseColumnFilter("status", "multiSelect", "todo,,done"),
+    ).toMatchObject({ value: ["todo", "done"] });
+    expect(
+      parseColumnFilter("estimatedHours", "range", "between.5"),
+    ).toMatchObject({ operator: "isBetween", value: ["5", ""] });
+  });
+
+  it("drops filters without a value when parsing", () => {
+    const parser = getColumnFilterParser("title", "text");
+
+    expect(
+      parser
+        .parse(["ilike.", "the", "is.empty"])
+        ?.map((filter) => [filter.operator, filter.value]),
+    ).toEqual([
+      ["iLike", "the"],
+      ["isEmpty", ""],
+    ]);
+  });
 });
 
 describe("serializeColumnFilter", () => {
@@ -180,31 +203,6 @@ describe("serializeColumnFilter", () => {
       ]),
     ).toEqual(["gte.2", "lte.8"]);
   });
-
-  it("parses quoted quotes, empty list items, and a single between bound", () => {
-    expect(
-      parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
-    ).toMatchObject({ value: ['say "hi"', "done"] });
-    expect(
-      parseColumnFilter("status", "multiSelect", "todo,,done"),
-    ).toMatchObject({ value: ["todo", "done"] });
-    expect(
-      parseColumnFilter("estimatedHours", "range", "between.5"),
-    ).toMatchObject({ operator: "isBetween", value: ["5", ""] });
-  });
-
-  it("drops filters without a value when parsing", () => {
-    const parser = getColumnFilterParser("title", "text");
-
-    expect(
-      parser
-        .parse(["ilike.", "the", "is.empty"])
-        ?.map((filter) => [filter.operator, filter.value]),
-    ).toEqual([
-      ["iLike", "the"],
-      ["isEmpty", ""],
-    ]);
-  });
 });
 
 describe("getDataTableQuery", () => {
@@ -236,7 +234,9 @@ describe("getDataTableQuery", () => {
     expect(query.joinOperator).toBe("and");
     expect(loadSearch("?joinOperator=xor").joinOperator).toBe("and");
   });
+});
 
+describe("getDataTableSearchParams", () => {
   it("defaults page, page size, and sorting", () => {
     const search = loadSearch("?page=no");
 
@@ -351,73 +351,5 @@ describe("getSortingStateParser", () => {
     expect(parser.eq(sorting, [{ id: "title", desc: true }])).toBe(true);
     expect(parser.eq(sorting, [{ id: "title", desc: false }])).toBe(false);
     expect(parser.eq(sorting, [])).toBe(false);
-  });
-});
-
-describe("matchesFilter", () => {
-  it("treats a calendar date as the local day", () => {
-    const morning = new Date(2026, 9, 3, 9, 30).getTime();
-    const nextDay = new Date(2026, 9, 4, 0, 30).getTime();
-
-    expect(
-      matchesFilter(morning, {
-        operator: "eq",
-        variant: "date",
-        value: "2026-10-03",
-      }),
-    ).toBe(true);
-    expect(
-      matchesFilter(nextDay, {
-        operator: "eq",
-        variant: "date",
-        value: "2026-10-03",
-      }),
-    ).toBe(false);
-  });
-
-  it("excludes the day itself from strict date comparisons", () => {
-    const dayBefore = new Date(2026, 9, 2, 12).getTime();
-    const sameDay = new Date(2026, 9, 3, 12).getTime();
-    const dayAfter = new Date(2026, 9, 4, 12).getTime();
-
-    function getMatches(operator: "lt" | "lte" | "gt" | "gte") {
-      return [dayBefore, sameDay, dayAfter].map((time) =>
-        matchesFilter(time, { operator, variant: "date", value: "2026-10-03" }),
-      );
-    }
-
-    expect(getMatches("lt")).toEqual([true, false, false]);
-    expect(getMatches("lte")).toEqual([true, true, false]);
-    expect(getMatches("gt")).toEqual([false, false, true]);
-    expect(getMatches("gte")).toEqual([false, true, true]);
-  });
-
-  it("treats a missing number bound as open", () => {
-    const atMostThree = {
-      operator: "isBetween" as const,
-      variant: "range" as const,
-      value: ["", "3"],
-    };
-    const atLeastTwo = {
-      operator: "isBetween" as const,
-      variant: "range" as const,
-      value: ["2", ""],
-    };
-
-    expect(matchesFilter(3, atMostThree)).toBe(true);
-    expect(matchesFilter(4, atMostThree)).toBe(false);
-    expect(matchesFilter(2, atLeastTwo)).toBe(true);
-    expect(matchesFilter(1, atLeastTwo)).toBe(false);
-  });
-});
-
-describe("parseFilterDate", () => {
-  it("rejects calendar dates that roll over", () => {
-    expect(parseFilterDate("2026-10-03")?.toDateString()).toBe(
-      new Date(2026, 9, 3).toDateString(),
-    );
-    expect(parseFilterDate("2026-13-01")).toBeUndefined();
-    expect(parseFilterDate("2026-00-31")).toBeUndefined();
-    expect(parseFilterDate("2026-02-30")).toBeUndefined();
   });
 });
