@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { getTasksTableColumns } from "@/app/components/tasks-table-columns";
-import { tasksColumns } from "@/app/lib/validations";
+import { tasksColumnConfigs } from "@/app/lib/validations";
 import { getFilterableColumns, getSortableColumns } from "@/lib/parsers";
 
 vi.mock("@/app/lib/actions", () => ({ updateTask: vi.fn() }));
@@ -18,13 +18,13 @@ const dataColumns = columns.filter(
 );
 
 describe("getTasksTableColumns", () => {
-  it("defines exactly the columns in `tasksColumns`", () => {
+  it("defines exactly the columns in `tasksColumnConfigs`", () => {
     const columnIds = dataColumns.flatMap((column) =>
       column.id ? [column.id] : [],
     );
 
     expect(columnIds.sort(compareColumnId)).toEqual(
-      Object.keys(tasksColumns).sort(compareColumnId),
+      Object.keys(tasksColumnConfigs).sort(compareColumnId),
     );
   });
 
@@ -37,7 +37,7 @@ describe("getTasksTableColumns", () => {
       ),
     );
 
-    expect(filterableColumns).toEqual(getFilterableColumns(tasksColumns));
+    expect(filterableColumns).toEqual(getFilterableColumns(tasksColumnConfigs));
   });
 
   it("sorts the same columns the server parses", () => {
@@ -46,7 +46,7 @@ describe("getTasksTableColumns", () => {
     );
 
     expect(sortableColumns.sort(compareColumnId)).toEqual(
-      getSortableColumns(tasksColumns).sort(compareColumnId),
+      getSortableColumns(tasksColumnConfigs).sort(compareColumnId),
     );
   });
 });

@@ -69,21 +69,26 @@ declare module "@tanstack/react-table" {
 
 export interface DataTableColumnConfig {
   variant?: FilterVariant;
-  sortable?: boolean;
+  isSortable?: boolean;
 }
 
-export type DataTableColumnsConfig = Record<string, DataTableColumnConfig>;
+export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
 
-export type FilterableColumnId<TColumns extends DataTableColumnsConfig> = {
-  [K in keyof TColumns]: TColumns[K] extends { variant: FilterVariant }
-    ? K
-    : never;
-}[keyof TColumns] &
-  string;
+export type FilterableColumnId<TColumnConfigs extends DataTableColumnConfigs> =
+  {
+    [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
+      variant: FilterVariant;
+    }
+      ? K
+      : never;
+  }[keyof TColumnConfigs] &
+    string;
 
-export type SortableColumnId<TColumns extends DataTableColumnsConfig> = {
-  [K in keyof TColumns]: TColumns[K] extends { sortable: false } ? never : K;
-}[keyof TColumns] &
+export type SortableColumnId<TColumnConfigs extends DataTableColumnConfigs> = {
+  [K in keyof TColumnConfigs]: TColumnConfigs[K] extends { isSortable: false }
+    ? never
+    : K;
+}[keyof TColumnConfigs] &
   string;
 
 export interface DataTableQuery<
@@ -97,8 +102,12 @@ export interface DataTableQuery<
   joinOperator: JoinOperator;
 }
 
-export type DataTableColumnsQuery<TColumns extends DataTableColumnsConfig> =
-  DataTableQuery<FilterableColumnId<TColumns>, SortableColumnId<TColumns>>;
+export type DataTableColumnConfigsQuery<
+  TColumnConfigs extends DataTableColumnConfigs,
+> = DataTableQuery<
+  FilterableColumnId<TColumnConfigs>,
+  SortableColumnId<TColumnConfigs>
+>;
 
 export interface DataTableRowAction<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;

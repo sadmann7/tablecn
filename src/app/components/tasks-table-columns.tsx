@@ -18,7 +18,7 @@ import type { DataTableRowAction } from "@/lib/data-table-types";
 import { type Task, tasks } from "@/db/schema";
 import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
-import { getColumnConfigProps } from "@/lib/parsers";
+import { getColumnOptions } from "@/lib/parsers";
 import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-table/data-table-column-header";
 import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
 import { Badge } from "@/registry/bases/radix/ui/badge";
@@ -38,7 +38,7 @@ import {
 
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
-import { tasksColumns } from "../lib/validations";
+import { tasksColumnConfigs } from "../lib/validations";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
@@ -65,7 +65,7 @@ export function getTasksTableColumns({
         <DataTableColumnHeader column={column} label="Task" />
       ),
       cell: ({ cell }) => <div>{cell.getValue()}</div>,
-      ...getColumnConfigProps(tasksColumns.code),
+      ...getColumnOptions(tasksColumnConfigs.code),
       enableHiding: false,
     }),
     columnHelper.accessor("title", {
@@ -90,10 +90,10 @@ export function getTasksTableColumns({
       meta: {
         label: "Title",
         placeholder: "Search titles...",
-        variant: tasksColumns.title.variant,
+        variant: tasksColumnConfigs.title.variant,
         icon: Text,
       },
-      ...getColumnConfigProps(tasksColumns.title),
+      ...getColumnOptions(tasksColumnConfigs.title),
       size: 500,
     }),
     columnHelper.accessor("status", {
@@ -119,7 +119,7 @@ export function getTasksTableColumns({
       },
       meta: {
         label: "Status",
-        variant: tasksColumns.status.variant,
+        variant: tasksColumnConfigs.status.variant,
         options: tasks.status.enumValues.map((status) => ({
           label: status.charAt(0).toUpperCase() + status.slice(1),
           value: status,
@@ -128,7 +128,7 @@ export function getTasksTableColumns({
         })),
         icon: CircleDashed,
       },
-      ...getColumnConfigProps(tasksColumns.status),
+      ...getColumnOptions(tasksColumnConfigs.status),
     }),
     columnHelper.accessor("priority", {
       id: "priority",
@@ -153,7 +153,7 @@ export function getTasksTableColumns({
       },
       meta: {
         label: "Priority",
-        variant: tasksColumns.priority.variant,
+        variant: tasksColumnConfigs.priority.variant,
         options: tasks.priority.enumValues.map((priority) => ({
           label: priority.charAt(0).toUpperCase() + priority.slice(1),
           value: priority,
@@ -162,7 +162,7 @@ export function getTasksTableColumns({
         })),
         icon: ArrowUpDown,
       },
-      ...getColumnConfigProps(tasksColumns.priority),
+      ...getColumnOptions(tasksColumnConfigs.priority),
     }),
     columnHelper.accessor("estimatedHours", {
       id: "estimatedHours",
@@ -174,12 +174,12 @@ export function getTasksTableColumns({
       ),
       meta: {
         label: "Est. Hours",
-        variant: tasksColumns.estimatedHours.variant,
+        variant: tasksColumnConfigs.estimatedHours.variant,
         range: [estimatedHoursRange.min, estimatedHoursRange.max],
         unit: "hr",
         icon: Clock,
       },
-      ...getColumnConfigProps(tasksColumns.estimatedHours),
+      ...getColumnOptions(tasksColumnConfigs.estimatedHours),
     }),
     columnHelper.accessor("createdAt", {
       id: "createdAt",
@@ -189,10 +189,10 @@ export function getTasksTableColumns({
       cell: ({ cell }) => formatDate(cell.getValue()),
       meta: {
         label: "Created At",
-        variant: tasksColumns.createdAt.variant,
+        variant: tasksColumnConfigs.createdAt.variant,
         icon: CalendarIcon,
       },
-      ...getColumnConfigProps(tasksColumns.createdAt),
+      ...getColumnOptions(tasksColumnConfigs.createdAt),
     }),
     columnHelper.display({
       id: "actions",

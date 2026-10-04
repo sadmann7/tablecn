@@ -11,8 +11,8 @@ import { type Task, tasks } from "@/db/schema";
 import { DATA_MODES, FILTER_MODES } from "@/lib/flag";
 import { getDataTableSearchParams } from "@/lib/parsers";
 
-export const tasksColumns = {
-  code: { sortable: false },
+export const tasksColumnConfigs = {
+  code: { isSortable: false },
   title: { variant: "text" },
   status: { variant: "multiSelect" },
   priority: { variant: "multiSelect" },
@@ -22,7 +22,7 @@ export const tasksColumns = {
 
 export const tasksDefaultSorting = [
   { id: "createdAt", desc: true },
-] satisfies ColumnSortItem<SortableColumnId<typeof tasksColumns>>[];
+] satisfies ColumnSortItem<SortableColumnId<typeof tasksColumnConfigs>>[];
 
 export const searchParamsCache = createSearchParamsCache({
   filterMode: parseAsStringEnum(
@@ -32,7 +32,7 @@ export const searchParamsCache = createSearchParamsCache({
     DATA_MODES.map((dataMode) => dataMode.value),
   ).withDefault("server"),
   ...getDataTableSearchParams({
-    columns: tasksColumns,
+    columnConfigs: tasksColumnConfigs,
     defaultSorting: tasksDefaultSorting,
   }),
 });
