@@ -104,7 +104,7 @@ export function TasksTable({
   );
 
   return (
-    <DirectionProvider dir="rtl">
+    <DirectionProvider dir="ltr">
       <DataTable
         table={table}
         actionBar={<TasksTableActionBar table={table} />}
