@@ -1,4 +1,8 @@
-import { createSearchParamsCache, parseAsStringEnum } from "nuqs/server";
+import {
+  createSearchParamsCache,
+  parseAsStringEnum,
+  parseAsStringLiteral,
+} from "nuqs/server";
 import * as z from "zod";
 
 import type {
@@ -9,7 +13,7 @@ import type {
 
 import { type Task, tasks } from "@/db/schema";
 import { getDataTableSearchParams } from "@/lib/data-table-parsers";
-import { DATA_MODES, FILTER_MODES } from "@/lib/flag";
+import { DATA_MODES, DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 
 export const tasksColumnConfigs = {
   code: { isSortable: false },
@@ -31,6 +35,7 @@ export const searchParamsCache = createSearchParamsCache({
   dataMode: parseAsStringEnum(
     DATA_MODES.map((dataMode) => dataMode.value),
   ).withDefault("server"),
+  dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
   ...getDataTableSearchParams({
     columnConfigs: tasksColumnConfigs,
     defaultSorting: tasksDefaultSorting,

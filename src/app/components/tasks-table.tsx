@@ -7,7 +7,7 @@ import type {
   DataTableQueryKeys,
   DataTableRowAction,
 } from "@/lib/data-table-types";
-import type { DataMode, FilterMode } from "@/lib/flag";
+import type { DataMode, Direction, FilterMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
@@ -36,6 +36,7 @@ import { UpdateTaskSheet } from "./update-task-sheet";
 
 interface TasksTableProps {
   dataMode: DataMode;
+  dir: Direction;
   filterMode: FilterMode;
   promises: Promise<
     [
@@ -50,6 +51,7 @@ interface TasksTableProps {
 
 export function TasksTable({
   dataMode,
+  dir,
   filterMode,
   promises,
   queryKeys,
@@ -104,7 +106,7 @@ export function TasksTable({
   );
 
   return (
-    <DirectionProvider dir="rtl">
+    <DirectionProvider dir={dir}>
       <DataTable
         table={table}
         actionBar={<TasksTableActionBar table={table} />}

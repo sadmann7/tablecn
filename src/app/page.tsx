@@ -56,7 +56,7 @@ export default function IndexPage(props: IndexPageProps) {
 async function TasksTableWrapper(props: IndexPageProps) {
   const searchParams = await props.searchParams;
   const search = searchParamsCache.parse(searchParams);
-  const { dataMode } = search;
+  const { dataMode, dir } = search;
 
   const tasksPromise =
     dataMode === "client"
@@ -74,6 +74,7 @@ async function TasksTableWrapper(props: IndexPageProps) {
     <TasksTable
       key={dataMode}
       dataMode={dataMode}
+      dir={dir}
       filterMode={search.filterMode}
       promises={promises}
     />
