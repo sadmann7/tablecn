@@ -16,9 +16,9 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { DataTableRowAction } from "@/lib/data-table-types";
 
 import { type Task, tasks } from "@/db/schema";
+import { getColumnOptions } from "@/lib/data-table-parsers";
 import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
-import { getColumnOptions } from "@/lib/parsers";
 import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-table/data-table-column-header";
 import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
 import { Badge } from "@/registry/bases/radix/ui/badge";

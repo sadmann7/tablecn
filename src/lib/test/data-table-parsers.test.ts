@@ -15,7 +15,7 @@ import {
   parseColumnFilter,
   serializeColumnFilter,
   sortColumnFiltersBySearch,
-} from "@/lib/parsers";
+} from "@/lib/data-table-parsers";
 
 const loadSearch = createLoader(
   getDataTableSearchParams({
