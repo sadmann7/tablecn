@@ -100,15 +100,6 @@ function asDataTable(table: object) {
   return table as DataTableInstance;
 }
 
-/**
- * Adds operator filters and a `joinOperator` on top of TanStack's
- * `columnFilteringFeature`, which stays the one filter state.
- *
- * `columnFilters` items may carry an `operator` (from the filter list and
- * menu). Plain filters set with `column.setFilterValue()` don't, and apply
- * their variant's plain operator through `dataTableFilterFn`, or through the
- * column's own `filterFn`.
- */
 const dataTableFilteringFeature: TableFeature = {
   getInitialState: (initialState) => ({
     joinOperator: "and",
@@ -209,10 +200,6 @@ const dataTableFilteringFeature: TableFeature = {
   },
 };
 
-/**
- * A column's plain filter and its value, e.g. `["todo"]` or `[1, 5]`. A
- * column may also have operator filters, which this leaves out.
- */
 function getPlainFilter(
   instance: DataTableInstance,
   columnId: string,
@@ -233,11 +220,6 @@ function getPlainFilter(
   return { index, filter, value };
 }
 
-/**
- * `column.setFilterValue()`: sets only the column's plain filter, so its
- * operator filters survive. Like `column.getFilterValue()`, the updater gets
- * the plain filter's value.
- */
 function setPlainFilter(
   instance: DataTableInstance,
   columnId: string,

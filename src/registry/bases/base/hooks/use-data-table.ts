@@ -146,7 +146,7 @@ function useDataTable<TData extends RowData>({
 
   const pagination = React.useMemo<PaginationState>(
     () => ({
-      pageIndex: page - 1, // zero-based index -> one-based index
+      pageIndex: page - 1,
       pageSize: perPage,
     }),
     [page, perPage],

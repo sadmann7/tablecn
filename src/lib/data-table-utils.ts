@@ -180,7 +180,6 @@ export function getFilterOperators(filterVariant: FilterVariant) {
   return FILTER_OPERATORS_BY_VARIANT[filterVariant] ?? [];
 }
 
-/** The operator a new filter starts with in the filter list and menu. */
 export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   const operators = getFilterOperators(filterVariant);
 
@@ -245,11 +244,7 @@ export function getSelectFilterValue(filter: ColumnFilterItem) {
 
 const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/**
- * Reads a filter date: a calendar day like `2026-10-01`, a timestamp, or a
- * `Date`. Calendar days resolve to local midnight, so every reader filters on
- * the same day regardless of its time zone.
- */
+/** Calendar days are local midnight, so every reader filters on the same day. */
 export function parseFilterDate(value: unknown): Date | undefined {
   if (value instanceof Date) return getValidDate(value);
   if (typeof value === "number") return getValidDate(new Date(value));
@@ -270,7 +265,6 @@ export function parseFilterDate(value: unknown): Date | undefined {
   return getValidDate(new Date(Number.isNaN(numeric) ? text : numeric));
 }
 
-/** Writes a date as its local calendar day, e.g. `2026-10-01`. */
 export function formatFilterDate(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -341,21 +335,12 @@ export function getIsMultiValueVariant(variant: FilterVariant) {
   return MULTI_VALUE_FILTER_VARIANTS.includes(variant);
 }
 
-/**
- * The operator `column.setFilterValue()` applies. Selects match any of the
- * values and ranges match between both bounds.
- */
 export function getPlainFilterOperator(variant: FilterVariant): FilterOperator {
   if (variant === "select" || variant === "multiSelect") return "inArray";
   if (variant === "range" || variant === "dateRange") return "isBetween";
   return getDefaultFilterOperator(variant);
 }
 
-/**
- * Whether a filter is a plain filter: the one `column.getFilterValue()` and
- * `column.setFilterValue()` read and write, with the variant's plain operator
- * and a value of the matching shape.
- */
 export function getIsPlainFilter(filter: ColumnFilterItem) {
   return (
     filter.operator === getPlainFilterOperator(filter.variant) &&
@@ -367,10 +352,6 @@ export function getPlainFilterId(columnId: string) {
   return `${columnId}-filter`;
 }
 
-/**
- * Creates a plain filter from a column filter value (e.g. `["todo", "done"]`
- * or `[1, 5]`). Returns `null` for empty values.
- */
 export function createPlainFilter<TColumnId extends string>(
   id: TColumnId,
   variant: FilterVariant,
@@ -393,10 +374,6 @@ export function createPlainFilter<TColumnId extends string>(
   return { id, variant, operator, value: stringify(value), filterId };
 }
 
-/**
- * Fills in a `columnFilters` item. Plain filters (no `operator`) get the
- * variant's plain operator, and their value becomes filter strings.
- */
 export function normalizeColumnFilter(
   filter: ColumnFilter,
   variant: FilterVariant,

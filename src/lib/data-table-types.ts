@@ -64,7 +64,6 @@ declare module "@tanstack/react-table" {
   }
 }
 
-/** A `columnFilters` item with every field resolved. */
 export interface ColumnFilterItem<
   TColumnId extends string = string,
 > extends ColumnFilter {

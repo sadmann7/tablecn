@@ -30,11 +30,6 @@ const sortingItemSchema = z.object({
   desc: z.boolean(),
 });
 
-/**
- * Parses the `sort` param, either `createdAt.desc,title.asc` or JSON, and
- * writes the compact form. Pass `columnIds` to reject unknown columns and to
- * narrow the parsed ids to them.
- */
 export const getSortingStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
 ) => {
@@ -60,7 +55,7 @@ export const getSortingStateParser = <TColumnId extends string = string>(
   });
 };
 
-/** How each operator is written in a filter param, after PostgREST. */
+/** PostgREST operator names. */
 const URL_OPERATORS = {
   iLike: "ilike",
   notILike: "not.ilike",
@@ -94,13 +89,6 @@ const LIST_OPERATORS = new Set<FilterOperator>([
   "isBetween",
 ]);
 
-/**
- * Reads one filter param of a column, e.g. `todo,done` with the variant's
- * default operator, or `not.in.todo,done`, `gte.2`, `between.2,8`, and
- * `is.empty`. Operators are case-insensitive and also accept their internal
- * names (`notInArray`). A param without an operator the variant supports is
- * read as a value for the default operator.
- */
 export function parseColumnFilter<TColumnId extends string>(
   id: TColumnId,
   variant: FilterVariant,
@@ -125,10 +113,6 @@ export function parseColumnFilter<TColumnId extends string>(
   return { ...filter, id };
 }
 
-/**
- * Writes one filter as a param, leaving out the operator when it's the
- * variant's default and the value still reads back the same.
- */
 export function serializeColumnFilter(filter: ColumnFilterItem) {
   const name = URL_OPERATORS[filter.operator];
   if (getIsValuelessOperator(filter.operator)) return name;
@@ -145,10 +129,6 @@ export function serializeColumnFilter(filter: ColumnFilterItem) {
   return `${name}.${rawValue}`;
 }
 
-/**
- * The parser for one column's filters. Each filter is its own param, so
- * `?hours=gte.2&hours=lte.8` holds two.
- */
 export function getColumnFilterParser<TColumnId extends string>(
   id: TColumnId,
   variant: FilterVariant,
@@ -162,10 +142,6 @@ export function getColumnFilterParser<TColumnId extends string>(
   );
 }
 
-/**
- * Joins per-column filters in column order, giving each a `filterId` that's
- * stable for the same URL.
- */
 export function getColumnFilters<TColumnId extends string>(
   columnIds: readonly TColumnId[],
   getFilters: (id: TColumnId) => ColumnFilterItem<TColumnId>[],
@@ -178,10 +154,6 @@ export function getColumnFilters<TColumnId extends string>(
   );
 }
 
-/**
- * Orders filters by where their column's param first appears in `search`,
- * keeping the order within a column. Columns missing from `search` go last.
- */
 export function sortColumnFiltersBySearch<TFilter extends ColumnFilterItem>(
   filters: TFilter[],
   search: string | URLSearchParams,
@@ -198,10 +170,6 @@ export function sortColumnFiltersBySearch<TFilter extends ColumnFilterItem>(
   );
 }
 
-/**
- * A key that changes only when the URL a set of filters writes changes, so
- * reordering filters across columns keeps it.
- */
 export function getColumnFiltersKey(filters: ColumnFilterItem[]) {
   return filters
     .map((filter) => `${filter.id}=${serializeColumnFilter(filter)}`)
@@ -213,19 +181,12 @@ interface DataTableSearchParamsOptions<
   TFilterColumnId extends string,
   TSortColumnId extends string,
 > {
-  /** Filterable column ids mapped to their filter variant. */
   filterableColumns: Record<TFilterColumnId, FilterVariant>;
-  /** Sortable column ids. Without it, sorts on any id are accepted. */
   sortableColumns?: readonly TSortColumnId[];
   defaultSorting?: ColumnSortItem<NoInfer<TSortColumnId>>[];
   defaultPerPage?: number;
 }
 
-/**
- * The nuqs parsers for every URL param a data table writes, including one per
- * filterable column. Spread the result into `createSearchParamsCache`, or use
- * the individual parsers.
- */
 export function getDataTableSearchParams<
   TFilterColumnId extends string,
   TSortColumnId extends string = string,
@@ -256,12 +217,7 @@ interface DataTableSearch<TSortColumnId extends string> {
   joinOperator: JoinOperator;
 }
 
-/**
- * Normalizes parsed search params into one `DataTableQuery`, joining the
- * per-column filter params and dropping filters without a value the same way
- * `useDataTable` does, so server and client agree. Server adapters (Drizzle,
- * Supabase, ...) only need to handle this shape.
- */
+/** Drops empty filters the same way `useDataTable` does, so server and client agree. */
 export function getDataTableQuery<
   TFilterColumnId extends string,
   TSortColumnId extends string,
@@ -321,10 +277,6 @@ function getIsVariantOperator(
   );
 }
 
-/**
- * Reads a comma separated list. Items are trimmed, and items holding a comma
- * are quoted (`"a,b"`), with `""` for a quote inside.
- */
 function parseListValue(rawValue: string, operator: FilterOperator) {
   const items: string[] = [];
   let item = "";

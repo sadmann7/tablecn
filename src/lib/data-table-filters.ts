@@ -30,11 +30,7 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Evaluates one filter condition against a cell value in the browser. This is
- * the client-side twin of the server adapters (e.g. the Drizzle adapter), so
- * every `FilterOperator` must be handled here as well.
- */
+/** Client-side twin of the server adapters: every `FilterOperator` is handled here. */
 export function matchesFilter(
   cellValue: unknown,
   filter: Pick<ColumnFilterItem, "operator" | "variant" | "value">,
@@ -99,10 +95,6 @@ export function matchesFilter(
   }
 }
 
-/**
- * The default `filterFn` of data table columns: applies a plain filter with
- * the column variant's plain operator. Only `undefined` removes a filter.
- */
 export const dataTableFilterFn = constructFilterFn({
   filter: (dataValue, filterValue, row, columnId) => {
     const variant = getFilterVariant(
@@ -114,14 +106,6 @@ export const dataTableFilterFn = constructFilterFn({
   autoRemove: (value) => value === undefined,
 });
 
-/**
- * Filtered row model for `columnFilters` joined by `joinOperator`. Register it
- * in the `filteredRowModel` slot. Filters with an `operator` apply it; plain
- * filters use the column's `filterFn`. The global filter must also match.
- *
- * Like TanStack's, it records each column's result per row, which
- * `createDataTableFacetedRowModel` reads to leave out a column's own filters.
- */
 export function createDataTableFilteredRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -145,11 +129,6 @@ export function createDataTableFilteredRowModel<
   };
 }
 
-/**
- * Faceted row model that honors `joinOperator`: a column's facets count the
- * rows that would match with that column's own filters left out. Register it
- * in the `facetedRowModel` slot next to `createDataTableFilteredRowModel`.
- */
 export function createDataTableFacetedRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -308,10 +287,6 @@ function getFacetedRowModel<
   );
 }
 
-/**
- * Joins a row's per-column results with `joinOperator`. The global filter
- * must always match. `excludedColumnId` leaves a column out, for facets.
- */
 function getRowPasses<TFeatures extends TableFeatures, TData extends RowData>(
   row: Row<TFeatures, TData>,
   joinOperator: JoinOperator,
