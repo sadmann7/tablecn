@@ -2,7 +2,6 @@ import { defineConfig, devices } from "@playwright/test";
 
 const viewport = { width: 1920, height: 1080 };
 
-/** Records the launch demo. Kept separate so `pnpm test:e2e` does not film it. */
 export default defineConfig({
   testDir: "e2e",
   testMatch: "**/record-launch.spec.ts",
@@ -17,7 +16,7 @@ export default defineConfig({
     video: "off",
   },
   webServer: {
-    command: "pnpm dev",
+    command: "node_modules/.bin/next dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

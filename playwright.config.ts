@@ -16,7 +16,9 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: isCI ? "pnpm start" : "pnpm dev",
+    command: isCI
+      ? "node_modules/.bin/next start"
+      : "node_modules/.bin/next dev",
     url: "http://localhost:3000",
     reuseExistingServer: !isCI,
     timeout: 120_000,
