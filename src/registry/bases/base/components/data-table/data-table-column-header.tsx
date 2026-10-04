@@ -122,7 +122,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
         {column.getCanSort() && (
           <>
             <DropdownMenuCheckboxItem
-              className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
+              className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "asc"}
               onClick={() => column.toggleSorting(false, true)}
             >
@@ -136,7 +136,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               Asc
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
-              className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
+              className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "desc"}
               onClick={() => column.toggleSorting(true, true)}
             >
@@ -151,7 +151,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             </DropdownMenuCheckboxItem>
             {sortDirection !== "none" && (
               <DropdownMenuItem
-                className="ltr:pl-2 rtl:pr-2 [&_svg]:text-muted-foreground"
+                className="[&_svg]:text-muted-foreground"
                 onClick={() => column.clearSorting()}
               >
                 <IconPlaceholder
@@ -168,7 +168,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
         )}
         {column.getCanHide() && (
           <DropdownMenuCheckboxItem
-            className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
+            className="[&_svg]:text-muted-foreground"
             checked={!isVisible}
             onClick={() => column.toggleVisibility(false)}
           >
