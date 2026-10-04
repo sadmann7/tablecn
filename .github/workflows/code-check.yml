@@ -57,6 +57,7 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     name: E2E
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:17.4
@@ -86,6 +87,9 @@ jobs:
 
       - name: Install Playwright
         run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build
+        run: pnpm exec next build
 
       - name: Test
         run: pnpm test:e2e
