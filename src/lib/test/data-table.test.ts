@@ -5,8 +5,10 @@ import { tasksColumnConfigs, tasksDefaultSorting } from "@/app/lib/validations";
 import { matchesFilter } from "@/lib/data-table-filters";
 import { parseFilterDate } from "@/lib/data-table-utils";
 import {
-  getColumnOptions,
+  getColumnFilters,
+  getColumnFiltersKey,
   getColumnFilterParser,
+  getColumnOptions,
   getDataTableQuery,
   getDataTableSearchParams,
   getFilterableColumns,
@@ -156,6 +158,16 @@ describe("serializeColumnFilter", () => {
         parseColumnFilter("status", "multiSelect", '"to,do",done'),
       ),
     ).toBe('"to,do",done');
+    expect(
+      serializeColumnFilter(
+        parseColumnFilter("title", "text", "ilike.eq.hello"),
+      ),
+    ).toBe("ilike.eq.hello");
+    expect(
+      serializeColumnFilter(
+        parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
+      ),
+    ).toBe('"say ""hi""",done');
   });
 
   it("serializes a column parser as one param per filter", () => {
@@ -167,6 +179,18 @@ describe("serializeColumnFilter", () => {
         parseColumnFilter("estimatedHours", "range", "lte.8"),
       ]),
     ).toEqual(["gte.2", "lte.8"]);
+  });
+
+  it("parses quoted quotes, empty list items, and a single between bound", () => {
+    expect(
+      parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
+    ).toMatchObject({ value: ['say "hi"', "done"] });
+    expect(
+      parseColumnFilter("status", "multiSelect", "todo,,done"),
+    ).toMatchObject({ value: ["todo", "done"] });
+    expect(
+      parseColumnFilter("estimatedHours", "range", "between.5"),
+    ).toMatchObject({ operator: "isBetween", value: ["5", ""] });
   });
 
   it("drops filters without a value when parsing", () => {
@@ -210,6 +234,45 @@ describe("getDataTableQuery", () => {
     );
 
     expect(query.joinOperator).toBe("and");
+    expect(loadSearch("?joinOperator=xor").joinOperator).toBe("and");
+  });
+
+  it("defaults page, page size, and sorting", () => {
+    const search = loadSearch("?page=no");
+
+    expect(search.page).toBe(1);
+    expect(search.perPage).toBe(10);
+    expect(search.sort).toEqual(tasksDefaultSorting);
+
+    const custom = createLoader(
+      getDataTableSearchParams({
+        columnConfigs: tasksColumnConfigs,
+        defaultPerPage: 25,
+        defaultSorting: [],
+      }),
+    )("?page=2&perPage=5");
+
+    expect(custom.page).toBe(2);
+    expect(custom.perPage).toBe(5);
+    expect(custom.sort).toEqual([]);
+  });
+});
+
+describe("getColumnFilters", () => {
+  it("numbers filters per column and builds a stable key", () => {
+    const title = parseColumnFilter("title", "text", "the");
+    const status = parseColumnFilter("status", "multiSelect", "todo");
+    const filters = getColumnFilters(["title", "status"] as const, (id) =>
+      id === "title" ? [title, title] : [status],
+    );
+
+    expect(filters.map((filter) => filter.filterId)).toEqual([
+      "title-0",
+      "title-1",
+      "status-0",
+    ]);
+    expect(getColumnFiltersKey([status, title])).toBe("status=todo&title=the");
+    expect(getColumnFiltersKey([])).toBe("");
   });
 });
 
@@ -227,6 +290,12 @@ describe("sortColumnFiltersBySearch", () => {
         "?createdAt=2026-10-01,2026-10-07&status=todo&title=the",
       ).map((filter) => filter.id),
     ).toEqual(["createdAt", "status", "title"]);
+    expect(
+      sortColumnFiltersBySearch(
+        filters,
+        new URLSearchParams("status=todo"),
+      ).map((filter) => filter.id),
+    ).toEqual(["status", "title", "createdAt"]);
   });
 });
 
@@ -252,6 +321,36 @@ describe("getSortingStateParser", () => {
     expect(commaParser.serialize([{ id: "a,b", desc: true }])).toBe(
       JSON.stringify([{ id: "a,b", desc: true }]),
     );
+    expect(
+      getSortingStateParser().serialize([{ id: "[title]", desc: false }]),
+    ).toBe(JSON.stringify([{ id: "[title]", desc: false }]));
+    expect(parser.serialize([])).toBe("[]");
+  });
+
+  it("reads JSON sorting and rejects a broken list", () => {
+    expect(parser.parse('[{"id":"title","desc":true}]')).toEqual([
+      { id: "title", desc: true },
+    ]);
+    expect(parser.parse("[]")).toEqual([]);
+    expect(parser.parse("[")).toBeNull();
+    expect(parser.parse("title")).toBeNull();
+    expect(parser.parse(".desc")).toBeNull();
+    expect(getSortingStateParser().parse("missing.desc")).toEqual([
+      { id: "missing", desc: true },
+    ]);
+    expect(
+      getSortingStateParser(new Set(["title"])).parse("title.asc"),
+    ).toEqual([{ id: "title", desc: false }]);
+    expect(getSortingStateParser(new Set(["title"])).parse("missing.asc")).toBe(
+      null,
+    );
+  });
+
+  it("treats the same sort list as equal", () => {
+    const sorting = [{ id: "title" as const, desc: true }];
+    expect(parser.eq(sorting, [{ id: "title", desc: true }])).toBe(true);
+    expect(parser.eq(sorting, [{ id: "title", desc: false }])).toBe(false);
+    expect(parser.eq(sorting, [])).toBe(false);
   });
 });
 
