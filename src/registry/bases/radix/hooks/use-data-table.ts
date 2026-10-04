@@ -236,8 +236,6 @@ function useDataTable<TData extends RowData>({
 
   const [filterParams, setFilterParams] = useQueryStates(filterParsers);
 
-  // nuqs and the server render only see values per column, so filters read
-  // from the URL follow the URL's param order once hydrated.
   const search = React.useSyncExternalStore(
     subscribeToHistory,
     getLocationSearch,
@@ -269,9 +267,6 @@ function useDataTable<TData extends RowData>({
     },
   );
 
-  // The draft keeps filters being edited, including ones without a value yet.
-  // It only applies while the URL still holds the filters it was based on, so
-  // back/forward or an edited link wins.
   const columnFilters =
     filtersDraft?.urlFiltersKey === urlFiltersKey
       ? filtersDraft.filters
@@ -279,13 +274,9 @@ function useDataTable<TData extends RowData>({
 
   const debouncedWriteFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState) => {
-      // Filters without a value stay out of the URL, since `?title=` reads
-      // back as no filter.
       const filters = getActiveFilters(
         columnIndex.normalizeColumnFilters(columnFilters),
       ).filter((filter) => Object.hasOwn(columnIndex.variantById, filter.id));
-      // Params are written in insertion order, so columns land in the URL in
-      // the order their first filter appears.
       const params = new Map<string, ColumnFilterItem[] | null>();
 
       for (const filter of filters) {
