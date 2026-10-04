@@ -6,7 +6,7 @@
 import type { NextConfig } from "next";
 
 import { DEFAULT_STYLE_ID } from "./src/lib/constants";
-import "./src/env.js";
+import "./src/env";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
