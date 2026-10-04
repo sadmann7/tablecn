@@ -22,7 +22,7 @@ import type {
 import {
   createPlainFilter,
   FILTER_VARIANTS,
-  getActiveFilters,
+  getIsActiveFilter,
   normalizeColumnFilter,
   parseFilterDate,
   stringifyFilterValue,
@@ -346,7 +346,7 @@ function getFilterTest<TFeatures extends TableFeatures, TData extends RowData>(
     filter,
     getFilterVariant(column.columnDef.meta),
   );
-  if (getActiveFilters([item]).length === 0) return null;
+  if (!getIsActiveFilter(item)) return null;
 
   return (row) => matchesFilter(row.getValue(column.id), item);
 }

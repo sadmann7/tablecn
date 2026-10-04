@@ -140,6 +140,19 @@ describe("serializeColumnFilter", () => {
       ]),
     ).toEqual(["gte.2", "lte.8"]);
   });
+
+  it("drops filters without a value when parsing", () => {
+    const parser = getColumnFilterParser("title", "text");
+
+    expect(
+      parser
+        .parse(["ilike.", "the", "is.empty"])
+        ?.map((filter) => [filter.operator, filter.value]),
+    ).toEqual([
+      ["iLike", "the"],
+      ["isEmpty", ""],
+    ]);
+  });
 });
 
 describe("getDataTableQuery", () => {

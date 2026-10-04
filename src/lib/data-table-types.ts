@@ -36,7 +36,7 @@ export interface FilterOption {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type FilterOperator = (typeof FILTER_OPERATORS)[number];
+export type FilterOperator = keyof typeof FILTER_OPERATORS;
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 

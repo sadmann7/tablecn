@@ -26,22 +26,22 @@ export const FILTER_VARIANTS = [
   "multiSelect",
 ] as const;
 
-export const FILTER_OPERATORS = [
-  "iLike",
-  "notILike",
-  "eq",
-  "ne",
-  "inArray",
-  "notInArray",
-  "isEmpty",
-  "isNotEmpty",
-  "lt",
-  "lte",
-  "gt",
-  "gte",
-  "isBetween",
-  "isRelativeToToday",
-] as const;
+export const FILTER_OPERATORS = {
+  iLike: "ilike",
+  notILike: "not.ilike",
+  eq: "eq",
+  ne: "neq",
+  inArray: "in",
+  notInArray: "not.in",
+  isEmpty: "is.empty",
+  isNotEmpty: "not.is.empty",
+  lt: "lt",
+  lte: "lte",
+  gt: "gt",
+  gte: "gte",
+  isBetween: "between",
+  isRelativeToToday: "rel",
+} as const;
 
 export const JOIN_OPERATORS = ["and", "or"] as const;
 
@@ -429,16 +429,19 @@ export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   return value;
 }
 
+export function getIsActiveFilter(filter: ColumnFilterItem) {
+  return (
+    getIsValuelessOperator(filter.operator) ||
+    (Array.isArray(filter.value)
+      ? filter.value.some((value) => value !== "")
+      : filter.value !== "" &&
+        filter.value !== null &&
+        filter.value !== undefined)
+  );
+}
+
 export function getActiveFilters<TFilterItem extends ColumnFilterItem>(
   filters: TFilterItem[],
 ): TFilterItem[] {
-  return filters.filter(
-    (filter) =>
-      getIsValuelessOperator(filter.operator) ||
-      (Array.isArray(filter.value)
-        ? filter.value.some((value) => value !== "")
-        : filter.value !== "" &&
-          filter.value !== null &&
-          filter.value !== undefined),
-  );
+  return filters.filter(getIsActiveFilter);
 }

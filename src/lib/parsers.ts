@@ -17,8 +17,8 @@ import type {
 
 import {
   FILTER_OPERATORS,
-  getActiveFilters,
   getFilterOperators,
+  getIsActiveFilter,
   getIsValuelessOperator,
   getPlainFilterOperator,
   JOIN_OPERATORS,
@@ -55,28 +55,10 @@ export const getSortingStateParser = <TColumnId extends string = string>(
   });
 };
 
-/** PostgREST operator names. */
-const URL_OPERATORS = {
-  iLike: "ilike",
-  notILike: "not.ilike",
-  eq: "eq",
-  ne: "neq",
-  inArray: "in",
-  notInArray: "not.in",
-  isEmpty: "is.empty",
-  isNotEmpty: "not.is.empty",
-  lt: "lt",
-  lte: "lte",
-  gt: "gt",
-  gte: "gte",
-  isBetween: "between",
-  isRelativeToToday: "rel",
-} satisfies Record<FilterOperator, string>;
-
 /** URL names and internal names, lowercased, so both read back. */
 const OPERATORS_BY_NAME = new Map(
-  FILTER_OPERATORS.flatMap((operator): [string, FilterOperator][] => [
-    [URL_OPERATORS[operator], operator],
+  getKeys(FILTER_OPERATORS).flatMap((operator): [string, FilterOperator][] => [
+    [FILTER_OPERATORS[operator], operator],
     [operator.toLowerCase(), operator],
   ]),
 );
@@ -114,7 +96,7 @@ export function parseColumnFilter<TColumnId extends string>(
 }
 
 export function serializeColumnFilter(filter: ColumnFilterItem) {
-  const name = URL_OPERATORS[filter.operator];
+  const name = FILTER_OPERATORS[filter.operator];
   if (getIsValuelessOperator(filter.operator)) return name;
 
   const rawValue = Array.isArray(filter.value)
@@ -135,7 +117,11 @@ export function getColumnFilterParser<TColumnId extends string>(
 ) {
   return parseAsNativeArrayOf(
     createParser<ColumnFilterItem<TColumnId>>({
-      parse: (param) => parseColumnFilter(id, variant, param),
+      // nuqs drops items that parse to null, so `?title=` reads as no filter.
+      parse: (param) => {
+        const filter = parseColumnFilter(id, variant, param);
+        return getIsActiveFilter(filter) ? filter : null;
+      },
       serialize: serializeColumnFilter,
       eq: (a, b) => serializeColumnFilter(a) === serializeColumnFilter(b),
     }),
@@ -201,12 +187,7 @@ export function getDataTableSearchParams<
     perPage: parseAsInteger.withDefault(defaultPerPage),
     sort: getSortingStateParser(sortableColumns).withDefault(defaultSorting),
     joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
-    ...Object.fromEntries(
-      getColumnIds(filterableColumns).map((id) => [
-        id,
-        getColumnFilterParser(id, filterableColumns[id]),
-      ]),
-    ),
+    ...getFilterParsers(filterableColumns),
   };
 }
 
@@ -217,28 +198,42 @@ interface DataTableSearch<TSortColumnId extends string> {
   joinOperator: JoinOperator;
 }
 
-/** Drops empty filters the same way `useDataTable` does, so server and client agree. */
+/** Joins the per-column filter params read by `getDataTableSearchParams`. */
 export function getDataTableQuery<
   TFilterColumnId extends string,
   TSortColumnId extends string,
 >(
   search: DataTableSearch<TSortColumnId> &
-    Partial<Record<NoInfer<TFilterColumnId>, unknown>>,
+    Record<TFilterColumnId, ColumnFilterItem<TFilterColumnId>[]>,
   filterableColumns: Record<TFilterColumnId, FilterVariant>,
 ): DataTableQuery<TFilterColumnId, TSortColumnId> {
-  const filters = getColumnFilters(getColumnIds(filterableColumns), (id) => {
-    const value = search[id];
-    if (!Array.isArray(value)) return [];
-    return value.filter(getIsColumnFilterItem).map((item) => ({ ...item, id }));
-  });
+  const filtersById: Record<
+    TFilterColumnId,
+    ColumnFilterItem<TFilterColumnId>[]
+  > = search;
 
   return {
     page: search.page,
     perPage: search.perPage,
     sorting: search.sort,
-    filters: getActiveFilters(filters),
+    filters: getColumnFilters(
+      getKeys(filterableColumns),
+      (id) => filtersById[id],
+    ),
     joinOperator: search.joinOperator,
   };
+}
+
+function getFilterParsers<TColumnId extends string>(
+  columns: Record<TColumnId, FilterVariant>,
+) {
+  const parsers = getKeys(columns).map(
+    (id) => [id, getColumnFilterParser(id, columns[id])] as const,
+  );
+  return Object.fromEntries(parsers) as Record<
+    TColumnId,
+    ReturnType<typeof getColumnFilterParser<TColumnId>>
+  >;
 }
 
 /**
@@ -330,21 +325,9 @@ function getIsSameFilter(a: ColumnFilterItem, b: ColumnFilterItem) {
   );
 }
 
-function getIsColumnFilterItem(value: unknown): value is ColumnFilterItem {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "operator" in value &&
-    "variant" in value &&
-    "value" in value
-  );
-}
-
-function getColumnIds<TColumnId extends string>(
-  columns: Record<TColumnId, FilterVariant>,
-) {
-  return Object.keys(columns).filter((id): id is TColumnId =>
-    Object.hasOwn(columns, id),
+function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
+  return Object.keys(record).filter((key): key is TKey =>
+    Object.hasOwn(record, key),
   );
 }
 
