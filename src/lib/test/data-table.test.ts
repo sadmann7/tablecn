@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { tasksColumnConfigs, tasksDefaultSorting } from "@/app/lib/validations";
 import { matchesFilter } from "@/lib/data-table-filters";
+import { parseFilterDate } from "@/lib/data-table-utils";
 import {
   getColumnOptions,
   getColumnFilterParser,
@@ -275,6 +276,23 @@ describe("matchesFilter", () => {
     ).toBe(false);
   });
 
+  it("excludes the day itself from strict date comparisons", () => {
+    const dayBefore = new Date(2026, 9, 2, 12).getTime();
+    const sameDay = new Date(2026, 9, 3, 12).getTime();
+    const dayAfter = new Date(2026, 9, 4, 12).getTime();
+
+    function getMatches(operator: "lt" | "lte" | "gt" | "gte") {
+      return [dayBefore, sameDay, dayAfter].map((time) =>
+        matchesFilter(time, { operator, variant: "date", value: "2026-10-03" }),
+      );
+    }
+
+    expect(getMatches("lt")).toEqual([true, false, false]);
+    expect(getMatches("lte")).toEqual([true, true, false]);
+    expect(getMatches("gt")).toEqual([false, false, true]);
+    expect(getMatches("gte")).toEqual([false, true, true]);
+  });
+
   it("treats a missing number bound as open", () => {
     const atMostThree = {
       operator: "isBetween" as const,
@@ -291,5 +309,16 @@ describe("matchesFilter", () => {
     expect(matchesFilter(4, atMostThree)).toBe(false);
     expect(matchesFilter(2, atLeastTwo)).toBe(true);
     expect(matchesFilter(1, atLeastTwo)).toBe(false);
+  });
+});
+
+describe("parseFilterDate", () => {
+  it("rejects calendar dates that roll over", () => {
+    expect(parseFilterDate("2026-10-03")?.toDateString()).toBe(
+      new Date(2026, 9, 3).toDateString(),
+    );
+    expect(parseFilterDate("2026-13-01")).toBeUndefined();
+    expect(parseFilterDate("2026-00-31")).toBeUndefined();
+    expect(parseFilterDate("2026-02-30")).toBeUndefined();
   });
 });

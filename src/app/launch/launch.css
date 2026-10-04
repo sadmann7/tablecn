@@ -15,12 +15,6 @@ html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
   transition: scale 1100ms cubic-bezier(0.65, 0, 0.35, 1);
 }
 
-/*
- * Chrome snaps a border thinner than 1px back to 1px, then the menu scale
- * turns that stroke into a thick ring. A subpixel shadow is not snapped, so
- * it stays about one screen pixel after scaling. The focus ring uses the
- * same shadow and would scale into a halo, so this replaces it.
- */
 html[data-launch-camera]
   [data-radix-popper-content-wrapper]
   :is(
@@ -145,7 +139,14 @@ html[data-launch-camera]
   .launch-rise,
   .launch-logo,
   .launch-keystroke,
-  .launch-sweep {
+  .launch-sweep,
+  .launch-flash {
     animation: none;
+  }
+
+  .launch-camera,
+  .launch-cursor,
+  html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
+    transition: none;
   }
 }

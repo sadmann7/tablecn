@@ -1205,6 +1205,13 @@ function useLaunchTimeline(onStep: (step: LaunchStep) => void) {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  React.useEffect(() => {
+    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    clockRef.current.isPaused = true;
+    dispatch({ type: "pause", isPaused: true });
+  }, []);
+
   const onPauseToggle = React.useCallback(() => {
     const clock = clockRef.current;
     clock.isPaused = !clock.isPaused;

@@ -273,7 +273,9 @@ function useDataTable<TData extends RowData>({
       : urlFilters;
 
   const debouncedWriteFilters = useDebouncedCallback(
-    (columnFilters: ColumnFiltersState) => {
+    (columnFilters: ColumnFiltersState, sourceUrlFiltersKey: string) => {
+      if (sourceUrlFiltersKey !== urlFiltersKey) return;
+
       const filters = getActiveFilters(
         columnIndex.normalizeColumnFilters(columnFilters),
       ).filter((filter) => Object.hasOwn(columnIndex.variantById, filter.id));
@@ -301,7 +303,7 @@ function useDataTable<TData extends RowData>({
   function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
     const filters = functionalUpdate(updater, columnFilters);
     setFiltersDraft({ filters, urlFiltersKey });
-    debouncedWriteFilters(filters);
+    debouncedWriteFilters(filters, urlFiltersKey);
   }
 
   const table = useTable(

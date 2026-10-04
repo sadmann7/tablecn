@@ -257,7 +257,11 @@ export function parseFilterDate(value: unknown): Date | undefined {
       return undefined;
     }
     const date = new Date(year, month - 1, day);
-    return date.getDate() === day ? date : undefined;
+    return date.getFullYear() === year &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day
+      ? date
+      : undefined;
   }
 
   const numeric = Number(text);

@@ -97,11 +97,11 @@ export function filterColumns<T extends Table>({
         if (filter.variant !== "date" || typeof filter.value !== "string") {
           return undefined;
         }
-        // `lt` and `lte` include the whole day, `gt` and `gte` start from it.
+        // `lte` and `gte` include the whole day, `lt` and `gt` exclude it.
         const date =
-          filter.operator === "lt" || filter.operator === "lte"
-            ? getEndOfDay(filter.value)
-            : getStartOfDay(filter.value);
+          filter.operator === "lt" || filter.operator === "gte"
+            ? getStartOfDay(filter.value)
+            : getEndOfDay(filter.value);
         return date ? compare(column, date) : undefined;
       }
 

@@ -505,9 +505,9 @@ function compare(
     cell = parseTime(cellValue);
     const time = parseTime(value);
     target =
-      operator === "lt" || operator === "lte"
-        ? endOfDay(time)
-        : startOfDay(time);
+      operator === "lt" || operator === "gte"
+        ? startOfDay(time)
+        : endOfDay(time);
   } else {
     cell = parseNumber(cellValue);
     target = parseNumber(value);
