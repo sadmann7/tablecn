@@ -52,7 +52,7 @@ export function DataTableSkeleton({
             : null}
         </div>
         {withViewOptions ? (
-          <Skeleton className="ml-auto hidden h-8 w-18 rounded-lg lg:flex" />
+          <Skeleton className="ms-auto hidden h-8 w-18 rounded-lg lg:flex" />
         ) : null}
       </div>
       <div className="rounded-md border">

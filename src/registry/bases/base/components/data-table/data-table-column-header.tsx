@@ -7,6 +7,7 @@ import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -71,11 +72,12 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   isVisible: boolean;
   sorted: "asc" | "desc" | "none";
 }) {
+  const dir = useDirection();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "-ml-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+          "-ms-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           className,
         )}
         {...props}
@@ -108,11 +110,11 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             />
           ))}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-28">
+      <DropdownMenuContent dir={dir} align="start" className="w-28">
         {column.getCanSort() && (
           <>
             <DropdownMenuCheckboxItem
-              className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
+              className="relative ps-2 pe-8 [&_svg]:text-muted-foreground [&>span:first-child]:inset-s-auto [&>span:first-child]:inset-e-2"
               checked={sorted === "asc"}
               onClick={() => column.toggleSorting(false, true)}
             >
@@ -126,7 +128,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               Asc
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
-              className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
+              className="relative ps-2 pe-8 [&_svg]:text-muted-foreground [&>span:first-child]:inset-s-auto [&>span:first-child]:inset-e-2"
               checked={sorted === "desc"}
               onClick={() => column.toggleSorting(true, true)}
             >
@@ -141,7 +143,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             </DropdownMenuCheckboxItem>
             {sorted !== "none" && (
               <DropdownMenuItem
-                className="pl-2 [&_svg]:text-muted-foreground"
+                className="ps-2 [&_svg]:text-muted-foreground"
                 onClick={() => column.clearSorting()}
               >
                 <IconPlaceholder
@@ -158,7 +160,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
         )}
         {column.getCanHide() && (
           <DropdownMenuCheckboxItem
-            className="relative pr-8 pl-2 [&_svg]:text-muted-foreground [&>span:first-child]:right-2 [&>span:first-child]:left-auto"
+            className="relative ps-2 pe-8 [&_svg]:text-muted-foreground [&>span:first-child]:inset-s-auto [&>span:first-child]:inset-e-2"
             checked={!isVisible}
             onClick={() => column.toggleVisibility(false)}
           >

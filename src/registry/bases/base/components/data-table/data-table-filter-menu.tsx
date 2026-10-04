@@ -28,6 +28,7 @@ import { generateId } from "@/lib/id";
 import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
+import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
   Faceted,
   FacetedContent,
@@ -119,6 +120,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
   disabled,
   ...props
 }: DataTableFilterMenuContentProps<TData>) {
+  const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -218,6 +220,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
           )}
         </PopoverTrigger>
         <PopoverContent
+          dir={dir}
           aria-describedby={descriptionId}
           aria-labelledby={labelId}
           className="flex w-full max-w-(--available-width) flex-col gap-3.5 p-4 sm:min-w-95"
@@ -276,7 +279,10 @@ function DataTableFilterMenuContent<TData extends RowData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div className="grid size-full grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,1fr)_auto_auto] items-center gap-2">
+        <div
+          dir={dir}
+          className="grid size-full grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,1fr)_auto_auto] items-center gap-2"
+        >
           <div className="h-8 rounded-lg bg-primary/10" />
           <div className="h-8 rounded-lg bg-primary/10" />
           <div className="h-8 rounded-lg bg-primary/10" />
@@ -416,6 +422,7 @@ function FilterJoinOperator({
   listboxId,
   onJoinOperatorChange,
 }: FilterJoinOperatorProps) {
+  const dir = useDirection();
   if (index === 0) {
     return <span className="text-sm text-muted-foreground">Where</span>;
   }
@@ -442,6 +449,7 @@ function FilterJoinOperator({
         <SelectValue placeholder={joinOperator} />
       </SelectTrigger>
       <SelectContent
+        dir={dir}
         id={listboxId}
         alignItemWithTrigger={false}
         className="min-w-(--anchor-width) lowercase"
@@ -482,6 +490,7 @@ function FilterFieldSelector<TData extends RowData>({
   onOpenChange,
   onFilterUpdate,
 }: FilterFieldSelectorProps<TData>) {
+  const dir = useDirection();
   return (
     <Faceted
       open={open}
@@ -515,7 +524,7 @@ function FilterFieldSelector<TData extends RowData>({
           className="opacity-50"
         />
       </FacetedTrigger>
-      <FacetedContent id={listboxId} className="w-40">
+      <FacetedContent dir={dir} id={listboxId} className="w-40">
         <FacetedInput placeholder="Search fields..." />
         <FacetedList>
           <FacetedEmpty>No fields found.</FacetedEmpty>
@@ -544,6 +553,7 @@ function FilterOperatorSelector({
   onOpenChange,
   onFilterUpdate,
 }: FilterOperatorSelectorProps) {
+  const dir = useDirection();
   return (
     <Select
       open={open}
@@ -562,7 +572,7 @@ function FilterOperatorSelector({
           <SelectValue placeholder={filter.operator} />
         </div>
       </SelectTrigger>
-      <SelectContent id={listboxId}>
+      <SelectContent dir={dir} id={listboxId}>
         <SelectGroup>
           {getFilterOperators(filter.variant).map((operator) => (
             <SelectItem
@@ -661,6 +671,7 @@ function BooleanFilterValue<TData extends RowData>({
   onOpenChange,
   onFilterUpdate,
 }: FilterValueInputProps<TData>) {
+  const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
 
   return (
@@ -681,7 +692,7 @@ function BooleanFilterValue<TData extends RowData>({
       >
         <SelectValue placeholder="Select value" />
       </SelectTrigger>
-      <SelectContent id={listboxId}>
+      <SelectContent dir={dir} id={listboxId}>
         <SelectGroup>
           <SelectItem value="true">True</SelectItem>
           <SelectItem value="false">False</SelectItem>
@@ -699,6 +710,7 @@ function SelectFilterValue<TData extends RowData>({
   onOpenChange,
   onFilterUpdate,
 }: FilterValueInputProps<TData>) {
+  const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
   const columnMeta = column.columnDef.meta;
   const multiple = filter.variant === "multiSelect";
@@ -731,7 +743,7 @@ function SelectFilterValue<TData extends RowData>({
           }
         />
       </FacetedTrigger>
-      <FacetedContent id={listboxId} className="w-50">
+      <FacetedContent dir={dir} id={listboxId} className="w-50">
         <FacetedInput
           aria-label={`Search ${columnMeta?.label} options`}
           placeholder={columnMeta?.placeholder ?? "Search options..."}
@@ -761,6 +773,7 @@ function DateFilterValue<TData extends RowData>({
   onOpenChange,
   onFilterUpdate,
 }: FilterValueInputProps<TData>) {
+  const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
   const label = column.columnDef.meta?.label;
   const [startDate, endDate] = getFilterDates(filter.value);
@@ -775,7 +788,7 @@ function DateFilterValue<TData extends RowData>({
             aria-label={`${label} date filter`}
             variant="outline"
             className={cn(
-              "w-full justify-start text-left",
+              "w-full justify-start text-start",
               !startDate && "text-muted-foreground",
             )}
           />
@@ -792,7 +805,12 @@ function DateFilterValue<TData extends RowData>({
           {getDateFilterLabel(filter) ?? "Pick a date"}
         </span>
       </PopoverTrigger>
-      <PopoverContent id={listboxId} align="start" className="w-auto p-0">
+      <PopoverContent
+        dir={dir}
+        id={listboxId}
+        align="start"
+        className="w-auto p-0"
+      >
         {filter.operator === "isBetween" ? (
           <Calendar
             aria-label={`Select ${label} date range`}

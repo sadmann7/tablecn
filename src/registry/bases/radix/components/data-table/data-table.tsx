@@ -17,6 +17,7 @@ import {
   getColumnSizingStyle,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
+import { useDirection } from "@/registry/bases/radix/ui/direction";
 import {
   Table,
   TableBody,
@@ -47,8 +48,11 @@ export function DataTable<TData extends RowData>({
   className,
   ...props
 }: DataTableProps<TData>) {
+  const dir = useDirection();
+
   return (
     <div
+      dir={dir}
       className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
       {...props}
     >

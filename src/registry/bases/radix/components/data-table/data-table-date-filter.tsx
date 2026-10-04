@@ -10,6 +10,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import { formatDate } from "@/lib/format";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
+import { useDirection } from "@/registry/bases/radix/ui/direction";
 import {
   Popover,
   PopoverContent,
@@ -87,6 +88,7 @@ function DataTableDateFilterContent<TData extends RowData>({
 }: DataTableDateFilterProps<TData> & {
   columnFilterValue: unknown;
 }) {
+  const dir = useDirection();
   const selectedDates = React.useMemo<DateSelection>(() => {
     if (!columnFilterValue) {
       return multiple ? { from: undefined, to: undefined } : [];
@@ -228,7 +230,7 @@ function DataTableDateFilterContent<TData extends RowData>({
           {label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent dir={dir} className="w-auto p-0" align="start">
         {multiple ? (
           <Calendar
             autoFocus

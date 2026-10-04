@@ -8,6 +8,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { FilterOption } from "@/lib/data-table-types";
 
 import { Button } from "@/registry/bases/radix/ui/button";
+import { useDirection } from "@/registry/bases/radix/ui/direction";
 import {
   Faceted,
   FacetedClear,
@@ -70,6 +71,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
   multiple = false,
   columnFilterValue,
 }: DataTableFacetedFilterContentProps<TData, TValue>) {
+  const dir = useDirection();
   const selectedValues = Array.isArray(columnFilterValue)
     ? columnFilterValue.filter(
         (value): value is string => typeof value === "string",
@@ -133,7 +135,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
           )}
         </Button>
       </FacetedTrigger>
-      <FacetedContent className="w-50">
+      <FacetedContent dir={dir} className="w-50">
         <FacetedInput placeholder={title} />
         <FacetedList className="max-h-full">
           <FacetedEmpty>No results found.</FacetedEmpty>

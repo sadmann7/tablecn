@@ -4,8 +4,8 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 import type {
-  DataTableRowAction,
   DataTableQueryKeys,
+  DataTableRowAction,
 } from "@/lib/data-table-types";
 import type { DataMode, FilterMode } from "@/lib/flag";
 
@@ -19,6 +19,7 @@ import {
   useDataTable,
   UseDataTableProps,
 } from "@/registry/bases/radix/hooks/use-data-table";
+import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
 
 import type {
   getEstimatedHoursRange,
@@ -103,7 +104,7 @@ export function TasksTable({
   );
 
   return (
-    <>
+    <DirectionProvider dir="rtl">
       <DataTable
         table={table}
         actionBar={<TasksTableActionBar table={table} />}
@@ -135,6 +136,6 @@ export function TasksTable({
         showTrigger={false}
         onSuccess={() => rowAction?.row.toggleSelected(false)}
       />
-    </>
+    </DirectionProvider>
   );
 }

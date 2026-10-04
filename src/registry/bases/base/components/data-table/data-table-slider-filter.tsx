@@ -7,6 +7,7 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
+import { useDirection } from "@/registry/bases/base/ui/direction";
 import { Input } from "@/registry/bases/base/ui/input";
 import { Label } from "@/registry/bases/base/ui/label";
 import {
@@ -86,6 +87,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
 }: DataTableSliderFilterProps<TData> & {
   columnFilterValue: unknown;
 }) {
+  const dir = useDirection();
   const id = React.useId();
 
   const defaultRange = column.columnDef.meta?.range;
@@ -215,7 +217,11 @@ function DataTableSliderFilterContent<TData extends RowData>({
           </>
         ) : null}
       </PopoverTrigger>
-      <PopoverContent align="start" className="flex w-auto flex-col gap-4">
+      <PopoverContent
+        dir={dir}
+        align="start"
+        className="flex w-auto flex-col gap-4"
+      >
         <div className="flex flex-col gap-3">
           <p className="leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             {title}
@@ -237,10 +243,10 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[0]?.toString()}
                 onChange={onFromInputChange}
-                className={cn("w-24", unit && "pr-8")}
+                className={cn("w-24", unit && "pe-8")}
               />
               {unit && (
-                <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-sm text-muted-foreground">
+                <span className="absolute inset-e-0 top-0 bottom-0 flex items-center rounded-e-md bg-accent px-2 text-sm text-muted-foreground">
                   {unit}
                 </span>
               )}
@@ -261,10 +267,10 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[1]?.toString()}
                 onChange={onToInputChange}
-                className={cn("w-24", unit && "pr-8")}
+                className={cn("w-24", unit && "pe-8")}
               />
               {unit && (
-                <span className="absolute top-0 right-0 bottom-0 flex items-center rounded-r-md bg-accent px-2 text-sm text-muted-foreground">
+                <span className="absolute inset-e-0 top-0 bottom-0 flex items-center rounded-e-md bg-accent px-2 text-sm text-muted-foreground">
                   {unit}
                 </span>
               )}
