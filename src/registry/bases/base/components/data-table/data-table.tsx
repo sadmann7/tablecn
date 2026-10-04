@@ -1,5 +1,7 @@
 "use client";
 
+import { mergeProps } from "@base-ui/react/merge-props";
+import { useRender } from "@base-ui/react/use-render";
 import {
   FlexRender,
   type Row,
@@ -26,13 +28,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/registry/bases/base/ui/table";
-
-const PINNED_CELL_CLASS_NAME = cn(
-  "bg-background transition-colors",
-  "group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
-  "group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
-  "group-data-[state=selected]/row:bg-muted",
-);
 
 interface DataTableProps<
   TData extends RowData,
@@ -124,17 +119,14 @@ function DataTableHeader<TData extends RowData>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="group/row">
               {headerGroup.headers.map((header) => (
-                <TableHead
+                <DataTableCellSlot
                   key={header.id}
-                  colSpan={header.colSpan}
-                  className={cn(
-                    "overflow-hidden",
-                    header.column.getIsPinned() && PINNED_CELL_CLASS_NAME,
-                  )}
+                  render={<TableHead colSpan={header.colSpan} />}
+                  pinned={!!header.column.getIsPinned()}
                   style={getColumnPinningStyle(header.column)}
                 >
                   {header.isPlaceholder ? null : <FlexRender header={header} />}
-                </TableHead>
+                </DataTableCellSlot>
               ))}
             </TableRow>
           ))}
@@ -200,10 +192,7 @@ function DataTableRow<TData extends RowData>({
       {() => {
         const cells = row.getVisibleCells().map((cell) => ({
           cell,
-          className: cn(
-            "overflow-hidden",
-            cell.column.getIsPinned() && PINNED_CELL_CLASS_NAME,
-          ),
+          pinned: !!cell.column.getIsPinned(),
           style: getColumnPinningStyle(cell.column),
         }));
 
@@ -217,10 +206,15 @@ function DataTableRow<TData extends RowData>({
                 data-state={isSelected ? "selected" : undefined}
                 className="group/row"
               >
-                {cells.map(({ cell, className, style }) => (
-                  <TableCell key={cell.id} className={className} style={style}>
+                {cells.map(({ cell, pinned, style }) => (
+                  <DataTableCellSlot
+                    key={cell.id}
+                    render={<TableCell />}
+                    pinned={pinned}
+                    style={style}
+                  >
                     <FlexRender cell={cell} />
-                  </TableCell>
+                  </DataTableCellSlot>
                 ))}
               </TableRow>
             )}
@@ -250,4 +244,34 @@ function DataTableActionBar<TData extends RowData>({
       {(hasSelectedRows) => (hasSelectedRows ? actionBar : null)}
     </Subscribe>
   );
+}
+
+interface DataTableCellSlotProps extends useRender.ComponentProps<"td"> {
+  pinned?: boolean;
+}
+
+function DataTableCellSlot({
+  pinned = false,
+  className,
+  render,
+  ...props
+}: DataTableCellSlotProps) {
+  return useRender({
+    defaultTagName: "td",
+    props: mergeProps<"td">(
+      {
+        className: cn(
+          "overflow-hidden",
+          "rtl:has-[[role=checkbox]]:[&:not([class~='[&:has([role=checkbox])]:pe-0'])]:pr-2!",
+          "rtl:has-[[role=checkbox]]:[&:not([class~='[&:has([role=checkbox])]:pe-0'])]:pl-0",
+          "rtl:has-[[role=checkbox]]:[&.text-left]:text-right",
+          pinned &&
+            "bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted",
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+  });
 }

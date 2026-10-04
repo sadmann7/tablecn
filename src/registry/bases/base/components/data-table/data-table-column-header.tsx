@@ -114,7 +114,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
         {column.getCanSort() && (
           <>
             <DropdownMenuCheckboxItem
-              className="relative ps-2 pe-8 [&_svg]:text-muted-foreground [&>span:first-child]:inset-s-auto [&>span:first-child]:inset-e-2"
+              className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
               checked={sorted === "asc"}
               onClick={() => column.toggleSorting(false, true)}
             >
@@ -128,7 +128,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               Asc
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
-              className="relative ps-2 pe-8 [&_svg]:text-muted-foreground [&>span:first-child]:inset-s-auto [&>span:first-child]:inset-e-2"
+              className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
               checked={sorted === "desc"}
               onClick={() => column.toggleSorting(true, true)}
             >
@@ -143,7 +143,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             </DropdownMenuCheckboxItem>
             {sorted !== "none" && (
               <DropdownMenuItem
-                className="ps-2 [&_svg]:text-muted-foreground"
+                className="ltr:pl-2 rtl:pr-2 [&_svg]:text-muted-foreground"
                 onClick={() => column.clearSorting()}
               >
                 <IconPlaceholder
@@ -160,7 +160,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
         )}
         {column.getCanHide() && (
           <DropdownMenuCheckboxItem
-            className="relative ps-2 pe-8 [&_svg]:text-muted-foreground [&>span:first-child]:inset-s-auto [&>span:first-child]:inset-e-2"
+            className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
             checked={!isVisible}
             onClick={() => column.toggleVisibility(false)}
           >
