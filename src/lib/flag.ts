@@ -55,3 +55,7 @@ export const FILTER_MODES = [
 ] as const satisfies readonly Flag[];
 
 export type FilterMode = (typeof FILTER_MODES)[number]["value"];
+
+export const DIRECTIONS = ["ltr", "rtl"] as const;
+
+export type Direction = (typeof DIRECTIONS)[number];

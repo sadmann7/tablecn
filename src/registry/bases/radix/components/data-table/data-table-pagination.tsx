@@ -90,7 +90,7 @@ function DataTablePaginationContent<TData extends RowData>({
         {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected.
       </div>
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
           <Select
             value={`${pageSize}`}
@@ -115,7 +115,7 @@ function DataTablePaginationContent<TData extends RowData>({
         <div className="flex items-center justify-center text-sm font-medium">
           Page {pageIndex + 1} of {pageCount}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <Button
             aria-label="Go to first page"
             variant="outline"
@@ -130,6 +130,7 @@ function DataTablePaginationContent<TData extends RowData>({
               hugeicons="ArrowLeftDoubleIcon"
               phosphor="CaretDoubleLeftIcon"
               remixicon="RiSkipLeftLine"
+              className="rtl:rotate-180"
             />
           </Button>
           <Button
@@ -145,6 +146,7 @@ function DataTablePaginationContent<TData extends RowData>({
               hugeicons="ArrowLeft01Icon"
               phosphor="CaretLeftIcon"
               remixicon="RiArrowLeftSLine"
+              className="rtl:rotate-180"
             />
           </Button>
           <Button
@@ -160,6 +162,7 @@ function DataTablePaginationContent<TData extends RowData>({
               hugeicons="ArrowRight01Icon"
               phosphor="CaretRightIcon"
               remixicon="RiArrowRightSLine"
+              className="rtl:rotate-180"
             />
           </Button>
           <Button
@@ -176,6 +179,7 @@ function DataTablePaginationContent<TData extends RowData>({
               hugeicons="ArrowRightDoubleIcon"
               phosphor="CaretDoubleRightIcon"
               remixicon="RiSkipRightLine"
+              className="rtl:rotate-180"
             />
           </Button>
         </div>

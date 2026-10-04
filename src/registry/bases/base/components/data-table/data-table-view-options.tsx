@@ -7,6 +7,7 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
+import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
   Faceted,
   FacetedContent,
@@ -33,6 +34,7 @@ export function DataTableViewOptions<TData extends RowData>({
   className,
   ...props
 }: DataTableViewOptionsProps<TData>) {
+  const dir = useDirection();
   const columns = React.useMemo(
     () =>
       table
@@ -59,7 +61,7 @@ export function DataTableViewOptions<TData extends RowData>({
                 aria-label="Toggle columns"
                 role="combobox"
                 variant="outline"
-                className="ml-auto hidden lg:flex"
+                className="ms-auto hidden lg:flex"
                 disabled={disabled}
               />
             }
@@ -75,6 +77,7 @@ export function DataTableViewOptions<TData extends RowData>({
             View
           </FacetedTrigger>
           <FacetedContent
+            dir={dir}
             align="center"
             className={cn("w-44", className)}
             {...props}

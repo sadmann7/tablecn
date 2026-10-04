@@ -15,6 +15,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import { SORT_ORDERS } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
+import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
   Faceted,
   FacetedContent,
@@ -77,6 +78,7 @@ function DataTableSortMenuContent<TData extends RowData>({
 }: DataTableSortMenuProps<TData> & {
   sorting: SortingState;
 }) {
+  const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
@@ -216,6 +218,7 @@ function DataTableSortMenuContent<TData extends RowData>({
           )}
         </PopoverTrigger>
         <PopoverContent
+          dir={dir}
           aria-labelledby={labelId}
           aria-describedby={descriptionId}
           className={cn(
@@ -279,7 +282,7 @@ function DataTableSortMenuContent<TData extends RowData>({
         </PopoverContent>
       </Popover>
       <SortableOverlay>
-        <div className="flex items-center gap-2">
+        <div dir={dir} className="flex items-center gap-2">
           <div className="h-8 w-45 rounded-lg bg-primary/10" />
           <div className="h-8 w-24 rounded-lg bg-primary/10" />
           <div className="size-8 shrink-0 rounded-lg bg-primary/10" />
@@ -307,6 +310,7 @@ function DataTableSortItem({
   onSortUpdate,
   onSortRemove,
 }: DataTableSortItemProps) {
+  const dir = useDirection();
   const fieldListboxId = `${sortItemId}-field-listbox`;
   const fieldTriggerId = `${sortItemId}-field-trigger`;
   const directionListboxId = `${sortItemId}-direction-listbox`;
@@ -377,7 +381,11 @@ function DataTableSortItem({
             className="opacity-50"
           />
         </FacetedTrigger>
-        <FacetedContent id={fieldListboxId} className="w-(--anchor-width)">
+        <FacetedContent
+          dir={dir}
+          id={fieldListboxId}
+          className="w-(--anchor-width)"
+        >
           <FacetedInput placeholder="Search fields..." />
           <FacetedList>
             <FacetedEmpty>No fields found.</FacetedEmpty>
@@ -409,6 +417,7 @@ function DataTableSortItem({
           <SelectValue />
         </SelectTrigger>
         <SelectContent
+          dir={dir}
           id={directionListboxId}
           className="min-w-(--anchor-width)"
         >

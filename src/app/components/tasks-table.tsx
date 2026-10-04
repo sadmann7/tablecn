@@ -4,10 +4,10 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 import type {
-  DataTableRowAction,
   DataTableQueryKeys,
+  DataTableRowAction,
 } from "@/lib/data-table-types";
-import type { DataMode, FilterMode } from "@/lib/flag";
+import type { DataMode, Direction, FilterMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
@@ -19,6 +19,7 @@ import {
   useDataTable,
   UseDataTableProps,
 } from "@/registry/bases/radix/hooks/use-data-table";
+import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
 
 import type {
   getEstimatedHoursRange,
@@ -35,6 +36,7 @@ import { UpdateTaskSheet } from "./update-task-sheet";
 
 interface TasksTableProps {
   dataMode: DataMode;
+  dir: Direction;
   filterMode: FilterMode;
   promises: Promise<
     [
@@ -49,6 +51,7 @@ interface TasksTableProps {
 
 export function TasksTable({
   dataMode,
+  dir,
   filterMode,
   promises,
   queryKeys,
@@ -103,7 +106,7 @@ export function TasksTable({
   );
 
   return (
-    <>
+    <DirectionProvider dir={dir}>
       <DataTable
         table={table}
         actionBar={<TasksTableActionBar table={table} />}
@@ -135,6 +138,6 @@ export function TasksTable({
         showTrigger={false}
         onSuccess={() => rowAction?.row.toggleSelected(false)}
       />
-    </>
+    </DirectionProvider>
   );
 }

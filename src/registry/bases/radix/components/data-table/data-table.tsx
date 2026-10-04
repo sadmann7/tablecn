@@ -8,6 +8,7 @@ import {
   type Table as TanstackTable,
 } from "@tanstack/react-table";
 import { cn } from "cn";
+import { Slot } from "radix-ui";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -17,6 +18,7 @@ import {
   getColumnSizingStyle,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
+import { useDirection } from "@/registry/bases/radix/ui/direction";
 import {
   Table,
   TableBody,
@@ -25,13 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/registry/bases/radix/ui/table";
-
-const PINNED_CELL_CLASS_NAME = cn(
-  "bg-background transition-colors",
-  "group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
-  "group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
-  "group-data-[state=selected]/row:bg-muted",
-);
 
 interface DataTableProps<
   TData extends RowData,
@@ -47,8 +42,11 @@ export function DataTable<TData extends RowData>({
   className,
   ...props
 }: DataTableProps<TData>) {
+  const dir = useDirection();
+
   return (
     <div
+      dir={dir}
       className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
       {...props}
     >
@@ -120,17 +118,17 @@ function DataTableHeader<TData extends RowData>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="group/row">
               {headerGroup.headers.map((header) => (
-                <TableHead
+                <DataTableCellSlot
                   key={header.id}
-                  colSpan={header.colSpan}
-                  className={cn(
-                    "overflow-hidden",
-                    header.column.getIsPinned() && PINNED_CELL_CLASS_NAME,
-                  )}
+                  pinned={!!header.column.getIsPinned()}
                   style={getColumnPinningStyle(header.column)}
                 >
-                  {header.isPlaceholder ? null : <FlexRender header={header} />}
-                </TableHead>
+                  <TableHead colSpan={header.colSpan}>
+                    {header.isPlaceholder ? null : (
+                      <FlexRender header={header} />
+                    )}
+                  </TableHead>
+                </DataTableCellSlot>
               ))}
             </TableRow>
           ))}
@@ -196,10 +194,7 @@ function DataTableRow<TData extends RowData>({
       {() => {
         const cells = row.getVisibleCells().map((cell) => ({
           cell,
-          className: cn(
-            "overflow-hidden",
-            cell.column.getIsPinned() && PINNED_CELL_CLASS_NAME,
-          ),
+          pinned: !!cell.column.getIsPinned(),
           style: getColumnPinningStyle(cell.column),
         }));
 
@@ -213,10 +208,16 @@ function DataTableRow<TData extends RowData>({
                 data-state={isSelected ? "selected" : undefined}
                 className="group/row"
               >
-                {cells.map(({ cell, className, style }) => (
-                  <TableCell key={cell.id} className={className} style={style}>
-                    <FlexRender cell={cell} />
-                  </TableCell>
+                {cells.map(({ cell, pinned, style }) => (
+                  <DataTableCellSlot
+                    key={cell.id}
+                    pinned={pinned}
+                    style={style}
+                  >
+                    <TableCell>
+                      <FlexRender cell={cell} />
+                    </TableCell>
+                  </DataTableCellSlot>
                 ))}
               </TableRow>
             )}
@@ -245,5 +246,32 @@ function DataTableActionBar<TData extends RowData>({
     >
       {(hasSelectedRows) => (hasSelectedRows ? actionBar : null)}
     </Subscribe>
+  );
+}
+
+interface DataTableCellSlotProps extends React.ComponentProps<
+  typeof Slot.Root
+> {
+  pinned?: boolean;
+}
+
+function DataTableCellSlot({
+  pinned = false,
+  className,
+  ...props
+}: DataTableCellSlotProps) {
+  return (
+    <Slot.Root
+      className={cn(
+        "overflow-hidden",
+        "rtl:has-[[role=checkbox]]:[&:not([class~='[&:has([role=checkbox])]:pe-0'])]:pr-2!",
+        "rtl:has-[[role=checkbox]]:[&:not([class~='[&:has([role=checkbox])]:pe-0'])]:pl-0",
+        "rtl:has-[[role=checkbox]]:[&.text-left]:text-right",
+        pinned &&
+          "bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted",
+        className,
+      )}
+      {...props}
+    />
   );
 }

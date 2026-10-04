@@ -39,6 +39,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/registry/bases/radix/ui/command";
+import { useDirection } from "@/registry/bases/radix/ui/direction";
 import {
   Faceted,
   FacetedContent,
@@ -124,6 +125,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
   onCloseAutoFocus,
   ...props
 }: DataTableCommandFilterMenuContentProps<TData>) {
+  const dir = useDirection();
   const id = React.useId();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState(EMPTY_QUERY);
@@ -256,6 +258,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
           </Button>
         </PopoverTrigger>
         <PopoverContent
+          dir={dir}
           className={cn(
             "w-full max-w-(--radix-popover-content-available-width) p-0",
             className,
@@ -371,7 +374,7 @@ function DataTableFilterItem<TData extends RowData>({
         aria-controls={filterItemId}
         aria-label={`Remove ${columnMeta?.label ?? column.id} filter`}
         variant="ghost"
-        className="h-full rounded-none rounded-r-md border border-l-0 border-input px-1.5 dark:bg-input/30"
+        className="h-full rounded-none rounded-e-md border border-s-0 border-input px-1.5 dark:bg-input/30"
         onClick={() => onFilterRemove(filter.filterId)}
       >
         <IconPlaceholder
@@ -474,7 +477,7 @@ function FilterValueOptions<TData extends RowData>({
                 {option.icon && <option.icon />}
                 <span className="truncate">{option.label}</span>
                 {option.count !== undefined && (
-                  <span className="ml-auto font-mono text-xs">
+                  <span className="ms-auto font-mono text-xs">
                     {option.count}
                   </span>
                 )}
@@ -568,6 +571,7 @@ function FilterFieldSelector<TData extends RowData>({
   onOpenChange,
   onFilterUpdate,
 }: FilterFieldSelectorProps<TData>) {
+  const dir = useDirection();
   const columnMeta = column.columnDef.meta;
 
   return (
@@ -585,7 +589,7 @@ function FilterFieldSelector<TData extends RowData>({
       <FacetedTrigger asChild>
         <Button
           variant="ghost"
-          className="rounded-none rounded-l-md border border-r-0 border-input dark:bg-input/30"
+          className="rounded-none rounded-s-md border border-e-0 border-input dark:bg-input/30"
         >
           {columnMeta?.icon && (
             <columnMeta.icon className="text-muted-foreground" />
@@ -593,7 +597,7 @@ function FilterFieldSelector<TData extends RowData>({
           {columnMeta?.label ?? column.id}
         </Button>
       </FacetedTrigger>
-      <FacetedContent className="w-48">
+      <FacetedContent dir={dir} className="w-48">
         <FacetedInput placeholder="Search fields..." />
         <FacetedList>
           <FacetedEmpty>No fields found.</FacetedEmpty>
@@ -636,7 +640,7 @@ function FilterOperatorSelector({
     >
       <SelectTrigger
         aria-controls={listboxId}
-        className="h-8 rounded-none border-r-0 px-2.5 lowercase data-size:h-8 [&_svg]:hidden"
+        className="h-8 rounded-none border-e-0 px-2.5 lowercase data-size:h-8 [&_svg]:hidden"
       >
         <SelectValue placeholder={filter.operator} />
       </SelectTrigger>
@@ -695,7 +699,7 @@ function FilterValueInput<TData extends RowData>(
             column={column}
             inputId={inputId}
             onFilterUpdate={onFilterUpdate}
-            className="size-full max-w-28 gap-0 **:data-[slot='range-min']:border-r-0 [&_input]:rounded-none [&_input]:px-1.5"
+            className="size-full max-w-28 gap-0 **:data-[slot='range-min']:border-e-0 [&_input]:rounded-none [&_input]:px-1.5"
           />
         );
       }
@@ -774,6 +778,7 @@ function SelectFilterValue<TData extends RowData>({
   onOpenChange,
   onFilterUpdate,
 }: FilterValueInputProps<TData>) {
+  const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
   const columnMeta = column.columnDef.meta;
   const options = columnMeta?.options ?? [];
@@ -806,7 +811,7 @@ function SelectFilterValue<TData extends RowData>({
           />
         </Button>
       </FacetedTrigger>
-      <FacetedContent id={listboxId} className="w-48">
+      <FacetedContent dir={dir} id={listboxId} className="w-48">
         <FacetedInput
           aria-label={`Search ${columnMeta?.label} options`}
           placeholder="Search options..."
@@ -878,6 +883,7 @@ function DateFilterValue<TData extends RowData>({
   onOpenChange,
   onFilterUpdate,
 }: FilterValueInputProps<TData>) {
+  const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
   const label = column.columnDef.meta?.label;
   const [startDate, endDate] = getFilterDates(filter.value);
@@ -908,7 +914,12 @@ function DateFilterValue<TData extends RowData>({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent id={listboxId} align="start" className="w-auto p-0">
+      <PopoverContent
+        dir={dir}
+        id={listboxId}
+        align="start"
+        className="w-auto p-0"
+      >
         {filter.operator === "isBetween" ? (
           <Calendar
             aria-label={`Select ${label} date range`}
