@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { FilterOperator, FilterVariant } from "@/lib/data-table-types";
 
@@ -77,48 +77,64 @@ describe("matchesFilter", () => {
   });
 
   it("matches a day, week, or month counted from today", () => {
-    const dayMs = 24 * 60 * 60 * 1000;
-    const now = Date.now();
+    // June 15 sits clear of daylight-saving transitions, so each 24h
+    // step is a different calendar day.
+    vi.useFakeTimers({ now: new Date(2026, 5, 15, 12), toFake: ["Date"] });
 
-    function atNoon(dayOffset: number) {
-      const date = new Date(now + dayOffset * dayMs);
-      date.setHours(12, 0, 0, 0);
-      return date.getTime();
+    try {
+      const dayMs = 24 * 60 * 60 * 1000;
+      const now = Date.now();
+
+      function atNoon(dayOffset: number) {
+        const date = new Date(now + dayOffset * dayMs);
+        date.setHours(12, 0, 0, 0);
+        return date.getTime();
+      }
+
+      expect(match(atNoon(0), "isRelativeToToday", "date", "0 days")).toBe(
+        true,
+      );
+      expect(match(atNoon(1), "isRelativeToToday", "date", "0 days")).toBe(
+        false,
+      );
+      expect(match(atNoon(-1), "isRelativeToToday", "date", "-1 days")).toBe(
+        true,
+      );
+      expect(match(atNoon(7), "isRelativeToToday", "date", "1 weeks")).toBe(
+        true,
+      );
+      expect(match(atNoon(6), "isRelativeToToday", "date", "1 weeks")).toBe(
+        false,
+      );
+      expect(match(atNoon(13), "isRelativeToToday", "date", "1 weeks")).toBe(
+        true,
+      );
+      expect(match(atNoon(14), "isRelativeToToday", "date", "1 weeks")).toBe(
+        false,
+      );
+      expect(
+        match(atNoon(30), "isRelativeToToday", "dateRange", "1 months"),
+      ).toBe(true);
+      expect(match(atNoon(29), "isRelativeToToday", "date", "1 months")).toBe(
+        false,
+      );
+      expect(match(atNoon(59), "isRelativeToToday", "date", "1 months")).toBe(
+        true,
+      );
+      expect(match(atNoon(60), "isRelativeToToday", "date", "1 months")).toBe(
+        false,
+      );
+      expect(match("nope", "isRelativeToToday", "date", "0 days")).toBe(false);
+      expect(match(atNoon(0), "isRelativeToToday", "date", ["0 days"])).toBe(
+        true,
+      );
+      expect(match(atNoon(0), "isRelativeToToday", "date", "days")).toBe(true);
+      expect(match(atNoon(0), "isRelativeToToday", "date", "1 years")).toBe(
+        true,
+      );
+    } finally {
+      vi.useRealTimers();
     }
-
-    expect(match(atNoon(0), "isRelativeToToday", "date", "0 days")).toBe(true);
-    expect(match(atNoon(1), "isRelativeToToday", "date", "0 days")).toBe(false);
-    expect(match(atNoon(-1), "isRelativeToToday", "date", "-1 days")).toBe(
-      true,
-    );
-    expect(match(atNoon(7), "isRelativeToToday", "date", "1 weeks")).toBe(true);
-    expect(match(atNoon(6), "isRelativeToToday", "date", "1 weeks")).toBe(
-      false,
-    );
-    expect(match(atNoon(13), "isRelativeToToday", "date", "1 weeks")).toBe(
-      true,
-    );
-    expect(match(atNoon(14), "isRelativeToToday", "date", "1 weeks")).toBe(
-      false,
-    );
-    expect(
-      match(atNoon(30), "isRelativeToToday", "dateRange", "1 months"),
-    ).toBe(true);
-    expect(match(atNoon(29), "isRelativeToToday", "date", "1 months")).toBe(
-      false,
-    );
-    expect(match(atNoon(59), "isRelativeToToday", "date", "1 months")).toBe(
-      true,
-    );
-    expect(match(atNoon(60), "isRelativeToToday", "date", "1 months")).toBe(
-      false,
-    );
-    expect(match("nope", "isRelativeToToday", "date", "0 days")).toBe(false);
-    expect(match(atNoon(0), "isRelativeToToday", "date", ["0 days"])).toBe(
-      true,
-    );
-    expect(match(atNoon(0), "isRelativeToToday", "date", "days")).toBe(true);
-    expect(match(atNoon(0), "isRelativeToToday", "date", "1 years")).toBe(true);
   });
 
   it("treats null, an empty string, and an empty list as empty", () => {

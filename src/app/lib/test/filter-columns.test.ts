@@ -1,6 +1,6 @@
 import { addDays, endOfDay, startOfDay } from "date-fns";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
@@ -324,90 +324,98 @@ describe("filterColumns", () => {
   });
 
   it("counts days, weeks, and months from today", () => {
-    const today = new Date();
+    // One frozen instant, so this date and the Date inside filterColumns
+    // stay on the same day.
+    vi.useFakeTimers({ now: new Date(2026, 5, 15, 12), toFake: ["Date"] });
 
-    const tomorrow = startOfDay(addDays(today, 1));
-    expect(
-      compile([
-        columnFilter({
-          id: "createdAt",
-          variant: "date",
-          operator: "isRelativeToToday",
-          value: "1 days",
-        }),
-      ])?.params,
-    ).toEqual([tomorrow.toISOString(), endOfDay(tomorrow).toISOString()]);
+    try {
+      const today = new Date();
 
-    const nextWeek = startOfDay(addDays(today, 7));
-    expect(
-      compile([
-        columnFilter({
-          id: "createdAt",
-          variant: "dateRange",
-          operator: "isRelativeToToday",
-          value: "1 weeks",
-        }),
-      ])?.params,
-    ).toEqual([
-      nextWeek.toISOString(),
-      endOfDay(addDays(nextWeek, 6)).toISOString(),
-    ]);
+      const tomorrow = startOfDay(addDays(today, 1));
+      expect(
+        compile([
+          columnFilter({
+            id: "createdAt",
+            variant: "date",
+            operator: "isRelativeToToday",
+            value: "1 days",
+          }),
+        ])?.params,
+      ).toEqual([tomorrow.toISOString(), endOfDay(tomorrow).toISOString()]);
 
-    const nextMonth = startOfDay(addDays(today, 30));
-    expect(
-      compile([
-        columnFilter({
-          id: "createdAt",
-          variant: "date",
-          operator: "isRelativeToToday",
-          value: "1 months",
-        }),
-      ])?.params,
-    ).toEqual([
-      nextMonth.toISOString(),
-      endOfDay(addDays(nextMonth, 29)).toISOString(),
-    ]);
+      const nextWeek = startOfDay(addDays(today, 7));
+      expect(
+        compile([
+          columnFilter({
+            id: "createdAt",
+            variant: "dateRange",
+            operator: "isRelativeToToday",
+            value: "1 weeks",
+          }),
+        ])?.params,
+      ).toEqual([
+        nextWeek.toISOString(),
+        endOfDay(addDays(nextWeek, 6)).toISOString(),
+      ]);
 
-    expect(
-      compile([
-        columnFilter({
-          id: "createdAt",
-          variant: "date",
-          operator: "isRelativeToToday",
-          value: "1",
-        }),
-      ]),
-    ).toBeUndefined();
-    expect(
-      compile([
-        columnFilter({
-          id: "createdAt",
-          variant: "date",
-          operator: "isRelativeToToday",
-          value: "1 years",
-        }),
-      ]),
-    ).toBeUndefined();
-    expect(
-      compile([
-        columnFilter({
-          id: "createdAt",
-          variant: "number",
-          operator: "isRelativeToToday",
-          value: "1 days",
-        }),
-      ]),
-    ).toBeUndefined();
-    expect(
-      compile([
-        columnFilter({
-          id: "estimatedHours",
-          variant: "number",
-          operator: "isRelativeToToday",
-          value: ["1 days"],
-        }),
-      ]),
-    ).toBeUndefined();
+      const nextMonth = startOfDay(addDays(today, 30));
+      expect(
+        compile([
+          columnFilter({
+            id: "createdAt",
+            variant: "date",
+            operator: "isRelativeToToday",
+            value: "1 months",
+          }),
+        ])?.params,
+      ).toEqual([
+        nextMonth.toISOString(),
+        endOfDay(addDays(nextMonth, 29)).toISOString(),
+      ]);
+
+      expect(
+        compile([
+          columnFilter({
+            id: "createdAt",
+            variant: "date",
+            operator: "isRelativeToToday",
+            value: "1",
+          }),
+        ]),
+      ).toBeUndefined();
+      expect(
+        compile([
+          columnFilter({
+            id: "createdAt",
+            variant: "date",
+            operator: "isRelativeToToday",
+            value: "1 years",
+          }),
+        ]),
+      ).toBeUndefined();
+      expect(
+        compile([
+          columnFilter({
+            id: "createdAt",
+            variant: "number",
+            operator: "isRelativeToToday",
+            value: "1 days",
+          }),
+        ]),
+      ).toBeUndefined();
+      expect(
+        compile([
+          columnFilter({
+            id: "estimatedHours",
+            variant: "number",
+            operator: "isRelativeToToday",
+            value: ["1 days"],
+          }),
+        ]),
+      ).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("matches empty and non-empty values", () => {
