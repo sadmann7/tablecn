@@ -59,7 +59,6 @@ export const getSortingStateParser = <TColumnId extends string = string>(
   });
 };
 
-/** URL names and internal names, lowercased, so both read back. */
 const OPERATORS_BY_NAME = new Map(
   getKeys(FILTER_OPERATORS).flatMap((operator): [string, FilterOperator][] => [
     [FILTER_OPERATORS[operator], operator],
@@ -67,7 +66,7 @@ const OPERATORS_BY_NAME = new Map(
   ]),
 );
 
-const MAX_OPERATOR_PARTS = 3;
+const MAX_OPERATOR_PART_COUNT = 3;
 
 const LIST_OPERATORS = new Set<FilterOperator>([
   "inArray",
@@ -208,7 +207,7 @@ interface DataTableSearchParamsOptions<
 }
 
 export function getDataTableSearchParams<
-  const TColumnConfigs extends DataTableColumnConfigs,
+  TColumnConfigs extends DataTableColumnConfigs,
 >({
   columnConfigs,
   defaultSorting = [],
@@ -232,7 +231,6 @@ interface DataTableSearch<TSortColumnId extends string> {
   joinOperator: JoinOperator;
 }
 
-/** Joins the per-column filter params read by `getDataTableSearchParams`. */
 export function getDataTableQuery<
   TColumnConfigs extends DataTableColumnConfigs,
 >(
@@ -274,17 +272,11 @@ function getFilterParsers<TColumnId extends string>(
   >;
 }
 
-/**
- * Splits a leading operator off a param, trying the longest name first since
- * some contain dots (`not.is.empty`). A word only counts as an operator when
- * the variant supports it and a value follows, unless it takes none, so
- * `title=in` and `title=in.progress` search for that text.
- */
 function splitFilterOperator(param: string, variant: FilterVariant) {
   const parts = param.split(".");
 
   for (
-    let count = Math.min(MAX_OPERATOR_PARTS, parts.length);
+    let count = Math.min(MAX_OPERATOR_PART_COUNT, parts.length);
     count > 0;
     count--
   ) {

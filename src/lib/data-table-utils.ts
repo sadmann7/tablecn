@@ -244,7 +244,6 @@ export function getSelectFilterValue(filter: ColumnFilterItem) {
 
 const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** Calendar days are local midnight, so every reader filters on the same day. */
 export function parseFilterDate(value: unknown): Date | undefined {
   if (value instanceof Date) return getValidDate(value);
   if (typeof value === "number") return getValidDate(new Date(value));
@@ -284,10 +283,6 @@ export function getIsDateVariant(variant: FilterVariant) {
   return variant === "date" || variant === "dateRange";
 }
 
-/**
- * Date filters store calendar days, except relative ones (`-7 days`), which
- * keep their text.
- */
 function getFilterValueStringifier(
   variant: FilterVariant,
   operator: FilterOperator,

@@ -29,8 +29,10 @@ import {
 } from "@/lib/data-table-utils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const GLOBAL_FILTER_ID = "__global__";
 
-/** Client-side twin of the server adapters: every `FilterOperator` is handled here. */
+const filterResultsByRow = new WeakMap<object, Record<string, boolean>>();
+
 export function matchesFilter(
   cellValue: unknown,
   filter: Pick<ColumnFilterItem, "operator" | "variant" | "value">,
@@ -153,10 +155,6 @@ export function createDataTableFacetedRowModel<
   };
 }
 
-const GLOBAL_FILTER_ID = "__global__";
-
-const filterResultsByRow = new WeakMap<object, Record<string, boolean>>();
-
 type RowTest<TFeatures extends TableFeatures, TData extends RowData> = (
   row: Row<TFeatures, TData>,
 ) => boolean;
@@ -171,11 +169,6 @@ interface FilteringColumn<
   getCanGlobalFilter?: () => boolean;
 }
 
-/**
- * Members a generic `Table` hides until its features are known, optional
- * because these row models also run without global filtering or pagination.
- * Comes first in `FilteringInstance`, so its `getColumn` overload wins.
- */
 interface FilteringMembers<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -311,7 +304,6 @@ function getRowPasses<TFeatures extends TableFeatures, TData extends RowData>(
     : columnIds.every((id) => results[id]);
 }
 
-/** Also written to `row.columnFilters`, where TanStack's APIs look. */
 function setFilterResults<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -375,7 +367,6 @@ function getGlobalFilterTests<
     .map((column) => (row) => filterFn(row, column.id, value));
 }
 
-/** Same traversal as TanStack's `filterRows`, which isn't exported. */
 function filterRows<TFeatures extends TableFeatures, TData extends RowData>(
   rows: Row<TFeatures, TData>[],
   passes: RowTest<TFeatures, TData>,
