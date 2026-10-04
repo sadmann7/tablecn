@@ -26,22 +26,22 @@ export const FILTER_VARIANTS = [
   "multiSelect",
 ] as const;
 
-export const FILTER_OPERATORS = [
-  "iLike",
-  "notILike",
-  "eq",
-  "ne",
-  "inArray",
-  "notInArray",
-  "isEmpty",
-  "isNotEmpty",
-  "lt",
-  "lte",
-  "gt",
-  "gte",
-  "isBetween",
-  "isRelativeToToday",
-] as const;
+export const FILTER_OPERATORS = {
+  iLike: "ilike",
+  notILike: "not.ilike",
+  eq: "eq",
+  ne: "neq",
+  inArray: "in",
+  notInArray: "not.in",
+  isEmpty: "is.empty",
+  isNotEmpty: "not.is.empty",
+  lt: "lt",
+  lte: "lte",
+  gt: "gt",
+  gte: "gte",
+  isBetween: "between",
+  isRelativeToToday: "rel",
+} as const;
 
 export const JOIN_OPERATORS = ["and", "or"] as const;
 
@@ -201,7 +201,7 @@ export function getIsValuelessOperator(operator: FilterOperator) {
   return operator === "isEmpty" || operator === "isNotEmpty";
 }
 
-export function getFilterValueForOperator(
+export function coerceFilterValue(
   operator: FilterOperator,
   value: string | string[],
 ) {
@@ -221,7 +221,7 @@ export function getFilterValueForOperator(
   return value;
 }
 
-export function getColumnFilterDefaults<TData extends RowData>(
+export function getDefaultFilter<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
 ) {
   const variant = column.columnDef.meta?.variant ?? "text";
@@ -242,14 +242,69 @@ export function getSelectFilterValue(filter: ColumnFilterItem) {
   return typeof filter.value === "string" ? filter.value : undefined;
 }
 
-export function getFilterDates(value: ColumnFilterItem["value"]) {
-  return (Array.isArray(value) ? value : [value])
-    .filter(Boolean)
-    .map((timestamp) => new Date(Number(timestamp)));
+const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+export function parseFilterDate(value: unknown): Date | undefined {
+  if (value instanceof Date) return getValidDate(value);
+  if (typeof value === "number") return getValidDate(new Date(value));
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+
+  const text = value.trim();
+  const match = CALENDAR_DATE_PATTERN.exec(text);
+  if (match) {
+    const [, year, month, day] = match.map(Number);
+    if (year === undefined || month === undefined || day === undefined) {
+      return undefined;
+    }
+    const date = new Date(year, month - 1, day);
+    return date.getFullYear() === year &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day
+      ? date
+      : undefined;
+  }
+
+  const numeric = Number(text);
+  return getValidDate(new Date(Number.isNaN(numeric) ? text : numeric));
 }
 
-export function toFilterTimestamp(date: Date | undefined) {
-  return date?.getTime().toString() ?? "";
+export function formatFilterDate(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function getValidDate(date: Date) {
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function stringifyFilterDate(value: unknown) {
+  const date = parseFilterDate(value);
+  return date ? formatFilterDate(date) : "";
+}
+
+export function getIsDateVariant(variant: FilterVariant) {
+  return variant === "date" || variant === "dateRange";
+}
+
+function getFilterValueStringifier(
+  variant: FilterVariant,
+  operator: FilterOperator,
+) {
+  return getIsDateVariant(variant) && operator !== "isRelativeToToday"
+    ? stringifyFilterDate
+    : stringifyFilterValue;
+}
+
+export function getFilterDates(value: ColumnFilterItem["value"]) {
+  return (Array.isArray(value) ? value : [value]).flatMap((item) => {
+    const date = parseFilterDate(item);
+    return date ? [date] : [];
+  });
+}
+
+export function getFilterDateValue(date: Date | undefined) {
+  return date ? formatFilterDate(date) : "";
 }
 
 export function getDateFilterLabel(filter: ColumnFilterItem) {
@@ -268,7 +323,7 @@ export function getDateFilterLabel(filter: ColumnFilterItem) {
   return `${start} - ${formatDate(endDate, { month: "short" })}`;
 }
 
-function toFilterString(value: unknown): string {
+export function stringifyFilterValue(value: unknown): string {
   if (value == null) return "";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "object") return JSON.stringify(value);
@@ -285,11 +340,6 @@ export function getPlainFilterOperator(variant: FilterVariant): FilterOperator {
   return getDefaultFilterOperator(variant);
 }
 
-/**
- * Whether a filter is a plain filter: the one `column.getFilterValue()` and
- * `column.setFilterValue()` read and write, with the variant's plain operator
- * and a value of the matching shape.
- */
 export function getIsPlainFilter(filter: ColumnFilterItem) {
   return (
     filter.operator === getPlainFilterOperator(filter.variant) &&
@@ -297,11 +347,11 @@ export function getIsPlainFilter(filter: ColumnFilterItem) {
   );
 }
 
-/**
- * Converts a filter value (e.g. `["todo", "done"]` or `[1, 5]`) to a
- * filter item. Returns `null` for empty values.
- */
-export function toColumnFilterItem<TColumnId extends string>(
+export function getPlainFilterId(columnId: string) {
+  return `${columnId}-filter`;
+}
+
+export function createPlainFilter<TColumnId extends string>(
   id: TColumnId,
   variant: FilterVariant,
   value: unknown,
@@ -309,42 +359,42 @@ export function toColumnFilterItem<TColumnId extends string>(
   if (value === undefined || value === null || value === "") return null;
 
   const operator = getPlainFilterOperator(variant);
-  const filterId = `${id}-filter`;
+  const filterId = getPlainFilterId(id);
+  const stringify = getFilterValueStringifier(variant, operator);
 
   if (getIsMultiValueVariant(variant)) {
-    const values = (Array.isArray(value) ? value : [value]).map(toFilterString);
+    const values = (Array.isArray(value) ? value : [value]).map(stringify);
     if (values.every((item) => item === "")) return null;
     return { id, variant, operator, value: values, filterId };
   }
 
   if (Array.isArray(value)) return null;
 
-  return { id, variant, operator, value: toFilterString(value), filterId };
+  return { id, variant, operator, value: stringify(value), filterId };
 }
 
-/**
- * Fills in a `columnFilters` item. Plain filters (no `operator`) get the
- * variant's plain operator, and their value becomes filter strings.
- */
-export function resolveColumnFilter(
+export function normalizeColumnFilter(
   filter: ColumnFilter,
   variant: FilterVariant,
 ): ColumnFilterItem {
-  const filterId = filter.filterId ?? `${filter.id}-filter`;
+  const filterId = filter.filterId ?? getPlainFilterId(filter.id);
 
   if (filter.operator) {
+    const filterVariant = filter.variant ?? variant;
+    const stringify = getFilterValueStringifier(filterVariant, filter.operator);
+
     return {
       id: filter.id,
-      variant: filter.variant ?? variant,
+      variant: filterVariant,
       operator: filter.operator,
       value: Array.isArray(filter.value)
-        ? filter.value.map(toFilterString)
-        : toFilterString(filter.value),
+        ? filter.value.map(stringify)
+        : stringify(filter.value),
       filterId,
     };
   }
 
-  const item = toColumnFilterItem(filter.id, variant, filter.value);
+  const item = createPlainFilter(filter.id, variant, filter.value);
   if (item) return { ...item, filterId };
 
   return {
@@ -356,61 +406,41 @@ export function resolveColumnFilter(
   };
 }
 
-/**
- * Per-column keys hold at most one plain filter per column and are read back
- * in column order, so only write them when every filter round-trips and the
- * filters are already in that order.
- */
-export function getCanWriteAsKeys(
-  filters: ColumnFilterItem[],
-  columnIds: string[],
-) {
-  let lastIndex = -1;
-
-  return filters.every((filter) => {
-    const index = columnIds.indexOf(filter.id);
-    if (index <= lastIndex) return false;
-    if (!getIsPlainFilter(filter)) return false;
-    if (!toColumnFilterItem(filter.id, filter.variant, filter.value)) {
-      return false;
-    }
-    lastIndex = index;
-    return true;
-  });
-}
-
-export function toColumnFilterValue(filter: ColumnFilterItem): unknown {
+export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 
   if (variant === "select" || variant === "multiSelect") {
     return Array.isArray(value) ? value : [value];
   }
 
-  if (variant === "range" || variant === "dateRange") {
+  if (variant === "range") {
     return Array.isArray(value)
       ? value.map((item) => (item === "" ? undefined : Number(item)))
       : value;
   }
 
-  if (variant === "date") {
+  if (getIsDateVariant(variant)) {
     return Array.isArray(value)
-      ? value.map((item) => (item === "" ? undefined : Number(item)))
-      : Number(value);
+      ? value.map((item) => parseFilterDate(item)?.getTime())
+      : parseFilterDate(value)?.getTime();
   }
 
   return value;
 }
 
-export function getValidFilters<TFilterItem extends ColumnFilterItem>(
+export function getIsActiveFilter(filter: ColumnFilterItem) {
+  return (
+    getIsValuelessOperator(filter.operator) ||
+    (Array.isArray(filter.value)
+      ? filter.value.some((value) => value !== "")
+      : filter.value !== "" &&
+        filter.value !== null &&
+        filter.value !== undefined)
+  );
+}
+
+export function getActiveFilters<TFilterItem extends ColumnFilterItem>(
   filters: TFilterItem[],
 ): TFilterItem[] {
-  return filters.filter(
-    (filter) =>
-      getIsValuelessOperator(filter.operator) ||
-      (Array.isArray(filter.value)
-        ? filter.value.some((value) => value !== "")
-        : filter.value !== "" &&
-          filter.value !== null &&
-          filter.value !== undefined),
-  );
+  return filters.filter(getIsActiveFilter);
 }

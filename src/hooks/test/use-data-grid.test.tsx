@@ -87,42 +87,15 @@ describe("useDataGrid", () => {
       configurable: true,
     });
 
-    // Mock requestAnimationFrame
+    // Run animation frames immediately so effects finish inside `act`.
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
       cb(0);
       return 0;
-    });
-
-    // Mock ResizeObserver (not implemented in jsdom)
-    vi.stubGlobal(
-      "ResizeObserver",
-      class {
-        observe() {}
-        disconnect() {}
-        unobserve() {}
-      },
-    );
-
-    // Mock scrollIntoView
-    Element.prototype.scrollIntoView = vi.fn();
-
-    // Mock getBoundingClientRect
-    Element.prototype.getBoundingClientRect = vi.fn().mockReturnValue({
-      top: 0,
-      left: 0,
-      bottom: 100,
-      right: 100,
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 0,
-      toJSON: () => {},
     });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
-    vi.unstubAllGlobals();
   });
 
   describe("initialization", () => {

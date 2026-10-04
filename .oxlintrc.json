@@ -75,7 +75,7 @@
           "@testing-library/dom",
           "@total-typescript/ts-reset",
           "server-only",
-          "./src/env.js"
+          "./src/env"
         ]
       }
     ],

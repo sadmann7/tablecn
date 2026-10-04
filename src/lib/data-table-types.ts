@@ -16,28 +16,27 @@ export interface DataTableColumnMeta {
   label?: string;
   placeholder?: string;
   variant?: FilterVariant;
-  options?: Option[];
+  options?: FilterOption[];
   range?: [number, number];
   unit?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export interface QueryKeys {
+export interface DataTableQueryKeys {
   page: string;
   perPage: string;
   sort: string;
-  filters: string;
   joinOperator: string;
 }
 
-export interface Option {
+export interface FilterOption {
   label: string;
   value: string;
   count?: number;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type FilterOperator = (typeof FILTER_OPERATORS)[number];
+export type FilterOperator = keyof typeof FILTER_OPERATORS;
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
@@ -52,20 +51,6 @@ export interface ColumnSortItem<
   id: TColumnId;
 }
 
-declare module "@tanstack/react-table" {
-  interface ColumnFilter {
-    /**
-     * Set by the filter list and menu. Plain filters, set with
-     * `column.setFilterValue()`, leave it unset and apply their variant's
-     * plain operator.
-     */
-    operator?: FilterOperator;
-    variant?: FilterVariant;
-    filterId?: string;
-  }
-}
-
-/** A `columnFilters` item with every field resolved. */
 export interface ColumnFilterItem<
   TColumnId extends string = string,
 > extends ColumnFilter {
@@ -75,6 +60,36 @@ export interface ColumnFilterItem<
   operator: FilterOperator;
   filterId: string;
 }
+
+declare module "@tanstack/react-table" {
+  interface ColumnFilter extends Partial<
+    Pick<ColumnFilterItem, "operator" | "variant" | "filterId">
+  > {}
+}
+
+export interface DataTableColumnConfig {
+  variant?: FilterVariant;
+  isSortable?: boolean;
+}
+
+export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
+
+export type FilterableColumnId<TColumnConfigs extends DataTableColumnConfigs> =
+  {
+    [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
+      variant: FilterVariant;
+    }
+      ? K
+      : never;
+  }[keyof TColumnConfigs] &
+    string;
+
+export type SortableColumnId<TColumnConfigs extends DataTableColumnConfigs> = {
+  [K in keyof TColumnConfigs]: TColumnConfigs[K] extends { isSortable: false }
+    ? never
+    : K;
+}[keyof TColumnConfigs] &
+  string;
 
 export interface DataTableQuery<
   TFilterColumnId extends string = string,
@@ -86,6 +101,13 @@ export interface DataTableQuery<
   filters: ColumnFilterItem<TFilterColumnId>[];
   joinOperator: JoinOperator;
 }
+
+export type DataTableColumnConfigsQuery<
+  TColumnConfigs extends DataTableColumnConfigs,
+> = DataTableQuery<
+  FilterableColumnId<TColumnConfigs>,
+  SortableColumnId<TColumnConfigs>
+>;
 
 export interface DataTableRowAction<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;

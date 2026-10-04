@@ -3,7 +3,10 @@
 import * as React from "react";
 
 import type { Task } from "@/db/schema";
-import type { DataTableRowAction, QueryKeys } from "@/lib/data-table-types";
+import type {
+  DataTableRowAction,
+  DataTableQueryKeys,
+} from "@/lib/data-table-types";
 import type { DataMode, FilterMode } from "@/lib/flag";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
@@ -24,6 +27,7 @@ import type {
   getTaskStatusCounts,
 } from "../lib/queries";
 
+import { tasksDefaultSorting } from "../lib/validations";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { getTasksTableColumns } from "./tasks-table-columns";
@@ -40,7 +44,7 @@ interface TasksTableProps {
       Awaited<ReturnType<typeof getEstimatedHoursRange>>,
     ]
   >;
-  queryKeys?: Partial<QueryKeys>;
+  queryKeys?: Partial<DataTableQueryKeys>;
 }
 
 export function TasksTable({
@@ -82,7 +86,7 @@ export function TasksTable({
     data,
     columns,
     initialState: {
-      sorting: [{ id: "createdAt", desc: true }],
+      sorting: tasksDefaultSorting,
       columnPinning: { start: ["select"], end: ["actions"] },
     },
     queryKeys,

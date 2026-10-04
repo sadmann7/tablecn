@@ -1,0 +1,152 @@
+.launch-stage[data-paused="true"] *,
+.launch-stage[data-paused="true"] *::before,
+.launch-stage[data-paused="true"] *::after {
+  animation-play-state: paused !important;
+}
+
+.launch-camera {
+  transform-origin: 0 0;
+  transition: transform 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
+  scale: var(--launch-camera-scale, 1);
+  transform-origin: var(--radix-popper-transform-origin);
+  transition: scale 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+html[data-launch-camera]
+  [data-radix-popper-content-wrapper]
+  :is(
+    [data-slot="select-trigger"],
+    button:not([class*="border-transparent"]),
+    input
+  ) {
+  border-color: transparent !important;
+  background-clip: border-box;
+  box-shadow: 0 0 0 calc(1px / var(--launch-camera-scale, 1)) var(--input) !important;
+}
+
+/* Item-aligned selects skip the popper wrapper and anchor at the trigger's top left. */
+html[data-launch-camera]
+  [data-slot="select-content"][data-align-trigger="true"] {
+  scale: var(--launch-camera-scale, 1);
+  transform-origin: 0 0;
+}
+
+.launch-cursor {
+  transition:
+    translate 750ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 300ms ease-out;
+}
+
+.launch-dots {
+  background-image: radial-gradient(rgb(255 255 255 / 0.14) 1px, transparent 0);
+  background-size: 36px 36px;
+}
+
+.launch-dots-fade {
+  background: linear-gradient(to bottom, transparent 70%, #09090b);
+}
+
+.launch-light {
+  background: radial-gradient(
+    ellipse 60% 50% at 70% 0%,
+    rgb(52 211 153 / 0.1),
+    transparent 70%
+  );
+}
+
+.launch-rise {
+  animation: launch-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--launch-delay, 0ms);
+}
+
+.launch-flash {
+  animation: launch-flash 1200ms ease-out both;
+}
+
+.launch-keystroke {
+  animation: launch-keystroke 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.launch-logo {
+  animation: launch-logo 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--launch-delay, 0ms);
+}
+
+.launch-sweep {
+  background: linear-gradient(
+    100deg,
+    rgb(255 255 255 / 0.55) 30%,
+    white 50%,
+    rgb(255 255 255 / 0.55) 70%
+  );
+  background-size: 300% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: launch-sweep 2400ms ease-out both;
+  animation-delay: var(--launch-delay, 0ms);
+}
+
+@keyframes launch-rise {
+  from {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translateY(1.5rem);
+  }
+}
+
+@keyframes launch-flash {
+  from {
+    background-color: rgb(52 211 153 / 0.25);
+  }
+}
+
+@keyframes launch-keystroke {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+  15%,
+  70% {
+    opacity: 1;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes launch-logo {
+  from {
+    opacity: 0;
+    filter: blur(16px);
+    transform: scale(0.92);
+  }
+}
+
+@keyframes launch-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launch-rise,
+  .launch-logo,
+  .launch-keystroke,
+  .launch-sweep,
+  .launch-flash {
+    animation: none;
+  }
+
+  .launch-camera,
+  .launch-cursor,
+  html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
+    transition: none;
+  }
+}

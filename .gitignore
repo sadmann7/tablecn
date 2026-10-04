@@ -7,6 +7,10 @@
 
 # testing
 /coverage
+/test-results/
+/playwright-report/
+/blob-report/
+/recordings/
 
 # database
 /prisma/db.sqlite

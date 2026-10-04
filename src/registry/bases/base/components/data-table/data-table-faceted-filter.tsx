@@ -5,7 +5,7 @@ import type * as React from "react";
 import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { Option } from "@/lib/data-table-types";
+import type { FilterOption } from "@/lib/data-table-types";
 
 import { Button } from "@/registry/bases/base/ui/button";
 import {
@@ -28,7 +28,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 interface DataTableFacetedFilterProps<TData extends RowData, TValue> {
   column?: Column<DataTableFeatures, TData, TValue>;
   title?: string;
-  options: Option[];
+  options: FilterOption[];
   multiple?: boolean;
 }
 

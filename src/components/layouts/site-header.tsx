@@ -6,7 +6,7 @@ import { Icons } from "@/components/icons";
 import { DocsLink } from "@/components/layouts/docs-link";
 import { MobileNav } from "@/components/layouts/mobile-nav";
 import { ModeToggle } from "@/components/layouts/mode-toggle";
-import { siteConfig } from "@/lib/site";
+import { GITHUB_URL, NAV_LINKS } from "@/lib/site";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Sheet,
@@ -47,7 +47,7 @@ export function SiteHeader() {
           </Link>
         </Button>
         <nav className="hidden w-full items-center text-sm md:flex">
-          {siteConfig.navLinks.map((navLink) => (
+          {NAV_LINKS.map((navLink) => (
             <ActiveLink key={navLink.href} href={navLink.href}>
               {navLink.label}
             </ActiveLink>
@@ -58,7 +58,7 @@ export function SiteHeader() {
           <Button variant="ghost" size="icon" className="size-8" asChild>
             <Link
               aria-label="GitHub repo"
-              href={siteConfig.links.github}
+              href={GITHUB_URL}
               target="_blank"
               rel="noopener noreferrer"
             >

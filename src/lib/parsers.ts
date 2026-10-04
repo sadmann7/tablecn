@@ -1,8 +1,7 @@
 import {
   createParser,
-  parseAsArrayOf,
   parseAsInteger,
-  parseAsString,
+  parseAsNativeArrayOf,
   parseAsStringEnum,
 } from "nuqs/server";
 import { z } from "zod";
@@ -10,18 +9,24 @@ import { z } from "zod";
 import type {
   ColumnFilterItem,
   ColumnSortItem,
-  DataTableQuery,
+  DataTableColumnConfig,
+  DataTableColumnConfigs,
+  DataTableColumnConfigsQuery,
+  FilterableColumnId,
+  FilterOperator,
   FilterVariant,
   JoinOperator,
+  SortableColumnId,
 } from "@/lib/data-table-types";
 
 import {
   FILTER_OPERATORS,
-  FILTER_VARIANTS,
-  getIsMultiValueVariant,
-  getValidFilters,
+  getFilterOperators,
+  getIsActiveFilter,
+  getIsValuelessOperator,
+  getPlainFilterOperator,
   JOIN_OPERATORS,
-  toColumnFilterItem,
+  normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
 const sortingItemSchema = z.object({
@@ -29,15 +34,10 @@ const sortingItemSchema = z.object({
   desc: z.boolean(),
 });
 
-/**
- * Parses the `sort` param, either `createdAt.desc,title.asc` or JSON, and
- * writes the compact form. Pass `columnIds` to reject unknown columns and to
- * narrow the parsed ids to them.
- */
 export const getSortingStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
 ) => {
-  const validIds = toIdSet(columnIds);
+  const validIds = getIdSet(columnIds);
 
   return createParser<ColumnSortItem<TColumnId>[]>({
     parse: (value) => {
@@ -59,140 +59,306 @@ export const getSortingStateParser = <TColumnId extends string = string>(
   });
 };
 
-const filterItemSchema = z.object({
-  id: z.string(),
-  value: z.union([z.string(), z.array(z.string())]),
-  variant: z.enum(FILTER_VARIANTS),
-  operator: z.enum(FILTER_OPERATORS),
-  filterId: z.string(),
-});
+const OPERATORS_BY_NAME = new Map(
+  getKeys(FILTER_OPERATORS).flatMap((operator): [string, FilterOperator][] => [
+    [FILTER_OPERATORS[operator], operator],
+    [operator.toLowerCase(), operator],
+  ]),
+);
 
-export type FilterItemSchema = z.infer<typeof filterItemSchema>;
+const MAX_OPERATOR_PART_COUNT = 3;
 
-/**
- * Parses the `filters` param. Pass `columnIds` to reject unknown columns and
- * to narrow the parsed ids to them.
- */
-export const getFiltersStateParser = <TColumnId extends string = string>(
-  columnIds?: readonly TColumnId[] | Set<TColumnId>,
-) => {
-  const validIds = toIdSet(columnIds);
+const LIST_OPERATORS = new Set<FilterOperator>([
+  "inArray",
+  "notInArray",
+  "isBetween",
+]);
 
-  return createParser<ColumnFilterItem<TColumnId>[]>({
-    parse: (value) => {
-      try {
-        const result = z.array(filterItemSchema).safeParse(JSON.parse(value));
+export function parseColumnFilter<TColumnId extends string>(
+  id: TColumnId,
+  variant: FilterVariant,
+  param: string,
+): ColumnFilterItem<TColumnId> {
+  const { operator, rawValue } = splitFilterOperator(param, variant);
 
-        if (!result.success || !getHasKnownIds(result.data, validIds)) {
-          return null;
-        }
-
-        return result.data;
-      } catch {
-        return null;
-      }
-    },
-    serialize: (value) => JSON.stringify(value),
-    eq: (a, b) =>
-      a.length === b.length &&
-      a.every(
-        (filter, index) =>
-          filter.id === b[index]?.id &&
-          filter.value === b[index]?.value &&
-          filter.variant === b[index]?.variant &&
-          filter.operator === b[index]?.operator,
-      ),
-  });
-};
-
-interface DataTableSearchParamsOptions<
-  TFilterColumnId extends string,
-  TSortColumnId extends string,
-> {
-  /**
-   * Filterable column ids mapped to their filter variant. Needed to read
-   * per-column params (`?status=todo,done`) and to reject unknown ids.
-   */
-  filterableColumns: Record<TFilterColumnId, FilterVariant>;
-  /** Sortable column ids. Without it, sorts on any id are accepted. */
-  sortableColumns?: readonly TSortColumnId[];
-  defaultSorting?: ColumnSortItem<NoInfer<TSortColumnId>>[];
-  defaultPerPage?: number;
-}
-
-/**
- * The nuqs parsers for every URL param a data table writes. Spread the
- * result into `createSearchParamsCache`, or use the individual parsers.
- */
-export function getDataTableSearchParams<
-  TFilterColumnId extends string,
-  TSortColumnId extends string = string,
->({
-  filterableColumns,
-  sortableColumns,
-  defaultSorting = [],
-  defaultPerPage = 10,
-}: DataTableSearchParamsOptions<TFilterColumnId, TSortColumnId>) {
-  const filterIds = Object.keys(filterableColumns) as TFilterColumnId[];
-
-  const columnParsers = Object.fromEntries(
-    filterIds.map((id) => [
+  const filter = normalizeColumnFilter(
+    {
       id,
-      getIsMultiValueVariant(filterableColumns[id])
-        ? parseAsArrayOf(parseAsString).withDefault([])
-        : parseAsString.withDefault(""),
-    ]),
+      variant,
+      operator,
+      value: getIsValuelessOperator(operator)
+        ? ""
+        : LIST_OPERATORS.has(operator)
+          ? parseListValue(rawValue, operator)
+          : rawValue,
+    },
+    variant,
   );
 
+  return { ...filter, id };
+}
+
+export function serializeColumnFilter(filter: ColumnFilterItem) {
+  const name = FILTER_OPERATORS[filter.operator];
+  if (getIsValuelessOperator(filter.operator)) return name;
+
+  const rawValue = Array.isArray(filter.value)
+    ? joinListValue(filter.value)
+    : filter.value;
+
+  if (filter.operator === getPlainFilterOperator(filter.variant)) {
+    const implicit = parseColumnFilter(filter.id, filter.variant, rawValue);
+    if (getIsSameFilter(implicit, filter)) return rawValue;
+  }
+
+  return `${name}.${rawValue}`;
+}
+
+export function getColumnFilterParser<TColumnId extends string>(
+  id: TColumnId,
+  variant: FilterVariant,
+) {
+  return parseAsNativeArrayOf(
+    createParser<ColumnFilterItem<TColumnId>>({
+      // nuqs drops items that parse to null, so `?title=` reads as no filter.
+      parse: (param) => {
+        const filter = parseColumnFilter(id, variant, param);
+        return getIsActiveFilter(filter) ? filter : null;
+      },
+      serialize: serializeColumnFilter,
+      eq: (a, b) => serializeColumnFilter(a) === serializeColumnFilter(b),
+    }),
+  );
+}
+
+export function getColumnFilters<TColumnId extends string>(
+  columnIds: readonly TColumnId[],
+  getFilters: (id: TColumnId) => ColumnFilterItem<TColumnId>[],
+) {
+  return columnIds.flatMap((id) =>
+    getFilters(id).map((filter, index) => ({
+      ...filter,
+      filterId: `${id}-${index}`,
+    })),
+  );
+}
+
+export function sortColumnFiltersBySearch<TFilter extends ColumnFilterItem>(
+  filters: TFilter[],
+  search: string | URLSearchParams,
+) {
+  const positions = new Map<string, number>();
+  for (const key of new URLSearchParams(search).keys()) {
+    if (!positions.has(key)) positions.set(key, positions.size);
+  }
+
+  return [...filters].sort(
+    (a, b) =>
+      (positions.get(a.id) ?? Number.POSITIVE_INFINITY) -
+      (positions.get(b.id) ?? Number.POSITIVE_INFINITY),
+  );
+}
+
+export function getColumnFiltersKey(filters: ColumnFilterItem[]) {
+  return filters
+    .map((filter) => `${filter.id}=${serializeColumnFilter(filter)}`)
+    .sort()
+    .join("&");
+}
+
+export function getFilterableColumns<
+  TColumnConfigs extends DataTableColumnConfigs,
+>(columnConfigs: TColumnConfigs) {
+  const entries = getKeys<keyof TColumnConfigs & string>(columnConfigs).flatMap(
+    (id) => {
+      const variant = columnConfigs[id]?.variant;
+      return variant ? [[id, variant] as const] : [];
+    },
+  );
+
+  return Object.fromEntries(entries) as Record<
+    FilterableColumnId<TColumnConfigs>,
+    FilterVariant
+  >;
+}
+
+export function getSortableColumns<
+  TColumnConfigs extends DataTableColumnConfigs,
+>(columnConfigs: TColumnConfigs) {
+  return getKeys<keyof TColumnConfigs & string>(columnConfigs).filter(
+    (id): id is SortableColumnId<TColumnConfigs> =>
+      columnConfigs[id]?.isSortable !== false,
+  );
+}
+
+export function getColumnOptions(config: DataTableColumnConfig) {
   return {
-    page: parseAsInteger.withDefault(1),
-    perPage: parseAsInteger.withDefault(defaultPerPage),
-    sort: getSortingStateParser(sortableColumns).withDefault(defaultSorting),
-    filters: getFiltersStateParser(filterIds).withDefault([]),
-    joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
-    ...columnParsers,
+    enableColumnFilter: config.variant !== undefined,
+    enableSorting: config.isSortable !== false,
   };
 }
 
-interface DataTableSearch<
-  TFilterColumnId extends string,
-  TSortColumnId extends string,
+interface DataTableSearchParamsOptions<
+  TColumnConfigs extends DataTableColumnConfigs,
 > {
+  columnConfigs: TColumnConfigs;
+  defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumnConfigs>>>[];
+  defaultPerPage?: number;
+}
+
+export function getDataTableSearchParams<
+  TColumnConfigs extends DataTableColumnConfigs,
+>({
+  columnConfigs,
+  defaultSorting = [],
+  defaultPerPage = 10,
+}: DataTableSearchParamsOptions<TColumnConfigs>) {
+  return {
+    page: parseAsInteger.withDefault(1),
+    perPage: parseAsInteger.withDefault(defaultPerPage),
+    sort: getSortingStateParser(getSortableColumns(columnConfigs)).withDefault(
+      defaultSorting,
+    ),
+    joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
+    ...getFilterParsers(getFilterableColumns(columnConfigs)),
+  };
+}
+
+interface DataTableSearch<TSortColumnId extends string> {
   page: number;
   perPage: number;
   sort: ColumnSortItem<TSortColumnId>[];
-  filters: ColumnFilterItem<TFilterColumnId>[];
   joinOperator: JoinOperator;
 }
 
-/**
- * Normalizes parsed search params into one `DataTableQuery`, regardless of
- * whether filters arrived as per-column params or inside `filters`. This
- * mirrors how `useDataTable` reads the URL, so server and client agree.
- * Server adapters (Drizzle, Supabase, ...) only need to handle this shape.
- */
 export function getDataTableQuery<
-  TFilterColumnId extends string,
-  TSortColumnId extends string,
+  TColumnConfigs extends DataTableColumnConfigs,
 >(
-  search: DataTableSearch<TFilterColumnId, TSortColumnId> &
-    Partial<Record<NoInfer<TFilterColumnId>, unknown>>,
-  filterableColumns: Record<TFilterColumnId, FilterVariant>,
-): DataTableQuery<TFilterColumnId, TSortColumnId> {
-  const filterIds = Object.keys(filterableColumns) as TFilterColumnId[];
-
-  const keyFilters = filterIds.flatMap((id) => {
-    const item = toColumnFilterItem(id, filterableColumns[id], search[id]);
-    return item ? [item] : [];
-  });
+  search: NoInfer<
+    DataTableSearch<SortableColumnId<TColumnConfigs>> &
+      Record<
+        FilterableColumnId<TColumnConfigs>,
+        ColumnFilterItem<FilterableColumnId<TColumnConfigs>>[]
+      >
+  >,
+  columnConfigs: TColumnConfigs,
+): DataTableColumnConfigsQuery<TColumnConfigs> {
+  const filtersById: Record<
+    FilterableColumnId<TColumnConfigs>,
+    ColumnFilterItem<FilterableColumnId<TColumnConfigs>>[]
+  > = search;
 
   return {
     page: search.page,
     perPage: search.perPage,
     sorting: search.sort,
-    filters: getValidFilters([...search.filters, ...keyFilters]),
+    filters: getColumnFilters(
+      getKeys(getFilterableColumns(columnConfigs)),
+      (id) => filtersById[id],
+    ),
     joinOperator: search.joinOperator,
   };
+}
+
+function getFilterParsers<TColumnId extends string>(
+  columns: Record<TColumnId, FilterVariant>,
+) {
+  const parsers = getKeys(columns).map(
+    (id) => [id, getColumnFilterParser(id, columns[id])] as const,
+  );
+  return Object.fromEntries(parsers) as Record<
+    TColumnId,
+    ReturnType<typeof getColumnFilterParser<TColumnId>>
+  >;
+}
+
+function splitFilterOperator(param: string, variant: FilterVariant) {
+  const parts = param.split(".");
+
+  for (
+    let count = Math.min(MAX_OPERATOR_PART_COUNT, parts.length);
+    count > 0;
+    count--
+  ) {
+    const operator = OPERATORS_BY_NAME.get(
+      parts.slice(0, count).join(".").toLowerCase(),
+    );
+    if (!operator || !getIsVariantOperator(variant, operator)) continue;
+    if (count === parts.length && !getIsValuelessOperator(operator)) continue;
+
+    return { operator, rawValue: parts.slice(count).join(".") };
+  }
+
+  return { operator: getPlainFilterOperator(variant), rawValue: param };
+}
+
+function getIsVariantOperator(
+  variant: FilterVariant,
+  operator: FilterOperator,
+) {
+  return (
+    operator === getPlainFilterOperator(variant) ||
+    getFilterOperators(variant).some((option) => option.value === operator)
+  );
+}
+
+function parseListValue(rawValue: string, operator: FilterOperator) {
+  const items: string[] = [];
+  let item = "";
+  let isQuoted = false;
+  let wasQuoted = false;
+
+  for (let index = 0; index < rawValue.length; index++) {
+    const char = rawValue[index];
+
+    if (char === '"') {
+      if (isQuoted && rawValue[index + 1] === '"') {
+        item += char;
+        index++;
+      } else {
+        isQuoted = !isQuoted;
+        wasQuoted = true;
+      }
+    } else if (char === "," && !isQuoted) {
+      items.push(wasQuoted ? item : item.trim());
+      item = "";
+      wasQuoted = false;
+    } else {
+      item += char;
+    }
+  }
+  if (rawValue !== "") items.push(wasQuoted ? item : item.trim());
+
+  if (operator === "isBetween") return [items[0] ?? "", items[1] ?? ""];
+  return items.filter((value) => value !== "");
+}
+
+function joinListValue(values: string[]) {
+  return values
+    .map((value) =>
+      /[,"]/.test(value) || value !== value.trim()
+        ? `"${value.replaceAll('"', '""')}"`
+        : value,
+    )
+    .join(",");
+}
+
+function getIsSameFilter(a: ColumnFilterItem, b: ColumnFilterItem) {
+  if (a.operator !== b.operator) return false;
+  if (!Array.isArray(a.value) || !Array.isArray(b.value)) {
+    return a.value === b.value;
+  }
+  const otherValue = b.value;
+  return (
+    a.value.length === otherValue.length &&
+    a.value.every((item, index) => item === otherValue[index])
+  );
+}
+
+function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
+  return Object.keys(record).filter((key): key is TKey =>
+    Object.hasOwn(record, key),
+  );
 }
 
 function parseSorting(value: string): ColumnSortItem[] | null {
@@ -228,7 +394,7 @@ function getIsSameSorting(a: ColumnSortItem[], b: ColumnSortItem[]) {
   );
 }
 
-function toIdSet<TColumnId extends string>(
+function getIdSet<TColumnId extends string>(
   ids?: readonly TColumnId[] | Set<TColumnId>,
 ) {
   if (!ids) return null;

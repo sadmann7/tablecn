@@ -20,19 +20,19 @@ import type {
 } from "@/lib/data-table-types";
 
 import {
+  createPlainFilter,
   FILTER_VARIANTS,
-  getValidFilters,
-  resolveColumnFilter,
-  toColumnFilterItem,
+  getIsActiveFilter,
+  normalizeColumnFilter,
+  parseFilterDate,
+  stringifyFilterValue,
 } from "@/lib/data-table-utils";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const GLOBAL_FILTER_ID = "__global__";
 
-/**
- * Evaluates one filter condition against a cell value in the browser. This is
- * the client-side twin of the server adapters (e.g. the Drizzle adapter), so
- * every `FilterOperator` must be handled here as well.
- */
+const filterResultsByRow = new WeakMap<object, Record<string, boolean>>();
+
 export function matchesFilter(
   cellValue: unknown,
   filter: Pick<ColumnFilterItem, "operator" | "variant" | "value">,
@@ -44,32 +44,34 @@ export function matchesFilter(
   switch (operator) {
     case "iLike":
       return typeof value === "string"
-        ? toText(cellValue).includes(value.toLowerCase())
+        ? getLowercaseText(cellValue).includes(value.toLowerCase())
         : true;
 
     case "notILike":
       return typeof value === "string"
-        ? !toText(cellValue).includes(value.toLowerCase())
+        ? !getLowercaseText(cellValue).includes(value.toLowerCase())
         : true;
 
     case "eq":
-      if (variant === "boolean") return toBoolean(cellValue) === value;
+      if (variant === "boolean") return getBooleanString(cellValue) === value;
       if (isDate) return getIsSameDay(cellValue, value);
-      if (isNumeric) return toNumber(cellValue) === toNumber(value);
-      return stringify(cellValue) === String(value);
+      if (isNumeric) return parseNumber(cellValue) === parseNumber(value);
+      return stringifyFilterValue(cellValue) === String(value);
 
     case "ne":
-      if (variant === "boolean") return toBoolean(cellValue) !== value;
+      if (variant === "boolean") return getBooleanString(cellValue) !== value;
       if (isDate) return !getIsSameDay(cellValue, value);
-      if (isNumeric) return toNumber(cellValue) !== toNumber(value);
-      return stringify(cellValue) !== String(value);
+      if (isNumeric) return parseNumber(cellValue) !== parseNumber(value);
+      return stringifyFilterValue(cellValue) !== String(value);
 
     case "inArray":
-      return Array.isArray(value) ? value.includes(stringify(cellValue)) : true;
+      return Array.isArray(value)
+        ? value.includes(stringifyFilterValue(cellValue))
+        : true;
 
     case "notInArray":
       return Array.isArray(value)
-        ? !value.includes(stringify(cellValue))
+        ? !value.includes(stringifyFilterValue(cellValue))
         : true;
 
     case "lt":
@@ -95,29 +97,17 @@ export function matchesFilter(
   }
 }
 
-/**
- * The default `filterFn` of data table columns: applies a plain filter with
- * the column variant's plain operator. Only `undefined` removes a filter.
- */
 export const dataTableFilterFn = constructFilterFn({
   filter: (dataValue, filterValue, row, columnId) => {
     const variant = getFilterVariant(
       row.table.getColumn(columnId)?.columnDef.meta,
     );
-    const item = toColumnFilterItem(columnId, variant, filterValue);
+    const item = createPlainFilter(columnId, variant, filterValue);
     return !item || matchesFilter(dataValue, item);
   },
   autoRemove: (value) => value === undefined,
 });
 
-/**
- * Filtered row model for `columnFilters` joined by `joinOperator`. Register it
- * in the `filteredRowModel` slot. Filters with an `operator` apply it; plain
- * filters use the column's `filterFn`. The global filter must also match.
- *
- * Like TanStack's, it records each column's result per row, which
- * `createDataTableFacetedRowModel` reads to leave out a column's own filters.
- */
 export function createDataTableFilteredRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -141,11 +131,6 @@ export function createDataTableFilteredRowModel<
   };
 }
 
-/**
- * Faceted row model that honors `joinOperator`: a column's facets count the
- * rows that would match with that column's own filters left out. Register it
- * in the `facetedRowModel` slot next to `createDataTableFilteredRowModel`.
- */
 export function createDataTableFacetedRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -170,10 +155,6 @@ export function createDataTableFacetedRowModel<
   };
 }
 
-const GLOBAL_FILTER_ID = "__global__";
-
-const filterResultsByRow = new WeakMap<object, Record<string, boolean>>();
-
 type RowTest<TFeatures extends TableFeatures, TData extends RowData> = (
   row: Row<TFeatures, TData>,
 ) => boolean;
@@ -188,11 +169,6 @@ interface FilteringColumn<
   getCanGlobalFilter?: () => boolean;
 }
 
-/**
- * Members a generic `Table` hides until its features are known, optional
- * because these row models also run without global filtering or pagination.
- * Comes first in `FilteringInstance`, so its `getColumn` overload wins.
- */
 interface FilteringMembers<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -304,10 +280,6 @@ function getFacetedRowModel<
   );
 }
 
-/**
- * Joins a row's per-column results with `joinOperator`. The global filter
- * must always match. `excludedColumnId` leaves a column out, for facets.
- */
 function getRowPasses<TFeatures extends TableFeatures, TData extends RowData>(
   row: Row<TFeatures, TData>,
   joinOperator: JoinOperator,
@@ -332,7 +304,6 @@ function getRowPasses<TFeatures extends TableFeatures, TData extends RowData>(
     : columnIds.every((id) => results[id]);
 }
 
-/** Also written to `row.columnFilters`, where TanStack's APIs look. */
 function setFilterResults<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -363,11 +334,11 @@ function getFilterTest<TFeatures extends TableFeatures, TData extends RowData>(
     return (row) => filterFn(row, column.id, value);
   }
 
-  const item = resolveColumnFilter(
+  const item = normalizeColumnFilter(
     filter,
     getFilterVariant(column.columnDef.meta),
   );
-  if (getValidFilters([item]).length === 0) return null;
+  if (!getIsActiveFilter(item)) return null;
 
   return (row) => matchesFilter(row.getValue(column.id), item);
 }
@@ -396,7 +367,6 @@ function getGlobalFilterTests<
     .map((column) => (row) => filterFn(row, column.id, value));
 }
 
-/** Same traversal as TanStack's `filterRows`, which isn't exported. */
 function filterRows<TFeatures extends TableFeatures, TData extends RowData>(
   rows: Row<TFeatures, TData>[],
   passes: RowTest<TFeatures, TData>,
@@ -484,34 +454,21 @@ function filterRows<TFeatures extends TableFeatures, TData extends RowData>(
   return { rows: fromRoot(rows, 0), flatRows, rowsById };
 }
 
-function stringify(value: unknown): string {
-  if (value == null) return "";
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value as string | number | boolean | bigint);
+function getLowercaseText(value: unknown) {
+  return stringifyFilterValue(value).toLowerCase();
 }
 
-function toText(value: unknown) {
-  return stringify(value).toLowerCase();
-}
-
-function toBoolean(value: unknown) {
+function getBooleanString(value: unknown) {
   return value === true || value === "true" ? "true" : "false";
 }
 
-function toNumber(value: unknown) {
+function parseNumber(value: unknown) {
   if (value === "" || value == null) return Number.NaN;
   return typeof value === "number" ? value : Number(value);
 }
 
-function toTime(value: unknown) {
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === "number") return value;
-  if (typeof value === "string" && value.trim() !== "") {
-    const numeric = Number(value);
-    return Number.isNaN(numeric) ? new Date(value).getTime() : numeric;
-  }
-  return Number.NaN;
+function parseTime(value: unknown) {
+  return parseFilterDate(value)?.getTime() ?? Number.NaN;
 }
 
 function startOfDay(time: number) {
@@ -527,8 +484,8 @@ function endOfDay(time: number) {
 }
 
 function getIsSameDay(cellValue: unknown, value: unknown) {
-  const cell = toTime(cellValue);
-  const target = toTime(value);
+  const cell = parseTime(cellValue);
+  const target = parseTime(value);
   if (Number.isNaN(cell) || Number.isNaN(target)) return false;
   return cell >= startOfDay(target) && cell <= endOfDay(target);
 }
@@ -545,15 +502,15 @@ function compare(
   let target: number;
 
   if (isDate) {
-    cell = toTime(cellValue);
-    const time = toTime(value);
+    cell = parseTime(cellValue);
+    const time = parseTime(value);
     target =
-      operator === "lt" || operator === "lte"
-        ? endOfDay(time)
-        : startOfDay(time);
+      operator === "lt" || operator === "gte"
+        ? startOfDay(time)
+        : endOfDay(time);
   } else {
-    cell = toNumber(cellValue);
-    target = toNumber(value);
+    cell = parseNumber(cellValue);
+    target = parseNumber(value);
   }
 
   if (Number.isNaN(cell) || Number.isNaN(target)) return false;
@@ -574,26 +531,22 @@ function getIsBetween(cellValue: unknown, value: unknown, isDate: boolean) {
   if (!Array.isArray(value) || value.length !== 2) return true;
 
   const [rawStart, rawEnd] = value;
-  const hasStart = stringify(rawStart).trim() !== "";
-  const hasEnd = stringify(rawEnd).trim() !== "";
+  const hasStart = stringifyFilterValue(rawStart).trim() !== "";
+  const hasEnd = stringifyFilterValue(rawEnd).trim() !== "";
 
   if (!hasStart && !hasEnd) return true;
 
-  const cell = isDate ? toTime(cellValue) : toNumber(cellValue);
+  const cell = isDate ? parseTime(cellValue) : parseNumber(cellValue);
   if (Number.isNaN(cell)) return false;
 
   if (isDate) {
-    const start = hasStart ? startOfDay(toTime(rawStart)) : null;
-    const end = hasEnd ? endOfDay(toTime(rawEnd)) : null;
+    const start = hasStart ? startOfDay(parseTime(rawStart)) : null;
+    const end = hasEnd ? endOfDay(parseTime(rawEnd)) : null;
     return (start === null || cell >= start) && (end === null || cell <= end);
   }
 
-  const start = hasStart ? toNumber(rawStart) : null;
-  const end = hasEnd ? toNumber(rawEnd) : null;
-
-  // Mirrors the server adapter: a single bound behaves like `eq`.
-  if (start !== null && end === null) return cell === start;
-  if (start === null && end !== null) return cell === end;
+  const start = hasStart ? parseNumber(rawStart) : null;
+  const end = hasEnd ? parseNumber(rawEnd) : null;
 
   return (start === null || cell >= start) && (end === null || cell <= end);
 }
@@ -626,7 +579,7 @@ function getIsRelativeToToday(cellValue: unknown, value: unknown) {
       return true;
   }
 
-  const cell = toTime(cellValue);
+  const cell = parseTime(cellValue);
   if (Number.isNaN(cell)) return false;
   return cell >= start && cell <= end;
 }
