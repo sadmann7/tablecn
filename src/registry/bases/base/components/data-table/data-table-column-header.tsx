@@ -2,7 +2,13 @@
 
 import type * as React from "react";
 
-import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
+import {
+  type Column,
+  type RowData,
+  type SortDirection,
+  type SortingState,
+  Subscribe,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -38,14 +44,10 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   return (
     <Subscribe
       source={column.table.store}
-      selector={(state) => {
-        const currentSort = state.sorting.find((sort) => sort.id === column.id);
-
-        return {
-          isVisible: state.columnVisibility[column.id] !== false,
-          sorted: currentSort ? (currentSort.desc ? "desc" : "asc") : "none",
-        } as const;
-      }}
+      selector={(state) => ({
+        isVisible: state.columnVisibility[column.id] !== false,
+        sortDirection: getSortDirection(state.sorting, column.id),
+      })}
     >
       {(headerState) => (
         <DataTableColumnHeaderMenu
@@ -53,7 +55,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
           label={label}
           className={className}
           isVisible={headerState.isVisible}
-          sorted={headerState.sorted}
+          sortDirection={headerState.sortDirection}
           {...props}
         />
       )}
@@ -61,30 +63,36 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   );
 }
 
+interface DataTableColumnHeaderMenuProps<
+  TData extends RowData,
+  TValue,
+> extends DataTableColumnHeaderProps<TData, TValue> {
+  isVisible: boolean;
+  sortDirection: SortDirection | "none";
+}
+
 function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   column,
   label,
   className,
   isVisible,
-  sorted,
+  sortDirection,
   ...props
-}: DataTableColumnHeaderProps<TData, TValue> & {
-  isVisible: boolean;
-  sorted: "asc" | "desc" | "none";
-}) {
+}: DataTableColumnHeaderMenuProps<TData, TValue>) {
   const dir = useDirection();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "-ms-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+          "-ms-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent rtl:flex-row-reverse [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           className,
         )}
         {...props}
       >
         {label}
         {column.getCanSort() &&
-          (sorted === "desc" ? (
+          (sortDirection === "desc" ? (
             <IconPlaceholder
               lucide="ChevronDown"
               tabler="IconChevronDown"
@@ -92,7 +100,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               phosphor="CaretDownIcon"
               remixicon="RiArrowDownSLine"
             />
-          ) : sorted === "asc" ? (
+          ) : sortDirection === "asc" ? (
             <IconPlaceholder
               lucide="ChevronUp"
               tabler="IconChevronUp"
@@ -115,7 +123,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
           <>
             <DropdownMenuCheckboxItem
               className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
-              checked={sorted === "asc"}
+              checked={sortDirection === "asc"}
               onClick={() => column.toggleSorting(false, true)}
             >
               <IconPlaceholder
@@ -129,7 +137,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
-              checked={sorted === "desc"}
+              checked={sortDirection === "desc"}
               onClick={() => column.toggleSorting(true, true)}
             >
               <IconPlaceholder
@@ -141,7 +149,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               />
               Desc
             </DropdownMenuCheckboxItem>
-            {sorted !== "none" && (
+            {sortDirection !== "none" && (
               <DropdownMenuItem
                 className="ltr:pl-2 rtl:pr-2 [&_svg]:text-muted-foreground"
                 onClick={() => column.clearSorting()}
@@ -177,4 +185,13 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function getSortDirection(
+  sorting: SortingState,
+  columnId: string,
+): SortDirection | "none" {
+  const sort = sorting.find((sort) => sort.id === columnId);
+  if (!sort) return "none";
+  return sort.desc ? "desc" : "asc";
 }
