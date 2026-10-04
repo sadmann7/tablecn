@@ -1,5 +1,6 @@
 import {
   type ColumnFiltersState,
+  functionalUpdate,
   type PaginationState,
   type RowData,
   type SortingState,
@@ -49,7 +50,11 @@ const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 const DEFAULT_PAGE_SIZE = 10;
 const EMPTY_SORTING: SortingState = [];
-const EMPTY_COLUMN_FILTERS: ColumnFiltersState = [];
+
+interface FiltersDraft {
+  filters: ColumnFiltersState;
+  urlFiltersKey: string;
+}
 
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
@@ -125,7 +130,7 @@ function useDataTable<TData extends RowData>({
     ],
   );
 
-  const initialStateRef = React.useRef(initialState);
+  const [initialTableState] = React.useState(initialState);
 
   const pageParser = React.useMemo(
     () => parseAsInteger.withOptions(queryStateOptions).withDefault(1),
@@ -136,34 +141,24 @@ function useDataTable<TData extends RowData>({
       parseAsInteger
         .withOptions(queryStateOptions)
         .withDefault(
-          initialStateRef.current?.pagination?.pageSize ?? DEFAULT_PAGE_SIZE,
+          initialTableState?.pagination?.pageSize ?? DEFAULT_PAGE_SIZE,
         ),
-    [queryStateOptions],
+    [initialTableState, queryStateOptions],
   );
 
   const [page, setPage] = useQueryState(pageKey, pageParser);
   const [perPage, setPerPage] = useQueryState(perPageKey, perPageParser);
 
   const pagination = React.useMemo<PaginationState>(
-    () => ({
-      pageIndex: page - 1,
-      pageSize: perPage,
-    }),
+    () => ({ pageIndex: page - 1, pageSize: perPage }),
     [page, perPage],
   );
 
-  const onPaginationChange = React.useCallback(
-    (updaterOrValue: Updater<PaginationState>) => {
-      const next =
-        typeof updaterOrValue === "function"
-          ? updaterOrValue(pagination)
-          : updaterOrValue;
-
-      void setPage(next.pageIndex + 1);
-      void setPerPage(next.pageSize);
-    },
-    [pagination, setPage, setPerPage],
-  );
+  function onPaginationChange(updater: Updater<PaginationState>) {
+    const next = functionalUpdate(updater, pagination);
+    void setPage(next.pageIndex + 1);
+    void setPerPage(next.pageSize);
+  }
 
   const columnIndex = React.useMemo(() => {
     const sortableIds = new Set<string>();
@@ -198,23 +193,32 @@ function useDataTable<TData extends RowData>({
     () =>
       getSortingStateParser(columnIndex.sortableIds)
         .withOptions(queryStateOptions)
-        .withDefault(initialStateRef.current?.sorting ?? EMPTY_SORTING),
-    [columnIndex, queryStateOptions],
+        .withDefault(initialTableState?.sorting ?? EMPTY_SORTING),
+    [columnIndex, initialTableState, queryStateOptions],
   );
 
   const [sorting, setSorting] = useQueryState(sortKey, sortingParser);
 
-  const onSortingChange = React.useCallback(
-    (updaterOrValue: Updater<SortingState>) => {
-      const next =
-        typeof updaterOrValue === "function"
-          ? updaterOrValue(sorting)
-          : updaterOrValue;
+  function onSortingChange(updater: Updater<SortingState>) {
+    void setSorting(functionalUpdate(updater, sorting));
+  }
 
-      void setSorting(next);
-    },
-    [sorting, setSorting],
+  const joinOperatorParser = React.useMemo(
+    () =>
+      parseAsStringEnum([...JOIN_OPERATORS])
+        .withOptions(queryStateOptions)
+        .withDefault(initialTableState?.joinOperator ?? "and"),
+    [initialTableState, queryStateOptions],
   );
+
+  const [joinOperator, setJoinOperator] = useQueryState(
+    joinOperatorKey,
+    joinOperatorParser,
+  );
+
+  function onJoinOperatorChange(updater: Updater<JoinOperator>) {
+    void setJoinOperator(functionalUpdate(updater, joinOperator));
+  }
 
   const filterParsers = React.useMemo(
     () =>
@@ -229,60 +233,51 @@ function useDataTable<TData extends RowData>({
       ),
     [columnIndex, queryStateOptions],
   );
-  const joinOperatorParser = React.useMemo(
-    () =>
-      parseAsStringEnum([...JOIN_OPERATORS])
-        .withOptions(queryStateOptions)
-        .withDefault(initialStateRef.current?.joinOperator ?? "and"),
-    [queryStateOptions],
-  );
 
   const [filterParams, setFilterParams] = useQueryStates(filterParsers);
-  const [joinOperator, setJoinOperator] = useQueryState(
-    joinOperatorKey,
-    joinOperatorParser,
+
+  // nuqs and the server render only see values per column, so filters read
+  // from the URL follow the URL's param order once hydrated.
+  const search = React.useSyncExternalStore(
+    subscribeToHistory,
+    getLocationSearch,
+    getServerLocationSearch,
   );
 
   const urlFilters = React.useMemo(
     () =>
-      getColumnFilters(
-        columnIndex.filterableIds,
-        (id) => filterParams[id] ?? [],
+      sortColumnFiltersBySearch(
+        getColumnFilters(
+          columnIndex.filterableIds,
+          (id) => filterParams[id] ?? [],
+        ),
+        search,
       ),
-    [columnIndex, filterParams],
+    [columnIndex, filterParams, search],
   );
   const urlFiltersKey = getColumnFiltersKey(urlFilters);
 
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    () =>
-      urlFilters.length > 0
-        ? urlFilters
-        : columnIndex.normalizeColumnFilters(
-            initialStateRef.current?.columnFilters ?? EMPTY_COLUMN_FILTERS,
-          ),
+  const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(
+    () => {
+      const initialFilters = initialTableState?.columnFilters;
+      if (urlFilters.length > 0 || !initialFilters?.length) return null;
+
+      return {
+        filters: columnIndex.normalizeColumnFilters(initialFilters),
+        urlFiltersKey,
+      };
+    },
   );
-  const [syncedFiltersKey, setSyncedFiltersKey] = React.useState(urlFiltersKey);
 
-  // The URL changed from outside (back/forward, an edited link), so it wins
-  // over the filters being edited.
-  if (urlFiltersKey !== syncedFiltersKey) {
-    setSyncedFiltersKey(urlFiltersKey);
-    setColumnFilters(urlFilters);
-  }
+  // The draft keeps filters being edited, including ones without a value yet.
+  // It only applies while the URL still holds the filters it was based on, so
+  // back/forward or an edited link wins.
+  const columnFilters =
+    filtersDraft?.urlFiltersKey === urlFiltersKey
+      ? filtersDraft.filters
+      : urlFilters;
 
-  // nuqs and the server render only see values per column, so filters read
-  // from the URL start in column order and take the URL's order once mounted.
-  React.useEffect(() => {
-    if (urlFilters.length < 2) return;
-
-    setColumnFilters((prev) =>
-      prev === urlFilters
-        ? sortColumnFiltersBySearch(urlFilters, window.location.search)
-        : prev,
-    );
-  }, [urlFilters]);
-
-  const debouncedSyncFilters = useDebouncedCallback(
+  const debouncedWriteFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState) => {
       // Filters without a value stay out of the URL, since `?title=` reads
       // back as no filter.
@@ -302,46 +297,28 @@ function useDataTable<TData extends RowData>({
         if (!params.has(id)) params.set(id, null);
       }
 
-      setSyncedFiltersKey(getColumnFiltersKey(filters));
+      const nextUrlFiltersKey = getColumnFiltersKey(filters);
+      setFiltersDraft(
+        (prev) => prev && { ...prev, urlFiltersKey: nextUrlFiltersKey },
+      );
       void setPage(1);
       void setFilterParams(Object.fromEntries(params));
     },
     debounceMs,
   );
 
-  const onColumnFiltersChange = React.useCallback(
-    (updaterOrValue: Updater<ColumnFiltersState>) => {
-      setColumnFilters((prev) => {
-        const next =
-          typeof updaterOrValue === "function"
-            ? updaterOrValue(prev)
-            : updaterOrValue;
-
-        debouncedSyncFilters(next);
-        return next;
-      });
-    },
-    [debouncedSyncFilters],
-  );
-
-  const onJoinOperatorChange = React.useCallback(
-    (updaterOrValue: Updater<JoinOperator>) => {
-      const next =
-        typeof updaterOrValue === "function"
-          ? updaterOrValue(joinOperator)
-          : updaterOrValue;
-
-      void setJoinOperator(next);
-    },
-    [joinOperator, setJoinOperator],
-  );
+  function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
+    const filters = functionalUpdate(updater, columnFilters);
+    setFiltersDraft({ filters, urlFiltersKey });
+    debouncedWriteFilters(filters);
+  }
 
   const table = useTable(
     {
       ...props,
       features: dataTableFeatures,
       columns,
-      initialState: initialStateRef.current,
+      initialState: initialTableState,
       pageCount: isServer ? pageCount : undefined,
       state: {
         pagination,
@@ -366,6 +343,19 @@ function useDataTable<TData extends RowData>({
   );
 
   return React.useMemo(() => ({ table }), [table]);
+}
+
+function subscribeToHistory(onChange: () => void) {
+  window.addEventListener("popstate", onChange);
+  return () => window.removeEventListener("popstate", onChange);
+}
+
+function getLocationSearch() {
+  return window.location.search;
+}
+
+function getServerLocationSearch() {
+  return "";
 }
 
 export { useDataTable, type UseDataTableProps };
