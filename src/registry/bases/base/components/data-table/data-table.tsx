@@ -111,7 +111,6 @@ function DataTableHeader<TData extends RowData>({
         columnPinning: state.columnPinning,
         columnVisibility: state.columnVisibility,
         rowSelection: state.rowSelection,
-        sorting: state.sorting,
       })}
     >
       {() => (

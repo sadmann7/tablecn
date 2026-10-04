@@ -1,7 +1,5 @@
 "use client";
 
-import type * as React from "react";
-
 import {
   type Column,
   type RowData,
@@ -10,6 +8,7 @@ import {
   Subscribe,
 } from "@tanstack/react-table";
 import { cn } from "cn";
+import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -78,8 +77,14 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   sortDirection,
   ...props
 }: DataTableColumnHeaderMenuProps<TData, TValue>) {
+  const [snapshot, setSnapshot] = React.useState({ isVisible, sortDirection });
+
+  function onOpenChange(open: boolean) {
+    if (open) setSnapshot({ isVisible, sortDirection });
+  }
+
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger
         className={cn(
           "-ms-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent rtl:flex-row-reverse [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
@@ -120,7 +125,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
           <>
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
-              checked={sortDirection === "asc"}
+              checked={snapshot.sortDirection === "asc"}
               onClick={() => column.toggleSorting(false, true)}
             >
               <IconPlaceholder
@@ -134,7 +139,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
-              checked={sortDirection === "desc"}
+              checked={snapshot.sortDirection === "desc"}
               onClick={() => column.toggleSorting(true, true)}
             >
               <IconPlaceholder
@@ -146,7 +151,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               />
               Desc
             </DropdownMenuCheckboxItem>
-            {sortDirection !== "none" && (
+            {snapshot.sortDirection !== "none" && (
               <DropdownMenuItem
                 className="[&_svg]:text-muted-foreground"
                 onClick={() => column.clearSorting()}
@@ -166,7 +171,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
         {column.getCanHide() && (
           <DropdownMenuCheckboxItem
             className="[&_svg]:text-muted-foreground"
-            checked={!isVisible}
+            checked={!snapshot.isVisible}
             onClick={() => column.toggleVisibility(false)}
           >
             <IconPlaceholder
