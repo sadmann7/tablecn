@@ -16,7 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
@@ -77,6 +76,15 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   sortDirection,
   ...props
 }: DataTableColumnHeaderMenuProps<TData, TValue>) {
+  function onSortDirectionChange(direction: SortDirection) {
+    if (sortDirection === direction) {
+      column.clearSorting();
+      return;
+    }
+
+    column.toggleSorting(direction === "desc", true);
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -123,7 +131,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "asc"}
-              onClick={() => column.toggleSorting(false, true)}
+              onClick={() => onSortDirectionChange("asc")}
             >
               <IconPlaceholder
                 lucide="ChevronUp"
@@ -137,7 +145,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "desc"}
-              onClick={() => column.toggleSorting(true, true)}
+              onClick={() => onSortDirectionChange("desc")}
             >
               <IconPlaceholder
                 lucide="ChevronDown"
@@ -148,21 +156,6 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               />
               Desc
             </DropdownMenuCheckboxItem>
-            {sortDirection !== "none" && (
-              <DropdownMenuItem
-                className="[&_svg]:text-muted-foreground"
-                onClick={() => column.clearSorting()}
-              >
-                <IconPlaceholder
-                  lucide="X"
-                  tabler="IconX"
-                  hugeicons="Cancel01Icon"
-                  phosphor="XIcon"
-                  remixicon="RiCloseLine"
-                />
-                Reset
-              </DropdownMenuItem>
-            )}
           </>
         )}
         {column.getCanHide() && (
