@@ -111,7 +111,6 @@ function DataTableHeader<TData extends RowData>({
         columnPinning: state.columnPinning,
         columnVisibility: state.columnVisibility,
         rowSelection: state.rowSelection,
-        sorting: state.sorting,
       })}
     >
       {() => (
@@ -262,9 +261,6 @@ function DataTableCellSlot({
       {
         className: cn(
           "overflow-hidden",
-          "rtl:has-[[role=checkbox]]:[&:not([class~='[&:has([role=checkbox])]:pe-0'])]:pr-2!",
-          "rtl:has-[[role=checkbox]]:[&:not([class~='[&:has([role=checkbox])]:pe-0'])]:pl-0",
-          "rtl:has-[[role=checkbox]]:[&.text-left]:text-right",
           pinned &&
             "bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted",
           className,

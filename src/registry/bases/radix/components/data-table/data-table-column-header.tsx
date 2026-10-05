@@ -1,7 +1,5 @@
 "use client";
 
-import type * as React from "react";
-
 import {
   type Column,
   type RowData,
@@ -10,6 +8,7 @@ import {
   Subscribe,
 } from "@tanstack/react-table";
 import { cn } from "cn";
+import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -17,7 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
@@ -78,6 +76,15 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   sortDirection,
   ...props
 }: DataTableColumnHeaderMenuProps<TData, TValue>) {
+  function onSortDirectionChange(direction: SortDirection) {
+    if (sortDirection === direction) {
+      column.clearSorting();
+      return;
+    }
+
+    column.toggleSorting(direction === "desc", true);
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -115,13 +122,16 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             />
           ))}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-28">
+      <DropdownMenuContent
+        align="start"
+        className="w-28 data-closed:fill-mode-forwards"
+      >
         {column.getCanSort() && (
           <>
             <DropdownMenuCheckboxItem
-              className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
+              className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "asc"}
-              onClick={() => column.toggleSorting(false, true)}
+              onClick={() => onSortDirectionChange("asc")}
             >
               <IconPlaceholder
                 lucide="ChevronUp"
@@ -133,9 +143,9 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               Asc
             </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
-              className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
+              className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "desc"}
-              onClick={() => column.toggleSorting(true, true)}
+              onClick={() => onSortDirectionChange("desc")}
             >
               <IconPlaceholder
                 lucide="ChevronDown"
@@ -146,26 +156,11 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
               />
               Desc
             </DropdownMenuCheckboxItem>
-            {sortDirection !== "none" && (
-              <DropdownMenuItem
-                className="ltr:pl-2 rtl:pr-2 [&_svg]:text-muted-foreground"
-                onClick={() => column.clearSorting()}
-              >
-                <IconPlaceholder
-                  lucide="X"
-                  tabler="IconX"
-                  hugeicons="Cancel01Icon"
-                  phosphor="XIcon"
-                  remixicon="RiCloseLine"
-                />
-                Reset
-              </DropdownMenuItem>
-            )}
           </>
         )}
         {column.getCanHide() && (
           <DropdownMenuCheckboxItem
-            className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
+            className="[&_svg]:text-muted-foreground"
             checked={!isVisible}
             onClick={() => column.toggleVisibility(false)}
           >
