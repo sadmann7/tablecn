@@ -1210,7 +1210,7 @@ export function MultiSelectCell<TData extends RowData>({
             className="w-75 rounded-none p-0"
             initialFocus={onInitialFocus}
           >
-            <Command className="**:data-[slot=command-input-wrapper]:h-auto **:data-[slot=command-input-wrapper]:border-none **:data-[slot=command-input-wrapper]:p-0 [&_[data-slot=command-input-wrapper]_svg]:hidden">
+            <Command className="**:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
                   const label = optionByValue.get(value)?.label ?? value;
@@ -1248,7 +1248,7 @@ export function MultiSelectCell<TData extends RowData>({
                   onValueChange={setSearchValue}
                   onKeyDown={onInputKeyDown}
                   placeholder="Search..."
-                  className="h-auto flex-1 p-0"
+                  className="p-0! placeholder:text-muted-foreground"
                 />
               </div>
               <CommandList className="max-h-full">
@@ -1262,24 +1262,8 @@ export function MultiSelectCell<TData extends RowData>({
                         key={option.value}
                         value={option.label}
                         onSelect={() => onValueChange(option.value)}
+                        data-checked={isSelected}
                       >
-                        <div
-                          className={cn(
-                            "flex size-4 items-center justify-center rounded-sm border border-primary",
-                            isSelected
-                              ? "bg-primary text-primary-foreground"
-                              : "opacity-50 [&_svg]:invisible",
-                          )}
-                        >
-                          <IconPlaceholder
-                            lucide="Check"
-                            tabler="IconCheck"
-                            hugeicons="Tick02Icon"
-                            phosphor="CheckIcon"
-                            remixicon="RiCheckLine"
-                            className="size-3"
-                          />
-                        </div>
                         <span>{option.label}</span>
                       </CommandItem>
                     );
