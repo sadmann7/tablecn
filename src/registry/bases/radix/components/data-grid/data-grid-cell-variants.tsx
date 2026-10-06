@@ -1208,7 +1208,7 @@ export function MultiSelectCell<TData extends RowData>({
             className="w-75 rounded-none p-0"
             onOpenAutoFocus={onOpenAutoFocus}
           >
-            <Command className="**:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent! **:data-[slot=input-group-addon]:hidden">
+            <Command className="**:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
                   const label = optionByValue.get(value)?.label ?? value;
@@ -1246,7 +1246,7 @@ export function MultiSelectCell<TData extends RowData>({
                   onValueChange={setSearchValue}
                   onKeyDown={onInputKeyDown}
                   placeholder="Search..."
-                  className="h-auto bg-transparent p-0! placeholder:text-muted-foreground"
+                  className="p-0! placeholder:text-muted-foreground"
                 />
               </div>
               <CommandList className="max-h-full">
