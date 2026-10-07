@@ -140,11 +140,17 @@ interface Cell_DataGridData {
   clearValue: () => void;
 }
 
+interface TableState_DataGridNavigation {
+  /** Column whose header holds keyboard focus, which hides the focused cell while the selection stays. */
+  focusedHeaderColumnId: string | null;
+}
+
 interface TableOptions_DataGridNavigation {
   /** Reading direction, so left and right follow the visual layout. */
   dir?: Direction;
   /** Brings a cell into view, provided by the layer that owns the scroll container. */
   onScrollToCell?: (cell: CellPosition) => void;
+  onFocusedHeaderColumnIdChange?: OnChangeFn<string | null>;
 }
 
 interface NavigateOptions {
@@ -171,6 +177,8 @@ interface Table_DataGridNavigation {
   ) => CellPosition | null;
   /** Scrolls a cell into view without moving focus or selection. */
   scrollToCell: (rowId: string, columnId: string) => void;
+  getFocusedHeaderColumnId: () => string | null;
+  setFocusedHeaderColumnId: (updater: Updater<string | null>) => void;
 }
 
 interface ClipboardNotice {
@@ -322,6 +330,7 @@ declare module "@tanstack/react-table" {
   interface TableState_FeatureMap {
     dataGridRowHeightFeature: TableState_DataGridRowHeight;
     dataGridCellEditingFeature: TableState_DataGridCellEditing;
+    dataGridNavigationFeature: TableState_DataGridNavigation;
     dataGridClipboardFeature: TableState_DataGridClipboard;
     dataGridSearchFeature: TableState_DataGridSearch;
     dataGridSelectionFeature: TableState_DataGridSelection;
@@ -807,6 +816,19 @@ function navigate(
 }
 
 const dataGridNavigationFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    focusedHeaderColumnId: null,
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: TableOptions_DataGridNavigation = {
+      onFocusedHeaderColumnIdChange: makeStateUpdater(
+        "focusedHeaderColumnId",
+        table,
+      ),
+    };
+    return options;
+  },
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
@@ -825,6 +847,13 @@ const dataGridNavigationFeature: TableFeature = {
       table_scrollToCell: {
         fn: (rowId: string, columnId: string) =>
           instance.options.onScrollToCell?.({ rowId, columnId }),
+      },
+      table_getFocusedHeaderColumnId: {
+        fn: () => instance.atoms.focusedHeaderColumnId.get(),
+      },
+      table_setFocusedHeaderColumnId: {
+        fn: (updater: Updater<string | null>) =>
+          instance.options.onFocusedHeaderColumnIdChange?.(updater),
       },
     });
   },
