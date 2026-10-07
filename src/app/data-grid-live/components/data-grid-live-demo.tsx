@@ -496,7 +496,7 @@ export function DataGridLiveDemo() {
     }
   }, []);
 
-  const { table, tableMeta, ...dataGridProps } = useDataGrid({
+  const { table, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
@@ -606,12 +606,7 @@ export function DataGridLiveDemo() {
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />
       </div>
-      <DataGrid
-        {...dataGridProps}
-        table={table}
-        tableMeta={tableMeta}
-        height={height}
-      />
+      <DataGrid {...dataGridProps} table={table} height={height} />
       <DataGridActionBar
         table={table}
         selectedCellCount={selectedCellCount}

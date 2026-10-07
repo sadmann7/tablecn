@@ -62,19 +62,6 @@ export interface DataGridColumnMeta {
   cell?: CellOpts;
 }
 
-export interface DataGridTableMeta {
-  onFilesUpload?: (params: {
-    files: File[];
-    rowId: string;
-    columnId: string;
-  }) => Promise<FileCellData[]>;
-  onFilesDelete?: (params: {
-    fileIds: string[];
-    rowId: string;
-    columnId: string;
-  }) => void | Promise<void>;
-}
-
 export interface CellPosition {
   rowId: string;
   columnId: string;
@@ -112,7 +99,6 @@ export type NavigationDirection =
 
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
-  tableMeta: DataGridTableMeta;
   rowId: string;
   columnId: string;
   rowHeight: RowHeightValue;

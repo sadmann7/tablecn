@@ -39,7 +39,6 @@ export function DataGrid<TData extends RowData>({
   footerRef,
   dir = "ltr",
   table,
-  tableMeta,
   gridBodyProps,
   scrollToCell: _scrollToCell,
   virtualTotalSize,
@@ -255,7 +254,6 @@ export function DataGrid<TData extends RowData>({
               <DataGridRow
                 key={row.id}
                 row={row}
-                tableMeta={tableMeta}
                 rowMapRef={rowMapRef}
                 virtualItem={virtualItem}
                 measureElement={measureElement}
