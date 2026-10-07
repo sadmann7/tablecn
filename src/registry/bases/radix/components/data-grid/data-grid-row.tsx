@@ -295,7 +295,9 @@ function selectRowState<TData extends RowData>(
     visibleCells: row.getVisibleCells(),
     rowHeight: state.rowHeight,
     focusedColumnId:
-      activeRange?.anchorRowId === rowId ? activeRange.anchorColumnId : null,
+      state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId
+        ? activeRange.anchorColumnId
+        : null,
     editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
     cellSelectionKey: getRowCellSelectionKey(cellSelectionBounds, rowIndex),
     searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
