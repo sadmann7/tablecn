@@ -1,7 +1,6 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
-
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -19,16 +18,27 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridContextMenuProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
-  contextMenu: ContextMenuState;
   dataGridRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function DataGridContextMenu<TData extends RowData>(
   props: DataGridContextMenuProps<TData>,
 ) {
-  if (!props.contextMenu.open) return null;
+  return (
+    <Subscribe source={props.table.atoms.contextMenu}>
+      {(contextMenu) =>
+        contextMenu.open ? (
+          <ContextMenu {...props} contextMenu={contextMenu} />
+        ) : null
+      }
+    </Subscribe>
+  );
+}
 
-  return <ContextMenu {...props} />;
+interface ContextMenuProps<
+  TData extends RowData,
+> extends DataGridContextMenuProps<TData> {
+  contextMenu: ContextMenuState;
 }
 
 const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
@@ -44,7 +54,7 @@ function ContextMenuImpl<TData extends RowData>({
   table,
   contextMenu,
   dataGridRef,
-}: DataGridContextMenuProps<TData>) {
+}: ContextMenuProps<TData>) {
   const readOnly = table.getIsReadOnly();
   const canDeleteRows = !readOnly && !!table.options.onRowsDelete;
 

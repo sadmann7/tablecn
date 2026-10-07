@@ -1,7 +1,6 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
-
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -20,15 +19,26 @@ import {
 
 interface DataGridPasteDialogProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
-  pasteDialog: PasteDialogState;
 }
 
-export function DataGridPasteDialog<TData extends RowData>(
-  props: DataGridPasteDialogProps<TData>,
-) {
-  if (!props.pasteDialog.open) return null;
+export function DataGridPasteDialog<TData extends RowData>({
+  table,
+}: DataGridPasteDialogProps<TData>) {
+  return (
+    <Subscribe source={table.atoms.pasteDialog}>
+      {(pasteDialog) =>
+        pasteDialog.open ? (
+          <PasteDialog table={table} pasteDialog={pasteDialog} />
+        ) : null
+      }
+    </Subscribe>
+  );
+}
 
-  return <PasteDialog {...props} />;
+interface PasteDialogProps<
+  TData extends RowData,
+> extends DataGridPasteDialogProps<TData> {
+  pasteDialog: PasteDialogState;
 }
 
 const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
@@ -43,7 +53,7 @@ const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
 function PasteDialogImpl<TData extends RowData>({
   table,
   pasteDialog,
-}: DataGridPasteDialogProps<TData>) {
+}: PasteDialogProps<TData>) {
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
 
   const onOpenChange = React.useCallback(

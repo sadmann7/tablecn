@@ -1,7 +1,6 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
-
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -31,13 +30,36 @@ function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
 
 interface DataGridSearchProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
+}
+
+export function DataGridSearch<TData extends RowData>({
+  table,
+}: DataGridSearchProps<TData>) {
+  return (
+    <Subscribe
+      source={table.store}
+      selector={(state) => ({
+        searchOpen: state.searchOpen,
+        searchQuery: state.searchQuery,
+        matchIndex: state.searchMatchIndex,
+        matchCount: table.getSearchMatches().length,
+      })}
+    >
+      {(searchState) => <DataGridSearchView table={table} {...searchState} />}
+    </Subscribe>
+  );
+}
+
+interface DataGridSearchViewProps<
+  TData extends RowData,
+> extends DataGridSearchProps<TData> {
   searchOpen: boolean;
   searchQuery: string;
   matchIndex: number;
   matchCount: number;
 }
 
-export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
+const DataGridSearchView = React.memo(DataGridSearchImpl, (prev, next) => {
   if (prev.table !== next.table) return false;
   if (prev.searchOpen !== next.searchOpen) return false;
 
@@ -55,7 +77,7 @@ function DataGridSearchImpl<TData extends RowData>({
   searchQuery,
   matchIndex,
   matchCount,
-}: DataGridSearchProps<TData>) {
+}: DataGridSearchViewProps<TData>) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
   const [hasQuery, setHasQuery] = React.useState(searchQuery.length > 0);

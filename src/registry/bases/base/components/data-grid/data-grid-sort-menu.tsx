@@ -1,7 +1,12 @@
 "use client";
 
-import type { ColumnSort, RowData, Table } from "@tanstack/react-table";
-
+import {
+  type ColumnSort,
+  type RowData,
+  type SortingState,
+  Subscribe,
+  type Table,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -57,12 +62,23 @@ interface DataGridSortMenuProps<
   disabled?: boolean;
 }
 
-export function DataGridSortMenu<TData extends RowData>({
+export function DataGridSortMenu<TData extends RowData>(
+  props: DataGridSortMenuProps<TData>,
+) {
+  return (
+    <Subscribe source={props.table.atoms.sorting}>
+      {(sorting) => <DataGridSortMenuImpl {...props} sorting={sorting} />}
+    </Subscribe>
+  );
+}
+
+function DataGridSortMenuImpl<TData extends RowData>({
   table,
+  sorting,
   disabled,
   className,
   ...props
-}: DataGridSortMenuProps<TData>) {
+}: DataGridSortMenuProps<TData> & { sorting: SortingState }) {
   const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
@@ -70,7 +86,6 @@ export function DataGridSortMenu<TData extends RowData>({
   const [open, setOpen] = React.useState(false);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
-  const sorting = table.store.state.sorting;
   const onSortingChange = table.setSorting;
 
   const { columnLabels, columns } = React.useMemo(() => {

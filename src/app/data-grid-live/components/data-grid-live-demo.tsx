@@ -585,7 +585,6 @@ export function DataGridLiveDemo() {
   }, [table]);
 
   const height = Math.max(400, windowSize.height - 150);
-  const selectedCellCount = table.getSelectedRangeCellCount();
 
   return (
     <div className="container flex flex-col gap-4 py-4">
@@ -609,7 +608,6 @@ export function DataGridLiveDemo() {
       <DataGrid {...dataGridProps} table={table} height={height} />
       <DataGridActionBar
         table={table}
-        selectedCellCount={selectedCellCount}
         statusOptions={statusOptions}
         styleOptions={styleOptions}
         onStatusUpdate={onStatusUpdate}
