@@ -286,12 +286,30 @@ export function getColumnFitSize(params: {
   columnId: string;
   minSize: number;
   maxSize: number;
+  wrapperContentSize?: number;
 }): number | null {
-  const { gridElement, columnId, minSize, maxSize } = params;
+  const {
+    gridElement,
+    columnId,
+    minSize,
+    maxSize,
+    wrapperContentSize = 0,
+  } = params;
   const cellElements = gridElement.querySelectorAll<HTMLElement>(
     `:is([data-slot="grid-header-cell"], [data-slot="grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
   );
   if (cellElements.length === 0) return null;
+
+  let cellChromeSize = 0;
+  for (const cellElement of cellElements) {
+    const wrapperElement = cellElement.querySelector<HTMLElement>(
+      '[data-slot="grid-cell-wrapper"]',
+    );
+    if (!wrapperElement) continue;
+    cellChromeSize =
+      cellElement.getBoundingClientRect().width - wrapperElement.clientWidth;
+    break;
+  }
 
   const measurer = document.createElement("div");
   measurer.setAttribute("aria-hidden", "true");
@@ -318,13 +336,15 @@ export function getColumnFitSize(params: {
     });
     for (const element of clone.querySelectorAll<HTMLElement>("*")) {
       element.style.whiteSpace = "nowrap";
+      element.style.flexWrap = "nowrap";
       element.style.webkitLineClamp = "unset";
     }
     measurer.append(clone);
   }
 
   gridElement.append(measurer);
-  let contentSize = 0;
+  let contentSize =
+    wrapperContentSize > 0 ? wrapperContentSize + cellChromeSize : 0;
   for (const clone of measurer.children) {
     contentSize = Math.max(contentSize, clone.getBoundingClientRect().width);
   }

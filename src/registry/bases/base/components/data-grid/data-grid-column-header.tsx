@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  Column,
   ColumnSort,
   Header,
   RowData,
@@ -14,7 +15,12 @@ import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { getColumnFitSize, getColumnVariant } from "@/lib/data-grid-utils";
+import { getBadgeListWidth } from "@/hooks/use-badge-overflow";
+import {
+  getColumnFitSize,
+  getColumnVariant,
+  getIsFileCellData,
+} from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -342,6 +348,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
               column.columnDef.maxSize ??
               defaultColumnDef.maxSize ??
               Number.POSITIVE_INFINITY,
+            wrapperContentSize: getBadgeColumnContentSize(column, table),
           })
         : null;
 
@@ -375,4 +382,46 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
       onTouchStart={header.getResizeHandler()}
     />
   );
+}
+
+function getBadgeColumnContentSize<TData extends RowData, TValue>(
+  column: Column<DataGridFeatures, TData, TValue>,
+  table: Table<DataGridFeatures, TData>,
+): number {
+  const cellOpts = column.columnDef.meta?.cell;
+  if (cellOpts?.variant !== "multi-select" && cellOpts?.variant !== "file") {
+    return 0;
+  }
+
+  const labelByValue = new Map(
+    cellOpts.variant === "multi-select"
+      ? cellOpts.options.map((option) => [option.value, option.label])
+      : [],
+  );
+
+  let contentSize = 0;
+  for (const row of table.getRowModel().rows) {
+    const value = row.getValue(column.id);
+    if (!Array.isArray(value)) continue;
+
+    const rowContentSize =
+      cellOpts.variant === "multi-select"
+        ? getBadgeListWidth({
+            items: value
+              .filter((item): item is string => typeof item === "string")
+              .map((item) => labelByValue.get(item) ?? item)
+              .filter(Boolean),
+            getLabel: (label) => label,
+          })
+        : getBadgeListWidth({
+            items: value.filter(getIsFileCellData),
+            getLabel: (file) => file.name,
+            cacheKeyPrefix: "file",
+            iconSize: 12,
+            maxWidth: 100,
+          });
+    contentSize = Math.max(contentSize, rowContentSize);
+  }
+
+  return contentSize;
 }
