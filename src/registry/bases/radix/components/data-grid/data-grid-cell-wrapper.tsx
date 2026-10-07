@@ -16,7 +16,7 @@ interface DataGridCellWrapperProps<TData extends RowData>
 
 export function DataGridCellWrapper<TData extends RowData>({
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   isEditing,
   isFocused,
@@ -32,13 +32,13 @@ export function DataGridCellWrapper<TData extends RowData>({
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const cellMapRef = tableMeta?.cellMapRef;
-  const cellPresence = useDataGridPresence(getCellKey(rowIndex, columnId));
+  const cellPresence = useDataGridPresence(getCellKey(rowId, columnId));
 
   const onCellChange = React.useCallback(
     (node: HTMLDivElement | null) => {
       if (!cellMapRef) return;
 
-      const cellKey = getCellKey(rowIndex, columnId);
+      const cellKey = getCellKey(rowId, columnId);
 
       if (node) {
         cellMapRef.current.set(cellKey, node);
@@ -46,7 +46,7 @@ export function DataGridCellWrapper<TData extends RowData>({
         cellMapRef.current.delete(cellKey);
       }
     },
-    [rowIndex, columnId, cellMapRef],
+    [rowId, columnId, cellMapRef],
   );
 
   const composedRef = useComposedRefs(ref, onCellChange);
@@ -57,40 +57,32 @@ export function DataGridCellWrapper<TData extends RowData>({
         event.preventDefault();
         onClickProp?.(event);
         if (isFocused && !readOnly) {
-          tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+          tableMeta?.onCellEditingStart?.(rowId, columnId);
         } else {
-          tableMeta?.onCellClick?.(rowIndex, columnId, event);
+          tableMeta?.onCellClick?.(rowId, columnId, event);
         }
       }
     },
-    [
-      tableMeta,
-      rowIndex,
-      columnId,
-      isEditing,
-      isFocused,
-      readOnly,
-      onClickProp,
-    ],
+    [tableMeta, rowId, columnId, isEditing, isFocused, readOnly, onClickProp],
   );
 
   const onContextMenu = React.useCallback(
     (event: React.MouseEvent) => {
       if (!isEditing) {
-        tableMeta?.onCellContextMenu?.(rowIndex, columnId, event);
+        tableMeta?.onCellContextMenu?.(rowId, columnId, event);
       }
     },
-    [tableMeta, rowIndex, columnId, isEditing],
+    [tableMeta, rowId, columnId, isEditing],
   );
 
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent) => {
       if (!isEditing) {
         event.preventDefault();
-        tableMeta?.onCellDoubleClick?.(rowIndex, columnId);
+        tableMeta?.onCellDoubleClick?.(rowId, columnId);
       }
     },
-    [tableMeta, rowIndex, columnId, isEditing],
+    [tableMeta, rowId, columnId, isEditing],
   );
 
   const onKeyDown = React.useCallback(
@@ -117,49 +109,41 @@ export function DataGridCellWrapper<TData extends RowData>({
         if (event.key === "F2" || event.key === "Enter") {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+          tableMeta?.onCellEditingStart?.(rowId, columnId);
           return;
         }
 
         if (event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+          tableMeta?.onCellEditingStart?.(rowId, columnId);
           return;
         }
 
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+          tableMeta?.onCellEditingStart?.(rowId, columnId);
         }
       }
     },
-    [
-      onKeyDownProp,
-      isFocused,
-      isEditing,
-      readOnly,
-      tableMeta,
-      rowIndex,
-      columnId,
-    ],
+    [onKeyDownProp, isFocused, isEditing, readOnly, tableMeta, rowId, columnId],
   );
 
   const onMouseDown = React.useCallback(
     (event: React.MouseEvent) => {
       if (!isEditing) {
-        tableMeta?.onCellMouseDown?.(rowIndex, columnId, event);
+        tableMeta?.onCellMouseDown?.(rowId, columnId, event);
       }
     },
-    [tableMeta, rowIndex, columnId, isEditing],
+    [tableMeta, rowId, columnId, isEditing],
   );
 
   const onMouseEnter = React.useCallback(() => {
     if (!isEditing) {
-      tableMeta?.onCellMouseEnter?.(rowIndex, columnId);
+      tableMeta?.onCellMouseEnter?.(rowId, columnId);
     }
-  }, [tableMeta, rowIndex, columnId, isEditing]);
+  }, [tableMeta, rowId, columnId, isEditing]);
 
   const onMouseUp = React.useCallback(() => {
     if (!isEditing) {

@@ -160,7 +160,7 @@ function ContextMenuImpl<TData extends RowData>({
     const updates: Array<CellUpdate> = [];
 
     for (const cellKey of selectionState.selectedCells) {
-      const { rowIndex, columnId } = parseCellKey(cellKey);
+      const { rowId, columnId } = parseCellKey(cellKey);
 
       // Get column from columns array
       const column = columns.find((col) => {
@@ -172,7 +172,7 @@ function ContextMenuImpl<TData extends RowData>({
 
       const emptyValue = getEmptyCellValue(cellVariant);
 
-      updates.push({ rowIndex, columnId, value: emptyValue });
+      updates.push({ rowId, columnId, value: emptyValue });
     }
 
     onDataUpdate?.(updates);
@@ -191,16 +191,14 @@ function ContextMenuImpl<TData extends RowData>({
     )
       return;
 
-    const rowIndices = new Set<number>();
+    const rowIds = new Set<string>();
     for (const cellKey of selectionState.selectedCells) {
-      const { rowIndex } = parseCellKey(cellKey);
-      rowIndices.add(rowIndex);
+      rowIds.add(parseCellKey(cellKey).rowId);
     }
 
-    const rowIndicesArray = Array.from(rowIndices).sort((a, b) => a - b);
-    const rowCount = rowIndicesArray.length;
+    const rowCount = rowIds.size;
 
-    await onRowsDelete?.(rowIndicesArray);
+    await onRowsDelete?.(Array.from(rowIds));
 
     toast.success(`${rowCount} row${rowCount !== 1 ? "s" : ""} deleted`);
   }, [propsRef]);

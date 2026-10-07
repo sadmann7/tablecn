@@ -54,7 +54,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 export function ShortTextCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isEditing,
@@ -83,10 +83,10 @@ export function ShortTextCell<TData extends RowData>({
     // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
     if (!readOnly && currentValue !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: currentValue });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: currentValue });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
+  }, [tableMeta, rowId, columnId, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -104,7 +104,7 @@ export function ShortTextCell<TData extends RowData>({
           const currentValue = cellRef.current?.textContent ?? "";
           if (currentValue !== initialValue) {
             tableMeta?.onDataUpdate?.({
-              rowIndex,
+              rowId,
               columnId,
               value: currentValue,
             });
@@ -115,7 +115,7 @@ export function ShortTextCell<TData extends RowData>({
           const currentValue = cellRef.current?.textContent ?? "";
           if (currentValue !== initialValue) {
             tableMeta?.onDataUpdate?.({
-              rowIndex,
+              rowId,
               columnId,
               value: currentValue,
             });
@@ -150,7 +150,7 @@ export function ShortTextCell<TData extends RowData>({
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId],
+    [isEditing, isFocused, initialValue, tableMeta, rowId, columnId],
   );
 
   React.useEffect(() => {
@@ -182,7 +182,7 @@ export function ShortTextCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={isEditing}
@@ -216,7 +216,7 @@ export function ShortTextCell<TData extends RowData>({
 export function LongTextCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isFocused,
@@ -241,40 +241,40 @@ export function LongTextCell<TData extends RowData>({
 
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     if (!readOnly) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: newValue });
     }
   }, 300);
 
   const onSave = React.useCallback(() => {
     // Immediately save any pending changes and close the popover
     if (!readOnly && value !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
+  }, [tableMeta, value, initialValue, rowId, columnId, readOnly]);
 
   const onCancel = React.useCallback(() => {
     // Restore the original value
     setValue(initialValue ?? "");
     if (!readOnly) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: initialValue });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: initialValue });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, initialValue, rowIndex, columnId, readOnly]);
+  }, [tableMeta, initialValue, rowId, columnId, readOnly]);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowId, columnId);
       } else {
         // Immediately save any pending changes when closing
         if (!readOnly && value !== initialValue) {
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+          tableMeta?.onDataUpdate?.({ rowId, columnId, value });
         }
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, value, initialValue, rowIndex, columnId, readOnly],
+    [tableMeta, value, initialValue, rowId, columnId, readOnly],
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -327,10 +327,10 @@ export function LongTextCell<TData extends RowData>({
   const onBlur = React.useCallback(() => {
     // Immediately save any pending changes on blur
     if (!readOnly && value !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, value, initialValue, rowIndex, columnId, readOnly]);
+  }, [tableMeta, value, initialValue, rowId, columnId, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -353,7 +353,7 @@ export function LongTextCell<TData extends RowData>({
         event.preventDefault();
         // Save any pending changes
         if (value !== initialValue) {
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
+          tableMeta?.onDataUpdate?.({ rowId, columnId, value });
         }
         tableMeta?.onCellEditingStop?.({
           direction: event.shiftKey ? "shift+tab" : "tab",
@@ -363,7 +363,7 @@ export function LongTextCell<TData extends RowData>({
       // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
-    [onSave, onCancel, value, initialValue, tableMeta, rowIndex, columnId],
+    [onSave, onCancel, value, initialValue, tableMeta, rowId, columnId],
   );
 
   return (
@@ -375,7 +375,7 @@ export function LongTextCell<TData extends RowData>({
             ref={containerRef}
             cell={cell}
             tableMeta={tableMeta}
-            rowIndex={rowIndex}
+            rowId={rowId}
             columnId={columnId}
             rowHeight={rowHeight}
             isEditing={isEditing}
@@ -415,7 +415,7 @@ export function LongTextCell<TData extends RowData>({
 export function NumberCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isFocused,
@@ -447,10 +447,10 @@ export function NumberCell<TData extends RowData>({
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (!readOnly && numValue !== initialValue) {
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: numValue });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, rowIndex, columnId, initialValue, value, readOnly]);
+  }, [tableMeta, rowId, columnId, initialValue, value, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -466,14 +466,14 @@ export function NumberCell<TData extends RowData>({
           event.preventDefault();
           const numValue = value === "" ? null : Number(value);
           if (numValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
+            tableMeta?.onDataUpdate?.({ rowId, columnId, value: numValue });
           }
           tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const numValue = value === "" ? null : Number(value);
           if (numValue !== initialValue) {
-            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
+            tableMeta?.onDataUpdate?.({ rowId, columnId, value: numValue });
           }
           tableMeta?.onCellEditingStop?.({
             direction: event.shiftKey ? "shift+tab" : "tab",
@@ -493,7 +493,7 @@ export function NumberCell<TData extends RowData>({
         }
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta, rowIndex, columnId, value],
+    [isEditing, isFocused, initialValue, tableMeta, rowId, columnId, value],
   );
 
   React.useEffect(() => {
@@ -511,7 +511,7 @@ export function NumberCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={isEditing}
@@ -544,7 +544,7 @@ export function NumberCell<TData extends RowData>({
 export function UrlCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isEditing,
@@ -574,13 +574,13 @@ export function UrlCell<TData extends RowData>({
 
     if (!readOnly && currentValue !== initialValue) {
       tableMeta?.onDataUpdate?.({
-        rowIndex,
+        rowId,
         columnId,
         value: currentValue || null,
       });
     }
     tableMeta?.onCellEditingStop?.();
-  }, [tableMeta, rowIndex, columnId, initialValue, readOnly]);
+  }, [tableMeta, rowId, columnId, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -598,7 +598,7 @@ export function UrlCell<TData extends RowData>({
           const currentValue = cellRef.current?.textContent?.trim() ?? "";
           if (!readOnly && currentValue !== initialValue) {
             tableMeta?.onDataUpdate?.({
-              rowIndex,
+              rowId,
               columnId,
               value: currentValue || null,
             });
@@ -609,7 +609,7 @@ export function UrlCell<TData extends RowData>({
           const currentValue = cellRef.current?.textContent?.trim() ?? "";
           if (!readOnly && currentValue !== initialValue) {
             tableMeta?.onDataUpdate?.({
-              rowIndex,
+              rowId,
               columnId,
               value: currentValue || null,
             });
@@ -664,7 +664,7 @@ export function UrlCell<TData extends RowData>({
       initialValue,
       value,
       tableMeta,
-      rowIndex,
+      rowId,
       columnId,
       readOnly,
     ],
@@ -722,7 +722,7 @@ export function UrlCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={isEditing}
@@ -776,7 +776,7 @@ export function UrlCell<TData extends RowData>({
 export function CheckboxCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isFocused,
@@ -799,9 +799,9 @@ export function CheckboxCell<TData extends RowData>({
     (checked: boolean) => {
       if (readOnly) return;
       setValue(checked);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: checked });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: checked });
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -853,7 +853,7 @@ export function CheckboxCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={false}
@@ -883,7 +883,7 @@ export function CheckboxCell<TData extends RowData>({
 export function SelectCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isFocused,
@@ -917,21 +917,21 @@ export function SelectCell<TData extends RowData>({
     (newValue: string | null) => {
       if (newValue == null || readOnly) return;
       setValue(newValue);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValue });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: newValue });
       tableMeta?.onCellEditingStop?.();
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowId, columnId);
       } else {
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -959,7 +959,7 @@ export function SelectCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={isEditing}
@@ -1022,7 +1022,7 @@ export function SelectCell<TData extends RowData>({
 export function MultiSelectCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isFocused,
@@ -1037,7 +1037,7 @@ export function MultiSelectCell<TData extends RowData>({
     return value ?? [];
   }, [cell]);
 
-  const cellKey = getCellKey(rowIndex, columnId);
+  const cellKey = getCellKey(rowId, columnId);
   const prevCellKeyRef = React.useRef(cellKey);
 
   const [selectedValues, setSelectedValues] =
@@ -1078,12 +1078,12 @@ export function MultiSelectCell<TData extends RowData>({
         return newValues;
       });
       queueMicrotask(() => {
-        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        tableMeta?.onDataUpdate?.({ rowId, columnId, value: newValues });
         inputRef.current?.focus();
       });
       setSearchValue("");
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const removeValue = React.useCallback(
@@ -1097,30 +1097,30 @@ export function MultiSelectCell<TData extends RowData>({
         return newValues;
       });
       queueMicrotask(() => {
-        tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+        tableMeta?.onDataUpdate?.({ rowId, columnId, value: newValues });
         inputRef.current?.focus();
       });
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const clearAll = React.useCallback(() => {
     if (readOnly) return;
     setSelectedValues([]);
-    tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
+    tableMeta?.onDataUpdate?.({ rowId, columnId, value: [] });
     queueMicrotask(() => inputRef.current?.focus());
-  }, [tableMeta, rowIndex, columnId, readOnly]);
+  }, [tableMeta, rowId, columnId, readOnly]);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowId, columnId);
       } else {
         setSearchValue("");
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -1158,7 +1158,7 @@ export function MultiSelectCell<TData extends RowData>({
         });
         queueMicrotask(() => {
           if (newValues !== null) {
-            tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: newValues });
+            tableMeta?.onDataUpdate?.({ rowId, columnId, value: newValues });
           }
           inputRef.current?.focus();
         });
@@ -1167,7 +1167,7 @@ export function MultiSelectCell<TData extends RowData>({
         event.stopPropagation();
       }
     },
-    [searchValue, tableMeta, rowIndex, columnId],
+    [searchValue, tableMeta, rowId, columnId],
   );
 
   const displayLabels = selectedValues
@@ -1194,7 +1194,7 @@ export function MultiSelectCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={isEditing}
@@ -1323,7 +1323,7 @@ export function MultiSelectCell<TData extends RowData>({
 export function DateCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isFocused,
@@ -1353,21 +1353,21 @@ export function DateCell<TData extends RowData>({
       // Format using local date components to avoid timezone issues
       const formattedDate = formatDateToString(date);
       setValue(formattedDate);
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: formattedDate });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: formattedDate });
       tableMeta?.onCellEditingStop?.();
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowId, columnId);
       } else {
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -1391,7 +1391,7 @@ export function DateCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={isEditing}
@@ -1434,7 +1434,7 @@ export function DateCell<TData extends RowData>({
 export function FileCell<TData extends RowData>({
   cell,
   tableMeta,
-  rowIndex,
+  rowId,
   columnId,
   rowHeight,
   isFocused,
@@ -1449,7 +1449,7 @@ export function FileCell<TData extends RowData>({
     [cell],
   );
 
-  const cellKey = getCellKey(rowIndex, columnId);
+  const cellKey = getCellKey(rowId, columnId);
   const prevCellKeyRef = React.useRef(cellKey);
 
   const labelId = React.useId();
@@ -1603,7 +1603,7 @@ export function FileCell<TData extends RowData>({
             try {
               uploadedFiles = await tableMeta.onFilesUpload({
                 files: filesToValidate,
-                rowIndex,
+                rowId,
                 columnId,
               });
             } catch (error) {
@@ -1637,7 +1637,7 @@ export function FileCell<TData extends RowData>({
 
           setFiles(finalFiles);
           setUploadingFiles(new Set());
-          tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: finalFiles });
+          tableMeta?.onDataUpdate?.({ rowId, columnId, value: finalFiles });
         } else {
           const newFilesData: FileCellData[] = filesToValidate.map((f) => ({
             id: crypto.randomUUID(),
@@ -1649,7 +1649,7 @@ export function FileCell<TData extends RowData>({
           const updatedFiles = [...files, ...newFilesData];
           setFiles(updatedFiles);
           tableMeta?.onDataUpdate?.({
-            rowIndex,
+            rowId,
             columnId,
             value: updatedFiles,
           });
@@ -1661,7 +1661,7 @@ export function FileCell<TData extends RowData>({
       maxFiles,
       validateFile,
       tableMeta,
-      rowIndex,
+      rowId,
       columnId,
       readOnly,
       isPending,
@@ -1682,7 +1682,7 @@ export function FileCell<TData extends RowData>({
         try {
           await tableMeta.onFilesDelete({
             fileIds: [fileId],
-            rowIndex,
+            rowId,
             columnId,
           });
         } catch (error) {
@@ -1711,9 +1711,9 @@ export function FileCell<TData extends RowData>({
         next.delete(fileId);
         return next;
       });
-      tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: updatedFiles });
+      tableMeta?.onDataUpdate?.({ rowId, columnId, value: updatedFiles });
     },
-    [files, tableMeta, rowIndex, columnId, readOnly, isPending],
+    [files, tableMeta, rowId, columnId, readOnly, isPending],
   );
 
   const clearAll = React.useCallback(async () => {
@@ -1727,7 +1727,7 @@ export function FileCell<TData extends RowData>({
       try {
         await tableMeta.onFilesDelete({
           fileIds,
-          rowIndex,
+          rowId,
           columnId,
         });
       } catch (error) {
@@ -1746,8 +1746,8 @@ export function FileCell<TData extends RowData>({
     }
     setFiles([]);
     setDeletingFiles(new Set());
-    tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: [] });
-  }, [files, tableMeta, rowIndex, columnId, readOnly, isPending]);
+    tableMeta?.onDataUpdate?.({ rowId, columnId, value: [] });
+  }, [files, tableMeta, rowId, columnId, readOnly, isPending]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1860,13 +1860,13 @@ export function FileCell<TData extends RowData>({
     (open: boolean) => {
       if (open && !readOnly) {
         setError(null);
-        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowId, columnId);
       } else {
         setError(null);
         tableMeta?.onCellEditingStop?.();
       }
     },
-    [tableMeta, rowIndex, columnId, readOnly],
+    [tableMeta, rowId, columnId, readOnly],
   );
 
   const onEditorKeyDown = React.useCallback(
@@ -1904,7 +1904,7 @@ export function FileCell<TData extends RowData>({
         }
       } else if (isFocused && event.key === "Enter") {
         event.preventDefault();
-        tableMeta?.onCellEditingStart?.(rowIndex, columnId);
+        tableMeta?.onCellEditingStart?.(rowId, columnId);
       }
     },
     [
@@ -1913,7 +1913,7 @@ export function FileCell<TData extends RowData>({
       cellValue,
       tableMeta,
       onDropzoneClick,
-      rowIndex,
+      rowId,
       columnId,
     ],
   );
@@ -1946,7 +1946,7 @@ export function FileCell<TData extends RowData>({
       ref={containerRef}
       cell={cell}
       tableMeta={tableMeta}
-      rowIndex={rowIndex}
+      rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
       isEditing={isEditing}

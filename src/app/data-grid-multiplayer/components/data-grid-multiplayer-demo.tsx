@@ -340,7 +340,7 @@ export function DataGridMultiplayerDemo({
       sendRowAdd(serializeSkater(newSkater));
       trackRowsAdd([newSkater]);
 
-      return { rowIndex: data.length, columnId: "name" };
+      return { rowId: newSkater.id, columnId: "name" };
     }, [data, trackRowsAdd, sendRowAdd]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
@@ -406,21 +406,12 @@ export function DataGridMultiplayerDemo({
     enablePaste: true,
   });
 
-  const focusedRowIndex = tableMeta.focusedCell?.rowIndex ?? null;
+  const focusedRowId = tableMeta.focusedCell?.rowId ?? null;
   const focusedColumnId = tableMeta.focusedCell?.columnId ?? null;
-  const tableRef = React.useRef(table);
-  React.useEffect(() => {
-    tableRef.current = table;
-  });
 
   React.useEffect(() => {
-    if (focusedRowIndex !== null && focusedColumnId !== null) {
-      const row = tableRef.current.getRowModel().rows[focusedRowIndex];
-      sendActiveCell(row?.id ?? null, focusedColumnId);
-    } else {
-      sendActiveCell(null, null);
-    }
-  }, [focusedRowIndex, focusedColumnId, sendActiveCell]);
+    sendActiveCell(focusedRowId, focusedColumnId);
+  }, [focusedRowId, focusedColumnId, sendActiveCell]);
 
   const onStatusUpdate = React.useCallback(
     (value: string) => {
@@ -468,7 +459,7 @@ export function DataGridMultiplayerDemo({
       toast.error("No skaters selected");
       return;
     }
-    void tableMeta.onRowsDelete?.(selectedRows.map((row) => row.index));
+    void tableMeta.onRowsDelete?.(selectedRows.map((row) => row.id));
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
@@ -482,13 +473,9 @@ export function DataGridMultiplayerDemo({
     ) => {
       const { rowId, columnId } = user.activeCell;
       if (!rowId || !columnId) return;
-      const rowIndex = table
-        .getRowModel()
-        .rows.findIndex((r) => r.id === rowId);
-      if (rowIndex === -1) return;
-      tableMeta.scrollToCell?.(rowIndex, columnId);
+      tableMeta.scrollToCell?.(rowId, columnId);
     },
-    [table, tableMeta],
+    [tableMeta],
   );
 
   const onCopyLink = React.useCallback(() => {
@@ -504,7 +491,6 @@ export function DataGridMultiplayerDemo({
 
   const remoteCells = React.useMemo(() => {
     const map = new Map<string, DataGridCellPresence>();
-    const rows = table.getRowModel().rows;
 
     for (const [userId, user] of Object.entries(users)) {
       if (userId === currentUserId) continue;
@@ -512,16 +498,13 @@ export function DataGridMultiplayerDemo({
       const { rowId, columnId } = user.activeCell;
       if (!rowId || !columnId) continue;
 
-      const rowIndex = rows.findIndex((r) => r.id === rowId);
-      if (rowIndex === -1) continue;
-
-      map.set(getCellKey(rowIndex, columnId), {
+      map.set(getCellKey(rowId, columnId), {
         color: user.color,
         name: user.name,
       });
     }
     return map;
-  }, [users, currentUserId, data, table]);
+  }, [users, currentUserId]);
 
   return (
     <div className="container flex flex-col gap-4 py-4">

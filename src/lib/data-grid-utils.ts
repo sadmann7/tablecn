@@ -84,21 +84,28 @@ export function matchSelectOption(
   )?.value;
 }
 
-export function getCellKey(rowIndex: number, columnId: string) {
-  return `${rowIndex}:${columnId}`;
+// Unit separator, so row ids and column ids may contain any printable character
+const CELL_KEY_SEPARATOR = "\u001f";
+
+export function getCellKey(rowId: string, columnId: string) {
+  return `${rowId}${CELL_KEY_SEPARATOR}${columnId}`;
 }
 
-export function parseCellKey(cellKey: string): Required<CellPosition> {
-  const parts = cellKey.split(":");
-  const rowIndexStr = parts[0];
-  const columnId = parts[1];
-  if (rowIndexStr && columnId) {
-    const rowIndex = parseInt(rowIndexStr, 10);
-    if (!Number.isNaN(rowIndex)) {
-      return { rowIndex, columnId };
-    }
-  }
-  return { rowIndex: 0, columnId: "" };
+export function parseCellKey(cellKey: string): CellPosition {
+  const separatorIndex = cellKey.indexOf(CELL_KEY_SEPARATOR);
+  if (separatorIndex === -1) return { rowId: "", columnId: "" };
+  return {
+    rowId: cellKey.slice(0, separatorIndex),
+    columnId: cellKey.slice(separatorIndex + CELL_KEY_SEPARATOR.length),
+  };
+}
+
+/** Position of a row in the rendered row model, or `-1` if it isn't rendered. */
+export function getRowIndexById<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  rowId: string,
+) {
+  return table.getRowModel().rowsById[rowId]?.getDisplayIndex() ?? -1;
 }
 
 export function getRowHeightValue(rowHeight: RowHeightValue): number {
@@ -237,7 +244,7 @@ export function getTabTargetCell(params: {
   rowCount: number;
   isBackward: boolean;
   getIsColumnTabbable?: (columnId: string) => boolean;
-}): CellPosition | null {
+}): { rowIndex: number; columnId: string } | null {
   const {
     rowIndex,
     columnId,

@@ -47,7 +47,7 @@ export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
     if (!prevMatch || !nextMatch) return false;
 
     if (
-      prevMatch.rowIndex !== nextMatch.rowIndex ||
+      prevMatch.rowId !== nextMatch.rowId ||
       prevMatch.columnId !== nextMatch.columnId
     ) {
       return false;

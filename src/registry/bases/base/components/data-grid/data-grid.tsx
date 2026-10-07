@@ -196,7 +196,7 @@ export function DataGrid<TData extends RowData>({
                         .columnDef.header === "function" ? (
                       <div
                         className={cn(
-                          "size-full px-3 py-1.5 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-inset",
+                          "size-full px-3 py-1.5 has-focus-visible:ring-1 has-focus-visible:ring-ring has-focus-visible:ring-inset",
                           cornerClassName,
                         )}
                       >
@@ -232,13 +232,10 @@ export function DataGrid<TData extends RowData>({
             if (!row) return null;
 
             const cellSelectionKeys =
-              cellSelectionMap?.get(virtualItem.index) ??
-              EMPTY_CELL_SELECTION_SET;
+              cellSelectionMap?.get(row.id) ?? EMPTY_CELL_SELECTION_SET;
 
-            const searchMatchColumns =
-              searchMatchesByRow?.get(virtualItem.index) ?? null;
-            const isActiveSearchRow =
-              activeSearchMatch?.rowIndex === virtualItem.index;
+            const searchMatchColumns = searchMatchesByRow?.get(row.id) ?? null;
+            const isActiveSearchRow = activeSearchMatch?.rowId === row.id;
 
             return (
               <DataGridRow
