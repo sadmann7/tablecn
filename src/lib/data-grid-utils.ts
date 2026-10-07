@@ -281,6 +281,58 @@ export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
   );
 }
 
+export function getColumnFitSize(params: {
+  gridElement: HTMLElement;
+  columnId: string;
+  minSize: number;
+  maxSize: number;
+}): number | null {
+  const { gridElement, columnId, minSize, maxSize } = params;
+  const cellElements = gridElement.querySelectorAll<HTMLElement>(
+    `:is([data-slot="grid-header-cell"], [data-slot="grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
+  );
+  if (cellElements.length === 0) return null;
+
+  const measurer = document.createElement("div");
+  measurer.setAttribute("aria-hidden", "true");
+  Object.assign(measurer.style, {
+    position: "absolute",
+    top: "0",
+    insetInlineStart: "0",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    visibility: "hidden",
+    pointerEvents: "none",
+    contain: "layout style",
+  });
+
+  for (const cellElement of cellElements) {
+    const clone = cellElement.cloneNode(true) as HTMLElement;
+    clone.removeAttribute("id");
+    Object.assign(clone.style, {
+      position: "static",
+      width: "max-content",
+      minWidth: "0",
+      maxWidth: "none",
+    });
+    for (const element of clone.querySelectorAll<HTMLElement>("*")) {
+      element.style.whiteSpace = "nowrap";
+      element.style.webkitLineClamp = "unset";
+    }
+    measurer.append(clone);
+  }
+
+  gridElement.append(measurer);
+  let contentSize = 0;
+  for (const clone of measurer.children) {
+    contentSize = Math.max(contentSize, clone.getBoundingClientRect().width);
+  }
+  measurer.remove();
+
+  return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
+}
+
 export function getScrollDirection(
   direction: string,
 ): "left" | "right" | "home" | "end" | undefined {

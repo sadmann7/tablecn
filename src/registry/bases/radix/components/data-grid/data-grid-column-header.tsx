@@ -14,7 +14,7 @@ import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { getColumnVariant } from "@/lib/data-grid-utils";
+import { getColumnFitSize, getColumnVariant } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -319,9 +319,32 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
 }: DataGridColumnResizerProps<TData, TValue>) {
   const defaultColumnDef = table.getDefaultColumnDef();
 
-  const onDoubleClick = React.useCallback(() => {
-    header.column.resetSize();
-  }, [header.column]);
+  const onDoubleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const column = header.column;
+      const gridElement =
+        event.currentTarget.closest<HTMLElement>('[role="grid"]');
+      const fitSize = gridElement
+        ? getColumnFitSize({
+            gridElement,
+            columnId: column.id,
+            minSize: column.columnDef.minSize ?? defaultColumnDef.minSize ?? 0,
+            maxSize:
+              column.columnDef.maxSize ??
+              defaultColumnDef.maxSize ??
+              Number.POSITIVE_INFINITY,
+          })
+        : null;
+
+      if (fitSize === null) {
+        column.resetSize();
+        return;
+      }
+
+      table.setColumnSizing((prev) => ({ ...prev, [column.id]: fitSize }));
+    },
+    [header.column, table, defaultColumnDef],
+  );
 
   return (
     <div
