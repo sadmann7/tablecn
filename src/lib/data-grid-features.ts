@@ -74,10 +74,19 @@ interface ColumnDef_DataGridCellEditing {
   enableCellEditing?: boolean;
 }
 
+interface StopEditingOptions {
+  /** Moves focus after committing, like Tab or the arrow keys. */
+  direction?: NavigationDirection;
+  /** Moves focus to the cell below, like Enter. */
+  moveToNextRow?: boolean;
+}
+
 interface Table_DataGridCellEditing {
   getEditingCell: () => CellPosition | null;
   setEditingCell: (updater: Updater<CellPosition | null>) => void;
   resetEditingCell: (defaultState?: boolean) => void;
+  /** Ends editing and optionally moves focus to a neighboring cell. */
+  stopEditing: (options?: StopEditingOptions) => void;
 }
 
 interface Column_DataGridCellEditing {
@@ -87,6 +96,8 @@ interface Column_DataGridCellEditing {
 interface Cell_DataGridCellEditing {
   getCanEdit: () => boolean;
   getIsEditing: () => boolean;
+  /** Focuses the cell and opens its editor when the cell is editable. */
+  startEditing: () => void;
 }
 
 interface TableOptions_DataGridData<TData extends RowData> {
@@ -284,6 +295,18 @@ const dataGridCellEditingFeature: TableFeature = {
             defaultState ? null : (instance.initialState.editingCell ?? null),
           ),
       },
+      table_stopEditing: {
+        fn: (options?: StopEditingOptions) => {
+          if (!instance.atoms.editingCell.get()) return;
+
+          setEditingCell(null);
+
+          const direction = options?.moveToNextRow
+            ? "down"
+            : options?.direction;
+          if (direction) instance.navigate(direction);
+        },
+      },
     });
   },
   assignColumnPrototype: (prototype, table) => {
@@ -304,6 +327,22 @@ const dataGridCellEditingFeature: TableFeature = {
             editingCell?.rowId === cell.row.id &&
             editingCell.columnId === cell.column.id
           );
+        },
+      },
+      cell_startEditing: {
+        fn: (
+          cell: DataGridCellRef & {
+            column: Parameters<typeof getCanEditColumn>[0];
+          },
+        ) => {
+          if (!getCanEditColumn(cell.column)) return;
+
+          const table = asDataGrid(cell.table);
+          table.setFocusedCell(cell.row.id, cell.column.id);
+          table.setEditingCell({
+            rowId: cell.row.id,
+            columnId: cell.column.id,
+          });
         },
       },
     });

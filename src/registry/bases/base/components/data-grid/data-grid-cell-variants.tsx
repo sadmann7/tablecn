@@ -85,8 +85,8 @@ export function ShortTextCell<TData extends RowData>({
     if (!readOnly && currentValue !== initialValue) {
       cell.setValue(currentValue);
     }
-    tableMeta?.onCellEditingStop?.();
-  }, [cell, tableMeta, initialValue, readOnly]);
+    cell.table.stopEditing();
+  }, [cell, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -105,14 +105,14 @@ export function ShortTextCell<TData extends RowData>({
           if (currentValue !== initialValue) {
             cell.setValue(currentValue);
           }
-          tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
+          cell.table.stopEditing({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent ?? "";
           if (currentValue !== initialValue) {
             cell.setValue(currentValue);
           }
-          tableMeta?.onCellEditingStop?.({
+          cell.table.stopEditing({
             direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
@@ -142,7 +142,7 @@ export function ShortTextCell<TData extends RowData>({
         });
       }
     },
-    [cell, isEditing, isFocused, initialValue, tableMeta],
+    [cell, isEditing, isFocused, initialValue],
   );
 
   React.useEffect(() => {
@@ -242,8 +242,8 @@ export function LongTextCell<TData extends RowData>({
     if (!readOnly && value !== initialValue) {
       cell.setValue(value);
     }
-    tableMeta?.onCellEditingStop?.();
-  }, [cell, tableMeta, value, initialValue, readOnly]);
+    cell.table.stopEditing();
+  }, [cell, value, initialValue, readOnly]);
 
   const onCancel = React.useCallback(() => {
     // Restore the original value
@@ -251,22 +251,22 @@ export function LongTextCell<TData extends RowData>({
     if (!readOnly) {
       cell.setValue(initialValue);
     }
-    tableMeta?.onCellEditingStop?.();
-  }, [cell, tableMeta, initialValue, readOnly]);
+    cell.table.stopEditing();
+  }, [cell, initialValue, readOnly]);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowId, columnId);
+        cell.startEditing();
       } else {
         // Immediately save any pending changes when closing
         if (!readOnly && value !== initialValue) {
           cell.setValue(value);
         }
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       }
     },
-    [cell, tableMeta, value, initialValue, rowId, columnId, readOnly],
+    [cell, value, initialValue, readOnly],
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -321,8 +321,8 @@ export function LongTextCell<TData extends RowData>({
     if (!readOnly && value !== initialValue) {
       cell.setValue(value);
     }
-    tableMeta?.onCellEditingStop?.();
-  }, [cell, tableMeta, value, initialValue, readOnly]);
+    cell.table.stopEditing();
+  }, [cell, value, initialValue, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -347,7 +347,7 @@ export function LongTextCell<TData extends RowData>({
         if (value !== initialValue) {
           cell.setValue(value);
         }
-        tableMeta?.onCellEditingStop?.({
+        cell.table.stopEditing({
           direction: event.shiftKey ? "shift+tab" : "tab",
         });
         return;
@@ -355,7 +355,7 @@ export function LongTextCell<TData extends RowData>({
       // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
-    [cell, onSave, onCancel, value, initialValue, tableMeta],
+    [cell, onSave, onCancel, value, initialValue],
   );
 
   return (
@@ -441,8 +441,8 @@ export function NumberCell<TData extends RowData>({
     if (!readOnly && numValue !== initialValue) {
       cell.setValue(numValue);
     }
-    tableMeta?.onCellEditingStop?.();
-  }, [cell, tableMeta, initialValue, value, readOnly]);
+    cell.table.stopEditing();
+  }, [cell, initialValue, value, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -460,14 +460,14 @@ export function NumberCell<TData extends RowData>({
           if (numValue !== initialValue) {
             cell.setValue(numValue);
           }
-          tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
+          cell.table.stopEditing({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const numValue = value === "" ? null : Number(value);
           if (numValue !== initialValue) {
             cell.setValue(numValue);
           }
-          tableMeta?.onCellEditingStop?.({
+          cell.table.stopEditing({
             direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
@@ -485,7 +485,7 @@ export function NumberCell<TData extends RowData>({
         }
       }
     },
-    [cell, isEditing, isFocused, initialValue, tableMeta, value],
+    [cell, isEditing, isFocused, initialValue, value],
   );
 
   React.useEffect(() => {
@@ -567,8 +567,8 @@ export function UrlCell<TData extends RowData>({
     if (!readOnly && currentValue !== initialValue) {
       cell.setValue(currentValue || null);
     }
-    tableMeta?.onCellEditingStop?.();
-  }, [cell, tableMeta, initialValue, readOnly]);
+    cell.table.stopEditing();
+  }, [cell, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.FormEvent<HTMLDivElement>) => {
@@ -587,14 +587,14 @@ export function UrlCell<TData extends RowData>({
           if (!readOnly && currentValue !== initialValue) {
             cell.setValue(currentValue || null);
           }
-          tableMeta?.onCellEditingStop?.({ moveToNextRow: true });
+          cell.table.stopEditing({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
           const currentValue = cellRef.current?.textContent?.trim() ?? "";
           if (!readOnly && currentValue !== initialValue) {
             cell.setValue(currentValue || null);
           }
-          tableMeta?.onCellEditingStop?.({
+          cell.table.stopEditing({
             direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
@@ -638,7 +638,7 @@ export function UrlCell<TData extends RowData>({
         });
       }
     },
-    [cell, isEditing, isFocused, initialValue, value, tableMeta, readOnly],
+    [cell, isEditing, isFocused, initialValue, value, readOnly],
   );
 
   const onLinkClick = React.useCallback(
@@ -889,20 +889,20 @@ export function SelectCell<TData extends RowData>({
       if (newValue == null || readOnly) return;
       setValue(newValue);
       cell.setValue(newValue);
-      tableMeta?.onCellEditingStop?.();
+      cell.table.stopEditing();
     },
-    [cell, tableMeta, readOnly],
+    [cell, readOnly],
   );
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowId, columnId);
+        cell.startEditing();
       } else {
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       }
     },
-    [tableMeta, rowId, columnId, readOnly],
+    [cell, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -910,15 +910,15 @@ export function SelectCell<TData extends RowData>({
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
-        tableMeta?.onCellEditingStop?.({
+        cell.table.stopEditing({
           direction: event.shiftKey ? "shift+tab" : "tab",
         });
       }
     },
-    [isEditing, initialValue, tableMeta],
+    [cell, isEditing, initialValue],
   );
 
   const displayLabel = value
@@ -1085,13 +1085,13 @@ export function MultiSelectCell<TData extends RowData>({
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowId, columnId);
+        cell.startEditing();
       } else {
         setSearchValue("");
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       }
     },
-    [tableMeta, rowId, columnId, readOnly],
+    [cell, readOnly],
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -1105,16 +1105,16 @@ export function MultiSelectCell<TData extends RowData>({
         event.preventDefault();
         setSelectedValues(cellValue);
         setSearchValue("");
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
         setSearchValue("");
-        tableMeta?.onCellEditingStop?.({
+        cell.table.stopEditing({
           direction: event.shiftKey ? "shift+tab" : "tab",
         });
       }
     },
-    [isEditing, cellValue, tableMeta],
+    [cell, isEditing, cellValue],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -1325,20 +1325,20 @@ export function DateCell<TData extends RowData>({
       const formattedDate = formatDateToString(date);
       setValue(formattedDate);
       cell.setValue(formattedDate);
-      tableMeta?.onCellEditingStop?.();
+      cell.table.stopEditing();
     },
-    [cell, tableMeta, readOnly],
+    [cell, readOnly],
   );
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
-        tableMeta?.onCellEditingStart?.(rowId, columnId);
+        cell.startEditing();
       } else {
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       }
     },
-    [tableMeta, rowId, columnId, readOnly],
+    [cell, readOnly],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -1346,15 +1346,15 @@ export function DateCell<TData extends RowData>({
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
         setValue(initialValue);
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
-        tableMeta?.onCellEditingStop?.({
+        cell.table.stopEditing({
           direction: event.shiftKey ? "shift+tab" : "tab",
         });
       }
     },
-    [isEditing, initialValue, tableMeta],
+    [cell, isEditing, initialValue],
   );
 
   return (
@@ -1828,13 +1828,13 @@ export function FileCell<TData extends RowData>({
     (open: boolean) => {
       if (open && !readOnly) {
         setError(null);
-        tableMeta?.onCellEditingStart?.(rowId, columnId);
+        cell.startEditing();
       } else {
         setError(null);
-        tableMeta?.onCellEditingStop?.();
+        cell.table.stopEditing();
       }
     },
-    [tableMeta, rowId, columnId, readOnly],
+    [cell, readOnly],
   );
 
   const onEditorKeyDown = React.useCallback(
@@ -1860,30 +1860,22 @@ export function FileCell<TData extends RowData>({
           event.preventDefault();
           setFiles(cellValue);
           setError(null);
-          tableMeta?.onCellEditingStop?.();
+          cell.table.stopEditing();
         } else if (event.key === " ") {
           event.preventDefault();
           onDropzoneClick();
         } else if (event.key === "Tab") {
           event.preventDefault();
-          tableMeta?.onCellEditingStop?.({
+          cell.table.stopEditing({
             direction: event.shiftKey ? "shift+tab" : "tab",
           });
         }
       } else if (isFocused && event.key === "Enter") {
         event.preventDefault();
-        tableMeta?.onCellEditingStart?.(rowId, columnId);
+        cell.startEditing();
       }
     },
-    [
-      isEditing,
-      isFocused,
-      cellValue,
-      tableMeta,
-      onDropzoneClick,
-      rowId,
-      columnId,
-    ],
+    [cell, isEditing, isFocused, cellValue, onDropzoneClick],
   );
 
   React.useEffect(() => {

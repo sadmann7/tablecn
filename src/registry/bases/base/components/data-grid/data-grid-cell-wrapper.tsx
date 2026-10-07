@@ -15,6 +15,7 @@ interface DataGridCellWrapperProps<TData extends RowData>
   extends DataGridCellProps<TData>, React.ComponentProps<"div"> {}
 
 export function DataGridCellWrapper<TData extends RowData>({
+  cell,
   tableMeta,
   rowId,
   columnId,
@@ -57,13 +58,22 @@ export function DataGridCellWrapper<TData extends RowData>({
         event.preventDefault();
         onClickProp?.(event);
         if (isFocused && !readOnly) {
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
+          cell.startEditing();
         } else {
           tableMeta?.onCellClick?.(rowId, columnId, event);
         }
       }
     },
-    [tableMeta, rowId, columnId, isEditing, isFocused, readOnly, onClickProp],
+    [
+      cell,
+      tableMeta,
+      rowId,
+      columnId,
+      isEditing,
+      isFocused,
+      readOnly,
+      onClickProp,
+    ],
   );
 
   const onContextMenu = React.useCallback(
@@ -109,25 +119,25 @@ export function DataGridCellWrapper<TData extends RowData>({
         if (event.key === "F2" || event.key === "Enter") {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
+          cell.startEditing();
           return;
         }
 
         if (event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
+          cell.startEditing();
           return;
         }
 
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
+          cell.startEditing();
         }
       }
     },
-    [onKeyDownProp, isFocused, isEditing, readOnly, tableMeta, rowId, columnId],
+    [cell, onKeyDownProp, isFocused, isEditing, readOnly],
   );
 
   const onMouseDown = React.useCallback(

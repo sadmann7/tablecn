@@ -96,11 +96,6 @@ export interface DataGridTableMeta {
     columnId: string,
     event: React.MouseEvent,
   ) => void;
-  onCellEditingStart?: (rowId: string, columnId: string) => void;
-  onCellEditingStop?: (opts?: {
-    direction?: NavigationDirection;
-    moveToNextRow?: boolean;
-  }) => void;
   onCellsCopy?: () => void;
   onCellsCut?: () => void;
   onCellsPaste?: (expand?: boolean) => void;
