@@ -2564,6 +2564,10 @@ describe("useDataGrid", () => {
       });
 
       expect(result.current.editingCell).toBeNull();
+      expect(result.current.focusedCell).toEqual({
+        rowId: "1",
+        columnId: "name",
+      });
     });
 
     it("should navigate in direction on Tab while editing", async () => {
@@ -2587,6 +2591,10 @@ describe("useDataGrid", () => {
       });
 
       expect(result.current.editingCell).toBeNull();
+      expect(result.current.focusedCell).toEqual({
+        rowId: "0",
+        columnId: "trick",
+      });
     });
 
     it("should start editing on second click of same cell", () => {
@@ -2619,6 +2627,150 @@ describe("useDataGrid", () => {
         rowId: "0",
         columnId: "name",
       });
+    });
+  });
+
+  describe("navigation feature", () => {
+    function renderGrid(
+      props: Partial<Parameters<typeof useDataGrid<TestData>>[0]> = {},
+    ) {
+      return renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            ...props,
+          }),
+        { wrapper: createWrapper() },
+      );
+    }
+
+    it("should move the focused cell and stop at the grid edges", () => {
+      const { result } = renderGrid();
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+
+      act(() => {
+        result.current.table.navigate("down");
+        result.current.table.navigate("right");
+      });
+      expect(result.current.focusedCell).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
+
+      act(() => {
+        result.current.table.navigate("ctrl+end");
+      });
+      expect(result.current.focusedCell).toEqual({
+        rowId: "2",
+        columnId: "score",
+      });
+
+      let target: unknown;
+      act(() => {
+        target = result.current.table.navigate("down");
+      });
+      expect(target).toBeNull();
+      expect(result.current.focusedCell).toEqual({
+        rowId: "2",
+        columnId: "score",
+      });
+    });
+
+    it("should extend the selection without moving the focused cell", () => {
+      const { result } = renderGrid();
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+
+      act(() => {
+        result.current.table.navigate("right", { extend: true });
+        result.current.table.navigate("down", { extend: true });
+      });
+
+      expect(result.current.focusedCell).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+      expect(result.current.tableMeta.getSelectedCellKeys?.()).toHaveLength(4);
+    });
+
+    it("should stop editing when navigating", () => {
+      const { result } = renderGrid();
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("0", "name");
+        result.current.tableMeta.onCellEditingStart?.("0", "name");
+      });
+      expect(result.current.editingCell).not.toBeNull();
+
+      act(() => {
+        result.current.table.navigate("down");
+      });
+      expect(result.current.editingCell).toBeNull();
+    });
+
+    it("should reach utility columns with arrows but skip them for home, end and tab", () => {
+      const { result } = renderGrid({ columns: columnsWithSelect });
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+
+      act(() => {
+        result.current.table.navigate("left");
+      });
+      expect(result.current.focusedCell?.columnId).toBe("select");
+
+      act(() => {
+        result.current.table.navigate("end");
+      });
+      expect(result.current.focusedCell?.columnId).toBe("trick");
+
+      act(() => {
+        result.current.table.navigate("tab");
+      });
+      expect(result.current.focusedCell).toEqual({
+        rowId: "1",
+        columnId: "name",
+      });
+
+      expect(
+        result.current.table.getNavigationTarget(
+          { rowId: "1", columnId: "name" },
+          "left",
+          { extend: true },
+        ),
+      ).toBeNull();
+    });
+
+    it("should mirror horizontal arrows in RTL", () => {
+      const { result } = renderGrid({ dir: "rtl" });
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "trick");
+      });
+
+      act(() => {
+        result.current.table.navigate("left");
+      });
+      expect(result.current.focusedCell?.columnId).toBe("score");
+    });
+
+    it("should use the page size for page up and down", () => {
+      const { result } = renderGrid();
+
+      expect(
+        result.current.table.getNavigationTarget(
+          { rowId: "0", columnId: "name" },
+          "pagedown",
+          { pageSize: 2 },
+        ),
+      ).toEqual({ rowId: "2", columnId: "name" });
     });
   });
 

@@ -46,7 +46,6 @@ import {
   getIsFileCellData,
   getIsInPopover,
   getRowIndexById,
-  getScrollDirection,
   getTabTargetCell,
   getVisibleColumnIds,
   matchSelectOption,
@@ -59,8 +58,6 @@ import { useDirection } from "@/registry/bases/base/ui/direction";
 
 const OVERSCAN = 6;
 const VIEWPORT_OFFSET = 1;
-const HORIZONTAL_PAGE_SIZE = 5;
-const SCROLL_SYNC_RETRY_COUNT = 16;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
@@ -227,14 +224,21 @@ function useStore<T>(
   return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
 }
 
+interface RowAddResult {
+  rowId: string;
+  /** Column to focus in the new row, defaults to the first data column. */
+  columnId?: string;
+}
+
 interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
 > {
   onDataChange?: (data: TData[]) => void;
+  /** Adds a row and returns its id so the grid can focus it once it renders. */
   onRowAdd?: (
     event?: React.MouseEvent<HTMLDivElement>,
-  ) => Partial<CellPosition> | Promise<Partial<CellPosition> | null> | null;
+  ) => RowAddResult | Promise<RowAddResult | null> | null;
   onRowsAdd?: (count: number) => void | Promise<void>;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
   onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
@@ -277,7 +281,10 @@ function useDataGrid<TData extends RowData>({
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const cellMapRef = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
-  const focusGuardRef = React.useRef(false);
+  const pendingFocusRef = React.useRef<{
+    cell: CellPosition;
+    shouldScroll: boolean;
+  } | null>(null);
 
   const propsRef = useAsRef({
     ...props,
@@ -411,6 +418,75 @@ function useDataGrid<TData extends RowData>({
   const getFocusedCell = React.useCallback(
     () => getFocusedCellPosition(getCellSelection()),
     [getCellSelection],
+  );
+
+  const revealCell = React.useCallback(
+    (
+      cell: CellPosition,
+      {
+        shouldFocus,
+        shouldScroll,
+      }: { shouldFocus: boolean; shouldScroll: boolean },
+    ) => {
+      const currentTable = tableRef.current;
+      const container = dataGridRef.current;
+      if (!currentTable || !container) return false;
+
+      const rowIndex = getRowIndexById(currentTable, cell.rowId);
+      if (rowIndex === -1) return false;
+
+      if (shouldScroll) {
+        rowVirtualizerRef.current?.scrollToIndex(rowIndex, { align: "auto" });
+      }
+
+      const cellElement = cellMapRef.current.get(
+        getCellKey(cell.rowId, cell.columnId),
+      );
+      if (!cellElement) return false;
+
+      if (shouldScroll) {
+        scrollCellIntoView({
+          container,
+          targetCell: cellElement,
+          tableRef,
+          viewportOffset: VIEWPORT_OFFSET,
+          isRtl: dir === "rtl",
+        });
+      }
+      if (shouldFocus) {
+        getCellFocusTarget(cellElement).focus({ preventScroll: true });
+      }
+      return true;
+    },
+    [dir],
+  );
+
+  const focusCellElement = React.useCallback(
+    (cell: CellPosition, shouldScroll = true) => {
+      if (store.getState().searchOpen) return;
+
+      if (revealCell(cell, { shouldFocus: true, shouldScroll })) {
+        pendingFocusRef.current = null;
+        return;
+      }
+
+      // Keeps keyboard handling on the grid until the cell mounts
+      pendingFocusRef.current = { cell, shouldScroll };
+      const container = dataGridRef.current;
+      if (container && !container.contains(document.activeElement)) {
+        container.focus({ preventScroll: true });
+      }
+    },
+    [store, revealCell],
+  );
+
+  const focusCell = React.useCallback(
+    (rowId: string, columnId: string) => {
+      tableRef.current?.setFocusedCell(rowId, columnId);
+      tableRef.current?.setEditingCell(null);
+      focusCellElement({ rowId, columnId });
+    },
+    [focusCellElement],
   );
 
   const columnIds = React.useMemo(() => {
@@ -700,14 +776,6 @@ function useDataGrid<TData extends RowData>({
       );
     }
   }, [store, propsRef, serializeCellsToTsv]);
-
-  const restoreFocus = React.useCallback((element: HTMLDivElement | null) => {
-    if (element && document.activeElement !== element) {
-      requestAnimationFrame(() => {
-        element.focus();
-      });
-    }
-  }, []);
 
   const onCellsPaste = React.useCallback(
     async (expandRows = false) => {
@@ -1117,9 +1185,11 @@ function useDataGrid<TData extends RowData>({
               { rowId: startRowId, columnId: startColumnId },
               { rowId: endRowId, columnId: endColumnId },
             );
+            focusCellElement(
+              { rowId: startRowId, columnId: startColumnId },
+              false,
+            );
           }
-
-          restoreFocus(dataGridRef.current);
         } else if (cellsSkipped > 0) {
           toast.error(
             `${cellsSkipped} cell${
@@ -1148,328 +1218,17 @@ function useDataGrid<TData extends RowData>({
       navigableColumnIds,
       propsRef,
       selectRange,
-      restoreFocus,
+      focusCellElement,
       getRowIndex,
     ],
   );
 
-  // Release focus guard after delay to allow async data re-renders to settle.
-  // 300ms accounts for db sync and virtualized cell mounting
-  const releaseFocusGuard = React.useCallback((immediate = false) => {
-    if (immediate) {
-      focusGuardRef.current = false;
-      return;
-    }
-
-    setTimeout(() => {
-      focusGuardRef.current = false;
-    }, 300);
-  }, []);
-
-  const focusCellWrapper = React.useCallback(
-    (rowId: string, columnId: string) => {
-      focusGuardRef.current = true;
-
-      requestAnimationFrame(() => {
-        const cellKey = getCellKey(rowId, columnId);
-        const cellWrapperElement = cellMapRef.current.get(cellKey);
-
-        if (!cellWrapperElement) {
-          const container = dataGridRef.current;
-          if (container) {
-            container.focus();
-          }
-          releaseFocusGuard();
-          return;
-        }
-
-        getCellFocusTarget(cellWrapperElement).focus();
-        releaseFocusGuard();
-      });
-    },
-    [releaseFocusGuard],
-  );
-
-  const focusCell = React.useCallback(
-    (rowId: string, columnId: string) => {
-      tableRef.current?.setFocusedCell(rowId, columnId);
-      tableRef.current?.setEditingCell(null);
-
-      if (store.getState().searchOpen) return;
-
-      focusCellWrapper(rowId, columnId);
-    },
-    [store, focusCellWrapper],
-  );
-
   const onRowsDelete = React.useCallback(
     async (rowIds: string[]) => {
-      const currentTable = tableRef.current;
-      if (!currentTable) return;
-
-      await currentTable.deleteRows(rowIds);
+      await tableRef.current?.deleteRows(rowIds);
       store.setState("dragStartCell", null);
-
-      const nextFocusedCell = getFocusedCell();
-      if (nextFocusedCell) {
-        focusCellWrapper(nextFocusedCell.rowId, nextFocusedCell.columnId);
-      }
     },
-    [store, getFocusedCell, focusCellWrapper],
-  );
-
-  const navigateCell = React.useCallback(
-    (direction: NavigationDirection) => {
-      const currentTable = tableRef.current;
-      const focusedCell = currentTable
-        ? getFocusedCellPosition(currentTable.atoms.cellSelection.get())
-        : null;
-      if (!focusedCell) return;
-
-      const { rowId, columnId } = focusedCell;
-      const rowIndex = getRowIndex(rowId);
-      if (rowIndex === -1) return;
-
-      const currentColIndex = navigableColumnIds.indexOf(columnId);
-      const rowVirtualizer = rowVirtualizerRef.current;
-      const rows = tableRef.current?.getRowModel().rows ?? [];
-      const rowCount = rows.length;
-
-      let newRowIndex = rowIndex;
-      let newColumnId = columnId;
-
-      const isRtl = dir === "rtl";
-
-      switch (direction) {
-        case "up":
-          newRowIndex = Math.max(0, rowIndex - 1);
-          break;
-        case "down":
-          newRowIndex = Math.min(rowCount - 1, rowIndex + 1);
-          break;
-        case "left":
-        case "right": {
-          const isNext = (direction === "right") !== isRtl;
-          const adjacentColumnId =
-            columnIds[columnIds.indexOf(columnId) + (isNext ? 1 : -1)];
-          if (adjacentColumnId) newColumnId = adjacentColumnId;
-          break;
-        }
-        case "home":
-          if (navigableColumnIds.length > 0) {
-            newColumnId = navigableColumnIds[0] ?? columnId;
-          }
-          break;
-        case "end":
-          if (navigableColumnIds.length > 0) {
-            newColumnId =
-              navigableColumnIds[navigableColumnIds.length - 1] ?? columnId;
-          }
-          break;
-        case "ctrl+home":
-          newRowIndex = 0;
-          if (navigableColumnIds.length > 0) {
-            newColumnId = navigableColumnIds[0] ?? columnId;
-          }
-          break;
-        case "ctrl+end":
-          newRowIndex = Math.max(0, rowCount - 1);
-          if (navigableColumnIds.length > 0) {
-            newColumnId =
-              navigableColumnIds[navigableColumnIds.length - 1] ?? columnId;
-          }
-          break;
-        case "ctrl+up":
-          newRowIndex = 0;
-          break;
-        case "ctrl+down":
-          newRowIndex = Math.max(0, rowCount - 1);
-          break;
-        case "pageup":
-          if (rowVirtualizer) {
-            const visibleRange = rowVirtualizer.getVirtualItems();
-            const pageSize = visibleRange.length ?? 10;
-            newRowIndex = Math.max(0, rowIndex - pageSize);
-          } else {
-            newRowIndex = Math.max(0, rowIndex - 10);
-          }
-          break;
-        case "pagedown":
-          if (rowVirtualizer) {
-            const visibleRange = rowVirtualizer.getVirtualItems();
-            const pageSize = visibleRange.length ?? 10;
-            newRowIndex = Math.min(rowCount - 1, rowIndex + pageSize);
-          } else {
-            newRowIndex = Math.min(rowCount - 1, rowIndex + 10);
-          }
-          break;
-        case "pageleft":
-          if (currentColIndex > 0) {
-            const targetIndex = Math.max(
-              0,
-              currentColIndex - HORIZONTAL_PAGE_SIZE,
-            );
-            const targetColumnId = navigableColumnIds[targetIndex];
-            if (targetColumnId) newColumnId = targetColumnId;
-          }
-          break;
-        case "pageright":
-          if (currentColIndex < navigableColumnIds.length - 1) {
-            const targetIndex = Math.min(
-              navigableColumnIds.length - 1,
-              currentColIndex + HORIZONTAL_PAGE_SIZE,
-            );
-            const targetColumnId = navigableColumnIds[targetIndex];
-            if (targetColumnId) newColumnId = targetColumnId;
-          }
-          break;
-        case "tab":
-        case "shift+tab": {
-          const target = getTabTargetCell({
-            rowIndex,
-            columnId,
-            columnIds,
-            rowCount,
-            isBackward: direction === "shift+tab",
-            getIsColumnTabbable: getIsDataColumn,
-          });
-          if (target) {
-            newRowIndex = target.rowIndex;
-            newColumnId = target.columnId;
-          }
-          break;
-        }
-      }
-
-      const newRowId = rows[newRowIndex]?.id;
-      if (!newRowId) return;
-
-      if (newRowIndex !== rowIndex || newColumnId !== columnId) {
-        focusCell(newRowId, newColumnId);
-
-        // Calculate and apply scrolls synchronously to avoid flashing
-        const container = dataGridRef.current;
-        if (!container) return;
-
-        const targetRow = rowMapRef.current.get(newRowIndex);
-        const cellKey = getCellKey(newRowId, newColumnId);
-        const targetCell = cellMapRef.current.get(cellKey);
-
-        // If target row is not rendered, scroll it into view first
-        if (!targetRow) {
-          if (rowVirtualizer) {
-            const align =
-              direction === "up" ||
-              direction === "pageup" ||
-              direction === "ctrl+up" ||
-              direction === "ctrl+home" ||
-              direction === "shift+tab"
-                ? "start"
-                : direction === "down" ||
-                    direction === "pagedown" ||
-                    direction === "ctrl+down" ||
-                    direction === "ctrl+end" ||
-                    direction === "tab"
-                  ? "end"
-                  : "center";
-
-            rowVirtualizer.scrollToIndex(newRowIndex, { align });
-
-            // Wait for row to render before horizontal scroll
-            if (newColumnId !== columnId) {
-              requestAnimationFrame(() => {
-                const cellKeyRetry = getCellKey(newRowId, newColumnId);
-                const targetCellRetry = cellMapRef.current.get(cellKeyRetry);
-
-                if (targetCellRetry) {
-                  const scrollDirection = getScrollDirection(direction);
-
-                  scrollCellIntoView({
-                    container,
-                    targetCell: targetCellRetry,
-                    tableRef,
-                    viewportOffset: VIEWPORT_OFFSET,
-                    direction: scrollDirection,
-                    isRtl: dir === "rtl",
-                  });
-                }
-              });
-            }
-          } else {
-            // Use direct scroll calculation when virtualizer is not available
-            const rowSize = tableRef.current?.getRowSize() ?? 0;
-            container.scrollTop = newRowIndex * rowSize;
-          }
-
-          return;
-        }
-
-        // Vertical scrolling for rendered rows that changed
-        if (newRowIndex !== rowIndex && targetRow) {
-          requestAnimationFrame(() => {
-            const containerRect = container.getBoundingClientRect();
-            const headerHeight =
-              headerRef.current?.getBoundingClientRect().height ?? 0;
-            const footerHeight =
-              footerRef.current?.getBoundingClientRect().height ?? 0;
-            const viewportTop =
-              containerRect.top + headerHeight + VIEWPORT_OFFSET;
-            const viewportBottom =
-              containerRect.bottom - footerHeight - VIEWPORT_OFFSET;
-
-            const rowRect = targetRow.getBoundingClientRect();
-            const isFullyVisible =
-              rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
-
-            if (!isFullyVisible) {
-              // Only apply vertical scroll for vertical navigation
-              const isVerticalNavigation =
-                direction === "up" ||
-                direction === "down" ||
-                direction === "pageup" ||
-                direction === "pagedown" ||
-                direction === "ctrl+up" ||
-                direction === "ctrl+down" ||
-                direction === "ctrl+home" ||
-                direction === "ctrl+end" ||
-                direction === "tab" ||
-                direction === "shift+tab";
-
-              if (isVerticalNavigation) {
-                if (
-                  direction === "down" ||
-                  direction === "pagedown" ||
-                  direction === "ctrl+down" ||
-                  direction === "ctrl+end" ||
-                  direction === "tab"
-                ) {
-                  container.scrollTop += rowRect.bottom - viewportBottom;
-                } else {
-                  container.scrollTop -= viewportTop - rowRect.top;
-                }
-              }
-            }
-          });
-        }
-
-        // Horizontal scrolling for rendered cells
-        if (newColumnId !== columnId && targetCell) {
-          requestAnimationFrame(() => {
-            const scrollDirection = getScrollDirection(direction);
-
-            scrollCellIntoView({
-              container,
-              targetCell,
-              tableRef,
-              viewportOffset: VIEWPORT_OFFSET,
-              direction: scrollDirection,
-              isRtl: dir === "rtl",
-            });
-          });
-        }
-      }
-    },
-    [dir, store, columnIds, navigableColumnIds, focusCell, getRowIndex],
+    [store],
   );
 
   const onCellEditingStart = React.useCallback(
@@ -1485,31 +1244,18 @@ function useDataGrid<TData extends RowData>({
 
   const onCellEditingStop = React.useCallback(
     (opts?: { moveToNextRow?: boolean; direction?: NavigationDirection }) => {
-      const currentEditing = tableRef.current?.getEditingCell();
+      const currentTable = tableRef.current;
+      if (!currentTable?.getEditingCell()) return;
 
-      tableRef.current?.setEditingCell(null);
+      currentTable.setEditingCell(null);
 
-      if (opts?.moveToNextRow && currentEditing) {
-        const { rowId, columnId } = currentEditing;
-        const nextRowId = getRowIdAt(getRowIndex(rowId) + 1);
+      const direction = opts?.moveToNextRow ? "down" : opts?.direction;
+      if (direction) currentTable.navigate(direction);
 
-        if (nextRowId) {
-          requestAnimationFrame(() => {
-            focusCell(nextRowId, columnId);
-          });
-        }
-      } else if (opts?.direction && currentEditing) {
-        const { rowId, columnId } = currentEditing;
-        focusCell(rowId, columnId);
-        requestAnimationFrame(() => {
-          navigateCell(opts.direction ?? "right");
-        });
-      } else if (currentEditing) {
-        const { rowId, columnId } = currentEditing;
-        focusCellWrapper(rowId, columnId);
-      }
+      const focusedCell = getFocusedCell();
+      if (focusedCell) focusCellElement(focusedCell, Boolean(direction));
     },
-    [store, focusCell, navigateCell, focusCellWrapper, getRowIndex, getRowIdAt],
+    [getFocusedCell, focusCellElement],
   );
 
   const onSearchOpenChange = React.useCallback(
@@ -1615,21 +1361,11 @@ function useDataGrid<TData extends RowData>({
         ? currentState.searchMatches.length - 1
         : currentState.matchIndex - 1;
     const match = currentState.searchMatches[prevIndex];
-    const matchRowIndex = match ? getRowIndex(match.rowId) : -1;
+    if (!match) return;
 
-    if (match && matchRowIndex !== -1) {
-      rowVirtualizerRef.current?.scrollToIndex(matchRowIndex, {
-        align: "center",
-      });
-
-      requestAnimationFrame(() => {
-        store.setState("matchIndex", prevIndex);
-        requestAnimationFrame(() => {
-          focusCell(match.rowId, match.columnId);
-        });
-      });
-    }
-  }, [store, focusCell, getRowIndex]);
+    store.setState("matchIndex", prevIndex);
+    tableRef.current?.setFocusedCell(match.rowId, match.columnId);
+  }, [store]);
 
   const onNavigateToNextMatch = React.useCallback(() => {
     const currentState = store.getState();
@@ -1638,21 +1374,11 @@ function useDataGrid<TData extends RowData>({
     const nextIndex =
       (currentState.matchIndex + 1) % currentState.searchMatches.length;
     const match = currentState.searchMatches[nextIndex];
-    const matchRowIndex = match ? getRowIndex(match.rowId) : -1;
+    if (!match) return;
 
-    if (match && matchRowIndex !== -1) {
-      rowVirtualizerRef.current?.scrollToIndex(matchRowIndex, {
-        align: "center",
-      });
-
-      requestAnimationFrame(() => {
-        store.setState("matchIndex", nextIndex);
-        requestAnimationFrame(() => {
-          focusCell(match.rowId, match.columnId);
-        });
-      });
-    }
-  }, [store, focusCell, getRowIndex]);
+    store.setState("matchIndex", nextIndex);
+    tableRef.current?.setFocusedCell(match.rowId, match.columnId);
+  }, [store]);
 
   const searchMatchSet = React.useMemo(() => {
     return new Set(searchMatches.map((m) => getCellKey(m.rowId, m.columnId)));
@@ -1709,27 +1435,6 @@ function useDataGrid<TData extends RowData>({
     tableRef.current?.setEditingCell(null);
   }, []);
 
-  const scrollToCell = React.useCallback(
-    (rowId: string, columnId: string) => {
-      requestAnimationFrame(() => {
-        const container = dataGridRef.current;
-        const cellKey = getCellKey(rowId, columnId);
-        const targetCell = cellMapRef.current.get(cellKey);
-
-        if (container && targetCell) {
-          scrollCellIntoView({
-            container,
-            targetCell,
-            tableRef,
-            viewportOffset: VIEWPORT_OFFSET,
-            isRtl: dir === "rtl",
-          });
-        }
-      });
-    },
-    [dir],
-  );
-
   const onCellClick = React.useCallback(
     (rowId: string, columnId: string, event?: React.MouseEvent) => {
       if (event?.button === 2) return;
@@ -1755,15 +1460,14 @@ function useDataGrid<TData extends RowData>({
             },
           );
           currentTable.setEditingCell(null);
-          focusCellWrapper(rowId, columnId);
-          scrollToCell(rowId, columnId);
+          focusCellElement({ rowId, columnId });
           return;
         }
 
         if (event.shiftKey && currentFocused) {
           event.preventDefault();
           extendSelection({ rowId, columnId });
-          scrollToCell(rowId, columnId);
+          focusCellElement(currentFocused, false);
           return;
         }
       }
@@ -1783,14 +1487,12 @@ function useDataGrid<TData extends RowData>({
         onCellEditingStart(rowId, columnId);
       } else {
         focusCell(rowId, columnId);
-        scrollToCell(rowId, columnId);
       }
     },
     [
       store,
       focusCell,
-      focusCellWrapper,
-      scrollToCell,
+      focusCellElement,
       onCellEditingStart,
       extendSelection,
       getIsCellSelected,
@@ -1835,12 +1537,12 @@ function useDataGrid<TData extends RowData>({
         currentFocused?.columnId !== dragStartCell.columnId
       ) {
         tableRef.current?.setEditingCell(null);
-        focusCellWrapper(dragStartCell.rowId, dragStartCell.columnId);
+        focusCellElement(dragStartCell, false);
       }
 
       selectRange(dragStartCell, { rowId, columnId });
     },
-    [store, selectRange, getFocusedCell, focusCellWrapper],
+    [store, selectRange, getFocusedCell, focusCellElement],
   );
 
   const onCellMouseUp = React.useCallback(() => {
@@ -2157,48 +1859,11 @@ function useDataGrid<TData extends RowData>({
         tableRef.current ? getSelectedCellKeys(tableRef.current) : [],
       getIsSearchMatch,
       getIsActiveSearchMatch,
-      scrollToCell: (rowId, columnId, align = "auto") => {
-        const container = dataGridRef.current;
-        const rowIndex = getRowIndex(rowId);
-        if (!container || rowIndex === -1) return;
-
-        rowVirtualizerRef.current?.scrollToIndex(rowIndex, { align });
-
-        const scrollRowIntoView = (retries = 1) => {
-          requestAnimationFrame(() => {
-            const targetRow = rowMapRef.current.get(rowIndex);
-            if (!targetRow) {
-              if (retries > 0) scrollRowIntoView(retries - 1);
-              return;
-            }
-
-            const headerBottom =
-              headerRef.current?.getBoundingClientRect().bottom ??
-              container.getBoundingClientRect().top;
-
-            const viewportTop = headerBottom + VIEWPORT_OFFSET;
-
-            const rowRect = targetRow.getBoundingClientRect();
-
-            if (rowRect.top < viewportTop) {
-              container.scrollTop -= viewportTop - rowRect.top;
-            }
-
-            const cellKey = getCellKey(rowId, columnId);
-            const targetCell = cellMapRef.current.get(cellKey);
-            if (targetCell) {
-              scrollCellIntoView({
-                container,
-                targetCell,
-                tableRef,
-                viewportOffset: VIEWPORT_OFFSET,
-                isRtl: dir === "rtl",
-              });
-            }
-          });
-        };
-
-        scrollRowIntoView();
+      scrollToCell: (rowId, columnId) => {
+        revealCell(
+          { rowId, columnId },
+          { shouldFocus: false, shouldScroll: true },
+        );
       },
       onRowSelect,
       onColumnClick,
@@ -2226,11 +1891,10 @@ function useDataGrid<TData extends RowData>({
   }, [
     propsRef,
     store,
-    dir,
     getIsCellSelected,
     getIsSearchMatch,
     getIsActiveSearchMatch,
-    getRowIndex,
+    revealCell,
     onRowSelect,
     onColumnClick,
     onCellClick,
@@ -2324,6 +1988,7 @@ function useDataGrid<TData extends RowData>({
       onColumnOrderChange,
       columnResizeMode: "onChange",
       columnResizeDirection: dir,
+      dir,
       meta: tableMeta,
     };
   }, [
@@ -2437,113 +2102,11 @@ function useDataGrid<TData extends RowData>({
     rowVirtualizerRef.current = rowVirtualizer;
   }
 
-  const onScrollToRow = React.useCallback(
-    async (opts: Partial<CellPosition> & { rowIndex?: number }) => {
-      const { rowId, columnId } = opts;
-
-      focusGuardRef.current = true;
-
-      const targetColumnId = columnId ?? navigableColumnIds[0];
-
-      if (!targetColumnId) {
-        releaseFocusGuard(true);
-        return;
-      }
-
-      async function onScrollAndFocus(retryCount: number) {
-        if (!targetColumnId) return;
-        const rows = tableRef.current?.getRowModel().rows ?? [];
-        const rowIndex =
-          rowId !== undefined ? getRowIndex(rowId) : (opts.rowIndex ?? 0);
-
-        // If the requested row doesn't exist yet, wait for data to update
-        if ((rowIndex === -1 || rowIndex >= rows.length) && retryCount > 0) {
-          await new Promise((resolve) => setTimeout(resolve, 50));
-          await onScrollAndFocus(retryCount - 1);
-          return;
-        }
-
-        const safeRowIndex =
-          rowIndex === -1
-            ? rows.length - 1
-            : Math.min(rowIndex, rows.length - 1);
-        const safeRowId = rows[safeRowIndex]?.id;
-
-        if (!safeRowId) {
-          releaseFocusGuard();
-          return;
-        }
-
-        const currentRowCount = rows.length;
-
-        const isBottomHalf = safeRowIndex > currentRowCount / 2;
-        rowVirtualizer.scrollToIndex(safeRowIndex, {
-          align: isBottomHalf ? "end" : "start",
-        });
-
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-
-        // Adjust scroll position to account for sticky header/footer
-        const container = dataGridRef.current;
-        const targetRow = rowMapRef.current.get(safeRowIndex);
-
-        if (container && targetRow) {
-          const containerRect = container.getBoundingClientRect();
-          const headerHeight =
-            headerRef.current?.getBoundingClientRect().height ?? 0;
-          const footerHeight =
-            footerRef.current?.getBoundingClientRect().height ?? 0;
-
-          const viewportTop =
-            containerRect.top + headerHeight + VIEWPORT_OFFSET;
-          const viewportBottom =
-            containerRect.bottom - footerHeight - VIEWPORT_OFFSET;
-
-          const rowRect = targetRow.getBoundingClientRect();
-          const isFullyVisible =
-            rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
-
-          if (!isFullyVisible) {
-            if (rowRect.top < viewportTop) {
-              // Scroll up as row is partially hidden by header
-              container.scrollTop -= viewportTop - rowRect.top;
-            } else if (rowRect.bottom > viewportBottom) {
-              // Scroll down as row is partially hidden by footer
-              container.scrollTop += rowRect.bottom - viewportBottom;
-            }
-          }
-        }
-
-        tableRef.current?.setFocusedCell(safeRowId, targetColumnId);
-        tableRef.current?.setEditingCell(null);
-
-        const cellKey = getCellKey(safeRowId, targetColumnId);
-        const cellElement = cellMapRef.current.get(cellKey);
-
-        if (cellElement) {
-          getCellFocusTarget(cellElement).focus();
-          releaseFocusGuard();
-        } else if (retryCount > 0) {
-          await new Promise((resolve) => requestAnimationFrame(resolve));
-          await onScrollAndFocus(retryCount - 1);
-        } else {
-          dataGridRef.current?.focus();
-          releaseFocusGuard();
-        }
-      }
-
-      await onScrollAndFocus(SCROLL_SYNC_RETRY_COUNT);
-    },
-    [rowVirtualizer, store, releaseFocusGuard, navigableColumnIds, getRowIndex],
-  );
-
   const onRowAdd = React.useCallback(
     async (event?: React.MouseEvent<HTMLDivElement>) => {
       if (propsRef.current.readOnly || !propsRef.current.onRowAdd) return;
 
-      const initialRowCount = tableRef.current?.getRowModel().rows.length ?? 0;
-
-      let result: Partial<CellPosition> | null;
+      let result: RowAddResult | null;
       try {
         result = await propsRef.current.onRowAdd(event);
       } catch {
@@ -2553,16 +2116,13 @@ function useDataGrid<TData extends RowData>({
 
       if (result === null || event?.defaultPrevented) return;
 
-      onSelectionClear();
+      const columnId = result.columnId ?? navigableColumnIds[0];
+      if (!columnId) return;
 
-      // onScrollToRow will handle retries if the row isn't rendered yet
-      void onScrollToRow({
-        rowId: result.rowId,
-        rowIndex: initialRowCount,
-        columnId: result.columnId,
-      });
+      onSelectionClear();
+      focusCell(result.rowId, columnId);
     },
-    [propsRef, onScrollToRow, onSelectionClear],
+    [propsRef, navigableColumnIds, onSelectionClear, focusCell],
   );
 
   const getColumnHeaderTrigger = React.useCallback((columnId: string) => {
@@ -2611,7 +2171,6 @@ function useDataGrid<TData extends RowData>({
       const headerIndex = headerColumnIds.indexOf(columnId);
       if (headerIndex === -1) return false;
 
-      const rowCount = tableRef.current?.getRowModel().rows.length ?? 0;
       const isRtl = dir === "rtl";
 
       function focusHeaderAt(index: number) {
@@ -2634,11 +2193,13 @@ function useDataGrid<TData extends RowData>({
           break;
         case "ArrowUp":
           break;
-        case "ArrowDown":
+        case "ArrowDown": {
           // Stops the menu trigger from opening its menu on ArrowDown
           event.stopPropagation();
-          if (rowCount > 0) void onScrollToRow({ rowIndex: 0, columnId });
+          const firstRowId = getRowIdAt(0);
+          if (firstRowId) focusCell(firstRowId, columnId);
           break;
+        }
         case "Escape":
           dataGridRef.current?.focus();
           break;
@@ -2652,9 +2213,10 @@ function useDataGrid<TData extends RowData>({
           } else if (headerIndex < headerColumnIds.length - 1) {
             focusHeaderAt(headerIndex + 1);
           } else {
+            const firstRowId = getRowIdAt(0);
             const firstColumnId = navigableColumnIds[0];
-            if (rowCount === 0 || !firstColumnId) return true;
-            void onScrollToRow({ rowIndex: 0, columnId: firstColumnId });
+            if (!firstRowId || !firstColumnId) return true;
+            focusCell(firstRowId, firstColumnId);
           }
           break;
         default:
@@ -2671,7 +2233,8 @@ function useDataGrid<TData extends RowData>({
       getColumnHeaderTrigger,
       focusColumnHeader,
       onGridTabBackOut,
-      onScrollToRow,
+      focusCell,
+      getRowIdAt,
     ],
   );
 
@@ -2681,7 +2244,6 @@ function useDataGrid<TData extends RowData>({
       const currentTable = tableRef.current;
       const cellSelection = currentTable?.atoms.cellSelection.get() ?? [];
       const focusedCell = getFocusedCellPosition(cellSelection);
-      const selectionEdge = getSelectionEdgePosition(cellSelection);
       const hasCellRangeSelection = getHasCellRangeSelection(cellSelection);
       const { key, ctrlKey, metaKey, shiftKey, altKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
@@ -2851,59 +2413,31 @@ function useDataGrid<TData extends RowData>({
         propsRef.current.onRowAdd
       ) {
         event.preventDefault();
-        const initialRowCount =
-          tableRef.current?.getRowModel().rows.length ?? 0;
         const currentColumnId = isUtilityCellFocused
           ? navigableColumnIds[0]
           : focusedCell.columnId;
 
         Promise.resolve(propsRef.current.onRowAdd())
-          .then(async (result) => {
-            if (result === null) return;
+          .then((result) => {
+            const columnId = result?.columnId ?? currentColumnId;
+            if (!result || !columnId) return;
 
             onSelectionClear();
-
-            void onScrollToRow({
-              rowId: result.rowId,
-              rowIndex: initialRowCount,
-              columnId: result.columnId ?? currentColumnId,
-            });
+            focusCell(result.rowId, columnId);
           })
           .catch(() => {
-            // Callback threw an error, don't proceed with scroll/focus
+            // Callback threw an error, don't proceed with focus
           });
         return;
       }
+
+      const isRtl = dir === "rtl";
 
       switch (key) {
         case "ArrowUp":
           if (altKey && !isCtrlPressed && !shiftKey) {
             direction = "pageup";
-          } else if (isCtrlPressed && shiftKey) {
-            const edgeCell = selectionEdge ?? focusedCell;
-            const currentColIndex = navigableColumnIds.indexOf(
-              edgeCell.columnId,
-            );
-            const firstRowId = getRowIdAt(0);
-
-            if (firstRowId) {
-              extendSelection({
-                rowId: firstRowId,
-                columnId:
-                  navigableColumnIds[currentColIndex] ?? edgeCell.columnId,
-              });
-            }
-
-            const rowVirtualizer = rowVirtualizerRef.current;
-            if (rowVirtualizer) {
-              rowVirtualizer.scrollToIndex(0, { align: "start" });
-            }
-
-            restoreFocus(dataGridRef.current);
-
-            event.preventDefault();
-            return;
-          } else if (isCtrlPressed && !shiftKey) {
+          } else if (isCtrlPressed) {
             direction = "ctrl+up";
           } else if (
             !shiftKey &&
@@ -2919,111 +2453,20 @@ function useDataGrid<TData extends RowData>({
         case "ArrowDown":
           if (altKey && !isCtrlPressed && !shiftKey) {
             direction = "pagedown";
-          } else if (isCtrlPressed && shiftKey) {
-            const rowCount = tableRef.current?.getRowModel().rows.length ?? 0;
-            const edgeCell = selectionEdge ?? focusedCell;
-            const currentColIndex = navigableColumnIds.indexOf(
-              edgeCell.columnId,
-            );
-            const lastRowId = getRowIdAt(rowCount - 1);
-
-            if (lastRowId) {
-              extendSelection({
-                rowId: lastRowId,
-                columnId:
-                  navigableColumnIds[currentColIndex] ?? edgeCell.columnId,
-              });
-            }
-
-            const rowVirtualizer = rowVirtualizerRef.current;
-            if (rowVirtualizer) {
-              rowVirtualizer.scrollToIndex(Math.max(0, rowCount - 1), {
-                align: "end",
-              });
-            }
-
-            restoreFocus(dataGridRef.current);
-
-            event.preventDefault();
-            return;
-          } else if (isCtrlPressed && !shiftKey) {
-            direction = "ctrl+down";
           } else {
-            direction = "down";
+            direction = isCtrlPressed ? "ctrl+down" : "down";
           }
           break;
         case "ArrowLeft":
-          if (isCtrlPressed && shiftKey) {
-            const edgeCell = selectionEdge ?? focusedCell;
-            const targetColumnId =
-              dir === "rtl"
-                ? navigableColumnIds[navigableColumnIds.length - 1]
-                : navigableColumnIds[0];
-
-            if (targetColumnId) {
-              extendSelection({
-                rowId: edgeCell.rowId,
-                columnId: targetColumnId,
-              });
-
-              const container = dataGridRef.current;
-              const cellKey = getCellKey(edgeCell.rowId, targetColumnId);
-              const targetCell = cellMapRef.current.get(cellKey);
-              if (container && targetCell) {
-                scrollCellIntoView({
-                  container,
-                  targetCell,
-                  tableRef,
-                  viewportOffset: VIEWPORT_OFFSET,
-                  direction: "home",
-                  isRtl: dir === "rtl",
-                });
-              }
-
-              restoreFocus(container);
-            }
-            event.preventDefault();
-            return;
-          } else if (isCtrlPressed && !shiftKey) {
-            direction = "home";
+          if (isCtrlPressed) {
+            direction = isRtl ? "end" : "home";
           } else {
             direction = "left";
           }
           break;
         case "ArrowRight":
-          if (isCtrlPressed && shiftKey) {
-            const edgeCell = selectionEdge ?? focusedCell;
-            const targetColumnId =
-              dir === "rtl"
-                ? navigableColumnIds[0]
-                : navigableColumnIds[navigableColumnIds.length - 1];
-
-            if (targetColumnId) {
-              extendSelection({
-                rowId: edgeCell.rowId,
-                columnId: targetColumnId,
-              });
-
-              const container = dataGridRef.current;
-              const cellKey = getCellKey(edgeCell.rowId, targetColumnId);
-              const targetCell = cellMapRef.current.get(cellKey);
-              if (container && targetCell) {
-                scrollCellIntoView({
-                  container,
-                  targetCell,
-                  tableRef,
-                  viewportOffset: VIEWPORT_OFFSET,
-                  direction: "end",
-                  isRtl: dir === "rtl",
-                });
-              }
-
-              restoreFocus(container);
-            }
-            event.preventDefault();
-            return;
-          } else if (isCtrlPressed && !shiftKey) {
-            direction = "end";
+          if (isCtrlPressed) {
+            direction = isRtl ? "home" : "end";
           } else {
             direction = "right";
           }
@@ -3055,206 +2498,44 @@ function useDataGrid<TData extends RowData>({
         case "Tab": {
           if (isCtrlPressed || altKey) return;
 
-          const tabTarget = getTabTargetCell({
-            rowIndex: getRowIndex(focusedCell.rowId),
-            columnId: focusedCell.columnId,
-            columnIds,
-            rowCount: tableRef.current?.getRowModel().rows.length ?? 0,
-            isBackward: shiftKey,
-            getIsColumnTabbable: getIsDataColumn,
-          });
-
-          if (!tabTarget) {
+          direction = shiftKey ? "shift+tab" : "tab";
+          if (!currentTable?.getNavigationTarget(focusedCell, direction)) {
             if (shiftKey) onGridTabBackOut();
             return;
           }
-
-          direction = shiftKey ? "shift+tab" : "tab";
           break;
         }
       }
 
-      if (direction) {
-        event.preventDefault();
+      if (!direction || !currentTable) return;
+      event.preventDefault();
 
-        if (shiftKey && key !== "Tab" && focusedCell) {
-          const edgeCell = selectionEdge ?? focusedCell;
+      const extend = shiftKey && key !== "Tab";
+      const pageSize = rowVirtualizerRef.current?.getVirtualItems().length;
 
-          const currentColIndex = navigableColumnIds.indexOf(edgeCell.columnId);
-          const edgeRowIndex = getRowIndex(edgeCell.rowId);
-          if (edgeRowIndex === -1) return;
-
-          let newRowIndex = edgeRowIndex;
-          let newColumnId = edgeCell.columnId;
-
-          const isRtl = dir === "rtl";
-
-          const rowCount = tableRef.current?.getRowModel().rows.length ?? 0;
-
-          switch (direction) {
-            case "up":
-              newRowIndex = Math.max(0, edgeRowIndex - 1);
-              break;
-            case "down":
-              newRowIndex = Math.min(rowCount - 1, edgeRowIndex + 1);
-              break;
-            case "left":
-              if (isRtl) {
-                if (currentColIndex < navigableColumnIds.length - 1) {
-                  const nextColumnId = navigableColumnIds[currentColIndex + 1];
-                  if (nextColumnId) newColumnId = nextColumnId;
-                }
-              } else {
-                if (currentColIndex > 0) {
-                  const prevColumnId = navigableColumnIds[currentColIndex - 1];
-                  if (prevColumnId) newColumnId = prevColumnId;
-                }
-              }
-              break;
-            case "right":
-              if (isRtl) {
-                if (currentColIndex > 0) {
-                  const prevColumnId = navigableColumnIds[currentColIndex - 1];
-                  if (prevColumnId) newColumnId = prevColumnId;
-                }
-              } else {
-                if (currentColIndex < navigableColumnIds.length - 1) {
-                  const nextColumnId = navigableColumnIds[currentColIndex + 1];
-                  if (nextColumnId) newColumnId = nextColumnId;
-                }
-              }
-              break;
-            case "home":
-              if (navigableColumnIds.length > 0) {
-                newColumnId = navigableColumnIds[0] ?? newColumnId;
-              }
-              break;
-            case "end":
-              if (navigableColumnIds.length > 0) {
-                newColumnId =
-                  navigableColumnIds[navigableColumnIds.length - 1] ??
-                  newColumnId;
-              }
-              break;
-          }
-          const newRowId = getRowIdAt(newRowIndex);
-          if (!newRowId) return;
-
-          extendSelection({
-            rowId: newRowId,
-            columnId: newColumnId,
-          });
-
-          const container = dataGridRef.current;
-          const targetRow = rowMapRef.current.get(newRowIndex);
-          const cellKey = getCellKey(newRowId, newColumnId);
-          const targetCell = cellMapRef.current.get(cellKey);
-
-          if (
-            newRowIndex !== edgeRowIndex &&
-            (direction === "up" || direction === "down")
-          ) {
-            if (container && targetRow) {
-              const containerRect = container.getBoundingClientRect();
-              const headerHeight =
-                headerRef.current?.getBoundingClientRect().height ?? 0;
-              const footerHeight =
-                footerRef.current?.getBoundingClientRect().height ?? 0;
-
-              const viewportTop =
-                containerRect.top + headerHeight + VIEWPORT_OFFSET;
-              const viewportBottom =
-                containerRect.bottom - footerHeight - VIEWPORT_OFFSET;
-
-              const rowRect = targetRow.getBoundingClientRect();
-              const isFullyVisible =
-                rowRect.top >= viewportTop && rowRect.bottom <= viewportBottom;
-
-              if (!isFullyVisible) {
-                const scrollNeeded =
-                  direction === "down"
-                    ? rowRect.bottom - viewportBottom
-                    : viewportTop - rowRect.top;
-
-                if (direction === "down") {
-                  container.scrollTop += scrollNeeded;
-                } else {
-                  container.scrollTop -= scrollNeeded;
-                }
-
-                restoreFocus(container);
-              }
-            } else {
-              const rowVirtualizer = rowVirtualizerRef.current;
-              if (rowVirtualizer) {
-                const align = direction === "up" ? "start" : "end";
-                rowVirtualizer.scrollToIndex(newRowIndex, { align });
-
-                restoreFocus(container);
-              }
-            }
-          }
-
-          if (
-            newColumnId !== edgeCell.columnId &&
-            (direction === "left" ||
-              direction === "right" ||
-              direction === "home" ||
-              direction === "end")
-          ) {
-            if (container && targetCell) {
-              scrollCellIntoView({
-                container,
-                targetCell,
-                tableRef,
-                viewportOffset: VIEWPORT_OFFSET,
-                direction,
-                isRtl,
-              });
-            }
-          }
-        } else {
-          const isMovingWithinUtilityColumn =
-            isUtilityCellFocused &&
-            (direction === "up" ||
-              direction === "down" ||
-              direction === "pageup" ||
-              direction === "pagedown" ||
-              direction === "ctrl+up" ||
-              direction === "ctrl+down");
-
-          if (hasCellRangeSelection && !isMovingWithinUtilityColumn) {
-            onSelectionClear();
-          }
-          navigateCell(direction);
-        }
-      }
+      if (!extend && hasCellRangeSelection) onSelectionClear();
+      currentTable.navigate(direction, { extend, pageSize });
     },
     [
       dir,
       store,
       propsRef,
-      columnIds,
       blurCell,
-      navigateCell,
       selectAll,
       onCellsCopy,
       onCellsCut,
       onCellsPaste,
       onSelectionClear,
       navigableColumnIds,
-      extendSelection,
       onSearchOpenChange,
       onNavigateToNextMatch,
       onNavigateToPrevMatch,
       onRowsDelete,
-      restoreFocus,
-      onScrollToRow,
+      focusCell,
       focusColumnHeader,
       onColumnHeaderKeyDown,
       onGridTabBackOut,
       getRowIndex,
-      getRowIdAt,
     ],
   );
 
@@ -3425,7 +2706,7 @@ function useDataGrid<TData extends RowData>({
     function onFocus(event: FocusEvent) {
       const wasPointerFocus = isPointerFocus;
       isPointerFocus = false;
-      if (wasPointerFocus || focusGuardRef.current) return;
+      if (wasPointerFocus) return;
 
       const currentContainer = dataGridRef.current;
       const relatedTarget = event.relatedTarget;
@@ -3442,13 +2723,7 @@ function useDataGrid<TData extends RowData>({
 
       const focusedCell = getFocusedCell();
       if (focusedCell) {
-        const { rowId, columnId } = focusedCell;
-        const cellElement = cellMapRef.current.get(getCellKey(rowId, columnId));
-        if (cellElement) {
-          getCellFocusTarget(cellElement).focus();
-        } else {
-          void onScrollToRow({ rowId, columnId });
-        }
+        focusCellElement(focusedCell);
         return;
       }
 
@@ -3469,47 +2744,101 @@ function useDataGrid<TData extends RowData>({
       container.removeEventListener("pointerup", onPointerUp);
       container.removeEventListener("focus", onFocus);
     };
-  }, [store, navigableColumnIds, focusCell, onScrollToRow, getFocusedCell]);
+  }, [store, navigableColumnIds, focusCell, focusCellElement, getFocusedCell]);
 
-  // Restore focus to container when virtualized cells are unmounted
+  // Keeps focus on the grid when the focused cell unmounts during virtualization
   React.useEffect(() => {
     const container = dataGridRef.current;
     if (!container) return;
 
+    let rafId = 0;
+
     function onFocusOut(event: FocusEvent) {
-      if (focusGuardRef.current) return;
+      // A real relatedTarget means the user moved focus elsewhere on purpose
+      if (event.relatedTarget || tableRef.current?.getEditingCell()) return;
 
-      const currentContainer = dataGridRef.current;
-      if (!currentContainer) return;
+      cancelAnimationFrame(rafId);
+      // Focus lands on the body only after the unmounted cell is removed from the DOM
+      rafId = requestAnimationFrame(() => {
+        const focusedCell = getFocusedCell();
+        if (!focusedCell || !document.hasFocus()) return;
+        if (document.activeElement && document.activeElement !== document.body)
+          return;
 
-      const focusedCell = getFocusedCell();
-      if (!focusedCell || tableRef.current?.getEditingCell()) return;
-
-      // A null relatedTarget means the focused cell was unmounted (or focus left the page),
-      // a real element means the user moved focus elsewhere on purpose
-      if (!event.relatedTarget) {
-        const { rowId, columnId } = focusedCell;
-        const cellKey = getCellKey(rowId, columnId);
-        const cellElement = cellMapRef.current.get(cellKey);
-
-        requestAnimationFrame(() => {
-          if (focusGuardRef.current) return;
-
-          if (cellElement && document.body.contains(cellElement)) {
-            getCellFocusTarget(cellElement).focus();
-          } else {
-            currentContainer.focus();
-          }
-        });
-      }
+        focusCellElement(focusedCell, false);
+      });
     }
 
     container.addEventListener("focusout", onFocusOut);
 
     return () => {
+      cancelAnimationFrame(rafId);
       container.removeEventListener("focusout", onFocusOut);
     };
-  }, [store]);
+  }, [getFocusedCell, focusCellElement]);
+
+  // Moves DOM focus and scroll position to follow the table's cell selection state
+  React.useEffect(() => {
+    let prevFocusKey: string | null = null;
+    let prevEdgeKey: string | null = null;
+
+    const subscription = table.atoms.cellSelection.subscribe(() => {
+      const ranges = table.atoms.cellSelection.get();
+      const focusedCell = getFocusedCellPosition(ranges);
+      const edgeCell = getSelectionEdgePosition(ranges);
+      const focusKey = focusedCell
+        ? getCellKey(focusedCell.rowId, focusedCell.columnId)
+        : null;
+      const edgeKey = edgeCell
+        ? getCellKey(edgeCell.rowId, edgeCell.columnId)
+        : null;
+      const isFocusChanged = focusKey !== prevFocusKey;
+      const isEdgeChanged = edgeKey !== prevEdgeKey;
+      prevFocusKey = focusKey;
+      prevEdgeKey = edgeKey;
+
+      const currentState = store.getState();
+
+      if (isFocusChanged && focusedCell) {
+        if (currentState.searchOpen) {
+          revealCell(focusedCell, { shouldFocus: false, shouldScroll: true });
+        } else if (dataGridRef.current?.contains(document.activeElement)) {
+          focusCellElement(focusedCell);
+        }
+        return;
+      }
+
+      if (isEdgeChanged && edgeCell && !currentState.dragStartCell) {
+        revealCell(edgeCell, { shouldFocus: false, shouldScroll: true });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [table, store, revealCell, focusCellElement]);
+
+  // Focuses a cell requested before its row was rendered, once it mounts
+  React.useLayoutEffect(() => {
+    const pending = pendingFocusRef.current;
+    if (!pending) return;
+
+    const focusedCell = getFocusedCell();
+    const isStale =
+      !focusedCell ||
+      focusedCell.rowId !== pending.cell.rowId ||
+      focusedCell.columnId !== pending.cell.columnId ||
+      !!tableRef.current?.getEditingCell() ||
+      !dataGridRef.current?.contains(document.activeElement);
+
+    if (
+      isStale ||
+      revealCell(pending.cell, {
+        shouldFocus: true,
+        shouldScroll: pending.shouldScroll,
+      })
+    ) {
+      pendingFocusRef.current = null;
+    }
+  });
 
   React.useEffect(() => {
     function onOutsideClick(event: MouseEvent) {
