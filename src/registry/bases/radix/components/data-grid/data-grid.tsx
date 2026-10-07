@@ -38,7 +38,6 @@ export function DataGrid<TData extends RowData>({
   dir = "ltr",
   table,
   dataGridBodyProps,
-  virtualTotalSize,
   virtualItems,
   measureElement,
   columns,
@@ -211,10 +210,6 @@ export function DataGrid<TData extends RowData>({
           data-slot="grid-body"
           {...dataGridBodyProps}
           className="relative grid"
-          style={{
-            height: `${virtualTotalSize}px`,
-            contain: adjustLayout ? "layout paint" : "strict",
-          }}
         >
           {virtualItems.map((virtualItem) => {
             const row = rows[virtualItem.index];

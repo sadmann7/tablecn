@@ -1505,7 +1505,7 @@ describe("useDataGrid", () => {
       expect(Array.isArray(result.current.virtualItems)).toBe(true);
     });
 
-    it("should provide virtualTotalSize", () => {
+    it("should size the grid body to the virtual total size", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1515,8 +1515,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.virtualTotalSize).toBeDefined();
-      expect(typeof result.current.virtualTotalSize).toBe("number");
+      expect(result.current.dataGridBodyProps.style.height).toMatch(/^\d+px$/);
     });
 
     it("should provide measureElement function", () => {

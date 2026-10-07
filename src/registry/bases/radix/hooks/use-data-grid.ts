@@ -498,7 +498,7 @@ function useDataGrid<TData extends RowData>({
       [],
     );
 
-  const dataGridBodyProps = React.useMemo(() => {
+  const dataGridBodyEventHandlers = React.useMemo(() => {
     let hoveredCellKey: string | null = null;
 
     // React bubbles events out of portalled editors too, so only cells mounted in the grid count
@@ -1792,6 +1792,17 @@ function useDataGrid<TData extends RowData>({
   const virtualItems = rowVirtualizer.getVirtualItems();
   const measureElement = rowVirtualizer.measureElement;
 
+  const dataGridBodyProps = React.useMemo(
+    () => ({
+      ...dataGridBodyEventHandlers,
+      style: {
+        height: `${virtualTotalSize}px`,
+        contain: adjustLayout ? "layout paint" : "strict",
+      } satisfies React.CSSProperties,
+    }),
+    [dataGridBodyEventHandlers, virtualTotalSize, adjustLayout],
+  );
+
   return React.useMemo(
     () => ({
       dataGridRef,
@@ -1801,7 +1812,6 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       dataGridBodyProps,
-      virtualTotalSize,
       virtualItems,
       measureElement,
       columns,
@@ -1816,7 +1826,6 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       dataGridBodyProps,
-      virtualTotalSize,
       virtualItems,
       measureElement,
       columns,
