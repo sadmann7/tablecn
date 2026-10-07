@@ -67,9 +67,12 @@ export interface DataGridTableMeta {
   cellMapRef?: React.RefObject<Map<string, HTMLDivElement>>;
   focusedCell?: CellPosition | null;
   editingCell?: CellPosition | null;
-  selectionState?: SelectionState;
+  /** Number of selected cells, `0` when only the focused cell is active. */
+  selectedCellCount?: number;
   searchOpen?: boolean;
   getIsCellSelected?: (rowId: string, columnId: string) => boolean;
+  /** Keys of the selected data cells in display order, or the focused cell when nothing else is selected. */
+  getSelectedCellKeys?: () => string[];
   getIsSearchMatch?: (rowId: string, columnId: string) => boolean;
   getIsActiveSearchMatch?: (rowId: string, columnId: string) => boolean;
   scrollToCell?: (
@@ -128,17 +131,6 @@ export interface DataGridTableMeta {
 export interface CellPosition {
   rowId: string;
   columnId: string;
-}
-
-export interface CellRange {
-  start: CellPosition;
-  end: CellPosition;
-}
-
-export interface SelectionState {
-  selectedCells: Set<string>;
-  selectionRange: CellRange | null;
-  isSelecting: boolean;
 }
 
 export interface ContextMenuState {

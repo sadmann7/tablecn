@@ -43,7 +43,8 @@ interface DataGridRowProps<
   columnPinning: ColumnPinningState;
   focusedCell: CellPosition | null;
   editingCell: CellPosition | null;
-  cellSelectionKeys: Set<string>;
+  /** Selected column spans for this row, `""` when none of its cells are selected. */
+  cellSelectionKey: string;
   searchMatchColumns: Set<string> | null;
   activeSearchMatch: CellPosition | null;
   dir: Direction;
@@ -106,8 +107,7 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
   }
 
   // Re-render if this row's selected cells changed
-  // Using stable Set reference that only includes this row's cells
-  if (prev.cellSelectionKeys !== next.cellSelectionKeys) {
+  if (prev.cellSelectionKey !== next.cellSelectionKey) {
     return false;
   }
 
@@ -171,7 +171,7 @@ function DataGridRowImpl<TData extends RowData>({
   columnPinning,
   focusedCell,
   editingCell,
-  cellSelectionKeys,
+  cellSelectionKey,
   searchMatchColumns,
   activeSearchMatch,
   dir,
@@ -242,8 +242,9 @@ function DataGridRowImpl<TData extends RowData>({
           focusedCell?.rowId === rowId && focusedCell?.columnId === columnId;
         const isCellEditing =
           editingCell?.rowId === rowId && editingCell?.columnId === columnId;
-        const isCellSelected =
-          cellSelectionKeys?.has(getCellKey(rowId, columnId)) ?? false;
+        const isCellSelected = cellSelectionKey !== "" && cell.getIsSelected();
+        const isUtilityCell =
+          typeof cell.column.columnDef.header === "function";
 
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
@@ -261,6 +262,7 @@ function DataGridRowImpl<TData extends RowData>({
             key={cell.id}
             role="gridcell"
             aria-colindex={colIndex + 1}
+            aria-selected={isUtilityCell ? undefined : isCellSelected}
             data-slot="grid-cell"
             data-column-id={columnId}
             data-highlighted={isCellFocused ? "" : undefined}
@@ -275,7 +277,7 @@ function DataGridRowImpl<TData extends RowData>({
               width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >
-            {typeof cell.column.columnDef.header === "function" ? (
+            {isUtilityCell ? (
               <DataGridUtilityCell
                 cell={cell}
                 tableMeta={tableMeta}

@@ -35,7 +35,7 @@ export function DataGridContextMenu<TData extends RowData>({
   contextMenu,
 }: DataGridContextMenuProps<TData>) {
   const onContextMenuOpenChange = tableMeta?.onContextMenuOpenChange;
-  const selectionState = tableMeta?.selectionState;
+  const getSelectedCellKeys = tableMeta?.getSelectedCellKeys;
   const dataGridRef = tableMeta?.dataGridRef;
   const onDataUpdate = tableMeta?.onDataUpdate;
   const onRowsDelete = tableMeta?.onRowsDelete;
@@ -51,7 +51,7 @@ export function DataGridContextMenu<TData extends RowData>({
       dataGridRef={dataGridRef}
       contextMenu={contextMenu}
       onContextMenuOpenChange={onContextMenuOpenChange}
-      selectionState={selectionState}
+      getSelectedCellKeys={getSelectedCellKeys}
       onDataUpdate={onDataUpdate}
       onRowsDelete={onRowsDelete}
       onCellsCopy={onCellsCopy}
@@ -66,7 +66,7 @@ interface ContextMenuProps<TData extends RowData>
       DataGridTableMeta,
       | "dataGridRef"
       | "onContextMenuOpenChange"
-      | "selectionState"
+      | "getSelectedCellKeys"
       | "onDataUpdate"
       | "onRowsDelete"
       | "onCellsCopy"
@@ -84,10 +84,6 @@ const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
   if (prev.contextMenu.x !== next.contextMenu.x) return false;
   if (prev.contextMenu.y !== next.contextMenu.y) return false;
 
-  const prevSize = prev.selectionState?.selectedCells?.size ?? 0;
-  const nextSize = next.selectionState?.selectedCells?.size ?? 0;
-  if (prevSize !== nextSize) return false;
-
   return true;
 }) as typeof ContextMenuImpl;
 
@@ -97,7 +93,7 @@ function ContextMenuImpl<TData extends RowData>({
   dataGridRef,
   contextMenu,
   onContextMenuOpenChange,
-  selectionState,
+  getSelectedCellKeys,
   onDataUpdate,
   onRowsDelete,
   onCellsCopy,
@@ -105,7 +101,7 @@ function ContextMenuImpl<TData extends RowData>({
 }: ContextMenuProps<TData>) {
   const propsRef = useAsRef({
     dataGridRef,
-    selectionState,
+    getSelectedCellKeys,
     onDataUpdate,
     onRowsDelete,
     onCellsCopy,
@@ -149,17 +145,14 @@ function ContextMenuImpl<TData extends RowData>({
   }, [propsRef]);
 
   const onClear = React.useCallback(() => {
-    const { selectionState, columns, onDataUpdate } = propsRef.current;
+    const { getSelectedCellKeys, columns, onDataUpdate } = propsRef.current;
 
-    if (
-      !selectionState?.selectedCells ||
-      selectionState.selectedCells.size === 0
-    )
-      return;
+    const selectedCellKeys = getSelectedCellKeys?.() ?? [];
+    if (selectedCellKeys.length === 0) return;
 
     const updates: Array<CellUpdate> = [];
 
-    for (const cellKey of selectionState.selectedCells) {
+    for (const cellKey of selectedCellKeys) {
       const { rowId, columnId } = parseCellKey(cellKey);
 
       // Get column from columns array
@@ -183,16 +176,13 @@ function ContextMenuImpl<TData extends RowData>({
   }, [propsRef]);
 
   const onDelete = React.useCallback(async () => {
-    const { selectionState, onRowsDelete } = propsRef.current;
+    const { getSelectedCellKeys, onRowsDelete } = propsRef.current;
 
-    if (
-      !selectionState?.selectedCells ||
-      selectionState.selectedCells.size === 0
-    )
-      return;
+    const selectedCellKeys = getSelectedCellKeys?.() ?? [];
+    if (selectedCellKeys.length === 0) return;
 
     const rowIds = new Set<string>();
-    for (const cellKey of selectionState.selectedCells) {
+    for (const cellKey of selectedCellKeys) {
       rowIds.add(parseCellKey(cellKey).rowId);
     }
 

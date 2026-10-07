@@ -1,4 +1,5 @@
 import type {
+  CellSelectionBounds,
   Column,
   ColumnOrderState,
   ColumnPinningState,
@@ -98,6 +99,22 @@ export function parseCellKey(cellKey: string): CellPosition {
     rowId: cellKey.slice(0, separatorIndex),
     columnId: cellKey.slice(separatorIndex + CELL_KEY_SEPARATOR.length),
   };
+}
+
+/**
+ * Column spans of the selection rectangles crossing a row, `""` when none do.
+ * Equal keys mean the row's selected cells are unchanged.
+ */
+export function getRowCellSelectionKey(
+  bounds: Array<CellSelectionBounds>,
+  rowIndex: number,
+) {
+  let key = "";
+  for (const bound of bounds) {
+    if (rowIndex < bound.minRowIndex || rowIndex > bound.maxRowIndex) continue;
+    key += `${bound.minColumnIndex}:${bound.maxColumnIndex},`;
+  }
+  return key;
 }
 
 /** Position of a row in the rendered row model, or `-1` if it isn't rendered. */
