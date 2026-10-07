@@ -216,6 +216,10 @@ function DataGridKeyboardShortcutsImpl({
             keys: ["Double Click"],
             description: "Start editing cell",
           },
+          {
+            keys: [modKey, "Enter"],
+            description: "Open link (in URL cell)",
+          },
           ...(enableRowAdd
             ? [
                 {

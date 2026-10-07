@@ -2717,13 +2717,10 @@ function useDataGrid<TData extends RowData>({
             focusHeaderAt(headerIndex - 1);
           } else if (headerIndex < headerColumnIds.length - 1) {
             focusHeaderAt(headerIndex + 1);
-          } else if (rowCount > 0) {
-            void onScrollToRow({
-              rowIndex: 0,
-              columnId: navigableColumnIds[0],
-            });
           } else {
-            return true;
+            const firstColumnId = navigableColumnIds[0];
+            if (rowCount === 0 || !firstColumnId) return true;
+            void onScrollToRow({ rowIndex: 0, columnId: firstColumnId });
           }
           break;
         default:

@@ -621,6 +621,19 @@ export function UrlCell<TData extends RowData>({
         }
       } else if (
         isFocused &&
+        event.key === "Enter" &&
+        (event.ctrlKey || event.metaKey)
+      ) {
+        event.preventDefault();
+        if (!value) return;
+        const href = getUrlHref(value);
+        if (href) {
+          window.open(href, "_blank", "noopener,noreferrer");
+        } else {
+          toastDangerousUrl();
+        }
+      } else if (
+        isFocused &&
         !readOnly &&
         event.key.length === 1 &&
         !event.ctrlKey &&
@@ -646,6 +659,7 @@ export function UrlCell<TData extends RowData>({
       isEditing,
       isFocused,
       initialValue,
+      value,
       tableMeta,
       rowIndex,
       columnId,
@@ -664,10 +678,7 @@ export function UrlCell<TData extends RowData>({
       const href = getUrlHref(value);
       if (!href) {
         event.preventDefault();
-        toast.error("Invalid URL", {
-          description:
-            "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
-        });
+        toastDangerousUrl();
         return;
       }
 
@@ -2144,4 +2155,11 @@ export function FileCell<TData extends RowData>({
       ) : null}
     </DataGridCellWrapper>
   );
+}
+
+function toastDangerousUrl() {
+  toast.error("Invalid URL", {
+    description:
+      "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
+  });
 }
