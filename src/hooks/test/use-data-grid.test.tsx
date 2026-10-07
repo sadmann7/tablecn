@@ -64,6 +64,17 @@ const columnsWithSelect: ColumnDef<DataGridFeatures, TestData>[] = [
   { id: "actions" },
 ];
 
+function startEditing(
+  table: ReturnType<typeof useDataGrid<TestData>>["table"],
+  rowId: string,
+  columnId: string,
+) {
+  table
+    .getCoreRowModel()
+    .rowsById[rowId]?.getAllCellsByColumnId()
+    [columnId]?.startEditing();
+}
+
 function createWrapper() {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
@@ -162,8 +173,6 @@ describe("useDataGrid", () => {
       const meta = result.current.tableMeta;
       expect(meta.onCellClick).toBeDefined();
       expect(meta.onCellDoubleClick).toBeDefined();
-      expect(meta.onCellEditingStart).toBeDefined();
-      expect(meta.onCellEditingStop).toBeDefined();
       expect(meta.onCellsCopy).toBeDefined();
       expect(meta.onCellsCut).toBeDefined();
       expect(meta.onCellsPaste).toBeDefined();
@@ -250,7 +259,7 @@ describe("useDataGrid", () => {
       });
     });
 
-    it("should start editing via onCellEditingStart", () => {
+    it("should start editing via cell.startEditing", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -261,7 +270,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       expect(result.current.editingCell).toEqual({
@@ -270,7 +279,7 @@ describe("useDataGrid", () => {
       });
     });
 
-    it("should stop editing via onCellEditingStop", async () => {
+    it("should stop editing via table.stopEditing", async () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -281,13 +290,13 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       expect(result.current.editingCell).not.toBeNull();
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.();
+        result.current.table.stopEditing();
       });
 
       expect(result.current.editingCell).toBeNull();
@@ -305,7 +314,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       expect(result.current.editingCell).toBeNull();
@@ -372,7 +381,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.();
+        result.current.table.stopEditing();
         await Promise.resolve();
       });
 
@@ -443,7 +452,7 @@ describe("useDataGrid", () => {
       rerender({ onEditingCellChange: secondOnChange });
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       expect(firstOnChange).not.toHaveBeenCalled();
@@ -488,7 +497,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
         result.current.table.updateCells({
           rowId: "0",
           columnId: "name",
@@ -525,7 +534,7 @@ describe("useDataGrid", () => {
       expect(result.current.table.getColumn("trick")?.getCanEdit()).toBe(true);
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       expect(result.current.editingCell).toBeNull();
@@ -2550,7 +2559,7 @@ describe("useDataGrid", () => {
 
       // Start editing
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       expect(result.current.editingCell).toEqual({
@@ -2560,7 +2569,7 @@ describe("useDataGrid", () => {
 
       // Stop editing and move to next row
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.({ moveToNextRow: true });
+        result.current.table.stopEditing({ moveToNextRow: true });
       });
 
       expect(result.current.editingCell).toBeNull();
@@ -2582,12 +2591,12 @@ describe("useDataGrid", () => {
 
       // Start editing
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       // Stop editing and navigate right
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.({ direction: "right" });
+        result.current.table.stopEditing({ direction: "right" });
       });
 
       expect(result.current.editingCell).toBeNull();
@@ -2704,7 +2713,7 @@ describe("useDataGrid", () => {
 
       act(() => {
         result.current.tableMeta.onCellClick?.("0", "name");
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
       expect(result.current.editingCell).not.toBeNull();
 

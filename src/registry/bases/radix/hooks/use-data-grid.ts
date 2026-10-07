@@ -1231,32 +1231,12 @@ function useDataGrid<TData extends RowData>({
     [store],
   );
 
-  const onCellEditingStart = React.useCallback(
-    (rowId: string, columnId: string) => {
-      const currentTable = tableRef.current;
-      if (!currentTable || !getCanEditColumnId(currentTable, columnId)) return;
-
-      currentTable.setFocusedCell(rowId, columnId);
-      currentTable.setEditingCell({ rowId, columnId });
-    },
-    [],
-  );
-
-  const onCellEditingStop = React.useCallback(
-    (opts?: { moveToNextRow?: boolean; direction?: NavigationDirection }) => {
-      const currentTable = tableRef.current;
-      if (!currentTable?.getEditingCell()) return;
-
-      currentTable.setEditingCell(null);
-
-      const direction = opts?.moveToNextRow ? "down" : opts?.direction;
-      if (direction) currentTable.navigate(direction);
-
-      const focusedCell = getFocusedCell();
-      if (focusedCell) focusCellElement(focusedCell, Boolean(direction));
-    },
-    [getFocusedCell, focusCellElement],
-  );
+  const startEditing = React.useCallback((rowId: string, columnId: string) => {
+    tableRef.current
+      ?.getCoreRowModel()
+      .rowsById[rowId]?.getAllCellsByColumnId()
+      [columnId]?.startEditing();
+  }, []);
 
   const onSearchOpenChange = React.useCallback(
     (open: boolean) => {
@@ -1484,7 +1464,7 @@ function useDataGrid<TData extends RowData>({
         currentFocused?.rowId === rowId &&
         currentFocused?.columnId === columnId
       ) {
-        onCellEditingStart(rowId, columnId);
+        startEditing(rowId, columnId);
       } else {
         focusCell(rowId, columnId);
       }
@@ -1493,7 +1473,7 @@ function useDataGrid<TData extends RowData>({
       store,
       focusCell,
       focusCellElement,
-      onCellEditingStart,
+      startEditing,
       extendSelection,
       getIsCellSelected,
     ],
@@ -1503,9 +1483,9 @@ function useDataGrid<TData extends RowData>({
     (rowId: string, columnId: string, event?: React.MouseEvent) => {
       if (event?.defaultPrevented) return;
 
-      onCellEditingStart(rowId, columnId);
+      startEditing(rowId, columnId);
     },
-    [onCellEditingStart],
+    [startEditing],
   );
 
   const onCellMouseDown = React.useCallback(
@@ -1873,8 +1853,6 @@ function useDataGrid<TData extends RowData>({
       onCellMouseEnter,
       onCellMouseUp,
       onCellContextMenu,
-      onCellEditingStart,
-      onCellEditingStop,
       onCellsCopy,
       onCellsCut,
       onCellsPaste,
@@ -1903,8 +1881,6 @@ function useDataGrid<TData extends RowData>({
     onCellMouseEnter,
     onCellMouseUp,
     onCellContextMenu,
-    onCellEditingStart,
-    onCellEditingStop,
     onCellsCopy,
     onCellsCut,
     onCellsPaste,
@@ -2777,7 +2753,7 @@ function useDataGrid<TData extends RowData>({
     };
   }, [getFocusedCell, focusCellElement]);
 
-  // Moves DOM focus and scroll position to follow the table's cell selection state
+  // Moves DOM focus and scroll position to follow the table's selection and editing state
   React.useEffect(() => {
     let prevFocusKey: string | null = null;
     let prevEdgeKey: string | null = null;
@@ -2813,7 +2789,24 @@ function useDataGrid<TData extends RowData>({
       }
     });
 
-    return () => subscription.unsubscribe();
+    let prevEditingCell = table.atoms.editingCell.get();
+    const editingSubscription = table.atoms.editingCell.subscribe(() => {
+      const editingCell = table.atoms.editingCell.get();
+      const wasEditing = !!prevEditingCell;
+      prevEditingCell = editingCell;
+      if (!wasEditing || editingCell) return;
+
+      // Editors may live in portals outside the grid, so focus returns to the cell unconditionally
+      const focusedCell = getFocusedCellPosition(
+        table.atoms.cellSelection.get(),
+      );
+      if (focusedCell) focusCellElement(focusedCell, false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      editingSubscription.unsubscribe();
+    };
   }, [table, store, revealCell, focusCellElement]);
 
   // Focuses a cell requested before its row was rendered, once it mounts
