@@ -27,12 +27,17 @@ import {
 
 import type {
   CellPosition,
+  CellUpdate,
   DataGridColumnMeta,
   DataGridTableMeta,
   RowHeightValue,
 } from "@/lib/data-grid-types";
 
-import { getLineCount, getRowHeightValue } from "@/lib/data-grid-utils";
+import {
+  getEmptyCellValue,
+  getLineCount,
+  getRowHeightValue,
+} from "@/lib/data-grid-utils";
 
 const DEFAULT_ROW_HEIGHT: RowHeightValue = "short";
 
@@ -80,10 +85,33 @@ interface Cell_DataGridCellEditing {
   getIsEditing: () => boolean;
 }
 
+interface TableOptions_DataGridData<TData extends RowData> {
+  /** Disables every data mutation, including cell edits and row deletion. */
+  readOnly?: boolean;
+  onDataChange?: (data: TData[]) => void;
+  onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
+}
+
+interface Table_DataGridData {
+  getIsReadOnly: () => boolean;
+  /** Writes values into editable cells and emits the next `data` through `onDataChange`. */
+  updateCells: (updates: CellUpdate | Array<CellUpdate>) => void;
+  /** Resets cells to their variant's empty value. */
+  clearCells: (cells: Array<CellPosition>) => void;
+  /** Deletes rows through `onRowsDelete`, then moves focus to the row that takes their place. */
+  deleteRows: (rowIds: string[]) => Promise<void>;
+}
+
+interface Cell_DataGridData {
+  setValue: (value: unknown) => void;
+  clearValue: () => void;
+}
+
 declare module "@tanstack/react-table" {
   interface Plugins {
     dataGridRowHeightFeature: TableFeature;
     dataGridCellEditingFeature: TableFeature;
+    dataGridDataFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
@@ -97,6 +125,7 @@ declare module "@tanstack/react-table" {
   > {
     dataGridRowHeightFeature: TableOptions_DataGridRowHeight;
     dataGridCellEditingFeature: TableOptions_DataGridCellEditing;
+    dataGridDataFeature: TableOptions_DataGridData<TData>;
   }
 
   interface ColumnDef_FeatureMap<
@@ -113,6 +142,7 @@ declare module "@tanstack/react-table" {
   > {
     dataGridRowHeightFeature: Table_DataGridRowHeight;
     dataGridCellEditingFeature: Table_DataGridCellEditing;
+    dataGridDataFeature: Table_DataGridData;
   }
 
   interface Column_FeatureMap<
@@ -124,6 +154,7 @@ declare module "@tanstack/react-table" {
 
   interface Cell_FeatureMap {
     dataGridCellEditingFeature: Cell_DataGridCellEditing;
+    dataGridDataFeature: Cell_DataGridData;
   }
 }
 
@@ -179,8 +210,10 @@ function getCanEditColumn(column: {
   table: object;
   columnDef: ColumnDef_DataGridCellEditing;
 }) {
+  const { options } = asDataGrid(column.table);
   return (
-    asDataGrid(column.table).options.enableCellEditing !== false &&
+    !options.readOnly &&
+    options.enableCellEditing !== false &&
     column.columnDef.enableCellEditing !== false
   );
 }
@@ -229,16 +262,148 @@ const dataGridCellEditingFeature: TableFeature = {
           getCanEditColumn(cell.column),
       },
       cell_getIsEditing: {
-        fn: (cell: {
-          table: object;
-          row: { id: string };
-          column: { id: string };
-        }) => {
+        fn: (cell: DataGridCellRef) => {
           const editingCell = asDataGrid(cell.table).atoms.editingCell.get();
           return (
             editingCell?.rowId === cell.row.id &&
             editingCell.columnId === cell.column.id
           );
+        },
+      },
+    });
+  },
+};
+
+interface DataGridCellRef {
+  table: object;
+  row: { id: string };
+  column: { id: string };
+}
+
+function getCanEditCell(table: DataGridInstance, columnId: string) {
+  const column = table.getAllFlatColumnsById()[columnId];
+  return column
+    ? column.getCanEdit()
+    : !table.options.readOnly && table.options.enableCellEditing !== false;
+}
+
+function updateCells(
+  table: DataGridInstance,
+  updates: CellUpdate | Array<CellUpdate>,
+) {
+  const updateArray = Array.isArray(updates) ? updates : [updates];
+  if (table.options.readOnly || updateArray.length === 0) return;
+
+  const data = table.options.data;
+  const rowsById = table.getCoreRowModel().rowsById;
+  const updatedRows = new Map<number, Record<string, unknown>>();
+
+  for (const { rowId, columnId, value } of updateArray) {
+    const row = rowsById[rowId];
+    if (!row || !getCanEditCell(table, columnId)) continue;
+
+    let updatedRow = updatedRows.get(row.index);
+    if (!updatedRow) {
+      updatedRow = { ...(data[row.index] ?? row.original) } as Record<
+        string,
+        unknown
+      >;
+      updatedRows.set(row.index, updatedRow);
+    }
+    updatedRow[columnId] = value;
+  }
+
+  if (updatedRows.size === 0) return;
+
+  const nextData = [...data];
+  for (const [index, row] of updatedRows) {
+    nextData[index] = row;
+  }
+  table.options.onDataChange?.(nextData);
+}
+
+function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
+  const column = table.getAllFlatColumnsById()[columnId];
+  return getEmptyCellValue(column?.columnDef.meta?.cell?.variant);
+}
+
+async function deleteRows(table: DataGridInstance, rowIds: string[]) {
+  const { readOnly, onRowsDelete } = table.options;
+  if (readOnly || !onRowsDelete || rowIds.length === 0) return;
+
+  const rowIdSet = new Set(rowIds);
+  const rows = table.getRowModel().rows;
+  const deletedRows = rows.filter((row) => rowIdSet.has(row.id));
+  const firstDeletedRow = deletedRows[0];
+  if (!firstDeletedRow) return;
+
+  const remainingRows = rows.filter((row) => !rowIdSet.has(row.id));
+  const nextFocusedRow =
+    remainingRows[
+      Math.min(firstDeletedRow.getDisplayIndex(), remainingRows.length - 1)
+    ];
+  const focusedColumnId = table.getFocusedCell()?.column.id;
+
+  await onRowsDelete(
+    deletedRows.map((row) => row.original),
+    deletedRows.map((row) => row.id),
+  );
+
+  table.resetEditingCell(true);
+  table.resetRowSelection(true);
+  if (nextFocusedRow && focusedColumnId) {
+    table.setFocusedCell(nextFocusedRow.id, focusedColumnId);
+  } else {
+    table.resetCellSelection(true);
+  }
+}
+
+const dataGridDataFeature: TableFeature = {
+  constructTableAPIs: (table) => {
+    const instance = asDataGrid(table);
+
+    assignTableAPIs("dataGridDataFeature", table, {
+      table_getIsReadOnly: {
+        fn: () => !!instance.options.readOnly,
+      },
+      table_updateCells: {
+        fn: (updates: CellUpdate | Array<CellUpdate>) =>
+          updateCells(instance, updates),
+      },
+      table_clearCells: {
+        fn: (cells: Array<CellPosition>) =>
+          updateCells(
+            instance,
+            cells.map(({ rowId, columnId }) => ({
+              rowId,
+              columnId,
+              value: getEmptyValueForColumn(instance, columnId),
+            })),
+          ),
+      },
+      table_deleteRows: {
+        fn: (rowIds: string[]) => deleteRows(instance, rowIds),
+      },
+    });
+  },
+  assignCellPrototype: (prototype, table) => {
+    assignPrototypeAPIs("dataGridDataFeature", prototype, table, {
+      cell_setValue: {
+        fn: (cell: DataGridCellRef, value: unknown) =>
+          updateCells(asDataGrid(cell.table), {
+            rowId: cell.row.id,
+            columnId: cell.column.id,
+            value,
+          }),
+      },
+      cell_clearValue: {
+        fn: (cell: DataGridCellRef) => {
+          const instance = asDataGrid(cell.table);
+          updateCells(instance, {
+            rowId: cell.row.id,
+            columnId: cell.column.id,
+            value: getEmptyValueForColumn(instance, cell.column.id),
+          });
         },
       },
     });
@@ -257,6 +422,7 @@ export const dataGridFeatures = tableFeatures({
   rowSortingFeature,
   dataGridRowHeightFeature,
   dataGridCellEditingFeature,
+  dataGridDataFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   tableMeta: metaHelper<DataGridTableMeta>(),
