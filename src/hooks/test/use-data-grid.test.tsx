@@ -309,6 +309,271 @@ describe("useDataGrid", () => {
       });
 
       expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getColumn("name")?.getCanEdit()).toBe(false);
+    });
+
+    it("should expose editing state through the table API", async () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await act(async () => {
+        result.current.table.setEditingCell({ rowId: "1", columnId: "trick" });
+        await Promise.resolve();
+      });
+
+      expect(result.current.editingCell).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
+      expect(result.current.tableMeta.editingCell).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
+
+      const cells = result.current.table.getRow("1").getAllCells();
+      expect(
+        cells.find((cell) => cell.column.id === "trick")?.getIsEditing(),
+      ).toBe(true);
+      expect(
+        cells.find((cell) => cell.column.id === "name")?.getIsEditing(),
+      ).toBe(false);
+
+      await act(async () => {
+        result.current.table.resetEditingCell();
+        await Promise.resolve();
+      });
+
+      expect(result.current.editingCell).toBeNull();
+    });
+
+    it("should support controlled editing state", async () => {
+      const onEditingCellChange = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            state: { editingCell: { rowId: "0", columnId: "name" } },
+            onEditingCellChange,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      expect(result.current.editingCell).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+
+      await act(async () => {
+        result.current.tableMeta.onCellEditingStop?.();
+        await Promise.resolve();
+      });
+
+      expect(onEditingCellChange).toHaveBeenCalled();
+      const updater = onEditingCellChange.mock.calls.at(-1)?.[0];
+      expect(
+        typeof updater === "function"
+          ? updater({ rowId: "0", columnId: "name" })
+          : updater,
+      ).toBeNull();
+      expect(result.current.editingCell).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+    });
+
+    it("should follow controlled editing state across renders", () => {
+      const { result, rerender } = renderHook(
+        ({
+          editingCell,
+        }: {
+          editingCell: { rowId: string; columnId: string } | null;
+        }) =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            state: { editingCell },
+            onEditingCellChange: vi.fn(),
+          }),
+        {
+          wrapper: createWrapper(),
+          initialProps: {
+            editingCell: { rowId: "0", columnId: "name" } as {
+              rowId: string;
+              columnId: string;
+            } | null,
+          },
+        },
+      );
+
+      expect(result.current.editingCell).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+
+      rerender({ editingCell: null });
+
+      expect(result.current.editingCell).toBeNull();
+    });
+
+    it("should call the latest onEditingCellChange", async () => {
+      const firstOnChange = vi.fn();
+      const secondOnChange = vi.fn();
+
+      const { result, rerender } = renderHook(
+        ({ onEditingCellChange }: { onEditingCellChange: () => void }) =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onEditingCellChange,
+          }),
+        {
+          wrapper: createWrapper(),
+          initialProps: { onEditingCellChange: firstOnChange },
+        },
+      );
+
+      rerender({ onEditingCellChange: secondOnChange });
+
+      await act(async () => {
+        result.current.tableMeta.onCellEditingStart?.("0", "name");
+      });
+
+      expect(firstOnChange).not.toHaveBeenCalled();
+      expect(secondOnChange).toHaveBeenCalledTimes(1);
+    });
+
+    it("should update read-only column ids when editing permissions change", () => {
+      const { result, rerender } = renderHook(
+        ({ enableCellEditing }: { enableCellEditing: boolean }) =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableCellEditing,
+          }),
+        {
+          wrapper: createWrapper(),
+          initialProps: { enableCellEditing: false },
+        },
+      );
+
+      const disabledIds = result.current.readOnlyColumnIds;
+      expect(disabledIds.has("name")).toBe(true);
+
+      rerender({ enableCellEditing: true });
+
+      expect(result.current.readOnlyColumnIds).not.toBe(disabledIds);
+      expect(result.current.readOnlyColumnIds.size).toBe(0);
+    });
+
+    it("should not edit when cell editing is disabled for the table", () => {
+      const onDataChange = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableCellEditing: false,
+            onDataChange,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        result.current.tableMeta.onDataUpdate?.({
+          rowId: "0",
+          columnId: "name",
+          value: "Changed",
+        });
+      });
+
+      expect(result.current.editingCell).toBeNull();
+      expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("should not edit columns with cell editing disabled", () => {
+      const onDataChange = vi.fn();
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name", enableCellEditing: false },
+        { id: "trick", accessorKey: "trick" },
+      ];
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns,
+            onDataChange,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      const row = result.current.table.getRow("0");
+      const nameCell = row
+        .getAllCells()
+        .find((cell) => cell.column.id === "name");
+      expect(nameCell?.getCanEdit()).toBe(false);
+      expect(result.current.table.getColumn("trick")?.getCanEdit()).toBe(true);
+
+      act(() => {
+        result.current.tableMeta.onCellEditingStart?.("0", "name");
+      });
+
+      expect(result.current.editingCell).toBeNull();
+
+      act(() => {
+        result.current.tableMeta.onDataUpdate?.([
+          { rowId: "0", columnId: "name", value: "Changed" },
+          { rowId: "0", columnId: "trick", value: "Ollie" },
+        ]);
+      });
+
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const updatedRow = onDataChange.mock.calls[0]?.[0]?.[0];
+      expect(updatedRow).toMatchObject({ name: "Tony Hawk", trick: "Ollie" });
+    });
+
+    it("should skip read-only columns when pasting", async () => {
+      const onDataChange = vi.fn();
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name", enableCellEditing: false },
+        { id: "trick", accessorKey: "trick" },
+      ];
+      mockClipboard.readText.mockResolvedValue("New Name\tNew Trick");
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns,
+            onDataChange,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      await act(async () => {
+        result.current.tableMeta.onCellClick?.("0", "name");
+      });
+
+      await act(async () => {
+        result.current.tableMeta.onCellsPaste?.();
+      });
+
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const updatedRow = onDataChange.mock.calls[0]?.[0]?.[0];
+      expect(updatedRow).toMatchObject({
+        name: "Tony Hawk",
+        trick: "New Trick",
+      });
     });
   });
 
@@ -1310,6 +1575,95 @@ describe("useDataGrid", () => {
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
+    });
+
+    it("should keep cut sources whose destinations were skipped", async () => {
+      const onDataChange = vi.fn();
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name" },
+        { id: "trick", accessorKey: "trick" },
+        { id: "score", accessorKey: "score", enableCellEditing: false },
+      ];
+
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+          button: 0,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+      act(() => {
+        result.current.tableMeta.onCellMouseEnter?.("0", "trick");
+      });
+
+      await act(async () => {
+        result.current.tableMeta.onCellsCut?.();
+      });
+
+      expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk\t900");
+      mockClipboard.readText.mockResolvedValue("Tony Hawk\t900");
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("1", "trick");
+      });
+
+      await act(async () => {
+        result.current.tableMeta.onCellsPaste?.();
+      });
+
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const [firstRow, secondRow] = onDataChange.mock.calls[0]?.[0] ?? [];
+      expect(firstRow).toMatchObject({ name: "", trick: "900" });
+      expect(secondRow).toMatchObject({ trick: "Tony Hawk", score: 98 });
+    });
+
+    it("should not clear cut sources that were pasted over", async () => {
+      const onDataChange = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns: testColumns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+          button: 0,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+      act(() => {
+        result.current.tableMeta.onCellMouseEnter?.("1", "name");
+      });
+
+      await act(async () => {
+        result.current.tableMeta.onCellsCut?.();
+      });
+
+      expect(mockClipboard.writeText).toHaveBeenCalledWith(
+        "Tony Hawk\nRodney Mullen",
+      );
+      mockClipboard.readText.mockResolvedValue("Tony Hawk\nRodney Mullen");
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("1", "name");
+      });
+
+      await act(async () => {
+        result.current.tableMeta.onCellsPaste?.();
+      });
+
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const nextData = onDataChange.mock.calls[0]?.[0] ?? [];
+      expect(nextData.map((row: TestData) => row.name)).toEqual([
+        "",
+        "Tony Hawk",
+        "Rodney Mullen",
+      ]);
     });
 
     it("should copy selected cells when multiple cells are selected", async () => {
