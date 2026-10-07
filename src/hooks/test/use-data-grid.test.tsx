@@ -3170,6 +3170,9 @@ describe("useDataGrid", () => {
       });
 
       expect(onSortingChange).toHaveBeenCalled();
+      expect(result.current.table.state.sorting).toEqual([
+        { id: "name", desc: false },
+      ]);
     });
 
     it("should call onColumnFiltersChange when filters change", () => {
