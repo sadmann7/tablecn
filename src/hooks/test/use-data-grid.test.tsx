@@ -1128,8 +1128,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // onRowAdd should still be defined on tableMeta (for internal use)
-      // but the hook's returned onRowAdd checks readOnly internally
+      // The returned onRowAdd checks readOnly internally
       expect(result.current.onRowAdd).toBeDefined();
     });
 
@@ -3212,7 +3211,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesUpload).toBeDefined();
+      expect(result.current.table.options.onFilesUpload).toBeDefined();
     });
 
     it("should not provide onFilesUpload when prop is not provided", () => {
@@ -3225,7 +3224,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesUpload).toBeUndefined();
+      expect(result.current.table.options.onFilesUpload).toBeUndefined();
     });
 
     it("should provide onFilesDelete when prop is provided", () => {
@@ -3241,7 +3240,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesDelete).toBeDefined();
+      expect(result.current.table.options.onFilesDelete).toBeDefined();
     });
 
     it("should not provide onFilesDelete when prop is not provided", () => {
@@ -3254,7 +3253,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesDelete).toBeUndefined();
+      expect(result.current.table.options.onFilesDelete).toBeUndefined();
     });
   });
 

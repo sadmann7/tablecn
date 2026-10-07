@@ -23,9 +23,7 @@ import { toast } from "sonner";
 
 import type {
   CellPosition,
-  DataGridTableMeta,
   Direction,
-  FileCellData,
   NavigationDirection,
 } from "@/lib/data-grid-types";
 
@@ -129,16 +127,6 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
     event?: React.MouseEvent<HTMLDivElement>,
   ) => RowAddResult | Promise<RowAddResult | null> | null;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
-  onFilesUpload?: (params: {
-    files: File[];
-    rowId: string;
-    columnId: string;
-  }) => Promise<FileCellData[]>;
-  onFilesDelete?: (params: {
-    fileIds: string[];
-    rowId: string;
-    columnId: string;
-  }) => void | Promise<void>;
   overscan?: number;
   dir?: Direction;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -635,15 +623,6 @@ function useDataGrid<TData extends RowData>({
     onCellContextMenu,
   ]);
 
-  const tableMeta = React.useMemo<DataGridTableMeta>(
-    () => ({
-      ...propsRef.current.meta,
-      onFilesUpload: propsRef.current.onFilesUpload,
-      onFilesDelete: propsRef.current.onFilesDelete,
-    }),
-    [propsRef],
-  );
-
   const tableColumns = React.useMemo(
     () =>
       columns.map((column) =>
@@ -708,7 +687,6 @@ function useDataGrid<TData extends RowData>({
       columnResizeMode: "onChange",
       columnResizeDirection: dir,
       dir,
-      meta: tableMeta,
     };
   }, [
     propsRef,
@@ -727,7 +705,6 @@ function useDataGrid<TData extends RowData>({
     onColumnVisibilityChange,
     onColumnPinningChange,
     onColumnOrderChange,
-    tableMeta,
   ]);
 
   const table = useTable(tableOptions);
@@ -1906,7 +1883,6 @@ function useDataGrid<TData extends RowData>({
       footerRef,
       dir,
       table,
-      tableMeta,
       gridBodyProps,
       scrollToCell,
       virtualTotalSize,
@@ -1928,7 +1904,6 @@ function useDataGrid<TData extends RowData>({
       propsRef,
       dir,
       table,
-      tableMeta,
       gridBodyProps,
       scrollToCell,
       virtualTotalSize,

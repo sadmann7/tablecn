@@ -53,7 +53,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 export function ShortTextCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -173,7 +172,6 @@ export function ShortTextCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
@@ -207,7 +205,6 @@ export function ShortTextCell<TData extends RowData>({
 
 export function LongTextCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -364,7 +361,6 @@ export function LongTextCell<TData extends RowData>({
         <DataGridCellWrapper<TData>
           ref={containerRef}
           cell={cell}
-          tableMeta={tableMeta}
           rowId={rowId}
           columnId={columnId}
           rowHeight={rowHeight}
@@ -403,7 +399,6 @@ export function LongTextCell<TData extends RowData>({
 
 export function NumberCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -499,7 +494,6 @@ export function NumberCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
@@ -532,7 +526,6 @@ export function NumberCell<TData extends RowData>({
 
 export function UrlCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -689,7 +682,6 @@ export function UrlCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
@@ -743,7 +735,6 @@ export function UrlCell<TData extends RowData>({
 
 export function CheckboxCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -820,7 +811,6 @@ export function CheckboxCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
@@ -850,7 +840,6 @@ export function CheckboxCell<TData extends RowData>({
 
 export function SelectCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -926,7 +915,6 @@ export function SelectCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
@@ -989,7 +977,6 @@ export function SelectCell<TData extends RowData>({
 
 export function MultiSelectCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -1163,7 +1150,6 @@ export function MultiSelectCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
@@ -1291,7 +1277,6 @@ export function MultiSelectCell<TData extends RowData>({
 
 export function DateCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -1359,7 +1344,6 @@ export function DateCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}
@@ -1401,7 +1385,6 @@ export function DateCell<TData extends RowData>({
 
 export function FileCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   rowHeight,
@@ -1567,9 +1550,9 @@ export function FileCell<TData extends RowData>({
 
           let uploadedFiles: FileCellData[] = [];
 
-          if (tableMeta?.onFilesUpload) {
+          if (cell.table.options.onFilesUpload) {
             try {
-              uploadedFiles = await tableMeta.onFilesUpload({
+              uploadedFiles = await cell.table.options.onFilesUpload({
                 files: filesToValidate,
                 rowId,
                 columnId,
@@ -1620,17 +1603,7 @@ export function FileCell<TData extends RowData>({
         }
       }
     },
-    [
-      cell,
-      files,
-      maxFiles,
-      validateFile,
-      tableMeta,
-      rowId,
-      columnId,
-      readOnly,
-      isPending,
-    ],
+    [cell, files, maxFiles, validateFile, rowId, columnId, readOnly, isPending],
   );
 
   const removeFile = React.useCallback(
@@ -1643,9 +1616,9 @@ export function FileCell<TData extends RowData>({
 
       setDeletingFiles((prev) => new Set(prev).add(fileId));
 
-      if (tableMeta?.onFilesDelete) {
+      if (cell.table.options.onFilesDelete) {
         try {
-          await tableMeta.onFilesDelete({
+          await cell.table.options.onFilesDelete({
             fileIds: [fileId],
             rowId,
             columnId,
@@ -1678,7 +1651,7 @@ export function FileCell<TData extends RowData>({
       });
       cell.setValue(updatedFiles);
     },
-    [cell, files, tableMeta, rowId, columnId, readOnly, isPending],
+    [cell, files, rowId, columnId, readOnly, isPending],
   );
 
   const clearAll = React.useCallback(async () => {
@@ -1688,9 +1661,9 @@ export function FileCell<TData extends RowData>({
     const fileIds = files.map((f) => f.id);
     setDeletingFiles(new Set(fileIds));
 
-    if (tableMeta?.onFilesDelete && files.length > 0) {
+    if (cell.table.options.onFilesDelete && files.length > 0) {
       try {
-        await tableMeta.onFilesDelete({
+        await cell.table.options.onFilesDelete({
           fileIds,
           rowId,
           columnId,
@@ -1712,7 +1685,7 @@ export function FileCell<TData extends RowData>({
     setFiles([]);
     setDeletingFiles(new Set());
     cell.setValue([]);
-  }, [cell, files, tableMeta, rowId, columnId, readOnly, isPending]);
+  }, [cell, files, rowId, columnId, readOnly, isPending]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1903,7 +1876,6 @@ export function FileCell<TData extends RowData>({
     <DataGridCellWrapper<TData>
       ref={containerRef}
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}

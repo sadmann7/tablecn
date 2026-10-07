@@ -50,7 +50,6 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
 
 function DataGridCellImpl<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   isFocused,
@@ -103,7 +102,6 @@ function DataGridCellImpl<TData extends RowData>({
   return (
     <Comp
       cell={cell}
-      tableMeta={tableMeta}
       rowId={rowId}
       columnId={columnId}
       rowHeight={rowHeight}

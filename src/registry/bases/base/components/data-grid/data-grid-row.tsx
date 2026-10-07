@@ -16,7 +16,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellPosition,
-  DataGridTableMeta,
   Direction,
   RowHeightValue,
 } from "@/lib/data-grid-types";
@@ -33,7 +32,6 @@ interface DataGridRowProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
-  tableMeta: DataGridTableMeta;
   virtualItem: VirtualItem;
   measureElement: (node: Element | null) => void;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
@@ -161,7 +159,6 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
 function DataGridRowImpl<TData extends RowData>({
   row,
-  tableMeta,
   virtualItem,
   measureElement,
   rowMapRef,
@@ -287,7 +284,6 @@ function DataGridRowImpl<TData extends RowData>({
             ) : (
               <DataGridCell
                 cell={cell}
-                tableMeta={tableMeta}
                 rowId={rowId}
                 columnId={columnId}
                 rowHeight={rowHeight}

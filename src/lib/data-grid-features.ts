@@ -30,7 +30,7 @@ import type {
   CellUpdate,
   ContextMenuState,
   DataGridColumnMeta,
-  DataGridTableMeta,
+  FileCellData,
   Direction,
   NavigationDirection,
   PasteDialogState,
@@ -112,6 +112,17 @@ interface TableOptions_DataGridData<TData extends RowData> {
   readOnly?: boolean;
   onDataChange?: (data: TData[]) => void;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
+  /** Uploads files dropped on a file cell and resolves to the stored file data. */
+  onFilesUpload?: (params: {
+    files: File[];
+    rowId: string;
+    columnId: string;
+  }) => Promise<FileCellData[]>;
+  onFilesDelete?: (params: {
+    fileIds: string[];
+    rowId: string;
+    columnId: string;
+  }) => void | Promise<void>;
 }
 
 interface Table_DataGridData {
@@ -1619,7 +1630,6 @@ export const dataGridFeatures = tableFeatures({
   dataGridSelectionFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
-  tableMeta: metaHelper<DataGridTableMeta>(),
   columnMeta: metaHelper<DataGridColumnMeta>(),
 });
 
