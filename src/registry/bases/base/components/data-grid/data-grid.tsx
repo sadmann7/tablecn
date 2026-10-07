@@ -38,7 +38,7 @@ export function DataGrid<TData extends RowData>({
   footerRef,
   dir = "ltr",
   table,
-  gridBodyProps,
+  dataGridBodyProps,
   scrollToCell: _scrollToCell,
   virtualTotalSize,
   virtualItems,
@@ -211,7 +211,7 @@ export function DataGrid<TData extends RowData>({
         <div
           role="rowgroup"
           data-slot="grid-body"
-          {...gridBodyProps}
+          {...dataGridBodyProps}
           className="relative grid"
           style={{
             height: `${virtualTotalSize}px`,
