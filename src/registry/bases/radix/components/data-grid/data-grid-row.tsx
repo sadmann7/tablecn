@@ -47,7 +47,7 @@ interface DataGridRowProps<
   searchMatchColumns: Set<string> | null;
   activeSearchMatch: CellPosition | null;
   dir: Direction;
-  readOnly: boolean;
+  readOnlyColumnIds: Set<string>;
   stretchColumns: boolean;
   adjustLayout: boolean;
 }
@@ -126,8 +126,8 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
     return false;
   }
 
-  // Re-render if readOnly changed
-  if (prev.readOnly !== next.readOnly) {
+  // Re-render if table or column editing permissions changed
+  if (prev.readOnlyColumnIds !== next.readOnlyColumnIds) {
     return false;
   }
 
@@ -175,7 +175,7 @@ function DataGridRowImpl<TData extends RowData>({
   searchMatchColumns,
   activeSearchMatch,
   dir,
-  readOnly,
+  readOnlyColumnIds,
   stretchColumns,
   adjustLayout,
   className,
@@ -296,7 +296,7 @@ function DataGridRowImpl<TData extends RowData>({
                 isSelected={isCellSelected}
                 isSearchMatch={isSearchMatch}
                 isActiveSearchMatch={isActiveSearchMatch}
-                readOnly={readOnly || !cell.getCanEdit()}
+                readOnly={readOnlyColumnIds.has(columnId)}
               />
             )}
           </div>

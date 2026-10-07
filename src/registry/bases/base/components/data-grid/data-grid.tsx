@@ -51,6 +51,7 @@ export function DataGrid<TData extends RowData>({
   cellSelectionMap,
   focusedCell,
   editingCell,
+  readOnlyColumnIds,
   rowHeight,
   contextMenu,
   pasteDialog,
@@ -256,7 +257,7 @@ export function DataGrid<TData extends RowData>({
                 dir={dir}
                 adjustLayout={adjustLayout}
                 stretchColumns={stretchColumns}
-                readOnly={readOnly}
+                readOnlyColumnIds={readOnlyColumnIds}
               />
             );
           })}
