@@ -1,12 +1,13 @@
 "use client";
 
-import type {
-  CellContext,
-  ColumnDef,
-  HeaderContext,
-  RowData,
+import {
+  type CellContext,
+  type ColumnDef,
+  type HeaderContext,
+  type RowData,
+  Subscribe,
+  type TableState,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 
@@ -141,17 +142,29 @@ function DataGridSelectHeader<TData extends RowData>({
   }
 
   return (
-    <DataGridSelectCheckbox
-      aria-label="Select all"
-      checked={
-        table.getIsAllPageRowsSelected() ||
-        (table.getIsSomePageRowsSelected() && "indeterminate")
-      }
-      onCheckedChange={onCheckedChange}
-      hitboxSize={hitboxSize}
-      debug={debug}
-    />
+    <Subscribe source={table.store} selector={selectSelectAllState}>
+      {() => (
+        <DataGridSelectCheckbox
+          aria-label="Select all"
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={onCheckedChange}
+          hitboxSize={hitboxSize}
+          debug={debug}
+        />
+      )}
+    </Subscribe>
   );
+}
+
+// The memoized grid header doesn't follow selection or filters, so select-all subscribes on its own
+function selectSelectAllState(state: TableState<DataGridFeatures>) {
+  return {
+    rowSelection: state.rowSelection,
+    columnFilters: state.columnFilters,
+  };
 }
 
 interface DataGridSelectCellProps<TData extends RowData> extends Pick<

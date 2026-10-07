@@ -1,14 +1,20 @@
 "use client";
 
-import type { RowData } from "@tanstack/react-table";
-
+import {
+  type HeaderGroup,
+  type RowData,
+  type TableState,
+} from "@tanstack/react-table";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "cn";
 import * as React from "react";
 
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 import type { useDataGrid } from "@/registry/bases/base/hooks/use-data-grid";
 
 import { useAsRef } from "@/hooks/use-as-ref";
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
   flexRender,
   getColumnBorderVisibility,
@@ -23,6 +29,8 @@ import {
 } from "@/registry/bases/base/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/registry/bases/base/components/data-grid/data-grid-search";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
+
+const VIEWPORT_OFFSET = 1;
 
 interface DataGridProps<TData extends RowData>
   extends
@@ -41,21 +49,131 @@ export function DataGrid<TData extends RowData>({
   dir = "ltr",
   table,
   dataGridBodyProps,
-  virtualItems,
-  measureElement,
+  rowVirtualizerRef,
+  rowVirtualizerOptions,
   columnSizeVars,
-  onRowAdd: onRowAddProp,
+  onRowAdd,
   height = 600,
   stretchColumns = false,
   adjustLayout,
   className,
   ...props
 }: DataGridProps<TData>) {
+  return (
+    <div
+      data-slot="grid-wrapper"
+      dir={dir}
+      {...props}
+      className={cn("relative flex w-full flex-col", className)}
+    >
+      {table.options.enableSearch && <DataGridSearch table={table} />}
+      <DataGridContextMenu table={table} dataGridRef={dataGridRef} />
+      <DataGridPasteDialog table={table} />
+      <DataGridViewport
+        table={table}
+        dataGridRef={dataGridRef}
+        headerRef={headerRef}
+        footerRef={footerRef}
+        rowMapRef={rowMapRef}
+        rowVirtualizerRef={rowVirtualizerRef}
+        rowVirtualizerOptions={rowVirtualizerOptions}
+        dataGridBodyProps={dataGridBodyProps}
+        columnSizeVars={columnSizeVars}
+        onRowAdd={onRowAdd}
+        adjustLayout={adjustLayout}
+        dir={dir}
+        height={height}
+        stretchColumns={stretchColumns}
+      />
+    </div>
+  );
+}
+
+type DataGridViewportProps<TData extends RowData> = Pick<
+  DataGridProps<TData>,
+  | "table"
+  | "dataGridRef"
+  | "headerRef"
+  | "footerRef"
+  | "rowMapRef"
+  | "rowVirtualizerRef"
+  | "rowVirtualizerOptions"
+  | "dataGridBodyProps"
+  | "columnSizeVars"
+  | "onRowAdd"
+  | "adjustLayout"
+> & {
+  dir: Direction;
+  height: number;
+  stretchColumns: boolean;
+};
+
+// Owns the virtualizer and its scroll container so scroll frames re-render here, not in the component calling useDataGrid
+function DataGridViewport<TData extends RowData>({
+  table,
+  dataGridRef,
+  headerRef,
+  footerRef,
+  rowMapRef,
+  rowVirtualizerRef,
+  rowVirtualizerOptions,
+  dataGridBodyProps,
+  columnSizeVars,
+  onRowAdd: onRowAddProp,
+  adjustLayout,
+  dir,
+  height,
+  stretchColumns,
+}: DataGridViewportProps<TData>) {
   const rows = table.getRowModel().rows;
+  const rowSize = table.getRowSize();
   const readOnly = table.getIsReadOnly();
   const leafColumns = table.getAllLeafColumns();
   const visibleColumnCount = table.getVisibleLeafColumns().length;
   const { enableCellEditing } = table.options;
+
+  const rowVirtualizer = useVirtualizer({
+    ...rowVirtualizerOptions,
+    count: rows.length,
+    getScrollElement: () => dataGridRef.current,
+    estimateSize: () => rowSize,
+    scrollPaddingStart:
+      (headerRef.current?.getBoundingClientRect().bottom ?? 0) -
+      (dataGridRef.current?.getBoundingClientRect().top ?? 0) +
+      VIEWPORT_OFFSET,
+    // Add extra row buffer to absorb virtual position drift after render measurements
+    scrollPaddingEnd:
+      (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
+      (footerRef.current?.getBoundingClientRect().top ??
+        dataGridRef.current?.getBoundingClientRect().bottom ??
+        0) +
+      rowSize +
+      VIEWPORT_OFFSET,
+  });
+
+  useIsomorphicLayoutEffect(() => {
+    rowVirtualizerRef.current = rowVirtualizer;
+    return () => {
+      if (rowVirtualizerRef.current === rowVirtualizer) {
+        rowVirtualizerRef.current = null;
+      }
+    };
+  }, [rowVirtualizerRef, rowVirtualizer]);
+
+  useIsomorphicLayoutEffect(() => {
+    const rafId = requestAnimationFrame(() => {
+      rowVirtualizer.measure();
+    });
+    return () => cancelAnimationFrame(rafId);
+  }, [
+    rowVirtualizer,
+    table.state.rowHeight,
+    table.state.columnFilters,
+    table.state.columnPinning,
+    table.state.columnSizing,
+    table.state.columnVisibility,
+    table.state.sorting,
+  ]);
 
   const readOnlyColumnIds = React.useMemo(
     () =>
@@ -74,7 +192,7 @@ export function DataGrid<TData extends RowData>({
       adjustLayout,
       readOnlyColumnIds,
       rowMapRef,
-      measureElement,
+      measureElement: rowVirtualizer.measureElement,
     }),
     [
       dir,
@@ -82,7 +200,7 @@ export function DataGrid<TData extends RowData>({
       adjustLayout,
       readOnlyColumnIds,
       rowMapRef,
-      measureElement,
+      rowVirtualizer.measureElement,
     ],
   );
 
@@ -116,37 +234,129 @@ export function DataGrid<TData extends RowData>({
 
   return (
     <div
-      data-slot="grid-wrapper"
-      dir={dir}
-      {...props}
-      className={cn("relative flex w-full flex-col", className)}
+      role="grid"
+      aria-label="Data grid"
+      aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
+      aria-colcount={visibleColumnCount}
+      aria-multiselectable="true"
+      data-slot="grid"
+      tabIndex={0}
+      ref={dataGridRef}
+      className="relative grid overflow-auto rounded-md border select-none focus:outline-none"
+      style={{
+        ...columnSizeVars,
+        maxHeight: `${height}px`,
+      }}
+      onContextMenu={onDataGridContextMenu}
     >
-      {table.options.enableSearch && <DataGridSearch table={table} />}
-      <DataGridContextMenu table={table} dataGridRef={dataGridRef} />
-      <DataGridPasteDialog table={table} />
+      <DataGridHeader
+        table={table}
+        headerGroups={table.getHeaderGroups()}
+        headerRef={headerRef}
+        dir={dir}
+        stretchColumns={stretchColumns}
+      />
       <div
-        role="grid"
-        aria-label="Data grid"
-        aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
-        aria-colcount={visibleColumnCount}
-        aria-multiselectable="true"
-        data-slot="grid"
-        tabIndex={0}
-        ref={dataGridRef}
-        className="relative grid overflow-auto rounded-md border select-none focus:outline-none"
+        role="rowgroup"
+        data-slot="grid-body"
+        {...dataGridBodyProps}
+        className="relative grid"
         style={{
-          ...columnSizeVars,
-          maxHeight: `${height}px`,
+          ...dataGridBodyProps.style,
+          height: `${rowVirtualizer.getTotalSize()}px`,
         }}
-        onContextMenu={onDataGridContextMenu}
       >
+        <DataGridRowContext value={rowContext}>
+          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+            const row = rows[virtualItem.index];
+            if (!row) return null;
+
+            return (
+              <DataGridRow key={row.id} row={row} virtualItem={virtualItem} />
+            );
+          })}
+        </DataGridRowContext>
+      </div>
+      {!readOnly && onRowAdd && (
+        <div
+          role="rowgroup"
+          data-slot="grid-footer"
+          ref={footerRef}
+          className="sticky bottom-0 z-10 grid border-t bg-background"
+        >
+          <div
+            role="row"
+            aria-rowindex={rows.length + 2}
+            data-slot="grid-add-row"
+            tabIndex={-1}
+            className="flex w-full"
+          >
+            <div
+              role="gridcell"
+              tabIndex={0}
+              className="relative flex h-9 grow items-center bg-muted/30 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
+              style={{
+                width: table.getTotalSize(),
+                minWidth: table.getTotalSize(),
+              }}
+              onClick={onRowAdd}
+              onKeyDown={onFooterCellKeyDown}
+            >
+              <div className="sticky inset-s-0 flex items-center gap-2 px-3 text-muted-foreground">
+                <IconPlaceholder
+                  lucide="Plus"
+                  tabler="IconPlus"
+                  hugeicons="PlusSignIcon"
+                  phosphor="PlusIcon"
+                  remixicon="RiAddLine"
+                  className="size-3.5"
+                />
+                <span className="text-sm">Add row</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DataGridHeaderProps<TData extends RowData> {
+  table: DataGridProps<TData>["table"];
+  headerGroups: Array<HeaderGroup<DataGridFeatures, TData>>;
+  headerRef: DataGridProps<TData>["headerRef"];
+  dir: Direction;
+  stretchColumns: boolean;
+}
+
+// The viewport re-renders on every scroll frame, so the header only follows its own state
+const DataGridHeader = React.memo(
+  DataGridHeaderImpl,
+  (prev, next) =>
+    prev.table.atoms === next.table.atoms &&
+    prev.headerGroups === next.headerGroups &&
+    prev.headerRef === next.headerRef &&
+    prev.dir === next.dir &&
+    prev.stretchColumns === next.stretchColumns,
+) as typeof DataGridHeaderImpl;
+
+function DataGridHeaderImpl<TData extends RowData>({
+  table,
+  headerGroups,
+  headerRef,
+  dir,
+  stretchColumns,
+}: DataGridHeaderProps<TData>) {
+  return (
+    <table.Subscribe selector={selectHeaderState}>
+      {() => (
         <div
           role="rowgroup"
           data-slot="grid-header"
           ref={headerRef}
           className="sticky top-0 z-10 grid border-b bg-background"
         >
-          {table.getHeaderGroups().map((headerGroup, rowIndex) => (
+          {headerGroups.map((headerGroup, rowIndex) => (
             <div
               key={headerGroup.id}
               role="row"
@@ -156,10 +366,7 @@ export function DataGrid<TData extends RowData>({
               className="flex w-full"
             >
               {headerGroup.headers.map((header, colIndex) => {
-                const sorting = table.state.sorting;
-                const currentSort = sorting.find(
-                  (sort) => sort.id === header.column.id,
-                );
+                const sortDirection = header.column.getIsSorted();
                 const isSortable = header.column.getCanSort();
 
                 const nextHeader = headerGroup.headers[colIndex + 1];
@@ -186,9 +393,9 @@ export function DataGrid<TData extends RowData>({
                     role="columnheader"
                     aria-colindex={colIndex + 1}
                     aria-sort={
-                      currentSort?.desc === false
+                      sortDirection === "asc"
                         ? "ascending"
-                        : currentSort?.desc === true
+                        : sortDirection === "desc"
                           ? "descending"
                           : isSortable
                             ? "none"
@@ -235,64 +442,18 @@ export function DataGrid<TData extends RowData>({
             </div>
           ))}
         </div>
-        <div
-          role="rowgroup"
-          data-slot="grid-body"
-          {...dataGridBodyProps}
-          className="relative grid"
-        >
-          <DataGridRowContext value={rowContext}>
-            {virtualItems.map((virtualItem) => {
-              const row = rows[virtualItem.index];
-              if (!row) return null;
-
-              return (
-                <DataGridRow key={row.id} row={row} virtualItem={virtualItem} />
-              );
-            })}
-          </DataGridRowContext>
-        </div>
-        {!readOnly && onRowAdd && (
-          <div
-            role="rowgroup"
-            data-slot="grid-footer"
-            ref={footerRef}
-            className="sticky bottom-0 z-10 grid border-t bg-background"
-          >
-            <div
-              role="row"
-              aria-rowindex={rows.length + 2}
-              data-slot="grid-add-row"
-              tabIndex={-1}
-              className="flex w-full"
-            >
-              <div
-                role="gridcell"
-                tabIndex={0}
-                className="relative flex h-9 grow items-center bg-muted/30 transition-colors hover:bg-muted/50 focus:bg-muted/50 focus:outline-none"
-                style={{
-                  width: table.getTotalSize(),
-                  minWidth: table.getTotalSize(),
-                }}
-                onClick={onRowAdd}
-                onKeyDown={onFooterCellKeyDown}
-              >
-                <div className="sticky inset-s-0 flex items-center gap-2 px-3 text-muted-foreground">
-                  <IconPlaceholder
-                    lucide="Plus"
-                    tabler="IconPlus"
-                    hugeicons="PlusSignIcon"
-                    phosphor="PlusIcon"
-                    remixicon="RiAddLine"
-                    className="size-3.5"
-                  />
-                  <span className="text-sm">Add row</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </table.Subscribe>
   );
+}
+
+function selectHeaderState(state: TableState<DataGridFeatures>) {
+  return {
+    sorting: state.sorting,
+    columnVisibility: state.columnVisibility,
+    columnPinning: state.columnPinning,
+    columnOrder: state.columnOrder,
+    columnSizing: state.columnSizing,
+    columnResizing: state.columnResizing,
+  };
 }

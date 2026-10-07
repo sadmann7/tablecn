@@ -237,7 +237,11 @@ interface DataGridUtilityCellProps<TData extends RowData> {
   isRowSelected: boolean;
 }
 
-function DataGridUtilityCell<TData extends RowData>({
+const DataGridUtilityCell = React.memo(
+  DataGridUtilityCellImpl,
+) as typeof DataGridUtilityCellImpl;
+
+function DataGridUtilityCellImpl<TData extends RowData>({
   cell,
   isFocused,
   isRowSelected,

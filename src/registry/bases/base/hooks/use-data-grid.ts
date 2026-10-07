@@ -1,3 +1,5 @@
+import type { Virtualizer, VirtualizerOptions } from "@tanstack/react-virtual";
+
 import {
   type CellSelectionState,
   type ColumnDef,
@@ -12,14 +14,12 @@ import {
   makeStateUpdater,
   useTable,
 } from "@tanstack/react-table";
-import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
 
 import type { CellPosition, NavigationDirection } from "@/lib/data-grid-types";
 
 import { useAsRef } from "@/hooks/use-as-ref";
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
   type DataGridFeatures,
   dataGridFeatures,
@@ -62,7 +62,6 @@ function showClipboardToast({
 function selectGridLayoutState(state: TableState<DataGridFeatures>) {
   return {
     rowHeight: state.rowHeight,
-    rowSelection: state.rowSelection,
     sorting: state.sorting,
     columnFilters: state.columnFilters,
     columnVisibility: state.columnVisibility,
@@ -645,7 +644,6 @@ function useDataGrid<TData extends RowData>({
     tableRef.current = table;
   }
 
-  const rowHeight = table.state.rowHeight;
   const rowSize = table.getRowSize();
 
   const dragDepsRef = useAsRef({
@@ -684,31 +682,20 @@ function useDataGrid<TData extends RowData>({
     );
   }, [isFirefox, table.state.columnPinning]);
 
-  const rowVirtualizer = useVirtualizer({
-    count: table.getRowModel().rows.length,
-    getScrollElement: () => dataGridRef.current,
-    estimateSize: () => rowSize,
-    overscan,
-    measureElement: !isFirefox
-      ? (element) => element?.getBoundingClientRect().height
-      : undefined,
-    scrollPaddingStart:
-      (headerRef.current?.getBoundingClientRect().bottom ?? 0) -
-      (dataGridRef.current?.getBoundingClientRect().top ?? 0) +
-      VIEWPORT_OFFSET,
-    // Add extra row buffer to absorb virtual position drift after render measurements
-    scrollPaddingEnd:
-      (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
-      (footerRef.current?.getBoundingClientRect().top ??
-        dataGridRef.current?.getBoundingClientRect().bottom ??
-        0) +
-      rowSize +
-      VIEWPORT_OFFSET,
-  });
-
-  if (!rowVirtualizerRef.current) {
-    rowVirtualizerRef.current = rowVirtualizer;
-  }
+  const rowVirtualizerOptions = React.useMemo<
+    Pick<
+      VirtualizerOptions<HTMLDivElement, Element>,
+      "overscan" | "measureElement"
+    >
+  >(
+    () => ({
+      overscan,
+      measureElement: isFirefox
+        ? undefined
+        : (element) => element.getBoundingClientRect().height,
+    }),
+    [overscan, isFirefox],
+  );
 
   const onRowAdd = React.useCallback(
     async (event?: React.MouseEvent<HTMLDivElement>) => {
@@ -1231,7 +1218,14 @@ function useDataGrid<TData extends RowData>({
         return () => cancelAnimationFrame(rafId);
       }
     }
-  }, [propsRef, data, columns, getNavigableColumnIds, focusCell]);
+  }, [
+    propsRef,
+    data,
+    columns,
+    getFocusedCell,
+    getNavigableColumnIds,
+    focusCell,
+  ]);
 
   // Forward keyboard focus entering the grid to the active cell, so the grid acts as a single tab stop
   React.useEffect(() => {
@@ -1767,34 +1761,14 @@ function useDataGrid<TData extends RowData>({
     };
   }, [table, dragDepsRef, getColumnIds]);
 
-  useIsomorphicLayoutEffect(() => {
-    const rafId = requestAnimationFrame(() => {
-      rowVirtualizer.measure();
-    });
-    return () => cancelAnimationFrame(rafId);
-  }, [
-    rowHeight,
-    table.state.columnFilters,
-    table.state.columnPinning,
-    table.state.columnSizing,
-    table.state.columnVisibility,
-    table.state.rowSelection,
-    table.state.sorting,
-  ]);
-
-  const virtualTotalSize = rowVirtualizer.getTotalSize();
-  const virtualItems = rowVirtualizer.getVirtualItems();
-  const measureElement = rowVirtualizer.measureElement;
-
   const dataGridBodyProps = React.useMemo(
     () => ({
       ...dataGridBodyEventHandlers,
       style: {
-        height: `${virtualTotalSize}px`,
         contain: adjustLayout ? "layout paint" : "strict",
       } satisfies React.CSSProperties,
     }),
-    [dataGridBodyEventHandlers, virtualTotalSize, adjustLayout],
+    [dataGridBodyEventHandlers, adjustLayout],
   );
 
   return React.useMemo(
@@ -1806,8 +1780,8 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       dataGridBodyProps,
-      virtualItems,
-      measureElement,
+      rowVirtualizerRef,
+      rowVirtualizerOptions,
       columnSizeVars,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
       adjustLayout,
@@ -1817,8 +1791,7 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       dataGridBodyProps,
-      virtualItems,
-      measureElement,
+      rowVirtualizerOptions,
       columnSizeVars,
       onRowAdd,
       adjustLayout,

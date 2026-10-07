@@ -122,6 +122,25 @@ describe("DataGrid rendering", () => {
     expect(getHookRenderCount()).toBe(renderCountBefore);
   });
 
+  it("sizes the body and scrolls without re-rendering the hook", async () => {
+    const { container, getHookRenderCount } = renderGrid();
+    const grid = container.querySelector<HTMLElement>('[data-slot="grid"]');
+    const body = container.querySelector<HTMLElement>(
+      '[data-slot="grid-body"]',
+    );
+    expect(body?.style.height).toMatch(/^\d+px$/);
+
+    const renderCountBefore = getHookRenderCount();
+
+    await act(async () => {
+      if (!grid) return;
+      grid.scrollTop = 36;
+      grid.dispatchEvent(new Event("scroll"));
+    });
+
+    expect(getHookRenderCount()).toBe(renderCountBefore);
+  });
+
   it("only re-renders the row whose selection changed", () => {
     const rowRenderCounts = new Map<string, number>();
     const { table } = renderGrid([
