@@ -23,7 +23,6 @@ import type {
 
 import {
   flexRender,
-  getCellKey,
   getColumnBorderVisibility,
   getColumnPinningStyle,
   getRowHeightValue,
@@ -280,7 +279,6 @@ function DataGridRowImpl<TData extends RowData>({
             {isUtilityCell ? (
               <DataGridUtilityCell
                 cell={cell}
-                tableMeta={tableMeta}
                 rowId={rowId}
                 columnId={columnId}
                 isFocused={isCellFocused}
@@ -310,7 +308,6 @@ function DataGridRowImpl<TData extends RowData>({
 
 interface DataGridUtilityCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
-  tableMeta: DataGridTableMeta;
   rowId: string;
   columnId: string;
   isFocused: boolean;
@@ -319,35 +316,18 @@ interface DataGridUtilityCellProps<TData extends RowData> {
 
 function DataGridUtilityCell<TData extends RowData>({
   cell,
-  tableMeta,
   rowId,
   columnId,
   isFocused,
   isRowSelected,
 }: DataGridUtilityCellProps<TData>) {
-  const cellMapRef = tableMeta?.cellMapRef;
-
-  const onCellChange = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!cellMapRef) return;
-
-      const cellKey = getCellKey(rowId, columnId);
-
-      if (node) {
-        cellMapRef.current.set(cellKey, node);
-      } else {
-        cellMapRef.current.delete(cellKey);
-      }
-    },
-    [rowId, columnId, cellMapRef],
-  );
-
   return (
     <div
       data-slot="grid-utility-cell"
+      data-row-id={rowId}
+      data-column-id={columnId}
       data-focused={isFocused ? "" : undefined}
       tabIndex={-1}
-      ref={onCellChange}
       className={cn("size-full px-3 py-1.5 outline-none", {
         "bg-primary/10": isRowSelected,
         "ring-1 ring-ring ring-inset": isFocused,

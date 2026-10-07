@@ -24,9 +24,10 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridProps<TData extends RowData>
   extends
-    Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
+    Omit<ReturnType<typeof useDataGrid<TData>>, "dir" | "scrollToCell">,
     Omit<React.ComponentProps<"div">, "contextMenu"> {
   dir?: Direction;
+  scrollToCell?: (rowId: string, columnId: string) => void;
   height?: number;
   stretchColumns?: boolean;
 }
@@ -39,6 +40,8 @@ export function DataGrid<TData extends RowData>({
   dir = "ltr",
   table,
   tableMeta,
+  gridBodyProps,
+  scrollToCell: _scrollToCell,
   virtualTotalSize,
   virtualItems,
   measureElement,
@@ -229,6 +232,7 @@ export function DataGrid<TData extends RowData>({
         <div
           role="rowgroup"
           data-slot="grid-body"
+          {...gridBodyProps}
           className="relative grid"
           style={{
             height: `${virtualTotalSize}px`,
