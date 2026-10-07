@@ -173,9 +173,6 @@ describe("useDataGrid", () => {
       const meta = result.current.tableMeta;
       expect(meta.onCellClick).toBeDefined();
       expect(meta.onCellDoubleClick).toBeDefined();
-      expect(meta.onCellsCopy).toBeDefined();
-      expect(meta.onCellsCut).toBeDefined();
-      expect(meta.onCellsPaste).toBeDefined();
       expect(meta.onSelectionClear).toBeDefined();
       expect(meta.getIsCellSelected).toBeDefined();
     });
@@ -574,7 +571,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -790,7 +787,7 @@ describe("useDataGrid", () => {
 
       // Copy
       await act(async () => {
-        result.current.tableMeta.onCellsCopy?.();
+        await result.current.table.copySelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
@@ -814,7 +811,7 @@ describe("useDataGrid", () => {
 
       // Try to cut
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).not.toHaveBeenCalled();
@@ -842,7 +839,7 @@ describe("useDataGrid", () => {
 
       // Try to paste
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).not.toHaveBeenCalled();
@@ -1490,7 +1487,7 @@ describe("useDataGrid", () => {
       expect(result.current.pasteDialog.open).toBe(false);
     });
 
-    it("should close paste dialog via onPasteDialogOpenChange", () => {
+    it("should close paste dialog via table.resetPasteDialog", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1502,10 +1499,155 @@ describe("useDataGrid", () => {
 
       // Close it (even though it's already closed, this tests the callback)
       act(() => {
-        result.current.tableMeta.onPasteDialogOpenChange?.(false);
+        result.current.table.resetPasteDialog(true);
       });
 
       expect(result.current.pasteDialog.open).toBe(false);
+    });
+  });
+
+  describe("clipboard feature", () => {
+    it("should ask before adding rows a paste needs", async () => {
+      const onRowsAdd = vi.fn();
+      mockClipboard.readText.mockResolvedValue("a\nb\nc");
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onRowsAdd,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("2", "name");
+      });
+
+      await act(async () => {
+        await result.current.table.pasteCells();
+      });
+
+      expect(result.current.pasteDialog).toEqual({
+        open: true,
+        rowsNeeded: 2,
+        clipboardText: "a\nb\nc",
+      });
+      expect(onRowsAdd).not.toHaveBeenCalled();
+    });
+
+    it("should paste only what fits when the dialog declines new rows", async () => {
+      const onRowsAdd = vi.fn();
+      const onDataChange = vi.fn();
+      mockClipboard.readText.mockResolvedValue("a\nb\nc");
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onRowsAdd,
+            onDataChange,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("2", "name");
+      });
+      await act(async () => {
+        await result.current.table.pasteCells();
+      });
+      await act(async () => {
+        await result.current.table.pasteCells({ expandRows: false });
+      });
+
+      expect(onRowsAdd).not.toHaveBeenCalled();
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange.mock.calls[0]?.[0][2].name).toBe("a");
+      expect(result.current.pasteDialog.open).toBe(false);
+    });
+
+    it("should add rows through onRowsAdd when expanding", async () => {
+      const onRowsAdd = vi.fn();
+      mockClipboard.readText.mockResolvedValue("a\nb");
+      vi.useFakeTimers();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onRowsAdd,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("2", "name");
+      });
+
+      await act(async () => {
+        const paste = result.current.table.pasteCells({ expandRows: true });
+        await vi.runAllTimersAsync();
+        await paste;
+      });
+      vi.useRealTimers();
+
+      expect(onRowsAdd).toHaveBeenCalledWith(1);
+    });
+
+    it("should report results through onClipboardNotice", async () => {
+      const onClipboardNotice = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onClipboardNotice,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+      await act(async () => {
+        await result.current.table.copySelectedCells();
+      });
+
+      expect(onClipboardNotice).toHaveBeenCalledWith({
+        variant: "success",
+        message: "1 cell copied",
+      });
+    });
+
+    it("should track cut cells and clear them on copy", async () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+      await act(async () => {
+        await result.current.table.cutSelectedCells();
+      });
+      expect(result.current.table.getCutCells()).toEqual([
+        [{ rowId: "0", columnId: "name" }],
+      ]);
+
+      await act(async () => {
+        await result.current.table.copySelectedCells();
+      });
+      expect(result.current.table.getCutCells()).toEqual([]);
     });
   });
 
@@ -1531,7 +1673,7 @@ describe("useDataGrid", () => {
 
       // Paste
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalled();
@@ -1561,7 +1703,7 @@ describe("useDataGrid", () => {
       // Paste will be called internally and should work
       await act(async () => {
         mockClipboard.readText.mockResolvedValue("Test\nValue\nNew");
-        result.current.tableMeta.onCellsPaste?.(false);
+        await result.current.table.pasteCells();
       });
     });
 
@@ -1586,7 +1728,7 @@ describe("useDataGrid", () => {
 
       // Paste invalid number
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       // Should skip the invalid cell
@@ -1614,7 +1756,7 @@ describe("useDataGrid", () => {
 
       // Paste
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1649,7 +1791,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1694,7 +1836,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1737,7 +1879,7 @@ describe("useDataGrid", () => {
 
       // Cut
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
@@ -1767,7 +1909,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk\t900");
@@ -1778,7 +1920,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -1807,7 +1949,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith(
@@ -1820,7 +1962,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -1857,7 +1999,7 @@ describe("useDataGrid", () => {
 
       // Copy
       await act(async () => {
-        result.current.tableMeta.onCellsCopy?.();
+        await result.current.table.copySelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalled();
@@ -3145,7 +3287,7 @@ describe("useDataGrid", () => {
 
       // Paste should work
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalled();
@@ -3208,7 +3350,6 @@ describe("useDataGrid", () => {
       expect(meta.selectedCellCount).toBe(0);
       expect(meta.searchOpen).toBe(false);
       expect(meta.contextMenu).toBeDefined();
-      expect(meta.pasteDialog).toBeDefined();
     });
 
     it("should reflect readOnly on the table", () => {
@@ -3477,7 +3618,7 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsCopy?.();
+        await result.current.table.copySelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith(

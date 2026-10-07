@@ -1,14 +1,13 @@
 "use client";
 
+import type { RowData, Table } from "@tanstack/react-table";
+
 import { cn } from "cn";
 import * as React from "react";
 
-import type {
-  DataGridTableMeta,
-  PasteDialogState,
-} from "@/lib/data-grid-types";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { PasteDialogState } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Dialog,
@@ -19,68 +18,50 @@ import {
   DialogTitle,
 } from "@/registry/bases/radix/ui/dialog";
 
-interface DataGridPasteDialogProps {
-  tableMeta: DataGridTableMeta;
+interface DataGridPasteDialogProps<TData extends RowData> {
+  table: Table<DataGridFeatures, TData>;
   pasteDialog: PasteDialogState;
 }
 
-export function DataGridPasteDialog({
-  tableMeta,
-  pasteDialog,
-}: DataGridPasteDialogProps) {
-  const onPasteDialogOpenChange = tableMeta?.onPasteDialogOpenChange;
-  const onCellsPaste = tableMeta?.onCellsPaste;
+export function DataGridPasteDialog<TData extends RowData>(
+  props: DataGridPasteDialogProps<TData>,
+) {
+  if (!props.pasteDialog.open) return null;
 
-  if (!pasteDialog.open) return null;
-
-  return (
-    <PasteDialog
-      pasteDialog={pasteDialog}
-      onPasteDialogOpenChange={onPasteDialogOpenChange}
-      onCellsPaste={onCellsPaste}
-    />
-  );
+  return <PasteDialog {...props} />;
 }
 
-interface PasteDialogProps
-  extends
-    Pick<DataGridTableMeta, "onPasteDialogOpenChange" | "onCellsPaste">,
-    Required<Pick<DataGridTableMeta, "pasteDialog">> {}
-
 const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
+  if (prev.table !== next.table) return false;
   if (prev.pasteDialog.open !== next.pasteDialog.open) return false;
   if (!next.pasteDialog.open) return true;
   if (prev.pasteDialog.rowsNeeded !== next.pasteDialog.rowsNeeded) return false;
 
   return true;
-});
+}) as typeof PasteDialogImpl;
 
-function PasteDialogImpl({
+function PasteDialogImpl<TData extends RowData>({
+  table,
   pasteDialog,
-  onPasteDialogOpenChange,
-  onCellsPaste,
-}: PasteDialogProps) {
-  const propsRef = useAsRef({
-    onPasteDialogOpenChange,
-    onCellsPaste,
-  });
-
+}: DataGridPasteDialogProps<TData>) {
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      propsRef.current.onPasteDialogOpenChange?.(open);
+      if (!open) table.resetPasteDialog(true);
     },
-    [propsRef],
+    [table],
   );
 
   const onCancel = React.useCallback(() => {
-    propsRef.current.onPasteDialogOpenChange?.(false);
-  }, [propsRef]);
+    table.resetPasteDialog(true);
+  }, [table]);
 
   const onContinue = React.useCallback(() => {
-    propsRef.current.onCellsPaste?.(expandRadioRef.current?.checked ?? false);
-  }, [propsRef]);
+    void table.pasteCells({
+      expandRows: expandRadioRef.current?.checked ?? false,
+    });
+  }, [table]);
 
   return (
     <Dialog open={pasteDialog.open} onOpenChange={onOpenChange}>

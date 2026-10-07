@@ -32,15 +32,20 @@ import type {
   DataGridTableMeta,
   Direction,
   NavigationDirection,
+  PasteDialogState,
   RowHeightValue,
 } from "@/lib/data-grid-types";
 
 import {
+  getCellKey,
   getEmptyCellValue,
   getLineCount,
   getRowHeightValue,
   getRowIndexById,
   getTabTargetCell,
+  parsePastedCellValue,
+  parseTsv,
+  serializeCellValue,
 } from "@/lib/data-grid-utils";
 
 const DEFAULT_ROW_HEIGHT: RowHeightValue = "short";
@@ -151,17 +156,63 @@ interface Table_DataGridNavigation {
   ) => CellPosition | null;
 }
 
+interface ClipboardNotice {
+  variant: "success" | "error";
+  message: string;
+}
+
+interface TableState_DataGridClipboard {
+  /** Cut source cells laid out in the same rows and columns as the clipboard text. */
+  cutCells: Array<Array<CellPosition | null>>;
+  pasteDialog: PasteDialogState;
+}
+
+interface TableOptions_DataGridClipboard {
+  enablePaste?: boolean;
+  /** Called with the parsed updates before they are written through `onDataChange`. */
+  onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
+  /** Adds rows when a paste needs more rows than the table has. */
+  onRowsAdd?: (count: number) => void | Promise<void>;
+  /** Reports copy, cut and paste results, e.g. to show a toast. */
+  onClipboardNotice?: (notice: ClipboardNotice) => void;
+  onCutCellsChange?: OnChangeFn<Array<Array<CellPosition | null>>>;
+  onPasteDialogChange?: OnChangeFn<PasteDialogState>;
+}
+
+interface PasteCellsOptions {
+  /** Adds the rows a paste needs through `onRowsAdd` instead of asking first. */
+  expandRows?: boolean;
+}
+
+interface Table_DataGridClipboard {
+  /** Selected cells in data columns, row by row in display order. */
+  getSelectedCells: () => Array<CellPosition>;
+  getCutCells: () => Array<Array<CellPosition | null>>;
+  setCutCells: (updater: Updater<Array<Array<CellPosition | null>>>) => void;
+  resetCutCells: (defaultState?: boolean) => void;
+  getPasteDialog: () => PasteDialogState;
+  setPasteDialog: (updater: Updater<PasteDialogState>) => void;
+  resetPasteDialog: (defaultState?: boolean) => void;
+  copySelectedCells: () => Promise<void>;
+  /** Copies the selection and clears it from its source on the next paste. */
+  cutSelectedCells: () => Promise<void>;
+  /** Pastes clipboard text at the focused cell, or fills the selection with a single value. */
+  pasteCells: (options?: PasteCellsOptions) => Promise<void>;
+}
+
 declare module "@tanstack/react-table" {
   interface Plugins {
     dataGridRowHeightFeature: TableFeature;
     dataGridCellEditingFeature: TableFeature;
     dataGridDataFeature: TableFeature;
     dataGridNavigationFeature: TableFeature;
+    dataGridClipboardFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
     dataGridRowHeightFeature: TableState_DataGridRowHeight;
     dataGridCellEditingFeature: TableState_DataGridCellEditing;
+    dataGridClipboardFeature: TableState_DataGridClipboard;
   }
 
   interface TableOptions_FeatureMap<
@@ -172,6 +223,7 @@ declare module "@tanstack/react-table" {
     dataGridCellEditingFeature: TableOptions_DataGridCellEditing;
     dataGridDataFeature: TableOptions_DataGridData<TData>;
     dataGridNavigationFeature: TableOptions_DataGridNavigation;
+    dataGridClipboardFeature: TableOptions_DataGridClipboard;
   }
 
   interface ColumnDef_FeatureMap<
@@ -190,6 +242,7 @@ declare module "@tanstack/react-table" {
     dataGridCellEditingFeature: Table_DataGridCellEditing;
     dataGridDataFeature: Table_DataGridData;
     dataGridNavigationFeature: Table_DataGridNavigation;
+    dataGridClipboardFeature: Table_DataGridClipboard;
   }
 
   interface Column_FeatureMap<
@@ -355,6 +408,10 @@ interface DataGridCellRef {
   column: { id: string };
 }
 
+function copyRowRecord(row: RowData): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(row));
+}
+
 function getCanEditCell(table: DataGridInstance, columnId: string) {
   const column = table.getAllFlatColumnsById()[columnId];
   return column
@@ -379,10 +436,7 @@ function updateCells(
 
     let updatedRow = updatedRows.get(row.index);
     if (!updatedRow) {
-      updatedRow = { ...(data[row.index] ?? row.original) } as Record<
-        string,
-        unknown
-      >;
+      updatedRow = copyRowRecord(data[row.index] ?? row.original);
       updatedRows.set(row.index, updatedRow);
     }
     updatedRow[columnId] = value;
@@ -655,6 +709,389 @@ const dataGridNavigationFeature: TableFeature = {
   },
 };
 
+const DEFAULT_PASTE_DIALOG: PasteDialogState = {
+  open: false,
+  rowsNeeded: 0,
+  clipboardText: "",
+};
+const ROWS_ADD_POLL_INTERVAL_MS = 100;
+const ROWS_ADD_POLL_ATTEMPTS = 50;
+
+function getDataColumnIds(table: DataGridInstance) {
+  return table
+    .getVisibleLeafColumns()
+    .filter((column) => column.columnDef.enableCellSelection !== false)
+    .map((column) => column.id);
+}
+
+function getSelectedCells(table: DataGridInstance) {
+  const bounds = table.getCellSelectionBounds();
+  if (bounds.length === 0) return [];
+
+  const rows = table.getRowModel().rows;
+  const columnIds: string[] = [];
+  for (const [columnId, columnIndex] of Object.entries(
+    table.getCellSelectionColumnIndexes(),
+  )) {
+    columnIds[columnIndex] = columnId;
+  }
+  const dataColumnIds = new Set(getDataColumnIds(table));
+
+  const cells: Array<CellPosition> = [];
+  for (const bound of bounds) {
+    for (
+      let rowIndex = bound.minRowIndex;
+      rowIndex <= bound.maxRowIndex;
+      rowIndex++
+    ) {
+      const rowId = rows[rowIndex]?.id;
+      if (!rowId) continue;
+
+      for (
+        let columnIndex = bound.minColumnIndex;
+        columnIndex <= bound.maxColumnIndex;
+        columnIndex++
+      ) {
+        const columnId = columnIds[columnIndex];
+        if (columnId && dataColumnIds.has(columnId)) {
+          cells.push({ rowId, columnId });
+        }
+      }
+    }
+  }
+  return cells;
+}
+
+function pluralizeCells(count: number) {
+  return `${count} cell${count !== 1 ? "s" : ""}`;
+}
+
+function serializeSelectedCells(table: DataGridInstance) {
+  const cells = getSelectedCells(table);
+  if (cells.length === 0) return null;
+
+  const cellKeys = new Set(cells.map((c) => getCellKey(c.rowId, c.columnId)));
+  const rowIds = new Set(cells.map((cell) => cell.rowId));
+  const columnIdSet = new Set(cells.map((cell) => cell.columnId));
+  const rows = table.getRowModel().rows.filter((row) => rowIds.has(row.id));
+  const columnIds = getDataColumnIds(table).filter((id) => columnIdSet.has(id));
+
+  const cellGrid = rows.map((row) =>
+    columnIds.map((columnId) =>
+      cellKeys.has(getCellKey(row.id, columnId))
+        ? { rowId: row.id, columnId }
+        : null,
+    ),
+  );
+
+  const text = rows
+    .map((row) => {
+      const cellsByColumnId = row.getAllCellsByColumnId();
+      return columnIds
+        .map((columnId) => {
+          if (!cellKeys.has(getCellKey(row.id, columnId))) return "";
+          const cell = cellsByColumnId[columnId];
+          return cell
+            ? serializeCellValue(
+                cell.getValue(),
+                cell.column.columnDef.meta?.cell?.variant,
+              )
+            : "";
+        })
+        .join("\t");
+    })
+    .join("\n");
+
+  return { text, cellGrid, cellCount: cells.length };
+}
+
+async function writeSelectedCells(table: DataGridInstance, isCut: boolean) {
+  const notify = table.options.onClipboardNotice;
+  if (isCut && table.options.readOnly) return;
+
+  const serialized = serializeSelectedCells(table);
+  if (!serialized) return;
+
+  try {
+    await navigator.clipboard.writeText(serialized.text);
+    if (isCut) table.setCutCells(serialized.cellGrid);
+    else if (table.atoms.cutCells.get().length > 0) table.resetCutCells(true);
+    notify?.({
+      variant: "success",
+      message: `${pluralizeCells(serialized.cellCount)} ${isCut ? "cut" : "copied"}`,
+    });
+  } catch (error) {
+    notify?.({
+      variant: "error",
+      message:
+        error instanceof Error
+          ? error.message
+          : `Failed to ${isCut ? "cut" : "copy"} to clipboard`,
+    });
+  }
+}
+
+async function waitForRowCount(table: DataGridInstance, rowCount: number) {
+  for (
+    let attempt = 0;
+    attempt < ROWS_ADD_POLL_ATTEMPTS &&
+    table.getRowModel().rows.length < rowCount;
+    attempt++
+  ) {
+    // New rows only reach the table after the consumer's data update re-renders it
+    await new Promise((resolve) =>
+      setTimeout(resolve, ROWS_ADD_POLL_INTERVAL_MS),
+    );
+  }
+}
+
+function getPasteTarget(
+  table: DataGridInstance,
+  focusedCell: CellPosition,
+  clipboardRows: string[][],
+  dataColumnIds: string[],
+) {
+  const rows = table.getRowModel().rows;
+  const target = {
+    rowIndex: getRowIndexById(table, focusedCell.rowId),
+    columnIndex: dataColumnIds.indexOf(focusedCell.columnId),
+    values: clipboardRows,
+    isFill: false,
+  };
+
+  const singleValue = clipboardRows[0]?.[0];
+  const isSingleValue =
+    clipboardRows.length === 1 && clipboardRows[0]?.length === 1;
+  const selectedCells = getSelectedCells(table);
+  if (!isSingleValue || singleValue === undefined || selectedCells.length < 2) {
+    return target;
+  }
+
+  const rowIndexById = new Map(rows.map((row, index) => [row.id, index]));
+  let minRow = Infinity;
+  let maxRow = -Infinity;
+  let minColumn = Infinity;
+  let maxColumn = -Infinity;
+  for (const { rowId, columnId } of selectedCells) {
+    const rowIndex = rowIndexById.get(rowId) ?? -1;
+    const columnIndex = dataColumnIds.indexOf(columnId);
+    if (rowIndex === -1 || columnIndex === -1) continue;
+    minRow = Math.min(minRow, rowIndex);
+    maxRow = Math.max(maxRow, rowIndex);
+    minColumn = Math.min(minColumn, columnIndex);
+    maxColumn = Math.max(maxColumn, columnIndex);
+  }
+  if (minRow === Infinity) return target;
+
+  return {
+    rowIndex: minRow,
+    columnIndex: minColumn,
+    values: Array.from({ length: maxRow - minRow + 1 }, () =>
+      Array.from({ length: maxColumn - minColumn + 1 }, () => singleValue),
+    ),
+    isFill: true,
+  };
+}
+
+async function pasteCells(
+  table: DataGridInstance,
+  { expandRows = false }: PasteCellsOptions = {},
+) {
+  const { readOnly, onRowsAdd, onPaste } = table.options;
+  const notify = table.options.onClipboardNotice;
+  if (readOnly) return;
+
+  const focusedCell = table.getFocusedCell();
+  if (!focusedCell) return;
+
+  const pasteDialog = table.atoms.pasteDialog.get();
+  const dataColumnIds = getDataColumnIds(table);
+
+  try {
+    const clipboardText =
+      pasteDialog.clipboardText || (await navigator.clipboard.readText());
+    if (!clipboardText) return;
+
+    const target = getPasteTarget(
+      table,
+      { rowId: focusedCell.row.id, columnId: focusedCell.column.id },
+      parseTsv(clipboardText, dataColumnIds.length),
+      dataColumnIds,
+    );
+    if (target.rowIndex === -1 || target.columnIndex === -1) return;
+
+    const rowCount = table.getRowModel().rows.length;
+    const rowsNeeded = target.rowIndex + target.values.length - rowCount;
+
+    if (rowsNeeded > 0 && onRowsAdd) {
+      if (!expandRows && !pasteDialog.clipboardText) {
+        table.setPasteDialog({ open: true, rowsNeeded, clipboardText });
+        return;
+      }
+      if (expandRows) {
+        await onRowsAdd(rowsNeeded);
+        await waitForRowCount(table, rowCount + rowsNeeded);
+      }
+    }
+
+    const rows = table.getRowModel().rows;
+    const cutCells = table.atoms.cutCells.get();
+    const updates: Array<CellUpdate> = [];
+    const writtenCellKeys = new Set<string>();
+    const movedSourceCells: Array<CellPosition> = [];
+    let skippedCount = 0;
+    let endRowIndex = target.rowIndex;
+    let endColumnIndex = target.columnIndex;
+
+    for (const [pasteRowIndex, pasteRow] of target.values.entries()) {
+      const rowIndex = target.rowIndex + pasteRowIndex;
+      const rowId = rows[rowIndex]?.id;
+      if (!rowId) break;
+
+      for (const [pasteColumnIndex, text] of pasteRow.entries()) {
+        const columnIndex = target.columnIndex + pasteColumnIndex;
+        const columnId = dataColumnIds[columnIndex];
+        if (!columnId) break;
+
+        endRowIndex = Math.max(endRowIndex, rowIndex);
+        endColumnIndex = Math.max(endColumnIndex, columnIndex);
+
+        const column = table.getAllFlatColumnsById()[columnId];
+        const parsed = column?.getCanEdit()
+          ? parsePastedCellValue(text, column.columnDef.meta?.cell)
+          : null;
+        if (!parsed) {
+          skippedCount++;
+          continue;
+        }
+
+        updates.push({ rowId, columnId, value: parsed.value });
+        writtenCellKeys.add(getCellKey(rowId, columnId));
+
+        const sourceCell = target.isFill
+          ? cutCells[0]?.[0]
+          : cutCells[pasteRowIndex]?.[pasteColumnIndex];
+        if (sourceCell) movedSourceCells.push(sourceCell);
+      }
+    }
+
+    if (updates.length > 0) {
+      await onPaste?.(updates);
+
+      const clearedSourceUpdates = movedSourceCells
+        .filter(
+          (cell) => !writtenCellKeys.has(getCellKey(cell.rowId, cell.columnId)),
+        )
+        .map((cell) => ({
+          ...cell,
+          value: getEmptyValueForColumn(table, cell.columnId),
+        }));
+      table.resetCutCells(true);
+      updateCells(table, [...updates, ...clearedSourceUpdates]);
+
+      const startRowId = rows[target.rowIndex]?.id;
+      const startColumnId = dataColumnIds[target.columnIndex];
+      const endRowId = rows[endRowIndex]?.id;
+      const endColumnId = dataColumnIds[endColumnIndex];
+      if (startRowId && startColumnId && endRowId && endColumnId) {
+        table.selectCellRange({
+          anchorRowId: startRowId,
+          anchorColumnId: startColumnId,
+          focusRowId: endRowId,
+          focusColumnId: endColumnId,
+        });
+      }
+
+      notify?.({
+        variant: "success",
+        message:
+          skippedCount > 0
+            ? `${pluralizeCells(updates.length)} pasted, ${skippedCount} skipped`
+            : `${pluralizeCells(updates.length)} pasted`,
+      });
+    } else if (skippedCount > 0) {
+      notify?.({
+        variant: "error",
+        message: `${pluralizeCells(skippedCount)} skipped pasting for invalid data`,
+      });
+    }
+
+    if (pasteDialog.open) table.resetPasteDialog(true);
+  } catch (error) {
+    notify?.({
+      variant: "error",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to paste. Please try again.",
+    });
+  }
+}
+
+const dataGridClipboardFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    cutCells: [],
+    pasteDialog: DEFAULT_PASTE_DIALOG,
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: TableOptions_DataGridClipboard = {
+      onCutCellsChange: makeStateUpdater("cutCells", table),
+      onPasteDialogChange: makeStateUpdater("pasteDialog", table),
+    };
+    return options;
+  },
+  constructTableAPIs: (table) => {
+    const instance = asDataGrid(table);
+
+    const setCutCells = (updater: Updater<Array<Array<CellPosition | null>>>) =>
+      instance.options.onCutCellsChange?.((old) =>
+        functionalUpdate(updater, old),
+      );
+    const setPasteDialog = (updater: Updater<PasteDialogState>) =>
+      instance.options.onPasteDialogChange?.((old) =>
+        functionalUpdate(updater, old),
+      );
+
+    assignTableAPIs("dataGridClipboardFeature", table, {
+      table_getSelectedCells: {
+        fn: () => getSelectedCells(instance),
+      },
+      table_getCutCells: {
+        fn: () => instance.atoms.cutCells.get(),
+      },
+      table_setCutCells: { fn: setCutCells },
+      table_resetCutCells: {
+        fn: (defaultState?: boolean) =>
+          setCutCells(
+            defaultState ? [] : (instance.initialState.cutCells ?? []),
+          ),
+      },
+      table_getPasteDialog: {
+        fn: () => instance.atoms.pasteDialog.get(),
+      },
+      table_setPasteDialog: { fn: setPasteDialog },
+      table_resetPasteDialog: {
+        fn: (defaultState?: boolean) =>
+          setPasteDialog(
+            defaultState
+              ? DEFAULT_PASTE_DIALOG
+              : (instance.initialState.pasteDialog ?? DEFAULT_PASTE_DIALOG),
+          ),
+      },
+      table_copySelectedCells: {
+        fn: () => writeSelectedCells(instance, false),
+      },
+      table_cutSelectedCells: {
+        fn: () => writeSelectedCells(instance, true),
+      },
+      table_pasteCells: {
+        fn: (options?: PasteCellsOptions) => pasteCells(instance, options),
+      },
+    });
+  },
+};
+
 export const dataGridFeatures = tableFeatures({
   cellSelectionFeature,
   columnFilteringFeature,
@@ -669,6 +1106,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridCellEditingFeature,
   dataGridDataFeature,
   dataGridNavigationFeature,
+  dataGridClipboardFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   tableMeta: metaHelper<DataGridTableMeta>(),

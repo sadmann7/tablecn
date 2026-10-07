@@ -6,7 +6,6 @@ import {
   type ColumnOrderState,
   type ColumnPinningState,
   type ColumnVisibilityState,
-  type Row,
   type RowData,
   type RowSelectionState,
   type SortingState,
@@ -22,13 +21,11 @@ import { toast } from "sonner";
 
 import type {
   CellPosition,
-  CellUpdate,
   ContextMenuState,
   DataGridTableMeta,
   Direction,
   FileCellData,
   NavigationDirection,
-  PasteDialogState,
   SearchState,
 } from "@/lib/data-grid-types";
 
@@ -42,15 +39,10 @@ import {
 import {
   getCellFocusTarget,
   getCellKey,
-  getEmptyCellValue,
-  getIsFileCellData,
   getIsInPopover,
   getRowIndexById,
-  getTabTargetCell,
   getVisibleColumnIds,
-  matchSelectOption,
   parseCellKey,
-  parseTsv,
   scrollCellIntoView,
   stringifyUnknown,
 } from "@/lib/data-grid-utils";
@@ -69,32 +61,19 @@ const AUTO_SCROLL_MIN_SPEED = 8;
 const AUTO_SCROLL_MAX_SPEED = 40;
 const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
 
-const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
-const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
-const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
-const VALID_BOOLEANS = new Set([
-  "true",
-  "false",
-  "1",
-  "0",
-  "yes",
-  "no",
-  "checked",
-  "unchecked",
-]);
+function showClipboardToast({
+  variant,
+  message,
+}: {
+  variant: "success" | "error";
+  message: string;
+}) {
+  if (variant === "error") toast.error(message);
+  else toast.success(message);
+}
 
 function getIsDataColumn(columnId: string) {
   return !NON_NAVIGABLE_COLUMN_IDS.has(columnId);
-}
-
-function getCanEditColumnId<TData extends RowData>(
-  table: Table<DataGridFeatures, TData>,
-  columnId: string,
-) {
-  const column = table.getAllFlatColumnsById()[columnId];
-  return column
-    ? column.getCanEdit()
-    : table.options.enableCellEditing !== false;
 }
 
 function getActiveCellRange(ranges: CellSelectionState) {
@@ -133,40 +112,9 @@ function getHasCellRangeSelection(ranges: CellSelectionState) {
 function getSelectedCellKeys<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
 ) {
-  const bounds = table.getCellSelectionBounds();
-  if (bounds.length === 0) return [];
-
-  const rows = table.getRowModel().rows;
-  const columnIds: string[] = [];
-  for (const [columnId, columnIndex] of Object.entries(
-    table.getCellSelectionColumnIndexes(),
-  )) {
-    columnIds[columnIndex] = columnId;
-  }
-
-  const cellKeys: string[] = [];
-  for (const bound of bounds) {
-    for (
-      let rowIndex = bound.minRowIndex;
-      rowIndex <= bound.maxRowIndex;
-      rowIndex++
-    ) {
-      const rowId = rows[rowIndex]?.id;
-      if (!rowId) continue;
-
-      for (
-        let columnIndex = bound.minColumnIndex;
-        columnIndex <= bound.maxColumnIndex;
-        columnIndex++
-      ) {
-        const columnId = columnIds[columnIndex];
-        if (columnId && getIsDataColumn(columnId)) {
-          cellKeys.push(getCellKey(rowId, columnId));
-        }
-      }
-    }
-  }
-  return cellKeys;
+  return table
+    .getSelectedCells()
+    .map(({ rowId, columnId }) => getCellKey(rowId, columnId));
 }
 
 function setRowSelected(
@@ -190,15 +138,12 @@ interface DataGridState {
   rowSelection: RowSelectionState;
   /** Cell where the current mouse drag selection started, `null` when not dragging. */
   dragStartCell: CellPosition | null;
-  /** Cut source keys laid out in the same rows and columns as the clipboard text. */
-  cutCells: Array<Array<string | null>>;
   contextMenu: ContextMenuState;
   searchQuery: string;
   searchMatches: CellPosition[];
   matchIndex: number;
   searchOpen: boolean;
   lastClickedRowId: string | null;
-  pasteDialog: PasteDialogState;
 }
 
 interface DataGridStore {
@@ -239,9 +184,7 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   onRowAdd?: (
     event?: React.MouseEvent<HTMLDivElement>,
   ) => RowAddResult | Promise<RowAddResult | null> | null;
-  onRowsAdd?: (count: number) => void | Promise<void>;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
-  onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
   onFilesUpload?: (params: {
     files: File[];
     rowId: string;
@@ -258,7 +201,6 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   enableSingleCellSelection?: boolean;
   enableColumnSelection?: boolean;
   enableSearch?: boolean;
-  enablePaste?: boolean;
   readOnly?: boolean;
 }
 
@@ -307,7 +249,6 @@ function useDataGrid<TData extends RowData>({
       columnOrder: initialState?.columnOrder ?? [],
       rowSelection: initialState?.rowSelection ?? {},
       dragStartCell: null,
-      cutCells: [],
       contextMenu: {
         open: false,
         x: 0,
@@ -318,11 +259,6 @@ function useDataGrid<TData extends RowData>({
       matchIndex: -1,
       searchOpen: false,
       lastClickedRowId: null,
-      pasteDialog: {
-        open: false,
-        rowsNeeded: 0,
-        clipboardText: "",
-      },
     };
   });
 
@@ -398,7 +334,6 @@ function useDataGrid<TData extends RowData>({
   const columnOrder = props.state?.columnOrder ?? storeColumnOrder;
   const rowSelection = useStore(store, (state) => state.rowSelection);
   const contextMenu = useStore(store, (state) => state.contextMenu);
-  const pasteDialog = useStore(store, (state) => state.pasteDialog);
 
   const getRowIndex = React.useCallback((rowId: string) => {
     const currentTable = tableRef.current;
@@ -625,603 +560,6 @@ function useDataGrid<TData extends RowData>({
       ];
     });
   }, []);
-
-  const serializeCellsToTsv = React.useCallback(() => {
-    const currentTable = tableRef.current;
-    if (!currentTable) return null;
-
-    const selectedCellsArray = getSelectedCellKeys(currentTable);
-    if (selectedCellsArray.length === 0) return null;
-
-    const rowsById = currentTable.getRowModel().rowsById;
-
-    const selectedColumnIds: string[] = [];
-    const seenColumnIds = new Set<string>();
-    const cellData = new Map<string, string>();
-    const selectedRows = new Map<string, Row<DataGridFeatures, TData>>();
-    const rowCellMaps = new Map<
-      string,
-      Map<
-        string,
-        ReturnType<Row<DataGridFeatures, TData>["getVisibleCells"]>[number]
-      >
-    >();
-    const navigableCells: string[] = [];
-
-    for (const cellKey of selectedCellsArray) {
-      const { rowId, columnId } = parseCellKey(cellKey);
-
-      if (columnId && NON_NAVIGABLE_COLUMN_IDS.has(columnId)) {
-        continue;
-      }
-
-      navigableCells.push(cellKey);
-
-      if (columnId && !seenColumnIds.has(columnId)) {
-        seenColumnIds.add(columnId);
-        selectedColumnIds.push(columnId);
-      }
-
-      const row = rowsById[rowId];
-      if (row) {
-        selectedRows.set(rowId, row);
-        let cellMap = rowCellMaps.get(rowId);
-        if (!cellMap) {
-          cellMap = new Map(row.getVisibleCells().map((c) => [c.column.id, c]));
-          rowCellMaps.set(rowId, cellMap);
-        }
-        const cell = cellMap.get(columnId);
-        if (cell) {
-          const value = cell.getValue();
-          const cellVariant = cell.column.columnDef?.meta?.cell?.variant;
-
-          let serializedValue = "";
-          if (cellVariant === "file" || cellVariant === "multi-select") {
-            serializedValue = value ? JSON.stringify(value) : "";
-          } else if (value instanceof Date) {
-            serializedValue = value.toISOString();
-          } else {
-            serializedValue = stringifyUnknown(value);
-          }
-
-          cellData.set(cellKey, serializedValue);
-        }
-      }
-    }
-
-    const colIndices = new Set<number>();
-    for (const cellKey of navigableCells) {
-      const { columnId } = parseCellKey(cellKey);
-      const colIndex = selectedColumnIds.indexOf(columnId);
-      if (colIndex >= 0) {
-        colIndices.add(colIndex);
-      }
-    }
-
-    const sortedRows = Array.from(selectedRows.values()).sort(
-      (a, b) => a.getDisplayIndex() - b.getDisplayIndex(),
-    );
-    const sortedColIndices = Array.from(colIndices).sort((a, b) => a - b);
-    const sortedColumnIds = sortedColIndices.map((i) => selectedColumnIds[i]);
-
-    const navigableCellSet = new Set(navigableCells);
-    const cellGrid = sortedRows.map((row) =>
-      sortedColumnIds.map((columnId) => {
-        if (!columnId) return null;
-        const cellKey = getCellKey(row.id, columnId);
-        return navigableCellSet.has(cellKey) ? cellKey : null;
-      }),
-    );
-
-    const tsvData = sortedRows
-      .map((row) =>
-        sortedColumnIds
-          .map((columnId) =>
-            columnId ? (cellData.get(getCellKey(row.id, columnId)) ?? "") : "",
-          )
-          .join("\t"),
-      )
-      .join("\n");
-
-    return { tsvData, cellGrid, selectedCellsArray: navigableCells };
-  }, []);
-
-  const onCellsCopy = React.useCallback(async () => {
-    const result = serializeCellsToTsv();
-    if (!result) return;
-
-    const { tsvData, selectedCellsArray } = result;
-
-    try {
-      await navigator.clipboard.writeText(tsvData);
-
-      const currentState = store.getState();
-      if (currentState.cutCells.length > 0) {
-        store.setState("cutCells", []);
-      }
-
-      toast.success(
-        `${selectedCellsArray.length} cell${
-          selectedCellsArray.length !== 1 ? "s" : ""
-        } copied`,
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to copy to clipboard",
-      );
-    }
-  }, [store, serializeCellsToTsv]);
-
-  const onCellsCut = React.useCallback(async () => {
-    if (propsRef.current.readOnly) return;
-
-    const result = serializeCellsToTsv();
-    if (!result) return;
-
-    const { tsvData, cellGrid, selectedCellsArray } = result;
-
-    try {
-      await navigator.clipboard.writeText(tsvData);
-
-      store.setState("cutCells", cellGrid);
-
-      toast.success(
-        `${selectedCellsArray.length} cell${
-          selectedCellsArray.length !== 1 ? "s" : ""
-        } cut`,
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to cut to clipboard",
-      );
-    }
-  }, [store, propsRef, serializeCellsToTsv]);
-
-  const onCellsPaste = React.useCallback(
-    async (expandRows = false) => {
-      if (propsRef.current.readOnly) return;
-
-      const currentState = store.getState();
-      const currentTable = tableRef.current;
-      if (!currentTable) return;
-
-      const focusedCell = getFocusedCellPosition(
-        currentTable.atoms.cellSelection.get(),
-      );
-      if (!focusedCell) return;
-
-      const rows = currentTable.getRowModel().rows;
-
-      try {
-        let clipboardText = currentState.pasteDialog.clipboardText;
-
-        if (!clipboardText) {
-          clipboardText = await navigator.clipboard.readText();
-          if (!clipboardText) return;
-        }
-
-        const rawPastedData = parseTsv(
-          clipboardText,
-          navigableColumnIds.length,
-        );
-
-        // Fill entire selection when clipboard has a single value and multiple cells are selected
-        const selectionCells = getSelectedCellKeys(currentTable);
-        const isSingleCellClipboard =
-          rawPastedData.length === 1 && (rawPastedData[0]?.length ?? 0) === 1;
-
-        let pastedData = rawPastedData;
-        let isFillPaste = false;
-        let startRowIndex = getRowIndex(focusedCell.rowId);
-        let startColIndex = navigableColumnIds.indexOf(focusedCell.columnId);
-
-        if (isSingleCellClipboard && selectionCells.length > 1) {
-          const singleValue = rawPastedData[0]?.[0] ?? "";
-          let minRow = Infinity;
-          let maxRow = -Infinity;
-          let minColIdx = Infinity;
-          let maxColIdx = -Infinity;
-
-          for (const cellKey of selectionCells) {
-            const { rowId, columnId } = parseCellKey(cellKey);
-            const rowIndex = getRowIndex(rowId);
-            const colIdx = navigableColumnIds.indexOf(columnId);
-            if (rowIndex === -1 || colIdx === -1) continue;
-            minRow = Math.min(minRow, rowIndex);
-            maxRow = Math.max(maxRow, rowIndex);
-            minColIdx = Math.min(minColIdx, colIdx);
-            maxColIdx = Math.max(maxColIdx, colIdx);
-          }
-
-          if (minRow !== Infinity) {
-            startRowIndex = minRow;
-            startColIndex = minColIdx;
-            const numRows = maxRow - minRow + 1;
-            const numCols = maxColIdx - minColIdx + 1;
-            pastedData = Array.from({ length: numRows }, () =>
-              Array.from({ length: numCols }, () => singleValue),
-            );
-            isFillPaste = true;
-          }
-        }
-
-        if (startRowIndex === -1 || startColIndex === -1) return;
-
-        const rowCount = rows.length;
-        const rowsNeeded = startRowIndex + pastedData.length - rowCount;
-
-        if (
-          rowsNeeded > 0 &&
-          !expandRows &&
-          propsRef.current.onRowAdd &&
-          !currentState.pasteDialog.clipboardText
-        ) {
-          store.setState("pasteDialog", {
-            open: true,
-            rowsNeeded,
-            clipboardText,
-          });
-          return;
-        }
-
-        if (expandRows && rowsNeeded > 0) {
-          const expectedRowCount = rowCount + rowsNeeded;
-
-          if (propsRef.current.onRowsAdd) {
-            await propsRef.current.onRowsAdd(rowsNeeded);
-          } else if (propsRef.current.onRowAdd) {
-            for (let i = 0; i < rowsNeeded; i++) {
-              await propsRef.current.onRowAdd();
-            }
-          }
-
-          let attempts = 0;
-          const maxAttempts = 50;
-          let currentTableRowCount =
-            tableRef.current?.getRowModel().rows.length ?? 0;
-
-          while (
-            currentTableRowCount < expectedRowCount &&
-            attempts < maxAttempts
-          ) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            currentTableRowCount =
-              tableRef.current?.getRowModel().rows.length ?? 0;
-            attempts++;
-          }
-        }
-
-        const updates: Array<CellUpdate> = [];
-        const tableColumns = currentTable?.getAllColumns() ?? [];
-        let cellsUpdated = 0;
-        let endRowIndex = startRowIndex;
-        let endColIndex = startColIndex;
-
-        const updatedTable = tableRef.current;
-        const updatedRows = updatedTable?.getRowModel().rows;
-
-        let cellsSkipped = 0;
-        const writtenCellKeys = new Set<string>();
-        const movedSourceCellKeys = new Set<string>();
-
-        const columnMap = new Map(tableColumns.map((c) => [c.id, c]));
-
-        for (
-          let pasteRowIdx = 0;
-          pasteRowIdx < pastedData.length;
-          pasteRowIdx++
-        ) {
-          const pasteRow = pastedData[pasteRowIdx];
-          if (!pasteRow) continue;
-
-          const targetRowIndex = startRowIndex + pasteRowIdx;
-          const targetRowId = updatedRows?.[targetRowIndex]?.id;
-          if (!targetRowId) break;
-
-          for (
-            let pasteColIdx = 0;
-            pasteColIdx < pasteRow.length;
-            pasteColIdx++
-          ) {
-            const targetColIndex = startColIndex + pasteColIdx;
-            if (targetColIndex >= navigableColumnIds.length) break;
-
-            const targetColumnId = navigableColumnIds[targetColIndex];
-            if (!targetColumnId) continue;
-
-            if (!getCanEditColumnId(currentTable, targetColumnId)) {
-              cellsSkipped++;
-              endRowIndex = Math.max(endRowIndex, targetRowIndex);
-              endColIndex = Math.max(endColIndex, targetColIndex);
-              continue;
-            }
-
-            const pastedValue = pasteRow[pasteColIdx] ?? "";
-            const column = columnMap.get(targetColumnId);
-            const cellOpts = column?.columnDef?.meta?.cell;
-            const cellVariant = cellOpts?.variant;
-
-            let processedValue: unknown = pastedValue;
-            let shouldSkip = false;
-
-            switch (cellVariant) {
-              case "number": {
-                if (!pastedValue) {
-                  processedValue = null;
-                } else {
-                  const num = Number.parseFloat(pastedValue);
-                  if (Number.isNaN(num)) shouldSkip = true;
-                  else processedValue = num;
-                }
-                break;
-              }
-
-              case "checkbox": {
-                if (!pastedValue) {
-                  processedValue = false;
-                } else {
-                  const lower = pastedValue.toLowerCase();
-                  if (VALID_BOOLEANS.has(lower)) {
-                    processedValue = TRUTHY_BOOLEANS.has(lower);
-                  } else {
-                    shouldSkip = true;
-                  }
-                }
-                break;
-              }
-
-              case "date": {
-                if (!pastedValue) {
-                  processedValue = null;
-                } else {
-                  const date = new Date(pastedValue);
-                  if (Number.isNaN(date.getTime())) shouldSkip = true;
-                  else processedValue = date;
-                }
-                break;
-              }
-
-              case "select": {
-                const options = cellOpts?.options ?? [];
-                if (!pastedValue) {
-                  processedValue = null;
-                } else {
-                  const matched = matchSelectOption(pastedValue, options);
-                  if (matched) processedValue = matched;
-                  else shouldSkip = true;
-                }
-                break;
-              }
-
-              case "multi-select": {
-                const options = cellOpts?.options ?? [];
-                let values: string[] = [];
-                try {
-                  const parsed = JSON.parse(pastedValue);
-                  if (Array.isArray(parsed)) {
-                    values = parsed.filter(
-                      (v): v is string => typeof v === "string",
-                    );
-                  }
-                } catch {
-                  values = pastedValue
-                    ? pastedValue.split(",").map((v) => v.trim())
-                    : [];
-                }
-
-                const validated = values
-                  .map((v) => matchSelectOption(v, options))
-                  .filter(Boolean) as string[];
-
-                if (values.length > 0 && validated.length === 0) {
-                  shouldSkip = true;
-                } else {
-                  processedValue = validated;
-                }
-                break;
-              }
-
-              case "file": {
-                if (!pastedValue) {
-                  processedValue = [];
-                } else {
-                  try {
-                    const parsed = JSON.parse(pastedValue);
-                    if (!Array.isArray(parsed)) {
-                      shouldSkip = true;
-                    } else {
-                      const validFiles = parsed.filter(getIsFileCellData);
-                      if (parsed.length > 0 && validFiles.length === 0) {
-                        shouldSkip = true;
-                      } else {
-                        processedValue = validFiles;
-                      }
-                    }
-                  } catch {
-                    shouldSkip = true;
-                  }
-                }
-                break;
-              }
-
-              case "url": {
-                if (!pastedValue) {
-                  processedValue = "";
-                } else {
-                  const firstChar = pastedValue[0];
-                  if (firstChar === "[" || firstChar === "{") {
-                    shouldSkip = true;
-                  } else {
-                    try {
-                      new URL(pastedValue);
-                      processedValue = pastedValue;
-                    } catch {
-                      if (DOMAIN_REGEX.test(pastedValue)) {
-                        processedValue = pastedValue;
-                      } else {
-                        shouldSkip = true;
-                      }
-                    }
-                  }
-                }
-                break;
-              }
-
-              default: {
-                if (!pastedValue) {
-                  processedValue = "";
-                  break;
-                }
-
-                if (ISO_DATE_REGEX.test(pastedValue)) {
-                  const date = new Date(pastedValue);
-                  if (!Number.isNaN(date.getTime())) {
-                    processedValue = date.toLocaleDateString();
-                    break;
-                  }
-                }
-
-                const firstChar = pastedValue[0];
-                if (
-                  firstChar === "[" ||
-                  firstChar === "{" ||
-                  firstChar === "t" ||
-                  firstChar === "f"
-                ) {
-                  try {
-                    const parsed = JSON.parse(pastedValue);
-
-                    if (Array.isArray(parsed)) {
-                      if (
-                        parsed.length > 0 &&
-                        parsed.every(getIsFileCellData)
-                      ) {
-                        processedValue = parsed.map((f) => f.name).join(", ");
-                      } else if (parsed.every((v) => typeof v === "string")) {
-                        processedValue = (parsed as string[]).join(", ");
-                      }
-                    } else if (typeof parsed === "boolean") {
-                      processedValue = parsed ? "Checked" : "Unchecked";
-                    }
-                  } catch {
-                    const lower = pastedValue.toLowerCase();
-                    if (lower === "true" || lower === "false") {
-                      processedValue =
-                        lower === "true" ? "Checked" : "Unchecked";
-                    }
-                  }
-                }
-              }
-            }
-
-            if (shouldSkip) {
-              cellsSkipped++;
-              endRowIndex = Math.max(endRowIndex, targetRowIndex);
-              endColIndex = Math.max(endColIndex, targetColIndex);
-              continue;
-            }
-
-            updates.push({
-              rowId: targetRowId,
-              columnId: targetColumnId,
-              value: processedValue,
-            });
-            cellsUpdated++;
-            writtenCellKeys.add(getCellKey(targetRowId, targetColumnId));
-
-            const sourceCellKey = isFillPaste
-              ? currentState.cutCells[0]?.[0]
-              : currentState.cutCells[pasteRowIdx]?.[pasteColIdx];
-            if (sourceCellKey) movedSourceCellKeys.add(sourceCellKey);
-
-            endRowIndex = Math.max(endRowIndex, targetRowIndex);
-            endColIndex = Math.max(endColIndex, targetColIndex);
-          }
-        }
-
-        if (updates.length > 0) {
-          if (propsRef.current.onPaste) {
-            await propsRef.current.onPaste(updates);
-          }
-
-          const allUpdates = [...updates];
-
-          if (currentState.cutCells.length > 0) {
-            const columnById = new Map(tableColumns.map((c) => [c.id, c]));
-
-            for (const cellKey of movedSourceCellKeys) {
-              if (writtenCellKeys.has(cellKey)) continue;
-
-              const { rowId, columnId } = parseCellKey(cellKey);
-              const column = columnById.get(columnId);
-              const cellVariant = column?.columnDef?.meta?.cell?.variant;
-              const emptyValue = getEmptyCellValue(cellVariant);
-              allUpdates.push({ rowId, columnId, value: emptyValue });
-            }
-
-            store.setState("cutCells", []);
-          }
-
-          currentTable.updateCells(allUpdates);
-
-          if (cellsSkipped > 0) {
-            toast.success(
-              `${cellsUpdated} cell${
-                cellsUpdated !== 1 ? "s" : ""
-              } pasted, ${cellsSkipped} skipped`,
-            );
-          } else {
-            toast.success(
-              `${cellsUpdated} cell${cellsUpdated !== 1 ? "s" : ""} pasted`,
-            );
-          }
-
-          const startRowId = updatedRows?.[startRowIndex]?.id;
-          const startColumnId = navigableColumnIds[startColIndex];
-          const endRowId = updatedRows?.[endRowIndex]?.id;
-          const endColumnId = navigableColumnIds[endColIndex];
-          if (startRowId && startColumnId && endRowId && endColumnId) {
-            selectRange(
-              { rowId: startRowId, columnId: startColumnId },
-              { rowId: endRowId, columnId: endColumnId },
-            );
-            focusCellElement(
-              { rowId: startRowId, columnId: startColumnId },
-              false,
-            );
-          }
-        } else if (cellsSkipped > 0) {
-          toast.error(
-            `${cellsSkipped} cell${
-              cellsSkipped !== 1 ? "s" : ""
-            } skipped pasting for invalid data`,
-          );
-        }
-
-        if (currentState.pasteDialog.open) {
-          store.setState("pasteDialog", {
-            open: false,
-            rowsNeeded: 0,
-            clipboardText: "",
-          });
-        }
-      } catch (error) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to paste. Please try again.",
-        );
-      }
-    },
-    [
-      store,
-      navigableColumnIds,
-      propsRef,
-      selectRange,
-      focusCellElement,
-      getRowIndex,
-    ],
-  );
 
   const onRowsDelete = React.useCallback(
     async (rowIds: string[]) => {
@@ -1782,19 +1120,6 @@ function useDataGrid<TData extends RowData>({
     [propsRef, selectColumn, onSelectionClear],
   );
 
-  const onPasteDialogOpenChange = React.useCallback(
-    (open: boolean) => {
-      if (!open) {
-        store.setState("pasteDialog", {
-          open: false,
-          rowsNeeded: 0,
-          clipboardText: "",
-        });
-      }
-    },
-    [store],
-  );
-
   const defaultColumn: Partial<ColumnDef<DataGridFeatures, TData>> =
     React.useMemo(
       () => ({
@@ -1831,9 +1156,6 @@ function useDataGrid<TData extends RowData>({
       get contextMenu() {
         return store.getState().contextMenu;
       },
-      get pasteDialog() {
-        return store.getState().pasteDialog;
-      },
       getIsCellSelected,
       getSelectedCellKeys: () =>
         tableRef.current ? getSelectedCellKeys(tableRef.current) : [],
@@ -1853,9 +1175,6 @@ function useDataGrid<TData extends RowData>({
       onCellMouseEnter,
       onCellMouseUp,
       onCellContextMenu,
-      onCellsCopy,
-      onCellsCut,
-      onCellsPaste,
       onSelectionClear,
       onFilesUpload: propsRef.current.onFilesUpload
         ? propsRef.current.onFilesUpload
@@ -1864,7 +1183,6 @@ function useDataGrid<TData extends RowData>({
         ? propsRef.current.onFilesDelete
         : undefined,
       onContextMenuOpenChange,
-      onPasteDialogOpenChange,
     };
   }, [
     propsRef,
@@ -1881,12 +1199,8 @@ function useDataGrid<TData extends RowData>({
     onCellMouseEnter,
     onCellMouseUp,
     onCellContextMenu,
-    onCellsCopy,
-    onCellsCut,
-    onCellsPaste,
     onSelectionClear,
     onContextMenuOpenChange,
-    onPasteDialogOpenChange,
   ]);
 
   // Memoize state object to reduce shallow equality checks
@@ -1928,6 +1242,7 @@ function useDataGrid<TData extends RowData>({
     !props.readOnly && props.enableCellEditing !== false;
   const hasEditingCellChange = !!props.onEditingCellChange;
   const hasRowHeightChange = !!props.onRowHeightChange;
+  const canAddRows = !!props.onRowsAdd || !!props.onRowAdd;
 
   const tableOptions = React.useMemo<
     TableOptions<DataGridFeatures, TData>
@@ -1948,6 +1263,15 @@ function useDataGrid<TData extends RowData>({
         onRowHeightChange: (updater) =>
           propsRef.current.onRowHeightChange?.(updater),
       }),
+      onRowsAdd: canAddRows
+        ? async (count) => {
+            const { onRowsAdd, onRowAdd } = propsRef.current;
+            if (onRowsAdd) return onRowsAdd(count);
+            for (let i = 0; i < count; i++) await onRowAdd?.();
+          }
+        : undefined,
+      onClipboardNotice: (notice) =>
+        (propsRef.current.onClipboardNotice ?? showClipboardToast)(notice),
       features: dataGridFeatures,
       data,
       columns: tableColumns,
@@ -1976,6 +1300,7 @@ function useDataGrid<TData extends RowData>({
     enableCellEditing,
     hasEditingCellChange,
     hasRowHeightChange,
+    canAddRows,
     dir,
     onRowSelectionChange,
     onSortingChange,
@@ -1994,6 +1319,7 @@ function useDataGrid<TData extends RowData>({
 
   const rowHeight = table.state.rowHeight;
   const editingCell = table.state.editingCell;
+  const pasteDialog = table.state.pasteDialog;
   const cellSelection = table.state.cellSelection;
   const focusedCell = React.useMemo(
     () => getFocusedCellPosition(cellSelection),
@@ -2327,7 +1653,7 @@ function useDataGrid<TData extends RowData>({
 
       if (isCtrlPressed && !shiftKey && key === "c" && !isUtilityCellFocused) {
         event.preventDefault();
-        void onCellsCopy();
+        void currentTable?.copySelectedCells();
         return;
       }
 
@@ -2339,7 +1665,7 @@ function useDataGrid<TData extends RowData>({
         !propsRef.current.readOnly
       ) {
         event.preventDefault();
-        void onCellsCut();
+        void currentTable?.cutSelectedCells();
         return;
       }
 
@@ -2352,7 +1678,7 @@ function useDataGrid<TData extends RowData>({
         !propsRef.current.readOnly
       ) {
         event.preventDefault();
-        void onCellsPaste();
+        void currentTable?.pasteCells();
         return;
       }
 
@@ -2375,8 +1701,8 @@ function useDataGrid<TData extends RowData>({
             onSelectionClear();
           }
 
-          if (currentState.cutCells.length > 0) {
-            store.setState("cutCells", []);
+          if (currentTable?.getCutCells().length) {
+            currentTable.resetCutCells(true);
           }
         }
         return;
@@ -2498,9 +1824,6 @@ function useDataGrid<TData extends RowData>({
       propsRef,
       blurCell,
       selectAll,
-      onCellsCopy,
-      onCellsCut,
-      onCellsPaste,
       onSelectionClear,
       navigableColumnIds,
       onSearchOpenChange,
