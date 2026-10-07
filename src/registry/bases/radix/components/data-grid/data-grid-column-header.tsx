@@ -343,6 +343,12 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
   label,
 }: DataGridColumnResizerProps<TData, TValue>) {
   const defaultColumnDef = table.getDefaultColumnDef();
+  const minSize =
+    header.column.columnDef.minSize ?? defaultColumnDef.minSize ?? 0;
+  const maxSize =
+    header.column.columnDef.maxSize ??
+    defaultColumnDef.maxSize ??
+    Number.POSITIVE_INFINITY;
 
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -353,11 +359,8 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
         ? getColumnFitSize({
             gridElement,
             columnId: column.id,
-            minSize: column.columnDef.minSize ?? defaultColumnDef.minSize ?? 0,
-            maxSize:
-              column.columnDef.maxSize ??
-              defaultColumnDef.maxSize ??
-              Number.POSITIVE_INFINITY,
+            minSize,
+            maxSize,
             wrapperContentSize: getBadgeColumnContentSize(column, table),
           })
         : null;
@@ -369,7 +372,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
 
       table.setColumnSizing((prev) => ({ ...prev, [column.id]: fitSize }));
     },
-    [header.column, table, defaultColumnDef],
+    [header.column, table, minSize, maxSize],
   );
 
   return (
@@ -378,8 +381,8 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
       aria-orientation="vertical"
       aria-label={`Resize ${label} column`}
       aria-valuenow={header.column.getSize()}
-      aria-valuemin={defaultColumnDef.minSize}
-      aria-valuemax={defaultColumnDef.maxSize}
+      aria-valuemin={minSize}
+      aria-valuemax={Number.isFinite(maxSize) ? maxSize : undefined}
       tabIndex={-1}
       className={cn(
         "absolute -inset-e-px top-0 z-50 h-full w-0.5 cursor-ew-resize touch-none bg-border transition-opacity select-none after:absolute after:inset-y-0 after:inset-s-1/2 after:h-full after:w-4.5 after:-translate-x-1/2 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
