@@ -75,11 +75,7 @@ export interface DataGridTableMeta {
   getSelectedCellKeys?: () => string[];
   getIsSearchMatch?: (rowId: string, columnId: string) => boolean;
   getIsActiveSearchMatch?: (rowId: string, columnId: string) => boolean;
-  scrollToCell?: (
-    rowId: string,
-    columnId: string,
-    align?: "auto" | "start" | "center" | "end",
-  ) => void;
+  scrollToCell?: (rowId: string, columnId: string) => void;
   onRowSelect?: (rowId: string, checked: boolean, shiftKey: boolean) => void;
   onColumnClick?: (columnId: string) => void;
   onCellClick?: (
