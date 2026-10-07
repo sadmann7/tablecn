@@ -69,10 +69,10 @@ function startEditing(
   rowId: string,
   columnId: string,
 ) {
-  table
+  const cellsByColumnId = table
     .getCoreRowModel()
-    .rowsById[rowId]?.getAllCellsByColumnId()
-    [columnId]?.startEditing();
+    .rowsById[rowId]?.getAllCellsByColumnId();
+  cellsByColumnId?.[columnId]?.startEditing();
 }
 
 function createWrapper() {
@@ -1146,7 +1146,7 @@ describe("useDataGrid", () => {
   });
 
   describe("search functionality", () => {
-    it("should provide search state when enableSearch is true", () => {
+    it("should start with search closed when enableSearch is true", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1157,13 +1157,13 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.searchState).toBeDefined();
-      expect(result.current.searchState?.searchOpen).toBe(false);
-      expect(result.current.searchState?.searchQuery).toBe("");
-      expect(result.current.searchState?.searchMatches).toEqual([]);
+      expect(result.current.table.options.enableSearch).toBe(true);
+      expect(result.current.table.getSearchOpen()).toBe(false);
+      expect(result.current.table.getSearchQuery()).toBe("");
+      expect(result.current.table.getSearchMatches()).toEqual([]);
     });
 
-    it("should not provide search state when enableSearch is false", () => {
+    it("should keep search disabled when enableSearch is false", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1174,7 +1174,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.searchState).toBeUndefined();
+      expect(result.current.table.options.enableSearch).toBe(false);
     });
 
     it("should open search panel", async () => {
@@ -1189,12 +1189,12 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.searchState?.onSearchOpenChange(true);
+        result.current.table.openSearch();
         // Allow microtask queue to flush
         await Promise.resolve();
       });
 
-      expect(result.current.searchState?.searchOpen).toBe(true);
+      expect(result.current.table.getSearchOpen()).toBe(true);
     });
 
     it("should find matches when searching", () => {
@@ -1209,12 +1209,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.searchState?.searchMatches.length).toBeGreaterThan(
-        0,
-      );
+      expect(result.current.table.getSearchMatches().length).toBeGreaterThan(0);
     });
 
     it("should clear search results when query is empty", () => {
@@ -1230,19 +1228,150 @@ describe("useDataGrid", () => {
 
       // First search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.searchState?.searchMatches.length).toBeGreaterThan(
-        0,
-      );
+      expect(result.current.table.getSearchMatches().length).toBeGreaterThan(0);
 
       // Clear search
       act(() => {
-        result.current.searchState?.onSearch("");
+        result.current.table.setSearchQuery("");
       });
 
-      expect(result.current.searchState?.searchMatches).toEqual([]);
+      expect(result.current.table.getSearchMatches()).toEqual([]);
+    });
+  });
+
+  describe("search feature", () => {
+    function getCell(
+      table: ReturnType<typeof useDataGrid<TestData>>["table"],
+      rowId: string,
+      columnId: string,
+    ) {
+      return table.getCoreRowModel().rowsById[rowId]?.getAllCellsByColumnId()[
+        columnId
+      ];
+    }
+
+    it("should focus the first match and flag matching cells", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.openSearch();
+        result.current.table.setSearchQuery("rodney");
+      });
+
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "1", columnId: "name" },
+      ]);
+      expect(result.current.focusedCell).toEqual({
+        rowId: "1",
+        columnId: "name",
+      });
+
+      const table = result.current.table;
+      expect(getCell(table, "1", "name")?.getIsSearchMatch()).toBe(true);
+      expect(getCell(table, "1", "name")?.getIsActiveSearchMatch()).toBe(true);
+      expect(getCell(table, "0", "name")?.getIsSearchMatch()).toBe(false);
+    });
+
+    it("should recompute matches when data changes", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("ollie");
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([]);
+
+      rerender({
+        data: [...testData, { id: "4", name: "Ollie", trick: "", score: 0 }],
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "3", columnId: "name" },
+      ]);
+    });
+
+    it("should skip utility columns", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: [
+              { id: "select", accessorFn: () => "Tony" },
+              ...testColumns,
+            ],
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("tony");
+      });
+
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "name" },
+      ]);
+    });
+
+    it("should not open without enableSearch", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.openSearch();
+      });
+
+      expect(result.current.table.getSearchOpen()).toBe(false);
+    });
+
+    it("should keep focus on the active match after closing", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.openSearch();
+        result.current.table.setSearchQuery("kickflip");
+      });
+      act(() => {
+        result.current.table.closeSearch();
+      });
+
+      expect(result.current.table.getSearchQuery()).toBe("");
+      expect(result.current.table.getSearchMatches()).toEqual([]);
+      expect(result.current.focusedCell).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
     });
   });
 
@@ -2417,15 +2546,15 @@ describe("useDataGrid", () => {
 
       // Search for "Kickflip"
       act(() => {
-        result.current.searchState?.onSearch("Kickflip");
+        result.current.table.setSearchQuery("Kickflip");
       });
 
       // Navigate to next match
       act(() => {
-        result.current.searchState?.onNavigateToNextMatch();
+        result.current.table.goToNextSearchMatch();
       });
 
-      expect(result.current.searchState?.matchIndex).toBeDefined();
+      expect(result.current.table.getSearchMatchIndex()).toBeDefined();
     });
 
     it("should navigate to previous search match", () => {
@@ -2441,20 +2570,20 @@ describe("useDataGrid", () => {
 
       // Search for "Kickflip"
       act(() => {
-        result.current.searchState?.onSearch("Kickflip");
+        result.current.table.setSearchQuery("Kickflip");
       });
 
       // Navigate to next first
       act(() => {
-        result.current.searchState?.onNavigateToNextMatch();
+        result.current.table.goToNextSearchMatch();
       });
 
       // Then navigate back
       act(() => {
-        result.current.searchState?.onNavigateToPrevMatch();
+        result.current.table.goToPrevSearchMatch();
       });
 
-      expect(result.current.searchState?.matchIndex).toBe(0);
+      expect(result.current.table.getSearchMatchIndex()).toBe(0);
     });
 
     it("should wrap around when navigating past last match", () => {
@@ -2470,20 +2599,20 @@ describe("useDataGrid", () => {
 
       // Search for "Kickflip"
       act(() => {
-        result.current.searchState?.onSearch("Kickflip");
+        result.current.table.setSearchQuery("Kickflip");
       });
 
-      const matchCount = result.current.searchState?.searchMatches.length ?? 0;
+      const matchCount = result.current.table.getSearchMatches().length ?? 0;
 
       // Navigate through all matches
       for (let i = 0; i < matchCount; i++) {
         act(() => {
-          result.current.searchState?.onNavigateToNextMatch();
+          result.current.table.goToNextSearchMatch();
         });
       }
 
       // Should wrap to 0
-      expect(result.current.searchState?.matchIndex).toBe(0);
+      expect(result.current.table.getSearchMatchIndex()).toBe(0);
     });
 
     it("should provide searchMatchesByRow computed value", () => {
@@ -2499,10 +2628,10 @@ describe("useDataGrid", () => {
 
       // Search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.searchMatchesByRow).toBeDefined();
+      expect(result.current.table.getSearchMatchesByRowId()).toBeDefined();
     });
 
     it("should provide activeSearchMatch", () => {
@@ -2518,10 +2647,10 @@ describe("useDataGrid", () => {
 
       // Search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.activeSearchMatch).toBeDefined();
+      expect(result.current.table.getActiveSearchMatch()).toBeDefined();
     });
 
     it("should update search query", async () => {
@@ -2536,11 +2665,11 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.searchState?.onSearchQueryChange("test query");
+        result.current.table.setSearchQuery("test query");
         await Promise.resolve();
       });
 
-      expect(result.current.searchState?.searchQuery).toBe("test query");
+      expect(result.current.table.getSearchQuery()).toBe("test query");
     });
 
     it("should close search and restore focus to last match", async () => {
@@ -2556,23 +2685,23 @@ describe("useDataGrid", () => {
 
       // Open search
       await act(async () => {
-        result.current.searchState?.onSearchOpenChange(true);
+        result.current.table.openSearch();
         await Promise.resolve();
       });
 
       // Search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
       // Close search
       await act(async () => {
-        result.current.searchState?.onSearchOpenChange(false);
+        result.current.table.closeSearch();
         await Promise.resolve();
       });
 
-      expect(result.current.searchState?.searchOpen).toBe(false);
-      expect(result.current.searchState?.searchQuery).toBe("");
+      expect(result.current.table.getSearchOpen()).toBe(false);
+      expect(result.current.table.getSearchQuery()).toBe("");
     });
   });
 
@@ -3348,7 +3477,7 @@ describe("useDataGrid", () => {
       expect(meta.focusedCell).toBeNull();
       expect(meta.editingCell).toBeNull();
       expect(meta.selectedCellCount).toBe(0);
-      expect(meta.searchOpen).toBe(false);
+      expect(result.current.table.getSearchOpen()).toBe(false);
       expect(meta.contextMenu).toBeDefined();
     });
 

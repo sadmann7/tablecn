@@ -44,9 +44,6 @@ export function DataGrid<TData extends RowData>({
   measureElement,
   columns,
   columnSizeVars,
-  searchState,
-  searchMatchesByRow,
-  activeSearchMatch,
   cellSelectionBounds,
   focusedCell,
   editingCell,
@@ -65,6 +62,8 @@ export function DataGrid<TData extends RowData>({
   const readOnly = table.getIsReadOnly();
   const columnVisibility = table.state.columnVisibility;
   const columnPinning = table.state.columnPinning;
+  const searchMatchesByRow = table.getSearchMatchesByRowId();
+  const activeSearchMatch = table.getActiveSearchMatch();
 
   const onRowAddRef = useAsRef(onRowAddProp);
 
@@ -101,7 +100,15 @@ export function DataGrid<TData extends RowData>({
       {...props}
       className={cn("relative flex w-full flex-col", className)}
     >
-      {searchState && <DataGridSearch {...searchState} />}
+      {table.options.enableSearch && (
+        <DataGridSearch
+          table={table}
+          searchOpen={table.state.searchOpen}
+          searchQuery={table.state.searchQuery}
+          matchIndex={table.state.searchMatchIndex}
+          matchCount={table.getSearchMatches().length}
+        />
+      )}
       <DataGridContextMenu
         table={table}
         tableMeta={tableMeta}
@@ -237,7 +244,7 @@ export function DataGrid<TData extends RowData>({
               virtualItem.index,
             );
 
-            const searchMatchColumns = searchMatchesByRow?.get(row.id) ?? null;
+            const searchMatchColumns = searchMatchesByRow.get(row.id) ?? null;
             const isActiveSearchRow = activeSearchMatch?.rowId === row.id;
 
             return (

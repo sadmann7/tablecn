@@ -26,7 +26,6 @@ import type {
   Direction,
   FileCellData,
   NavigationDirection,
-  SearchState,
 } from "@/lib/data-grid-types";
 
 import { useAsRef } from "@/hooks/use-as-ref";
@@ -44,7 +43,6 @@ import {
   getVisibleColumnIds,
   parseCellKey,
   scrollCellIntoView,
-  stringifyUnknown,
 } from "@/lib/data-grid-utils";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
 
@@ -139,10 +137,6 @@ interface DataGridState {
   /** Cell where the current mouse drag selection started, `null` when not dragging. */
   dragStartCell: CellPosition | null;
   contextMenu: ContextMenuState;
-  searchQuery: string;
-  searchMatches: CellPosition[];
-  matchIndex: number;
-  searchOpen: boolean;
   lastClickedRowId: string | null;
 }
 
@@ -200,7 +194,6 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   autoFocus?: boolean | Partial<CellPosition>;
   enableSingleCellSelection?: boolean;
   enableColumnSelection?: boolean;
-  enableSearch?: boolean;
   readOnly?: boolean;
 }
 
@@ -254,10 +247,6 @@ function useDataGrid<TData extends RowData>({
         x: 0,
         y: 0,
       },
-      searchQuery: "",
-      searchMatches: [],
-      matchIndex: -1,
-      searchOpen: false,
       lastClickedRowId: null,
     };
   });
@@ -316,10 +305,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, [listenersRef, stateRef]);
 
-  const searchQuery = useStore(store, (state) => state.searchQuery);
-  const searchMatches = useStore(store, (state) => state.searchMatches);
-  const matchIndex = useStore(store, (state) => state.matchIndex);
-  const searchOpen = useStore(store, (state) => state.searchOpen);
   const sorting = useStore(store, (state) => state.sorting);
   const columnFilters = useStore(store, (state) => state.columnFilters);
   const storeColumnVisibility = useStore(
@@ -398,7 +383,7 @@ function useDataGrid<TData extends RowData>({
 
   const focusCellElement = React.useCallback(
     (cell: CellPosition, shouldScroll = true) => {
-      if (store.getState().searchOpen) return;
+      if (tableRef.current?.getSearchOpen()) return;
 
       if (revealCell(cell, { shouldFocus: true, shouldScroll })) {
         pendingFocusRef.current = null;
@@ -570,176 +555,11 @@ function useDataGrid<TData extends RowData>({
   );
 
   const startEditing = React.useCallback((rowId: string, columnId: string) => {
-    tableRef.current
+    const cellsByColumnId = tableRef.current
       ?.getCoreRowModel()
-      .rowsById[rowId]?.getAllCellsByColumnId()
-      [columnId]?.startEditing();
+      .rowsById[rowId]?.getAllCellsByColumnId();
+    cellsByColumnId?.[columnId]?.startEditing();
   }, []);
-
-  const onSearchOpenChange = React.useCallback(
-    (open: boolean) => {
-      if (open) {
-        store.setState("searchOpen", true);
-        return;
-      }
-
-      const currentState = store.getState();
-      const currentMatch =
-        currentState.matchIndex >= 0 &&
-        currentState.searchMatches[currentState.matchIndex];
-
-      store.batch(() => {
-        store.setState("searchOpen", false);
-        store.setState("searchQuery", "");
-        store.setState("searchMatches", []);
-        store.setState("matchIndex", -1);
-      });
-
-      if (currentMatch) {
-        tableRef.current?.setFocusedCell(
-          currentMatch.rowId,
-          currentMatch.columnId,
-        );
-      }
-
-      if (
-        dataGridRef.current &&
-        document.activeElement !== dataGridRef.current
-      ) {
-        dataGridRef.current.focus();
-      }
-    },
-    [store],
-  );
-
-  const onSearch = React.useCallback(
-    (query: string) => {
-      if (!query.trim()) {
-        store.batch(() => {
-          store.setState("searchMatches", []);
-          store.setState("matchIndex", -1);
-        });
-        return;
-      }
-
-      const matches: CellPosition[] = [];
-      let firstMatchRowIndex = -1;
-      const currentTable = tableRef.current;
-      const rows = currentTable?.getRowModel().rows ?? [];
-
-      const lowerQuery = query.toLowerCase();
-
-      for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-        const row = rows[rowIndex];
-        if (!row) continue;
-
-        const cellById = new Map(
-          row.getVisibleCells().map((c) => [c.column.id, c]),
-        );
-
-        for (const columnId of columnIds) {
-          const cell = cellById.get(columnId);
-          if (!cell) continue;
-
-          const value = cell.getValue();
-          const stringValue = stringifyUnknown(value).toLowerCase();
-
-          if (stringValue.includes(lowerQuery)) {
-            if (firstMatchRowIndex === -1) firstMatchRowIndex = rowIndex;
-            matches.push({ rowId: row.id, columnId });
-          }
-        }
-      }
-
-      store.batch(() => {
-        store.setState("searchMatches", matches);
-        store.setState("matchIndex", matches.length > 0 ? 0 : -1);
-      });
-
-      if (firstMatchRowIndex !== -1) {
-        rowVirtualizerRef.current?.scrollToIndex(firstMatchRowIndex, {
-          align: "center",
-        });
-      }
-    },
-    [columnIds, store],
-  );
-
-  const onSearchQueryChange = React.useCallback(
-    (query: string) => store.setState("searchQuery", query),
-    [store],
-  );
-
-  const onNavigateToPrevMatch = React.useCallback(() => {
-    const currentState = store.getState();
-    if (currentState.searchMatches.length === 0) return;
-
-    const prevIndex =
-      currentState.matchIndex - 1 < 0
-        ? currentState.searchMatches.length - 1
-        : currentState.matchIndex - 1;
-    const match = currentState.searchMatches[prevIndex];
-    if (!match) return;
-
-    store.setState("matchIndex", prevIndex);
-    tableRef.current?.setFocusedCell(match.rowId, match.columnId);
-  }, [store]);
-
-  const onNavigateToNextMatch = React.useCallback(() => {
-    const currentState = store.getState();
-    if (currentState.searchMatches.length === 0) return;
-
-    const nextIndex =
-      (currentState.matchIndex + 1) % currentState.searchMatches.length;
-    const match = currentState.searchMatches[nextIndex];
-    if (!match) return;
-
-    store.setState("matchIndex", nextIndex);
-    tableRef.current?.setFocusedCell(match.rowId, match.columnId);
-  }, [store]);
-
-  const searchMatchSet = React.useMemo(() => {
-    return new Set(searchMatches.map((m) => getCellKey(m.rowId, m.columnId)));
-  }, [searchMatches]);
-
-  const getIsSearchMatch = React.useCallback(
-    (rowId: string, columnId: string) => {
-      return searchMatchSet.has(getCellKey(rowId, columnId));
-    },
-    [searchMatchSet],
-  );
-
-  const getIsActiveSearchMatch = React.useCallback(
-    (rowId: string, columnId: string) => {
-      const currentState = store.getState();
-      if (currentState.matchIndex < 0) return false;
-      const currentMatch = currentState.searchMatches[currentState.matchIndex];
-      return (
-        currentMatch?.rowId === rowId && currentMatch?.columnId === columnId
-      );
-    },
-    [store],
-  );
-
-  // Compute search match data for targeted row re-renders
-  const searchMatchesByRow = React.useMemo(() => {
-    if (searchMatches.length === 0) return null;
-    const rowMap = new Map<string, Set<string>>();
-    for (const match of searchMatches) {
-      let columnSet = rowMap.get(match.rowId);
-      if (!columnSet) {
-        columnSet = new Set<string>();
-        rowMap.set(match.rowId, columnSet);
-      }
-      columnSet.add(match.columnId);
-    }
-    return rowMap;
-  }, [searchMatches]);
-
-  const activeSearchMatch = React.useMemo<CellPosition | null>(() => {
-    if (matchIndex < 0 || searchMatches.length === 0) return null;
-    return searchMatches[matchIndex] ?? null;
-  }, [searchMatches, matchIndex]);
 
   const blurCell = React.useCallback(() => {
     if (
@@ -1150,17 +970,12 @@ function useDataGrid<TData extends RowData>({
           ? currentTable.getSelectedCellCount()
           : 0;
       },
-      get searchOpen() {
-        return store.getState().searchOpen;
-      },
       get contextMenu() {
         return store.getState().contextMenu;
       },
       getIsCellSelected,
       getSelectedCellKeys: () =>
         tableRef.current ? getSelectedCellKeys(tableRef.current) : [],
-      getIsSearchMatch,
-      getIsActiveSearchMatch,
       scrollToCell: (rowId, columnId) => {
         revealCell(
           { rowId, columnId },
@@ -1188,8 +1003,6 @@ function useDataGrid<TData extends RowData>({
     propsRef,
     store,
     getIsCellSelected,
-    getIsSearchMatch,
-    getIsActiveSearchMatch,
     revealCell,
     onRowSelect,
     onColumnClick,
@@ -1551,33 +1364,29 @@ function useDataGrid<TData extends RowData>({
       const isCtrlPressed = ctrlKey || metaKey;
 
       if (
-        propsRef.current.enableSearch &&
+        currentTable?.options.enableSearch &&
         isCtrlPressed &&
         !shiftKey &&
         key === SEARCH_SHORTCUT_KEY
       ) {
         event.preventDefault();
-        onSearchOpenChange(true);
+        currentTable.openSearch();
         return;
       }
 
-      if (
-        propsRef.current.enableSearch &&
-        currentState.searchOpen &&
-        !tableRef.current?.getEditingCell()
-      ) {
+      if (currentTable?.getSearchOpen() && !currentTable.getEditingCell()) {
         if (key === "Enter") {
           event.preventDefault();
           if (shiftKey) {
-            onNavigateToPrevMatch();
+            currentTable.goToPrevSearchMatch();
           } else {
-            onNavigateToNextMatch();
+            currentTable.goToNextSearchMatch();
           }
           return;
         }
         if (key === "Escape") {
           event.preventDefault();
-          onSearchOpenChange(false);
+          currentTable.closeSearch();
           return;
         }
         return;
@@ -1826,9 +1635,6 @@ function useDataGrid<TData extends RowData>({
       selectAll,
       onSelectionClear,
       navigableColumnIds,
-      onSearchOpenChange,
-      onNavigateToNextMatch,
-      onNavigateToPrevMatch,
       onRowsDelete,
       focusCell,
       focusColumnHeader,
@@ -1837,33 +1643,6 @@ function useDataGrid<TData extends RowData>({
       getRowIndex,
     ],
   );
-
-  const searchState = React.useMemo<SearchState | undefined>(() => {
-    if (!propsRef.current.enableSearch) return undefined;
-
-    return {
-      searchMatches,
-      matchIndex,
-      searchOpen,
-      onSearchOpenChange,
-      searchQuery,
-      onSearchQueryChange,
-      onSearch,
-      onNavigateToNextMatch,
-      onNavigateToPrevMatch,
-    };
-  }, [
-    propsRef,
-    searchMatches,
-    matchIndex,
-    searchOpen,
-    onSearchOpenChange,
-    searchQuery,
-    onSearchQueryChange,
-    onSearch,
-    onNavigateToNextMatch,
-    onNavigateToPrevMatch,
-  ]);
 
   React.useEffect(() => {
     const dataGridElement = dataGridRef.current;
@@ -1886,8 +1665,9 @@ function useDataGrid<TData extends RowData>({
       const { key, ctrlKey, metaKey, shiftKey } = event;
       const isCommandPressed = ctrlKey || metaKey;
 
+      const currentTable = tableRef.current;
       if (
-        propsRef.current.enableSearch &&
+        currentTable?.options.enableSearch &&
         isCommandPressed &&
         !shiftKey &&
         key === SEARCH_SHORTCUT_KEY
@@ -1901,8 +1681,9 @@ function useDataGrid<TData extends RowData>({
           event.preventDefault();
           event.stopPropagation();
 
-          const nextSearchOpen = !store.getState().searchOpen;
-          onSearchOpenChange(nextSearchOpen);
+          const nextSearchOpen = !currentTable.getSearchOpen();
+          if (nextSearchOpen) currentTable.openSearch();
+          else currentTable.closeSearch();
 
           if (nextSearchOpen && !isInDataGrid && !isInSearchInput) {
             requestAnimationFrame(() => {
@@ -1934,7 +1715,7 @@ function useDataGrid<TData extends RowData>({
     return () => {
       window.removeEventListener("keydown", onGlobalKeyDown, true);
     };
-  }, [propsRef, onSearchOpenChange, store, onSelectionClear]);
+  }, [store, onSelectionClear]);
 
   React.useEffect(() => {
     const autoFocus = propsRef.current.autoFocus;
@@ -2017,7 +1798,10 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (tableRef.current?.getEditingCell() || store.getState().searchOpen)
+      if (
+        tableRef.current?.getEditingCell() ||
+        tableRef.current?.getSearchOpen()
+      )
         return;
 
       const focusedCell = getFocusedCell();
@@ -2096,10 +1880,8 @@ function useDataGrid<TData extends RowData>({
       prevFocusKey = focusKey;
       prevEdgeKey = edgeKey;
 
-      const currentState = store.getState();
-
       if (isFocusChanged && focusedCell) {
-        if (currentState.searchOpen) {
+        if (table.getSearchOpen()) {
           revealCell(focusedCell, { shouldFocus: false, shouldScroll: true });
         } else if (dataGridRef.current?.contains(document.activeElement)) {
           focusCellElement(focusedCell);
@@ -2107,7 +1889,7 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (isEdgeChanged && edgeCell && !currentState.dragStartCell) {
+      if (isEdgeChanged && edgeCell && !store.getState().dragStartCell) {
         revealCell(edgeCell, { shouldFocus: false, shouldScroll: true });
       }
     });
@@ -2126,9 +1908,24 @@ function useDataGrid<TData extends RowData>({
       if (focusedCell) focusCellElement(focusedCell, false);
     });
 
+    let prevSearchOpen = table.atoms.searchOpen.get();
+    const searchOpenSubscription = table.atoms.searchOpen.subscribe(() => {
+      const searchOpen = table.atoms.searchOpen.get();
+      const wasSearchOpen = prevSearchOpen;
+      prevSearchOpen = searchOpen;
+      if (!wasSearchOpen || searchOpen) return;
+
+      const focusedCell = getFocusedCellPosition(
+        table.atoms.cellSelection.get(),
+      );
+      if (focusedCell) focusCellElement(focusedCell);
+      else dataGridRef.current?.focus();
+    });
+
     return () => {
       subscription.unsubscribe();
       editingSubscription.unsubscribe();
+      searchOpenSubscription.unsubscribe();
     };
   }, [table, store, revealCell, focusCellElement]);
 
@@ -2518,9 +2315,6 @@ function useDataGrid<TData extends RowData>({
       measureElement,
       columns,
       columnSizeVars,
-      searchState,
-      searchMatchesByRow,
-      activeSearchMatch,
       cellSelectionBounds,
       focusedCell,
       editingCell,
@@ -2541,9 +2335,6 @@ function useDataGrid<TData extends RowData>({
       measureElement,
       columns,
       columnSizeVars,
-      searchState,
-      searchMatchesByRow,
-      activeSearchMatch,
       cellSelectionBounds,
       focusedCell,
       editingCell,

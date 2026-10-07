@@ -69,12 +69,9 @@ export interface DataGridTableMeta {
   editingCell?: CellPosition | null;
   /** Number of selected cells, `0` when only the focused cell is active. */
   selectedCellCount?: number;
-  searchOpen?: boolean;
   getIsCellSelected?: (rowId: string, columnId: string) => boolean;
   /** Keys of the selected data cells in display order, or the focused cell when nothing else is selected. */
   getSelectedCellKeys?: () => string[];
-  getIsSearchMatch?: (rowId: string, columnId: string) => boolean;
-  getIsActiveSearchMatch?: (rowId: string, columnId: string) => boolean;
   scrollToCell?: (rowId: string, columnId: string) => void;
   onRowSelect?: (rowId: string, checked: boolean, shiftKey: boolean) => void;
   onColumnClick?: (columnId: string) => void;
@@ -145,18 +142,6 @@ export type NavigationDirection =
   | "pageright"
   | "tab"
   | "shift+tab";
-
-export interface SearchState {
-  searchMatches: CellPosition[];
-  matchIndex: number;
-  searchOpen: boolean;
-  onSearchOpenChange: (open: boolean) => void;
-  searchQuery: string;
-  onSearchQueryChange: (query: string) => void;
-  onSearch: (query: string) => void;
-  onNavigateToNextMatch: () => void;
-  onNavigateToPrevMatch: () => void;
-}
 
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
