@@ -1,5 +1,4 @@
 import {
-  type CellSelectionBounds,
   type CellSelectionState,
   type ColumnDef,
   type ColumnFiltersState,
@@ -11,6 +10,7 @@ import {
   type SortingState,
   type Table,
   type TableOptions,
+  type TableState,
   type Updater,
   functionalUpdate,
   makeStateUpdater,
@@ -49,7 +49,6 @@ const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
-const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
 const AUTO_SCROLL_EDGE_ZONE = 50;
 const AUTO_SCROLL_SPEED_RAMP_ZONE = AUTO_SCROLL_EDGE_ZONE * 3;
 const AUTO_SCROLL_MIN_SPEED = 8;
@@ -65,6 +64,21 @@ function showClipboardToast({
 }) {
   if (variant === "error") toast.error(message);
   else toast.success(message);
+}
+
+// Interaction state (selection, editing, search, menus) is subscribed to where it renders
+function selectGridLayoutState(state: TableState<DataGridFeatures>) {
+  return {
+    rowHeight: state.rowHeight,
+    rowSelection: state.rowSelection,
+    sorting: state.sorting,
+    columnFilters: state.columnFilters,
+    columnVisibility: state.columnVisibility,
+    columnPinning: state.columnPinning,
+    columnOrder: state.columnOrder,
+    columnSizing: state.columnSizing,
+    columnResizing: state.columnResizing,
+  };
 }
 
 function getIsDataColumn(columnId: string) {
@@ -708,24 +722,13 @@ function useDataGrid<TData extends RowData>({
     onColumnOrderChange,
   ]);
 
-  const table = useTable(tableOptions);
+  const table = useTable(tableOptions, selectGridLayoutState);
 
   if (!tableRef.current) {
     tableRef.current = table;
   }
 
   const rowHeight = table.state.rowHeight;
-  const editingCell = table.state.editingCell;
-  const pasteDialog = table.state.pasteDialog;
-  const cellSelection = table.state.cellSelection;
-  const focusedCell = React.useMemo(
-    () => getFocusedCellPosition(cellSelection),
-    [cellSelection],
-  );
-  const cellSelectionBounds =
-    props.enableSingleCellSelection || getHasCellRangeSelection(cellSelection)
-      ? table.getCellSelectionBounds()
-      : EMPTY_CELL_SELECTION_BOUNDS;
   const readOnlyColumnIds = React.useMemo(
     () =>
       new Set(
@@ -1891,13 +1894,8 @@ function useDataGrid<TData extends RowData>({
       measureElement,
       columns,
       columnSizeVars,
-      cellSelectionBounds,
-      focusedCell,
-      editingCell,
       readOnlyColumnIds,
       rowHeight,
-      contextMenu: table.state.contextMenu,
-      pasteDialog,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
       adjustLayout,
     }),
@@ -1912,13 +1910,8 @@ function useDataGrid<TData extends RowData>({
       measureElement,
       columns,
       columnSizeVars,
-      cellSelectionBounds,
-      focusedCell,
-      editingCell,
       readOnlyColumnIds,
       rowHeight,
-      table.state.contextMenu,
-      pasteDialog,
       onRowAdd,
       adjustLayout,
     ],

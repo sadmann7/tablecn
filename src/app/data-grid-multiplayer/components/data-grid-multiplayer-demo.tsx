@@ -406,12 +406,25 @@ export function DataGridMultiplayerDemo({
     enablePaste: true,
   });
 
-  const focusedRowId = dataGridProps.focusedCell?.rowId ?? null;
-  const focusedColumnId = dataGridProps.focusedCell?.columnId ?? null;
-
   React.useEffect(() => {
-    sendActiveCell(focusedRowId, focusedColumnId);
-  }, [focusedRowId, focusedColumnId, sendActiveCell]);
+    let prevCellKey: string | null = null;
+
+    function onCellSelectionChange() {
+      const focusedCell = table.getFocusedCell();
+      const rowId = focusedCell?.row.id ?? null;
+      const columnId = focusedCell?.column.id ?? null;
+      const cellKey = `${rowId}\u0000${columnId}`;
+      if (cellKey === prevCellKey) return;
+      prevCellKey = cellKey;
+      sendActiveCell(rowId, columnId);
+    }
+
+    onCellSelectionChange();
+    const subscription = table.atoms.cellSelection.subscribe(
+      onCellSelectionChange,
+    );
+    return () => subscription.unsubscribe();
+  }, [table, sendActiveCell]);
 
   // The server doesn't echo your own cell back, so your presence takes it from the grid
   const presenceUsers = React.useMemo(() => {
@@ -510,7 +523,6 @@ export function DataGridMultiplayerDemo({
   );
 
   const height = Math.max(400, windowSize.height - 150);
-  const selectedCellCount = table.getSelectedRangeCellCount();
 
   const remoteCells = React.useMemo(() => {
     const map = new Map<string, DataGridCellPresence>();
@@ -562,7 +574,6 @@ export function DataGridMultiplayerDemo({
       </DataGridPresenceProvider>
       <DataGridActionBar
         table={table}
-        selectedCellCount={selectedCellCount}
         statusOptions={statusOptions}
         styleOptions={styleOptions}
         onStatusUpdate={onStatusUpdate}

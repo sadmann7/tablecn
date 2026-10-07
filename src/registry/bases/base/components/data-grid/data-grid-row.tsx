@@ -1,32 +1,35 @@
 "use client";
 
-import type {
-  Cell,
-  ColumnPinningState,
-  ColumnVisibilityState,
-  Row,
-  RowData,
-} from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
+import {
+  type Cell,
+  type CellSelectionBounds,
+  type ColumnPinningState,
+  type ColumnVisibilityState,
+  type Row,
+  type RowData,
+  Subscribe,
+  type Table,
+  type TableState,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  CellPosition,
-  Direction,
-  RowHeightValue,
-} from "@/lib/data-grid-types";
+import type { Direction, RowHeightValue } from "@/lib/data-grid-types";
 
 import {
   flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
+  getRowCellSelectionKey,
   getRowHeightValue,
 } from "@/lib/data-grid-utils";
 import { DataGridCell } from "@/registry/bases/base/components/data-grid/data-grid-cell";
+
+const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
 
 interface DataGridRowProps<
   TData extends RowData,
@@ -38,12 +41,6 @@ interface DataGridRowProps<
   rowHeight: RowHeightValue;
   columnVisibility: ColumnVisibilityState;
   columnPinning: ColumnPinningState;
-  focusedCell: CellPosition | null;
-  editingCell: CellPosition | null;
-  /** Selected column spans for this row, `""` when none of its cells are selected. */
-  cellSelectionKey: string;
-  searchMatchColumns: Set<string> | null;
-  activeSearchMatch: CellPosition | null;
   dir: Direction;
   readOnlyColumnIds: Set<string>;
   stretchColumns: boolean;
@@ -51,10 +48,8 @@ interface DataGridRowProps<
 }
 
 export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
-  const rowId = next.row.id;
-
   // Re-render if row identity changed
-  if (prev.row.id !== rowId) {
+  if (prev.row.id !== next.row.id) {
     return false;
   }
 
@@ -70,41 +65,6 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
   // Re-render if virtual position changed (handles transform updates)
   if (prev.virtualItem.start !== next.virtualItem.start) {
-    return false;
-  }
-
-  // Re-render if focus state changed for this row
-  const prevHasFocus = prev.focusedCell?.rowId === rowId;
-  const nextHasFocus = next.focusedCell?.rowId === rowId;
-
-  if (prevHasFocus !== nextHasFocus) {
-    return false;
-  }
-
-  // Re-render if focused column changed within this row
-  if (nextHasFocus && prevHasFocus) {
-    if (prev.focusedCell?.columnId !== next.focusedCell?.columnId) {
-      return false;
-    }
-  }
-
-  // Re-render if editing state changed for this row
-  const prevHasEditing = prev.editingCell?.rowId === rowId;
-  const nextHasEditing = next.editingCell?.rowId === rowId;
-
-  if (prevHasEditing !== nextHasEditing) {
-    return false;
-  }
-
-  // Re-render if editing column changed within this row
-  if (nextHasEditing && prevHasEditing) {
-    if (prev.editingCell?.columnId !== next.editingCell?.columnId) {
-      return false;
-    }
-  }
-
-  // Re-render if this row's selected cells changed
-  if (prev.cellSelectionKey !== next.cellSelectionKey) {
     return false;
   }
 
@@ -125,16 +85,6 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 
   // Re-render if table or column editing permissions changed
   if (prev.readOnlyColumnIds !== next.readOnlyColumnIds) {
-    return false;
-  }
-
-  // Re-render if search match columns changed for this row
-  if (prev.searchMatchColumns !== next.searchMatchColumns) {
-    return false;
-  }
-
-  // Re-render if active search match changed for this row
-  if (prev.activeSearchMatch?.columnId !== next.activeSearchMatch?.columnId) {
     return false;
   }
 
@@ -160,16 +110,44 @@ export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
 function DataGridRowImpl<TData extends RowData>({
   row,
   virtualItem,
+  ...props
+}: DataGridRowProps<TData>) {
+  const table = row.table;
+  const rowId = row.id;
+  const rowIndex = virtualItem.index;
+
+  return (
+    <Subscribe
+      source={table.store}
+      selector={(state) => selectRowState(table, state, rowId, rowIndex)}
+    >
+      {(rowState) => (
+        <DataGridRowContent
+          row={row}
+          virtualItem={virtualItem}
+          rowState={rowState}
+          {...props}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+interface DataGridRowContentProps<
+  TData extends RowData,
+> extends DataGridRowProps<TData> {
+  rowState: RowState;
+}
+
+function DataGridRowContent<TData extends RowData>({
+  row,
+  virtualItem,
   measureElement,
   rowMapRef,
   rowHeight,
   columnVisibility,
   columnPinning,
-  focusedCell,
-  editingCell,
-  cellSelectionKey,
-  searchMatchColumns,
-  activeSearchMatch,
+  rowState,
   dir,
   readOnlyColumnIds,
   stretchColumns,
@@ -178,9 +156,17 @@ function DataGridRowImpl<TData extends RowData>({
   style,
   ref,
   ...props
-}: DataGridRowProps<TData>) {
+}: DataGridRowContentProps<TData>) {
   const virtualRowIndex = virtualItem.index;
   const rowId = row.id;
+  const {
+    focusedColumnId,
+    editingColumnId,
+    cellSelectionKey,
+    searchMatchColumns,
+    activeSearchColumnId,
+    isRowSelected,
+  } = rowState;
 
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
@@ -197,8 +183,6 @@ function DataGridRowImpl<TData extends RowData>({
   );
 
   const rowRef = useMergedRefs(ref, onRowChange);
-
-  const isRowSelected = row.getIsSelected();
 
   // Memoize visible cells to avoid recreating cell array on every render
   // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
@@ -234,16 +218,14 @@ function DataGridRowImpl<TData extends RowData>({
       {visibleCells.map((cell, colIndex) => {
         const columnId = cell.column.id;
 
-        const isCellFocused =
-          focusedCell?.rowId === rowId && focusedCell?.columnId === columnId;
-        const isCellEditing =
-          editingCell?.rowId === rowId && editingCell?.columnId === columnId;
+        const isCellFocused = focusedColumnId === columnId;
+        const isCellEditing = editingColumnId === columnId;
         const isCellSelected = cellSelectionKey !== "" && cell.getIsSelected();
         const isUtilityCell =
           typeof cell.column.columnDef.header === "function";
 
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
-        const isActiveSearchMatch = activeSearchMatch?.columnId === columnId;
+        const isActiveSearchMatch = activeSearchColumnId === columnId;
 
         const nextCell = visibleCells[colIndex + 1];
         const isLastColumn = colIndex === visibleCells.length - 1;
@@ -332,4 +314,41 @@ function DataGridUtilityCell<TData extends RowData>({
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </div>
   );
+}
+
+interface RowState {
+  focusedColumnId: string | null;
+  editingColumnId: string | null;
+  /** Selected column spans for this row, `""` when none of its cells are selected. */
+  cellSelectionKey: string;
+  searchMatchColumns: Set<string> | null;
+  activeSearchColumnId: string | null;
+  isRowSelected: boolean;
+}
+
+// Only primitives and memoized references, so the shallow compare skips rows whose slice didn't change
+function selectRowState<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  state: TableState<DataGridFeatures>,
+  rowId: string,
+  rowIndex: number,
+): RowState {
+  const activeRange = state.cellSelection[state.cellSelection.length - 1];
+  const editingCell = state.editingCell;
+  const activeSearchMatch = table.getActiveSearchMatch();
+  const cellSelectionBounds =
+    table.options.enableSingleCellSelection || table.getHasCellRangeSelection()
+      ? table.getCellSelectionBounds()
+      : EMPTY_CELL_SELECTION_BOUNDS;
+
+  return {
+    focusedColumnId:
+      activeRange?.anchorRowId === rowId ? activeRange.anchorColumnId : null,
+    editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
+    cellSelectionKey: getRowCellSelectionKey(cellSelectionBounds, rowIndex),
+    searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
+    activeSearchColumnId:
+      activeSearchMatch?.rowId === rowId ? activeSearchMatch.columnId : null,
+    isRowSelected: !!state.rowSelection[rowId],
+  };
 }

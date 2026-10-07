@@ -1,15 +1,15 @@
 "use client";
 
-import type {
-  Column,
-  ColumnSort,
-  Header,
-  RowData,
-  SortDirection,
-  SortingState,
-  Table,
+import {
+  type Column,
+  type ColumnSort,
+  type Header,
+  type RowData,
+  type SortDirection,
+  type SortingState,
+  Subscribe,
+  type Table,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 
@@ -45,21 +45,40 @@ interface DataGridColumnHeaderProps<
   table: Table<DataGridFeatures, TData>;
 }
 
-export function DataGridColumnHeader<TData extends RowData, TValue>({
+export function DataGridColumnHeader<TData extends RowData, TValue>(
+  props: DataGridColumnHeaderProps<TData, TValue>,
+) {
+  return (
+    <Subscribe
+      source={props.table.atoms.columnResizing}
+      selector={(columnResizing) => !!columnResizing.isResizingColumn}
+    >
+      {(isAnyColumnResizing) => (
+        <DataGridColumnHeaderImpl
+          {...props}
+          isAnyColumnResizing={isAnyColumnResizing}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
   header,
   table,
+  isAnyColumnResizing,
   className,
   onPointerDown,
   ...props
-}: DataGridColumnHeaderProps<TData, TValue>) {
+}: DataGridColumnHeaderProps<TData, TValue> & {
+  isAnyColumnResizing: boolean;
+}) {
   const column = header.column;
   const label = column.columnDef.meta?.label
     ? column.columnDef.meta.label
     : typeof column.columnDef.header === "string"
       ? column.columnDef.header
       : column.id;
-
-  const isAnyColumnResizing = table.store.state.columnResizing.isResizingColumn;
 
   const cellVariant = column.columnDef.meta?.cell;
   const columnVariant = getColumnVariant(cellVariant?.variant);

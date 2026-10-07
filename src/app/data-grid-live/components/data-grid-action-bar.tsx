@@ -1,7 +1,6 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
-
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 
@@ -25,7 +24,6 @@ import {
 
 interface DataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
-  selectedCellCount: number;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
   onStatusUpdate?: (value: string) => void;
@@ -33,7 +31,25 @@ interface DataGridActionBarProps<TData extends RowData> {
   onDelete?: () => void;
 }
 
-export function DataGridActionBar<TData extends RowData>({
+export function DataGridActionBar<TData extends RowData>(
+  props: DataGridActionBarProps<TData>,
+) {
+  return (
+    <Subscribe
+      source={props.table.atoms.cellSelection}
+      selector={() => props.table.getSelectedRangeCellCount()}
+    >
+      {(selectedCellCount) => (
+        <DataGridActionBarImpl
+          {...props}
+          selectedCellCount={selectedCellCount}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataGridActionBarImpl<TData extends RowData>({
   table,
   selectedCellCount,
   statusOptions,
@@ -41,7 +57,7 @@ export function DataGridActionBar<TData extends RowData>({
   onStatusUpdate,
   onStyleUpdate,
   onDelete,
-}: DataGridActionBarProps<TData>) {
+}: DataGridActionBarProps<TData> & { selectedCellCount: number }) {
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (!open) {

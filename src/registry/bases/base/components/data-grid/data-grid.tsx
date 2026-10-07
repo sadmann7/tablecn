@@ -13,7 +13,6 @@ import {
   flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
-  getRowCellSelectionKey,
 } from "@/lib/data-grid-utils";
 import { DataGridColumnHeader } from "@/registry/bases/base/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/registry/bases/base/components/data-grid/data-grid-context-menu";
@@ -25,7 +24,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 interface DataGridProps<TData extends RowData>
   extends
     Omit<ReturnType<typeof useDataGrid<TData>>, "dir" | "scrollToCell">,
-    Omit<React.ComponentProps<"div">, "contextMenu"> {
+    React.ComponentProps<"div"> {
   dir?: Direction;
   scrollToCell?: (rowId: string, columnId: string) => void;
   height?: number;
@@ -46,13 +45,8 @@ export function DataGrid<TData extends RowData>({
   measureElement,
   columns,
   columnSizeVars,
-  cellSelectionBounds,
-  focusedCell,
-  editingCell,
   readOnlyColumnIds,
   rowHeight,
-  contextMenu,
-  pasteDialog,
   onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
@@ -64,8 +58,6 @@ export function DataGrid<TData extends RowData>({
   const readOnly = table.getIsReadOnly();
   const columnVisibility = table.state.columnVisibility;
   const columnPinning = table.state.columnPinning;
-  const searchMatchesByRow = table.getSearchMatchesByRowId();
-  const activeSearchMatch = table.getActiveSearchMatch();
 
   const onRowAddRef = useAsRef(onRowAddProp);
 
@@ -102,21 +94,9 @@ export function DataGrid<TData extends RowData>({
       {...props}
       className={cn("relative flex w-full flex-col", className)}
     >
-      {table.options.enableSearch && (
-        <DataGridSearch
-          table={table}
-          searchOpen={table.state.searchOpen}
-          searchQuery={table.state.searchQuery}
-          matchIndex={table.state.searchMatchIndex}
-          matchCount={table.getSearchMatches().length}
-        />
-      )}
-      <DataGridContextMenu
-        table={table}
-        contextMenu={contextMenu}
-        dataGridRef={dataGridRef}
-      />
-      <DataGridPasteDialog table={table} pasteDialog={pasteDialog} />
+      {table.options.enableSearch && <DataGridSearch table={table} />}
+      <DataGridContextMenu table={table} dataGridRef={dataGridRef} />
+      <DataGridPasteDialog table={table} />
       <div
         role="grid"
         aria-label="Data grid"
@@ -242,14 +222,6 @@ export function DataGrid<TData extends RowData>({
             const row = rows[virtualItem.index];
             if (!row) return null;
 
-            const cellSelectionKey = getRowCellSelectionKey(
-              cellSelectionBounds,
-              virtualItem.index,
-            );
-
-            const searchMatchColumns = searchMatchesByRow.get(row.id) ?? null;
-            const isActiveSearchRow = activeSearchMatch?.rowId === row.id;
-
             return (
               <DataGridRow
                 key={row.id}
@@ -260,11 +232,6 @@ export function DataGrid<TData extends RowData>({
                 rowHeight={rowHeight}
                 columnVisibility={columnVisibility}
                 columnPinning={columnPinning}
-                focusedCell={focusedCell}
-                editingCell={editingCell}
-                cellSelectionKey={cellSelectionKey}
-                searchMatchColumns={searchMatchColumns}
-                activeSearchMatch={isActiveSearchRow ? activeSearchMatch : null}
                 dir={dir}
                 adjustLayout={adjustLayout}
                 stretchColumns={stretchColumns}
