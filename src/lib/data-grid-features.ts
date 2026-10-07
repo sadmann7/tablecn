@@ -56,13 +56,11 @@ interface TableState_DataGridCellEditing {
 }
 
 interface TableOptions_DataGridCellEditing {
-  /** Set to `false` to make every cell read-only. Defaults to `true`. */
   enableCellEditing?: boolean;
   onEditingCellChange?: OnChangeFn<CellPosition | null>;
 }
 
 interface ColumnDef_DataGridCellEditing {
-  /** Set to `false` to make this column's cells read-only. Defaults to `true`. */
   enableCellEditing?: boolean;
 }
 
@@ -130,10 +128,6 @@ declare module "@tanstack/react-table" {
 
 type DataGridInstance = Table<DataGridFeatures, RowData>;
 
-/**
- * Feature hooks get a `Table` generic over any features. This feature is only
- * registered in `dataGridFeatures`, so its hooks can use that table's types.
- */
 function asDataGrid(table: object) {
   return table as DataGridInstance;
 }
