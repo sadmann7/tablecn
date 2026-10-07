@@ -1,6 +1,191 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTsv } from "@/lib/data-grid-utils";
+import {
+  getTabTargetCell,
+  getVisibleColumnIds,
+  parseTsv,
+} from "@/lib/data-grid-utils";
+
+describe("getVisibleColumnIds", () => {
+  const columnIds = ["select", "name", "age", "email", "actions"];
+
+  it("keeps definition order by default", () => {
+    expect(getVisibleColumnIds({ columnIds })).toEqual(columnIds);
+  });
+
+  it("drops hidden columns", () => {
+    expect(
+      getVisibleColumnIds({ columnIds, columnVisibility: { age: false } }),
+    ).toEqual(["select", "name", "email", "actions"]);
+  });
+
+  it("applies column order and appends unordered columns", () => {
+    expect(
+      getVisibleColumnIds({
+        columnIds,
+        columnOrder: ["email", "missing", "name"],
+      }),
+    ).toEqual(["email", "name", "select", "age", "actions"]);
+  });
+
+  it("moves pinned columns to the start and end", () => {
+    expect(
+      getVisibleColumnIds({
+        columnIds,
+        columnPinning: { start: ["select", "email"], end: ["name"] },
+      }),
+    ).toEqual(["select", "email", "age", "actions", "name"]);
+  });
+
+  it("ignores hidden pinned columns", () => {
+    expect(
+      getVisibleColumnIds({
+        columnIds,
+        columnVisibility: { email: false },
+        columnPinning: { start: ["email"], end: [] },
+      }),
+    ).toEqual(["select", "name", "age", "actions"]);
+  });
+});
+
+describe("getTabTargetCell", () => {
+  const columnIds = ["name", "age", "email"];
+
+  it("should move to the next column in the same row", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 1,
+        columnId: "name",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toEqual({ rowIndex: 1, columnId: "age" });
+  });
+
+  it("should wrap to the first column of the next row", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 1,
+        columnId: "email",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toEqual({ rowIndex: 2, columnId: "name" });
+  });
+
+  it("should wrap to the last column of the previous row on shift+tab", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 1,
+        columnId: "name",
+        columnIds,
+        rowCount: 3,
+        isBackward: true,
+      }),
+    ).toEqual({ rowIndex: 0, columnId: "email" });
+  });
+
+  it("should return null at the grid edges so focus can leave the grid", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 2,
+        columnId: "email",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toBeNull();
+    expect(
+      getTabTargetCell({
+        rowIndex: 0,
+        columnId: "name",
+        columnIds,
+        rowCount: 3,
+        isBackward: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("should return null for an unknown column", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 0,
+        columnId: "missing",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toBeNull();
+  });
+
+  describe("with utility columns", () => {
+    const allColumnIds = ["select", "name", "age", "actions"];
+    function getIsColumnTabbable(columnId: string) {
+      return columnId !== "select" && columnId !== "actions";
+    }
+
+    it("should skip utility columns when wrapping", () => {
+      expect(
+        getTabTargetCell({
+          rowIndex: 0,
+          columnId: "age",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: false,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 1, columnId: "name" });
+      expect(
+        getTabTargetCell({
+          rowIndex: 1,
+          columnId: "name",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: true,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 0, columnId: "age" });
+    });
+
+    it("should leave a utility column for the nearest data cell", () => {
+      expect(
+        getTabTargetCell({
+          rowIndex: 1,
+          columnId: "select",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: false,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 1, columnId: "name" });
+      expect(
+        getTabTargetCell({
+          rowIndex: 1,
+          columnId: "actions",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: true,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 1, columnId: "age" });
+    });
+
+    it("should return null when no column is tabbable", () => {
+      expect(
+        getTabTargetCell({
+          rowIndex: 0,
+          columnId: "select",
+          columnIds: ["select", "actions"],
+          rowCount: 3,
+          isBackward: false,
+          getIsColumnTabbable,
+        }),
+      ).toBeNull();
+    });
+  });
+});
 
 describe("parseTsv", () => {
   describe("basic parsing", () => {

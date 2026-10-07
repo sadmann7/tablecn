@@ -121,7 +121,7 @@ export function ShortTextCell<TData extends RowData>({
             });
           }
           tableMeta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
+            direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
           event.preventDefault();
@@ -356,7 +356,7 @@ export function LongTextCell<TData extends RowData>({
           tableMeta?.onDataUpdate?.({ rowIndex, columnId, value });
         }
         tableMeta?.onCellEditingStop?.({
-          direction: event.shiftKey ? "left" : "right",
+          direction: event.shiftKey ? "shift+tab" : "tab",
         });
         return;
       }
@@ -473,7 +473,7 @@ export function NumberCell<TData extends RowData>({
             tableMeta?.onDataUpdate?.({ rowIndex, columnId, value: numValue });
           }
           tableMeta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
+            direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
           event.preventDefault();
@@ -612,12 +612,25 @@ export function UrlCell<TData extends RowData>({
             });
           }
           tableMeta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
+            direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
           event.preventDefault();
           setValue(initialValue ?? "");
           cellRef.current?.blur();
+        }
+      } else if (
+        isFocused &&
+        event.key === "Enter" &&
+        (event.ctrlKey || event.metaKey)
+      ) {
+        event.preventDefault();
+        if (!value) return;
+        const href = getUrlHref(value);
+        if (href) {
+          window.open(href, "_blank", "noopener,noreferrer");
+        } else {
+          toastDangerousUrl();
         }
       } else if (
         isFocused &&
@@ -646,6 +659,7 @@ export function UrlCell<TData extends RowData>({
       isEditing,
       isFocused,
       initialValue,
+      value,
       tableMeta,
       rowIndex,
       columnId,
@@ -664,10 +678,7 @@ export function UrlCell<TData extends RowData>({
       const href = getUrlHref(value);
       if (!href) {
         event.preventDefault();
-        toast.error("Invalid URL", {
-          description:
-            "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
-        });
+        toastDangerousUrl();
         return;
       }
 
@@ -725,6 +736,7 @@ export function UrlCell<TData extends RowData>({
           className="size-full overflow-hidden"
         >
           <a
+            tabIndex={-1}
             data-focused={isFocused && !isDangerousUrl ? "" : undefined}
             data-invalid={isDangerousUrl ? "" : undefined}
             href={urlHref}
@@ -799,14 +811,9 @@ export function CheckboxCell<TData extends RowData>({
         event.preventDefault();
         event.stopPropagation();
         onCheckedChange(!value);
-      } else if (isFocused && event.key === "Tab") {
-        event.preventDefault();
-        tableMeta?.onCellEditingStop?.({
-          direction: event.shiftKey ? "left" : "right",
-        });
       }
     },
-    [isFocused, value, onCheckedChange, tableMeta, readOnly],
+    [isFocused, value, onCheckedChange, readOnly],
   );
 
   const onWrapperClick = React.useCallback(
@@ -857,6 +864,7 @@ export function CheckboxCell<TData extends RowData>({
       onKeyDown={onWrapperKeyDown}
     >
       <Checkbox
+        tabIndex={-1}
         checked={value}
         onCheckedChange={onCheckedChange}
         disabled={readOnly}
@@ -929,14 +937,14 @@ export function SelectCell<TData extends RowData>({
         event.preventDefault();
         setValue(initialValue);
         tableMeta?.onCellEditingStop?.();
-      } else if (isFocused && event.key === "Tab") {
+      } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
-          direction: event.shiftKey ? "left" : "right",
+          direction: event.shiftKey ? "shift+tab" : "tab",
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta],
+    [isEditing, initialValue, tableMeta],
   );
 
   const displayLabel = value
@@ -1126,15 +1134,15 @@ export function MultiSelectCell<TData extends RowData>({
         setSelectedValues(cellValue);
         setSearchValue("");
         tableMeta?.onCellEditingStop?.();
-      } else if (isFocused && event.key === "Tab") {
+      } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
         setSearchValue("");
         tableMeta?.onCellEditingStop?.({
-          direction: event.shiftKey ? "left" : "right",
+          direction: event.shiftKey ? "shift+tab" : "tab",
         });
       }
     },
-    [isEditing, isFocused, cellValue, tableMeta],
+    [isEditing, cellValue, tableMeta],
   );
 
   const onInputKeyDown = React.useCallback(
@@ -1366,14 +1374,14 @@ export function DateCell<TData extends RowData>({
         event.preventDefault();
         setValue(initialValue);
         tableMeta?.onCellEditingStop?.();
-      } else if (isFocused && event.key === "Tab") {
+      } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
         tableMeta?.onCellEditingStop?.({
-          direction: event.shiftKey ? "left" : "right",
+          direction: event.shiftKey ? "shift+tab" : "tab",
         });
       }
     },
-    [isEditing, isFocused, initialValue, tableMeta],
+    [isEditing, initialValue, tableMeta],
   );
 
   return (
@@ -1889,17 +1897,12 @@ export function FileCell<TData extends RowData>({
         } else if (event.key === "Tab") {
           event.preventDefault();
           tableMeta?.onCellEditingStop?.({
-            direction: event.shiftKey ? "left" : "right",
+            direction: event.shiftKey ? "shift+tab" : "tab",
           });
         }
       } else if (isFocused && event.key === "Enter") {
         event.preventDefault();
         tableMeta?.onCellEditingStart?.(rowIndex, columnId);
-      } else if (isFocused && event.key === "Tab") {
-        event.preventDefault();
-        tableMeta?.onCellEditingStop?.({
-          direction: event.shiftKey ? "left" : "right",
-        });
       }
     },
     [
@@ -2152,4 +2155,11 @@ export function FileCell<TData extends RowData>({
       ) : null}
     </DataGridCellWrapper>
   );
+}
+
+function toastDangerousUrl() {
+  toast.error("Invalid URL", {
+    description:
+      "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
+  });
 }

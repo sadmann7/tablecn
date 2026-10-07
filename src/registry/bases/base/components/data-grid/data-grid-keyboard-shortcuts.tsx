@@ -92,11 +92,11 @@ function DataGridKeyboardShortcutsImpl({
           },
           {
             keys: ["Tab"],
-            description: "Move to next cell",
+            description: "Move to next cell (wraps to next row)",
           },
           {
             keys: ["Shift", "Tab"],
-            description: "Move to previous cell",
+            description: "Move to previous cell (wraps to previous row)",
           },
           {
             keys: ["Home"],
@@ -160,6 +160,10 @@ function DataGridKeyboardShortcutsImpl({
         title: "Selection",
         shortcuts: [
           {
+            keys: ["Space"],
+            description: "Toggle row selection (in select column)",
+          },
+          {
             keys: ["Shift", "↑↓←→"],
             description: "Extend selection",
           },
@@ -211,6 +215,10 @@ function DataGridKeyboardShortcutsImpl({
           {
             keys: ["Double Click"],
             description: "Start editing cell",
+          },
+          {
+            keys: [modKey, "Enter"],
+            description: "Open link (in URL cell)",
           },
           ...(enableRowAdd
             ? [

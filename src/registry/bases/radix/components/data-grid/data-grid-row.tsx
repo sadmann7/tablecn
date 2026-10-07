@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  Cell,
   ColumnPinningState,
   ColumnVisibilityState,
   Row,
@@ -272,13 +273,14 @@ function DataGridRowImpl<TData extends RowData>({
             }}
           >
             {typeof cell.column.columnDef.header === "function" ? (
-              <div
-                className={cn("size-full px-3 py-1.5", {
-                  "bg-primary/10": isRowSelected,
-                })}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </div>
+              <DataGridUtilityCell
+                cell={cell}
+                tableMeta={tableMeta}
+                rowIndex={virtualRowIndex}
+                columnId={columnId}
+                isFocused={isCellFocused}
+                isRowSelected={isRowSelected}
+              />
             ) : (
               <DataGridCell
                 cell={cell}
@@ -297,6 +299,56 @@ function DataGridRowImpl<TData extends RowData>({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+interface DataGridUtilityCellProps<TData extends RowData> {
+  cell: Cell<DataGridFeatures, TData>;
+  tableMeta: DataGridTableMeta;
+  rowIndex: number;
+  columnId: string;
+  isFocused: boolean;
+  isRowSelected: boolean;
+}
+
+function DataGridUtilityCell<TData extends RowData>({
+  cell,
+  tableMeta,
+  rowIndex,
+  columnId,
+  isFocused,
+  isRowSelected,
+}: DataGridUtilityCellProps<TData>) {
+  const cellMapRef = tableMeta?.cellMapRef;
+
+  const onCellChange = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!cellMapRef) return;
+
+      const cellKey = getCellKey(rowIndex, columnId);
+
+      if (node) {
+        cellMapRef.current.set(cellKey, node);
+      } else {
+        cellMapRef.current.delete(cellKey);
+      }
+    },
+    [rowIndex, columnId, cellMapRef],
+  );
+
+  return (
+    <div
+      data-slot="grid-utility-cell"
+      data-focused={isFocused ? "" : undefined}
+      tabIndex={-1}
+      ref={onCellChange}
+      className={cn("size-full px-3 py-1.5 outline-none", {
+        "bg-primary/10": isRowSelected,
+        "ring-1 ring-ring ring-inset": isFocused,
+      })}
+    >
+      {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </div>
   );
 }

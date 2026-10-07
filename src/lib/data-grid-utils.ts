@@ -1,4 +1,11 @@
-import type { Column, RowData, Table } from "@tanstack/react-table";
+import type {
+  Column,
+  ColumnOrderState,
+  ColumnPinningState,
+  ColumnVisibilityState,
+  RowData,
+  Table,
+} from "@tanstack/react-table";
 import type * as React from "react";
 
 import {
@@ -187,6 +194,91 @@ export function getColumnPinningStyle<TData extends RowData>(params: {
     width: column.getSize(),
     zIndex: isPinned ? 1 : undefined,
   };
+}
+
+export function getVisibleColumnIds(params: {
+  columnIds: string[];
+  columnVisibility?: ColumnVisibilityState;
+  columnPinning?: Partial<ColumnPinningState>;
+  columnOrder?: ColumnOrderState;
+}): string[] {
+  const {
+    columnIds,
+    columnVisibility = {},
+    columnPinning = {},
+    columnOrder = [],
+  } = params;
+
+  const knownIds = new Set(columnIds);
+  const orderedIds = new Set(columnOrder.filter((id) => knownIds.has(id)));
+  for (const id of columnIds) orderedIds.add(id);
+
+  const visibleIds = [...orderedIds].filter(
+    (id) => columnVisibility[id] !== false,
+  );
+  const visibleIdSet = new Set(visibleIds);
+  const startIds = (columnPinning.start ?? []).filter((id) =>
+    visibleIdSet.has(id),
+  );
+  const endIds = (columnPinning.end ?? []).filter((id) => visibleIdSet.has(id));
+  const pinnedIds = new Set([...startIds, ...endIds]);
+
+  return [
+    ...startIds,
+    ...visibleIds.filter((id) => !pinnedIds.has(id)),
+    ...endIds,
+  ];
+}
+
+export function getTabTargetCell(params: {
+  rowIndex: number;
+  columnId: string;
+  columnIds: string[];
+  rowCount: number;
+  isBackward: boolean;
+  getIsColumnTabbable?: (columnId: string) => boolean;
+}): CellPosition | null {
+  const {
+    rowIndex,
+    columnId,
+    columnIds,
+    rowCount,
+    isBackward,
+    getIsColumnTabbable = () => true,
+  } = params;
+  const colIndex = columnIds.indexOf(columnId);
+  if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
+
+  const step = isBackward ? -1 : 1;
+  let nextRowIndex = rowIndex;
+  let nextColIndex = colIndex;
+
+  while (true) {
+    nextColIndex += step;
+    if (nextColIndex >= columnIds.length) {
+      nextColIndex = 0;
+      nextRowIndex++;
+    } else if (nextColIndex < 0) {
+      nextColIndex = columnIds.length - 1;
+      nextRowIndex--;
+    }
+
+    if (nextRowIndex < 0 || nextRowIndex >= rowCount) return null;
+
+    const nextColumnId = columnIds[nextColIndex];
+    if (nextColumnId && getIsColumnTabbable(nextColumnId)) {
+      return { rowIndex: nextRowIndex, columnId: nextColumnId };
+    }
+  }
+}
+
+export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
+  if (cellElement.dataset.slot === "grid-cell-wrapper") return cellElement;
+  return (
+    cellElement.querySelector<HTMLElement>(
+      'button, a[href], [role="checkbox"]',
+    ) ?? cellElement
+  );
 }
 
 export function getScrollDirection(
