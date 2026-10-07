@@ -1489,7 +1489,7 @@ describe("useDataGrid", () => {
   });
 
   describe("virtualization", () => {
-    it("should provide virtual items", () => {
+    it("should provide virtualizer options for the grid body", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1499,35 +1499,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.virtualItems).toBeDefined();
-      expect(Array.isArray(result.current.virtualItems)).toBe(true);
-    });
-
-    it("should size the grid body to the virtual total size", () => {
-      const { result } = renderHook(
-        () =>
-          useDataGrid({
-            data: testData,
-            columns: testColumns,
-          }),
-        { wrapper: createWrapper() },
+      expect(result.current.rowVirtualizerOptions.overscan).toBe(6);
+      expect(typeof result.current.rowVirtualizerOptions.measureElement).toBe(
+        "function",
       );
-
-      expect(result.current.dataGridBodyProps.style.height).toMatch(/^\d+px$/);
-    });
-
-    it("should provide measureElement function", () => {
-      const { result } = renderHook(
-        () =>
-          useDataGrid({
-            data: testData,
-            columns: testColumns,
-          }),
-        { wrapper: createWrapper() },
-      );
-
-      expect(result.current.measureElement).toBeDefined();
-      expect(typeof result.current.measureElement).toBe("function");
     });
   });
 
@@ -2742,7 +2717,7 @@ describe("useDataGrid", () => {
         result.current.table.selectRow(firstRowId ?? "1", true);
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
+      const rowSelection = result.current.table.atoms.rowSelection.get();
       expect(Object.keys(rowSelection).length).toBeGreaterThan(0);
     });
 
@@ -2773,7 +2748,7 @@ describe("useDataGrid", () => {
         });
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
+      const rowSelection = result.current.table.atoms.rowSelection.get();
       expect(Object.keys(rowSelection).length).toBeGreaterThanOrEqual(2);
     });
 
@@ -2800,7 +2775,7 @@ describe("useDataGrid", () => {
         result.current.table.selectRow(firstRowId ?? "1", false);
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
+      const rowSelection = result.current.table.atoms.rowSelection.get();
       expect(rowSelection[firstRowId ?? "1"]).toBeFalsy();
     });
 
@@ -2829,7 +2804,7 @@ describe("useDataGrid", () => {
         result.current.table.selectRow(visibleRowId ?? "1", true);
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
+      const rowSelection = result.current.table.atoms.rowSelection.get();
       expect(rowSelection["1"]).toBe(true);
       expect(Object.keys(rowSelection).length).toBe(1);
     });
@@ -3416,8 +3391,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Virtualizer should be initialized with custom overscan
-      expect(result.current.virtualItems).toBeDefined();
+      expect(result.current.rowVirtualizerOptions.overscan).toBe(10);
     });
   });
 
