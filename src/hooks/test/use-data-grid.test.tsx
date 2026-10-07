@@ -1,8 +1,8 @@
-import type { ColumnDef, Table } from "@tanstack/react-table";
+import type { ColumnDef, SortingState, Table } from "@tanstack/react-table";
 import type * as React from "react";
 
 import { act, render, renderHook } from "@testing-library/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -3122,16 +3122,22 @@ describe("useDataGrid", () => {
   });
 
   describe("sorting and filtering", () => {
-    it("should call onSortingChange when sorting changes", () => {
+    it("should hand sorting to onSortingChange when controlled", () => {
       const onSortingChange = vi.fn();
 
       const { result } = renderHook(
-        () =>
-          useDataGrid({
+        () => {
+          const [sorting, setSorting] = useState<SortingState>([]);
+          return useDataGrid({
             data: testData,
             columns: testColumns,
-            onSortingChange,
-          }),
+            state: { sorting },
+            onSortingChange: (updater) => {
+              onSortingChange(updater);
+              setSorting(updater);
+            },
+          });
+        },
         { wrapper: createWrapper() },
       );
 
@@ -3148,7 +3154,7 @@ describe("useDataGrid", () => {
       ]);
     });
 
-    it("should call onColumnFiltersChange when filters change", () => {
+    it("should hand column filters to onColumnFiltersChange", () => {
       const onColumnFiltersChange = vi.fn();
 
       const { result } = renderHook(
