@@ -11,7 +11,6 @@ import type {
   DataGridTableMeta,
 } from "@/lib/data-grid-types";
 
-import { parseCellKey } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -75,15 +74,15 @@ function ContextMenuImpl<TData extends RowData>({
   }, [tableMeta]);
 
   const onCopy = React.useCallback(() => {
-    tableMeta.onCellsCopy?.();
-  }, [tableMeta]);
+    void table.copySelectedCells();
+  }, [table]);
 
   const onCut = React.useCallback(() => {
-    tableMeta.onCellsCut?.();
-  }, [tableMeta]);
+    void table.cutSelectedCells();
+  }, [table]);
 
   const onClear = React.useCallback(() => {
-    const cells = (tableMeta.getSelectedCellKeys?.() ?? []).map(parseCellKey);
+    const cells = table.getSelectedCells();
     if (cells.length === 0) return;
 
     table.clearCells(cells);
@@ -91,20 +90,16 @@ function ContextMenuImpl<TData extends RowData>({
     toast.success(
       `${cells.length} cell${cells.length !== 1 ? "s" : ""} cleared`,
     );
-  }, [table, tableMeta]);
+  }, [table]);
 
   const onDelete = React.useCallback(async () => {
-    const rowIds = new Set(
-      (tableMeta.getSelectedCellKeys?.() ?? []).map(
-        (cellKey) => parseCellKey(cellKey).rowId,
-      ),
-    );
+    const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
     if (rowIds.size === 0) return;
 
     await table.deleteRows(Array.from(rowIds));
 
     toast.success(`${rowIds.size} row${rowIds.size !== 1 ? "s" : ""} deleted`);
-  }, [table, tableMeta]);
+  }, [table]);
 
   return (
     <DropdownMenu

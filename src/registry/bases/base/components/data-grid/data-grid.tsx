@@ -107,7 +107,7 @@ export function DataGrid<TData extends RowData>({
         tableMeta={tableMeta}
         contextMenu={contextMenu}
       />
-      <DataGridPasteDialog tableMeta={tableMeta} pasteDialog={pasteDialog} />
+      <DataGridPasteDialog table={table} pasteDialog={pasteDialog} />
       <div
         role="grid"
         aria-label="Data grid"
