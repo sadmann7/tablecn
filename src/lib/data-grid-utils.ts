@@ -189,6 +189,37 @@ export function getColumnPinningStyle<TData extends RowData>(params: {
   };
 }
 
+export function getTabTargetCell(params: {
+  rowIndex: number;
+  columnId: string;
+  columnIds: string[];
+  rowCount: number;
+  isBackward: boolean;
+}): CellPosition | null {
+  const { rowIndex, columnId, columnIds, rowCount, isBackward } = params;
+  const colIndex = columnIds.indexOf(columnId);
+  if (colIndex === -1) return null;
+
+  const firstColumnId = columnIds[0];
+  const lastColumnId = columnIds[columnIds.length - 1];
+
+  if (isBackward) {
+    const prevColumnId = columnIds[colIndex - 1];
+    if (prevColumnId) return { rowIndex, columnId: prevColumnId };
+    if (rowIndex > 0 && lastColumnId) {
+      return { rowIndex: rowIndex - 1, columnId: lastColumnId };
+    }
+    return null;
+  }
+
+  const nextColumnId = columnIds[colIndex + 1];
+  if (nextColumnId) return { rowIndex, columnId: nextColumnId };
+  if (rowIndex < rowCount - 1 && firstColumnId) {
+    return { rowIndex: rowIndex + 1, columnId: firstColumnId };
+  }
+  return null;
+}
+
 export function getScrollDirection(
   direction: string,
 ): "left" | "right" | "home" | "end" | undefined {

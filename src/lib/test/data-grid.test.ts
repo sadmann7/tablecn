@@ -1,6 +1,79 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTsv } from "@/lib/data-grid-utils";
+import { getTabTargetCell, parseTsv } from "@/lib/data-grid-utils";
+
+describe("getTabTargetCell", () => {
+  const columnIds = ["name", "age", "email"];
+
+  it("should move to the next column in the same row", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 1,
+        columnId: "name",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toEqual({ rowIndex: 1, columnId: "age" });
+  });
+
+  it("should wrap to the first column of the next row", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 1,
+        columnId: "email",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toEqual({ rowIndex: 2, columnId: "name" });
+  });
+
+  it("should wrap to the last column of the previous row on shift+tab", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 1,
+        columnId: "name",
+        columnIds,
+        rowCount: 3,
+        isBackward: true,
+      }),
+    ).toEqual({ rowIndex: 0, columnId: "email" });
+  });
+
+  it("should return null at the grid edges so focus can leave the grid", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 2,
+        columnId: "email",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toBeNull();
+    expect(
+      getTabTargetCell({
+        rowIndex: 0,
+        columnId: "name",
+        columnIds,
+        rowCount: 3,
+        isBackward: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("should return null for a non-navigable column", () => {
+    expect(
+      getTabTargetCell({
+        rowIndex: 0,
+        columnId: "select",
+        columnIds,
+        rowCount: 3,
+        isBackward: false,
+      }),
+    ).toBeNull();
+  });
+});
 
 describe("parseTsv", () => {
   describe("basic parsing", () => {

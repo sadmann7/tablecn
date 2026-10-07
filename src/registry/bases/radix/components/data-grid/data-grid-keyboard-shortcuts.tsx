@@ -97,11 +97,11 @@ function DataGridKeyboardShortcutsImpl({
           },
           {
             keys: ["Tab"],
-            description: "Move to next cell",
+            description: "Move to next cell (wraps to next row)",
           },
           {
             keys: ["Shift", "Tab"],
-            description: "Move to previous cell",
+            description: "Move to previous cell (wraps to previous row)",
           },
           {
             keys: ["Home"],

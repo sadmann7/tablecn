@@ -171,6 +171,7 @@ export function DataGrid<TData extends RowData>({
                             : undefined
                     }
                     data-slot="grid-header-cell"
+                    data-column-id={header.column.id}
                     tabIndex={-1}
                     className={cn("relative", {
                       grow: stretchColumns && header.column.id !== "select",

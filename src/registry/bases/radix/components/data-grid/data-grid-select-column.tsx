@@ -83,6 +83,7 @@ function DataGridSelectCheckbox({
         </div>
         <Checkbox
           id={id}
+          tabIndex={-1}
           className={cn(
             "relative transition-[shadow,border,opacity] hover:border-primary/40",
             "opacity-0 group-hover:opacity-100 data-[state=checked]:opacity-100",
@@ -99,6 +100,7 @@ function DataGridSelectCheckbox({
     <DataGridSelectHitbox htmlFor={id} size={hitboxSize} debug={debug}>
       <Checkbox
         id={id}
+        tabIndex={-1}
         className={cn(
           "relative transition-[shadow,border] hover:border-primary/40",
           className,

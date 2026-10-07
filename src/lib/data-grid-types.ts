@@ -170,7 +170,9 @@ export type NavigationDirection =
   | "pageup"
   | "pagedown"
   | "pageleft"
-  | "pageright";
+  | "pageright"
+  | "tab"
+  | "shift+tab";
 
 export interface SearchState {
   searchMatches: CellPosition[];
