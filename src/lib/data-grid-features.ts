@@ -266,8 +266,6 @@ interface TableState_DataGridSelection {
   /** Cell where the current mouse drag selection started, `null` when not dragging. */
   cellDragAnchor: CellPosition | null;
   contextMenu: ContextMenuState;
-  /** Row last toggled through its checkbox, where Shift+click ranges start. */
-  rowSelectionAnchor: string | null;
 }
 
 interface TableOptions_DataGridSelection {
@@ -277,12 +275,6 @@ interface TableOptions_DataGridSelection {
   enableColumnSelection?: boolean;
   onCellDragAnchorChange?: OnChangeFn<CellPosition | null>;
   onContextMenuChange?: OnChangeFn<ContextMenuState>;
-  onRowSelectionAnchorChange?: OnChangeFn<string | null>;
-}
-
-interface SelectRowOptions {
-  /** Applies the change to every row between the previous anchor row and this one. */
-  extend?: boolean;
 }
 
 interface Table_DataGridSelection {
@@ -302,11 +294,6 @@ interface Table_DataGridSelection {
   extendCellSelectionTo: (cell: CellPosition) => void;
   /** Selects a column's cells, or clears the selection when column selection is off. */
   selectColumnCells: (columnId: string) => void;
-  selectRow: (
-    rowId: string,
-    selected: boolean,
-    options?: SelectRowOptions,
-  ) => void;
   getCellDragAnchor: () => CellPosition | null;
   /** Starts a drag selection from the cell and drops any row selection. */
   startCellDrag: (cell: CellPosition) => void;
@@ -1418,55 +1405,6 @@ function getFocusedCellPosition(table: DataGridInstance): CellPosition | null {
     : null;
 }
 
-function getIsUtilityColumn(table: DataGridInstance, columnId: string) {
-  return table.getColumn(columnId)?.columnDef.enableCellSelection === false;
-}
-
-function selectRow(
-  table: DataGridInstance,
-  rowId: string,
-  selected: boolean,
-  { extend = false }: SelectRowOptions = {},
-) {
-  const rows = table.getRowModel().rows;
-  const rowIndex = rows.findIndex((row) => row.id === rowId);
-  if (rowIndex === -1) return;
-
-  const anchorRowId = table.atoms.rowSelectionAnchor.get();
-  const anchorIndex =
-    extend && anchorRowId !== null
-      ? rows.findIndex((row) => row.id === anchorRowId)
-      : -1;
-  const startIndex =
-    anchorIndex === -1 ? rowIndex : Math.min(anchorIndex, rowIndex);
-  const endIndex =
-    anchorIndex === -1 ? rowIndex : Math.max(anchorIndex, rowIndex);
-
-  const rowSelection = { ...table.atoms.rowSelection.get() };
-  for (let index = startIndex; index <= endIndex; index++) {
-    const id = rows[index]?.id;
-    if (!id) continue;
-    if (selected) rowSelection[id] = true;
-    else delete rowSelection[id];
-  }
-
-  table.setRowSelection(rowSelection);
-  table.options.onRowSelectionAnchorChange?.(rowId);
-
-  const focusedCell = getFocusedCellPosition(table);
-  if (focusedCell && getIsUtilityColumn(table, focusedCell.columnId)) {
-    table.setCellSelection((ranges) => [
-      ...ranges.slice(0, -1),
-      {
-        anchorRowId: rowId,
-        anchorColumnId: focusedCell.columnId,
-        focusRowId: rowId,
-        focusColumnId: focusedCell.columnId,
-      },
-    ]);
-  }
-}
-
 function selectAllDataCells(table: DataGridInstance) {
   const rows = table.getRowModel().rows;
   const dataColumnIds = getDataColumnIds(table);
@@ -1504,14 +1442,12 @@ const dataGridSelectionFeature: TableFeature = {
   getInitialState: (initialState) => ({
     cellDragAnchor: null,
     contextMenu: DEFAULT_CONTEXT_MENU,
-    rowSelectionAnchor: null,
     ...initialState,
   }),
   getDefaultTableOptions: (table) => {
     const options: TableOptions_DataGridSelection = {
       onCellDragAnchorChange: makeStateUpdater("cellDragAnchor", table),
       onContextMenuChange: makeStateUpdater("contextMenu", table),
-      onRowSelectionAnchorChange: makeStateUpdater("rowSelectionAnchor", table),
     };
     return options;
   },
@@ -1606,10 +1542,6 @@ const dataGridSelectionFeature: TableFeature = {
             focusColumnId: columnId,
           });
         },
-      },
-      table_selectRow: {
-        fn: (rowId: string, selected: boolean, options?: SelectRowOptions) =>
-          selectRow(instance, rowId, selected, options),
       },
       table_getCellDragAnchor: {
         fn: () => instance.atoms.cellDragAnchor.get(),

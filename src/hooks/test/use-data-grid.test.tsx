@@ -2427,10 +2427,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.table.selectRow("1", true);
+        result.current.table.getRow("1").toggleSelected(true);
       });
       act(() => {
-        result.current.table.selectRow("3", true);
+        result.current.table.getRow("3").toggleSelected(true);
       });
 
       expect(result.current.table.getCellSelectionBounds()).toEqual([
@@ -2448,32 +2448,6 @@ describe("useDataGrid", () => {
         },
       ]);
       expect(result.current.table.getIsCellSelected("2", "name")).toBe(false);
-    });
-
-    it("should keep focus on the select cell while toggling rows", () => {
-      const { result } = renderHook(
-        () =>
-          useDataGrid({
-            data: testData,
-            columns: columnsWithSelect,
-            getRowId: (row) => row.id,
-          }),
-        { wrapper: createWrapper() },
-      );
-
-      act(() => {
-        fireCellEvent(result, "onClick", "1", "select");
-      });
-      act(() => {
-        result.current.table.selectRow("2", true);
-      });
-
-      expect(getFocusedCell(result.current.table)).toEqual({
-        rowId: "2",
-        columnId: "select",
-      });
-      expect(result.current.table.getIsCellSelected("2", "name")).toBe(true);
-      expect(result.current.table.getIsCellSelected("2", "select")).toBe(false);
     });
 
     it("should clear selection when clicking column with enableColumnSelection false", () => {
@@ -2714,7 +2688,7 @@ describe("useDataGrid", () => {
 
       const firstRowId = result.current.table.getRowModel().rows[0]?.id;
       act(() => {
-        result.current.table.selectRow(firstRowId ?? "1", true);
+        result.current.table.getRow(firstRowId ?? "1").toggleSelected(true);
       });
 
       const rowSelection = result.current.table.atoms.rowSelection.get();
@@ -2738,18 +2712,23 @@ describe("useDataGrid", () => {
 
       // Select first row
       act(() => {
-        result.current.table.selectRow(firstRowId ?? "1", true);
+        result.current.table
+          .getRow(firstRowId ?? "1")
+          .getToggleSelectedHandler()({ target: { checked: true } });
       });
 
       // Select third row with shift
       act(() => {
-        result.current.table.selectRow(thirdRowId ?? "3", true, {
-          extend: true,
+        result.current.table
+          .getRow(thirdRowId ?? "3")
+          .getToggleSelectedHandler()({
+          target: { checked: true },
+          shiftKey: true,
         });
       });
 
       const rowSelection = result.current.table.atoms.rowSelection.get();
-      expect(Object.keys(rowSelection).length).toBeGreaterThanOrEqual(2);
+      expect(rowSelection).toEqual({ "1": true, "2": true, "3": true });
     });
 
     it("should deselect row", () => {
@@ -2767,12 +2746,12 @@ describe("useDataGrid", () => {
 
       // Select row
       act(() => {
-        result.current.table.selectRow(firstRowId ?? "1", true);
+        result.current.table.getRow(firstRowId ?? "1").toggleSelected(true);
       });
 
       // Deselect row
       act(() => {
-        result.current.table.selectRow(firstRowId ?? "1", false);
+        result.current.table.getRow(firstRowId ?? "1").toggleSelected(false);
       });
 
       const rowSelection = result.current.table.atoms.rowSelection.get();
@@ -2801,7 +2780,7 @@ describe("useDataGrid", () => {
 
       // Select the visible (filtered) row
       act(() => {
-        result.current.table.selectRow(visibleRowId ?? "1", true);
+        result.current.table.getRow(visibleRowId ?? "1").toggleSelected(true);
       });
 
       const rowSelection = result.current.table.atoms.rowSelection.get();
