@@ -96,9 +96,6 @@ export interface DataGridTableMeta {
     columnId: string,
     event: React.MouseEvent,
   ) => void;
-  onCellsCopy?: () => void;
-  onCellsCut?: () => void;
-  onCellsPaste?: (expand?: boolean) => void;
   onSelectionClear?: () => void;
   onFilesUpload?: (params: {
     files: File[];
@@ -112,8 +109,6 @@ export interface DataGridTableMeta {
   }) => void | Promise<void>;
   contextMenu?: ContextMenuState;
   onContextMenuOpenChange?: (open: boolean) => void;
-  pasteDialog?: PasteDialogState;
-  onPasteDialogOpenChange?: (open: boolean) => void;
 }
 
 export interface CellPosition {

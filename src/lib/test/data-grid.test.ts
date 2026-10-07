@@ -6,7 +6,9 @@ import {
   getTabTargetCell,
   getVisibleColumnIds,
   parseCellKey,
+  parsePastedCellValue,
   parseTsv,
+  serializeCellValue,
 } from "@/lib/data-grid-utils";
 
 describe("getCellKey", () => {
@@ -371,5 +373,74 @@ describe("getIsInPopover", () => {
 
     expect(getIsInPopover(button)).toBe(false);
     expect(getIsInPopover(null)).toBe(false);
+  });
+});
+
+describe("parsePastedCellValue", () => {
+  const options = [
+    { label: "Goofy", value: "goofy" },
+    { label: "Regular", value: "regular" },
+  ];
+
+  it("parses numbers and rejects non-numeric text", () => {
+    expect(parsePastedCellValue("42.5", { variant: "number" })).toEqual({
+      value: 42.5,
+    });
+    expect(parsePastedCellValue("", { variant: "number" })).toEqual({
+      value: null,
+    });
+    expect(parsePastedCellValue("abc", { variant: "number" })).toBeNull();
+  });
+
+  it("parses checkbox words", () => {
+    expect(parsePastedCellValue("Yes", { variant: "checkbox" })).toEqual({
+      value: true,
+    });
+    expect(parsePastedCellValue("unchecked", { variant: "checkbox" })).toEqual({
+      value: false,
+    });
+    expect(parsePastedCellValue("maybe", { variant: "checkbox" })).toBeNull();
+  });
+
+  it("matches select options by value or label", () => {
+    const cellOpts = { variant: "select" as const, options };
+    expect(parsePastedCellValue("Goofy", cellOpts)).toEqual({
+      value: "goofy",
+    });
+    expect(parsePastedCellValue("switch", cellOpts)).toBeNull();
+  });
+
+  it("parses multi-select from JSON or comma separated text", () => {
+    const cellOpts = { variant: "multi-select" as const, options };
+    expect(parsePastedCellValue('["goofy","nope"]', cellOpts)).toEqual({
+      value: ["goofy"],
+    });
+    expect(parsePastedCellValue("Regular, Goofy", cellOpts)).toEqual({
+      value: ["regular", "goofy"],
+    });
+    expect(parsePastedCellValue("nope", cellOpts)).toBeNull();
+  });
+
+  it("accepts urls and bare domains only", () => {
+    expect(parsePastedCellValue("example.com/a", { variant: "url" })).toEqual({
+      value: "example.com/a",
+    });
+    expect(parsePastedCellValue("not a url", { variant: "url" })).toBeNull();
+  });
+
+  it("turns JSON text into readable strings for text cells", () => {
+    expect(parsePastedCellValue('["a","b"]', undefined)).toEqual({
+      value: "a, b",
+    });
+    expect(parsePastedCellValue("true", { variant: "short-text" })).toEqual({
+      value: "Checked",
+    });
+  });
+
+  it("round-trips serialized multi-select values", () => {
+    const text = serializeCellValue(["goofy", "regular"], "multi-select");
+    expect(
+      parsePastedCellValue(text, { variant: "multi-select", options }),
+    ).toEqual({ value: ["goofy", "regular"] });
   });
 });

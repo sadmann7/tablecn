@@ -38,6 +38,20 @@ import type {
   RowHeightValue,
 } from "@/lib/data-grid-types";
 
+const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
+const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
+const VALID_BOOLEANS = new Set([
+  "true",
+  "false",
+  "1",
+  "0",
+  "yes",
+  "no",
+  "checked",
+  "unchecked",
+]);
+
 export function stringifyUnknown(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string") return value;
@@ -83,6 +97,133 @@ export function matchSelectOption(
       o.value.toLowerCase() === value.toLowerCase() ||
       o.label.toLowerCase() === value.toLowerCase(),
   )?.value;
+}
+
+/** Text written to the clipboard for a cell value. */
+export function serializeCellValue(
+  value: unknown,
+  variant: CellOpts["variant"] | undefined,
+): string {
+  if (variant === "file" || variant === "multi-select") {
+    return value ? JSON.stringify(value) : "";
+  }
+  if (value instanceof Date) return value.toISOString();
+  return stringifyUnknown(value);
+}
+
+function parseTextValue(text: string): unknown {
+  if (ISO_DATE_REGEX.test(text)) {
+    const date = new Date(text);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleDateString();
+  }
+
+  const firstChar = text[0];
+  if (
+    firstChar !== "[" &&
+    firstChar !== "{" &&
+    firstChar !== "t" &&
+    firstChar !== "f"
+  ) {
+    return text;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
+        return parsed.map((file) => file.name).join(", ");
+      }
+      if (parsed.every((item) => typeof item === "string")) {
+        return parsed.join(", ");
+      }
+    } else if (typeof parsed === "boolean") {
+      return parsed ? "Checked" : "Unchecked";
+    }
+  } catch {
+    const lower = text.toLowerCase();
+    if (lower === "true" || lower === "false") {
+      return lower === "true" ? "Checked" : "Unchecked";
+    }
+  }
+  return text;
+}
+
+function parseMultiSelectValues(text: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === "string");
+    }
+  } catch {
+    // Falls back to comma separated values
+  }
+  return text ? text.split(",").map((item) => item.trim()) : [];
+}
+
+/** Converts pasted text into a value for the cell, or `null` when the text is invalid for it. */
+export function parsePastedCellValue(
+  text: string,
+  cellOpts: CellOpts | undefined,
+): { value: unknown } | null {
+  switch (cellOpts?.variant) {
+    case "number": {
+      if (!text) return { value: null };
+      const num = Number.parseFloat(text);
+      return Number.isNaN(num) ? null : { value: num };
+    }
+    case "checkbox": {
+      if (!text) return { value: false };
+      const lower = text.toLowerCase();
+      return VALID_BOOLEANS.has(lower)
+        ? { value: TRUTHY_BOOLEANS.has(lower) }
+        : null;
+    }
+    case "date": {
+      if (!text) return { value: null };
+      const date = new Date(text);
+      return Number.isNaN(date.getTime()) ? null : { value: date };
+    }
+    case "select": {
+      if (!text) return { value: null };
+      const matched = matchSelectOption(text, cellOpts.options);
+      return matched ? { value: matched } : null;
+    }
+    case "multi-select": {
+      const values = parseMultiSelectValues(text);
+      const validated = values.flatMap((item) => {
+        const matched = matchSelectOption(item, cellOpts.options);
+        return matched ? [matched] : [];
+      });
+      return values.length > 0 && validated.length === 0
+        ? null
+        : { value: validated };
+    }
+    case "file": {
+      if (!text) return { value: [] };
+      try {
+        const parsed: unknown = JSON.parse(text);
+        if (!Array.isArray(parsed)) return null;
+        const validFiles = parsed.filter(getIsFileCellData);
+        return parsed.length > 0 && validFiles.length === 0
+          ? null
+          : { value: validFiles };
+      } catch {
+        return null;
+      }
+    }
+    case "url": {
+      if (!text) return { value: "" };
+      if (text[0] === "[" || text[0] === "{") return null;
+      try {
+        new URL(text);
+        return { value: text };
+      } catch {
+        return DOMAIN_REGEX.test(text) ? { value: text } : null;
+      }
+    }
+    default:
+      return { value: text ? parseTextValue(text) : "" };
+  }
 }
 
 // Unit separator, so row ids and column ids may contain any printable character
