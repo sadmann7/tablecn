@@ -160,6 +160,10 @@ function DataGridKeyboardShortcutsImpl({
         title: "Selection",
         shortcuts: [
           {
+            keys: ["Space"],
+            description: "Toggle row selection (in select column)",
+          },
+          {
             keys: ["Shift", "↑↓←→"],
             description: "Extend selection",
           },

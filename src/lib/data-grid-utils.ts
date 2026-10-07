@@ -195,29 +195,49 @@ export function getTabTargetCell(params: {
   columnIds: string[];
   rowCount: number;
   isBackward: boolean;
+  getIsColumnTabbable?: (columnId: string) => boolean;
 }): CellPosition | null {
-  const { rowIndex, columnId, columnIds, rowCount, isBackward } = params;
+  const {
+    rowIndex,
+    columnId,
+    columnIds,
+    rowCount,
+    isBackward,
+    getIsColumnTabbable = () => true,
+  } = params;
   const colIndex = columnIds.indexOf(columnId);
-  if (colIndex === -1) return null;
+  if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
 
-  const firstColumnId = columnIds[0];
-  const lastColumnId = columnIds[columnIds.length - 1];
+  const step = isBackward ? -1 : 1;
+  let nextRowIndex = rowIndex;
+  let nextColIndex = colIndex;
 
-  if (isBackward) {
-    const prevColumnId = columnIds[colIndex - 1];
-    if (prevColumnId) return { rowIndex, columnId: prevColumnId };
-    if (rowIndex > 0 && lastColumnId) {
-      return { rowIndex: rowIndex - 1, columnId: lastColumnId };
+  while (true) {
+    nextColIndex += step;
+    if (nextColIndex >= columnIds.length) {
+      nextColIndex = 0;
+      nextRowIndex++;
+    } else if (nextColIndex < 0) {
+      nextColIndex = columnIds.length - 1;
+      nextRowIndex--;
     }
-    return null;
-  }
 
-  const nextColumnId = columnIds[colIndex + 1];
-  if (nextColumnId) return { rowIndex, columnId: nextColumnId };
-  if (rowIndex < rowCount - 1 && firstColumnId) {
-    return { rowIndex: rowIndex + 1, columnId: firstColumnId };
+    if (nextRowIndex < 0 || nextRowIndex >= rowCount) return null;
+
+    const nextColumnId = columnIds[nextColIndex];
+    if (nextColumnId && getIsColumnTabbable(nextColumnId)) {
+      return { rowIndex: nextRowIndex, columnId: nextColumnId };
+    }
   }
-  return null;
+}
+
+const CELL_CONTROL_SELECTOR = 'button, a[href], [role="checkbox"]';
+
+export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
+  if (cellElement.dataset.slot === "grid-cell-wrapper") return cellElement;
+  return (
+    cellElement.querySelector<HTMLElement>(CELL_CONTROL_SELECTOR) ?? cellElement
+  );
 }
 
 export function getScrollDirection(

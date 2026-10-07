@@ -75,7 +75,7 @@ function DataGridSelectCheckbox({
         <div
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-s-3 top-1.5 flex size-4 items-center justify-center text-xs text-muted-foreground tabular-nums transition-opacity group-hover:opacity-0",
+            "pointer-events-none absolute inset-s-3 top-1.5 flex size-4 items-center justify-center text-xs text-muted-foreground tabular-nums transition-opacity group-hover:opacity-0 group-has-focus-visible:opacity-0",
             checked && "opacity-0",
           )}
         >
@@ -86,7 +86,7 @@ function DataGridSelectCheckbox({
           tabIndex={-1}
           className={cn(
             "relative transition-[shadow,border,opacity] hover:border-primary/40",
-            "opacity-0 group-hover:opacity-100 data-checked:opacity-100",
+            "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-checked:opacity-100",
             className,
           )}
           checked={checked}

@@ -62,16 +62,82 @@ describe("getTabTargetCell", () => {
     ).toBeNull();
   });
 
-  it("should return null for a non-navigable column", () => {
+  it("should return null for an unknown column", () => {
     expect(
       getTabTargetCell({
         rowIndex: 0,
-        columnId: "select",
+        columnId: "missing",
         columnIds,
         rowCount: 3,
         isBackward: false,
       }),
     ).toBeNull();
+  });
+
+  describe("with utility columns", () => {
+    const allColumnIds = ["select", "name", "age", "actions"];
+    function getIsColumnTabbable(columnId: string) {
+      return columnId !== "select" && columnId !== "actions";
+    }
+
+    it("should skip utility columns when wrapping", () => {
+      expect(
+        getTabTargetCell({
+          rowIndex: 0,
+          columnId: "age",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: false,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 1, columnId: "name" });
+      expect(
+        getTabTargetCell({
+          rowIndex: 1,
+          columnId: "name",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: true,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 0, columnId: "age" });
+    });
+
+    it("should leave a utility column for the nearest data cell", () => {
+      expect(
+        getTabTargetCell({
+          rowIndex: 1,
+          columnId: "select",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: false,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 1, columnId: "name" });
+      expect(
+        getTabTargetCell({
+          rowIndex: 1,
+          columnId: "actions",
+          columnIds: allColumnIds,
+          rowCount: 3,
+          isBackward: true,
+          getIsColumnTabbable,
+        }),
+      ).toEqual({ rowIndex: 1, columnId: "age" });
+    });
+
+    it("should return null when no column is tabbable", () => {
+      expect(
+        getTabTargetCell({
+          rowIndex: 0,
+          columnId: "select",
+          columnIds: ["select", "actions"],
+          rowCount: 3,
+          isBackward: false,
+          getIsColumnTabbable,
+        }),
+      ).toBeNull();
+    });
   });
 });
 
