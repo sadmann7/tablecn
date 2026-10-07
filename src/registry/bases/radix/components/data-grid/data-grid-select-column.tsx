@@ -169,7 +169,7 @@ function selectSelectAllState(state: TableState<DataGridFeatures>) {
 
 interface DataGridSelectCellProps<TData extends RowData> extends Pick<
   CellContext<DataGridFeatures, TData>,
-  "row" | "table"
+  "row" | "column" | "table"
 > {
   hitboxSize?: HitboxSize;
   enableRowMarkers?: boolean;
@@ -179,6 +179,7 @@ interface DataGridSelectCellProps<TData extends RowData> extends Pick<
 
 function DataGridSelectCell<TData extends RowData>({
   row,
+  column,
   table,
   hitboxSize,
   enableRowMarkers,
@@ -187,21 +188,29 @@ function DataGridSelectCell<TData extends RowData>({
 }: DataGridSelectCellProps<TData>) {
   const rowNumber = enableRowMarkers ? row.getDisplayIndex() + 1 : undefined;
 
-  const onCheckedChange = React.useCallback(
-    (value: boolean) => {
-      table.selectRow(row.id, value);
+  const onToggle = React.useCallback(
+    (checked: boolean, shiftKey: boolean) => {
+      if (table.getFocusedCell()?.column.id === column.id) {
+        table.setFocusedCell(row.id, column.id);
+      }
+      // The checkbox renders a button, so the handler can't read `checked` from the event target
+      row.getToggleSelectedHandler()({ target: { checked }, shiftKey });
     },
-    [table, row],
+    [table, row, column],
+  );
+
+  const onCheckedChange = React.useCallback(
+    (value: boolean) => onToggle(value, false),
+    [onToggle],
   );
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
-      if (event.shiftKey) {
-        event.preventDefault();
-        table.selectRow(row.id, !row.getIsSelected(), { extend: true });
-      }
+      if (!event.shiftKey) return;
+      event.preventDefault();
+      onToggle(!row.getIsSelected(), true);
     },
-    [table, row],
+    [row, onToggle],
   );
 
   if (readOnly) {
@@ -259,9 +268,10 @@ export function getDataGridSelectColumn<TData extends RowData>({
         debug={debug}
       />
     ),
-    cell: ({ row, table }) => (
+    cell: ({ row, column, table }) => (
       <DataGridSelectCell
         row={row}
+        column={column}
         table={table}
         enableRowMarkers={enableRowMarkers}
         readOnly={readOnly}

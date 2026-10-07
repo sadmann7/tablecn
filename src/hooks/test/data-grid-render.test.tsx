@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
 vi.mock("sonner", () => ({
@@ -222,6 +223,48 @@ describe("DataGrid rendering", () => {
     ).not.toBeNull();
     expect(table.atoms.cellSelection.get()).toEqual([]);
     expect(table.atoms.rowSelection.get()).toEqual({});
+  });
+
+  it("selects a range of rows with Shift+click on the select checkbox", () => {
+    const { table } = renderGrid([getDataGridSelectColumn(), ...testColumns]);
+    const [firstCheckbox, , thirdCheckbox] = screen.getAllByRole("checkbox", {
+      name: "Select row",
+    });
+
+    act(() => {
+      firstCheckbox?.click();
+    });
+    act(() => {
+      thirdCheckbox?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, shiftKey: true }),
+      );
+    });
+
+    expect(table.atoms.rowSelection.get()).toEqual({
+      "1": true,
+      "2": true,
+      "3": true,
+    });
+  });
+
+  it("keeps focus on the select cell while toggling rows", () => {
+    const { table } = renderGrid([getDataGridSelectColumn(), ...testColumns]);
+    const secondCheckbox = screen.getAllByRole("checkbox", {
+      name: "Select row",
+    })[1];
+
+    act(() => {
+      table.setFocusedCell("1", "select");
+    });
+    act(() => {
+      secondCheckbox?.click();
+    });
+
+    const focusedCell = table.getFocusedCell();
+    expect(focusedCell?.row.id).toBe("2");
+    expect(focusedCell?.column.id).toBe("select");
+    expect(table.getIsCellSelected("2", "name")).toBe(true);
+    expect(table.getIsCellSelected("2", "select")).toBe(false);
   });
 
   it("updates rendered cells when columns are hidden or reordered", () => {
