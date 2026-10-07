@@ -52,7 +52,7 @@ export type CellOpts =
     };
 
 export interface CellUpdate {
-  rowIndex: number;
+  rowId: string;
   columnId: string;
   value: unknown;
 }
@@ -69,40 +69,37 @@ export interface DataGridTableMeta {
   editingCell?: CellPosition | null;
   selectionState?: SelectionState;
   searchOpen?: boolean;
-  getIsCellSelected?: (rowIndex: number, columnId: string) => boolean;
-  getIsSearchMatch?: (rowIndex: number, columnId: string) => boolean;
-  getIsActiveSearchMatch?: (rowIndex: number, columnId: string) => boolean;
-  getVisualRowIndex?: (rowId: string) => number | undefined;
+  getIsCellSelected?: (rowId: string, columnId: string) => boolean;
+  getIsSearchMatch?: (rowId: string, columnId: string) => boolean;
+  getIsActiveSearchMatch?: (rowId: string, columnId: string) => boolean;
   scrollToCell?: (
-    rowIndex: number,
+    rowId: string,
     columnId: string,
     align?: "auto" | "start" | "center" | "end",
   ) => void;
-  rowHeight?: RowHeightValue;
-  onRowHeightChange?: (value: RowHeightValue) => void;
   onRowSelect?: (rowId: string, checked: boolean, shiftKey: boolean) => void;
   onDataUpdate?: (params: CellUpdate | Array<CellUpdate>) => void;
-  onRowsDelete?: (rowIndices: number[]) => void | Promise<void>;
+  onRowsDelete?: (rowIds: string[]) => void | Promise<void>;
   onColumnClick?: (columnId: string) => void;
   onCellClick?: (
-    rowIndex: number,
+    rowId: string,
     columnId: string,
     event?: React.MouseEvent,
   ) => void;
-  onCellDoubleClick?: (rowIndex: number, columnId: string) => void;
+  onCellDoubleClick?: (rowId: string, columnId: string) => void;
   onCellMouseDown?: (
-    rowIndex: number,
+    rowId: string,
     columnId: string,
     event: React.MouseEvent,
   ) => void;
-  onCellMouseEnter?: (rowIndex: number, columnId: string) => void;
+  onCellMouseEnter?: (rowId: string, columnId: string) => void;
   onCellMouseUp?: () => void;
   onCellContextMenu?: (
-    rowIndex: number,
+    rowId: string,
     columnId: string,
     event: React.MouseEvent,
   ) => void;
-  onCellEditingStart?: (rowIndex: number, columnId: string) => void;
+  onCellEditingStart?: (rowId: string, columnId: string) => void;
   onCellEditingStop?: (opts?: {
     direction?: NavigationDirection;
     moveToNextRow?: boolean;
@@ -113,12 +110,12 @@ export interface DataGridTableMeta {
   onSelectionClear?: () => void;
   onFilesUpload?: (params: {
     files: File[];
-    rowIndex: number;
+    rowId: string;
     columnId: string;
   }) => Promise<FileCellData[]>;
   onFilesDelete?: (params: {
     fileIds: string[];
-    rowIndex: number;
+    rowId: string;
     columnId: string;
   }) => void | Promise<void>;
   contextMenu?: ContextMenuState;
@@ -129,7 +126,7 @@ export interface DataGridTableMeta {
 }
 
 export interface CellPosition {
-  rowIndex: number;
+  rowId: string;
   columnId: string;
 }
 
@@ -189,7 +186,7 @@ export interface SearchState {
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
   tableMeta: DataGridTableMeta;
-  rowIndex: number;
+  rowId: string;
   columnId: string;
   rowHeight: RowHeightValue;
   isEditing: boolean;

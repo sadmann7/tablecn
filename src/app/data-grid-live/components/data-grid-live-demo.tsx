@@ -395,7 +395,7 @@ export function DataGridLiveDemo() {
       trackRowsAdd([newSkater]);
 
       return {
-        rowIndex: data.length,
+        rowId: newSkater.id,
         columnId: "name",
       };
     }, [data, trackRowsAdd]);
@@ -576,9 +576,7 @@ export function DataGridLiveDemo() {
       return;
     }
 
-    const rowIndices = selectedRows.map((row) => row.index);
-
-    void tableMeta.onRowsDelete?.(rowIndices);
+    void tableMeta.onRowsDelete?.(selectedRows.map((row) => row.id));
 
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,

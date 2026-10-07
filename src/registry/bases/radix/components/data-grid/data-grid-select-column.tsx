@@ -173,9 +173,7 @@ function DataGridSelectCell<TData extends RowData>({
   debug,
 }: DataGridSelectCellProps<TData>) {
   const meta = table.options.meta;
-  const rowNumber = enableRowMarkers
-    ? (meta?.getVisualRowIndex?.(row.id) ?? row.index + 1)
-    : undefined;
+  const rowNumber = enableRowMarkers ? row.getDisplayIndex() + 1 : undefined;
 
   const onCheckedChange = React.useCallback(
     (value: boolean) => {

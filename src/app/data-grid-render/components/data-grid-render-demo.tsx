@@ -243,13 +243,15 @@ export function DataGridRenderDemo() {
           ] as const;
 
           const updates: CellUpdate[] = [];
+          const rows = table.getRowModel().rows;
 
           for (let i = 0; i < count; i++) {
             const rowIndex = Math.floor(i / columnsToFill.length);
             const colIndex = i % columnsToFill.length;
             const col = columnsToFill[colIndex];
+            const rowId = rows[rowIndex]?.id;
 
-            if (!col) continue;
+            if (!col || !rowId) continue;
 
             let value: string | number;
             switch (col) {
@@ -273,7 +275,7 @@ export function DataGridRenderDemo() {
             }
 
             updates.push({
-              rowIndex,
+              rowId,
               columnId: col,
               value,
             });
@@ -326,13 +328,15 @@ export function DataGridRenderDemo() {
           ) => string | number,
         ) {
           const updates: CellUpdate[] = [];
+          const rows = table.getRowModel().rows;
           for (let i = startCell; i < endCell; i++) {
             const rowIndex = Math.floor(i / columnsToFill.length);
             const colIndex = i % columnsToFill.length;
             const col = columnsToFill[colIndex];
-            if (!col || rowIndex >= rowsCount) continue;
+            const rowId = rows[rowIndex]?.id;
+            if (!col || !rowId || rowIndex >= rowsCount) continue;
             updates.push({
-              rowIndex,
+              rowId,
               columnId: col,
               value: getValue(rowIndex, col),
             });

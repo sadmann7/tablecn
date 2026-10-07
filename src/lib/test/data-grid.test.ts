@@ -1,10 +1,32 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getCellKey,
   getTabTargetCell,
   getVisibleColumnIds,
+  parseCellKey,
   parseTsv,
 } from "@/lib/data-grid-utils";
+
+describe("getCellKey", () => {
+  it("round-trips row and column ids", () => {
+    expect(parseCellKey(getCellKey("row-1", "name"))).toEqual({
+      rowId: "row-1",
+      columnId: "name",
+    });
+  });
+
+  it("keeps ids that contain colons or spaces intact", () => {
+    expect(parseCellKey(getCellKey("org:42:user 7", "a:b"))).toEqual({
+      rowId: "org:42:user 7",
+      columnId: "a:b",
+    });
+  });
+
+  it("returns empty ids for malformed keys", () => {
+    expect(parseCellKey("0:name")).toEqual({ rowId: "", columnId: "" });
+  });
+});
 
 describe("getVisibleColumnIds", () => {
   const columnIds = ["select", "name", "age", "email", "actions"];

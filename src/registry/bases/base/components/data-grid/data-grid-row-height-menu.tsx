@@ -1,10 +1,11 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
+import type * as React from "react";
 
-import * as React from "react";
+import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { RowHeightValue } from "@/lib/data-grid-types";
 
 import {
   Select,
@@ -87,53 +88,41 @@ export function DataGridRowHeightMenu<TData extends RowData>({
   disabled,
   ...props
 }: DataGridRowHeightMenuProps<TData>) {
-  const rowHeight = table.options.meta?.rowHeight;
-  const onRowHeightChange = table.options.meta?.onRowHeightChange;
-
-  const selectedRowHeight = React.useMemo(() => {
-    return (
-      rowHeights.find((opt) => opt.value === rowHeight) ?? {
-        label: "Short",
-        value: "short" as const,
-        icon: (props: React.ComponentProps<"svg">) => (
-          <IconPlaceholder
-            lucide="MinusIcon"
-            tabler="IconMinus"
-            hugeicons="MinusSignIcon"
-            phosphor="MinusIcon"
-            remixicon="RiSubtractLine"
-            {...props}
-          />
-        ),
-      }
-    );
-  }, [rowHeight]);
-
   return (
-    <Select
-      value={rowHeight}
-      onValueChange={(value) => {
-        if (value == null) return;
-        onRowHeightChange?.(value);
+    <Subscribe source={table.atoms.rowHeight}>
+      {(rowHeight) => {
+        const selectedRowHeight =
+          rowHeights.find((option) => option.value === rowHeight) ??
+          rowHeights[0];
+
+        return (
+          <Select
+            value={rowHeight}
+            onValueChange={(value: RowHeightValue | null) => {
+              if (value == null) return;
+              table.setRowHeight(value);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger className="[&_svg:nth-child(2)]:hidden">
+              <SelectValue placeholder="Row height">
+                <selectedRowHeight.icon />
+                {selectedRowHeight.label}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent {...props}>
+              <SelectGroup>
+                {rowHeights.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <option.icon />
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        );
       }}
-      disabled={disabled}
-    >
-      <SelectTrigger className="[&_svg:nth-child(2)]:hidden">
-        <SelectValue placeholder="Row height">
-          <selectedRowHeight.icon />
-          {selectedRowHeight.label}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent {...props}>
-        <SelectGroup>
-          {rowHeights.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              <option.icon />
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    </Subscribe>
   );
 }
