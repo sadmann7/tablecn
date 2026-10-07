@@ -733,9 +733,8 @@ function useDataGrid<TData extends RowData>({
       const trigger = getColumnHeaderTrigger(columnId);
       if (!trigger) return false;
 
-      if (!tableRef.current?.getHasRowSelection()) {
-        tableRef.current?.resetCellSelection(true);
-      }
+      tableRef.current?.resetCellSelection(true);
+      tableRef.current?.clearRowSelection();
       tableRef.current?.setEditingCell(null);
       trigger.focus();
       return true;
@@ -792,7 +791,9 @@ function useDataGrid<TData extends RowData>({
           // Stops the menu trigger from opening its menu on ArrowDown
           event.stopPropagation();
           const firstRowId = getRowIdAt(0);
-          if (firstRowId) focusCell(firstRowId, columnId);
+          if (!firstRowId) break;
+          tableRef.current?.clearRowSelection();
+          focusCell(firstRowId, columnId);
           break;
         }
         case "Escape":
@@ -811,6 +812,7 @@ function useDataGrid<TData extends RowData>({
             const firstRowId = getRowIdAt(0);
             const firstColumnId = getNavigableColumnIds()[0];
             if (!firstRowId || !firstColumnId) return true;
+            tableRef.current?.clearRowSelection();
             focusCell(firstRowId, firstColumnId);
           }
           break;
@@ -1307,6 +1309,26 @@ function useDataGrid<TData extends RowData>({
       container.removeEventListener("focus", onFocus);
     };
   }, [getNavigableColumnIds, focusCell, focusCellElement, getFocusedCell]);
+
+  // Tracks whether keyboard focus sits in a column header, so the focused cell can step back while rows stay selected
+  React.useEffect(() => {
+    function onFocusIn(event: FocusEvent) {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (!dataGridRef.current?.contains(target)) return;
+
+      const columnId =
+        target.closest<HTMLElement>('[data-slot="grid-header-cell"]')?.dataset
+          .columnId ?? null;
+      if (tableRef.current?.getFocusedHeaderColumnId() === columnId) return;
+      tableRef.current?.setFocusedHeaderColumnId(columnId);
+    }
+
+    document.addEventListener("focusin", onFocusIn);
+    return () => {
+      document.removeEventListener("focusin", onFocusIn);
+    };
+  }, []);
 
   // Keeps focus on the grid when the focused cell unmounts during virtualization
   React.useEffect(() => {

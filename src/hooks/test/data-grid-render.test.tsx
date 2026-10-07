@@ -68,7 +68,7 @@ function getCellWrapper(
   rowId: string,
   columnId: string,
 ) {
-  return container.querySelector(
+  return container.querySelector<HTMLElement>(
     `[data-slot="grid-cell-wrapper"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
   );
 }
@@ -165,6 +165,63 @@ describe("DataGrid rendering", () => {
       countsBefore.get("2") ?? 0,
     );
     expect(rowRenderCounts.get("3")).toBe(countsBefore.get("3"));
+  });
+
+  it("hides the focused cell while a column header has focus", () => {
+    const { container, table } = renderGrid();
+
+    act(() => {
+      table.getRow("1").toggleSelected(true);
+    });
+
+    expect(
+      getCellWrapper(container, "1", "name")?.hasAttribute("data-focused"),
+    ).toBe(true);
+
+    const headerTrigger = container.querySelector<HTMLElement>(
+      '[data-slot="grid-header-cell"][data-column-id="name"] button',
+    );
+    act(() => {
+      headerTrigger?.focus();
+    });
+
+    expect(container.querySelector("[data-focused]")).toBeNull();
+    expect(
+      container
+        .querySelector('[role="row"][aria-rowindex="2"]')
+        ?.getAttribute("aria-selected"),
+    ).toBe("true");
+
+    act(() => {
+      table.setFocusedCell("2", "trick");
+      getCellWrapper(container, "2", "trick")?.focus();
+    });
+
+    expect(
+      getCellWrapper(container, "2", "trick")?.hasAttribute("data-focused"),
+    ).toBe(true);
+  });
+
+  it("clears cell and row selection when moving up into the header", () => {
+    const { container, table } = renderGrid();
+
+    act(() => {
+      table.getRow("1").toggleSelected(true);
+    });
+    const cell = getCellWrapper(container, "1", "name");
+    expect(cell?.hasAttribute("data-focused")).toBe(true);
+
+    act(() => {
+      cell?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+      );
+    });
+
+    expect(
+      document.activeElement?.closest('[data-slot="grid-header"]'),
+    ).not.toBeNull();
+    expect(table.atoms.cellSelection.get()).toEqual([]);
+    expect(table.atoms.rowSelection.get()).toEqual({});
   });
 
   it("updates rendered cells when columns are hidden or reordered", () => {
