@@ -64,7 +64,6 @@ export interface DataGridColumnMeta {
 
 export interface DataGridTableMeta {
   dataGridRef?: React.RefObject<HTMLElement | null>;
-  cellMapRef?: React.RefObject<Map<string, HTMLDivElement>>;
   focusedCell?: CellPosition | null;
   editingCell?: CellPosition | null;
   /** Number of selected cells, `0` when only the focused cell is active. */
@@ -72,27 +71,8 @@ export interface DataGridTableMeta {
   getIsCellSelected?: (rowId: string, columnId: string) => boolean;
   /** Keys of the selected data cells in display order, or the focused cell when nothing else is selected. */
   getSelectedCellKeys?: () => string[];
-  scrollToCell?: (rowId: string, columnId: string) => void;
   onRowSelect?: (rowId: string, checked: boolean, shiftKey: boolean) => void;
   onColumnClick?: (columnId: string) => void;
-  onCellClick?: (
-    rowId: string,
-    columnId: string,
-    event?: React.MouseEvent,
-  ) => void;
-  onCellDoubleClick?: (rowId: string, columnId: string) => void;
-  onCellMouseDown?: (
-    rowId: string,
-    columnId: string,
-    event: React.MouseEvent,
-  ) => void;
-  onCellMouseEnter?: (rowId: string, columnId: string) => void;
-  onCellMouseUp?: () => void;
-  onCellContextMenu?: (
-    rowId: string,
-    columnId: string,
-    event: React.MouseEvent,
-  ) => void;
   onSelectionClear?: () => void;
   onFilesUpload?: (params: {
     files: File[];

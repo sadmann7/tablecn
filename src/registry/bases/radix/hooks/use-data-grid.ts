@@ -36,6 +36,7 @@ import {
   dataGridFeatures,
 } from "@/lib/data-grid-features";
 import {
+  getCellElement,
   getCellFocusTarget,
   getCellKey,
   getIsInPopover,
@@ -214,7 +215,6 @@ function useDataGrid<TData extends RowData>({
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
-  const cellMapRef = React.useRef<Map<string, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
   const pendingFocusRef = React.useRef<{
     cell: CellPosition;
@@ -359,9 +359,7 @@ function useDataGrid<TData extends RowData>({
         rowVirtualizerRef.current?.scrollToIndex(rowIndex, { align: "auto" });
       }
 
-      const cellElement = cellMapRef.current.get(
-        getCellKey(cell.rowId, cell.columnId),
-      );
+      const cellElement = getCellElement(container, cell.rowId, cell.columnId);
       if (!cellElement) return false;
 
       if (shouldScroll) {
@@ -951,11 +949,88 @@ function useDataGrid<TData extends RowData>({
       [],
     );
 
+  const scrollToCell = React.useCallback(
+    (rowId: string, columnId: string) => {
+      revealCell(
+        { rowId, columnId },
+        { shouldFocus: false, shouldScroll: true },
+      );
+    },
+    [revealCell],
+  );
+
+  const gridBodyProps = React.useMemo(() => {
+    let hoveredCellKey: string | null = null;
+
+    // React bubbles events out of portalled editors too, so only cells mounted in the grid count
+    function getEventCell(event: React.SyntheticEvent) {
+      const container = dataGridRef.current;
+      const target = event.target;
+      if (!container || !(target instanceof Element)) return null;
+      if (!container.contains(target)) return null;
+
+      const cellElement = target.closest<HTMLElement>(
+        '[data-slot="grid-cell-wrapper"]',
+      );
+      const rowId = cellElement?.dataset.rowId;
+      const columnId = cellElement?.dataset.columnId;
+      if (!rowId || !columnId) return null;
+
+      const editingCell = tableRef.current?.getEditingCell();
+      if (editingCell?.rowId === rowId && editingCell.columnId === columnId) {
+        return null;
+      }
+      return { rowId, columnId };
+    }
+
+    return {
+      onClick: (event: React.MouseEvent<HTMLElement>) => {
+        const cell = getEventCell(event);
+        if (!cell) return;
+        event.preventDefault();
+        onCellClick(cell.rowId, cell.columnId, event);
+      },
+      onDoubleClick: (event: React.MouseEvent<HTMLElement>) => {
+        const cell = getEventCell(event);
+        if (!cell) return;
+        event.preventDefault();
+        onCellDoubleClick(cell.rowId, cell.columnId);
+      },
+      onMouseDown: (event: React.MouseEvent<HTMLElement>) => {
+        const cell = getEventCell(event);
+        if (cell) onCellMouseDown(cell.rowId, cell.columnId, event);
+      },
+      onMouseOver: (event: React.MouseEvent<HTMLElement>) => {
+        const cell = getEventCell(event);
+        const cellKey = cell ? getCellKey(cell.rowId, cell.columnId) : null;
+        if (cellKey === hoveredCellKey) return;
+        hoveredCellKey = cellKey;
+        if (cell) onCellMouseEnter(cell.rowId, cell.columnId);
+      },
+      onMouseLeave: () => {
+        hoveredCellKey = null;
+      },
+      onMouseUp: (event: React.MouseEvent<HTMLElement>) => {
+        if (getEventCell(event)) onCellMouseUp();
+      },
+      onContextMenu: (event: React.MouseEvent<HTMLElement>) => {
+        const cell = getEventCell(event);
+        if (cell) onCellContextMenu(cell.rowId, cell.columnId, event);
+      },
+    };
+  }, [
+    onCellClick,
+    onCellDoubleClick,
+    onCellMouseDown,
+    onCellMouseEnter,
+    onCellMouseUp,
+    onCellContextMenu,
+  ]);
+
   const tableMeta = React.useMemo<DataGridTableMeta>(() => {
     return {
       ...propsRef.current.meta,
       dataGridRef,
-      cellMapRef,
       get focusedCell() {
         return getFocusedCell();
       },
@@ -976,20 +1051,8 @@ function useDataGrid<TData extends RowData>({
       getIsCellSelected,
       getSelectedCellKeys: () =>
         tableRef.current ? getSelectedCellKeys(tableRef.current) : [],
-      scrollToCell: (rowId, columnId) => {
-        revealCell(
-          { rowId, columnId },
-          { shouldFocus: false, shouldScroll: true },
-        );
-      },
       onRowSelect,
       onColumnClick,
-      onCellClick,
-      onCellDoubleClick,
-      onCellMouseDown,
-      onCellMouseEnter,
-      onCellMouseUp,
-      onCellContextMenu,
       onSelectionClear,
       onFilesUpload: propsRef.current.onFilesUpload
         ? propsRef.current.onFilesUpload
@@ -1003,15 +1066,8 @@ function useDataGrid<TData extends RowData>({
     propsRef,
     store,
     getIsCellSelected,
-    revealCell,
     onRowSelect,
     onColumnClick,
-    onCellClick,
-    onCellDoubleClick,
-    onCellMouseDown,
-    onCellMouseEnter,
-    onCellMouseUp,
-    onCellContextMenu,
     onSelectionClear,
     onContextMenuOpenChange,
   ]);
@@ -2310,6 +2366,8 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       tableMeta,
+      gridBodyProps,
+      scrollToCell,
       virtualTotalSize,
       virtualItems,
       measureElement,
@@ -2330,6 +2388,8 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       tableMeta,
+      gridBodyProps,
+      scrollToCell,
       virtualTotalSize,
       virtualItems,
       measureElement,

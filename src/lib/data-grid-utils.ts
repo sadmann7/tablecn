@@ -233,6 +233,21 @@ export function getCellKey(rowId: string, columnId: string) {
   return `${rowId}${CELL_KEY_SEPARATOR}${columnId}`;
 }
 
+function escapeAttributeValue(value: string) {
+  return value.replace(/["\\]/g, "\\$&");
+}
+
+/** Mounted element for a cell inside the grid, `null` when it is virtualized away. */
+export function getCellElement(
+  container: HTMLElement,
+  rowId: string,
+  columnId: string,
+) {
+  return container.querySelector<HTMLDivElement>(
+    `[data-row-id="${escapeAttributeValue(rowId)}"][data-column-id="${escapeAttributeValue(columnId)}"]`,
+  );
+}
+
 export function parseCellKey(cellKey: string): CellPosition {
   const separatorIndex = cellKey.indexOf(CELL_KEY_SEPARATOR);
   if (separatorIndex === -1) return { rowId: "", columnId: "" };

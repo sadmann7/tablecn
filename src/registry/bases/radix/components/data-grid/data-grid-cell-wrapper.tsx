@@ -3,7 +3,6 @@
 import type { RowData } from "@tanstack/react-table";
 
 import { cn } from "cn";
-import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
@@ -16,7 +15,7 @@ interface DataGridCellWrapperProps<TData extends RowData>
 
 export function DataGridCellWrapper<TData extends RowData>({
   cell,
-  tableMeta,
+  tableMeta: _tableMeta,
   rowId,
   columnId,
   isEditing,
@@ -27,73 +26,10 @@ export function DataGridCellWrapper<TData extends RowData>({
   readOnly,
   rowHeight,
   className,
-  onClick: onClickProp,
   onKeyDown: onKeyDownProp,
-  ref,
   ...props
 }: DataGridCellWrapperProps<TData>) {
-  const cellMapRef = tableMeta?.cellMapRef;
   const cellPresence = useDataGridPresence(getCellKey(rowId, columnId));
-
-  const onCellChange = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!cellMapRef) return;
-
-      const cellKey = getCellKey(rowId, columnId);
-
-      if (node) {
-        cellMapRef.current.set(cellKey, node);
-      } else {
-        cellMapRef.current.delete(cellKey);
-      }
-    },
-    [rowId, columnId, cellMapRef],
-  );
-
-  const composedRef = useComposedRefs(ref, onCellChange);
-
-  const onClick = React.useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!isEditing) {
-        event.preventDefault();
-        onClickProp?.(event);
-        if (isFocused && !readOnly) {
-          cell.startEditing();
-        } else {
-          tableMeta?.onCellClick?.(rowId, columnId, event);
-        }
-      }
-    },
-    [
-      cell,
-      tableMeta,
-      rowId,
-      columnId,
-      isEditing,
-      isFocused,
-      readOnly,
-      onClickProp,
-    ],
-  );
-
-  const onContextMenu = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        tableMeta?.onCellContextMenu?.(rowId, columnId, event);
-      }
-    },
-    [tableMeta, rowId, columnId, isEditing],
-  );
-
-  const onDoubleClick = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        event.preventDefault();
-        tableMeta?.onCellDoubleClick?.(rowId, columnId);
-      }
-    },
-    [tableMeta, rowId, columnId, isEditing],
-  );
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -140,37 +76,17 @@ export function DataGridCellWrapper<TData extends RowData>({
     [cell, onKeyDownProp, isFocused, isEditing, readOnly],
   );
 
-  const onMouseDown = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        tableMeta?.onCellMouseDown?.(rowId, columnId, event);
-      }
-    },
-    [tableMeta, rowId, columnId, isEditing],
-  );
-
-  const onMouseEnter = React.useCallback(() => {
-    if (!isEditing) {
-      tableMeta?.onCellMouseEnter?.(rowId, columnId);
-    }
-  }, [tableMeta, rowId, columnId, isEditing]);
-
-  const onMouseUp = React.useCallback(() => {
-    if (!isEditing) {
-      tableMeta?.onCellMouseUp?.();
-    }
-  }, [tableMeta, isEditing]);
-
   return (
     <div
       role="button"
       data-slot="grid-cell-wrapper"
+      data-row-id={rowId}
+      data-column-id={columnId}
       data-editing={isEditing ? "" : undefined}
       data-focused={isFocused ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
       {...props}
-      ref={composedRef}
       className={cn(
         "size-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
@@ -197,12 +113,6 @@ export function DataGridCellWrapper<TData extends RowData>({
           ? ({ "--tw-ring-color": cellPresence.color } as React.CSSProperties)
           : undefined
       }
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-      onDoubleClick={onDoubleClick}
-      onMouseDown={onMouseDown}
-      onMouseEnter={onMouseEnter}
-      onMouseUp={onMouseUp}
       onKeyDown={onKeyDown}
     />
   );
