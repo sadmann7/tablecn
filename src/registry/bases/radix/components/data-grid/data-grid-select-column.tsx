@@ -172,28 +172,23 @@ function DataGridSelectCell<TData extends RowData>({
   readOnly,
   debug,
 }: DataGridSelectCellProps<TData>) {
-  const meta = table.options.meta;
   const rowNumber = enableRowMarkers ? row.getDisplayIndex() + 1 : undefined;
 
   const onCheckedChange = React.useCallback(
     (value: boolean) => {
-      if (meta?.onRowSelect) {
-        meta.onRowSelect(row.id, value, false);
-      } else {
-        row.toggleSelected(value);
-      }
+      table.selectRow(row.id, value);
     },
-    [meta, row],
+    [table, row],
   );
 
   const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       if (event.shiftKey) {
         event.preventDefault();
-        meta?.onRowSelect?.(row.id, !row.getIsSelected(), true);
+        table.selectRow(row.id, !row.getIsSelected(), { extend: true });
       }
     },
-    [meta, row],
+    [table, row],
   );
 
   if (readOnly) {

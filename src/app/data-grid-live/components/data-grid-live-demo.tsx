@@ -582,10 +582,10 @@ export function DataGridLiveDemo() {
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
     table.toggleAllRowsSelected(false);
-  }, [table, tableMeta]);
+  }, [table]);
 
   const height = Math.max(400, windowSize.height - 150);
-  const selectedCellCount = tableMeta.selectedCellCount ?? 0;
+  const selectedCellCount = table.getSelectedRangeCellCount();
 
   return (
     <div className="container flex flex-col gap-4 py-4">
@@ -614,7 +614,6 @@ export function DataGridLiveDemo() {
       />
       <DataGridActionBar
         table={table}
-        tableMeta={tableMeta}
         selectedCellCount={selectedCellCount}
         statusOptions={statusOptions}
         styleOptions={styleOptions}

@@ -406,8 +406,8 @@ export function DataGridMultiplayerDemo({
     enablePaste: true,
   });
 
-  const focusedRowId = tableMeta.focusedCell?.rowId ?? null;
-  const focusedColumnId = tableMeta.focusedCell?.columnId ?? null;
+  const focusedRowId = dataGridProps.focusedCell?.rowId ?? null;
+  const focusedColumnId = dataGridProps.focusedCell?.columnId ?? null;
 
   React.useEffect(() => {
     sendActiveCell(focusedRowId, focusedColumnId);
@@ -464,7 +464,7 @@ export function DataGridMultiplayerDemo({
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
     );
     table.toggleAllRowsSelected(false);
-  }, [table, tableMeta]);
+  }, [table]);
 
   const onUserClick = React.useCallback(
     (
@@ -487,7 +487,7 @@ export function DataGridMultiplayerDemo({
   }, [roomId]);
 
   const height = Math.max(400, windowSize.height - 200);
-  const selectedCellCount = tableMeta.selectedCellCount ?? 0;
+  const selectedCellCount = table.getSelectedRangeCellCount();
 
   const remoteCells = React.useMemo(() => {
     const map = new Map<string, DataGridCellPresence>();
@@ -549,7 +549,6 @@ export function DataGridMultiplayerDemo({
       </DataGridPresenceProvider>
       <DataGridActionBar
         table={table}
-        tableMeta={tableMeta}
         selectedCellCount={selectedCellCount}
         statusOptions={statusOptions}
         styleOptions={styleOptions}

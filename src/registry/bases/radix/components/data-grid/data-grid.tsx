@@ -114,8 +114,8 @@ export function DataGrid<TData extends RowData>({
       )}
       <DataGridContextMenu
         table={table}
-        tableMeta={tableMeta}
         contextMenu={contextMenu}
+        dataGridRef={dataGridRef}
       />
       <DataGridPasteDialog table={table} pasteDialog={pasteDialog} />
       <div
