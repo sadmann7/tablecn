@@ -489,7 +489,7 @@ describe("useDataGrid", () => {
 
       act(() => {
         result.current.tableMeta.onCellEditingStart?.("0", "name");
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "0",
           columnId: "name",
           value: "Changed",
@@ -531,7 +531,7 @@ describe("useDataGrid", () => {
       expect(result.current.editingCell).toBeNull();
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.([
+        result.current.table.updateCells([
           { rowId: "0", columnId: "name", value: "Changed" },
           { rowId: "0", columnId: "trick", value: "Ollie" },
         ]);
@@ -855,7 +855,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "0",
           columnId: "name",
           value: "Updated Name",
@@ -883,7 +883,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.([
+        result.current.table.updateCells([
           { rowId: "0", columnId: "name", value: "Updated Name 1" },
           { rowId: "1", columnId: "name", value: "Updated Name 2" },
         ]);
@@ -912,7 +912,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "0",
           columnId: "name",
           value: "Updated Name",
@@ -946,7 +946,7 @@ describe("useDataGrid", () => {
       expect(filteredRows[0]?.original.name).toBe("Tony Hawk");
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: filteredRows[0]?.id ?? "",
           columnId: "score",
           value: 100,
@@ -1010,7 +1010,7 @@ describe("useDataGrid", () => {
 
       // Bob is the first filtered row, and index 3 in data
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: filteredRows[0]?.id ?? "",
           columnId: "score",
           value: 95,
@@ -1080,7 +1080,7 @@ describe("useDataGrid", () => {
       expect(result.current.onRowAdd).toBeDefined();
     });
 
-    it("should provide onRowsDelete callback when prop is provided", () => {
+    it("should delete rows and focus the row that takes their place", async () => {
       const onRowsDelete = vi.fn().mockResolvedValue(undefined);
 
       const { result } = renderHook(
@@ -1093,22 +1093,49 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // tableMeta.onRowsDelete should be defined when prop is provided
-      expect(result.current.tableMeta.onRowsDelete).toBeDefined();
+      act(() => {
+        result.current.tableMeta.onCellClick?.("0", "trick");
+      });
+
+      await act(async () => {
+        await result.current.table.deleteRows(["0"]);
+      });
+
+      expect(onRowsDelete).toHaveBeenCalledWith([testData[0]], ["0"]);
+      expect(result.current.focusedCell).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
     });
 
-    it("should not provide onRowsDelete callback when prop is not provided", () => {
-      const { result } = renderHook(
-        () =>
+    it("should not delete rows without onRowsDelete or when read-only", async () => {
+      const onRowsDelete = vi.fn();
+
+      const { result, rerender } = renderHook(
+        ({ readOnly }) =>
           useDataGrid({
             data: testData,
             columns: testColumns,
+            onRowsDelete: readOnly === undefined ? undefined : onRowsDelete,
+            readOnly,
           }),
-        { wrapper: createWrapper() },
+        {
+          wrapper: createWrapper(),
+          initialProps: { readOnly: undefined as boolean | undefined },
+        },
       );
 
-      // tableMeta.onRowsDelete should be undefined when prop is not provided
-      expect(result.current.tableMeta.onRowsDelete).toBeUndefined();
+      await act(async () => {
+        await result.current.table.deleteRows(["0"]);
+      });
+
+      rerender({ readOnly: true });
+
+      await act(async () => {
+        await result.current.table.deleteRows(["0"]);
+      });
+
+      expect(onRowsDelete).not.toHaveBeenCalled();
     });
   });
 
@@ -3021,10 +3048,9 @@ describe("useDataGrid", () => {
       expect(meta.searchOpen).toBe(false);
       expect(meta.contextMenu).toBeDefined();
       expect(meta.pasteDialog).toBeDefined();
-      expect(meta.readOnly).toBeUndefined();
     });
 
-    it("should reflect readOnly in tableMeta getter", () => {
+    it("should reflect readOnly on the table", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -3035,7 +3061,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.readOnly).toBe(true);
+      expect(result.current.table.getIsReadOnly()).toBe(true);
     });
   });
 
@@ -3054,7 +3080,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.([]);
+        result.current.table.updateCells([]);
       });
 
       expect(onDataChange).not.toHaveBeenCalled();
@@ -3074,7 +3100,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "999",
           columnId: "name",
           value: "Invalid",
@@ -3246,7 +3272,7 @@ describe("useDataGrid", () => {
       expect(result.current.table.getRowModel().rows[0]?.id).toBe("2");
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "2",
           columnId: "score",
           value: 99,
@@ -3267,7 +3293,7 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        await result.current.tableMeta.onRowsDelete?.(["3", "missing"]);
+        await result.current.table.deleteRows(["3", "missing"]);
       });
 
       expect(onRowsDelete).toHaveBeenCalledWith([testData[2]], ["3"]);

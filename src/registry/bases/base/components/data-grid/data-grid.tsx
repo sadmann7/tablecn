@@ -62,7 +62,7 @@ export function DataGrid<TData extends RowData>({
   ...props
 }: DataGridProps<TData>) {
   const rows = table.getRowModel().rows;
-  const readOnly = tableMeta?.readOnly ?? false;
+  const readOnly = table.getIsReadOnly();
   const columnVisibility = table.state.columnVisibility;
   const columnPinning = table.state.columnPinning;
 
@@ -103,8 +103,8 @@ export function DataGrid<TData extends RowData>({
     >
       {searchState && <DataGridSearch {...searchState} />}
       <DataGridContextMenu
+        table={table}
         tableMeta={tableMeta}
-        columns={columns}
         contextMenu={contextMenu}
       />
       <DataGridPasteDialog tableMeta={tableMeta} pasteDialog={pasteDialog} />
