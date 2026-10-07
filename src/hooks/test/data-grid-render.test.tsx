@@ -36,14 +36,14 @@ const testColumns: ColumnDef<DataGridFeatures, TestData>[] = [
   { id: "trick", accessorKey: "trick", header: "Trick" },
 ];
 
-function renderGrid() {
+function renderGrid(columns = testColumns) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
   let hookRenderCount = 0;
 
   function Harness() {
     const dataGrid = useDataGrid({
       data: testData,
-      columns: testColumns,
+      columns,
       getRowId: (row) => row.id,
       enableSearch: true,
     });
@@ -120,6 +120,75 @@ describe("DataGrid rendering", () => {
       getCellWrapper(container, "2", "trick")?.hasAttribute("data-focused"),
     ).toBe(true);
     expect(getHookRenderCount()).toBe(renderCountBefore);
+  });
+
+  it("only re-renders the row whose selection changed", () => {
+    const rowRenderCounts = new Map<string, number>();
+    const { table } = renderGrid([
+      {
+        id: "select",
+        header: () => null,
+        cell: ({ row }) => {
+          rowRenderCounts.set(row.id, (rowRenderCounts.get(row.id) ?? 0) + 1);
+          return null;
+        },
+      },
+      ...testColumns,
+    ]);
+    const countsBefore = new Map(rowRenderCounts);
+
+    act(() => {
+      table.getRow("2").toggleSelected(true);
+    });
+
+    expect(rowRenderCounts.get("1")).toBe(countsBefore.get("1"));
+    expect(rowRenderCounts.get("2")).toBeGreaterThan(
+      countsBefore.get("2") ?? 0,
+    );
+    expect(rowRenderCounts.get("3")).toBe(countsBefore.get("3"));
+  });
+
+  it("updates rendered cells when columns are hidden or reordered", () => {
+    const { container, table } = renderGrid();
+
+    function getRowColumnIds() {
+      return Array.from(
+        container.querySelectorAll<HTMLElement>(
+          '[data-slot="grid-cell-wrapper"][data-row-id="1"]',
+        ),
+        (element) => element.dataset.columnId,
+      );
+    }
+
+    expect(getRowColumnIds()).toEqual(["name", "trick"]);
+
+    act(() => {
+      table.setColumnOrder(["trick", "name"]);
+    });
+
+    expect(getRowColumnIds()).toEqual(["trick", "name"]);
+
+    act(() => {
+      table.getColumn("trick")?.toggleVisibility(false);
+    });
+
+    expect(getRowColumnIds()).toEqual(["name"]);
+  });
+
+  it("scrolls to a cell without moving focus or selection", () => {
+    const { table } = renderGrid();
+
+    act(() => {
+      table.setFocusedCell("1", "name");
+    });
+    const selectionBefore = table.atoms.cellSelection.get();
+
+    act(() => {
+      table.scrollToCell("3", "trick");
+    });
+
+    expect(table.atoms.cellSelection.get()).toBe(selectionBefore);
+    expect(table.getEditingCell()).toBeNull();
   });
 
   it("shows search and the context menu from their own subscriptions", () => {

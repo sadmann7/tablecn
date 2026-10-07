@@ -15,8 +15,6 @@ interface DataGridCellWrapperProps<TData extends RowData>
 
 export function DataGridCellWrapper<TData extends RowData>({
   cell,
-  rowId,
-  columnId,
   isEditing,
   isFocused,
   isSelected,
@@ -28,6 +26,8 @@ export function DataGridCellWrapper<TData extends RowData>({
   onKeyDown: onKeyDownProp,
   ...props
 }: DataGridCellWrapperProps<TData>) {
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
   const cellPresence = useDataGridPresence(getCellKey(rowId, columnId));
 
   const onKeyDown = React.useCallback(

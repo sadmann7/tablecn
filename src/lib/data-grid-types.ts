@@ -99,8 +99,6 @@ export type NavigationDirection =
 
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
-  rowId: string;
-  columnId: string;
   rowHeight: RowHeightValue;
   isEditing: boolean;
   isFocused: boolean;

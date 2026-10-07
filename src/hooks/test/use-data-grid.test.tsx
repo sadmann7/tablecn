@@ -190,7 +190,7 @@ describe("useDataGrid", () => {
       expect(result.current.table).toBeDefined();
       expect(getFocusedCell(result.current.table)).toBeNull();
       expect(result.current.table.getEditingCell()).toBeNull();
-      expect(result.current.rowHeight).toBe("short");
+      expect(result.current.table.state.rowHeight).toBe("short");
     });
 
     it("should initialize with custom rowHeight", () => {
@@ -204,7 +204,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.rowHeight).toBe("tall");
+      expect(result.current.table.state.rowHeight).toBe("tall");
       expect(result.current.table.getRowHeight()).toBe("tall");
       expect(result.current.table.getRowSize()).toBe(76);
     });
@@ -522,7 +522,7 @@ describe("useDataGrid", () => {
       expect(secondOnChange).toHaveBeenCalledTimes(1);
     });
 
-    it("should update read-only column ids when editing permissions change", () => {
+    it("should update column edit permissions when cell editing changes", () => {
       const { result, rerender } = renderHook(
         ({ enableCellEditing }: { enableCellEditing: boolean }) =>
           useDataGrid({
@@ -536,13 +536,11 @@ describe("useDataGrid", () => {
         },
       );
 
-      const disabledIds = result.current.readOnlyColumnIds;
-      expect(disabledIds.has("name")).toBe(true);
+      expect(result.current.table.getColumn("name")?.getCanEdit()).toBe(false);
 
       rerender({ enableCellEditing: true });
 
-      expect(result.current.readOnlyColumnIds).not.toBe(disabledIds);
-      expect(result.current.readOnlyColumnIds.size).toBe(0);
+      expect(result.current.table.getColumn("name")?.getCanEdit()).toBe(true);
     });
 
     it("should not edit when cell editing is disabled for the table", () => {
@@ -1612,7 +1610,7 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(result.current.rowHeight).toBe("tall");
+      expect(result.current.table.state.rowHeight).toBe("tall");
       expect(result.current.table.getRowSize()).toBe(76);
       expect(result.current.table.getRowLineCount()).toBe(3);
 
@@ -1621,7 +1619,7 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(result.current.rowHeight).toBe("short");
+      expect(result.current.table.state.rowHeight).toBe("short");
     });
 
     it("should support controlled row height", async () => {
@@ -1638,7 +1636,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.rowHeight).toBe("medium");
+      expect(result.current.table.state.rowHeight).toBe("medium");
 
       await act(async () => {
         result.current.table.setRowHeight("tall");
@@ -1650,7 +1648,7 @@ describe("useDataGrid", () => {
       expect(typeof updater === "function" ? updater("medium") : updater).toBe(
         "tall",
       );
-      expect(result.current.rowHeight).toBe("medium");
+      expect(result.current.table.state.rowHeight).toBe("medium");
     });
   });
 
