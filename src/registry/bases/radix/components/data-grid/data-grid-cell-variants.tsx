@@ -51,18 +51,10 @@ import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-export function ShortTextCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isEditing,
-  isFocused,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function ShortTextCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, isEditing, isFocused, readOnly } = props;
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
@@ -170,17 +162,8 @@ export function ShortTextCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       <div
@@ -203,18 +186,10 @@ export function ShortTextCell<TData extends RowData>({
   );
 }
 
-export function LongTextCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isFocused,
-  isEditing,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function LongTextCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, isEditing, isFocused, readOnly } = props;
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -359,17 +334,8 @@ export function LongTextCell<TData extends RowData>({
     <Popover open={isEditing} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
         <DataGridCellWrapper<TData>
+          {...props}
           ref={containerRef}
-          cell={cell}
-          rowId={rowId}
-          columnId={columnId}
-          rowHeight={rowHeight}
-          isEditing={isEditing}
-          isFocused={isFocused}
-          isSelected={isSelected}
-          isSearchMatch={isSearchMatch}
-          isActiveSearchMatch={isActiveSearchMatch}
-          readOnly={readOnly}
           onKeyDown={onWrapperKeyDown}
         >
           <span data-slot="grid-cell-content">{value}</span>
@@ -397,18 +363,10 @@ export function LongTextCell<TData extends RowData>({
   );
 }
 
-export function NumberCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isFocused,
-  isEditing,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function NumberCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, isEditing, isFocused, readOnly } = props;
   const initialValue = cell.getValue() as number;
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -492,17 +450,8 @@ export function NumberCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -524,18 +473,10 @@ export function NumberCell<TData extends RowData>({
   );
 }
 
-export function UrlCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isEditing,
-  isFocused,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function UrlCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, isEditing, isFocused, readOnly } = props;
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const cellRef = React.useRef<HTMLDivElement>(null);
@@ -680,17 +621,8 @@ export function UrlCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {!isEditing && displayValue ? (
@@ -733,17 +665,10 @@ export function UrlCell<TData extends RowData>({
   );
 }
 
-export function CheckboxCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isFocused,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: Omit<DataGridCellProps<TData>, "isEditing">) {
+export function CheckboxCell<TData extends RowData>(
+  props: Omit<DataGridCellProps<TData>, "isEditing">,
+) {
+  const { cell, isFocused, readOnly } = props;
   const initialValue = cell.getValue() as boolean;
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -809,17 +734,9 @@ export function CheckboxCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
       isEditing={false}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       className="flex size-full justify-center"
       onClick={onWrapperClick}
       onKeyDown={onWrapperKeyDown}
@@ -838,18 +755,10 @@ export function CheckboxCell<TData extends RowData>({
   );
 }
 
-export function SelectCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isFocused,
-  isEditing,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function SelectCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, isEditing, readOnly } = props;
   const initialValue = (cell.getValue() ?? undefined) as string | undefined;
 
   const [value, setValue] = React.useState(initialValue);
@@ -913,17 +822,8 @@ export function SelectCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -975,18 +875,12 @@ export function SelectCell<TData extends RowData>({
   );
 }
 
-export function MultiSelectCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isFocused,
-  isEditing,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function MultiSelectCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, rowHeight, isEditing, readOnly } = props;
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
   const cellValue = React.useMemo(() => {
     const value = cell.getValue() as string[];
     return value ?? [];
@@ -1148,17 +1042,8 @@ export function MultiSelectCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
@@ -1275,18 +1160,10 @@ export function MultiSelectCell<TData extends RowData>({
   );
 }
 
-export function DateCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isFocused,
-  isEditing,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function DateCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, isEditing, readOnly } = props;
   const initialValue = cell.getValue() as string;
   const [value, setValue] = React.useState(initialValue ?? "");
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -1342,17 +1219,8 @@ export function DateCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       onKeyDown={onWrapperKeyDown}
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
@@ -1383,18 +1251,12 @@ export function DateCell<TData extends RowData>({
   );
 }
 
-export function FileCell<TData extends RowData>({
-  cell,
-  rowId,
-  columnId,
-  rowHeight,
-  isFocused,
-  isEditing,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-}: DataGridCellProps<TData>) {
+export function FileCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const { cell, rowHeight, isEditing, isFocused, readOnly } = props;
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
   const cellValue = React.useMemo(
     () => (cell.getValue() as FileCellData[]) ?? [],
     [cell],
@@ -1874,17 +1736,8 @@ export function FileCell<TData extends RowData>({
 
   return (
     <DataGridCellWrapper<TData>
+      {...props}
       ref={containerRef}
-      cell={cell}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
       className={cn({
         "ring-1 ring-primary/80 ring-inset": isDraggingOver,
       })}

@@ -143,6 +143,8 @@ interface Cell_DataGridData {
 interface TableOptions_DataGridNavigation {
   /** Reading direction, so left and right follow the visual layout. */
   dir?: Direction;
+  /** Brings a cell into view, provided by the layer that owns the scroll container. */
+  onScrollToCell?: (cell: CellPosition) => void;
 }
 
 interface NavigateOptions {
@@ -167,6 +169,8 @@ interface Table_DataGridNavigation {
     direction: NavigationDirection,
     options?: NavigateOptions,
   ) => CellPosition | null;
+  /** Scrolls a cell into view without moving focus or selection. */
+  scrollToCell: (rowId: string, columnId: string) => void;
 }
 
 interface ClipboardNotice {
@@ -817,6 +821,10 @@ const dataGridNavigationFeature: TableFeature = {
       table_navigate: {
         fn: (direction: NavigationDirection, options?: NavigateOptions) =>
           navigate(instance, direction, options),
+      },
+      table_scrollToCell: {
+        fn: (rowId: string, columnId: string) =>
+          instance.options.onScrollToCell?.({ rowId, columnId }),
       },
     });
   },

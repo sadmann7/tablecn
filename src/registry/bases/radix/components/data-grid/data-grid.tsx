@@ -17,7 +17,10 @@ import {
 import { DataGridColumnHeader } from "@/registry/bases/radix/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/registry/bases/radix/components/data-grid/data-grid-context-menu";
 import { DataGridPasteDialog } from "@/registry/bases/radix/components/data-grid/data-grid-paste-dialog";
-import { DataGridRow } from "@/registry/bases/radix/components/data-grid/data-grid-row";
+import {
+  DataGridRow,
+  DataGridRowContext,
+} from "@/registry/bases/radix/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/registry/bases/radix/components/data-grid/data-grid-search";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
@@ -40,10 +43,7 @@ export function DataGrid<TData extends RowData>({
   dataGridBodyProps,
   virtualItems,
   measureElement,
-  columns,
   columnSizeVars,
-  readOnlyColumnIds,
-  rowHeight,
   onRowAdd: onRowAddProp,
   height = 600,
   stretchColumns = false,
@@ -53,8 +53,38 @@ export function DataGrid<TData extends RowData>({
 }: DataGridProps<TData>) {
   const rows = table.getRowModel().rows;
   const readOnly = table.getIsReadOnly();
-  const columnVisibility = table.state.columnVisibility;
-  const columnPinning = table.state.columnPinning;
+  const leafColumns = table.getAllLeafColumns();
+  const visibleColumnCount = table.getVisibleLeafColumns().length;
+  const { enableCellEditing } = table.options;
+
+  const readOnlyColumnIds = React.useMemo(
+    () =>
+      new Set(
+        leafColumns
+          .filter((column) => !column.getCanEdit())
+          .map((column) => column.id),
+      ),
+    [leafColumns, readOnly, enableCellEditing],
+  );
+
+  const rowContext = React.useMemo(
+    () => ({
+      dir,
+      stretchColumns,
+      adjustLayout,
+      readOnlyColumnIds,
+      rowMapRef,
+      measureElement,
+    }),
+    [
+      dir,
+      stretchColumns,
+      adjustLayout,
+      readOnlyColumnIds,
+      rowMapRef,
+      measureElement,
+    ],
+  );
 
   const onRowAddRef = useAsRef(onRowAddProp);
 
@@ -98,7 +128,7 @@ export function DataGrid<TData extends RowData>({
         role="grid"
         aria-label="Data grid"
         aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
-        aria-colcount={columns.length}
+        aria-colcount={visibleColumnCount}
         aria-multiselectable="true"
         data-slot="grid"
         tabIndex={0}
@@ -211,27 +241,16 @@ export function DataGrid<TData extends RowData>({
           {...dataGridBodyProps}
           className="relative grid"
         >
-          {virtualItems.map((virtualItem) => {
-            const row = rows[virtualItem.index];
-            if (!row) return null;
+          <DataGridRowContext value={rowContext}>
+            {virtualItems.map((virtualItem) => {
+              const row = rows[virtualItem.index];
+              if (!row) return null;
 
-            return (
-              <DataGridRow
-                key={row.id}
-                row={row}
-                rowMapRef={rowMapRef}
-                virtualItem={virtualItem}
-                measureElement={measureElement}
-                rowHeight={rowHeight}
-                columnVisibility={columnVisibility}
-                columnPinning={columnPinning}
-                dir={dir}
-                adjustLayout={adjustLayout}
-                stretchColumns={stretchColumns}
-                readOnlyColumnIds={readOnlyColumnIds}
-              />
-            );
-          })}
+              return (
+                <DataGridRow key={row.id} row={row} virtualItem={virtualItem} />
+              );
+            })}
+          </DataGridRowContext>
         </div>
         {!readOnly && onRowAdd && (
           <div

@@ -606,6 +606,8 @@ function useDataGrid<TData extends RowData>({
             for (let i = 0; i < count; i++) await onRowAdd?.();
           }
         : undefined,
+      onScrollToCell: (cell) =>
+        revealCell(cell, { shouldFocus: false, shouldScroll: true }),
       onClipboardNotice: (notice) =>
         (propsRef.current.onClipboardNotice ?? showClipboardToast)(notice),
       features: dataGridFeatures,
@@ -632,6 +634,7 @@ function useDataGrid<TData extends RowData>({
     hasRowHeightChange,
     canAddRows,
     dir,
+    revealCell,
     onRowSelectionChange,
     onColumnVisibilityChange,
   ]);
@@ -643,16 +646,6 @@ function useDataGrid<TData extends RowData>({
   }
 
   const rowHeight = table.state.rowHeight;
-  const readOnlyColumnIds = React.useMemo(
-    () =>
-      new Set(
-        table
-          .getAllLeafColumns()
-          .filter((column) => !column.getCanEdit())
-          .map((column) => column.id),
-      ),
-    [table, columns, enableCellEditing],
-  );
   const rowSize = table.getRowSize();
 
   const dragDepsRef = useAsRef({
@@ -1815,10 +1808,7 @@ function useDataGrid<TData extends RowData>({
       dataGridBodyProps,
       virtualItems,
       measureElement,
-      columns,
       columnSizeVars,
-      readOnlyColumnIds,
-      rowHeight,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
       adjustLayout,
     }),
@@ -1829,10 +1819,7 @@ function useDataGrid<TData extends RowData>({
       dataGridBodyProps,
       virtualItems,
       measureElement,
-      columns,
       columnSizeVars,
-      readOnlyColumnIds,
-      rowHeight,
       onRowAdd,
       adjustLayout,
     ],
