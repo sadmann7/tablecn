@@ -487,7 +487,7 @@ export function DataGridMultiplayerDemo({
   }, [roomId]);
 
   const height = Math.max(400, windowSize.height - 200);
-  const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
+  const selectedCellCount = tableMeta.selectedCellCount ?? 0;
 
   const remoteCells = React.useMemo(() => {
     const map = new Map<string, DataGridCellPresence>();
