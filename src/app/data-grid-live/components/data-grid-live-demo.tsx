@@ -576,7 +576,7 @@ export function DataGridLiveDemo() {
       return;
     }
 
-    void tableMeta.onRowsDelete?.(selectedRows.map((row) => row.id));
+    void table.deleteRows(selectedRows.map((row) => row.id));
 
     toast.success(
       `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,

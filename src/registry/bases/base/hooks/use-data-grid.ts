@@ -432,61 +432,6 @@ function useDataGrid<TData extends RowData>({
     return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
   }, [columnIds]);
 
-  const onDataUpdate = React.useCallback(
-    (updates: CellUpdate | Array<CellUpdate>) => {
-      if (propsRef.current.readOnly) return;
-
-      const updateArray = Array.isArray(updates) ? updates : [updates];
-
-      if (updateArray.length === 0) return;
-
-      const currentTable = tableRef.current;
-      if (!currentTable) return;
-
-      const rowsById = currentTable.getCoreRowModel().rowsById;
-      const currentData = propsRef.current.data;
-      const rowUpdatesMap = new Map<
-        number,
-        { original: TData; updates: Array<Omit<CellUpdate, "rowId">> }
-      >();
-
-      for (const update of updateArray) {
-        const row = rowsById[update.rowId];
-        if (!row || !getCanEditColumnId(currentTable, update.columnId)) {
-          continue;
-        }
-
-        let rowUpdates = rowUpdatesMap.get(row.index);
-        if (!rowUpdates) {
-          rowUpdates = { original: row.original, updates: [] };
-          rowUpdatesMap.set(row.index, rowUpdates);
-        }
-        rowUpdates.updates.push({
-          columnId: update.columnId,
-          value: update.value,
-        });
-      }
-
-      if (rowUpdatesMap.size === 0) return;
-
-      const newData = [...currentData];
-
-      for (const [dataIndex, { original, updates }] of rowUpdatesMap) {
-        const updatedRow = Object.assign(
-          {},
-          (currentData[dataIndex] ?? original) as Record<string, unknown>,
-        );
-        for (const { columnId, value } of updates) {
-          updatedRow[columnId] = value;
-        }
-        newData[dataIndex] = updatedRow as TData;
-      }
-
-      propsRef.current.onDataChange?.(newData);
-    },
-    [propsRef],
-  );
-
   const getIsCellSelected = React.useCallback(
     (rowId: string, columnId: string) => {
       const currentTable = tableRef.current;
@@ -1149,7 +1094,7 @@ function useDataGrid<TData extends RowData>({
             store.setState("cutCells", []);
           }
 
-          onDataUpdate(allUpdates);
+          currentTable.updateCells(allUpdates);
 
           if (cellsSkipped > 0) {
             toast.success(
@@ -1202,7 +1147,6 @@ function useDataGrid<TData extends RowData>({
       store,
       navigableColumnIds,
       propsRef,
-      onDataUpdate,
       selectRange,
       restoreFocus,
       getRowIndex,
@@ -1260,58 +1204,18 @@ function useDataGrid<TData extends RowData>({
 
   const onRowsDelete = React.useCallback(
     async (rowIds: string[]) => {
-      if (
-        propsRef.current.readOnly ||
-        !propsRef.current.onRowsDelete ||
-        rowIds.length === 0
-      )
-        return;
-
       const currentTable = tableRef.current;
       if (!currentTable) return;
 
-      const rowsById = currentTable.getRowModel().rowsById;
-      const currentFocusedColumn =
-        getFocusedCellPosition(currentTable.atoms.cellSelection.get())
-          ?.columnId ?? navigableColumnIds[0];
+      await currentTable.deleteRows(rowIds);
+      store.setState("dragStartCell", null);
 
-      const rowsToDelete: TData[] = [];
-      const deletedRowIds: string[] = [];
-      let minDeletedRowIndex = Infinity;
-      for (const rowId of rowIds) {
-        const row = rowsById[rowId];
-        if (!row) continue;
-
-        rowsToDelete.push(row.original);
-        deletedRowIds.push(rowId);
-        minDeletedRowIndex = Math.min(
-          minDeletedRowIndex,
-          row.getDisplayIndex(),
-        );
+      const nextFocusedCell = getFocusedCell();
+      if (nextFocusedCell) {
+        focusCellWrapper(nextFocusedCell.rowId, nextFocusedCell.columnId);
       }
-
-      if (rowsToDelete.length === 0) return;
-
-      await propsRef.current.onRowsDelete(rowsToDelete, deletedRowIds);
-
-      currentTable.resetCellSelection(true);
-      currentTable.setEditingCell(null);
-      store.batch(() => {
-        store.setState("dragStartCell", null);
-        store.setState("rowSelection", {});
-      });
-
-      requestAnimationFrame(() => {
-        const currentRows = tableRef.current?.getRowModel().rows ?? [];
-        const targetRow =
-          currentRows[Math.min(minDeletedRowIndex, currentRows.length - 1)];
-
-        if (targetRow && currentFocusedColumn) {
-          focusCell(targetRow.id, currentFocusedColumn);
-        }
-      });
     },
-    [propsRef, store, navigableColumnIds, focusCell],
+    [store, getFocusedCell, focusCellWrapper],
   );
 
   const navigateCell = React.useCallback(
@@ -2248,9 +2152,6 @@ function useDataGrid<TData extends RowData>({
       get pasteDialog() {
         return store.getState().pasteDialog;
       },
-      get readOnly() {
-        return propsRef.current.readOnly;
-      },
       getIsCellSelected,
       getSelectedCellKeys: () =>
         tableRef.current ? getSelectedCellKeys(tableRef.current) : [],
@@ -2300,8 +2201,6 @@ function useDataGrid<TData extends RowData>({
         scrollRowIntoView();
       },
       onRowSelect,
-      onDataUpdate,
-      onRowsDelete: propsRef.current.onRowsDelete ? onRowsDelete : undefined,
       onColumnClick,
       onCellClick,
       onCellDoubleClick,
@@ -2333,8 +2232,6 @@ function useDataGrid<TData extends RowData>({
     getIsActiveSearchMatch,
     getRowIndex,
     onRowSelect,
-    onDataUpdate,
-    onRowsDelete,
     onColumnClick,
     onCellClick,
     onCellDoubleClick,
@@ -2934,20 +2831,7 @@ function useDataGrid<TData extends RowData>({
         if (cellsToClear.length > 0) {
           event.preventDefault();
 
-          const updates: Array<CellUpdate> = [];
-
-          const tableColumns = currentTable?.getAllColumns() ?? [];
-          const columnById = new Map(tableColumns.map((c) => [c.id, c]));
-
-          for (const cellKey of cellsToClear) {
-            const { rowId, columnId } = parseCellKey(cellKey);
-            const column = columnById.get(columnId);
-            const cellVariant = column?.columnDef?.meta?.cell?.variant;
-            const emptyValue = getEmptyCellValue(cellVariant);
-            updates.push({ rowId, columnId, value: emptyValue });
-          }
-
-          onDataUpdate(updates);
+          currentTable?.clearCells(cellsToClear.map(parseCellKey));
 
           if (hasCellRangeSelection) {
             onSelectionClear();
@@ -3357,7 +3241,6 @@ function useDataGrid<TData extends RowData>({
       onCellsCopy,
       onCellsCut,
       onCellsPaste,
-      onDataUpdate,
       onSelectionClear,
       navigableColumnIds,
       extendSelection,

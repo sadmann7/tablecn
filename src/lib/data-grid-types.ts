@@ -81,8 +81,6 @@ export interface DataGridTableMeta {
     align?: "auto" | "start" | "center" | "end",
   ) => void;
   onRowSelect?: (rowId: string, checked: boolean, shiftKey: boolean) => void;
-  onDataUpdate?: (params: CellUpdate | Array<CellUpdate>) => void;
-  onRowsDelete?: (rowIds: string[]) => void | Promise<void>;
   onColumnClick?: (columnId: string) => void;
   onCellClick?: (
     rowId: string,
@@ -125,7 +123,6 @@ export interface DataGridTableMeta {
   onContextMenuOpenChange?: (open: boolean) => void;
   pasteDialog?: PasteDialogState;
   onPasteDialogOpenChange?: (open: boolean) => void;
-  readOnly?: boolean;
 }
 
 export interface CellPosition {

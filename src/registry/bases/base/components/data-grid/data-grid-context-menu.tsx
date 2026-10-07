@@ -1,19 +1,17 @@
 "use client";
 
-import type { ColumnDef, RowData } from "@tanstack/react-table";
+import type { RowData, Table } from "@tanstack/react-table";
 
 import * as React from "react";
 import { toast } from "sonner";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
-  CellUpdate,
   ContextMenuState,
   DataGridTableMeta,
 } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
-import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-utils";
+import { parseCellKey } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,58 +22,17 @@ import {
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridContextMenuProps<TData extends RowData> {
+  table: Table<DataGridFeatures, TData>;
   tableMeta: DataGridTableMeta;
-  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
   contextMenu: ContextMenuState;
 }
 
-export function DataGridContextMenu<TData extends RowData>({
-  tableMeta,
-  columns,
-  contextMenu,
-}: DataGridContextMenuProps<TData>) {
-  const onContextMenuOpenChange = tableMeta?.onContextMenuOpenChange;
-  const getSelectedCellKeys = tableMeta?.getSelectedCellKeys;
-  const dataGridRef = tableMeta?.dataGridRef;
-  const onDataUpdate = tableMeta?.onDataUpdate;
-  const onRowsDelete = tableMeta?.onRowsDelete;
-  const onCellsCopy = tableMeta?.onCellsCopy;
-  const onCellsCut = tableMeta?.onCellsCut;
+export function DataGridContextMenu<TData extends RowData>(
+  props: DataGridContextMenuProps<TData>,
+) {
+  if (!props.contextMenu.open) return null;
 
-  if (!contextMenu.open) return null;
-
-  return (
-    <ContextMenu
-      tableMeta={tableMeta}
-      columns={columns}
-      dataGridRef={dataGridRef}
-      contextMenu={contextMenu}
-      onContextMenuOpenChange={onContextMenuOpenChange}
-      getSelectedCellKeys={getSelectedCellKeys}
-      onDataUpdate={onDataUpdate}
-      onRowsDelete={onRowsDelete}
-      onCellsCopy={onCellsCopy}
-      onCellsCut={onCellsCut}
-    />
-  );
-}
-
-interface ContextMenuProps<TData extends RowData>
-  extends
-    Pick<
-      DataGridTableMeta,
-      | "dataGridRef"
-      | "onContextMenuOpenChange"
-      | "getSelectedCellKeys"
-      | "onDataUpdate"
-      | "onRowsDelete"
-      | "onCellsCopy"
-      | "onCellsCut"
-      | "readOnly"
-    >,
-    Required<Pick<DataGridTableMeta, "contextMenu">> {
-  tableMeta: DataGridTableMeta;
-  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
+  return <ContextMenu {...props} />;
 }
 
 const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
@@ -88,26 +45,12 @@ const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
 }) as typeof ContextMenuImpl;
 
 function ContextMenuImpl<TData extends RowData>({
+  table,
   tableMeta,
-  columns,
-  dataGridRef,
   contextMenu,
-  onContextMenuOpenChange,
-  getSelectedCellKeys,
-  onDataUpdate,
-  onRowsDelete,
-  onCellsCopy,
-  onCellsCut,
-}: ContextMenuProps<TData>) {
-  const propsRef = useAsRef({
-    dataGridRef,
-    getSelectedCellKeys,
-    onDataUpdate,
-    onRowsDelete,
-    onCellsCopy,
-    onCellsCut,
-    columns,
-  });
+}: DataGridContextMenuProps<TData>) {
+  const readOnly = table.getIsReadOnly();
+  const canDeleteRows = !readOnly && !!table.options.onRowsDelete;
 
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
@@ -127,71 +70,46 @@ function ContextMenuImpl<TData extends RowData>({
   );
 
   const onFinalFocus = React.useCallback(() => {
-    propsRef.current.dataGridRef?.current?.focus();
+    tableMeta.dataGridRef?.current?.focus();
     return false;
-  }, [propsRef]);
+  }, [tableMeta]);
 
   const onCopy = React.useCallback(() => {
-    propsRef.current.onCellsCopy?.();
-  }, [propsRef]);
+    tableMeta.onCellsCopy?.();
+  }, [tableMeta]);
 
   const onCut = React.useCallback(() => {
-    propsRef.current.onCellsCut?.();
-  }, [propsRef]);
+    tableMeta.onCellsCut?.();
+  }, [tableMeta]);
 
   const onClear = React.useCallback(() => {
-    const { getSelectedCellKeys, columns, onDataUpdate } = propsRef.current;
+    const cells = (tableMeta.getSelectedCellKeys?.() ?? []).map(parseCellKey);
+    if (cells.length === 0) return;
 
-    const selectedCellKeys = getSelectedCellKeys?.() ?? [];
-    if (selectedCellKeys.length === 0) return;
-
-    const updates: Array<CellUpdate> = [];
-
-    for (const cellKey of selectedCellKeys) {
-      const { rowId, columnId } = parseCellKey(cellKey);
-
-      // Get column from columns array
-      const column = columns.find((col) => {
-        if (col.id) return col.id === columnId;
-        if ("accessorKey" in col) return col.accessorKey === columnId;
-        return false;
-      });
-      const cellVariant = column?.meta?.cell?.variant;
-
-      const emptyValue = getEmptyCellValue(cellVariant);
-
-      updates.push({ rowId, columnId, value: emptyValue });
-    }
-
-    onDataUpdate?.(updates);
+    table.clearCells(cells);
 
     toast.success(
-      `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,
+      `${cells.length} cell${cells.length !== 1 ? "s" : ""} cleared`,
     );
-  }, [propsRef]);
+  }, [table, tableMeta]);
 
   const onDelete = React.useCallback(async () => {
-    const { getSelectedCellKeys, onRowsDelete } = propsRef.current;
+    const rowIds = new Set(
+      (tableMeta.getSelectedCellKeys?.() ?? []).map(
+        (cellKey) => parseCellKey(cellKey).rowId,
+      ),
+    );
+    if (rowIds.size === 0) return;
 
-    const selectedCellKeys = getSelectedCellKeys?.() ?? [];
-    if (selectedCellKeys.length === 0) return;
+    await table.deleteRows(Array.from(rowIds));
 
-    const rowIds = new Set<string>();
-    for (const cellKey of selectedCellKeys) {
-      rowIds.add(parseCellKey(cellKey).rowId);
-    }
-
-    const rowCount = rowIds.size;
-
-    await onRowsDelete?.(Array.from(rowIds));
-
-    toast.success(`${rowCount} row${rowCount !== 1 ? "s" : ""} deleted`);
-  }, [propsRef]);
+    toast.success(`${rowIds.size} row${rowIds.size !== 1 ? "s" : ""} deleted`);
+  }, [table, tableMeta]);
 
   return (
     <DropdownMenu
       open={contextMenu.open}
-      onOpenChange={onContextMenuOpenChange}
+      onOpenChange={tableMeta.onContextMenuOpenChange}
     >
       <DropdownMenuTrigger style={triggerStyle} />
       <DropdownMenuContent
@@ -210,7 +128,7 @@ function ContextMenuImpl<TData extends RowData>({
           />
           Copy
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onCut} disabled={tableMeta?.readOnly}>
+        <DropdownMenuItem onClick={onCut} disabled={readOnly}>
           <IconPlaceholder
             lucide="ScissorsIcon"
             tabler="IconCut"
@@ -220,7 +138,7 @@ function ContextMenuImpl<TData extends RowData>({
           />
           Cut
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={onClear} disabled={tableMeta?.readOnly}>
+        <DropdownMenuItem onClick={onClear} disabled={readOnly}>
           <IconPlaceholder
             lucide="EraserIcon"
             tabler="IconEraser"
@@ -230,7 +148,7 @@ function ContextMenuImpl<TData extends RowData>({
           />
           Clear
         </DropdownMenuItem>
-        {onRowsDelete && (
+        {canDeleteRows && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onDelete}>
