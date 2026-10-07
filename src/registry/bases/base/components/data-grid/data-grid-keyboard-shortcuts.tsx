@@ -157,6 +157,27 @@ function DataGridKeyboardShortcutsImpl({
         ],
       },
       {
+        title: "Columns",
+        shortcuts: [
+          {
+            keys: ["⌥", "→"],
+            description: "Widen column (when header focused)",
+          },
+          {
+            keys: ["⌥", "←"],
+            description: "Narrow column (when header focused)",
+          },
+          {
+            keys: ["Shift", "→"],
+            description: "Move column right (when header focused)",
+          },
+          {
+            keys: ["Shift", "←"],
+            description: "Move column left (when header focused)",
+          },
+        ],
+      },
+      {
         title: "Selection",
         shortcuts: [
           {
