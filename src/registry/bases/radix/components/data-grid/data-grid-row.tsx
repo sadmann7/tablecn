@@ -259,9 +259,9 @@ function DataGridRowImpl<TData extends RowData>({
             key={cell.id}
             role="gridcell"
             aria-colindex={colIndex + 1}
-            data-highlighted={isCellFocused ? "" : undefined}
             data-slot="grid-cell"
             data-column-id={columnId}
+            data-highlighted={isCellFocused ? "" : undefined}
             tabIndex={-1}
             className={cn({
               grow: stretchColumns && columnId !== "select",
