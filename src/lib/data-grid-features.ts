@@ -28,6 +28,7 @@ import {
 import type {
   CellPosition,
   CellUpdate,
+  ContextMenuState,
   DataGridColumnMeta,
   DataGridTableMeta,
   Direction,
@@ -238,6 +239,60 @@ interface Cell_DataGridSearch {
   getIsActiveSearchMatch: () => boolean;
 }
 
+interface TableState_DataGridSelection {
+  /** Cell where the current mouse drag selection started, `null` when not dragging. */
+  cellDragAnchor: CellPosition | null;
+  contextMenu: ContextMenuState;
+  /** Row last toggled through its checkbox, where Shift+click ranges start. */
+  rowSelectionAnchor: string | null;
+}
+
+interface TableOptions_DataGridSelection {
+  /** Highlights the lone focused cell as a one-cell selection. */
+  enableSingleCellSelection?: boolean;
+  /** Clicking a column header selects its cells instead of clearing the selection. */
+  enableColumnSelection?: boolean;
+  onCellDragAnchorChange?: OnChangeFn<CellPosition | null>;
+  onContextMenuChange?: OnChangeFn<ContextMenuState>;
+  onRowSelectionAnchorChange?: OnChangeFn<string | null>;
+}
+
+interface SelectRowOptions {
+  /** Applies the change to every row between the previous anchor row and this one. */
+  extend?: boolean;
+}
+
+interface Table_DataGridSelection {
+  getHasCellRangeSelection: () => boolean;
+  getHasRowSelection: () => boolean;
+  /** Whether the cell is highlighted, the lone focused cell only counts with `enableSingleCellSelection`. */
+  getIsCellSelected: (rowId: string, columnId: string) => boolean;
+  /** Number of highlighted cells, following the same rule as `getIsCellSelected`. */
+  getSelectedRangeCellCount: () => number;
+  /** Clears cell and row selection, keeping the focused cell. */
+  clearSelection: () => void;
+  /** Unlike `resetRowSelection`, skips `onRowSelectionChange` so the cell selection stays put. */
+  clearRowSelection: () => void;
+  /** Selects every data cell while the focused cell stays active. */
+  selectAllDataCells: () => void;
+  /** Moves the active range's far corner, keeping its anchor and any earlier ranges. */
+  extendCellSelectionTo: (cell: CellPosition) => void;
+  /** Selects a column's cells, or clears the selection when column selection is off. */
+  selectColumnCells: (columnId: string) => void;
+  selectRow: (
+    rowId: string,
+    selected: boolean,
+    options?: SelectRowOptions,
+  ) => void;
+  getCellDragAnchor: () => CellPosition | null;
+  /** Starts a drag selection from the cell and drops any row selection. */
+  startCellDrag: (cell: CellPosition) => void;
+  endCellDrag: () => void;
+  getContextMenu: () => ContextMenuState;
+  openContextMenu: (position: { x: number; y: number }) => void;
+  closeContextMenu: () => void;
+}
+
 declare module "@tanstack/react-table" {
   interface Plugins {
     dataGridRowHeightFeature: TableFeature;
@@ -246,6 +301,7 @@ declare module "@tanstack/react-table" {
     dataGridNavigationFeature: TableFeature;
     dataGridClipboardFeature: TableFeature;
     dataGridSearchFeature: TableFeature;
+    dataGridSelectionFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
@@ -253,6 +309,7 @@ declare module "@tanstack/react-table" {
     dataGridCellEditingFeature: TableState_DataGridCellEditing;
     dataGridClipboardFeature: TableState_DataGridClipboard;
     dataGridSearchFeature: TableState_DataGridSearch;
+    dataGridSelectionFeature: TableState_DataGridSelection;
   }
 
   interface TableOptions_FeatureMap<
@@ -265,6 +322,7 @@ declare module "@tanstack/react-table" {
     dataGridNavigationFeature: TableOptions_DataGridNavigation;
     dataGridClipboardFeature: TableOptions_DataGridClipboard;
     dataGridSearchFeature: TableOptions_DataGridSearch;
+    dataGridSelectionFeature: TableOptions_DataGridSelection;
   }
 
   interface ColumnDef_FeatureMap<
@@ -285,6 +343,7 @@ declare module "@tanstack/react-table" {
     dataGridNavigationFeature: Table_DataGridNavigation;
     dataGridClipboardFeature: Table_DataGridClipboard;
     dataGridSearchFeature: Table_DataGridSearch;
+    dataGridSelectionFeature: Table_DataGridSelection;
   }
 
   interface Column_FeatureMap<
@@ -1282,6 +1341,265 @@ const dataGridSearchFeature: TableFeature = {
   },
 };
 
+const DEFAULT_CONTEXT_MENU: ContextMenuState = { open: false, x: 0, y: 0 };
+
+function getHasCellRangeSelection(table: DataGridInstance) {
+  const ranges = table.atoms.cellSelection.get();
+  const range = ranges[ranges.length - 1];
+  if (!range) return false;
+  return (
+    ranges.length > 1 ||
+    range.anchorRowId !== range.focusRowId ||
+    range.anchorColumnId !== range.focusColumnId
+  );
+}
+
+function getHasRowSelection(table: DataGridInstance) {
+  return Object.keys(table.atoms.rowSelection.get()).length > 0;
+}
+
+function clearRowSelection(table: DataGridInstance) {
+  if (getHasRowSelection(table)) makeStateUpdater("rowSelection", table)({});
+}
+
+function getFocusedCellPosition(table: DataGridInstance): CellPosition | null {
+  const ranges = table.atoms.cellSelection.get();
+  const range = ranges[ranges.length - 1];
+  return range
+    ? { rowId: range.anchorRowId, columnId: range.anchorColumnId }
+    : null;
+}
+
+function getIsUtilityColumn(table: DataGridInstance, columnId: string) {
+  return table.getColumn(columnId)?.columnDef.enableCellSelection === false;
+}
+
+function selectRow(
+  table: DataGridInstance,
+  rowId: string,
+  selected: boolean,
+  { extend = false }: SelectRowOptions = {},
+) {
+  const rows = table.getRowModel().rows;
+  const rowIndex = rows.findIndex((row) => row.id === rowId);
+  if (rowIndex === -1) return;
+
+  const anchorRowId = table.atoms.rowSelectionAnchor.get();
+  const anchorIndex =
+    extend && anchorRowId !== null
+      ? rows.findIndex((row) => row.id === anchorRowId)
+      : -1;
+  const startIndex =
+    anchorIndex === -1 ? rowIndex : Math.min(anchorIndex, rowIndex);
+  const endIndex =
+    anchorIndex === -1 ? rowIndex : Math.max(anchorIndex, rowIndex);
+
+  const rowSelection = { ...table.atoms.rowSelection.get() };
+  for (let index = startIndex; index <= endIndex; index++) {
+    const id = rows[index]?.id;
+    if (!id) continue;
+    if (selected) rowSelection[id] = true;
+    else delete rowSelection[id];
+  }
+
+  table.setRowSelection(rowSelection);
+  table.options.onRowSelectionAnchorChange?.(rowId);
+
+  const focusedCell = getFocusedCellPosition(table);
+  if (focusedCell && getIsUtilityColumn(table, focusedCell.columnId)) {
+    table.setCellSelection((ranges) => [
+      ...ranges.slice(0, -1),
+      {
+        anchorRowId: rowId,
+        anchorColumnId: focusedCell.columnId,
+        focusRowId: rowId,
+        focusColumnId: focusedCell.columnId,
+      },
+    ]);
+  }
+}
+
+function selectAllDataCells(table: DataGridInstance) {
+  const rows = table.getRowModel().rows;
+  const dataColumnIds = getDataColumnIds(table);
+  const firstRowId = rows[0]?.id;
+  const lastRowId = rows[rows.length - 1]?.id;
+  const firstColumnId = dataColumnIds[0];
+  const lastColumnId = dataColumnIds[dataColumnIds.length - 1];
+  if (!firstRowId || !lastRowId || !firstColumnId || !lastColumnId) return;
+
+  const allRange = {
+    anchorRowId: firstRowId,
+    anchorColumnId: firstColumnId,
+    focusRowId: lastRowId,
+    focusColumnId: lastColumnId,
+  };
+  const focusedCell = getFocusedCellPosition(table);
+
+  // The focused cell stays the active range so selecting everything doesn't move focus
+  table.setCellSelection(
+    focusedCell
+      ? [
+          allRange,
+          {
+            anchorRowId: focusedCell.rowId,
+            anchorColumnId: focusedCell.columnId,
+            focusRowId: focusedCell.rowId,
+            focusColumnId: focusedCell.columnId,
+          },
+        ]
+      : [allRange],
+  );
+}
+
+const dataGridSelectionFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    cellDragAnchor: null,
+    contextMenu: DEFAULT_CONTEXT_MENU,
+    rowSelectionAnchor: null,
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: TableOptions_DataGridSelection = {
+      onCellDragAnchorChange: makeStateUpdater("cellDragAnchor", table),
+      onContextMenuChange: makeStateUpdater("contextMenu", table),
+      onRowSelectionAnchorChange: makeStateUpdater("rowSelectionAnchor", table),
+    };
+    return options;
+  },
+  constructTableAPIs: (table) => {
+    const instance = asDataGrid(table);
+
+    const clearSelection = () => {
+      const focusedCell = getFocusedCellPosition(instance);
+      if (focusedCell) {
+        instance.setFocusedCell(focusedCell.rowId, focusedCell.columnId);
+      } else {
+        instance.resetCellSelection(true);
+      }
+      clearRowSelection(instance);
+      instance.options.onCellDragAnchorChange?.(null);
+    };
+
+    assignTableAPIs("dataGridSelectionFeature", table, {
+      table_getHasCellRangeSelection: {
+        fn: () => getHasCellRangeSelection(instance),
+      },
+      table_getHasRowSelection: {
+        fn: () => getHasRowSelection(instance),
+      },
+      table_getIsCellSelected: {
+        fn: (rowId: string, columnId: string) => {
+          if (
+            !instance.options.enableSingleCellSelection &&
+            !getHasCellRangeSelection(instance)
+          ) {
+            return false;
+          }
+          const row = instance.getRowModel().rowsById[rowId];
+          return (
+            row?.getAllCellsByColumnId()[columnId]?.getIsSelected() ?? false
+          );
+        },
+      },
+      table_getSelectedRangeCellCount: {
+        fn: () =>
+          instance.options.enableSingleCellSelection ||
+          getHasCellRangeSelection(instance)
+            ? instance.getSelectedCellCount()
+            : 0,
+      },
+      table_clearSelection: { fn: clearSelection },
+      table_clearRowSelection: {
+        fn: () => clearRowSelection(instance),
+      },
+      table_selectAllDataCells: {
+        fn: () => selectAllDataCells(instance),
+      },
+      table_extendCellSelectionTo: {
+        fn: (cell: CellPosition) => {
+          instance.setCellSelection((ranges) => {
+            const activeRange = ranges[ranges.length - 1];
+            if (!activeRange) {
+              return [
+                {
+                  anchorRowId: cell.rowId,
+                  anchorColumnId: cell.columnId,
+                  focusRowId: cell.rowId,
+                  focusColumnId: cell.columnId,
+                },
+              ];
+            }
+            return [
+              ...ranges.slice(0, -1),
+              {
+                ...activeRange,
+                focusRowId: cell.rowId,
+                focusColumnId: cell.columnId,
+              },
+            ];
+          });
+        },
+      },
+      table_selectColumnCells: {
+        fn: (columnId: string) => {
+          if (!instance.options.enableColumnSelection) {
+            clearSelection();
+            return;
+          }
+          const rows = instance.getRowModel().rows;
+          const firstRowId = rows[0]?.id;
+          const lastRowId = rows[rows.length - 1]?.id;
+          if (!firstRowId || !lastRowId) return;
+          instance.selectCellRange({
+            anchorRowId: firstRowId,
+            anchorColumnId: columnId,
+            focusRowId: lastRowId,
+            focusColumnId: columnId,
+          });
+        },
+      },
+      table_selectRow: {
+        fn: (rowId: string, selected: boolean, options?: SelectRowOptions) =>
+          selectRow(instance, rowId, selected, options),
+      },
+      table_getCellDragAnchor: {
+        fn: () => instance.atoms.cellDragAnchor.get(),
+      },
+      table_startCellDrag: {
+        fn: (cell: CellPosition) => {
+          clearRowSelection(instance);
+          instance.options.onCellDragAnchorChange?.(cell);
+        },
+      },
+      table_endCellDrag: {
+        fn: () => {
+          if (instance.atoms.cellDragAnchor.get()) {
+            instance.options.onCellDragAnchorChange?.(null);
+          }
+        },
+      },
+      table_getContextMenu: {
+        fn: () => instance.atoms.contextMenu.get(),
+      },
+      table_openContextMenu: {
+        fn: ({ x, y }: { x: number; y: number }) =>
+          instance.options.onContextMenuChange?.({ open: true, x, y }),
+      },
+      table_closeContextMenu: {
+        fn: () => {
+          const contextMenu = instance.atoms.contextMenu.get();
+          if (!contextMenu.open) return;
+          instance.options.onContextMenuChange?.({
+            ...contextMenu,
+            open: false,
+          });
+        },
+      },
+    });
+  },
+};
+
 export const dataGridFeatures = tableFeatures({
   cellSelectionFeature,
   columnFilteringFeature,
@@ -1298,6 +1616,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridNavigationFeature,
   dataGridClipboardFeature,
   dataGridSearchFeature,
+  dataGridSelectionFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   tableMeta: metaHelper<DataGridTableMeta>(),

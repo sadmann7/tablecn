@@ -6,10 +6,7 @@ import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  CellSelectOption,
-  DataGridTableMeta,
-} from "@/lib/data-grid-types";
+import type { CellSelectOption } from "@/lib/data-grid-types";
 
 import {
   ActionBar,
@@ -28,7 +25,6 @@ import {
 
 interface DataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
-  tableMeta: DataGridTableMeta;
   selectedCellCount: number;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
@@ -39,7 +35,6 @@ interface DataGridActionBarProps<TData extends RowData> {
 
 export function DataGridActionBar<TData extends RowData>({
   table,
-  tableMeta,
   selectedCellCount,
   statusOptions,
   styleOptions,
@@ -51,10 +46,10 @@ export function DataGridActionBar<TData extends RowData>({
     (open: boolean) => {
       if (!open) {
         table.toggleAllRowsSelected(false);
-        tableMeta.onSelectionClear?.();
+        table.clearSelection();
       }
     },
-    [table, tableMeta],
+    [table],
   );
 
   return (
