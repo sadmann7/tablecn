@@ -1,13 +1,9 @@
 import {
   type CellSelectionState,
   type ColumnDef,
-  type ColumnFiltersState,
-  type ColumnOrderState,
-  type ColumnPinningState,
   type ColumnVisibilityState,
   type RowData,
   type RowSelectionState,
-  type SortingState,
   type Table,
   type TableOptions,
   type TableState,
@@ -20,11 +16,7 @@ import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type {
-  CellPosition,
-  Direction,
-  NavigationDirection,
-} from "@/lib/data-grid-types";
+import type { CellPosition, NavigationDirection } from "@/lib/data-grid-types";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
@@ -136,18 +128,12 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
 > {
-  onDataChange?: (data: TData[]) => void;
   /** Adds a row and returns its id so the grid can focus it once it renders. */
   onRowAdd?: (
     event?: React.MouseEvent<HTMLDivElement>,
   ) => RowAddResult | Promise<RowAddResult | null> | null;
-  onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
   overscan?: number;
-  dir?: Direction;
   autoFocus?: boolean | Partial<CellPosition>;
-  enableSingleCellSelection?: boolean;
-  enableColumnSelection?: boolean;
-  readOnly?: boolean;
 }
 
 function useDataGrid<TData extends RowData>({
@@ -155,7 +141,6 @@ function useDataGrid<TData extends RowData>({
   columns,
   overscan = OVERSCAN,
   dir: dirProp,
-  initialState,
   ...props
 }: UseDataGridProps<TData>) {
   const contextDir = useDirection();
@@ -172,12 +157,7 @@ function useDataGrid<TData extends RowData>({
     shouldScroll: boolean;
   } | null>(null);
 
-  const propsRef = useAsRef({
-    ...props,
-    data,
-    columns,
-    initialState,
-  });
+  const propsRef = useAsRef(props);
 
   const getRowIndex = React.useCallback((rowId: string) => {
     const currentTable = tableRef.current;
@@ -430,26 +410,6 @@ function useDataGrid<TData extends RowData>({
     [],
   );
 
-  const onSortingChange = React.useCallback(
-    (updater: Updater<SortingState>) => {
-      const currentTable = tableRef.current;
-      if (!currentTable) return;
-      makeStateUpdater("sorting", currentTable)(updater);
-      propsRef.current.onSortingChange?.(updater);
-    },
-    [propsRef],
-  );
-
-  const onColumnFiltersChange = React.useCallback(
-    (updater: Updater<ColumnFiltersState>) => {
-      const currentTable = tableRef.current;
-      if (!currentTable) return;
-      makeStateUpdater("columnFilters", currentTable)(updater);
-      propsRef.current.onColumnFiltersChange?.(updater);
-    },
-    [propsRef],
-  );
-
   const onColumnVisibilityChange = React.useCallback(
     (updater: Updater<ColumnVisibilityState>) => {
       const currentTable = tableRef.current;
@@ -468,26 +428,6 @@ function useDataGrid<TData extends RowData>({
       propsRef.current.onColumnVisibilityChange?.(updater);
     },
     [propsRef, getFocusedCell],
-  );
-
-  const onColumnPinningChange = React.useCallback(
-    (updater: Updater<ColumnPinningState>) => {
-      const currentTable = tableRef.current;
-      if (!currentTable) return;
-      makeStateUpdater("columnPinning", currentTable)(updater);
-      propsRef.current.onColumnPinningChange?.(updater);
-    },
-    [propsRef],
-  );
-
-  const onColumnOrderChange = React.useCallback(
-    (updater: Updater<ColumnOrderState>) => {
-      const currentTable = tableRef.current;
-      if (!currentTable) return;
-      makeStateUpdater("columnOrder", currentTable)(updater);
-      propsRef.current.onColumnOrderChange?.(updater);
-    },
-    [propsRef],
   );
 
   const onRowSelectionChange = React.useCallback(
@@ -558,16 +498,6 @@ function useDataGrid<TData extends RowData>({
       }),
       [],
     );
-
-  const scrollToCell = React.useCallback(
-    (rowId: string, columnId: string) => {
-      revealCell(
-        { rowId, columnId },
-        { shouldFocus: false, shouldScroll: true },
-      );
-    },
-    [revealCell],
-  );
 
   const dataGridBodyProps = React.useMemo(() => {
     let hoveredCellKey: string | null = null;
@@ -659,14 +589,8 @@ function useDataGrid<TData extends RowData>({
   const tableOptions = React.useMemo<
     TableOptions<DataGridFeatures, TData>
   >(() => {
-    const {
-      onEditingCellChange: _onEditingCellChange,
-      onRowHeightChange: _onRowHeightChange,
-      ...tableProps
-    } = propsRef.current;
-
     return {
-      ...tableProps,
+      ...propsRef.current,
       ...(hasEditingCellChange && {
         onEditingCellChange: (updater) =>
           propsRef.current.onEditingCellChange?.(updater),
@@ -688,16 +612,11 @@ function useDataGrid<TData extends RowData>({
       data,
       columns: tableColumns,
       defaultColumn,
-      initialState: propsRef.current.initialState,
       state: controlledState,
       autoResetCellSelection: false,
       enableCellEditing,
       onRowSelectionChange,
-      onSortingChange,
-      onColumnFiltersChange,
       onColumnVisibilityChange,
-      onColumnPinningChange,
-      onColumnOrderChange,
       columnResizeMode: "onChange",
       columnResizeDirection: dir,
       dir,
@@ -714,11 +633,7 @@ function useDataGrid<TData extends RowData>({
     canAddRows,
     dir,
     onRowSelectionChange,
-    onSortingChange,
-    onColumnFiltersChange,
     onColumnVisibilityChange,
-    onColumnPinningChange,
-    onColumnOrderChange,
   ]);
 
   const table = useTable(tableOptions, selectGridLayoutState);
@@ -1887,7 +1802,6 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       dataGridBodyProps,
-      scrollToCell,
       virtualTotalSize,
       virtualItems,
       measureElement,
@@ -1903,7 +1817,6 @@ function useDataGrid<TData extends RowData>({
       dir,
       table,
       dataGridBodyProps,
-      scrollToCell,
       virtualTotalSize,
       virtualItems,
       measureElement,
