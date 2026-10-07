@@ -22,7 +22,6 @@ import { toast } from "sonner";
 
 import type {
   CellPosition,
-  ContextMenuState,
   DataGridTableMeta,
   Direction,
   FileCellData,
@@ -31,7 +30,6 @@ import type {
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
-import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   type DataGridFeatures,
   dataGridFeatures,
@@ -116,48 +114,6 @@ function getSelectedCellKeys<TData extends RowData>(
     .map(({ rowId, columnId }) => getCellKey(rowId, columnId));
 }
 
-function setRowSelected(
-  rowSelection: RowSelectionState,
-  rowId: string,
-  selected: boolean,
-) {
-  if (selected) {
-    rowSelection[rowId] = true;
-  } else {
-    delete rowSelection[rowId];
-  }
-}
-
-interface DataGridState {
-  /** Cell where the current mouse drag selection started, `null` when not dragging. */
-  dragStartCell: CellPosition | null;
-  contextMenu: ContextMenuState;
-  lastClickedRowId: string | null;
-}
-
-interface DataGridStore {
-  subscribe: (callback: () => void) => () => void;
-  getState: () => DataGridState;
-  setState: <K extends keyof DataGridState>(
-    key: K,
-    value: DataGridState[K],
-  ) => void;
-  notify: () => void;
-  batch: (fn: () => void) => void;
-}
-
-function useStore<T>(
-  store: DataGridStore,
-  selector: (state: DataGridState) => T,
-): T {
-  const getSnapshot = React.useCallback(
-    () => selector(store.getState()),
-    [store, selector],
-  );
-
-  return React.useSyncExternalStore(store.subscribe, getSnapshot, getSnapshot);
-}
-
 interface RowAddResult {
   rowId: string;
   /** Column to focus in the new row, defaults to the first data column. */
@@ -221,76 +177,6 @@ function useDataGrid<TData extends RowData>({
     columns,
     initialState,
   });
-
-  const listenersRef = useLazyRef(() => new Set<() => void>());
-
-  const stateRef = useLazyRef<DataGridState>(() => {
-    return {
-      dragStartCell: null,
-      contextMenu: {
-        open: false,
-        x: 0,
-        y: 0,
-      },
-      lastClickedRowId: null,
-    };
-  });
-
-  const store = React.useMemo<DataGridStore>(() => {
-    let isBatching = false;
-    let pendingNotification = false;
-
-    return {
-      subscribe: (callback) => {
-        listenersRef.current.add(callback);
-        return () => listenersRef.current.delete(callback);
-      },
-      getState: () => stateRef.current,
-      setState: (key, value) => {
-        if (Object.is(stateRef.current[key], value)) return;
-        stateRef.current[key] = value;
-
-        if (isBatching) {
-          pendingNotification = true;
-        } else {
-          if (!pendingNotification) {
-            pendingNotification = true;
-            queueMicrotask(() => {
-              pendingNotification = false;
-              store.notify();
-            });
-          }
-        }
-      },
-      notify: () => {
-        for (const listener of listenersRef.current) {
-          listener();
-        }
-      },
-      batch: (fn) => {
-        if (isBatching) {
-          fn();
-          return;
-        }
-
-        isBatching = true;
-        const wasPending = pendingNotification;
-        pendingNotification = false;
-
-        try {
-          fn();
-        } finally {
-          isBatching = false;
-          if (pendingNotification || wasPending) {
-            pendingNotification = false;
-            store.notify();
-          }
-        }
-      },
-    };
-  }, [listenersRef, stateRef]);
-
-  const contextMenu = useStore(store, (state) => state.contextMenu);
 
   const getRowIndex = React.useCallback((rowId: string) => {
     const currentTable = tableRef.current;
@@ -367,7 +253,7 @@ function useDataGrid<TData extends RowData>({
         container.focus({ preventScroll: true });
       }
     },
-    [store, revealCell],
+    [revealCell],
   );
 
   const focusCell = React.useCallback(
@@ -391,89 +277,6 @@ function useDataGrid<TData extends RowData>({
     [getColumnIds],
   );
 
-  const getHasRowSelection = React.useCallback(
-    () =>
-      Object.keys(tableRef.current?.atoms.rowSelection.get() ?? {}).length > 0,
-    [],
-  );
-
-  // Writes the slice directly so onRowSelectionChange doesn't rebuild the cell selection
-  const clearRowSelection = React.useCallback(() => {
-    const currentTable = tableRef.current;
-    if (!currentTable || !getHasRowSelection()) return;
-    makeStateUpdater("rowSelection", currentTable)({});
-  }, [getHasRowSelection]);
-
-  const getIsCellSelected = React.useCallback(
-    (rowId: string, columnId: string) => {
-      const currentTable = tableRef.current;
-      if (!currentTable) return false;
-      if (
-        !propsRef.current.enableSingleCellSelection &&
-        !getHasCellRangeSelection(currentTable.atoms.cellSelection.get())
-      ) {
-        return false;
-      }
-      const row = currentTable.getRowModel().rowsById[rowId];
-      return row?.getAllCellsByColumnId()[columnId]?.getIsSelected() ?? false;
-    },
-    [propsRef],
-  );
-
-  const onSelectionClear = React.useCallback(() => {
-    const currentTable = tableRef.current;
-    const focusedCell = currentTable
-      ? getFocusedCellPosition(currentTable.atoms.cellSelection.get())
-      : null;
-
-    if (focusedCell) {
-      currentTable?.setFocusedCell(focusedCell.rowId, focusedCell.columnId);
-    } else {
-      currentTable?.resetCellSelection(true);
-    }
-    clearRowSelection();
-    store.batch(() => {
-      store.setState("dragStartCell", null);
-    });
-  }, [store, clearRowSelection]);
-
-  const selectAll = React.useCallback(() => {
-    const currentTable = tableRef.current;
-    if (!currentTable) return;
-
-    const rows = currentTable.getRowModel().rows;
-    const firstRowId = rows[0]?.id;
-    const lastRowId = rows[rows.length - 1]?.id;
-    const firstColumnId = getNavigableColumnIds()[0];
-    const lastColumnId = getNavigableColumnIds().at(-1);
-    if (!firstRowId || !lastRowId || !firstColumnId || !lastColumnId) return;
-
-    const focusedCell = getFocusedCellPosition(
-      currentTable.atoms.cellSelection.get(),
-    );
-    const allRange = {
-      anchorRowId: firstRowId,
-      anchorColumnId: firstColumnId,
-      focusRowId: lastRowId,
-      focusColumnId: lastColumnId,
-    };
-
-    // The focused cell stays the active range so selecting everything doesn't move focus
-    currentTable.setCellSelection(
-      focusedCell
-        ? [
-            allRange,
-            {
-              anchorRowId: focusedCell.rowId,
-              anchorColumnId: focusedCell.columnId,
-              focusRowId: focusedCell.rowId,
-              focusColumnId: focusedCell.columnId,
-            },
-          ]
-        : [allRange],
-    );
-  }, [getNavigableColumnIds]);
-
   const selectRange = React.useCallback(
     (start: CellPosition, end: CellPosition) => {
       tableRef.current?.selectCellRange({
@@ -486,49 +289,10 @@ function useDataGrid<TData extends RowData>({
     [],
   );
 
-  const selectColumn = React.useCallback(
-    (columnId: string) => {
-      const rows = tableRef.current?.getRowModel().rows ?? [];
-      const firstRowId = rows[0]?.id;
-      const lastRowId = rows[rows.length - 1]?.id;
-      if (!firstRowId || !lastRowId) return;
-
-      selectRange(
-        { rowId: firstRowId, columnId },
-        { rowId: lastRowId, columnId },
-      );
-    },
-    [selectRange],
-  );
-
-  /** Moves the active range's far corner, keeping its anchor and any earlier ranges. */
-  const extendSelection = React.useCallback((end: CellPosition) => {
-    tableRef.current?.setCellSelection((ranges) => {
-      const activeRange = getActiveCellRange(ranges);
-      if (!activeRange) {
-        return [
-          {
-            anchorRowId: end.rowId,
-            anchorColumnId: end.columnId,
-            focusRowId: end.rowId,
-            focusColumnId: end.columnId,
-          },
-        ];
-      }
-      return [
-        ...ranges.slice(0, -1),
-        { ...activeRange, focusRowId: end.rowId, focusColumnId: end.columnId },
-      ];
-    });
+  const onRowsDelete = React.useCallback(async (rowIds: string[]) => {
+    await tableRef.current?.deleteRows(rowIds);
+    tableRef.current?.endCellDrag();
   }, []);
-
-  const onRowsDelete = React.useCallback(
-    async (rowIds: string[]) => {
-      await tableRef.current?.deleteRows(rowIds);
-      store.setState("dragStartCell", null);
-    },
-    [store],
-  );
 
   const startEditing = React.useCallback((rowId: string, columnId: string) => {
     const cellsByColumnId = tableRef.current
@@ -570,7 +334,9 @@ function useDataGrid<TData extends RowData>({
               focusColumnId: columnId,
             },
             {
-              mode: getIsCellSelected(rowId, columnId) ? "exclude" : "include",
+              mode: currentTable.getIsCellSelected(rowId, columnId)
+                ? "exclude"
+                : "include",
             },
           );
           currentTable.setEditingCell(null);
@@ -580,13 +346,13 @@ function useDataGrid<TData extends RowData>({
 
         if (event.shiftKey && currentFocused) {
           event.preventDefault();
-          extendSelection({ rowId, columnId });
+          currentTable.extendCellSelectionTo({ rowId, columnId });
           focusCellElement(currentFocused, false);
           return;
         }
       }
 
-      if (columnId !== "select") clearRowSelection();
+      if (columnId !== "select") currentTable.clearRowSelection();
 
       if (
         !getHasCellRangeSelection(ranges) &&
@@ -598,14 +364,7 @@ function useDataGrid<TData extends RowData>({
         focusCell(rowId, columnId);
       }
     },
-    [
-      clearRowSelection,
-      focusCell,
-      focusCellElement,
-      startEditing,
-      extendSelection,
-      getIsCellSelected,
-    ],
+    [focusCell, focusCellElement, startEditing],
   );
 
   const onCellDoubleClick = React.useCallback(
@@ -626,18 +385,15 @@ function useDataGrid<TData extends RowData>({
       event.preventDefault();
 
       if (!event.ctrlKey && !event.metaKey && !event.shiftKey) {
-        clearRowSelection();
-        store.batch(() => {
-          store.setState("dragStartCell", { rowId, columnId });
-        });
+        tableRef.current?.startCellDrag({ rowId, columnId });
       }
     },
-    [store, clearRowSelection],
+    [],
   );
 
   const onCellMouseEnter = React.useCallback(
     (rowId: string, columnId: string) => {
-      const dragStartCell = store.getState().dragStartCell;
+      const dragStartCell = tableRef.current?.getCellDragAnchor();
       if (!dragStartCell) return;
 
       const currentFocused = getFocusedCell();
@@ -651,43 +407,26 @@ function useDataGrid<TData extends RowData>({
 
       selectRange(dragStartCell, { rowId, columnId });
     },
-    [store, selectRange, getFocusedCell, focusCellElement],
+    [selectRange, getFocusedCell, focusCellElement],
   );
 
   const onCellMouseUp = React.useCallback(() => {
-    store.setState("dragStartCell", null);
-  }, [store]);
+    tableRef.current?.endCellDrag();
+  }, []);
 
   const onCellContextMenu = React.useCallback(
     (rowId: string, columnId: string, event: React.MouseEvent) => {
       event.preventDefault();
       event.stopPropagation();
 
-      if (!getIsCellSelected(rowId, columnId)) {
-        tableRef.current?.setFocusedCell(rowId, columnId);
+      const currentTable = tableRef.current;
+      if (!currentTable) return;
+      if (!currentTable.getIsCellSelected(rowId, columnId)) {
+        currentTable.setFocusedCell(rowId, columnId);
       }
-
-      store.setState("contextMenu", {
-        open: true,
-        x: event.clientX,
-        y: event.clientY,
-      });
+      currentTable.openContextMenu({ x: event.clientX, y: event.clientY });
     },
-    [store, getIsCellSelected],
-  );
-
-  const onContextMenuOpenChange = React.useCallback(
-    (open: boolean) => {
-      if (!open) {
-        const currentMenu = store.getState().contextMenu;
-        store.setState("contextMenu", {
-          open: false,
-          x: currentMenu.x,
-          y: currentMenu.y,
-        });
-      }
-    },
-    [store],
+    [],
   );
 
   const onSortingChange = React.useCallback(
@@ -808,80 +547,6 @@ function useDataGrid<TData extends RowData>({
     [getNavigableColumnIds, propsRef, getFocusedCell],
   );
 
-  const onRowSelect = React.useCallback(
-    (rowId: string, selected: boolean, shiftKey: boolean) => {
-      const { lastClickedRowId } = store.getState();
-      const rowSelection = tableRef.current?.atoms.rowSelection.get() ?? {};
-      const rows = tableRef.current?.getRowModel().rows ?? [];
-      const currentRowIndex = rows.findIndex((r) => r.id === rowId);
-      const currentRow = currentRowIndex >= 0 ? rows[currentRowIndex] : null;
-      if (!currentRow) return;
-
-      if (shiftKey && lastClickedRowId !== null) {
-        const lastClickedRowIndex = rows.findIndex(
-          (r) => r.id === lastClickedRowId,
-        );
-        if (lastClickedRowIndex >= 0) {
-          const startIndex = Math.min(lastClickedRowIndex, currentRowIndex);
-          const endIndex = Math.max(lastClickedRowIndex, currentRowIndex);
-
-          const newRowSelection: RowSelectionState = {
-            ...rowSelection,
-          };
-
-          for (let i = startIndex; i <= endIndex; i++) {
-            const row = rows[i];
-            if (row) {
-              setRowSelected(newRowSelection, row.id, selected);
-            }
-          }
-
-          onRowSelectionChange(newRowSelection);
-        } else {
-          const newRowSelection: RowSelectionState = {
-            ...rowSelection,
-          };
-          setRowSelected(newRowSelection, currentRow.id, selected);
-          onRowSelectionChange(newRowSelection);
-        }
-      } else {
-        const newRowSelection: RowSelectionState = {
-          ...rowSelection,
-        };
-        setRowSelected(newRowSelection, currentRow.id, selected);
-        onRowSelectionChange(newRowSelection);
-      }
-
-      store.setState("lastClickedRowId", rowId);
-
-      const focusedCell = getFocusedCell();
-      if (focusedCell && !getIsDataColumn(focusedCell.columnId)) {
-        tableRef.current?.setCellSelection((ranges) => [
-          ...ranges.slice(0, -1),
-          {
-            anchorRowId: rowId,
-            anchorColumnId: "select",
-            focusRowId: rowId,
-            focusColumnId: "select",
-          },
-        ]);
-      }
-    },
-    [store, onRowSelectionChange, getFocusedCell],
-  );
-
-  const onColumnClick = React.useCallback(
-    (columnId: string) => {
-      if (!propsRef.current.enableColumnSelection) {
-        onSelectionClear();
-        return;
-      }
-
-      selectColumn(columnId);
-    },
-    [propsRef, selectColumn, onSelectionClear],
-  );
-
   const defaultColumn: Partial<ColumnDef<DataGridFeatures, TData>> =
     React.useMemo(
       () => ({
@@ -971,50 +636,14 @@ function useDataGrid<TData extends RowData>({
     onCellContextMenu,
   ]);
 
-  const tableMeta = React.useMemo<DataGridTableMeta>(() => {
-    return {
+  const tableMeta = React.useMemo<DataGridTableMeta>(
+    () => ({
       ...propsRef.current.meta,
-      dataGridRef,
-      get focusedCell() {
-        return getFocusedCell();
-      },
-      get editingCell() {
-        return tableRef.current?.getEditingCell() ?? null;
-      },
-      get selectedCellCount() {
-        const currentTable = tableRef.current;
-        if (!currentTable) return 0;
-        return propsRef.current.enableSingleCellSelection ||
-          getHasCellRangeSelection(currentTable.atoms.cellSelection.get())
-          ? currentTable.getSelectedCellCount()
-          : 0;
-      },
-      get contextMenu() {
-        return store.getState().contextMenu;
-      },
-      getIsCellSelected,
-      getSelectedCellKeys: () =>
-        tableRef.current ? getSelectedCellKeys(tableRef.current) : [],
-      onRowSelect,
-      onColumnClick,
-      onSelectionClear,
-      onFilesUpload: propsRef.current.onFilesUpload
-        ? propsRef.current.onFilesUpload
-        : undefined,
-      onFilesDelete: propsRef.current.onFilesDelete
-        ? propsRef.current.onFilesDelete
-        : undefined,
-      onContextMenuOpenChange,
-    };
-  }, [
-    propsRef,
-    store,
-    getIsCellSelected,
-    onRowSelect,
-    onColumnClick,
-    onSelectionClear,
-    onContextMenuOpenChange,
-  ]);
+      onFilesUpload: propsRef.current.onFilesUpload,
+      onFilesDelete: propsRef.current.onFilesDelete,
+    }),
+    [propsRef],
+  );
 
   const tableColumns = React.useMemo(
     () =>
@@ -1211,10 +840,10 @@ function useDataGrid<TData extends RowData>({
       const columnId = result.columnId ?? getNavigableColumnIds()[0];
       if (!columnId) return;
 
-      onSelectionClear();
+      tableRef.current?.clearSelection();
       focusCell(result.rowId, columnId);
     },
-    [propsRef, getNavigableColumnIds, onSelectionClear, focusCell],
+    [propsRef, getNavigableColumnIds, focusCell],
   );
 
   const getColumnHeaderTrigger = React.useCallback((columnId: string) => {
@@ -1230,14 +859,14 @@ function useDataGrid<TData extends RowData>({
       const trigger = getColumnHeaderTrigger(columnId);
       if (!trigger) return false;
 
-      if (!getHasRowSelection()) {
+      if (!tableRef.current?.getHasRowSelection()) {
         tableRef.current?.resetCellSelection(true);
       }
       tableRef.current?.setEditingCell(null);
       trigger.focus();
       return true;
     },
-    [getHasRowSelection, getColumnHeaderTrigger],
+    [getColumnHeaderTrigger],
   );
 
   const onGridTabBackOut = React.useCallback(() => {
@@ -1389,7 +1018,7 @@ function useDataGrid<TData extends RowData>({
       ) {
         const rowIds = new Set<string>();
 
-        if (getHasRowSelection()) {
+        if (tableRef.current?.getHasRowSelection()) {
           const rows = tableRef.current?.getRowModel().rows ?? [];
           for (const row of rows) {
             if (currentTable?.atoms.rowSelection.get()[row.id]) {
@@ -1432,7 +1061,7 @@ function useDataGrid<TData extends RowData>({
 
       if (isCtrlPressed && !shiftKey && key === "a") {
         event.preventDefault();
-        selectAll();
+        tableRef.current?.selectAllDataCells();
         return;
       }
 
@@ -1483,7 +1112,7 @@ function useDataGrid<TData extends RowData>({
           currentTable?.clearCells(cellsToClear.map(parseCellKey));
 
           if (hasCellRangeSelection) {
-            onSelectionClear();
+            tableRef.current?.clearSelection();
           }
 
           if (currentTable?.getCutCells().length) {
@@ -1509,7 +1138,7 @@ function useDataGrid<TData extends RowData>({
             const columnId = result?.columnId ?? currentColumnId;
             if (!result || !columnId) return;
 
-            onSelectionClear();
+            tableRef.current?.clearSelection();
             focusCell(result.rowId, columnId);
           })
           .catch(() => {
@@ -1572,8 +1201,8 @@ function useDataGrid<TData extends RowData>({
           break;
         case "Escape":
           event.preventDefault();
-          if (hasCellRangeSelection || getHasRowSelection()) {
-            onSelectionClear();
+          if (hasCellRangeSelection || tableRef.current?.getHasRowSelection()) {
+            tableRef.current?.clearSelection();
           } else {
             blurCell();
             dataGridRef.current?.focus();
@@ -1597,16 +1226,13 @@ function useDataGrid<TData extends RowData>({
       const extend = shiftKey && key !== "Tab";
       const pageSize = rowVirtualizerRef.current?.getVirtualItems().length;
 
-      if (!extend && hasCellRangeSelection) onSelectionClear();
+      if (!extend && hasCellRangeSelection) tableRef.current?.clearSelection();
       currentTable.navigate(direction, { extend, pageSize });
     },
     [
       dir,
-      store,
       propsRef,
       blurCell,
-      selectAll,
-      onSelectionClear,
       getNavigableColumnIds,
       onRowsDelete,
       focusCell,
@@ -1672,14 +1298,13 @@ function useDataGrid<TData extends RowData>({
 
       if (key === "Escape") {
         const hasSelections =
-          getHasCellRangeSelection(
-            tableRef.current?.atoms.cellSelection.get() ?? [],
-          ) || getHasRowSelection();
+          tableRef.current?.getHasCellRangeSelection() ||
+          tableRef.current?.getHasRowSelection();
 
         if (hasSelections) {
           event.preventDefault();
           event.stopPropagation();
-          onSelectionClear();
+          tableRef.current?.clearSelection();
         }
       }
     }
@@ -1688,7 +1313,7 @@ function useDataGrid<TData extends RowData>({
     return () => {
       window.removeEventListener("keydown", onGlobalKeyDown, true);
     };
-  }, [store, onSelectionClear]);
+  }, []);
 
   React.useEffect(() => {
     const autoFocus = propsRef.current.autoFocus;
@@ -1719,7 +1344,7 @@ function useDataGrid<TData extends RowData>({
         return () => cancelAnimationFrame(rafId);
       }
     }
-  }, [store, propsRef, data, columns, getNavigableColumnIds, focusCell]);
+  }, [propsRef, data, columns, getNavigableColumnIds, focusCell]);
 
   // Forward keyboard focus entering the grid to the active cell, so the grid acts as a single tab stop
   React.useEffect(() => {
@@ -1800,13 +1425,7 @@ function useDataGrid<TData extends RowData>({
       container.removeEventListener("pointerup", onPointerUp);
       container.removeEventListener("focus", onFocus);
     };
-  }, [
-    store,
-    getNavigableColumnIds,
-    focusCell,
-    focusCellElement,
-    getFocusedCell,
-  ]);
+  }, [getNavigableColumnIds, focusCell, focusCellElement, getFocusedCell]);
 
   // Keeps focus on the grid when the focused cell unmounts during virtualization
   React.useEffect(() => {
@@ -1868,7 +1487,7 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (isEdgeChanged && edgeCell && !store.getState().dragStartCell) {
+      if (isEdgeChanged && edgeCell && !table.atoms.cellDragAnchor.get()) {
         revealCell(edgeCell, { shouldFocus: false, shouldScroll: true });
       }
     });
@@ -1906,7 +1525,7 @@ function useDataGrid<TData extends RowData>({
       editingSubscription.unsubscribe();
       searchOpenSubscription.unsubscribe();
     };
-  }, [table, store, revealCell, focusCellElement]);
+  }, [table, revealCell, focusCellElement]);
 
   // Focuses a cell requested before its row was rendered, once it mounts
   React.useLayoutEffect(() => {
@@ -1954,11 +1573,10 @@ function useDataGrid<TData extends RowData>({
 
         if (!isInsidePopover) {
           const hasSelections =
-            getHasCellRangeSelection(
-              tableRef.current?.atoms.cellSelection.get() ?? [],
-            ) || getHasRowSelection();
+            tableRef.current?.getHasCellRangeSelection() ||
+            tableRef.current?.getHasRowSelection();
           blurCell();
-          if (hasSelections) onSelectionClear();
+          if (hasSelections) tableRef.current?.clearSelection();
         }
       }
     }
@@ -1967,7 +1585,7 @@ function useDataGrid<TData extends RowData>({
     return () => {
       document.removeEventListener("mousedown", onOutsideClick);
     };
-  }, [store, blurCell, onSelectionClear]);
+  }, [blurCell]);
 
   React.useEffect(() => {
     function onSelectStart(event: Event) {
@@ -1984,8 +1602,8 @@ function useDataGrid<TData extends RowData>({
       document.body.style.userSelect = "";
     }
 
-    const onUnsubscribe = store.subscribe(() => {
-      if (store.getState().dragStartCell) {
+    const subscription = table.atoms.cellDragAnchor.subscribe(() => {
+      if (table.atoms.cellDragAnchor.get()) {
         document.addEventListener("selectstart", onSelectStart);
         document.addEventListener("contextmenu", onContextMenu);
         document.body.style.userSelect = "none";
@@ -1996,9 +1614,9 @@ function useDataGrid<TData extends RowData>({
 
     return () => {
       onCleanup();
-      onUnsubscribe();
+      subscription.unsubscribe();
     };
-  }, [store]);
+  }, [table]);
 
   React.useEffect(() => {
     let rafId: number | null = null;
@@ -2112,7 +1730,7 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      const dragStartCell = store.getState().dragStartCell;
+      const dragStartCell = tbl.atoms.cellDragAnchor.get();
       const selectionEdge = getSelectionEdgePosition(
         tbl.atoms.cellSelection.get(),
       );
@@ -2207,7 +1825,7 @@ function useDataGrid<TData extends RowData>({
 
     function onUp() {
       onAutoScrollStop();
-      store.setState("dragStartCell", null);
+      tableRef.current?.endCellDrag();
     }
 
     function onAutoScrollStart() {
@@ -2248,19 +1866,19 @@ function useDataGrid<TData extends RowData>({
       }
     }
 
-    if (store.getState().dragStartCell) onAutoScrollStart();
+    if (table.atoms.cellDragAnchor.get()) onAutoScrollStart();
 
-    const onUnsubscribe = store.subscribe(() => {
-      const isDragging = store.getState().dragStartCell !== null;
+    const subscription = table.atoms.cellDragAnchor.subscribe(() => {
+      const isDragging = table.atoms.cellDragAnchor.get() !== null;
       if (isDragging && !active) onAutoScrollStart();
       else if (!isDragging && active) onAutoScrollStop();
     });
 
     return () => {
       onAutoScrollStop();
-      onUnsubscribe();
+      subscription.unsubscribe();
     };
-  }, [store, dragDepsRef, getColumnIds]);
+  }, [table, dragDepsRef, getColumnIds]);
 
   useIsomorphicLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
@@ -2302,7 +1920,7 @@ function useDataGrid<TData extends RowData>({
       editingCell,
       readOnlyColumnIds,
       rowHeight,
-      contextMenu,
+      contextMenu: table.state.contextMenu,
       pasteDialog,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
       adjustLayout,
@@ -2324,7 +1942,7 @@ function useDataGrid<TData extends RowData>({
       editingCell,
       readOnlyColumnIds,
       rowHeight,
-      contextMenu,
+      table.state.contextMenu,
       pasteDialog,
       onRowAdd,
       adjustLayout,

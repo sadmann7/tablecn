@@ -121,9 +121,9 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
       if (event.button !== 0) {
         return;
       }
-      table.options.meta?.onColumnClick?.(column.id);
+      table.selectColumnCells(column.id);
     },
-    [table.options.meta, column.id, onPointerDown],
+    [table, column.id, onPointerDown],
   );
 
   return (

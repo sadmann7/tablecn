@@ -63,17 +63,6 @@ export interface DataGridColumnMeta {
 }
 
 export interface DataGridTableMeta {
-  dataGridRef?: React.RefObject<HTMLElement | null>;
-  focusedCell?: CellPosition | null;
-  editingCell?: CellPosition | null;
-  /** Number of selected cells, `0` when only the focused cell is active. */
-  selectedCellCount?: number;
-  getIsCellSelected?: (rowId: string, columnId: string) => boolean;
-  /** Keys of the selected data cells in display order, or the focused cell when nothing else is selected. */
-  getSelectedCellKeys?: () => string[];
-  onRowSelect?: (rowId: string, checked: boolean, shiftKey: boolean) => void;
-  onColumnClick?: (columnId: string) => void;
-  onSelectionClear?: () => void;
   onFilesUpload?: (params: {
     files: File[];
     rowId: string;
@@ -84,8 +73,6 @@ export interface DataGridTableMeta {
     rowId: string;
     columnId: string;
   }) => void | Promise<void>;
-  contextMenu?: ContextMenuState;
-  onContextMenuOpenChange?: (open: boolean) => void;
 }
 
 export interface CellPosition {

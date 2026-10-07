@@ -6,10 +6,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  ContextMenuState,
-  DataGridTableMeta,
-} from "@/lib/data-grid-types";
+import type { ContextMenuState } from "@/lib/data-grid-types";
 
 import {
   DropdownMenu,
@@ -22,8 +19,8 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridContextMenuProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
-  tableMeta: DataGridTableMeta;
   contextMenu: ContextMenuState;
+  dataGridRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function DataGridContextMenu<TData extends RowData>(
@@ -45,8 +42,8 @@ const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
 
 function ContextMenuImpl<TData extends RowData>({
   table,
-  tableMeta,
   contextMenu,
+  dataGridRef,
 }: DataGridContextMenuProps<TData>) {
   const readOnly = table.getIsReadOnly();
   const canDeleteRows = !readOnly && !!table.options.onRowsDelete;
@@ -69,9 +66,16 @@ function ContextMenuImpl<TData extends RowData>({
   );
 
   const onFinalFocus = React.useCallback(() => {
-    tableMeta.dataGridRef?.current?.focus();
+    dataGridRef.current?.focus();
     return false;
-  }, [tableMeta]);
+  }, [dataGridRef]);
+
+  const onOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (!open) table.closeContextMenu();
+    },
+    [table],
+  );
 
   const onCopy = React.useCallback(() => {
     void table.copySelectedCells();
@@ -102,10 +106,7 @@ function ContextMenuImpl<TData extends RowData>({
   }, [table]);
 
   return (
-    <DropdownMenu
-      open={contextMenu.open}
-      onOpenChange={tableMeta.onContextMenuOpenChange}
-    >
+    <DropdownMenu open={contextMenu.open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger style={triggerStyle} />
       <DropdownMenuContent
         data-grid-popover=""
