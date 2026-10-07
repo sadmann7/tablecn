@@ -388,7 +388,7 @@ export function DataGridMultiplayerDemo({
     [trackRowsDelete, sendRowsDelete],
   );
 
-  const { table, tableMeta, scrollToCell, ...dataGridProps } = useDataGrid({
+  const { table, scrollToCell, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
@@ -540,12 +540,7 @@ export function DataGridMultiplayerDemo({
         </div>
       </div>
       <DataGridPresenceProvider value={remoteCells}>
-        <DataGrid
-          {...dataGridProps}
-          table={table}
-          tableMeta={tableMeta}
-          height={height}
-        />
+        <DataGrid {...dataGridProps} table={table} height={height} />
       </DataGridPresenceProvider>
       <DataGridActionBar
         table={table}

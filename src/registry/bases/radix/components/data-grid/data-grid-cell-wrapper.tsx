@@ -15,7 +15,6 @@ interface DataGridCellWrapperProps<TData extends RowData>
 
 export function DataGridCellWrapper<TData extends RowData>({
   cell,
-  tableMeta: _tableMeta,
   rowId,
   columnId,
   isEditing,
