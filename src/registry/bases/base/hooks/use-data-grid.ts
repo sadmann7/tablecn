@@ -1390,7 +1390,13 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (isEdgeChanged && edgeCell && !table.atoms.cellDragAnchor.get()) {
+      // Row selection mirrors whole rows into the cell selection, and revealing that edge would jump to the last column
+      if (
+        isEdgeChanged &&
+        edgeCell &&
+        !table.atoms.cellDragAnchor.get() &&
+        !table.getHasRowSelection()
+      ) {
         revealCell(edgeCell, { shouldFocus: false, shouldScroll: true });
       }
     });

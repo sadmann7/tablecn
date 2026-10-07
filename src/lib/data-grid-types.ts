@@ -57,11 +57,6 @@ export interface CellUpdate {
   value: unknown;
 }
 
-export interface DataGridColumnMeta {
-  label?: string;
-  cell?: CellOpts;
-}
-
 export interface CellPosition {
   rowId: string;
   columnId: string;
@@ -96,6 +91,11 @@ export type NavigationDirection =
   | "pageright"
   | "tab"
   | "shift+tab";
+
+export interface DataGridColumnMeta {
+  label?: string;
+  cell?: CellOpts;
+}
 
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
