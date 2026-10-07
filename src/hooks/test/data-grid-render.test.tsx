@@ -264,6 +264,25 @@ describe("DataGrid rendering", () => {
     expect(document.activeElement).toBe(headerTrigger);
   });
 
+  it("exposes each column's own size bounds on its resize handle", () => {
+    renderGrid([
+      { ...testColumns[0], minSize: 80, maxSize: 300 },
+      ...testColumns.slice(1),
+    ] as ColumnDef<DataGridFeatures, TestData>[]);
+
+    const nameResizer = screen.getByRole("separator", {
+      name: "Resize Name column",
+    });
+    expect(nameResizer.getAttribute("aria-valuemin")).toBe("80");
+    expect(nameResizer.getAttribute("aria-valuemax")).toBe("300");
+
+    const trickResizer = screen.getByRole("separator", {
+      name: "Resize Trick column",
+    });
+    expect(trickResizer.getAttribute("aria-valuemin")).toBe("60");
+    expect(trickResizer.getAttribute("aria-valuemax")).toBe("800");
+  });
+
   it("moves the focused header column with Shift+Arrow", () => {
     const { container, table } = renderGrid([
       getDataGridSelectColumn(),
