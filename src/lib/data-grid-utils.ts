@@ -272,12 +272,12 @@ export function getTabTargetCell(params: {
   }
 }
 
-const CELL_CONTROL_SELECTOR = 'button, a[href], [role="checkbox"]';
-
 export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
   if (cellElement.dataset.slot === "grid-cell-wrapper") return cellElement;
   return (
-    cellElement.querySelector<HTMLElement>(CELL_CONTROL_SELECTOR) ?? cellElement
+    cellElement.querySelector<HTMLElement>(
+      'button, a[href], [role="checkbox"]',
+    ) ?? cellElement
   );
 }
 
