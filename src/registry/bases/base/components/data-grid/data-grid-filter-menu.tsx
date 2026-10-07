@@ -1,12 +1,13 @@
 "use client";
 
-import type {
-  Column,
-  ColumnFilter,
-  RowData,
-  Table,
+import {
+  type Column,
+  type ColumnFilter,
+  type ColumnFiltersState,
+  type RowData,
+  Subscribe,
+  type Table,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 
@@ -75,20 +76,31 @@ interface DataGridFilterMenuProps<
   disabled?: boolean;
 }
 
-export function DataGridFilterMenu<TData extends RowData>({
+export function DataGridFilterMenu<TData extends RowData>(
+  props: DataGridFilterMenuProps<TData>,
+) {
+  return (
+    <Subscribe source={props.table.atoms.columnFilters}>
+      {(columnFilters) => (
+        <DataGridFilterMenuImpl {...props} columnFilters={columnFilters} />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataGridFilterMenuImpl<TData extends RowData>({
   table,
+  columnFilters,
   disabled,
   className,
   ...props
-}: DataGridFilterMenuProps<TData>) {
+}: DataGridFilterMenuProps<TData> & { columnFilters: ColumnFiltersState }) {
   const dir = useDirection();
   const id = React.useId();
   const labelId = React.useId();
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
-
-  const columnFilters = table.store.state.columnFilters;
 
   const { columnLabels, columns, columnVariants } = React.useMemo(() => {
     const labels = new Map<string, string>();
