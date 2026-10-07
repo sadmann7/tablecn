@@ -74,6 +74,24 @@ function getCellWrapper(
   );
 }
 
+function getHeaderTrigger(container: HTMLElement, columnId: string) {
+  return container.querySelector<HTMLElement>(
+    `[data-slot="grid-header-cell"][data-column-id="${columnId}"] button`,
+  );
+}
+
+function pressHeaderKey(
+  target: HTMLElement | null,
+  key: string,
+  modifiers: Pick<KeyboardEventInit, "altKey" | "shiftKey">,
+) {
+  act(() => {
+    target?.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, ...modifiers }),
+    );
+  });
+}
+
 describe("DataGrid rendering", () => {
   beforeEach(() => {
     // The virtualizer only renders rows once its scroll element has a size
@@ -223,6 +241,54 @@ describe("DataGrid rendering", () => {
     ).not.toBeNull();
     expect(table.atoms.cellSelection.get()).toEqual([]);
     expect(table.atoms.rowSelection.get()).toEqual({});
+  });
+
+  it("resizes the focused header column with Alt+Arrow within its bounds", () => {
+    const { container, table } = renderGrid([
+      { ...testColumns[0], size: 100, maxSize: 115 },
+      ...testColumns.slice(1),
+    ] as ColumnDef<DataGridFeatures, TestData>[]);
+    const headerTrigger = getHeaderTrigger(container, "name");
+
+    act(() => {
+      headerTrigger?.focus();
+    });
+    pressHeaderKey(headerTrigger, "ArrowRight", { altKey: true });
+    expect(table.getColumn("name")?.getSize()).toBe(110);
+
+    pressHeaderKey(headerTrigger, "ArrowRight", { altKey: true });
+    expect(table.getColumn("name")?.getSize()).toBe(115);
+
+    pressHeaderKey(headerTrigger, "ArrowLeft", { altKey: true });
+    expect(table.getColumn("name")?.getSize()).toBe(105);
+    expect(document.activeElement).toBe(headerTrigger);
+  });
+
+  it("moves the focused header column with Shift+Arrow", () => {
+    const { container, table } = renderGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
+    const getOrder = () =>
+      table.getVisibleLeafColumns().map((column) => column.id);
+
+    act(() => {
+      getHeaderTrigger(container, "name")?.focus();
+    });
+    pressHeaderKey(getHeaderTrigger(container, "name"), "ArrowLeft", {
+      shiftKey: true,
+    });
+    expect(getOrder()).toEqual(["select", "name", "trick"]);
+
+    pressHeaderKey(getHeaderTrigger(container, "name"), "ArrowRight", {
+      shiftKey: true,
+    });
+    expect(getOrder()).toEqual(["select", "trick", "name"]);
+
+    pressHeaderKey(getHeaderTrigger(container, "name"), "ArrowRight", {
+      shiftKey: true,
+    });
+    expect(getOrder()).toEqual(["select", "trick", "name"]);
   });
 
   it("selects a range of rows with Shift+click on the select checkbox", () => {

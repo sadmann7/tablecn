@@ -39,6 +39,7 @@ const OVERSCAN = 6;
 const VIEWPORT_OFFSET = 1;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
+const COLUMN_RESIZE_STEP = 10;
 const SEARCH_SHORTCUT_KEY = "f";
 const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
 const AUTO_SCROLL_EDGE_ZONE = 50;
@@ -74,6 +75,14 @@ function selectGridLayoutState(state: TableState<DataGridFeatures>) {
 
 function getIsDataColumn(columnId: string) {
   return !NON_NAVIGABLE_COLUMN_IDS.has(columnId);
+}
+
+function swapItems(items: string[], first: string, second: string) {
+  return items.map((item) => {
+    if (item === first) return second;
+    if (item === second) return first;
+    return item;
+  });
 }
 
 function getActiveCellRange(ranges: CellSelectionState) {
@@ -757,7 +766,10 @@ function useDataGrid<TData extends RowData>({
   const onColumnHeaderKeyDown = React.useCallback(
     (event: KeyboardEvent, columnId: string) => {
       const { key, shiftKey, ctrlKey, metaKey, altKey } = event;
-      if (ctrlKey || metaKey || altKey) return false;
+      const isHorizontalArrow = key === "ArrowLeft" || key === "ArrowRight";
+      if (ctrlKey || metaKey || (altKey && (shiftKey || !isHorizontalArrow))) {
+        return false;
+      }
 
       const headerColumnIds = getColumnIds().filter((id) =>
         getColumnHeaderTrigger(id),
@@ -772,11 +784,77 @@ function useDataGrid<TData extends RowData>({
         if (targetColumnId) focusColumnHeader(targetColumnId);
       }
 
+      function resizeColumnBy(delta: number) {
+        const currentTable = tableRef.current;
+        const column = currentTable?.getColumn(columnId);
+        if (!currentTable || !column?.getCanResize()) return;
+
+        const defaultColumnDef = currentTable.getDefaultColumnDef();
+        const minSize =
+          column.columnDef.minSize ?? defaultColumnDef.minSize ?? 0;
+        const maxSize =
+          column.columnDef.maxSize ??
+          defaultColumnDef.maxSize ??
+          Number.POSITIVE_INFINITY;
+        const size = Math.min(
+          Math.max(column.getSize() + delta, minSize),
+          maxSize,
+        );
+        currentTable.setColumnSizing((prev) => ({ ...prev, [columnId]: size }));
+      }
+
+      function moveColumnBy(step: number) {
+        const currentTable = tableRef.current;
+        const column = currentTable?.getColumn(columnId);
+        if (!currentTable || !column) return;
+
+        const pinnedPosition = column.getIsPinned();
+        const regionColumnIds = currentTable
+          .getPinnedVisibleLeafColumns(pinnedPosition || "center")
+          .map((regionColumn) => regionColumn.id)
+          .filter(getIsDataColumn);
+        const targetColumnId =
+          regionColumnIds[regionColumnIds.indexOf(columnId) + step];
+        if (!targetColumnId) return;
+
+        if (pinnedPosition) {
+          currentTable.setColumnPinning((prev) => ({
+            ...prev,
+            [pinnedPosition]: swapItems(
+              prev[pinnedPosition] ?? [],
+              columnId,
+              targetColumnId,
+            ),
+          }));
+          return;
+        }
+
+        const leafColumnIds = currentTable
+          .getAllLeafColumns()
+          .map((leafColumn) => leafColumn.id);
+        currentTable.setColumnOrder((prev) =>
+          swapItems(
+            [
+              ...prev.filter((id) => leafColumnIds.includes(id)),
+              ...leafColumnIds.filter((id) => !prev.includes(id)),
+            ],
+            columnId,
+            targetColumnId,
+          ),
+        );
+      }
+
       switch (key) {
         case "ArrowLeft":
         case "ArrowRight": {
           const isNext = (key === "ArrowRight") !== isRtl;
-          focusHeaderAt(headerIndex + (isNext ? 1 : -1));
+          if (altKey) {
+            resizeColumnBy(isNext ? COLUMN_RESIZE_STEP : -COLUMN_RESIZE_STEP);
+          } else if (shiftKey) {
+            moveColumnBy(isNext ? 1 : -1);
+          } else {
+            focusHeaderAt(headerIndex + (isNext ? 1 : -1));
+          }
           break;
         }
         case "Home":
