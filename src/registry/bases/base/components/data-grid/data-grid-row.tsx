@@ -6,8 +6,6 @@ import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import {
   type Cell,
   type CellSelectionBounds,
-  type ColumnPinningState,
-  type ColumnVisibilityState,
   type Row,
   type RowData,
   Subscribe,
@@ -31,81 +29,42 @@ import { DataGridCell } from "@/registry/bases/base/components/data-grid/data-gr
 
 const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
 
+interface DataGridRowContextValue {
+  dir: Direction;
+  stretchColumns: boolean;
+  adjustLayout: boolean;
+  readOnlyColumnIds: Set<string>;
+  rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
+  measureElement: (node: Element | null) => void;
+}
+
+export const DataGridRowContext =
+  React.createContext<DataGridRowContextValue | null>(null);
+
+function useDataGridRowContext() {
+  const context = React.use(DataGridRowContext);
+  if (!context) {
+    throw new Error("DataGridRow must be rendered within DataGrid");
+  }
+  return context;
+}
+
 interface DataGridRowProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
   virtualItem: VirtualItem;
-  measureElement: (node: Element | null) => void;
-  rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
-  rowHeight: RowHeightValue;
-  columnVisibility: ColumnVisibilityState;
-  columnPinning: ColumnPinningState;
-  dir: Direction;
-  readOnlyColumnIds: Set<string>;
-  stretchColumns: boolean;
-  adjustLayout: boolean;
 }
 
-export const DataGridRow = React.memo(DataGridRowImpl, (prev, next) => {
-  // Re-render if row identity changed
-  if (prev.row.id !== next.row.id) {
-    return false;
-  }
-
-  // Re-render if the row moved, since the row map and aria-rowindex are positional
-  if (prev.virtualItem.index !== next.virtualItem.index) {
-    return false;
-  }
-
-  // Re-render if row data (original) reference changed
-  if (prev.row.original !== next.row.original) {
-    return false;
-  }
-
-  // Re-render if virtual position changed (handles transform updates)
-  if (prev.virtualItem.start !== next.virtualItem.start) {
-    return false;
-  }
-
-  // Re-render if column visibility changed
-  if (prev.columnVisibility !== next.columnVisibility) {
-    return false;
-  }
-
-  // Re-render if row height changed
-  if (prev.rowHeight !== next.rowHeight) {
-    return false;
-  }
-
-  // Re-render if column pinning state changed
-  if (prev.columnPinning !== next.columnPinning) {
-    return false;
-  }
-
-  // Re-render if table or column editing permissions changed
-  if (prev.readOnlyColumnIds !== next.readOnlyColumnIds) {
-    return false;
-  }
-
-  // Re-render if direction changed
-  if (prev.dir !== next.dir) {
-    return false;
-  }
-
-  // Re-render if adjustLayout state changed
-  if (prev.adjustLayout !== next.adjustLayout) {
-    return false;
-  }
-
-  // Re-render if stretchColumns changed
-  if (prev.stretchColumns !== next.stretchColumns) {
-    return false;
-  }
-
-  // Skip re-render - props are equal
-  return true;
-}) as typeof DataGridRowImpl;
+// Grid layout comes from context and table state comes from the row's subscription
+export const DataGridRow = React.memo(
+  DataGridRowImpl,
+  (prev, next) =>
+    prev.row.id === next.row.id &&
+    prev.row.original === next.row.original &&
+    prev.virtualItem.index === next.virtualItem.index &&
+    prev.virtualItem.start === next.virtualItem.start,
+) as typeof DataGridRowImpl;
 
 function DataGridRowImpl<TData extends RowData>({
   row,
@@ -113,13 +72,12 @@ function DataGridRowImpl<TData extends RowData>({
   ...props
 }: DataGridRowProps<TData>) {
   const table = row.table;
-  const rowId = row.id;
   const rowIndex = virtualItem.index;
 
   return (
     <Subscribe
       source={table.store}
-      selector={(state) => selectRowState(table, state, rowId, rowIndex)}
+      selector={(state) => selectRowState(table, state, row, rowIndex)}
     >
       {(rowState) => (
         <DataGridRowContent
@@ -136,30 +94,30 @@ function DataGridRowImpl<TData extends RowData>({
 interface DataGridRowContentProps<
   TData extends RowData,
 > extends DataGridRowProps<TData> {
-  rowState: RowState;
+  rowState: RowState<TData>;
 }
 
 function DataGridRowContent<TData extends RowData>({
   row,
   virtualItem,
-  measureElement,
-  rowMapRef,
-  rowHeight,
-  columnVisibility,
-  columnPinning,
   rowState,
-  dir,
-  readOnlyColumnIds,
-  stretchColumns,
-  adjustLayout,
   className,
   style,
   ref,
   ...props
 }: DataGridRowContentProps<TData>) {
-  const virtualRowIndex = virtualItem.index;
-  const rowId = row.id;
   const {
+    dir,
+    stretchColumns,
+    adjustLayout,
+    readOnlyColumnIds,
+    rowMapRef,
+    measureElement,
+  } = useDataGridRowContext();
+  const virtualRowIndex = virtualItem.index;
+  const {
+    visibleCells,
+    rowHeight,
     focusedColumnId,
     editingColumnId,
     cellSelectionKey,
@@ -183,13 +141,6 @@ function DataGridRowContent<TData extends RowData>({
   );
 
   const rowRef = useMergedRefs(ref, onRowChange);
-
-  // Memoize visible cells to avoid recreating cell array on every render
-  // Though TanStack returns new Cell wrappers, memoizing the array helps React's reconciliation
-  const visibleCells = React.useMemo(
-    () => row.getVisibleCells(),
-    [row, columnVisibility, columnPinning],
-  );
 
   return (
     <div
@@ -258,16 +209,12 @@ function DataGridRowContent<TData extends RowData>({
             {isUtilityCell ? (
               <DataGridUtilityCell
                 cell={cell}
-                rowId={rowId}
-                columnId={columnId}
                 isFocused={isCellFocused}
                 isRowSelected={isRowSelected}
               />
             ) : (
               <DataGridCell
                 cell={cell}
-                rowId={rowId}
-                columnId={columnId}
                 rowHeight={rowHeight}
                 isFocused={isCellFocused}
                 isEditing={isCellEditing}
@@ -286,24 +233,20 @@ function DataGridRowContent<TData extends RowData>({
 
 interface DataGridUtilityCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
-  rowId: string;
-  columnId: string;
   isFocused: boolean;
   isRowSelected: boolean;
 }
 
 function DataGridUtilityCell<TData extends RowData>({
   cell,
-  rowId,
-  columnId,
   isFocused,
   isRowSelected,
 }: DataGridUtilityCellProps<TData>) {
   return (
     <div
       data-slot="grid-utility-cell"
-      data-row-id={rowId}
-      data-column-id={columnId}
+      data-row-id={cell.row.id}
+      data-column-id={cell.column.id}
       data-focused={isFocused ? "" : undefined}
       tabIndex={-1}
       className={cn("size-full px-3 py-1.5 outline-none", {
@@ -316,7 +259,9 @@ function DataGridUtilityCell<TData extends RowData>({
   );
 }
 
-interface RowState {
+interface RowState<TData extends RowData> {
+  visibleCells: Array<Cell<DataGridFeatures, TData>>;
+  rowHeight: RowHeightValue;
   focusedColumnId: string | null;
   editingColumnId: string | null;
   /** Selected column spans for this row, `""` when none of its cells are selected. */
@@ -330,9 +275,10 @@ interface RowState {
 function selectRowState<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
   state: TableState<DataGridFeatures>,
-  rowId: string,
+  row: Row<DataGridFeatures, TData>,
   rowIndex: number,
-): RowState {
+): RowState<TData> {
+  const rowId = row.id;
   const activeRange = state.cellSelection[state.cellSelection.length - 1];
   const editingCell = state.editingCell;
   const activeSearchMatch = table.getActiveSearchMatch();
@@ -342,6 +288,8 @@ function selectRowState<TData extends RowData>(
       : EMPTY_CELL_SELECTION_BOUNDS;
 
   return {
+    visibleCells: row.getVisibleCells(),
+    rowHeight: state.rowHeight,
     focusedColumnId:
       activeRange?.anchorRowId === rowId ? activeRange.anchorColumnId : null,
     editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
