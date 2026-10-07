@@ -1,4 +1,11 @@
-import type { Column, RowData, Table } from "@tanstack/react-table";
+import type {
+  Column,
+  ColumnOrderState,
+  ColumnPinningState,
+  ColumnVisibilityState,
+  RowData,
+  Table,
+} from "@tanstack/react-table";
 import type * as React from "react";
 
 import {
@@ -187,6 +194,40 @@ export function getColumnPinningStyle<TData extends RowData>(params: {
     width: column.getSize(),
     zIndex: isPinned ? 1 : undefined,
   };
+}
+
+export function getVisibleColumnIds(params: {
+  columnIds: string[];
+  columnVisibility?: ColumnVisibilityState;
+  columnPinning?: Partial<ColumnPinningState>;
+  columnOrder?: ColumnOrderState;
+}): string[] {
+  const {
+    columnIds,
+    columnVisibility = {},
+    columnPinning = {},
+    columnOrder = [],
+  } = params;
+
+  const knownIds = new Set(columnIds);
+  const orderedIds = new Set(columnOrder.filter((id) => knownIds.has(id)));
+  for (const id of columnIds) orderedIds.add(id);
+
+  const visibleIds = [...orderedIds].filter(
+    (id) => columnVisibility[id] !== false,
+  );
+  const visibleIdSet = new Set(visibleIds);
+  const startIds = (columnPinning.start ?? []).filter((id) =>
+    visibleIdSet.has(id),
+  );
+  const endIds = (columnPinning.end ?? []).filter((id) => visibleIdSet.has(id));
+  const pinnedIds = new Set([...startIds, ...endIds]);
+
+  return [
+    ...startIds,
+    ...visibleIds.filter((id) => !pinnedIds.has(id)),
+    ...endIds,
+  ];
 }
 
 export function getTabTargetCell(params: {

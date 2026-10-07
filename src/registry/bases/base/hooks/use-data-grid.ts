@@ -1,6 +1,9 @@
 import {
   type ColumnDef,
   type ColumnFiltersState,
+  type ColumnOrderState,
+  type ColumnPinningState,
+  type ColumnVisibilityState,
   type Row,
   type RowData,
   type RowSelectionState,
@@ -44,6 +47,7 @@ import {
   getRowHeightValue,
   getScrollDirection,
   getTabTargetCell,
+  getVisibleColumnIds,
   matchSelectOption,
   parseCellKey,
   parseTsv,
@@ -100,6 +104,9 @@ function setRowSelected(
 interface DataGridState {
   sorting: SortingState;
   columnFilters: ColumnFiltersState;
+  columnVisibility: ColumnVisibilityState;
+  columnPinning: ColumnPinningState;
+  columnOrder: ColumnOrderState;
   rowHeight: RowHeightValue;
   rowSelection: RowSelectionState;
   selectionState: SelectionState;
@@ -206,6 +213,12 @@ function useDataGrid<TData extends RowData>({
     return {
       sorting: initialState?.sorting ?? [],
       columnFilters: initialState?.columnFilters ?? [],
+      columnVisibility: initialState?.columnVisibility ?? {},
+      columnPinning: {
+        start: initialState?.columnPinning?.start ?? [],
+        end: initialState?.columnPinning?.end ?? [],
+      },
+      columnOrder: initialState?.columnOrder ?? [],
       rowHeight: rowHeightProp,
       rowSelection: initialState?.rowSelection ?? {},
       selectionState: {
@@ -297,6 +310,16 @@ function useDataGrid<TData extends RowData>({
   const searchOpen = useStore(store, (state) => state.searchOpen);
   const sorting = useStore(store, (state) => state.sorting);
   const columnFilters = useStore(store, (state) => state.columnFilters);
+  const storeColumnVisibility = useStore(
+    store,
+    (state) => state.columnVisibility,
+  );
+  const storeColumnPinning = useStore(store, (state) => state.columnPinning);
+  const storeColumnOrder = useStore(store, (state) => state.columnOrder);
+  const columnVisibility =
+    props.state?.columnVisibility ?? storeColumnVisibility;
+  const columnPinning = props.state?.columnPinning ?? storeColumnPinning;
+  const columnOrder = props.state?.columnOrder ?? storeColumnOrder;
   const rowSelection = useStore(store, (state) => state.rowSelection);
   const rowHeight = useStore(store, (state) => state.rowHeight);
   const contextMenu = useStore(store, (state) => state.contextMenu);
@@ -373,14 +396,19 @@ function useDataGrid<TData extends RowData>({
   );
 
   const columnIds = React.useMemo(() => {
-    return columns
-      .map((c) => {
-        if (c.id) return c.id;
-        if ("accessorKey" in c) return c.accessorKey as string;
-        return undefined;
-      })
-      .filter((id): id is string => Boolean(id));
-  }, [columns]);
+    return getVisibleColumnIds({
+      columnIds: columns
+        .map((c) => {
+          if (c.id) return c.id;
+          if ("accessorKey" in c) return c.accessorKey as string;
+          return undefined;
+        })
+        .filter((id): id is string => Boolean(id)),
+      columnVisibility,
+      columnPinning,
+      columnOrder,
+    });
+  }, [columns, columnVisibility, columnPinning, columnOrder]);
 
   const navigableColumnIds = React.useMemo(() => {
     return columnIds.filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
@@ -1992,6 +2020,65 @@ function useDataGrid<TData extends RowData>({
     [store, propsRef],
   );
 
+  const onColumnVisibilityChange = React.useCallback(
+    (updater: Updater<ColumnVisibilityState>) => {
+      const currentState = store.getState();
+      const newColumnVisibility =
+        typeof updater === "function"
+          ? updater(
+              propsRef.current.state?.columnVisibility ??
+                currentState.columnVisibility,
+            )
+          : updater;
+
+      store.batch(() => {
+        store.setState("columnVisibility", newColumnVisibility);
+
+        const focusedColumnId = currentState.focusedCell?.columnId;
+        if (focusedColumnId && newColumnVisibility[focusedColumnId] === false) {
+          store.setState("focusedCell", null);
+          store.setState("editingCell", null);
+        }
+      });
+
+      propsRef.current.onColumnVisibilityChange?.(newColumnVisibility);
+    },
+    [store, propsRef],
+  );
+
+  const onColumnPinningChange = React.useCallback(
+    (updater: Updater<ColumnPinningState>) => {
+      const currentState = store.getState();
+      const newColumnPinning =
+        typeof updater === "function"
+          ? updater(
+              propsRef.current.state?.columnPinning ??
+                currentState.columnPinning,
+            )
+          : updater;
+
+      store.setState("columnPinning", newColumnPinning);
+      propsRef.current.onColumnPinningChange?.(newColumnPinning);
+    },
+    [store, propsRef],
+  );
+
+  const onColumnOrderChange = React.useCallback(
+    (updater: Updater<ColumnOrderState>) => {
+      const currentState = store.getState();
+      const newColumnOrder =
+        typeof updater === "function"
+          ? updater(
+              propsRef.current.state?.columnOrder ?? currentState.columnOrder,
+            )
+          : updater;
+
+      store.setState("columnOrder", newColumnOrder);
+      propsRef.current.onColumnOrderChange?.(newColumnOrder);
+    },
+    [store, propsRef],
+  );
+
   const onColumnFiltersChange = React.useCallback(
     (updater: Updater<ColumnFiltersState>) => {
       const currentState = store.getState();
@@ -2296,9 +2383,20 @@ function useDataGrid<TData extends RowData>({
       ...propsRef.current.state,
       sorting,
       columnFilters,
+      columnVisibility,
+      columnPinning,
+      columnOrder,
       rowSelection,
     }),
-    [propsRef, sorting, columnFilters, rowSelection],
+    [
+      propsRef,
+      sorting,
+      columnFilters,
+      columnVisibility,
+      columnPinning,
+      columnOrder,
+      rowSelection,
+    ],
   );
 
   const tableOptions = React.useMemo<
@@ -2315,6 +2413,9 @@ function useDataGrid<TData extends RowData>({
       onRowSelectionChange,
       onSortingChange,
       onColumnFiltersChange,
+      onColumnVisibilityChange,
+      onColumnPinningChange,
+      onColumnOrderChange,
       columnResizeMode: "onChange",
       columnResizeDirection: dir,
       meta: tableMeta,
@@ -2329,6 +2430,9 @@ function useDataGrid<TData extends RowData>({
     onRowSelectionChange,
     onSortingChange,
     onColumnFiltersChange,
+    onColumnVisibilityChange,
+    onColumnPinningChange,
+    onColumnOrderChange,
     tableMeta,
   ]);
 
@@ -2401,16 +2505,7 @@ function useDataGrid<TData extends RowData>({
 
       focusGuardRef.current = true;
 
-      const navigableIds = propsRef.current.columns
-        .map((c) => {
-          if (c.id) return c.id;
-          if ("accessorKey" in c) return c.accessorKey as string;
-          return undefined;
-        })
-        .filter((id): id is string => Boolean(id))
-        .filter((c) => !NON_NAVIGABLE_COLUMN_IDS.has(c));
-
-      const targetColumnId = columnId ?? navigableIds[0];
+      const targetColumnId = columnId ?? navigableColumnIds[0];
 
       if (!targetColumnId) {
         releaseFocusGuard(true);
@@ -2496,7 +2591,7 @@ function useDataGrid<TData extends RowData>({
 
       await onScrollAndFocus(SCROLL_SYNC_RETRY_COUNT);
     },
-    [rowVirtualizer, propsRef, store, releaseFocusGuard],
+    [rowVirtualizer, propsRef, store, releaseFocusGuard, navigableColumnIds],
   );
 
   const onRowAdd = React.useCallback(

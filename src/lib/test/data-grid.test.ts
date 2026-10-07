@@ -1,6 +1,52 @@
 import { describe, expect, it } from "vitest";
 
-import { getTabTargetCell, parseTsv } from "@/lib/data-grid-utils";
+import {
+  getTabTargetCell,
+  getVisibleColumnIds,
+  parseTsv,
+} from "@/lib/data-grid-utils";
+
+describe("getVisibleColumnIds", () => {
+  const columnIds = ["select", "name", "age", "email", "actions"];
+
+  it("keeps definition order by default", () => {
+    expect(getVisibleColumnIds({ columnIds })).toEqual(columnIds);
+  });
+
+  it("drops hidden columns", () => {
+    expect(
+      getVisibleColumnIds({ columnIds, columnVisibility: { age: false } }),
+    ).toEqual(["select", "name", "email", "actions"]);
+  });
+
+  it("applies column order and appends unordered columns", () => {
+    expect(
+      getVisibleColumnIds({
+        columnIds,
+        columnOrder: ["email", "missing", "name"],
+      }),
+    ).toEqual(["email", "name", "select", "age", "actions"]);
+  });
+
+  it("moves pinned columns to the start and end", () => {
+    expect(
+      getVisibleColumnIds({
+        columnIds,
+        columnPinning: { start: ["select", "email"], end: ["name"] },
+      }),
+    ).toEqual(["select", "email", "age", "actions", "name"]);
+  });
+
+  it("ignores hidden pinned columns", () => {
+    expect(
+      getVisibleColumnIds({
+        columnIds,
+        columnVisibility: { email: false },
+        columnPinning: { start: ["email"], end: [] },
+      }),
+    ).toEqual(["select", "name", "age", "actions"]);
+  });
+});
 
 describe("getTabTargetCell", () => {
   const columnIds = ["name", "age", "email"];

@@ -156,6 +156,13 @@ export function DataGrid<TData extends RowData>({
                     isLastColumn,
                   });
 
+                const cornerClassName = cn(
+                  rowIndex === 0 && {
+                    "rounded-ss-[calc(var(--radius-md)-1px)]": colIndex === 0,
+                    "rounded-se-[calc(var(--radius-md)-1px)]": isLastColumn,
+                  },
+                );
+
                 return (
                   <div
                     key={header.id}
@@ -187,14 +194,23 @@ export function DataGrid<TData extends RowData>({
                   >
                     {header.isPlaceholder ? null : typeof header.column
                         .columnDef.header === "function" ? (
-                      <div className="size-full px-3 py-1.5">
+                      <div
+                        className={cn(
+                          "size-full px-3 py-1.5 has-[:focus-visible]:ring-1 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-inset",
+                          cornerClassName,
+                        )}
+                      >
                         {flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
                       </div>
                     ) : (
-                      <DataGridColumnHeader header={header} table={table} />
+                      <DataGridColumnHeader
+                        header={header}
+                        table={table}
+                        className={cornerClassName}
+                      />
                     )}
                   </div>
                 );
