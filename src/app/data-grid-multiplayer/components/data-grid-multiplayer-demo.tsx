@@ -388,7 +388,7 @@ export function DataGridMultiplayerDemo({
     [trackRowsDelete, sendRowsDelete],
   );
 
-  const { table, tableMeta, ...dataGridProps } = useDataGrid({
+  const { table, tableMeta, scrollToCell, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
@@ -486,9 +486,9 @@ export function DataGridMultiplayerDemo({
     ) => {
       const { rowId, columnId } = user.activeCell;
       if (!rowId || !columnId) return;
-      tableMeta.scrollToCell?.(rowId, columnId);
+      scrollToCell(rowId, columnId);
     },
-    [tableMeta],
+    [scrollToCell],
   );
 
   const getCellLabel = React.useCallback(

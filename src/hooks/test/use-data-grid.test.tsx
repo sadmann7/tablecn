@@ -75,6 +75,50 @@ function startEditing(
   cellsByColumnId?.[columnId]?.startEditing();
 }
 
+type GridBodyEventType =
+  | "onClick"
+  | "onDoubleClick"
+  | "onMouseDown"
+  | "onMouseOver"
+  | "onMouseUp"
+  | "onContextMenu";
+
+function fireCellEvent(
+  result: { current: ReturnType<typeof useDataGrid<TestData>> },
+  type: GridBodyEventType,
+  rowId: string,
+  columnId: string,
+  init: object = {},
+) {
+  const { dataGridRef, gridBodyProps } = result.current;
+  const previousContainer = dataGridRef.current;
+  const container = document.createElement("div");
+  const cellElement = document.createElement("div");
+  cellElement.dataset.slot = "grid-cell-wrapper";
+  cellElement.dataset.rowId = rowId;
+  cellElement.dataset.columnId = columnId;
+  container.append(cellElement);
+  dataGridRef.current = container;
+
+  try {
+    gridBodyProps[type]({
+      target: cellElement,
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      defaultPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      ...init,
+    } as unknown as React.MouseEvent<HTMLElement>);
+  } finally {
+    dataGridRef.current = previousContainer;
+  }
+}
+
 function createWrapper() {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
@@ -99,8 +143,16 @@ describe("useDataGrid", () => {
     });
 
     // Run animation frames immediately so effects finish inside `act`.
+    // Frames requested from inside a frame are dropped so self-scheduling loops terminate.
+    let isRunningFrame = false;
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
-      cb(0);
+      if (isRunningFrame) return 0;
+      isRunningFrame = true;
+      try {
+        cb(0);
+      } finally {
+        isRunningFrame = false;
+      }
       return 0;
     });
   });
@@ -171,8 +223,8 @@ describe("useDataGrid", () => {
       );
 
       const meta = result.current.tableMeta;
-      expect(meta.onCellClick).toBeDefined();
-      expect(meta.onCellDoubleClick).toBeDefined();
+      expect(result.current.gridBodyProps.onClick).toBeDefined();
+      expect(result.current.gridBodyProps.onDoubleClick).toBeDefined();
       expect(meta.onSelectionClear).toBeDefined();
       expect(meta.getIsCellSelected).toBeDefined();
     });
@@ -190,7 +242,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       expect(result.current.focusedCell).toEqual({
@@ -210,7 +262,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       expect(result.current.focusedCell).toEqual({
@@ -219,7 +271,7 @@ describe("useDataGrid", () => {
       });
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick");
+        fireCellEvent(result, "onClick", "1", "trick");
       });
 
       expect(result.current.focusedCell).toEqual({
@@ -242,12 +294,12 @@ describe("useDataGrid", () => {
 
       // First click to focus
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Double click to edit
       act(() => {
-        result.current.tableMeta.onCellDoubleClick?.("0", "name");
+        fireCellEvent(result, "onDoubleClick", "0", "name");
       });
 
       expect(result.current.editingCell).toEqual({
@@ -567,7 +619,7 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       await act(async () => {
@@ -601,7 +653,7 @@ describe("useDataGrid", () => {
 
       // Click to focus (which doesn't select)
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Single click focuses but doesn't select
@@ -622,7 +674,7 @@ describe("useDataGrid", () => {
 
       // Trigger mouse down to start selection
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -645,10 +697,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick", {
+        fireCellEvent(result, "onClick", "1", "trick", {
           shiftKey: true,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -674,10 +726,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
       act(() => {
-        result.current.tableMeta.onCellClick?.("2", "score", {
+        fireCellEvent(result, "onClick", "2", "score", {
           metaKey: true,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -693,7 +745,7 @@ describe("useDataGrid", () => {
       ]);
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name", {
+        fireCellEvent(result, "onClick", "0", "name", {
           ctrlKey: true,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -711,16 +763,16 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "trick", {
+        fireCellEvent(result, "onMouseDown", "0", "trick", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("2", "score");
+        fireCellEvent(result, "onMouseOver", "2", "score");
       });
       act(() => {
-        result.current.tableMeta.onCellMouseUp?.();
+        fireCellEvent(result, "onMouseUp", "0", "name");
       });
 
       expect(result.current.focusedCell).toEqual({
@@ -733,7 +785,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("2", "name");
+        fireCellEvent(result, "onMouseOver", "2", "name");
       });
 
       expect(result.current.tableMeta.selectedCellCount).toBe(6);
@@ -746,10 +798,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick", {
+        fireCellEvent(result, "onClick", "1", "trick", {
           shiftKey: true,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -782,7 +834,7 @@ describe("useDataGrid", () => {
 
       // Focus a cell first
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Copy
@@ -806,7 +858,7 @@ describe("useDataGrid", () => {
 
       // Focus a cell first
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Try to cut
@@ -834,7 +886,7 @@ describe("useDataGrid", () => {
 
       // Focus a cell first
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Try to paste
@@ -1100,7 +1152,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "trick");
+        fireCellEvent(result, "onClick", "0", "trick");
       });
 
       await act(async () => {
@@ -1394,7 +1446,7 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
       });
 
       expect(result.current.contextMenu.open).toBe(true);
@@ -1421,7 +1473,7 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       await act(async () => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
         await Promise.resolve();
       });
 
@@ -1797,7 +1849,7 @@ describe("useDataGrid", () => {
 
       // Focus a number cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "score");
+        fireCellEvent(result, "onClick", "0", "score");
       });
 
       // Paste
@@ -1826,7 +1878,7 @@ describe("useDataGrid", () => {
 
       // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Paste will be called internally and should work
@@ -1852,7 +1904,7 @@ describe("useDataGrid", () => {
 
       // Focus a number cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "score");
+        fireCellEvent(result, "onClick", "0", "score");
       });
 
       // Paste invalid number
@@ -1880,7 +1932,7 @@ describe("useDataGrid", () => {
 
       // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Paste
@@ -1916,7 +1968,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       await act(async () => {
@@ -1961,7 +2013,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       await act(async () => {
@@ -2003,7 +2055,7 @@ describe("useDataGrid", () => {
 
       // Focus and select a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Cut
@@ -2028,13 +2080,13 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("0", "trick");
+        fireCellEvent(result, "onMouseOver", "0", "trick");
       });
 
       await act(async () => {
@@ -2045,7 +2097,7 @@ describe("useDataGrid", () => {
       mockClipboard.readText.mockResolvedValue("Tony Hawk\t900");
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick");
+        fireCellEvent(result, "onClick", "1", "trick");
       });
 
       await act(async () => {
@@ -2068,13 +2120,13 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "name");
+        fireCellEvent(result, "onMouseOver", "1", "name");
       });
 
       await act(async () => {
@@ -2087,7 +2139,7 @@ describe("useDataGrid", () => {
       mockClipboard.readText.mockResolvedValue("Tony Hawk\nRodney Mullen");
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "name");
+        fireCellEvent(result, "onClick", "1", "name");
       });
 
       await act(async () => {
@@ -2115,12 +2167,12 @@ describe("useDataGrid", () => {
 
       // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Start selection by mouse down
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -2154,7 +2206,7 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name", mockEvent);
+        fireCellEvent(result, "onClick", "0", "name", mockEvent);
       });
 
       expect(result.current.focusedCell).toEqual({
@@ -2175,7 +2227,7 @@ describe("useDataGrid", () => {
 
       // First click to set anchor
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Shift+Click to select range
@@ -2187,7 +2239,7 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick", mockEvent);
+        fireCellEvent(result, "onClick", "1", "trick", mockEvent);
       });
 
       expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
@@ -2207,7 +2259,7 @@ describe("useDataGrid", () => {
 
       // Mouse down to start selection
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
           ctrlKey: false,
@@ -2218,12 +2270,12 @@ describe("useDataGrid", () => {
 
       // Mouse enter to extend selection
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "score");
+        fireCellEvent(result, "onMouseOver", "1", "score");
       });
 
       // Mouse up to end selection
       act(() => {
-        result.current.tableMeta.onCellMouseUp?.();
+        fireCellEvent(result, "onMouseUp", "0", "name");
       });
 
       expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
@@ -2263,7 +2315,7 @@ describe("useDataGrid", () => {
       // onAutoScrollStart, which synchronously registers the document mouseup
       // listener before queuing the deferred RAF.
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
           ctrlKey: false,
@@ -2274,7 +2326,7 @@ describe("useDataGrid", () => {
 
       // Extend the selection to a multi-cell range.
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "score");
+        fireCellEvent(result, "onMouseOver", "1", "score");
       });
 
       // (0, "name") is now inside the committed selection range.
@@ -2292,7 +2344,7 @@ describe("useDataGrid", () => {
       // A subsequent onCellMouseEnter must be a no-op because the drag has
       // ended — so row 2 should never enter the selected set.
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("2", "score");
+        fireCellEvent(result, "onMouseOver", "2", "score");
       });
 
       expect(result.current.tableMeta.getIsCellSelected?.("2", "score")).toBe(
@@ -2350,7 +2402,7 @@ describe("useDataGrid", () => {
       const gridElement = container.firstElementChild as HTMLElement;
 
       act(() => {
-        grid?.tableMeta.onCellClick?.("0", "name");
+        if (grid) fireCellEvent({ current: grid }, "onClick", "0", "name");
       });
 
       act(() => {
@@ -2457,7 +2509,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "select");
+        fireCellEvent(result, "onClick", "1", "select");
       });
       act(() => {
         result.current.tableMeta.onRowSelect?.("2", true, false);
@@ -2488,7 +2540,7 @@ describe("useDataGrid", () => {
 
       // Select a cell first
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -2520,11 +2572,7 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellClick?.(
-          "0",
-          "name",
-          mockRightClickEvent,
-        );
+        fireCellEvent(result, "onClick", "0", "name", mockRightClickEvent);
       });
 
       // Right-click shouldn't change focus
@@ -2889,7 +2937,7 @@ describe("useDataGrid", () => {
 
       // First click to focus
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       expect(result.current.focusedCell).toEqual({
@@ -2900,7 +2948,7 @@ describe("useDataGrid", () => {
 
       // Second click on same cell to edit
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       expect(result.current.editingCell).toEqual({
@@ -2983,7 +3031,7 @@ describe("useDataGrid", () => {
       const { result } = renderGrid();
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
         startEditing(result.current.table, "0", "name");
       });
       expect(result.current.editingCell).not.toBeNull();
@@ -3276,7 +3324,7 @@ describe("useDataGrid", () => {
 
       // Right-click on a cell
       act(() => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
       });
 
       expect(result.current.focusedCell).toEqual({
@@ -3301,7 +3349,7 @@ describe("useDataGrid", () => {
 
       // Select multiple cells first
       await act(async () => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
           ctrlKey: false,
@@ -3312,12 +3360,12 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "trick");
+        fireCellEvent(result, "onMouseOver", "1", "trick");
         await Promise.resolve();
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellMouseUp?.();
+        fireCellEvent(result, "onMouseUp", "0", "name");
         await Promise.resolve();
       });
 
@@ -3330,7 +3378,7 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       await act(async () => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
         await Promise.resolve();
       });
 
@@ -3353,13 +3401,13 @@ describe("useDataGrid", () => {
       expect(result.current.cellSelectionBounds).toEqual([]);
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       expect(result.current.cellSelectionBounds).toEqual([]);
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick", {
+        fireCellEvent(result, "onClick", "1", "trick", {
           shiftKey: true,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -3411,7 +3459,7 @@ describe("useDataGrid", () => {
 
       // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Paste should work
@@ -3555,7 +3603,7 @@ describe("useDataGrid", () => {
 
       // Select a cell
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
@@ -3563,7 +3611,7 @@ describe("useDataGrid", () => {
 
       // Click on another cell (non-select column)
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Should maintain or update selection appropriately
@@ -3651,12 +3699,12 @@ describe("useDataGrid", () => {
 
       // First click to focus
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       // Double click to edit
       act(() => {
-        result.current.tableMeta.onCellDoubleClick?.("0", "name");
+        fireCellEvent(result, "onDoubleClick", "0", "name");
       });
 
       expect(result.current.editingCell).toEqual({
@@ -3680,7 +3728,7 @@ describe("useDataGrid", () => {
       });
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "name");
+        fireCellEvent(result, "onClick", "1", "name");
       });
 
       act(() => {
@@ -3736,14 +3784,14 @@ describe("useDataGrid", () => {
       });
 
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("2", "name", {
+        fireCellEvent(result, "onMouseDown", "2", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "name");
+        fireCellEvent(result, "onMouseOver", "1", "name");
       });
 
       await act(async () => {
