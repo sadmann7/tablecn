@@ -105,7 +105,7 @@ function fireCellEvent(
   columnId: string,
   init: object = {},
 ) {
-  const { dataGridRef, gridBodyProps } = result.current;
+  const { dataGridRef, dataGridBodyProps } = result.current;
   const previousContainer = dataGridRef.current;
   const container = document.createElement("div");
   const cellElement = document.createElement("div");
@@ -116,7 +116,7 @@ function fireCellEvent(
   dataGridRef.current = container;
 
   try {
-    gridBodyProps[type]({
+    dataGridBodyProps[type]({
       target: cellElement,
       button: 0,
       clientX: 0,
@@ -237,8 +237,8 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.gridBodyProps.onClick).toBeDefined();
-      expect(result.current.gridBodyProps.onDoubleClick).toBeDefined();
+      expect(result.current.dataGridBodyProps.onClick).toBeDefined();
+      expect(result.current.dataGridBodyProps.onDoubleClick).toBeDefined();
       expect(result.current.table.clearSelection).toBeDefined();
       expect(result.current.table.getIsCellSelected).toBeDefined();
     });
