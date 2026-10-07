@@ -13,6 +13,7 @@ import {
   flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
+  getRowCellSelectionKey,
 } from "@/lib/data-grid-utils";
 import { DataGridColumnHeader } from "@/registry/bases/radix/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/registry/bases/radix/components/data-grid/data-grid-context-menu";
@@ -20,8 +21,6 @@ import { DataGridPasteDialog } from "@/registry/bases/radix/components/data-grid
 import { DataGridRow } from "@/registry/bases/radix/components/data-grid/data-grid-row";
 import { DataGridSearch } from "@/registry/bases/radix/components/data-grid/data-grid-search";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
-
-const EMPTY_CELL_SELECTION_SET = new Set<string>();
 
 interface DataGridProps<TData extends RowData>
   extends
@@ -48,7 +47,7 @@ export function DataGrid<TData extends RowData>({
   searchState,
   searchMatchesByRow,
   activeSearchMatch,
-  cellSelectionMap,
+  cellSelectionBounds,
   focusedCell,
   editingCell,
   readOnlyColumnIds,
@@ -114,6 +113,7 @@ export function DataGrid<TData extends RowData>({
         aria-label="Data grid"
         aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
         aria-colcount={columns.length}
+        aria-multiselectable="true"
         data-slot="grid"
         tabIndex={0}
         ref={dataGridRef}
@@ -232,8 +232,10 @@ export function DataGrid<TData extends RowData>({
             const row = rows[virtualItem.index];
             if (!row) return null;
 
-            const cellSelectionKeys =
-              cellSelectionMap?.get(row.id) ?? EMPTY_CELL_SELECTION_SET;
+            const cellSelectionKey = getRowCellSelectionKey(
+              cellSelectionBounds,
+              virtualItem.index,
+            );
 
             const searchMatchColumns = searchMatchesByRow?.get(row.id) ?? null;
             const isActiveSearchRow = activeSearchMatch?.rowId === row.id;
@@ -251,7 +253,7 @@ export function DataGrid<TData extends RowData>({
                 columnPinning={columnPinning}
                 focusedCell={focusedCell}
                 editingCell={editingCell}
-                cellSelectionKeys={cellSelectionKeys}
+                cellSelectionKey={cellSelectionKey}
                 searchMatchColumns={searchMatchColumns}
                 activeSearchMatch={isActiveSearchRow ? activeSearchMatch : null}
                 dir={dir}

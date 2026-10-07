@@ -2,6 +2,7 @@ import {
   assignPrototypeAPIs,
   assignTableAPIs,
   type CellData,
+  cellSelectionFeature,
   columnFilteringFeature,
   columnOrderingFeature,
   columnPinningFeature,
@@ -245,6 +246,7 @@ const dataGridCellEditingFeature: TableFeature = {
 };
 
 export const dataGridFeatures = tableFeatures({
+  cellSelectionFeature,
   columnFilteringFeature,
   columnOrderingFeature,
   columnPinningFeature,

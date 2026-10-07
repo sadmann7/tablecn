@@ -585,7 +585,7 @@ export function DataGridLiveDemo() {
   }, [table, tableMeta]);
 
   const height = Math.max(400, windowSize.height - 150);
-  const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
+  const selectedCellCount = tableMeta.selectedCellCount ?? 0;
 
   return (
     <div className="container flex flex-col gap-4 py-4">

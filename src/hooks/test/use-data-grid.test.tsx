@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { stringifyUnknown } from "@/lib/data-grid-utils";
+import { getCellKey, stringifyUnknown } from "@/lib/data-grid-utils";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
 // Mock toast
@@ -630,6 +630,136 @@ describe("useDataGrid", () => {
       expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
         false,
       );
+    });
+
+    it("should extend the selection from the focused cell with Shift+click", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("0", "name");
+      });
+      act(() => {
+        result.current.tableMeta.onCellClick?.("1", "trick", {
+          shiftKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      expect(result.current.focusedCell).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+      expect(result.current.tableMeta.selectedCellCount).toBe(4);
+      expect(result.current.tableMeta.getIsCellSelected?.("1", "trick")).toBe(
+        true,
+      );
+      expect(result.current.tableMeta.getIsCellSelected?.("2", "name")).toBe(
+        false,
+      );
+    });
+
+    it("should include and exclude cells with Ctrl/Cmd+click", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("0", "name");
+      });
+      act(() => {
+        result.current.tableMeta.onCellClick?.("2", "score", {
+          metaKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      expect(result.current.focusedCell).toEqual({
+        rowId: "2",
+        columnId: "score",
+      });
+      expect(result.current.tableMeta.getSelectedCellKeys?.()).toEqual([
+        getCellKey("0", "name"),
+        getCellKey("2", "score"),
+      ]);
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("0", "name", {
+          ctrlKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      expect(result.current.tableMeta.getSelectedCellKeys?.()).toEqual([
+        getCellKey("2", "score"),
+      ]);
+    });
+
+    it("should select a range by dragging and keep focus on the drag start", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellMouseDown?.("0", "trick", {
+          button: 0,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+      act(() => {
+        result.current.tableMeta.onCellMouseEnter?.("2", "score");
+      });
+      act(() => {
+        result.current.tableMeta.onCellMouseUp?.();
+      });
+
+      expect(result.current.focusedCell).toEqual({
+        rowId: "0",
+        columnId: "trick",
+      });
+      expect(result.current.tableMeta.selectedCellCount).toBe(6);
+      expect(result.current.tableMeta.getIsCellSelected?.("1", "name")).toBe(
+        false,
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellMouseEnter?.("2", "name");
+      });
+
+      expect(result.current.tableMeta.selectedCellCount).toBe(6);
+    });
+
+    it("should keep the selection when data changes", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) => useDataGrid({ data, columns: testColumns }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("0", "name");
+      });
+      act(() => {
+        result.current.tableMeta.onCellClick?.("1", "trick", {
+          shiftKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      rerender({
+        data: testData.map((row) =>
+          row.id === "1" ? { ...row, name: "Bob Burnquist" } : row,
+        ),
+      });
+
+      expect(result.current.tableMeta.selectedCellCount).toBe(4);
+      expect(result.current.focusedCell).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
     });
   });
 
@@ -1822,7 +1952,7 @@ describe("useDataGrid", () => {
         result.current.dataGridRef as React.MutableRefObject<HTMLDivElement>
       ).current = mockContainer;
 
-      // Start the drag — this sets isSelecting:true which triggers
+      // Start the drag — this sets dragStartCell which triggers
       // onAutoScrollStart, which synchronously registers the document mouseup
       // listener before queuing the deferred RAF.
       act(() => {
@@ -1835,7 +1965,7 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Extend the selection so selectRange populates selectedCells.
+      // Extend the selection to a multi-cell range.
       act(() => {
         result.current.tableMeta.onCellMouseEnter?.("1", "score");
       });
@@ -1847,13 +1977,13 @@ describe("useDataGrid", () => {
 
       // Simulate the user releasing the mouse outside the grid.  The
       // document-level mouseup listener (registered by onAutoScrollStart)
-      // should flip isSelecting to false.
+      // should clear dragStartCell.
       act(() => {
         document.dispatchEvent(new MouseEvent("mouseup"));
       });
 
-      // A subsequent onCellMouseEnter must be a no-op because isSelecting is
-      // now false — so row 2 should never enter the selected set.
+      // A subsequent onCellMouseEnter must be a no-op because the drag has
+      // ended — so row 2 should never enter the selected set.
       act(() => {
         result.current.tableMeta.onCellMouseEnter?.("2", "score");
       });
@@ -1927,15 +2057,21 @@ describe("useDataGrid", () => {
         );
       });
 
-      expect(grid?.tableMeta.selectionState?.selectedCells.size).toBe(4);
+      expect(grid?.tableMeta.selectedCellCount).toBe(4);
       expect(grid?.tableMeta.getIsCellSelected?.("0", "name")).toBe(true);
       expect(grid?.tableMeta.getIsCellSelected?.("1", "trick")).toBe(true);
       expect(grid?.tableMeta.getIsCellSelected?.("0", "select")).toBe(false);
       expect(grid?.tableMeta.getIsCellSelected?.("1", "actions")).toBe(false);
-      expect(grid?.tableMeta.selectionState?.selectionRange).toEqual({
-        start: { rowId: "0", columnId: "name" },
-        end: { rowId: "1", columnId: "trick" },
+      expect(grid?.tableMeta.focusedCell).toEqual({
+        rowId: "0",
+        columnId: "name",
       });
+      expect(grid?.tableMeta.getSelectedCellKeys?.()).toEqual([
+        getCellKey("0", "name"),
+        getCellKey("0", "trick"),
+        getCellKey("1", "name"),
+        getCellKey("1", "trick"),
+      ]);
     });
 
     it("should not count non-navigable columns when selecting rows", () => {
@@ -1953,9 +2089,7 @@ describe("useDataGrid", () => {
         result.current.table.toggleAllRowsSelected(true);
       });
 
-      expect(result.current.tableMeta.selectionState?.selectedCells.size).toBe(
-        4,
-      );
+      expect(result.current.tableMeta.selectedCellCount).toBe(4);
       expect(result.current.tableMeta.getIsCellSelected?.("1", "select")).toBe(
         false,
       );
@@ -1964,6 +2098,73 @@ describe("useDataGrid", () => {
       );
       expect(result.current.tableMeta.getIsCellSelected?.("2", "name")).toBe(
         true,
+      );
+    });
+
+    it("should mirror non-contiguous selected rows as separate ranges", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: columnsWithSelect,
+            getRowId: (row) => row.id,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onRowSelect?.("1", true, false);
+      });
+      act(() => {
+        result.current.tableMeta.onRowSelect?.("3", true, false);
+      });
+
+      expect(result.current.cellSelectionBounds).toEqual([
+        {
+          minRowIndex: 0,
+          maxRowIndex: 0,
+          minColumnIndex: 1,
+          maxColumnIndex: 2,
+        },
+        {
+          minRowIndex: 2,
+          maxRowIndex: 2,
+          minColumnIndex: 1,
+          maxColumnIndex: 2,
+        },
+      ]);
+      expect(result.current.tableMeta.getIsCellSelected?.("2", "name")).toBe(
+        false,
+      );
+    });
+
+    it("should keep focus on the select cell while toggling rows", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: columnsWithSelect,
+            getRowId: (row) => row.id,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("1", "select");
+      });
+      act(() => {
+        result.current.tableMeta.onRowSelect?.("2", true, false);
+      });
+
+      expect(result.current.focusedCell).toEqual({
+        rowId: "2",
+        columnId: "select",
+      });
+      expect(result.current.tableMeta.getIsCellSelected?.("2", "name")).toBe(
+        true,
+      );
+      expect(result.current.tableMeta.getIsCellSelected?.("2", "select")).toBe(
+        false,
       );
     });
 
@@ -2597,7 +2798,7 @@ describe("useDataGrid", () => {
   });
 
   describe("context menu advanced", () => {
-    it("should select non-selected cell before opening context menu", () => {
+    it("should focus a non-selected cell before opening context menu", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -2619,10 +2820,13 @@ describe("useDataGrid", () => {
         result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
       });
 
-      // Should select the cell and open context menu
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        true,
-      );
+      expect(result.current.focusedCell).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+      expect(result.current.tableMeta.getSelectedCellKeys?.()).toEqual([
+        getCellKey("0", "name"),
+      ]);
       expect(result.current.contextMenu.open).toBe(true);
     });
 
@@ -2676,8 +2880,8 @@ describe("useDataGrid", () => {
     });
   });
 
-  describe("cell selection map optimization", () => {
-    it("should provide cellSelectionMap for performance optimization", () => {
+  describe("cell selection bounds", () => {
+    it("should only expose bounds once more than the focused cell is selected", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -2687,19 +2891,29 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Initially should be null (no selection)
-      expect(result.current.cellSelectionMap).toBeNull();
+      expect(result.current.cellSelectionBounds).toEqual([]);
 
-      // Select a cell
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
-          button: 0,
+        result.current.tableMeta.onCellClick?.("0", "name");
+      });
+
+      expect(result.current.cellSelectionBounds).toEqual([]);
+
+      act(() => {
+        result.current.tableMeta.onCellClick?.("1", "trick", {
+          shiftKey: true,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
-      // Should now have a map
-      expect(result.current.cellSelectionMap).toBeDefined();
+      expect(result.current.cellSelectionBounds).toEqual([
+        {
+          minRowIndex: 0,
+          maxRowIndex: 1,
+          minColumnIndex: 0,
+          maxColumnIndex: 1,
+        },
+      ]);
     });
   });
 
@@ -2803,7 +3017,7 @@ describe("useDataGrid", () => {
       const meta = result.current.tableMeta;
       expect(meta.focusedCell).toBeNull();
       expect(meta.editingCell).toBeNull();
-      expect(meta.selectionState).toBeDefined();
+      expect(meta.selectedCellCount).toBe(0);
       expect(meta.searchOpen).toBe(false);
       expect(meta.contextMenu).toBeDefined();
       expect(meta.pasteDialog).toBeDefined();
