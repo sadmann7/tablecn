@@ -1,5 +1,7 @@
 import {
+  assignPrototypeAPIs,
   assignTableAPIs,
+  type CellData,
   columnFilteringFeature,
   columnOrderingFeature,
   columnPinningFeature,
@@ -23,6 +25,7 @@ import {
 } from "@tanstack/react-table";
 
 import type {
+  CellPosition,
   DataGridColumnMeta,
   DataGridTableMeta,
   RowHeightValue,
@@ -48,13 +51,45 @@ interface Table_DataGridRowHeight {
   resetRowHeight: (defaultState?: boolean) => void;
 }
 
+interface TableState_DataGridCellEditing {
+  editingCell: CellPosition | null;
+}
+
+interface TableOptions_DataGridCellEditing {
+  /** Set to `false` to make every cell read-only. Defaults to `true`. */
+  enableCellEditing?: boolean;
+  onEditingCellChange?: OnChangeFn<CellPosition | null>;
+}
+
+interface ColumnDef_DataGridCellEditing {
+  /** Set to `false` to make this column's cells read-only. Defaults to `true`. */
+  enableCellEditing?: boolean;
+}
+
+interface Table_DataGridCellEditing {
+  getEditingCell: () => CellPosition | null;
+  setEditingCell: (updater: Updater<CellPosition | null>) => void;
+  resetEditingCell: (defaultState?: boolean) => void;
+}
+
+interface Column_DataGridCellEditing {
+  getCanEdit: () => boolean;
+}
+
+interface Cell_DataGridCellEditing {
+  getCanEdit: () => boolean;
+  getIsEditing: () => boolean;
+}
+
 declare module "@tanstack/react-table" {
   interface Plugins {
     dataGridRowHeightFeature: TableFeature;
+    dataGridCellEditingFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
     dataGridRowHeightFeature: TableState_DataGridRowHeight;
+    dataGridCellEditingFeature: TableState_DataGridCellEditing;
   }
 
   interface TableOptions_FeatureMap<
@@ -62,6 +97,15 @@ declare module "@tanstack/react-table" {
     in out TData extends RowData,
   > {
     dataGridRowHeightFeature: TableOptions_DataGridRowHeight;
+    dataGridCellEditingFeature: TableOptions_DataGridCellEditing;
+  }
+
+  interface ColumnDef_FeatureMap<
+    in out TFeatures extends TableFeatures,
+    in out TData extends RowData,
+    TValue extends CellData,
+  > {
+    dataGridCellEditingFeature: ColumnDef_DataGridCellEditing;
   }
 
   interface Table_FeatureMap<
@@ -69,6 +113,18 @@ declare module "@tanstack/react-table" {
     in out TData extends RowData,
   > {
     dataGridRowHeightFeature: Table_DataGridRowHeight;
+    dataGridCellEditingFeature: Table_DataGridCellEditing;
+  }
+
+  interface Column_FeatureMap<
+    in out TFeatures extends TableFeatures,
+    in out TData extends RowData,
+  > {
+    dataGridCellEditingFeature: Column_DataGridCellEditing;
+  }
+
+  interface Cell_FeatureMap {
+    dataGridCellEditingFeature: Cell_DataGridCellEditing;
   }
 }
 
@@ -124,6 +180,76 @@ const dataGridRowHeightFeature: TableFeature = {
   },
 };
 
+function getCanEditColumn(column: {
+  table: object;
+  columnDef: ColumnDef_DataGridCellEditing;
+}) {
+  return (
+    asDataGrid(column.table).options.enableCellEditing !== false &&
+    column.columnDef.enableCellEditing !== false
+  );
+}
+
+const dataGridCellEditingFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    editingCell: null,
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: TableOptions_DataGridCellEditing = {
+      onEditingCellChange: makeStateUpdater("editingCell", table),
+    };
+    return options;
+  },
+  constructTableAPIs: (table) => {
+    const instance = asDataGrid(table);
+
+    const setEditingCell = (updater: Updater<CellPosition | null>) =>
+      instance.options.onEditingCellChange?.((old) =>
+        functionalUpdate(updater, old),
+      );
+
+    assignTableAPIs("dataGridCellEditingFeature", table, {
+      table_getEditingCell: {
+        fn: () => instance.atoms.editingCell.get(),
+      },
+      table_setEditingCell: { fn: setEditingCell },
+      table_resetEditingCell: {
+        fn: (defaultState?: boolean) =>
+          setEditingCell(
+            defaultState ? null : (instance.initialState.editingCell ?? null),
+          ),
+      },
+    });
+  },
+  assignColumnPrototype: (prototype, table) => {
+    assignPrototypeAPIs("dataGridCellEditingFeature", prototype, table, {
+      column_getCanEdit: { fn: getCanEditColumn },
+    });
+  },
+  assignCellPrototype: (prototype, table) => {
+    assignPrototypeAPIs("dataGridCellEditingFeature", prototype, table, {
+      cell_getCanEdit: {
+        fn: (cell: { column: Parameters<typeof getCanEditColumn>[0] }) =>
+          getCanEditColumn(cell.column),
+      },
+      cell_getIsEditing: {
+        fn: (cell: {
+          table: object;
+          row: { id: string };
+          column: { id: string };
+        }) => {
+          const editingCell = asDataGrid(cell.table).atoms.editingCell.get();
+          return (
+            editingCell?.rowId === cell.row.id &&
+            editingCell.columnId === cell.column.id
+          );
+        },
+      },
+    });
+  },
+};
+
 export const dataGridFeatures = tableFeatures({
   columnFilteringFeature,
   columnOrderingFeature,
@@ -134,6 +260,7 @@ export const dataGridFeatures = tableFeatures({
   rowSelectionFeature,
   rowSortingFeature,
   dataGridRowHeightFeature,
+  dataGridCellEditingFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   tableMeta: metaHelper<DataGridTableMeta>(),

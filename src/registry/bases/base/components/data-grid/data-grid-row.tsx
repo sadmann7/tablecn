@@ -296,7 +296,7 @@ function DataGridRowImpl<TData extends RowData>({
                 isSelected={isCellSelected}
                 isSearchMatch={isSearchMatch}
                 isActiveSearchMatch={isActiveSearchMatch}
-                readOnly={readOnly}
+                readOnly={readOnly || !cell.getCanEdit()}
               />
             )}
           </div>
