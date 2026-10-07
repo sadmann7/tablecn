@@ -52,6 +52,9 @@ const VALID_BOOLEANS = new Set([
   "unchecked",
 ]);
 
+// Unit separator, so row ids and column ids may contain any printable character
+const CELL_KEY_SEPARATOR = "\u001f";
+
 export function stringifyUnknown(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string") return value;
@@ -225,9 +228,6 @@ export function parsePastedCellValue(
       return { value: text ? parseTextValue(text) : "" };
   }
 }
-
-// Unit separator, so row ids and column ids may contain any printable character
-const CELL_KEY_SEPARATOR = "\u001f";
 
 export function getCellKey(rowId: string, columnId: string) {
   return `${rowId}${CELL_KEY_SEPARATOR}${columnId}`;

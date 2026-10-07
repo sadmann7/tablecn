@@ -46,6 +46,7 @@ import {
   parsePastedCellValue,
   parseTsv,
   serializeCellValue,
+  stringifyUnknown,
 } from "@/lib/data-grid-utils";
 
 const DEFAULT_ROW_HEIGHT: RowHeightValue = "short";
@@ -200,6 +201,43 @@ interface Table_DataGridClipboard {
   pasteCells: (options?: PasteCellsOptions) => Promise<void>;
 }
 
+interface TableState_DataGridSearch {
+  searchOpen: boolean;
+  searchQuery: string;
+  /** Index into `getSearchMatches()` of the active match, `-1` when there is none. */
+  searchMatchIndex: number;
+}
+
+interface TableOptions_DataGridSearch {
+  enableSearch?: boolean;
+  onSearchOpenChange?: OnChangeFn<boolean>;
+  onSearchQueryChange?: OnChangeFn<string>;
+  onSearchMatchIndexChange?: OnChangeFn<number>;
+}
+
+interface Table_DataGridSearch {
+  getSearchOpen: () => boolean;
+  openSearch: () => void;
+  /** Closes search, clears the query and leaves focus on the active match. */
+  closeSearch: () => void;
+  getSearchQuery: () => string;
+  /** Applies a query and moves focus to its first match. */
+  setSearchQuery: (query: string) => void;
+  getSearchMatchIndex: () => number;
+  /** Data cells whose value contains the query, row by row in display order. */
+  getSearchMatches: () => Array<CellPosition>;
+  /** Matched column ids per row id, for re-rendering only the rows that match. */
+  getSearchMatchesByRowId: () => Map<string, Set<string>>;
+  getActiveSearchMatch: () => CellPosition | null;
+  goToNextSearchMatch: () => void;
+  goToPrevSearchMatch: () => void;
+}
+
+interface Cell_DataGridSearch {
+  getIsSearchMatch: () => boolean;
+  getIsActiveSearchMatch: () => boolean;
+}
+
 declare module "@tanstack/react-table" {
   interface Plugins {
     dataGridRowHeightFeature: TableFeature;
@@ -207,12 +245,14 @@ declare module "@tanstack/react-table" {
     dataGridDataFeature: TableFeature;
     dataGridNavigationFeature: TableFeature;
     dataGridClipboardFeature: TableFeature;
+    dataGridSearchFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
     dataGridRowHeightFeature: TableState_DataGridRowHeight;
     dataGridCellEditingFeature: TableState_DataGridCellEditing;
     dataGridClipboardFeature: TableState_DataGridClipboard;
+    dataGridSearchFeature: TableState_DataGridSearch;
   }
 
   interface TableOptions_FeatureMap<
@@ -224,6 +264,7 @@ declare module "@tanstack/react-table" {
     dataGridDataFeature: TableOptions_DataGridData<TData>;
     dataGridNavigationFeature: TableOptions_DataGridNavigation;
     dataGridClipboardFeature: TableOptions_DataGridClipboard;
+    dataGridSearchFeature: TableOptions_DataGridSearch;
   }
 
   interface ColumnDef_FeatureMap<
@@ -243,6 +284,7 @@ declare module "@tanstack/react-table" {
     dataGridDataFeature: Table_DataGridData;
     dataGridNavigationFeature: Table_DataGridNavigation;
     dataGridClipboardFeature: Table_DataGridClipboard;
+    dataGridSearchFeature: Table_DataGridSearch;
   }
 
   interface Column_FeatureMap<
@@ -255,6 +297,7 @@ declare module "@tanstack/react-table" {
   interface Cell_FeatureMap {
     dataGridCellEditingFeature: Cell_DataGridCellEditing;
     dataGridDataFeature: Cell_DataGridData;
+    dataGridSearchFeature: Cell_DataGridSearch;
   }
 }
 
@@ -1092,6 +1135,153 @@ const dataGridClipboardFeature: TableFeature = {
   },
 };
 
+function getSearchMatches(
+  query: string,
+  rows: ReturnType<DataGridInstance["getRowModel"]>["rows"],
+  columns: ReturnType<DataGridInstance["getVisibleLeafColumns"]>,
+) {
+  const lowerQuery = query.trim().toLowerCase();
+  if (!lowerQuery) return [];
+
+  const dataColumnIds = columns
+    .filter((column) => column.columnDef.enableCellSelection !== false)
+    .map((column) => column.id);
+
+  const matches: Array<CellPosition> = [];
+  for (const row of rows) {
+    const cellsByColumnId = row.getAllCellsByColumnId();
+    for (const columnId of dataColumnIds) {
+      const value = cellsByColumnId[columnId]?.getValue();
+      if (stringifyUnknown(value).toLowerCase().includes(lowerQuery)) {
+        matches.push({ rowId: row.id, columnId });
+      }
+    }
+  }
+  return matches;
+}
+
+function goToSearchMatch(table: DataGridInstance, step: 1 | -1) {
+  const matches = table.getSearchMatches();
+  if (matches.length === 0) return;
+
+  const index =
+    (table.atoms.searchMatchIndex.get() + step + matches.length) %
+    matches.length;
+  const match = matches[index];
+  if (!match) return;
+
+  table.options.onSearchMatchIndexChange?.(index);
+  table.setFocusedCell(match.rowId, match.columnId);
+}
+
+const dataGridSearchFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    searchOpen: false,
+    searchQuery: "",
+    searchMatchIndex: -1,
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: TableOptions_DataGridSearch = {
+      onSearchOpenChange: makeStateUpdater("searchOpen", table),
+      onSearchQueryChange: makeStateUpdater("searchQuery", table),
+      onSearchMatchIndexChange: makeStateUpdater("searchMatchIndex", table),
+    };
+    return options;
+  },
+  constructTableAPIs: (table) => {
+    const instance = asDataGrid(table);
+
+    const setSearchQuery = (query: string) => {
+      instance.options.onSearchQueryChange?.(query);
+      const firstMatch = instance.getSearchMatches()[0];
+      instance.options.onSearchMatchIndexChange?.(firstMatch ? 0 : -1);
+      if (firstMatch) {
+        instance.setFocusedCell(firstMatch.rowId, firstMatch.columnId);
+      }
+    };
+
+    assignTableAPIs("dataGridSearchFeature", table, {
+      table_getSearchOpen: {
+        fn: () => instance.atoms.searchOpen.get(),
+      },
+      table_openSearch: {
+        fn: () => {
+          if (!instance.options.enableSearch) return;
+          instance.options.onSearchOpenChange?.(true);
+        },
+      },
+      table_closeSearch: {
+        fn: () => {
+          instance.options.onSearchQueryChange?.("");
+          instance.options.onSearchMatchIndexChange?.(-1);
+          instance.options.onSearchOpenChange?.(false);
+        },
+      },
+      table_getSearchQuery: {
+        fn: () => instance.atoms.searchQuery.get(),
+      },
+      table_setSearchQuery: { fn: setSearchQuery },
+      table_getSearchMatchIndex: {
+        fn: () => instance.atoms.searchMatchIndex.get(),
+      },
+      table_getSearchMatches: {
+        fn: getSearchMatches,
+        memoDeps: () => [
+          instance.atoms.searchQuery.get(),
+          instance.getRowModel().rows,
+          instance.getVisibleLeafColumns(),
+        ],
+      },
+      table_getSearchMatchesByRowId: {
+        fn: (matches: Array<CellPosition>) => {
+          const matchesByRowId = new Map<string, Set<string>>();
+          for (const { rowId, columnId } of matches) {
+            let columnIds = matchesByRowId.get(rowId);
+            if (!columnIds) {
+              columnIds = new Set();
+              matchesByRowId.set(rowId, columnIds);
+            }
+            columnIds.add(columnId);
+          }
+          return matchesByRowId;
+        },
+        memoDeps: () => [instance.getSearchMatches()],
+      },
+      table_getActiveSearchMatch: {
+        fn: () =>
+          instance.getSearchMatches()[instance.atoms.searchMatchIndex.get()] ??
+          null,
+      },
+      table_goToNextSearchMatch: {
+        fn: () => goToSearchMatch(instance, 1),
+      },
+      table_goToPrevSearchMatch: {
+        fn: () => goToSearchMatch(instance, -1),
+      },
+    });
+  },
+  assignCellPrototype: (prototype, table) => {
+    assignPrototypeAPIs("dataGridSearchFeature", prototype, table, {
+      cell_getIsSearchMatch: {
+        fn: (cell: DataGridCellRef) =>
+          asDataGrid(cell.table)
+            .getSearchMatchesByRowId()
+            .get(cell.row.id)
+            ?.has(cell.column.id) ?? false,
+      },
+      cell_getIsActiveSearchMatch: {
+        fn: (cell: DataGridCellRef) => {
+          const match = asDataGrid(cell.table).getActiveSearchMatch();
+          return (
+            match?.rowId === cell.row.id && match.columnId === cell.column.id
+          );
+        },
+      },
+    });
+  },
+};
+
 export const dataGridFeatures = tableFeatures({
   cellSelectionFeature,
   columnFilteringFeature,
@@ -1107,6 +1297,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridDataFeature,
   dataGridNavigationFeature,
   dataGridClipboardFeature,
+  dataGridSearchFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
   tableMeta: metaHelper<DataGridTableMeta>(),
