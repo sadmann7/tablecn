@@ -161,8 +161,7 @@ function useDataGrid<TData extends RowData>({
   const contextDir = useDirection();
   const dir = dirProp ?? contextDir;
   const dataGridRef = React.useRef<HTMLDivElement>(null);
-  const tableRef =
-    React.useRef<ReturnType<typeof useTable<DataGridFeatures, TData>>>(null);
+  const tableRef = React.useRef<Table<DataGridFeatures, TData>>(null);
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
