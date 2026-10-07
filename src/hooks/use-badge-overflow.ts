@@ -58,17 +58,48 @@ function measureBadgeWidth({
   return width;
 }
 
-interface UseBadgeOverflowProps<T> {
+interface GetBadgeListWidthProps<T> {
   items: T[];
   getLabel: (item: T) => string;
-  containerRef: React.RefObject<HTMLElement | null>;
-  lineCount: number;
   cacheKeyPrefix?: string;
   iconSize?: number;
   maxWidth?: number;
   className?: string;
   containerPadding?: number;
   badgeGap?: number;
+}
+
+export function getBadgeListWidth<T>({
+  items,
+  getLabel,
+  cacheKeyPrefix = "",
+  iconSize,
+  maxWidth,
+  className,
+  containerPadding = DEFAULT_CONTAINER_PADDING,
+  badgeGap = DEFAULT_BADGE_GAP,
+}: GetBadgeListWidthProps<T>): number {
+  if (items.length === 0) return 0;
+
+  let width = containerPadding;
+  for (const item of items) {
+    const label = getLabel(item);
+    width +=
+      measureBadgeWidth({
+        label,
+        cacheKey: cacheKeyPrefix ? `${cacheKeyPrefix}:${label}` : label,
+        iconSize,
+        maxWidth,
+        className,
+      }) + badgeGap;
+  }
+
+  return width;
+}
+
+interface UseBadgeOverflowProps<T> extends GetBadgeListWidthProps<T> {
+  containerRef: React.RefObject<HTMLElement | null>;
+  lineCount: number;
   overflowBadgeWidth?: number;
 }
 
