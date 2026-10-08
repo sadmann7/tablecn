@@ -20,6 +20,7 @@ import {
   getUrlHref,
   insertTextAtSelection,
   parseLocalDate,
+  replaceEditableText,
 } from "@/lib/data-grid-utils";
 import { DataGridCellWrapper } from "@/registry/bases/base/components/data-grid/data-grid-cell-wrapper";
 import { Badge } from "@/registry/bases/base/ui/badge";
@@ -61,6 +62,7 @@ export function ShortTextCell<TData extends RowData>(
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
+  const pendingCharRef = React.useRef<string | null>(null);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -114,27 +116,15 @@ export function ShortTextCell<TData extends RowData>(
         }
       } else if (
         isFocused &&
+        !readOnly &&
         event.key.length === 1 &&
         !event.ctrlKey &&
         !event.metaKey
       ) {
-        // Handle typing to pre-fill the value when editing starts
-        setValue(event.key);
-
-        queueMicrotask(() => {
-          if (cellRef.current && cellRef.current.contentEditable === "true") {
-            cellRef.current.textContent = event.key;
-            const range = document.createRange();
-            const selection = window.getSelection();
-            range.selectNodeContents(cellRef.current);
-            range.collapse(false);
-            selection?.removeAllRanges();
-            selection?.addRange(range);
-          }
-        });
+        pendingCharRef.current = event.key;
       }
     },
-    [cell, isEditing, isFocused, initialValue],
+    [cell, isEditing, isFocused, initialValue, readOnly],
   );
 
   React.useEffect(() => {
@@ -148,7 +138,11 @@ export function ShortTextCell<TData extends RowData>(
         cellRef.current.textContent = value;
       }
 
-      if (cellRef.current.textContent) {
+      const pendingChar = pendingCharRef.current;
+      pendingCharRef.current = null;
+      if (pendingChar) {
+        replaceEditableText(cellRef.current, pendingChar);
+      } else if (cellRef.current.textContent) {
         const range = document.createRange();
         const selection = window.getSelection();
         range.selectNodeContents(cellRef.current);
