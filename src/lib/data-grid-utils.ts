@@ -90,6 +90,46 @@ export function getIsFileCellData(item: unknown): item is FileCellData {
   );
 }
 
+export function getTextCellValue(value: unknown): string {
+  return stringifyUnknown(value);
+}
+
+export function getNumberCellValue(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value !== "string" || value.trim() === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+export function getBooleanCellValue(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return TRUTHY_BOOLEANS.has(value.toLowerCase());
+  }
+  return value === 1;
+}
+
+export function getDateCellValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return formatDateToString(value);
+  }
+  return "";
+}
+
+export function getOptionCellValue(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+export function getOptionsCellValue(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+export function getFilesCellValue(value: unknown): FileCellData[] {
+  return Array.isArray(value) ? value.filter(getIsFileCellData) : [];
+}
+
 export function matchSelectOption(
   value: string,
   options: { value: string; label: string }[],
