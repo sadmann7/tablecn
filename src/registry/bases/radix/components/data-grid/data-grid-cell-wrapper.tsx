@@ -7,9 +7,6 @@ import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
-import { getCellKey } from "@/lib/data-grid-utils";
-import { useDataGridPresence } from "@/registry/bases/radix/components/data-grid/data-grid-presence";
-
 interface DataGridCellWrapperProps<TData extends RowData>
   extends DataGridCellProps<TData>, React.ComponentProps<"div"> {}
 
@@ -20,6 +17,7 @@ export function DataGridCellWrapper<TData extends RowData>({
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  presence,
   readOnly,
   rowHeight,
   className,
@@ -28,7 +26,6 @@ export function DataGridCellWrapper<TData extends RowData>({
 }: DataGridCellWrapperProps<TData>) {
   const rowId = cell.row.id;
   const columnId = cell.column.id;
-  const cellPresence = useDataGridPresence(getCellKey(rowId, columnId));
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -89,8 +86,8 @@ export function DataGridCellWrapper<TData extends RowData>({
       className={cn(
         "size-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
-          "ring-1 ring-inset": isFocused || !!cellPresence,
-          "ring-ring": isFocused && !cellPresence,
+          "ring-1 ring-inset": isFocused || !!presence,
+          "ring-ring": isFocused && !presence,
           "bg-yellow-100 dark:bg-yellow-900/30":
             isSearchMatch && !isActiveSearchMatch,
           "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
@@ -108,8 +105,8 @@ export function DataGridCellWrapper<TData extends RowData>({
         className,
       )}
       style={
-        cellPresence
-          ? ({ "--tw-ring-color": cellPresence.color } as React.CSSProperties)
+        presence
+          ? ({ "--tw-ring-color": presence.color } as React.CSSProperties)
           : undefined
       }
       onKeyDown={onKeyDown}
