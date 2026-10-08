@@ -1,7 +1,10 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { act, render, screen } from "@testing-library/react";
+import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { insertTextAtSelection } from "@/lib/data-grid-utils";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
@@ -112,6 +115,46 @@ describe("DataGrid rendering", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("syncs a controlled textarea after inserting text at the caret", () => {
+    function Editor() {
+      const [value, setValue] = React.useState("900");
+      const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+      return (
+        <>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const textarea = textareaRef.current;
+              if (!textarea) return;
+              textarea.focus();
+              textarea.setSelectionRange(
+                textarea.value.length,
+                textarea.value.length,
+              );
+              insertTextAtSelection(textarea, "x");
+            }}
+          >
+            insert
+          </button>
+        </>
+      );
+    }
+
+    render(<Editor />);
+
+    act(() => {
+      screen.getByRole("button", { name: "insert" }).click();
+    });
+
+    expect(screen.getByRole("textbox")).toHaveProperty("value", "900x");
   });
 
   it("moves the focus highlight between rows without re-rendering the hook", () => {

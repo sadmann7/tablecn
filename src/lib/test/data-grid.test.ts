@@ -5,6 +5,7 @@ import {
   getIsInPopover,
   getIsPointOnScrollbar,
   getTabTargetCell,
+  insertTextAtSelection,
   parseCellKey,
   parsePastedCellValue,
   parseTsv,
@@ -454,5 +455,37 @@ describe("parsePastedCellValue", () => {
     expect(
       parsePastedCellValue(text, { variant: "multi-select", options }),
     ).toEqual({ value: ["goofy", "regular"] });
+  });
+});
+
+describe("insertTextAtSelection", () => {
+  it("inserts at the caret and emits an input event", () => {
+    const textarea = document.createElement("textarea");
+    textarea.value = "hello";
+    textarea.selectionStart = 5;
+    textarea.selectionEnd = 5;
+
+    let inputData = "";
+    textarea.addEventListener("input", (event) => {
+      inputData = (event as InputEvent).data ?? "";
+    });
+
+    insertTextAtSelection(textarea, "!");
+
+    expect(textarea.value).toBe("hello!");
+    expect(textarea.selectionStart).toBe(6);
+    expect(textarea.selectionEnd).toBe(6);
+    expect(inputData).toBe("!");
+  });
+
+  it("replaces the current selection", () => {
+    const textarea = document.createElement("textarea");
+    textarea.value = "hello";
+    textarea.selectionStart = 1;
+    textarea.selectionEnd = 4;
+
+    insertTextAtSelection(textarea, "i");
+
+    expect(textarea.value).toBe("hio");
   });
 });

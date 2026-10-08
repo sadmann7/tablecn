@@ -18,6 +18,7 @@ import {
   getFileIcon,
   getLineCount,
   getUrlHref,
+  insertTextAtSelection,
   parseLocalDate,
 } from "@/lib/data-grid-utils";
 import { DataGridCellWrapper } from "@/registry/bases/radix/components/data-grid/data-grid-cell-wrapper";
@@ -80,7 +81,7 @@ export function ShortTextCell<TData extends RowData>(
   }, [cell, initialValue, readOnly]);
 
   const onInput = React.useCallback(
-    (event: React.FormEvent<HTMLDivElement>) => {
+    (event: React.InputEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
       setValue(currentValue);
     },
@@ -250,18 +251,15 @@ export function LongTextCell<TData extends RowData>(
       const length = textareaRef.current.value.length;
       textareaRef.current.setSelectionRange(length, length);
 
-      // Insert pending character using execCommand so it's part of undo history
-      // Use requestAnimationFrame to ensure focus has fully settled
+      // Insert the typed character after focus settles
       if (pendingCharRef.current) {
         const char = pendingCharRef.current;
         pendingCharRef.current = null;
         requestAnimationFrame(() => {
-          if (
-            textareaRef.current &&
-            document.activeElement === textareaRef.current
-          ) {
-            document.execCommand("insertText", false, char);
-            textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+          const textarea = textareaRef.current;
+          if (textarea && document.activeElement === textarea) {
+            insertTextAtSelection(textarea, char);
+            textarea.scrollTop = textarea.scrollHeight;
           }
         });
       } else {
@@ -280,8 +278,6 @@ export function LongTextCell<TData extends RowData>(
         !event.ctrlKey &&
         !event.metaKey
       ) {
-        // Store the character to be inserted after textarea focuses
-        // This ensures it's part of the textarea's undo history
         pendingCharRef.current = event.key;
       }
     },
@@ -502,7 +498,7 @@ export function UrlCell<TData extends RowData>(
   }, [cell, initialValue, readOnly]);
 
   const onInput = React.useCallback(
-    (event: React.FormEvent<HTMLDivElement>) => {
+    (event: React.InputEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
       setValue(currentValue);
     },
