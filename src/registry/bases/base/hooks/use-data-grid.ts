@@ -29,6 +29,7 @@ import {
   getCellFocusTarget,
   getCellKey,
   getIsInPopover,
+  getIsEventOnScrollbar,
   getRowIndexById,
   parseCellKey,
   scrollCellIntoView,
@@ -532,21 +533,26 @@ function useDataGrid<TData extends RowData>({
       return { rowId, columnId };
     }
 
+    function getPressedCell(event: React.MouseEvent<HTMLElement>) {
+      if (getIsEventOnScrollbar(event)) return null;
+      return getEventCell(event);
+    }
+
     return {
       onClick: (event: React.MouseEvent<HTMLElement>) => {
-        const cell = getEventCell(event);
+        const cell = getPressedCell(event);
         if (!cell) return;
         event.preventDefault();
         onCellClick(cell.rowId, cell.columnId, event);
       },
       onDoubleClick: (event: React.MouseEvent<HTMLElement>) => {
-        const cell = getEventCell(event);
+        const cell = getPressedCell(event);
         if (!cell) return;
         event.preventDefault();
         onCellDoubleClick(cell.rowId, cell.columnId);
       },
       onMouseDown: (event: React.MouseEvent<HTMLElement>) => {
-        const cell = getEventCell(event);
+        const cell = getPressedCell(event);
         if (cell) onCellMouseDown(cell.rowId, cell.columnId, event);
       },
       onMouseOver: (event: React.MouseEvent<HTMLElement>) => {

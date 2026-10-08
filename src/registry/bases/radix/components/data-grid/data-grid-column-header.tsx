@@ -11,6 +11,7 @@ import {
   type Table,
 } from "@tanstack/react-table";
 import { cn } from "cn";
+import { composeEventHandlers } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -20,6 +21,7 @@ import {
   getColumnFitSize,
   getColumnVariant,
   getIsFileCellData,
+  getIsEventOnScrollbar,
 } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
@@ -127,16 +129,21 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const onTriggerPointerDown = React.useCallback(
-    (event: React.PointerEvent<HTMLButtonElement>) => {
-      onPointerDown?.(event);
-      if (event.defaultPrevented) return;
+  const onTriggerPointerDown = React.useMemo(
+    () =>
+      composeEventHandlers(
+        onPointerDown,
+        (event: React.PointerEvent<HTMLButtonElement>) => {
+          // Also stops Radix from opening the menu on a scrollbar press
+          if (getIsEventOnScrollbar(event)) {
+            event.preventDefault();
+            return;
+          }
 
-      if (event.button !== 0) {
-        return;
-      }
-      table.selectColumnCells(column.id);
-    },
+          if (event.button !== 0) return;
+          table.selectColumnCells(column.id);
+        },
+      ),
     [table, column.id, onPointerDown],
   );
 
