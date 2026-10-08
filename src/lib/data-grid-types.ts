@@ -62,6 +62,11 @@ export interface CellPosition {
   columnId: string;
 }
 
+export interface CellPresence extends CellPosition {
+  name: string;
+  color: string;
+}
+
 export interface ContextMenuState {
   open: boolean;
   x: number;
@@ -105,6 +110,7 @@ export interface DataGridCellProps<TData extends RowData> {
   isSelected: boolean;
   isSearchMatch: boolean;
   isActiveSearchMatch: boolean;
+  presence: CellPresence | null;
   readOnly: boolean;
 }
 
