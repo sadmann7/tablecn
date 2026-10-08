@@ -3,12 +3,67 @@ import { describe, expect, it } from "vitest";
 import {
   getCellKey,
   getIsInPopover,
+  getIsPointOnScrollbar,
   getTabTargetCell,
   parseCellKey,
   parsePastedCellValue,
   parseTsv,
   serializeCellValue,
 } from "@/lib/data-grid-utils";
+
+function createScrollContainer({
+  dir = "ltr",
+  canScrollY = true,
+  canScrollX = true,
+}: {
+  dir?: "ltr" | "rtl";
+  canScrollY?: boolean;
+  canScrollX?: boolean;
+} = {}) {
+  const container = document.createElement("div");
+  container.dir = dir;
+  container.style.direction = dir;
+  document.body.replaceChildren(container);
+  container.getBoundingClientRect = () =>
+    ({ left: 0, top: 0, right: 800, bottom: 600 }) as DOMRect;
+  Object.defineProperties(container, {
+    clientHeight: { value: 600 },
+    scrollHeight: { value: canScrollY ? 6000 : 600 },
+    clientWidth: { value: 800 },
+    scrollWidth: { value: canScrollX ? 4000 : 800 },
+  });
+  return container;
+}
+
+describe("getIsPointOnScrollbar", () => {
+  it("detects presses on the vertical scrollbar edge", () => {
+    const container = createScrollContainer();
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 700, 300)).toBe(false);
+  });
+
+  it("uses the start edge for the vertical scrollbar in rtl", () => {
+    const container = createScrollContainer({ dir: "rtl" });
+    expect(getIsPointOnScrollbar(container, 5, 300)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
+  });
+
+  it("detects presses on the horizontal scrollbar edge", () => {
+    const container = createScrollContainer();
+    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 300, 500)).toBe(false);
+  });
+
+  it("ignores edges of axes that do not scroll", () => {
+    const container = createScrollContainer({
+      canScrollY: false,
+      canScrollX: false,
+    });
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
+    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(false);
+    expect(getIsPointOnScrollbar(null, 795, 300)).toBe(false);
+  });
+});
 
 describe("getCellKey", () => {
   it("round-trips row and column ids", () => {

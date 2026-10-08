@@ -1,5 +1,6 @@
 "use client";
 
+import { mergeProps } from "@base-ui/react/merge-props";
 import {
   type Column,
   type ColumnSort,
@@ -20,6 +21,7 @@ import {
   getColumnFitSize,
   getColumnVariant,
   getIsFileCellData,
+  getIsEventOnScrollbar,
 } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
@@ -69,6 +71,7 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
   isAnyColumnResizing,
   className,
   onPointerDown,
+  onMouseDown,
   ...props
 }: DataGridColumnHeaderProps<TData, TValue> & {
   isAnyColumnResizing: boolean;
@@ -128,21 +131,23 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const onTriggerPointerDown = React.useCallback<
-    NonNullable<
-      React.ComponentProps<typeof DropdownMenuTrigger>["onPointerDown"]
-    >
-  >(
-    (event) => {
-      onPointerDown?.(event);
-      if (event.defaultPrevented) return;
-
-      if (event.button !== 0) {
-        return;
-      }
-      table.selectColumnCells(column.id);
-    },
-    [table, column.id, onPointerDown],
+  const triggerHandlers = React.useMemo(
+    () =>
+      mergeProps<"button">(
+        {
+          onPointerDown: (event) => {
+            if (getIsEventOnScrollbar(event)) return;
+            if (event.button !== 0) return;
+            table.selectColumnCells(column.id);
+          },
+          // Base UI opens the menu on mousedown, so a scrollbar press has to skip its handler there
+          onMouseDown: (event) => {
+            if (getIsEventOnScrollbar(event)) event.preventBaseUIHandler();
+          },
+        },
+        { onPointerDown, onMouseDown },
+      ),
+    [table, column.id, onPointerDown, onMouseDown],
   );
 
   return (
@@ -155,7 +160,7 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
             isAnyColumnResizing && "pointer-events-none",
             className,
           )}
-          onPointerDown={onTriggerPointerDown}
+          {...triggerHandlers}
           {...props}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">

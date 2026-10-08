@@ -52,6 +52,9 @@ const VALID_BOOLEANS = new Set([
 // Unit separator, so row ids and column ids may contain any printable character
 const CELL_KEY_SEPARATOR = "\u001f";
 
+// Overlay scrollbars take no layout space, so presses this close to the edge are treated as scrollbar presses
+const SCROLLBAR_HITBOX_SIZE = 16;
+
 export function stringifyUnknown(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string") return value;
@@ -825,4 +828,41 @@ export function getFileIcon(
   )
     return Presentation;
   return File;
+}
+
+/**
+ * Whether a pointer event lands on the grid's scrollbar. Overlay scrollbars draw
+ * over content, so presses meant for them also reach the cell or header underneath.
+ */
+export function getIsEventOnScrollbar(
+  event: React.MouseEvent<HTMLElement>,
+): boolean {
+  return getIsPointOnScrollbar(
+    event.currentTarget.closest<HTMLElement>('[data-slot="grid"]'),
+    event.clientX,
+    event.clientY,
+  );
+}
+
+export function getIsPointOnScrollbar(
+  container: HTMLElement | null,
+  clientX: number,
+  clientY: number,
+): boolean {
+  if (!container) return false;
+
+  const rect = container.getBoundingClientRect();
+  const isRtl = getComputedStyle(container).direction === "rtl";
+
+  if (container.scrollHeight > container.clientHeight) {
+    const edgeDistance = isRtl ? clientX - rect.left : rect.right - clientX;
+    if (edgeDistance >= 0 && edgeDistance <= SCROLLBAR_HITBOX_SIZE) return true;
+  }
+
+  if (container.scrollWidth > container.clientWidth) {
+    const edgeDistance = rect.bottom - clientY;
+    if (edgeDistance >= 0 && edgeDistance <= SCROLLBAR_HITBOX_SIZE) return true;
+  }
+
+  return false;
 }
