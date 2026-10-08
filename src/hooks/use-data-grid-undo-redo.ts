@@ -494,8 +494,4 @@ function useDataGridUndoRedo<TData>({
   );
 }
 
-export {
-  //
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-};
+export { type UndoRedoCellUpdate, useDataGridUndoRedo };

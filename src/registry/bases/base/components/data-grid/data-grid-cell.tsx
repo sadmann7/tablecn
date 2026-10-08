@@ -19,7 +19,6 @@ import {
 } from "@/registry/bases/base/components/data-grid/data-grid-cell-variants";
 
 export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
-  // Fast path: check stable primitive props first
   if (prev.isFocused !== next.isFocused) return false;
   if (prev.isEditing !== next.isEditing) return false;
   if (prev.isSelected !== next.isSelected) return false;

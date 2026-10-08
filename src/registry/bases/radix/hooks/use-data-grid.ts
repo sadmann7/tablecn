@@ -41,13 +41,13 @@ const VIEWPORT_OFFSET = 1;
 const MIN_COLUMN_SIZE = 60;
 const MAX_COLUMN_SIZE = 800;
 const COLUMN_RESIZE_STEP = 10;
-const SEARCH_SHORTCUT_KEY = "f";
-const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
 const AUTO_SCROLL_EDGE_ZONE = 50;
 const AUTO_SCROLL_SPEED_RAMP_ZONE = AUTO_SCROLL_EDGE_ZONE * 3;
 const AUTO_SCROLL_MIN_SPEED = 8;
 const AUTO_SCROLL_MAX_SPEED = 40;
 const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
+const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
+const SEARCH_SHORTCUT_KEY = "f";
 
 function showClipboardToast({
   variant,
@@ -60,7 +60,6 @@ function showClipboardToast({
   else toast.success(message);
 }
 
-// Interaction state (selection, editing, search, menus) is subscribed to where it renders
 function selectGridLayoutState(state: TableState<DataGridFeatures>) {
   return {
     rowHeight: state.rowHeight,
@@ -108,7 +107,6 @@ function getSelectionEdgePosition(
     : null;
 }
 
-/** Whether the selection covers more than the focused cell. */
 function getHasCellRangeSelection(ranges: CellSelectionState) {
   const range = getActiveCellRange(ranges);
   if (!range) return false;
@@ -129,7 +127,6 @@ function getSelectedCellKeys<TData extends RowData>(
 
 interface RowAddResult {
   rowId: string;
-  /** Column to focus in the new row, defaults to the first data column. */
   columnId?: string;
 }
 
@@ -137,7 +134,6 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
 > {
-  /** Adds a row and returns its id so the grid can focus it once it renders. */
   onRowAdd?: (
     event?: React.MouseEvent<HTMLDivElement>,
   ) => RowAddResult | Promise<RowAddResult | null> | null;
@@ -721,7 +717,6 @@ function useDataGrid<TData extends RowData>({
       try {
         result = await propsRef.current.onRowAdd(event);
       } catch {
-        // Callback threw an error, don't proceed with scroll/focus
         return;
       }
 
@@ -1076,8 +1071,8 @@ function useDataGrid<TData extends RowData>({
             tableRef.current?.clearSelection();
           }
 
-          if (currentTable?.getCutCells().length) {
-            currentTable.resetCutCells(true);
+          if (currentTable?.getCutCellGrid().length) {
+            currentTable.resetCutCellGrid(true);
           }
         }
         return;
@@ -1446,7 +1441,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, [getFocusedCell, focusCellElement]);
 
-  // Moves DOM focus and scroll position to follow the table's selection and editing state
   React.useEffect(() => {
     let prevFocusKey: string | null = null;
     let prevEdgeKey: string | null = null;

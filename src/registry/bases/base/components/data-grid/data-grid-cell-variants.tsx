@@ -212,7 +212,6 @@ export function LongTextCell<TData extends RowData>(
   }, 300);
 
   const onSave = React.useCallback(() => {
-    // Immediately save any pending changes and close the popover
     if (!readOnly && value !== initialValue) {
       cell.setValue(value);
     }
@@ -220,7 +219,6 @@ export function LongTextCell<TData extends RowData>(
   }, [cell, value, initialValue, readOnly]);
 
   const onCancel = React.useCallback(() => {
-    // Restore the original value
     setValue(initialValue);
     if (!readOnly) {
       cell.setValue(initialValue);
@@ -233,7 +231,6 @@ export function LongTextCell<TData extends RowData>(
       if (open && !readOnly) {
         cell.startEditing();
       } else {
-        // Immediately save any pending changes when closing
         if (!readOnly && value !== initialValue) {
           cell.setValue(value);
         }
@@ -286,7 +283,6 @@ export function LongTextCell<TData extends RowData>(
   );
 
   const onBlur = React.useCallback(() => {
-    // Immediately save any pending changes on blur
     if (!readOnly && value !== initialValue) {
       cell.setValue(value);
     }
@@ -312,7 +308,6 @@ export function LongTextCell<TData extends RowData>(
         onSave();
       } else if (event.key === "Tab") {
         event.preventDefault();
-        // Save any pending changes
         if (value !== initialValue) {
           cell.setValue(value);
         }
@@ -426,11 +421,9 @@ export function NumberCell<TData extends RowData>(
           inputRef.current?.blur();
         }
       } else if (isFocused) {
-        // Handle Backspace to start editing with empty value
         if (event.key === "Backspace") {
           setValue("");
         } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          // Handle typing to pre-fill the value when editing starts
           setValue(event.key);
         }
       }
@@ -442,7 +435,6 @@ export function NumberCell<TData extends RowData>(
     const wasEditing = prevIsEditingRef.current;
     prevIsEditingRef.current = isEditing;
 
-    // Only focus when we start editing (transition from false to true)
     if (isEditing && !wasEditing && inputRef.current) {
       inputRef.current.focus();
     }
@@ -553,7 +545,6 @@ export function UrlCell<TData extends RowData>(
         !event.ctrlKey &&
         !event.metaKey
       ) {
-        // Handle typing to pre-fill the value when editing starts
         setValue(event.key);
 
         queueMicrotask(() => {

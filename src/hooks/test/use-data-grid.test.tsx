@@ -10,7 +10,6 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getCellKey, stringifyUnknown } from "@/lib/data-grid-utils";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
-// Mock toast
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -18,7 +17,6 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// Mock useDirection
 vi.mock("@/registry/bases/radix/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
@@ -36,7 +34,6 @@ const testData: TestData[] = [
   { id: "3", name: "Nyjah Huston", trick: "Switch Heel", score: 92 },
 ];
 
-// Simple filter function for testing
 const simpleFilterFn = (
   row: { getValue: (id: string) => unknown },
   _columnId: string,
@@ -308,12 +305,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to focus
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Double click to edit
       act(() => {
         fireCellEvent(result, "onDoubleClick", "0", "name");
       });
@@ -660,15 +655,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Initially no cells are selected
       expect(result.current.table.getIsCellSelected("0", "name")).toBe(false);
 
-      // Click to focus (which doesn't select)
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Single click focuses but doesn't select
       expect(result.current.table.getIsCellSelected("0", "name")).toBe(false);
     });
 
@@ -682,7 +674,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Trigger mouse down to start selection
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -690,7 +681,6 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Clear selection
       act(() => {
         result.current.table.clearSelection();
       });
@@ -834,12 +824,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell first
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Copy
       await act(async () => {
         await result.current.table.copySelectedCells();
       });
@@ -858,12 +846,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell first
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Try to cut
       await act(async () => {
         await result.current.table.cutSelectedCells();
       });
@@ -886,12 +872,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell first
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Try to paste
       await act(async () => {
         await result.current.table.pasteCells();
       });
@@ -992,15 +976,12 @@ describe("useDataGrid", () => {
             columns: testColumns,
             onDataChange,
             initialState: {
-              columnFilters: [
-                { id: "name", value: "Hawk" }, // Filter to only show Tony Hawk
-              ],
+              columnFilters: [{ id: "name", value: "Hawk" }],
             },
           }),
         { wrapper: createWrapper() },
       );
 
-      // Get filtered rows - should only have 1 row (Tony Hawk)
       const filteredRows = result.current.table.getRowModel().rows;
       expect(filteredRows.length).toBe(1);
       expect(filteredRows[0]?.original.name).toBe("Tony Hawk");
@@ -1017,26 +998,23 @@ describe("useDataGrid", () => {
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
 
-      // Should have all 3 rows
       expect(updatedData).toHaveLength(3);
 
-      // Tony Hawk (at index 0 in full dataset) should be updated
       expect(updatedData[0]).toMatchObject({
         id: "1",
         name: "Tony Hawk",
-        score: 100, // Updated value
+        score: 100,
       });
 
-      // Other rows should remain unchanged
       expect(updatedData[1]).toMatchObject({
         id: "2",
         name: "Rodney Mullen",
-        score: 98, // Original value
+        score: 98,
       });
       expect(updatedData[2]).toMatchObject({
         id: "3",
         name: "Nyjah Huston",
-        score: 92, // Original value
+        score: 92,
       });
     });
 
@@ -1056,19 +1034,15 @@ describe("useDataGrid", () => {
             columns: testColumns,
             onDataChange,
             initialState: {
-              columnFilters: [
-                { id: "name", value: "B" }, // Filter to show names containing 'B'
-              ],
+              columnFilters: [{ id: "name", value: "B" }],
             },
           }),
         { wrapper: createWrapper() },
       );
 
-      // Get filtered rows - should have 2 rows (Bob and Bam)
       const filteredRows = result.current.table.getRowModel().rows;
       expect(filteredRows.length).toBe(2);
 
-      // Bob is the first filtered row, and index 3 in data
       act(() => {
         result.current.table.updateCells({
           rowId: filteredRows[0]?.id ?? "",
@@ -1080,21 +1054,18 @@ describe("useDataGrid", () => {
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
 
-      // Should have all 5 rows
       expect(updatedData).toHaveLength(5);
 
-      // Bob (at index 3) should be updated
       expect(updatedData[3]).toMatchObject({
         id: "4",
         name: "Bob Burnquist",
-        score: 95, // Updated value
+        score: 95,
       });
 
-      // Other rows should remain unchanged
-      expect(updatedData[0]?.score).toBe(95); // Tony
-      expect(updatedData[1]?.score).toBe(98); // Rodney
-      expect(updatedData[2]?.score).toBe(92); // Nyjah
-      expect(updatedData[4]?.score).toBe(85); // Bam
+      expect(updatedData[0]?.score).toBe(95);
+      expect(updatedData[1]?.score).toBe(98);
+      expect(updatedData[2]?.score).toBe(92);
+      expect(updatedData[4]?.score).toBe(85);
     });
   });
 
@@ -1279,14 +1250,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First search for something
       act(() => {
         result.current.table.setSearchQuery("Tony");
       });
 
       expect(result.current.table.getSearchMatches().length).toBeGreaterThan(0);
 
-      // Clear search
       act(() => {
         result.current.table.setSearchQuery("");
       });
@@ -1465,7 +1434,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Open context menu
       const mockEvent = {
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
@@ -1480,7 +1448,6 @@ describe("useDataGrid", () => {
 
       expect(result.current.table.getContextMenu().open).toBe(true);
 
-      // Close context menu
       await act(async () => {
         result.current.table.closeContextMenu();
         await Promise.resolve();
@@ -1522,7 +1489,6 @@ describe("useDataGrid", () => {
       expect(result.current.columnSizeVars).toBeDefined();
       expect(typeof result.current.columnSizeVars).toBe("object");
 
-      // Should have size vars for each column
       expect(result.current.columnSizeVars["--col-name-size"]).toBeDefined();
       expect(result.current.columnSizeVars["--col-trick-size"]).toBeDefined();
       expect(result.current.columnSizeVars["--col-score-size"]).toBeDefined();
@@ -1541,7 +1507,7 @@ describe("useDataGrid", () => {
       );
 
       expect(result.current.dataGridRef).toBeDefined();
-      expect(result.current.dataGridRef.current).toBeNull(); // Not mounted
+      expect(result.current.dataGridRef.current).toBeNull();
     });
 
     it("should provide headerRef", () => {
@@ -1796,14 +1762,14 @@ describe("useDataGrid", () => {
       await act(async () => {
         await result.current.table.cutSelectedCells();
       });
-      expect(result.current.table.getCutCells()).toEqual([
+      expect(result.current.table.getCutCellGrid()).toEqual([
         [{ rowId: "0", columnId: "name" }],
       ]);
 
       await act(async () => {
         await result.current.table.copySelectedCells();
       });
-      expect(result.current.table.getCutCells()).toEqual([]);
+      expect(result.current.table.getCutCellGrid()).toEqual([]);
     });
   });
 
@@ -1822,12 +1788,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a number cell
       act(() => {
         fireCellEvent(result, "onClick", "0", "score");
       });
 
-      // Paste
       await act(async () => {
         await result.current.table.pasteCells();
       });
@@ -1851,12 +1815,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Paste will be called internally and should work
       await act(async () => {
         mockClipboard.readText.mockResolvedValue("Test\nValue\nNew");
         await result.current.table.pasteCells();
@@ -1877,17 +1839,14 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a number cell
       act(() => {
         fireCellEvent(result, "onClick", "0", "score");
       });
 
-      // Paste invalid number
       await act(async () => {
         await result.current.table.pasteCells();
       });
 
-      // Should skip the invalid cell
       expect(onDataChange).not.toHaveBeenCalled();
     });
 
@@ -1905,12 +1864,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Paste
       await act(async () => {
         await result.current.table.pasteCells();
       });
@@ -2028,12 +1985,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus and select a cell
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Cut
       await act(async () => {
         await result.current.table.cutSelectedCells();
       });
@@ -2140,12 +2095,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Start selection by mouse down
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -2153,7 +2106,6 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Copy
       await act(async () => {
         await result.current.table.copySelectedCells();
       });
@@ -2200,12 +2152,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to set anchor
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Shift+Click to select range
       const mockEvent = {
         preventDefault: vi.fn(),
         shiftKey: true,
@@ -2230,7 +2180,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Mouse down to start selection
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -2241,12 +2190,10 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Mouse enter to extend selection
       act(() => {
         fireCellEvent(result, "onMouseOver", "1", "score");
       });
 
-      // Mouse up to end selection
       act(() => {
         fireCellEvent(result, "onMouseUp", "0", "name");
       });
@@ -2293,12 +2240,10 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Extend the selection to a multi-cell range.
       act(() => {
         fireCellEvent(result, "onMouseOver", "1", "score");
       });
 
-      // (0, "name") is now inside the committed selection range.
       expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
 
       // Simulate the user releasing the mouse outside the grid.  The
@@ -2332,7 +2277,6 @@ describe("useDataGrid", () => {
         result.current.table.selectColumnCells("name");
       });
 
-      // All cells in the column should be selected
       expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
       expect(result.current.table.getIsCellSelected("1", "name")).toBe(true);
       expect(result.current.table.getIsCellSelected("2", "name")).toBe(true);
@@ -2461,7 +2405,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Select a cell first
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -2469,7 +2412,6 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Click column header
       act(() => {
         result.current.table.selectColumnCells("name");
       });
@@ -2496,7 +2438,6 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onClick", "0", "name", mockRightClickEvent);
       });
 
-      // Right-click shouldn't change focus
       expect(getFocusedCell(result.current.table)).toBeNull();
     });
   });
@@ -2513,12 +2454,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "Kickflip"
       act(() => {
         result.current.table.setSearchQuery("Kickflip");
       });
 
-      // Navigate to next match
       act(() => {
         result.current.table.goToNextSearchMatch();
       });
@@ -2537,17 +2476,14 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "Kickflip"
       act(() => {
         result.current.table.setSearchQuery("Kickflip");
       });
 
-      // Navigate to next first
       act(() => {
         result.current.table.goToNextSearchMatch();
       });
 
-      // Then navigate back
       act(() => {
         result.current.table.goToPrevSearchMatch();
       });
@@ -2566,21 +2502,18 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "Kickflip"
       act(() => {
         result.current.table.setSearchQuery("Kickflip");
       });
 
       const matchCount = result.current.table.getSearchMatches().length ?? 0;
 
-      // Navigate through all matches
       for (let i = 0; i < matchCount; i++) {
         act(() => {
           result.current.table.goToNextSearchMatch();
         });
       }
 
-      // Should wrap to 0
       expect(result.current.table.getSearchMatchIndex()).toBe(0);
     });
 
@@ -2595,7 +2528,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for something
       act(() => {
         result.current.table.setSearchQuery("Tony");
       });
@@ -2614,7 +2546,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for something
       act(() => {
         result.current.table.setSearchQuery("Tony");
       });
@@ -2652,18 +2583,15 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Open search
       await act(async () => {
         result.current.table.openSearch();
         await Promise.resolve();
       });
 
-      // Search for something
       act(() => {
         result.current.table.setSearchQuery("Tony");
       });
 
-      // Close search
       await act(async () => {
         result.current.table.closeSearch();
         await Promise.resolve();
@@ -2710,14 +2638,12 @@ describe("useDataGrid", () => {
       const firstRowId = rows[0]?.id;
       const thirdRowId = rows[2]?.id;
 
-      // Select first row
       act(() => {
         result.current.table
           .getRow(firstRowId ?? "1")
           .getToggleSelectedHandler()({ target: { checked: true } });
       });
 
-      // Select third row with shift
       act(() => {
         result.current.table
           .getRow(thirdRowId ?? "3")
@@ -2744,12 +2670,10 @@ describe("useDataGrid", () => {
 
       const firstRowId = result.current.table.getRowModel().rows[0]?.id;
 
-      // Select row
       act(() => {
         result.current.table.getRow(firstRowId ?? "1").toggleSelected(true);
       });
 
-      // Deselect row
       act(() => {
         result.current.table.getRow(firstRowId ?? "1").toggleSelected(false);
       });
@@ -2772,13 +2696,11 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // With filter "name contains Tony", only Tony Hawk (id: "1") should be visible
       const rows = result.current.table.getRowModel().rows;
       expect(rows.length).toBe(1);
       const visibleRowId = rows[0]?.id;
       expect(visibleRowId).toBe("1");
 
-      // Select the visible (filtered) row
       act(() => {
         result.current.table.getRow(visibleRowId ?? "1").toggleSelected(true);
       });
@@ -2800,7 +2722,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Start editing
       await act(async () => {
         startEditing(result.current.table, "0", "name");
       });
@@ -2810,7 +2731,6 @@ describe("useDataGrid", () => {
         columnId: "name",
       });
 
-      // Stop editing and move to next row
       await act(async () => {
         result.current.table.stopEditing({ moveToNextRow: true });
       });
@@ -2832,12 +2752,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Start editing
       await act(async () => {
         startEditing(result.current.table, "0", "name");
       });
 
-      // Stop editing and navigate right
       await act(async () => {
         result.current.table.stopEditing({ direction: "right" });
       });
@@ -2859,7 +2777,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to focus
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
@@ -2870,7 +2787,6 @@ describe("useDataGrid", () => {
       });
       expect(result.current.table.getEditingCell()).toBeNull();
 
-      // Second click on same cell to edit
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
@@ -3038,7 +2954,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Auto focus should set focused cell
       expect(getFocusedCell(result.current.table)).toBeDefined();
     });
 
@@ -3053,7 +2968,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Should focus the specified cell
       expect(getFocusedCell(result.current.table)).toBeDefined();
     });
 
@@ -3092,7 +3006,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Get the column and toggle sorting
       const nameColumn = result.current.table.getColumn("name");
 
       act(() => {
@@ -3118,7 +3031,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Set a filter
       act(() => {
         result.current.table.setColumnFilters([{ id: "name", value: "Tony" }]);
       });
@@ -3255,7 +3167,6 @@ describe("useDataGrid", () => {
         clientY: 100,
       } as unknown as React.MouseEvent;
 
-      // Right-click on a cell
       act(() => {
         fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
       });
@@ -3280,7 +3191,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Select multiple cells first
       await act(async () => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -3302,7 +3212,6 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      // Right-click on a selected cell
       const mockEvent = {
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
@@ -3315,7 +3224,6 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      // Should keep existing selection and open context menu
       expect(result.current.table.getContextMenu().open).toBe(true);
     });
   });
@@ -3390,12 +3298,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Paste should work
       await act(async () => {
         await result.current.table.pasteCells();
       });
@@ -3532,7 +3438,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Select a cell
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -3540,12 +3445,10 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Click on another cell (non-select column)
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Should maintain or update selection appropriately
       expect(getFocusedCell(result.current.table)).toBeDefined();
     });
   });
@@ -3569,7 +3472,6 @@ describe("useDataGrid", () => {
       });
 
       expect(onRowAdd).toHaveBeenCalled();
-      // Should not crash
     });
 
     it("should not proceed if onRowAdd returns null", async () => {
@@ -3628,12 +3530,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to focus
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Double click to edit
       act(() => {
         fireCellEvent(result, "onDoubleClick", "0", "name");
       });

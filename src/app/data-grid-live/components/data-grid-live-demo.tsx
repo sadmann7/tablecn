@@ -91,7 +91,6 @@ export function DataGridLiveDemo() {
     (q) => {
       let query = q.from({ skater: skatersCollection });
 
-      // Apply user-specified sorting first (primary)
       for (const sort of sorting) {
         const field = sort.id as keyof SkaterSchema;
         const direction = sort.desc ? "desc" : "asc";
@@ -258,27 +257,23 @@ export function DataGridLiveDemo() {
     [filterFn],
   );
 
-  // Undo/redo support - wraps data changes to track history
-  // and allows reverting changes via keyboard shortcuts
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
       const currentIds = new Set(data.map((s) => s.id));
       const newIds = new Set(newData.map((s) => s.id));
 
-      // Delete rows that exist in current but not in new (undo add / redo delete)
+      // Undo of an add, or redo of a delete
       for (const skater of data) {
         if (!newIds.has(skater.id)) {
           skatersCollection.delete(skater.id);
         }
       }
 
-      // Insert or update rows
       for (const skater of newData) {
         if (!currentIds.has(skater.id)) {
-          // Insert new row (undo delete / redo add)
+          // Undo of a delete, or redo of an add
           skatersCollection.insert(skater);
         } else {
-          // Update existing row
           const existingSkater = data.find((s) => s.id === skater.id);
           if (!existingSkater) continue;
 
@@ -319,10 +314,8 @@ export function DataGridLiveDemo() {
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
     (newData) => {
-      // Track cell updates for undo/redo
       const cellUpdates: Array<UndoRedoCellUpdate> = [];
 
-      // Diff and update changed skaters via TanStack DB for optimistic updates
       for (const skater of newData) {
         const existingSkater = data.find((s) => s.id === skater.id);
 
@@ -361,7 +354,6 @@ export function DataGridLiveDemo() {
         }
       }
 
-      // Track cell updates if there are any
       if (cellUpdates.length > 0) {
         trackCellsUpdate(cellUpdates);
       }
@@ -391,7 +383,6 @@ export function DataGridLiveDemo() {
 
       skatersCollection.insert(newSkater);
 
-      // Track for undo/redo
       trackRowsAdd([newSkater]);
 
       return {
@@ -427,7 +418,6 @@ export function DataGridLiveDemo() {
           skatersCollection.insert(newSkater);
         }
 
-        // Track for undo/redo
         trackRowsAdd(newRows);
       },
       [data, trackRowsAdd],
@@ -450,7 +440,6 @@ export function DataGridLiveDemo() {
     UseDataGridProps<SkaterSchema>["onFilesUpload"]
   > = React.useCallback(
     async ({ files }) => {
-      // Try to upload via UploadThing, fall back to simulation if not configured
       try {
         const uploadedFiles = await startUpload(files);
 
@@ -484,7 +473,6 @@ export function DataGridLiveDemo() {
   const onFilesDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onFilesDelete"]
   > = React.useCallback(async ({ fileIds }) => {
-    // Try to delete from UploadThing, silently fail if not configured
     try {
       await fetch("/api/uploadthing/delete", {
         method: "POST",
