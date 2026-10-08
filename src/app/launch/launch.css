@@ -4,27 +4,42 @@
   animation-play-state: paused !important;
 }
 
+/* Shared by the camera layers and the portaled popovers so they zoom in lockstep. */
+html[data-launch-camera] {
+  --launch-camera-duration: 700ms;
+  --launch-camera-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .launch-camera {
   transform-origin: 0 0;
-  transition: transform 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+  transition: transform var(--launch-camera-duration, 700ms)
+    var(--launch-camera-ease, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
   scale: var(--launch-camera-scale, 1);
   transform-origin: var(--radix-popper-transform-origin);
-  transition: scale 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+  transition: scale var(--launch-camera-duration) var(--launch-camera-ease);
 }
 
+/* Only elements that draw a border, so borderless ones like search inputs stay bare. */
 html[data-launch-camera]
   [data-radix-popper-content-wrapper]
   :is(
     [data-slot="select-trigger"],
     button:not([class*="border-transparent"]),
     input
-  ) {
+  )[class~="border"] {
   border-color: transparent !important;
   background-clip: border-box;
   box-shadow: 0 0 0 calc(1px / var(--launch-camera-scale, 1)) var(--input) !important;
+}
+
+/* The toolbar count badges are sized in px, so they skip the stage's rem scaling. */
+.launch-stage [data-slot="badge"][class*="h-[18.24px]"] {
+  height: 1.14rem;
+  padding-inline: 0.32rem;
+  font-size: 0.65rem;
 }
 
 /* Item-aligned selects skip the popper wrapper and anchor at the trigger's top left. */
@@ -40,21 +55,44 @@ html[data-launch-camera]
     opacity 300ms ease-out;
 }
 
-.launch-dots {
-  background-image: radial-gradient(rgb(255 255 255 / 0.14) 1px, transparent 0);
-  background-size: 36px 36px;
+.launch-glow {
+  filter: blur(120px);
+  will-change: transform;
 }
 
-.launch-dots-fade {
-  background: linear-gradient(to bottom, transparent 70%, #09090b);
-}
-
-.launch-light {
+.launch-glow-primary {
   background: radial-gradient(
-    ellipse 60% 50% at 70% 0%,
-    rgb(52 211 153 / 0.1),
-    transparent 70%
+    closest-side,
+    rgb(52 211 153 / 0.28),
+    rgb(20 184 166 / 0.1) 60%,
+    transparent
   );
+  animation: launch-drift 24s ease-in-out infinite alternate;
+}
+
+.launch-glow-secondary {
+  background: radial-gradient(
+    closest-side,
+    rgb(56 189 248 / 0.2),
+    rgb(99 102 241 / 0.08) 60%,
+    transparent
+  );
+  animation: launch-drift 30s ease-in-out -12s infinite alternate-reverse;
+}
+
+.launch-vignette {
+  background: radial-gradient(
+    ellipse 85% 75% at 50% 45%,
+    transparent 40%,
+    rgb(0 0 0 / 0.55)
+  );
+}
+
+/* Grain keeps the dark gradients from banding once the video is encoded. */
+.launch-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
 }
 
 .launch-rise {
@@ -72,20 +110,6 @@ html[data-launch-camera]
 
 .launch-logo {
   animation: launch-logo 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--launch-delay, 0ms);
-}
-
-.launch-sweep {
-  background: linear-gradient(
-    100deg,
-    rgb(255 255 255 / 0.55) 30%,
-    white 50%,
-    rgb(255 255 255 / 0.55) 70%
-  );
-  background-size: 300% 100%;
-  background-clip: text;
-  color: transparent;
-  animation: launch-sweep 2400ms ease-out both;
   animation-delay: var(--launch-delay, 0ms);
 }
 
@@ -126,12 +150,12 @@ html[data-launch-camera]
   }
 }
 
-@keyframes launch-sweep {
+@keyframes launch-drift {
   from {
-    background-position: 100% 0;
+    transform: translate(0, 0) scale(1);
   }
   to {
-    background-position: 0% 0;
+    transform: translate(-8%, 6%) scale(1.12);
   }
 }
 
@@ -139,8 +163,8 @@ html[data-launch-camera]
   .launch-rise,
   .launch-logo,
   .launch-keystroke,
-  .launch-sweep,
-  .launch-flash {
+  .launch-flash,
+  .launch-glow {
     animation: none;
   }
 

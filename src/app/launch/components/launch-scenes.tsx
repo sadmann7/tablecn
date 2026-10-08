@@ -2,22 +2,19 @@ import type * as React from "react";
 
 import { Copy, LayoutGrid } from "lucide-react";
 
+const TAGLINE =
+  "A shadcn/ui data table with sorting, filtering, and pagination.";
+
 const INSTALL_COMMAND =
   "pnpm dlx shadcn@latest add https://tablecn.com/r/data-table.json";
 
-const HIGHLIGHTS = [
-  "Filters from column definitions",
-  "Server and client modes",
-  "Plain, advanced, and command filters",
-  "State in the URL",
-];
-
 export function LaunchBackdrop() {
   return (
-    <div className="pointer-events-none absolute inset-0">
-      <div className="launch-dots absolute inset-0" />
-      <div className="launch-light absolute inset-0" />
-      <div className="launch-dots-fade absolute inset-0" />
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="launch-glow launch-glow-primary absolute top-[-30%] right-[-10%] h-[90%] w-[70%] rounded-full" />
+      <div className="launch-glow launch-glow-secondary absolute bottom-[-20%] left-[-5%] h-[75%] w-[55%] rounded-full" />
+      <div className="launch-vignette absolute inset-0" />
+      <div className="launch-grain absolute inset-0" />
     </div>
   );
 }
@@ -32,22 +29,11 @@ export function LaunchIntroScene() {
         </span>
       </div>
       <p
-        className="launch-rise text-5xl text-white/60"
+        className="launch-rise max-w-280 text-5xl leading-snug text-balance text-white/60"
         style={launchDelay(200)}
       >
-        The data table for shadcn/ui.
+        {TAGLINE}
       </p>
-      <div className="flex items-center gap-3">
-        {HIGHLIGHTS.map((highlight, index) => (
-          <span
-            key={highlight}
-            className="launch-rise rounded-full border border-white/15 bg-white/5 px-5 py-2 text-xl text-white/70"
-            style={launchDelay(450 + index * 100)}
-          >
-            {highlight}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
@@ -157,15 +143,9 @@ export function LaunchOutroScene() {
           tablecn
         </span>
       </div>
-      <p
-        className="launch-sweep text-5xl font-semibold tracking-tight"
-        style={launchDelay(250)}
-      >
-        Define your columns. Get a data table.
-      </p>
       <div
         className="launch-rise flex items-center gap-5 rounded-2xl border border-white/10 bg-white/4 py-5 pr-5 pl-8 font-mono text-2xl text-white/80"
-        style={launchDelay(450)}
+        style={launchDelay(250)}
       >
         <span className="text-white/35">$</span>
         {INSTALL_COMMAND}
@@ -175,7 +155,7 @@ export function LaunchOutroScene() {
       </div>
       <span
         className="launch-rise font-mono text-2xl text-white/45"
-        style={launchDelay(600)}
+        style={launchDelay(400)}
       >
         tablecn.com
       </span>
