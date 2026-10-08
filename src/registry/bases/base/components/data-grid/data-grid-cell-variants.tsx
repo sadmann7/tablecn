@@ -14,9 +14,16 @@ import {
   formatDateForDisplay,
   formatDateToString,
   formatFileSize,
+  getBooleanCellValue,
   getCellKey,
+  getDateCellValue,
   getFileIcon,
+  getFilesCellValue,
   getLineCount,
+  getNumberCellValue,
+  getOptionCellValue,
+  getOptionsCellValue,
+  getTextCellValue,
   getUrlHref,
   insertTextAtSelection,
   parseLocalDate,
@@ -57,7 +64,7 @@ export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = cell.getValue() as string;
+  const initialValue = getTextCellValue(cell.getValue());
   const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -185,8 +192,8 @@ export function LongTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = cell.getValue() as string;
-  const [value, setValue] = React.useState(initialValue ?? "");
+  const initialValue = getTextCellValue(cell.getValue());
+  const [value, setValue] = React.useState(initialValue);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const pendingCharRef = React.useRef<string | null>(null);
@@ -195,7 +202,7 @@ export function LongTextCell<TData extends RowData>(
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
-    setValue(initialValue ?? "");
+    setValue(initialValue);
   }
 
   const debouncedSave = useDebouncedCallback((newValue: string) => {
@@ -214,7 +221,7 @@ export function LongTextCell<TData extends RowData>(
 
   const onCancel = React.useCallback(() => {
     // Restore the original value
-    setValue(initialValue ?? "");
+    setValue(initialValue);
     if (!readOnly) {
       cell.setValue(initialValue);
     }
@@ -360,7 +367,7 @@ export function NumberCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = cell.getValue() as number;
+  const initialValue = getNumberCellValue(cell.getValue());
   const [value, setValue] = React.useState(String(initialValue ?? ""));
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -470,8 +477,8 @@ export function UrlCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = cell.getValue() as string;
-  const [value, setValue] = React.useState(initialValue ?? "");
+  const initialValue = getTextCellValue(cell.getValue());
+  const [value, setValue] = React.useState(initialValue);
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
@@ -479,9 +486,9 @@ export function UrlCell<TData extends RowData>(
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
-    setValue(initialValue ?? "");
+    setValue(initialValue);
     if (cellRef.current && !isEditing) {
-      cellRef.current.textContent = initialValue ?? "";
+      cellRef.current.textContent = initialValue;
     }
   }
 
@@ -523,7 +530,7 @@ export function UrlCell<TData extends RowData>(
           });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(initialValue ?? "");
+          setValue(initialValue);
           cellRef.current?.blur();
         }
       } else if (
@@ -662,7 +669,7 @@ export function CheckboxCell<TData extends RowData>(
   props: Omit<DataGridCellProps<TData>, "isEditing">,
 ) {
   const { cell, isFocused, readOnly } = props;
-  const initialValue = cell.getValue() as boolean;
+  const initialValue = getBooleanCellValue(cell.getValue());
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -752,7 +759,7 @@ export function SelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, readOnly } = props;
-  const initialValue = (cell.getValue() ?? undefined) as string | undefined;
+  const initialValue = getOptionCellValue(cell.getValue());
 
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -875,8 +882,7 @@ export function MultiSelectCell<TData extends RowData>(
   const rowId = cell.row.id;
   const columnId = cell.column.id;
   const cellValue = React.useMemo(() => {
-    const value = cell.getValue() as string[];
-    return value ?? [];
+    return getOptionsCellValue(cell.getValue());
   }, [cell]);
 
   const cellKey = getCellKey(rowId, columnId);
@@ -1156,14 +1162,14 @@ export function DateCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, readOnly } = props;
-  const initialValue = cell.getValue() as string;
-  const [value, setValue] = React.useState(initialValue ?? "");
+  const initialValue = getDateCellValue(cell.getValue());
+  const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
     prevInitialValueRef.current = initialValue;
-    setValue(initialValue ?? "");
+    setValue(initialValue);
   }
 
   // Parse date as local time to avoid timezone shifts
@@ -1251,7 +1257,7 @@ export function FileCell<TData extends RowData>(
   const rowId = cell.row.id;
   const columnId = cell.column.id;
   const cellValue = React.useMemo(
-    () => (cell.getValue() as FileCellData[]) ?? [],
+    () => getFilesCellValue(cell.getValue()),
     [cell],
   );
 

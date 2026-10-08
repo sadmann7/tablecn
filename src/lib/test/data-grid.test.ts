@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getBooleanCellValue,
   getCellKey,
+  getDateCellValue,
+  getFilesCellValue,
   getIsInPopover,
   getIsPointOnScrollbar,
+  getNumberCellValue,
+  getOptionCellValue,
+  getOptionsCellValue,
   getTabTargetCell,
   insertTextAtSelection,
   parseCellKey,
@@ -510,5 +516,47 @@ describe("replaceEditableText", () => {
     expect(selection?.isCollapsed).toBe(true);
     expect(selection?.focusOffset).toBe(1);
     expect(inputData).toBe("a");
+  });
+});
+
+describe("cell value narrowing", () => {
+  it("narrows number values", () => {
+    expect(getNumberCellValue(42)).toBe(42);
+    expect(getNumberCellValue("3.5")).toBe(3.5);
+    expect(getNumberCellValue("")).toBeNull();
+    expect(getNumberCellValue("abc")).toBeNull();
+    expect(getNumberCellValue(Number.NaN)).toBeNull();
+    expect(getNumberCellValue(undefined)).toBeNull();
+  });
+
+  it("narrows boolean values", () => {
+    expect(getBooleanCellValue(true)).toBe(true);
+    expect(getBooleanCellValue("Yes")).toBe(true);
+    expect(getBooleanCellValue(1)).toBe(true);
+    expect(getBooleanCellValue("false")).toBe(false);
+    expect(getBooleanCellValue(null)).toBe(false);
+  });
+
+  it("narrows date values to local date strings", () => {
+    expect(getDateCellValue("2026-10-08")).toBe("2026-10-08");
+    expect(getDateCellValue(new Date(2026, 9, 8))).toBe("2026-10-08");
+    expect(getDateCellValue(new Date("invalid"))).toBe("");
+    expect(getDateCellValue(null)).toBe("");
+  });
+
+  it("narrows option values", () => {
+    expect(getOptionCellValue("regular")).toBe("regular");
+    expect(getOptionCellValue(null)).toBeUndefined();
+    expect(getOptionsCellValue(["goofy", 1, "regular"])).toEqual([
+      "goofy",
+      "regular",
+    ]);
+    expect(getOptionsCellValue("goofy")).toEqual([]);
+  });
+
+  it("narrows file values", () => {
+    const file = { id: "1", name: "a.png", size: 10, type: "image/png" };
+    expect(getFilesCellValue([file, { id: "2" }])).toEqual([file]);
+    expect(getFilesCellValue(null)).toEqual([]);
   });
 });
