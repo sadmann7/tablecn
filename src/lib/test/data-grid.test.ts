@@ -9,6 +9,7 @@ import {
   parseCellKey,
   parsePastedCellValue,
   parseTsv,
+  replaceEditableText,
   serializeCellValue,
 } from "@/lib/data-grid-utils";
 
@@ -487,5 +488,27 @@ describe("insertTextAtSelection", () => {
     insertTextAtSelection(textarea, "i");
 
     expect(textarea.value).toBe("hio");
+  });
+});
+
+describe("replaceEditableText", () => {
+  it("replaces the content, moves the caret to the end and emits an input event", () => {
+    const element = document.createElement("div");
+    element.contentEditable = "true";
+    element.textContent = "hello";
+    document.body.replaceChildren(element);
+
+    let inputData = "";
+    element.addEventListener("input", (event) => {
+      inputData = (event as InputEvent).data ?? "";
+    });
+
+    replaceEditableText(element, "a");
+
+    const selection = window.getSelection();
+    expect(element.textContent).toBe("a");
+    expect(selection?.isCollapsed).toBe(true);
+    expect(selection?.focusOffset).toBe(1);
+    expect(inputData).toBe("a");
   });
 });
