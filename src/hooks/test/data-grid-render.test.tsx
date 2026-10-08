@@ -352,6 +352,28 @@ describe("DataGrid rendering", () => {
     expect(table.getIsCellSelected("2", "select")).toBe(false);
   });
 
+  it("keeps focus in place when selecting all rows from the header", () => {
+    const { table } = renderGrid([getDataGridSelectColumn(), ...testColumns]);
+    const selectAll = screen.getByRole("checkbox", { name: "Select all" });
+
+    act(() => {
+      table.setFocusedCell("3", "name");
+    });
+    act(() => {
+      selectAll.focus();
+    });
+    act(() => {
+      selectAll.click();
+    });
+
+    expect(table.getIsAllRowsSelected()).toBe(true);
+    expect(document.activeElement).toBe(selectAll);
+    const focusedCell = table.getFocusedCell();
+    expect(focusedCell?.row.id).toBe("3");
+    expect(focusedCell?.column.id).toBe("name");
+    expect(table.getIsCellSelected("1", "name")).toBe(true);
+  });
+
   it("updates rendered cells when columns are hidden or reordered", () => {
     const { container, table } = renderGrid();
 

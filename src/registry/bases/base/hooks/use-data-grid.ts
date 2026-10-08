@@ -476,7 +476,8 @@ function useDataGrid<TData extends RowData>({
       const focusedCell = getFocusedCell();
       const isUtilityCellFocused =
         focusedCell !== null && !getIsDataColumn(focusedCell.columnId);
-      if (focusedCell && isUtilityCellFocused) {
+      // The focused cell stays the active range so selecting rows elsewhere doesn't move focus and scroll to them
+      if (focusedCell) {
         ranges.push({
           anchorRowId: focusedCell.rowId,
           anchorColumnId: focusedCell.columnId,
@@ -1462,7 +1463,11 @@ function useDataGrid<TData extends RowData>({
       if (isFocusChanged && focusedCell) {
         if (table.getSearchOpen()) {
           revealCell(focusedCell, { shouldFocus: false, shouldScroll: true });
-        } else if (dataGridRef.current?.contains(document.activeElement)) {
+        } else if (
+          table.getFocusedHeaderColumnId() === null &&
+          dataGridRef.current?.contains(document.activeElement)
+        ) {
+          // Header controls like select all keep focus, so toggling them doesn't scroll to the first row
           focusCellElement(focusedCell);
         }
         return;
