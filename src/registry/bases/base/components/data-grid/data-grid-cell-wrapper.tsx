@@ -78,6 +78,7 @@ export function DataGridCellWrapper<TData extends RowData>({
   return (
     <div
       role="button"
+      {...props}
       data-slot="grid-cell-wrapper"
       data-row-id={rowId}
       data-column-id={columnId}
@@ -85,7 +86,6 @@ export function DataGridCellWrapper<TData extends RowData>({
       data-focused={isFocused ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
-      {...props}
       className={cn(
         "size-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
