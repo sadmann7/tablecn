@@ -85,7 +85,6 @@ interface ColumnDef_DataGridCellEditing {
 interface StopEditingOptions {
   /** Moves focus after committing, like Tab or the arrow keys. */
   direction?: NavigationDirection;
-  /** Moves focus to the cell below, like Enter. */
   moveToNextRow?: boolean;
 }
 
@@ -93,7 +92,6 @@ interface Table_DataGridCellEditing {
   getEditingCell: () => CellPosition | null;
   setEditingCell: (updater: Updater<CellPosition | null>) => void;
   resetEditingCell: (defaultState?: boolean) => void;
-  /** Ends editing and optionally moves focus to a neighboring cell. */
   stopEditing: (options?: StopEditingOptions) => void;
 }
 
@@ -104,7 +102,6 @@ interface Column_DataGridCellEditing {
 interface Cell_DataGridCellEditing {
   getCanEdit: () => boolean;
   getIsEditing: () => boolean;
-  /** Focuses the cell and opens its editor when the cell is editable. */
   startEditing: () => void;
 }
 
@@ -113,7 +110,6 @@ interface TableOptions_DataGridData<TData extends RowData> {
   readOnly?: boolean;
   onDataChange?: (data: TData[]) => void;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
-  /** Uploads files dropped on a file cell and resolves to the stored file data. */
   onFilesUpload?: (params: {
     files: File[];
     rowId: string;
@@ -189,7 +185,7 @@ interface ClipboardNotice {
 
 interface TableState_DataGridClipboard {
   /** Cut source cells laid out in the same rows and columns as the clipboard text. */
-  cutCells: Array<Array<CellPosition | null>>;
+  cutCellGrid: Array<Array<CellPosition | null>>;
   pasteDialog: PasteDialogState;
 }
 
@@ -199,9 +195,8 @@ interface TableOptions_DataGridClipboard {
   onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
   /** Adds rows when a paste needs more rows than the table has. */
   onRowsAdd?: (count: number) => void | Promise<void>;
-  /** Reports copy, cut and paste results, e.g. to show a toast. */
   onClipboardNotice?: (notice: ClipboardNotice) => void;
-  onCutCellsChange?: OnChangeFn<Array<Array<CellPosition | null>>>;
+  onCutCellGridChange?: OnChangeFn<Array<Array<CellPosition | null>>>;
   onPasteDialogChange?: OnChangeFn<PasteDialogState>;
 }
 
@@ -213,9 +208,9 @@ interface PasteCellsOptions {
 interface Table_DataGridClipboard {
   /** Selected cells in data columns, row by row in display order. */
   getSelectedCells: () => Array<CellPosition>;
-  getCutCells: () => Array<Array<CellPosition | null>>;
-  setCutCells: (updater: Updater<Array<Array<CellPosition | null>>>) => void;
-  resetCutCells: (defaultState?: boolean) => void;
+  getCutCellGrid: () => Array<Array<CellPosition | null>>;
+  setCutCellGrid: (updater: Updater<Array<Array<CellPosition | null>>>) => void;
+  resetCutCellGrid: (defaultState?: boolean) => void;
   getPasteDialog: () => PasteDialogState;
   setPasteDialog: (updater: Updater<PasteDialogState>) => void;
   resetPasteDialog: (defaultState?: boolean) => void;
@@ -284,7 +279,6 @@ interface Cell_DataGridPresence {
 }
 
 interface TableState_DataGridSelection {
-  /** Cell where the current mouse drag selection started, `null` when not dragging. */
   cellDragAnchor: CellPosition | null;
   contextMenu: ContextMenuState;
 }
@@ -977,8 +971,9 @@ async function writeSelectedCells(table: DataGridInstance, isCut: boolean) {
 
   try {
     await navigator.clipboard.writeText(serialized.text);
-    if (isCut) table.setCutCells(serialized.cellGrid);
-    else if (table.atoms.cutCells.get().length > 0) table.resetCutCells(true);
+    if (isCut) table.setCutCellGrid(serialized.cellGrid);
+    else if (table.atoms.cutCellGrid.get().length > 0)
+      table.resetCutCellGrid(true);
     notify?.({
       variant: "success",
       message: `${pluralizeCells(serialized.cellCount)} ${isCut ? "cut" : "copied"}`,
@@ -1098,7 +1093,7 @@ async function pasteCells(
     }
 
     const rows = table.getRowModel().rows;
-    const cutCells = table.atoms.cutCells.get();
+    const cutCellGrid = table.atoms.cutCellGrid.get();
     const updates: Array<CellUpdate> = [];
     const writtenCellKeys = new Set<string>();
     const movedSourceCells: Array<CellPosition> = [];
@@ -1132,8 +1127,8 @@ async function pasteCells(
         writtenCellKeys.add(getCellKey(rowId, columnId));
 
         const sourceCell = target.isFill
-          ? cutCells[0]?.[0]
-          : cutCells[pasteRowIndex]?.[pasteColumnIndex];
+          ? cutCellGrid[0]?.[0]
+          : cutCellGrid[pasteRowIndex]?.[pasteColumnIndex];
         if (sourceCell) movedSourceCells.push(sourceCell);
       }
     }
@@ -1149,7 +1144,7 @@ async function pasteCells(
           ...cell,
           value: getEmptyValueForColumn(table, cell.columnId),
         }));
-      table.resetCutCells(true);
+      table.resetCutCellGrid(true);
       updateCells(table, [...updates, ...clearedSourceUpdates]);
 
       const startRowId = rows[target.rowIndex]?.id;
@@ -1193,13 +1188,13 @@ async function pasteCells(
 
 const dataGridClipboardFeature: TableFeature = {
   getInitialState: (initialState) => ({
-    cutCells: [],
+    cutCellGrid: [],
     pasteDialog: DEFAULT_PASTE_DIALOG,
     ...initialState,
   }),
   getDefaultTableOptions: (table) => {
     const options: TableOptions_DataGridClipboard = {
-      onCutCellsChange: makeStateUpdater("cutCells", table),
+      onCutCellGridChange: makeStateUpdater("cutCellGrid", table),
       onPasteDialogChange: makeStateUpdater("pasteDialog", table),
     };
     return options;
@@ -1207,8 +1202,10 @@ const dataGridClipboardFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
-    const setCutCells = (updater: Updater<Array<Array<CellPosition | null>>>) =>
-      instance.options.onCutCellsChange?.((old) =>
+    const setCutCellGrid = (
+      updater: Updater<Array<Array<CellPosition | null>>>,
+    ) =>
+      instance.options.onCutCellGridChange?.((old) =>
         functionalUpdate(updater, old),
       );
     const setPasteDialog = (updater: Updater<PasteDialogState>) =>
@@ -1220,14 +1217,14 @@ const dataGridClipboardFeature: TableFeature = {
       table_getSelectedCells: {
         fn: () => getSelectedCells(instance),
       },
-      table_getCutCells: {
-        fn: () => instance.atoms.cutCells.get(),
+      table_getCutCellGrid: {
+        fn: () => instance.atoms.cutCellGrid.get(),
       },
-      table_setCutCells: { fn: setCutCells },
-      table_resetCutCells: {
+      table_setCutCellGrid: { fn: setCutCellGrid },
+      table_resetCutCellGrid: {
         fn: (defaultState?: boolean) =>
-          setCutCells(
-            defaultState ? [] : (instance.initialState.cutCells ?? []),
+          setCutCellGrid(
+            defaultState ? [] : (instance.initialState.cutCellGrid ?? []),
           ),
       },
       table_getPasteDialog: {
