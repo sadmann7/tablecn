@@ -67,6 +67,11 @@ export interface CellPresence extends CellPosition {
   color: string;
 }
 
+export interface ClipboardNotice {
+  variant: "success" | "error";
+  message: string;
+}
+
 export interface ContextMenuState {
   open: boolean;
   x: number;

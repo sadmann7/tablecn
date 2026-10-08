@@ -28,6 +28,7 @@ import {
 import type {
   CellPosition,
   CellPresence,
+  ClipboardNotice,
   CellUpdate,
   ContextMenuState,
   DataGridColumnMeta,
@@ -41,6 +42,8 @@ import type {
 import {
   getCellKey,
   getEmptyCellValue,
+  getFocusedCellPosition,
+  getHasCellRangeSelection,
   getLineCount,
   getRowHeightValue,
   getRowIndexById,
@@ -176,11 +179,6 @@ interface Table_DataGridNavigation {
   scrollToCell: (rowId: string, columnId: string) => void;
   getFocusedHeaderColumnId: () => string | null;
   setFocusedHeaderColumnId: (updater: Updater<string | null>) => void;
-}
-
-interface ClipboardNotice {
-  variant: "success" | "error";
-  message: string;
 }
 
 interface TableState_DataGridClipboard {
@@ -1446,31 +1444,12 @@ const dataGridPresenceFeature: TableFeature = {
 
 const DEFAULT_CONTEXT_MENU: ContextMenuState = { open: false, x: 0, y: 0 };
 
-function getHasCellRangeSelection(table: DataGridInstance) {
-  const ranges = table.atoms.cellSelection.get();
-  const range = ranges[ranges.length - 1];
-  if (!range) return false;
-  return (
-    ranges.length > 1 ||
-    range.anchorRowId !== range.focusRowId ||
-    range.anchorColumnId !== range.focusColumnId
-  );
-}
-
 function getHasRowSelection(table: DataGridInstance) {
   return Object.keys(table.atoms.rowSelection.get()).length > 0;
 }
 
 function clearRowSelection(table: DataGridInstance) {
   if (getHasRowSelection(table)) makeStateUpdater("rowSelection", table)({});
-}
-
-function getFocusedCellPosition(table: DataGridInstance): CellPosition | null {
-  const ranges = table.atoms.cellSelection.get();
-  const range = ranges[ranges.length - 1];
-  return range
-    ? { rowId: range.anchorRowId, columnId: range.anchorColumnId }
-    : null;
 }
 
 function selectAllDataCells(table: DataGridInstance) {
@@ -1488,7 +1467,7 @@ function selectAllDataCells(table: DataGridInstance) {
     focusRowId: lastRowId,
     focusColumnId: lastColumnId,
   };
-  const focusedCell = getFocusedCellPosition(table);
+  const focusedCell = getFocusedCellPosition(table.atoms.cellSelection.get());
 
   // The focused cell stays the active range so selecting everything doesn't move focus
   table.setCellSelection(
@@ -1523,7 +1502,9 @@ const dataGridSelectionFeature: TableFeature = {
     const instance = asDataGrid(table);
 
     const clearSelection = () => {
-      const focusedCell = getFocusedCellPosition(instance);
+      const focusedCell = getFocusedCellPosition(
+        instance.atoms.cellSelection.get(),
+      );
       if (focusedCell) {
         instance.setFocusedCell(focusedCell.rowId, focusedCell.columnId);
       } else {
@@ -1535,7 +1516,7 @@ const dataGridSelectionFeature: TableFeature = {
 
     assignTableAPIs("dataGridSelectionFeature", table, {
       table_getHasCellRangeSelection: {
-        fn: () => getHasCellRangeSelection(instance),
+        fn: () => getHasCellRangeSelection(instance.atoms.cellSelection.get()),
       },
       table_getHasRowSelection: {
         fn: () => getHasRowSelection(instance),
@@ -1544,7 +1525,7 @@ const dataGridSelectionFeature: TableFeature = {
         fn: (rowId: string, columnId: string) => {
           if (
             !instance.options.enableSingleCellSelection &&
-            !getHasCellRangeSelection(instance)
+            !getHasCellRangeSelection(instance.atoms.cellSelection.get())
           ) {
             return false;
           }
@@ -1557,7 +1538,7 @@ const dataGridSelectionFeature: TableFeature = {
       table_getSelectedRangeCellCount: {
         fn: () =>
           instance.options.enableSingleCellSelection ||
-          getHasCellRangeSelection(instance)
+          getHasCellRangeSelection(instance.atoms.cellSelection.get())
             ? instance.getSelectedCellCount()
             : 0,
       },

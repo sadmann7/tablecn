@@ -7,7 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { getCellKey, stringifyUnknown } from "@/lib/data-grid-utils";
+import {
+  getCellKey,
+  getFocusedCellPosition,
+  stringifyUnknown,
+} from "@/lib/data-grid-utils";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
 vi.mock("sonner", () => ({
@@ -81,10 +85,7 @@ type GridBodyEventType =
   | "onContextMenu";
 
 function getFocusedCell(table: Table<DataGridFeatures, TestData> | undefined) {
-  const activeRange = table?.atoms.cellSelection.get().at(-1);
-  return activeRange
-    ? { rowId: activeRange.anchorRowId, columnId: activeRange.anchorColumnId }
-    : null;
+  return getFocusedCellPosition(table?.atoms.cellSelection.get() ?? []);
 }
 
 function getSelectedCellKeys(
