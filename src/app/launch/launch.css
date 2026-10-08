@@ -42,6 +42,15 @@ html[data-launch-camera]
   font-size: 0.65rem;
 }
 
+/* Column sizes are px, so the table would overflow its window once the stage scales down. */
+.launch-stage table[style] {
+  min-width: 0 !important;
+}
+
+.launch-stage table[style] :is(th, td) {
+  width: auto !important;
+}
+
 /* Item-aligned selects skip the popper wrapper and anchor at the trigger's top left. */
 html[data-launch-camera]
   [data-slot="select-content"][data-align-trigger="true"] {

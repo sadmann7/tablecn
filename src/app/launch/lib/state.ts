@@ -115,10 +115,3 @@ export function serverReducer(
       };
   }
 }
-
-export function resetTable(table: LaunchTable) {
-  table.resetColumnFilters(true);
-  table.resetJoinOperator(true);
-  table.setSorting(INITIAL_SORTING);
-  table.setPageIndex(0);
-}

@@ -22,13 +22,13 @@ import {
   pressFilterShortcut,
   openPopover,
   pressKey,
+  replaceUrl,
   typeCommand,
 } from "./dom";
 import {
   type LaunchDemoAction,
   type LaunchServerAction,
   type LaunchTable,
-  resetTable,
 } from "./state";
 
 export type LaunchSceneId =
@@ -158,13 +158,16 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [3, 4],
     },
     steps: [
+      { at: 600, run: setUrl("?status=todo", "Status") },
+      { at: 1200, run: setUrl("?status=todo,in-progress", "Status") },
       {
-        at: 1000,
-        run: ({ table }) =>
-          table.setSorting([{ id: "estimatedHours", desc: true }]),
+        at: 2200,
+        run: setUrl("?status=todo,in-progress&sort=estimatedHours.desc"),
       },
-      { at: 2100, run: ({ table }) => table.nextPage() },
-      { at: 3200, run: setFilter("status", ["todo", "in-progress"]) },
+      {
+        at: 3200,
+        run: setUrl("?status=todo,in-progress&sort=estimatedHours.desc&page=2"),
+      },
     ],
   },
   {
@@ -188,18 +191,23 @@ const SCRIPT: LaunchSceneScript[] = [
       {
         at: 0,
         run: (context) => {
-          resetTable(context.table);
+          replaceUrl("");
           setDataMode("client")(context);
         },
       },
-      ...typeSteps(600, ["f", "fi", "fix"], (value) =>
-        setFilter("title", value),
-      ),
+      { at: 700, run: setUrl("?status=in-progress", "Status") },
       {
-        at: 1900,
-        run: ({ table }) => table.setSorting([{ id: "title", desc: false }]),
+        at: 1500,
+        run: setUrl("?status=in-progress,canceled", "Status"),
       },
-      { at: 2800, run: ({ table }) => table.nextPage() },
+      {
+        at: 2400,
+        run: setUrl("?status=in-progress,canceled&sort=priority.desc"),
+      },
+      {
+        at: 3200,
+        run: setUrl("?status=in-progress,canceled&sort=priority.desc&page=2"),
+      },
     ],
   },
   {
@@ -213,9 +221,9 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [0],
     },
     steps: [
-      { at: 0, run: ({ table }) => resetTable(table) },
-      { at: 400, run: setFilter("status", ["todo"]) },
-      { at: 1000, run: setFilter("priority", ["high"]) },
+      { at: 0, run: setUrl("") },
+      { at: 400, run: setUrl("?status=todo", "Status") },
+      { at: 1000, run: setUrl("?status=todo&priority=high", "Priority") },
       {
         at: 1200,
         run: ({ director }) =>
@@ -390,14 +398,13 @@ function getTimedScenes(script: LaunchSceneScript[]): LaunchScene[] {
 }
 
 function resetDemo({
-  table,
   director,
   dispatchDemo,
   dispatchServer,
 }: LaunchStepContext) {
   closeAllMenus();
   director.reset();
-  resetTable(table);
+  replaceUrl("");
   dispatchDemo({ type: "reset" });
   dispatchServer({ type: "reset" });
 }
@@ -422,8 +429,12 @@ function setFilterMode(filterMode: FilterMode): LaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "filterMode", filterMode });
 }
 
-function setFilter(columnId: string, value: unknown): LaunchStepRun {
-  return ({ table }) => table.getColumn(columnId)?.setFilterValue(value);
+/** Edits the URL like an address bar would, flashing the filter it changes. */
+function setUrl(search: string, filterLabel?: string): LaunchStepRun {
+  return () => {
+    replaceUrl(search);
+    if (filterLabel) flashToolbarFilter(filterLabel);
+  };
 }
 
 function typeCommandStep(value: string): LaunchStepRun {

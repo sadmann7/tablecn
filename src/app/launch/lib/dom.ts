@@ -85,6 +85,16 @@ export function flashToolbarFilter(label: string) {
   );
 }
 
+/**
+ * Swaps the query string the way an address bar edit would, without a reload.
+ * nuqs reads its own last writes over the URL until a popstate clears them,
+ * and Next ignores a popstate without state.
+ */
+export function replaceUrl(search: string) {
+  window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
+  history.replaceState(null, "", `${location.pathname}${search}`);
+}
+
 export function getIsPopoverOpen() {
   return document.querySelector("[data-radix-popper-content-wrapper]") !== null;
 }
