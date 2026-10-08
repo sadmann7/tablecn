@@ -880,7 +880,7 @@ export function SelectCell<TData extends RowData>(
 export function MultiSelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, readOnly } = props;
+  const { cell, width, rowHeight, isEditing, readOnly } = props;
   const rowId = cell.row.id;
   const columnId = cell.column.id;
   const cellValue = React.useMemo(() => {
@@ -1037,7 +1037,7 @@ export function MultiSelectCell<TData extends RowData>(
     useBadgeOverflow({
       items: displayLabels,
       getLabel: (label) => label,
-      containerRef,
+      containerWidth: width,
       lineCount,
     });
 
@@ -1259,7 +1259,7 @@ export function DateCell<TData extends RowData>(
 export function FileCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, isFocused, readOnly } = props;
+  const { cell, width, rowHeight, isEditing, isFocused, readOnly } = props;
   const rowId = cell.row.id;
   const columnId = cell.column.id;
   const cellValue = React.useMemo(
@@ -1732,7 +1732,7 @@ export function FileCell<TData extends RowData>(
     useBadgeOverflow({
       items: files,
       getLabel: (file) => file.name,
-      containerRef,
+      containerWidth: width,
       lineCount,
       cacheKeyPrefix: "file",
       iconSize: 12,
