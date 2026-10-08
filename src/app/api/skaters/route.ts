@@ -1,5 +1,6 @@
 import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { flattenError } from "zod";
 
 import {
   deleteSkatersSchema,
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error: "Invalid request body",
-          details: singleResult.error.flatten(),
+          details: flattenError(singleResult.error),
         },
         { status: 400 },
       );
@@ -83,7 +84,7 @@ export async function PATCH(request: Request) {
     const result = updateSkatersSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { error: "Invalid request body", details: result.error.flatten() },
+        { error: "Invalid request body", details: flattenError(result.error) },
         { status: 400 },
       );
     }
@@ -159,7 +160,7 @@ export async function DELETE(request: Request) {
     const result = deleteSkatersSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
-        { error: "Invalid request body", details: result.error.flatten() },
+        { error: "Invalid request body", details: flattenError(result.error) },
         { status: 400 },
       );
     }
