@@ -4,10 +4,9 @@ import { act, render, screen } from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { insertTextAtSelection } from "@/lib/data-grid-utils";
-
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
+import { insertTextAtSelection } from "@/lib/data-grid-utils";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";

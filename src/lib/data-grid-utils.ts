@@ -855,6 +855,23 @@ export function getIsEventOnScrollbar(
   );
 }
 
+function execInsertText(text: string) {
+  return (
+    typeof document.execCommand === "function" &&
+    document.execCommand("insertText", false, text)
+  );
+}
+
+function dispatchInsertTextInput(element: HTMLElement, text: string) {
+  element.dispatchEvent(
+    new InputEvent("input", {
+      bubbles: true,
+      data: text,
+      inputType: "insertText",
+    }),
+  );
+}
+
 export function insertTextAtSelection(
   element: HTMLTextAreaElement | HTMLInputElement,
   text: string,
@@ -866,17 +883,29 @@ export function insertTextAtSelection(
 
   const valueBeforeInsert = element.value;
 
-  const inserted =
-    typeof document.execCommand === "function" &&
-    document.execCommand("insertText", false, text);
+  const inserted = execInsertText(text);
   if (inserted && element.value !== valueBeforeInsert) return;
 
   element.setRangeText(text, start, end, "end");
-  element.dispatchEvent(
-    new InputEvent("input", {
-      bubbles: true,
-      data: text,
-      inputType: "insertText",
-    }),
-  );
+  dispatchInsertTextInput(element, text);
+}
+
+export function replaceEditableText(element: HTMLElement, text: string) {
+  element.focus();
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+
+  const textBeforeInsert = element.textContent;
+  const inserted = execInsertText(text);
+  if (inserted && element.textContent !== textBeforeInsert) return;
+
+  element.textContent = text;
+  range.selectNodeContents(element);
+  range.collapse(false);
+  selection?.removeAllRanges();
+  selection?.addRange(range);
+  dispatchInsertTextInput(element, text);
 }
