@@ -31,6 +31,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellOpts,
   CellPosition,
+  ColumnWindow,
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
@@ -547,6 +548,65 @@ export function getColumnBorderVisibility<TData extends RowData>(params: {
     showEndBorder,
     showStartBorder,
   };
+}
+
+type WindowedColumnEntry<T> =
+  | { type: "column"; item: T; colIndex: number }
+  | { type: "spacer"; key: string; size: number };
+
+/**
+ * Pinned items in full plus the windowed unpinned items, with spacers filling the gaps.
+ * `items` must be in render order: start pinned, unpinned, end pinned.
+ */
+export function getWindowedColumns<T>(
+  items: T[],
+  columnWindow: ColumnWindow | null,
+): Array<WindowedColumnEntry<T>> {
+  if (!columnWindow) {
+    return items.map((item, colIndex) => ({ type: "column", item, colIndex }));
+  }
+
+  const { startCount, centerCount, centerStart, centerEnd } = columnWindow;
+  const entries: Array<WindowedColumnEntry<T>> = [];
+
+  for (let colIndex = 0; colIndex < startCount; colIndex++) {
+    const item = items[colIndex];
+    if (item !== undefined) entries.push({ type: "column", item, colIndex });
+  }
+
+  let offset = centerStart;
+  for (const windowItem of columnWindow.items) {
+    const colIndex = startCount + windowItem.index;
+    const item = items[colIndex];
+    if (item === undefined) continue;
+    if (windowItem.start > offset) {
+      entries.push({
+        type: "spacer",
+        key: `spacer-${windowItem.index}`,
+        size: windowItem.start - offset,
+      });
+    }
+    entries.push({ type: "column", item, colIndex });
+    offset = windowItem.end;
+  }
+  if (centerEnd > offset) {
+    entries.push({
+      type: "spacer",
+      key: "spacer-end",
+      size: centerEnd - offset,
+    });
+  }
+
+  for (
+    let colIndex = startCount + centerCount;
+    colIndex < items.length;
+    colIndex++
+  ) {
+    const item = items[colIndex];
+    if (item !== undefined) entries.push({ type: "column", item, colIndex });
+  }
+
+  return entries;
 }
 
 export function getColumnPinningStyle<TData extends RowData>(
