@@ -34,6 +34,7 @@ import {
   getCellKey,
   getFocusedCellPosition,
   getHasCellRangeSelection,
+  getIsDataColumn,
   getIsInPopover,
   getIsEventOnScrollbar,
   getRowIndexById,
@@ -53,7 +54,7 @@ const AUTO_SCROLL_SPEED_RAMP_ZONE = AUTO_SCROLL_EDGE_ZONE * 3;
 const AUTO_SCROLL_MIN_SPEED = 8;
 const AUTO_SCROLL_MAX_SPEED = 40;
 const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
-const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
+const UTILITY_COLUMN_IDS = new Set(["select", "actions"]);
 const SEARCH_SHORTCUT_KEY = "f";
 
 function showClipboardToast({ variant, message }: ClipboardNotice) {
@@ -72,10 +73,6 @@ function selectGridLayoutState(state: TableState<DataGridFeatures>) {
     columnSizing: state.columnSizing,
     columnResizing: state.columnResizing,
   };
-}
-
-function getIsDataColumn(columnId: string) {
-  return !NON_NAVIGABLE_COLUMN_IDS.has(columnId);
 }
 
 interface RowAddResult {
@@ -211,9 +208,15 @@ function useDataGrid<TData extends RowData>({
     [],
   );
 
+  const getIsDataColumnId = React.useCallback(
+    (columnId: string) =>
+      getIsDataColumn(tableRef.current?.getAllFlatColumnsById()[columnId]),
+    [],
+  );
+
   const getNavigableColumnIds = React.useCallback(
-    () => getColumnIds().filter(getIsDataColumn),
-    [getColumnIds],
+    () => getColumnIds().filter(getIsDataColumnId),
+    [getColumnIds, getIsDataColumnId],
   );
 
   const selectRange = React.useCallback(
@@ -425,7 +428,7 @@ function useDataGrid<TData extends RowData>({
 
       const focusedCell = getFocusedCell();
       const isUtilityCellFocused =
-        focusedCell !== null && !getIsDataColumn(focusedCell.columnId);
+        focusedCell !== null && !getIsDataColumnId(focusedCell.columnId);
       // The focused cell stays the active range so selecting rows elsewhere doesn't move focus and scroll to them
       if (focusedCell) {
         ranges.push({
@@ -444,7 +447,7 @@ function useDataGrid<TData extends RowData>({
 
       propsRef.current.onRowSelectionChange?.(updater);
     },
-    [getNavigableColumnIds, propsRef, getFocusedCell],
+    [getNavigableColumnIds, getIsDataColumnId, propsRef, getFocusedCell],
   );
 
   const defaultColumn: Partial<ColumnDef<DataGridFeatures, TData>> =
@@ -534,10 +537,12 @@ function useDataGrid<TData extends RowData>({
   const tableColumns = React.useMemo(
     () =>
       columns.map((column) =>
-        column.id &&
-        NON_NAVIGABLE_COLUMN_IDS.has(column.id) &&
-        column.enableCellSelection === undefined
-          ? { ...column, enableCellSelection: false }
+        column.id && UTILITY_COLUMN_IDS.has(column.id)
+          ? {
+              ...column,
+              enableCellSelection: column.enableCellSelection ?? false,
+              enableOrdering: column.enableOrdering ?? false,
+            }
           : column,
       ),
     [columns],
@@ -761,16 +766,18 @@ function useDataGrid<TData extends RowData>({
       function moveColumnBy(step: number) {
         const currentTable = tableRef.current;
         const column = currentTable?.getColumn(columnId);
-        if (!currentTable || !column) return;
+        if (!currentTable || !column?.getCanOrder()) return;
 
         const pinnedPosition = column.getIsPinned();
-        const regionColumnIds = currentTable
-          .getPinnedVisibleLeafColumns(pinnedPosition || "center")
-          .map((regionColumn) => regionColumn.id)
-          .filter(getIsDataColumn);
-        const targetColumnId =
-          regionColumnIds[regionColumnIds.indexOf(columnId) + step];
-        if (!targetColumnId) return;
+        const regionColumns = currentTable.getPinnedVisibleLeafColumns(
+          pinnedPosition || "center",
+        );
+        const targetColumn =
+          regionColumns[
+            regionColumns.findIndex((c) => c.id === columnId) + step
+          ];
+        if (!targetColumn?.getCanOrder()) return;
+        const targetColumnId = targetColumn.id;
 
         if (pinnedPosition) {
           currentTable.setColumnPinning((prev) => ({
@@ -953,7 +960,7 @@ function useDataGrid<TData extends RowData>({
 
       let direction: NavigationDirection | null = null;
 
-      const isUtilityCellFocused = !getIsDataColumn(focusedCell.columnId);
+      const isUtilityCellFocused = !getIsDataColumnId(focusedCell.columnId);
 
       if (
         isUtilityCellFocused &&
@@ -1141,6 +1148,7 @@ function useDataGrid<TData extends RowData>({
       propsRef,
       blurCell,
       getNavigableColumnIds,
+      getIsDataColumnId,
       onRowsDelete,
       focusCell,
       focusColumnHeader,

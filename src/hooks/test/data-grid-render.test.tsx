@@ -405,6 +405,48 @@ describe("DataGrid rendering", () => {
     expect(getOrder()).toEqual(["select", "trick", "name"]);
   });
 
+  it("moves past columns that opt out of cell selection", () => {
+    const { container, table } = renderGrid([
+      testColumns[0],
+      { ...testColumns[1], enableCellSelection: false },
+    ] as ColumnDef<DataGridFeatures, TestData>[]);
+    const getOrder = () =>
+      table.getVisibleLeafColumns().map((column) => column.id);
+
+    act(() => {
+      getHeaderTrigger(container, "name")?.focus();
+    });
+    pressHeaderKey(getHeaderTrigger(container, "name"), "ArrowRight", {
+      shiftKey: true,
+    });
+    expect(getOrder()).toEqual(["trick", "name"]);
+  });
+
+  it("keeps columns that opt out of ordering in place", () => {
+    const { container, table } = renderGrid([
+      { id: "rank", header: "Rank", enableOrdering: false },
+      ...testColumns,
+    ] as ColumnDef<DataGridFeatures, TestData>[]);
+    const getOrder = () =>
+      table.getVisibleLeafColumns().map((column) => column.id);
+
+    act(() => {
+      getHeaderTrigger(container, "rank")?.focus();
+    });
+    pressHeaderKey(getHeaderTrigger(container, "rank"), "ArrowRight", {
+      shiftKey: true,
+    });
+    expect(getOrder()).toEqual(["rank", "name", "trick"]);
+
+    act(() => {
+      getHeaderTrigger(container, "name")?.focus();
+    });
+    pressHeaderKey(getHeaderTrigger(container, "name"), "ArrowLeft", {
+      shiftKey: true,
+    });
+    expect(getOrder()).toEqual(["rank", "name", "trick"]);
+  });
+
   it("selects a range of rows with Shift+click on the select checkbox", () => {
     const { table } = renderGrid([getDataGridSelectColumn(), ...testColumns]);
     const [firstCheckbox, , thirdCheckbox] = screen.getAllByRole("checkbox", {
