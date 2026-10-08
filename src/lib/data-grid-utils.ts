@@ -102,7 +102,6 @@ export function matchSelectOption(
   )?.value;
 }
 
-/** Text written to the clipboard for a cell value. */
 export function serializeCellValue(
   value: unknown,
   variant: CellOpts["variant"] | undefined,
@@ -163,7 +162,6 @@ function parseMultiSelectValues(text: string): string[] {
   return text ? text.split(",").map((item) => item.trim()) : [];
 }
 
-/** Converts pasted text into a value for the cell, or `null` when the text is invalid for it. */
 export function parsePastedCellValue(
   text: string,
   cellOpts: CellOpts | undefined,
@@ -237,7 +235,6 @@ function escapeAttributeValue(value: string) {
   return value.replace(/["\\]/g, "\\$&");
 }
 
-/** Mounted element for a cell inside the grid, `null` when it is virtualized away. */
 export function getCellElement(
   container: HTMLElement,
   rowId: string,
@@ -257,10 +254,6 @@ export function parseCellKey(cellKey: string): CellPosition {
   };
 }
 
-/**
- * Column spans of the selection rectangles crossing a row, `""` when none do.
- * Equal keys mean the row's selected cells are unchanged.
- */
 export function getRowCellSelectionKey(
   bounds: Array<CellSelectionBounds>,
   rowIndex: number,
@@ -273,7 +266,6 @@ export function getRowCellSelectionKey(
   return key;
 }
 
-/** Position of a row in the rendered row model, or `-1` if it isn't rendered. */
 export function getRowIndexById<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
   rowId: string,
@@ -830,20 +822,6 @@ export function getFileIcon(
   return File;
 }
 
-/**
- * Whether a pointer event lands on the grid's scrollbar. Overlay scrollbars draw
- * over content, so presses meant for them also reach the cell or header underneath.
- */
-export function getIsEventOnScrollbar(
-  event: React.MouseEvent<HTMLElement>,
-): boolean {
-  return getIsPointOnScrollbar(
-    event.currentTarget.closest<HTMLElement>('[data-slot="grid"]'),
-    event.clientX,
-    event.clientY,
-  );
-}
-
 export function getIsPointOnScrollbar(
   container: HTMLElement | null,
   clientX: number,
@@ -865,4 +843,40 @@ export function getIsPointOnScrollbar(
   }
 
   return false;
+}
+
+export function getIsEventOnScrollbar(
+  event: React.MouseEvent<HTMLElement>,
+): boolean {
+  return getIsPointOnScrollbar(
+    event.currentTarget.closest<HTMLElement>('[data-slot="grid"]'),
+    event.clientX,
+    event.clientY,
+  );
+}
+
+export function insertTextAtSelection(
+  element: HTMLTextAreaElement | HTMLInputElement,
+  text: string,
+) {
+  const start = element.selectionStart ?? element.value.length;
+  const end = element.selectionEnd ?? start;
+  element.focus();
+  element.setSelectionRange(start, end);
+
+  const valueBeforeInsert = element.value;
+
+  const inserted =
+    typeof document.execCommand === "function" &&
+    document.execCommand("insertText", false, text);
+  if (inserted && element.value !== valueBeforeInsert) return;
+
+  element.setRangeText(text, start, end, "end");
+  element.dispatchEvent(
+    new InputEvent("input", {
+      bubbles: true,
+      data: text,
+      inputType: "insertText",
+    }),
+  );
 }

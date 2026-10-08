@@ -2278,9 +2278,7 @@ describe("useDataGrid", () => {
 
       // Give onAutoScrollStart a real container so it doesn't bail early.
       const mockContainer = document.createElement("div");
-      (
-        result.current.dataGridRef as React.MutableRefObject<HTMLDivElement>
-      ).current = mockContainer;
+      result.current.dataGridRef.current = mockContainer;
 
       // Start the drag — this sets dragStartCell which triggers
       // onAutoScrollStart, which synchronously registers the document mouseup
