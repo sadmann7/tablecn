@@ -25,6 +25,8 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isSearchMatch !== next.isSearchMatch) return false;
   if (prev.isActiveSearchMatch !== next.isActiveSearchMatch) return false;
+  if (prev.presence?.color !== next.presence?.color) return false;
+  if (prev.presence?.name !== next.presence?.name) return false;
   if (prev.readOnly !== next.readOnly) return false;
   if (prev.rowHeight !== next.rowHeight) return false;
   if (prev.cell.row.id !== next.cell.row.id) return false;

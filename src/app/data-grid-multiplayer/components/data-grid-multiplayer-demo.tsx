@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { CellPresence } from "@/lib/data-grid-types";
 
 import { DataGridActionBar } from "@/app/data-grid-live/components/data-grid-action-bar";
 import {
@@ -24,15 +25,10 @@ import {
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getCellKey } from "@/lib/data-grid-utils";
 import { generateId } from "@/lib/id";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
-import {
-  type DataGridCellPresence,
-  DataGridPresenceProvider,
-} from "@/registry/bases/radix/components/data-grid/data-grid-presence";
 import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
@@ -388,6 +384,20 @@ export function DataGridMultiplayerDemo({
     [trackRowsDelete, sendRowsDelete],
   );
 
+  const cellPresence = React.useMemo(() => {
+    const presence: Array<CellPresence> = [];
+
+    for (const [userId, user] of Object.entries(users)) {
+      if (userId === currentUserId) continue;
+
+      const { rowId, columnId } = user.activeCell;
+      if (!rowId || !columnId) continue;
+
+      presence.push({ rowId, columnId, color: user.color, name: user.name });
+    }
+    return presence;
+  }, [users, currentUserId]);
+
   const { table, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
@@ -400,6 +410,7 @@ export function DataGridMultiplayerDemo({
       columnPinning: { start: ["select"], end: [] },
       sorting,
     },
+    state: { cellPresence },
     onSortingChange: setSorting,
     manualSorting: true,
     enableSearch: true,
@@ -524,23 +535,6 @@ export function DataGridMultiplayerDemo({
 
   const height = Math.max(400, windowSize.height - 150);
 
-  const remoteCells = React.useMemo(() => {
-    const map = new Map<string, DataGridCellPresence>();
-
-    for (const [userId, user] of Object.entries(users)) {
-      if (userId === currentUserId) continue;
-
-      const { rowId, columnId } = user.activeCell;
-      if (!rowId || !columnId) continue;
-
-      map.set(getCellKey(rowId, columnId), {
-        color: user.color,
-        name: user.name,
-      });
-    }
-    return map;
-  }, [users, currentUserId]);
-
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
@@ -569,9 +563,7 @@ export function DataGridMultiplayerDemo({
           <DataGridViewMenu table={table} align="end" />
         </div>
       </div>
-      <DataGridPresenceProvider value={remoteCells}>
-        <DataGrid {...dataGridProps} table={table} height={height} />
-      </DataGridPresenceProvider>
+      <DataGrid {...dataGridProps} table={table} height={height} />
       <DataGridActionBar
         table={table}
         statusOptions={statusOptions}

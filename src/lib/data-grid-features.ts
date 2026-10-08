@@ -27,6 +27,7 @@ import {
 
 import type {
   CellPosition,
+  CellPresence,
   CellUpdate,
   ContextMenuState,
   DataGridColumnMeta,
@@ -262,6 +263,26 @@ interface Cell_DataGridSearch {
   getIsActiveSearchMatch: () => boolean;
 }
 
+interface TableState_DataGridPresence {
+  /** Cells collaborators are on, kept out of undo history since it comes from the network. */
+  cellPresence: Array<CellPresence>;
+}
+
+interface TableOptions_DataGridPresence {
+  onCellPresenceChange?: OnChangeFn<Array<CellPresence>>;
+}
+
+interface Table_DataGridPresence {
+  getCellPresence: () => Array<CellPresence>;
+  setCellPresence: (updater: Updater<Array<CellPresence>>) => void;
+  /** Collaborators per column id per row id, for re-rendering only the rows they are on. */
+  getCellPresenceByRowId: () => Map<string, Map<string, CellPresence>>;
+}
+
+interface Cell_DataGridPresence {
+  getPresence: () => CellPresence | null;
+}
+
 interface TableState_DataGridSelection {
   /** Cell where the current mouse drag selection started, `null` when not dragging. */
   cellDragAnchor: CellPosition | null;
@@ -311,6 +332,7 @@ declare module "@tanstack/react-table" {
     dataGridNavigationFeature: TableFeature;
     dataGridClipboardFeature: TableFeature;
     dataGridSearchFeature: TableFeature;
+    dataGridPresenceFeature: TableFeature;
     dataGridSelectionFeature: TableFeature;
   }
 
@@ -320,6 +342,7 @@ declare module "@tanstack/react-table" {
     dataGridNavigationFeature: TableState_DataGridNavigation;
     dataGridClipboardFeature: TableState_DataGridClipboard;
     dataGridSearchFeature: TableState_DataGridSearch;
+    dataGridPresenceFeature: TableState_DataGridPresence;
     dataGridSelectionFeature: TableState_DataGridSelection;
   }
 
@@ -333,6 +356,7 @@ declare module "@tanstack/react-table" {
     dataGridNavigationFeature: TableOptions_DataGridNavigation;
     dataGridClipboardFeature: TableOptions_DataGridClipboard;
     dataGridSearchFeature: TableOptions_DataGridSearch;
+    dataGridPresenceFeature: TableOptions_DataGridPresence;
     dataGridSelectionFeature: TableOptions_DataGridSelection;
   }
 
@@ -354,6 +378,7 @@ declare module "@tanstack/react-table" {
     dataGridNavigationFeature: Table_DataGridNavigation;
     dataGridClipboardFeature: Table_DataGridClipboard;
     dataGridSearchFeature: Table_DataGridSearch;
+    dataGridPresenceFeature: Table_DataGridPresence;
     dataGridSelectionFeature: Table_DataGridSelection;
   }
 
@@ -368,6 +393,7 @@ declare module "@tanstack/react-table" {
     dataGridCellEditingFeature: Cell_DataGridCellEditing;
     dataGridDataFeature: Cell_DataGridData;
     dataGridSearchFeature: Cell_DataGridSearch;
+    dataGridPresenceFeature: Cell_DataGridPresence;
   }
 }
 
@@ -1376,6 +1402,62 @@ const dataGridSearchFeature: TableFeature = {
   },
 };
 
+const EMPTY_CELL_PRESENCE: Array<CellPresence> = [];
+
+const dataGridPresenceFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    cellPresence: EMPTY_CELL_PRESENCE,
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: TableOptions_DataGridPresence = {
+      onCellPresenceChange: makeStateUpdater("cellPresence", table),
+    };
+    return options;
+  },
+  constructTableAPIs: (table) => {
+    const instance = asDataGrid(table);
+
+    assignTableAPIs("dataGridPresenceFeature", table, {
+      table_getCellPresence: {
+        fn: () => instance.atoms.cellPresence.get(),
+      },
+      table_setCellPresence: {
+        fn: (updater: Updater<Array<CellPresence>>) =>
+          instance.options.onCellPresenceChange?.((old) =>
+            functionalUpdate(updater, old),
+          ),
+      },
+      table_getCellPresenceByRowId: {
+        fn: (cellPresence: Array<CellPresence>) => {
+          const presenceByRowId = new Map<string, Map<string, CellPresence>>();
+          for (const presence of cellPresence) {
+            let presenceByColumnId = presenceByRowId.get(presence.rowId);
+            if (!presenceByColumnId) {
+              presenceByColumnId = new Map();
+              presenceByRowId.set(presence.rowId, presenceByColumnId);
+            }
+            presenceByColumnId.set(presence.columnId, presence);
+          }
+          return presenceByRowId;
+        },
+        memoDeps: () => [instance.atoms.cellPresence.get()],
+      },
+    });
+  },
+  assignCellPrototype: (prototype, table) => {
+    assignPrototypeAPIs("dataGridPresenceFeature", prototype, table, {
+      cell_getPresence: {
+        fn: (cell: DataGridCellRef) =>
+          asDataGrid(cell.table)
+            .getCellPresenceByRowId()
+            .get(cell.row.id)
+            ?.get(cell.column.id) ?? null,
+      },
+    });
+  },
+};
+
 const DEFAULT_CONTEXT_MENU: ContextMenuState = { open: false, x: 0, y: 0 };
 
 function getHasCellRangeSelection(table: DataGridInstance) {
@@ -1596,6 +1678,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridNavigationFeature,
   dataGridClipboardFeature,
   dataGridSearchFeature,
+  dataGridPresenceFeature,
   dataGridSelectionFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),

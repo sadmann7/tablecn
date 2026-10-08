@@ -228,6 +228,59 @@ describe("DataGrid rendering", () => {
     expect(rowRenderCounts.get("3")).toBe(countsBefore.get("3"));
   });
 
+  it("outlines cells collaborators are on and only re-renders their rows", () => {
+    const rowRenderCounts = new Map<string, number>();
+    const { container, table } = renderGrid([
+      {
+        id: "select",
+        header: () => null,
+        cell: ({ row }) => {
+          rowRenderCounts.set(row.id, (rowRenderCounts.get(row.id) ?? 0) + 1);
+          return null;
+        },
+      },
+      ...testColumns,
+    ]);
+    const countsBefore = new Map(rowRenderCounts);
+
+    act(() => {
+      table.setCellPresence([
+        { rowId: "2", columnId: "trick", name: "Rodney", color: "#ff0000" },
+      ]);
+    });
+
+    expect(
+      table.getRow("2").getAllCellsByColumnId().trick?.getPresence(),
+    ).toEqual({
+      rowId: "2",
+      columnId: "trick",
+      name: "Rodney",
+      color: "#ff0000",
+    });
+    expect(
+      getCellWrapper(container, "2", "trick")?.style.getPropertyValue(
+        "--tw-ring-color",
+      ),
+    ).toBe("#ff0000");
+    expect(
+      getCellWrapper(container, "2", "name")?.style.getPropertyValue(
+        "--tw-ring-color",
+      ),
+    ).toBe("");
+    expect(rowRenderCounts.get("1")).toBe(countsBefore.get("1"));
+    expect(rowRenderCounts.get("3")).toBe(countsBefore.get("3"));
+
+    act(() => {
+      table.setCellPresence([]);
+    });
+
+    expect(
+      getCellWrapper(container, "2", "trick")?.style.getPropertyValue(
+        "--tw-ring-color",
+      ),
+    ).toBe("");
+  });
+
   it("hides the focused cell while a column header has focus", () => {
     const { container, table } = renderGrid();
 

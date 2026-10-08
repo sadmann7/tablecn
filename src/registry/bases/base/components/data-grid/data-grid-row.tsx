@@ -16,7 +16,11 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { Direction, RowHeightValue } from "@/lib/data-grid-types";
+import type {
+  CellPresence,
+  Direction,
+  RowHeightValue,
+} from "@/lib/data-grid-types";
 
 import {
   flexRender,
@@ -123,6 +127,7 @@ function DataGridRowContent<TData extends RowData>({
     cellSelectionKey,
     searchMatchColumns,
     activeSearchColumnId,
+    presenceColumns,
     isRowSelected,
   } = rowState;
 
@@ -221,6 +226,7 @@ function DataGridRowContent<TData extends RowData>({
                 isSelected={isCellSelected}
                 isSearchMatch={isSearchMatch}
                 isActiveSearchMatch={isActiveSearchMatch}
+                presence={presenceColumns?.get(columnId) ?? null}
                 readOnly={readOnlyColumnIds.has(columnId)}
               />
             )}
@@ -272,6 +278,7 @@ interface RowState<TData extends RowData> {
   cellSelectionKey: string;
   searchMatchColumns: Set<string> | null;
   activeSearchColumnId: string | null;
+  presenceColumns: Map<string, CellPresence> | null;
   isRowSelected: boolean;
 }
 
@@ -303,6 +310,7 @@ function selectRowState<TData extends RowData>(
     searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
     activeSearchColumnId:
       activeSearchMatch?.rowId === rowId ? activeSearchMatch.columnId : null,
+    presenceColumns: table.getCellPresenceByRowId().get(rowId) ?? null,
     isRowSelected: !!state.rowSelection[rowId],
   };
 }
