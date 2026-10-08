@@ -30,7 +30,7 @@ export function LaunchIntroScene() {
       </div>
       <p
         className="launch-rise max-w-280 text-5xl leading-snug text-balance text-white/60"
-        style={launchDelay(200)}
+        style={launchDelay(60)}
       >
         {TAGLINE}
       </p>
@@ -62,25 +62,25 @@ export function LaunchStory({
       </span>
       <h2
         className="launch-rise text-7xl leading-[1.05] font-semibold tracking-tight text-balance text-white"
-        style={launchDelay(80)}
+        style={launchDelay(40)}
       >
         {title}
       </h2>
       <p
         className="launch-rise text-[1.75rem] leading-snug text-pretty text-white/50"
-        style={launchDelay(160)}
+        style={launchDelay(80)}
       >
         {description}
       </p>
       <pre
         className="launch-rise flex flex-col rounded-2xl border border-white/10 bg-white/4 py-5 font-mono text-[1.1875rem] leading-9 text-white/60"
-        style={launchDelay(240)}
+        style={launchDelay(120)}
       >
         {code.map((line, index) => (
           <code
             key={`${index}-${line}`}
             data-highlighted={highlightedLines.includes(index)}
-            className="border-l-2 border-transparent px-6 transition-colors duration-500 data-[highlighted=true]:border-emerald-400 data-[highlighted=true]:bg-emerald-400/10 data-[highlighted=true]:text-white"
+            className="border-l-2 border-transparent px-6 transition-colors duration-300 data-[highlighted=true]:border-emerald-400 data-[highlighted=true]:bg-emerald-400/10 data-[highlighted=true]:text-white"
           >
             <CodeLine line={line} />
           </code>
@@ -100,13 +100,13 @@ export function LaunchVariants({ variants, activeCount }: LaunchVariantsProps) {
   return (
     <div
       className="launch-rise flex flex-wrap gap-2 font-mono text-lg"
-      style={launchDelay(320)}
+      style={launchDelay(160)}
     >
       {variants.map((variant, index) => (
         <span
           key={variant}
           data-active={index < activeCount}
-          className="rounded-lg border border-white/10 px-3 py-1 text-white/30 transition-colors duration-500 data-[active=true]:border-emerald-400/40 data-[active=true]:bg-emerald-400/10 data-[active=true]:text-emerald-300"
+          className="rounded-lg border border-white/10 px-3 py-1 text-white/30 transition-colors duration-300 data-[active=true]:border-emerald-400/40 data-[active=true]:bg-emerald-400/10 data-[active=true]:text-emerald-300"
         >
           {variant}
         </span>
@@ -145,7 +145,7 @@ export function LaunchOutroScene() {
       </div>
       <div
         className="launch-rise flex items-center gap-5 rounded-2xl border border-white/10 bg-white/4 py-5 pr-5 pl-8 font-mono text-2xl text-white/80"
-        style={launchDelay(250)}
+        style={launchDelay(80)}
       >
         <span className="text-white/35">$</span>
         {INSTALL_COMMAND}
@@ -155,7 +155,7 @@ export function LaunchOutroScene() {
       </div>
       <span
         className="launch-rise font-mono text-2xl text-white/45"
-        style={launchDelay(400)}
+        style={launchDelay(140)}
       >
         tablecn.com
       </span>

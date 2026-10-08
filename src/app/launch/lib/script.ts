@@ -13,11 +13,13 @@ import {
   flashToolbarFilter,
   getFilterOperatorTrigger,
   getFacetedOption,
+  getCommandTrigger,
   getFilterTrigger,
   getFilterValueTrigger,
   getIsPopoverOpen,
   getLaunchTarget,
   getSelectOption,
+  pressCommandArrow,
   pressCommandEnter,
   pressFilterShortcut,
   openPopover,
@@ -115,6 +117,9 @@ const FILTER_CODE = [
   "<DataTableCommandFilterMenu /> // command",
 ];
 
+/** The ring starts after the control has painted its new value. */
+const FLASH_AFTER_MS = 100;
+
 /**
  * The scripted loop. Each scene owns the table actions that play while it is
  * on screen, so retiming a scene never shifts the ones after it. The filter
@@ -123,25 +128,23 @@ const FILTER_CODE = [
 const SCRIPT: LaunchSceneScript[] = [
   {
     id: "intro",
-    duration: 2600,
+    duration: 2400,
     steps: [{ at: 0, run: resetDemo }],
   },
   {
     id: "columns",
-    duration: 4400,
-    steps: COLUMN_SNIPPETS.flatMap((snippet, index) => [
-      { at: 600 + index * 1000, run: showColumns(index + 1) },
-      {
-        at: 700 + index * 1000,
-        run: () => {
-          for (const label of snippet.filterLabels) flashToolbarFilter(label);
-        },
-      },
-    ]),
+    duration: 4200,
+    steps: COLUMN_SNIPPETS.flatMap((snippet, index) => {
+      const at = 600 + index * 780;
+      return [
+        { at, run: showColumns(index + 1) },
+        flashStep(at, snippet.filterLabels),
+      ];
+    }),
   },
   {
     id: "server",
-    duration: 4400,
+    duration: 3600,
     story: {
       eyebrow: 'mode: "server"',
       title: "Query on the server.",
@@ -158,21 +161,14 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [3, 4],
     },
     steps: [
-      { at: 600, run: setUrl("?status=todo", "Status") },
-      { at: 1200, run: setUrl("?status=todo,in-progress", "Status") },
-      {
-        at: 2200,
-        run: setUrl("?status=todo,in-progress&sort=estimatedHours.desc"),
-      },
-      {
-        at: 3200,
-        run: setUrl("?status=todo,in-progress&sort=estimatedHours.desc&page=2"),
-      },
+      ...urlSteps(700, "?status=todo", "Status"),
+      ...urlSteps(1600, "?status=todo&sort=estimatedHours.desc"),
+      ...urlSteps(2500, "?status=todo&sort=estimatedHours.desc&page=2"),
     ],
   },
   {
     id: "client",
-    duration: 4200,
+    duration: 2600,
     story: {
       eyebrow: 'mode: "client"',
       title: "Or keep it in the browser.",
@@ -195,24 +191,12 @@ const SCRIPT: LaunchSceneScript[] = [
           setDataMode("client")(context);
         },
       },
-      { at: 700, run: setUrl("?status=in-progress", "Status") },
-      {
-        at: 1500,
-        run: setUrl("?status=in-progress,canceled", "Status"),
-      },
-      {
-        at: 2400,
-        run: setUrl("?status=in-progress,canceled&sort=priority.desc"),
-      },
-      {
-        at: 3200,
-        run: setUrl("?status=in-progress,canceled&sort=priority.desc&page=2"),
-      },
+      ...urlSteps(700, "?status=in-progress", "Status"),
     ],
   },
   {
     id: "plain",
-    duration: 1800,
+    duration: 2000,
     story: {
       eyebrow: "Plain filters",
       title: "Filter in the toolbar.",
@@ -221,16 +205,15 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [0],
     },
     steps: [
-      { at: 0, run: setUrl("") },
-      { at: 400, run: setUrl("?status=todo", "Status") },
-      { at: 1000, run: setUrl("?status=todo&priority=high", "Priority") },
+      { at: 0, run: () => replaceUrl("") },
+      ...urlSteps(500, "?priority=high", "Priority"),
       {
-        at: 1200,
+        at: 1100,
         run: ({ director }) =>
           director.moveCursor(getLaunchTarget("filter-advanced")),
       },
       {
-        at: 1700,
+        at: 1550,
         run: ({ director }) =>
           director.click(getLaunchTarget("filter-advanced")),
       },
@@ -238,7 +221,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "advanced",
-    duration: 6200,
+    duration: 5700,
     story: {
       eyebrow: "Advanced filters",
       title: "Build any query.",
@@ -248,9 +231,17 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [1],
     },
     steps: [
-      { at: 0, run: setFilterMode("advanced") },
       {
-        at: 300,
+        at: 0,
+        run: (context) => {
+          // The operator demo edits the Status row, so the row has to exist
+          // before the menu opens. Plain itself only sets Priority.
+          replaceUrl("?priority=high&status=todo");
+          setFilterMode("advanced")(context);
+        },
+      },
+      {
+        at: 220,
         run: ({ director }) => {
           const trigger = getFilterTrigger();
           director.moveCursor(trigger);
@@ -258,7 +249,7 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       },
       {
-        at: 900,
+        at: 600,
         run: ({ director }) => {
           const trigger = getFilterTrigger();
           director.click(trigger);
@@ -266,12 +257,12 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       },
       {
-        at: 1400,
+        at: 960,
         run: ({ director }) =>
           director.moveCursor(getFilterOperatorTrigger("Status")),
       },
       {
-        at: 1900,
+        at: 1280,
         run: ({ director }) => {
           const trigger = getFilterOperatorTrigger("Status");
           director.click(trigger);
@@ -279,12 +270,12 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       },
       {
-        at: 2350,
+        at: 1680,
         run: ({ director }) =>
           director.moveCursor(getSelectOption("has none of")),
       },
       {
-        at: 2750,
+        at: 2000,
         run: ({ table, director }) => {
           const option = getSelectOption("has none of");
           if (!option) {
@@ -296,12 +287,12 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       },
       {
-        at: 3200,
+        at: 2440,
         run: ({ director }) =>
           director.moveCursor(getFilterValueTrigger("Status")),
       },
       {
-        at: 3600,
+        at: 2760,
         run: ({ director }) => {
           const trigger = getFilterValueTrigger("Status");
           director.click(trigger);
@@ -309,11 +300,11 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       },
       {
-        at: 4000,
+        at: 3080,
         run: ({ director }) => director.moveCursor(getFacetedOption("Done")),
       },
       {
-        at: 4400,
+        at: 3400,
         run: ({ table, director }) => {
           const option = getFacetedOption("Done");
           if (!option) {
@@ -324,9 +315,53 @@ const SCRIPT: LaunchSceneScript[] = [
           if (!option.hasAttribute("data-checked")) option.click();
         },
       },
-      { at: 4900, run: closeFacetedList },
+      { at: 3760, run: closeFacetedList },
       {
-        at: 6100,
+        at: 4300,
+        run: ({ director }) => {
+          closeAllMenus();
+          director.zoomOut();
+        },
+      },
+      {
+        at: 4750,
+        run: ({ director }) =>
+          director.moveCursor(getLaunchTarget("filter-command")),
+      },
+      {
+        at: 5200,
+        run: ({ director }) =>
+          director.click(getLaunchTarget("filter-command")),
+      },
+    ],
+  },
+  {
+    id: "command",
+    duration: 5100,
+    story: {
+      eyebrow: "Command filters",
+      title: "Filter from the keyboard.",
+      description: "Pick a field, then a value. Open it with ⌘⇧F.",
+      code: FILTER_CODE,
+      highlightedLines: [2],
+    },
+    steps: [
+      { at: 0, run: setFilterMode("command") },
+      {
+        at: 2000,
+        run: ({ director }) => {
+          const trigger = getCommandTrigger();
+          director.moveCursor(trigger);
+          director.focus(trigger, { offsetX: 16, offsetY: 6 });
+        },
+      },
+      { at: 2170, run: openFilterMenu },
+      ...typeSteps(2520, ["st", "status"], typeCommandStep),
+      { at: 2920, run: pressCommandEnter },
+      { at: 3400, run: pressCommandArrow },
+      { at: 3720, run: pressCommandEnter },
+      {
+        at: 4320,
         run: ({ director }) => {
           closeAllMenus();
           director.reset();
@@ -335,27 +370,8 @@ const SCRIPT: LaunchSceneScript[] = [
     ],
   },
   {
-    id: "command",
-    duration: 3000,
-    story: {
-      eyebrow: "Command filters",
-      title: "Filter from the keyboard.",
-      description: "Pick a field, type a value. Open it with ⌘⇧F.",
-      code: FILTER_CODE,
-      highlightedLines: [2],
-    },
-    steps: [
-      { at: 0, run: setFilterMode("command") },
-      { at: 600, run: openFilterMenu },
-      ...typeSteps(1000, ["ti", "title"], typeCommandStep),
-      { at: 1500, run: pressCommandEnter },
-      ...typeSteps(1900, ["f", "fi", "fix"], typeCommandStep),
-      { at: 2500, run: pressCommandEnter },
-    ],
-  },
-  {
     id: "outro",
-    duration: 3600,
+    duration: 3000,
     steps: [{ at: 0, run: () => closeAllMenus() }],
   },
 ];
@@ -429,11 +445,24 @@ function setFilterMode(filterMode: FilterMode): LaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "filterMode", filterMode });
 }
 
-/** Edits the URL like an address bar would, flashing the filter it changes. */
-function setUrl(search: string, filterLabel?: string): LaunchStepRun {
-  return () => {
-    replaceUrl(search);
-    if (filterLabel) flashToolbarFilter(filterLabel);
+/** Writes the URL, then rings the filter it changed once the badge has painted. */
+function urlSteps(
+  at: number,
+  search: string,
+  filterLabel?: string,
+): LaunchStep[] {
+  return [
+    { at, run: () => replaceUrl(search) },
+    ...(filterLabel ? [flashStep(at, [filterLabel])] : []),
+  ];
+}
+
+function flashStep(at: number, labels: string[]): LaunchStep {
+  return {
+    at: at + FLASH_AFTER_MS,
+    run: () => {
+      for (const label of labels) flashToolbarFilter(label);
+    },
   };
 }
 

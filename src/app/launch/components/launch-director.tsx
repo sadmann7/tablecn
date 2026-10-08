@@ -225,14 +225,14 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       moveCursor(target);
       refs.pointer.current?.animate(
         [{ scale: "1" }, { scale: "0.82" }, { scale: "1" }],
-        { duration: 320, easing: "ease-out" },
+        { duration: 200, easing: "ease-out" },
       );
       refs.ripple.current?.animate(
         [
           { opacity: 0.6, scale: "0.2" },
           { opacity: 0, scale: "1.4" },
         ],
-        { duration: 600, easing: "ease-out" },
+        { duration: 360, easing: "ease-out" },
       );
     },
     reset() {

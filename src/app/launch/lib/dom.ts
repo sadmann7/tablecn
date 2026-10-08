@@ -13,11 +13,23 @@ export function getFilterTrigger() {
   ).find((button) => button.textContent?.startsWith("Filter"));
 }
 
-/** Scoped to the column's filter row, whatever operator it shows right now. */
+export function getCommandTrigger() {
+  return document.querySelector<HTMLButtonElement>(
+    '[role=toolbar] button[aria-label="Open filter command menu"]',
+  );
+}
+
+/**
+ * Scoped to the column's filter row, whatever operator it shows right now.
+ * The join control's id also ends in `-operator-listbox`, and it is the
+ * first control on every row after the first.
+ */
 export function getFilterOperatorTrigger(columnLabel: string) {
   return getFilterValueTrigger(columnLabel)
     ?.closest("[role=listitem]")
-    ?.querySelector<HTMLElement>('[aria-controls$="-operator-listbox"]');
+    ?.querySelector<HTMLElement>(
+      '[aria-controls$="-operator-listbox"]:not([aria-controls$="-join-operator-listbox"])',
+    );
 }
 
 export function getSelectOption(label: string) {
@@ -70,9 +82,23 @@ function getToolbarFilter(label: string) {
   );
 }
 
-/** Rings a newly added toolbar filter, then fades back to its own styles. */
+const FLASH_MS = 800;
+const flashedAt = new Map<string, number>();
+
+/**
+ * Rings a toolbar filter once, then fades back to its own styles.
+ * A second ring on the same control waits until this one has finished.
+ */
 export function flashToolbarFilter(label: string) {
-  getToolbarFilter(label)?.animate(
+  const element = getToolbarFilter(label);
+  if (!element) return;
+
+  const now = performance.now();
+  const previous = flashedAt.get(label);
+  if (previous !== undefined && now - previous < FLASH_MS) return;
+
+  flashedAt.set(label, now);
+  element.animate(
     [
       {
         offset: 0,
@@ -81,7 +107,7 @@ export function flashToolbarFilter(label: string) {
         backgroundColor: "rgb(52 211 153 / 0.15)",
       },
     ],
-    { duration: 1400, easing: "ease-out" },
+    { duration: FLASH_MS, easing: "ease-out" },
   );
 }
 
@@ -140,6 +166,10 @@ export function typeCommand(value: string) {
 
 export function pressCommandEnter() {
   pressKey(getCommandInput(), "Enter");
+}
+
+export function pressCommandArrow() {
+  pressKey(getCommandInput(), "ArrowDown");
 }
 
 function getCommandInput() {

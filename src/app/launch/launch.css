@@ -6,7 +6,7 @@
 
 /* Shared by the camera layers and the portaled popovers so they zoom in lockstep. */
 html[data-launch-camera] {
-  --launch-camera-duration: 700ms;
+  --launch-camera-duration: 420ms;
   --launch-camera-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -60,8 +60,8 @@ html[data-launch-camera]
 
 .launch-cursor {
   transition:
-    translate 750ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 300ms ease-out;
+    translate 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease-out;
 }
 
 .launch-glow {
@@ -105,8 +105,16 @@ html[data-launch-camera]
 }
 
 .launch-rise {
-  animation: launch-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: launch-rise 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--launch-delay, 0ms);
+}
+
+.launch-scene-exit {
+  animation: launch-scene-exit 240ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.launch-scene-exit :is(.launch-rise, .launch-logo) {
+  animation: none;
 }
 
 .launch-flash {
@@ -114,19 +122,26 @@ html[data-launch-camera]
 }
 
 .launch-keystroke {
-  animation: launch-keystroke 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: launch-keystroke 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .launch-logo {
-  animation: launch-logo 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: launch-logo 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--launch-delay, 0ms);
 }
 
 @keyframes launch-rise {
   from {
     opacity: 0;
-    filter: blur(10px);
-    transform: translateY(1.5rem);
+    filter: blur(4px);
+    transform: translateY(0.6rem);
+  }
+}
+
+@keyframes launch-scene-exit {
+  to {
+    opacity: 0;
+    transform: translateY(-0.35rem);
   }
 }
 
@@ -154,8 +169,8 @@ html[data-launch-camera]
 @keyframes launch-logo {
   from {
     opacity: 0;
-    filter: blur(16px);
-    transform: scale(0.92);
+    filter: blur(8px);
+    transform: scale(0.96);
   }
 }
 
@@ -173,8 +188,13 @@ html[data-launch-camera]
   .launch-logo,
   .launch-keystroke,
   .launch-flash,
-  .launch-glow {
+  .launch-glow,
+  .launch-scene-exit {
     animation: none;
+  }
+
+  .launch-scene-exit {
+    display: none;
   }
 
   .launch-camera,

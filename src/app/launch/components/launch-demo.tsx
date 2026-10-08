@@ -139,13 +139,11 @@ export function LaunchDemo() {
       >
         <LaunchBackdrop />
         <LaunchCamera refs={refs}>
-          <LaunchSceneContent
-            key={`${playback.cycle}-${scene.id}`}
-            scene={scene}
-            columnCount={demo.columnCount}
-          />
+          <LaunchSceneFrame sceneKey={`${playback.cycle}-${scene.id}`}>
+            <LaunchSceneContent scene={scene} columnCount={demo.columnCount} />
+          </LaunchSceneFrame>
           <div
-            className="absolute top-27 left-180 w-282 transition-[transform,opacity,filter] duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)]"
+            className="absolute top-27 left-180 w-282 transition-[transform,opacity,filter] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
             style={WINDOW_SHOTS[scene.id] ?? VISIBLE_WINDOW}
           >
             <LaunchWindow
@@ -202,6 +200,51 @@ export function LaunchDemo() {
         />
       )}
     </div>
+  );
+}
+
+interface LaunchSceneFrameProps {
+  sceneKey: string;
+  children: React.ReactNode;
+}
+
+function LaunchSceneFrame({ sceneKey, children }: LaunchSceneFrameProps) {
+  const shownKey = React.useRef(sceneKey);
+  const shownNode = React.useRef(children);
+  const [leaving, setLeaving] = React.useState<{
+    key: string;
+    node: React.ReactNode;
+  } | null>(null);
+
+  if (shownKey.current !== sceneKey) {
+    setLeaving({ key: shownKey.current, node: shownNode.current });
+    shownKey.current = sceneKey;
+  }
+
+  shownNode.current = children;
+
+  function onLeaveEnd(event: React.AnimationEvent<HTMLDivElement>) {
+    if (event.animationName !== "launch-scene-exit") return;
+    const key = event.currentTarget.dataset.sceneKey;
+    setLeaving((current) => (current?.key === key ? null : current));
+  }
+
+  return (
+    <>
+      {leaving && (
+        <div
+          key={leaving.key}
+          data-scene-key={leaving.key}
+          className="launch-scene-exit pointer-events-none absolute inset-0"
+          onAnimationEnd={onLeaveEnd}
+        >
+          {leaving.node}
+        </div>
+      )}
+      <div key={sceneKey} className="absolute inset-0">
+        {children}
+      </div>
+    </>
   );
 }
 
