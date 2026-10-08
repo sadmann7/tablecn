@@ -11,13 +11,13 @@ import {
   columnVisibilityFeature,
   createFilteredRowModel,
   createSortedRowModel,
-  functionalUpdate,
   makeStateUpdater,
   metaHelper,
   type OnChangeFn,
   type RowData,
   rowSelectionFeature,
   rowSortingFeature,
+  setStateSlice,
   type Table,
   type TableFeature,
   type TableFeatures,
@@ -412,9 +412,7 @@ const dataGridRowHeightFeature: TableFeature = {
     const instance = asDataGrid(table);
 
     const setRowHeight = (updater: Updater<RowHeightValue>) =>
-      instance.options.onRowHeightChange?.((old) =>
-        functionalUpdate(updater, old),
-      );
+      setStateSlice(instance, "rowHeight", updater);
 
     assignTableAPIs("dataGridRowHeightFeature", table, {
       table_getRowHeight: {
@@ -466,9 +464,7 @@ const dataGridCellEditingFeature: TableFeature = {
     const instance = asDataGrid(table);
 
     const setEditingCell = (updater: Updater<CellPosition | null>) =>
-      instance.options.onEditingCellChange?.((old) =>
-        functionalUpdate(updater, old),
-      );
+      setStateSlice(instance, "editingCell", updater);
 
     assignTableAPIs("dataGridCellEditingFeature", table, {
       table_getEditingCell: {
@@ -860,7 +856,7 @@ const dataGridNavigationFeature: TableFeature = {
       },
       table_setFocusedHeaderColumnId: {
         fn: (updater: Updater<string | null>) =>
-          instance.options.onFocusedHeaderColumnIdChange?.(updater),
+          setStateSlice(instance, "focusedHeaderColumnId", updater),
       },
     });
   },
@@ -1204,14 +1200,9 @@ const dataGridClipboardFeature: TableFeature = {
 
     const setCutCellGrid = (
       updater: Updater<Array<Array<CellPosition | null>>>,
-    ) =>
-      instance.options.onCutCellGridChange?.((old) =>
-        functionalUpdate(updater, old),
-      );
+    ) => setStateSlice(instance, "cutCellGrid", updater);
     const setPasteDialog = (updater: Updater<PasteDialogState>) =>
-      instance.options.onPasteDialogChange?.((old) =>
-        functionalUpdate(updater, old),
-      );
+      setStateSlice(instance, "pasteDialog", updater);
 
     assignTableAPIs("dataGridClipboardFeature", table, {
       table_getSelectedCells: {
@@ -1287,7 +1278,7 @@ function goToSearchMatch(table: DataGridInstance, step: 1 | -1) {
   const match = matches[index];
   if (!match) return;
 
-  table.options.onSearchMatchIndexChange?.(index);
+  setStateSlice(table, "searchMatchIndex", index);
   table.setFocusedCell(match.rowId, match.columnId);
 }
 
@@ -1310,9 +1301,9 @@ const dataGridSearchFeature: TableFeature = {
     const instance = asDataGrid(table);
 
     const setSearchQuery = (query: string) => {
-      instance.options.onSearchQueryChange?.(query);
+      setStateSlice(instance, "searchQuery", query);
       const firstMatch = instance.getSearchMatches()[0];
-      instance.options.onSearchMatchIndexChange?.(firstMatch ? 0 : -1);
+      setStateSlice(instance, "searchMatchIndex", firstMatch ? 0 : -1);
       if (firstMatch) {
         instance.setFocusedCell(firstMatch.rowId, firstMatch.columnId);
       }
@@ -1325,14 +1316,14 @@ const dataGridSearchFeature: TableFeature = {
       table_openSearch: {
         fn: () => {
           if (!instance.options.enableSearch) return;
-          instance.options.onSearchOpenChange?.(true);
+          setStateSlice(instance, "searchOpen", true);
         },
       },
       table_closeSearch: {
         fn: () => {
-          instance.options.onSearchQueryChange?.("");
-          instance.options.onSearchMatchIndexChange?.(-1);
-          instance.options.onSearchOpenChange?.(false);
+          setStateSlice(instance, "searchQuery", "");
+          setStateSlice(instance, "searchMatchIndex", -1);
+          setStateSlice(instance, "searchOpen", false);
         },
       },
       table_getSearchQuery: {
@@ -1421,9 +1412,7 @@ const dataGridPresenceFeature: TableFeature = {
       },
       table_setCellPresence: {
         fn: (updater: Updater<Array<CellPresence>>) =>
-          instance.options.onCellPresenceChange?.((old) =>
-            functionalUpdate(updater, old),
-          ),
+          setStateSlice(instance, "cellPresence", updater),
       },
       table_getCellPresenceByRowId: {
         fn: (cellPresence: Array<CellPresence>) => {
@@ -1541,7 +1530,7 @@ const dataGridSelectionFeature: TableFeature = {
         instance.resetCellSelection(true);
       }
       clearRowSelection(instance);
-      instance.options.onCellDragAnchorChange?.(null);
+      setStateSlice(instance, "cellDragAnchor", null);
     };
 
     assignTableAPIs("dataGridSelectionFeature", table, {
@@ -1628,13 +1617,13 @@ const dataGridSelectionFeature: TableFeature = {
       table_startCellDrag: {
         fn: (cell: CellPosition) => {
           clearRowSelection(instance);
-          instance.options.onCellDragAnchorChange?.(cell);
+          setStateSlice(instance, "cellDragAnchor", cell);
         },
       },
       table_endCellDrag: {
         fn: () => {
           if (instance.atoms.cellDragAnchor.get()) {
-            instance.options.onCellDragAnchorChange?.(null);
+            setStateSlice(instance, "cellDragAnchor", null);
           }
         },
       },
@@ -1643,13 +1632,13 @@ const dataGridSelectionFeature: TableFeature = {
       },
       table_openContextMenu: {
         fn: ({ x, y }: { x: number; y: number }) =>
-          instance.options.onContextMenuChange?.({ open: true, x, y }),
+          setStateSlice(instance, "contextMenu", { open: true, x, y }),
       },
       table_closeContextMenu: {
         fn: () => {
           const contextMenu = instance.atoms.contextMenu.get();
           if (!contextMenu.open) return;
-          instance.options.onContextMenuChange?.({
+          setStateSlice(instance, "contextMenu", {
             ...contextMenu,
             open: false,
           });
