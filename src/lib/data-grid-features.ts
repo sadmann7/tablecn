@@ -44,6 +44,7 @@ import {
   getEmptyCellValue,
   getFocusedCellPosition,
   getHasCellRangeSelection,
+  getIsDataColumn,
   getLineCount,
   getRowHeightValue,
   getRowIndexById,
@@ -83,6 +84,14 @@ interface TableOptions_DataGridCellEditing {
 
 interface ColumnDef_DataGridCellEditing {
   enableCellEditing?: boolean;
+}
+
+interface ColumnDef_DataGridColumnOrdering {
+  enableOrdering?: boolean;
+}
+
+interface Column_DataGridColumnOrdering {
+  getCanOrder: () => boolean;
 }
 
 interface StopEditingOptions {
@@ -320,6 +329,7 @@ declare module "@tanstack/react-table" {
   interface Plugins {
     dataGridRowHeightFeature: TableFeature;
     dataGridCellEditingFeature: TableFeature;
+    dataGridColumnOrderingFeature: TableFeature;
     dataGridDataFeature: TableFeature;
     dataGridNavigationFeature: TableFeature;
     dataGridClipboardFeature: TableFeature;
@@ -358,6 +368,7 @@ declare module "@tanstack/react-table" {
     TValue extends CellData,
   > {
     dataGridCellEditingFeature: ColumnDef_DataGridCellEditing;
+    dataGridColumnOrderingFeature: ColumnDef_DataGridColumnOrdering;
   }
 
   interface Table_FeatureMap<
@@ -379,6 +390,7 @@ declare module "@tanstack/react-table" {
     in out TData extends RowData,
   > {
     dataGridCellEditingFeature: Column_DataGridCellEditing;
+    dataGridColumnOrderingFeature: Column_DataGridColumnOrdering;
   }
 
   interface Cell_FeatureMap {
@@ -524,6 +536,17 @@ const dataGridCellEditingFeature: TableFeature = {
             columnId: cell.column.id,
           });
         },
+      },
+    });
+  },
+};
+
+const dataGridColumnOrderingFeature: TableFeature = {
+  assignColumnPrototype: (prototype, table) => {
+    assignPrototypeAPIs("dataGridColumnOrderingFeature", prototype, table, {
+      column_getCanOrder: {
+        fn: (column: { columnDef: ColumnDef_DataGridColumnOrdering }) =>
+          column.columnDef.enableOrdering !== false,
       },
     });
   },
@@ -682,7 +705,7 @@ function getNavigationTarget(
   const columnIds = table.getVisibleLeafColumns().map((column) => column.id);
   const dataColumnIds = table
     .getVisibleLeafColumns()
-    .filter((column) => column.columnDef.enableCellSelection !== false)
+    .filter(getIsDataColumn)
     .map((column) => column.id);
   const firstDataColumnId = dataColumnIds[0];
   const lastDataColumnId = dataColumnIds[dataColumnIds.length - 1];
@@ -871,7 +894,7 @@ const ROWS_ADD_POLL_ATTEMPTS = 50;
 function getDataColumnIds(table: DataGridInstance) {
   return table
     .getVisibleLeafColumns()
-    .filter((column) => column.columnDef.enableCellSelection !== false)
+    .filter(getIsDataColumn)
     .map((column) => column.id);
 }
 
@@ -1250,7 +1273,7 @@ function getSearchMatches(
   if (!lowerQuery) return [];
 
   const dataColumnIds = columns
-    .filter((column) => column.columnDef.enableCellSelection !== false)
+    .filter(getIsDataColumn)
     .map((column) => column.id);
 
   const matches: Array<CellPosition> = [];
@@ -1641,6 +1664,7 @@ export const dataGridFeatures = tableFeatures({
   rowSortingFeature,
   dataGridRowHeightFeature,
   dataGridCellEditingFeature,
+  dataGridColumnOrderingFeature,
   dataGridDataFeature,
   dataGridNavigationFeature,
   dataGridClipboardFeature,

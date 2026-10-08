@@ -56,6 +56,20 @@ const CELL_KEY_SEPARATOR = "\u001f";
 // Overlay scrollbars take no layout space, so presses this close to the edge are treated as scrollbar presses
 const SCROLLBAR_HITBOX_SIZE = 16;
 
+const ROW_HEIGHTS: Record<RowHeightValue, number> = {
+  short: 36,
+  medium: 56,
+  tall: 76,
+  "extra-tall": 96,
+};
+
+const LINE_COUNTS: Record<RowHeightValue, number> = {
+  short: 1,
+  medium: 2,
+  tall: 3,
+  "extra-tall": 4,
+};
+
 export function stringifyUnknown(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string") return value;
@@ -68,16 +82,6 @@ export function stringifyUnknown(value: unknown): string {
   } catch {
     return "";
   }
-}
-
-export function flexRender<TProps extends object>(
-  Comp: ((props: TProps) => React.ReactNode) | string | undefined,
-  props: TProps,
-): React.ReactNode {
-  if (typeof Comp === "string") {
-    return Comp;
-  }
-  return Comp?.(props);
 }
 
 export function getIsFileCellData(item: unknown): item is FileCellData {
@@ -131,16 +135,14 @@ export function getFilesCellValue(value: unknown): FileCellData[] {
   return Array.isArray(value) ? value.filter(getIsFileCellData) : [];
 }
 
-export function matchSelectOption(
-  value: string,
-  options: { value: string; label: string }[],
-): string | undefined {
-  return options.find(
-    (o) =>
-      o.value === value ||
-      o.value.toLowerCase() === value.toLowerCase() ||
-      o.label.toLowerCase() === value.toLowerCase(),
-  )?.value;
+export function getEmptyCellValue(
+  variant: CellOpts["variant"] | undefined,
+): unknown {
+  if (variant === "multi-select" || variant === "file") return [];
+  if (variant === "number" || variant === "date" || variant === "select")
+    return null;
+  if (variant === "checkbox") return false;
+  return "";
 }
 
 export function serializeCellValue(
@@ -152,6 +154,18 @@ export function serializeCellValue(
   }
   if (value instanceof Date) return value.toISOString();
   return stringifyUnknown(value);
+}
+
+function matchSelectOption(
+  value: string,
+  options: { value: string; label: string }[],
+): string | undefined {
+  return options.find(
+    (o) =>
+      o.value === value ||
+      o.value.toLowerCase() === value.toLowerCase() ||
+      o.label.toLowerCase() === value.toLowerCase(),
+  )?.value;
 }
 
 function parseTextValue(text: string): unknown {
@@ -198,7 +212,7 @@ function parseMultiSelectValues(text: string): string[] {
       return parsed.filter((item): item is string => typeof item === "string");
     }
   } catch {
-    // Falls back to comma separated values
+    // Fall back to comma separated values
   }
   return text ? text.split(",").map((item) => item.trim()) : [];
 }
@@ -266,394 +280,6 @@ export function parsePastedCellValue(
     default:
       return { value: text ? parseTextValue(text) : "" };
   }
-}
-
-export function getCellKey(rowId: string, columnId: string) {
-  return `${rowId}${CELL_KEY_SEPARATOR}${columnId}`;
-}
-
-function escapeAttributeValue(value: string) {
-  return value.replace(/["\\]/g, "\\$&");
-}
-
-export function getCellElement(
-  container: HTMLElement,
-  rowId: string,
-  columnId: string,
-) {
-  return container.querySelector<HTMLDivElement>(
-    `[data-row-id="${escapeAttributeValue(rowId)}"][data-column-id="${escapeAttributeValue(columnId)}"]`,
-  );
-}
-
-export function parseCellKey(cellKey: string): CellPosition {
-  const separatorIndex = cellKey.indexOf(CELL_KEY_SEPARATOR);
-  if (separatorIndex === -1) return { rowId: "", columnId: "" };
-  return {
-    rowId: cellKey.slice(0, separatorIndex),
-    columnId: cellKey.slice(separatorIndex + CELL_KEY_SEPARATOR.length),
-  };
-}
-
-export function getRowCellSelectionKey(
-  bounds: Array<CellSelectionBounds>,
-  rowIndex: number,
-) {
-  let key = "";
-  for (const bound of bounds) {
-    if (rowIndex < bound.minRowIndex || rowIndex > bound.maxRowIndex) continue;
-    key += `${bound.minColumnIndex}:${bound.maxColumnIndex},`;
-  }
-  return key;
-}
-
-function getActiveCellRange(ranges: CellSelectionState) {
-  return ranges[ranges.length - 1] ?? null;
-}
-
-export function getFocusedCellPosition(
-  ranges: CellSelectionState,
-): CellPosition | null {
-  const range = getActiveCellRange(ranges);
-  return range
-    ? { rowId: range.anchorRowId, columnId: range.anchorColumnId }
-    : null;
-}
-
-export function getSelectionEdgePosition(
-  ranges: CellSelectionState,
-): CellPosition | null {
-  const range = getActiveCellRange(ranges);
-  return range
-    ? { rowId: range.focusRowId, columnId: range.focusColumnId }
-    : null;
-}
-
-export function getHasCellRangeSelection(ranges: CellSelectionState) {
-  const range = getActiveCellRange(ranges);
-  if (!range) return false;
-  return (
-    ranges.length > 1 ||
-    range.anchorRowId !== range.focusRowId ||
-    range.anchorColumnId !== range.focusColumnId
-  );
-}
-
-export function swapItems<T>(items: Array<T>, first: T, second: T) {
-  return items.map((item) => {
-    if (item === first) return second;
-    if (item === second) return first;
-    return item;
-  });
-}
-
-export function getRowIndexById<TData extends RowData>(
-  table: Table<DataGridFeatures, TData>,
-  rowId: string,
-) {
-  return table.getRowModel().rowsById[rowId]?.getDisplayIndex() ?? -1;
-}
-
-export function getRowHeightValue(rowHeight: RowHeightValue): number {
-  const rowHeightMap: Record<RowHeightValue, number> = {
-    short: 36,
-    medium: 56,
-    tall: 76,
-    "extra-tall": 96,
-  };
-
-  return rowHeightMap[rowHeight];
-}
-
-export function getLineCount(rowHeight: RowHeightValue): number {
-  const lineCountMap: Record<RowHeightValue, number> = {
-    short: 1,
-    medium: 2,
-    tall: 3,
-    "extra-tall": 4,
-  };
-
-  return lineCountMap[rowHeight];
-}
-
-export function getColumnBorderVisibility<TData extends RowData>(params: {
-  column: Column<DataGridFeatures, TData>;
-  nextColumn?: Column<DataGridFeatures, TData>;
-  isLastColumn: boolean;
-}): {
-  showEndBorder: boolean;
-  showStartBorder: boolean;
-} {
-  const { column, nextColumn, isLastColumn } = params;
-
-  const isPinned = column.getIsPinned();
-  const isFirstRightPinnedColumn =
-    isPinned === "end" && column.getIsFirstColumn("end");
-  const isLastRightPinnedColumn =
-    isPinned === "end" && column.getIsLastColumn("end");
-
-  const nextIsPinned = nextColumn?.getIsPinned();
-  const isBeforeRightPinned =
-    nextIsPinned === "end" && nextColumn?.getIsFirstColumn("end");
-
-  const showEndBorder =
-    !isBeforeRightPinned && (isLastColumn || !isLastRightPinnedColumn);
-
-  const showStartBorder = isFirstRightPinnedColumn;
-
-  return {
-    showEndBorder,
-    showStartBorder,
-  };
-}
-
-export function getColumnPinningStyle<TData extends RowData>(params: {
-  column: Column<DataGridFeatures, TData>;
-  withBorder?: boolean;
-  dir?: Direction;
-}): React.CSSProperties {
-  const { column, dir = "ltr", withBorder = false } = params;
-
-  const isPinned = column.getIsPinned();
-  const isLastLeftPinnedColumn =
-    isPinned === "start" && column.getIsLastColumn("start");
-  const isFirstRightPinnedColumn =
-    isPinned === "end" && column.getIsFirstColumn("end");
-
-  const isRtl = dir === "rtl";
-
-  const leftPosition =
-    isPinned === "start" ? `${column.getStart("start")}px` : undefined;
-  const rightPosition =
-    isPinned === "end" ? `${column.getAfter("end")}px` : undefined;
-
-  return {
-    boxShadow: withBorder
-      ? isLastLeftPinnedColumn
-        ? isRtl
-          ? "4px 0 4px -4px var(--border) inset"
-          : "-4px 0 4px -4px var(--border) inset"
-        : isFirstRightPinnedColumn
-          ? isRtl
-            ? "-4px 0 4px -4px var(--border) inset"
-            : "4px 0 4px -4px var(--border) inset"
-          : undefined
-      : undefined,
-    left: isRtl ? rightPosition : leftPosition,
-    right: isRtl ? leftPosition : rightPosition,
-    opacity: isPinned ? 0.97 : 1,
-    position: isPinned ? "sticky" : "relative",
-    background: isPinned ? "var(--background)" : "var(--background)",
-    width: column.getSize(),
-    zIndex: isPinned ? 1 : undefined,
-  };
-}
-
-export function getTabTargetCell(params: {
-  rowIndex: number;
-  columnId: string;
-  columnIds: string[];
-  rowCount: number;
-  isBackward: boolean;
-  getIsColumnTabbable?: (columnId: string) => boolean;
-}): { rowIndex: number; columnId: string } | null {
-  const {
-    rowIndex,
-    columnId,
-    columnIds,
-    rowCount,
-    isBackward,
-    getIsColumnTabbable = () => true,
-  } = params;
-  const colIndex = columnIds.indexOf(columnId);
-  if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
-
-  const step = isBackward ? -1 : 1;
-  let nextRowIndex = rowIndex;
-  let nextColIndex = colIndex;
-
-  while (true) {
-    nextColIndex += step;
-    if (nextColIndex >= columnIds.length) {
-      nextColIndex = 0;
-      nextRowIndex++;
-    } else if (nextColIndex < 0) {
-      nextColIndex = columnIds.length - 1;
-      nextRowIndex--;
-    }
-
-    if (nextRowIndex < 0 || nextRowIndex >= rowCount) return null;
-
-    const nextColumnId = columnIds[nextColIndex];
-    if (nextColumnId && getIsColumnTabbable(nextColumnId)) {
-      return { rowIndex: nextRowIndex, columnId: nextColumnId };
-    }
-  }
-}
-
-export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
-  if (cellElement.dataset.slot === "grid-cell-wrapper") return cellElement;
-  return (
-    cellElement.querySelector<HTMLElement>(
-      'button, a[href], [role="checkbox"]',
-    ) ?? cellElement
-  );
-}
-
-export function getColumnFitSize(params: {
-  gridElement: HTMLElement;
-  columnId: string;
-  minSize: number;
-  maxSize: number;
-  wrapperContentSize?: number;
-}): number | null {
-  const {
-    gridElement,
-    columnId,
-    minSize,
-    maxSize,
-    wrapperContentSize = 0,
-  } = params;
-  const cellElements = gridElement.querySelectorAll<HTMLElement>(
-    `:is([data-slot="grid-header-cell"], [data-slot="grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
-  );
-  if (cellElements.length === 0) return null;
-
-  let cellChromeSize = 0;
-  for (const cellElement of cellElements) {
-    const wrapperElement = cellElement.querySelector<HTMLElement>(
-      '[data-slot="grid-cell-wrapper"]',
-    );
-    if (!wrapperElement) continue;
-    cellChromeSize =
-      cellElement.getBoundingClientRect().width - wrapperElement.clientWidth;
-    break;
-  }
-
-  const measurer = document.createElement("div");
-  measurer.setAttribute("aria-hidden", "true");
-  Object.assign(measurer.style, {
-    position: "absolute",
-    top: "0",
-    insetInlineStart: "0",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    visibility: "hidden",
-    pointerEvents: "none",
-    contain: "layout style",
-  });
-
-  for (const cellElement of cellElements) {
-    const clone = cellElement.cloneNode(true) as HTMLElement;
-    clone.removeAttribute("id");
-    Object.assign(clone.style, {
-      position: "static",
-      width: "max-content",
-      minWidth: "0",
-      maxWidth: "none",
-    });
-    for (const element of clone.querySelectorAll<HTMLElement>("*")) {
-      element.style.whiteSpace = "nowrap";
-      element.style.flexWrap = "nowrap";
-      element.style.webkitLineClamp = "unset";
-    }
-    measurer.append(clone);
-  }
-
-  gridElement.append(measurer);
-  let contentSize =
-    wrapperContentSize > 0 ? wrapperContentSize + cellChromeSize : 0;
-  for (const clone of measurer.children) {
-    contentSize = Math.max(contentSize, clone.getBoundingClientRect().width);
-  }
-  measurer.remove();
-
-  return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
-}
-
-export function getScrollDirection(
-  direction: string,
-): "left" | "right" | "home" | "end" | undefined {
-  if (
-    direction === "left" ||
-    direction === "right" ||
-    direction === "home" ||
-    direction === "end"
-  ) {
-    return direction as "left" | "right" | "home" | "end";
-  }
-  if (direction === "pageleft") return "left";
-  if (direction === "pageright") return "right";
-  return undefined;
-}
-
-export function scrollCellIntoView<TData extends RowData>(params: {
-  container: HTMLDivElement;
-  targetCell: HTMLDivElement;
-  tableRef: React.RefObject<Table<DataGridFeatures, TData> | null>;
-  viewportOffset: number;
-  direction?: "left" | "right" | "home" | "end";
-  isRtl: boolean;
-}): void {
-  const { container, targetCell, tableRef, direction, viewportOffset, isRtl } =
-    params;
-
-  const containerRect = container.getBoundingClientRect();
-  const cellRect = targetCell.getBoundingClientRect();
-
-  const hasNegativeScroll = container.scrollLeft < 0;
-  const isActuallyRtl = isRtl || hasNegativeScroll;
-
-  const currentTable = tableRef.current;
-  const leftPinnedColumns = currentTable?.getStartVisibleLeafColumns() ?? [];
-  const rightPinnedColumns = currentTable?.getEndVisibleLeafColumns() ?? [];
-
-  const leftPinnedWidth = leftPinnedColumns.reduce(
-    (sum, c) => sum + c.getSize(),
-    0,
-  );
-  const rightPinnedWidth = rightPinnedColumns.reduce(
-    (sum, c) => sum + c.getSize(),
-    0,
-  );
-
-  const viewportLeft = isActuallyRtl
-    ? containerRect.left + rightPinnedWidth + viewportOffset
-    : containerRect.left + leftPinnedWidth + viewportOffset;
-  const viewportRight = isActuallyRtl
-    ? containerRect.right - leftPinnedWidth - viewportOffset
-    : containerRect.right - rightPinnedWidth - viewportOffset;
-
-  const isFullyVisible =
-    cellRect.left >= viewportLeft && cellRect.right <= viewportRight;
-
-  if (isFullyVisible) return;
-
-  const isClippedLeft = cellRect.left < viewportLeft;
-  const isClippedRight = cellRect.right > viewportRight;
-
-  let scrollDelta = 0;
-
-  if (!direction) {
-    if (isClippedRight) {
-      scrollDelta = cellRect.right - viewportRight;
-    } else if (isClippedLeft) {
-      scrollDelta = -(viewportLeft - cellRect.left);
-    }
-  } else {
-    const shouldScrollRight = isActuallyRtl
-      ? direction === "right" || direction === "home"
-      : direction === "right" || direction === "end";
-
-    if (shouldScrollRight) {
-      scrollDelta = cellRect.right - viewportRight;
-    } else {
-      scrollDelta = -(viewportLeft - cellRect.left);
-    }
-  }
-
-  container.scrollLeft += scrollDelta;
 }
 
 function countTabs(s: string): number {
@@ -767,6 +393,371 @@ export function parseTsv(
     : lines.filter((l) => l.length > 0).map((l) => l.split("\t"));
 }
 
+export function getCellKey(rowId: string, columnId: string) {
+  return `${rowId}${CELL_KEY_SEPARATOR}${columnId}`;
+}
+
+export function parseCellKey(cellKey: string): CellPosition {
+  const separatorIndex = cellKey.indexOf(CELL_KEY_SEPARATOR);
+  if (separatorIndex === -1) return { rowId: "", columnId: "" };
+  return {
+    rowId: cellKey.slice(0, separatorIndex),
+    columnId: cellKey.slice(separatorIndex + CELL_KEY_SEPARATOR.length),
+  };
+}
+
+export function getRowCellSelectionKey(
+  bounds: Array<CellSelectionBounds>,
+  rowIndex: number,
+) {
+  let key = "";
+  for (const bound of bounds) {
+    if (rowIndex < bound.minRowIndex || rowIndex > bound.maxRowIndex) continue;
+    key += `${bound.minColumnIndex}:${bound.maxColumnIndex},`;
+  }
+  return key;
+}
+
+function getActiveCellRange(ranges: CellSelectionState) {
+  return ranges[ranges.length - 1] ?? null;
+}
+
+export function getFocusedCellPosition(
+  ranges: CellSelectionState,
+): CellPosition | null {
+  const range = getActiveCellRange(ranges);
+  return range
+    ? { rowId: range.anchorRowId, columnId: range.anchorColumnId }
+    : null;
+}
+
+export function getSelectionEdgePosition(
+  ranges: CellSelectionState,
+): CellPosition | null {
+  const range = getActiveCellRange(ranges);
+  return range
+    ? { rowId: range.focusRowId, columnId: range.focusColumnId }
+    : null;
+}
+
+export function getHasCellRangeSelection(ranges: CellSelectionState) {
+  const range = getActiveCellRange(ranges);
+  if (!range) return false;
+  return (
+    ranges.length > 1 ||
+    range.anchorRowId !== range.focusRowId ||
+    range.anchorColumnId !== range.focusColumnId
+  );
+}
+
+/** Columns that take part in cell selection, navigation, search and the clipboard. */
+export function getIsDataColumn(
+  column: { columnDef: { enableCellSelection?: boolean } } | undefined,
+) {
+  return column?.columnDef.enableCellSelection !== false;
+}
+
+export function getRowIndexById<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  rowId: string,
+) {
+  return table.getRowModel().rowsById[rowId]?.getDisplayIndex() ?? -1;
+}
+
+export function getTabTargetCell(params: {
+  rowIndex: number;
+  columnId: string;
+  columnIds: string[];
+  rowCount: number;
+  isBackward: boolean;
+  getIsColumnTabbable?: (columnId: string) => boolean;
+}): { rowIndex: number; columnId: string } | null {
+  const {
+    rowIndex,
+    columnId,
+    columnIds,
+    rowCount,
+    isBackward,
+    getIsColumnTabbable = () => true,
+  } = params;
+  const colIndex = columnIds.indexOf(columnId);
+  if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
+
+  const step = isBackward ? -1 : 1;
+  let nextRowIndex = rowIndex;
+  let nextColIndex = colIndex;
+
+  while (true) {
+    nextColIndex += step;
+    if (nextColIndex >= columnIds.length) {
+      nextColIndex = 0;
+      nextRowIndex++;
+    } else if (nextColIndex < 0) {
+      nextColIndex = columnIds.length - 1;
+      nextRowIndex--;
+    }
+
+    if (nextRowIndex < 0 || nextRowIndex >= rowCount) return null;
+
+    const nextColumnId = columnIds[nextColIndex];
+    if (nextColumnId && getIsColumnTabbable(nextColumnId)) {
+      return { rowIndex: nextRowIndex, columnId: nextColumnId };
+    }
+  }
+}
+
+export function swapItems<T>(items: Array<T>, first: T, second: T) {
+  return items.map((item) => {
+    if (item === first) return second;
+    if (item === second) return first;
+    return item;
+  });
+}
+
+export function getRowHeightValue(rowHeight: RowHeightValue): number {
+  return ROW_HEIGHTS[rowHeight];
+}
+
+export function getLineCount(rowHeight: RowHeightValue): number {
+  return LINE_COUNTS[rowHeight];
+}
+
+export function getColumnBorderVisibility<TData extends RowData>(params: {
+  column: Column<DataGridFeatures, TData>;
+  nextColumn?: Column<DataGridFeatures, TData>;
+  isLastColumn: boolean;
+}): {
+  showEndBorder: boolean;
+  showStartBorder: boolean;
+} {
+  const { column, nextColumn, isLastColumn } = params;
+
+  const isPinned = column.getIsPinned();
+  const isFirstRightPinnedColumn =
+    isPinned === "end" && column.getIsFirstColumn("end");
+  const isLastRightPinnedColumn =
+    isPinned === "end" && column.getIsLastColumn("end");
+
+  const nextIsPinned = nextColumn?.getIsPinned();
+  const isBeforeRightPinned =
+    nextIsPinned === "end" && nextColumn?.getIsFirstColumn("end");
+
+  const showEndBorder =
+    !isBeforeRightPinned && (isLastColumn || !isLastRightPinnedColumn);
+
+  const showStartBorder = isFirstRightPinnedColumn;
+
+  return {
+    showEndBorder,
+    showStartBorder,
+  };
+}
+
+export function getColumnPinningStyle<TData extends RowData>(params: {
+  column: Column<DataGridFeatures, TData>;
+  withBorder?: boolean;
+  dir?: Direction;
+}): React.CSSProperties {
+  const { column, dir = "ltr", withBorder = false } = params;
+
+  const isPinned = column.getIsPinned();
+  const isLastLeftPinnedColumn =
+    isPinned === "start" && column.getIsLastColumn("start");
+  const isFirstRightPinnedColumn =
+    isPinned === "end" && column.getIsFirstColumn("end");
+
+  const isRtl = dir === "rtl";
+
+  const leftPosition =
+    isPinned === "start" ? `${column.getStart("start")}px` : undefined;
+  const rightPosition =
+    isPinned === "end" ? `${column.getAfter("end")}px` : undefined;
+
+  return {
+    boxShadow: withBorder
+      ? isLastLeftPinnedColumn
+        ? isRtl
+          ? "4px 0 4px -4px var(--border) inset"
+          : "-4px 0 4px -4px var(--border) inset"
+        : isFirstRightPinnedColumn
+          ? isRtl
+            ? "-4px 0 4px -4px var(--border) inset"
+            : "4px 0 4px -4px var(--border) inset"
+          : undefined
+      : undefined,
+    left: isRtl ? rightPosition : leftPosition,
+    right: isRtl ? leftPosition : rightPosition,
+    opacity: isPinned ? 0.97 : 1,
+    position: isPinned ? "sticky" : "relative",
+    background: "var(--background)",
+    width: column.getSize(),
+    zIndex: isPinned ? 1 : undefined,
+  };
+}
+
+export function getColumnFitSize(params: {
+  gridElement: HTMLElement;
+  columnId: string;
+  minSize: number;
+  maxSize: number;
+  wrapperContentSize?: number;
+}): number | null {
+  const {
+    gridElement,
+    columnId,
+    minSize,
+    maxSize,
+    wrapperContentSize = 0,
+  } = params;
+  const cellElements = gridElement.querySelectorAll<HTMLElement>(
+    `:is([data-slot="grid-header-cell"], [data-slot="grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
+  );
+  if (cellElements.length === 0) return null;
+
+  let cellChromeSize = 0;
+  for (const cellElement of cellElements) {
+    const wrapperElement = cellElement.querySelector<HTMLElement>(
+      '[data-slot="grid-cell-wrapper"]',
+    );
+    if (!wrapperElement) continue;
+    cellChromeSize =
+      cellElement.getBoundingClientRect().width - wrapperElement.clientWidth;
+    break;
+  }
+
+  const measurer = document.createElement("div");
+  measurer.setAttribute("aria-hidden", "true");
+  Object.assign(measurer.style, {
+    position: "absolute",
+    top: "0",
+    insetInlineStart: "0",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    visibility: "hidden",
+    pointerEvents: "none",
+    contain: "layout style",
+  });
+
+  for (const cellElement of cellElements) {
+    const clone = cellElement.cloneNode(true) as HTMLElement;
+    clone.removeAttribute("id");
+    Object.assign(clone.style, {
+      position: "static",
+      width: "max-content",
+      minWidth: "0",
+      maxWidth: "none",
+    });
+    for (const element of clone.querySelectorAll<HTMLElement>("*")) {
+      element.style.whiteSpace = "nowrap";
+      element.style.flexWrap = "nowrap";
+      element.style.webkitLineClamp = "unset";
+    }
+    measurer.append(clone);
+  }
+
+  gridElement.append(measurer);
+  let contentSize =
+    wrapperContentSize > 0 ? wrapperContentSize + cellChromeSize : 0;
+  for (const clone of measurer.children) {
+    contentSize = Math.max(contentSize, clone.getBoundingClientRect().width);
+  }
+  measurer.remove();
+
+  return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
+}
+
+export function scrollCellIntoView<TData extends RowData>(params: {
+  container: HTMLDivElement;
+  targetCell: HTMLDivElement;
+  tableRef: React.RefObject<Table<DataGridFeatures, TData> | null>;
+  viewportOffset: number;
+  direction?: "left" | "right" | "home" | "end";
+  isRtl: boolean;
+}): void {
+  const { container, targetCell, tableRef, direction, viewportOffset, isRtl } =
+    params;
+
+  const containerRect = container.getBoundingClientRect();
+  const cellRect = targetCell.getBoundingClientRect();
+
+  const hasNegativeScroll = container.scrollLeft < 0;
+  const isActuallyRtl = isRtl || hasNegativeScroll;
+
+  const currentTable = tableRef.current;
+  const leftPinnedColumns = currentTable?.getStartVisibleLeafColumns() ?? [];
+  const rightPinnedColumns = currentTable?.getEndVisibleLeafColumns() ?? [];
+
+  const leftPinnedWidth = leftPinnedColumns.reduce(
+    (sum, c) => sum + c.getSize(),
+    0,
+  );
+  const rightPinnedWidth = rightPinnedColumns.reduce(
+    (sum, c) => sum + c.getSize(),
+    0,
+  );
+
+  const viewportLeft = isActuallyRtl
+    ? containerRect.left + rightPinnedWidth + viewportOffset
+    : containerRect.left + leftPinnedWidth + viewportOffset;
+  const viewportRight = isActuallyRtl
+    ? containerRect.right - leftPinnedWidth - viewportOffset
+    : containerRect.right - rightPinnedWidth - viewportOffset;
+
+  const isFullyVisible =
+    cellRect.left >= viewportLeft && cellRect.right <= viewportRight;
+
+  if (isFullyVisible) return;
+
+  const isClippedLeft = cellRect.left < viewportLeft;
+  const isClippedRight = cellRect.right > viewportRight;
+
+  let scrollDelta = 0;
+
+  if (!direction) {
+    if (isClippedRight) {
+      scrollDelta = cellRect.right - viewportRight;
+    } else if (isClippedLeft) {
+      scrollDelta = -(viewportLeft - cellRect.left);
+    }
+  } else {
+    const shouldScrollRight = isActuallyRtl
+      ? direction === "right" || direction === "home"
+      : direction === "right" || direction === "end";
+
+    if (shouldScrollRight) {
+      scrollDelta = cellRect.right - viewportRight;
+    } else {
+      scrollDelta = -(viewportLeft - cellRect.left);
+    }
+  }
+
+  container.scrollLeft += scrollDelta;
+}
+
+function escapeAttributeValue(value: string) {
+  return value.replace(/["\\]/g, "\\$&");
+}
+
+export function getCellElement(
+  container: HTMLElement,
+  rowId: string,
+  columnId: string,
+) {
+  return container.querySelector<HTMLDivElement>(
+    `[data-row-id="${escapeAttributeValue(rowId)}"][data-column-id="${escapeAttributeValue(columnId)}"]`,
+  );
+}
+
+export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
+  if (cellElement.dataset.slot === "grid-cell-wrapper") return cellElement;
+  return (
+    cellElement.querySelector<HTMLElement>(
+      'button, a[href], [role="checkbox"]',
+    ) ?? cellElement
+  );
+}
+
 export function getIsInPopover(element: unknown): boolean {
   if (!(element instanceof Element)) return false;
 
@@ -778,129 +769,6 @@ export function getIsInPopover(element: unknown): boolean {
     element.closest("[data-slot='select-content']") !== null ||
     element.closest("[data-slot='faceted-content']") !== null
   );
-}
-
-export function getColumnVariant(variant?: CellOpts["variant"]): {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  label: string;
-} | null {
-  switch (variant) {
-    case "short-text":
-      return { label: "Short text", icon: BaselineIcon };
-    case "long-text":
-      return { label: "Long text", icon: TextInitialIcon };
-    case "number":
-      return { label: "Number", icon: HashIcon };
-    case "url":
-      return { label: "URL", icon: LinkIcon };
-    case "checkbox":
-      return { label: "Checkbox", icon: CheckSquareIcon };
-    case "select":
-      return { label: "Select", icon: ListIcon };
-    case "multi-select":
-      return { label: "Multi-select", icon: ListChecksIcon };
-    case "date":
-      return { label: "Date", icon: CalendarIcon };
-    case "file":
-      return { label: "File", icon: FileIcon };
-    default:
-      return null;
-  }
-}
-
-export function getEmptyCellValue(
-  variant: CellOpts["variant"] | undefined,
-): unknown {
-  if (variant === "multi-select" || variant === "file") return [];
-  if (variant === "number" || variant === "date" || variant === "select")
-    return null;
-  if (variant === "checkbox") return false;
-  return "";
-}
-
-export function getUrlHref(urlString: string): string {
-  if (!urlString || urlString.trim() === "") return "";
-
-  const trimmed = urlString.trim();
-
-  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
-    return "";
-  }
-
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-
-  return `http://${trimmed}`;
-}
-
-export function parseLocalDate(dateStr: unknown): Date | null {
-  if (!dateStr) return null;
-  if (dateStr instanceof Date) return dateStr;
-  if (typeof dateStr !== "string") return null;
-  const [year, month, day] = dateStr.split("-").map(Number);
-  if (!year || !month || !day) return null;
-  const date = new Date(year, month - 1, day);
-  // Verify date wasn't auto-corrected (e.g. Feb 30 -> Mar 1)
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return null;
-  }
-  return date;
-}
-
-export function formatDateToString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-export function formatDateForDisplay(dateStr: unknown): string {
-  if (!dateStr) return "";
-  const date = parseLocalDate(dateStr);
-  if (!date) return typeof dateStr === "string" ? dateStr : "";
-  return date.toLocaleDateString();
-}
-
-export function formatFileSize(bytes: number): string {
-  if (bytes <= 0 || !Number.isFinite(bytes)) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.min(
-    sizes.length - 1,
-    Math.floor(Math.log(bytes) / Math.log(k)),
-  );
-  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
-}
-
-export function getFileIcon(
-  type: string,
-): React.ComponentType<React.SVGProps<SVGSVGElement>> {
-  if (type.startsWith("image/")) return FileImage;
-  if (type.startsWith("video/")) return FileVideo;
-  if (type.startsWith("audio/")) return FileAudio;
-  if (type.includes("pdf")) return FileText;
-  if (type.includes("zip") || type.includes("rar")) return FileArchive;
-  if (
-    type.includes("word") ||
-    type.includes("document") ||
-    type.includes("doc")
-  )
-    return FileText;
-  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
-    return FileSpreadsheet;
-  if (
-    type.includes("presentation") ||
-    type.includes("powerpoint") ||
-    type.includes("ppt")
-  )
-    return Presentation;
-  return File;
 }
 
 export function getIsPointOnScrollbar(
@@ -989,4 +857,127 @@ export function replaceEditableText(element: HTMLElement, text: string) {
   selection?.removeAllRanges();
   selection?.addRange(range);
   dispatchInsertTextInput(element, text);
+}
+
+export function flexRender<TProps extends object>(
+  Comp: ((props: TProps) => React.ReactNode) | string | undefined,
+  props: TProps,
+): React.ReactNode {
+  if (typeof Comp === "string") {
+    return Comp;
+  }
+  return Comp?.(props);
+}
+
+export function getColumnVariant(variant?: CellOpts["variant"]): {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+} | null {
+  switch (variant) {
+    case "short-text":
+      return { label: "Short text", icon: BaselineIcon };
+    case "long-text":
+      return { label: "Long text", icon: TextInitialIcon };
+    case "number":
+      return { label: "Number", icon: HashIcon };
+    case "url":
+      return { label: "URL", icon: LinkIcon };
+    case "checkbox":
+      return { label: "Checkbox", icon: CheckSquareIcon };
+    case "select":
+      return { label: "Select", icon: ListIcon };
+    case "multi-select":
+      return { label: "Multi-select", icon: ListChecksIcon };
+    case "date":
+      return { label: "Date", icon: CalendarIcon };
+    case "file":
+      return { label: "File", icon: FileIcon };
+    default:
+      return null;
+  }
+}
+
+export function getUrlHref(urlString: string): string {
+  if (!urlString || urlString.trim() === "") return "";
+
+  const trimmed = urlString.trim();
+
+  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
+  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
+    return "";
+  }
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  return `http://${trimmed}`;
+}
+
+export function parseLocalDate(dateStr: unknown): Date | null {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  if (typeof dateStr !== "string") return null;
+  const [year, month, day] = dateStr.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  // Verify date wasn't auto-corrected (e.g. Feb 30 -> Mar 1)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
+
+export function formatDateToString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function formatDateForDisplay(dateStr: unknown): string {
+  if (!dateStr) return "";
+  const date = parseLocalDate(dateStr);
+  if (!date) return typeof dateStr === "string" ? dateStr : "";
+  return date.toLocaleDateString();
+}
+
+export function formatFileSize(bytes: number): string {
+  if (bytes <= 0 || !Number.isFinite(bytes)) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.min(
+    sizes.length - 1,
+    Math.floor(Math.log(bytes) / Math.log(k)),
+  );
+  return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
+}
+
+export function getFileIcon(
+  type: string,
+): React.ComponentType<React.SVGProps<SVGSVGElement>> {
+  if (type.startsWith("image/")) return FileImage;
+  if (type.startsWith("video/")) return FileVideo;
+  if (type.startsWith("audio/")) return FileAudio;
+  if (type.includes("pdf")) return FileText;
+  if (type.includes("zip") || type.includes("rar")) return FileArchive;
+  if (
+    type.includes("word") ||
+    type.includes("document") ||
+    type.includes("doc")
+  )
+    return FileText;
+  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
+    return FileSpreadsheet;
+  if (
+    type.includes("presentation") ||
+    type.includes("powerpoint") ||
+    type.includes("ppt")
+  )
+    return Presentation;
+  return File;
 }
