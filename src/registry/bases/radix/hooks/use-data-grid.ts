@@ -17,7 +17,11 @@ import {
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { CellPosition, NavigationDirection } from "@/lib/data-grid-types";
+import type {
+  CellPosition,
+  ClipboardNotice,
+  NavigationDirection,
+} from "@/lib/data-grid-types";
 
 import { useAsRef } from "@/hooks/use-as-ref";
 import {
@@ -28,11 +32,14 @@ import {
   getCellElement,
   getCellFocusTarget,
   getCellKey,
+  getFocusedCellPosition,
+  getHasCellRangeSelection,
   getIsInPopover,
   getIsEventOnScrollbar,
   getRowIndexById,
-  parseCellKey,
+  getSelectionEdgePosition,
   scrollCellIntoView,
+  swapItems,
 } from "@/lib/data-grid-utils";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
 
@@ -49,13 +56,7 @@ const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
 const NON_NAVIGABLE_COLUMN_IDS = new Set(["select", "actions"]);
 const SEARCH_SHORTCUT_KEY = "f";
 
-function showClipboardToast({
-  variant,
-  message,
-}: {
-  variant: "success" | "error";
-  message: string;
-}) {
+function showClipboardToast({ variant, message }: ClipboardNotice) {
   if (variant === "error") toast.error(message);
   else toast.success(message);
 }
@@ -75,54 +76,6 @@ function selectGridLayoutState(state: TableState<DataGridFeatures>) {
 
 function getIsDataColumn(columnId: string) {
   return !NON_NAVIGABLE_COLUMN_IDS.has(columnId);
-}
-
-function swapItems(items: string[], first: string, second: string) {
-  return items.map((item) => {
-    if (item === first) return second;
-    if (item === second) return first;
-    return item;
-  });
-}
-
-function getActiveCellRange(ranges: CellSelectionState) {
-  return ranges[ranges.length - 1] ?? null;
-}
-
-function getFocusedCellPosition(
-  ranges: CellSelectionState,
-): CellPosition | null {
-  const range = getActiveCellRange(ranges);
-  return range
-    ? { rowId: range.anchorRowId, columnId: range.anchorColumnId }
-    : null;
-}
-
-function getSelectionEdgePosition(
-  ranges: CellSelectionState,
-): CellPosition | null {
-  const range = getActiveCellRange(ranges);
-  return range
-    ? { rowId: range.focusRowId, columnId: range.focusColumnId }
-    : null;
-}
-
-function getHasCellRangeSelection(ranges: CellSelectionState) {
-  const range = getActiveCellRange(ranges);
-  if (!range) return false;
-  return (
-    ranges.length > 1 ||
-    range.anchorRowId !== range.focusRowId ||
-    range.anchorColumnId !== range.focusColumnId
-  );
-}
-
-function getSelectedCellKeys<TData extends RowData>(
-  table: Table<DataGridFeatures, TData>,
-) {
-  return table
-    .getSelectedCells()
-    .map(({ rowId, columnId }) => getCellKey(rowId, columnId));
 }
 
 interface RowAddResult {
@@ -982,8 +935,8 @@ function useDataGrid<TData extends RowData>({
             }
           }
         } else if (hasCellRangeSelection && currentTable) {
-          for (const cellKey of getSelectedCellKeys(currentTable)) {
-            rowIds.add(parseCellKey(cellKey).rowId);
+          for (const { rowId } of currentTable.getSelectedCells()) {
+            rowIds.add(rowId);
           }
         } else if (focusedCell) {
           rowIds.add(focusedCell.rowId);
@@ -1058,14 +1011,12 @@ function useDataGrid<TData extends RowData>({
         !isUtilityCellFocused &&
         !propsRef.current.readOnly
       ) {
-        const cellsToClear = currentTable
-          ? getSelectedCellKeys(currentTable)
-          : [];
+        const cellsToClear = currentTable?.getSelectedCells() ?? [];
 
         if (cellsToClear.length > 0) {
           event.preventDefault();
 
-          currentTable?.clearCells(cellsToClear.map(parseCellKey));
+          currentTable?.clearCells(cellsToClear);
 
           if (hasCellRangeSelection) {
             tableRef.current?.clearSelection();

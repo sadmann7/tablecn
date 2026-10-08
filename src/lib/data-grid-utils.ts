@@ -1,5 +1,6 @@
 import type {
   CellSelectionBounds,
+  CellSelectionState,
   Column,
   RowData,
   Table,
@@ -304,6 +305,46 @@ export function getRowCellSelectionKey(
     key += `${bound.minColumnIndex}:${bound.maxColumnIndex},`;
   }
   return key;
+}
+
+function getActiveCellRange(ranges: CellSelectionState) {
+  return ranges[ranges.length - 1] ?? null;
+}
+
+export function getFocusedCellPosition(
+  ranges: CellSelectionState,
+): CellPosition | null {
+  const range = getActiveCellRange(ranges);
+  return range
+    ? { rowId: range.anchorRowId, columnId: range.anchorColumnId }
+    : null;
+}
+
+export function getSelectionEdgePosition(
+  ranges: CellSelectionState,
+): CellPosition | null {
+  const range = getActiveCellRange(ranges);
+  return range
+    ? { rowId: range.focusRowId, columnId: range.focusColumnId }
+    : null;
+}
+
+export function getHasCellRangeSelection(ranges: CellSelectionState) {
+  const range = getActiveCellRange(ranges);
+  if (!range) return false;
+  return (
+    ranges.length > 1 ||
+    range.anchorRowId !== range.focusRowId ||
+    range.anchorColumnId !== range.focusColumnId
+  );
+}
+
+export function swapItems<T>(items: Array<T>, first: T, second: T) {
+  return items.map((item) => {
+    if (item === first) return second;
+    if (item === second) return first;
+    return item;
+  });
 }
 
 export function getRowIndexById<TData extends RowData>(
