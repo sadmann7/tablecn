@@ -11,6 +11,7 @@ import {
   getOptionCellValue,
   getOptionsCellValue,
   getTabTargetCell,
+  getWindowedColumns,
   insertTextAtSelection,
   parseCellKey,
   parsePastedCellValue,
@@ -558,5 +559,63 @@ describe("cell value narrowing", () => {
     const file = { id: "1", name: "a.png", size: 10, type: "image/png" };
     expect(getFilesCellValue([file, { id: "2" }])).toEqual([file]);
     expect(getFilesCellValue(null)).toEqual([]);
+  });
+});
+
+describe("getWindowedColumns", () => {
+  const items = ["select", "a", "b", "c", "d", "e", "actions"];
+
+  it("renders every item without a window", () => {
+    expect(
+      getWindowedColumns(items, null).map((entry) =>
+        entry.type === "column" ? entry.item : entry.type,
+      ),
+    ).toEqual(items);
+  });
+
+  it("keeps pinned items and fills gaps around windowed items with spacers", () => {
+    const entries = getWindowedColumns(items, {
+      startCount: 1,
+      centerCount: 5,
+      centerStart: 40,
+      centerEnd: 540,
+      items: [
+        { index: 1, start: 140, end: 240 },
+        { index: 2, start: 240, end: 340 },
+        { index: 4, start: 440, end: 540 },
+      ],
+    });
+
+    expect(
+      entries.map((entry) =>
+        entry.type === "column"
+          ? `${entry.item}@${entry.colIndex}`
+          : `spacer:${entry.size}`,
+      ),
+    ).toEqual([
+      "select@0",
+      "spacer:100",
+      "b@2",
+      "c@3",
+      "spacer:100",
+      "e@5",
+      "actions@6",
+    ]);
+  });
+
+  it("adds a trailing spacer when the window ends before the last column", () => {
+    const entries = getWindowedColumns(items, {
+      startCount: 1,
+      centerCount: 5,
+      centerStart: 40,
+      centerEnd: 540,
+      items: [{ index: 0, start: 40, end: 140 }],
+    });
+
+    expect(entries.at(-2)).toEqual({
+      type: "spacer",
+      key: "spacer-end",
+      size: 400,
+    });
   });
 });

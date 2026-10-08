@@ -16,7 +16,12 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { CellPresence, RowHeightValue } from "@/lib/data-grid-types";
+import type {
+  CellPresence,
+  ColumnWindow,
+  DataGridCellProps,
+  RowHeightValue,
+} from "@/lib/data-grid-types";
 
 import {
   flexRender,
@@ -25,8 +30,10 @@ import {
   getFocusedCellPosition,
   getRowCellSelectionKey,
   getRowHeightValue,
+  getWindowedColumns,
 } from "@/lib/data-grid-utils";
 import { DataGridCell } from "@/registry/bases/base/components/data-grid/data-grid-cell";
+import { DataGridCellPreview } from "@/registry/bases/base/components/data-grid/data-grid-cell-preview";
 
 const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
 
@@ -35,7 +42,6 @@ interface DataGridRowContextValue {
   adjustLayout: boolean;
   readOnlyColumnIds: Set<string>;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
-  measureElement: (node: Element | null) => void;
 }
 
 export const DataGridRowContext =
@@ -54,6 +60,9 @@ interface DataGridRowProps<
 > extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
   virtualItem: VirtualItem;
+  columnWindow: ColumnWindow | null;
+  /** Cells mounted while this is true render previews until it turns false. */
+  isScrollingFast: boolean;
 }
 
 // Grid layout comes from context and table state comes from the row's subscription
@@ -63,7 +72,9 @@ export const DataGridRow = React.memo(
     prev.row.id === next.row.id &&
     prev.row.original === next.row.original &&
     prev.virtualItem.index === next.virtualItem.index &&
-    prev.virtualItem.start === next.virtualItem.start,
+    prev.virtualItem.start === next.virtualItem.start &&
+    prev.columnWindow === next.columnWindow &&
+    prev.isScrollingFast === next.isScrollingFast,
 ) as typeof DataGridRowImpl;
 
 function DataGridRowImpl<TData extends RowData>({
@@ -100,19 +111,16 @@ interface DataGridRowContentProps<
 function DataGridRowContent<TData extends RowData>({
   row,
   virtualItem,
+  columnWindow,
   rowState,
+  isScrollingFast,
   className,
   style,
   ref,
   ...props
 }: DataGridRowContentProps<TData>) {
-  const {
-    stretchColumns,
-    adjustLayout,
-    readOnlyColumnIds,
-    rowMapRef,
-    measureElement,
-  } = useDataGridRowContext();
+  const { stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef } =
+    useDataGridRowContext();
   const virtualRowIndex = virtualItem.index;
   const {
     visibleCells,
@@ -131,13 +139,12 @@ function DataGridRowContent<TData extends RowData>({
       if (typeof virtualRowIndex === "undefined") return;
 
       if (node) {
-        measureElement(node);
         rowMapRef.current?.set(virtualRowIndex, node);
       } else {
         rowMapRef.current?.delete(virtualRowIndex);
       }
     },
-    [virtualRowIndex, measureElement, rowMapRef],
+    [virtualRowIndex, rowMapRef],
   );
 
   const rowRef = useMergedRefs(ref, onRowChange);
@@ -166,7 +173,19 @@ function DataGridRowContent<TData extends RowData>({
         ...style,
       }}
     >
-      {visibleCells.map((cell, columnIndex) => {
+      {getWindowedColumns(visibleCells, columnWindow).map((entry) => {
+        if (entry.type === "spacer") {
+          return (
+            <div
+              key={entry.key}
+              aria-hidden="true"
+              className="shrink-0"
+              style={{ width: entry.size }}
+            />
+          );
+        }
+
+        const { item: cell, colIndex: columnIndex } = entry;
         const columnId = cell.column.id;
 
         const isCellFocused = focusedColumnId === columnId;
@@ -210,9 +229,10 @@ function DataGridRowContent<TData extends RowData>({
                 isRowSelected={isRowSelected}
               />
             ) : (
-              <DataGridCell
+              <DataGridDataCell
                 cell={cell}
                 columnIndex={columnIndex}
+                width={cell.column.getSize()}
                 rowHeight={rowHeight}
                 isFocused={isCellFocused}
                 isEditing={isCellEditing}
@@ -221,6 +241,7 @@ function DataGridRowContent<TData extends RowData>({
                 isActiveSearchMatch={isActiveSearchMatch}
                 presence={presenceColumns?.get(columnId) ?? null}
                 readOnly={readOnlyColumnIds.has(columnId)}
+                isScrollingFast={isScrollingFast}
               />
             )}
           </div>
@@ -228,6 +249,36 @@ function DataGridRowContent<TData extends RowData>({
       })}
     </div>
   );
+}
+
+interface DataGridDataCellProps<
+  TData extends RowData,
+> extends DataGridCellProps<TData> {
+  isScrollingFast: boolean;
+}
+
+// Cells mounted mid fling stay previews until scrolling settles, while cells already mounted keep their full component
+function DataGridDataCell<TData extends RowData>({
+  isScrollingFast,
+  ...props
+}: DataGridDataCellProps<TData>) {
+  const [isPreview, setIsPreview] = React.useState(isScrollingFast);
+  if (isPreview && !isScrollingFast) setIsPreview(false);
+
+  if (isPreview && !props.isFocused && !props.isEditing) {
+    return (
+      <DataGridCellPreview
+        cell={props.cell}
+        width={props.width}
+        rowHeight={props.rowHeight}
+        isSelected={props.isSelected}
+        isSearchMatch={props.isSearchMatch}
+        isActiveSearchMatch={props.isActiveSearchMatch}
+      />
+    );
+  }
+
+  return <DataGridCell {...props} />;
 }
 
 interface DataGridUtilityCellProps<TData extends RowData> {
@@ -291,6 +342,8 @@ function DataGridUtilityCellImpl<TData extends RowData>({
 
 interface RowState<TData extends RowData> {
   visibleCells: Array<Cell<DataGridFeatures, TData>>;
+  /** Re-renders the row when columns resize, so cells get their new width. */
+  columnSizing: TableState<DataGridFeatures>["columnSizing"];
   rowHeight: RowHeightValue;
   focusedColumnId: string | null;
   editingColumnId: string | null;
@@ -327,6 +380,7 @@ function selectRowState<TData extends RowData>(
       ? currentRow
       : row
     ).getVisibleCells(),
+    columnSizing: state.columnSizing,
     rowHeight: state.rowHeight,
     focusedColumnId:
       state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId

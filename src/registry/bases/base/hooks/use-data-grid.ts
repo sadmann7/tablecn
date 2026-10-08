@@ -104,6 +104,8 @@ function useDataGrid<TData extends RowData>({
   const tableRef = React.useRef<Table<DataGridFeatures, TData>>(null);
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
+  const columnVirtualizerRef =
+    React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
@@ -154,7 +156,17 @@ function useDataGrid<TData extends RowData>({
       }
 
       const cellElement = getCellElement(container, cell.rowId, cell.columnId);
-      if (!cellElement) return false;
+      if (!cellElement) {
+        const centerIndex = currentTable
+          .getCenterVisibleLeafColumns()
+          .findIndex((column) => column.id === cell.columnId);
+        if (shouldScroll && centerIndex !== -1) {
+          columnVirtualizerRef.current?.scrollToIndex(centerIndex, {
+            align: "auto",
+          });
+        }
+        return false;
+      }
 
       if (shouldScroll) {
         scrollCellIntoView({
@@ -653,19 +665,8 @@ function useDataGrid<TData extends RowData>({
   }, [isFirefox, table.state.columnPinning]);
 
   const rowVirtualizerOptions = React.useMemo<
-    Pick<
-      VirtualizerOptions<HTMLDivElement, Element>,
-      "overscan" | "measureElement"
-    >
-  >(
-    () => ({
-      overscan,
-      measureElement: isFirefox
-        ? undefined
-        : (element) => element.getBoundingClientRect().height,
-    }),
-    [overscan, isFirefox],
-  );
+    Pick<VirtualizerOptions<HTMLDivElement, Element>, "overscan">
+  >(() => ({ overscan }), [overscan]);
 
   const onRowAdd = React.useCallback(
     async (event?: React.MouseEvent<HTMLDivElement>) => {
@@ -1854,6 +1855,7 @@ function useDataGrid<TData extends RowData>({
       dataGridBodyProps,
       rowVirtualizerRef,
       rowVirtualizerOptions,
+      columnVirtualizerRef,
       columnSizeVars,
       onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
       adjustLayout,

@@ -1,16 +1,22 @@
 "use client";
 
 import {
+  type Column,
   type HeaderGroup,
   type RowData,
   type TableState,
 } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  defaultRangeExtractor,
+  type Range,
+  useVirtualizer,
+  type Virtualizer,
+} from "@tanstack/react-virtual";
 import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { Direction } from "@/lib/data-grid-types";
+import type { ColumnWindow, Direction } from "@/lib/data-grid-types";
 import type { useDataGrid } from "@/registry/bases/base/hooks/use-data-grid";
 
 import { useAsRef } from "@/hooks/use-as-ref";
@@ -19,6 +25,7 @@ import {
   flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
+  getWindowedColumns,
 } from "@/lib/data-grid-utils";
 import { DataGridColumnHeader } from "@/registry/bases/base/components/data-grid/data-grid-column-header";
 import { DataGridContextMenu } from "@/registry/bases/base/components/data-grid/data-grid-context-menu";
@@ -31,6 +38,9 @@ import { DataGridSearch } from "@/registry/bases/base/components/data-grid/data-
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const VIEWPORT_OFFSET = 1;
+const COLUMN_OVERSCAN = 2;
+const FAST_SCROLL_ROWS_PER_FRAME = 3;
+const FAST_SCROLL_COLUMNS_PER_FRAME = 1;
 
 interface DataGridProps<TData extends RowData>
   extends
@@ -53,6 +63,7 @@ export function DataGrid<TData extends RowData>({
   dataGridBodyProps,
   rowVirtualizerRef,
   rowVirtualizerOptions,
+  columnVirtualizerRef,
   columnSizeVars,
   onRowAdd,
   height = 600,
@@ -80,10 +91,12 @@ export function DataGrid<TData extends RowData>({
         rowMapRef={rowMapRef}
         rowVirtualizerRef={rowVirtualizerRef}
         rowVirtualizerOptions={rowVirtualizerOptions}
+        columnVirtualizerRef={columnVirtualizerRef}
         dataGridBodyProps={dataGridBodyProps}
         columnSizeVars={columnSizeVars}
         onRowAdd={onRowAdd}
         adjustLayout={adjustLayout}
+        dir={dir}
         height={height}
         stretchColumns={stretchColumns}
       />
@@ -125,11 +138,13 @@ type DataGridViewportProps<TData extends RowData> = Pick<
   | "rowMapRef"
   | "rowVirtualizerRef"
   | "rowVirtualizerOptions"
+  | "columnVirtualizerRef"
   | "dataGridBodyProps"
   | "columnSizeVars"
   | "onRowAdd"
   | "adjustLayout"
 > & {
+  dir: Direction;
   height: number;
   stretchColumns: boolean;
 };
@@ -143,10 +158,12 @@ function DataGridViewport<TData extends RowData>({
   rowMapRef,
   rowVirtualizerRef,
   rowVirtualizerOptions,
+  columnVirtualizerRef,
   dataGridBodyProps,
   columnSizeVars,
   onRowAdd: onRowAddProp,
   adjustLayout,
+  dir,
   height,
   stretchColumns,
 }: DataGridViewportProps<TData>) {
@@ -155,10 +172,44 @@ function DataGridViewport<TData extends RowData>({
   const readOnly = table.getIsReadOnly();
   const leafColumns = table.getAllLeafColumns();
   const visibleColumnCount = table.getVisibleLeafColumns().length;
-  const { enableCellEditing } = table.options;
+  const headerGroups = table.getHeaderGroups();
+  const startColumns = table.getStartVisibleLeafColumns();
+  const centerColumns = table.getCenterVisibleLeafColumns();
+  const startWidth = getColumnsWidth(startColumns);
+  const centerWidth = getColumnsWidth(centerColumns);
+  const endWidth = getColumnsWidth(table.getEndVisibleLeafColumns());
+  const isColumnVirtualizationEnabled =
+    !stretchColumns && headerGroups.length === 1;
+  const enableCellEditing = table.options.enableCellEditing;
+
+  // Spends most of the overscan ahead of the scroll direction, where rows are about to enter
+  const rowRangeExtractor = React.useCallback(
+    ({ startIndex, endIndex, overscan, count }: Range) => {
+      const direction = rowVirtualizerRef.current?.scrollDirection ?? null;
+      const before =
+        direction === "forward"
+          ? Math.ceil(overscan / 3)
+          : direction === "backward"
+            ? overscan * 2
+            : overscan;
+      const after =
+        direction === "forward"
+          ? overscan * 2
+          : direction === "backward"
+            ? Math.ceil(overscan / 3)
+            : overscan;
+      const start = Math.max(0, startIndex - before);
+      const end = Math.min(count - 1, endIndex + after);
+      const indexes: Array<number> = [];
+      for (let index = start; index <= end; index++) indexes.push(index);
+      return indexes;
+    },
+    [rowVirtualizerRef],
+  );
 
   const rowVirtualizer = useVirtualizer({
     ...rowVirtualizerOptions,
+    rangeExtractor: rowRangeExtractor,
     count: rows.length,
     getScrollElement: () => dataGridRef.current,
     estimateSize: () => rowSize,
@@ -176,6 +227,109 @@ function DataGridViewport<TData extends RowData>({
       VIEWPORT_OFFSET,
   });
 
+  const centerColumnsRef = useAsRef(centerColumns);
+
+  // Keeps the focused and editing columns mounted while scrolled away, so keyboard focus and drafts survive
+  const columnRangeExtractor = React.useCallback(
+    (range: Range) => {
+      const indexes = defaultRangeExtractor(range);
+      const activeColumnIds = [
+        table.getFocusedCell()?.column.id,
+        table.atoms.editingCell.get()?.columnId,
+      ];
+      for (const columnId of activeColumnIds) {
+        if (!columnId) continue;
+        const index = centerColumnsRef.current.findIndex(
+          (column) => column.id === columnId,
+        );
+        if (index !== -1 && !indexes.includes(index)) indexes.push(index);
+      }
+      return indexes.sort((a, b) => a - b);
+    },
+    [table, centerColumnsRef],
+  );
+
+  const columnVirtualizer = useVirtualizer({
+    horizontal: true,
+    enabled: isColumnVirtualizationEnabled,
+    isRtl: dir === "rtl",
+    count: centerColumns.length,
+    getScrollElement: () => dataGridRef.current,
+    estimateSize: (index) => centerColumns[index]?.getSize() ?? 0,
+    getItemKey: (index) => centerColumns[index]?.id ?? index,
+    overscan: COLUMN_OVERSCAN,
+    paddingStart: startWidth,
+    scrollPaddingStart: startWidth + VIEWPORT_OFFSET,
+    scrollPaddingEnd: endWidth + VIEWPORT_OFFSET,
+    rangeExtractor: columnRangeExtractor,
+  });
+
+  const scrollOffset = rowVirtualizer.scrollOffset ?? 0;
+  const scrollLeft = columnVirtualizer.scrollOffset ?? 0;
+  const headerHeight = headerRef.current?.offsetHeight ?? 0;
+  const committedScrollRef = React.useRef({
+    offset: scrollOffset,
+    left: scrollLeft,
+    isFast: false,
+    isJumping: false,
+  });
+  const scrollDelta = Math.abs(
+    scrollOffset - committedScrollRef.current.offset,
+  );
+  const isRowScrollingFast =
+    rowVirtualizer.isScrolling &&
+    scrollDelta > rowSize * FAST_SCROLL_ROWS_PER_FRAME;
+  const isColumnScrollingFast =
+    columnVirtualizer.isScrolling &&
+    centerColumns.length > 0 &&
+    Math.abs(scrollLeft - committedScrollRef.current.left) >
+      (centerWidth / centerColumns.length) * FAST_SCROLL_COLUMNS_PER_FRAME;
+  const isFastScrolling =
+    (rowVirtualizer.isScrolling || columnVirtualizer.isScrolling) &&
+    (committedScrollRef.current.isFast ||
+      isRowScrollingFast ||
+      isColumnScrollingFast);
+  // Jumps past the leading overscan would scroll into blank space before React renders, which scrollbar drags do constantly
+  const isScrollJumping =
+    rowVirtualizer.isScrolling &&
+    (committedScrollRef.current.isJumping ||
+      scrollDelta > rowSize * rowVirtualizer.options.overscan * 2);
+  // Cells leave preview mode in a transition, so React spreads the upgrade over frames and drops it if scrolling resumes
+  const deferredIsFastScrolling = React.useDeferredValue(isFastScrolling);
+
+  useIsomorphicLayoutEffect(() => {
+    committedScrollRef.current = {
+      offset: scrollOffset,
+      left: scrollLeft,
+      isFast: isFastScrolling,
+      isJumping: isScrollJumping,
+    };
+  });
+
+  const columnWindowKey = isColumnVirtualizationEnabled
+    ? getColumnWindowKey({
+        virtualizer: columnVirtualizer,
+        startCount: startColumns.length,
+        centerCount: centerColumns.length,
+        centerStart: startWidth,
+        centerEnd: startWidth + centerWidth,
+      })
+    : "";
+  // Rows compare the window by reference, so it only changes when the mounted columns do
+  const columnWindow = React.useMemo(
+    () => parseColumnWindowKey(columnWindowKey),
+    [columnWindowKey],
+  );
+
+  useIsomorphicLayoutEffect(() => {
+    columnVirtualizerRef.current = columnVirtualizer;
+    return () => {
+      if (columnVirtualizerRef.current === columnVirtualizer) {
+        columnVirtualizerRef.current = null;
+      }
+    };
+  }, [columnVirtualizerRef, columnVirtualizer]);
+
   useIsomorphicLayoutEffect(() => {
     rowVirtualizerRef.current = rowVirtualizer;
     return () => {
@@ -188,12 +342,15 @@ function DataGridViewport<TData extends RowData>({
   useIsomorphicLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
+      columnVirtualizer.measure();
     });
     return () => cancelAnimationFrame(rafId);
   }, [
     rowVirtualizer,
+    columnVirtualizer,
     table.state.rowHeight,
     table.state.columnFilters,
+    table.state.columnOrder,
     table.state.columnPinning,
     table.state.columnSizing,
     table.state.columnVisibility,
@@ -216,15 +373,8 @@ function DataGridViewport<TData extends RowData>({
       adjustLayout,
       readOnlyColumnIds,
       rowMapRef,
-      measureElement: rowVirtualizer.measureElement,
     }),
-    [
-      stretchColumns,
-      adjustLayout,
-      readOnlyColumnIds,
-      rowMapRef,
-      rowVirtualizer.measureElement,
-    ],
+    [stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef],
   );
 
   const onRowAddRef = useAsRef(onRowAddProp);
@@ -290,7 +440,8 @@ function DataGridViewport<TData extends RowData>({
     >
       <DataGridHeader
         table={table}
-        headerGroups={table.getHeaderGroups()}
+        headerGroups={headerGroups}
+        columnWindow={columnWindow}
         headerRef={headerRef}
         stretchColumns={stretchColumns}
       />
@@ -304,16 +455,37 @@ function DataGridViewport<TData extends RowData>({
           height: `${rowVirtualizer.getTotalSize()}px`,
         }}
       >
-        <DataGridRowContext value={rowContext}>
-          {rowVirtualizer.getVirtualItems().map((virtualItem) => {
-            const row = rows[virtualItem.index];
-            if (!row) return null;
+        {/* While jumping, rows are pinned and offset by the rendered scroll position, so the last rendered rows stay on screen when the compositor scrolls ahead of JS. Otherwise they scroll natively so the compositor keeps scrolling smooth */}
+        <div
+          data-slot="grid-rows"
+          data-pinned={isScrollJumping ? "" : undefined}
+          className="relative h-0 data-pinned:sticky"
+          style={
+            isScrollJumping
+              ? {
+                  top: headerHeight,
+                  transform: `translateY(${-scrollOffset}px)`,
+                }
+              : undefined
+          }
+        >
+          <DataGridRowContext value={rowContext}>
+            {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+              const row = rows[virtualItem.index];
+              if (!row) return null;
 
-            return (
-              <DataGridRow key={row.id} row={row} virtualItem={virtualItem} />
-            );
-          })}
-        </DataGridRowContext>
+              return (
+                <DataGridRow
+                  key={row.id}
+                  row={row}
+                  virtualItem={virtualItem}
+                  columnWindow={columnWindow}
+                  isScrollingFast={isFastScrolling || deferredIsFastScrolling}
+                />
+              );
+            })}
+          </DataGridRowContext>
+        </div>
       </div>
       {!readOnly && onRowAddProp && (
         <div
@@ -362,6 +534,7 @@ function DataGridViewport<TData extends RowData>({
 interface DataGridHeaderProps<TData extends RowData> {
   table: DataGridProps<TData>["table"];
   headerGroups: Array<HeaderGroup<DataGridFeatures, TData>>;
+  columnWindow: ColumnWindow | null;
   headerRef: DataGridProps<TData>["headerRef"];
   stretchColumns: boolean;
 }
@@ -372,6 +545,7 @@ const DataGridHeader = React.memo(
   (prev, next) =>
     prev.table.atoms === next.table.atoms &&
     prev.headerGroups === next.headerGroups &&
+    prev.columnWindow === next.columnWindow &&
     prev.headerRef === next.headerRef &&
     prev.stretchColumns === next.stretchColumns,
 ) as typeof DataGridHeaderImpl;
@@ -379,6 +553,7 @@ const DataGridHeader = React.memo(
 function DataGridHeaderImpl<TData extends RowData>({
   table,
   headerGroups,
+  columnWindow,
   headerRef,
   stretchColumns,
 }: DataGridHeaderProps<TData>) {
@@ -400,79 +575,93 @@ function DataGridHeaderImpl<TData extends RowData>({
               tabIndex={-1}
               className="flex w-full"
             >
-              {headerGroup.headers.map((header, columnIndex) => {
-                const primarySort =
-                  sorting[0]?.id === header.column.id ? sorting[0] : null;
-
-                const nextHeader = headerGroup.headers[columnIndex + 1];
-                const isLastColumn =
-                  columnIndex === headerGroup.headers.length - 1;
-
-                const { showEndBorder, showStartBorder } =
-                  getColumnBorderVisibility({
-                    column: header.column,
-                    nextColumn: nextHeader?.column,
-                  });
-
-                const cornerClassName = cn(
-                  rowIndex === 0 && {
-                    "rounded-ss-[calc(var(--radius-md)-1px)]":
-                      columnIndex === 0,
-                    "rounded-se-[calc(var(--radius-md)-1px)]": isLastColumn,
-                  },
-                );
-
-                return (
-                  <div
-                    key={header.id}
-                    role="columnheader"
-                    aria-colindex={columnIndex + 1}
-                    aria-sort={
-                      primarySort
-                        ? primarySort.desc
-                          ? "descending"
-                          : "ascending"
-                        : undefined
-                    }
-                    data-slot="data-grid-header-cell"
-                    data-column-id={header.column.id}
-                    tabIndex={-1}
-                    onMouseDown={onHeaderCellMouseDown}
-                    className={cn("group/header relative", {
-                      grow: stretchColumns && header.column.id !== "select",
-                      "border-e":
-                        showEndBorder && header.column.id !== "select",
-                      "border-s":
-                        showStartBorder && header.column.id !== "select",
-                    })}
-                    style={{
-                      ...getColumnPinningStyle(header.column),
-                      width: `calc(var(--header-${header.id}-size) * 1px)`,
-                    }}
-                  >
-                    {header.isPlaceholder ? null : typeof header.column
-                        .columnDef.header === "function" ? (
+              {getWindowedColumns(headerGroup.headers, columnWindow).map(
+                (entry) => {
+                  if (entry.type === "spacer") {
+                    return (
                       <div
-                        className={cn(
-                          "size-full px-3 py-1.5 group-focus-within/header:ring-1 group-focus-within/header:ring-ring group-focus-within/header:ring-inset",
-                          cornerClassName,
-                        )}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                      </div>
-                    ) : (
-                      <DataGridColumnHeader
-                        header={header}
-                        table={table}
-                        className={cornerClassName}
+                        key={entry.key}
+                        aria-hidden="true"
+                        className="shrink-0"
+                        style={{ width: entry.size }}
                       />
-                    )}
-                  </div>
-                );
-              })}
+                    );
+                  }
+
+                  const { item: header, colIndex: columnIndex } = entry;
+                  const primarySort =
+                    sorting[0]?.id === header.column.id ? sorting[0] : null;
+
+                  const nextHeader = headerGroup.headers[columnIndex + 1];
+                  const isLastColumn =
+                    columnIndex === headerGroup.headers.length - 1;
+
+                  const { showEndBorder, showStartBorder } =
+                    getColumnBorderVisibility({
+                      column: header.column,
+                      nextColumn: nextHeader?.column,
+                    });
+
+                  const cornerClassName = cn(
+                    rowIndex === 0 && {
+                      "rounded-ss-[calc(var(--radius-md)-1px)]":
+                        columnIndex === 0,
+                      "rounded-se-[calc(var(--radius-md)-1px)]": isLastColumn,
+                    },
+                  );
+
+                  return (
+                    <div
+                      key={header.id}
+                      role="columnheader"
+                      aria-colindex={columnIndex + 1}
+                      aria-sort={
+                        primarySort
+                          ? primarySort.desc
+                            ? "descending"
+                            : "ascending"
+                          : undefined
+                      }
+                      data-slot="data-grid-header-cell"
+                      data-column-id={header.column.id}
+                      tabIndex={-1}
+                      onMouseDown={onHeaderCellMouseDown}
+                      className={cn("group/header relative", {
+                        grow: stretchColumns && header.column.id !== "select",
+                        "border-e":
+                          showEndBorder && header.column.id !== "select",
+                        "border-s":
+                          showStartBorder && header.column.id !== "select",
+                      })}
+                      style={{
+                        ...getColumnPinningStyle(header.column),
+                        width: `calc(var(--header-${header.id}-size) * 1px)`,
+                      }}
+                    >
+                      {header.isPlaceholder ? null : typeof header.column
+                          .columnDef.header === "function" ? (
+                        <div
+                          className={cn(
+                            "size-full px-3 py-1.5 group-focus-within/header:ring-1 group-focus-within/header:ring-ring group-focus-within/header:ring-inset",
+                            cornerClassName,
+                          )}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                        </div>
+                      ) : (
+                        <DataGridColumnHeader
+                          header={header}
+                          table={table}
+                          className={cornerClassName}
+                        />
+                      )}
+                    </div>
+                  );
+                },
+              )}
             </div>
           ))}
         </div>
@@ -496,5 +685,48 @@ function selectHeaderState(state: TableState<DataGridFeatures>) {
     columnOrder: state.columnOrder,
     columnSizing: state.columnSizing,
     columnResizing: state.columnResizing,
+  };
+}
+
+function getColumnsWidth<TData extends RowData>(
+  columns: Array<Column<DataGridFeatures, TData>>,
+) {
+  let width = 0;
+  for (const column of columns) width += column.getSize();
+  return width;
+}
+
+function getColumnWindowKey(params: {
+  virtualizer: Virtualizer<HTMLDivElement, Element>;
+  startCount: number;
+  centerCount: number;
+  centerStart: number;
+  centerEnd: number;
+}) {
+  const { virtualizer, startCount, centerCount, centerStart, centerEnd } =
+    params;
+  let key = `${startCount}|${centerCount}|${centerStart}|${centerEnd}|`;
+  for (const item of virtualizer.getVirtualItems()) {
+    key += `${item.index}:${item.start}:${item.end},`;
+  }
+  return key;
+}
+
+function parseColumnWindowKey(key: string): ColumnWindow | null {
+  if (!key) return null;
+  const [startCount, centerCount, centerStart, centerEnd, items = ""] =
+    key.split("|");
+  return {
+    startCount: Number(startCount),
+    centerCount: Number(centerCount),
+    centerStart: Number(centerStart),
+    centerEnd: Number(centerEnd),
+    items: items
+      .split(",")
+      .filter(Boolean)
+      .map((item) => {
+        const [index, start, end] = item.split(":").map(Number);
+        return { index: index ?? 0, start: start ?? 0, end: end ?? 0 };
+      }),
   };
 }

@@ -1469,10 +1469,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.rowVirtualizerOptions.overscan).toBe(6);
-      expect(typeof result.current.rowVirtualizerOptions.measureElement).toBe(
-        "function",
-      );
+      expect(result.current.rowVirtualizerOptions).toEqual({ overscan: 6 });
     });
   });
 
