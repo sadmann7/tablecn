@@ -196,6 +196,7 @@ export function getTasksTableColumns({
     }),
     columnHelper.display({
       id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
       cell: function Cell({ row }) {
         const [isUpdatePending, startUpdateTransition] = React.useTransition();
 
@@ -203,7 +204,7 @@ export function getTasksTableColumns({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                aria-label="Open menu"
+                aria-label={`Open actions for ${row.original.code}`}
                 variant="ghost"
                 className="flex size-8 p-0 data-[state=open]:bg-muted"
               >
