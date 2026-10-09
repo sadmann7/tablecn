@@ -76,7 +76,7 @@ export function DataGridCellWrapper<TData extends RowData>({
     <div
       role="button"
       {...props}
-      data-slot="grid-cell-wrapper"
+      data-slot="data-grid-cell-wrapper"
       data-row-id={rowId}
       data-column-id={columnId}
       data-editing={isEditing ? "" : undefined}
@@ -93,13 +93,13 @@ export function DataGridCellWrapper<TData extends RowData>({
           "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
           "bg-primary/10": isSelected && !isEditing,
           "cursor-default": !isEditing,
-          "**:data-[slot=grid-cell-content]:line-clamp-1":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-1":
             !isEditing && rowHeight === "short",
-          "**:data-[slot=grid-cell-content]:line-clamp-2":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-2":
             !isEditing && rowHeight === "medium",
-          "**:data-[slot=grid-cell-content]:line-clamp-3":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-3":
             !isEditing && rowHeight === "tall",
-          "**:data-[slot=grid-cell-content]:line-clamp-4":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-4":
             !isEditing && rowHeight === "extra-tall",
         },
         className,

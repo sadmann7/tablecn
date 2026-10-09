@@ -72,13 +72,13 @@ function getCellWrapper(
   columnId: string,
 ) {
   return container.querySelector<HTMLElement>(
-    `[data-slot="grid-cell-wrapper"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
+    `[data-slot="data-grid-cell-wrapper"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
   );
 }
 
 function getHeaderTrigger(container: HTMLElement, columnId: string) {
   return container.querySelector<HTMLElement>(
-    `[data-slot="grid-header-cell"][data-column-id="${columnId}"] button`,
+    `[data-slot="data-grid-header-cell"][data-column-id="${columnId}"] button`,
   );
 }
 
@@ -185,9 +185,11 @@ describe("DataGrid rendering", () => {
 
   it("sizes the body and scrolls without re-rendering the hook", async () => {
     const { container, getHookRenderCount } = renderGrid();
-    const grid = container.querySelector<HTMLElement>('[data-slot="grid"]');
+    const grid = container.querySelector<HTMLElement>(
+      '[data-slot="data-grid"]',
+    );
     const body = container.querySelector<HTMLElement>(
-      '[data-slot="grid-body"]',
+      '[data-slot="data-grid-body"]',
     );
     expect(body?.style.height).toMatch(/^\d+px$/);
 
@@ -293,7 +295,7 @@ describe("DataGrid rendering", () => {
     ).toBe(true);
 
     const headerTrigger = container.querySelector<HTMLElement>(
-      '[data-slot="grid-header-cell"][data-column-id="name"] button',
+      '[data-slot="data-grid-header-cell"][data-column-id="name"] button',
     );
     act(() => {
       headerTrigger?.focus();
@@ -332,7 +334,7 @@ describe("DataGrid rendering", () => {
     });
 
     expect(
-      document.activeElement?.closest('[data-slot="grid-header"]'),
+      document.activeElement?.closest('[data-slot="data-grid-header"]'),
     ).not.toBeNull();
     expect(table.atoms.cellSelection.get()).toEqual([]);
     expect(table.atoms.rowSelection.get()).toEqual({});
@@ -517,7 +519,7 @@ describe("DataGrid rendering", () => {
     function getRowColumnIds() {
       return Array.from(
         container.querySelectorAll<HTMLElement>(
-          '[data-slot="grid-cell-wrapper"][data-row-id="1"]',
+          '[data-slot="data-grid-cell-wrapper"][data-row-id="1"]',
         ),
         (element) => element.dataset.columnId,
       );
