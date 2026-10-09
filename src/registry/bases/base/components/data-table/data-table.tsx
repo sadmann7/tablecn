@@ -118,7 +118,7 @@ function DataTableHeader<TData extends RowData>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="group/row">
               {headerGroup.headers.map((header) => (
-                <MemoizedDataTableHeadCell
+                <DataTableHeadCell
                   key={header.id}
                   header={header}
                   pinned={header.column.getIsPinned()}
@@ -137,7 +137,11 @@ interface DataTableHeadCellProps<TData extends RowData> {
   pinned: ColumnPinningPosition;
 }
 
-function DataTableHeadCell<TData extends RowData>({
+const DataTableHeadCell = React.memo(
+  DataTableHeadCellImpl,
+) as typeof DataTableHeadCellImpl;
+
+function DataTableHeadCellImpl<TData extends RowData>({
   header,
   pinned,
 }: DataTableHeadCellProps<TData>) {
@@ -151,10 +155,6 @@ function DataTableHeadCell<TData extends RowData>({
     </TableHead>
   );
 }
-
-const MemoizedDataTableHeadCell = React.memo(
-  DataTableHeadCell,
-) as typeof DataTableHeadCell;
 
 interface DataTableBodyProps<TData extends RowData> {
   table: TanstackTable<DataTableFeatures, TData>;
@@ -187,7 +187,7 @@ function DataTableBody<TData extends RowData>({
   return (
     <TableBody>
       {rows.map((row) => (
-        <MemoizedDataTableRow key={row.id} row={row} />
+        <DataTableRow key={row.id} row={row} />
       ))}
     </TableBody>
   );
@@ -197,7 +197,9 @@ interface DataTableRowProps<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;
 }
 
-function DataTableRow<TData extends RowData>({
+const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
+
+function DataTableRowImpl<TData extends RowData>({
   row,
 }: DataTableRowProps<TData>) {
   return (
@@ -216,7 +218,7 @@ function DataTableRow<TData extends RowData>({
           className="group/row"
         >
           {row.getVisibleCells().map((cell) => (
-            <MemoizedDataTableCell
+            <DataTableCell
               key={cell.id}
               cell={cell}
               pinned={cell.column.getIsPinned()}
@@ -228,8 +230,6 @@ function DataTableRow<TData extends RowData>({
   );
 }
 
-const MemoizedDataTableRow = React.memo(DataTableRow) as typeof DataTableRow;
-
 interface DataTableCellProps<TData extends RowData> {
   cell: Cell<DataTableFeatures, TData>;
   pinned: ColumnPinningPosition;
@@ -240,7 +240,9 @@ interface DataTableCellProps<TData extends RowData> {
  * renderers that read table state should subscribe to it themselves, like the
  * select column does.
  */
-function DataTableCell<TData extends RowData>({
+const DataTableCell = React.memo(DataTableCellImpl) as typeof DataTableCellImpl;
+
+function DataTableCellImpl<TData extends RowData>({
   cell,
   pinned,
 }: DataTableCellProps<TData>) {
@@ -253,8 +255,6 @@ function DataTableCell<TData extends RowData>({
     </TableCell>
   );
 }
-
-const MemoizedDataTableCell = React.memo(DataTableCell) as typeof DataTableCell;
 
 interface DataTableActionBarProps<TData extends RowData> {
   table: TanstackTable<DataTableFeatures, TData>;
