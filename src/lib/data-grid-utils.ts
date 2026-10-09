@@ -575,6 +575,7 @@ export function getWindowedColumns<T>(
   }
 
   let offset = centerStart;
+  let spacerCount = 0;
   for (const windowItem of columnWindow.items) {
     const colIndex = startCount + windowItem.index;
     const item = items[colIndex];
@@ -582,7 +583,8 @@ export function getWindowedColumns<T>(
     if (windowItem.start > offset) {
       entries.push({
         type: "spacer",
-        key: `spacer-${windowItem.index}`,
+        // Keyed by position, not column index, so the leading spacer survives window shifts
+        key: spacerCount++ === 0 ? "spacer-start" : `spacer-${spacerCount}`,
         size: windowItem.start - offset,
       });
     }

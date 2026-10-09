@@ -181,6 +181,15 @@ function DataGridViewport<TData extends RowData>({
   const isColumnVirtualizationEnabled =
     !stretchColumns && headerGroups.length === 1;
   const enableCellEditing = table.options.enableCellEditing;
+  const hasFooter = !readOnly && !!onRowAddProp;
+
+  const insets = useViewportInsets({
+    dataGridRef,
+    headerRef,
+    footerRef,
+    // The footer follows the last row until the body overflows, so row count and height move it
+    contentKey: `${rows.length}:${rowSize}:${hasFooter}`,
+  });
 
   // Spends most of the overscan ahead of the scroll direction, where rows are about to enter
   const rowRangeExtractor = React.useCallback(
@@ -214,13 +223,7 @@ function DataGridViewport<TData extends RowData>({
     getScrollElement: () => dataGridRef.current,
     estimateSize: () => rowSize,
     scrollPaddingStart: VIEWPORT_OFFSET,
-    scrollPaddingEnd:
-      (headerRef.current?.offsetHeight ?? 0) +
-      (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
-      (footerRef.current?.getBoundingClientRect().top ??
-        dataGridRef.current?.getBoundingClientRect().bottom ??
-        0) +
-      VIEWPORT_OFFSET,
+    scrollPaddingEnd: insets.start + insets.end + VIEWPORT_OFFSET,
   });
 
   const centerColumnsRef = useValueAsRef(centerColumns);
@@ -262,7 +265,6 @@ function DataGridViewport<TData extends RowData>({
 
   const scrollOffset = rowVirtualizer.scrollOffset ?? 0;
   const scrollLeft = columnVirtualizer.scrollOffset ?? 0;
-  const headerHeight = headerRef.current?.offsetHeight ?? 0;
   const committedScrollRef = React.useRef({
     offset: scrollOffset,
     left: scrollLeft,
@@ -459,7 +461,7 @@ function DataGridViewport<TData extends RowData>({
           style={
             isScrollJumping
               ? {
-                  top: headerHeight,
+                  top: insets.headerHeight,
                   transform: `translateY(${-scrollOffset}px)`,
                 }
               : undefined
@@ -525,6 +527,70 @@ function DataGridViewport<TData extends RowData>({
       )}
     </div>
   );
+}
+
+interface ViewportInsets {
+  start: number;
+  end: number;
+  headerHeight: number;
+}
+
+const EMPTY_VIEWPORT_INSETS: ViewportInsets = {
+  start: 0,
+  end: 0,
+  headerHeight: 0,
+};
+
+// Measures the sticky header and footer on resize instead of on every scroll frame, where reading layout would force it
+function useViewportInsets({
+  dataGridRef,
+  headerRef,
+  footerRef,
+  contentKey,
+}: {
+  dataGridRef: React.RefObject<HTMLDivElement | null>;
+  headerRef: React.RefObject<HTMLDivElement | null>;
+  footerRef: React.RefObject<HTMLDivElement | null>;
+  contentKey: string;
+}) {
+  const [insets, setInsets] = React.useState(EMPTY_VIEWPORT_INSETS);
+
+  useIsomorphicLayoutEffect(() => {
+    const dataGrid = dataGridRef.current;
+    if (!dataGrid) return;
+    const header = headerRef.current;
+    const footer = footerRef.current;
+
+    function measure() {
+      if (!dataGrid) return;
+      const gridRect = dataGrid.getBoundingClientRect();
+      const next: ViewportInsets = {
+        start:
+          (header?.getBoundingClientRect().bottom ?? gridRect.top) -
+          gridRect.top,
+        end:
+          gridRect.bottom -
+          (footer?.getBoundingClientRect().top ?? gridRect.bottom),
+        headerHeight: header?.offsetHeight ?? 0,
+      };
+      setInsets((prev) =>
+        prev.start === next.start &&
+        prev.end === next.end &&
+        prev.headerHeight === next.headerHeight
+          ? prev
+          : next,
+      );
+    }
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    for (const element of [dataGrid, header, footer]) {
+      if (element) observer.observe(element);
+    }
+    return () => observer.disconnect();
+  }, [dataGridRef, headerRef, footerRef, contentKey]);
+
+  return insets;
 }
 
 interface DataGridHeaderProps<TData extends RowData> {

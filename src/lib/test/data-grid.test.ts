@@ -603,6 +603,22 @@ describe("getWindowedColumns", () => {
     ]);
   });
 
+  it("keeps the leading spacer key stable when the window shifts", () => {
+    const getLeadingSpacerKey = (index: number) => {
+      const entry = getWindowedColumns(items, {
+        startCount: 1,
+        centerCount: 5,
+        centerStart: 40,
+        centerEnd: 540,
+        items: [{ index, start: 40 + index * 100, end: 140 + index * 100 }],
+      }).find((entry) => entry.type === "spacer");
+      return entry?.type === "spacer" ? entry.key : null;
+    };
+
+    expect(getLeadingSpacerKey(1)).toBe("spacer-start");
+    expect(getLeadingSpacerKey(3)).toBe("spacer-start");
+  });
+
   it("adds a trailing spacer when the window ends before the last column", () => {
     const entries = getWindowedColumns(items, {
       startCount: 1,
