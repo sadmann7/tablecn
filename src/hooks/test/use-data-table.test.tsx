@@ -2,7 +2,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { NuqsTestingAdapter, type UrlUpdateEvent } from "nuqs/adapters/testing";
 import * as React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -89,6 +89,7 @@ function getFilterSummary(filters: { id: string; value: unknown }[]) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   window.history.replaceState(null, "", "/");
 });
 
@@ -141,11 +142,10 @@ describe("useDataTable", () => {
   });
 
   it("lets an outside URL change replace the filters being edited", async () => {
-    // A wide debounce window keeps slow runners from writing the draft before
-    // the outside URL change lands.
-    const { result, navigate, getLastSearch } = renderDataTable("?title=bug", {
-      debounceMs: 300,
-    });
+    // Fake timers hold the debounced URL write until the outside URL change
+    // has landed, however slow the runner is.
+    vi.useFakeTimers();
+    const { result, navigate, getLastSearch } = renderDataTable("?title=bug");
 
     act(() => {
       result.current.table.setColumnFilters([
@@ -153,20 +153,15 @@ describe("useDataTable", () => {
         { id: "status", value: [] },
       ]);
     });
-    await waitFor(() =>
-      expect(result.current.table.state.columnFilters).toHaveLength(2),
-    );
+    expect(result.current.table.state.columnFilters).toHaveLength(2);
 
     act(() => navigate("?status=done"));
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["status", ["done"]],
+    ]);
 
-    await waitFor(() =>
-      expect(
-        getFilterSummary(result.current.table.state.columnFilters),
-      ).toEqual([["status", ["done"]]]),
-    );
-
-    // Wait until the debounced URL write has run.
-    await act(() => new Promise((resolve) => setTimeout(resolve, 350)));
+    // Run the debounced URL write that was scheduled for the stale filters.
+    await act(() => vi.runAllTimersAsync());
 
     expect(getLastSearch()?.get("title")).not.toBe("zzz");
     expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
