@@ -26,6 +26,7 @@ interface IndexPageProps {
 export default function IndexPage(props: IndexPageProps) {
   return (
     <div className="container flex flex-col gap-4 py-4">
+      <h1 className="sr-only">Data Table</h1>
       <Suspense fallback={<TasksTableControlMenuSkeleton />}>
         <TasksTableControlMenu />
       </Suspense>

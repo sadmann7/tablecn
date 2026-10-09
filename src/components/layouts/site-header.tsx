@@ -42,7 +42,7 @@ export function SiteHeader() {
           </SheetContent>
         </Sheet>
         <Button variant="ghost" size="icon" className="size-8" asChild>
-          <Link href="/">
+          <Link aria-label="Home" href="/">
             <LayoutGrid />
           </Link>
         </Button>
