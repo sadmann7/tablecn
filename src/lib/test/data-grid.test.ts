@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getCellKey,
+  getIsInPopover,
   getTabTargetCell,
   getVisibleColumnIds,
   parseCellKey,
@@ -344,5 +345,31 @@ describe("parseTsv", () => {
         ["line3"],
       ]);
     });
+  });
+});
+
+describe("getIsInPopover", () => {
+  it.each([
+    "dropdown-menu-content",
+    "popover-content",
+    "select-content",
+    "faceted-content",
+  ])("treats elements inside %s as inside a popover", (slot) => {
+    const popup = document.createElement("div");
+    popup.dataset.slot = slot;
+    const option = document.createElement("button");
+    popup.append(option);
+
+    expect(getIsInPopover(option)).toBe(true);
+  });
+
+  it("ignores elements outside a popover", () => {
+    const toolbar = document.createElement("div");
+    toolbar.dataset.slot = "button-group";
+    const button = document.createElement("button");
+    toolbar.append(button);
+
+    expect(getIsInPopover(button)).toBe(false);
+    expect(getIsInPopover(null)).toBe(false);
   });
 });
