@@ -1,4 +1,3 @@
-import { chromium, type CDPSession, type Page } from "@playwright/test";
 /**
  * Records scroll performance on /data-grid-stress against a running server.
  *
@@ -10,8 +9,11 @@ import { chromium, type CDPSession, type Page } from "@playwright/test";
  * DevTools Performance panel) and prints frame stats. Use a different label per
  * change to compare before and after.
  *
- * Set EXTRA_CSS to inject a stylesheet, which A/B tests CSS changes without a rebuild.
+ * Set EXTRA_CSS to inject a stylesheet, or STRIP_CSS to a regex to delete the style
+ * rules whose selector matches it, which A/B tests CSS changes without a rebuild.
  */
+
+import { chromium, type CDPSession, type Page } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -226,6 +228,34 @@ async function recordTrace(
   await writeFile(outFile, JSON.stringify({ traceEvents: events }));
 }
 
+/** Deletes style rules whose selector matches `pattern`, including inside @layer and @media blocks. */
+function stripStyleRules(pattern: string) {
+  const regex = new RegExp(pattern);
+  let count = 0;
+  const strip = (
+    rules: CSSRuleList,
+    owner: CSSStyleSheet | CSSGroupingRule,
+  ) => {
+    for (let index = rules.length - 1; index >= 0; index--) {
+      const rule = rules[index];
+      if (rule instanceof CSSStyleRule && regex.test(rule.selectorText)) {
+        owner.deleteRule(index);
+        count++;
+      } else if (rule instanceof CSSGroupingRule) {
+        strip(rule.cssRules, rule);
+      }
+    }
+  };
+  for (const sheet of document.styleSheets) {
+    try {
+      strip(sheet.cssRules, sheet);
+    } catch {
+      // Cross-origin sheets are not readable
+    }
+  }
+  return count;
+}
+
 function round(value: number) {
   return Math.round(value * 10) / 10;
 }
@@ -257,6 +287,15 @@ async function main() {
   // Lets CSS experiments be A/B tested against the same build
   if (process.env.EXTRA_CSS) {
     await page.addStyleTag({ content: process.env.EXTRA_CSS });
+  }
+  if (process.env.STRIP_CSS) {
+    const stripped = await page.evaluate(
+      stripStyleRules,
+      process.env.STRIP_CSS,
+    );
+    console.log(
+      `Stripped ${stripped} style rules matching ${process.env.STRIP_CSS}`,
+    );
   }
   const grid = page.locator(GRID_SELECTOR);
   await grid.waitFor();
