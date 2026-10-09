@@ -9,6 +9,8 @@ import { chromium, type CDPSession, type Page } from "@playwright/test";
  * Writes a Chrome trace per scenario to recordings/perf/<label>/ (open in the
  * DevTools Performance panel) and prints frame stats. Use a different label per
  * change to compare before and after.
+ *
+ * Set EXTRA_CSS to inject a stylesheet, which A/B tests CSS changes without a rebuild.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -252,6 +254,10 @@ async function main() {
   // tsx keeps function names via an `__name` helper that page.evaluate does not serialize
   await page.addInitScript("globalThis.__name = (fn) => fn");
   await page.goto(`${BASE_URL}/data-grid-stress`);
+  // Lets CSS experiments be A/B tested against the same build
+  if (process.env.EXTRA_CSS) {
+    await page.addStyleTag({ content: process.env.EXTRA_CSS });
+  }
   const grid = page.locator(GRID_SELECTOR);
   await grid.waitFor();
   const box = await grid.boundingBox();

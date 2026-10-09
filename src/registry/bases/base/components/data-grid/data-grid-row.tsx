@@ -160,11 +160,7 @@ function DataGridRowContent<TData extends RowData>({
       tabIndex={-1}
       {...props}
       ref={rowRef}
-      className={cn(
-        "absolute flex w-full border-b [content-visibility:auto]",
-        !adjustLayout && "will-change-transform",
-        className,
-      )}
+      className={cn("absolute flex w-full border-b", className)}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
         ...(adjustLayout
