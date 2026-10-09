@@ -352,8 +352,8 @@ describe("getIsInPopover", () => {
   it.each([
     "dropdown-menu-content",
     "popover-content",
-    "faceted-content",
     "select-content",
+    "faceted-content",
   ])("treats elements inside %s as inside a popover", (slot) => {
     const popup = document.createElement("div");
     popup.dataset.slot = slot;
