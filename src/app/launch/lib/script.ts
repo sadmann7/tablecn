@@ -365,7 +365,7 @@ const SCRIPT: LaunchSceneScript[] = [
         at: 2720,
         run: ({ director }) => {
           pressCommandEnter();
-          director.reset(800);
+          director.reset(640);
         },
       },
     ],
