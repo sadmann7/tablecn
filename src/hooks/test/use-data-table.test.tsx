@@ -141,7 +141,11 @@ describe("useDataTable", () => {
   });
 
   it("lets an outside URL change replace the filters being edited", async () => {
-    const { result, navigate, getLastSearch } = renderDataTable("?title=bug");
+    // A wide debounce window keeps slow runners from writing the draft before
+    // the outside URL change lands.
+    const { result, navigate, getLastSearch } = renderDataTable("?title=bug", {
+      debounceMs: 300,
+    });
 
     act(() => {
       result.current.table.setColumnFilters([
@@ -161,8 +165,8 @@ describe("useDataTable", () => {
       ).toEqual([["status", ["done"]]]),
     );
 
-    // The URL write is debounced by 10ms, so wait until that timer has run.
-    await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
+    // Wait until the debounced URL write has run.
+    await act(() => new Promise((resolve) => setTimeout(resolve, 350)));
 
     expect(getLastSearch()?.get("title")).not.toBe("zzz");
     expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
