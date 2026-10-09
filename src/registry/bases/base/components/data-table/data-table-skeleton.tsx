@@ -40,6 +40,7 @@ export function DataTableSkeleton({
 
   return (
     <div
+      data-slot="data-table-skeleton"
       role="status"
       className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
       {...props}

@@ -43,6 +43,7 @@ export function DataTableToolbar<TData extends RowData>({
 
   return (
     <div
+      data-slot="data-table-toolbar"
       className={cn(
         "flex w-full items-start justify-between gap-2 p-1",
         className,
