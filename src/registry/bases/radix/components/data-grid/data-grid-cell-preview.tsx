@@ -50,7 +50,7 @@ interface DataGridCellPreviewProps<TData extends RowData> {
   isActiveSearchMatch: boolean;
 }
 
-// Static stand-in for a cell mounted mid fling, without the data-row-id and data-column-id attributes so focus never lands on it
+// Static stand-in for a cell mounted while scrolling, without the data-row-id and data-column-id attributes so focus never lands on it
 export function DataGridCellPreview<TData extends RowData>({
   cell,
   width,

@@ -39,9 +39,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const VIEWPORT_OFFSET = 1;
 const COLUMN_OVERSCAN = 2;
-const FAST_SCROLL_ROWS_PER_FRAME = 3;
 const SCROLL_JUMP_EXIT_ROWS_PER_COMMIT = 2;
-const FAST_SCROLL_COLUMNS_PER_FRAME = 1;
 
 interface DataGridProps<TData extends RowData>
   extends
@@ -270,29 +268,16 @@ function DataGridViewport<TData extends RowData>({
   });
 
   const scrollOffset = rowVirtualizer.scrollOffset ?? 0;
-  const scrollLeft = columnVirtualizer.scrollOffset ?? 0;
   const committedScrollRef = React.useRef({
     offset: scrollOffset,
-    left: scrollLeft,
-    isFast: false,
     isJumping: false,
   });
   const scrollDelta = Math.abs(
     scrollOffset - committedScrollRef.current.offset,
   );
-  const isRowScrollingFast =
-    rowVirtualizer.isScrolling &&
-    scrollDelta > rowSize * FAST_SCROLL_ROWS_PER_FRAME;
-  const isColumnScrollingFast =
-    columnVirtualizer.isScrolling &&
-    centerColumns.length > 0 &&
-    Math.abs(scrollLeft - committedScrollRef.current.left) >
-      (centerWidth / centerColumns.length) * FAST_SCROLL_COLUMNS_PER_FRAME;
-  const isFastScrolling =
-    (rowVirtualizer.isScrolling || columnVirtualizer.isScrolling) &&
-    (committedScrollRef.current.isFast ||
-      isRowScrollingFast ||
-      isColumnScrollingFast);
+  // Cells mounted during any scroll start as previews, since they look the same and cost far less to mount
+  const isScrolling =
+    rowVirtualizer.isScrolling || columnVirtualizer.isScrolling;
   // Jumps past the leading overscan would scroll into blank space before React renders, which scrollbar drags do constantly.
   // Pinned rows only move when the virtualizer re-renders, which it skips until the visible range changes, so unpin once
   // commits slow down instead of holding rows behind a slowing fling and snapping them into place when it stops
@@ -304,13 +289,11 @@ function DataGridViewport<TData extends RowData>({
           ? SCROLL_JUMP_EXIT_ROWS_PER_COMMIT
           : rowVirtualizer.options.overscan * 2);
   // Cells leave preview mode in a transition, so React spreads the upgrade over frames and drops it if scrolling resumes
-  const deferredIsFastScrolling = React.useDeferredValue(isFastScrolling);
+  const deferredIsScrolling = React.useDeferredValue(isScrolling);
 
   useIsomorphicLayoutEffect(() => {
     committedScrollRef.current = {
       offset: scrollOffset,
-      left: scrollLeft,
-      isFast: isFastScrolling,
       isJumping: isScrollJumping,
     };
     isScrollJumpingRef.current = isScrollJumping;
@@ -490,7 +473,7 @@ function DataGridViewport<TData extends RowData>({
                   row={row}
                   virtualItem={virtualItem}
                   columnWindow={columnWindow}
-                  isScrollingFast={isFastScrolling || deferredIsFastScrolling}
+                  isScrolling={isScrolling || deferredIsScrolling}
                 />
               );
             })}

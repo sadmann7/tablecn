@@ -11,6 +11,7 @@
  *
  * Set EXTRA_CSS to inject a stylesheet, or STRIP_CSS to a regex to delete the style
  * rules whose selector matches it, which A/B tests CSS changes without a rebuild.
+ * Set CPU_THROTTLE (for example 4) to emulate a slower CPU.
  */
 
 import { chromium, type CDPSession, type Page } from "@playwright/test";
@@ -101,6 +102,7 @@ interface FrameStats {
   p99: number;
   max: number;
   droppedFrames: number;
+  mainThreadMs: number;
   longAnimationFrames: number;
   loafScriptMs: number;
 }
@@ -200,6 +202,8 @@ function summarize(
     ),
     longAnimationFrames: loafs.length,
     loafScriptMs: loafs.reduce((sum, loaf) => sum + loaf.scriptMs, 0),
+    // Filled in from the traced run
+    mainThreadMs: 0,
   };
 }
 
@@ -226,6 +230,42 @@ async function recordTrace(
   await complete;
   cdp.off("Tracing.dataCollected", onData);
   await writeFile(outFile, JSON.stringify({ traceEvents: events }));
+  return getMainThreadBusyMs(events as TraceEvent[]);
+}
+
+interface TraceEvent {
+  name: string;
+  ph: string;
+  pid: number;
+  tid: number;
+  dur?: number;
+  args?: { name?: string };
+}
+
+/** Total duration of top-level tasks on the page's main thread, which shows headroom even when fps is capped. */
+function getMainThreadBusyMs(events: TraceEvent[]) {
+  const mainThreads = new Set(
+    events
+      .filter(
+        (event) =>
+          event.ph === "M" &&
+          event.name === "thread_name" &&
+          event.args?.name === "CrRendererMain",
+      )
+      .map((event) => `${event.pid}:${event.tid}`),
+  );
+  const busyByThread = new Map<string, number>();
+  for (const event of events) {
+    if (event.ph !== "X" || event.name !== "RunTask" || !event.dur) continue;
+    const thread = `${event.pid}:${event.tid}`;
+    if (!mainThreads.has(thread)) continue;
+    busyByThread.set(
+      thread,
+      (busyByThread.get(thread) ?? 0) + event.dur / 1000,
+    );
+  }
+  // Other renderers (extensions, about:blank) barely run, so the busiest one is the page
+  return Math.max(0, ...busyByThread.values());
 }
 
 /** Deletes style rules whose selector matches `pattern`, including inside @layer and @media blocks. */
@@ -280,6 +320,11 @@ async function main() {
     viewport: { width: 1920, height: 1080 },
   });
   const cdp = await page.context().newCDPSession(page);
+  // Simulates a slower machine, where headroom that a fast one hides shows up as dropped frames
+  const cpuThrottle = Number(process.env.CPU_THROTTLE ?? 1);
+  if (cpuThrottle > 1) {
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpuThrottle });
+  }
 
   // tsx keeps function names via an `__name` helper that page.evaluate does not serialize
   await page.addInitScript("globalThis.__name = (fn) => fn");
@@ -319,10 +364,10 @@ async function main() {
     // Let the deferred preview upgrade land inside the measurement
     await page.waitForTimeout(300);
     const { deltas, loafs } = await page.evaluate(stopFrameRecorder);
-    results[scenario.name] = summarize(deltas, loafs, vsync);
+    const stats = summarize(deltas, loafs, vsync);
 
     await resetScroll(page);
-    await recordTrace(
+    stats.mainThreadMs = await recordTrace(
       page,
       cdp,
       path.join(outDir, `${scenario.name}.json`),
@@ -331,6 +376,7 @@ async function main() {
         await page.waitForTimeout(300);
       },
     );
+    results[scenario.name] = stats;
   }
 
   await browser.close();
