@@ -1,14 +1,16 @@
 "use client";
 
 import {
+  type Cell,
+  type ColumnPinningPosition,
   FlexRender,
+  type Header,
   type Row,
   type RowData,
   Subscribe,
   type Table as TanstackTable,
 } from "@tanstack/react-table";
 import { cn } from "cn";
-import { Slot } from "radix-ui";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -109,7 +111,6 @@ function DataTableHeader<TData extends RowData>({
         columnOrder: state.columnOrder,
         columnPinning: state.columnPinning,
         columnVisibility: state.columnVisibility,
-        rowSelection: state.rowSelection,
       })}
     >
       {() => (
@@ -117,23 +118,41 @@ function DataTableHeader<TData extends RowData>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="group/row">
               {headerGroup.headers.map((header) => (
-                <DataTableCellSlot
+                <DataTableHeadCell
                   key={header.id}
-                  pinned={!!header.column.getIsPinned()}
-                  style={getColumnPinningStyle(header.column)}
-                >
-                  <TableHead colSpan={header.colSpan}>
-                    {header.isPlaceholder ? null : (
-                      <FlexRender header={header} />
-                    )}
-                  </TableHead>
-                </DataTableCellSlot>
+                  header={header}
+                  pinned={header.column.getIsPinned()}
+                />
               ))}
             </TableRow>
           ))}
         </TableHeader>
       )}
     </Subscribe>
+  );
+}
+
+interface DataTableHeadCellProps<TData extends RowData> {
+  header: Header<DataTableFeatures, TData>;
+  pinned: ColumnPinningPosition;
+}
+
+const DataTableHeadCell = React.memo(
+  DataTableHeadCellImpl,
+) as typeof DataTableHeadCellImpl;
+
+function DataTableHeadCellImpl<TData extends RowData>({
+  header,
+  pinned,
+}: DataTableHeadCellProps<TData>) {
+  return (
+    <TableHead
+      colSpan={header.colSpan}
+      className={getCellClassName(pinned)}
+      style={getColumnPinningStyle(header.column)}
+    >
+      {header.isPlaceholder ? null : <FlexRender header={header} />}
+    </TableHead>
   );
 }
 
@@ -168,7 +187,7 @@ function DataTableBody<TData extends RowData>({
   return (
     <TableBody>
       {rows.map((row) => (
-        <MemoizedDataTableRow key={row.id} row={row} />
+        <DataTableRow key={row.id} row={row} />
       ))}
     </TableBody>
   );
@@ -178,7 +197,9 @@ interface DataTableRowProps<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;
 }
 
-function DataTableRow<TData extends RowData>({
+const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
+
+function DataTableRowImpl<TData extends RowData>({
   row,
 }: DataTableRowProps<TData>) {
   return (
@@ -188,46 +209,47 @@ function DataTableRow<TData extends RowData>({
         columnOrder: state.columnOrder,
         columnPinning: state.columnPinning,
         columnVisibility: state.columnVisibility,
+        isSelected: state.rowSelection[row.id] === true,
       })}
     >
-      {() => {
-        const cells = row.getVisibleCells().map((cell) => ({
-          cell,
-          pinned: !!cell.column.getIsPinned(),
-          style: getColumnPinningStyle(cell.column),
-        }));
-
-        return (
-          <Subscribe
-            source={row.table.atoms.rowSelection}
-            selector={(selection) => selection[row.id] === true}
-          >
-            {(isSelected) => (
-              <TableRow
-                data-state={isSelected ? "selected" : undefined}
-                className="group/row"
-              >
-                {cells.map(({ cell, pinned, style }) => (
-                  <DataTableCellSlot
-                    key={cell.id}
-                    pinned={pinned}
-                    style={style}
-                  >
-                    <TableCell>
-                      <FlexRender cell={cell} />
-                    </TableCell>
-                  </DataTableCellSlot>
-                ))}
-              </TableRow>
-            )}
-          </Subscribe>
-        );
-      }}
+      {({ isSelected }) => (
+        <TableRow
+          data-state={isSelected ? "selected" : undefined}
+          className="group/row"
+        >
+          {row.getVisibleCells().map((cell) => (
+            <DataTableCell
+              key={cell.id}
+              cell={cell}
+              pinned={cell.column.getIsPinned()}
+            />
+          ))}
+        </TableRow>
+      )}
     </Subscribe>
   );
 }
 
-const MemoizedDataTableRow = React.memo(DataTableRow) as typeof DataTableRow;
+interface DataTableCellProps<TData extends RowData> {
+  cell: Cell<DataTableFeatures, TData>;
+  pinned: ColumnPinningPosition;
+}
+
+const DataTableCell = React.memo(DataTableCellImpl) as typeof DataTableCellImpl;
+
+function DataTableCellImpl<TData extends RowData>({
+  cell,
+  pinned,
+}: DataTableCellProps<TData>) {
+  return (
+    <TableCell
+      className={getCellClassName(pinned)}
+      style={getColumnPinningStyle(cell.column)}
+    >
+      <FlexRender cell={cell} />
+    </TableCell>
+  );
+}
 
 interface DataTableActionBarProps<TData extends RowData> {
   table: TanstackTable<DataTableFeatures, TData>;
@@ -248,26 +270,8 @@ function DataTableActionBar<TData extends RowData>({
   );
 }
 
-interface DataTableCellSlotProps extends React.ComponentProps<
-  typeof Slot.Root
-> {
-  pinned?: boolean;
-}
-
-function DataTableCellSlot({
-  pinned = false,
-  className,
-  ...props
-}: DataTableCellSlotProps) {
-  return (
-    <Slot.Root
-      className={cn(
-        "overflow-hidden",
-        pinned &&
-          "bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted",
-        className,
-      )}
-      {...props}
-    />
-  );
+function getCellClassName(pinned: ColumnPinningPosition) {
+  return pinned
+    ? "overflow-hidden bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted"
+    : "overflow-hidden";
 }

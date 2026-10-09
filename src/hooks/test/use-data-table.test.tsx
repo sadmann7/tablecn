@@ -2,7 +2,7 @@ import { createColumnHelper } from "@tanstack/react-table";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { NuqsTestingAdapter, type UrlUpdateEvent } from "nuqs/adapters/testing";
 import * as React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -89,6 +89,7 @@ function getFilterSummary(filters: { id: string; value: unknown }[]) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   window.history.replaceState(null, "", "/");
 });
 
@@ -141,6 +142,9 @@ describe("useDataTable", () => {
   });
 
   it("lets an outside URL change replace the filters being edited", async () => {
+    // Fake timers hold the debounced URL write until the outside URL change
+    // has landed, however slow the runner is.
+    vi.useFakeTimers();
     const { result, navigate, getLastSearch } = renderDataTable("?title=bug");
 
     act(() => {
@@ -149,20 +153,14 @@ describe("useDataTable", () => {
         { id: "status", value: [] },
       ]);
     });
-    await waitFor(() =>
-      expect(result.current.table.state.columnFilters).toHaveLength(2),
-    );
+    expect(result.current.table.state.columnFilters).toHaveLength(2);
 
     act(() => navigate("?status=done"));
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["status", ["done"]],
+    ]);
 
-    await waitFor(() =>
-      expect(
-        getFilterSummary(result.current.table.state.columnFilters),
-      ).toEqual([["status", ["done"]]]),
-    );
-
-    // The URL write is debounced by 10ms, so wait until that timer has run.
-    await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
+    await act(() => vi.runAllTimersAsync());
 
     expect(getLastSearch()?.get("title")).not.toBe("zzz");
     expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
