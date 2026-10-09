@@ -128,10 +128,6 @@ html[data-launch-camera]
   animation: none;
 }
 
-.launch-flash {
-  animation: launch-flash 1200ms ease-out both;
-}
-
 .launch-keystroke {
   animation: launch-keystroke 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -153,12 +149,6 @@ html[data-launch-camera]
   to {
     opacity: 0;
     transform: translateY(-0.35rem);
-  }
-}
-
-@keyframes launch-flash {
-  from {
-    background-color: rgb(52 211 153 / 0.25);
   }
 }
 
@@ -198,7 +188,6 @@ html[data-launch-camera]
   .launch-rise,
   .launch-logo,
   .launch-keystroke,
-  .launch-flash,
   .launch-glow,
   .launch-scene-exit {
     animation: none;

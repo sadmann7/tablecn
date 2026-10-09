@@ -18,7 +18,6 @@ interface LaunchClock {
   stepIndex: number;
   cycle: number;
   isPaused: boolean;
-  /** While set, earlier steps replay one per frame up to this time. */
   replayTo: number | null;
 }
 
@@ -41,10 +40,6 @@ const INITIAL_PLAYBACK: LaunchPlayback = {
   isChromeHidden: false,
 };
 
-/**
- * Drives the loop from one animation frame clock, so pausing freezes both the
- * scripted table steps and the scene animations.
- */
 export function useLaunchTimeline(onStep: (step: LaunchStep) => void) {
   const [playback, dispatch] = React.useReducer(
     playbackReducer,

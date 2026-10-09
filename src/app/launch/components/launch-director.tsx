@@ -34,12 +34,6 @@ interface LaunchDirectorRefs {
   ripple: React.RefObject<HTMLSpanElement | null>;
 }
 
-/**
- * A scripted camera and cursor. The camera transforms a layer inside the
- * stage, and open popovers read the same scale from `--launch-camera-scale`
- * since they portal outside of it. The cursor lives in a portaled overlay
- * above the popovers that mirrors the camera transform.
- */
 export function useLaunchDirector() {
   const stage = React.useRef<HTMLDivElement>(null);
   const camera = React.useRef<HTMLDivElement>(null);

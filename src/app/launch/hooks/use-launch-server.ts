@@ -11,7 +11,6 @@ interface UseLaunchServerProps {
   dispatchServer: React.Dispatch<LaunchServerAction>;
 }
 
-/** Answers each server-mode URL the way a route handler would. */
 export function useLaunchServer({
   table,
   request,

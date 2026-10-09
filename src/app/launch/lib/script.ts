@@ -61,7 +61,6 @@ export interface LaunchStepContext {
 type LaunchStepRun = (context: LaunchStepContext) => void;
 
 export interface LaunchStep {
-  /** Milliseconds from the start of the scene. */
   at: number;
   run: LaunchStepRun;
 }
@@ -128,11 +127,6 @@ const FILTER_CODE = [
 /** The ring starts after the control has painted its new value. */
 const FLASH_AFTER_MS = 100;
 
-/**
- * The scripted loop. Each scene owns the table actions that play while it is
- * on screen, so retiming a scene never shifts the ones after it. The filter
- * menus are driven through their real keyboard shortcut and inputs.
- */
 const SCRIPT: LaunchSceneScript[] = [
   {
     id: "intro",
@@ -384,7 +378,6 @@ const SCRIPT: LaunchSceneScript[] = [
 ];
 
 export interface LaunchScene extends LaunchSceneScript {
-  /** Milliseconds from the start of the loop. */
   start: number;
 }
 
@@ -395,7 +388,6 @@ export const LAUNCH_DURATION = SCRIPT.reduce(
   0,
 );
 
-/** Every step on the loop's clock, in the order they fire. */
 export const LAUNCH_STEPS: LaunchStep[] = SCENES.flatMap((scene) =>
   scene.steps.map((step) => ({ at: scene.start + step.at, run: step.run })),
 );
@@ -469,7 +461,6 @@ function typeCommandStep(value: string): LaunchStepRun {
   return () => typeCommand(value);
 }
 
-/** Types one value per keystroke tick, like someone typing a word. */
 function typeSteps(
   at: number,
   values: string[],

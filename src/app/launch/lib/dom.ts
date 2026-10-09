@@ -1,8 +1,3 @@
-/**
- * Drives the real filter menus through the DOM, the same way a user would,
- * so the demo exercises the shipped components instead of a mock.
- */
-
 export function getLaunchTarget(name: string) {
   return document.querySelector(`[data-launch="${name}"]`);
 }
@@ -20,7 +15,6 @@ export function getCommandTrigger() {
 }
 
 /**
- * Scoped to the column's filter row, whatever operator it shows right now.
  * The join control's id also ends in `-operator-listbox`, and it is the
  * first control on every row after the first.
  */
@@ -69,7 +63,6 @@ export function closeFacetedList() {
   pressEscape();
 }
 
-/** Matches a toolbar filter by its button title or input placeholder. */
 function getToolbarFilter(label: string) {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
@@ -85,10 +78,7 @@ function getToolbarFilter(label: string) {
 const FLASH_MS = 800;
 const flashedAt = new Map<string, number>();
 
-/**
- * Rings a toolbar filter once, then fades back to its own styles.
- * A second ring on the same control waits until this one has finished.
- */
+/** A second ring on the same control waits until this one has finished. */
 export function flashToolbarFilter(label: string) {
   const element = getToolbarFilter(label);
   if (!element) return;
@@ -135,7 +125,6 @@ export function pressFilterShortcut() {
   );
 }
 
-/** Dismisses only the topmost popover, like a single Escape press. */
 export function pressEscape() {
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 }
