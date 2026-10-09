@@ -1,12 +1,11 @@
 import type * as React from "react";
 
-import { Copy, LayoutGrid } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 
 const TAGLINE =
   "A shadcn/ui data table with sorting, filtering, and pagination.";
 
-const INSTALL_COMMAND =
-  "pnpm dlx shadcn@latest add https://tablecn.com/r/data-table.json";
+const INSTALL_COMMAND = "pnpm dlx shadcn@latest add @diceui/data-table";
 
 export function LaunchBackdrop() {
   return (
@@ -144,14 +143,11 @@ export function LaunchOutroScene() {
         </span>
       </div>
       <div
-        className="launch-rise flex items-center gap-5 rounded-2xl border border-white/10 bg-white/4 py-5 pr-5 pl-8 font-mono text-2xl text-white/80"
+        className="launch-rise flex items-center gap-5 rounded-2xl border border-white/10 bg-white/4 px-8 py-5 font-mono text-2xl text-white/80"
         style={launchDelay(80)}
       >
         <span className="text-white/35">$</span>
         {INSTALL_COMMAND}
-        <span className="flex size-11 items-center justify-center rounded-lg bg-white/8 text-white/60">
-          <Copy className="size-5" />
-        </span>
       </div>
       <span
         className="launch-rise font-mono text-2xl text-white/45"

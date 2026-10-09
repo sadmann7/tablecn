@@ -4,7 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 const DEFAULT_ZOOM = 1.6;
-const CAMERA_EXIT_EASE = "cubic-bezier(0.45, 0.05, 0.2, 1)";
+const CAMERA_EXIT_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 
 interface LaunchFocusOptions {
   scale?: number;
@@ -242,7 +242,12 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     reset(duration?: number) {
       setCamera(1, 0, 0, duration);
       const cursor = refs.cursor.current;
-      if (cursor) cursor.style.opacity = "0";
+      if (!cursor) return;
+
+      if (duration !== undefined) {
+        cursor.style.transition = `opacity ${duration}ms var(--launch-camera-ease, ease)`;
+      }
+      cursor.style.opacity = "0";
     },
   };
 }
