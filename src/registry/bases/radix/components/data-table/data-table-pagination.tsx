@@ -1,9 +1,8 @@
 "use client";
 
-import type * as React from "react";
-
 import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
 import { cn } from "cn";
+import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -74,6 +73,7 @@ function DataTablePaginationContent<TData extends RowData>({
   className,
   ...props
 }: DataTablePaginationContentProps<TData>) {
+  const pageSizeLabelId = React.useId();
   const pageCount = table.getPageCount();
   const canPreviousPage = table.getCanPreviousPage();
   const canNextPage = table.getCanNextPage();
@@ -86,19 +86,27 @@ function DataTablePaginationContent<TData extends RowData>({
       )}
       {...props}
     >
-      <div className="flex-1 text-sm whitespace-nowrap text-muted-foreground">
+      <div
+        role="status"
+        className="flex-1 text-sm whitespace-nowrap text-muted-foreground"
+      >
         {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected.
       </div>
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium whitespace-nowrap">Rows per page</p>
+          <p
+            id={pageSizeLabelId}
+            className="text-sm font-medium whitespace-nowrap"
+          >
+            Rows per page
+          </p>
           <Select
             value={`${pageSize}`}
             onValueChange={(value) => {
               table.setPageSize(Number(value));
             }}
           >
-            <SelectTrigger className="w-18">
+            <SelectTrigger aria-labelledby={pageSizeLabelId} className="w-18">
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
@@ -112,7 +120,10 @@ function DataTablePaginationContent<TData extends RowData>({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex items-center justify-center text-sm font-medium">
+        <div
+          role="status"
+          className="flex items-center justify-center text-sm font-medium"
+        >
           Page {pageIndex + 1} of {pageCount}
         </div>
         <div className="flex items-center gap-2">

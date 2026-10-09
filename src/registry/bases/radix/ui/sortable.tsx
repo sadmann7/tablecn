@@ -405,7 +405,8 @@ function SortableItem(props: SortableItemProps) {
   }
 
   const context = useSortableContext(ITEM_NAME);
-  const id = React.useId();
+  const generatedId = React.useId();
+  const id = itemProps.id ?? generatedId;
   const {
     attributes,
     listeners,

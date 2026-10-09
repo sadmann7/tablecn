@@ -19,7 +19,6 @@ import {
   FacetedItem,
   FacetedItemIndicator,
   FacetedList,
-  FacetedSeparator,
   FacetedTrigger,
   FacetedValue,
 } from "@/registry/bases/radix/ui/faceted";
@@ -66,7 +65,7 @@ interface DataTableFacetedFilterContentProps<
 
 function DataTableFacetedFilterContent<TData extends RowData, TValue>({
   column,
-  title,
+  title = column?.columnDef.meta?.label ?? column?.id,
   options,
   multiple = false,
   columnFilterValue,
@@ -99,11 +98,9 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
       <FacetedTrigger asChild>
         <Button variant="outline">
           {hasSelection ? (
-            <div
-              role="button"
-              aria-label={`Clear ${title} filter`}
-              tabIndex={0}
-              className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+            <span
+              aria-hidden="true"
+              className="rounded-sm opacity-70 transition-opacity hover:opacity-100"
               onClick={onReset}
             >
               <IconPlaceholder
@@ -113,7 +110,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
                 phosphor="XCircleIcon"
                 remixicon="RiCloseCircleLine"
               />
-            </div>
+            </span>
           ) : (
             <IconPlaceholder
               lucide="PlusCircle"
@@ -135,7 +132,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
           )}
         </Button>
       </FacetedTrigger>
-      <FacetedContent dir={dir} className="w-50">
+      <FacetedContent aria-label={`${title} filter`} dir={dir} className="w-50">
         <FacetedInput placeholder={title} />
         <FacetedList className="max-h-full">
           <FacetedEmpty>No results found.</FacetedEmpty>
@@ -149,12 +146,9 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
             ))}
           </FacetedGroup>
           {hasSelection && (
-            <>
-              <FacetedSeparator />
-              <FacetedGroup>
-                <FacetedClear>Clear filters</FacetedClear>
-              </FacetedGroup>
-            </>
+            <FacetedGroup className="mt-0.5 border-t pt-1.5">
+              <FacetedClear>Clear filters</FacetedClear>
+            </FacetedGroup>
           )}
         </FacetedList>
       </FacetedContent>

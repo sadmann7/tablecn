@@ -16,6 +16,7 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
+  getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
 } from "@/lib/data-table-utils";
@@ -42,6 +43,8 @@ export function DataTable<TData extends RowData>({
   actionBar,
   children,
   className,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
   ...props
 }: DataTableProps<TData>) {
   const dir = useDirection();
@@ -54,7 +57,11 @@ export function DataTable<TData extends RowData>({
     >
       {children}
       <div className="overflow-hidden rounded-md border">
-        <DataTableLayout table={table}>
+        <DataTableLayout
+          table={table}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+        >
           <DataTableHeader table={table} />
           <DataTableBody table={table} />
         </DataTableLayout>
@@ -69,7 +76,10 @@ export function DataTable<TData extends RowData>({
   );
 }
 
-interface DataTableLayoutProps<TData extends RowData> {
+interface DataTableLayoutProps<TData extends RowData> extends Pick<
+  React.ComponentProps<"table">,
+  "aria-label" | "aria-labelledby"
+> {
   table: TanstackTable<DataTableFeatures, TData>;
   children: React.ReactNode;
 }
@@ -77,6 +87,7 @@ interface DataTableLayoutProps<TData extends RowData> {
 function DataTableLayout<TData extends RowData>({
   table,
   children,
+  ...props
 }: DataTableLayoutProps<TData>) {
   return (
     <Subscribe
@@ -89,7 +100,11 @@ function DataTableLayout<TData extends RowData>({
       })}
     >
       {() => (
-        <Table className="table-fixed" style={getColumnSizingStyle(table)}>
+        <Table
+          className="table-fixed"
+          style={getColumnSizingStyle(table)}
+          {...props}
+        >
           {children}
         </Table>
       )}
@@ -146,13 +161,21 @@ function DataTableHeadCellImpl<TData extends RowData>({
   pinned,
 }: DataTableHeadCellProps<TData>) {
   return (
-    <TableHead
-      colSpan={header.colSpan}
-      className={getCellClassName(pinned)}
-      style={getColumnPinningStyle(header.column)}
+    <Subscribe
+      source={header.column.table.atoms.sorting}
+      selector={(sorting) => getAriaSort(sorting, header.column.id)}
     >
-      {header.isPlaceholder ? null : <FlexRender header={header} />}
-    </TableHead>
+      {(ariaSort) => (
+        <TableHead
+          aria-sort={ariaSort}
+          colSpan={header.colSpan}
+          className={getCellClassName(pinned)}
+          style={getColumnPinningStyle(header.column)}
+        >
+          {header.isPlaceholder ? null : <FlexRender header={header} />}
+        </TableHead>
+      )}
+    </Subscribe>
   );
 }
 

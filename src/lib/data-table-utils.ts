@@ -2,6 +2,7 @@ import type {
   Column,
   ColumnFilter,
   RowData,
+  SortingState,
   Table,
 } from "@tanstack/react-table";
 
@@ -130,6 +131,15 @@ function getColumnVar(columnId: string, property: "size" | "offset") {
     (char) => `_${char.codePointAt(0)?.toString(16)}_`,
   );
   return `--column-${name}-${property}`;
+}
+
+export function getAriaSort(
+  sorting: SortingState,
+  columnId: string,
+): React.AriaAttributes["aria-sort"] {
+  const sort = sorting[0];
+  if (sort?.id !== columnId) return undefined;
+  return sort.desc ? "descending" : "ascending";
 }
 
 export function getColumnPinningStyle<TData extends RowData>(

@@ -40,10 +40,15 @@ export function DataTableSkeleton({
 
   return (
     <div
+      role="status"
       className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
       {...props}
     >
-      <div className="flex w-full items-center justify-between gap-2 overflow-auto p-1">
+      <span className="sr-only">Loading table…</span>
+      <div
+        aria-hidden="true"
+        className="flex w-full items-center justify-between gap-2 overflow-auto p-1"
+      >
         <div className="flex flex-1 items-center gap-2">
           {filterCount > 0
             ? Array.from({ length: filterCount }).map((_, i) => (
@@ -55,7 +60,7 @@ export function DataTableSkeleton({
           <Skeleton className="ms-auto hidden h-8 w-18 rounded-lg lg:flex" />
         ) : null}
       </div>
-      <div className="rounded-md border">
+      <div aria-hidden="true" className="rounded-md border">
         <Table>
           <TableHeader>
             {Array.from({ length: 1 }).map((_, i) => (
@@ -94,7 +99,10 @@ export function DataTableSkeleton({
         </Table>
       </div>
       {withPagination ? (
-        <div className="flex w-full items-center justify-between gap-4 overflow-auto p-1 sm:gap-8">
+        <div
+          aria-hidden="true"
+          className="flex w-full items-center justify-between gap-4 overflow-auto p-1 sm:gap-8"
+        >
           <Skeleton className="h-8 w-40 shrink-0 rounded-lg" />
           <div className="flex items-center gap-4 sm:gap-6 lg:gap-8">
             <div className="flex items-center gap-2">
