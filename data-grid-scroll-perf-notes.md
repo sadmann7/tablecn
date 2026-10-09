@@ -105,3 +105,12 @@ Back to back, 2 rounds x 2 runs: scrollbar drag 61–62 → 64.7–65.4 fps; oth
 Preview vs settled full cells at the same offset are pixel-identical (only the scrollbar thumb and FPS meter differ). Two regressions caught by the pixel check and fixed: URLs need their own clipping box (unbroken text otherwise overflows into padding), and the badge list needs `content-start` when it is the full-height preview element.
 
 Drag progress today: ~47 → ~65 fps. Frames now sit at ~2 vsyncs (p50 16.7 ms).
+
+## Remaining suspects (2026-10-09)
+
+- **#4 `useFlushSync: false` — rejected.** No fps gain (drag 67.2–67.4 vs 67–68.7) and rendering falls behind scroll events: blank rows on the first frame after a jump (up to 7,900 px of empty grid) and ~100 visible content jumps with >1,100 px drift per very hard fling (control: 0–2). Synchronous renders are what keep pinned rows aligned.
+- **#1 Previews for every cell mounted while scrolling — adopted.** Slow wheel main thread 2,122 / 2,149 → 1,780 / 1,765 ms (−17%); at 4x CPU throttle 8,160 / 8,303 → 6,957 / 6,981 ms and 112–115 → 118 fps (37–56 → 13 dropped frames). Other scenarios unchanged. Previews upgrade 150–250 ms after scrolling stops (the virtualizer's `isScrolling` reset delay); clicks before that land on a preview and are ignored, same as before for fast scrolls.
+
+Profiler additions: `mainThreadMs` per scenario (top-level tasks on the page's main thread, from the traced run) and `CPU_THROTTLE` to emulate slower machines.
+
+Not tried: rendering drag frames every other vsync, and recycling row elements by slot instead of keying by `row.id` (the remaining path toward 120 fps on scrollbar drag).

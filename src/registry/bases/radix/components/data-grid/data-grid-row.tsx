@@ -62,7 +62,7 @@ interface DataGridRowProps<
   virtualItem: VirtualItem;
   columnWindow: ColumnWindow | null;
   /** Cells mounted while this is true render previews until it turns false. */
-  isScrollingFast: boolean;
+  isScrolling: boolean;
 }
 
 // Grid layout comes from context and table state comes from the row's subscription
@@ -74,7 +74,7 @@ export const DataGridRow = React.memo(
     prev.virtualItem.index === next.virtualItem.index &&
     prev.virtualItem.start === next.virtualItem.start &&
     prev.columnWindow === next.columnWindow &&
-    prev.isScrollingFast === next.isScrollingFast,
+    prev.isScrolling === next.isScrolling,
 ) as typeof DataGridRowImpl;
 
 function DataGridRowImpl<TData extends RowData>({
@@ -113,7 +113,7 @@ function DataGridRowContent<TData extends RowData>({
   virtualItem,
   columnWindow,
   rowState,
-  isScrollingFast,
+  isScrolling,
   className,
   style,
   ref,
@@ -237,7 +237,7 @@ function DataGridRowContent<TData extends RowData>({
                 isActiveSearchMatch={isActiveSearchMatch}
                 presence={presenceColumns?.get(columnId) ?? null}
                 readOnly={readOnlyColumnIds.has(columnId)}
-                isScrollingFast={isScrollingFast}
+                isScrolling={isScrolling}
               />
             )}
           </div>
@@ -250,16 +250,16 @@ function DataGridRowContent<TData extends RowData>({
 interface DataGridDataCellProps<
   TData extends RowData,
 > extends DataGridCellProps<TData> {
-  isScrollingFast: boolean;
+  isScrolling: boolean;
 }
 
-// Cells mounted mid fling stay previews until scrolling settles, while cells already mounted keep their full component
+// Cells mounted while scrolling stay previews until scrolling settles, while cells already mounted keep their full component
 function DataGridDataCell<TData extends RowData>({
-  isScrollingFast,
+  isScrolling,
   ...props
 }: DataGridDataCellProps<TData>) {
-  const [isPreview, setIsPreview] = React.useState(isScrollingFast);
-  if (isPreview && !isScrollingFast) setIsPreview(false);
+  const [isPreview, setIsPreview] = React.useState(isScrolling);
+  if (isPreview && !isScrolling) setIsPreview(false);
 
   if (isPreview && !props.isFocused && !props.isEditing) {
     return (
