@@ -235,11 +235,6 @@ interface DataTableCellProps<TData extends RowData> {
   pinned: ColumnPinningPosition;
 }
 
-/**
- * Cells re-render only when their cell or pinned side changes. Cell and header
- * renderers that read table state should subscribe to it themselves, like the
- * select column does.
- */
 const DataTableCell = React.memo(DataTableCellImpl) as typeof DataTableCellImpl;
 
 function DataTableCellImpl<TData extends RowData>({

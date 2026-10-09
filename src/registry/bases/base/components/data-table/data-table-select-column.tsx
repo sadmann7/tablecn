@@ -13,6 +13,36 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Checkbox } from "@/registry/bases/base/ui/checkbox";
 
+interface GetDataTableSelectColumnOptions<TData extends RowData> extends Omit<
+  Partial<ColumnDef<DataTableFeatures, TData>>,
+  "id" | "header" | "cell"
+> {
+  debug?: boolean;
+}
+
+export function getDataTableSelectColumn<TData extends RowData>({
+  size = 40,
+  enableHiding = false,
+  enableSorting = false,
+  debug = false,
+  ...props
+}: GetDataTableSelectColumnOptions<TData> = {}): ColumnDef<
+  DataTableFeatures,
+  TData
+> {
+  return {
+    id: "select",
+    header: ({ table }) => (
+      <DataTableSelectHeader table={table} debug={debug} />
+    ),
+    cell: ({ row }) => <DataTableSelectCell row={row} debug={debug} />,
+    size,
+    enableHiding,
+    enableSorting,
+    ...props,
+  };
+}
+
 function getHitboxClassName(debug?: boolean) {
   return cn(
     "select-none after:-inset-2",
@@ -92,34 +122,4 @@ function DataTableSelectCell<TData extends RowData>({
       )}
     </Subscribe>
   );
-}
-
-interface GetDataTableSelectColumnOptions<TData extends RowData> extends Omit<
-  Partial<ColumnDef<DataTableFeatures, TData>>,
-  "id" | "header" | "cell"
-> {
-  debug?: boolean;
-}
-
-export function getDataTableSelectColumn<TData extends RowData>({
-  size = 40,
-  enableHiding = false,
-  enableSorting = false,
-  debug = false,
-  ...props
-}: GetDataTableSelectColumnOptions<TData> = {}): ColumnDef<
-  DataTableFeatures,
-  TData
-> {
-  return {
-    id: "select",
-    header: ({ table }) => (
-      <DataTableSelectHeader table={table} debug={debug} />
-    ),
-    cell: ({ row }) => <DataTableSelectCell row={row} debug={debug} />,
-    size,
-    enableHiding,
-    enableSorting,
-    ...props,
-  };
 }
