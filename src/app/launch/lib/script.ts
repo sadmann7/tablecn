@@ -86,12 +86,20 @@ export const COLUMN_SNIPPETS = [
     extra: 'placeholder: "Search titles...",',
   },
   {
-    columnIds: ["status", "priority"],
-    filterLabels: ["Status", "Priority"],
+    columnIds: ["status"],
+    filterLabels: ["Status"],
     accessorKey: "status",
     label: "Status",
     variant: "multiSelect",
     extra: "options: statuses,",
+  },
+  {
+    columnIds: ["priority"],
+    filterLabels: ["Priority"],
+    accessorKey: "priority",
+    label: "Priority",
+    variant: "multiSelect",
+    extra: "options: priorities,",
   },
   {
     columnIds: ["estimatedHours"],
@@ -133,7 +141,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "columns",
-    duration: 4200,
+    duration: 5600,
     steps: COLUMN_SNIPPETS.flatMap((snippet, index) => {
       const at = 600 + index * 780;
       return [
@@ -161,7 +169,7 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [3, 4],
     },
     steps: [
-      ...urlSteps(700, "?status=todo", "Status"),
+      ...urlSteps(700, "?status=todo"),
       ...urlSteps(1600, "?status=todo&sort=estimatedHours.desc"),
       ...urlSteps(2500, "?status=todo&sort=estimatedHours.desc&page=2"),
     ],
@@ -191,7 +199,7 @@ const SCRIPT: LaunchSceneScript[] = [
           setDataMode("client")(context);
         },
       },
-      ...urlSteps(700, "?status=in-progress", "Status"),
+      ...urlSteps(700, "?status=in-progress"),
     ],
   },
   {
@@ -206,7 +214,7 @@ const SCRIPT: LaunchSceneScript[] = [
     },
     steps: [
       { at: 0, run: () => replaceUrl("") },
-      ...urlSteps(500, "?priority=high", "Priority"),
+      ...urlSteps(500, "?priority=high"),
       {
         at: 1100,
         run: ({ director }) =>
@@ -337,7 +345,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "command",
-    duration: 5100,
+    duration: 4900,
     story: {
       eyebrow: "Command filters",
       title: "Filter from the keyboard.",
@@ -348,23 +356,22 @@ const SCRIPT: LaunchSceneScript[] = [
     steps: [
       { at: 0, run: setFilterMode("command") },
       {
-        at: 2000,
+        at: 1500,
         run: ({ director }) => {
           const trigger = getCommandTrigger();
           director.moveCursor(trigger);
           director.focus(trigger, { offsetX: 16, offsetY: 6 });
         },
       },
-      { at: 2170, run: openFilterMenu },
-      ...typeSteps(2520, ["st", "status"], typeCommandStep),
-      { at: 2920, run: pressCommandEnter },
-      { at: 3400, run: pressCommandArrow },
-      { at: 3720, run: pressCommandEnter },
+      { at: 1670, run: openFilterMenu },
+      ...typeSteps(2020, ["st", "status"], typeCommandStep),
+      { at: 2420, run: pressCommandEnter },
+      { at: 2900, run: pressCommandArrow },
       {
-        at: 4320,
+        at: 3220,
         run: ({ director }) => {
-          closeAllMenus();
-          director.reset();
+          pressCommandEnter();
+          director.reset(800);
         },
       },
     ],
@@ -445,16 +452,8 @@ function setFilterMode(filterMode: FilterMode): LaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "filterMode", filterMode });
 }
 
-/** Writes the URL, then rings the filter it changed once the badge has painted. */
-function urlSteps(
-  at: number,
-  search: string,
-  filterLabel?: string,
-): LaunchStep[] {
-  return [
-    { at, run: () => replaceUrl(search) },
-    ...(filterLabel ? [flashStep(at, [filterLabel])] : []),
-  ];
+function urlSteps(at: number, search: string): LaunchStep[] {
+  return [{ at, run: () => replaceUrl(search) }];
 }
 
 function flashStep(at: number, labels: string[]): LaunchStep {

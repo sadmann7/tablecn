@@ -291,8 +291,12 @@ function LaunchColumnsStory({ columnCount }: LaunchColumnsStoryProps) {
       highlightedLines={columnCount > 0 ? [4, 5] : []}
     >
       <LaunchVariants
-        variants={COLUMN_SNIPPETS.map((item) => item.variant)}
-        activeCount={columnCount}
+        variants={[...new Set(COLUMN_SNIPPETS.map((item) => item.variant))]}
+        activeCount={
+          new Set(
+            COLUMN_SNIPPETS.slice(0, columnCount).map((item) => item.variant),
+          ).size
+        }
       />
     </LaunchStory>
   );

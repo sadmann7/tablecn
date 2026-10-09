@@ -22,6 +22,17 @@ html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
   transition: scale var(--launch-camera-duration) var(--launch-camera-ease);
 }
 
+/* The command menu's own close is 100ms, so it would vanish before the camera finishes pulling back. */
+html[data-launch-camera]
+  [data-slot="popover-content"]:has([cmdk-input])[data-state="closed"] {
+  animation-duration: 600ms;
+}
+
+/* A 3px focus ring swallows these small toggles. */
+.launch-stage [data-slot="toggle-group-item"]:focus-visible {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 45%, transparent);
+}
+
 /* Only elements that draw a border, so borderless ones like search inputs stay bare. */
 html[data-launch-camera]
   [data-radix-popper-content-wrapper]

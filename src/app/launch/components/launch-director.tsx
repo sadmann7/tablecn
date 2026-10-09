@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 const DEFAULT_ZOOM = 1.6;
+const CAMERA_EXIT_EASE = "cubic-bezier(0.45, 0.05, 0.2, 1)";
 
 interface LaunchFocusOptions {
   scale?: number;
@@ -20,7 +21,7 @@ export interface LaunchDirector {
   zoomOut: () => void;
   moveCursor: (target: Element | null | undefined) => void;
   click: (target: Element | null | undefined) => void;
-  reset: () => void;
+  reset: (duration?: number) => void;
 }
 
 interface LaunchDirectorRefs {
@@ -109,7 +110,7 @@ function LaunchCursorOverlay({ refs }: { refs: LaunchDirectorRefs }) {
         >
           <span
             ref={refs.ripple}
-            className="absolute -top-6 -left-6 size-12 rounded-full bg-white/50 opacity-0"
+            className="absolute -top-3.5 -left-3.5 size-7 rounded-full border border-white/80 opacity-0"
           />
           <svg
             ref={refs.pointer}
@@ -164,7 +165,16 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     overlay.style.height = `${rect.height}px`;
   }
 
-  function setCamera(scale: number, x: number, y: number) {
+  function setCamera(scale: number, x: number, y: number, duration?: number) {
+    const root = document.documentElement;
+    if (duration === undefined) {
+      root.style.removeProperty("--launch-camera-duration");
+      root.style.removeProperty("--launch-camera-ease");
+    } else {
+      root.style.setProperty("--launch-camera-duration", `${duration}ms`);
+      root.style.setProperty("--launch-camera-ease", CAMERA_EXIT_EASE);
+    }
+
     const transform = `translate(${x}px, ${y}px) scale(${scale})`;
     for (const layer of [refs.camera.current, refs.overlayCamera.current]) {
       if (layer) layer.style.transform = transform;
@@ -235,8 +245,8 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
         { duration: 360, easing: "ease-out" },
       );
     },
-    reset() {
-      setCamera(1, 0, 0);
+    reset(duration?: number) {
+      setCamera(1, 0, 0, duration);
       const cursor = refs.cursor.current;
       if (cursor) cursor.style.opacity = "0";
     },
