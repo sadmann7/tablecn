@@ -36,7 +36,11 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   ...props
 }: DataTableColumnHeaderProps<TData, TValue>) {
   if (!column.getCanSort() && !column.getCanHide()) {
-    return <div className={cn(className)}>{label}</div>;
+    return (
+      <div data-slot="data-table-column-header" className={cn(className)}>
+        {label}
+      </div>
+    );
   }
 
   return (
@@ -91,6 +95,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        data-slot="data-table-column-header"
         className={cn(
           "-ms-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent rtl:flex-row-reverse [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           className,

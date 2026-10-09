@@ -79,7 +79,7 @@ export function DataTableRangeFilter<TData extends RowData>({
 
   return (
     <div
-      data-slot="range"
+      data-slot="data-table-range-filter"
       className={cn("flex w-full items-center gap-2", className)}
       {...props}
     >
@@ -89,7 +89,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         aria-label={`${meta?.label} minimum value`}
         aria-valuemin={min}
         aria-valuemax={max}
-        data-slot="range-min"
+        data-slot="data-table-range-filter-min"
         inputMode="numeric"
         placeholder={min.toString()}
         min={min}
@@ -105,7 +105,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         aria-label={`${meta?.label} maximum value`}
         aria-valuemin={min}
         aria-valuemax={max}
-        data-slot="range-max"
+        data-slot="data-table-range-filter-max"
         inputMode="numeric"
         placeholder={max.toString()}
         min={min}

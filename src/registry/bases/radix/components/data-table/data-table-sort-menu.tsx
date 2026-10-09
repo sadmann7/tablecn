@@ -191,7 +191,7 @@ function DataTableSortMenuContent<TData extends RowData>({
       getItemValue={(item) => item.id}
     >
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+        <PopoverTrigger data-slot="data-table-sort-menu" asChild>
           <Button
             variant="outline"
             onKeyDown={onTriggerKeyDown}

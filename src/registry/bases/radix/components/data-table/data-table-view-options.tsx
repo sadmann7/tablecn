@@ -55,7 +55,7 @@ export function DataTableViewOptions<TData extends RowData>({
             .filter((column) => columnVisibility[column.id] !== false)
             .map((column) => column.id)}
         >
-          <FacetedTrigger asChild>
+          <FacetedTrigger data-slot="data-table-view-options" asChild>
             <Button
               aria-label="View columns"
               variant="outline"

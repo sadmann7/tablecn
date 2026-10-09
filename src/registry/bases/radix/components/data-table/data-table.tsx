@@ -51,6 +51,7 @@ export function DataTable<TData extends RowData>({
 
   return (
     <div
+      data-slot="data-table"
       dir={dir}
       className={cn("flex w-full flex-col gap-2.5 overflow-auto", className)}
       {...props}

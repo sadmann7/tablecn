@@ -204,7 +204,10 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div
+      data-slot="data-table-command-filter-menu"
+      className="flex flex-wrap items-center gap-2"
+    >
       {hasFilters && (
         <div role="list" className="flex flex-wrap items-center gap-2">
           {filters.map((filter) => (
@@ -707,7 +710,7 @@ function FilterValueInput<TData extends RowData>(
             column={column}
             inputId={inputId}
             onFilterUpdate={onFilterUpdate}
-            className="size-full max-w-28 gap-0 **:data-[slot='range-min']:border-e-0 [&_input]:rounded-none [&_input]:px-1.5"
+            className="size-full max-w-28 gap-0 **:data-[slot='data-table-range-filter-min']:border-e-0 [&_input]:rounded-none [&_input]:px-1.5"
           />
         );
       }

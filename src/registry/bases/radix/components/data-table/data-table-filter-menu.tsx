@@ -196,7 +196,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
       getItemValue={(item) => item.filterId}
     >
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+        <PopoverTrigger data-slot="data-table-filter-menu" asChild>
           <Button
             variant="outline"
             onKeyDown={onTriggerKeyDown}

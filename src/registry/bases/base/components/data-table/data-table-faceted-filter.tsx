@@ -96,6 +96,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
       multiple={multiple}
     >
       <FacetedTrigger
+        data-slot="data-table-faceted-filter"
         render={<Button variant="outline" className="border-dashed" />}
       >
         {hasSelection ? (

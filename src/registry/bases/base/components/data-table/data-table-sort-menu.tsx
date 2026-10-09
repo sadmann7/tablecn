@@ -191,6 +191,7 @@ function DataTableSortMenuContent<TData extends RowData>({
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
+          data-slot="data-table-sort-menu"
           render={
             <Button
               variant="outline"
