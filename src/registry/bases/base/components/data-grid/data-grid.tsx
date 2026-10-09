@@ -40,6 +40,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 const VIEWPORT_OFFSET = 1;
 const COLUMN_OVERSCAN = 2;
 const FAST_SCROLL_ROWS_PER_FRAME = 3;
+const SCROLL_JUMP_EXIT_ROWS_PER_COMMIT = 2;
 const FAST_SCROLL_COLUMNS_PER_FRAME = 1;
 
 interface DataGridProps<TData extends RowData>
@@ -292,11 +293,16 @@ function DataGridViewport<TData extends RowData>({
     (committedScrollRef.current.isFast ||
       isRowScrollingFast ||
       isColumnScrollingFast);
-  // Jumps past the leading overscan would scroll into blank space before React renders, which scrollbar drags do constantly
+  // Jumps past the leading overscan would scroll into blank space before React renders, which scrollbar drags do constantly.
+  // Pinned rows only move when the virtualizer re-renders, which it skips until the visible range changes, so unpin once
+  // commits slow down instead of holding rows behind a slowing fling and snapping them into place when it stops
   const isScrollJumping =
     rowVirtualizer.isScrolling &&
-    (committedScrollRef.current.isJumping ||
-      scrollDelta > rowSize * rowVirtualizer.options.overscan * 2);
+    scrollDelta >
+      rowSize *
+        (committedScrollRef.current.isJumping
+          ? SCROLL_JUMP_EXIT_ROWS_PER_COMMIT
+          : rowVirtualizer.options.overscan * 2);
   // Cells leave preview mode in a transition, so React spreads the upgrade over frames and drops it if scrolling resumes
   const deferredIsFastScrolling = React.useDeferredValue(isFastScrolling);
 
