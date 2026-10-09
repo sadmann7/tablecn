@@ -339,7 +339,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "command",
-    duration: 4900,
+    duration: 4400,
     story: {
       eyebrow: "Command filters",
       title: "Filter from the keyboard.",
@@ -350,19 +350,19 @@ const SCRIPT: LaunchSceneScript[] = [
     steps: [
       { at: 0, run: setFilterMode("command") },
       {
-        at: 1500,
+        at: 1000,
         run: ({ director }) => {
           const trigger = getCommandTrigger();
           director.moveCursor(trigger);
           director.focus(trigger, { offsetX: 16, offsetY: 6 });
         },
       },
-      { at: 1670, run: openFilterMenu },
-      ...typeSteps(2020, ["st", "status"], typeCommandStep),
-      { at: 2420, run: pressCommandEnter },
-      { at: 2900, run: pressCommandArrow },
+      { at: 1170, run: openFilterMenu },
+      ...typeSteps(1520, ["st", "status"], typeCommandStep),
+      { at: 1920, run: pressCommandEnter },
+      { at: 2400, run: pressCommandArrow },
       {
-        at: 3220,
+        at: 2720,
         run: ({ director }) => {
           pressCommandEnter();
           director.reset(800);
