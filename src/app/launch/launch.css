@@ -4,27 +4,64 @@
   animation-play-state: paused !important;
 }
 
+/* Shared by the camera layers and the portaled popovers so they zoom in lockstep. */
+html[data-launch-camera] {
+  --launch-camera-duration: 420ms;
+  --launch-camera-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .launch-camera {
   transform-origin: 0 0;
-  transition: transform 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+  transition: transform var(--launch-camera-duration, 700ms)
+    var(--launch-camera-ease, cubic-bezier(0.16, 1, 0.3, 1));
 }
 
 html[data-launch-camera] [data-radix-popper-content-wrapper] > * {
   scale: var(--launch-camera-scale, 1);
   transform-origin: var(--radix-popper-transform-origin);
-  transition: scale 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+  transition: scale var(--launch-camera-duration) var(--launch-camera-ease);
 }
 
+/* The component's zoom-out would shrink the menu on top of the camera pullback. */
+html[data-launch-camera]
+  [data-slot="popover-content"]:has([cmdk-input])[data-state="closed"] {
+  --tw-exit-scale: 1;
+  animation-duration: var(--launch-camera-duration);
+  animation-timing-function: var(--launch-camera-ease);
+}
+
+/* A 3px focus ring swallows these small toggles. */
+.launch-stage [data-slot="toggle-group-item"]:focus-visible {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 45%, transparent);
+}
+
+/* Only elements that draw a border, so borderless ones like search inputs stay bare. */
 html[data-launch-camera]
   [data-radix-popper-content-wrapper]
   :is(
     [data-slot="select-trigger"],
     button:not([class*="border-transparent"]),
     input
-  ) {
+  )[class~="border"] {
   border-color: transparent !important;
   background-clip: border-box;
   box-shadow: 0 0 0 calc(1px / var(--launch-camera-scale, 1)) var(--input) !important;
+}
+
+/* The toolbar count badges are sized in px, so they skip the stage's rem scaling. */
+.launch-stage [data-slot="badge"][class*="h-[18.24px]"] {
+  height: 1.14rem;
+  padding-inline: 0.32rem;
+  font-size: 0.65rem;
+}
+
+/* Column sizes are px, so the table would overflow its window once the stage scales down. */
+.launch-stage table[style] {
+  min-width: 0 !important;
+}
+
+.launch-stage table[style] :is(th, td) {
+  width: auto !important;
 }
 
 /* Item-aligned selects skip the popper wrapper and anchor at the trigger's top left. */
@@ -36,70 +73,84 @@ html[data-launch-camera]
 
 .launch-cursor {
   transition:
-    translate 750ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 300ms ease-out;
+    translate 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 180ms ease-out;
 }
 
-.launch-dots {
-  background-image: radial-gradient(rgb(255 255 255 / 0.14) 1px, transparent 0);
-  background-size: 36px 36px;
+.launch-glow {
+  filter: blur(120px);
+  will-change: transform;
 }
 
-.launch-dots-fade {
-  background: linear-gradient(to bottom, transparent 70%, #09090b);
-}
-
-.launch-light {
+.launch-glow-primary {
   background: radial-gradient(
-    ellipse 60% 50% at 70% 0%,
-    rgb(52 211 153 / 0.1),
-    transparent 70%
+    closest-side,
+    rgb(52 211 153 / 0.28),
+    rgb(20 184 166 / 0.1) 60%,
+    transparent
   );
+  animation: launch-drift 24s ease-in-out infinite alternate;
+}
+
+.launch-glow-secondary {
+  background: radial-gradient(
+    closest-side,
+    rgb(56 189 248 / 0.2),
+    rgb(99 102 241 / 0.08) 60%,
+    transparent
+  );
+  animation: launch-drift 30s ease-in-out -12s infinite alternate-reverse;
+}
+
+.launch-vignette {
+  background: radial-gradient(
+    ellipse 85% 75% at 50% 45%,
+    transparent 40%,
+    rgb(0 0 0 / 0.55)
+  );
+}
+
+/* Grain keeps the dark gradients from banding once the video is encoded. */
+.launch-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.05;
+  mix-blend-mode: overlay;
 }
 
 .launch-rise {
-  animation: launch-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: launch-rise 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--launch-delay, 0ms);
 }
 
-.launch-flash {
-  animation: launch-flash 1200ms ease-out both;
+.launch-scene-exit {
+  animation: launch-scene-exit 240ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.launch-scene-exit :is(.launch-rise, .launch-logo) {
+  animation: none;
 }
 
 .launch-keystroke {
-  animation: launch-keystroke 1400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: launch-keystroke 800ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .launch-logo {
-  animation: launch-logo 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
-  animation-delay: var(--launch-delay, 0ms);
-}
-
-.launch-sweep {
-  background: linear-gradient(
-    100deg,
-    rgb(255 255 255 / 0.55) 30%,
-    white 50%,
-    rgb(255 255 255 / 0.55) 70%
-  );
-  background-size: 300% 100%;
-  background-clip: text;
-  color: transparent;
-  animation: launch-sweep 2400ms ease-out both;
+  animation: launch-logo 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: var(--launch-delay, 0ms);
 }
 
 @keyframes launch-rise {
   from {
     opacity: 0;
-    filter: blur(10px);
-    transform: translateY(1.5rem);
+    filter: blur(4px);
+    transform: translateY(0.6rem);
   }
 }
 
-@keyframes launch-flash {
-  from {
-    background-color: rgb(52 211 153 / 0.25);
+@keyframes launch-scene-exit {
+  to {
+    opacity: 0;
+    transform: translateY(-0.35rem);
   }
 }
 
@@ -121,17 +172,17 @@ html[data-launch-camera]
 @keyframes launch-logo {
   from {
     opacity: 0;
-    filter: blur(16px);
-    transform: scale(0.92);
+    filter: blur(8px);
+    transform: scale(0.96);
   }
 }
 
-@keyframes launch-sweep {
+@keyframes launch-drift {
   from {
-    background-position: 100% 0;
+    transform: translate(0, 0) scale(1);
   }
   to {
-    background-position: 0% 0;
+    transform: translate(-8%, 6%) scale(1.12);
   }
 }
 
@@ -139,9 +190,13 @@ html[data-launch-camera]
   .launch-rise,
   .launch-logo,
   .launch-keystroke,
-  .launch-sweep,
-  .launch-flash {
+  .launch-glow,
+  .launch-scene-exit {
     animation: none;
+  }
+
+  .launch-scene-exit {
+    display: none;
   }
 
   .launch-camera,

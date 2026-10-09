@@ -116,7 +116,6 @@ export interface LaunchQuery {
   pagination: PaginationState;
 }
 
-/** What a server-mode endpoint does with the table state from the URL. */
 export function queryLaunchTasks({
   filters,
   joinOperator,

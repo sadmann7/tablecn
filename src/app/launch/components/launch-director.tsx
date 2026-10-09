@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 const DEFAULT_ZOOM = 1.6;
+const CAMERA_EXIT_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 
 interface LaunchFocusOptions {
   scale?: number;
@@ -20,7 +21,7 @@ export interface LaunchDirector {
   zoomOut: () => void;
   moveCursor: (target: Element | null | undefined) => void;
   click: (target: Element | null | undefined) => void;
-  reset: () => void;
+  reset: (duration?: number) => void;
 }
 
 interface LaunchDirectorRefs {
@@ -33,12 +34,6 @@ interface LaunchDirectorRefs {
   ripple: React.RefObject<HTMLSpanElement | null>;
 }
 
-/**
- * A scripted camera and cursor. The camera transforms a layer inside the
- * stage, and open popovers read the same scale from `--launch-camera-scale`
- * since they portal outside of it. The cursor lives in a portaled overlay
- * above the popovers that mirrors the camera transform.
- */
 export function useLaunchDirector() {
   const stage = React.useRef<HTMLDivElement>(null);
   const camera = React.useRef<HTMLDivElement>(null);
@@ -109,7 +104,7 @@ function LaunchCursorOverlay({ refs }: { refs: LaunchDirectorRefs }) {
         >
           <span
             ref={refs.ripple}
-            className="absolute -top-6 -left-6 size-12 rounded-full bg-white/50 opacity-0"
+            className="absolute -top-3.5 -left-3.5 size-7 rounded-full border border-white/80 opacity-0"
           />
           <svg
             ref={refs.pointer}
@@ -164,7 +159,16 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     overlay.style.height = `${rect.height}px`;
   }
 
-  function setCamera(scale: number, x: number, y: number) {
+  function setCamera(scale: number, x: number, y: number, duration?: number) {
+    const root = document.documentElement;
+    if (duration === undefined) {
+      root.style.removeProperty("--launch-camera-duration");
+      root.style.removeProperty("--launch-camera-ease");
+    } else {
+      root.style.setProperty("--launch-camera-duration", `${duration}ms`);
+      root.style.setProperty("--launch-camera-ease", CAMERA_EXIT_EASE);
+    }
+
     const transform = `translate(${x}px, ${y}px) scale(${scale})`;
     for (const layer of [refs.camera.current, refs.overlayCamera.current]) {
       if (layer) layer.style.transform = transform;
@@ -225,20 +229,25 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       moveCursor(target);
       refs.pointer.current?.animate(
         [{ scale: "1" }, { scale: "0.82" }, { scale: "1" }],
-        { duration: 320, easing: "ease-out" },
+        { duration: 200, easing: "ease-out" },
       );
       refs.ripple.current?.animate(
         [
           { opacity: 0.6, scale: "0.2" },
           { opacity: 0, scale: "1.4" },
         ],
-        { duration: 600, easing: "ease-out" },
+        { duration: 360, easing: "ease-out" },
       );
     },
-    reset() {
-      setCamera(1, 0, 0);
+    reset(duration?: number) {
+      setCamera(1, 0, 0, duration);
       const cursor = refs.cursor.current;
-      if (cursor) cursor.style.opacity = "0";
+      if (!cursor) return;
+
+      if (duration !== undefined) {
+        cursor.style.transition = `opacity ${duration}ms var(--launch-camera-ease, ease)`;
+      }
+      cursor.style.opacity = "0";
     },
   };
 }
