@@ -161,7 +161,7 @@ function DataGridSearchImpl<TData extends RowData>({
   return (
     <div
       role="search"
-      data-slot="grid-search"
+      data-slot="data-grid-search"
       className="absolute inset-e-4 top-4 z-50 flex animate-in flex-col gap-2 rounded-lg border bg-background p-2 shadow-lg fade-in-0 slide-in-from-top-2"
     >
       <div className="flex items-center gap-2">

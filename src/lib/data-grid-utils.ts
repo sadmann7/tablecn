@@ -610,14 +610,14 @@ export function getColumnFitSize(params: {
     wrapperContentSize = 0,
   } = params;
   const cellElements = gridElement.querySelectorAll<HTMLElement>(
-    `:is([data-slot="grid-header-cell"], [data-slot="grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
+    `:is([data-slot="data-grid-header-cell"], [data-slot="data-grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
   );
   if (cellElements.length === 0) return null;
 
   let cellChromeSize = 0;
   for (const cellElement of cellElements) {
     const wrapperElement = cellElement.querySelector<HTMLElement>(
-      '[data-slot="grid-cell-wrapper"]',
+      '[data-slot="data-grid-cell-wrapper"]',
     );
     if (!wrapperElement) continue;
     cellChromeSize =
@@ -750,7 +750,7 @@ export function getCellElement(
 }
 
 export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
-  if (cellElement.dataset.slot === "grid-cell-wrapper") return cellElement;
+  if (cellElement.dataset.slot === "data-grid-cell-wrapper") return cellElement;
   return (
     cellElement.querySelector<HTMLElement>(
       'button, a[href], [role="checkbox"]',
@@ -798,7 +798,7 @@ export function getIsEventOnScrollbar(
   event: React.MouseEvent<HTMLElement>,
 ): boolean {
   return getIsPointOnScrollbar(
-    event.currentTarget.closest<HTMLElement>('[data-slot="grid"]'),
+    event.currentTarget.closest<HTMLElement>('[data-slot="data-grid"]'),
     event.clientX,
     event.clientY,
   );

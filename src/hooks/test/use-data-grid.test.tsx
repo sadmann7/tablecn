@@ -108,7 +108,7 @@ function fireCellEvent(
   const container = document.createElement("div");
   container.dataset.slot = "grid";
   const cellElement = document.createElement("div");
-  cellElement.dataset.slot = "grid-cell-wrapper";
+  cellElement.dataset.slot = "data-grid-cell-wrapper";
   cellElement.dataset.rowId = rowId;
   cellElement.dataset.columnId = columnId;
   container.append(cellElement);

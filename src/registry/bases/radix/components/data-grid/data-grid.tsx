@@ -60,7 +60,7 @@ export function DataGrid<TData extends RowData>({
 }: DataGridProps<TData>) {
   return (
     <div
-      data-slot="grid-wrapper"
+      data-slot="data-grid-wrapper"
       dir={dir}
       {...props}
       className={cn("relative flex w-full flex-col", className)}
@@ -238,7 +238,7 @@ function DataGridViewport<TData extends RowData>({
       aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
-      data-slot="grid"
+      data-slot="data-grid"
       tabIndex={0}
       ref={dataGridRef}
       className="relative isolate grid overflow-auto rounded-md border select-none focus:outline-none"
@@ -257,7 +257,7 @@ function DataGridViewport<TData extends RowData>({
       />
       <div
         role="rowgroup"
-        data-slot="grid-body"
+        data-slot="data-grid-body"
         {...dataGridBodyProps}
         className="relative grid"
         style={{
@@ -279,14 +279,14 @@ function DataGridViewport<TData extends RowData>({
       {!readOnly && onRowAdd && (
         <div
           role="rowgroup"
-          data-slot="grid-footer"
+          data-slot="data-grid-footer"
           ref={footerRef}
           className="sticky bottom-0 z-30 grid border-t bg-background"
         >
           <div
             role="row"
             aria-rowindex={rows.length + 2}
-            data-slot="grid-add-row"
+            data-slot="data-grid-add-row"
             tabIndex={-1}
             className="flex w-full"
           >
@@ -351,7 +351,7 @@ function DataGridHeaderImpl<TData extends RowData>({
       {() => (
         <div
           role="rowgroup"
-          data-slot="grid-header"
+          data-slot="data-grid-header"
           ref={headerRef}
           className="sticky top-0 z-30 grid border-b bg-background"
         >
@@ -360,7 +360,7 @@ function DataGridHeaderImpl<TData extends RowData>({
               key={headerGroup.id}
               role="row"
               aria-rowindex={rowIndex + 1}
-              data-slot="grid-header-row"
+              data-slot="data-grid-header-row"
               tabIndex={-1}
               className="flex w-full"
             >
@@ -400,7 +400,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                             ? "none"
                             : undefined
                     }
-                    data-slot="grid-header-cell"
+                    data-slot="data-grid-header-cell"
                     data-column-id={header.column.id}
                     tabIndex={-1}
                     className={cn("relative", {

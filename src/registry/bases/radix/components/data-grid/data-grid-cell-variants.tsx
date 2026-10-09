@@ -170,7 +170,7 @@ export function ShortTextCell<TData extends RowData>(
     >
       <div
         role="textbox"
-        data-slot="grid-cell-content"
+        data-slot="data-grid-cell-content"
         contentEditable={isEditing}
         tabIndex={-1}
         ref={cellRef}
@@ -330,7 +330,7 @@ export function LongTextCell<TData extends RowData>(
           ref={containerRef}
           onKeyDown={onWrapperKeyDown}
         >
-          <span data-slot="grid-cell-content">{value}</span>
+          <span data-slot="data-grid-cell-content">{value}</span>
         </DataGridCellWrapper>
       </PopoverAnchor>
       <PopoverContent
@@ -456,7 +456,7 @@ export function NumberCell<TData extends RowData>(
           onChange={onChange}
         />
       ) : (
-        <span data-slot="grid-cell-content">{value}</span>
+        <span data-slot="data-grid-cell-content">{value}</span>
       )}
     </DataGridCellWrapper>
   );
@@ -615,7 +615,7 @@ export function UrlCell<TData extends RowData>(
     >
       {!isEditing && displayValue ? (
         <div
-          data-slot="grid-cell-content"
+          data-slot="data-grid-cell-content"
           className="size-full overflow-hidden"
         >
           <a
@@ -634,7 +634,7 @@ export function UrlCell<TData extends RowData>(
       ) : (
         <div
           role="textbox"
-          data-slot="grid-cell-content"
+          data-slot="data-grid-cell-content"
           contentEditable={isEditing}
           tabIndex={-1}
           ref={cellRef}
@@ -852,7 +852,7 @@ export function SelectCell<TData extends RowData>(
         </Select>
       ) : displayLabel ? (
         <Badge
-          data-slot="grid-cell-content"
+          data-slot="data-grid-cell-content"
           variant="secondary"
           className="px-1.5 py-px whitespace-pre-wrap"
         >
@@ -1212,7 +1212,7 @@ export function DateCell<TData extends RowData>(
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
-          <span data-slot="grid-cell-content">
+          <span data-slot="data-grid-cell-content">
             {formatDateForDisplay(value)}
           </span>
         </PopoverAnchor>

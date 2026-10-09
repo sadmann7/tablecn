@@ -154,7 +154,7 @@ function DataGridRowContent<TData extends RowData>({
       aria-rowindex={virtualRowIndex + 2}
       aria-selected={isRowSelected}
       data-index={virtualRowIndex}
-      data-slot="grid-row"
+      data-slot="data-grid-row"
       tabIndex={-1}
       {...props}
       ref={rowRef}
@@ -197,7 +197,7 @@ function DataGridRowContent<TData extends RowData>({
             role="gridcell"
             aria-colindex={colIndex + 1}
             aria-selected={isUtilityCell ? undefined : isCellSelected}
-            data-slot="grid-cell"
+            data-slot="data-grid-cell"
             data-column-id={columnId}
             data-highlighted={isCellFocused ? "" : undefined}
             tabIndex={-1}
@@ -254,7 +254,7 @@ function DataGridUtilityCellImpl<TData extends RowData>({
 }: DataGridUtilityCellProps<TData>) {
   return (
     <div
-      data-slot="grid-utility-cell"
+      data-slot="data-grid-utility-cell"
       data-row-id={cell.row.id}
       data-column-id={cell.column.id}
       data-focused={isFocused ? "" : undefined}

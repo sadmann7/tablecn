@@ -472,7 +472,7 @@ function useDataGrid<TData extends RowData>({
       if (!container.contains(target)) return null;
 
       const cellElement = target.closest<HTMLElement>(
-        '[data-slot="grid-cell-wrapper"]',
+        '[data-slot="data-grid-cell-wrapper"]',
       );
       const rowId = cellElement?.dataset.rowId;
       const columnId = cellElement?.dataset.columnId;
@@ -692,7 +692,7 @@ function useDataGrid<TData extends RowData>({
   const getColumnHeaderTrigger = React.useCallback((columnId: string) => {
     return (
       headerRef.current?.querySelector<HTMLElement>(
-        `[data-slot="grid-header-cell"][data-column-id="${CSS.escape(columnId)}"] :is(button, [role="checkbox"])`,
+        `[data-slot="data-grid-header-cell"][data-column-id="${CSS.escape(columnId)}"] :is(button, [role="checkbox"])`,
       ) ?? null
     );
   }, []);
@@ -919,7 +919,9 @@ function useDataGrid<TData extends RowData>({
 
       const headerCell =
         event.target instanceof Element
-          ? event.target.closest<HTMLElement>('[data-slot="grid-header-cell"]')
+          ? event.target.closest<HTMLElement>(
+              '[data-slot="data-grid-header-cell"]',
+            )
           : null;
       const headerColumnId = headerCell?.dataset.columnId;
       if (headerColumnId && onColumnHeaderKeyDown(event, headerColumnId)) {
@@ -1357,8 +1359,8 @@ function useDataGrid<TData extends RowData>({
       if (!dataGridRef.current?.contains(target)) return;
 
       const columnId =
-        target.closest<HTMLElement>('[data-slot="grid-header-cell"]')?.dataset
-          .columnId ?? null;
+        target.closest<HTMLElement>('[data-slot="data-grid-header-cell"]')
+          ?.dataset.columnId ?? null;
       if (tableRef.current?.getFocusedHeaderColumnId() === columnId) return;
       tableRef.current?.setFocusedHeaderColumnId(columnId);
     }
