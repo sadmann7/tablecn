@@ -160,7 +160,6 @@ describe("useDataTable", () => {
       ["status", ["done"]],
     ]);
 
-    // Run the debounced URL write that was scheduled for the stale filters.
     await act(() => vi.runAllTimersAsync());
 
     expect(getLastSearch()?.get("title")).not.toBe("zzz");
