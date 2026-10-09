@@ -13,7 +13,7 @@ import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
 const ROW_COUNT = 100_000;
-const COLUMN_COUNT = 50;
+const COLUMN_COUNT = 100;
 
 const STATUSES = ["Todo", "In Progress", "Review", "Done", "Blocked"];
 const TAGS = ["React", "Rust", "Go", "Python", "Design", "Ops", "Data"];
