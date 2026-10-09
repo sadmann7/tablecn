@@ -56,7 +56,6 @@ export function DataTableViewOptions<TData extends RowData>({
             .map((column) => column.id)}
         >
           <FacetedTrigger
-            data-slot="data-table-view-options"
             render={
               <Button
                 aria-label="View columns"

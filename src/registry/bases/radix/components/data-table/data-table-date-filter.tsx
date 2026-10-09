@@ -200,7 +200,7 @@ function DataTableDateFilterContent<TData extends RowData>({
 
   return (
     <Popover>
-      <PopoverTrigger data-slot="data-table-date-filter" asChild>
+      <PopoverTrigger asChild>
         <Button variant="outline">
           {hasValue ? (
             <span

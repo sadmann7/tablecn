@@ -193,7 +193,6 @@ function DataTableFilterMenuContent<TData extends RowData>({
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
-          data-slot="data-table-filter-menu"
           render={
             <Button
               variant="outline"

@@ -174,7 +174,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
 
   return (
     <Popover>
-      <PopoverTrigger data-slot="data-table-slider-filter" asChild>
+      <PopoverTrigger asChild>
         <Button variant="outline">
           {columnFilterValue ? (
             <span
