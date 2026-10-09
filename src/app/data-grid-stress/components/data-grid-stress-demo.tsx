@@ -9,6 +9,7 @@ import type { CellOpts } from "@/lib/data-grid-types";
 
 import { useWindowSize } from "@/hooks/use-window-size";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
@@ -111,10 +112,17 @@ export function DataGridStressDemo() {
 
   return (
     <div className="container flex flex-col gap-4 py-4">
+      <div
+        role="toolbar"
+        aria-orientation="horizontal"
+        className="flex items-center gap-2 self-end"
+      >
+        <DataGridRowHeightMenu table={table} align="end" />
+      </div>
       <DataGrid
         {...dataGridProps}
         table={table}
-        height={Math.max(400, windowSize.height - 100)}
+        height={Math.max(400, windowSize.height - 150)}
       />
     </div>
   );
