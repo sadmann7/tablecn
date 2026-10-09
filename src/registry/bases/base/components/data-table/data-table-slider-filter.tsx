@@ -82,7 +82,7 @@ export function DataTableSliderFilter<TData extends RowData>({
 
 function DataTableSliderFilterContent<TData extends RowData>({
   column,
-  title,
+  title = column.columnDef.meta?.label ?? column.id,
   columnFilterValue: columnFilterValueProp,
 }: DataTableSliderFilterProps<TData> & {
   columnFilterValue: unknown;
@@ -166,9 +166,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
 
   const onReset = React.useCallback(
     (event: React.MouseEvent) => {
-      if (event.target instanceof HTMLDivElement) {
-        event.stopPropagation();
-      }
+      event.stopPropagation();
       column.setFilterValue(undefined);
     },
     [column],
@@ -180,11 +178,9 @@ function DataTableSliderFilterContent<TData extends RowData>({
         render={<Button variant="outline" className="border-dashed" />}
       >
         {columnFilterValue ? (
-          <div
-            role="button"
-            aria-label={`Clear ${title} filter`}
-            tabIndex={0}
-            className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+          <span
+            aria-hidden="true"
+            className="rounded-sm opacity-70 transition-opacity hover:opacity-100"
             onClick={onReset}
           >
             <IconPlaceholder
@@ -194,7 +190,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
               phosphor="XCircleIcon"
               remixicon="RiCloseCircleLine"
             />
-          </div>
+          </span>
         ) : (
           <IconPlaceholder
             lucide="PlusCircle"
@@ -218,6 +214,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
         ) : null}
       </PopoverTrigger>
       <PopoverContent
+        aria-label={`${title} filter`}
         dir={dir}
         align="start"
         className="flex w-auto flex-col gap-4"

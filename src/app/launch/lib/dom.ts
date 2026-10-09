@@ -4,13 +4,15 @@ export function getLaunchTarget(name: string) {
 
 export function getFilterTrigger() {
   return Array.from(
-    document.querySelectorAll<HTMLButtonElement>("[role=toolbar] button"),
+    document.querySelectorAll<HTMLButtonElement>(
+      "[data-launch=toolbar] button",
+    ),
   ).find((button) => button.textContent?.startsWith("Filter"));
 }
 
 export function getCommandTrigger() {
   return document.querySelector<HTMLButtonElement>(
-    '[role=toolbar] button[aria-label="Open filter command menu"]',
+    '[data-launch=toolbar] button[aria-label="Open filter command menu"]',
   );
 }
 
@@ -66,7 +68,7 @@ export function closeFacetedList() {
 function getToolbarFilter(label: string) {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
-      "[role=toolbar] button, [role=toolbar] input",
+      "[data-launch=toolbar] :is(button, input)",
     ),
   ).find((element) =>
     element instanceof HTMLInputElement

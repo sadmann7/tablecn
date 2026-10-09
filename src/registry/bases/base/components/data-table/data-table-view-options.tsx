@@ -58,8 +58,7 @@ export function DataTableViewOptions<TData extends RowData>({
           <FacetedTrigger
             render={
               <Button
-                aria-label="Toggle columns"
-                role="combobox"
+                aria-label="View columns"
                 variant="outline"
                 className="ms-auto hidden lg:flex"
                 disabled={disabled}
@@ -77,6 +76,7 @@ export function DataTableViewOptions<TData extends RowData>({
             View
           </FacetedTrigger>
           <FacetedContent
+            aria-label="Columns"
             dir={dir}
             align="center"
             className={cn("w-44", className)}

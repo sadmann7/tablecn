@@ -108,6 +108,7 @@ export function TasksTable({
   return (
     <DirectionProvider dir={dir}>
       <DataTable
+        aria-label="Tasks"
         table={table}
         actionBar={<TasksTableActionBar table={table} />}
       >

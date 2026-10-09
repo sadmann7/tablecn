@@ -28,5 +28,10 @@ const DataGridLiveDemo = dynamic(
 );
 
 export default function DataGridLivePage() {
-  return <DataGridLiveDemo />;
+  return (
+    <>
+      <h1 className="sr-only">Data Grid Live</h1>
+      <DataGridLiveDemo />
+    </>
+  );
 }

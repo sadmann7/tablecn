@@ -209,17 +209,21 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
   }
 
   return (
-    <div role="list" className="flex flex-wrap items-center gap-2">
-      {filters.map((filter) => (
-        <DataTableFilterItem
-          key={filter.filterId}
-          filter={filter}
-          filterItemId={`${id}-filter-${filter.filterId}`}
-          columns={columns}
-          onFilterUpdate={onFilterUpdate}
-          onFilterRemove={onFilterRemove}
-        />
-      ))}
+    <div className="flex flex-wrap items-center gap-2">
+      {hasFilters && (
+        <div role="list" className="flex flex-wrap items-center gap-2">
+          {filters.map((filter) => (
+            <DataTableFilterItem
+              key={filter.filterId}
+              filter={filter}
+              filterItemId={`${id}-filter-${filter.filterId}`}
+              columns={columns}
+              onFilterUpdate={onFilterUpdate}
+              onFilterRemove={onFilterRemove}
+            />
+          ))}
+        </div>
+      )}
       {hasFilters && (
         <Button
           aria-label="Reset all filters"
@@ -359,6 +363,7 @@ function DataTableFilterItem<TData extends RowData>({
       />
       <FilterOperatorSelector
         filter={filter}
+        label={columnMeta?.label ?? column.id}
         listboxId={`${filterItemId}-operator-listbox`}
         onFilterUpdate={onFilterUpdate}
         {...getSelectorProps("operator")}
@@ -616,11 +621,13 @@ function FilterFieldSelector<TData extends RowData>({
 }
 
 interface FilterOperatorSelectorProps extends FilterSelectorProps {
+  label: string;
   listboxId: string;
 }
 
 function FilterOperatorSelector({
   filter,
+  label,
   listboxId,
   open,
   onOpenChange,
@@ -640,6 +647,7 @@ function FilterOperatorSelector({
     >
       <SelectTrigger
         aria-controls={listboxId}
+        aria-label={`${label} filter operator`}
         className="h-8 rounded-none border-e-0 px-2.5 lowercase data-size:h-8 [&_svg]:hidden"
       >
         <SelectValue placeholder={filter.operator} />

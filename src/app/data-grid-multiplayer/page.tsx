@@ -5,8 +5,11 @@ import { DataGridMultiplayerSkeleton } from "./components/data-grid-multiplayer-
 
 export default function DataGridMultiplayerPage() {
   return (
-    <Suspense fallback={<DataGridMultiplayerSkeleton />}>
-      <DataGridMultiplayerRoom />
-    </Suspense>
+    <>
+      <h1 className="sr-only">Data Grid Multiplayer</h1>
+      <Suspense fallback={<DataGridMultiplayerSkeleton />}>
+        <DataGridMultiplayerRoom />
+      </Suspense>
+    </>
   );
 }

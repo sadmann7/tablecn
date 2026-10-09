@@ -82,7 +82,7 @@ export function DataTableDateFilter<TData extends RowData>({
 
 function DataTableDateFilterContent<TData extends RowData>({
   column,
-  title,
+  title = column.columnDef.meta?.label ?? column.id,
   multiple,
   columnFilterValue,
 }: DataTableDateFilterProps<TData> & {
@@ -203,12 +203,10 @@ function DataTableDateFilterContent<TData extends RowData>({
       <PopoverTrigger asChild>
         <Button variant="outline">
           {hasValue ? (
-            <div
-              role="button"
-              aria-label={`Clear ${title} filter`}
-              tabIndex={0}
+            <span
+              aria-hidden="true"
+              className="rounded-sm opacity-70 transition-opacity hover:opacity-100"
               onClick={onReset}
-              className="rounded-sm opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
             >
               <IconPlaceholder
                 lucide="XCircle"
@@ -217,7 +215,7 @@ function DataTableDateFilterContent<TData extends RowData>({
                 phosphor="XCircleIcon"
                 remixicon="RiCloseCircleLine"
               />
-            </div>
+            </span>
           ) : (
             <IconPlaceholder
               lucide="CalendarIcon"
@@ -230,7 +228,12 @@ function DataTableDateFilterContent<TData extends RowData>({
           {label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent dir={dir} className="w-auto p-0" align="start">
+      <PopoverContent
+        aria-label={`${title} filter`}
+        dir={dir}
+        className="w-auto p-0"
+        align="start"
+      >
         {multiple ? (
           <Calendar
             autoFocus
@@ -252,6 +255,18 @@ function DataTableDateFilterContent<TData extends RowData>({
             }
             onSelect={onSelect}
           />
+        )}
+        {hasValue && (
+          <div className="border-t p-3">
+            <Button
+              aria-label={`Clear ${title} filter`}
+              variant="outline"
+              className="w-full"
+              onClick={onReset}
+            >
+              Clear
+            </Button>
+          </div>
         )}
       </PopoverContent>
     </Popover>

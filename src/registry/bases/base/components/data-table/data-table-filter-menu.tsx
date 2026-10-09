@@ -322,6 +322,8 @@ function DataTableFilterItem<TData extends RowData>({
   const column = columns.find((column) => column.id === filter.id);
   if (!column) return null;
 
+  const label = column.columnDef.meta?.label ?? column.id;
+
   function getSelectorProps(selector: FilterSelector) {
     return {
       open: activeSelector === selector,
@@ -340,11 +342,11 @@ function DataTableFilterItem<TData extends RowData>({
 
   return (
     <SortableItem
+      id={filterItemId}
       value={filter.filterId}
       render={
         <div
           role="listitem"
-          id={filterItemId}
           tabIndex={-1}
           className="col-span-full grid grid-cols-subgrid items-center"
           onKeyDown={onItemKeyDown}
@@ -369,6 +371,7 @@ function DataTableFilterItem<TData extends RowData>({
       />
       <FilterOperatorSelector
         filter={filter}
+        label={label}
         listboxId={`${filterItemId}-operator-listbox`}
         onFilterUpdate={onFilterUpdate}
         {...getSelectorProps("operator")}
@@ -384,6 +387,8 @@ function DataTableFilterItem<TData extends RowData>({
       </div>
       <Button
         aria-controls={filterItemId}
+
+        aria-label={`Remove ${label} filter`}
         variant="outline"
         size="icon"
         onClick={() => onFilterRemove(filter.filterId)}
@@ -396,7 +401,10 @@ function DataTableFilterItem<TData extends RowData>({
           remixicon="RiDeleteBinLine"
         />
       </Button>
-      <SortableItemHandle render={<Button variant="outline" size="icon" />}>
+      <SortableItemHandle
+        aria-label={`Reorder ${label} filter`}
+        render={<Button variant="outline" size="icon" />}
+      >
         <IconPlaceholder
           lucide="GripVertical"
           tabler="IconGripVertical"
@@ -543,11 +551,13 @@ function FilterFieldSelector<TData extends RowData>({
 }
 
 interface FilterOperatorSelectorProps extends FilterSelectorProps {
+  label: string;
   listboxId: string;
 }
 
 function FilterOperatorSelector({
   filter,
+  label,
   listboxId,
   open,
   onOpenChange,
@@ -567,7 +577,11 @@ function FilterOperatorSelector({
         });
       }}
     >
-      <SelectTrigger aria-controls={listboxId} className="w-32 lowercase">
+      <SelectTrigger
+        aria-controls={listboxId}
+        aria-label={`${label} filter operator`}
+        className="w-32 lowercase"
+      >
         <div className="truncate">
           <SelectValue placeholder={filter.operator} />
         </div>

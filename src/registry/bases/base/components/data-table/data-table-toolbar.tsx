@@ -43,8 +43,6 @@ export function DataTableToolbar<TData extends RowData>({
 
   return (
     <div
-      role="toolbar"
-      aria-orientation="horizontal"
       className={cn(
         "flex w-full items-start justify-between gap-2 p-1",
         className,

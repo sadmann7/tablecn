@@ -161,14 +161,14 @@ interface LaunchToolbarProps {
 export function LaunchToolbar({ table, filterMode }: LaunchToolbarProps) {
   if (filterMode === "plain") {
     return (
-      <DataTableToolbar table={table}>
+      <DataTableToolbar data-launch="toolbar" table={table}>
         <DataTableSortMenu table={table} align="end" />
       </DataTableToolbar>
     );
   }
 
   return (
-    <DataTableAdvancedToolbar table={table}>
+    <DataTableAdvancedToolbar data-launch="toolbar" table={table}>
       <DataTableSortMenu table={table} align="start" />
       {filterMode === "advanced" ? (
         <DataTableFilterMenu
