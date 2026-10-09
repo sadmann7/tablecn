@@ -5,14 +5,14 @@ export function getLaunchTarget(name: string) {
 export function getFilterTrigger() {
   return Array.from(
     document.querySelectorAll<HTMLButtonElement>(
-      "[data-slot=data-table-toolbar] button",
+      "[data-slot=data-table-advanced-toolbar] button",
     ),
   ).find((button) => button.textContent?.startsWith("Filter"));
 }
 
 export function getCommandTrigger() {
   return document.querySelector<HTMLButtonElement>(
-    '[data-slot=data-table-toolbar] button[aria-label="Open filter command menu"]',
+    '[data-slot=data-table-advanced-toolbar] button[aria-label="Open filter command menu"]',
   );
 }
 
@@ -68,7 +68,7 @@ export function closeFacetedList() {
 function getToolbarFilter(label: string) {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
-      "[data-slot=data-table-toolbar] button, [data-slot=data-table-toolbar] input",
+      ":is([data-slot=data-table-toolbar], [data-slot=data-table-advanced-toolbar]) :is(button, input)",
     ),
   ).find((element) =>
     element instanceof HTMLInputElement
