@@ -265,11 +265,13 @@ function DataGridDataCell<TData extends RowData>({
     return (
       <DataGridCellPreview
         cell={props.cell}
+        columnIndex={props.columnIndex}
         width={props.width}
         rowHeight={props.rowHeight}
         isSelected={props.isSelected}
         isSearchMatch={props.isSearchMatch}
         isActiveSearchMatch={props.isActiveSearchMatch}
+        readOnly={props.readOnly}
       />
     );
   }

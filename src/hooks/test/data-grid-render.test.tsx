@@ -533,7 +533,7 @@ describe("DataGrid rendering", () => {
     expect(getCellWrapper(container, "1", "column0")).not.toBeNull();
     expect(getCellWrapper(container, "1", "column29")).toBeNull();
     expect(
-      container.querySelectorAll('[data-slot="grid-header-cell"]').length,
+      container.querySelectorAll('[data-slot="data-grid-header-cell"]').length,
     ).toBe(firstRowCells.length);
   });
 

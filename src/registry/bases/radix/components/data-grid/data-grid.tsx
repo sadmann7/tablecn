@@ -450,7 +450,7 @@ function DataGridViewport<TData extends RowData>({
       >
         {/* While jumping, rows are pinned and offset by the rendered scroll position, so the last rendered rows stay on screen when the compositor scrolls ahead of JS. Otherwise they scroll natively so the compositor keeps scrolling smooth */}
         <div
-          data-slot="grid-rows"
+          data-slot="data-grid-rows"
           data-pinned={isScrollJumping ? "" : undefined}
           className="relative h-0 data-pinned:sticky"
           style={
