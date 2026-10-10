@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
+import { getVisibleSelectedRows } from "@/lib/data-table-utils";
 import { exportTableToCSV } from "@/lib/export";
 import {
   ActionBar,
@@ -39,13 +40,24 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
 }
 
 function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
-  const selectedRowIds = table.getSelectedRowIds();
+  const selectedRowIds = getVisibleSelectedRows(table).map((row) => row.id);
+
+  const deselectRows = React.useCallback(
+    (rowIds: string[]) => {
+      table.setRowSelection((prev) => {
+        const next = { ...prev };
+        for (const rowId of rowIds) delete next[rowId];
+        return next;
+      });
+    },
+    [table],
+  );
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      if (!open) table.resetRowSelection(true);
+      if (!open) deselectRows(selectedRowIds);
     },
-    [table],
+    [deselectRows, selectedRowIds],
   );
 
   const onTaskUpdate = React.useCallback(
@@ -67,24 +79,36 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
     [selectedRowIds],
   );
 
-  const onTaskExport = React.useCallback(() => {
-    exportTableToCSV(table, {
-      excludeColumns: ["select", "actions"],
-      onlySelected: true,
-    });
-  }, [table]);
+  const onTaskExport = React.useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      exportTableToCSV(table, {
+        excludeColumns: ["select", "actions"],
+        onlySelected: true,
+      });
+    },
+    [table],
+  );
 
-  const onTaskDelete = React.useCallback(async () => {
-    const { error } = await deleteTasks({
-      ids: selectedRowIds,
-    });
+  const [isDeletePending, startDeleteTransition] = React.useTransition();
 
-    if (error) {
-      toast.error(error);
-      return;
-    }
-    table.resetRowSelection(true);
-  }, [selectedRowIds, table]);
+  const onTaskDelete = React.useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      startDeleteTransition(async () => {
+        const { error } = await deleteTasks({
+          ids: selectedRowIds,
+        });
+
+        if (error) {
+          toast.error(error);
+          return;
+        }
+        deselectRows(selectedRowIds);
+      });
+    },
+    [selectedRowIds, deselectRows],
+  );
 
   return (
     <ActionBar open={selectedRowIds.length > 0} onOpenChange={onOpenChange}>
@@ -136,11 +160,15 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <ActionBarItem onClick={onTaskExport}>
+        <ActionBarItem onSelect={onTaskExport}>
           <Download />
           Export
         </ActionBarItem>
-        <ActionBarItem variant="destructive" onClick={onTaskDelete}>
+        <ActionBarItem
+          variant="destructive"
+          disabled={isDeletePending}
+          onSelect={onTaskDelete}
+        >
           <Trash2 />
           Delete
         </ActionBarItem>

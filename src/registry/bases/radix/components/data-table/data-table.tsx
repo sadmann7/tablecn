@@ -19,6 +19,7 @@ import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
+  getVisibleSelectedRows,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
@@ -151,11 +152,7 @@ interface DataTableHeadCellProps<TData extends RowData> {
   pinned: ColumnPinningPosition;
 }
 
-const DataTableHeadCell = React.memo(
-  DataTableHeadCellImpl,
-) as typeof DataTableHeadCellImpl;
-
-function DataTableHeadCellImpl<TData extends RowData>({
+function DataTableHeadCell<TData extends RowData>({
   header,
   pinned,
 }: DataTableHeadCellProps<TData>) {
@@ -283,12 +280,9 @@ function DataTableActionBar<TData extends RowData>({
   actionBar,
 }: DataTableActionBarProps<TData>) {
   return (
-    <Subscribe
-      source={table.atoms.rowSelection}
-      selector={() => table.getSelectedRowIds().length > 0}
-    >
-      {(hasSelectedRows) => (hasSelectedRows ? actionBar : null)}
-    </Subscribe>
+    <table.Subscribe selector={() => getVisibleSelectedRows(table).length > 0}>
+      {(hasVisibleSelectedRows) => (hasVisibleSelectedRows ? actionBar : null)}
+    </table.Subscribe>
   );
 }
 

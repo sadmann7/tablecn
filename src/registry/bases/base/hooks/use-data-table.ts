@@ -242,6 +242,13 @@ function useDataTable<TData extends RowData>({
     getServerLocationSearch,
   );
 
+  const filterOrder = React.useMemo(() => {
+    const filterableIds = new Set(columnIndex.filterableIds);
+    return [...new Set(new URLSearchParams(search).keys())]
+      .filter((key) => filterableIds.has(key))
+      .join("&");
+  }, [columnIndex, search]);
+
   const urlFilters = React.useMemo(
     () =>
       sortColumnFiltersBySearch(
@@ -249,9 +256,9 @@ function useDataTable<TData extends RowData>({
           columnIndex.filterableIds,
           (id) => filterParams[id] ?? [],
         ),
-        search,
+        filterOrder,
       ),
-    [columnIndex, filterParams, search],
+    [columnIndex, filterParams, filterOrder],
   );
   const urlFiltersKey = getColumnFiltersKey(urlFilters);
 

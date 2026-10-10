@@ -142,6 +142,12 @@ export function getAriaSort(
   return sort.desc ? "descending" : "ascending";
 }
 
+export function getVisibleSelectedRows<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+) {
+  return table.getRowModel().rows.filter((row) => row.getIsSelected());
+}
+
 export function getColumnPinningStyle<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
 ): React.CSSProperties {
