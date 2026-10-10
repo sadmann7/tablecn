@@ -1,10 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
-import * as React from "react";
-
-import { generateId } from "@/lib/id";
+import { useSearchParams } from "next/navigation";
 
 import { DataGridMultiplayerSkeleton } from "./data-grid-multiplayer-skeleton";
 
@@ -19,24 +16,12 @@ const DataGridMultiplayerDemo = dynamic(
   },
 );
 
+// Everyone shares this room unless they open a link to their own with ?room=
+const DEFAULT_ROOM_ID = "lobby";
+
 export function DataGridMultiplayerRoom() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const roomId = searchParams.get("room");
-
-  React.useEffect(() => {
-    if (!roomId) {
-      const newRoom = generateId({
-        length: 8,
-        alphabet: "abcdefghijklmnopqrstuvwxyz0123456789",
-      });
-      router.replace(`/data-grid-multiplayer?room=${newRoom}`);
-    }
-  }, [roomId, router]);
-
-  if (!roomId) {
-    return <DataGridMultiplayerSkeleton />;
-  }
+  const roomId = searchParams.get("room") ?? DEFAULT_ROOM_ID;
 
   return <DataGridMultiplayerDemo roomId={roomId} />;
 }

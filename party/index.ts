@@ -1,8 +1,10 @@
-// PartyKit server is the source of truth for the multiplayer demo.
-// Rows are persisted in Durable Object storage so data survives hibernation.
-// Each room seeds from party/seeds.ts on first use and stores mutations from there.
-
-import type * as Party from "partykit/server";
+import {
+  type Connection,
+  type ConnectionContext,
+  routePartykitRequest,
+  Server,
+  type WSMessage,
+} from "partyserver";
 
 import type {
   ClientMessage,
@@ -13,6 +15,12 @@ import type {
 
 import { ADJECTIVES, ANIMALS, COLORS } from "./constants";
 import { seedRows } from "./seeds";
+
+const RESET_DELAY = 10 * 60 * 1000;
+
+interface Env {
+  Main: DurableObjectNamespace<SkaterRoom>;
+}
 
 interface RoomState {
   users: Record<string, UserPresence>;
@@ -33,33 +41,38 @@ function pickColor(usedColors: string[]): string {
   return pool[Math.floor(Math.random() * pool.length)] ?? COLORS[0] ?? "";
 }
 
-export default class SkaterRoom implements Party.Server {
+export class SkaterRoom extends Server<Env> {
   state: RoomState = { users: {}, usedColors: [], rows: [] };
-
-  constructor(readonly room: Party.Room) {}
 
   // Runs before any connection is accepted — the room waits for this to complete.
   async onStart() {
-    const stored = await this.room.storage.get<RowPayload[]>("rows");
+    const stored = await this.ctx.storage.get<RowPayload[]>("rows");
     if (Array.isArray(stored) && stored.length > 0) {
       this.state.rows = stored;
     } else {
-      // Deep-clone so per-room mutations never bleed into the shared module-level array.
-      // Persist immediately so a hibernation before any mutation doesn't re-seed with new IDs.
       this.state.rows = structuredClone(seedRows);
-      await this.room.storage.put("rows", this.state.rows);
+      await this.ctx.storage.put("rows", this.state.rows);
     }
   }
 
   // Surface storage write failures rather than silently swallowing them.
   private persistRows() {
-    this.room.storage
+    this.ctx.storage
       .put("rows", this.state.rows)
       .catch((err) => console.error("[party] Failed to persist rows:", err));
   }
 
-  onConnect(conn: Party.Connection) {
-    const url = new URL(conn.uri);
+  async onAlarm() {
+    if (Object.keys(this.state.users).length > 0) return;
+
+    await this.ctx.storage.delete("rows");
+    this.state.rows = structuredClone(seedRows);
+  }
+
+  onConnect(conn: Connection, ctx: ConnectionContext) {
+    void this.ctx.storage.deleteAlarm();
+
+    const url = new URL(ctx.request.url);
     const name = url.searchParams.get("name") ?? generateUserName();
     const color =
       url.searchParams.get("color") ?? pickColor(this.state.usedColors);
@@ -82,10 +95,10 @@ export default class SkaterRoom implements Party.Server {
     conn.send(JSON.stringify(snapshot));
 
     const joinMsg: ServerMessage = { type: "user-join", userId: conn.id, user };
-    this.room.broadcast(JSON.stringify(joinMsg), [conn.id]);
+    this.broadcast(JSON.stringify(joinMsg), [conn.id]);
   }
 
-  onClose(conn: Party.Connection) {
+  onClose(conn: Connection) {
     const user = this.state.users[conn.id];
     if (user) {
       this.state.usedColors = this.state.usedColors.filter(
@@ -95,10 +108,16 @@ export default class SkaterRoom implements Party.Server {
     delete this.state.users[conn.id];
 
     const leaveMsg: ServerMessage = { type: "user-leave", userId: conn.id };
-    this.room.broadcast(JSON.stringify(leaveMsg));
+    this.broadcast(JSON.stringify(leaveMsg));
+
+    if (Object.keys(this.state.users).length === 0) {
+      void this.ctx.storage.setAlarm(Date.now() + RESET_DELAY);
+    }
   }
 
-  onMessage(message: string, sender: Party.Connection) {
+  onMessage(sender: Connection, message: WSMessage) {
+    if (typeof message !== "string") return;
+
     let msg: ClientMessage;
     try {
       msg = JSON.parse(message) as ClientMessage;
@@ -110,7 +129,7 @@ export default class SkaterRoom implements Party.Server {
       case "row-add": {
         this.state.rows.push(msg.row);
         this.persistRows();
-        this.room.broadcast(
+        this.broadcast(
           JSON.stringify({
             type: "row-add",
             row: msg.row,
@@ -124,7 +143,7 @@ export default class SkaterRoom implements Party.Server {
       case "rows-add": {
         this.state.rows.push(...msg.rows);
         this.persistRows();
-        this.room.broadcast(
+        this.broadcast(
           JSON.stringify({
             type: "rows-add",
             rows: msg.rows,
@@ -139,7 +158,7 @@ export default class SkaterRoom implements Party.Server {
         const row = this.state.rows.find((r) => r.id === msg.rowId);
         if (row) row[msg.columnId] = msg.value;
         this.persistRows();
-        this.room.broadcast(
+        this.broadcast(
           JSON.stringify({
             type: "cell-update",
             rowId: msg.rowId,
@@ -157,7 +176,7 @@ export default class SkaterRoom implements Party.Server {
           (r) => !msg.ids.includes(r.id as string),
         );
         this.persistRows();
-        this.room.broadcast(
+        this.broadcast(
           JSON.stringify({
             type: "rows-delete",
             ids: msg.ids,
@@ -172,7 +191,7 @@ export default class SkaterRoom implements Party.Server {
         const user = this.state.users[sender.id];
         if (user)
           user.activeCell = { rowId: msg.rowId, columnId: msg.columnId };
-        this.room.broadcast(
+        this.broadcast(
           JSON.stringify({
             type: "active-cell",
             userId: sender.id,
@@ -186,3 +205,12 @@ export default class SkaterRoom implements Party.Server {
     }
   }
 }
+
+export default {
+  async fetch(request, env) {
+    return (
+      (await routePartykitRequest(request, env)) ??
+      new Response("Not found", { status: 404 })
+    );
+  },
+} satisfies ExportedHandler<Env>;

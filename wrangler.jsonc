@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tablecn",
+  "main": "party/index.ts",
+  "compatibility_date": "2026-06-13",
+  "durable_objects": {
+    "bindings": [{ "name": "Main", "class_name": "SkaterRoom" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SkaterRoom"] }],
+}
