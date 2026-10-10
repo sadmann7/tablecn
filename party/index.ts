@@ -1,7 +1,3 @@
-// PartyServer is the source of truth for the multiplayer demo.
-// Rows are persisted in Durable Object storage so data survives eviction.
-// Each room seeds from party/seeds.ts on first use and stores mutations from there.
-
 import {
   type Connection,
   type ConnectionContext,
@@ -20,7 +16,6 @@ import type {
 import { ADJECTIVES, ANIMALS, COLORS } from "./constants";
 import { seedRows } from "./seeds";
 
-// Rooms go back to the seed data once they've been empty this long, so one visitor can't break the demo for the next
 const RESET_DELAY = 10 * 60 * 1000;
 
 interface Env {
@@ -55,8 +50,6 @@ export class SkaterRoom extends Server<Env> {
     if (Array.isArray(stored) && stored.length > 0) {
       this.state.rows = stored;
     } else {
-      // Deep-clone so per-room mutations never bleed into the shared module-level array.
-      // Persist immediately so a restart before any mutation doesn't re-seed with new IDs.
       this.state.rows = structuredClone(seedRows);
       await this.ctx.storage.put("rows", this.state.rows);
     }
