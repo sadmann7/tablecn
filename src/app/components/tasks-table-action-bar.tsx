@@ -91,17 +91,25 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
     [table],
   );
 
-  const onTaskDelete = React.useCallback(async () => {
-    const { error } = await deleteTasks({
-      ids: selectedRowIds,
-    });
+  const [isDeletePending, startDeleteTransition] = React.useTransition();
 
-    if (error) {
-      toast.error(error);
-      return;
-    }
-    deselectRows(selectedRowIds);
-  }, [selectedRowIds, deselectRows]);
+  const onTaskDelete = React.useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      startDeleteTransition(async () => {
+        const { error } = await deleteTasks({
+          ids: selectedRowIds,
+        });
+
+        if (error) {
+          toast.error(error);
+          return;
+        }
+        deselectRows(selectedRowIds);
+      });
+    },
+    [selectedRowIds, deselectRows],
+  );
 
   return (
     <ActionBar open={selectedRowIds.length > 0} onOpenChange={onOpenChange}>
@@ -157,7 +165,11 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
           <Download />
           Export
         </ActionBarItem>
-        <ActionBarItem variant="destructive" onSelect={onTaskDelete}>
+        <ActionBarItem
+          variant="destructive"
+          disabled={isDeletePending}
+          onSelect={onTaskDelete}
+        >
           <Trash2 />
           Delete
         </ActionBarItem>

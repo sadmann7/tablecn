@@ -98,7 +98,7 @@ function DataTablePaginationContent<TData extends RowData>({
       >
         {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected
         {selectedRowCount > visibleSelectedRowCount
-          ? ` (${selectedRowCount - visibleSelectedRowCount} not on this page)`
+          ? ` (${selectedRowCount - visibleSelectedRowCount} not shown)`
           : ""}
         .
       </div>
