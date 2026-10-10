@@ -1,6 +1,7 @@
 "use client";
 
-import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
+import type { ReactTable, RowData } from "@tanstack/react-table";
+
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -29,15 +30,14 @@ function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
 }
 
 interface DataGridSearchProps<TData extends RowData> {
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
 }
 
 export function DataGridSearch<TData extends RowData>({
   table,
 }: DataGridSearchProps<TData>) {
   return (
-    <Subscribe
-      source={table.store}
+    <table.Subscribe
       selector={(state) => ({
         searchOpen: state.searchOpen,
         searchQuery: state.searchQuery,
@@ -46,7 +46,7 @@ export function DataGridSearch<TData extends RowData>({
       })}
     >
       {(searchState) => <DataGridSearchView table={table} {...searchState} />}
-    </Subscribe>
+    </table.Subscribe>
   );
 }
 
