@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  type Column,
-  type RowData,
-  Subscribe,
-  type Table,
-} from "@tanstack/react-table";
+import type { Column, ReactTable, RowData } from "@tanstack/react-table";
+
 import { cn } from "cn";
 import * as React from "react";
 
@@ -82,7 +78,7 @@ type FilterSelector = "field" | "operator" | "value";
 interface DataTableFilterMenuProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   disabled?: boolean;
 }
 
@@ -91,8 +87,7 @@ export function DataTableFilterMenu<TData extends RowData>({
   ...props
 }: DataTableFilterMenuProps<TData>) {
   return (
-    <Subscribe
-      source={table.store}
+    <table.Subscribe
       selector={(state) => ({
         filters: table.getColumnFilterItems(),
         joinOperator: state.joinOperator,
@@ -106,7 +101,7 @@ export function DataTableFilterMenu<TData extends RowData>({
           {...props}
         />
       )}
-    </Subscribe>
+    </table.Subscribe>
   );
 }
 

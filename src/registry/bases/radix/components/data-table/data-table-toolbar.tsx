@@ -2,9 +2,9 @@
 
 import {
   type Column,
+  type ReactTable,
   type RowData,
   Subscribe,
-  type Table,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
@@ -22,7 +22,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 interface DataTableToolbarProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
-  table: Table<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
 }
 
 export function DataTableToolbar<TData extends RowData>({

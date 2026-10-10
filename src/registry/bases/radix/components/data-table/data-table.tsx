@@ -5,10 +5,10 @@ import {
   type ColumnPinningPosition,
   FlexRender,
   type Header,
+  type ReactTable,
   type Row,
   type RowData,
   Subscribe,
-  type Table as TanstackTable,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
@@ -34,7 +34,7 @@ import {
 interface DataTableProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
-  table: TanstackTable<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   actionBar?: React.ReactNode;
 }
 
@@ -81,7 +81,7 @@ interface DataTableLayoutProps<TData extends RowData> extends Pick<
   React.ComponentProps<"table">,
   "aria-label" | "aria-labelledby"
 > {
-  table: TanstackTable<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   children: React.ReactNode;
 }
 
@@ -91,8 +91,7 @@ function DataTableLayout<TData extends RowData>({
   ...props
 }: DataTableLayoutProps<TData>) {
   return (
-    <Subscribe
-      source={table.store}
+    <table.Subscribe
       selector={(state) => ({
         columnOrder: state.columnOrder,
         columnPinning: state.columnPinning,
@@ -109,20 +108,19 @@ function DataTableLayout<TData extends RowData>({
           {children}
         </Table>
       )}
-    </Subscribe>
+    </table.Subscribe>
   );
 }
 
 interface DataTableHeaderProps<TData extends RowData> {
-  table: TanstackTable<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
 }
 
 function DataTableHeader<TData extends RowData>({
   table,
 }: DataTableHeaderProps<TData>) {
   return (
-    <Subscribe
-      source={table.store}
+    <table.Subscribe
       selector={(state) => ({
         columnOrder: state.columnOrder,
         columnPinning: state.columnPinning,
@@ -144,7 +142,7 @@ function DataTableHeader<TData extends RowData>({
           ))}
         </TableHeader>
       )}
-    </Subscribe>
+    </table.Subscribe>
   );
 }
 
@@ -181,7 +179,7 @@ function DataTableHeadCellImpl<TData extends RowData>({
 }
 
 interface DataTableBodyProps<TData extends RowData> {
-  table: TanstackTable<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
 }
 
 function DataTableBody<TData extends RowData>({
@@ -276,7 +274,7 @@ function DataTableCellImpl<TData extends RowData>({
 }
 
 interface DataTableActionBarProps<TData extends RowData> {
-  table: TanstackTable<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   actionBar: React.ReactNode;
 }
 
