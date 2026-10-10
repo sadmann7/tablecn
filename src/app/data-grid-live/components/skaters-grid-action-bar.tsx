@@ -1,6 +1,11 @@
 "use client";
 
-import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
+import {
+  type Row,
+  type RowData,
+  Subscribe,
+  type Table,
+} from "@tanstack/react-table";
 import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 
@@ -22,13 +27,15 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
+type SkaterRows<TData extends RowData> = Array<Row<DataGridFeatures, TData>>;
+
 interface SkatersGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
-  onStatusUpdate?: (value: string) => void;
-  onStyleUpdate?: (value: string) => void;
-  onDelete?: () => void;
+  onStatusUpdate?: (value: string, rows: SkaterRows<TData>) => void;
+  onStyleUpdate?: (value: string, rows: SkaterRows<TData>) => void;
+  onDelete?: (rows: SkaterRows<TData>) => void;
 }
 
 export function SkatersGridActionBar<TData extends RowData>(
@@ -36,28 +43,30 @@ export function SkatersGridActionBar<TData extends RowData>(
 ) {
   return (
     <Subscribe
-      source={props.table.atoms.cellSelection}
-      selector={() => props.table.getSelectedRangeCellCount()}
+      source={props.table.store}
+      selector={(state) => ({
+        rowSelection: state.rowSelection,
+        cellSelection: state.cellSelection,
+      })}
     >
-      {(selectedCellCount) => (
-        <SkatersGridActionBarImpl
-          {...props}
-          selectedCellCount={selectedCellCount}
-        />
-      )}
+      {() => <SkatersGridActionBarImpl {...props} />}
     </Subscribe>
   );
 }
 
 function SkatersGridActionBarImpl<TData extends RowData>({
   table,
-  selectedCellCount,
   statusOptions,
   styleOptions,
   onStatusUpdate,
   onStyleUpdate,
   onDelete,
-}: SkatersGridActionBarProps<TData> & { selectedCellCount: number }) {
+}: SkatersGridActionBarProps<TData>) {
+  const hasRowSelection = table.getHasRowSelection();
+  const selectedCount = hasRowSelection
+    ? table.getSelectedRowIds().length
+    : table.getSelectedRangeCellCount();
+
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (!open) {
@@ -71,12 +80,21 @@ function SkatersGridActionBarImpl<TData extends RowData>({
   return (
     <ActionBar
       data-grid-popover
-      open={selectedCellCount > 0}
+      open={selectedCount > 0}
       onOpenChange={onOpenChange}
     >
       <ActionBarSelection>
-        <span className="font-medium">{selectedCellCount}</span>
-        <span>{selectedCellCount === 1 ? "cell" : "cells"} selected</span>
+        <span className="font-medium">{selectedCount}</span>
+        <span>
+          {hasRowSelection
+            ? selectedCount === 1
+              ? "row"
+              : "rows"
+            : selectedCount === 1
+              ? "cell"
+              : "cells"}{" "}
+          selected
+        </span>
         <ActionBarSeparator />
         <ActionBarClose>
           <X />
@@ -96,7 +114,9 @@ function SkatersGridActionBarImpl<TData extends RowData>({
               {statusOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => onStatusUpdate(option.value)}
+                  onClick={() =>
+                    onStatusUpdate(option.value, getTargetRows(table))
+                  }
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -116,7 +136,9 @@ function SkatersGridActionBarImpl<TData extends RowData>({
               {styleOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => onStyleUpdate(option.value)}
+                  onClick={() =>
+                    onStyleUpdate(option.value, getTargetRows(table))
+                  }
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -125,7 +147,10 @@ function SkatersGridActionBarImpl<TData extends RowData>({
           </DropdownMenu>
         )}
         {onDelete && (
-          <ActionBarItem variant="destructive" onClick={onDelete}>
+          <ActionBarItem
+            variant="destructive"
+            onClick={() => onDelete(getTargetRows(table))}
+          >
             <Trash2 />
             Delete
           </ActionBarItem>
@@ -133,4 +158,14 @@ function SkatersGridActionBarImpl<TData extends RowData>({
       </ActionBarGroup>
     </ActionBar>
   );
+}
+
+// Checked rows, or the rows a cell range covers
+function getTargetRows<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+) {
+  if (table.getHasRowSelection()) return table.getSelectedRowModel().rows;
+
+  const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
+  return table.getRowModel().rows.filter((row) => rowIds.has(row.id));
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { useLiveQuery } from "@tanstack/react-db";
 import * as React from "react";
@@ -39,6 +39,8 @@ import type { SkaterSchema } from "../lib/validation";
 
 import { skatersCollection } from "../lib/collections";
 import { SkatersGridActionBar } from "./skaters-grid-action-bar";
+
+type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
 
 const TRICKS = [
   "Kickflip",
@@ -507,13 +509,7 @@ export function DataGridLiveDemo() {
   });
 
   const onStatusUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       // Use batch update - single transaction for all updates
       skatersCollection.update(
         selectedRows.map((row) => row.original.id),
@@ -528,17 +524,11 @@ export function DataGridLiveDemo() {
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table],
+    [],
   );
 
   const onStyleUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       // Use batch update - single transaction for all updates
       skatersCollection.update(
         selectedRows.map((row) => row.original.id),
@@ -553,23 +543,20 @@ export function DataGridLiveDemo() {
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table],
+    [],
   );
 
-  const onDelete = React.useCallback(() => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    if (selectedRows.length === 0) {
-      toast.error("No skaters selected");
-      return;
-    }
+  const onDelete = React.useCallback(
+    (selectedRows: SkaterRows) => {
+      void table.deleteRows(selectedRows.map((row) => row.id));
 
-    void table.deleteRows(selectedRows.map((row) => row.id));
-
-    toast.success(
-      `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
-    );
-    table.toggleAllRowsSelected(false);
-  }, [table]);
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
+      );
+      table.toggleAllRowsSelected(false);
+    },
+    [table],
+  );
 
   const height = Math.max(400, windowSize.height - 150);
 

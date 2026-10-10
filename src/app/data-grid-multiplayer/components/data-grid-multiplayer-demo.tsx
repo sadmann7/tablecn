@@ -1,6 +1,6 @@
 "use client";
 
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
@@ -44,6 +44,8 @@ import {
 } from "../lib/multiplayer-collection";
 import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 import { DataGridShareMenu } from "./data-grid-share-menu";
+
+type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
@@ -449,13 +451,7 @@ export function DataGridMultiplayerDemo({
   }, [users, currentUserId, focusedRowId, focusedColumnId]);
 
   const onStatusUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       const ids = selectedRows.map((row) => row.original.id);
       multiplayerCollection.update(ids, (drafts) => {
         for (const draft of drafts) draft.status = value as never;
@@ -465,17 +461,11 @@ export function DataGridMultiplayerDemo({
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table, sendCellUpdate],
+    [sendCellUpdate],
   );
 
   const onStyleUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       const ids = selectedRows.map((row) => row.original.id);
       multiplayerCollection.update(ids, (drafts) => {
         for (const draft of drafts) draft.style = value as never;
@@ -485,21 +475,19 @@ export function DataGridMultiplayerDemo({
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table, sendCellUpdate],
+    [sendCellUpdate],
   );
 
-  const onDelete = React.useCallback(() => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    if (selectedRows.length === 0) {
-      toast.error("No skaters selected");
-      return;
-    }
-    void table.deleteRows(selectedRows.map((row) => row.id));
-    toast.success(
-      `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
-    );
-    table.toggleAllRowsSelected(false);
-  }, [table]);
+  const onDelete = React.useCallback(
+    (selectedRows: SkaterRows) => {
+      void table.deleteRows(selectedRows.map((row) => row.id));
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
+      );
+      table.toggleAllRowsSelected(false);
+    },
+    [table],
+  );
 
   const onUserClick = React.useCallback(
     (
