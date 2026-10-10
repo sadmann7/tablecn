@@ -110,6 +110,8 @@ export interface DataGridColumnMeta {
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
   columnIndex: number;
+  /** Column width in pixels, so cells can lay out content without measuring the DOM. */
+  width: number;
   rowHeight: RowHeightValue;
   isEditing: boolean;
   isFocused: boolean;
@@ -181,4 +183,22 @@ export interface FilterValue {
   operator: FilterOperator;
   value?: string | number | string[];
   endValue?: string | number;
+}
+
+export interface ColumnWindowItem {
+  /** Index within the unpinned (center) visible columns. */
+  index: number;
+  start: number;
+  end: number;
+}
+
+/** Unpinned columns mounted by the horizontal virtualizer. */
+export interface ColumnWindow {
+  items: ColumnWindowItem[];
+  /** Offset where unpinned columns begin, the start pinned width. */
+  centerStart: number;
+  /** Offset where unpinned columns end. */
+  centerEnd: number;
+  startCount: number;
+  centerCount: number;
 }

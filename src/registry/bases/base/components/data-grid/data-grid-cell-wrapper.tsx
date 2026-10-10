@@ -21,6 +21,7 @@ export function DataGridCellWrapper<TData extends RowData>({
   presence,
   readOnly,
   rowHeight,
+  width: _width,
   className,
   onKeyDown: onKeyDownProp,
   ...props

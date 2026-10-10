@@ -513,6 +513,30 @@ describe("DataGrid rendering", () => {
     expect(table.getIsCellSelected("1", "name")).toBe(true);
   });
 
+  it("only mounts the columns inside the horizontal viewport", () => {
+    const wideColumns = Array.from(
+      { length: 30 },
+      (_, index): ColumnDef<DataGridFeatures, TestData> => ({
+        id: `column${index}`,
+        accessorFn: (row) => row.name,
+        header: `Column ${index}`,
+        size: 100,
+      }),
+    );
+    const { container } = renderGrid(wideColumns);
+
+    const firstRowCells = container.querySelectorAll(
+      '[role="row"][aria-rowindex="2"] [role="gridcell"]',
+    );
+    expect(firstRowCells.length).toBeGreaterThan(0);
+    expect(firstRowCells.length).toBeLessThan(wideColumns.length);
+    expect(getCellWrapper(container, "1", "column0")).not.toBeNull();
+    expect(getCellWrapper(container, "1", "column29")).toBeNull();
+    expect(
+      container.querySelectorAll('[data-slot="data-grid-header-cell"]').length,
+    ).toBe(firstRowCells.length);
+  });
+
   it("updates rendered cells when columns are hidden or reordered", () => {
     const { container, table } = renderGrid();
 

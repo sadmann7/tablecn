@@ -106,7 +106,7 @@ function fireCellEvent(
   const { dataGridRef, dataGridBodyProps } = result.current;
   const previousContainer = dataGridRef.current;
   const container = document.createElement("div");
-  container.dataset.slot = "grid";
+  container.dataset.slot = "data-grid";
   const cellElement = document.createElement("div");
   cellElement.dataset.slot = "data-grid-cell-wrapper";
   cellElement.dataset.rowId = rowId;
@@ -1469,10 +1469,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.rowVirtualizerOptions.overscan).toBe(6);
-      expect(typeof result.current.rowVirtualizerOptions.measureElement).toBe(
-        "function",
-      );
+      expect(result.current.rowVirtualizerOptions).toEqual({ overscan: 6 });
     });
   });
 

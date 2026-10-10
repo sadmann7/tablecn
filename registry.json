@@ -415,6 +415,11 @@
           "target": "src/components/data-grid/data-grid-cell-wrapper.tsx"
         },
         {
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-cell-preview.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-cell-preview.tsx"
+        },
+        {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-cell-variants.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-cell-variants.tsx"
