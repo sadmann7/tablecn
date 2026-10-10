@@ -486,7 +486,7 @@ export function DataGridMultiplayerDemo({
       .then(() => toast.success("Room link copied"));
   }, [roomId]);
 
-  const height = Math.max(400, windowSize.height - 200);
+  const height = Math.max(400, windowSize.height - 150);
   const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
 
   const remoteCells = React.useMemo(() => {

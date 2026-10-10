@@ -15,26 +15,39 @@ const PARTYKIT_HOST = env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 const STORAGE_KEY = "multiplayer-identity";
 
 interface Identity {
+  clientId: string;
   name: string;
   color: string;
 }
 
+// Kept in localStorage so the same person comes back across tabs and visits, and the server can merge a browser's tabs into one user
 function getOrCreateIdentity(): Identity {
+  let stored: Partial<Identity> | null = null;
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored) as Identity;
+    const value = localStorage.getItem(STORAGE_KEY);
+    if (value) stored = JSON.parse(value) as Partial<Identity>;
   } catch {}
+
+  if (stored?.clientId && stored.name && stored.color) {
+    return stored as Identity;
+  }
 
   const adj =
     ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
   const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
-  const color = COLORS[Math.floor(Math.random() * COLORS.length)] ?? "#3b82f6";
-  const identity: Identity = { name: `${adj} ${animal}`, color };
+  const identity: Identity = {
+    clientId: stored?.clientId ?? generateId(),
+    name: stored?.name ?? `${adj} ${animal}`,
+    color:
+      stored?.color ??
+      COLORS[Math.floor(Math.random() * COLORS.length)] ??
+      "#3b82f6",
+  };
 
   try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
   } catch {
-    // Fail silently if sessionStorage is not available
+    // Fail silently if localStorage is not available
   }
 
   return identity;
@@ -72,7 +85,11 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       host: PARTYKIT_HOST,
       room: roomId,
       id: generateId(),
-      query: { name: identity.name, color: identity.color },
+      query: {
+        clientId: identity.clientId,
+        name: identity.name,
+        color: identity.color,
+      },
     });
     socketRef.current = socket;
 
