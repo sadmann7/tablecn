@@ -19,6 +19,7 @@ import {
 } from "@/registry/bases/radix/components/data-grid/data-grid-cell-variants";
 
 export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
+  if (prev.columnIndex !== next.columnIndex) return false;
   if (prev.isFocused !== next.isFocused) return false;
   if (prev.isEditing !== next.isEditing) return false;
   if (prev.isSelected !== next.isSelected) return false;

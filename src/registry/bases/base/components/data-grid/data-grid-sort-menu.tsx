@@ -230,9 +230,9 @@ function DataGridSortMenuImpl<TData extends RowData>({
           {...props}
         >
           <div className="flex flex-col gap-1">
-            <h4 id={labelId} className="leading-none font-medium">
+            <h2 id={labelId} className="leading-none font-medium">
               {sorting.length > 0 ? "Sort by" : "No sorting applied"}
-            </h4>
+            </h2>
             <p
               id={descriptionId}
               className={cn(
@@ -318,6 +318,7 @@ function DataTableSortItem({
   const fieldListboxId = `${sortItemId}-field-listbox`;
   const fieldTriggerId = `${sortItemId}-field-trigger`;
   const directionListboxId = `${sortItemId}-direction-listbox`;
+  const label = columnLabels.get(sort.id) ?? sort.id;
 
   const [showFieldSelector, setShowFieldSelector] = React.useState(false);
   const [showDirectionSelector, setShowDirectionSelector] =
@@ -346,11 +347,11 @@ function DataTableSortItem({
 
   return (
     <SortableItem
+      id={sortItemId}
       value={sort.id}
       render={
         <div
           role="listitem"
-          id={sortItemId}
           tabIndex={-1}
           className="flex items-center gap-2"
           onKeyDown={onItemKeyDown}
@@ -417,7 +418,11 @@ function DataTableSortItem({
           onSortUpdate(sort.id, { desc: value === "desc" });
         }}
       >
-        <SelectTrigger aria-controls={directionListboxId} className="w-24">
+        <SelectTrigger
+          aria-controls={directionListboxId}
+          aria-label={`${label} sort direction`}
+          className="w-24"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent
@@ -435,6 +440,7 @@ function DataTableSortItem({
       </Select>
       <Button
         aria-controls={sortItemId}
+        aria-label={`Remove ${label} sort`}
         variant="outline"
         size="icon"
         className="shrink-0"
@@ -449,6 +455,7 @@ function DataTableSortItem({
         />
       </Button>
       <SortableItemHandle
+        aria-label={`Reorder ${label} sort`}
         render={<Button variant="outline" size="icon" className="shrink-0" />}
       >
         <IconPlaceholder

@@ -255,9 +255,9 @@ function DataGridFilterMenuImpl<TData extends RowData>({
           {...props}
         >
           <div className="flex flex-col gap-1">
-            <h4 id={labelId} className="leading-none font-medium">
+            <h2 id={labelId} className="leading-none font-medium">
               {columnFilters.length > 0 ? "Filter by" : "No filters applied"}
-            </h4>
+            </h2>
             <p
               id={descriptionId}
               className={cn(
@@ -356,6 +356,7 @@ function DataGridFilterItem<TData extends RowData>({
   const fieldTriggerId = `${filterItemId}-field-trigger`;
   const operatorListboxId = `${filterItemId}-operator-listbox`;
   const inputId = `${filterItemId}-input`;
+  const label = columnLabels.get(filter.id) ?? filter.id;
 
   const [showFieldSelector, setShowFieldSelector] = React.useState(false);
   const [showOperatorSelector, setShowOperatorSelector] = React.useState(false);
@@ -430,10 +431,9 @@ function DataGridFilterItem<TData extends RowData>({
   );
 
   return (
-    <SortableItem value={filter.id} asChild>
+    <SortableItem id={filterItemId} value={filter.id} asChild>
       <div
         role="listitem"
-        id={filterItemId}
         tabIndex={-1}
         className="col-span-full grid grid-cols-subgrid items-center"
         onKeyDown={onItemKeyDown}
@@ -514,6 +514,7 @@ function DataGridFilterItem<TData extends RowData>({
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
+            aria-label={`${label} filter operator`}
             className="w-32 lowercase"
           >
             <div className="truncate">
@@ -560,6 +561,7 @@ function DataGridFilterItem<TData extends RowData>({
         </div>
         <Button
           aria-controls={filterItemId}
+          aria-label={`Remove ${label} filter`}
           variant="outline"
           size="icon"
           onClick={() => onFilterRemove(filter.id)}
@@ -572,7 +574,7 @@ function DataGridFilterItem<TData extends RowData>({
             remixicon="RiDeleteBinLine"
           />
         </Button>
-        <SortableItemHandle asChild>
+        <SortableItemHandle aria-label={`Reorder ${label} filter`} asChild>
           <Button variant="outline" size="icon">
             <IconPlaceholder
               lucide="GripVertical"

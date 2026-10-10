@@ -449,6 +449,7 @@ function DataGridKeyboardShortcutsImpl({
               className="absolute inset-s-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
             />
             <Input
+              aria-label="Search shortcuts"
               ref={inputRef}
               placeholder="Search shortcuts..."
               className="ps-8"

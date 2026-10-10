@@ -19,6 +19,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getBadgeListWidth } from "@/hooks/use-badge-overflow";
 import {
   getColumnFitSize,
+  getColumnLabel,
   getColumnVariant,
   getIsFileCellData,
   getIsEventOnScrollbar,
@@ -77,11 +78,7 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
   isAnyColumnResizing: boolean;
 }) {
   const column = header.column;
-  const label = column.columnDef.meta?.label
-    ? column.columnDef.meta.label
-    : typeof column.columnDef.header === "string"
-      ? column.columnDef.header
-      : column.id;
+  const label = getColumnLabel(column);
 
   const cellVariant = column.columnDef.meta?.cell;
   const columnVariant = getColumnVariant(cellVariant?.variant);

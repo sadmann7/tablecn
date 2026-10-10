@@ -104,7 +104,10 @@ export function DataGridRowHeightMenu<TData extends RowData>({
             }}
             disabled={disabled}
           >
-            <SelectTrigger className="[&_svg:nth-child(2)]:hidden">
+            <SelectTrigger
+              aria-label="Row height"
+              className="[&_svg:nth-child(2)]:hidden"
+            >
               <SelectValue placeholder="Row height">
                 <selectedRowHeight.icon />
                 {selectedRowHeight.label}

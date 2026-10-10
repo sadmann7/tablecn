@@ -739,6 +739,14 @@ function escapeAttributeValue(value: string) {
   return value.replace(/["\\]/g, "\\$&");
 }
 
+export function getColumnLabel<TData extends RowData, TValue = unknown>(
+  column: Column<DataGridFeatures, TData, TValue>,
+): string {
+  const { header, meta } = column.columnDef;
+  if (meta?.label) return meta.label;
+  return typeof header === "string" ? header : column.id;
+}
+
 export function getCellElement(
   container: HTMLElement,
   rowId: string,

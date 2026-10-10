@@ -576,4 +576,64 @@ describe("DataGrid rendering", () => {
     expect(screen.getByRole("menu")).not.toBeNull();
     expect(getHookRenderCount()).toBe(renderCountBefore);
   });
+
+  it("makes the focusable cell wrapper the gridcell", () => {
+    const { container } = renderGrid();
+
+    const wrapper = getCellWrapper(container, "1", "name");
+    expect(wrapper?.getAttribute("role")).toBe("gridcell");
+    expect(wrapper?.getAttribute("aria-colindex")).toBe("1");
+    expect(wrapper?.parentElement?.getAttribute("role")).toBe("none");
+    expect(
+      wrapper
+        ?.querySelector('[data-slot="data-grid-cell-content"]')
+        ?.getAttribute("role"),
+    ).toBeNull();
+  });
+
+  it("names the cell textbox only while editing", () => {
+    const { container, table } = renderGrid();
+
+    act(() => {
+      table
+        .getCoreRowModel()
+        .rowsById["1"]?.getAllCellsByColumnId()
+        .name?.startEditing();
+    });
+
+    expect(
+      screen
+        .getByRole("textbox", { name: "Name" })
+        .closest('[data-slot="data-grid-cell-wrapper"]'),
+    ).toBe(getCellWrapper(container, "1", "name"));
+  });
+
+  it("counts the header row in aria-rowcount", () => {
+    renderGrid();
+
+    const rows = screen.getAllByRole("row");
+    expect(screen.getByRole("grid").getAttribute("aria-rowcount")).toBe("4");
+    expect(rows.at(-1)?.getAttribute("aria-rowindex")).toBe("4");
+  });
+
+  it("sets aria-sort only on the primary sorted column", () => {
+    const { table } = renderGrid();
+
+    act(() => {
+      table.setSorting([
+        { id: "trick", desc: true },
+        { id: "name", desc: false },
+      ]);
+    });
+
+    const sortedHeaders = screen
+      .getAllByRole("columnheader")
+      .filter((header) => header.hasAttribute("aria-sort"));
+    expect(
+      sortedHeaders.map((header) => [
+        header.textContent,
+        header.getAttribute("aria-sort"),
+      ]),
+    ).toEqual([["Trick", "descending"]]);
+  });
 });

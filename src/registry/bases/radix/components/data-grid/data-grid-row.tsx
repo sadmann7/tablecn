@@ -171,7 +171,7 @@ function DataGridRowContent<TData extends RowData>({
         ...style,
       }}
     >
-      {visibleCells.map((cell, colIndex) => {
+      {visibleCells.map((cell, columnIndex) => {
         const columnId = cell.column.id;
 
         const isCellFocused = focusedColumnId === columnId;
@@ -183,8 +183,8 @@ function DataGridRowContent<TData extends RowData>({
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchColumnId === columnId;
 
-        const nextCell = visibleCells[colIndex + 1];
-        const isLastColumn = colIndex === visibleCells.length - 1;
+        const nextCell = visibleCells[columnIndex + 1];
+        const isLastColumn = columnIndex === visibleCells.length - 1;
         const { showEndBorder, showStartBorder } = getColumnBorderVisibility({
           column: cell.column,
           nextColumn: nextCell?.column,
@@ -194,13 +194,12 @@ function DataGridRowContent<TData extends RowData>({
         return (
           <div
             key={cell.id}
-            role="gridcell"
-            aria-colindex={colIndex + 1}
-            aria-selected={isUtilityCell ? undefined : isCellSelected}
+            role={isUtilityCell ? "gridcell" : "none"}
+            aria-colindex={isUtilityCell ? columnIndex + 1 : undefined}
             data-slot="data-grid-cell"
             data-column-id={columnId}
             data-highlighted={isCellFocused ? "" : undefined}
-            tabIndex={-1}
+            tabIndex={isUtilityCell ? -1 : undefined}
             className={cn({
               grow: stretchColumns && columnId !== "select",
               "border-e": showEndBorder && columnId !== "select",
@@ -220,6 +219,7 @@ function DataGridRowContent<TData extends RowData>({
             ) : (
               <DataGridCell
                 cell={cell}
+                columnIndex={columnIndex}
                 rowHeight={rowHeight}
                 isFocused={isCellFocused}
                 isEditing={isCellEditing}
