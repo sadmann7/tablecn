@@ -1,7 +1,7 @@
 "use client";
 
 import { Subscribe, type Table } from "@tanstack/react-table";
-import { Copy, Trash2, X } from "lucide-react";
+import { Copy, Eraser, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -27,7 +27,13 @@ export function PeopleGridActionBar({
   onRowsDuplicate,
 }: PeopleGridActionBarProps) {
   return (
-    <Subscribe source={table.atoms.rowSelection}>
+    <Subscribe
+      source={table.store}
+      selector={(state) => ({
+        rowSelection: state.rowSelection,
+        cellSelection: state.cellSelection,
+      })}
+    >
       {() => (
         <PeopleGridActionBarImpl
           table={table}
@@ -42,7 +48,10 @@ function PeopleGridActionBarImpl({
   table,
   onRowsDuplicate,
 }: PeopleGridActionBarProps) {
-  const selectedRowIds = table.getSelectedRowIds();
+  const hasRowSelection = table.getHasRowSelection();
+  const selectedCount = hasRowSelection
+    ? table.getSelectedRowIds().length
+    : table.getSelectedRangeCellCount();
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
@@ -54,26 +63,41 @@ function PeopleGridActionBarImpl({
   const onDuplicate = React.useCallback(
     (event: Event) => {
       event.preventDefault();
-      onRowsDuplicate(
-        table.getSelectedRowModel().rows.map((row) => row.original),
-      );
+      onRowsDuplicate(getTargetRows(table).map((row) => row.original));
     },
     [table, onRowsDuplicate],
   );
 
+  const onClear = React.useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      table.clearCells(table.getSelectedCells());
+    },
+    [table],
+  );
+
   const onDelete = React.useCallback(() => {
-    void table.deleteRows(selectedRowIds);
-  }, [table, selectedRowIds]);
+    void table.deleteRows(getTargetRows(table).map((row) => row.id));
+  }, [table]);
 
   return (
     <ActionBar
       data-grid-popover
-      open={selectedRowIds.length > 0}
+      open={selectedCount > 0}
       onOpenChange={onOpenChange}
     >
       <ActionBarSelection>
-        <span className="font-medium">{selectedRowIds.length}</span>
-        <span>{selectedRowIds.length === 1 ? "row" : "rows"} selected</span>
+        <span className="font-medium">{selectedCount}</span>
+        <span>
+          {hasRowSelection
+            ? selectedCount === 1
+              ? "row"
+              : "rows"
+            : selectedCount === 1
+              ? "cell"
+              : "cells"}{" "}
+          selected
+        </span>
         <ActionBarSeparator />
         <ActionBarClose>
           <X />
@@ -81,6 +105,12 @@ function PeopleGridActionBarImpl({
       </ActionBarSelection>
       <ActionBarSeparator />
       <ActionBarGroup>
+        {!hasRowSelection && (
+          <ActionBarItem onSelect={onClear}>
+            <Eraser />
+            Clear
+          </ActionBarItem>
+        )}
         <ActionBarItem onSelect={onDuplicate}>
           <Copy />
           Duplicate
@@ -92,4 +122,12 @@ function PeopleGridActionBarImpl({
       </ActionBarGroup>
     </ActionBar>
   );
+}
+
+// Checked rows, or the rows a cell range covers
+function getTargetRows(table: Table<DataGridFeatures, Person>) {
+  if (table.getHasRowSelection()) return table.getSelectedRowModel().rows;
+
+  const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
+  return table.getRowModel().rows.filter((row) => rowIds.has(row.id));
 }

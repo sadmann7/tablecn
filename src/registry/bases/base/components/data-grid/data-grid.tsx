@@ -39,7 +39,7 @@ interface DataGridProps<TData extends RowData>
   dir?: Direction;
   height?: number;
   stretchColumns?: boolean;
-  /** Rendered while any rows are selected, such as an `ActionBar` with bulk row actions. */
+  /** Rendered while rows or a range of cells are selected, such as an `ActionBar` with bulk actions. */
   actionBar?: React.ReactNode;
 }
 
@@ -106,8 +106,12 @@ function DataGridActionBar<TData extends RowData>({
   actionBar,
 }: DataGridActionBarProps<TData>) {
   return (
-    <table.Subscribe selector={() => table.getHasRowSelection()}>
-      {(hasRowSelection) => (hasRowSelection ? actionBar : null)}
+    <table.Subscribe
+      selector={() =>
+        table.getHasRowSelection() || table.getHasCellRangeSelection()
+      }
+    >
+      {(hasSelection) => (hasSelection ? actionBar : null)}
     </table.Subscribe>
   );
 }
