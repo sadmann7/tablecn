@@ -1555,6 +1555,12 @@ const dataGridSelectionFeature: TableFeature = {
           ) {
             return false;
           }
+          if (
+            getHasRowSelection(instance) &&
+            !instance.atoms.rowSelection.get()[rowId]
+          ) {
+            return false;
+          }
           const row = instance.getRowModel().rowsById[rowId];
           return (
             row?.getAllCellsByColumnId()[columnId]?.getIsSelected() ?? false

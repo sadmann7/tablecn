@@ -298,6 +298,8 @@ function selectRowState<TData extends RowData>(
       ? table.getCellSelectionBounds()
       : EMPTY_CELL_SELECTION_BOUNDS;
 
+  const isRowSelected = !!state.rowSelection[rowId];
+
   return {
     visibleCells: row.getVisibleCells(),
     rowHeight: state.rowHeight,
@@ -306,11 +308,20 @@ function selectRowState<TData extends RowData>(
         ? activeRange.anchorColumnId
         : null,
     editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
-    cellSelectionKey: getRowCellSelectionKey(cellSelectionBounds, rowIndex),
+    // While rows are selected, only their cells highlight, not the focused cell that keeps focus in place
+    cellSelectionKey:
+      !isRowSelected && getHasKeys(state.rowSelection)
+        ? ""
+        : getRowCellSelectionKey(cellSelectionBounds, rowIndex),
     searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
     activeSearchColumnId:
       activeSearchMatch?.rowId === rowId ? activeSearchMatch.columnId : null,
     presenceColumns: table.getCellPresenceByRowId().get(rowId) ?? null,
-    isRowSelected: !!state.rowSelection[rowId],
+    isRowSelected,
   };
+}
+
+function getHasKeys(object: object) {
+  for (const _ in object) return true;
+  return false;
 }

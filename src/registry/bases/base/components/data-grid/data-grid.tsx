@@ -365,7 +365,7 @@ function DataGridHeaderImpl<TData extends RowData>({
 }: DataGridHeaderProps<TData>) {
   return (
     <table.Subscribe selector={selectHeaderState}>
-      {({ sorting }) => (
+      {({ sorting, focusedHeaderColumnId }) => (
         <div
           role="rowgroup"
           data-slot="data-grid-header"
@@ -435,7 +435,9 @@ function DataGridHeaderImpl<TData extends RowData>({
                         .columnDef.header === "function" ? (
                       <div
                         className={cn(
-                          "size-full px-3 py-1.5 has-focus-visible:ring-1 has-focus-visible:ring-ring has-focus-visible:ring-inset",
+                          "size-full px-3 py-1.5",
+                          focusedHeaderColumnId === header.column.id &&
+                            "ring-1 ring-ring ring-inset",
                           cornerClassName,
                         )}
                       >
@@ -465,6 +467,7 @@ function DataGridHeaderImpl<TData extends RowData>({
 function selectHeaderState(state: TableState<DataGridFeatures>) {
   return {
     sorting: state.sorting,
+    focusedHeaderColumnId: state.focusedHeaderColumnId,
     columnVisibility: state.columnVisibility,
     columnPinning: state.columnPinning,
     columnOrder: state.columnOrder,
