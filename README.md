@@ -95,19 +95,19 @@ To run the multiplayer demo locally:
 pnpm dev:multiplayer
 ```
 
-This starts both the Next.js and PartyKit dev servers concurrently.
+This starts the Next.js dev server and the [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) worker (via `wrangler dev`) concurrently.
 
 ## Deployment
 
 Follow the deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify), and [Docker](https://create.t3.gg/en/deployment/docker).
 
-The multiplayer demo uses [PartyKit](https://partykit.io) as a separate deployment:
+The multiplayer demo runs on [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) as a Cloudflare Worker with Durable Objects, deployed separately to your Cloudflare account:
 
 ```bash
 pnpm deploy:multiplayer
 ```
 
-Set `NEXT_PUBLIC_PARTYKIT_HOST` in your deployment environment variables after deploying.
+Set `NEXT_PUBLIC_PARTYKIT_HOST` in your deployment environment variables to the worker's host (for example `tablecn.<your-subdomain>.workers.dev`) after deploying.
 
 ## Credits
 

@@ -20,6 +20,7 @@ docker-data
 # next.js
 /.next/
 /.partykit/
+/.wrangler/
 /out/
 next-env.d.ts
 
