@@ -242,7 +242,6 @@ function useDataTable<TData extends RowData>({
     getServerLocationSearch,
   );
 
-  // Only the order of filter params matters, so paging or sorting keeps the same filters
   const filterOrder = React.useMemo(() => {
     const filterableIds = new Set(columnIndex.filterableIds);
     return [...new Set(new URLSearchParams(search).keys())]

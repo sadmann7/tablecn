@@ -40,7 +40,6 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
 }
 
 function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
-  // Actions only apply to selected rows on the current page; selections on other pages are kept for later
   const selectedRowIds = getVisibleSelectedRows(table).map((row) => row.id);
 
   const deselectRows = React.useCallback(
