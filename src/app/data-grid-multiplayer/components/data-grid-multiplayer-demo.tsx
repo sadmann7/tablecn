@@ -1,5 +1,6 @@
 "use client";
 
+import type { UserPresence } from "@party/types";
 import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { TRICKS } from "@party/constants";
@@ -46,6 +47,17 @@ import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 import { DataGridShareMenu } from "./data-grid-share-menu";
 
 type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
+
+// The server doesn't echo your own cell back, so your presence takes it from the grid
+function getPresenceUsers(
+  users: Record<string, UserPresence>,
+  currentUserId: string,
+  activeCell: UserPresence["activeCell"],
+) {
+  const currentUser = users[currentUserId];
+  if (!currentUser) return users;
+  return { ...users, [currentUserId]: { ...currentUser, activeCell } };
+}
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
@@ -437,19 +449,6 @@ export function DataGridMultiplayerDemo({
     return () => subscription.unsubscribe();
   }, [table, sendActiveCell]);
 
-  // The server doesn't echo your own cell back, so your presence takes it from the grid
-  const presenceUsers = React.useMemo(() => {
-    const currentUser = users[currentUserId];
-    if (!currentUser) return users;
-    return {
-      ...users,
-      [currentUserId]: {
-        ...currentUser,
-        activeCell: { rowId: focusedRowId, columnId: focusedColumnId },
-      },
-    };
-  }, [users, currentUserId, focusedRowId, focusedColumnId]);
-
   const onStatusUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
       const ids = selectedRows.map((row) => row.original.id);
@@ -524,12 +523,24 @@ export function DataGridMultiplayerDemo({
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <DataGridPresenceAvatars
-          users={presenceUsers}
-          currentUserId={currentUserId}
-          getCellLabel={getCellLabel}
-          onUserClick={onUserClick}
-        />
+        <table.Subscribe
+          selector={() => {
+            const focusedCell = table.getFocusedCell();
+            return {
+              rowId: focusedCell?.row.id ?? null,
+              columnId: focusedCell?.column.id ?? null,
+            };
+          }}
+        >
+          {(focusedCell) => (
+            <DataGridPresenceAvatars
+              users={getPresenceUsers(users, currentUserId, focusedCell)}
+              currentUserId={currentUserId}
+              getCellLabel={getCellLabel}
+              onUserClick={onUserClick}
+            />
+          )}
+        </table.Subscribe>
         <div
           role="toolbar"
           aria-orientation="horizontal"
