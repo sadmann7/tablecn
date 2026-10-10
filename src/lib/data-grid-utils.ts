@@ -549,11 +549,9 @@ export function getColumnBorderVisibility<TData extends RowData>(params: {
   };
 }
 
-export function getColumnPinningStyle<TData extends RowData>(params: {
-  column: Column<DataGridFeatures, TData>;
-}): React.CSSProperties {
-  const { column } = params;
-
+export function getColumnPinningStyle<TData extends RowData>(
+  column: Column<DataGridFeatures, TData>,
+): React.CSSProperties {
   const isPinned = column.getIsPinned();
 
   return {

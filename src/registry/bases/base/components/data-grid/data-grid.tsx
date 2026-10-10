@@ -441,7 +441,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                         showStartBorder && header.column.id !== "select",
                     })}
                     style={{
-                      ...getColumnPinningStyle({ column: header.column }),
+                      ...getColumnPinningStyle(header.column),
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >
