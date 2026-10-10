@@ -128,26 +128,21 @@ function DataTableHeader<TData extends RowData>({
         columnVisibility: state.columnVisibility,
       })}
     >
-      {() => {
-        const rows = table.getRowModel().rows;
-
-        return (
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="group/row">
-                {headerGroup.headers.map((header) => (
-                  <DataTableHeadCell
-                    key={header.id}
-                    header={header}
-                    pinned={header.column.getIsPinned()}
-                    rows={rows}
-                  />
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-        );
-      }}
+      {() => (
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id} className="group/row">
+              {headerGroup.headers.map((header) => (
+                <DataTableHeadCell
+                  key={header.id}
+                  header={header}
+                  pinned={header.column.getIsPinned()}
+                />
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+      )}
     </table.Subscribe>
   );
 }
@@ -155,15 +150,9 @@ function DataTableHeader<TData extends RowData>({
 interface DataTableHeadCellProps<TData extends RowData> {
   header: Header<DataTableFeatures, TData>;
   pinned: ColumnPinningPosition;
-  // Unused by the cell; a new array re-renders page-dependent headers like select all
-  rows: Row<DataTableFeatures, TData>[];
 }
 
-const DataTableHeadCell = React.memo(
-  DataTableHeadCellImpl,
-) as typeof DataTableHeadCellImpl;
-
-function DataTableHeadCellImpl<TData extends RowData>({
+function DataTableHeadCell<TData extends RowData>({
   header,
   pinned,
 }: DataTableHeadCellProps<TData>) {
