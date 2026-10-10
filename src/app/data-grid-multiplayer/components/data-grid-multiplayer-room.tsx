@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 
+import { PUBLIC_ROOM_ID } from "../lib/rooms";
 import { DataGridMultiplayerSkeleton } from "./data-grid-multiplayer-skeleton";
 
 const DataGridMultiplayerDemo = dynamic(
@@ -16,12 +17,9 @@ const DataGridMultiplayerDemo = dynamic(
   },
 );
 
-// Everyone shares this room unless they open a link to their own with ?room=
-const DEFAULT_ROOM_ID = "lobby";
-
 export function DataGridMultiplayerRoom() {
   const searchParams = useSearchParams();
-  const roomId = searchParams.get("room") ?? DEFAULT_ROOM_ID;
+  const roomId = searchParams.get("room") ?? PUBLIC_ROOM_ID;
 
   return <DataGridMultiplayerDemo roomId={roomId} />;
 }

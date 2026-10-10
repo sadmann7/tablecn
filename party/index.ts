@@ -43,6 +43,13 @@ function pickColor(usedColors: string[]): string {
 
 export class SkaterRoom extends Server<Env> {
   state: RoomState = { users: {}, usedColors: [], rows: [] };
+  // Users are keyed by clientId so a browser's tabs show up as one person
+  private connectionIdsByUserId = new Map<string, Set<string>>();
+  private userIdByConnectionId = new Map<string, string>();
+
+  private getUserId(conn: Connection) {
+    return this.userIdByConnectionId.get(conn.id) ?? conn.id;
+  }
 
   // Runs before any connection is accepted — the room waits for this to complete.
   async onStart() {
@@ -73,41 +80,59 @@ export class SkaterRoom extends Server<Env> {
     void this.ctx.storage.deleteAlarm();
 
     const url = new URL(ctx.request.url);
-    const name = url.searchParams.get("name") ?? generateUserName();
-    const color =
-      url.searchParams.get("color") ?? pickColor(this.state.usedColors);
-    if (!this.state.usedColors.includes(color))
-      this.state.usedColors.push(color);
+    // Older clients don't send a clientId, so each of their connections stays its own user
+    const userId = url.searchParams.get("clientId") ?? conn.id;
+    this.userIdByConnectionId.set(conn.id, userId);
+    const connectionIds = this.connectionIdsByUserId.get(userId) ?? new Set();
+    connectionIds.add(conn.id);
+    this.connectionIdsByUserId.set(userId, connectionIds);
 
-    const user: UserPresence = {
-      name,
-      color,
-      activeCell: { rowId: null, columnId: null },
-    };
-    this.state.users[conn.id] = user;
+    let user = this.state.users[userId];
+    const isNewUser = !user;
+    if (!user) {
+      const name = url.searchParams.get("name") ?? generateUserName();
+      const color =
+        url.searchParams.get("color") ?? pickColor(this.state.usedColors);
+      if (!this.state.usedColors.includes(color))
+        this.state.usedColors.push(color);
+
+      user = { name, color, activeCell: { rowId: null, columnId: null } };
+      this.state.users[userId] = user;
+    }
 
     const snapshot: ServerMessage = {
       type: "snapshot",
       users: this.state.users,
-      userId: conn.id,
+      userId,
       rows: this.state.rows,
     };
     conn.send(JSON.stringify(snapshot));
 
-    const joinMsg: ServerMessage = { type: "user-join", userId: conn.id, user };
-    this.broadcast(JSON.stringify(joinMsg), [conn.id]);
+    if (isNewUser) {
+      const joinMsg: ServerMessage = { type: "user-join", userId, user };
+      this.broadcast(JSON.stringify(joinMsg), [conn.id]);
+    }
   }
 
   onClose(conn: Connection) {
-    const user = this.state.users[conn.id];
+    const userId = this.getUserId(conn);
+    this.userIdByConnectionId.delete(conn.id);
+
+    const connectionIds = this.connectionIdsByUserId.get(userId);
+    connectionIds?.delete(conn.id);
+    // The user stays while any of their tabs is still connected
+    if (connectionIds && connectionIds.size > 0) return;
+    this.connectionIdsByUserId.delete(userId);
+
+    const user = this.state.users[userId];
     if (user) {
       this.state.usedColors = this.state.usedColors.filter(
         (c) => c !== user.color,
       );
     }
-    delete this.state.users[conn.id];
+    delete this.state.users[userId];
 
-    const leaveMsg: ServerMessage = { type: "user-leave", userId: conn.id };
+    const leaveMsg: ServerMessage = { type: "user-leave", userId };
     this.broadcast(JSON.stringify(leaveMsg));
 
     if (Object.keys(this.state.users).length === 0) {
@@ -125,6 +150,8 @@ export class SkaterRoom extends Server<Env> {
       return;
     }
 
+    const userId = this.getUserId(sender);
+
     switch (msg.type) {
       case "row-add": {
         this.state.rows.push(msg.row);
@@ -133,7 +160,7 @@ export class SkaterRoom extends Server<Env> {
           JSON.stringify({
             type: "row-add",
             row: msg.row,
-            userId: sender.id,
+            userId,
           } satisfies ServerMessage),
           [sender.id],
         );
@@ -147,7 +174,7 @@ export class SkaterRoom extends Server<Env> {
           JSON.stringify({
             type: "rows-add",
             rows: msg.rows,
-            userId: sender.id,
+            userId,
           } satisfies ServerMessage),
           [sender.id],
         );
@@ -164,7 +191,7 @@ export class SkaterRoom extends Server<Env> {
             rowId: msg.rowId,
             columnId: msg.columnId,
             value: msg.value,
-            userId: sender.id,
+            userId,
           } satisfies ServerMessage),
           [sender.id],
         );
@@ -180,7 +207,7 @@ export class SkaterRoom extends Server<Env> {
           JSON.stringify({
             type: "rows-delete",
             ids: msg.ids,
-            userId: sender.id,
+            userId,
           } satisfies ServerMessage),
           [sender.id],
         );
@@ -188,13 +215,13 @@ export class SkaterRoom extends Server<Env> {
       }
 
       case "active-cell": {
-        const user = this.state.users[sender.id];
+        const user = this.state.users[userId];
         if (user)
           user.activeCell = { rowId: msg.rowId, columnId: msg.columnId };
         this.broadcast(
           JSON.stringify({
             type: "active-cell",
-            userId: sender.id,
+            userId,
             rowId: msg.rowId,
             columnId: msg.columnId,
           } satisfies ServerMessage),
