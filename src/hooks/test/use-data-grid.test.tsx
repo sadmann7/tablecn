@@ -106,7 +106,7 @@ function fireCellEvent(
   const { dataGridRef, dataGridBodyProps } = result.current;
   const previousContainer = dataGridRef.current;
   const container = document.createElement("div");
-  container.dataset.slot = "grid";
+  container.dataset.slot = "data-grid";
   const cellElement = document.createElement("div");
   cellElement.dataset.slot = "data-grid-cell-wrapper";
   cellElement.dataset.rowId = rowId;
