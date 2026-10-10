@@ -134,7 +134,7 @@ describe("DataTable accessibility", () => {
       table.nextPage();
     });
     expect(statuses.map((status) => status.textContent)).toEqual([
-      "10 rows selected.",
+      "10 rows selected (10 not on this page).",
       "Page 2 of 3",
     ]);
   });

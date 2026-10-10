@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
+import { getVisibleSelectedRows } from "@/lib/data-table-utils";
 import { exportTableToCSV } from "@/lib/export";
 import {
   ActionBar,
@@ -39,13 +40,25 @@ export function TasksTableActionBar({ table }: TasksTableActionBarProps) {
 }
 
 function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
-  const selectedRowIds = table.getSelectedRowIds();
+  // Actions only apply to selected rows on the current page; selections on other pages are kept for later
+  const selectedRowIds = getVisibleSelectedRows(table).map((row) => row.id);
+
+  const deselectRows = React.useCallback(
+    (rowIds: string[]) => {
+      table.setRowSelection((prev) => {
+        const next = { ...prev };
+        for (const rowId of rowIds) delete next[rowId];
+        return next;
+      });
+    },
+    [table],
+  );
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      if (!open) table.resetRowSelection(true);
+      if (!open) deselectRows(selectedRowIds);
     },
-    [table],
+    [deselectRows, selectedRowIds],
   );
 
   const onTaskUpdate = React.useCallback(
@@ -83,8 +96,8 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
       toast.error(error);
       return;
     }
-    table.resetRowSelection(true);
-  }, [selectedRowIds, table]);
+    deselectRows(selectedRowIds);
+  }, [selectedRowIds, deselectRows]);
 
   return (
     <ActionBar open={selectedRowIds.length > 0} onOpenChange={onOpenChange}>

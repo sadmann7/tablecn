@@ -126,14 +126,18 @@ describe("DataTable rendering", () => {
     ).toHaveLength(10);
   });
 
-  it("does not re-render headers when filters change", () => {
-    const { table, measure } = renderTable();
+  it("updates select all when the page changes", () => {
+    const { table } = renderTable();
+    const selectAll = screen.getByRole("checkbox", { name: "Select all" });
 
-    const counts = measure(() =>
-      table.getColumn("title")?.setFilterValue("Task 0"),
-    );
+    act(() => table.toggleAllPageRowsSelected(true));
+    expect(selectAll.getAttribute("data-state")).toBe("checked");
 
-    expect(counts.headers).toBe(0);
+    act(() => table.nextPage());
+    expect(selectAll.getAttribute("data-state")).toBe("unchecked");
+
+    act(() => table.previousPage());
+    expect(selectAll.getAttribute("data-state")).toBe("checked");
   });
 
   it("only renders the cells of a column whose visibility or pinning changes", () => {

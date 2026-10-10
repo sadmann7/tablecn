@@ -7,6 +7,7 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { getVisibleSelectedRows } from "@/lib/data-table-utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Select,
@@ -37,14 +38,16 @@ export function DataTablePagination<TData extends RowData>({
         pageIndex: state.pagination.pageIndex,
         pageSize: state.pagination.pageSize,
         selectedRowCount: table.getSelectedRowIds().length,
+        visibleSelectedRowCount: getVisibleSelectedRows(table).length,
       })}
     >
-      {({ pageIndex, pageSize, selectedRowCount }) => (
+      {({ pageIndex, pageSize, selectedRowCount, visibleSelectedRowCount }) => (
         <DataTablePaginationContent
           table={table}
           pageIndex={pageIndex}
           pageSize={pageSize}
           selectedRowCount={selectedRowCount}
+          visibleSelectedRowCount={visibleSelectedRowCount}
           pageSizeOptions={pageSizeOptions}
           className={className}
           {...props}
@@ -61,6 +64,7 @@ interface DataTablePaginationContentProps<
   pageIndex: number;
   pageSize: number;
   selectedRowCount: number;
+  visibleSelectedRowCount: number;
   pageSizeOptions: number[];
 }
 
@@ -69,6 +73,7 @@ function DataTablePaginationContent<TData extends RowData>({
   pageIndex,
   pageSize,
   selectedRowCount,
+  visibleSelectedRowCount,
   pageSizeOptions,
   className,
   ...props
@@ -91,7 +96,11 @@ function DataTablePaginationContent<TData extends RowData>({
         role="status"
         className="flex-1 text-sm whitespace-nowrap text-muted-foreground"
       >
-        {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected.
+        {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected
+        {selectedRowCount > visibleSelectedRowCount
+          ? ` (${selectedRowCount - visibleSelectedRowCount} not on this page)`
+          : ""}
+        .
       </div>
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center gap-2">

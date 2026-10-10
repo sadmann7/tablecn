@@ -2,6 +2,8 @@ import type { RowData, Table } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { getVisibleSelectedRows } from "@/lib/data-table-utils";
+
 export function exportTableToCSV<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,
   opts: {
@@ -21,8 +23,8 @@ export function exportTableToCSV<TData extends RowData>(
     .filter((column) => !excludeColumns.includes(column.id));
 
   const rows = (
-    onlySelected ? table.getSelectedRowModel() : table.getRowModel()
-  ).rows.map((row) => row.original);
+    onlySelected ? getVisibleSelectedRows(table) : table.getRowModel().rows
+  ).map((row) => row.original);
 
   const csvContent = [
     columns.map((column) => column.id).join(","),

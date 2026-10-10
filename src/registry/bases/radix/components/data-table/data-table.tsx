@@ -19,6 +19,7 @@ import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
+  getVisibleSelectedRows,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
@@ -127,21 +128,26 @@ function DataTableHeader<TData extends RowData>({
         columnVisibility: state.columnVisibility,
       })}
     >
-      {() => (
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="group/row">
-              {headerGroup.headers.map((header) => (
-                <DataTableHeadCell
-                  key={header.id}
-                  header={header}
-                  pinned={header.column.getIsPinned()}
-                />
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-      )}
+      {() => {
+        const rows = table.getRowModel().rows;
+
+        return (
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="group/row">
+                {headerGroup.headers.map((header) => (
+                  <DataTableHeadCell
+                    key={header.id}
+                    header={header}
+                    pinned={header.column.getIsPinned()}
+                    rows={rows}
+                  />
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+        );
+      }}
     </table.Subscribe>
   );
 }
@@ -149,6 +155,8 @@ function DataTableHeader<TData extends RowData>({
 interface DataTableHeadCellProps<TData extends RowData> {
   header: Header<DataTableFeatures, TData>;
   pinned: ColumnPinningPosition;
+  // Unused by the cell; a new array re-renders page-dependent headers like select all
+  rows: Row<DataTableFeatures, TData>[];
 }
 
 const DataTableHeadCell = React.memo(
@@ -283,12 +291,9 @@ function DataTableActionBar<TData extends RowData>({
   actionBar,
 }: DataTableActionBarProps<TData>) {
   return (
-    <Subscribe
-      source={table.atoms.rowSelection}
-      selector={() => table.getSelectedRowIds().length > 0}
-    >
-      {(hasSelectedRows) => (hasSelectedRows ? actionBar : null)}
-    </Subscribe>
+    <table.Subscribe selector={() => getVisibleSelectedRows(table).length > 0}>
+      {(hasVisibleSelectedRows) => (hasVisibleSelectedRows ? actionBar : null)}
+    </table.Subscribe>
   );
 }
 
