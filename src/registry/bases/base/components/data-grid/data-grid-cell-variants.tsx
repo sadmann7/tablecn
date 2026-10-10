@@ -16,6 +16,7 @@ import {
   formatFileSize,
   getBooleanCellValue,
   getCellKey,
+  getColumnLabel,
   getDateCellValue,
   getFileIcon,
   getFilesCellValue,
@@ -169,7 +170,8 @@ export function ShortTextCell<TData extends RowData>(
       onKeyDown={onWrapperKeyDown}
     >
       <div
-        role="textbox"
+        role={isEditing ? "textbox" : undefined}
+        aria-label={isEditing ? getColumnLabel(cell.column) : undefined}
         data-slot="data-grid-cell-content"
         contentEditable={isEditing}
         tabIndex={-1}
@@ -337,6 +339,7 @@ export function LongTextCell<TData extends RowData>(
         <span data-slot="data-grid-cell-content">{value}</span>
       </PopoverTrigger>
       <PopoverContent
+        aria-label={getColumnLabel(cell.column)}
         data-grid-cell-editor=""
         align="start"
         side="bottom"
@@ -345,6 +348,7 @@ export function LongTextCell<TData extends RowData>(
         initialFocus={onInitialFocus}
       >
         <Textarea
+          aria-label={getColumnLabel(cell.column)}
           placeholder="Enter text..."
           className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
           ref={textareaRef}
@@ -448,6 +452,7 @@ export function NumberCell<TData extends RowData>(
     >
       {isEditing ? (
         <input
+          aria-label={getColumnLabel(cell.column)}
           type="number"
           ref={inputRef}
           value={value}
@@ -636,7 +641,8 @@ export function UrlCell<TData extends RowData>(
         </div>
       ) : (
         <div
-          role="textbox"
+          role={isEditing ? "textbox" : undefined}
+          aria-label={isEditing ? getColumnLabel(cell.column) : undefined}
           data-slot="data-grid-cell-content"
           contentEditable={isEditing}
           tabIndex={-1}
@@ -733,6 +739,7 @@ export function CheckboxCell<TData extends RowData>(
       onKeyDown={onWrapperKeyDown}
     >
       <Checkbox
+        aria-label={getColumnLabel(cell.column)}
         tabIndex={-1}
         checked={value}
         onCheckedChange={onCheckedChange}
@@ -837,6 +844,7 @@ export function SelectCell<TData extends RowData>(
             )}
           </SelectTrigger>
           <SelectContent
+            aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             // compensate for the wrapper padding
             align="start"
@@ -1041,6 +1049,7 @@ export function MultiSelectCell<TData extends RowData>(
             render={<div className="pointer-events-none absolute inset-0" />}
           />
           <PopoverContent
+            aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
             sideOffset={sideOffset}
@@ -1060,6 +1069,7 @@ export function MultiSelectCell<TData extends RowData>(
                     >
                       {label}
                       <button
+                        aria-label={`Remove ${label}`}
                         type="button"
                         onClick={(event) => removeValue(value, event)}
                         onPointerDown={(event) => {
@@ -1080,6 +1090,7 @@ export function MultiSelectCell<TData extends RowData>(
                   );
                 })}
                 <CommandInput
+                  aria-label={`Search ${getColumnLabel(cell.column)}`}
                   ref={inputRef}
                   value={searchValue}
                   onValueChange={setSearchValue}
@@ -1221,6 +1232,7 @@ export function DateCell<TData extends RowData>(
         </PopoverTrigger>
         {isEditing && (
           <PopoverContent
+            aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
             alignOffset={-8}
@@ -1743,6 +1755,7 @@ export function FileCell<TData extends RowData>(
             render={<div className="pointer-events-none absolute inset-0" />}
           />
           <PopoverContent
+            aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
             sideOffset={sideOffset}
@@ -1850,6 +1863,7 @@ export function FileCell<TData extends RowData>(
                             </p>
                           </div>
                           <Button
+                            aria-label={`Remove ${file.name}`}
                             type="button"
                             variant="ghost"
                             size="icon"

@@ -109,6 +109,7 @@ export interface DataGridColumnMeta {
 
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
+  columnIndex: number;
   rowHeight: RowHeightValue;
   isEditing: boolean;
   isFocused: boolean;
