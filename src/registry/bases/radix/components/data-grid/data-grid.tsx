@@ -419,7 +419,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                     data-slot="data-grid-header-cell"
                     data-column-id={header.column.id}
                     tabIndex={-1}
-                    className={cn("relative", {
+                    className={cn("group/header relative", {
                       grow: stretchColumns && header.column.id !== "select",
                       "border-e":
                         showEndBorder && header.column.id !== "select",
@@ -435,7 +435,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                         .columnDef.header === "function" ? (
                       <div
                         className={cn(
-                          "size-full px-3 py-1.5 has-focus:ring-1 has-focus:ring-ring has-focus:ring-inset",
+                          "size-full px-3 py-1.5 group-focus-within/header:ring-1 group-focus-within/header:ring-ring group-focus-within/header:ring-inset",
                           cornerClassName,
                         )}
                       >
