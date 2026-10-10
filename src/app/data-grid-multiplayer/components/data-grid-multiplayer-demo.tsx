@@ -41,13 +41,13 @@ import {
   type UseDataGridProps,
   useDataGrid,
 } from "@/registry/bases/radix/hooks/use-data-grid";
-import { Button } from "@/registry/bases/radix/ui/button";
 
 import {
   multiplayerCollection,
   serializeSkater,
 } from "../lib/multiplayer-collection";
 import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
+import { DataGridShareMenu } from "./data-grid-share-menu";
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
@@ -413,6 +413,19 @@ export function DataGridMultiplayerDemo({
     sendActiveCell(focusedRowId, focusedColumnId);
   }, [focusedRowId, focusedColumnId, sendActiveCell]);
 
+  // The server doesn't echo your own cell back, so your presence takes it from the grid
+  const presenceUsers = React.useMemo(() => {
+    const currentUser = users[currentUserId];
+    if (!currentUser) return users;
+    return {
+      ...users,
+      [currentUserId]: {
+        ...currentUser,
+        activeCell: { rowId: focusedRowId, columnId: focusedColumnId },
+      },
+    };
+  }, [users, currentUserId, focusedRowId, focusedColumnId]);
+
   const onStatusUpdate = React.useCallback(
     (value: string) => {
       const selectedRows = table.getSelectedRowModel().rows;
@@ -478,13 +491,23 @@ export function DataGridMultiplayerDemo({
     [tableMeta],
   );
 
-  const onCopyLink = React.useCallback(() => {
-    if (typeof window === "undefined") return;
-    const url = `${window.location.origin}/data-grid-multiplayer?room=${roomId}`;
-    void navigator.clipboard
-      .writeText(url)
-      .then(() => toast.success("Room link copied"));
-  }, [roomId]);
+  const getCellLabel = React.useCallback(
+    ({
+      rowId,
+      columnId,
+    }: {
+      rowId: string | null;
+      columnId: string | null;
+    }) => {
+      if (!rowId || !columnId) return null;
+      const row = table.getRowModel().rowsById[rowId];
+      const column = table.getColumn(columnId);
+      if (!row || !column) return null;
+      const columnLabel = column.columnDef.meta?.label ?? column.id;
+      return `${columnLabel} · row ${row.getDisplayIndex() + 1}`;
+    },
+    [table],
+  );
 
   const height = Math.max(400, windowSize.height - 150);
   const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
@@ -510,8 +533,9 @@ export function DataGridMultiplayerDemo({
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
         <DataGridPresenceAvatars
-          users={users}
+          users={presenceUsers}
           currentUserId={currentUserId}
+          getCellLabel={getCellLabel}
           onUserClick={onUserClick}
         />
         <div
@@ -519,13 +543,7 @@ export function DataGridMultiplayerDemo({
           aria-orientation="horizontal"
           className="flex items-center gap-2"
         >
-          <Button
-            variant="outline"
-            onClick={onCopyLink}
-            className="h-8 gap-1.5 text-xs"
-          >
-            Share room
-          </Button>
+          <DataGridShareMenu roomId={roomId} />
           <DataGridKeyboardShortcuts
             enableSearch
             enableUndoRedo
