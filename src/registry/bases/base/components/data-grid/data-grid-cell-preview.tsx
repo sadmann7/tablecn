@@ -43,21 +43,25 @@ const LINE_CLAMP_CLASS_NAMES: Record<RowHeightValue, string> = {
 
 interface DataGridCellPreviewProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
+  columnIndex: number;
   width: number;
   rowHeight: RowHeightValue;
   isSelected: boolean;
   isSearchMatch: boolean;
   isActiveSearchMatch: boolean;
+  readOnly: boolean;
 }
 
 // Static stand-in for a cell mounted while scrolling, without the data-row-id and data-column-id attributes so focus never lands on it
 export function DataGridCellPreview<TData extends RowData>({
   cell,
+  columnIndex,
   width,
   rowHeight,
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  readOnly,
 }: DataGridCellPreviewProps<TData>) {
   const { className, content } = getPreviewContent(
     cell,
@@ -68,7 +72,11 @@ export function DataGridCellPreview<TData extends RowData>({
 
   return (
     <div
-      data-slot="grid-cell-preview"
+      role="gridcell"
+      aria-colindex={columnIndex + 1}
+      aria-selected={isSelected}
+      aria-readonly={readOnly || undefined}
+      data-slot="data-grid-cell-preview"
       className={cn(
         "size-full cursor-default px-2 py-1.5 text-start text-sm",
         className,

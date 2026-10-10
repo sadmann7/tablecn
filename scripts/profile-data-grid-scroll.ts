@@ -19,7 +19,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
-const GRID_SELECTOR = '[data-slot="grid"]';
+const GRID_SELECTOR = '[data-slot="data-grid"]';
 const TRACE_CATEGORIES = [
   "devtools.timeline",
   "disabled-by-default-devtools.timeline",
