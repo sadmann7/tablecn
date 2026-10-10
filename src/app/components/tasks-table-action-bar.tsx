@@ -80,12 +80,16 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
     [selectedRowIds],
   );
 
-  const onTaskExport = React.useCallback(() => {
-    exportTableToCSV(table, {
-      excludeColumns: ["select", "actions"],
-      onlySelected: true,
-    });
-  }, [table]);
+  const onTaskExport = React.useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      exportTableToCSV(table, {
+        excludeColumns: ["select", "actions"],
+        onlySelected: true,
+      });
+    },
+    [table],
+  );
 
   const onTaskDelete = React.useCallback(async () => {
     const { error } = await deleteTasks({
@@ -149,11 +153,11 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <ActionBarItem onClick={onTaskExport}>
+        <ActionBarItem onSelect={onTaskExport}>
           <Download />
           Export
         </ActionBarItem>
-        <ActionBarItem variant="destructive" onClick={onTaskDelete}>
+        <ActionBarItem variant="destructive" onSelect={onTaskDelete}>
           <Trash2 />
           Delete
         </ActionBarItem>
