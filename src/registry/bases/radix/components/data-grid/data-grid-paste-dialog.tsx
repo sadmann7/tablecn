@@ -1,6 +1,10 @@
 "use client";
 
-import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
+import {
+  type ReactTable,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -18,7 +22,7 @@ import {
 } from "@/registry/bases/radix/ui/dialog";
 
 interface DataGridPasteDialogProps<TData extends RowData> {
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
 }
 
 export function DataGridPasteDialog<TData extends RowData>({
