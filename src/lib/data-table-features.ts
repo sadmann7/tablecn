@@ -16,6 +16,9 @@ import {
   makeStateUpdater,
   metaHelper,
   setStateSlice,
+  sortFn_alphanumeric,
+  sortFn_datetime,
+  sortFn_text,
   type OnChangeFn,
   type RowData,
   rowPaginationFeature,
@@ -282,6 +285,11 @@ export const dataTableFeatures = tableFeatures({
   facetedMinMaxValues: createFacetedMinMaxValues(),
   paginatedRowModel: createPaginatedRowModel(),
   sortedRowModel: createSortedRowModel(),
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
   columnMeta: metaHelper<DataTableColumnMeta>(),
 });
 
