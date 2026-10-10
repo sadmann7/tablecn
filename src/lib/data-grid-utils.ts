@@ -31,7 +31,6 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellOpts,
   CellPosition,
-  Direction,
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
@@ -450,7 +449,6 @@ export function getHasCellRangeSelection(ranges: CellSelectionState) {
   );
 }
 
-/** Columns that take part in cell selection, navigation, search and the clipboard. */
 export function getIsDataColumn(
   column: { columnDef: { enableCellSelection?: boolean } } | undefined,
 ) {
@@ -525,12 +523,11 @@ export function getLineCount(rowHeight: RowHeightValue): number {
 export function getColumnBorderVisibility<TData extends RowData>(params: {
   column: Column<DataGridFeatures, TData>;
   nextColumn?: Column<DataGridFeatures, TData>;
-  isLastColumn: boolean;
 }): {
   showEndBorder: boolean;
   showStartBorder: boolean;
 } {
-  const { column, nextColumn, isLastColumn } = params;
+  const { column, nextColumn } = params;
 
   const isPinned = column.getIsPinned();
   const isFirstRightPinnedColumn =
@@ -542,8 +539,7 @@ export function getColumnBorderVisibility<TData extends RowData>(params: {
   const isBeforeRightPinned =
     nextIsPinned === "end" && nextColumn?.getIsFirstColumn("end");
 
-  const showEndBorder =
-    !isBeforeRightPinned && (isLastColumn || !isLastRightPinnedColumn);
+  const showEndBorder = !isBeforeRightPinned && !isLastRightPinnedColumn;
 
   const showStartBorder = isFirstRightPinnedColumn;
 
@@ -555,38 +551,16 @@ export function getColumnBorderVisibility<TData extends RowData>(params: {
 
 export function getColumnPinningStyle<TData extends RowData>(params: {
   column: Column<DataGridFeatures, TData>;
-  withBorder?: boolean;
-  dir?: Direction;
 }): React.CSSProperties {
-  const { column, dir = "ltr", withBorder = false } = params;
+  const { column } = params;
 
   const isPinned = column.getIsPinned();
-  const isLastLeftPinnedColumn =
-    isPinned === "start" && column.getIsLastColumn("start");
-  const isFirstRightPinnedColumn =
-    isPinned === "end" && column.getIsFirstColumn("end");
-
-  const isRtl = dir === "rtl";
-
-  const leftPosition =
-    isPinned === "start" ? `${column.getStart("start")}px` : undefined;
-  const rightPosition =
-    isPinned === "end" ? `${column.getAfter("end")}px` : undefined;
 
   return {
-    boxShadow: withBorder
-      ? isLastLeftPinnedColumn
-        ? isRtl
-          ? "4px 0 4px -4px var(--border) inset"
-          : "-4px 0 4px -4px var(--border) inset"
-        : isFirstRightPinnedColumn
-          ? isRtl
-            ? "-4px 0 4px -4px var(--border) inset"
-            : "4px 0 4px -4px var(--border) inset"
-          : undefined
-      : undefined,
-    left: isRtl ? rightPosition : leftPosition,
-    right: isRtl ? leftPosition : rightPosition,
+    insetInlineStart:
+      isPinned === "start" ? `${column.getStart("start")}px` : undefined,
+    insetInlineEnd:
+      isPinned === "end" ? `${column.getAfter("end")}px` : undefined,
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     background: "var(--background)",

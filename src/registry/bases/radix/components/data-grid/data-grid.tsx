@@ -39,6 +39,8 @@ interface DataGridProps<TData extends RowData>
   dir?: Direction;
   height?: number;
   stretchColumns?: boolean;
+  /** Rendered while any rows are selected, such as an `ActionBar` with bulk row actions. */
+  actionBar?: React.ReactNode;
 }
 
 export function DataGrid<TData extends RowData>({
@@ -56,6 +58,7 @@ export function DataGrid<TData extends RowData>({
   height = 600,
   stretchColumns = false,
   adjustLayout,
+  actionBar,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -81,11 +84,31 @@ export function DataGrid<TData extends RowData>({
         columnSizeVars={columnSizeVars}
         onRowAdd={onRowAdd}
         adjustLayout={adjustLayout}
-        dir={dir}
         height={height}
         stretchColumns={stretchColumns}
       />
+      {actionBar ? (
+        <DataGridActionBar table={table} actionBar={actionBar} />
+      ) : null}
     </div>
+  );
+}
+
+interface DataGridActionBarProps<TData extends RowData> extends Pick<
+  DataGridProps<TData>,
+  "table"
+> {
+  actionBar: React.ReactNode;
+}
+
+function DataGridActionBar<TData extends RowData>({
+  table,
+  actionBar,
+}: DataGridActionBarProps<TData>) {
+  return (
+    <table.Subscribe selector={() => table.getHasRowSelection()}>
+      {(hasRowSelection) => (hasRowSelection ? actionBar : null)}
+    </table.Subscribe>
   );
 }
 
@@ -103,7 +126,6 @@ type DataGridViewportProps<TData extends RowData> = Pick<
   | "onRowAdd"
   | "adjustLayout"
 > & {
-  dir: Direction;
   height: number;
   stretchColumns: boolean;
 };
@@ -121,7 +143,6 @@ function DataGridViewport<TData extends RowData>({
   columnSizeVars,
   onRowAdd: onRowAddProp,
   adjustLayout,
-  dir,
   height,
   stretchColumns,
 }: DataGridViewportProps<TData>) {
@@ -187,7 +208,6 @@ function DataGridViewport<TData extends RowData>({
 
   const rowContext = React.useMemo(
     () => ({
-      dir,
       stretchColumns,
       adjustLayout,
       readOnlyColumnIds,
@@ -195,7 +215,6 @@ function DataGridViewport<TData extends RowData>({
       measureElement: rowVirtualizer.measureElement,
     }),
     [
-      dir,
       stretchColumns,
       adjustLayout,
       readOnlyColumnIds,
@@ -269,7 +288,6 @@ function DataGridViewport<TData extends RowData>({
         table={table}
         headerGroups={table.getHeaderGroups()}
         headerRef={headerRef}
-        dir={dir}
         stretchColumns={stretchColumns}
       />
       <div
@@ -341,7 +359,6 @@ interface DataGridHeaderProps<TData extends RowData> {
   table: DataGridProps<TData>["table"];
   headerGroups: Array<HeaderGroup<DataGridFeatures, TData>>;
   headerRef: DataGridProps<TData>["headerRef"];
-  dir: Direction;
   stretchColumns: boolean;
 }
 
@@ -352,7 +369,6 @@ const DataGridHeader = React.memo(
     prev.table.atoms === next.table.atoms &&
     prev.headerGroups === next.headerGroups &&
     prev.headerRef === next.headerRef &&
-    prev.dir === next.dir &&
     prev.stretchColumns === next.stretchColumns,
 ) as typeof DataGridHeaderImpl;
 
@@ -360,7 +376,6 @@ function DataGridHeaderImpl<TData extends RowData>({
   table,
   headerGroups,
   headerRef,
-  dir,
   stretchColumns,
 }: DataGridHeaderProps<TData>) {
   return (
@@ -393,7 +408,6 @@ function DataGridHeaderImpl<TData extends RowData>({
                   getColumnBorderVisibility({
                     column: header.column,
                     nextColumn: nextHeader?.column,
-                    isLastColumn,
                   });
 
                 const cornerClassName = cn(
@@ -427,7 +441,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                         showStartBorder && header.column.id !== "select",
                     })}
                     style={{
-                      ...getColumnPinningStyle({ column: header.column, dir }),
+                      ...getColumnPinningStyle({ column: header.column }),
                       width: `calc(var(--header-${header.id}-size) * 1px)`,
                     }}
                   >

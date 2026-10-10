@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { Languages } from "lucide-react";
+import { Copy, Languages, Trash2 } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -16,6 +16,7 @@ import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
 import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
@@ -27,6 +28,10 @@ import {
   useDataGrid,
 } from "@/registry/bases/radix/hooks/use-data-grid";
 import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
+import {
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/registry/bases/radix/ui/dropdown-menu";
 import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
 import {
@@ -36,17 +41,20 @@ import {
   skills,
   statuses,
 } from "../lib/seeds";
+import { PeopleGridActionBar } from "./people-grid-action-bar";
 
 interface DataGridDemoImplProps extends UseDataGridProps<Person> {
   dir: Direction;
   onDirChange: (dir: Direction) => void;
   height: number;
+  onRowsDuplicate: (rows: Person[]) => void;
 }
 
 function DataGridDemoImpl({
   dir,
   onDirChange,
   height,
+  onRowsDuplicate,
   ...props
 }: DataGridDemoImplProps) {
   const { table, ...dataGridProps } = useDataGrid({
@@ -54,7 +62,7 @@ function DataGridDemoImpl({
     initialState: {
       columnPinning: {
         start: ["select"],
-        end: [],
+        end: ["actions"],
       },
     },
     dir,
@@ -93,7 +101,17 @@ function DataGridDemoImpl({
         enableRowAdd
         enableRowsDelete
       />
-      <DataGrid {...dataGridProps} table={table} height={height} />
+      <DataGrid
+        {...dataGridProps}
+        table={table}
+        height={height}
+        actionBar={
+          <PeopleGridActionBar
+            table={table}
+            onRowsDuplicate={onRowsDuplicate}
+          />
+        }
+      />
     </div>
   );
 }
@@ -104,6 +122,30 @@ export function DataGridDemo() {
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
+
+  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
+    useDataGridUndoRedo({
+      data,
+      onDataChange: setData,
+      getRowId: (row) => row.id,
+    });
+
+  const onRowsDuplicate = React.useCallback(
+    (rows: Person[]) => {
+      const copies = new Map(
+        rows.map((row) => [row.id, { ...row, id: generateId() }]),
+      );
+
+      setData((prev) =>
+        prev.flatMap((row) => {
+          const copy = copies.get(row.id);
+          return copy ? [row, copy] : [row];
+        }),
+      );
+      trackRowsAdd([...copies.values()]);
+    },
+    [trackRowsAdd],
+  );
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(
     () => [
@@ -286,16 +328,27 @@ export function DataGridDemo() {
           },
         },
       },
+      getDataGridActionsColumn<Person>({
+        actions: ({ row, table }) => (
+          <>
+            <DropdownMenuItem onSelect={() => onRowsDuplicate([row.original])}>
+              <Copy />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => void table.deleteRows([row.id])}
+            >
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          </>
+        ),
+      }),
     ],
-    [filterFn],
+    [filterFn, onRowsDuplicate],
   );
-
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo({
-      data,
-      onDataChange: setData,
-      getRowId: (row) => row.id,
-    });
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
     React.useCallback(() => {
@@ -412,6 +465,7 @@ export function DataGridDemo() {
         onRowAdd={onRowAdd}
         onRowsAdd={onRowsAdd}
         onRowsDelete={onRowsDelete}
+        onRowsDuplicate={onRowsDuplicate}
         onFilesUpload={onFilesUpload}
         onFilesDelete={onFilesDelete}
         height={height}
