@@ -43,12 +43,11 @@ function pickColor(usedColors: string[]): string {
 
 export class SkaterRoom extends Server<Env> {
   state: RoomState = { users: {}, usedColors: [], rows: [] };
-  // Users are keyed by clientId so a browser's tabs show up as one person
   private connectionIdsByUserId = new Map<string, Set<string>>();
   private userIdByConnectionId = new Map<string, string>();
 
-  private getUserId(conn: Connection) {
-    return this.userIdByConnectionId.get(conn.id) ?? conn.id;
+  private getUserId(connection: Connection) {
+    return this.userIdByConnectionId.get(connection.id) ?? connection.id;
   }
 
   // Runs before any connection is accepted — the room waits for this to complete.
@@ -76,15 +75,15 @@ export class SkaterRoom extends Server<Env> {
     this.state.rows = structuredClone(seedRows);
   }
 
-  onConnect(conn: Connection, ctx: ConnectionContext) {
+  onConnect(connection: Connection, ctx: ConnectionContext) {
     void this.ctx.storage.deleteAlarm();
 
     const url = new URL(ctx.request.url);
-    // Older clients don't send a clientId, so each of their connections stays its own user
-    const userId = url.searchParams.get("clientId") ?? conn.id;
-    this.userIdByConnectionId.set(conn.id, userId);
+
+    const userId = url.searchParams.get("clientId") ?? connection.id;
+    this.userIdByConnectionId.set(connection.id, userId);
     const connectionIds = this.connectionIdsByUserId.get(userId) ?? new Set();
-    connectionIds.add(conn.id);
+    connectionIds.add(connection.id);
     this.connectionIdsByUserId.set(userId, connectionIds);
 
     let user = this.state.users[userId];
@@ -106,20 +105,20 @@ export class SkaterRoom extends Server<Env> {
       userId,
       rows: this.state.rows,
     };
-    conn.send(JSON.stringify(snapshot));
+    connection.send(JSON.stringify(snapshot));
 
     if (isNewUser) {
       const joinMsg: ServerMessage = { type: "user-join", userId, user };
-      this.broadcast(JSON.stringify(joinMsg), [conn.id]);
+      this.broadcast(JSON.stringify(joinMsg), [connection.id]);
     }
   }
 
-  onClose(conn: Connection) {
-    const userId = this.getUserId(conn);
-    this.userIdByConnectionId.delete(conn.id);
+  onClose(connection: Connection) {
+    const userId = this.getUserId(connection);
+    this.userIdByConnectionId.delete(connection.id);
 
     const connectionIds = this.connectionIdsByUserId.get(userId);
-    connectionIds?.delete(conn.id);
+    connectionIds?.delete(connection.id);
     // The user stays while any of their tabs is still connected
     if (connectionIds && connectionIds.size > 0) return;
     this.connectionIdsByUserId.delete(userId);
