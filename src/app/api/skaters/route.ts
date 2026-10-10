@@ -106,7 +106,10 @@ export async function PATCH(request: Request) {
         .where(eq(skaters.id, firstUpdate.id))
         .returning();
 
-      return NextResponse.json({ updated: updated ? 1 : 0 });
+      return NextResponse.json({
+        updated: updated ? 1 : 0,
+        skaters: updated ? [updated] : [],
+      });
     }
 
     const firstChanges = JSON.stringify(firstUpdate.changes);
@@ -123,7 +126,7 @@ export async function PATCH(request: Request) {
         .where(inArray(skaters.id, ids))
         .returning();
 
-      return NextResponse.json({ updated: updated.length });
+      return NextResponse.json({ updated: updated.length, skaters: updated });
     }
 
     const results = await db.transaction(async (tx) => {
@@ -139,7 +142,7 @@ export async function PATCH(request: Request) {
       return updated;
     });
 
-    return NextResponse.json({ updated: results.length });
+    return NextResponse.json({ updated: results.length, skaters: results });
   } catch {
     return NextResponse.json(
       { error: "Failed to update skaters" },

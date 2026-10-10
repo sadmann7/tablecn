@@ -38,7 +38,7 @@ import {
 import type { SkaterSchema } from "../lib/validation";
 
 import { skatersCollection } from "../lib/collections";
-import { DataGridActionBar } from "./data-grid-action-bar";
+import { SkatersGridActionBar } from "./skaters-grid-action-bar";
 
 const TRICKS = [
   "Kickflip",
@@ -87,8 +87,8 @@ export function DataGridLiveDemo() {
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { data } = useLiveQuery(
-    (q) => {
+  const { data } = useLiveQuery({
+    query: (q) => {
       let query = q.from({ skater: skatersCollection });
 
       for (const sort of sorting) {
@@ -102,8 +102,7 @@ export function DataGridLiveDemo() {
 
       return query;
     },
-    [sorting],
-  );
+  });
 
   const { startUpload } = useUploadThing("skaterMedia");
 
@@ -594,7 +593,7 @@ export function DataGridLiveDemo() {
         <DataGridViewMenu table={table} align="end" />
       </div>
       <DataGrid {...dataGridProps} table={table} height={height} />
-      <DataGridActionBar
+      <SkatersGridActionBar
         table={table}
         statusOptions={statusOptions}
         styleOptions={styleOptions}
