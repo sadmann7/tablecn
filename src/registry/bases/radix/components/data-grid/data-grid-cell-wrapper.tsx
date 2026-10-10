@@ -12,6 +12,7 @@ interface DataGridCellWrapperProps<TData extends RowData>
 
 export function DataGridCellWrapper<TData extends RowData>({
   cell,
+  columnIndex,
   isEditing,
   isFocused,
   isSelected,
@@ -74,7 +75,10 @@ export function DataGridCellWrapper<TData extends RowData>({
 
   return (
     <div
-      role="button"
+      role="gridcell"
+      aria-colindex={columnIndex + 1}
+      aria-selected={isSelected}
+      aria-readonly={readOnly || undefined}
       {...props}
       data-slot="data-grid-cell-wrapper"
       data-row-id={rowId}

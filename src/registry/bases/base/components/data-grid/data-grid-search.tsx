@@ -166,6 +166,7 @@ function DataGridSearchImpl<TData extends RowData>({
     >
       <div className="flex items-center gap-2">
         <Input
+          aria-label="Find in table"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
@@ -231,7 +232,10 @@ function DataGridSearchImpl<TData extends RowData>({
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-1 text-xs whitespace-nowrap text-muted-foreground">
+      <div
+        role="status"
+        className="flex items-center gap-1 text-xs whitespace-nowrap text-muted-foreground"
+      >
         {matchCount > 0 ? (
           <span>
             {matchIndex + 1} of {matchCount}

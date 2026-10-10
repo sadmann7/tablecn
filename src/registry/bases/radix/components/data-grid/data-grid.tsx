@@ -213,6 +213,21 @@ function DataGridViewport<TData extends RowData>({
     [onRowAddRef],
   );
 
+  // Skip the grid's own tab stop when Shift+Tab leaves a cell
+  const onDataGridKeyDownCapture = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Tab" || !event.shiftKey) return;
+      const container = event.currentTarget;
+      if (event.target === container) return;
+
+      container.tabIndex = -1;
+      requestAnimationFrame(() => {
+        container.tabIndex = 0;
+      });
+    },
+    [],
+  );
+
   const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -236,7 +251,7 @@ function DataGridViewport<TData extends RowData>({
     <div
       role="grid"
       aria-label="Data grid"
-      aria-rowcount={rows.length + (onRowAddProp ? 1 : 0)}
+      aria-rowcount={rows.length + 1 + (!readOnly && onRowAddProp ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
       data-slot="data-grid"
@@ -247,6 +262,7 @@ function DataGridViewport<TData extends RowData>({
         ...columnSizeVars,
         maxHeight: `${height}px`,
       }}
+      onKeyDownCapture={onDataGridKeyDownCapture}
       onContextMenu={onDataGridContextMenu}
     >
       <DataGridHeader
@@ -277,7 +293,7 @@ function DataGridViewport<TData extends RowData>({
           })}
         </DataGridRowContext>
       </div>
-      {!readOnly && onRowAdd && (
+      {!readOnly && onRowAddProp && (
         <div
           role="rowgroup"
           data-slot="data-grid-footer"
@@ -349,7 +365,7 @@ function DataGridHeaderImpl<TData extends RowData>({
 }: DataGridHeaderProps<TData>) {
   return (
     <table.Subscribe selector={selectHeaderState}>
-      {() => (
+      {({ sorting }) => (
         <div
           role="rowgroup"
           data-slot="data-grid-header"
@@ -365,13 +381,13 @@ function DataGridHeaderImpl<TData extends RowData>({
               tabIndex={-1}
               className="flex w-full"
             >
-              {headerGroup.headers.map((header, colIndex) => {
-                const sortDirection = header.column.getIsSorted();
-                const isSortable = header.column.getCanSort();
+              {headerGroup.headers.map((header, columnIndex) => {
+                const primarySort =
+                  sorting[0]?.id === header.column.id ? sorting[0] : null;
 
-                const nextHeader = headerGroup.headers[colIndex + 1];
+                const nextHeader = headerGroup.headers[columnIndex + 1];
                 const isLastColumn =
-                  colIndex === headerGroup.headers.length - 1;
+                  columnIndex === headerGroup.headers.length - 1;
 
                 const { showEndBorder, showStartBorder } =
                   getColumnBorderVisibility({
@@ -382,7 +398,8 @@ function DataGridHeaderImpl<TData extends RowData>({
 
                 const cornerClassName = cn(
                   rowIndex === 0 && {
-                    "rounded-ss-[calc(var(--radius-md)-1px)]": colIndex === 0,
+                    "rounded-ss-[calc(var(--radius-md)-1px)]":
+                      columnIndex === 0,
                     "rounded-se-[calc(var(--radius-md)-1px)]": isLastColumn,
                   },
                 );
@@ -391,15 +408,13 @@ function DataGridHeaderImpl<TData extends RowData>({
                   <div
                     key={header.id}
                     role="columnheader"
-                    aria-colindex={colIndex + 1}
+                    aria-colindex={columnIndex + 1}
                     aria-sort={
-                      sortDirection === "asc"
-                        ? "ascending"
-                        : sortDirection === "desc"
+                      primarySort
+                        ? primarySort.desc
                           ? "descending"
-                          : isSortable
-                            ? "none"
-                            : undefined
+                          : "ascending"
+                        : undefined
                     }
                     data-slot="data-grid-header-cell"
                     data-column-id={header.column.id}
