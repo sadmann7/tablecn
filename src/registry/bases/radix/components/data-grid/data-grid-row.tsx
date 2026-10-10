@@ -22,6 +22,7 @@ import {
   flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
+  getFocusedCellPosition,
   getRowCellSelectionKey,
   getRowHeightValue,
 } from "@/lib/data-grid-utils";
@@ -244,6 +245,32 @@ function DataGridUtilityCellImpl<TData extends RowData>({
   isFocused,
   isRowSelected,
 }: DataGridUtilityCellProps<TData>) {
+  // Clicking a control in the cell moves DOM focus without going through grid navigation
+  const onFocus = React.useCallback(() => {
+    const { table, row, column } = cell;
+    const ranges = table.atoms.cellSelection.get();
+    const focusedCell = getFocusedCellPosition(ranges);
+    if (focusedCell?.rowId === row.id && focusedCell.columnId === column.id) {
+      return;
+    }
+
+    if (table.getHasRowSelection()) {
+      // Keeps the selected rows and only moves the focus marker
+      table.setCellSelection([
+        ...ranges.slice(0, -1),
+        {
+          anchorRowId: row.id,
+          anchorColumnId: column.id,
+          focusRowId: row.id,
+          focusColumnId: column.id,
+        },
+      ]);
+      return;
+    }
+
+    table.setFocusedCell(row.id, column.id);
+  }, [cell]);
+
   return (
     <div
       data-slot="data-grid-utility-cell"
@@ -251,6 +278,7 @@ function DataGridUtilityCellImpl<TData extends RowData>({
       data-column-id={cell.column.id}
       data-focused={isFocused ? "" : undefined}
       tabIndex={-1}
+      onFocus={onFocus}
       className={cn("size-full px-3 py-1.5 outline-none", {
         "bg-primary/10": isRowSelected,
         "ring-1 ring-ring ring-inset": isFocused,

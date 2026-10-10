@@ -432,6 +432,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                     data-slot="data-grid-header-cell"
                     data-column-id={header.column.id}
                     tabIndex={-1}
+                    onMouseDown={onHeaderCellMouseDown}
                     className={cn("group/header relative", {
                       grow: stretchColumns && header.column.id !== "select",
                       "border-e":
@@ -473,6 +474,13 @@ function DataGridHeaderImpl<TData extends RowData>({
       )}
     </table.Subscribe>
   );
+}
+
+// A header with nothing to interact with, like the actions column's, shouldn't take focus when clicked
+function onHeaderCellMouseDown(event: React.MouseEvent<HTMLDivElement>) {
+  if (!event.currentTarget.querySelector("button, input, a[href]")) {
+    event.preventDefault();
+  }
 }
 
 function selectHeaderState(state: TableState<DataGridFeatures>) {
