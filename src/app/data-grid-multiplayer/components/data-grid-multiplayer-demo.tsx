@@ -11,7 +11,7 @@ import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellPresence } from "@/lib/data-grid-types";
 
-import { DataGridActionBar } from "@/app/data-grid-live/components/data-grid-action-bar";
+import { SkatersGridActionBar } from "@/app/data-grid-live/components/skaters-grid-action-bar";
 import {
   getSkaterStatusIcon,
   getStanceIcon,
@@ -78,8 +78,8 @@ export function DataGridMultiplayerDemo({
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { data } = useLiveQuery(
-    (q) => {
+  const { data } = useLiveQuery({
+    query: (q) => {
       let query = q.from({ skater: multiplayerCollection });
       for (const sort of sorting) {
         const field = sort.id as keyof SkaterSchema;
@@ -93,8 +93,7 @@ export function DataGridMultiplayerDemo({
       query = query.orderBy((t) => t.skater.order, "asc");
       return query;
     },
-    [sorting],
-  );
+  });
 
   const {
     users,
@@ -563,7 +562,7 @@ export function DataGridMultiplayerDemo({
         </div>
       </div>
       <DataGrid {...dataGridProps} table={table} height={height} />
-      <DataGridActionBar
+      <SkatersGridActionBar
         table={table}
         statusOptions={statusOptions}
         styleOptions={styleOptions}

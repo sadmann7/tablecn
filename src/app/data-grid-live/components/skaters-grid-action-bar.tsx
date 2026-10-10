@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
-interface DataGridActionBarProps<TData extends RowData> {
+interface SkatersGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
@@ -31,8 +31,8 @@ interface DataGridActionBarProps<TData extends RowData> {
   onDelete?: () => void;
 }
 
-export function DataGridActionBar<TData extends RowData>(
-  props: DataGridActionBarProps<TData>,
+export function SkatersGridActionBar<TData extends RowData>(
+  props: SkatersGridActionBarProps<TData>,
 ) {
   return (
     <Subscribe
@@ -40,7 +40,7 @@ export function DataGridActionBar<TData extends RowData>(
       selector={() => props.table.getSelectedRangeCellCount()}
     >
       {(selectedCellCount) => (
-        <DataGridActionBarImpl
+        <SkatersGridActionBarImpl
           {...props}
           selectedCellCount={selectedCellCount}
         />
@@ -49,7 +49,7 @@ export function DataGridActionBar<TData extends RowData>(
   );
 }
 
-function DataGridActionBarImpl<TData extends RowData>({
+function SkatersGridActionBarImpl<TData extends RowData>({
   table,
   selectedCellCount,
   statusOptions,
@@ -57,7 +57,7 @@ function DataGridActionBarImpl<TData extends RowData>({
   onStatusUpdate,
   onStyleUpdate,
   onDelete,
-}: DataGridActionBarProps<TData> & { selectedCellCount: number }) {
+}: SkatersGridActionBarProps<TData> & { selectedCellCount: number }) {
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (!open) {
