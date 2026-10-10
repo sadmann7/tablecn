@@ -718,8 +718,12 @@ export function CheckboxCell<TData extends RowData>(
   const onCheckboxMouseDown = React.useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
+      // Keep focus on the cell, not the checkbox inside it
+      event.preventDefault();
+      cell.table.setFocusedCell(cell.row.id, cell.column.id);
+      containerRef.current?.focus();
     },
-    [],
+    [cell],
   );
 
   const onCheckboxDoubleClick = React.useCallback(
@@ -798,6 +802,15 @@ export function SelectCell<TData extends RowData>(
     [cell, readOnly],
   );
 
+  // The select's trigger unmounts once editing stops, so return focus to the cell
+  const getFinalFocus = React.useCallback(() => {
+    const container = containerRef.current;
+    if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
+      return false;
+    }
+    return container;
+  }, []);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
@@ -851,6 +864,7 @@ export function SelectCell<TData extends RowData>(
             alignOffset={-8}
             sideOffset={-8}
             className="min-w-[calc(var(--anchor-width)+16px)]"
+            finalFocus={getFinalFocus}
           >
             <SelectGroup>
               {options.map((option) => (
