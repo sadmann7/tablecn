@@ -16,11 +16,7 @@ import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  CellPresence,
-  Direction,
-  RowHeightValue,
-} from "@/lib/data-grid-types";
+import type { CellPresence, RowHeightValue } from "@/lib/data-grid-types";
 
 import {
   flexRender,
@@ -34,7 +30,6 @@ import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-g
 const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
 
 interface DataGridRowContextValue {
-  dir: Direction;
   stretchColumns: boolean;
   adjustLayout: boolean;
   readOnlyColumnIds: Set<string>;
@@ -111,7 +106,6 @@ function DataGridRowContent<TData extends RowData>({
   ...props
 }: DataGridRowContentProps<TData>) {
   const {
-    dir,
     stretchColumns,
     adjustLayout,
     readOnlyColumnIds,
@@ -184,11 +178,9 @@ function DataGridRowContent<TData extends RowData>({
         const isActiveSearchMatch = activeSearchColumnId === columnId;
 
         const nextCell = visibleCells[columnIndex + 1];
-        const isLastColumn = columnIndex === visibleCells.length - 1;
         const { showEndBorder, showStartBorder } = getColumnBorderVisibility({
           column: cell.column,
           nextColumn: nextCell?.column,
-          isLastColumn,
         });
 
         return (
@@ -206,7 +198,7 @@ function DataGridRowContent<TData extends RowData>({
               "border-s": showStartBorder && columnId !== "select",
             })}
             style={{
-              ...getColumnPinningStyle({ column: cell.column, dir }),
+              ...getColumnPinningStyle({ column: cell.column }),
               width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >
@@ -299,9 +291,14 @@ function selectRowState<TData extends RowData>(
       : EMPTY_CELL_SELECTION_BOUNDS;
 
   const isRowSelected = !!state.rowSelection[rowId];
+  // The memoized row can hold a Row from before the data changed, whose cells no longer resolve their selection
+  const currentRow = table.getRowModel().rows[rowIndex];
 
   return {
-    visibleCells: row.getVisibleCells(),
+    visibleCells: (currentRow?.id === rowId
+      ? currentRow
+      : row
+    ).getVisibleCells(),
     rowHeight: state.rowHeight,
     focusedColumnId:
       state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId
