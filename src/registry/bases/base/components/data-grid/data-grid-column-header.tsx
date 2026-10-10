@@ -5,6 +5,7 @@ import {
   type Column,
   type ColumnSort,
   type Header,
+  type ReactTable,
   type RowData,
   type SortDirection,
   type SortingState,
@@ -45,7 +46,7 @@ interface DataGridColumnHeaderProps<
   TValue,
 > extends React.ComponentProps<typeof DropdownMenuTrigger> {
   header: Header<DataGridFeatures, TData, TValue>;
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
 }
 
 export function DataGridColumnHeader<TData extends RowData, TValue>(

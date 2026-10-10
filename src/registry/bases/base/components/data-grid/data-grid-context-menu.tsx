@@ -1,6 +1,10 @@
 "use client";
 
-import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
+import {
+  type ReactTable,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -17,7 +21,7 @@ import {
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridContextMenuProps<TData extends RowData> {
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
   dataGridRef: React.RefObject<HTMLDivElement | null>;
 }
 

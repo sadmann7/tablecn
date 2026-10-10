@@ -4,9 +4,9 @@ import {
   type Column,
   type ColumnFilter,
   type ColumnFiltersState,
+  type ReactTable,
   type RowData,
   Subscribe,
-  type Table,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
@@ -72,7 +72,7 @@ const OPERATORS_WITHOUT_VALUE = new Set([
 interface DataGridFilterMenuProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
   disabled?: boolean;
 }
 
@@ -335,7 +335,7 @@ interface DataGridFilterItemProps<TData extends RowData> {
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   columnVariants: Map<string, string>;
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
   onFilterUpdate: (filterId: string, updates: Partial<ColumnFilter>) => void;
   onFilterRemove: (filterId: string) => void;
 }

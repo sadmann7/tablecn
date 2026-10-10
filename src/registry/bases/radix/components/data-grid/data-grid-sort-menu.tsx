@@ -2,11 +2,11 @@
 
 import {
   type ColumnSort,
+  type ReactTable,
   type RowData,
   type SortDirection,
   type SortingState,
   Subscribe,
-  type Table,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
@@ -59,7 +59,7 @@ const SORT_ORDERS = [
 interface DataGridSortMenuProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
   disabled?: boolean;
 }
 
