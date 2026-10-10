@@ -2,11 +2,11 @@
 
 import {
   type ColumnSort,
+  type ReactTable,
   type RowData,
   type SortDirection,
   type SortingState,
   Subscribe,
-  type Table,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
@@ -56,7 +56,7 @@ const REMOVE_SORT_SHORTCUTS = ["backspace", "delete"];
 interface DataTableSortMenuProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof PopoverContent> {
-  table: Table<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   disabled?: boolean;
 }
 

@@ -1,6 +1,10 @@
 "use client";
 
-import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
+import {
+  type ReactTable,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -24,7 +28,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 interface DataTableViewOptionsProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof FacetedContent> {
-  table: Table<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   disabled?: boolean;
 }
 

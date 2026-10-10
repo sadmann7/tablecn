@@ -1,7 +1,7 @@
 import type {
   PaginationState,
+  ReactTable,
   SortingState,
-  Table,
 } from "@tanstack/react-table";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
@@ -9,7 +9,7 @@ import type { DataMode, FilterMode } from "@/lib/flag";
 
 import { type LaunchTask, queryLaunchTasks } from "./data";
 
-export type LaunchTable = Table<DataTableFeatures, LaunchTask>;
+export type LaunchTable = ReactTable<DataTableFeatures, LaunchTask, unknown>;
 
 export const INITIAL_SORTING: SortingState = [{ id: "createdAt", desc: true }];
 export const INITIAL_PAGINATION: PaginationState = {

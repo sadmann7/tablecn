@@ -1,6 +1,6 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
+import type { ReactTable, RowData } from "@tanstack/react-table";
 import type * as React from "react";
 
 import { cn } from "cn";
@@ -12,7 +12,7 @@ import { DataTableViewOptions } from "@/registry/bases/base/components/data-tabl
 interface DataTableAdvancedToolbarProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
-  table: Table<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
 }
 
 export function DataTableAdvancedToolbar<TData extends RowData>({

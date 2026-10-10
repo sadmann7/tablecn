@@ -1,6 +1,7 @@
 "use client";
 
-import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
+import type { ReactTable, RowData } from "@tanstack/react-table";
+
 import { cn } from "cn";
 import * as React from "react";
 
@@ -21,7 +22,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 interface DataTablePaginationProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
-  table: Table<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   pageSizeOptions?: number[];
 }
 
@@ -32,8 +33,7 @@ export function DataTablePagination<TData extends RowData>({
   ...props
 }: DataTablePaginationProps<TData>) {
   return (
-    <Subscribe
-      source={table.store}
+    <table.Subscribe
       selector={(state) => ({
         pageIndex: state.pagination.pageIndex,
         pageSize: state.pagination.pageSize,
@@ -51,14 +51,14 @@ export function DataTablePagination<TData extends RowData>({
           {...props}
         />
       )}
-    </Subscribe>
+    </table.Subscribe>
   );
 }
 
 interface DataTablePaginationContentProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
-  table: Table<DataTableFeatures, TData>;
+  table: ReactTable<DataTableFeatures, TData, unknown>;
   pageIndex: number;
   pageSize: number;
   selectedRowCount: number;
