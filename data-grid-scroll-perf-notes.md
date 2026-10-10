@@ -31,7 +31,7 @@ All paths are under `src/registry/bases/{radix,base}/`.
 
 3. **`will-change-transform` on every row.**
    `components/data-grid/data-grid-row.tsx`: each row's `translateY` never changes after mount (rows are keyed by `row.id`), so the hint only creates ~40 extra compositor layers, each rasterized on mount.
-   Idea: drop it from rows (keep it only on the `grid-rows` container while pinned). A/B test together with removing `[content-visibility:auto]`, which adds a per-row relevance check for no benefit at a fixed row height.
+   Idea: drop it from rows (keep it only on the `data-grid-rows` container while pinned). A/B test together with removing `[content-visibility:auto]`, which adds a per-row relevance check for no benefit at a fixed row height.
 
 4. **Synchronous re-renders inside the scroll handler.**
    `rowVirtualizerOptions` only passes `overscan`, so both virtualizers keep the default `useFlushSync: true`.
