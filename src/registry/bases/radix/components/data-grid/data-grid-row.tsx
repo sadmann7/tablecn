@@ -198,7 +198,7 @@ function DataGridRowContent<TData extends RowData>({
               "border-s": showStartBorder && columnId !== "select",
             })}
             style={{
-              ...getColumnPinningStyle({ column: cell.column }),
+              ...getColumnPinningStyle(cell.column),
               width: `calc(var(--col-${columnId}-size) * 1px)`,
             }}
           >
