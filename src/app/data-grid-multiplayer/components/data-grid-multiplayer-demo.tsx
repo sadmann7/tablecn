@@ -408,9 +408,8 @@ export function DataGridMultiplayerDemo({
     getRowId: (row) => row.id,
     initialState: {
       columnPinning: { start: ["select"], end: [] },
-      sorting,
     },
-    state: { cellPresence },
+    state: { cellPresence, sorting },
     onSortingChange: setSorting,
     manualSorting: true,
     enableSearch: true,
