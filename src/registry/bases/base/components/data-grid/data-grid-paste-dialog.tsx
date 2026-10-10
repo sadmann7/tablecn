@@ -1,14 +1,16 @@
 "use client";
 
+import {
+  type ReactTable,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 
-import type {
-  DataGridTableMeta,
-  PasteDialogState,
-} from "@/lib/data-grid-types";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { PasteDialogState } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
   Dialog,
@@ -19,68 +21,61 @@ import {
   DialogTitle,
 } from "@/registry/bases/base/ui/dialog";
 
-interface DataGridPasteDialogProps {
-  tableMeta: DataGridTableMeta;
-  pasteDialog: PasteDialogState;
+interface DataGridPasteDialogProps<TData extends RowData> {
+  table: ReactTable<DataGridFeatures, TData, unknown>;
 }
 
-export function DataGridPasteDialog({
-  tableMeta,
-  pasteDialog,
-}: DataGridPasteDialogProps) {
-  const onPasteDialogOpenChange = tableMeta?.onPasteDialogOpenChange;
-  const onCellsPaste = tableMeta?.onCellsPaste;
-
-  if (!pasteDialog.open) return null;
-
+export function DataGridPasteDialog<TData extends RowData>({
+  table,
+}: DataGridPasteDialogProps<TData>) {
   return (
-    <PasteDialog
-      pasteDialog={pasteDialog}
-      onPasteDialogOpenChange={onPasteDialogOpenChange}
-      onCellsPaste={onCellsPaste}
-    />
+    <Subscribe source={table.atoms.pasteDialog}>
+      {(pasteDialog) =>
+        pasteDialog.open ? (
+          <PasteDialog table={table} pasteDialog={pasteDialog} />
+        ) : null
+      }
+    </Subscribe>
   );
 }
 
-interface PasteDialogProps
-  extends
-    Pick<DataGridTableMeta, "onPasteDialogOpenChange" | "onCellsPaste">,
-    Required<Pick<DataGridTableMeta, "pasteDialog">> {}
+interface PasteDialogProps<
+  TData extends RowData,
+> extends DataGridPasteDialogProps<TData> {
+  pasteDialog: PasteDialogState;
+}
 
 const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
+  if (prev.table !== next.table) return false;
   if (prev.pasteDialog.open !== next.pasteDialog.open) return false;
   if (!next.pasteDialog.open) return true;
   if (prev.pasteDialog.rowsNeeded !== next.pasteDialog.rowsNeeded) return false;
 
   return true;
-});
+}) as typeof PasteDialogImpl;
 
-function PasteDialogImpl({
+function PasteDialogImpl<TData extends RowData>({
+  table,
   pasteDialog,
-  onPasteDialogOpenChange,
-  onCellsPaste,
-}: PasteDialogProps) {
-  const propsRef = useAsRef({
-    onPasteDialogOpenChange,
-    onCellsPaste,
-  });
-
+}: PasteDialogProps<TData>) {
   const expandRadioRef = React.useRef<HTMLInputElement | null>(null);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      propsRef.current.onPasteDialogOpenChange?.(open);
+      if (!open) table.resetPasteDialog(true);
     },
-    [propsRef],
+    [table],
   );
 
   const onCancel = React.useCallback(() => {
-    propsRef.current.onPasteDialogOpenChange?.(false);
-  }, [propsRef]);
+    table.resetPasteDialog(true);
+  }, [table]);
 
   const onContinue = React.useCallback(() => {
-    propsRef.current.onCellsPaste?.(expandRadioRef.current?.checked ?? false);
-  }, [propsRef]);
+    void table.pasteCells({
+      expandRows: expandRadioRef.current?.checked ?? false,
+    });
+  }, [table]);
 
   return (
     <Dialog open={pasteDialog.open} onOpenChange={onOpenChange}>

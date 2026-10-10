@@ -162,6 +162,27 @@ function DataGridKeyboardShortcutsImpl({
         ],
       },
       {
+        title: "Columns",
+        shortcuts: [
+          {
+            keys: ["⌥", "→"],
+            description: "Widen column (when header focused)",
+          },
+          {
+            keys: ["⌥", "←"],
+            description: "Narrow column (when header focused)",
+          },
+          {
+            keys: ["Shift", "→"],
+            description: "Move column right (when header focused)",
+          },
+          {
+            keys: ["Shift", "←"],
+            description: "Move column left (when header focused)",
+          },
+        ],
+      },
+      {
         title: "Selection",
         shortcuts: [
           {
@@ -429,6 +450,7 @@ function DataGridKeyboardShortcutsImpl({
               className="absolute inset-s-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
             />
             <Input
+              aria-label="Search shortcuts"
               ref={inputRef}
               placeholder="Search shortcuts..."
               className="ps-8"

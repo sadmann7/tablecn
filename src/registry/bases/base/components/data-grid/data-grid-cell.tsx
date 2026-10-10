@@ -19,49 +19,36 @@ import {
 } from "@/registry/bases/base/components/data-grid/data-grid-cell-variants";
 
 export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
-  // Fast path: check stable primitive props first
+  if (prev.columnIndex !== next.columnIndex) return false;
   if (prev.isFocused !== next.isFocused) return false;
   if (prev.isEditing !== next.isEditing) return false;
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.isSearchMatch !== next.isSearchMatch) return false;
   if (prev.isActiveSearchMatch !== next.isActiveSearchMatch) return false;
+  if (prev.presence?.color !== next.presence?.color) return false;
+  if (prev.presence?.name !== next.presence?.name) return false;
   if (prev.readOnly !== next.readOnly) return false;
-  if (prev.rowId !== next.rowId) return false;
-  if (prev.columnId !== next.columnId) return false;
   if (prev.rowHeight !== next.rowHeight) return false;
+  if (prev.cell.row.id !== next.cell.row.id) return false;
+  if (prev.cell.column.id !== next.cell.column.id) return false;
 
   // Check cell value using row.original instead of getValue() for stability
   // getValue() is unstable and recreates on every render, breaking memoization
   const prevValue = (prev.cell.row.original as Record<string, unknown>)[
-    prev.columnId
+    prev.cell.column.id
   ];
   const nextValue = (next.cell.row.original as Record<string, unknown>)[
-    next.columnId
+    next.cell.column.id
   ];
-  if (prevValue !== nextValue) {
-    return false;
-  }
-
-  // Check cell/row identity
-  if (prev.cell.row.id !== next.cell.row.id) return false;
+  if (prevValue !== nextValue) return false;
 
   return true;
 }) as typeof DataGridCellImpl;
 
-function DataGridCellImpl<TData extends RowData>({
-  cell,
-  tableMeta,
-  rowId,
-  columnId,
-  isFocused,
-  isEditing,
-  isSelected,
-  isSearchMatch,
-  isActiveSearchMatch,
-  readOnly,
-  rowHeight,
-}: DataGridCellProps<TData>) {
-  const cellOpts = cell.column.columnDef.meta?.cell;
+function DataGridCellImpl<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  const cellOpts = props.cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 
   let Comp: React.ComponentType<DataGridCellProps<TData>>;
@@ -100,19 +87,5 @@ function DataGridCellImpl<TData extends RowData>({
       break;
   }
 
-  return (
-    <Comp
-      cell={cell}
-      tableMeta={tableMeta}
-      rowId={rowId}
-      columnId={columnId}
-      rowHeight={rowHeight}
-      isEditing={isEditing}
-      isFocused={isFocused}
-      isSelected={isSelected}
-      isSearchMatch={isSearchMatch}
-      isActiveSearchMatch={isActiveSearchMatch}
-      readOnly={readOnly}
-    />
-  );
+  return <Comp {...props} />;
 }

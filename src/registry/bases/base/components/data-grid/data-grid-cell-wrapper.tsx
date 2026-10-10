@@ -2,88 +2,31 @@
 
 import type { RowData } from "@tanstack/react-table";
 
-import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
-import { getCellKey } from "@/lib/data-grid-utils";
-import { useDataGridPresence } from "@/registry/bases/base/components/data-grid/data-grid-presence";
-
 interface DataGridCellWrapperProps<TData extends RowData>
   extends DataGridCellProps<TData>, React.ComponentProps<"div"> {}
 
 export function DataGridCellWrapper<TData extends RowData>({
-  tableMeta,
-  rowId,
-  columnId,
+  cell,
+  columnIndex,
   isEditing,
   isFocused,
   isSelected,
   isSearchMatch,
   isActiveSearchMatch,
+  presence,
   readOnly,
   rowHeight,
   className,
-  onClick: onClickProp,
   onKeyDown: onKeyDownProp,
-  ref,
   ...props
 }: DataGridCellWrapperProps<TData>) {
-  const cellMapRef = tableMeta?.cellMapRef;
-  const cellPresence = useDataGridPresence(getCellKey(rowId, columnId));
-
-  const onCellChange = React.useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!cellMapRef) return;
-
-      const cellKey = getCellKey(rowId, columnId);
-
-      if (node) {
-        cellMapRef.current.set(cellKey, node);
-      } else {
-        cellMapRef.current.delete(cellKey);
-      }
-    },
-    [rowId, columnId, cellMapRef],
-  );
-
-  const composedRef = useMergedRefs(ref, onCellChange);
-
-  const onClick = React.useCallback(
-    (event: React.MouseEvent<HTMLDivElement>) => {
-      if (!isEditing) {
-        event.preventDefault();
-        onClickProp?.(event);
-        if (isFocused && !readOnly) {
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
-        } else {
-          tableMeta?.onCellClick?.(rowId, columnId, event);
-        }
-      }
-    },
-    [tableMeta, rowId, columnId, isEditing, isFocused, readOnly, onClickProp],
-  );
-
-  const onContextMenu = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        tableMeta?.onCellContextMenu?.(rowId, columnId, event);
-      }
-    },
-    [tableMeta, rowId, columnId, isEditing],
-  );
-
-  const onDoubleClick = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        event.preventDefault();
-        tableMeta?.onCellDoubleClick?.(rowId, columnId);
-      }
-    },
-    [tableMeta, rowId, columnId, isEditing],
-  );
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -109,90 +52,67 @@ export function DataGridCellWrapper<TData extends RowData>({
         if (event.key === "F2" || event.key === "Enter") {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
+          cell.startEditing();
           return;
         }
 
         if (event.key === " ") {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
+          cell.startEditing();
           return;
         }
 
         if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
           event.preventDefault();
           event.stopPropagation();
-          tableMeta?.onCellEditingStart?.(rowId, columnId);
+          cell.startEditing();
         }
       }
     },
-    [onKeyDownProp, isFocused, isEditing, readOnly, tableMeta, rowId, columnId],
+    [cell, onKeyDownProp, isFocused, isEditing, readOnly],
   );
-
-  const onMouseDown = React.useCallback(
-    (event: React.MouseEvent) => {
-      if (!isEditing) {
-        tableMeta?.onCellMouseDown?.(rowId, columnId, event);
-      }
-    },
-    [tableMeta, rowId, columnId, isEditing],
-  );
-
-  const onMouseEnter = React.useCallback(() => {
-    if (!isEditing) {
-      tableMeta?.onCellMouseEnter?.(rowId, columnId);
-    }
-  }, [tableMeta, rowId, columnId, isEditing]);
-
-  const onMouseUp = React.useCallback(() => {
-    if (!isEditing) {
-      tableMeta?.onCellMouseUp?.();
-    }
-  }, [tableMeta, isEditing]);
 
   return (
     <div
-      role="button"
-      data-slot="grid-cell-wrapper"
+      role="gridcell"
+      aria-colindex={columnIndex + 1}
+      aria-selected={isSelected}
+      aria-readonly={readOnly || undefined}
+      {...props}
+      data-slot="data-grid-cell-wrapper"
+      data-row-id={rowId}
+      data-column-id={columnId}
       data-editing={isEditing ? "" : undefined}
       data-focused={isFocused ? "" : undefined}
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
-      {...props}
-      ref={composedRef}
       className={cn(
         "size-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
-          "ring-1 ring-inset": isFocused || !!cellPresence,
-          "ring-ring": isFocused && !cellPresence,
+          "ring-1 ring-inset": isFocused || !!presence,
+          "ring-ring": isFocused && !presence,
           "bg-yellow-100 dark:bg-yellow-900/30":
             isSearchMatch && !isActiveSearchMatch,
           "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
           "bg-primary/10": isSelected && !isEditing,
           "cursor-default": !isEditing,
-          "**:data-[slot=grid-cell-content]:line-clamp-1":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-1":
             !isEditing && rowHeight === "short",
-          "**:data-[slot=grid-cell-content]:line-clamp-2":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-2":
             !isEditing && rowHeight === "medium",
-          "**:data-[slot=grid-cell-content]:line-clamp-3":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-3":
             !isEditing && rowHeight === "tall",
-          "**:data-[slot=grid-cell-content]:line-clamp-4":
+          "**:data-[slot=data-grid-cell-content]:line-clamp-4":
             !isEditing && rowHeight === "extra-tall",
         },
         className,
       )}
       style={
-        cellPresence
-          ? ({ "--tw-ring-color": cellPresence.color } as React.CSSProperties)
+        presence
+          ? ({ "--tw-ring-color": presence.color } as React.CSSProperties)
           : undefined
       }
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-      onDoubleClick={onDoubleClick}
-      onMouseDown={onMouseDown}
-      onMouseEnter={onMouseEnter}
-      onMouseUp={onMouseUp}
       onKeyDown={onKeyDown}
     />
   );

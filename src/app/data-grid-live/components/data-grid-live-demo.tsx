@@ -1,6 +1,6 @@
 "use client";
 
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { useLiveQuery } from "@tanstack/react-db";
 import * as React from "react";
@@ -38,7 +38,9 @@ import {
 import type { SkaterSchema } from "../lib/validation";
 
 import { skatersCollection } from "../lib/collections";
-import { DataGridActionBar } from "./data-grid-action-bar";
+import { SkatersGridActionBar } from "./skaters-grid-action-bar";
+
+type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
 
 const TRICKS = [
   "Kickflip",
@@ -87,11 +89,10 @@ export function DataGridLiveDemo() {
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { data } = useLiveQuery(
-    (q) => {
+  const { data } = useLiveQuery({
+    query: (q) => {
       let query = q.from({ skater: skatersCollection });
 
-      // Apply user-specified sorting first (primary)
       for (const sort of sorting) {
         const field = sort.id as keyof SkaterSchema;
         const direction = sort.desc ? "desc" : "asc";
@@ -103,8 +104,7 @@ export function DataGridLiveDemo() {
 
       return query;
     },
-    [sorting],
-  );
+  });
 
   const { startUpload } = useUploadThing("skaterMedia");
 
@@ -258,27 +258,23 @@ export function DataGridLiveDemo() {
     [filterFn],
   );
 
-  // Undo/redo support - wraps data changes to track history
-  // and allows reverting changes via keyboard shortcuts
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
       const currentIds = new Set(data.map((s) => s.id));
       const newIds = new Set(newData.map((s) => s.id));
 
-      // Delete rows that exist in current but not in new (undo add / redo delete)
+      // Undo of an add, or redo of a delete
       for (const skater of data) {
         if (!newIds.has(skater.id)) {
           skatersCollection.delete(skater.id);
         }
       }
 
-      // Insert or update rows
       for (const skater of newData) {
         if (!currentIds.has(skater.id)) {
-          // Insert new row (undo delete / redo add)
+          // Undo of a delete, or redo of an add
           skatersCollection.insert(skater);
         } else {
-          // Update existing row
           const existingSkater = data.find((s) => s.id === skater.id);
           if (!existingSkater) continue;
 
@@ -319,10 +315,8 @@ export function DataGridLiveDemo() {
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
     (newData) => {
-      // Track cell updates for undo/redo
       const cellUpdates: Array<UndoRedoCellUpdate> = [];
 
-      // Diff and update changed skaters via TanStack DB for optimistic updates
       for (const skater of newData) {
         const existingSkater = data.find((s) => s.id === skater.id);
 
@@ -361,7 +355,6 @@ export function DataGridLiveDemo() {
         }
       }
 
-      // Track cell updates if there are any
       if (cellUpdates.length > 0) {
         trackCellsUpdate(cellUpdates);
       }
@@ -391,7 +384,6 @@ export function DataGridLiveDemo() {
 
       skatersCollection.insert(newSkater);
 
-      // Track for undo/redo
       trackRowsAdd([newSkater]);
 
       return {
@@ -427,7 +419,6 @@ export function DataGridLiveDemo() {
           skatersCollection.insert(newSkater);
         }
 
-        // Track for undo/redo
         trackRowsAdd(newRows);
       },
       [data, trackRowsAdd],
@@ -450,7 +441,6 @@ export function DataGridLiveDemo() {
     UseDataGridProps<SkaterSchema>["onFilesUpload"]
   > = React.useCallback(
     async ({ files }) => {
-      // Try to upload via UploadThing, fall back to simulation if not configured
       try {
         const uploadedFiles = await startUpload(files);
 
@@ -484,7 +474,6 @@ export function DataGridLiveDemo() {
   const onFilesDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onFilesDelete"]
   > = React.useCallback(async ({ fileIds }) => {
-    // Try to delete from UploadThing, silently fail if not configured
     try {
       await fetch("/api/uploadthing/delete", {
         method: "POST",
@@ -496,7 +485,7 @@ export function DataGridLiveDemo() {
     }
   }, []);
 
-  const { table, tableMeta, ...dataGridProps } = useDataGrid({
+  const { table, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
@@ -511,8 +500,8 @@ export function DataGridLiveDemo() {
         start: ["select"],
         end: [],
       },
-      sorting,
     },
+    state: { sorting },
     onSortingChange: setSorting,
     manualSorting: true,
     enableSearch: true,
@@ -520,13 +509,7 @@ export function DataGridLiveDemo() {
   });
 
   const onStatusUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       // Use batch update - single transaction for all updates
       skatersCollection.update(
         selectedRows.map((row) => row.original.id),
@@ -541,17 +524,11 @@ export function DataGridLiveDemo() {
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table],
+    [],
   );
 
   const onStyleUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       // Use batch update - single transaction for all updates
       skatersCollection.update(
         selectedRows.map((row) => row.original.id),
@@ -566,26 +543,22 @@ export function DataGridLiveDemo() {
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
+    [],
+  );
+
+  const onDelete = React.useCallback(
+    (selectedRows: SkaterRows) => {
+      void table.deleteRows(selectedRows.map((row) => row.id));
+
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
+      );
+      table.toggleAllRowsSelected(false);
+    },
     [table],
   );
 
-  const onDelete = React.useCallback(() => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    if (selectedRows.length === 0) {
-      toast.error("No skaters selected");
-      return;
-    }
-
-    void tableMeta.onRowsDelete?.(selectedRows.map((row) => row.id));
-
-    toast.success(
-      `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
-    );
-    table.toggleAllRowsSelected(false);
-  }, [table, tableMeta]);
-
   const height = Math.max(400, windowSize.height - 150);
-  const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
 
   return (
     <div className="container flex flex-col gap-4 py-4">
@@ -606,16 +579,9 @@ export function DataGridLiveDemo() {
         <DataGridRowHeightMenu table={table} align="end" />
         <DataGridViewMenu table={table} align="end" />
       </div>
-      <DataGrid
-        {...dataGridProps}
+      <DataGrid {...dataGridProps} table={table} height={height} />
+      <SkatersGridActionBar
         table={table}
-        tableMeta={tableMeta}
-        height={height}
-      />
-      <DataGridActionBar
-        table={table}
-        tableMeta={tableMeta}
-        selectedCellCount={selectedCellCount}
         statusOptions={statusOptions}
         styleOptions={styleOptions}
         onStatusUpdate={onStatusUpdate}

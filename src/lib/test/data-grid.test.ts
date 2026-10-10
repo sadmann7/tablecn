@@ -1,13 +1,77 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getBooleanCellValue,
   getCellKey,
+  getDateCellValue,
+  getFilesCellValue,
   getIsInPopover,
+  getIsPointOnScrollbar,
+  getNumberCellValue,
+  getOptionCellValue,
+  getOptionsCellValue,
   getTabTargetCell,
-  getVisibleColumnIds,
+  insertTextAtSelection,
   parseCellKey,
+  parsePastedCellValue,
   parseTsv,
+  replaceEditableText,
+  serializeCellValue,
 } from "@/lib/data-grid-utils";
+
+function createScrollContainer({
+  dir = "ltr",
+  canScrollY = true,
+  canScrollX = true,
+}: {
+  dir?: "ltr" | "rtl";
+  canScrollY?: boolean;
+  canScrollX?: boolean;
+} = {}) {
+  const container = document.createElement("div");
+  container.dir = dir;
+  container.style.direction = dir;
+  document.body.replaceChildren(container);
+  container.getBoundingClientRect = () =>
+    ({ left: 0, top: 0, right: 800, bottom: 600 }) as DOMRect;
+  Object.defineProperties(container, {
+    clientHeight: { value: 600 },
+    scrollHeight: { value: canScrollY ? 6000 : 600 },
+    clientWidth: { value: 800 },
+    scrollWidth: { value: canScrollX ? 4000 : 800 },
+  });
+  return container;
+}
+
+describe("getIsPointOnScrollbar", () => {
+  it("detects presses on the vertical scrollbar edge", () => {
+    const container = createScrollContainer();
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 700, 300)).toBe(false);
+  });
+
+  it("uses the start edge for the vertical scrollbar in rtl", () => {
+    const container = createScrollContainer({ dir: "rtl" });
+    expect(getIsPointOnScrollbar(container, 5, 300)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
+  });
+
+  it("detects presses on the horizontal scrollbar edge", () => {
+    const container = createScrollContainer();
+    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 300, 500)).toBe(false);
+  });
+
+  it("ignores edges of axes that do not scroll", () => {
+    const container = createScrollContainer({
+      canScrollY: false,
+      canScrollX: false,
+    });
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
+    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(false);
+    expect(getIsPointOnScrollbar(null, 795, 300)).toBe(false);
+  });
+});
 
 describe("getCellKey", () => {
   it("round-trips row and column ids", () => {
@@ -26,48 +90,6 @@ describe("getCellKey", () => {
 
   it("returns empty ids for malformed keys", () => {
     expect(parseCellKey("0:name")).toEqual({ rowId: "", columnId: "" });
-  });
-});
-
-describe("getVisibleColumnIds", () => {
-  const columnIds = ["select", "name", "age", "email", "actions"];
-
-  it("keeps definition order by default", () => {
-    expect(getVisibleColumnIds({ columnIds })).toEqual(columnIds);
-  });
-
-  it("drops hidden columns", () => {
-    expect(
-      getVisibleColumnIds({ columnIds, columnVisibility: { age: false } }),
-    ).toEqual(["select", "name", "email", "actions"]);
-  });
-
-  it("applies column order and appends unordered columns", () => {
-    expect(
-      getVisibleColumnIds({
-        columnIds,
-        columnOrder: ["email", "missing", "name"],
-      }),
-    ).toEqual(["email", "name", "select", "age", "actions"]);
-  });
-
-  it("moves pinned columns to the start and end", () => {
-    expect(
-      getVisibleColumnIds({
-        columnIds,
-        columnPinning: { start: ["select", "email"], end: ["name"] },
-      }),
-    ).toEqual(["select", "email", "age", "actions", "name"]);
-  });
-
-  it("ignores hidden pinned columns", () => {
-    expect(
-      getVisibleColumnIds({
-        columnIds,
-        columnVisibility: { email: false },
-        columnPinning: { start: ["email"], end: [] },
-      }),
-    ).toEqual(["select", "name", "age", "actions"]);
   });
 });
 
@@ -371,5 +393,170 @@ describe("getIsInPopover", () => {
 
     expect(getIsInPopover(button)).toBe(false);
     expect(getIsInPopover(null)).toBe(false);
+  });
+});
+
+describe("parsePastedCellValue", () => {
+  const options = [
+    { label: "Goofy", value: "goofy" },
+    { label: "Regular", value: "regular" },
+  ];
+
+  it("parses numbers and rejects non-numeric text", () => {
+    expect(parsePastedCellValue("42.5", { variant: "number" })).toEqual({
+      value: 42.5,
+    });
+    expect(parsePastedCellValue("", { variant: "number" })).toEqual({
+      value: null,
+    });
+    expect(parsePastedCellValue("abc", { variant: "number" })).toBeNull();
+  });
+
+  it("parses checkbox words", () => {
+    expect(parsePastedCellValue("Yes", { variant: "checkbox" })).toEqual({
+      value: true,
+    });
+    expect(parsePastedCellValue("unchecked", { variant: "checkbox" })).toEqual({
+      value: false,
+    });
+    expect(parsePastedCellValue("maybe", { variant: "checkbox" })).toBeNull();
+  });
+
+  it("matches select options by value or label", () => {
+    const cellOpts = { variant: "select" as const, options };
+    expect(parsePastedCellValue("Goofy", cellOpts)).toEqual({
+      value: "goofy",
+    });
+    expect(parsePastedCellValue("switch", cellOpts)).toBeNull();
+  });
+
+  it("parses multi-select from JSON or comma separated text", () => {
+    const cellOpts = { variant: "multi-select" as const, options };
+    expect(parsePastedCellValue('["goofy","nope"]', cellOpts)).toEqual({
+      value: ["goofy"],
+    });
+    expect(parsePastedCellValue("Regular, Goofy", cellOpts)).toEqual({
+      value: ["regular", "goofy"],
+    });
+    expect(parsePastedCellValue("nope", cellOpts)).toBeNull();
+  });
+
+  it("accepts urls and bare domains only", () => {
+    expect(parsePastedCellValue("example.com/a", { variant: "url" })).toEqual({
+      value: "example.com/a",
+    });
+    expect(parsePastedCellValue("not a url", { variant: "url" })).toBeNull();
+  });
+
+  it("turns JSON text into readable strings for text cells", () => {
+    expect(parsePastedCellValue('["a","b"]', undefined)).toEqual({
+      value: "a, b",
+    });
+    expect(parsePastedCellValue("true", { variant: "short-text" })).toEqual({
+      value: "Checked",
+    });
+  });
+
+  it("round-trips serialized multi-select values", () => {
+    const text = serializeCellValue(["goofy", "regular"], "multi-select");
+    expect(
+      parsePastedCellValue(text, { variant: "multi-select", options }),
+    ).toEqual({ value: ["goofy", "regular"] });
+  });
+});
+
+describe("insertTextAtSelection", () => {
+  it("inserts at the caret and emits an input event", () => {
+    const textarea = document.createElement("textarea");
+    textarea.value = "hello";
+    textarea.selectionStart = 5;
+    textarea.selectionEnd = 5;
+
+    let inputData = "";
+    textarea.addEventListener("input", (event) => {
+      inputData = (event as InputEvent).data ?? "";
+    });
+
+    insertTextAtSelection(textarea, "!");
+
+    expect(textarea.value).toBe("hello!");
+    expect(textarea.selectionStart).toBe(6);
+    expect(textarea.selectionEnd).toBe(6);
+    expect(inputData).toBe("!");
+  });
+
+  it("replaces the current selection", () => {
+    const textarea = document.createElement("textarea");
+    textarea.value = "hello";
+    textarea.selectionStart = 1;
+    textarea.selectionEnd = 4;
+
+    insertTextAtSelection(textarea, "i");
+
+    expect(textarea.value).toBe("hio");
+  });
+});
+
+describe("replaceEditableText", () => {
+  it("replaces the content, moves the caret to the end and emits an input event", () => {
+    const element = document.createElement("div");
+    element.contentEditable = "true";
+    element.textContent = "hello";
+    document.body.replaceChildren(element);
+
+    let inputData = "";
+    element.addEventListener("input", (event) => {
+      inputData = (event as InputEvent).data ?? "";
+    });
+
+    replaceEditableText(element, "a");
+
+    const selection = window.getSelection();
+    expect(element.textContent).toBe("a");
+    expect(selection?.isCollapsed).toBe(true);
+    expect(selection?.focusOffset).toBe(1);
+    expect(inputData).toBe("a");
+  });
+});
+
+describe("cell value narrowing", () => {
+  it("narrows number values", () => {
+    expect(getNumberCellValue(42)).toBe(42);
+    expect(getNumberCellValue("3.5")).toBe(3.5);
+    expect(getNumberCellValue("")).toBeNull();
+    expect(getNumberCellValue("abc")).toBeNull();
+    expect(getNumberCellValue(Number.NaN)).toBeNull();
+    expect(getNumberCellValue(undefined)).toBeNull();
+  });
+
+  it("narrows boolean values", () => {
+    expect(getBooleanCellValue(true)).toBe(true);
+    expect(getBooleanCellValue("Yes")).toBe(true);
+    expect(getBooleanCellValue(1)).toBe(true);
+    expect(getBooleanCellValue("false")).toBe(false);
+    expect(getBooleanCellValue(null)).toBe(false);
+  });
+
+  it("narrows date values to local date strings", () => {
+    expect(getDateCellValue("2026-10-08")).toBe("2026-10-08");
+    expect(getDateCellValue(new Date(2026, 9, 8))).toBe("2026-10-08");
+    expect(getDateCellValue(new Date("invalid"))).toBe("");
+    expect(getDateCellValue(null)).toBe("");
+  });
+
+  it("narrows option values", () => {
+    expect(getOptionCellValue("regular")).toBe("regular");
+    expect(getOptionCellValue(null)).toBeUndefined();
+    expect(getOptionsCellValue(["goofy", 1, "regular"])).toEqual([
+      "goofy",
+      "regular",
+    ]);
+    expect(getOptionsCellValue("goofy")).toEqual([]);
+  });
+
+  it("narrows file values", () => {
+    const file = { id: "1", name: "a.png", size: 10, type: "image/png" };
+    expect(getFilesCellValue([file, { id: "2" }])).toEqual([file]);
+    expect(getFilesCellValue(null)).toEqual([]);
   });
 });

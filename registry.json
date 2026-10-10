@@ -405,11 +405,6 @@
           "target": "src/components/data-grid/data-grid.tsx"
         },
         {
-          "path": "src/registry/bases/radix/components/data-grid/data-grid-presence.tsx",
-          "type": "registry:component",
-          "target": "src/components/data-grid/data-grid-presence.tsx"
-        },
-        {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-cell.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-cell.tsx"
@@ -505,6 +500,29 @@
           "path": "src/registry/bases/radix/components/data-grid/data-grid-select-column.tsx",
           "type": "registry:component",
           "target": "src/components/data-grid/data-grid-select-column.tsx"
+        },
+        {
+          "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "data-grid-actions-column",
+      "type": "registry:component",
+      "title": "Data Grid Actions Column",
+      "description": "A reusable actions column definition for the data grid with a per-row actions menu",
+      "registryDependencies": ["button", "dropdown-menu"],
+      "dependencies": ["@tanstack/react-table"],
+      "files": [
+        {
+          "path": "src/registry/bases/radix/components/data-grid/data-grid-actions-column.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-grid/data-grid-actions-column.tsx"
         },
         {
           "path": "src/lib/data-grid-features.ts",

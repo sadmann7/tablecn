@@ -1,19 +1,16 @@
 "use client";
 
-import type { ColumnDef, RowData } from "@tanstack/react-table";
-
+import {
+  type ReactTable,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import * as React from "react";
 import { toast } from "sonner";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  CellUpdate,
-  ContextMenuState,
-  DataGridTableMeta,
-} from "@/lib/data-grid-types";
+import type { ContextMenuState } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
-import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,58 +21,28 @@ import {
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataGridContextMenuProps<TData extends RowData> {
-  tableMeta: DataGridTableMeta;
-  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
-  contextMenu: ContextMenuState;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
+  dataGridRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function DataGridContextMenu<TData extends RowData>({
-  tableMeta,
-  columns,
-  contextMenu,
-}: DataGridContextMenuProps<TData>) {
-  const onContextMenuOpenChange = tableMeta?.onContextMenuOpenChange;
-  const selectionState = tableMeta?.selectionState;
-  const dataGridRef = tableMeta?.dataGridRef;
-  const onDataUpdate = tableMeta?.onDataUpdate;
-  const onRowsDelete = tableMeta?.onRowsDelete;
-  const onCellsCopy = tableMeta?.onCellsCopy;
-  const onCellsCut = tableMeta?.onCellsCut;
-
-  if (!contextMenu.open) return null;
-
+export function DataGridContextMenu<TData extends RowData>(
+  props: DataGridContextMenuProps<TData>,
+) {
   return (
-    <ContextMenu
-      tableMeta={tableMeta}
-      columns={columns}
-      dataGridRef={dataGridRef}
-      contextMenu={contextMenu}
-      onContextMenuOpenChange={onContextMenuOpenChange}
-      selectionState={selectionState}
-      onDataUpdate={onDataUpdate}
-      onRowsDelete={onRowsDelete}
-      onCellsCopy={onCellsCopy}
-      onCellsCut={onCellsCut}
-    />
+    <Subscribe source={props.table.atoms.contextMenu}>
+      {(contextMenu) =>
+        contextMenu.open ? (
+          <ContextMenu {...props} contextMenu={contextMenu} />
+        ) : null
+      }
+    </Subscribe>
   );
 }
 
-interface ContextMenuProps<TData extends RowData>
-  extends
-    Pick<
-      DataGridTableMeta,
-      | "dataGridRef"
-      | "onContextMenuOpenChange"
-      | "selectionState"
-      | "onDataUpdate"
-      | "onRowsDelete"
-      | "onCellsCopy"
-      | "onCellsCut"
-      | "readOnly"
-    >,
-    Required<Pick<DataGridTableMeta, "contextMenu">> {
-  tableMeta: DataGridTableMeta;
-  columns: ReadonlyArray<ColumnDef<DataGridFeatures, TData>>;
+interface ContextMenuProps<
+  TData extends RowData,
+> extends DataGridContextMenuProps<TData> {
+  contextMenu: ContextMenuState;
 }
 
 const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
@@ -84,34 +51,16 @@ const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
   if (prev.contextMenu.x !== next.contextMenu.x) return false;
   if (prev.contextMenu.y !== next.contextMenu.y) return false;
 
-  const prevSize = prev.selectionState?.selectedCells?.size ?? 0;
-  const nextSize = next.selectionState?.selectedCells?.size ?? 0;
-  if (prevSize !== nextSize) return false;
-
   return true;
 }) as typeof ContextMenuImpl;
 
 function ContextMenuImpl<TData extends RowData>({
-  tableMeta,
-  columns,
-  dataGridRef,
+  table,
   contextMenu,
-  onContextMenuOpenChange,
-  selectionState,
-  onDataUpdate,
-  onRowsDelete,
-  onCellsCopy,
-  onCellsCut,
+  dataGridRef,
 }: ContextMenuProps<TData>) {
-  const propsRef = useAsRef({
-    dataGridRef,
-    selectionState,
-    onDataUpdate,
-    onRowsDelete,
-    onCellsCopy,
-    onCellsCut,
-    columns,
-  });
+  const readOnly = table.getIsReadOnly();
+  const canDeleteRows = !readOnly && !!table.options.onRowsDelete;
 
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
@@ -135,79 +84,48 @@ function ContextMenuImpl<TData extends RowData>({
   > = React.useCallback(
     (event) => {
       event.preventDefault();
-      propsRef.current.dataGridRef?.current?.focus();
+      dataGridRef.current?.focus();
     },
-    [propsRef],
+    [dataGridRef],
+  );
+
+  const onOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (!open) table.closeContextMenu();
+    },
+    [table],
   );
 
   const onCopy = React.useCallback(() => {
-    propsRef.current.onCellsCopy?.();
-  }, [propsRef]);
+    void table.copySelectedCells();
+  }, [table]);
 
   const onCut = React.useCallback(() => {
-    propsRef.current.onCellsCut?.();
-  }, [propsRef]);
+    void table.cutSelectedCells();
+  }, [table]);
 
   const onClear = React.useCallback(() => {
-    const { selectionState, columns, onDataUpdate } = propsRef.current;
+    const cells = table.getSelectedCells();
+    if (cells.length === 0) return;
 
-    if (
-      !selectionState?.selectedCells ||
-      selectionState.selectedCells.size === 0
-    )
-      return;
-
-    const updates: Array<CellUpdate> = [];
-
-    for (const cellKey of selectionState.selectedCells) {
-      const { rowId, columnId } = parseCellKey(cellKey);
-
-      // Get column from columns array
-      const column = columns.find((col) => {
-        if (col.id) return col.id === columnId;
-        if ("accessorKey" in col) return col.accessorKey === columnId;
-        return false;
-      });
-      const cellVariant = column?.meta?.cell?.variant;
-
-      const emptyValue = getEmptyCellValue(cellVariant);
-
-      updates.push({ rowId, columnId, value: emptyValue });
-    }
-
-    onDataUpdate?.(updates);
+    table.clearCells(cells);
 
     toast.success(
-      `${updates.length} cell${updates.length !== 1 ? "s" : ""} cleared`,
+      `${cells.length} cell${cells.length !== 1 ? "s" : ""} cleared`,
     );
-  }, [propsRef]);
+  }, [table]);
 
   const onDelete = React.useCallback(async () => {
-    const { selectionState, onRowsDelete } = propsRef.current;
+    const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
+    if (rowIds.size === 0) return;
 
-    if (
-      !selectionState?.selectedCells ||
-      selectionState.selectedCells.size === 0
-    )
-      return;
+    await table.deleteRows(Array.from(rowIds));
 
-    const rowIds = new Set<string>();
-    for (const cellKey of selectionState.selectedCells) {
-      rowIds.add(parseCellKey(cellKey).rowId);
-    }
-
-    const rowCount = rowIds.size;
-
-    await onRowsDelete?.(Array.from(rowIds));
-
-    toast.success(`${rowCount} row${rowCount !== 1 ? "s" : ""} deleted`);
-  }, [propsRef]);
+    toast.success(`${rowIds.size} row${rowIds.size !== 1 ? "s" : ""} deleted`);
+  }, [table]);
 
   return (
-    <DropdownMenu
-      open={contextMenu.open}
-      onOpenChange={onContextMenuOpenChange}
-    >
+    <DropdownMenu open={contextMenu.open} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger style={triggerStyle} />
       <DropdownMenuContent
         data-grid-popover=""
@@ -225,7 +143,7 @@ function ContextMenuImpl<TData extends RowData>({
           />
           Copy
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onCut} disabled={tableMeta?.readOnly}>
+        <DropdownMenuItem onSelect={onCut} disabled={readOnly}>
           <IconPlaceholder
             lucide="ScissorsIcon"
             tabler="IconCut"
@@ -235,7 +153,7 @@ function ContextMenuImpl<TData extends RowData>({
           />
           Cut
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onClear} disabled={tableMeta?.readOnly}>
+        <DropdownMenuItem onSelect={onClear} disabled={readOnly}>
           <IconPlaceholder
             lucide="EraserIcon"
             tabler="IconEraser"
@@ -245,7 +163,7 @@ function ContextMenuImpl<TData extends RowData>({
           />
           Clear
         </DropdownMenuItem>
-        {onRowsDelete && (
+        {canDeleteRows && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onSelect={onDelete}>

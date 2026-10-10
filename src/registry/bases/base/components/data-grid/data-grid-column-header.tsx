@@ -1,15 +1,17 @@
 "use client";
 
-import type {
-  Column,
-  ColumnSort,
-  Header,
-  RowData,
-  SortDirection,
-  SortingState,
-  Table,
+import { mergeProps } from "@base-ui/react/merge-props";
+import {
+  type Column,
+  type ColumnSort,
+  type Header,
+  type ReactTable,
+  type RowData,
+  type SortDirection,
+  type SortingState,
+  Subscribe,
+  type Table,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 
@@ -18,8 +20,10 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import { getBadgeListWidth } from "@/hooks/use-badge-overflow";
 import {
   getColumnFitSize,
+  getColumnLabel,
   getColumnVariant,
   getIsFileCellData,
+  getIsEventOnScrollbar,
 } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
@@ -42,24 +46,40 @@ interface DataGridColumnHeaderProps<
   TValue,
 > extends React.ComponentProps<typeof DropdownMenuTrigger> {
   header: Header<DataGridFeatures, TData, TValue>;
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
 }
 
-export function DataGridColumnHeader<TData extends RowData, TValue>({
+export function DataGridColumnHeader<TData extends RowData, TValue>(
+  props: DataGridColumnHeaderProps<TData, TValue>,
+) {
+  return (
+    <Subscribe
+      source={props.table.atoms.columnResizing}
+      selector={(columnResizing) => !!columnResizing.isResizingColumn}
+    >
+      {(isAnyColumnResizing) => (
+        <DataGridColumnHeaderImpl
+          {...props}
+          isAnyColumnResizing={isAnyColumnResizing}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
   header,
   table,
+  isAnyColumnResizing,
   className,
   onPointerDown,
+  onMouseDown,
   ...props
-}: DataGridColumnHeaderProps<TData, TValue>) {
+}: DataGridColumnHeaderProps<TData, TValue> & {
+  isAnyColumnResizing: boolean;
+}) {
   const column = header.column;
-  const label = column.columnDef.meta?.label
-    ? column.columnDef.meta.label
-    : typeof column.columnDef.header === "string"
-      ? column.columnDef.header
-      : column.id;
-
-  const isAnyColumnResizing = table.store.state.columnResizing.isResizingColumn;
+  const label = getColumnLabel(column);
 
   const cellVariant = column.columnDef.meta?.cell;
   const columnVariant = getColumnVariant(cellVariant?.variant);
@@ -109,21 +129,23 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const onTriggerPointerDown = React.useCallback<
-    NonNullable<
-      React.ComponentProps<typeof DropdownMenuTrigger>["onPointerDown"]
-    >
-  >(
-    (event) => {
-      onPointerDown?.(event);
-      if (event.defaultPrevented) return;
-
-      if (event.button !== 0) {
-        return;
-      }
-      table.options.meta?.onColumnClick?.(column.id);
-    },
-    [table.options.meta, column.id, onPointerDown],
+  const triggerHandlers = React.useMemo(
+    () =>
+      mergeProps<"button">(
+        {
+          onPointerDown: (event) => {
+            if (getIsEventOnScrollbar(event)) return;
+            if (event.button !== 0) return;
+            table.selectColumnCells(column.id);
+          },
+          // Base UI opens the menu on mousedown, so a scrollbar press has to skip its handler there
+          onMouseDown: (event) => {
+            if (getIsEventOnScrollbar(event)) event.preventBaseUIHandler();
+          },
+        },
+        { onPointerDown, onMouseDown },
+      ),
+    [table, column.id, onPointerDown, onMouseDown],
   );
 
   return (
@@ -136,7 +158,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>({
             isAnyColumnResizing && "pointer-events-none",
             className,
           )}
-          onPointerDown={onTriggerPointerDown}
+          {...triggerHandlers}
           {...props}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -333,6 +355,12 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
   label,
 }: DataGridColumnResizerProps<TData, TValue>) {
   const defaultColumnDef = table.getDefaultColumnDef();
+  const minSize =
+    header.column.columnDef.minSize ?? defaultColumnDef.minSize ?? 0;
+  const maxSize =
+    header.column.columnDef.maxSize ??
+    defaultColumnDef.maxSize ??
+    Number.POSITIVE_INFINITY;
 
   const onDoubleClick = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -343,11 +371,8 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
         ? getColumnFitSize({
             gridElement,
             columnId: column.id,
-            minSize: column.columnDef.minSize ?? defaultColumnDef.minSize ?? 0,
-            maxSize:
-              column.columnDef.maxSize ??
-              defaultColumnDef.maxSize ??
-              Number.POSITIVE_INFINITY,
+            minSize,
+            maxSize,
             wrapperContentSize: getBadgeColumnContentSize(column, table),
           })
         : null;
@@ -359,7 +384,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
 
       table.setColumnSizing((prev) => ({ ...prev, [column.id]: fitSize }));
     },
-    [header.column, table, defaultColumnDef],
+    [header.column, table, minSize, maxSize],
   );
 
   return (
@@ -368,8 +393,8 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
       aria-orientation="vertical"
       aria-label={`Resize ${label} column`}
       aria-valuenow={header.column.getSize()}
-      aria-valuemin={defaultColumnDef.minSize}
-      aria-valuemax={defaultColumnDef.maxSize}
+      aria-valuemin={minSize}
+      aria-valuemax={Number.isFinite(maxSize) ? maxSize : undefined}
       tabIndex={-1}
       className={cn(
         "absolute -inset-e-px top-0 z-50 h-full w-0.5 cursor-ew-resize touch-none bg-border transition-opacity select-none after:absolute after:inset-y-0 after:inset-s-1/2 after:h-full after:w-4.5 after:-translate-x-1/2 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",

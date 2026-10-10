@@ -2,7 +2,11 @@
 
 import type * as React from "react";
 
-import { type RowData, Subscribe, type Table } from "@tanstack/react-table";
+import {
+  type ReactTable,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { RowHeightValue } from "@/lib/data-grid-types";
@@ -79,7 +83,7 @@ const rowHeights = [
 interface DataGridRowHeightMenuProps<
   TData extends RowData,
 > extends React.ComponentProps<typeof SelectContent> {
-  table: Table<DataGridFeatures, TData>;
+  table: ReactTable<DataGridFeatures, TData, unknown>;
   disabled?: boolean;
 }
 
@@ -104,7 +108,10 @@ export function DataGridRowHeightMenu<TData extends RowData>({
             }}
             disabled={disabled}
           >
-            <SelectTrigger className="[&_svg:nth-child(2)]:hidden">
+            <SelectTrigger
+              aria-label="Row height"
+              className="[&_svg:nth-child(2)]:hidden"
+            >
               <SelectValue placeholder="Row height">
                 <selectedRowHeight.icon />
                 {selectedRowHeight.label}

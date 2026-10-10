@@ -1,10 +1,11 @@
 "use client";
 
+import type { ReactTable, RowData } from "@tanstack/react-table";
+
 import * as React from "react";
 
-import type { SearchState } from "@/lib/data-grid-types";
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { Button } from "@/registry/bases/base/ui/button";
 import { Input } from "@/registry/bases/base/ui/input";
@@ -28,54 +29,55 @@ function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
   }
 }
 
-interface DataGridSearchProps extends SearchState {}
+interface DataGridSearchProps<TData extends RowData> {
+  table: ReactTable<DataGridFeatures, TData, unknown>;
+}
 
-export const DataGridSearch = React.memo(DataGridSearchImpl, (prev, next) => {
+export function DataGridSearch<TData extends RowData>({
+  table,
+}: DataGridSearchProps<TData>) {
+  return (
+    <table.Subscribe
+      selector={(state) => ({
+        searchOpen: state.searchOpen,
+        searchQuery: state.searchQuery,
+        matchIndex: state.searchMatchIndex,
+        matchCount: table.getSearchMatches().length,
+      })}
+    >
+      {(searchState) => <DataGridSearchView table={table} {...searchState} />}
+    </table.Subscribe>
+  );
+}
+
+interface DataGridSearchViewProps<
+  TData extends RowData,
+> extends DataGridSearchProps<TData> {
+  searchOpen: boolean;
+  searchQuery: string;
+  matchIndex: number;
+  matchCount: number;
+}
+
+const DataGridSearchView = React.memo(DataGridSearchImpl, (prev, next) => {
+  if (prev.table !== next.table) return false;
   if (prev.searchOpen !== next.searchOpen) return false;
 
   if (!next.searchOpen) return true;
 
   // Exclude searchQuery because the input is uncontrolled, and hasQuery state handles the status text
-  if (prev.matchIndex !== next.matchIndex) return false;
+  return (
+    prev.matchIndex === next.matchIndex && prev.matchCount === next.matchCount
+  );
+}) as typeof DataGridSearchImpl;
 
-  if (prev.searchMatches.length !== next.searchMatches.length) return false;
-
-  for (let i = 0; i < prev.searchMatches.length; i++) {
-    const prevMatch = prev.searchMatches[i];
-    const nextMatch = next.searchMatches[i];
-
-    if (!prevMatch || !nextMatch) return false;
-
-    if (
-      prevMatch.rowId !== nextMatch.rowId ||
-      prevMatch.columnId !== nextMatch.columnId
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-});
-
-function DataGridSearchImpl({
-  searchMatches,
-  matchIndex,
+function DataGridSearchImpl<TData extends RowData>({
+  table,
   searchOpen,
-  onSearchOpenChange,
   searchQuery,
-  onSearchQueryChange,
-  onSearch,
-  onNavigateToNextMatch,
-  onNavigateToPrevMatch,
-}: DataGridSearchProps) {
-  const propsRef = useAsRef({
-    onSearchOpenChange,
-    onSearchQueryChange,
-    onSearch,
-    onNavigateToNextMatch,
-    onNavigateToPrevMatch,
-  });
-
+  matchIndex,
+  matchCount,
+}: DataGridSearchViewProps<TData>) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
   const [hasQuery, setHasQuery] = React.useState(searchQuery.length > 0);
@@ -98,16 +100,16 @@ function DataGridSearchImpl({
     function onEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
-        propsRef.current.onSearchOpenChange(false);
+        table.closeSearch();
       }
     }
 
     document.addEventListener("keydown", onEscape);
     return () => document.removeEventListener("keydown", onEscape);
-  }, [searchOpen, propsRef]);
+  }, [searchOpen, table]);
 
   const debouncedSearch = useDebouncedCallback((query: string) => {
-    propsRef.current.onSearch(query);
+    table.setSearchQuery(query);
   }, 150);
 
   function onCompositionStart() {
@@ -118,7 +120,6 @@ function DataGridSearchImpl({
     isComposingRef.current = false;
     const value = event.currentTarget.value;
     setHasQuery(value.length > 0);
-    propsRef.current.onSearchQueryChange(value);
     debouncedSearch(value);
   }
 
@@ -129,9 +130,9 @@ function DataGridSearchImpl({
       if (event.nativeEvent.isComposing) return;
       event.preventDefault();
       if (event.shiftKey) {
-        propsRef.current.onNavigateToPrevMatch();
+        table.goToPrevSearchMatch();
       } else {
-        propsRef.current.onNavigateToNextMatch();
+        table.goToNextSearchMatch();
       }
     }
   }
@@ -140,20 +141,19 @@ function DataGridSearchImpl({
     if (isComposingRef.current) return;
     const value = event.target.value;
     setHasQuery(value.length > 0);
-    propsRef.current.onSearchQueryChange(value);
     debouncedSearch(value);
   }
 
   function onClose() {
-    propsRef.current.onSearchOpenChange(false);
+    table.closeSearch();
   }
 
   function onPrevMatch() {
-    propsRef.current.onNavigateToPrevMatch();
+    table.goToPrevSearchMatch();
   }
 
   function onNextMatch() {
-    propsRef.current.onNavigateToNextMatch();
+    table.goToNextSearchMatch();
   }
 
   if (!searchOpen) return null;
@@ -161,11 +161,12 @@ function DataGridSearchImpl({
   return (
     <div
       role="search"
-      data-slot="grid-search"
+      data-slot="data-grid-search"
       className="absolute inset-e-4 top-4 z-50 flex animate-in flex-col gap-2 rounded-lg border bg-background p-2 shadow-lg fade-in-0 slide-in-from-top-2"
     >
       <div className="flex items-center gap-2">
         <Input
+          aria-label="Find in table"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
@@ -187,7 +188,7 @@ function DataGridSearchImpl({
             className="size-7"
             onClick={onPrevMatch}
             onPointerDown={onTriggerPointerDown}
-            disabled={searchMatches.length === 0}
+            disabled={matchCount === 0}
           >
             <IconPlaceholder
               lucide="ChevronUp"
@@ -204,7 +205,7 @@ function DataGridSearchImpl({
             className="size-7"
             onClick={onNextMatch}
             onPointerDown={onTriggerPointerDown}
-            disabled={searchMatches.length === 0}
+            disabled={matchCount === 0}
           >
             <IconPlaceholder
               lucide="ChevronDown"
@@ -231,10 +232,13 @@ function DataGridSearchImpl({
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-1 text-xs whitespace-nowrap text-muted-foreground">
-        {searchMatches.length > 0 ? (
+      <div
+        role="status"
+        className="flex items-center gap-1 text-xs whitespace-nowrap text-muted-foreground"
+      >
+        {matchCount > 0 ? (
           <span>
-            {matchIndex + 1} of {searchMatches.length}
+            {matchIndex + 1} of {matchCount}
           </span>
         ) : hasQuery ? (
           <span>No results</span>
