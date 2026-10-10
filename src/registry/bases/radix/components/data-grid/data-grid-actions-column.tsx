@@ -31,28 +31,30 @@ function DataGridActionsCell<TData extends RowData>({
   actions,
 }: DataGridActionsCellProps<TData>) {
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={`Open actions for row ${row.getDisplayIndex() + 1}`}
-          variant="ghost"
-          size="icon-sm"
-          tabIndex={-1}
-          className="-my-1 size-7 text-muted-foreground data-[state=open]:bg-accent"
-        >
-          <IconPlaceholder
-            lucide="Ellipsis"
-            tabler="IconDots"
-            hugeicons="MoreHorizontalIcon"
-            phosphor="DotsThreeIcon"
-            remixicon="RiMoreLine"
-          />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent data-grid-popover align="end">
-        {actions({ row, table })}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="-mx-3 flex justify-center">
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            aria-label={`Open actions for row ${row.getDisplayIndex() + 1}`}
+            variant="ghost"
+            size="icon-sm"
+            tabIndex={-1}
+            className="size-6 -translate-y-[0.5px] text-muted-foreground transition-none data-[state=open]:bg-accent"
+          >
+            <IconPlaceholder
+              lucide="Ellipsis"
+              tabler="IconDots"
+              hugeicons="MoreHorizontalIcon"
+              phosphor="DotsThreeIcon"
+              remixicon="RiMoreLine"
+            />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent data-grid-popover align="end">
+          {actions({ row, table })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
 
@@ -66,7 +68,8 @@ interface GetDataGridActionsColumnOptions<TData extends RowData> extends Omit<
 
 export function getDataGridActionsColumn<TData extends RowData>({
   actions,
-  size = 48,
+  size = 56,
+  minSize = size,
   enableHiding = false,
   enableResizing = false,
   enableSorting = false,
@@ -79,6 +82,7 @@ export function getDataGridActionsColumn<TData extends RowData>({
       <DataGridActionsCell row={row} table={table} actions={actions} />
     ),
     size,
+    minSize,
     enableHiding,
     enableResizing,
     enableSorting,
