@@ -657,6 +657,10 @@ export function scrollCellIntoView<TData extends RowData>(params: {
   const isActuallyRtl = isRtl || hasNegativeScroll;
 
   const currentTable = tableRef.current;
+  // Pinned cells are always in view, and the pinned-area math below would treat them as hidden behind it
+  const columnId = targetCell.dataset.columnId;
+  if (columnId && currentTable?.getColumn(columnId)?.getIsPinned()) return;
+
   const leftPinnedColumns = currentTable?.getStartVisibleLeafColumns() ?? [];
   const rightPinnedColumns = currentTable?.getEndVisibleLeafColumns() ?? [];
 
