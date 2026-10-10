@@ -18,6 +18,9 @@ import {
   rowSelectionFeature,
   rowSortingFeature,
   setStateSlice,
+  sortFn_alphanumeric,
+  sortFn_datetime,
+  sortFn_text,
   type Table,
   type TableFeature,
   type TableFeatures,
@@ -1673,6 +1676,11 @@ export const dataGridFeatures = tableFeatures({
   dataGridSelectionFeature,
   filteredRowModel: createFilteredRowModel(),
   sortedRowModel: createSortedRowModel(),
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
   columnMeta: metaHelper<DataGridColumnMeta>(),
 });
 
