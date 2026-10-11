@@ -22,9 +22,7 @@ interface GetDataTableActionsColumnOptions<TData extends RowData> extends Omit<
   Partial<ColumnDef<DataTableFeatures, TData>>,
   "id" | "header" | "cell"
 > {
-  /** Renders the row's menu items, such as `DropdownMenuItem`s. */
   actions: (context: CellContext<DataTableFeatures, TData>) => React.ReactNode;
-  /** The accessible label of the row's menu trigger. */
   getAriaLabel?: (row: Row<DataTableFeatures, TData>) => string;
 }
 
