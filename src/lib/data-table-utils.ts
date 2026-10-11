@@ -165,7 +165,7 @@ export function getColumnPinningStyle<TData extends RowData>(
     opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     width: `var(${getColumnVar(column.id, "size")})`,
-    zIndex: isPinned ? 1 : undefined,
+    zIndex: isPinned ? 20 : undefined,
   };
 }
 

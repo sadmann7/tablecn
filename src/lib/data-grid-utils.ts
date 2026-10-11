@@ -199,7 +199,7 @@ export function getColumnPinningStyle<TData extends RowData>(params: {
     position: isPinned ? "sticky" : "relative",
     background: isPinned ? "var(--background)" : "var(--background)",
     width: column.getSize(),
-    zIndex: isPinned ? 1 : undefined,
+    zIndex: isPinned ? 20 : undefined,
   };
 }
 
