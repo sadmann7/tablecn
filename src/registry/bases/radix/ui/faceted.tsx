@@ -3,10 +3,9 @@
 import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
 import { Slot } from "radix-ui";
-import { composeEventHandlers } from "radix-ui/internal";
+import { composeEventHandlers, useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
   Command,
   CommandEmpty,
@@ -232,7 +231,7 @@ function Faceted<Multiple extends boolean = false>({
   const store = storeRef.current;
   const open = useFacetedStoreSelector(store, (state) => state.open);
 
-  useIsomorphicLayoutEffect(() => {
+  useLayoutEffect(() => {
     if (value !== undefined) store.notify();
   }, [store, value]);
 

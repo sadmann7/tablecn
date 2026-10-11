@@ -15,6 +15,7 @@ import {
   useTable,
 } from "@tanstack/react-table";
 import { useVirtualizer, type Virtualizer } from "@tanstack/react-virtual";
+import { useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -32,7 +33,6 @@ import type {
 } from "@/lib/data-grid-types";
 
 import { useAsRef } from "@/hooks/use-as-ref";
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   type DataGridFeatures,
@@ -3994,7 +3994,7 @@ function useDataGrid<TData extends RowData>({
     };
   }, [store, dragDepsRef]);
 
-  useIsomorphicLayoutEffect(() => {
+  useLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
     });

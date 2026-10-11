@@ -38,11 +38,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "cn";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { useComposedRefs } from "radix-ui/internal";
+import { useComposedRefs, useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 const orientationConfig = {
   vertical: {
@@ -546,7 +544,7 @@ function SortableOverlay(props: SortableOverlayProps) {
 
   const [mounted, setMounted] = React.useState(false);
 
-  useIsomorphicLayoutEffect(() => setMounted(true), []);
+  useLayoutEffect(() => setMounted(true), []);
 
   const container =
     containerProp ?? (mounted ? globalThis.document?.body : null);
