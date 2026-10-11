@@ -235,9 +235,11 @@ function getPreviewContent<TData extends RowData>(
         content: getNumberCellValue(value) ?? "",
       };
     default:
+      // Wrapping text needs its own clamped box: clamped on the padded cell, the next line still paints into the bottom padding
       return {
-        className: lineClampClassName,
-        content: getTextCellValue(value),
+        content: (
+          <div className={lineClampClassName}>{getTextCellValue(value)}</div>
+        ),
       };
   }
 }
