@@ -89,7 +89,7 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
           enableSystem
           disableTransitionOnChange
         >
-          <SkipNav className="focus-visible:z-60" />
+          <SkipNav />
           <div className="relative flex min-h-screen flex-col">
             <SiteHeader />
             <main id={MAIN_CONTENT_ID} className="flex-1 scroll-mt-14">
