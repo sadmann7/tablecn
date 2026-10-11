@@ -6,6 +6,7 @@ import { Suspense } from "react";
 
 import { SiteHeader } from "@/components/layouts/site-header";
 import { ThemeProvider } from "@/components/providers";
+import { MAIN_CONTENT_ID, SkipNav } from "@/components/skip-nav";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
 import { UploadThingSSR } from "@/components/uploadthing-ssr";
 import { fontMono, fontSans } from "@/lib/fonts";
@@ -88,15 +89,10 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
           enableSystem
           disableTransitionOnChange
         >
-          <a
-            href="#main"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-60 focus:rounded-md focus:bg-background focus:px-3 focus:py-2 focus:text-sm focus:ring-2 focus:ring-ring"
-          >
-            Skip to content
-          </a>
+          <SkipNav className="focus-visible:z-60" />
           <div className="relative flex min-h-screen flex-col">
             <SiteHeader />
-            <main id="main" className="flex-1">
+            <main id={MAIN_CONTENT_ID} className="flex-1 scroll-mt-14">
               {children}
             </main>
           </div>
