@@ -762,8 +762,11 @@ function getColumnWindowKey(params: {
 }) {
   const { virtualizer, startCount, centerCount, centerStart, centerEnd } =
     params;
+  const items = virtualizer.getVirtualItems();
+  // Before the scroll element is measured the virtualizer returns no items, so render every column instead of only the pinned ones
+  if (centerCount > 0 && items.length === 0) return "";
   let key = `${startCount}|${centerCount}|${centerStart}|${centerEnd}|`;
-  for (const item of virtualizer.getVirtualItems()) {
+  for (const item of items) {
     key += `${item.index}:${item.start}:${item.end},`;
   }
   return key;
