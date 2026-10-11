@@ -73,7 +73,6 @@
           "@testing-library/jest-dom",
           "@testing-library/jest-dom/**",
           "@testing-library/dom",
-          "@total-typescript/ts-reset",
           "server-only",
           "./src/env"
         ]
