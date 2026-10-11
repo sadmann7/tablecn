@@ -8,7 +8,7 @@ import * as React from "react";
 import type { Direction } from "@/lib/data-grid-types";
 import type { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
-import { useAsRef } from "@/hooks/use-as-ref";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   flexRender,
   getColumnBorderVisibility,
@@ -67,7 +67,7 @@ export function DataGrid<TData extends RowData>({
   const columnVisibility = table.state.columnVisibility;
   const columnPinning = table.state.columnPinning;
 
-  const onRowAddRef = useAsRef(onRowAddProp);
+  const onRowAddRef = useValueAsRef(onRowAddProp);
 
   const onRowAdd = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {

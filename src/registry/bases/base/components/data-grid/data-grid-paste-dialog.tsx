@@ -1,5 +1,6 @@
 "use client";
 
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -8,7 +9,6 @@ import type {
   PasteDialogState,
 } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
 import { Button } from "@/registry/bases/base/ui/button";
 import {
   Dialog,
@@ -60,7 +60,7 @@ function PasteDialogImpl({
   onPasteDialogOpenChange,
   onCellsPaste,
 }: PasteDialogProps) {
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     onPasteDialogOpenChange,
     onCellsPaste,
   });

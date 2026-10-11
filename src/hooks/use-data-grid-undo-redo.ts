@@ -1,8 +1,8 @@
 import * as React from "react";
 import { toast } from "sonner";
 
-import { useAsRef } from "@/hooks/use-as-ref";
-import { useLazyRef } from "@/hooks/use-lazy-ref";
+import { useRefWithInit } from "@/hooks/use-ref-with-init";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { getIsInPopover } from "@/lib/data-grid-utils";
 
 const DEFAULT_MAX_HISTORY = 100;
@@ -96,7 +96,7 @@ function useDataGridUndoRedo<TData>({
   maxHistory = DEFAULT_MAX_HISTORY,
   enabled = true,
 }: UseDataGridUndoRedoProps<TData>): UseDataGridUndoRedoReturn<TData> {
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     data,
     onDataChange,
     getRowId,
@@ -104,9 +104,9 @@ function useDataGridUndoRedo<TData>({
     enabled,
   });
 
-  const listenersRef = useLazyRef(() => new Set<() => void>());
+  const listenersRef = useRefWithInit(() => new Set<() => void>());
 
-  const stateRef = useLazyRef<StoreState<TData>>(() => ({
+  const stateRef = useRefWithInit<StoreState<TData>>(() => ({
     undoStack: [],
     redoStack: [],
     hasPendingChanges: false,

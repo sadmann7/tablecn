@@ -6,7 +6,7 @@ import { useComposedRefs, useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
-import { useAsRef } from "@/hooks/use-as-ref";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
 
@@ -146,7 +146,7 @@ function ActionBar(props: ActionBarProps) {
   const rootRef = React.useRef<RootElement>(null);
   const composedRef = useComposedRefs(ref, rootRef);
 
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     onEscapeKeyDown,
     onOpenChange,
   });

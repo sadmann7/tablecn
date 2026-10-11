@@ -482,7 +482,7 @@
           "target": "src/components/ui/direction.tsx"
         },
         {
-          "path": "src/hooks/use-as-ref.ts",
+          "path": "src/hooks/use-value-as-ref.ts",
           "type": "registry:hook"
         },
         {
@@ -503,7 +503,7 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/hooks/use-lazy-ref.ts",
+          "path": "src/hooks/use-ref-with-init.ts",
           "type": "registry:hook"
         },
         {
@@ -763,11 +763,11 @@
           "type": "registry:hook"
         },
         {
-          "path": "src/hooks/use-as-ref.ts",
+          "path": "src/hooks/use-value-as-ref.ts",
           "type": "registry:hook"
         },
         {
-          "path": "src/hooks/use-lazy-ref.ts",
+          "path": "src/hooks/use-ref-with-init.ts",
           "type": "registry:hook"
         },
         {

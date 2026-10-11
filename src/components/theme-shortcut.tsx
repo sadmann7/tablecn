@@ -3,12 +3,12 @@
 import { useTheme } from "next-themes";
 import * as React from "react";
 
-import { useAsRef } from "@/hooks/use-as-ref";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { getIsEditableTarget } from "@/lib/utils";
 
 export function ThemeShortcut() {
   const { resolvedTheme, setTheme } = useTheme();
-  const resolvedThemeRef = useAsRef(resolvedTheme);
+  const resolvedThemeRef = useValueAsRef(resolvedTheme);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
