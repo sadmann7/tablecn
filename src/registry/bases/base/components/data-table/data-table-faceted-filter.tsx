@@ -11,6 +11,8 @@ import { Button } from "@/registry/bases/base/ui/button";
 import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
   Faceted,
+  FacetedBadge,
+  FacetedBadgeList,
   FacetedClear,
   FacetedContent,
   FacetedEmpty,
@@ -128,7 +130,21 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
               orientation="vertical"
               className="mx-0.5 data-vertical:h-4 data-vertical:self-center"
             />
-            <FacetedValue />
+            <FacetedValue>
+              {(selected) => (
+                <FacetedBadgeList>
+                  {selected.length > 2 ? (
+                    <FacetedBadge>{selected.length} selected</FacetedBadge>
+                  ) : (
+                    selected.map((item) => (
+                      <FacetedBadge key={item.value}>
+                        <span className="truncate">{item.label}</span>
+                      </FacetedBadge>
+                    ))
+                  )}
+                </FacetedBadgeList>
+              )}
+            </FacetedValue>
           </>
         )}
       </FacetedTrigger>
@@ -145,11 +161,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
               </FacetedItem>
             ))}
           </FacetedGroup>
-          {hasSelection && (
-            <FacetedGroup className="mt-0.5 border-t pt-1.5">
-              <FacetedClear>Clear filters</FacetedClear>
-            </FacetedGroup>
-          )}
+          <FacetedClear>Clear filters</FacetedClear>
         </FacetedList>
       </FacetedContent>
     </Faceted>
