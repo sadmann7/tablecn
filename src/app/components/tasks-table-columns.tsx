@@ -1,12 +1,11 @@
 "use client";
 
-import { createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper, type Row } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   CalendarIcon,
   CircleDashed,
   Clock,
-  Ellipsis,
   Text,
 } from "lucide-react";
 import * as React from "react";
@@ -19,13 +18,11 @@ import { type Task, tasks } from "@/db/schema";
 import { getColumnOptions } from "@/lib/data-table-parsers";
 import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
+import { getDataTableActionsColumn } from "@/registry/bases/radix/components/data-table/data-table-actions-column";
 import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-table/data-table-column-header";
 import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
 import { Badge } from "@/registry/bases/radix/ui/badge";
-import { Button } from "@/registry/bases/radix/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -33,7 +30,6 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
 import { updateTask } from "../lib/actions";
@@ -194,74 +190,72 @@ export function getTasksTableColumns({
       },
       ...getColumnOptions(tasksColumnConfigs.createdAt),
     }),
-    columnHelper.display({
-      id: "actions",
-      header: () => <span className="sr-only">Actions</span>,
-      cell: function Cell({ row }) {
-        const [isUpdatePending, startUpdateTransition] = React.useTransition();
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                aria-label={`Open actions for ${row.original.code}`}
-                variant="ghost"
-                className="flex size-8 p-0 data-[state=open]:bg-muted"
-              >
-                <Ellipsis />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem
-                onSelect={() => setRowAction({ row, variant: "update" })}
-              >
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent>
-                  <DropdownMenuRadioGroup
-                    value={row.original.label}
-                    onValueChange={(value) => {
-                      startUpdateTransition(() => {
-                        toast.promise(
-                          updateTask({
-                            id: row.original.id,
-                            label: value as Task["label"],
-                          }),
-                          {
-                            loading: "Updating...",
-                            success: "Label updated",
-                            error: (err) => getErrorMessage(err),
-                          },
-                        );
-                      });
-                    }}
-                  >
-                    {tasks.label.enumValues.map((label) => (
-                      <DropdownMenuRadioItem
-                        key={label}
-                        value={label}
-                        className="capitalize"
-                        disabled={isUpdatePending}
-                      >
-                        {label}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => setRowAction({ row, variant: "delete" })}
-              >
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        );
-      },
-      size: 48,
+    getDataTableActionsColumn<Task>({
+      actions: ({ row }) => (
+        <TaskActions row={row} setRowAction={setRowAction} />
+      ),
+      getAriaLabel: (row) => `Open actions for ${row.original.code}`,
     }),
   ]);
+}
+
+interface TaskActionsProps extends Pick<
+  GetTasksTableColumnsProps,
+  "setRowAction"
+> {
+  row: Row<DataTableFeatures, Task>;
+}
+
+function TaskActions({ row, setRowAction }: TaskActionsProps) {
+  const [isUpdatePending, startUpdateTransition] = React.useTransition();
+
+  return (
+    <>
+      <DropdownMenuItem
+        onSelect={() => setRowAction({ row, variant: "update" })}
+      >
+        Edit
+      </DropdownMenuItem>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          <DropdownMenuRadioGroup
+            value={row.original.label}
+            onValueChange={(value) => {
+              startUpdateTransition(() => {
+                toast.promise(
+                  updateTask({
+                    id: row.original.id,
+                    label: value as Task["label"],
+                  }),
+                  {
+                    loading: "Updating...",
+                    success: "Label updated",
+                    error: (err) => getErrorMessage(err),
+                  },
+                );
+              });
+            }}
+          >
+            {tasks.label.enumValues.map((label) => (
+              <DropdownMenuRadioItem
+                key={label}
+                value={label}
+                className="capitalize"
+                disabled={isUpdatePending}
+              >
+                {label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onSelect={() => setRowAction({ row, variant: "delete" })}
+      >
+        Delete
+      </DropdownMenuItem>
+    </>
+  );
 }

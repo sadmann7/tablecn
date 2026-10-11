@@ -150,6 +150,41 @@
       ]
     },
     {
+      "name": "data-table-actions-column",
+      "type": "registry:component",
+      "title": "Data Table Actions Column",
+      "description": "A reusable actions column definition for the data table with a per-row actions menu",
+      "registryDependencies": ["button", "dropdown-menu"],
+      "dependencies": ["@tanstack/react-table"],
+      "files": [
+        {
+          "path": "src/registry/bases/radix/components/data-table/data-table-actions-column.tsx",
+          "type": "registry:component",
+          "target": "src/components/data-table/data-table-actions-column.tsx"
+        },
+        {
+          "path": "src/lib/data-table-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-filters.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-utils.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "data-table-sort-menu",
       "type": "registry:component",
       "title": "Data Table Sort Menu",
