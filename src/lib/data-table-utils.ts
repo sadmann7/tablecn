@@ -104,12 +104,12 @@ const BOOLEAN_OPERATORS = [
   { label: "Is not", value: "ne" },
 ] satisfies FilterOperatorOption[];
 
-const MULTI_VALUE_FILTER_VARIANTS = [
+const MULTI_VALUE_FILTER_VARIANTS: FilterVariant[] = [
   "select",
   "multiSelect",
   "range",
   "dateRange",
-] satisfies FilterVariant[];
+];
 
 const FILTER_OPERATORS_BY_VARIANT: Record<
   FilterVariant,
