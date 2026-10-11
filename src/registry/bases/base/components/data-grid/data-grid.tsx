@@ -549,7 +549,7 @@ function useViewportInsets({
 }) {
   const [insets, setInsets] = React.useState(EMPTY_VIEWPORT_INSETS);
 
-  useIsomorphicLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const dataGrid = dataGridRef.current;
     if (!dataGrid) return;
     const header = headerRef.current;
