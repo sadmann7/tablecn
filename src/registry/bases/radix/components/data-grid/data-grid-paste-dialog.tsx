@@ -8,7 +8,7 @@ import type {
   PasteDialogState,
 } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Dialog,
@@ -60,7 +60,7 @@ function PasteDialogImpl({
   onPasteDialogOpenChange,
   onCellsPaste,
 }: PasteDialogProps) {
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     onPasteDialogOpenChange,
     onCellsPaste,
   });

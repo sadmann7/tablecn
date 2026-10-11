@@ -2,6 +2,7 @@
 
 import type { ColumnDef, RowData } from "@tanstack/react-table";
 
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -12,7 +13,6 @@ import type {
   DataGridTableMeta,
 } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
 import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
@@ -103,7 +103,7 @@ function ContextMenuImpl<TData extends RowData>({
   onCellsCopy,
   onCellsCut,
 }: ContextMenuProps<TData>) {
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     dataGridRef,
     selectionState,
     onDataUpdate,

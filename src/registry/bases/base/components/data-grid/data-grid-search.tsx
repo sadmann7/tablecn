@@ -1,10 +1,10 @@
 "use client";
 
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import * as React from "react";
 
 import type { SearchState } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import { Button } from "@/registry/bases/base/ui/button";
 import { Input } from "@/registry/bases/base/ui/input";
@@ -68,7 +68,7 @@ function DataGridSearchImpl({
   onNavigateToNextMatch,
   onNavigateToPrevMatch,
 }: DataGridSearchProps) {
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     onSearchOpenChange,
     onSearchQueryChange,
     onSearch,

@@ -4,8 +4,8 @@ import * as React from "react";
 
 import type { SearchState } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
@@ -68,7 +68,7 @@ function DataGridSearchImpl({
   onNavigateToNextMatch,
   onNavigateToPrevMatch,
 }: DataGridSearchProps) {
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     onSearchOpenChange,
     onSearchQueryChange,
     onSearch,

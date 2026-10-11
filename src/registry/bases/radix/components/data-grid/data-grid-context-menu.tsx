@@ -12,7 +12,7 @@ import type {
   DataGridTableMeta,
 } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { getEmptyCellValue, parseCellKey } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,
@@ -103,7 +103,7 @@ function ContextMenuImpl<TData extends RowData>({
   onCellsCopy,
   onCellsCut,
 }: ContextMenuProps<TData>) {
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     dataGridRef,
     selectionState,
     onDataUpdate,

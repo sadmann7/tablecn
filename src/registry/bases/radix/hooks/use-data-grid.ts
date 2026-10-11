@@ -32,8 +32,8 @@ import type {
   SelectionState,
 } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
-import { useLazyRef } from "@/hooks/use-lazy-ref";
+import { useRefWithInit } from "@/hooks/use-ref-with-init";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   type DataGridFeatures,
   dataGridFeatures,
@@ -205,16 +205,16 @@ function useDataGrid<TData extends RowData>({
   const footerRef = React.useRef<HTMLDivElement>(null);
   const focusGuardRef = React.useRef(false);
 
-  const propsRef = useAsRef({
+  const propsRef = useValueAsRef({
     ...props,
     data,
     columns,
     initialState,
   });
 
-  const listenersRef = useLazyRef(() => new Set<() => void>());
+  const listenersRef = useRefWithInit(() => new Set<() => void>());
 
-  const stateRef = useLazyRef<DataGridState>(() => {
+  const stateRef = useRefWithInit<DataGridState>(() => {
     return {
       sorting: initialState?.sorting ?? [],
       columnFilters: initialState?.columnFilters ?? [],
@@ -326,7 +326,7 @@ function useDataGrid<TData extends RowData>({
   const contextMenu = useStore(store, (state) => state.contextMenu);
   const pasteDialog = useStore(store, (state) => state.pasteDialog);
 
-  const prevCellSelectionMapRef = useLazyRef(
+  const prevCellSelectionMapRef = useRefWithInit(
     () => new Map<string, Set<string>>(),
   );
 
@@ -2456,7 +2456,7 @@ function useDataGrid<TData extends RowData>({
   );
   const rowSize = table.getRowSize();
 
-  const dragDepsRef = useAsRef({
+  const dragDepsRef = useValueAsRef({
     selectRange,
     dir,
     rowSize,
