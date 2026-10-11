@@ -1,5 +1,7 @@
 "use client";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import {
   type HeaderGroup,
   type RowData,
@@ -13,7 +15,6 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 import type { useDataGrid } from "@/registry/bases/base/hooks/use-data-grid";
 
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
   flexRender,
   getColumnBorderVisibility,
@@ -175,7 +176,7 @@ function DataGridViewport<TData extends RowData>({
       VIEWPORT_OFFSET,
   });
 
-  useIsomorphicLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     rowVirtualizerRef.current = rowVirtualizer;
     return () => {
       if (rowVirtualizerRef.current === rowVirtualizer) {
@@ -184,7 +185,7 @@ function DataGridViewport<TData extends RowData>({
     };
   }, [rowVirtualizerRef, rowVirtualizer]);
 
-  useIsomorphicLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
     });

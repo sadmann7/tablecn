@@ -23,7 +23,7 @@ import type {
   NavigationDirection,
 } from "@/lib/data-grid-types";
 
-import { useAsRef } from "@/hooks/use-as-ref";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   type DataGridFeatures,
   dataGridFeatures,
@@ -112,7 +112,7 @@ function useDataGrid<TData extends RowData>({
     shouldScroll: boolean;
   } | null>(null);
 
-  const propsRef = useAsRef(props);
+  const propsRef = useValueAsRef(props);
 
   const getRowIndex = React.useCallback((rowId: string) => {
     const currentTable = tableRef.current;

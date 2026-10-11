@@ -7,13 +7,14 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "cn";
+import { useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 import type { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   flexRender,
   getColumnBorderVisibility,
@@ -175,7 +176,7 @@ function DataGridViewport<TData extends RowData>({
       VIEWPORT_OFFSET,
   });
 
-  useIsomorphicLayoutEffect(() => {
+  useLayoutEffect(() => {
     rowVirtualizerRef.current = rowVirtualizer;
     return () => {
       if (rowVirtualizerRef.current === rowVirtualizer) {
@@ -184,7 +185,7 @@ function DataGridViewport<TData extends RowData>({
     };
   }, [rowVirtualizerRef, rowVirtualizer]);
 
-  useIsomorphicLayoutEffect(() => {
+  useLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
     });
