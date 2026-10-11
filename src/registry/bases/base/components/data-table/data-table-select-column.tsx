@@ -67,7 +67,9 @@ function DataTableSelectHeader<TData extends RowData>({
       source={table.atoms.rowSelection}
       selector={() => ({
         checked: table.getIsAllPageRowsSelected(),
-        indeterminate: table.getIsSomePageRowsSelected(),
+        indeterminate:
+          table.getIsSomePageRowsSelected() &&
+          !table.getIsAllPageRowsSelected(),
       })}
     >
       {({ checked, indeterminate }) => (
