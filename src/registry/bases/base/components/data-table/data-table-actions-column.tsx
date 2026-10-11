@@ -18,70 +18,19 @@ import {
 } from "@/registry/bases/base/ui/dropdown-menu";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-type DataTableActionsContext<TData extends RowData> = Pick<
-  CellContext<DataTableFeatures, TData>,
-  "row" | "table"
->;
-
-interface DataTableActionsCellProps<
-  TData extends RowData,
-> extends DataTableActionsContext<TData> {
-  actions: (context: DataTableActionsContext<TData>) => React.ReactNode;
-  getAriaLabel: (row: Row<DataTableFeatures, TData>) => string;
-}
-
-function DataTableActionsCell<TData extends RowData>({
-  row,
-  table,
-  actions,
-  getAriaLabel,
-}: DataTableActionsCellProps<TData>) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            aria-label={getAriaLabel(row)}
-            variant="ghost"
-            size="icon-sm"
-            className="text-muted-foreground data-popup-open:bg-accent"
-          />
-        }
-      >
-        <IconPlaceholder
-          lucide="Ellipsis"
-          tabler="IconDots"
-          hugeicons="MoreHorizontalIcon"
-          phosphor="DotsThreeIcon"
-          remixicon="RiMoreLine"
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {actions({ row, table })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function getDefaultAriaLabel<TData extends RowData>(
-  row: Row<DataTableFeatures, TData>,
-) {
-  return `Open actions for row ${row.getDisplayIndex() + 1}`;
-}
-
 interface GetDataTableActionsColumnOptions<TData extends RowData> extends Omit<
   Partial<ColumnDef<DataTableFeatures, TData>>,
   "id" | "header" | "cell"
 > {
   /** Renders the row's menu items, such as `DropdownMenuItem`s. */
-  actions: (context: DataTableActionsContext<TData>) => React.ReactNode;
+  actions: (context: CellContext<DataTableFeatures, TData>) => React.ReactNode;
   /** The accessible label of the row's menu trigger. */
   getAriaLabel?: (row: Row<DataTableFeatures, TData>) => string;
 }
 
 export function getDataTableActionsColumn<TData extends RowData>({
   actions,
-  getAriaLabel = getDefaultAriaLabel,
+  getAriaLabel = (row) => `Open actions for row ${row.getDisplayIndex() + 1}`,
   size = 48,
   enableHiding = false,
   enableSorting = false,
@@ -93,13 +42,30 @@ export function getDataTableActionsColumn<TData extends RowData>({
   return {
     id: "actions",
     header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row, table }) => (
-      <DataTableActionsCell
-        row={row}
-        table={table}
-        actions={actions}
-        getAriaLabel={getAriaLabel}
-      />
+    cell: (context) => (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              aria-label={getAriaLabel(context.row)}
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground data-popup-open:bg-accent"
+            />
+          }
+        >
+          <IconPlaceholder
+            lucide="Ellipsis"
+            tabler="IconDots"
+            hugeicons="MoreHorizontalIcon"
+            phosphor="DotsThreeIcon"
+            remixicon="RiMoreLine"
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {actions(context)}
+        </DropdownMenuContent>
+      </DropdownMenu>
     ),
     size,
     enableHiding,
