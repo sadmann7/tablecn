@@ -111,10 +111,6 @@
         {
           "path": "src/lib/data-table-filters.ts",
           "type": "registry:lib"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },
@@ -247,10 +243,6 @@
         {
           "path": "src/lib/data-table-filters.ts",
           "type": "registry:lib"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },
@@ -334,10 +326,6 @@
           "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-view-options.tsx"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },
@@ -409,10 +397,6 @@
           "path": "src/registry/bases/radix/components/data-table/data-table-view-options.tsx",
           "type": "registry:component",
           "target": "src/components/data-table/data-table-view-options.tsx"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },
@@ -606,10 +590,6 @@
         {
           "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },
@@ -666,10 +646,6 @@
         {
           "path": "src/lib/data-grid-types.ts",
           "type": "registry:lib"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },
@@ -757,10 +733,6 @@
         {
           "path": "src/lib/data-grid-features.ts",
           "type": "registry:lib"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
         }
       ]
     },

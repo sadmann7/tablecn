@@ -2,12 +2,11 @@
 
 import { cn } from "cn";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { useComposedRefs } from "radix-ui/internal";
+import { useComposedRefs, useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
 import { useAsRef } from "@/hooks/use-as-ref";
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
 
@@ -447,7 +446,7 @@ function ActionBarItem(props: ActionBarItemProps) {
   const itemId = React.useId();
   const isTabStop = focusContext.tabStopId === itemId;
 
-  useIsomorphicLayoutEffect(() => {
+  useLayoutEffect(() => {
     focusContext.onItemRegister({
       id: itemId,
       ref: itemRef,

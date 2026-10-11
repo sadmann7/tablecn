@@ -1,3 +1,4 @@
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import {
   type ColumnDef,
   type ColumnFiltersState,
@@ -32,7 +33,6 @@ import type {
 } from "@/lib/data-grid-types";
 
 import { useAsRef } from "@/hooks/use-as-ref";
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import { useLazyRef } from "@/hooks/use-lazy-ref";
 import {
   type DataGridFeatures,
@@ -3994,7 +3994,7 @@ function useDataGrid<TData extends RowData>({
     };
   }, [store, dragDepsRef]);
 
-  useIsomorphicLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
     });

@@ -2,11 +2,11 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
 import * as React from "react";
 
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
   Command,
   CommandEmpty,
@@ -234,7 +234,7 @@ function Faceted<Multiple extends boolean = false>({
   const store = storeRef.current;
   const open = useFacetedStoreSelector(store, (state) => state.open);
 
-  useIsomorphicLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     if (value !== undefined) store.notify();
   }, [store, value]);
 

@@ -2,6 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import {
   type Announcements,
   closestCenter,
@@ -41,8 +42,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "cn";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-
-import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 
 const orientationConfig = {
   vertical: {
@@ -576,7 +575,7 @@ function SortableOverlay(props: SortableOverlayProps) {
 
   const [mounted, setMounted] = React.useState(false);
 
-  useIsomorphicLayoutEffect(() => setMounted(true), []);
+  useIsoLayoutEffect(() => setMounted(true), []);
 
   const container =
     containerProp ?? (mounted ? globalThis.document?.body : null);
