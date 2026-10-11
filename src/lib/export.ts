@@ -17,11 +17,11 @@ export function exportTableToCSV<TData extends RowData>(
     excludeColumns = [],
     onlySelected = false,
   } = opts;
-  const excludedColumnIds: PropertyKey[] = excludeColumns;
+  const excludedColumnIds = new Set<PropertyKey>(excludeColumns);
 
   const columns = table
     .getAllLeafColumns()
-    .filter((column) => !excludedColumnIds.includes(column.id));
+    .filter((column) => !excludedColumnIds.has(column.id));
 
   const rows = (
     onlySelected ? getVisibleSelectedRows(table) : table.getRowModel().rows
