@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "launch:record": "playwright test -c playwright.record.config.ts",
+    "launch:record:prod": "LAUNCH_RECORD_PROD=1 playwright test -c playwright.record.config.ts",
     "dev:docker": "pnpm db:start && pnpm dev",
     "start": "next start",
     "ollie": "pnpm install && pnpm run db:start && pnpm run db:setup",
