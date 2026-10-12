@@ -9,7 +9,6 @@ const INSTALL_COMMAND = "pnpm dlx shadcn@latest add @diceui/data-table";
 export function LaunchBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="launch-dots absolute -inset-20" />
       <div className="launch-glow launch-glow-primary absolute top-[-30%] right-[-10%] h-[90%] w-[70%] rounded-full" />
       <div className="launch-glow launch-glow-secondary absolute bottom-[-20%] left-[-5%] h-[75%] w-[55%] rounded-full" />
       <div className="launch-vignette absolute inset-0" />

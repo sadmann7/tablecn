@@ -218,16 +218,6 @@ html[data-launch-camera]
   animation: launch-sheen 1400ms cubic-bezier(0.4, 0, 0.2, 1) 300ms both;
 }
 
-.launch-dots {
-  background-image: radial-gradient(
-    rgb(255 255 255 / 0.11) 1px,
-    transparent 1.5px
-  );
-  background-size: 2rem 2rem;
-  mask-image: radial-gradient(ellipse 70% 60% at 55% 45%, black, transparent);
-  animation: launch-dots 40s linear infinite;
-}
-
 @keyframes launch-rise {
   from {
     opacity: 0;
@@ -305,12 +295,6 @@ html[data-launch-camera]
   }
 }
 
-@keyframes launch-dots {
-  to {
-    background-position: 2rem 2rem;
-  }
-}
-
 @keyframes launch-drift {
   from {
     transform: translate(0, 0) scale(1);
@@ -330,7 +314,6 @@ html[data-launch-camera]
   .launch-key,
   .launch-keystroke,
   .launch-glow,
-  .launch-dots,
   .launch-sheen,
   .launch-scene-exit,
   .launch-scene-exit .launch-intro {
