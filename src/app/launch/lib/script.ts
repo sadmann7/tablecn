@@ -336,17 +336,17 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [2],
     },
     steps: [
-      // Closes the Advanced menu as the camera pulls back. Waits for the
-      // Advanced copy to leave, so pulling back doesn't bring it back.
+      // Pulls back on the scene's first frame, so the Command copy never
+      // mounts zoomed in, and closes the Advanced menu on the way out
       {
-        at: 240,
+        at: 0,
         run: ({ director }) => {
           closeAllMenus();
           director.zoomOut();
         },
       },
       // After the menu's exit, which the toolbar swap would cut short
-      { at: 520, run: setFilterMode("command") },
+      { at: 280, run: setFilterMode("command") },
       {
         at: 1100,
         run: ({ director }) => {

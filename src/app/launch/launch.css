@@ -188,6 +188,11 @@ html[data-launch-camera]
   filter: blur(6px);
 }
 
+/* A leaving story stays out, so pulling back as a scene ends doesn't bring it back. */
+.launch-scene-exit .launch-story {
+  opacity: 0;
+}
+
 .launch-stage[data-zoomed="true"] .launch-story {
   opacity: 0;
   translate: -3rem 0;
