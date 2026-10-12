@@ -127,14 +127,7 @@ html[data-launch-camera]
 }
 
 .launch-scene-exit
-  :is(
-    .launch-rise,
-    .launch-pop,
-    .launch-letter,
-    .launch-word,
-    .launch-line,
-    .launch-typed
-  ) {
+  :is(.launch-rise, .launch-pop, .launch-letter, .launch-word, .launch-line) {
   animation: none;
 }
 
@@ -171,19 +164,6 @@ html[data-launch-camera]
 .launch-code {
   animation: launch-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 220ms;
-}
-
-/* The right border is the caret, so it rides along with the typed text. */
-.launch-typed {
-  display: inline-block;
-  box-sizing: content-box;
-  width: calc(var(--launch-chars) * 1ch);
-  overflow: hidden;
-  white-space: nowrap;
-  animation:
-    launch-type calc(var(--launch-chars) * 26ms) steps(var(--launch-chars)) both,
-    launch-caret 1s steps(1) infinite;
-  animation-delay: var(--launch-delay, 0ms), 0ms;
 }
 
 .launch-key {
@@ -301,18 +281,6 @@ html[data-launch-camera]
   }
 }
 
-@keyframes launch-type {
-  from {
-    width: 0;
-  }
-}
-
-@keyframes launch-caret {
-  50% {
-    border-color: transparent;
-  }
-}
-
 @keyframes launch-key {
   from {
     opacity: 0;
@@ -359,7 +327,6 @@ html[data-launch-camera]
   .launch-word,
   .launch-line,
   .launch-code,
-  .launch-typed,
   .launch-key,
   .launch-keystroke,
   .launch-glow,

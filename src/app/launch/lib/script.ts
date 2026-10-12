@@ -18,6 +18,7 @@ import {
   getFilterValueTrigger,
   getIsPopoverOpen,
   getSelectOption,
+  getToolbarFilter,
   pressCommandArrow,
   pressCommandEnter,
   pressFilterShortcut,
@@ -199,7 +200,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "plain",
-    duration: 1700,
+    duration: 2700,
     story: {
       eyebrow: "Plain filters",
       title: "Filter in the toolbar.",
@@ -209,7 +210,32 @@ const SCRIPT: LaunchSceneScript[] = [
     },
     steps: [
       { at: 0, run: () => replaceUrl("") },
-      ...urlSteps(500, "?priority=high"),
+      {
+        at: 500,
+        run: ({ director }) =>
+          director.moveCursor(getToolbarFilter("Priority")),
+      },
+      ...clickSteps(
+        900,
+        () => getToolbarFilter("Priority"),
+        (trigger) => openPopover(trigger),
+      ),
+      {
+        at: 1240,
+        run: ({ director }) => director.moveCursor(getFacetedOption("High")),
+      },
+      ...clickSteps(
+        1640,
+        () => getFacetedOption("High"),
+        (option) => {
+          if (!option) {
+            replaceUrl("?priority=high");
+            return;
+          }
+          if (!option.hasAttribute("data-checked")) option.click();
+        },
+      ),
+      { at: 2200, run: closeFacetedList },
     ],
   },
   {
@@ -330,7 +356,7 @@ const SCRIPT: LaunchSceneScript[] = [
         at: 2720,
         run: ({ director }) => {
           pressCommandEnter();
-          director.reset(640);
+          director.reset();
         },
       },
     ],

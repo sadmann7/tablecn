@@ -229,25 +229,11 @@ export function LaunchOutroScene() {
         style={launchDelay(520)}
       >
         <span className="text-emerald-300">$</span>
-        {/* The hidden copy holds the box at its final width while the command types out */}
-        <span className="relative">
-          <span className="invisible pe-[0.6ch]">{INSTALL_COMMAND}</span>
-          <span
-            className="launch-typed absolute inset-y-0 left-0 border-r-[0.6ch] border-emerald-300"
-            style={
-              {
-                "--launch-chars": INSTALL_COMMAND.length,
-                ...launchDelay(760),
-              } as React.CSSProperties
-            }
-          >
-            {INSTALL_COMMAND}
-          </span>
-        </span>
+        <span>{INSTALL_COMMAND}</span>
       </div>
       <span
         className="launch-rise font-mono text-3xl tracking-wide text-white/55"
-        style={launchDelay(2300)}
+        style={launchDelay(760)}
       >
         tablecn.com
       </span>

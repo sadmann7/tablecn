@@ -61,7 +61,7 @@ export function closeFacetedList() {
   pressEscape();
 }
 
-function getToolbarFilter(label: string) {
+export function getToolbarFilter(label: string) {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
       "[data-launch=toolbar] :is(button, input)",

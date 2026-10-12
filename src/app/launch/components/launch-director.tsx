@@ -6,7 +6,6 @@ import { createPortal } from "react-dom";
 const DEFAULT_ZOOM = 1.6;
 /** Most of the cursor's 420ms glide, so the highlight lands as it arrives. */
 const CURSOR_HOVER_DELAY = 260;
-const CAMERA_EXIT_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 
 interface LaunchFocusOptions {
   scale?: number;
@@ -23,7 +22,7 @@ export interface LaunchDirector {
   zoomOut: () => void;
   moveCursor: (target: Element | null | undefined) => void;
   click: (target: Element | null | undefined) => void;
-  reset: (duration?: number) => void;
+  reset: () => void;
 }
 
 interface LaunchDirectorRefs {
@@ -176,16 +175,7 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     overlay.style.height = `${rect.height}px`;
   }
 
-  function setCamera(scale: number, x: number, y: number, duration?: number) {
-    const root = document.documentElement;
-    if (duration === undefined) {
-      root.style.removeProperty("--launch-camera-duration");
-      root.style.removeProperty("--launch-camera-ease");
-    } else {
-      root.style.setProperty("--launch-camera-duration", `${duration}ms`);
-      root.style.setProperty("--launch-camera-ease", CAMERA_EXIT_EASE);
-    }
-
+  function setCamera(scale: number, x: number, y: number) {
     const transform = `translate(${x}px, ${y}px) scale(${scale})`;
     for (const layer of [refs.camera.current, refs.overlayCamera.current]) {
       if (layer) layer.style.transform = transform;
@@ -269,16 +259,11 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
         { duration: 360, easing: "ease-out" },
       );
     },
-    reset(duration?: number) {
+    reset() {
       window.clearTimeout(hoverTimeout);
-      setCamera(1, 0, 0, duration);
+      setCamera(1, 0, 0);
       const cursor = refs.cursor.current;
-      if (!cursor) return;
-
-      if (duration !== undefined) {
-        cursor.style.transition = `opacity ${duration}ms var(--launch-camera-ease, ease)`;
-      }
-      cursor.style.opacity = "0";
+      if (cursor) cursor.style.opacity = "0";
     },
   };
 }
