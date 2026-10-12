@@ -30,6 +30,11 @@ html[data-launch-camera]
   animation-timing-function: var(--launch-camera-ease);
 }
 
+/* Closing a menu hands focus back to its trigger, so a full 3px ring would flash after every scripted Escape. */
+.launch-stage :focus-visible {
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 45%, transparent);
+}
+
 /* Only elements that draw a border, so borderless ones like search inputs stay bare. */
 html[data-launch-camera]
   [data-radix-popper-content-wrapper]

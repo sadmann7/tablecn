@@ -151,19 +151,27 @@ export function useLaunchTimeline(onStep: (step: LaunchStep) => void) {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (getIsEditableTarget(event.target)) return;
 
-      if (event.key === " ") {
+      const key = event.key.toLowerCase();
+      if (key === " " || key === "k") {
         event.preventDefault();
         onPauseToggle();
-      } else if (event.key === "r") {
+      } else if (key === "arrowleft" || key === "arrowright") {
+        event.preventDefault();
+        const step = key === "arrowright" ? 1 : -1;
+        const sceneIndex = getSceneIndex(clockRef.current.elapsed) + step;
+        onSeek(Math.min(Math.max(sceneIndex, 0), SCENES.length - 1));
+      } else if (/^[1-9]$/.test(key) && Number(key) <= SCENES.length) {
+        onSeek(Number(key) - 1);
+      } else if (key === "r") {
         onRestart();
-      } else if (event.key === "h") {
+      } else if (key === "h") {
         onChromeToggle();
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onPauseToggle, onRestart, onChromeToggle]);
+  }, [onPauseToggle, onSeek, onRestart, onChromeToggle]);
 
   return {
     playback,
