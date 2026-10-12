@@ -4,6 +4,8 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 const DEFAULT_ZOOM = 1.6;
+/** Most of the cursor's 420ms glide, so the highlight lands as it arrives. */
+const CURSOR_HOVER_DELAY = 260;
 const CAMERA_EXIT_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 
 interface LaunchFocusOptions {
@@ -126,6 +128,21 @@ function LaunchCursorOverlay({ refs }: { refs: LaunchDirectorRefs }) {
   );
 }
 
+// The cursor is only drawn, so menus that highlight the item under the pointer need the events a real mouse sends
+function hover(target: Element | null | undefined) {
+  if (!target?.isConnected) return;
+
+  const rect = target.getBoundingClientRect();
+  const init: PointerEventInit = {
+    bubbles: true,
+    pointerType: "mouse",
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  };
+  target.dispatchEvent(new PointerEvent("pointerover", init));
+  target.dispatchEvent(new PointerEvent("pointermove", init));
+}
+
 function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
   function getCameraPoint(target: Element | null | undefined) {
     const stage = refs.stage.current;
@@ -181,6 +198,8 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     if (stage) stage.dataset.zoomed = String(scale > 1);
   }
 
+  let hoverTimeout = 0;
+
   function moveCursor(target: Element | null | undefined) {
     const cursor = refs.cursor.current;
     const point = getCameraPoint(target);
@@ -196,6 +215,13 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       cursor.style.transition = "";
     }
     cursor.style.opacity = "1";
+
+    // Lands as the cursor glides into place
+    window.clearTimeout(hoverTimeout);
+    hoverTimeout = window.setTimeout(
+      () => hover(target),
+      isHidden ? 0 : CURSOR_HOVER_DELAY,
+    );
   }
 
   return {
@@ -229,6 +255,8 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     moveCursor,
     click(target) {
       moveCursor(target);
+      window.clearTimeout(hoverTimeout);
+      hover(target);
       refs.pointer.current?.animate(
         [{ scale: "1" }, { scale: "0.82" }, { scale: "1" }],
         { duration: 200, easing: "ease-out" },
@@ -242,6 +270,7 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       );
     },
     reset(duration?: number) {
+      window.clearTimeout(hoverTimeout);
       setCamera(1, 0, 0, duration);
       const cursor = refs.cursor.current;
       if (!cursor) return;

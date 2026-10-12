@@ -73,6 +73,8 @@ interface LaunchSceneScript {
 
 export const FILTER_SHORTCUT_KEYS = ["⌘", "⇧", "F"];
 const TYPING_INTERVAL = 150;
+/** How long the cursor shows its press before the click lands. */
+const PRESS_MS = 140;
 
 export const COLUMN_SNIPPETS = [
   {
@@ -212,7 +214,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "advanced",
-    duration: 4900,
+    duration: 5300,
     story: {
       eyebrow: "Advanced filters",
       title: "Build any query.",
@@ -239,76 +241,62 @@ const SCRIPT: LaunchSceneScript[] = [
           director.focus(trigger, { offsetX: 16, offsetY: 6 });
         },
       },
-      {
-        at: 600,
-        run: ({ director }) => {
-          const trigger = getFilterTrigger();
-          director.click(trigger);
-          openPopover(trigger);
-        },
-      },
+      ...clickSteps(600, getFilterTrigger, (trigger) => openPopover(trigger)),
       {
         at: 960,
         run: ({ director }) =>
           director.moveCursor(getFilterOperatorTrigger("Status")),
       },
+      ...clickSteps(
+        1280,
+        () => getFilterOperatorTrigger("Status"),
+        (trigger) => pressKey(trigger, "Enter"),
+      ),
       {
-        at: 1280,
-        run: ({ director }) => {
-          const trigger = getFilterOperatorTrigger("Status");
-          director.click(trigger);
-          pressKey(trigger, "Enter");
-        },
-      },
-      {
-        at: 1680,
+        at: 1700,
         run: ({ director }) =>
           director.moveCursor(getSelectOption("has none of")),
       },
-      {
-        at: 2000,
-        run: ({ table, director }) => {
-          const option = getSelectOption("has none of");
+      ...clickSteps(
+        2120,
+        () => getSelectOption("has none of"),
+        (option, { table }) => {
           if (!option) {
             setFilterOperator(table, "status", "notInArray");
             return;
           }
-          director.click(option);
           pressKey(option, "Enter");
         },
-      },
+      ),
       {
-        at: 2440,
+        at: 2600,
         run: ({ director }) =>
           director.moveCursor(getFilterValueTrigger("Status")),
       },
+      ...clickSteps(
+        2920,
+        () => getFilterValueTrigger("Status"),
+        (trigger) => openPopover(trigger),
+      ),
       {
-        at: 2760,
-        run: ({ director }) => {
-          const trigger = getFilterValueTrigger("Status");
-          director.click(trigger);
-          openPopover(trigger);
-        },
-      },
-      {
-        at: 3080,
+        at: 3300,
         run: ({ director }) => director.moveCursor(getFacetedOption("Done")),
       },
-      {
-        at: 3400,
-        run: ({ table, director }) => {
-          const option = getFacetedOption("Done");
+      ...clickSteps(
+        3720,
+        () => getFacetedOption("Done"),
+        (option, { table }) => {
           if (!option) {
             setFilterValue(table, "status", ["todo", "done"]);
             return;
           }
-          director.click(option);
           if (!option.hasAttribute("data-checked")) option.click();
         },
-      },
-      { at: 3760, run: closeFacetedList },
+      ),
+      // Holds on the new selection before the list closes
+      { at: 4300, run: closeFacetedList },
       {
-        at: 4300,
+        at: 4640,
         run: ({ director }) => {
           closeAllMenus();
           director.zoomOut();
@@ -421,6 +409,21 @@ function setDataMode(dataMode: DataMode): LaunchStepRun {
 
 function setFilterMode(filterMode: FilterMode): LaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "filterMode", filterMode });
+}
+
+/**
+ * A press, then the click's effect a beat later, so a menu doesn't open or
+ * close on the same frame the cursor touches it.
+ */
+function clickSteps<TTarget extends Element>(
+  at: number,
+  getTarget: () => TTarget | null | undefined,
+  act: (target: TTarget | null | undefined, context: LaunchStepContext) => void,
+): LaunchStep[] {
+  return [
+    { at, run: ({ director }) => director.click(getTarget()) },
+    { at: at + PRESS_MS, run: (context) => act(getTarget(), context) },
+  ];
 }
 
 function urlSteps(at: number, search: string): LaunchStep[] {
