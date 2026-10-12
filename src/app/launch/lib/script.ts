@@ -17,7 +17,6 @@ import {
   getFilterTrigger,
   getFilterValueTrigger,
   getIsPopoverOpen,
-  getLaunchTarget,
   getSelectOption,
   pressCommandArrow,
   pressCommandEnter,
@@ -130,7 +129,7 @@ const FLASH_AFTER_MS = 100;
 const SCRIPT: LaunchSceneScript[] = [
   {
     id: "intro",
-    duration: 2400,
+    duration: 3200,
     steps: [{ at: 0, run: resetDemo }],
   },
   {
@@ -198,7 +197,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "plain",
-    duration: 2000,
+    duration: 1700,
     story: {
       eyebrow: "Plain filters",
       title: "Filter in the toolbar.",
@@ -209,21 +208,11 @@ const SCRIPT: LaunchSceneScript[] = [
     steps: [
       { at: 0, run: () => replaceUrl("") },
       ...urlSteps(500, "?priority=high"),
-      {
-        at: 1100,
-        run: ({ director }) =>
-          director.moveCursor(getLaunchTarget("filter-advanced")),
-      },
-      {
-        at: 1550,
-        run: ({ director }) =>
-          director.click(getLaunchTarget("filter-advanced")),
-      },
     ],
   },
   {
     id: "advanced",
-    duration: 5700,
+    duration: 4900,
     story: {
       eyebrow: "Advanced filters",
       title: "Build any query.",
@@ -325,16 +314,6 @@ const SCRIPT: LaunchSceneScript[] = [
           director.zoomOut();
         },
       },
-      {
-        at: 4750,
-        run: ({ director }) =>
-          director.moveCursor(getLaunchTarget("filter-command")),
-      },
-      {
-        at: 5200,
-        run: ({ director }) =>
-          director.click(getLaunchTarget("filter-command")),
-      },
     ],
   },
   {
@@ -372,7 +351,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "outro",
-    duration: 3000,
+    duration: 4200,
     steps: [{ at: 0, run: () => closeAllMenus() }],
   },
 ];

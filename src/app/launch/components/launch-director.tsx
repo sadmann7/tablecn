@@ -177,6 +177,8 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       "--launch-camera-scale",
       String(scale),
     );
+    const stage = refs.stage.current;
+    if (stage) stage.dataset.zoomed = String(scale > 1);
   }
 
   function moveCursor(target: Element | null | undefined) {

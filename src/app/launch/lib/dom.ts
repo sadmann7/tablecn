@@ -1,7 +1,3 @@
-export function getLaunchTarget(name: string) {
-  return document.querySelector(`[data-launch="${name}"]`);
-}
-
 export function getFilterTrigger() {
   return Array.from(
     document.querySelectorAll<HTMLButtonElement>(
