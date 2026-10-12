@@ -61,7 +61,7 @@ export function LaunchControls({
               aria-label={`Go to ${scene.id}`}
               aria-current={index === sceneIndex ? "step" : undefined}
               data-state={index === sceneIndex ? "active" : undefined}
-              className="rounded-full px-2 py-1 font-mono text-xs text-white/45 capitalize hover:text-white/80 data-[state=active]:bg-white/10 data-[state=active]:text-white"
+              className="rounded-full px-2 py-1 font-mono text-xs text-white/60 capitalize hover:text-white/80 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none data-[state=active]:bg-white/10 data-[state=active]:text-white"
               onClick={() => onSeek(index)}
             >
               {scene.id}
@@ -77,7 +77,7 @@ export function LaunchControls({
         </div>
         <button
           type="button"
-          className="px-3 font-mono text-xs text-white/45 hover:text-white/80"
+          className="rounded-full px-3 font-mono text-xs text-white/60 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
           onClick={onChromeToggle}
         >
           Space · R · H to hide

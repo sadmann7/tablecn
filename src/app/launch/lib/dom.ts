@@ -1,7 +1,3 @@
-export function getLaunchTarget(name: string) {
-  return document.querySelector(`[data-launch="${name}"]`);
-}
-
 export function getFilterTrigger() {
   return Array.from(
     document.querySelectorAll<HTMLButtonElement>(
@@ -65,7 +61,7 @@ export function closeFacetedList() {
   pressEscape();
 }
 
-function getToolbarFilter(label: string) {
+export function getToolbarFilter(label: string) {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
       "[data-launch=toolbar] :is(button, input)",
@@ -74,32 +70,6 @@ function getToolbarFilter(label: string) {
     element instanceof HTMLInputElement
       ? element.placeholder === label
       : element.textContent?.trim().startsWith(label),
-  );
-}
-
-const FLASH_MS = 800;
-const flashedAt = new Map<string, number>();
-
-/** A second ring on the same control waits until this one has finished. */
-export function flashToolbarFilter(label: string) {
-  const element = getToolbarFilter(label);
-  if (!element) return;
-
-  const now = performance.now();
-  const previous = flashedAt.get(label);
-  if (previous !== undefined && now - previous < FLASH_MS) return;
-
-  flashedAt.set(label, now);
-  element.animate(
-    [
-      {
-        offset: 0,
-        boxShadow:
-          "0 0 0 0.125rem rgb(52 211 153 / 0.7), 0 0 1.5rem rgb(52 211 153 / 0.35)",
-        backgroundColor: "rgb(52 211 153 / 0.15)",
-      },
-    ],
-    { duration: FLASH_MS, easing: "ease-out" },
   );
 }
 

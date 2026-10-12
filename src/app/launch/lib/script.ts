@@ -10,15 +10,14 @@ import type { LaunchDirector } from "../components/launch-director";
 import {
   closeAllMenus,
   closeFacetedList,
-  flashToolbarFilter,
   getFilterOperatorTrigger,
   getFacetedOption,
   getCommandTrigger,
   getFilterTrigger,
   getFilterValueTrigger,
   getIsPopoverOpen,
-  getLaunchTarget,
   getSelectOption,
+  getToolbarFilter,
   pressCommandArrow,
   pressCommandEnter,
   pressFilterShortcut,
@@ -74,11 +73,11 @@ interface LaunchSceneScript {
 
 export const FILTER_SHORTCUT_KEYS = ["⌘", "⇧", "F"];
 const TYPING_INTERVAL = 150;
+const PRESS_MS = 140;
 
 export const COLUMN_SNIPPETS = [
   {
     columnIds: ["title"],
-    filterLabels: ["Search titles..."],
     accessorKey: "title",
     label: "Title",
     variant: "text",
@@ -86,7 +85,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["status"],
-    filterLabels: ["Status"],
     accessorKey: "status",
     label: "Status",
     variant: "multiSelect",
@@ -94,7 +92,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["priority"],
-    filterLabels: ["Priority"],
     accessorKey: "priority",
     label: "Priority",
     variant: "multiSelect",
@@ -102,7 +99,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["estimatedHours"],
-    filterLabels: ["Est. Hours"],
     accessorKey: "estimatedHours",
     label: "Est. Hours",
     variant: "range",
@@ -110,7 +106,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["createdAt"],
-    filterLabels: ["Created At"],
     accessorKey: "createdAt",
     label: "Created At",
     variant: "dateRange",
@@ -124,25 +119,19 @@ const FILTER_CODE = [
   "<DataTableCommandFilterMenu /> // command",
 ];
 
-/** The ring starts after the control has painted its new value. */
-const FLASH_AFTER_MS = 100;
-
 const SCRIPT: LaunchSceneScript[] = [
   {
     id: "intro",
-    duration: 2400,
+    duration: 3200,
     steps: [{ at: 0, run: resetDemo }],
   },
   {
     id: "columns",
     duration: 5600,
-    steps: COLUMN_SNIPPETS.flatMap((snippet, index) => {
-      const at = 600 + index * 780;
-      return [
-        { at, run: showColumns(index + 1) },
-        flashStep(at, snippet.filterLabels),
-      ];
-    }),
+    steps: COLUMN_SNIPPETS.map((_, index) => ({
+      at: 600 + index * 780,
+      run: showColumns(index + 1),
+    })),
   },
   {
     id: "server",
@@ -198,7 +187,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "plain",
-    duration: 2000,
+    duration: 2600,
     story: {
       eyebrow: "Plain filters",
       title: "Filter in the toolbar.",
@@ -208,22 +197,37 @@ const SCRIPT: LaunchSceneScript[] = [
     },
     steps: [
       { at: 0, run: () => replaceUrl("") },
-      ...urlSteps(500, "?priority=high"),
       {
-        at: 1100,
+        at: 500,
         run: ({ director }) =>
-          director.moveCursor(getLaunchTarget("filter-advanced")),
+          director.moveCursor(getToolbarFilter("Priority")),
       },
+      ...clickSteps(
+        900,
+        () => getToolbarFilter("Priority"),
+        (trigger) => openPopover(trigger),
+      ),
       {
-        at: 1550,
-        run: ({ director }) =>
-          director.click(getLaunchTarget("filter-advanced")),
+        at: 1240,
+        run: ({ director }) => director.moveCursor(getFacetedOption("High")),
       },
+      ...clickSteps(
+        1540,
+        () => getFacetedOption("High"),
+        (option) => {
+          if (!option) {
+            replaceUrl("?priority=high");
+            return;
+          }
+          if (!option.hasAttribute("data-checked")) option.click();
+        },
+      ),
+      { at: 2100, run: closeFacetedList },
     ],
   },
   {
     id: "advanced",
-    duration: 5700,
+    duration: 5860,
     story: {
       eyebrow: "Advanced filters",
       title: "Build any query.",
@@ -243,103 +247,72 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       },
       {
-        at: 220,
-        run: ({ director }) => {
-          const trigger = getFilterTrigger();
-          director.moveCursor(trigger);
-          director.focus(trigger, { offsetX: 16, offsetY: 6 });
-        },
+        at: 1000,
+        run: ({ director }) => director.moveCursor(getFilterTrigger()),
       },
       {
-        at: 600,
-        run: ({ director }) => {
-          const trigger = getFilterTrigger();
-          director.click(trigger);
-          openPopover(trigger);
-        },
+        at: 1420,
+        run: ({ director }) =>
+          director.focus(getFilterTrigger(), { offsetX: 16, offsetY: 6 }),
       },
+      ...clickSteps(1800, getFilterTrigger, (trigger) => openPopover(trigger)),
       {
-        at: 960,
+        at: 2160,
         run: ({ director }) =>
           director.moveCursor(getFilterOperatorTrigger("Status")),
       },
+      ...clickSteps(
+        2480,
+        () => getFilterOperatorTrigger("Status"),
+        (trigger) => pressKey(trigger, "Enter"),
+      ),
       {
-        at: 1280,
-        run: ({ director }) => {
-          const trigger = getFilterOperatorTrigger("Status");
-          director.click(trigger);
-          pressKey(trigger, "Enter");
-        },
-      },
-      {
-        at: 1680,
+        at: 2900,
         run: ({ director }) =>
           director.moveCursor(getSelectOption("has none of")),
       },
-      {
-        at: 2000,
-        run: ({ table, director }) => {
-          const option = getSelectOption("has none of");
+      ...clickSteps(
+        3200,
+        () => getSelectOption("has none of"),
+        (option, { table }) => {
           if (!option) {
             setFilterOperator(table, "status", "notInArray");
             return;
           }
-          director.click(option);
           pressKey(option, "Enter");
         },
-      },
+      ),
       {
-        at: 2440,
+        at: 3680,
         run: ({ director }) =>
           director.moveCursor(getFilterValueTrigger("Status")),
       },
+      ...clickSteps(
+        4000,
+        () => getFilterValueTrigger("Status"),
+        (trigger) => openPopover(trigger),
+      ),
       {
-        at: 2760,
-        run: ({ director }) => {
-          const trigger = getFilterValueTrigger("Status");
-          director.click(trigger);
-          openPopover(trigger);
-        },
-      },
-      {
-        at: 3080,
+        at: 4380,
         run: ({ director }) => director.moveCursor(getFacetedOption("Done")),
       },
-      {
-        at: 3400,
-        run: ({ table, director }) => {
-          const option = getFacetedOption("Done");
+      ...clickSteps(
+        4680,
+        () => getFacetedOption("Done"),
+        (option, { table }) => {
           if (!option) {
             setFilterValue(table, "status", ["todo", "done"]);
             return;
           }
-          director.click(option);
           if (!option.hasAttribute("data-checked")) option.click();
         },
-      },
-      { at: 3760, run: closeFacetedList },
-      {
-        at: 4300,
-        run: ({ director }) => {
-          closeAllMenus();
-          director.zoomOut();
-        },
-      },
-      {
-        at: 4750,
-        run: ({ director }) =>
-          director.moveCursor(getLaunchTarget("filter-command")),
-      },
-      {
-        at: 5200,
-        run: ({ director }) =>
-          director.click(getLaunchTarget("filter-command")),
-      },
+      ),
+      { at: 5260, run: closeFacetedList },
     ],
   },
   {
     id: "command",
-    duration: 4400,
+    duration: 4420,
     story: {
       eyebrow: "Command filters",
       title: "Filter from the keyboard.",
@@ -348,31 +321,33 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [2],
     },
     steps: [
-      { at: 0, run: setFilterMode("command") },
       {
-        at: 1000,
+        at: 0,
+        run: ({ director }) => {
+          closeAllMenus();
+          director.zoomOut();
+        },
+      },
+      { at: 280, run: setFilterMode("command") },
+      {
+        at: 1100,
         run: ({ director }) => {
           const trigger = getCommandTrigger();
           director.moveCursor(trigger);
           director.focus(trigger, { offsetX: 16, offsetY: 6 });
         },
       },
-      { at: 1170, run: openFilterMenu },
-      ...typeSteps(1520, ["st", "status"], typeCommandStep),
-      { at: 1920, run: pressCommandEnter },
+      { at: 1270, run: openFilterMenu },
+      ...typeSteps(1620, ["st", "status"], typeCommandStep),
+      { at: 2020, run: pressCommandEnter },
       { at: 2400, run: pressCommandArrow },
-      {
-        at: 2720,
-        run: ({ director }) => {
-          pressCommandEnter();
-          director.reset(640);
-        },
-      },
+      { at: 2640, run: pressCommandEnter },
+      { at: 3040, run: ({ director }) => director.reset() },
     ],
   },
   {
     id: "outro",
-    duration: 3000,
+    duration: 4200,
     steps: [{ at: 0, run: () => closeAllMenus() }],
   },
 ];
@@ -444,17 +419,19 @@ function setFilterMode(filterMode: FilterMode): LaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "filterMode", filterMode });
 }
 
-function urlSteps(at: number, search: string): LaunchStep[] {
-  return [{ at, run: () => replaceUrl(search) }];
+function clickSteps<TTarget extends Element>(
+  at: number,
+  getTarget: () => TTarget | null | undefined,
+  act: (target: TTarget | null | undefined, context: LaunchStepContext) => void,
+): LaunchStep[] {
+  return [
+    { at, run: ({ director }) => director.click(getTarget()) },
+    { at: at + PRESS_MS, run: (context) => act(getTarget(), context) },
+  ];
 }
 
-function flashStep(at: number, labels: string[]): LaunchStep {
-  return {
-    at: at + FLASH_AFTER_MS,
-    run: () => {
-      for (const label of labels) flashToolbarFilter(label);
-    },
-  };
+function urlSteps(at: number, search: string): LaunchStep[] {
+  return [{ at, run: () => replaceUrl(search) }];
 }
 
 function typeCommandStep(value: string): LaunchStepRun {

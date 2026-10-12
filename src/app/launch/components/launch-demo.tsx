@@ -42,29 +42,26 @@ import {
   LaunchStory,
   LaunchVariants,
 } from "./launch-scenes";
-import {
-  LaunchControlBar,
-  LaunchNetwork,
-  LaunchToolbar,
-  LaunchWindow,
-} from "./launch-window";
+import { LaunchNetwork, LaunchToolbar, LaunchWindow } from "./launch-window";
 
 const VISIBLE_WINDOW: React.CSSProperties = {
   opacity: 1,
   filter: "blur(0px)",
   transform: "none",
+  transitionDelay: "180ms",
 };
 
 const WINDOW_SHOTS: Partial<Record<LaunchSceneId, React.CSSProperties>> = {
   intro: {
     opacity: 0,
-    filter: "blur(12px)",
-    transform: "translateX(10rem) scale(0.96)",
+    filter: "blur(10px)",
+    transform:
+      "perspective(120rem) translateY(24rem) rotateX(28deg) scale(0.92)",
   },
   outro: {
     opacity: 0,
-    filter: "blur(12px)",
-    transform: "translateY(-5rem) scale(0.96)",
+    filter: "blur(14px)",
+    transform: "perspective(120rem) translateY(-4rem) scale(0.86)",
   },
 };
 
@@ -139,27 +136,13 @@ export function LaunchDemo() {
       >
         <LaunchBackdrop />
         <LaunchCamera refs={refs}>
-          <LaunchSceneFrame sceneKey={`${playback.cycle}-${scene.id}`}>
-            <LaunchSceneContent scene={scene} columnCount={demo.columnCount} />
-          </LaunchSceneFrame>
           <div
-            className="absolute top-27 left-180 w-282 transition-[transform,opacity,filter] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+            className="launch-window absolute top-27 left-180 w-282"
             style={WINDOW_SHOTS[scene.id] ?? VISIBLE_WINDOW}
           >
             <LaunchWindow
               search={request}
-              controls={
-                <LaunchControlBar
-                  dataMode={demo.dataMode}
-                  filterMode={demo.filterMode}
-                  onDataModeChange={(dataMode) =>
-                    dispatchDemo({ type: "dataMode", dataMode })
-                  }
-                  onFilterModeChange={(filterMode) =>
-                    dispatchDemo({ type: "filterMode", filterMode })
-                  }
-                />
-              }
+              sheenKey={`${playback.cycle}-${scene.id === "intro" ? "hidden" : "shown"}`}
               network={
                 <LaunchNetwork
                   dataMode={demo.dataMode}
@@ -180,6 +163,9 @@ export function LaunchDemo() {
             </LaunchWindow>
           </div>
         </LaunchCamera>
+        <LaunchSceneFrame sceneKey={`${playback.cycle}-${scene.id}`}>
+          <LaunchSceneContent scene={scene} columnCount={demo.columnCount} />
+        </LaunchSceneFrame>
         {demo.keystroke > 0 && (
           <LaunchKeystroke
             key={`${playback.cycle}-${demo.keystroke}`}
@@ -241,7 +227,7 @@ function LaunchSceneFrame({ sceneKey, children }: LaunchSceneFrameProps) {
           {leaving.node}
         </div>
       )}
-      <div key={sceneKey} className="absolute inset-0">
+      <div key={sceneKey} className="pointer-events-none absolute inset-0">
         {children}
       </div>
     </>

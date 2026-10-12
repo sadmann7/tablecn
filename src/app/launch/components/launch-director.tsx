@@ -4,7 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 const DEFAULT_ZOOM = 1.6;
-const CAMERA_EXIT_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
+const CURSOR_HOVER_DELAY = 260;
 
 interface LaunchFocusOptions {
   scale?: number;
@@ -21,7 +21,7 @@ export interface LaunchDirector {
   zoomOut: () => void;
   moveCursor: (target: Element | null | undefined) => void;
   click: (target: Element | null | undefined) => void;
-  reset: (duration?: number) => void;
+  reset: () => void;
 }
 
 interface LaunchDirectorRefs {
@@ -126,6 +126,20 @@ function LaunchCursorOverlay({ refs }: { refs: LaunchDirectorRefs }) {
   );
 }
 
+function hover(target: Element | null | undefined) {
+  if (!target?.isConnected) return;
+
+  const rect = target.getBoundingClientRect();
+  const init: PointerEventInit = {
+    bubbles: true,
+    pointerType: "mouse",
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  };
+  target.dispatchEvent(new PointerEvent("pointerover", init));
+  target.dispatchEvent(new PointerEvent("pointermove", init));
+}
+
 function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
   function getCameraPoint(target: Element | null | undefined) {
     const stage = refs.stage.current;
@@ -159,16 +173,7 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     overlay.style.height = `${rect.height}px`;
   }
 
-  function setCamera(scale: number, x: number, y: number, duration?: number) {
-    const root = document.documentElement;
-    if (duration === undefined) {
-      root.style.removeProperty("--launch-camera-duration");
-      root.style.removeProperty("--launch-camera-ease");
-    } else {
-      root.style.setProperty("--launch-camera-duration", `${duration}ms`);
-      root.style.setProperty("--launch-camera-ease", CAMERA_EXIT_EASE);
-    }
-
+  function setCamera(scale: number, x: number, y: number) {
     const transform = `translate(${x}px, ${y}px) scale(${scale})`;
     for (const layer of [refs.camera.current, refs.overlayCamera.current]) {
       if (layer) layer.style.transform = transform;
@@ -177,7 +182,11 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       "--launch-camera-scale",
       String(scale),
     );
+    const stage = refs.stage.current;
+    if (stage) stage.dataset.zoomed = String(scale > 1);
   }
+
+  let hoverTimeout = 0;
 
   function moveCursor(target: Element | null | undefined) {
     const cursor = refs.cursor.current;
@@ -194,6 +203,12 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       cursor.style.transition = "";
     }
     cursor.style.opacity = "1";
+
+    window.clearTimeout(hoverTimeout);
+    hoverTimeout = window.setTimeout(
+      () => hover(target),
+      isHidden ? 0 : CURSOR_HOVER_DELAY,
+    );
   }
 
   return {
@@ -227,27 +242,25 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     moveCursor,
     click(target) {
       moveCursor(target);
+      window.clearTimeout(hoverTimeout);
+      hover(target);
       refs.pointer.current?.animate(
-        [{ scale: "1" }, { scale: "0.82" }, { scale: "1" }],
-        { duration: 200, easing: "ease-out" },
+        [{ scale: "1" }, { scale: "0.9" }, { scale: "1" }],
+        { duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
       );
       refs.ripple.current?.animate(
         [
           { opacity: 0.6, scale: "0.2" },
           { opacity: 0, scale: "1.4" },
         ],
-        { duration: 360, easing: "ease-out" },
+        { duration: 360, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
       );
     },
-    reset(duration?: number) {
-      setCamera(1, 0, 0, duration);
+    reset() {
+      window.clearTimeout(hoverTimeout);
+      setCamera(1, 0, 0);
       const cursor = refs.cursor.current;
-      if (!cursor) return;
-
-      if (duration !== undefined) {
-        cursor.style.transition = `opacity ${duration}ms var(--launch-camera-ease, ease)`;
-      }
-      cursor.style.opacity = "0";
+      if (cursor) cursor.style.opacity = "0";
     },
   };
 }
