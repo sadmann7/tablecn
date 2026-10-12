@@ -37,6 +37,7 @@ export function LaunchControls({
       <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/70 px-2 py-1.5 text-white/70 backdrop-blur-md">
         <Button
           aria-label={isPaused ? "Play" : "Pause"}
+          aria-keyshortcuts="Space K"
           variant="ghost"
           size="icon"
           className="size-8 rounded-full"
@@ -46,6 +47,7 @@ export function LaunchControls({
         </Button>
         <Button
           aria-label="Restart"
+          aria-keyshortcuts="R"
           variant="ghost"
           size="icon"
           className="size-8 rounded-full"
@@ -59,6 +61,7 @@ export function LaunchControls({
               key={scene.id}
               type="button"
               aria-label={`Go to ${scene.id}`}
+              aria-keyshortcuts={String(index + 1)}
               aria-current={index === sceneIndex ? "step" : undefined}
               data-state={index === sceneIndex ? "active" : undefined}
               className="rounded-full px-2 py-1 font-mono text-xs text-white/60 capitalize hover:text-white/80 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none data-[state=active]:bg-white/10 data-[state=active]:text-white"
@@ -78,9 +81,10 @@ export function LaunchControls({
         <button
           type="button"
           className="rounded-full px-3 font-mono text-xs text-white/60 hover:text-white/80 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:outline-none"
+          aria-keyshortcuts="H"
           onClick={onChromeToggle}
         >
-          Space · R · H to hide
+          Space · ← → · R · H to hide
         </button>
       </div>
     </div>
