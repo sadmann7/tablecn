@@ -14,6 +14,9 @@ export default defineConfig({
     viewport,
     deviceScaleFactor: 1,
     video: "off",
+    // Headless Chrome rasterizes on the CPU by default, which holds the
+    // screencast near 19fps and bands the backdrop's blurred gradients.
+    launchOptions: { args: ["--enable-gpu"] },
   },
   webServer: {
     command: "node_modules/.bin/next dev",

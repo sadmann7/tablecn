@@ -5,7 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const OUTPUT = path.resolve("recordings/launch-demo.webm");
+const OUTPUT = path.resolve("recordings/launch-demo.mp4");
 const FRAMES = path.resolve("recordings/.frames");
 
 interface CapturedFrame {
@@ -25,7 +25,8 @@ test("record one launch loop", async ({ page }) => {
   const stage = page.locator(".launch-stage");
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({
-    content: "nextjs-portal { display: none !important; }",
+    content:
+      "nextjs-portal, [data-slot=tailwind-indicator] { display: none !important; }",
   });
 
   // A click runs after the shortcut listener is attached. Hide the controls
@@ -147,19 +148,17 @@ async function encodeLoop(
     "-vf",
     "fps=60",
     "-c:v",
-    "libvpx-vp9",
+    "libx264",
+    "-preset",
+    "slow",
+    "-tune",
+    "grain",
+    "-crf",
+    "16",
     "-pix_fmt",
     "yuv420p",
-    "-b:v",
-    "0",
-    "-crf",
-    "10",
-    "-deadline",
-    "good",
-    "-cpu-used",
-    "2",
-    "-row-mt",
-    "1",
+    "-movflags",
+    "+faststart",
     outputPath,
   ]);
 
