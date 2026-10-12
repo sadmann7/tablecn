@@ -24,11 +24,6 @@ test("record one launch loop", async ({ page }) => {
   await page.goto("/launch");
   const stage = page.locator(".launch-stage");
   await page.evaluate(() => document.fonts.ready);
-  await page.addStyleTag({
-    content:
-      "nextjs-portal, [data-slot=tailwind-indicator] { display: none !important; }",
-  });
-
   // A click runs after the shortcut listener is attached. Hide the controls
   // first, then restart so the kept loop begins at the intro.
   await expect(async () => {

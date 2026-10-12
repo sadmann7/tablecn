@@ -30,7 +30,6 @@ html[data-launch-camera]
   animation-timing-function: var(--launch-camera-ease);
 }
 
-/* Closing a menu hands focus back to its trigger, so a full 3px ring would flash after every scripted Escape. */
 .launch-stage :focus-visible {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 45%, transparent);
 }
@@ -113,7 +112,6 @@ html[data-launch-camera]
 /* Grain keeps the dark gradients from banding once the video is encoded. */
 .launch-grain {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  /* Overlay barely shifts near-black, so it can't dither the dark glows. */
   opacity: 0.035;
 }
 
