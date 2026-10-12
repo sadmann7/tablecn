@@ -214,7 +214,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "advanced",
-    duration: 5300,
+    duration: 6100,
     story: {
       eyebrow: "Advanced filters",
       title: "Build any query.",
@@ -233,32 +233,34 @@ const SCRIPT: LaunchSceneScript[] = [
           setFilterMode("advanced")(context);
         },
       },
+      // The new copy and toolbar hold the frame before the camera moves in
       {
-        at: 220,
-        run: ({ director }) => {
-          const trigger = getFilterTrigger();
-          director.moveCursor(trigger);
-          director.focus(trigger, { offsetX: 16, offsetY: 6 });
-        },
+        at: 1000,
+        run: ({ director }) => director.moveCursor(getFilterTrigger()),
       },
-      ...clickSteps(600, getFilterTrigger, (trigger) => openPopover(trigger)),
       {
-        at: 960,
+        at: 1420,
+        run: ({ director }) =>
+          director.focus(getFilterTrigger(), { offsetX: 16, offsetY: 6 }),
+      },
+      ...clickSteps(1800, getFilterTrigger, (trigger) => openPopover(trigger)),
+      {
+        at: 2160,
         run: ({ director }) =>
           director.moveCursor(getFilterOperatorTrigger("Status")),
       },
       ...clickSteps(
-        1280,
+        2480,
         () => getFilterOperatorTrigger("Status"),
         (trigger) => pressKey(trigger, "Enter"),
       ),
       {
-        at: 1700,
+        at: 2900,
         run: ({ director }) =>
           director.moveCursor(getSelectOption("has none of")),
       },
       ...clickSteps(
-        2120,
+        3320,
         () => getSelectOption("has none of"),
         (option, { table }) => {
           if (!option) {
@@ -269,21 +271,21 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       ),
       {
-        at: 2600,
+        at: 3800,
         run: ({ director }) =>
           director.moveCursor(getFilterValueTrigger("Status")),
       },
       ...clickSteps(
-        2920,
+        4120,
         () => getFilterValueTrigger("Status"),
         (trigger) => openPopover(trigger),
       ),
       {
-        at: 3300,
+        at: 4500,
         run: ({ director }) => director.moveCursor(getFacetedOption("Done")),
       },
       ...clickSteps(
-        3720,
+        4920,
         () => getFacetedOption("Done"),
         (option, { table }) => {
           if (!option) {
@@ -294,14 +296,8 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       ),
       // Holds on the new selection before the list closes
-      { at: 4300, run: closeFacetedList },
-      {
-        at: 4640,
-        run: ({ director }) => {
-          closeAllMenus();
-          director.zoomOut();
-        },
-      },
+      { at: 5500, run: closeFacetedList },
+      { at: 5840, run: () => closeAllMenus() },
     ],
   },
   {
@@ -316,6 +312,8 @@ const SCRIPT: LaunchSceneScript[] = [
     },
     steps: [
       { at: 0, run: setFilterMode("command") },
+      // Waits for the Advanced copy to leave, so pulling back doesn't bring it back
+      { at: 240, run: ({ director }) => director.zoomOut() },
       {
         at: 1000,
         run: ({ director }) => {

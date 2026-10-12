@@ -1,7 +1,7 @@
 import type * as React from "react";
 
-const TAGLINE = "The data table for shadcn/ui.";
-const FEATURES = ["Sorting", "Filtering", "Pagination", "URL state"];
+const TAGLINE =
+  "A shadcn/ui data table with sorting, filtering, and pagination.";
 const WORDMARK = "tablecn";
 
 const INSTALL_COMMAND = "pnpm dlx shadcn@latest add @diceui/data-table";
@@ -78,19 +78,8 @@ export function LaunchIntroScene() {
       <LaunchWords
         text={TAGLINE}
         delay={620}
-        className="text-6xl leading-tight font-medium tracking-tight text-white/70"
+        className="block max-w-280 text-6xl leading-tight font-medium tracking-tight text-balance text-white/70"
       />
-      <div className="flex items-center gap-3">
-        {FEATURES.map((feature, index) => (
-          <span
-            key={feature}
-            className="launch-rise rounded-full border border-white/12 bg-white/5 px-6 py-2.5 font-mono text-2xl text-white/60"
-            style={launchDelay(1100 + index * 110)}
-          >
-            {feature}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
