@@ -30,11 +30,6 @@ html[data-launch-camera]
   animation-timing-function: var(--launch-camera-ease);
 }
 
-/* A 3px focus ring swallows these small toggles. */
-.launch-stage [data-slot="toggle-group-item"]:focus-visible {
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ring) 45%, transparent);
-}
-
 /* Only elements that draw a border, so borderless ones like search inputs stay bare. */
 html[data-launch-camera]
   [data-radix-popper-content-wrapper]
@@ -127,7 +122,14 @@ html[data-launch-camera]
 }
 
 .launch-scene-exit
-  :is(.launch-rise, .launch-pop, .launch-letter, .launch-word, .launch-line) {
+  :is(
+    .launch-rise,
+    .launch-pop,
+    .launch-letter,
+    .launch-word,
+    .launch-line,
+    .launch-code
+  ) {
   animation: none;
 }
 

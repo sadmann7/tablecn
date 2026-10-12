@@ -127,7 +127,8 @@ function LaunchCursorOverlay({ refs }: { refs: LaunchDirectorRefs }) {
   );
 }
 
-// The cursor is only drawn, so menus that highlight the item under the pointer need the events a real mouse sends
+// The cursor is only drawn, so menus that highlight the item under the pointer
+// need the events a real mouse sends.
 function hover(target: Element | null | undefined) {
   if (!target?.isConnected) return;
 
