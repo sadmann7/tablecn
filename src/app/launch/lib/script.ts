@@ -200,7 +200,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
   {
     id: "plain",
-    duration: 2700,
+    duration: 2600,
     story: {
       eyebrow: "Plain filters",
       title: "Filter in the toolbar.",
@@ -225,7 +225,7 @@ const SCRIPT: LaunchSceneScript[] = [
         run: ({ director }) => director.moveCursor(getFacetedOption("High")),
       },
       ...clickSteps(
-        1640,
+        1540,
         () => getFacetedOption("High"),
         (option) => {
           if (!option) {
@@ -235,12 +235,12 @@ const SCRIPT: LaunchSceneScript[] = [
           if (!option.hasAttribute("data-checked")) option.click();
         },
       ),
-      { at: 2200, run: closeFacetedList },
+      { at: 2100, run: closeFacetedList },
     ],
   },
   {
     id: "advanced",
-    duration: 6100,
+    duration: 5860,
     story: {
       eyebrow: "Advanced filters",
       title: "Build any query.",
@@ -286,7 +286,7 @@ const SCRIPT: LaunchSceneScript[] = [
           director.moveCursor(getSelectOption("has none of")),
       },
       ...clickSteps(
-        3320,
+        3200,
         () => getSelectOption("has none of"),
         (option, { table }) => {
           if (!option) {
@@ -297,21 +297,21 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       ),
       {
-        at: 3800,
+        at: 3680,
         run: ({ director }) =>
           director.moveCursor(getFilterValueTrigger("Status")),
       },
       ...clickSteps(
-        4120,
+        4000,
         () => getFilterValueTrigger("Status"),
         (trigger) => openPopover(trigger),
       ),
       {
-        at: 4500,
+        at: 4380,
         run: ({ director }) => director.moveCursor(getFacetedOption("Done")),
       },
       ...clickSteps(
-        4920,
+        4680,
         () => getFacetedOption("Done"),
         (option, { table }) => {
           if (!option) {
@@ -322,12 +322,12 @@ const SCRIPT: LaunchSceneScript[] = [
         },
       ),
       // Holds on the new selection before the list closes
-      { at: 5500, run: closeFacetedList },
+      { at: 5260, run: closeFacetedList },
     ],
   },
   {
     id: "command",
-    duration: 4600,
+    duration: 4420,
     story: {
       eyebrow: "Command filters",
       title: "Filter from the keyboard.",
@@ -358,10 +358,10 @@ const SCRIPT: LaunchSceneScript[] = [
       { at: 1270, run: openFilterMenu },
       ...typeSteps(1620, ["st", "status"], typeCommandStep),
       { at: 2020, run: pressCommandEnter },
-      { at: 2500, run: pressCommandArrow },
-      { at: 2820, run: pressCommandEnter },
+      { at: 2400, run: pressCommandArrow },
+      { at: 2640, run: pressCommandEnter },
       // Holds on the new filter before pulling back
-      { at: 3220, run: ({ director }) => director.reset() },
+      { at: 3040, run: ({ director }) => director.reset() },
     ],
   },
   {
