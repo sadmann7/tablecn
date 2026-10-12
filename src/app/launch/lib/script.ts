@@ -10,7 +10,6 @@ import type { LaunchDirector } from "../components/launch-director";
 import {
   closeAllMenus,
   closeFacetedList,
-  flashToolbarFilter,
   getFilterOperatorTrigger,
   getFacetedOption,
   getCommandTrigger,
@@ -79,7 +78,6 @@ const PRESS_MS = 140;
 export const COLUMN_SNIPPETS = [
   {
     columnIds: ["title"],
-    filterLabels: ["Search titles..."],
     accessorKey: "title",
     label: "Title",
     variant: "text",
@@ -87,7 +85,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["status"],
-    filterLabels: ["Status"],
     accessorKey: "status",
     label: "Status",
     variant: "multiSelect",
@@ -95,7 +92,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["priority"],
-    filterLabels: ["Priority"],
     accessorKey: "priority",
     label: "Priority",
     variant: "multiSelect",
@@ -103,7 +99,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["estimatedHours"],
-    filterLabels: ["Est. Hours"],
     accessorKey: "estimatedHours",
     label: "Est. Hours",
     variant: "range",
@@ -111,7 +106,6 @@ export const COLUMN_SNIPPETS = [
   },
   {
     columnIds: ["createdAt"],
-    filterLabels: ["Created At"],
     accessorKey: "createdAt",
     label: "Created At",
     variant: "dateRange",
@@ -125,9 +119,6 @@ const FILTER_CODE = [
   "<DataTableCommandFilterMenu /> // command",
 ];
 
-/** The ring starts after the control has painted its new value. */
-const FLASH_AFTER_MS = 100;
-
 const SCRIPT: LaunchSceneScript[] = [
   {
     id: "intro",
@@ -137,13 +128,10 @@ const SCRIPT: LaunchSceneScript[] = [
   {
     id: "columns",
     duration: 5600,
-    steps: COLUMN_SNIPPETS.flatMap((snippet, index) => {
-      const at = 600 + index * 780;
-      return [
-        { at, run: showColumns(index + 1) },
-        flashStep(at, snippet.filterLabels),
-      ];
-    }),
+    steps: COLUMN_SNIPPETS.map((_, index) => ({
+      at: 600 + index * 780,
+      run: showColumns(index + 1),
+    })),
   },
   {
     id: "server",
@@ -444,15 +432,6 @@ function clickSteps<TTarget extends Element>(
 
 function urlSteps(at: number, search: string): LaunchStep[] {
   return [{ at, run: () => replaceUrl(search) }];
-}
-
-function flashStep(at: number, labels: string[]): LaunchStep {
-  return {
-    at: at + FLASH_AFTER_MS,
-    run: () => {
-      for (const label of labels) flashToolbarFilter(label);
-    },
-  };
 }
 
 function typeCommandStep(value: string): LaunchStepRun {

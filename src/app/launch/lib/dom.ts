@@ -73,32 +73,6 @@ export function getToolbarFilter(label: string) {
   );
 }
 
-const FLASH_MS = 800;
-const flashedAt = new Map<string, number>();
-
-/** A second ring on the same control waits until this one has finished. */
-export function flashToolbarFilter(label: string) {
-  const element = getToolbarFilter(label);
-  if (!element) return;
-
-  const now = performance.now();
-  const previous = flashedAt.get(label);
-  if (previous !== undefined && now - previous < FLASH_MS) return;
-
-  flashedAt.set(label, now);
-  element.animate(
-    [
-      {
-        offset: 0,
-        boxShadow:
-          "0 0 0 0.125rem rgb(52 211 153 / 0.7), 0 0 1.5rem rgb(52 211 153 / 0.35)",
-        backgroundColor: "rgb(52 211 153 / 0.15)",
-      },
-    ],
-    { duration: FLASH_MS, easing: "ease-out" },
-  );
-}
-
 /**
  * Swaps the query string the way an address bar edit would, without a reload.
  * nuqs reads its own last writes over the URL until a popstate clears them,

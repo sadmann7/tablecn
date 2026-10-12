@@ -162,7 +162,7 @@ export function LaunchStory({
         </pre>
         {children}
       </div>
-      <div className="launch-lower-third absolute bottom-16 left-16 flex flex-col gap-2 rounded-3xl border border-white/10 bg-black/55 px-8 py-6 shadow-[0_24px_80px_-12px_rgb(0_0_0/0.8)] backdrop-blur-xl">
+      <div className="launch-lower-third absolute bottom-16 left-16 flex flex-col gap-2 rounded-3xl border border-white/10 bg-black/55 px-8 py-6 shadow-[0_24px_80px_-12px_rgb(0_0_0/0.8)] backdrop-blur-md">
         <span className="flex items-center gap-3 font-mono text-lg text-emerald-300">
           <span className="size-2 rounded-full bg-emerald-400 shadow-[0_0_0.75rem_rgb(52_211_153)]" />
           {eyebrow}

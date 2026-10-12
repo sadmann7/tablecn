@@ -245,15 +245,15 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       window.clearTimeout(hoverTimeout);
       hover(target);
       refs.pointer.current?.animate(
-        [{ scale: "1" }, { scale: "0.82" }, { scale: "1" }],
-        { duration: 200, easing: "ease-out" },
+        [{ scale: "1" }, { scale: "0.9" }, { scale: "1" }],
+        { duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
       );
       refs.ripple.current?.animate(
         [
           { opacity: 0.6, scale: "0.2" },
           { opacity: 0, scale: "1.4" },
         ],
-        { duration: 360, easing: "ease-out" },
+        { duration: 360, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
       );
     },
     reset() {
