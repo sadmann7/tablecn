@@ -323,12 +323,11 @@ const SCRIPT: LaunchSceneScript[] = [
       ),
       // Holds on the new selection before the list closes
       { at: 5500, run: closeFacetedList },
-      { at: 5840, run: () => closeAllMenus() },
     ],
   },
   {
     id: "command",
-    duration: 4400,
+    duration: 4600,
     story: {
       eyebrow: "Command filters",
       title: "Filter from the keyboard.",
@@ -337,28 +336,32 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [2],
     },
     steps: [
-      { at: 0, run: setFilterMode("command") },
-      // Waits for the Advanced copy to leave, so pulling back doesn't bring it back
-      { at: 240, run: ({ director }) => director.zoomOut() },
+      // Closes the Advanced menu as the camera pulls back. Waits for the
+      // Advanced copy to leave, so pulling back doesn't bring it back.
       {
-        at: 1000,
+        at: 240,
+        run: ({ director }) => {
+          closeAllMenus();
+          director.zoomOut();
+        },
+      },
+      // After the menu's exit, which the toolbar swap would cut short
+      { at: 520, run: setFilterMode("command") },
+      {
+        at: 1100,
         run: ({ director }) => {
           const trigger = getCommandTrigger();
           director.moveCursor(trigger);
           director.focus(trigger, { offsetX: 16, offsetY: 6 });
         },
       },
-      { at: 1170, run: openFilterMenu },
-      ...typeSteps(1520, ["st", "status"], typeCommandStep),
-      { at: 1920, run: pressCommandEnter },
-      { at: 2400, run: pressCommandArrow },
-      {
-        at: 2720,
-        run: ({ director }) => {
-          pressCommandEnter();
-          director.reset();
-        },
-      },
+      { at: 1270, run: openFilterMenu },
+      ...typeSteps(1620, ["st", "status"], typeCommandStep),
+      { at: 2020, run: pressCommandEnter },
+      { at: 2500, run: pressCommandArrow },
+      { at: 2820, run: pressCommandEnter },
+      // Holds on the new filter before pulling back
+      { at: 3220, run: ({ director }) => director.reset() },
     ],
   },
   {
