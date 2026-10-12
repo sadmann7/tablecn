@@ -123,7 +123,7 @@ export function LaunchNetwork({
 
   return (
     <div className="flex h-40 flex-col gap-2 border-t border-white/10 bg-white/2 px-5 py-4 font-mono text-[0.9375rem]">
-      <div className="flex items-center justify-between font-sans text-sm text-white/40">
+      <div className="flex items-center justify-between font-sans text-sm text-white/50">
         <span>Network</span>
         <span>{isServerMode ? "Server mode" : "Client mode"}</span>
       </div>
@@ -174,7 +174,7 @@ function ClientNetworkSummary() {
     <div className="launch-rise flex items-center gap-4 text-white/70">
       <span className="w-12 text-emerald-300">0</span>
       <span>requests</span>
-      <span className="font-sans text-white/40">
+      <span className="font-sans text-white/50">
         {launchTasks.length} rows sorted, filtered, and paginated in the browser
       </span>
     </div>
@@ -191,9 +191,9 @@ function NetworkRow({ status, path, detail }: NetworkRowProps) {
   return (
     <div className="flex items-center gap-4 text-white/70">
       <span className="flex w-12 text-emerald-300">{status}</span>
-      <span className="text-white/40">GET</span>
+      <span className="text-white/50">GET</span>
       <span className="min-w-0 flex-1 truncate">{path}</span>
-      <span className="shrink-0 text-white/40">{detail}</span>
+      <span className="shrink-0 text-white/50">{detail}</span>
     </div>
   );
 }

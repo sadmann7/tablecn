@@ -31,6 +31,7 @@ function LaunchLogo({ size = "lg", delay = 0 }: LaunchLogoProps) {
           ? "flex items-center gap-8 text-white"
           : "flex items-center gap-6 text-white"
       }
+      role="img"
       aria-label={WORDMARK}
     >
       <div
@@ -99,7 +100,8 @@ function LaunchWords({
   className,
 }: LaunchWordsProps) {
   return (
-    <span className={className} aria-label={text}>
+    <span className={className}>
+      <span className="sr-only">{text}</span>
       {text.split(" ").map((word, index) => (
         <span
           key={`${index}-${word}`}
@@ -191,7 +193,7 @@ export function LaunchVariants({ variants, activeCount }: LaunchVariantsProps) {
         <span
           key={variant}
           data-active={index < activeCount}
-          className="rounded-lg border border-white/10 px-3 py-1 text-white/30 transition-[color,background-color,border-color,scale] duration-300 data-[active=true]:scale-105 data-[active=true]:border-emerald-400/40 data-[active=true]:bg-emerald-400/10 data-[active=true]:text-emerald-300"
+          className="rounded-lg border border-white/10 px-3 py-1 text-white/50 transition-[color,background-color,border-color,scale] duration-300 data-[active=true]:scale-105 data-[active=true]:border-emerald-400/40 data-[active=true]:bg-emerald-400/10 data-[active=true]:text-emerald-300"
         >
           {variant}
         </span>
@@ -257,7 +259,7 @@ function CodeLine({ line }: CodeLineProps) {
 
 function getTokenClassName(token: string) {
   if (token.startsWith('"')) return "text-emerald-300";
-  if (token.startsWith("//")) return "text-white/30";
+  if (token.startsWith("//")) return "text-white/50";
   if (token.startsWith("<")) return "text-sky-300";
   return undefined;
 }
