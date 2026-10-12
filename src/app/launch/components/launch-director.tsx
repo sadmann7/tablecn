@@ -4,7 +4,6 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 const DEFAULT_ZOOM = 1.6;
-/** Most of the cursor's 420ms glide, so the highlight lands as it arrives. */
 const CURSOR_HOVER_DELAY = 260;
 
 interface LaunchFocusOptions {
@@ -127,8 +126,6 @@ function LaunchCursorOverlay({ refs }: { refs: LaunchDirectorRefs }) {
   );
 }
 
-// The cursor is only drawn, so menus that highlight the item under the pointer
-// need the events a real mouse sends.
 function hover(target: Element | null | undefined) {
   if (!target?.isConnected) return;
 
@@ -207,7 +204,6 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     }
     cursor.style.opacity = "1";
 
-    // Lands as the cursor glides into place
     window.clearTimeout(hoverTimeout);
     hoverTimeout = window.setTimeout(
       () => hover(target),

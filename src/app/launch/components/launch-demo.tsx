@@ -48,12 +48,10 @@ const VISIBLE_WINDOW: React.CSSProperties = {
   opacity: 1,
   filter: "blur(0px)",
   transform: "none",
-  // Lets the intro clear before the window rises through it
   transitionDelay: "180ms",
 };
 
 const WINDOW_SHOTS: Partial<Record<LaunchSceneId, React.CSSProperties>> = {
-  // Lies tilted back below the frame, then rises flat into place
   intro: {
     opacity: 0,
     filter: "blur(10px)",
@@ -165,7 +163,6 @@ export function LaunchDemo() {
             </LaunchWindow>
           </div>
         </LaunchCamera>
-        {/* Copy stays in screen space, so camera moves never crop it. */}
         <LaunchSceneFrame sceneKey={`${playback.cycle}-${scene.id}`}>
           <LaunchSceneContent scene={scene} columnCount={demo.columnCount} />
         </LaunchSceneFrame>

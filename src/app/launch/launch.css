@@ -133,7 +133,6 @@ html[data-launch-camera]
   animation: none;
 }
 
-/* The intro dollies through the camera as the window rises into place. */
 .launch-scene-exit:has(.launch-intro) {
   animation-duration: 420ms;
 }
@@ -173,7 +172,6 @@ html[data-launch-camera]
   animation-delay: var(--launch-delay, 0ms);
 }
 
-/* While the camera is zoomed in, the story steps aside into a compact lower third. */
 .launch-story,
 .launch-lower-third {
   transition:
@@ -188,7 +186,6 @@ html[data-launch-camera]
   filter: blur(6px);
 }
 
-/* A leaving story stays out, so pulling back as a scene ends doesn't bring it back. */
 .launch-scene-exit .launch-story {
   opacity: 0;
 }
@@ -213,7 +210,6 @@ html[data-launch-camera]
   transform-origin: 50% 100%;
 }
 
-/* A single pass of light across the glass when the window lands. */
 .launch-sheen {
   background: linear-gradient(
     105deg,

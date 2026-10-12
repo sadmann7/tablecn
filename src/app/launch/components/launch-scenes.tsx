@@ -91,7 +91,6 @@ interface LaunchWordsProps {
   className?: string;
 }
 
-/** Reveals a line one word at a time, the way launch videos set their headlines. */
 function LaunchWords({
   text,
   delay = 0,
@@ -152,8 +151,6 @@ export function LaunchStory({
         <pre className="launch-code relative flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/4 py-5 font-mono text-[1.1875rem] leading-9 text-white/60 shadow-[inset_0_1px_0_rgb(255_255_255/0.06)]">
           {code.map((line, index) => (
             <code
-              // Keyed by position, so a line whose text changes updates in
-              // place instead of replaying its reveal
               key={`line-${index}`}
               data-highlighted={highlightedLines.includes(index)}
               className="launch-line border-l-2 border-transparent px-6 transition-colors duration-300 data-[highlighted=true]:border-emerald-400 data-[highlighted=true]:bg-emerald-400/10 data-[highlighted=true]:text-white"

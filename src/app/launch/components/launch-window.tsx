@@ -21,7 +21,6 @@ import {
 
 interface LaunchWindowProps {
   search: string;
-  /** Remounting the sheen replays its single pass of light. */
   sheenKey: string;
   network: React.ReactNode;
   children: React.ReactNode;

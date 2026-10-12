@@ -74,7 +74,6 @@ interface LaunchSceneScript {
 
 export const FILTER_SHORTCUT_KEYS = ["⌘", "⇧", "F"];
 const TYPING_INTERVAL = 150;
-/** How long the cursor shows its press before the click lands. */
 const PRESS_MS = 140;
 
 export const COLUMN_SNIPPETS = [
@@ -259,7 +258,6 @@ const SCRIPT: LaunchSceneScript[] = [
           setFilterMode("advanced")(context);
         },
       },
-      // The new copy and toolbar hold the frame before the camera moves in
       {
         at: 1000,
         run: ({ director }) => director.moveCursor(getFilterTrigger()),
@@ -321,7 +319,6 @@ const SCRIPT: LaunchSceneScript[] = [
           if (!option.hasAttribute("data-checked")) option.click();
         },
       ),
-      // Holds on the new selection before the list closes
       { at: 5260, run: closeFacetedList },
     ],
   },
@@ -336,8 +333,6 @@ const SCRIPT: LaunchSceneScript[] = [
       highlightedLines: [2],
     },
     steps: [
-      // Pulls back on the scene's first frame, so the Command copy never
-      // mounts zoomed in, and closes the Advanced menu on the way out
       {
         at: 0,
         run: ({ director }) => {
@@ -345,7 +340,6 @@ const SCRIPT: LaunchSceneScript[] = [
           director.zoomOut();
         },
       },
-      // After the menu's exit, which the toolbar swap would cut short
       { at: 280, run: setFilterMode("command") },
       {
         at: 1100,
@@ -360,7 +354,6 @@ const SCRIPT: LaunchSceneScript[] = [
       { at: 2020, run: pressCommandEnter },
       { at: 2400, run: pressCommandArrow },
       { at: 2640, run: pressCommandEnter },
-      // Holds on the new filter before pulling back
       { at: 3040, run: ({ director }) => director.reset() },
     ],
   },
@@ -438,10 +431,6 @@ function setFilterMode(filterMode: FilterMode): LaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "filterMode", filterMode });
 }
 
-/**
- * A press, then the click's effect a beat later, so a menu doesn't open or
- * close on the same frame the cursor touches it.
- */
 function clickSteps<TTarget extends Element>(
   at: number,
   getTarget: () => TTarget | null | undefined,
