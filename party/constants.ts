@@ -1,3 +1,6 @@
+export const PUBLIC_ROOM_ID = "lobby";
+export const PRIVATE_ROOM_ID_PATTERN = /^[a-z0-9]{8}$/;
+
 export const ADJECTIVES = [
   "Swift",
   "Bold",

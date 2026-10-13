@@ -1,7 +1,9 @@
+import { PUBLIC_ROOM_ID } from "@party/constants";
+
 import { generateId } from "@/lib/id";
 
 // Everyone shares this room unless they open a link to their own with ?room=
-export const PUBLIC_ROOM_ID = "lobby";
+export { PUBLIC_ROOM_ID };
 
 export function createRoomId() {
   return generateId({

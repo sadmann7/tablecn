@@ -13,20 +13,28 @@ import type {
   UserPresence,
 } from "./types";
 
-import { ADJECTIVES, ANIMALS, COLORS } from "./constants";
+import {
+  ADJECTIVES,
+  ANIMALS,
+  COLORS,
+  PRIVATE_ROOM_ID_PATTERN,
+  PUBLIC_ROOM_ID,
+} from "./constants";
 import { seedRows } from "./seeds";
 
 const RESET_DELAY = 10 * 60 * 1000;
+const PERSIST_DELAY = 500;
 
 interface Env {
   Main: DurableObjectNamespace<SkaterRoom>;
 }
 
-interface RoomState {
-  users: Record<string, UserPresence>;
-  usedColors: string[];
-  rows: RowPayload[];
+interface PresenceState {
+  userId: string;
+  user: UserPresence;
 }
+
+type PresenceConnection = Connection<PresenceState>;
 
 function generateUserName(): string {
   const adj =
@@ -42,68 +50,90 @@ function pickColor(usedColors: string[]): string {
 }
 
 export class SkaterRoom extends Server<Env> {
-  state: RoomState = { users: {}, usedColors: [], rows: [] };
-  private connectionIdsByUserId = new Map<string, Set<string>>();
-  private userIdByConnectionId = new Map<string, string>();
+  static options = { hibernate: true };
 
-  private getUserId(connection: Connection) {
-    return this.userIdByConnectionId.get(connection.id) ?? connection.id;
-  }
+  rows: RowPayload[] = [];
+  private persistTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  // Runs before any connection is accepted — the room waits for this to complete.
   async onStart() {
     const stored = await this.ctx.storage.get<RowPayload[]>("rows");
     if (Array.isArray(stored) && stored.length > 0) {
-      this.state.rows = stored;
+      this.rows = stored;
     } else {
-      this.state.rows = structuredClone(seedRows);
-      await this.ctx.storage.put("rows", this.state.rows);
+      this.rows = structuredClone(seedRows);
+      await this.ctx.storage.put("rows", this.rows);
     }
   }
 
-  // Surface storage write failures rather than silently swallowing them.
   private persistRows() {
-    this.ctx.storage
-      .put("rows", this.state.rows)
-      .catch((err) => console.error("[party] Failed to persist rows:", err));
+    if (this.persistTimeout) return;
+
+    this.persistTimeout = setTimeout(() => {
+      this.persistTimeout = null;
+      this.ctx.storage
+        .put("rows", this.rows)
+        .catch((err) => console.error("[party] Failed to persist rows:", err));
+    }, PERSIST_DELAY);
+  }
+
+  private getUserId(connection: PresenceConnection) {
+    return connection.state?.userId ?? connection.id;
+  }
+
+  private getUsers(excludeConnectionId?: string) {
+    const users: Record<string, UserPresence> = {};
+    for (const connection of this.getConnections<PresenceState>()) {
+      if (connection.id === excludeConnectionId || !connection.state) continue;
+      users[connection.state.userId] ??= structuredClone(
+        connection.state.user,
+      ) as UserPresence;
+    }
+    return users;
+  }
+
+  getConnectionTags(_connection: Connection, ctx: ConnectionContext) {
+    const userId = new URL(ctx.request.url).searchParams.get("clientId");
+    return userId ? [userId] : [];
   }
 
   async onAlarm() {
-    if (Object.keys(this.state.users).length > 0) return;
+    if (Object.keys(this.getUsers()).length > 0) return;
 
-    await this.ctx.storage.delete("rows");
-    this.state.rows = structuredClone(seedRows);
+    if (this.persistTimeout) {
+      clearTimeout(this.persistTimeout);
+      this.persistTimeout = null;
+    }
+    this.rows = structuredClone(seedRows);
+    if (this.name === PUBLIC_ROOM_ID) {
+      await this.ctx.storage.delete("rows");
+    } else {
+      await this.ctx.storage.deleteAll();
+    }
   }
 
-  onConnect(connection: Connection, ctx: ConnectionContext) {
+  onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
     void this.ctx.storage.deleteAlarm();
 
     const url = new URL(ctx.request.url);
-
     const userId = url.searchParams.get("clientId") ?? connection.id;
-    this.userIdByConnectionId.set(connection.id, userId);
-    const connectionIds = this.connectionIdsByUserId.get(userId) ?? new Set();
-    connectionIds.add(connection.id);
-    this.connectionIdsByUserId.set(userId, connectionIds);
+    const users = this.getUsers(connection.id);
 
-    let user = this.state.users[userId];
+    let user = users[userId];
     const isNewUser = !user;
     if (!user) {
       const name = url.searchParams.get("name") ?? generateUserName();
-      const color =
-        url.searchParams.get("color") ?? pickColor(this.state.usedColors);
-      if (!this.state.usedColors.includes(color))
-        this.state.usedColors.push(color);
-
+      const usedColors = Object.values(users).map((u) => u.color);
+      const color = url.searchParams.get("color") ?? pickColor(usedColors);
       user = { name, color, activeCell: { rowId: null, columnId: null } };
-      this.state.users[userId] = user;
+      users[userId] = user;
     }
+    connection.setState({ userId, user });
 
     const snapshot: ServerMessage = {
       type: "snapshot",
-      users: this.state.users,
+      users,
       userId,
-      rows: this.state.rows,
+      rows: this.rows,
     };
     connection.send(JSON.stringify(snapshot));
 
@@ -113,33 +143,21 @@ export class SkaterRoom extends Server<Env> {
     }
   }
 
-  onClose(connection: Connection) {
+  onClose(connection: PresenceConnection) {
     const userId = this.getUserId(connection);
-    this.userIdByConnectionId.delete(connection.id);
-
-    const connectionIds = this.connectionIdsByUserId.get(userId);
-    connectionIds?.delete(connection.id);
+    const users = this.getUsers(connection.id);
     // The user stays while any of their tabs is still connected
-    if (connectionIds && connectionIds.size > 0) return;
-    this.connectionIdsByUserId.delete(userId);
-
-    const user = this.state.users[userId];
-    if (user) {
-      this.state.usedColors = this.state.usedColors.filter(
-        (c) => c !== user.color,
-      );
-    }
-    delete this.state.users[userId];
+    if (users[userId]) return;
 
     const leaveMsg: ServerMessage = { type: "user-leave", userId };
-    this.broadcast(JSON.stringify(leaveMsg));
+    this.broadcast(JSON.stringify(leaveMsg), [connection.id]);
 
-    if (Object.keys(this.state.users).length === 0) {
+    if (Object.keys(users).length === 0) {
       void this.ctx.storage.setAlarm(Date.now() + RESET_DELAY);
     }
   }
 
-  onMessage(sender: Connection, message: WSMessage) {
+  onMessage(sender: PresenceConnection, message: WSMessage) {
     if (typeof message !== "string") return;
 
     let msg: ClientMessage;
@@ -153,7 +171,7 @@ export class SkaterRoom extends Server<Env> {
 
     switch (msg.type) {
       case "row-add": {
-        this.state.rows.push(msg.row);
+        this.rows.push(msg.row);
         this.persistRows();
         this.broadcast(
           JSON.stringify({
@@ -167,7 +185,7 @@ export class SkaterRoom extends Server<Env> {
       }
 
       case "rows-add": {
-        this.state.rows.push(...msg.rows);
+        this.rows.push(...msg.rows);
         this.persistRows();
         this.broadcast(
           JSON.stringify({
@@ -181,7 +199,7 @@ export class SkaterRoom extends Server<Env> {
       }
 
       case "cell-update": {
-        const row = this.state.rows.find((r) => r.id === msg.rowId);
+        const row = this.rows.find((r) => r.id === msg.rowId);
         if (row) row[msg.columnId] = msg.value;
         this.persistRows();
         this.broadcast(
@@ -198,9 +216,7 @@ export class SkaterRoom extends Server<Env> {
       }
 
       case "rows-delete": {
-        this.state.rows = this.state.rows.filter(
-          (r) => !msg.ids.includes(r.id as string),
-        );
+        this.rows = this.rows.filter((r) => !msg.ids.includes(r.id as string));
         this.persistRows();
         this.broadcast(
           JSON.stringify({
@@ -214,9 +230,15 @@ export class SkaterRoom extends Server<Env> {
       }
 
       case "active-cell": {
-        const user = this.state.users[userId];
-        if (user)
-          user.activeCell = { rowId: msg.rowId, columnId: msg.columnId };
+        const activeCell = { rowId: msg.rowId, columnId: msg.columnId };
+        for (const connection of this.getConnections<PresenceState>(userId)) {
+          const state = connection.state;
+          if (!state) continue;
+          connection.setState({
+            userId: state.userId,
+            user: { ...(state.user as UserPresence), activeCell },
+          });
+        }
         this.broadcast(
           JSON.stringify({
             type: "active-cell",
@@ -232,8 +254,21 @@ export class SkaterRoom extends Server<Env> {
   }
 }
 
+function getIsValidRoom(request: Request) {
+  const room = new URL(request.url).pathname.split("/")[3];
+  return (
+    room === undefined ||
+    room === PUBLIC_ROOM_ID ||
+    PRIVATE_ROOM_ID_PATTERN.test(room)
+  );
+}
+
 export default {
   async fetch(request, env) {
+    if (!getIsValidRoom(request)) {
+      return new Response("Not found", { status: 404 });
+    }
+
     return (
       (await routePartykitRequest(request, env)) ??
       new Response("Not found", { status: 404 })
