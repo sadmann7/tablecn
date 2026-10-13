@@ -13,6 +13,8 @@ import { generateId } from "@/lib/id";
 
 const PARTYKIT_HOST = env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 const STORAGE_KEY = "multiplayer-identity";
+// Long enough that a quick tab switch keeps the connection
+const HIDDEN_DISCONNECT_MS = 60_000;
 
 interface Identity {
   clientId: string;
@@ -108,15 +110,29 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       }
 
       switch (msg.type) {
+        // Also arrives on every reconnect, so rows already here are updated
+        // and rows deleted while away are dropped
         case "snapshot": {
           setCurrentUserId(msg.userId);
           setUsers(msg.users);
+          const snapshotIds = new Set<string>();
           for (const raw of msg.rows ?? []) {
             const row = parseRow(raw);
-            if (row) {
+            if (!row) continue;
+            snapshotIds.add(row.id);
+            if (knownIds.has(row.id)) {
+              multiplayerCollection.update(row.id, (draft) => {
+                Object.assign(draft, row);
+              });
+            } else {
               multiplayerCollection.insert(row);
               knownIds.add(row.id);
             }
+          }
+          const removedIds = [...knownIds].filter((id) => !snapshotIds.has(id));
+          if (removedIds.length > 0) {
+            multiplayerCollection.delete(removedIds);
+            for (const id of removedIds) knownIds.delete(id);
           }
           break;
         }
@@ -196,7 +212,24 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       }
     });
 
+    // A hidden tab lets go of the room, so an idle room can stop running
+    let hiddenTimeout = 0;
+    function onVisibilityChange() {
+      window.clearTimeout(hiddenTimeout);
+      if (document.visibilityState === "hidden") {
+        hiddenTimeout = window.setTimeout(
+          () => socket.close(),
+          HIDDEN_DISCONNECT_MS,
+        );
+      } else if (socket.readyState === PartySocket.CLOSED) {
+        socket.reconnect();
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.clearTimeout(hiddenTimeout);
       socket.close();
       socketRef.current = null;
       activeCellMessageRef.current = null;
