@@ -13,8 +13,8 @@ import { generateId } from "@/lib/id";
 
 const PARTYKIT_HOST = env.NEXT_PUBLIC_PARTYKIT_HOST ?? "localhost:1999";
 const STORAGE_KEY = "multiplayer-identity";
-// Long enough that a quick tab switch keeps the connection
 const HIDDEN_DISCONNECT_MS = 60_000;
+const ACTIVE_CELL_THROTTLE_MS = 100;
 
 interface Identity {
   clientId: string;
@@ -77,6 +77,7 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
 
   const socketRef = React.useRef<PartySocket | null>(null);
   const activeCellMessageRef = React.useRef<string | null>(null);
+  const activeCellTimeoutRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
     const knownIds = new Set<string>();
@@ -110,8 +111,6 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       }
 
       switch (msg.type) {
-        // Also arrives on every reconnect, so rows already here are updated
-        // and rows deleted while away are dropped
         case "snapshot": {
           setCurrentUserId(msg.userId);
           setUsers(msg.users);
@@ -212,7 +211,6 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       }
     });
 
-    // A hidden tab lets go of the room, so an idle room can stop running
     let hiddenTimeout = 0;
     function onVisibilityChange() {
       window.clearTimeout(hiddenTimeout);
@@ -231,6 +229,10 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.clearTimeout(hiddenTimeout);
       socket.close();
+      if (activeCellTimeoutRef.current !== null) {
+        window.clearTimeout(activeCellTimeoutRef.current);
+        activeCellTimeoutRef.current = null;
+      }
       socketRef.current = null;
       activeCellMessageRef.current = null;
       setUsers({});
@@ -262,9 +264,19 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
 
   const sendActiveCell = React.useCallback(
     (rowId: string | null, columnId: string | null) => {
-      const message = JSON.stringify({ type: "active-cell", rowId, columnId });
-      activeCellMessageRef.current = message;
-      socketRef.current?.send(message);
+      activeCellMessageRef.current = JSON.stringify({
+        type: "active-cell",
+        rowId,
+        columnId,
+      });
+      if (activeCellTimeoutRef.current !== null) return;
+
+      activeCellTimeoutRef.current = window.setTimeout(() => {
+        activeCellTimeoutRef.current = null;
+        if (activeCellMessageRef.current) {
+          socketRef.current?.send(activeCellMessageRef.current);
+        }
+      }, ACTIVE_CELL_THROTTLE_MS);
     },
     [],
   );

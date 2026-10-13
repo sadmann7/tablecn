@@ -13,10 +13,17 @@ import type {
   UserPresence,
 } from "./types";
 
-import { ADJECTIVES, ANIMALS, COLORS } from "./constants";
+import {
+  ADJECTIVES,
+  ANIMALS,
+  COLORS,
+  PRIVATE_ROOM_ID_PATTERN,
+  PUBLIC_ROOM_ID,
+} from "./constants";
 import { seedRows } from "./seeds";
 
 const RESET_DELAY = 10 * 60 * 1000;
+const PERSIST_DELAY = 500;
 
 interface Env {
   Main: DurableObjectNamespace<SkaterRoom>;
@@ -43,11 +50,10 @@ function pickColor(usedColors: string[]): string {
 }
 
 export class SkaterRoom extends Server<Env> {
-  // Idle rooms leave memory between messages, so presence lives on each
-  // connection rather than in fields that a wake-up would reset.
   static options = { hibernate: true };
 
   rows: RowPayload[] = [];
+  private persistTimeout: ReturnType<typeof setTimeout> | null = null;
 
   async onStart() {
     const stored = await this.ctx.storage.get<RowPayload[]>("rows");
@@ -60,9 +66,14 @@ export class SkaterRoom extends Server<Env> {
   }
 
   private persistRows() {
-    this.ctx.storage
-      .put("rows", this.rows)
-      .catch((err) => console.error("[party] Failed to persist rows:", err));
+    if (this.persistTimeout) return;
+
+    this.persistTimeout = setTimeout(() => {
+      this.persistTimeout = null;
+      this.ctx.storage
+        .put("rows", this.rows)
+        .catch((err) => console.error("[party] Failed to persist rows:", err));
+    }, PERSIST_DELAY);
   }
 
   private getUserId(connection: PresenceConnection) {
@@ -88,8 +99,16 @@ export class SkaterRoom extends Server<Env> {
   async onAlarm() {
     if (Object.keys(this.getUsers()).length > 0) return;
 
-    await this.ctx.storage.delete("rows");
+    if (this.persistTimeout) {
+      clearTimeout(this.persistTimeout);
+      this.persistTimeout = null;
+    }
     this.rows = structuredClone(seedRows);
+    if (this.name === PUBLIC_ROOM_ID) {
+      await this.ctx.storage.delete("rows");
+    } else {
+      await this.ctx.storage.deleteAll();
+    }
   }
 
   onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
@@ -99,7 +118,6 @@ export class SkaterRoom extends Server<Env> {
     const userId = url.searchParams.get("clientId") ?? connection.id;
     const users = this.getUsers(connection.id);
 
-    // Another tab of the same user is already here, so it keeps that presence
     let user = users[userId];
     const isNewUser = !user;
     if (!user) {
@@ -236,8 +254,21 @@ export class SkaterRoom extends Server<Env> {
   }
 }
 
+function getIsValidRoom(request: Request) {
+  const room = new URL(request.url).pathname.split("/")[3];
+  return (
+    room === undefined ||
+    room === PUBLIC_ROOM_ID ||
+    PRIVATE_ROOM_ID_PATTERN.test(room)
+  );
+}
+
 export default {
   async fetch(request, env) {
+    if (!getIsValidRoom(request)) {
+      return new Response("Not found", { status: 404 });
+    }
+
     return (
       (await routePartykitRequest(request, env)) ??
       new Response("Not found", { status: 404 })
