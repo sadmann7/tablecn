@@ -13,8 +13,8 @@ import {
 } from "@/registry/bases/base/ui/dialog";
 import { useDirection } from "@/registry/bases/base/ui/direction";
 import { Input } from "@/registry/bases/base/ui/input";
+import { Kbd, KbdGroup } from "@/registry/bases/base/ui/kbd";
 import { Separator } from "@/registry/bases/base/ui/separator";
-import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const SHORTCUT_KEY = "/";
