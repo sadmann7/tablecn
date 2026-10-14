@@ -9,6 +9,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { formatDate } from "@/lib/format";
 import { Button } from "@/registry/bases/base/ui/button";
+import { Calendar } from "@/registry/bases/base/ui/calendar";
 import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
   Popover,
@@ -16,7 +17,6 @@ import {
   PopoverTrigger,
 } from "@/registry/bases/base/ui/popover";
 import { Separator } from "@/registry/bases/base/ui/separator";
-import { Calendar } from "@/registry/bases/radix/ui/calendar";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 type DateSelection = Date[] | DateRange;

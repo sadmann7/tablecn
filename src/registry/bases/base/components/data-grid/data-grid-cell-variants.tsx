@@ -33,6 +33,7 @@ import {
 import { DataGridCellWrapper } from "@/registry/bases/base/components/data-grid/data-grid-cell-wrapper";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
+import { Calendar } from "@/registry/bases/base/ui/calendar";
 import { Checkbox } from "@/registry/bases/base/ui/checkbox";
 import {
   Command,
@@ -58,7 +59,6 @@ import {
 } from "@/registry/bases/base/ui/select";
 import { Skeleton } from "@/registry/bases/base/ui/skeleton";
 import { Textarea } from "@/registry/bases/base/ui/textarea";
-import { Calendar } from "@/registry/bases/radix/ui/calendar";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 export function ShortTextCell<TData extends RowData>(

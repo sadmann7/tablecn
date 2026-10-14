@@ -26,6 +26,7 @@ import {
 import { generateId } from "@/lib/id";
 import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
 import { Button } from "@/registry/bases/base/ui/button";
+import { Calendar } from "@/registry/bases/base/ui/calendar";
 import {
   Command,
   CommandEmpty,
@@ -60,7 +61,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/base/ui/select";
-import { Calendar } from "@/registry/bases/radix/ui/calendar";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const FILTER_SHORTCUT_KEY = "f";

@@ -24,6 +24,7 @@ import { generateId } from "@/lib/id";
 import { DataTableRangeFilter } from "@/registry/bases/base/components/data-table/data-table-range-filter";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
+import { Calendar } from "@/registry/bases/base/ui/calendar";
 import { useDirection } from "@/registry/bases/base/ui/direction";
 import {
   Faceted,
@@ -58,7 +59,6 @@ import {
   SortableItemHandle,
   SortableOverlay,
 } from "@/registry/bases/base/ui/sortable";
-import { Calendar } from "@/registry/bases/radix/ui/calendar";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const FILTER_SHORTCUT_KEY = "f";
