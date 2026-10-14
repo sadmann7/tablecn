@@ -1422,7 +1422,7 @@ export function FileCell<TData extends RowData>(
           const filesWithTemp = [...files, ...tempFiles];
           setFiles(filesWithTemp);
 
-          const uploadingIds = new Set(tempFiles.map((f) => f.id));
+          const uploadingIds = new Set<string>(tempFiles.map((f) => f.id));
           setUploadingFiles(uploadingIds);
 
           let uploadedFiles: FileCellData[] = [];
