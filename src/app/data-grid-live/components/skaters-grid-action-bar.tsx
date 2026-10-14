@@ -1,15 +1,16 @@
 "use client";
 
-import type { RowData, Table } from "@tanstack/react-table";
-
+import {
+  type Row,
+  type RowData,
+  Subscribe,
+  type Table,
+} from "@tanstack/react-table";
 import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type {
-  CellSelectOption,
-  DataGridTableMeta,
-} from "@/lib/data-grid-types";
+import type { CellSelectOption } from "@/lib/data-grid-types";
 
 import {
   ActionBar,
@@ -26,46 +27,74 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
-interface DataGridActionBarProps<TData extends RowData> {
+type SkaterRows<TData extends RowData> = Array<Row<DataGridFeatures, TData>>;
+
+interface SkatersGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
-  tableMeta: DataGridTableMeta;
-  selectedCellCount: number;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
-  onStatusUpdate?: (value: string) => void;
-  onStyleUpdate?: (value: string) => void;
-  onDelete?: () => void;
+  onStatusUpdate?: (value: string, rows: SkaterRows<TData>) => void;
+  onStyleUpdate?: (value: string, rows: SkaterRows<TData>) => void;
+  onDelete?: (rows: SkaterRows<TData>) => void;
 }
 
-export function DataGridActionBar<TData extends RowData>({
+export function SkatersGridActionBar<TData extends RowData>(
+  props: SkatersGridActionBarProps<TData>,
+) {
+  return (
+    <Subscribe
+      source={props.table.store}
+      selector={(state) => ({
+        rowSelection: state.rowSelection,
+        cellSelection: state.cellSelection,
+      })}
+    >
+      {() => <SkatersGridActionBarImpl {...props} />}
+    </Subscribe>
+  );
+}
+
+function SkatersGridActionBarImpl<TData extends RowData>({
   table,
-  tableMeta,
-  selectedCellCount,
   statusOptions,
   styleOptions,
   onStatusUpdate,
   onStyleUpdate,
   onDelete,
-}: DataGridActionBarProps<TData>) {
+}: SkatersGridActionBarProps<TData>) {
+  const hasRowSelection = table.getHasRowSelection();
+  const selectedCount = hasRowSelection
+    ? table.getSelectedRowIds().length
+    : table.getSelectedRangeCellCount();
+
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (!open) {
         table.toggleAllRowsSelected(false);
-        tableMeta.onSelectionClear?.();
+        table.clearSelection();
       }
     },
-    [table, tableMeta],
+    [table],
   );
 
   return (
     <ActionBar
       data-grid-popover
-      open={selectedCellCount > 0}
+      open={selectedCount > 0}
       onOpenChange={onOpenChange}
     >
       <ActionBarSelection>
-        <span className="font-medium">{selectedCellCount}</span>
-        <span>{selectedCellCount === 1 ? "cell" : "cells"} selected</span>
+        <span className="font-medium">{selectedCount}</span>
+        <span>
+          {hasRowSelection
+            ? selectedCount === 1
+              ? "row"
+              : "rows"
+            : selectedCount === 1
+              ? "cell"
+              : "cells"}{" "}
+          selected
+        </span>
         <ActionBarSeparator />
         <ActionBarClose>
           <X />
@@ -85,7 +114,9 @@ export function DataGridActionBar<TData extends RowData>({
               {statusOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => onStatusUpdate(option.value)}
+                  onClick={() =>
+                    onStatusUpdate(option.value, getTargetRows(table))
+                  }
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -105,7 +136,9 @@ export function DataGridActionBar<TData extends RowData>({
               {styleOptions.map((option) => (
                 <DropdownMenuItem
                   key={option.value}
-                  onClick={() => onStyleUpdate(option.value)}
+                  onClick={() =>
+                    onStyleUpdate(option.value, getTargetRows(table))
+                  }
                 >
                   {option.label}
                 </DropdownMenuItem>
@@ -114,7 +147,10 @@ export function DataGridActionBar<TData extends RowData>({
           </DropdownMenu>
         )}
         {onDelete && (
-          <ActionBarItem variant="destructive" onClick={onDelete}>
+          <ActionBarItem
+            variant="destructive"
+            onClick={() => onDelete(getTargetRows(table))}
+          >
             <Trash2 />
             Delete
           </ActionBarItem>
@@ -122,4 +158,14 @@ export function DataGridActionBar<TData extends RowData>({
       </ActionBarGroup>
     </ActionBar>
   );
+}
+
+// Checked rows, or the rows a cell range covers
+function getTargetRows<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+) {
+  if (table.getHasRowSelection()) return table.getSelectedRowModel().rows;
+
+  const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
+  return table.getRowModel().rows.filter((row) => rowIds.has(row.id));
 }

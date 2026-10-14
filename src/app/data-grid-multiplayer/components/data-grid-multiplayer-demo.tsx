@@ -1,6 +1,7 @@
 "use client";
 
-import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import type { UserPresence } from "@party/types";
+import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
@@ -9,8 +10,9 @@ import { toast } from "sonner";
 
 import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { CellPresence } from "@/lib/data-grid-types";
 
-import { DataGridActionBar } from "@/app/data-grid-live/components/data-grid-action-bar";
+import { SkatersGridActionBar } from "@/app/data-grid-live/components/skaters-grid-action-bar";
 import {
   getSkaterStatusIcon,
   getStanceIcon,
@@ -24,15 +26,10 @@ import {
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
-import { getCellKey } from "@/lib/data-grid-utils";
 import { generateId } from "@/lib/id";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
-import {
-  type DataGridCellPresence,
-  DataGridPresenceProvider,
-} from "@/registry/bases/radix/components/data-grid/data-grid-presence";
 import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
@@ -48,6 +45,19 @@ import {
 } from "../lib/multiplayer-collection";
 import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 import { DataGridShareMenu } from "./data-grid-share-menu";
+
+type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
+
+// The server doesn't echo your own cell back, so your presence takes it from the grid
+function getPresenceUsers(
+  users: Record<string, UserPresence>,
+  currentUserId: string,
+  activeCell: UserPresence["activeCell"],
+) {
+  const currentUser = users[currentUserId];
+  if (!currentUser) return users;
+  return { ...users, [currentUserId]: { ...currentUser, activeCell } };
+}
 
 const stanceOptions = skaters.stance.enumValues.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
@@ -82,8 +92,8 @@ export function DataGridMultiplayerDemo({
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
 
-  const { data } = useLiveQuery(
-    (q) => {
+  const { data } = useLiveQuery({
+    query: (q) => {
       let query = q.from({ skater: multiplayerCollection });
       for (const sort of sorting) {
         const field = sort.id as keyof SkaterSchema;
@@ -97,8 +107,7 @@ export function DataGridMultiplayerDemo({
       query = query.orderBy((t) => t.skater.order, "asc");
       return query;
     },
-    [sorting],
-  );
+  });
 
   const {
     users,
@@ -388,7 +397,21 @@ export function DataGridMultiplayerDemo({
     [trackRowsDelete, sendRowsDelete],
   );
 
-  const { table, tableMeta, ...dataGridProps } = useDataGrid({
+  const cellPresence = React.useMemo(() => {
+    const presence: Array<CellPresence> = [];
+
+    for (const [userId, user] of Object.entries(users)) {
+      if (userId === currentUserId) continue;
+
+      const { rowId, columnId } = user.activeCell;
+      if (!rowId || !columnId) continue;
+
+      presence.push({ rowId, columnId, color: user.color, name: user.name });
+    }
+    return presence;
+  }, [users, currentUserId]);
+
+  const { table, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
     onRowAdd,
@@ -398,42 +421,36 @@ export function DataGridMultiplayerDemo({
     getRowId: (row) => row.id,
     initialState: {
       columnPinning: { start: ["select"], end: [] },
-      sorting,
     },
+    state: { cellPresence, sorting },
     onSortingChange: setSorting,
     manualSorting: true,
     enableSearch: true,
     enablePaste: true,
   });
 
-  const focusedRowId = tableMeta.focusedCell?.rowId ?? null;
-  const focusedColumnId = tableMeta.focusedCell?.columnId ?? null;
-
   React.useEffect(() => {
-    sendActiveCell(focusedRowId, focusedColumnId);
-  }, [focusedRowId, focusedColumnId, sendActiveCell]);
+    let prevCellKey: string | null = null;
 
-  // The server doesn't echo your own cell back, so your presence takes it from the grid
-  const presenceUsers = React.useMemo(() => {
-    const currentUser = users[currentUserId];
-    if (!currentUser) return users;
-    return {
-      ...users,
-      [currentUserId]: {
-        ...currentUser,
-        activeCell: { rowId: focusedRowId, columnId: focusedColumnId },
-      },
-    };
-  }, [users, currentUserId, focusedRowId, focusedColumnId]);
+    function onCellSelectionChange() {
+      const focusedCell = table.getFocusedCell();
+      const rowId = focusedCell?.row.id ?? null;
+      const columnId = focusedCell?.column.id ?? null;
+      const cellKey = `${rowId}\u0000${columnId}`;
+      if (cellKey === prevCellKey) return;
+      prevCellKey = cellKey;
+      sendActiveCell(rowId, columnId);
+    }
+
+    onCellSelectionChange();
+    const subscription = table.atoms.cellSelection.subscribe(
+      onCellSelectionChange,
+    );
+    return () => subscription.unsubscribe();
+  }, [table, sendActiveCell]);
 
   const onStatusUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       const ids = selectedRows.map((row) => row.original.id);
       multiplayerCollection.update(ids, (drafts) => {
         for (const draft of drafts) draft.status = value as never;
@@ -443,17 +460,11 @@ export function DataGridMultiplayerDemo({
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table, sendCellUpdate],
+    [sendCellUpdate],
   );
 
   const onStyleUpdate = React.useCallback(
-    (value: string) => {
-      const selectedRows = table.getSelectedRowModel().rows;
-      if (selectedRows.length === 0) {
-        toast.error("No skaters selected");
-        return;
-      }
-
+    (value: string, selectedRows: SkaterRows) => {
       const ids = selectedRows.map((row) => row.original.id);
       multiplayerCollection.update(ids, (drafts) => {
         for (const draft of drafts) draft.style = value as never;
@@ -463,21 +474,19 @@ export function DataGridMultiplayerDemo({
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [table, sendCellUpdate],
+    [sendCellUpdate],
   );
 
-  const onDelete = React.useCallback(() => {
-    const selectedRows = table.getSelectedRowModel().rows;
-    if (selectedRows.length === 0) {
-      toast.error("No skaters selected");
-      return;
-    }
-    void tableMeta.onRowsDelete?.(selectedRows.map((row) => row.id));
-    toast.success(
-      `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
-    );
-    table.toggleAllRowsSelected(false);
-  }, [table, tableMeta]);
+  const onDelete = React.useCallback(
+    (selectedRows: SkaterRows) => {
+      void table.deleteRows(selectedRows.map((row) => row.id));
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
+      );
+      table.toggleAllRowsSelected(false);
+    },
+    [table],
+  );
 
   const onUserClick = React.useCallback(
     (
@@ -486,9 +495,9 @@ export function DataGridMultiplayerDemo({
     ) => {
       const { rowId, columnId } = user.activeCell;
       if (!rowId || !columnId) return;
-      tableMeta.scrollToCell?.(rowId, columnId);
+      table.scrollToCell(rowId, columnId);
     },
-    [tableMeta],
+    [table],
   );
 
   const getCellLabel = React.useCallback(
@@ -510,34 +519,28 @@ export function DataGridMultiplayerDemo({
   );
 
   const height = Math.max(400, windowSize.height - 150);
-  const selectedCellCount = tableMeta.selectionState?.selectedCells.size ?? 0;
-
-  const remoteCells = React.useMemo(() => {
-    const map = new Map<string, DataGridCellPresence>();
-
-    for (const [userId, user] of Object.entries(users)) {
-      if (userId === currentUserId) continue;
-
-      const { rowId, columnId } = user.activeCell;
-      if (!rowId || !columnId) continue;
-
-      map.set(getCellKey(rowId, columnId), {
-        color: user.color,
-        name: user.name,
-      });
-    }
-    return map;
-  }, [users, currentUserId]);
 
   return (
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <DataGridPresenceAvatars
-          users={presenceUsers}
-          currentUserId={currentUserId}
-          getCellLabel={getCellLabel}
-          onUserClick={onUserClick}
-        />
+        <table.Subscribe
+          selector={() => {
+            const focusedCell = table.getFocusedCell();
+            return {
+              rowId: focusedCell?.row.id ?? null,
+              columnId: focusedCell?.column.id ?? null,
+            };
+          }}
+        >
+          {(focusedCell) => (
+            <DataGridPresenceAvatars
+              users={getPresenceUsers(users, currentUserId, focusedCell)}
+              currentUserId={currentUserId}
+              getCellLabel={getCellLabel}
+              onUserClick={onUserClick}
+            />
+          )}
+        </table.Subscribe>
         <div
           role="toolbar"
           aria-orientation="horizontal"
@@ -557,18 +560,9 @@ export function DataGridMultiplayerDemo({
           <DataGridViewMenu table={table} align="end" />
         </div>
       </div>
-      <DataGridPresenceProvider value={remoteCells}>
-        <DataGrid
-          {...dataGridProps}
-          table={table}
-          tableMeta={tableMeta}
-          height={height}
-        />
-      </DataGridPresenceProvider>
-      <DataGridActionBar
+      <DataGrid {...dataGridProps} table={table} height={height} />
+      <SkatersGridActionBar
         table={table}
-        tableMeta={tableMeta}
-        selectedCellCount={selectedCellCount}
         statusOptions={statusOptions}
         styleOptions={styleOptions}
         onStatusUpdate={onStatusUpdate}

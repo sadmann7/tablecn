@@ -1,16 +1,19 @@
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, SortingState, Table } from "@tanstack/react-table";
 import type * as React from "react";
 
 import { act, render, renderHook } from "@testing-library/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
-import { stringifyUnknown } from "@/lib/data-grid-utils";
+import {
+  getCellKey,
+  getFocusedCellPosition,
+  stringifyUnknown,
+} from "@/lib/data-grid-utils";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
-// Mock toast
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
@@ -18,7 +21,6 @@ vi.mock("sonner", () => ({
   },
 }));
 
-// Mock useDirection
 vi.mock("@/registry/bases/radix/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
@@ -36,7 +38,6 @@ const testData: TestData[] = [
   { id: "3", name: "Nyjah Huston", trick: "Switch Heel", score: 92 },
 ];
 
-// Simple filter function for testing
 const simpleFilterFn = (
   row: { getValue: (id: string) => unknown },
   _columnId: string,
@@ -64,6 +65,75 @@ const columnsWithSelect: ColumnDef<DataGridFeatures, TestData>[] = [
   { id: "actions" },
 ];
 
+function startEditing(
+  table: ReturnType<typeof useDataGrid<TestData>>["table"],
+  rowId: string,
+  columnId: string,
+) {
+  const cellsByColumnId = table
+    .getCoreRowModel()
+    .rowsById[rowId]?.getAllCellsByColumnId();
+  cellsByColumnId?.[columnId]?.startEditing();
+}
+
+type GridBodyEventType =
+  | "onClick"
+  | "onDoubleClick"
+  | "onMouseDown"
+  | "onMouseOver"
+  | "onMouseUp"
+  | "onContextMenu";
+
+function getFocusedCell(table: Table<DataGridFeatures, TestData> | undefined) {
+  return getFocusedCellPosition(table?.atoms.cellSelection.get() ?? []);
+}
+
+function getSelectedCellKeys(
+  table: Table<DataGridFeatures, TestData> | undefined,
+) {
+  return (table?.getSelectedCells() ?? []).map(({ rowId, columnId }) =>
+    getCellKey(rowId, columnId),
+  );
+}
+
+function fireCellEvent(
+  result: { current: ReturnType<typeof useDataGrid<TestData>> },
+  type: GridBodyEventType,
+  rowId: string,
+  columnId: string,
+  init: object = {},
+) {
+  const { dataGridRef, dataGridBodyProps } = result.current;
+  const previousContainer = dataGridRef.current;
+  const container = document.createElement("div");
+  container.dataset.slot = "grid";
+  const cellElement = document.createElement("div");
+  cellElement.dataset.slot = "data-grid-cell-wrapper";
+  cellElement.dataset.rowId = rowId;
+  cellElement.dataset.columnId = columnId;
+  container.append(cellElement);
+  dataGridRef.current = container;
+
+  try {
+    dataGridBodyProps[type]({
+      target: cellElement,
+      currentTarget: container,
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      defaultPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      ...init,
+    } as unknown as React.MouseEvent<HTMLElement>);
+  } finally {
+    dataGridRef.current = previousContainer;
+  }
+}
+
 function createWrapper() {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
@@ -88,8 +158,16 @@ describe("useDataGrid", () => {
     });
 
     // Run animation frames immediately so effects finish inside `act`.
+    // Frames requested from inside a frame are dropped so self-scheduling loops terminate.
+    let isRunningFrame = false;
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
-      cb(0);
+      if (isRunningFrame) return 0;
+      isRunningFrame = true;
+      try {
+        cb(0);
+      } finally {
+        isRunningFrame = false;
+      }
       return 0;
     });
   });
@@ -110,9 +188,9 @@ describe("useDataGrid", () => {
       );
 
       expect(result.current.table).toBeDefined();
-      expect(result.current.focusedCell).toBeNull();
-      expect(result.current.editingCell).toBeNull();
-      expect(result.current.rowHeight).toBe("short");
+      expect(getFocusedCell(result.current.table)).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
+      expect(result.current.table.state.rowHeight).toBe("short");
     });
 
     it("should initialize with custom rowHeight", () => {
@@ -126,7 +204,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.rowHeight).toBe("tall");
+      expect(result.current.table.state.rowHeight).toBe("tall");
       expect(result.current.table.getRowHeight()).toBe("tall");
       expect(result.current.table.getRowSize()).toBe(76);
     });
@@ -159,16 +237,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      const meta = result.current.tableMeta;
-      expect(meta.onCellClick).toBeDefined();
-      expect(meta.onCellDoubleClick).toBeDefined();
-      expect(meta.onCellEditingStart).toBeDefined();
-      expect(meta.onCellEditingStop).toBeDefined();
-      expect(meta.onCellsCopy).toBeDefined();
-      expect(meta.onCellsCut).toBeDefined();
-      expect(meta.onCellsPaste).toBeDefined();
-      expect(meta.onSelectionClear).toBeDefined();
-      expect(meta.getIsCellSelected).toBeDefined();
+      expect(result.current.dataGridBodyProps.onClick).toBeDefined();
+      expect(result.current.dataGridBodyProps.onDoubleClick).toBeDefined();
+      expect(result.current.table.clearSelection).toBeDefined();
+      expect(result.current.table.getIsCellSelected).toBeDefined();
     });
   });
 
@@ -184,10 +256,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      expect(result.current.focusedCell).toEqual({
+      expect(getFocusedCell(result.current.table)).toEqual({
         rowId: "0",
         columnId: "name",
       });
@@ -204,19 +276,19 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      expect(result.current.focusedCell).toEqual({
+      expect(getFocusedCell(result.current.table)).toEqual({
         rowId: "0",
         columnId: "name",
       });
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick");
+        fireCellEvent(result, "onClick", "1", "trick");
       });
 
-      expect(result.current.focusedCell).toEqual({
+      expect(getFocusedCell(result.current.table)).toEqual({
         rowId: "1",
         columnId: "trick",
       });
@@ -234,23 +306,21 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to focus
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Double click to edit
       act(() => {
-        result.current.tableMeta.onCellDoubleClick?.("0", "name");
+        fireCellEvent(result, "onDoubleClick", "0", "name");
       });
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
     });
 
-    it("should start editing via onCellEditingStart", () => {
+    it("should start editing via cell.startEditing", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -261,16 +331,16 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
     });
 
-    it("should stop editing via onCellEditingStop", async () => {
+    it("should stop editing via table.stopEditing", async () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -281,16 +351,16 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
-      expect(result.current.editingCell).not.toBeNull();
+      expect(result.current.table.getEditingCell()).not.toBeNull();
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.();
+        result.current.table.stopEditing();
       });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
     });
 
     it("should not start editing in readOnly mode", () => {
@@ -305,10 +375,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
       expect(result.current.table.getColumn("name")?.getCanEdit()).toBe(false);
     });
 
@@ -327,11 +397,11 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "1",
         columnId: "trick",
       });
-      expect(result.current.tableMeta.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "1",
         columnId: "trick",
       });
@@ -349,7 +419,7 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
     });
 
     it("should support controlled editing state", async () => {
@@ -366,13 +436,13 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.();
+        result.current.table.stopEditing();
         await Promise.resolve();
       });
 
@@ -383,7 +453,7 @@ describe("useDataGrid", () => {
           ? updater({ rowId: "0", columnId: "name" })
           : updater,
       ).toBeNull();
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
@@ -413,14 +483,14 @@ describe("useDataGrid", () => {
         },
       );
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
 
       rerender({ editingCell: null });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
     });
 
     it("should call the latest onEditingCellChange", async () => {
@@ -443,14 +513,14 @@ describe("useDataGrid", () => {
       rerender({ onEditingCellChange: secondOnChange });
 
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
       expect(firstOnChange).not.toHaveBeenCalled();
       expect(secondOnChange).toHaveBeenCalledTimes(1);
     });
 
-    it("should update read-only column ids when editing permissions change", () => {
+    it("should update column edit permissions when cell editing changes", () => {
       const { result, rerender } = renderHook(
         ({ enableCellEditing }: { enableCellEditing: boolean }) =>
           useDataGrid({
@@ -464,13 +534,11 @@ describe("useDataGrid", () => {
         },
       );
 
-      const disabledIds = result.current.readOnlyColumnIds;
-      expect(disabledIds.has("name")).toBe(true);
+      expect(result.current.table.getColumn("name")?.getCanEdit()).toBe(false);
 
       rerender({ enableCellEditing: true });
 
-      expect(result.current.readOnlyColumnIds).not.toBe(disabledIds);
-      expect(result.current.readOnlyColumnIds.size).toBe(0);
+      expect(result.current.table.getColumn("name")?.getCanEdit()).toBe(true);
     });
 
     it("should not edit when cell editing is disabled for the table", () => {
@@ -488,15 +556,15 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
-        result.current.tableMeta.onDataUpdate?.({
+        startEditing(result.current.table, "0", "name");
+        result.current.table.updateCells({
           rowId: "0",
           columnId: "name",
           value: "Changed",
         });
       });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
       expect(onDataChange).not.toHaveBeenCalled();
     });
 
@@ -525,13 +593,13 @@ describe("useDataGrid", () => {
       expect(result.current.table.getColumn("trick")?.getCanEdit()).toBe(true);
 
       act(() => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.([
+        result.current.table.updateCells([
           { rowId: "0", columnId: "name", value: "Changed" },
           { rowId: "0", columnId: "trick", value: "Ollie" },
         ]);
@@ -561,11 +629,11 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -588,20 +656,13 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Initially no cells are selected
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        false,
-      );
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(false);
 
-      // Click to focus (which doesn't select)
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Single click focuses but doesn't select
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        false,
-      );
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(false);
     });
 
     it("should clear selection via onSelectionClear", () => {
@@ -614,22 +675,142 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Trigger mouse down to start selection
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
-      // Clear selection
       act(() => {
-        result.current.tableMeta.onSelectionClear?.();
+        result.current.table.clearSelection();
       });
 
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        false,
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(false);
+    });
+
+    it("should extend the selection from the focused cell with Shift+click", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
       );
+
+      act(() => {
+        fireCellEvent(result, "onClick", "0", "name");
+      });
+      act(() => {
+        fireCellEvent(result, "onClick", "1", "trick", {
+          shiftKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+      expect(result.current.table.getSelectedRangeCellCount()).toBe(4);
+      expect(result.current.table.getIsCellSelected("1", "trick")).toBe(true);
+      expect(result.current.table.getIsCellSelected("2", "name")).toBe(false);
+    });
+
+    it("should include and exclude cells with Ctrl/Cmd+click", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        fireCellEvent(result, "onClick", "0", "name");
+      });
+      act(() => {
+        fireCellEvent(result, "onClick", "2", "score", {
+          metaKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "2",
+        columnId: "score",
+      });
+      expect(getSelectedCellKeys(result.current.table)).toEqual([
+        getCellKey("0", "name"),
+        getCellKey("2", "score"),
+      ]);
+
+      act(() => {
+        fireCellEvent(result, "onClick", "0", "name", {
+          ctrlKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      expect(getSelectedCellKeys(result.current.table)).toEqual([
+        getCellKey("2", "score"),
+      ]);
+    });
+
+    it("should select a range by dragging and keep focus on the drag start", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        fireCellEvent(result, "onMouseDown", "0", "trick", {
+          button: 0,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+      act(() => {
+        fireCellEvent(result, "onMouseOver", "2", "score");
+      });
+      act(() => {
+        fireCellEvent(result, "onMouseUp", "0", "name");
+      });
+
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "0",
+        columnId: "trick",
+      });
+      expect(result.current.table.getSelectedRangeCellCount()).toBe(6);
+      expect(result.current.table.getIsCellSelected("1", "name")).toBe(false);
+
+      act(() => {
+        fireCellEvent(result, "onMouseOver", "2", "name");
+      });
+
+      expect(result.current.table.getSelectedRangeCellCount()).toBe(6);
+    });
+
+    it("should keep the selection when data changes", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) => useDataGrid({ data, columns: testColumns }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        fireCellEvent(result, "onClick", "0", "name");
+      });
+      act(() => {
+        fireCellEvent(result, "onClick", "1", "trick", {
+          shiftKey: true,
+          preventDefault: vi.fn(),
+        } as unknown as React.MouseEvent);
+      });
+
+      rerender({
+        data: testData.map((row) =>
+          row.id === "1" ? { ...row, name: "Bob Burnquist" } : row,
+        ),
+      });
+
+      expect(result.current.table.getSelectedRangeCellCount()).toBe(4);
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
     });
   });
 
@@ -644,14 +825,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell first
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Copy
       await act(async () => {
-        result.current.tableMeta.onCellsCopy?.();
+        await result.current.table.copySelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
@@ -668,14 +847,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell first
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Try to cut
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).not.toHaveBeenCalled();
@@ -696,14 +873,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell first
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Try to paste
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).not.toHaveBeenCalled();
@@ -725,7 +900,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "0",
           columnId: "name",
           value: "Updated Name",
@@ -753,7 +928,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.([
+        result.current.table.updateCells([
           { rowId: "0", columnId: "name", value: "Updated Name 1" },
           { rowId: "1", columnId: "name", value: "Updated Name 2" },
         ]);
@@ -782,7 +957,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "0",
           columnId: "name",
           value: "Updated Name",
@@ -802,21 +977,18 @@ describe("useDataGrid", () => {
             columns: testColumns,
             onDataChange,
             initialState: {
-              columnFilters: [
-                { id: "name", value: "Hawk" }, // Filter to only show Tony Hawk
-              ],
+              columnFilters: [{ id: "name", value: "Hawk" }],
             },
           }),
         { wrapper: createWrapper() },
       );
 
-      // Get filtered rows - should only have 1 row (Tony Hawk)
       const filteredRows = result.current.table.getRowModel().rows;
       expect(filteredRows.length).toBe(1);
       expect(filteredRows[0]?.original.name).toBe("Tony Hawk");
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: filteredRows[0]?.id ?? "",
           columnId: "score",
           value: 100,
@@ -827,26 +999,23 @@ describe("useDataGrid", () => {
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
 
-      // Should have all 3 rows
       expect(updatedData).toHaveLength(3);
 
-      // Tony Hawk (at index 0 in full dataset) should be updated
       expect(updatedData[0]).toMatchObject({
         id: "1",
         name: "Tony Hawk",
-        score: 100, // Updated value
+        score: 100,
       });
 
-      // Other rows should remain unchanged
       expect(updatedData[1]).toMatchObject({
         id: "2",
         name: "Rodney Mullen",
-        score: 98, // Original value
+        score: 98,
       });
       expect(updatedData[2]).toMatchObject({
         id: "3",
         name: "Nyjah Huston",
-        score: 92, // Original value
+        score: 92,
       });
     });
 
@@ -866,21 +1035,17 @@ describe("useDataGrid", () => {
             columns: testColumns,
             onDataChange,
             initialState: {
-              columnFilters: [
-                { id: "name", value: "B" }, // Filter to show names containing 'B'
-              ],
+              columnFilters: [{ id: "name", value: "B" }],
             },
           }),
         { wrapper: createWrapper() },
       );
 
-      // Get filtered rows - should have 2 rows (Bob and Bam)
       const filteredRows = result.current.table.getRowModel().rows;
       expect(filteredRows.length).toBe(2);
 
-      // Bob is the first filtered row, and index 3 in data
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: filteredRows[0]?.id ?? "",
           columnId: "score",
           value: 95,
@@ -890,21 +1055,18 @@ describe("useDataGrid", () => {
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
 
-      // Should have all 5 rows
       expect(updatedData).toHaveLength(5);
 
-      // Bob (at index 3) should be updated
       expect(updatedData[3]).toMatchObject({
         id: "4",
         name: "Bob Burnquist",
-        score: 95, // Updated value
+        score: 95,
       });
 
-      // Other rows should remain unchanged
-      expect(updatedData[0]?.score).toBe(95); // Tony
-      expect(updatedData[1]?.score).toBe(98); // Rodney
-      expect(updatedData[2]?.score).toBe(92); // Nyjah
-      expect(updatedData[4]?.score).toBe(85); // Bam
+      expect(updatedData[0]?.score).toBe(95);
+      expect(updatedData[1]?.score).toBe(98);
+      expect(updatedData[2]?.score).toBe(92);
+      expect(updatedData[4]?.score).toBe(85);
     });
   });
 
@@ -945,12 +1107,11 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // onRowAdd should still be defined on tableMeta (for internal use)
-      // but the hook's returned onRowAdd checks readOnly internally
+      // The returned onRowAdd checks readOnly internally
       expect(result.current.onRowAdd).toBeDefined();
     });
 
-    it("should provide onRowsDelete callback when prop is provided", () => {
+    it("should delete rows and focus the row that takes their place", async () => {
       const onRowsDelete = vi.fn().mockResolvedValue(undefined);
 
       const { result } = renderHook(
@@ -963,27 +1124,54 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // tableMeta.onRowsDelete should be defined when prop is provided
-      expect(result.current.tableMeta.onRowsDelete).toBeDefined();
+      act(() => {
+        fireCellEvent(result, "onClick", "0", "trick");
+      });
+
+      await act(async () => {
+        await result.current.table.deleteRows(["0"]);
+      });
+
+      expect(onRowsDelete).toHaveBeenCalledWith([testData[0]], ["0"]);
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
     });
 
-    it("should not provide onRowsDelete callback when prop is not provided", () => {
-      const { result } = renderHook(
-        () =>
+    it("should not delete rows without onRowsDelete or when read-only", async () => {
+      const onRowsDelete = vi.fn();
+
+      const { result, rerender } = renderHook(
+        ({ readOnly }) =>
           useDataGrid({
             data: testData,
             columns: testColumns,
+            onRowsDelete: readOnly === undefined ? undefined : onRowsDelete,
+            readOnly,
           }),
-        { wrapper: createWrapper() },
+        {
+          wrapper: createWrapper(),
+          initialProps: { readOnly: undefined as boolean | undefined },
+        },
       );
 
-      // tableMeta.onRowsDelete should be undefined when prop is not provided
-      expect(result.current.tableMeta.onRowsDelete).toBeUndefined();
+      await act(async () => {
+        await result.current.table.deleteRows(["0"]);
+      });
+
+      rerender({ readOnly: true });
+
+      await act(async () => {
+        await result.current.table.deleteRows(["0"]);
+      });
+
+      expect(onRowsDelete).not.toHaveBeenCalled();
     });
   });
 
   describe("search functionality", () => {
-    it("should provide search state when enableSearch is true", () => {
+    it("should start with search closed when enableSearch is true", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -994,13 +1182,13 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.searchState).toBeDefined();
-      expect(result.current.searchState?.searchOpen).toBe(false);
-      expect(result.current.searchState?.searchQuery).toBe("");
-      expect(result.current.searchState?.searchMatches).toEqual([]);
+      expect(result.current.table.options.enableSearch).toBe(true);
+      expect(result.current.table.getSearchOpen()).toBe(false);
+      expect(result.current.table.getSearchQuery()).toBe("");
+      expect(result.current.table.getSearchMatches()).toEqual([]);
     });
 
-    it("should not provide search state when enableSearch is false", () => {
+    it("should keep search disabled when enableSearch is false", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1011,7 +1199,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.searchState).toBeUndefined();
+      expect(result.current.table.options.enableSearch).toBe(false);
     });
 
     it("should open search panel", async () => {
@@ -1026,12 +1214,12 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.searchState?.onSearchOpenChange(true);
+        result.current.table.openSearch();
         // Allow microtask queue to flush
         await Promise.resolve();
       });
 
-      expect(result.current.searchState?.searchOpen).toBe(true);
+      expect(result.current.table.getSearchOpen()).toBe(true);
     });
 
     it("should find matches when searching", () => {
@@ -1046,12 +1234,10 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.searchState?.searchMatches.length).toBeGreaterThan(
-        0,
-      );
+      expect(result.current.table.getSearchMatches().length).toBeGreaterThan(0);
     });
 
     it("should clear search results when query is empty", () => {
@@ -1065,21 +1251,150 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.searchState?.searchMatches.length).toBeGreaterThan(
-        0,
+      expect(result.current.table.getSearchMatches().length).toBeGreaterThan(0);
+
+      act(() => {
+        result.current.table.setSearchQuery("");
+      });
+
+      expect(result.current.table.getSearchMatches()).toEqual([]);
+    });
+  });
+
+  describe("search feature", () => {
+    function getCell(
+      table: ReturnType<typeof useDataGrid<TestData>>["table"],
+      rowId: string,
+      columnId: string,
+    ) {
+      return table.getCoreRowModel().rowsById[rowId]?.getAllCellsByColumnId()[
+        columnId
+      ];
+    }
+
+    it("should focus the first match and flag matching cells", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
       );
 
-      // Clear search
       act(() => {
-        result.current.searchState?.onSearch("");
+        result.current.table.openSearch();
+        result.current.table.setSearchQuery("rodney");
       });
 
-      expect(result.current.searchState?.searchMatches).toEqual([]);
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "1", columnId: "name" },
+      ]);
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "1",
+        columnId: "name",
+      });
+
+      const table = result.current.table;
+      expect(getCell(table, "1", "name")?.getIsSearchMatch()).toBe(true);
+      expect(getCell(table, "1", "name")?.getIsActiveSearchMatch()).toBe(true);
+      expect(getCell(table, "0", "name")?.getIsSearchMatch()).toBe(false);
+    });
+
+    it("should recompute matches when data changes", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("ollie");
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([]);
+
+      rerender({
+        data: [...testData, { id: "4", name: "Ollie", trick: "", score: 0 }],
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "3", columnId: "name" },
+      ]);
+    });
+
+    it("should skip utility columns", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: [
+              { id: "select", accessorFn: () => "Tony" },
+              ...testColumns,
+            ],
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("tony");
+      });
+
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "name" },
+      ]);
+    });
+
+    it("should not open without enableSearch", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.openSearch();
+      });
+
+      expect(result.current.table.getSearchOpen()).toBe(false);
+    });
+
+    it("should keep focus on the active match after closing", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.openSearch();
+        result.current.table.setSearchQuery("kickflip");
+      });
+      act(() => {
+        result.current.table.closeSearch();
+      });
+
+      expect(result.current.table.getSearchQuery()).toBe("");
+      expect(result.current.table.getSearchMatches()).toEqual([]);
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
     });
   });
 
@@ -1102,12 +1417,12 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
       });
 
-      expect(result.current.contextMenu.open).toBe(true);
-      expect(result.current.contextMenu.x).toBe(100);
-      expect(result.current.contextMenu.y).toBe(100);
+      expect(result.current.table.getContextMenu().open).toBe(true);
+      expect(result.current.table.getContextMenu().x).toBe(100);
+      expect(result.current.table.getContextMenu().y).toBe(100);
     });
 
     it("should close context menu via onContextMenuOpenChange", async () => {
@@ -1120,7 +1435,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Open context menu
       const mockEvent = {
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
@@ -1129,24 +1443,23 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       await act(async () => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
         await Promise.resolve();
       });
 
-      expect(result.current.contextMenu.open).toBe(true);
+      expect(result.current.table.getContextMenu().open).toBe(true);
 
-      // Close context menu
       await act(async () => {
-        result.current.tableMeta.onContextMenuOpenChange?.(false);
+        result.current.table.closeContextMenu();
         await Promise.resolve();
       });
 
-      expect(result.current.contextMenu.open).toBe(false);
+      expect(result.current.table.getContextMenu().open).toBe(false);
     });
   });
 
   describe("virtualization", () => {
-    it("should provide virtual items", () => {
+    it("should provide virtualizer options for the grid body", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1156,36 +1469,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.virtualItems).toBeDefined();
-      expect(Array.isArray(result.current.virtualItems)).toBe(true);
-    });
-
-    it("should provide virtualTotalSize", () => {
-      const { result } = renderHook(
-        () =>
-          useDataGrid({
-            data: testData,
-            columns: testColumns,
-          }),
-        { wrapper: createWrapper() },
+      expect(result.current.rowVirtualizerOptions.overscan).toBe(6);
+      expect(typeof result.current.rowVirtualizerOptions.measureElement).toBe(
+        "function",
       );
-
-      expect(result.current.virtualTotalSize).toBeDefined();
-      expect(typeof result.current.virtualTotalSize).toBe("number");
-    });
-
-    it("should provide measureElement function", () => {
-      const { result } = renderHook(
-        () =>
-          useDataGrid({
-            data: testData,
-            columns: testColumns,
-          }),
-        { wrapper: createWrapper() },
-      );
-
-      expect(result.current.measureElement).toBeDefined();
-      expect(typeof result.current.measureElement).toBe("function");
     });
   });
 
@@ -1203,7 +1490,6 @@ describe("useDataGrid", () => {
       expect(result.current.columnSizeVars).toBeDefined();
       expect(typeof result.current.columnSizeVars).toBe("object");
 
-      // Should have size vars for each column
       expect(result.current.columnSizeVars["--col-name-size"]).toBeDefined();
       expect(result.current.columnSizeVars["--col-trick-size"]).toBeDefined();
       expect(result.current.columnSizeVars["--col-score-size"]).toBeDefined();
@@ -1222,7 +1508,7 @@ describe("useDataGrid", () => {
       );
 
       expect(result.current.dataGridRef).toBeDefined();
-      expect(result.current.dataGridRef.current).toBeNull(); // Not mounted
+      expect(result.current.dataGridRef.current).toBeNull();
     });
 
     it("should provide headerRef", () => {
@@ -1268,7 +1554,7 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(result.current.rowHeight).toBe("tall");
+      expect(result.current.table.state.rowHeight).toBe("tall");
       expect(result.current.table.getRowSize()).toBe(76);
       expect(result.current.table.getRowLineCount()).toBe(3);
 
@@ -1277,7 +1563,7 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(result.current.rowHeight).toBe("short");
+      expect(result.current.table.state.rowHeight).toBe("short");
     });
 
     it("should support controlled row height", async () => {
@@ -1294,7 +1580,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.rowHeight).toBe("medium");
+      expect(result.current.table.state.rowHeight).toBe("medium");
 
       await act(async () => {
         result.current.table.setRowHeight("tall");
@@ -1306,7 +1592,7 @@ describe("useDataGrid", () => {
       expect(typeof updater === "function" ? updater("medium") : updater).toBe(
         "tall",
       );
-      expect(result.current.rowHeight).toBe("medium");
+      expect(result.current.table.state.rowHeight).toBe("medium");
     });
   });
 
@@ -1321,10 +1607,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.pasteDialog.open).toBe(false);
+      expect(result.current.table.getPasteDialog().open).toBe(false);
     });
 
-    it("should close paste dialog via onPasteDialogOpenChange", () => {
+    it("should close paste dialog via table.resetPasteDialog", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -1336,10 +1622,155 @@ describe("useDataGrid", () => {
 
       // Close it (even though it's already closed, this tests the callback)
       act(() => {
-        result.current.tableMeta.onPasteDialogOpenChange?.(false);
+        result.current.table.resetPasteDialog(true);
       });
 
-      expect(result.current.pasteDialog.open).toBe(false);
+      expect(result.current.table.getPasteDialog().open).toBe(false);
+    });
+  });
+
+  describe("clipboard feature", () => {
+    it("should ask before adding rows a paste needs", async () => {
+      const onRowsAdd = vi.fn();
+      mockClipboard.readText.mockResolvedValue("a\nb\nc");
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onRowsAdd,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("2", "name");
+      });
+
+      await act(async () => {
+        await result.current.table.pasteCells();
+      });
+
+      expect(result.current.table.getPasteDialog()).toEqual({
+        open: true,
+        rowsNeeded: 2,
+        clipboardText: "a\nb\nc",
+      });
+      expect(onRowsAdd).not.toHaveBeenCalled();
+    });
+
+    it("should paste only what fits when the dialog declines new rows", async () => {
+      const onRowsAdd = vi.fn();
+      const onDataChange = vi.fn();
+      mockClipboard.readText.mockResolvedValue("a\nb\nc");
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onRowsAdd,
+            onDataChange,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("2", "name");
+      });
+      await act(async () => {
+        await result.current.table.pasteCells();
+      });
+      await act(async () => {
+        await result.current.table.pasteCells({ expandRows: false });
+      });
+
+      expect(onRowsAdd).not.toHaveBeenCalled();
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange.mock.calls[0]?.[0][2].name).toBe("a");
+      expect(result.current.table.getPasteDialog().open).toBe(false);
+    });
+
+    it("should add rows through onRowsAdd when expanding", async () => {
+      const onRowsAdd = vi.fn();
+      mockClipboard.readText.mockResolvedValue("a\nb");
+      vi.useFakeTimers();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onRowsAdd,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("2", "name");
+      });
+
+      await act(async () => {
+        const paste = result.current.table.pasteCells({ expandRows: true });
+        await vi.runAllTimersAsync();
+        await paste;
+      });
+      vi.useRealTimers();
+
+      expect(onRowsAdd).toHaveBeenCalledWith(1);
+    });
+
+    it("should report results through onClipboardNotice", async () => {
+      const onClipboardNotice = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onClipboardNotice,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+      await act(async () => {
+        await result.current.table.copySelectedCells();
+      });
+
+      expect(onClipboardNotice).toHaveBeenCalledWith({
+        variant: "success",
+        message: "1 cell copied",
+      });
+    });
+
+    it("should track cut cells and clear them on copy", async () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+      await act(async () => {
+        await result.current.table.cutSelectedCells();
+      });
+      expect(result.current.table.getCutCellGrid()).toEqual([
+        [{ rowId: "0", columnId: "name" }],
+      ]);
+
+      await act(async () => {
+        await result.current.table.copySelectedCells();
+      });
+      expect(result.current.table.getCutCellGrid()).toEqual([]);
     });
   });
 
@@ -1358,14 +1789,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a number cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "score");
+        fireCellEvent(result, "onClick", "0", "score");
       });
 
-      // Paste
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalled();
@@ -1387,15 +1816,13 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Paste will be called internally and should work
       await act(async () => {
         mockClipboard.readText.mockResolvedValue("Test\nValue\nNew");
-        result.current.tableMeta.onCellsPaste?.(false);
+        await result.current.table.pasteCells();
       });
     });
 
@@ -1413,17 +1840,14 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a number cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "score");
+        fireCellEvent(result, "onClick", "0", "score");
       });
 
-      // Paste invalid number
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
-      // Should skip the invalid cell
       expect(onDataChange).not.toHaveBeenCalled();
     });
 
@@ -1441,14 +1865,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Paste
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1479,11 +1901,11 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1524,11 +1946,11 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onPaste).toHaveBeenCalledWith(
@@ -1564,14 +1986,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus and select a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Cut
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk");
@@ -1591,28 +2011,28 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("0", "trick");
+        fireCellEvent(result, "onMouseOver", "0", "trick");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith("Tony Hawk\t900");
       mockClipboard.readText.mockResolvedValue("Tony Hawk\t900");
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick");
+        fireCellEvent(result, "onClick", "1", "trick");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -1631,17 +2051,17 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "name");
+        fireCellEvent(result, "onMouseOver", "1", "name");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsCut?.();
+        await result.current.table.cutSelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith(
@@ -1650,11 +2070,11 @@ describe("useDataGrid", () => {
       mockClipboard.readText.mockResolvedValue("Tony Hawk\nRodney Mullen");
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "name");
+        fireCellEvent(result, "onClick", "1", "name");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -1676,22 +2096,19 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Start selection by mouse down
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
-      // Copy
       await act(async () => {
-        result.current.tableMeta.onCellsCopy?.();
+        await result.current.table.copySelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalled();
@@ -1717,10 +2134,10 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name", mockEvent);
+        fireCellEvent(result, "onClick", "0", "name", mockEvent);
       });
 
-      expect(result.current.focusedCell).toEqual({
+      expect(getFocusedCell(result.current.table)).toEqual({
         rowId: "0",
         columnId: "name",
       });
@@ -1736,12 +2153,10 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to set anchor
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Shift+Click to select range
       const mockEvent = {
         preventDefault: vi.fn(),
         shiftKey: true,
@@ -1750,12 +2165,10 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "trick", mockEvent);
+        fireCellEvent(result, "onClick", "1", "trick", mockEvent);
       });
 
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        true,
-      );
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
     });
 
     it("should handle mouse drag selection", () => {
@@ -1768,9 +2181,8 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Mouse down to start selection
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
           ctrlKey: false,
@@ -1779,19 +2191,15 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Mouse enter to extend selection
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "score");
+        fireCellEvent(result, "onMouseOver", "1", "score");
       });
 
-      // Mouse up to end selection
       act(() => {
-        result.current.tableMeta.onCellMouseUp?.();
+        fireCellEvent(result, "onMouseUp", "0", "name");
       });
 
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        true,
-      );
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
     });
 
     it("should stop selection when document mouseup fires during auto-scroll", () => {
@@ -1818,15 +2226,13 @@ describe("useDataGrid", () => {
 
       // Give onAutoScrollStart a real container so it doesn't bail early.
       const mockContainer = document.createElement("div");
-      (
-        result.current.dataGridRef as React.MutableRefObject<HTMLDivElement>
-      ).current = mockContainer;
+      result.current.dataGridRef.current = mockContainer;
 
-      // Start the drag — this sets isSelecting:true which triggers
+      // Start the drag — this sets dragStartCell which triggers
       // onAutoScrollStart, which synchronously registers the document mouseup
       // listener before queuing the deferred RAF.
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
           ctrlKey: false,
@@ -1835,32 +2241,26 @@ describe("useDataGrid", () => {
         } as unknown as React.MouseEvent);
       });
 
-      // Extend the selection so selectRange populates selectedCells.
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "score");
+        fireCellEvent(result, "onMouseOver", "1", "score");
       });
 
-      // (0, "name") is now inside the committed selection range.
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        true,
-      );
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
 
       // Simulate the user releasing the mouse outside the grid.  The
       // document-level mouseup listener (registered by onAutoScrollStart)
-      // should flip isSelecting to false.
+      // should clear dragStartCell.
       act(() => {
         document.dispatchEvent(new MouseEvent("mouseup"));
       });
 
-      // A subsequent onCellMouseEnter must be a no-op because isSelecting is
-      // now false — so row 2 should never enter the selected set.
+      // A subsequent onCellMouseEnter must be a no-op because the drag has
+      // ended — so row 2 should never enter the selected set.
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("2", "score");
+        fireCellEvent(result, "onMouseOver", "2", "score");
       });
 
-      expect(result.current.tableMeta.getIsCellSelected?.("2", "score")).toBe(
-        false,
-      );
+      expect(result.current.table.getIsCellSelected("2", "score")).toBe(false);
     });
 
     it("should select column when enableColumnSelection is true", () => {
@@ -1875,19 +2275,12 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onColumnClick?.("name");
+        result.current.table.selectColumnCells("name");
       });
 
-      // All cells in the column should be selected
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        true,
-      );
-      expect(result.current.tableMeta.getIsCellSelected?.("1", "name")).toBe(
-        true,
-      );
-      expect(result.current.tableMeta.getIsCellSelected?.("2", "name")).toBe(
-        true,
-      );
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
+      expect(result.current.table.getIsCellSelected("1", "name")).toBe(true);
+      expect(result.current.table.getIsCellSelected("2", "name")).toBe(true);
     });
 
     it("should select data cells with Cmd+A and skip non-navigable columns", () => {
@@ -1913,7 +2306,7 @@ describe("useDataGrid", () => {
       const gridElement = container.firstElementChild as HTMLElement;
 
       act(() => {
-        grid?.tableMeta.onCellClick?.("0", "name");
+        if (grid) fireCellEvent({ current: grid }, "onClick", "0", "name");
       });
 
       act(() => {
@@ -1927,15 +2320,21 @@ describe("useDataGrid", () => {
         );
       });
 
-      expect(grid?.tableMeta.selectionState?.selectedCells.size).toBe(4);
-      expect(grid?.tableMeta.getIsCellSelected?.("0", "name")).toBe(true);
-      expect(grid?.tableMeta.getIsCellSelected?.("1", "trick")).toBe(true);
-      expect(grid?.tableMeta.getIsCellSelected?.("0", "select")).toBe(false);
-      expect(grid?.tableMeta.getIsCellSelected?.("1", "actions")).toBe(false);
-      expect(grid?.tableMeta.selectionState?.selectionRange).toEqual({
-        start: { rowId: "0", columnId: "name" },
-        end: { rowId: "1", columnId: "trick" },
+      expect(grid?.table.getSelectedRangeCellCount()).toBe(4);
+      expect(grid?.table.getIsCellSelected("0", "name")).toBe(true);
+      expect(grid?.table.getIsCellSelected("1", "trick")).toBe(true);
+      expect(grid?.table.getIsCellSelected("0", "select")).toBe(false);
+      expect(grid?.table.getIsCellSelected("1", "actions")).toBe(false);
+      expect(getFocusedCell(gridRef.current?.table)).toEqual({
+        rowId: "0",
+        columnId: "name",
       });
+      expect(getSelectedCellKeys(grid?.table)).toEqual([
+        getCellKey("0", "name"),
+        getCellKey("0", "trick"),
+        getCellKey("1", "name"),
+        getCellKey("1", "trick"),
+      ]);
     });
 
     it("should not count non-navigable columns when selecting rows", () => {
@@ -1953,18 +2352,47 @@ describe("useDataGrid", () => {
         result.current.table.toggleAllRowsSelected(true);
       });
 
-      expect(result.current.tableMeta.selectionState?.selectedCells.size).toBe(
-        4,
-      );
-      expect(result.current.tableMeta.getIsCellSelected?.("1", "select")).toBe(
+      expect(result.current.table.getSelectedRangeCellCount()).toBe(4);
+      expect(result.current.table.getIsCellSelected("1", "select")).toBe(false);
+      expect(result.current.table.getIsCellSelected("1", "actions")).toBe(
         false,
       );
-      expect(result.current.tableMeta.getIsCellSelected?.("1", "actions")).toBe(
-        false,
+      expect(result.current.table.getIsCellSelected("2", "name")).toBe(true);
+    });
+
+    it("should mirror non-contiguous selected rows as separate ranges", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: columnsWithSelect,
+            getRowId: (row) => row.id,
+          }),
+        { wrapper: createWrapper() },
       );
-      expect(result.current.tableMeta.getIsCellSelected?.("2", "name")).toBe(
-        true,
-      );
+
+      act(() => {
+        result.current.table.getRow("1").toggleSelected(true);
+      });
+      act(() => {
+        result.current.table.getRow("3").toggleSelected(true);
+      });
+
+      expect(result.current.table.getCellSelectionBounds()).toEqual([
+        {
+          minRowIndex: 0,
+          maxRowIndex: 0,
+          minColumnIndex: 1,
+          maxColumnIndex: 2,
+        },
+        {
+          minRowIndex: 2,
+          maxRowIndex: 2,
+          minColumnIndex: 1,
+          maxColumnIndex: 2,
+        },
+      ]);
+      expect(result.current.table.getIsCellSelected("2", "name")).toBe(false);
     });
 
     it("should clear selection when clicking column with enableColumnSelection false", () => {
@@ -1978,22 +2406,18 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Select a cell first
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
-      // Click column header
       act(() => {
-        result.current.tableMeta.onColumnClick?.("name");
+        result.current.table.selectColumnCells("name");
       });
 
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        false,
-      );
+      expect(result.current.table.getIsCellSelected("0", "name")).toBe(false);
     });
 
     it("should handle right-click without affecting existing selection", () => {
@@ -2012,15 +2436,10 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       act(() => {
-        result.current.tableMeta.onCellClick?.(
-          "0",
-          "name",
-          mockRightClickEvent,
-        );
+        fireCellEvent(result, "onClick", "0", "name", mockRightClickEvent);
       });
 
-      // Right-click shouldn't change focus
-      expect(result.current.focusedCell).toBeNull();
+      expect(getFocusedCell(result.current.table)).toBeNull();
     });
   });
 
@@ -2036,17 +2455,15 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "Kickflip"
       act(() => {
-        result.current.searchState?.onSearch("Kickflip");
+        result.current.table.setSearchQuery("Kickflip");
       });
 
-      // Navigate to next match
       act(() => {
-        result.current.searchState?.onNavigateToNextMatch();
+        result.current.table.goToNextSearchMatch();
       });
 
-      expect(result.current.searchState?.matchIndex).toBeDefined();
+      expect(result.current.table.getSearchMatchIndex()).toBeDefined();
     });
 
     it("should navigate to previous search match", () => {
@@ -2060,22 +2477,19 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "Kickflip"
       act(() => {
-        result.current.searchState?.onSearch("Kickflip");
+        result.current.table.setSearchQuery("Kickflip");
       });
 
-      // Navigate to next first
       act(() => {
-        result.current.searchState?.onNavigateToNextMatch();
+        result.current.table.goToNextSearchMatch();
       });
 
-      // Then navigate back
       act(() => {
-        result.current.searchState?.onNavigateToPrevMatch();
+        result.current.table.goToPrevSearchMatch();
       });
 
-      expect(result.current.searchState?.matchIndex).toBe(0);
+      expect(result.current.table.getSearchMatchIndex()).toBe(0);
     });
 
     it("should wrap around when navigating past last match", () => {
@@ -2089,22 +2503,19 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for "Kickflip"
       act(() => {
-        result.current.searchState?.onSearch("Kickflip");
+        result.current.table.setSearchQuery("Kickflip");
       });
 
-      const matchCount = result.current.searchState?.searchMatches.length ?? 0;
+      const matchCount = result.current.table.getSearchMatches().length ?? 0;
 
-      // Navigate through all matches
       for (let i = 0; i < matchCount; i++) {
         act(() => {
-          result.current.searchState?.onNavigateToNextMatch();
+          result.current.table.goToNextSearchMatch();
         });
       }
 
-      // Should wrap to 0
-      expect(result.current.searchState?.matchIndex).toBe(0);
+      expect(result.current.table.getSearchMatchIndex()).toBe(0);
     });
 
     it("should provide searchMatchesByRow computed value", () => {
@@ -2118,12 +2529,11 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.searchMatchesByRow).toBeDefined();
+      expect(result.current.table.getSearchMatchesByRowId()).toBeDefined();
     });
 
     it("should provide activeSearchMatch", () => {
@@ -2137,12 +2547,11 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      expect(result.current.activeSearchMatch).toBeDefined();
+      expect(result.current.table.getActiveSearchMatch()).toBeDefined();
     });
 
     it("should update search query", async () => {
@@ -2157,11 +2566,11 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        result.current.searchState?.onSearchQueryChange("test query");
+        result.current.table.setSearchQuery("test query");
         await Promise.resolve();
       });
 
-      expect(result.current.searchState?.searchQuery).toBe("test query");
+      expect(result.current.table.getSearchQuery()).toBe("test query");
     });
 
     it("should close search and restore focus to last match", async () => {
@@ -2175,25 +2584,22 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Open search
       await act(async () => {
-        result.current.searchState?.onSearchOpenChange(true);
+        result.current.table.openSearch();
         await Promise.resolve();
       });
 
-      // Search for something
       act(() => {
-        result.current.searchState?.onSearch("Tony");
+        result.current.table.setSearchQuery("Tony");
       });
 
-      // Close search
       await act(async () => {
-        result.current.searchState?.onSearchOpenChange(false);
+        result.current.table.closeSearch();
         await Promise.resolve();
       });
 
-      expect(result.current.searchState?.searchOpen).toBe(false);
-      expect(result.current.searchState?.searchQuery).toBe("");
+      expect(result.current.table.getSearchOpen()).toBe(false);
+      expect(result.current.table.getSearchQuery()).toBe("");
     });
   });
 
@@ -2211,10 +2617,10 @@ describe("useDataGrid", () => {
 
       const firstRowId = result.current.table.getRowModel().rows[0]?.id;
       act(() => {
-        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", true, false);
+        result.current.table.getRow(firstRowId ?? "1").toggleSelected(true);
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
+      const rowSelection = result.current.table.atoms.rowSelection.get();
       expect(Object.keys(rowSelection).length).toBeGreaterThan(0);
     });
 
@@ -2233,18 +2639,23 @@ describe("useDataGrid", () => {
       const firstRowId = rows[0]?.id;
       const thirdRowId = rows[2]?.id;
 
-      // Select first row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", true, false);
+        result.current.table
+          .getRow(firstRowId ?? "1")
+          .getToggleSelectedHandler()({ target: { checked: true } });
       });
 
-      // Select third row with shift
       act(() => {
-        result.current.tableMeta.onRowSelect?.(thirdRowId ?? "3", true, true);
+        result.current.table
+          .getRow(thirdRowId ?? "3")
+          .getToggleSelectedHandler()({
+          target: { checked: true },
+          shiftKey: true,
+        });
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
-      expect(Object.keys(rowSelection).length).toBeGreaterThanOrEqual(2);
+      const rowSelection = result.current.table.atoms.rowSelection.get();
+      expect(rowSelection).toEqual({ "1": true, "2": true, "3": true });
     });
 
     it("should deselect row", () => {
@@ -2260,17 +2671,15 @@ describe("useDataGrid", () => {
 
       const firstRowId = result.current.table.getRowModel().rows[0]?.id;
 
-      // Select row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", true, false);
+        result.current.table.getRow(firstRowId ?? "1").toggleSelected(true);
       });
 
-      // Deselect row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(firstRowId ?? "1", false, false);
+        result.current.table.getRow(firstRowId ?? "1").toggleSelected(false);
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
+      const rowSelection = result.current.table.atoms.rowSelection.get();
       expect(rowSelection[firstRowId ?? "1"]).toBeFalsy();
     });
 
@@ -2288,22 +2697,16 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // With filter "name contains Tony", only Tony Hawk (id: "1") should be visible
       const rows = result.current.table.getRowModel().rows;
       expect(rows.length).toBe(1);
       const visibleRowId = rows[0]?.id;
       expect(visibleRowId).toBe("1");
 
-      // Select the visible (filtered) row
       act(() => {
-        result.current.tableMeta.onRowSelect?.(
-          visibleRowId ?? "1",
-          true,
-          false,
-        );
+        result.current.table.getRow(visibleRowId ?? "1").toggleSelected(true);
       });
 
-      const rowSelection = result.current.table.state.rowSelection;
+      const rowSelection = result.current.table.atoms.rowSelection.get();
       expect(rowSelection["1"]).toBe(true);
       expect(Object.keys(rowSelection).length).toBe(1);
     });
@@ -2320,22 +2723,24 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Start editing
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
 
-      // Stop editing and move to next row
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.({ moveToNextRow: true });
+        result.current.table.stopEditing({ moveToNextRow: true });
       });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "1",
+        columnId: "name",
+      });
     });
 
     it("should navigate in direction on Tab while editing", async () => {
@@ -2348,17 +2753,19 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Start editing
       await act(async () => {
-        result.current.tableMeta.onCellEditingStart?.("0", "name");
+        startEditing(result.current.table, "0", "name");
       });
 
-      // Stop editing and navigate right
       await act(async () => {
-        result.current.tableMeta.onCellEditingStop?.({ direction: "right" });
+        result.current.table.stopEditing({ direction: "right" });
       });
 
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "0",
+        columnId: "trick",
+      });
     });
 
     it("should start editing on second click of same cell", () => {
@@ -2371,26 +2778,168 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to focus
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      expect(result.current.focusedCell).toEqual({
+      expect(getFocusedCell(result.current.table)).toEqual({
         rowId: "0",
         columnId: "name",
       });
-      expect(result.current.editingCell).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
 
-      // Second click on same cell to edit
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
+    });
+  });
+
+  describe("navigation feature", () => {
+    function renderGrid(
+      props: Partial<Parameters<typeof useDataGrid<TestData>>[0]> = {},
+    ) {
+      return renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            ...props,
+          }),
+        { wrapper: createWrapper() },
+      );
+    }
+
+    it("should move the focused cell and stop at the grid edges", () => {
+      const { result } = renderGrid();
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+
+      act(() => {
+        result.current.table.navigate("down");
+        result.current.table.navigate("right");
+      });
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "1",
+        columnId: "trick",
+      });
+
+      act(() => {
+        result.current.table.navigate("ctrl+end");
+      });
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "2",
+        columnId: "score",
+      });
+
+      let target: unknown;
+      act(() => {
+        target = result.current.table.navigate("down");
+      });
+      expect(target).toBeNull();
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "2",
+        columnId: "score",
+      });
+    });
+
+    it("should extend the selection without moving the focused cell", () => {
+      const { result } = renderGrid();
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+
+      act(() => {
+        result.current.table.navigate("right", { extend: true });
+        result.current.table.navigate("down", { extend: true });
+      });
+
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+      expect(getSelectedCellKeys(result.current.table)).toHaveLength(4);
+    });
+
+    it("should stop editing when navigating", () => {
+      const { result } = renderGrid();
+
+      act(() => {
+        fireCellEvent(result, "onClick", "0", "name");
+        startEditing(result.current.table, "0", "name");
+      });
+      expect(result.current.table.getEditingCell()).not.toBeNull();
+
+      act(() => {
+        result.current.table.navigate("down");
+      });
+      expect(result.current.table.getEditingCell()).toBeNull();
+    });
+
+    it("should reach utility columns with arrows but skip them for home, end and tab", () => {
+      const { result } = renderGrid({ columns: columnsWithSelect });
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "name");
+      });
+
+      act(() => {
+        result.current.table.navigate("left");
+      });
+      expect(getFocusedCell(result.current.table)?.columnId).toBe("select");
+
+      act(() => {
+        result.current.table.navigate("end");
+      });
+      expect(getFocusedCell(result.current.table)?.columnId).toBe("trick");
+
+      act(() => {
+        result.current.table.navigate("tab");
+      });
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "1",
+        columnId: "name",
+      });
+
+      expect(
+        result.current.table.getNavigationTarget(
+          { rowId: "1", columnId: "name" },
+          "left",
+          { extend: true },
+        ),
+      ).toBeNull();
+    });
+
+    it("should mirror horizontal arrows in RTL", () => {
+      const { result } = renderGrid({ dir: "rtl" });
+
+      act(() => {
+        result.current.table.setFocusedCell("0", "trick");
+      });
+
+      act(() => {
+        result.current.table.navigate("left");
+      });
+      expect(getFocusedCell(result.current.table)?.columnId).toBe("score");
+    });
+
+    it("should use the page size for page up and down", () => {
+      const { result } = renderGrid();
+
+      expect(
+        result.current.table.getNavigationTarget(
+          { rowId: "0", columnId: "name" },
+          "pagedown",
+          { pageSize: 2 },
+        ),
+      ).toEqual({ rowId: "2", columnId: "name" });
     });
   });
 
@@ -2406,8 +2955,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Auto focus should set focused cell
-      expect(result.current.focusedCell).toBeDefined();
+      expect(getFocusedCell(result.current.table)).toBeDefined();
     });
 
     it("should auto focus specific cell when autoFocus is object", () => {
@@ -2421,8 +2969,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Should focus the specified cell
-      expect(result.current.focusedCell).toBeDefined();
+      expect(getFocusedCell(result.current.table)).toBeDefined();
     });
 
     it("should not auto focus when autoFocus is false", () => {
@@ -2436,25 +2983,30 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.focusedCell).toBeNull();
+      expect(getFocusedCell(result.current.table)).toBeNull();
     });
   });
 
   describe("sorting and filtering", () => {
-    it("should call onSortingChange when sorting changes", () => {
+    it("should hand sorting to onSortingChange when controlled", () => {
       const onSortingChange = vi.fn();
 
       const { result } = renderHook(
-        () =>
-          useDataGrid({
+        () => {
+          const [sorting, setSorting] = useState<SortingState>([]);
+          return useDataGrid({
             data: testData,
             columns: testColumns,
-            onSortingChange,
-          }),
+            state: { sorting },
+            onSortingChange: (updater) => {
+              onSortingChange(updater);
+              setSorting(updater);
+            },
+          });
+        },
         { wrapper: createWrapper() },
       );
 
-      // Get the column and toggle sorting
       const nameColumn = result.current.table.getColumn("name");
 
       act(() => {
@@ -2462,9 +3014,12 @@ describe("useDataGrid", () => {
       });
 
       expect(onSortingChange).toHaveBeenCalled();
+      expect(result.current.table.state.sorting).toEqual([
+        { id: "name", desc: false },
+      ]);
     });
 
-    it("should call onColumnFiltersChange when filters change", () => {
+    it("should hand column filters to onColumnFiltersChange", () => {
       const onColumnFiltersChange = vi.fn();
 
       const { result } = renderHook(
@@ -2477,7 +3032,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Set a filter
       act(() => {
         result.current.table.setColumnFilters([{ id: "name", value: "Tony" }]);
       });
@@ -2534,7 +3088,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesUpload).toBeDefined();
+      expect(result.current.table.options.onFilesUpload).toBeDefined();
     });
 
     it("should not provide onFilesUpload when prop is not provided", () => {
@@ -2547,7 +3101,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesUpload).toBeUndefined();
+      expect(result.current.table.options.onFilesUpload).toBeUndefined();
     });
 
     it("should provide onFilesDelete when prop is provided", () => {
@@ -2563,7 +3117,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesDelete).toBeDefined();
+      expect(result.current.table.options.onFilesDelete).toBeDefined();
     });
 
     it("should not provide onFilesDelete when prop is not provided", () => {
@@ -2576,7 +3130,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.onFilesDelete).toBeUndefined();
+      expect(result.current.table.options.onFilesDelete).toBeUndefined();
     });
   });
 
@@ -2597,7 +3151,7 @@ describe("useDataGrid", () => {
   });
 
   describe("context menu advanced", () => {
-    it("should select non-selected cell before opening context menu", () => {
+    it("should focus a non-selected cell before opening context menu", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -2614,16 +3168,18 @@ describe("useDataGrid", () => {
         clientY: 100,
       } as unknown as React.MouseEvent;
 
-      // Right-click on a cell
       act(() => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
       });
 
-      // Should select the cell and open context menu
-      expect(result.current.tableMeta.getIsCellSelected?.("0", "name")).toBe(
-        true,
-      );
-      expect(result.current.contextMenu.open).toBe(true);
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "0",
+        columnId: "name",
+      });
+      expect(getSelectedCellKeys(result.current.table)).toEqual([
+        getCellKey("0", "name"),
+      ]);
+      expect(result.current.table.getContextMenu().open).toBe(true);
     });
 
     it("should keep selection when right-clicking already selected cell", async () => {
@@ -2636,9 +3192,8 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Select multiple cells first
       await act(async () => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
           ctrlKey: false,
@@ -2649,16 +3204,15 @@ describe("useDataGrid", () => {
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "trick");
+        fireCellEvent(result, "onMouseOver", "1", "trick");
         await Promise.resolve();
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellMouseUp?.();
+        fireCellEvent(result, "onMouseUp", "0", "name");
         await Promise.resolve();
       });
 
-      // Right-click on a selected cell
       const mockEvent = {
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
@@ -2667,17 +3221,16 @@ describe("useDataGrid", () => {
       } as unknown as React.MouseEvent;
 
       await act(async () => {
-        result.current.tableMeta.onCellContextMenu?.("0", "name", mockEvent);
+        fireCellEvent(result, "onContextMenu", "0", "name", mockEvent);
         await Promise.resolve();
       });
 
-      // Should keep existing selection and open context menu
-      expect(result.current.contextMenu.open).toBe(true);
+      expect(result.current.table.getContextMenu().open).toBe(true);
     });
   });
 
-  describe("cell selection map optimization", () => {
-    it("should provide cellSelectionMap for performance optimization", () => {
+  describe("cell selection bounds", () => {
+    it("should only count a range once more than the focused cell is selected", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -2687,19 +3240,30 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Initially should be null (no selection)
-      expect(result.current.cellSelectionMap).toBeNull();
+      expect(result.current.table.getHasCellRangeSelection()).toBe(false);
 
-      // Select a cell
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
-          button: 0,
+        fireCellEvent(result, "onClick", "0", "name");
+      });
+
+      expect(result.current.table.getHasCellRangeSelection()).toBe(false);
+      expect(result.current.table.getSelectedRangeCellCount()).toBe(0);
+
+      act(() => {
+        fireCellEvent(result, "onClick", "1", "trick", {
+          shiftKey: true,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
-      // Should now have a map
-      expect(result.current.cellSelectionMap).toBeDefined();
+      expect(result.current.table.getCellSelectionBounds()).toEqual([
+        {
+          minRowIndex: 0,
+          maxRowIndex: 1,
+          minColumnIndex: 0,
+          maxColumnIndex: 1,
+        },
+      ]);
     });
   });
 
@@ -2715,8 +3279,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Virtualizer should be initialized with custom overscan
-      expect(result.current.virtualItems).toBeDefined();
+      expect(result.current.rowVirtualizerOptions.overscan).toBe(10);
     });
   });
 
@@ -2736,14 +3299,12 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Focus a cell
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Paste should work
       await act(async () => {
-        result.current.tableMeta.onCellsPaste?.();
+        await result.current.table.pasteCells();
       });
 
       expect(onDataChange).toHaveBeenCalled();
@@ -2788,8 +3349,8 @@ describe("useDataGrid", () => {
     });
   });
 
-  describe("table meta getters", () => {
-    it("should use getters for dynamic state values in tableMeta", () => {
+  describe("initial table state", () => {
+    it("should start with no focus, editing, selection or menu", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -2799,18 +3360,14 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Access meta getters
-      const meta = result.current.tableMeta;
-      expect(meta.focusedCell).toBeNull();
-      expect(meta.editingCell).toBeNull();
-      expect(meta.selectionState).toBeDefined();
-      expect(meta.searchOpen).toBe(false);
-      expect(meta.contextMenu).toBeDefined();
-      expect(meta.pasteDialog).toBeDefined();
-      expect(meta.readOnly).toBeUndefined();
+      expect(getFocusedCell(result.current.table)).toBeNull();
+      expect(result.current.table.getEditingCell()).toBeNull();
+      expect(result.current.table.getSelectedRangeCellCount()).toBe(0);
+      expect(result.current.table.getSearchOpen()).toBe(false);
+      expect(result.current.table.getContextMenu().open).toBe(false);
     });
 
-    it("should reflect readOnly in tableMeta getter", () => {
+    it("should reflect readOnly on the table", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -2821,7 +3378,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.tableMeta.readOnly).toBe(true);
+      expect(result.current.table.getIsReadOnly()).toBe(true);
     });
   });
 
@@ -2840,7 +3397,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.([]);
+        result.current.table.updateCells([]);
       });
 
       expect(onDataChange).not.toHaveBeenCalled();
@@ -2860,7 +3417,7 @@ describe("useDataGrid", () => {
       );
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "999",
           columnId: "name",
           value: "Invalid",
@@ -2882,21 +3439,18 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Select a cell
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("0", "name", {
+        fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
-      // Click on another cell (non-select column)
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Should maintain or update selection appropriately
-      expect(result.current.focusedCell).toBeDefined();
+      expect(getFocusedCell(result.current.table)).toBeDefined();
     });
   });
 
@@ -2919,7 +3473,6 @@ describe("useDataGrid", () => {
       });
 
       expect(onRowAdd).toHaveBeenCalled();
-      // Should not crash
     });
 
     it("should not proceed if onRowAdd returns null", async () => {
@@ -2978,17 +3531,15 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // First click to focus
       act(() => {
-        result.current.tableMeta.onCellClick?.("0", "name");
+        fireCellEvent(result, "onClick", "0", "name");
       });
 
-      // Double click to edit
       act(() => {
-        result.current.tableMeta.onCellDoubleClick?.("0", "name");
+        fireCellEvent(result, "onDoubleClick", "0", "name");
       });
 
-      expect(result.current.editingCell).toEqual({
+      expect(result.current.table.getEditingCell()).toEqual({
         rowId: "0",
         columnId: "name",
       });
@@ -3009,14 +3560,14 @@ describe("useDataGrid", () => {
       });
 
       act(() => {
-        result.current.tableMeta.onCellClick?.("1", "name");
+        fireCellEvent(result, "onClick", "1", "name");
       });
 
       act(() => {
         result.current.table.setSorting([{ id: "score", desc: false }]);
       });
 
-      expect(result.current.focusedCell).toEqual({
+      expect(getFocusedCell(result.current.table)).toEqual({
         rowId: "1",
         columnId: "name",
       });
@@ -3032,7 +3583,7 @@ describe("useDataGrid", () => {
       expect(result.current.table.getRowModel().rows[0]?.id).toBe("2");
 
       act(() => {
-        result.current.tableMeta.onDataUpdate?.({
+        result.current.table.updateCells({
           rowId: "2",
           columnId: "score",
           value: 99,
@@ -3053,7 +3604,7 @@ describe("useDataGrid", () => {
       );
 
       await act(async () => {
-        await result.current.tableMeta.onRowsDelete?.(["3", "missing"]);
+        await result.current.table.deleteRows(["3", "missing"]);
       });
 
       expect(onRowsDelete).toHaveBeenCalledWith([testData[2]], ["3"]);
@@ -3065,18 +3616,18 @@ describe("useDataGrid", () => {
       });
 
       act(() => {
-        result.current.tableMeta.onCellMouseDown?.("2", "name", {
+        fireCellEvent(result, "onMouseDown", "2", "name", {
           button: 0,
           preventDefault: vi.fn(),
         } as unknown as React.MouseEvent);
       });
 
       act(() => {
-        result.current.tableMeta.onCellMouseEnter?.("1", "name");
+        fireCellEvent(result, "onMouseOver", "1", "name");
       });
 
       await act(async () => {
-        result.current.tableMeta.onCellsCopy?.();
+        await result.current.table.copySelectedCells();
       });
 
       expect(mockClipboard.writeText).toHaveBeenCalledWith(

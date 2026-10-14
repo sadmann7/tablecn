@@ -1,12 +1,13 @@
 "use client";
 
-import type {
-  CellContext,
-  ColumnDef,
-  HeaderContext,
-  RowData,
+import {
+  type CellContext,
+  type ColumnDef,
+  type HeaderContext,
+  type RowData,
+  Subscribe,
+  type TableState,
 } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import * as React from "react";
 
@@ -75,7 +76,7 @@ function DataGridSelectCheckbox({
         <div
           aria-hidden="true"
           className={cn(
-            "pointer-events-none absolute inset-s-3 top-1.5 flex size-4 translate-y-0.5 items-center justify-center text-xs text-muted-foreground tabular-nums transition-opacity group-hover:opacity-0 group-has-focus-visible:opacity-0",
+            "pointer-events-none absolute inset-s-3 top-1.5 flex size-4 translate-y-[3.5px] items-center justify-center text-xs text-muted-foreground tabular-nums group-hover:opacity-0 group-has-focus-visible:opacity-0",
             checked && "opacity-0",
           )}
         >
@@ -85,7 +86,7 @@ function DataGridSelectCheckbox({
           id={id}
           tabIndex={-1}
           className={cn(
-            "relative translate-y-0.5 transition-[shadow,border,opacity] hover:border-primary/40",
+            "relative translate-y-[3.5px] transition-none hover:border-primary/40",
             "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-checked:opacity-100",
             className,
           )}
@@ -102,7 +103,7 @@ function DataGridSelectCheckbox({
         id={id}
         tabIndex={-1}
         className={cn(
-          "relative translate-y-0.5 transition-[shadow,border] hover:border-primary/40",
+          "relative translate-y-[3.5px] transition-none hover:border-primary/40",
           className,
         )}
         checked={checked}
@@ -141,22 +142,35 @@ function DataGridSelectHeader<TData extends RowData>({
   }
 
   return (
-    <DataGridSelectCheckbox
-      aria-label="Select all"
-      checked={table.getIsAllPageRowsSelected()}
-      indeterminate={
-        table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()
-      }
-      onCheckedChange={onCheckedChange}
-      hitboxSize={hitboxSize}
-      debug={debug}
-    />
+    <Subscribe source={table.store} selector={selectSelectAllState}>
+      {() => (
+        <DataGridSelectCheckbox
+          aria-label="Select all"
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={
+            table.getIsSomePageRowsSelected() &&
+            !table.getIsAllPageRowsSelected()
+          }
+          onCheckedChange={onCheckedChange}
+          hitboxSize={hitboxSize}
+          debug={debug}
+        />
+      )}
+    </Subscribe>
   );
+}
+
+// The memoized grid header doesn't follow selection or filters, so select-all subscribes on its own
+function selectSelectAllState(state: TableState<DataGridFeatures>) {
+  return {
+    rowSelection: state.rowSelection,
+    columnFilters: state.columnFilters,
+  };
 }
 
 interface DataGridSelectCellProps<TData extends RowData> extends Pick<
   CellContext<DataGridFeatures, TData>,
-  "row" | "table"
+  "row" | "column" | "table"
 > {
   hitboxSize?: HitboxSize;
   enableRowMarkers?: boolean;
@@ -166,36 +180,38 @@ interface DataGridSelectCellProps<TData extends RowData> extends Pick<
 
 function DataGridSelectCell<TData extends RowData>({
   row,
+  column,
   table,
   hitboxSize,
   enableRowMarkers,
   readOnly,
   debug,
 }: DataGridSelectCellProps<TData>) {
-  const meta = table.options.meta;
   const rowNumber = enableRowMarkers ? row.getDisplayIndex() + 1 : undefined;
 
-  const onCheckedChange = React.useCallback(
-    (value: boolean) => {
-      if (meta?.onRowSelect) {
-        meta.onRowSelect(row.id, value, false);
-      } else {
-        row.toggleSelected(value);
-      }
+  const onToggle = React.useCallback(
+    (checked: boolean, shiftKey: boolean) => {
+      table.setFocusedCell(row.id, column.id);
+      // The checkbox renders a button, so the handler can't read `checked` from the event target
+      row.getToggleSelectedHandler()({ target: { checked }, shiftKey });
     },
-    [meta, row],
+    [table, row, column],
+  );
+
+  const onCheckedChange = React.useCallback(
+    (value: boolean) => onToggle(value, false),
+    [onToggle],
   );
 
   const onClick = React.useCallback<
     NonNullable<React.ComponentProps<typeof Checkbox>["onClick"]>
   >(
     (event) => {
-      if (event.shiftKey) {
-        event.preventDefault();
-        meta?.onRowSelect?.(row.id, !row.getIsSelected(), true);
-      }
+      if (!event.shiftKey) return;
+      event.preventDefault();
+      onToggle(!row.getIsSelected(), true);
     },
-    [meta, row],
+    [row, onToggle],
   );
 
   if (readOnly) {
@@ -253,9 +269,10 @@ export function getDataGridSelectColumn<TData extends RowData>({
         debug={debug}
       />
     ),
-    cell: ({ row, table }) => (
+    cell: ({ row, column, table }) => (
       <DataGridSelectCell
         row={row}
+        column={column}
         table={table}
         enableRowMarkers={enableRowMarkers}
         readOnly={readOnly}
