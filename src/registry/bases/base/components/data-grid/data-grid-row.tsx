@@ -92,7 +92,6 @@ function DataGridRowImpl<TData extends RowData>({
     >
       {(rowState) => (
         <DataGridRowContent
-          row={row}
           virtualItem={virtualItem}
           rowState={rowState}
           {...props}
@@ -102,14 +101,14 @@ function DataGridRowImpl<TData extends RowData>({
   );
 }
 
-interface DataGridRowContentProps<
-  TData extends RowData,
-> extends DataGridRowProps<TData> {
+interface DataGridRowContentProps<TData extends RowData> extends Omit<
+  DataGridRowProps<TData>,
+  "row"
+> {
   rowState: RowState<TData>;
 }
 
 function DataGridRowContent<TData extends RowData>({
-  row,
   virtualItem,
   columnWindow,
   rowState,
@@ -151,7 +150,6 @@ function DataGridRowContent<TData extends RowData>({
 
   return (
     <div
-      key={row.id}
       role="row"
       aria-rowindex={virtualRowIndex + 2}
       aria-selected={isRowSelected}
@@ -201,7 +199,7 @@ function DataGridRowContent<TData extends RowData>({
 
         return (
           <div
-            key={cell.id}
+            key={columnId}
             role={isUtilityCell ? "gridcell" : "none"}
             aria-colindex={isUtilityCell ? columnIndex + 1 : undefined}
             data-slot="data-grid-cell"
@@ -258,6 +256,13 @@ function DataGridDataCell<TData extends RowData>({
   ...props
 }: DataGridDataCellProps<TData>) {
   const [isPreview, setIsPreview] = React.useState(isScrolling);
+  const rowId = props.cell.row.id;
+  const [prevRowId, setPrevRowId] = React.useState(rowId);
+  // Rows are reused by slot, so a cell gets a new row mid scroll and should drop back to the cheap preview
+  if (rowId !== prevRowId) {
+    setPrevRowId(rowId);
+    if (isScrolling && !isPreview) setIsPreview(true);
+  }
   if (isPreview && !isScrolling) setIsPreview(false);
 
   if (isPreview && !props.isFocused && !props.isEditing) {
@@ -275,7 +280,8 @@ function DataGridDataCell<TData extends RowData>({
     );
   }
 
-  return <DataGridCell {...props} />;
+  // Keyed by row so editing and other cell state never carry over to the next row in this slot
+  return <DataGridCell key={rowId} {...props} />;
 }
 
 interface DataGridUtilityCellProps<TData extends RowData> {
