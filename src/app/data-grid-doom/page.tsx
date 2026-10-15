@@ -20,7 +20,8 @@ const DOOM_WASM_URL = "https://diekmann.github.io/wasm-fizzbuzz/doom/doom.wasm";
 const SCREEN_WIDTH = 640;
 const SCREEN_HEIGHT = 400;
 const CELL_SIZE = 36;
-const RESOLUTIONS = [40, 64, 80, 106, 128, 160] as const;
+const RESOLUTIONS = [40, 64, 80, 106, 128, 160, 192, 320] as const;
+const NATIVE_RESOLUTION = 320;
 
 type PixelRow = { id: string } & Record<string, number | string>;
 
@@ -212,15 +213,19 @@ function DoomGrid({
         size: CELL_SIZE,
         minSize: CELL_SIZE,
         maxSize: CELL_SIZE,
-        cell: ({ getValue }) => (
-          <div
-            data-pixel=""
-            className="absolute inset-0"
-            style={{ backgroundColor: toColor(getValue() as number) }}
-          />
-        ),
+        // Direct writes color the grid's own cell element, so each pixel is one element less
+        cell:
+          mode === "dom"
+            ? () => null
+            : ({ getValue }) => (
+                <div
+                  data-pixel=""
+                  className="absolute inset-0"
+                  style={{ backgroundColor: toColor(getValue() as number) }}
+                />
+              ),
       })),
-    [width],
+    [width, mode],
   );
 
   const { table, ...dataGridProps } = useDataGrid({
@@ -348,6 +353,8 @@ function DoomGrid({
     let last = 0;
     let measureStart = 0;
     let statsAt = performance.now();
+    // 4 bits per channel from 160 columns up, where cells are too small to show the banding and every write counts
+    const colorMask = width >= 160 ? 0xf0 : 0xf8;
     const stepX = SCREEN_WIDTH / width;
     const stepY = SCREEN_HEIGHT / height;
     const changedRows = Math.max(1, Math.round(height * damage));
@@ -359,8 +366,7 @@ function DoomGrid({
       )) {
         const y = Number(cell.dataset.rowId?.slice(1));
         const x = Number(cell.dataset.columnId?.slice(1));
-        const pixel = cell.querySelector<HTMLElement>("[data-pixel]");
-        if (pixel) (result[y] ??= [])[x] = pixel;
+        (result[y] ??= [])[x] = cell;
       }
       return result;
     };
@@ -403,11 +409,11 @@ function DoomGrid({
               n++;
             }
           }
-          // 5 bits per channel, so tiny shifts in an average don't count as a changed pixel
+          // Rounding means tiny shifts in an average don't count as a changed pixel
           const rgb =
-            (((r / n) & 0xf8) << 16) |
-            (((g / n) & 0xf8) << 8) |
-            ((b / n) & 0xf8);
+            (((r / n) & colorMask) << 16) |
+            (((g / n) & colorMask) << 8) |
+            ((b / n) & colorMask);
           const index = y * width + x;
           if (current[index] !== rgb) {
             current[index] = rgb;
@@ -559,6 +565,7 @@ function DoomGrid({
               }
             >
               {res}×{Math.round((res * SCREEN_HEIGHT) / SCREEN_WIDTH)}
+              {res === NATIVE_RESOLUTION ? " native" : ""}
             </a>
           ))}
         </span>
@@ -605,7 +612,7 @@ function DoomGrid({
       >
         <div
           // Grid lines cost a border per cell and darken the picture
-          className="[&_[data-slot=data-grid-cell]]:border-0 [&_[data-slot=data-grid-row]]:border-0 [&_[role=grid]]:border-0"
+          className="**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0"
           style={{ zoom, width: gridWidth }}
         >
           <DataGrid {...dataGridProps} table={table} height={gridHeight} />
