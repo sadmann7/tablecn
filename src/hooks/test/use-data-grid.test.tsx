@@ -3083,6 +3083,82 @@ describe("useDataGrid", () => {
       ]);
     });
 
+    it("should sort rows like the built-in sorted row model", () => {
+      interface SortData {
+        id: string;
+        label: string;
+        group: string;
+        score?: number;
+      }
+
+      const data: SortData[] = [
+        { id: "a", label: "Item10", group: "b", score: 2 },
+        { id: "b", label: "item2", group: "a" },
+        { id: "c", label: "Item1", group: "b", score: 1 },
+        { id: "d", label: "item2", group: "a", score: 3 },
+        { id: "e", label: "item20", group: "c", score: 2 },
+      ];
+      const columns: ColumnDef<DataGridFeatures, SortData>[] = [
+        { id: "label", accessorKey: "label" },
+        { id: "group", accessorKey: "group" },
+        { id: "score", accessorKey: "score", sortUndefined: "last" },
+        {
+          id: "length",
+          accessorFn: (row) => row.label.length,
+          sortFn: (rowA, rowB) =>
+            rowA.original.label.length - rowB.original.label.length,
+        },
+      ];
+
+      const { result } = renderHook(
+        () => useDataGrid({ data, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+
+      function getSortedIds(sorting: SortingState) {
+        act(() => {
+          result.current.table.setSorting(sorting);
+        });
+        return result.current.table.getRowModel().rows.map((row) => row.id);
+      }
+
+      // Natural, case-insensitive order with ties kept in data order
+      expect(getSortedIds([{ id: "label", desc: false }])).toEqual([
+        "c",
+        "b",
+        "d",
+        "a",
+        "e",
+      ]);
+      expect(getSortedIds([{ id: "label", desc: true }])).toEqual([
+        "e",
+        "a",
+        "b",
+        "d",
+        "c",
+      ]);
+      expect(
+        getSortedIds([
+          { id: "group", desc: false },
+          { id: "score", desc: true },
+        ]),
+      ).toEqual(["d", "b", "a", "c", "e"]);
+      expect(getSortedIds([{ id: "score", desc: false }])).toEqual([
+        "c",
+        "a",
+        "e",
+        "d",
+        "b",
+      ]);
+      expect(getSortedIds([{ id: "length", desc: false }])).toEqual([
+        "b",
+        "c",
+        "d",
+        "a",
+        "e",
+      ]);
+    });
+
     it("should hand column filters to onColumnFiltersChange", () => {
       const onColumnFiltersChange = vi.fn();
 
