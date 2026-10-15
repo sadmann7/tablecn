@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { Copy, Languages, Trash2 } from "lucide-react";
-import { parseAsNumberLiteral, parseAsStringEnum, useQueryState } from "nuqs";
+import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -61,31 +61,6 @@ const ROW_COUNTS = {
 } as const;
 type RowCount = keyof typeof ROW_COUNTS;
 const ROW_COUNT_KEYS = Object.keys(ROW_COUNTS) as RowCount[];
-
-// Counts the data columns plus the actions column
-const COLUMN_COUNTS = [16, 32, 64] as const;
-
-// Extra columns for wide-grid testing repeat the real ones, read-only so they need no extra row fields
-function getMirrorColumns(
-  columns: ColumnDef<DataGridFeatures, Person>[],
-  count: number,
-): ColumnDef<DataGridFeatures, Person>[] {
-  return Array.from({ length: Math.max(0, count) }, (_, index) => {
-    const base = columns[index % columns.length]!;
-    const copy = 2 + Math.floor(index / columns.length);
-    const key = base.id as keyof Person;
-    const label = `${base.meta?.label ?? base.id} ${copy}`;
-    return {
-      id: `${base.id}${copy}`,
-      accessorFn: (row: Person) => row[key],
-      header: label,
-      minSize: base.minSize,
-      filterFn: base.filterFn,
-      enableCellEditing: false,
-      meta: { ...base.meta, label },
-    } as ColumnDef<DataGridFeatures, Person>;
-  });
-}
 
 interface DataGridDemoImplProps extends UseDataGridProps<Person> {
   toolbar: React.ReactNode;
@@ -165,13 +140,11 @@ function DataGridDemoImpl({
 
 interface DataGridDemoContentProps {
   initialRows: Person[];
-  columnCount: number;
   toolbar: React.ReactNode;
 }
 
 function DataGridDemoContent({
   initialRows,
-  columnCount,
   toolbar,
 }: DataGridDemoContentProps) {
   const [data, setData] = React.useState<Person[]>(initialRows);
@@ -220,22 +193,6 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "age",
-        accessorKey: "age",
-        header: "Age",
-        minSize: 100,
-        filterFn,
-        meta: {
-          label: "Age",
-          cell: {
-            variant: "number",
-            min: 18,
-            max: 100,
-            step: 1,
-          },
-        },
-      },
-      {
         id: "email",
         accessorKey: "email",
         header: "Email",
@@ -249,43 +206,15 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "website",
-        accessorKey: "website",
-        header: "Website",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Website",
-          cell: {
-            variant: "url",
-          },
-        },
-      },
-      {
-        id: "notes",
-        accessorKey: "notes",
-        header: "Notes",
-        minSize: 200,
-        filterFn,
-        meta: {
-          label: "Notes",
-          cell: {
-            variant: "long-text",
-          },
-        },
-      },
-      {
-        id: "salary",
-        accessorKey: "salary",
-        header: "Salary",
+        id: "phone",
+        accessorKey: "phone",
+        header: "Phone",
         minSize: 180,
         filterFn,
         meta: {
-          label: "Salary",
+          label: "Phone",
           cell: {
-            variant: "number",
-            min: 0,
-            step: 1000,
+            variant: "short-text",
           },
         },
       },
@@ -324,19 +253,79 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "skills",
-        accessorKey: "skills",
-        header: "Skills",
-        minSize: 240,
+        id: "location",
+        accessorKey: "location",
+        header: "Location",
+        minSize: 180,
         filterFn,
         meta: {
-          label: "Skills",
+          label: "Location",
           cell: {
-            variant: "multi-select",
-            options: skills.map((skill) => ({
-              label: skill,
-              value: skill,
+            variant: "select",
+            options: locations.map((location) => ({
+              label: location,
+              value: location,
             })),
+          },
+        },
+      },
+      {
+        id: "startDate",
+        accessorKey: "startDate",
+        header: "Start Date",
+        minSize: 150,
+        filterFn,
+        meta: {
+          label: "Start Date",
+          cell: {
+            variant: "date",
+          },
+        },
+      },
+      {
+        id: "salary",
+        accessorKey: "salary",
+        header: "Salary",
+        minSize: 180,
+        filterFn,
+        meta: {
+          label: "Salary",
+          cell: {
+            variant: "number",
+            min: 0,
+            step: 1000,
+          },
+        },
+      },
+      {
+        id: "age",
+        accessorKey: "age",
+        header: "Age",
+        minSize: 100,
+        filterFn,
+        meta: {
+          label: "Age",
+          cell: {
+            variant: "number",
+            min: 18,
+            max: 100,
+            step: 1,
+          },
+        },
+      },
+      {
+        id: "rating",
+        accessorKey: "rating",
+        header: "Rating",
+        minSize: 120,
+        filterFn,
+        meta: {
+          label: "Rating",
+          cell: {
+            variant: "number",
+            min: 1,
+            max: 5,
+            step: 1,
           },
         },
       },
@@ -354,15 +343,32 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "startDate",
-        accessorKey: "startDate",
-        header: "Start Date",
-        minSize: 150,
+        id: "skills",
+        accessorKey: "skills",
+        header: "Skills",
+        minSize: 240,
         filterFn,
         meta: {
-          label: "Start Date",
+          label: "Skills",
           cell: {
-            variant: "date",
+            variant: "multi-select",
+            options: skills.map((skill) => ({
+              label: skill,
+              value: skill,
+            })),
+          },
+        },
+      },
+      {
+        id: "website",
+        accessorKey: "website",
+        header: "Website",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Website",
+          cell: {
+            variant: "url",
           },
         },
       },
@@ -385,48 +391,15 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "phone",
-        accessorKey: "phone",
-        header: "Phone",
-        minSize: 180,
+        id: "notes",
+        accessorKey: "notes",
+        header: "Notes",
+        minSize: 200,
         filterFn,
         meta: {
-          label: "Phone",
+          label: "Notes",
           cell: {
-            variant: "short-text",
-          },
-        },
-      },
-      {
-        id: "location",
-        accessorKey: "location",
-        header: "Location",
-        minSize: 180,
-        filterFn,
-        meta: {
-          label: "Location",
-          cell: {
-            variant: "select",
-            options: locations.map((location) => ({
-              label: location,
-              value: location,
-            })),
-          },
-        },
-      },
-      {
-        id: "rating",
-        accessorKey: "rating",
-        header: "Rating",
-        minSize: 120,
-        filterFn,
-        meta: {
-          label: "Rating",
-          cell: {
-            variant: "number",
-            min: 1,
-            max: 5,
-            step: 1,
+            variant: "long-text",
           },
         },
       },
@@ -435,7 +408,6 @@ function DataGridDemoContent({
     return [
       getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
       ...dataColumns,
-      ...getMirrorColumns(dataColumns, columnCount - 1 - dataColumns.length),
       getDataGridActionsColumn<Person>({
         actions: ({ row, table }) => (
           <>
@@ -455,7 +427,7 @@ function DataGridDemoContent({
         ),
       }),
     ];
-  }, [filterFn, onRowsDuplicate, columnCount]);
+  }, [filterFn, onRowsDuplicate]);
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
     React.useCallback(() => {
@@ -596,12 +568,6 @@ export function DataGridDemo() {
       .withDefault("10k")
       .withOptions({ clearOnDefault: true }),
   );
-  const [columnCount, setColumnCount] = useQueryState(
-    "columnCount",
-    parseAsNumberLiteral(COLUMN_COUNTS)
-      .withDefault(16)
-      .withOptions({ clearOnDefault: true }),
-  );
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
@@ -641,26 +607,6 @@ export function DataGridDemo() {
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Select
-        value={String(columnCount)}
-        onValueChange={(value) => {
-          const next = COLUMN_COUNTS.find((count) => String(count) === value);
-          if (next) void setColumnCount(next);
-        }}
-      >
-        <SelectTrigger aria-label="Column count">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent align="end">
-          <SelectGroup>
-            {COLUMN_COUNTS.map((count) => (
-              <SelectItem key={count} value={String(count)}>
-                {count} columns
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
     </>
   );
 
@@ -687,7 +633,6 @@ export function DataGridDemo() {
     <DataGridDemoContent
       key={dataset.rowCount}
       initialRows={dataset.rows}
-      columnCount={columnCount}
       toolbar={sizeSelects}
     />
   );
