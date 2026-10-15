@@ -3,6 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { Copy, Languages, Trash2 } from "lucide-react";
+import { parseAsNumberLiteral, parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -32,18 +33,62 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/registry/bases/radix/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/registry/bases/radix/ui/select";
+import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
 import {
   departments,
-  initialData,
+  generatePeople,
+  locations,
   type Person,
   skills,
   statuses,
 } from "../lib/seeds";
 import { PeopleGridActionBar } from "./people-grid-action-bar";
 
+const ROW_COUNTS = {
+  "10k": 10_000,
+  "100k": 100_000,
+  "500k": 500_000,
+} as const;
+type RowCount = keyof typeof ROW_COUNTS;
+const ROW_COUNT_KEYS = Object.keys(ROW_COUNTS) as RowCount[];
+
+// Counts the data columns plus the actions column
+const COLUMN_COUNTS = [16, 32, 64] as const;
+
+// Extra columns for wide-grid testing repeat the real ones, read-only so they need no extra row fields
+function getMirrorColumns(
+  columns: ColumnDef<DataGridFeatures, Person>[],
+  count: number,
+): ColumnDef<DataGridFeatures, Person>[] {
+  return Array.from({ length: Math.max(0, count) }, (_, index) => {
+    const base = columns[index % columns.length]!;
+    const copy = 2 + Math.floor(index / columns.length);
+    const key = base.id as keyof Person;
+    const label = `${base.meta?.label ?? base.id} ${copy}`;
+    return {
+      id: `${base.id}${copy}`,
+      accessorFn: (row: Person) => row[key],
+      header: label,
+      minSize: base.minSize,
+      filterFn: base.filterFn,
+      enableCellEditing: false,
+      meta: { ...base.meta, label },
+    } as ColumnDef<DataGridFeatures, Person>;
+  });
+}
+
 interface DataGridDemoImplProps extends UseDataGridProps<Person> {
+  toolbar: React.ReactNode;
   dir: Direction;
   onDirChange: (dir: Direction) => void;
   height: number;
@@ -51,6 +96,7 @@ interface DataGridDemoImplProps extends UseDataGridProps<Person> {
 }
 
 function DataGridDemoImpl({
+  toolbar,
   dir,
   onDirChange,
   height,
@@ -78,6 +124,7 @@ function DataGridDemoImpl({
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
+        {toolbar}
         <Toggle
           aria-label="Toggle text direction"
           dir={dir}
@@ -116,8 +163,18 @@ function DataGridDemoImpl({
   );
 }
 
-export function DataGridDemo() {
-  const [data, setData] = React.useState<Person[]>(initialData);
+interface DataGridDemoContentProps {
+  initialRows: Person[];
+  columnCount: number;
+  toolbar: React.ReactNode;
+}
+
+function DataGridDemoContent({
+  initialRows,
+  columnCount,
+  toolbar,
+}: DataGridDemoContentProps) {
+  const [data, setData] = React.useState<Person[]>(initialRows);
   const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
@@ -147,9 +204,8 @@ export function DataGridDemo() {
     [trackRowsAdd],
   );
 
-  const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(
-    () => [
-      getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(() => {
+    const dataColumns: ColumnDef<DataGridFeatures, Person>[] = [
       {
         id: "name",
         accessorKey: "name",
@@ -328,6 +384,58 @@ export function DataGridDemo() {
           },
         },
       },
+      {
+        id: "phone",
+        accessorKey: "phone",
+        header: "Phone",
+        minSize: 180,
+        filterFn,
+        meta: {
+          label: "Phone",
+          cell: {
+            variant: "short-text",
+          },
+        },
+      },
+      {
+        id: "location",
+        accessorKey: "location",
+        header: "Location",
+        minSize: 180,
+        filterFn,
+        meta: {
+          label: "Location",
+          cell: {
+            variant: "select",
+            options: locations.map((location) => ({
+              label: location,
+              value: location,
+            })),
+          },
+        },
+      },
+      {
+        id: "rating",
+        accessorKey: "rating",
+        header: "Rating",
+        minSize: 120,
+        filterFn,
+        meta: {
+          label: "Rating",
+          cell: {
+            variant: "number",
+            min: 1,
+            max: 5,
+            step: 1,
+          },
+        },
+      },
+    ];
+
+    return [
+      getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
+      ...dataColumns,
+      ...getMirrorColumns(dataColumns, columnCount - 1 - dataColumns.length),
       getDataGridActionsColumn<Person>({
         actions: ({ row, table }) => (
           <>
@@ -346,9 +454,8 @@ export function DataGridDemo() {
           </>
         ),
       }),
-    ],
-    [filterFn, onRowsDuplicate],
-  );
+    ];
+  }, [filterFn, onRowsDuplicate, columnCount]);
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
     React.useCallback(() => {
@@ -469,9 +576,119 @@ export function DataGridDemo() {
         onFilesUpload={onFilesUpload}
         onFilesDelete={onFilesDelete}
         height={height}
+        toolbar={toolbar}
         dir={dir}
         onDirChange={setDir}
       />
     </DirectionProvider>
+  );
+}
+
+interface Dataset {
+  rowCount: RowCount;
+  rows: Person[];
+}
+
+export function DataGridDemo() {
+  const [rowCount, setRowCount] = useQueryState(
+    "rowCount",
+    parseAsStringEnum(ROW_COUNT_KEYS)
+      .withDefault("10k")
+      .withOptions({ clearOnDefault: true }),
+  );
+  const [columnCount, setColumnCount] = useQueryState(
+    "columnCount",
+    parseAsNumberLiteral(COLUMN_COUNTS)
+      .withDefault(16)
+      .withOptions({ clearOnDefault: true }),
+  );
+  const [dataset, setDataset] = React.useState<Dataset | null>(null);
+  const windowSize = useWindowSize({ defaultHeight: 760 });
+
+  // Generating hundreds of thousands of rows takes a moment, so it runs after the skeleton has painted
+  React.useEffect(() => {
+    let timeout = 0;
+    const frame = requestAnimationFrame(() => {
+      timeout = window.setTimeout(() => {
+        setDataset({ rowCount, rows: generatePeople(ROW_COUNTS[rowCount]) });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timeout);
+    };
+  }, [rowCount]);
+
+  const sizeSelects = (
+    <>
+      <Select
+        value={rowCount}
+        onValueChange={(value) => {
+          const next = ROW_COUNT_KEYS.find((key) => key === value);
+          if (next) void setRowCount(next);
+        }}
+      >
+        <SelectTrigger aria-label="Row count">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectGroup>
+            {ROW_COUNT_KEYS.map((key) => (
+              <SelectItem key={key} value={key}>
+                {key} rows
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+      <Select
+        value={String(columnCount)}
+        onValueChange={(value) => {
+          const next = COLUMN_COUNTS.find((count) => String(count) === value);
+          if (next) void setColumnCount(next);
+        }}
+      >
+        <SelectTrigger aria-label="Column count">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="end">
+          <SelectGroup>
+            {COLUMN_COUNTS.map((count) => (
+              <SelectItem key={count} value={String(count)}>
+                {count} columns
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </>
+  );
+
+  if (dataset?.rowCount !== rowCount) {
+    return (
+      <div className="container flex flex-col gap-4 py-4">
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2 self-end"
+        >
+          {sizeSelects}
+          <Skeleton className="h-8 w-80" />
+        </div>
+        <Skeleton
+          className="w-full"
+          style={{ height: Math.max(400, windowSize.height - 150) }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <DataGridDemoContent
+      key={dataset.rowCount}
+      initialRows={dataset.rows}
+      columnCount={columnCount}
+      toolbar={sizeSelects}
+    />
   );
 }
