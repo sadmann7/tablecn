@@ -216,6 +216,8 @@ const STRESS_STEPS: StressStep[] = [
     name: "Search",
     run: async ({ table, signal, measure }) => {
       table.openSearch();
+      // Give the search index time to warm up, like a user moving to the input
+      await pause(signal, 30);
       for (const query of ["j", "jo", "joh", "john", "jo", "ma", "mar", ""]) {
         if (signal.aborted) break;
         await measure(() => table.setSearchQuery(query));
