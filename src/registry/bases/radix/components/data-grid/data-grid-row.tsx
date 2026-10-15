@@ -253,7 +253,6 @@ interface DataGridDataCellProps<
   isScrolling: boolean;
 }
 
-// Cells mounted while scrolling stay previews until scrolling settles, while cells already mounted keep their full component
 function DataGridDataCell<TData extends RowData>({
   isScrolling,
   ...props

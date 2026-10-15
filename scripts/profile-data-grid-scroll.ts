@@ -37,12 +37,10 @@ interface Scenario {
 
 const scenarios: Scenario[] = [
   {
-    // ~40 px per event at ~120 events/s, about 4,800 px/s
     name: "slow-wheel",
     run: (page) => wheel(page, { deltaY: 40, events: 360, intervalMs: 8 }),
   },
   {
-    // Strong flick that decays, like a trackpad fling
     name: "fast-fling",
     run: async (page) => {
       for (let delta = 600; delta > 20; delta *= 0.97) {
@@ -107,7 +105,6 @@ interface FrameStats {
   loafScriptMs: number;
 }
 
-/** Collects rAF deltas and long animation frames until `stopFrameRecorder` is called. */
 function startFrameRecorder() {
   const recorder = {
     deltas: [] as number[],
@@ -166,7 +163,6 @@ function percentile(values: number[], q: number) {
   );
 }
 
-/** Median rAF interval while idle, which is the display's vsync interval. */
 function measureVsync() {
   return new Promise<number>((resolve) => {
     const deltas: number[] = [];
@@ -195,7 +191,6 @@ function summarize(
     p95: at(0.95),
     p99: at(0.99),
     max: Math.max(0, ...deltas),
-    // Frames missed beyond one vsync interval
     droppedFrames: deltas.reduce(
       (sum, delta) => sum + Math.max(0, Math.round(delta / vsync) - 1),
       0,
@@ -268,7 +263,6 @@ function getMainThreadBusyMs(events: TraceEvent[]) {
   return Math.max(0, ...busyByThread.values());
 }
 
-/** Deletes style rules whose selector matches `pattern`, including inside @layer and @media blocks. */
 function stripStyleRules(pattern: string) {
   const regex = new RegExp(pattern);
   let count = 0;
@@ -320,7 +314,6 @@ async function main() {
     viewport: { width: 1920, height: 1080 },
   });
   const cdp = await page.context().newCDPSession(page);
-  // Simulates a slower machine, where headroom that a fast one hides shows up as dropped frames
   const cpuThrottle = Number(process.env.CPU_THROTTLE ?? 1);
   if (cpuThrottle > 1) {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpuThrottle });
@@ -329,7 +322,6 @@ async function main() {
   // tsx keeps function names via an `__name` helper that page.evaluate does not serialize
   await page.addInitScript("globalThis.__name = (fn) => fn");
   await page.goto(`${BASE_URL}/data-grid-stress`);
-  // Lets CSS experiments be A/B tested against the same build
   if (process.env.EXTRA_CSS) {
     await page.addStyleTag({ content: process.env.EXTRA_CSS });
   }

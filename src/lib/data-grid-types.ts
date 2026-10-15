@@ -192,12 +192,9 @@ export interface ColumnWindowItem {
   end: number;
 }
 
-/** Unpinned columns mounted by the horizontal virtualizer. */
 export interface ColumnWindow {
   items: ColumnWindowItem[];
-  /** Offset where unpinned columns begin, the start pinned width. */
   centerStart: number;
-  /** Offset where unpinned columns end. */
   centerEnd: number;
   startCount: number;
   centerCount: number;
