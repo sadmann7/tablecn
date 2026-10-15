@@ -283,6 +283,19 @@ function DataGridDemoContent({
         },
       },
       {
+        id: "review",
+        accessorKey: "review",
+        header: "Review",
+        minSize: 200,
+        filterFn,
+        meta: {
+          label: "Review",
+          cell: {
+            variant: "long-text",
+          },
+        },
+      },
+      {
         id: "salary",
         accessorKey: "salary",
         header: "Salary",
@@ -371,19 +384,6 @@ function DataGridDemoContent({
             accept:
               "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
             multiple: true,
-          },
-        },
-      },
-      {
-        id: "notes",
-        accessorKey: "notes",
-        header: "Notes",
-        minSize: 200,
-        filterFn,
-        meta: {
-          label: "Notes",
-          cell: {
-            variant: "long-text",
           },
         },
       },

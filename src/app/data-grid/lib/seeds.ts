@@ -10,7 +10,7 @@ export interface Person {
   age?: number;
   email?: string;
   website?: string;
-  notes?: string;
+  review?: string;
   salary?: number;
   department?: string;
   status?: string;
@@ -58,7 +58,7 @@ export const skills = [
   "Agile",
 ] as const;
 
-const notes = [
+const reviews = [
   "Excellent team player with strong communication skills. Consistently meets deadlines and delivers high-quality work.",
   "Currently working on the Q4 project initiative. Requires additional training in advanced analytics tools.",
   "Relocated from the Seattle office last month. Adjusting well to the new team dynamics and company culture.",
@@ -171,7 +171,7 @@ function generatePerson(id: number): SeedPerson {
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
     website: faker.internet.url().replace(/\/$/, ""),
-    notes: faker.helpers.arrayElement(notes),
+    review: faker.helpers.arrayElement(reviews),
     salary: faker.number.int({ min: 40000, max: 150000 }),
     department: faker.helpers.arrayElement(departments),
     status: faker.helpers.arrayElement(statuses),
@@ -216,7 +216,7 @@ export function generatePeople(count: number): Person[] {
       age: 22 + (h % 44),
       email: `${firstName}.${lastName}${i}@example.com`.toLowerCase(),
       website: other.website,
-      notes: base.notes,
+      review: base.review,
       salary: 40000 + (h % 111) * 1000,
       department: departments[h % departments.length],
       status: statuses[(h >>> 4) % statuses.length],
