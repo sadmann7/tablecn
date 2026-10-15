@@ -28,7 +28,7 @@ interface DoomEngine {
   pixels: () => Uint8ClampedArray | null;
   frame: () => number;
   step: () => void;
-  key: (pressed: boolean, keyCode: number) => void;
+  key: (pressed: boolean, doomKey: number) => void;
 }
 
 let enginePromise: Promise<DoomEngine> | null = null;
@@ -71,12 +71,28 @@ function loadDoom(): Promise<DoomEngine> {
       pixels: () => screen,
       frame: () => frame,
       step: () => exports.doom_loop_step(),
-      key: (pressed, keyCode) =>
-        exports.add_browser_event(pressed ? 0 : 1, toDoomKey(keyCode)),
+      key: (pressed, doomKey) =>
+        exports.add_browser_event(pressed ? 0 : 1, doomKey),
     };
   })();
   return enginePromise;
 }
+
+// Modern bindings on top of DOOM's own (keyCode to DOOM key codes from doomdef.h)
+const EXTRA_KEYS: Record<number, number> = {
+  87: 173, // W: forward, like the up arrow
+  83: 175, // S: back, like the down arrow
+  65: 44, // A: strafe left, DOOM's ","
+  68: 46, // D: strafe right, DOOM's "."
+  69: 32, // E: use, like Space
+  70: 157, // F: fire, like Ctrl (Ctrl with the arrow keys switches Spaces on macOS)
+};
+
+// DOOM resets a cheat on any key outside its sequence, so remapped letters would break them.
+// The page spots cheats itself and replays them as plain letters instead.
+const CHEAT_PATTERN =
+  /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/;
+const KEY_RSHIFT = 182;
 
 // Browser keyCodes to DOOM's key codes (doomdef.h)
 function toDoomKey(keyCode: number) {
@@ -206,13 +222,29 @@ function DoomGrid({
     void loadDoom().then((loaded) => {
       engine = loaded;
     });
+    let typed = "";
     const onKey = (event: KeyboardEvent) => {
       if (!engine || event.metaKey) return;
-      // F also fires: on macOS, Ctrl with the arrow keys switches Spaces
+      const pressed = event.type === "keydown";
       engine.key(
-        event.type === "keydown",
-        event.keyCode === 70 ? 17 : event.keyCode,
+        pressed,
+        EXTRA_KEYS[event.keyCode] ?? toDoomKey(event.keyCode),
       );
+      if (pressed && /^[a-z0-9]$/i.test(event.key)) {
+        typed = (typed + event.key.toLowerCase()).slice(-12);
+        const cheat = CHEAT_PATTERN.exec(typed)?.[0];
+        if (cheat) {
+          typed = "";
+          // Any key outside the sequence resets DOOM's matcher, then the cheat goes in clean
+          for (const key of [
+            KEY_RSHIFT,
+            ...cheat.split("").map((c) => c.charCodeAt(0)),
+          ]) {
+            engine.key(true, key);
+            engine.key(false, key);
+          }
+        }
+      }
       event.preventDefault();
       event.stopPropagation();
     };
@@ -466,8 +498,9 @@ function DoomGrid({
         )}
         {isPlaying && (
           <span className="text-muted-foreground">
-            Arrows move, F or Ctrl fires, Space opens doors, Alt strafes, Enter
-            and Esc for menus. ⌘ shortcuts still reach the browser.
+            WASD or arrows move (A and D strafe, arrows turn), F or Ctrl fires,
+            E or Space uses, Enter and Esc for menus. ⌘ shortcuts still reach
+            the browser.
           </span>
         )}
       </div>
@@ -478,6 +511,29 @@ function DoomGrid({
       >
         <DataGrid {...dataGridProps} table={table} height={gridHeight} />
       </div>
+      {source === "doom" && (
+        <p className="text-xs text-muted-foreground">
+          DOOM © id Software.{" "}
+          <a
+            href="https://github.com/id-Software/DOOM"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Source code
+          </a>{" "}
+          released under GPL-2.0. WebAssembly port by{" "}
+          <a
+            href="https://github.com/diekmann/wasm-fizzbuzz/tree/main/doom"
+            target="_blank"
+            rel="noreferrer"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            diekmann
+          </a>
+          , with the shareware episode, loaded at runtime from its GitHub Pages.
+        </p>
+      )}
     </div>
   );
 }
