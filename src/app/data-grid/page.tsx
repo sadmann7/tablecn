@@ -15,7 +15,7 @@ export default async function DataGridPage() {
       <Suspense
         fallback={
           <DataGridSkeleton className="container flex flex-col gap-4 py-4">
-            <DataGridSkeletonToolbar actionCount={5} />
+            <DataGridSkeletonToolbar actionCount={7} />
             <DataGridSkeletonGrid />
           </DataGridSkeleton>
         }
