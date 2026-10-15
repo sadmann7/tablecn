@@ -20,7 +20,6 @@ export interface Person {
   attachments?: FileCellData[];
   phone?: string;
   location?: string;
-  rating?: number;
 }
 
 faker.seed(12345);
@@ -186,7 +185,6 @@ function generatePerson(id: number): SeedPerson {
     attachments,
     phone: faker.phone.number({ style: "national" }),
     location: faker.helpers.arrayElement(locations),
-    rating: faker.number.int({ min: 1, max: 5 }),
   };
 }
 
@@ -228,7 +226,6 @@ export function generatePeople(count: number): Person[] {
       attachments: other.attachments,
       phone: base.phone,
       location: locations[(h >>> 8) % locations.length],
-      rating: 1 + ((h >>> 12) % 5),
     };
   });
 }
