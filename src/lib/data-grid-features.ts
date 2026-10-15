@@ -1267,29 +1267,102 @@ const dataGridClipboardFeature: TableFeature = {
   },
 };
 
-function getSearchMatches(
-  query: string,
-  rows: ReturnType<DataGridInstance["getRowModel"]>["rows"],
-  columns: ReturnType<DataGridInstance["getVisibleLeafColumns"]>,
-) {
-  const lowerQuery = query.trim().toLowerCase();
-  if (!lowerQuery) return [];
+interface SearchTextCache {
+  columnsKey: string;
+  textsByRow: WeakMap<object, Array<string>>;
+}
 
+type SearchRow = ReturnType<DataGridInstance["getRowModel"]>["rows"][number];
+type SearchColumns = ReturnType<DataGridInstance["getVisibleLeafColumns"]>;
+
+function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
   const dataColumnIds = columns
     .filter(getIsDataColumn)
     .map((column) => column.id);
 
+  const columnsKey = dataColumnIds.join("\u0000");
+  if (cache.columnsKey !== columnsKey) {
+    cache.columnsKey = columnsKey;
+    cache.textsByRow = new WeakMap();
+  }
+  return dataColumnIds;
+}
+
+// Lowercased cell text is cached per row data, so each keystroke only scans strings
+// instead of reading and stringifying every cell again, and edited rows refresh on their own.
+// Repeated values share one lowercased string to keep the cache small.
+function getRowSearchTexts(
+  row: SearchRow,
+  dataColumnIds: Array<string>,
+  cache: SearchTextCache,
+  lowerByValue: Map<unknown, string>,
+) {
+  const original = row.original;
+  const isCacheable = typeof original === "object" && original !== null;
+  let texts = isCacheable ? cache.textsByRow.get(original) : undefined;
+  if (texts) return texts;
+
+  texts = dataColumnIds.map((columnId) => {
+    const value = row.getValue(columnId);
+    let text = lowerByValue.get(value);
+    if (text === undefined) {
+      text = stringifyUnknown(value).toLowerCase();
+      lowerByValue.set(value, text);
+    }
+    return text;
+  });
+  if (isCacheable) cache.textsByRow.set(original, texts);
+  return texts;
+}
+
+function getSearchMatches(
+  query: string,
+  rows: Array<SearchRow>,
+  columns: SearchColumns,
+  cache: SearchTextCache,
+) {
+  const lowerQuery = query.trim().toLowerCase();
+  if (!lowerQuery) return [];
+
+  const dataColumnIds = getSearchColumnIds(columns, cache);
+  const lowerByValue = new Map<unknown, string>();
+
   const matches: Array<CellPosition> = [];
   for (const row of rows) {
-    const cellsByColumnId = row.getAllCellsByColumnId();
-    for (const columnId of dataColumnIds) {
-      const value = cellsByColumnId[columnId]?.getValue();
-      if (stringifyUnknown(value).toLowerCase().includes(lowerQuery)) {
-        matches.push({ rowId: row.id, columnId });
+    const texts = getRowSearchTexts(row, dataColumnIds, cache, lowerByValue);
+    for (let index = 0; index < texts.length; index++) {
+      if (texts[index]!.includes(lowerQuery)) {
+        matches.push({ rowId: row.id, columnId: dataColumnIds[index]! });
       }
     }
   }
   return matches;
+}
+
+// Fills the search text cache in idle time after search opens, so the first keystroke stays fast
+function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
+  if (typeof requestIdleCallback === "undefined") return;
+
+  const rows = table.getRowModel().rows;
+  const dataColumnIds = getSearchColumnIds(
+    table.getVisibleLeafColumns(),
+    cache,
+  );
+  const columnsKey = cache.columnsKey;
+  const lowerByValue = new Map<unknown, string>();
+  let index = 0;
+
+  function onIdle(deadline: IdleDeadline) {
+    if (!table.atoms.searchOpen.get() || cache.columnsKey !== columnsKey) {
+      return;
+    }
+    while (index < rows.length && deadline.timeRemaining() > 1) {
+      getRowSearchTexts(rows[index++]!, dataColumnIds, cache, lowerByValue);
+    }
+    if (index < rows.length) requestIdleCallback(onIdle);
+  }
+
+  requestIdleCallback(onIdle);
 }
 
 function goToSearchMatch(table: DataGridInstance, step: 1 | -1) {
@@ -1324,6 +1397,11 @@ const dataGridSearchFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
+    const searchTextCache: SearchTextCache = {
+      columnsKey: "",
+      textsByRow: new WeakMap(),
+    };
+
     const setSearchQuery = (query: string) => {
       setStateSlice(instance, "searchQuery", query);
       const firstMatch = instance.getSearchMatches()[0];
@@ -1341,6 +1419,7 @@ const dataGridSearchFeature: TableFeature = {
         fn: () => {
           if (!instance.options.enableSearch) return;
           setStateSlice(instance, "searchOpen", true);
+          warmSearchTextCache(instance, searchTextCache);
         },
       },
       table_closeSearch: {
@@ -1358,7 +1437,8 @@ const dataGridSearchFeature: TableFeature = {
         fn: () => instance.atoms.searchMatchIndex.get(),
       },
       table_getSearchMatches: {
-        fn: getSearchMatches,
+        fn: (query: string, rows: Array<SearchRow>, columns: SearchColumns) =>
+          getSearchMatches(query, rows, columns, searchTextCache),
         memoDeps: () => [
           instance.atoms.searchQuery.get(),
           instance.getRowModel().rows,
