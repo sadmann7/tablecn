@@ -51,6 +51,7 @@ import {
   skills,
   statuses,
 } from "../lib/seeds";
+import { DataGridStressTest } from "./data-grid-stress-test";
 import { PeopleGridActionBar } from "./people-grid-action-bar";
 
 const ROW_COUNTS = {
@@ -98,6 +99,10 @@ function DataGridDemoImpl({
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
+        <DataGridStressTest
+          table={table}
+          dataGridRef={dataGridProps.dataGridRef}
+        />
         {toolbar}
         <Toggle
           aria-label="Toggle text direction"
