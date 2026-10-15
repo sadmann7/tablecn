@@ -114,3 +114,20 @@ Drag progress today: ~47 → ~65 fps. Frames now sit at ~2 vsyncs (p50 16.7 ms).
 Profiler additions: `mainThreadMs` per scenario (top-level tasks on the page's main thread, from the traced run) and `CPU_THROTTLE` to emulate slower machines.
 
 Not tried: rendering drag frames every other vsync, and recycling row elements by slot instead of keying by `row.id` (the remaining path toward 120 fps on scrollbar drag).
+
+## Results (2026-10-16, after row slot reuse)
+
+Row elements reused by slot (5825f9af) landed since the last entry: scrollbar drag now measures ~98–102 fps back to back (was ~65). Other scenarios hold ~118–120. The drag trace shows 240 scroll dispatches averaging 9.5 ms — the synchronous commit is just over one 8.3 ms vsync, so ~30% of frames take two.
+
+**Stub experiment (decisive):** rendering previews with no content holds scrollbar drag at 119.4 fps (2 dropped frames). The whole remaining gap is cell content, ~4.9 ms per commit across ~450 cells (~11 µs each): ~3.3 ms style recalc + layout + paint of the text/badges, ~1.6 ms scripting. Commit infrastructure (React reconciliation, row/cell scaffolding, virtualizers) is no longer the bottleneck.
+
+Changes A/B'd back to back (all within the ±2 fps noise band on drag):
+
+| change | drag fps | verdict |
+| --- | --- | --- |
+| control | 101.9 | — |
+| identity-stable unpinned cell styles + plain-concat cell classNames | 98.9 | neutral, kept (fewer allocations) |
+| preview `line-clamp-1` → `truncate` at short row height | 98.2 | neutral, reverted |
+| column overscan 0 while jumping + shared `Intl.DateTimeFormat` | 101.6 | neutral, kept (strictly less work) |
+
+Takeaway: per-cell content cost is already so lean that no micro-optimization clears the noise floor. The only measured path to 120 fps on scrollbar drag is not rendering cell content during scroll jumps (skeleton cells while `isScrollJumping`, filled on settle) — a visual trade-off, not an engineering one.
