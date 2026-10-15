@@ -1,6 +1,6 @@
 /**
  * Records scroll performance on the /data-grid demo against a running server.
- * PAGE_PATH picks the page and size (default 100k rows, 64 columns).
+ * PAGE_PATH picks the page and size (default 100k rows).
  *
  * Run against a production build on a real 120 Hz display (headed, not headless):
  *   pnpm build && pnpm start
@@ -20,8 +20,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
-const PAGE_PATH =
-  process.env.PAGE_PATH ?? "/data-grid?rowCount=100k&columnCount=64";
+const PAGE_PATH = process.env.PAGE_PATH ?? "/data-grid?rowCount=100k";
 const GRID_SELECTOR = '[data-slot="data-grid"]';
 const TRACE_CATEGORIES = [
   "devtools.timeline",

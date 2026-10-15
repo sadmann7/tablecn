@@ -63,7 +63,7 @@ Every drag frame jumps past the whole window, so all rows unmount and remount. S
 
 Profile a production build (`pnpm build && pnpm start`) on real hardware with a 120 Hz display, not a dev build and not a headless cloud browser.
 
-1. Open `/data-grid?rowCount=100k&columnCount=64` (formerly `/data-grid-stress`).
+1. Open `/data-grid?rowCount=100k` (formerly `/data-grid-stress`).
 2. Record three scroll patterns in the Chrome DevTools Performance panel, or script them with Playwright + CDP tracing:
    - slow wheel / trackpad scroll
    - fast fling
@@ -134,4 +134,4 @@ Takeaway: per-cell content cost is already so lean that no micro-optimization cl
 
 ## Stress page merged into `/data-grid` (2026-10-16)
 
-`/data-grid-stress` is gone. `/data-grid` now has row (10k, 100k, 500k) and column (16, 32, 64) dropdowns, stored as `rowCount` and `columnCount` in the URL. Rows come from a seeded pool, so 500k generate fast and deterministically. Columns past the 15 real ones plus actions are read-only mirrors (Name 2, …). `pnpm profile:scroll` defaults to `/data-grid?rowCount=100k&columnCount=64`; set `PAGE_PATH` for other sizes. Numbers measured on the old page's 100 synthetic columns don't compare directly.
+`/data-grid-stress` is gone. `/data-grid` now has a row count dropdown (10k, 100k, 500k), stored as `rowCount` in the URL, and 15 real columns plus actions. Rows come from a seeded pool, so 500k generate fast and deterministically. `pnpm profile:scroll` defaults to `/data-grid?rowCount=100k`; set `PAGE_PATH` for other sizes. Numbers measured on the old page's 100 synthetic columns don't compare directly, and with 16 columns horizontal scrolling is a much lighter test than before.
