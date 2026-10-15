@@ -192,7 +192,6 @@ function DataGridViewport<TData extends RowData>({
 
   const isScrollJumpingRef = React.useRef(false);
 
-  // Spends most of the overscan ahead of the scroll direction, where rows are about to enter
   const rowRangeExtractor = React.useCallback(
     ({ startIndex, endIndex, overscan: overscanProp, count }: Range) => {
       // While jumping, every frame replaces all rows and pinning covers the gap, so overscan rows are wasted mounts

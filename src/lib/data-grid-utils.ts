@@ -554,10 +554,7 @@ type WindowedColumnEntry<T> =
   | { type: "column"; item: T; colIndex: number }
   | { type: "spacer"; key: string; size: number };
 
-/**
- * Pinned items in full plus the windowed unpinned items, with spacers filling the gaps.
- * `items` must be in render order: start pinned, unpinned, end pinned.
- */
+// `items` must be in render order: start pinned, unpinned, end pinned
 export function getWindowedColumns<T>(
   items: T[],
   columnWindow: ColumnWindow | null,
