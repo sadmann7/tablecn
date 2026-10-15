@@ -47,7 +47,6 @@ import { Toggle } from "@/registry/bases/radix/ui/toggle";
 import {
   departments,
   generatePeople,
-  locations,
   type Person,
   skills,
   statuses,
@@ -193,6 +192,22 @@ function DataGridDemoContent({
         },
       },
       {
+        id: "age",
+        accessorKey: "age",
+        header: "Age",
+        minSize: 100,
+        filterFn,
+        meta: {
+          label: "Age",
+          cell: {
+            variant: "number",
+            min: 18,
+            max: 100,
+            step: 1,
+          },
+        },
+      },
+      {
         id: "email",
         accessorKey: "email",
         header: "Email",
@@ -206,15 +221,15 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "phone",
-        accessorKey: "phone",
-        header: "Phone",
-        minSize: 180,
+        id: "feedback",
+        accessorKey: "feedback",
+        header: "Feedback",
+        minSize: 200,
         filterFn,
         meta: {
-          label: "Phone",
+          label: "Feedback",
           cell: {
-            variant: "short-text",
+            variant: "long-text",
           },
         },
       },
@@ -253,18 +268,18 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "location",
-        accessorKey: "location",
-        header: "Location",
-        minSize: 180,
+        id: "skills",
+        accessorKey: "skills",
+        header: "Skills",
+        minSize: 240,
         filterFn,
         meta: {
-          label: "Location",
+          label: "Skills",
           cell: {
-            variant: "select",
-            options: locations.map((location) => ({
-              label: location,
-              value: location,
+            variant: "multi-select",
+            options: skills.map((skill) => ({
+              label: skill,
+              value: skill,
             })),
           },
         },
@@ -279,19 +294,6 @@ function DataGridDemoContent({
           label: "Start Date",
           cell: {
             variant: "date",
-          },
-        },
-      },
-      {
-        id: "review",
-        accessorKey: "review",
-        header: "Review",
-        minSize: 200,
-        filterFn,
-        meta: {
-          label: "Review",
-          cell: {
-            variant: "long-text",
           },
         },
       },
@@ -311,22 +313,6 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "age",
-        accessorKey: "age",
-        header: "Age",
-        minSize: 100,
-        filterFn,
-        meta: {
-          label: "Age",
-          cell: {
-            variant: "number",
-            min: 18,
-            max: 100,
-            step: 1,
-          },
-        },
-      },
-      {
         id: "isActive",
         accessorKey: "isActive",
         header: "Active",
@@ -336,23 +322,6 @@ function DataGridDemoContent({
           label: "Active",
           cell: {
             variant: "checkbox",
-          },
-        },
-      },
-      {
-        id: "skills",
-        accessorKey: "skills",
-        header: "Skills",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Skills",
-          cell: {
-            variant: "multi-select",
-            options: skills.map((skill) => ({
-              label: skill,
-              value: skill,
-            })),
           },
         },
       },

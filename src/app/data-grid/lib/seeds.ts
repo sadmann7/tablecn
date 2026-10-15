@@ -10,7 +10,7 @@ export interface Person {
   age?: number;
   email?: string;
   website?: string;
-  review?: string;
+  feedback?: string;
   salary?: number;
   department?: string;
   status?: string;
@@ -18,8 +18,6 @@ export interface Person {
   isActive?: boolean;
   startDate?: string;
   attachments?: FileCellData[];
-  phone?: string;
-  location?: string;
 }
 
 faker.seed(12345);
@@ -34,17 +32,6 @@ export const departments = [
 
 export const statuses = ["Active", "On Leave", "Remote", "In Office"] as const;
 
-export const locations = [
-  "New York",
-  "San Francisco",
-  "London",
-  "Berlin",
-  "Tokyo",
-  "Toronto",
-  "Sydney",
-  "Singapore",
-] as const;
-
 export const skills = [
   "JavaScript",
   "TypeScript",
@@ -58,7 +45,7 @@ export const skills = [
   "Agile",
 ] as const;
 
-const reviews = [
+const feedbackNotes = [
   "Excellent team player with strong communication skills. Consistently meets deadlines and delivers high-quality work.",
   "Currently working on the Q4 project initiative. Requires additional training in advanced analytics tools.",
   "Relocated from the Seattle office last month. Adjusting well to the new team dynamics and company culture.",
@@ -171,7 +158,7 @@ function generatePerson(id: number): SeedPerson {
     age: faker.number.int({ min: 22, max: 65 }),
     email: faker.internet.email({ firstName, lastName }).toLowerCase(),
     website: faker.internet.url().replace(/\/$/, ""),
-    review: faker.helpers.arrayElement(reviews),
+    feedback: faker.helpers.arrayElement(feedbackNotes),
     salary: faker.number.int({ min: 40000, max: 150000 }),
     department: faker.helpers.arrayElement(departments),
     status: faker.helpers.arrayElement(statuses),
@@ -183,8 +170,6 @@ function generatePerson(id: number): SeedPerson {
         .split("T")[0] ?? "",
     skills: faker.helpers.arrayElements(skills, { min: 1, max: 5 }),
     attachments,
-    phone: faker.phone.number({ style: "national" }),
-    location: faker.helpers.arrayElement(locations),
   };
 }
 
@@ -216,7 +201,7 @@ export function generatePeople(count: number): Person[] {
       age: 22 + (h % 44),
       email: `${firstName}.${lastName}${i}@example.com`.toLowerCase(),
       website: other.website,
-      review: base.review,
+      feedback: base.feedback,
       salary: 40000 + (h % 111) * 1000,
       department: departments[h % departments.length],
       status: statuses[(h >>> 4) % statuses.length],
@@ -224,8 +209,6 @@ export function generatePeople(count: number): Person[] {
       startDate: other.startDate,
       skills: base.skills,
       attachments: other.attachments,
-      phone: base.phone,
-      location: locations[(h >>> 8) % locations.length],
     };
   });
 }
