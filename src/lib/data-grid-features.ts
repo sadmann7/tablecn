@@ -9,15 +9,20 @@ import {
   columnResizingFeature,
   columnSizingFeature,
   columnVisibilityFeature,
+  copyInstancePropertiesWithoutMemos,
   createFilteredRowModel,
-  createSortedRowModel,
   makeStateUpdater,
   metaHelper,
   type OnChangeFn,
   type RowData,
   rowSelectionFeature,
+  type Row,
+  type RowModel,
   rowSortingFeature,
   setStateSlice,
+  skipFirstRun,
+  type SortFn,
+  type SortFnDef,
   sortFn_alphanumeric,
   sortFn_datetime,
   sortFn_text,
@@ -25,8 +30,14 @@ import {
   type TableFeature,
   type TableFeatures,
   tableFeatures,
+  tableMemo,
   type Updater,
 } from "@tanstack/react-table";
+import {
+  column_getCanSort,
+  column_getSortFn,
+  table_autoResetPageIndex,
+} from "@tanstack/react-table/static-functions";
 
 import type {
   CellPosition,
@@ -1741,6 +1752,158 @@ const dataGridSelectionFeature: TableFeature = {
   },
 };
 
+type SortedRow = Row<TableFeatures, RowData>;
+type SortedRowFn = SortFn<TableFeatures, RowData>;
+
+interface ResolvedSort {
+  id: string;
+  desc: boolean;
+  invertSorting: boolean;
+  sortUndefined: false | -1 | 1 | "first" | "last" | undefined;
+  sortFn: SortedRowFn;
+  /** Set for comparators built with `constructSortFn`, which compare values instead of rows. */
+  compareValues: SortFnDef<TableFeatures, RowData>["sort"] | null;
+}
+
+function getValueSort(sortFn: SortedRowFn) {
+  return "sort" in sortFn && typeof sortFn.sort === "function"
+    ? (sortFn.sort as SortFnDef<TableFeatures, RowData>["sort"])
+    : null;
+}
+
+// Same ordering as `createSortedRowModel`, but each row's sort value is read and resolved once
+// per sort instead of on every comparison, which allocates lowercased strings millions of times
+function createDataGridSortedRowModel<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
+  return (_table) => {
+    const table = _table as unknown as Table<TableFeatures, RowData>;
+    return tableMemo({
+      feature: "rowSortingFeature",
+      table: _table,
+      fnName: "table.getSortedRowModel",
+      memoDeps: () => [
+        table.atoms.sorting?.get(),
+        table.getPreSortedRowModel(),
+      ],
+      fn: () =>
+        getSortedRowModel(table) as unknown as RowModel<TFeatures, TData>,
+      onAfterUpdate: skipFirstRun(() => table_autoResetPageIndex(table)),
+    });
+  };
+}
+
+function getSortedRowModel(
+  table: Table<TableFeatures, RowData>,
+): RowModel<TableFeatures, RowData> {
+  const preSortedRowModel = table.getPreSortedRowModel();
+  const sorting = table.atoms.sorting?.get();
+  if (!preSortedRowModel.rows.length || !sorting?.length) {
+    return preSortedRowModel;
+  }
+
+  const resolvedSorting: Array<ResolvedSort> = [];
+  for (const sort of sorting) {
+    const column = table.getColumn(sort.id);
+    if (!column || !column_getCanSort(column)) continue;
+    const sortFn = column_getSortFn(column);
+    resolvedSorting.push({
+      id: sort.id,
+      desc: sort.desc,
+      invertSorting: !!column.columnDef.invertSorting,
+      sortUndefined: column.columnDef.sortUndefined,
+      sortFn,
+      compareValues: getValueSort(sortFn),
+    });
+  }
+  if (!resolvedSorting.length) return preSortedRowModel;
+
+  const sortedFlatRows: Array<SortedRow> = [];
+
+  function sortRows(rows: Array<SortedRow>) {
+    // Values are only read when a comparator or `sortUndefined` needs them,
+    // custom row comparators read rows themselves
+    const rawValues = resolvedSorting.map((sort) =>
+      sort.compareValues || sort.sortUndefined
+        ? rows.map((row) => row.getValue(sort.id))
+        : null,
+    );
+    // Value-level comparators from `constructSortFn` compare pre-resolved values
+    const sortValues = resolvedSorting.map((sort, sortIndex) => {
+      const values = rawValues[sortIndex];
+      if (!sort.compareValues || !values) return null;
+      const resolve = sort.sortFn.resolveDataValue;
+      return resolve ? values.map((value) => resolve(value)) : values;
+    });
+
+    const order = rows.map((_, index) => index);
+    order.sort((a, b) => {
+      const rowA = rows[a]!;
+      const rowB = rows[b]!;
+      for (let i = 0; i < resolvedSorting.length; i++) {
+        const sort = resolvedSorting[i]!;
+        let sortInt = 0;
+
+        if (sort.sortUndefined) {
+          const values = rawValues[i]!;
+          const isAUndefined = values[a] === undefined;
+          const isBUndefined = values[b] === undefined;
+          if (isAUndefined && isBUndefined) continue;
+          if (isAUndefined || isBUndefined) {
+            if (sort.sortUndefined === "first") return isAUndefined ? -1 : 1;
+            if (sort.sortUndefined === "last") return isAUndefined ? 1 : -1;
+            sortInt = isAUndefined ? sort.sortUndefined : -sort.sortUndefined;
+          }
+        }
+
+        if (sortInt === 0) {
+          const values = sortValues[i];
+          sortInt =
+            values && sort.compareValues
+              ? sort.compareValues(values[a], values[b], rowA, rowB, sort.id)
+              : sort.sortFn(rowA, rowB, sort.id);
+        }
+
+        if (sortInt !== 0) {
+          if (sort.desc) sortInt *= -1;
+          if (sort.invertSorting) sortInt *= -1;
+          return sortInt;
+        }
+      }
+      return rowA.index - rowB.index;
+    });
+
+    const sortedRows = order.map((index) => rows[index]!);
+    let changed = false;
+    for (let i = 0; i < sortedRows.length; i++) {
+      const row = sortedRows[i]!;
+      if (row !== rows[i]) changed = true;
+      const flatIndex = sortedFlatRows.length;
+      sortedFlatRows.push(row);
+
+      if (row.subRows.length) {
+        const sortedSubRows = sortRows(row.subRows);
+        if (sortedSubRows.changed) {
+          const cloned = Object.create(Object.getPrototypeOf(row));
+          copyInstancePropertiesWithoutMemos(cloned, row);
+          cloned.subRows = sortedSubRows.rows;
+          sortedRows[i] = cloned;
+          sortedFlatRows[flatIndex] = cloned;
+          changed = true;
+        }
+      }
+    }
+    return { rows: sortedRows, changed };
+  }
+
+  return {
+    rows: sortRows(preSortedRowModel.rows).rows,
+    flatRows: sortedFlatRows,
+    rowsById: preSortedRowModel.rowsById,
+  };
+}
+
 export const dataGridFeatures = tableFeatures({
   cellSelectionFeature,
   columnFilteringFeature,
@@ -1761,7 +1924,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridPresenceFeature,
   dataGridSelectionFeature,
   filteredRowModel: createFilteredRowModel(),
-  sortedRowModel: createSortedRowModel(),
+  sortedRowModel: createDataGridSortedRowModel(),
   sortFns: {
     alphanumeric: sortFn_alphanumeric,
     datetime: sortFn_datetime,
