@@ -314,22 +314,6 @@ function DataGridDemoContent({
         },
       },
       {
-        id: "rating",
-        accessorKey: "rating",
-        header: "Rating",
-        minSize: 120,
-        filterFn,
-        meta: {
-          label: "Rating",
-          cell: {
-            variant: "number",
-            min: 1,
-            max: 5,
-            step: 1,
-          },
-        },
-      },
-      {
         id: "isActive",
         accessorKey: "isActive",
         header: "Active",
@@ -565,7 +549,7 @@ export function DataGridDemo() {
   const [rowCount, setRowCount] = useQueryState(
     "rowCount",
     parseAsStringEnum(ROW_COUNT_KEYS)
-      .withDefault("10k")
+      .withDefault("100k")
       .withOptions({ clearOnDefault: true }),
   );
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
