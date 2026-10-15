@@ -15,7 +15,7 @@ Frame budget at 120 Hz is ~8.3 ms. The only way to hit it is to keep the work pe
 - Rows pinned to the rendered scroll offset during large jumps (scrollbar drags), so no blank space.
 - Row overscan biased toward the scroll direction.
 - `measureElement` removed; rows use their fixed height from `estimateSize`.
-- 100k row stress demo at `/data-grid-stress`.
+- 100k row stress demo at `/data-grid-stress` (since merged into `/data-grid`, see below).
 
 ## Remaining suspects (in priority order)
 
@@ -63,7 +63,7 @@ Every drag frame jumps past the whole window, so all rows unmount and remount. S
 
 Profile a production build (`pnpm build && pnpm start`) on real hardware with a 120 Hz display, not a dev build and not a headless cloud browser.
 
-1. Open `/data-grid-stress`.
+1. Open `/data-grid?rowCount=100k&columnCount=64` (formerly `/data-grid-stress`).
 2. Record three scroll patterns in the Chrome DevTools Performance panel, or script them with Playwright + CDP tracing:
    - slow wheel / trackpad scroll
    - fast fling
@@ -131,3 +131,7 @@ Changes A/B'd back to back (all within the ±2 fps noise band on drag):
 | column overscan 0 while jumping + shared `Intl.DateTimeFormat` | 101.6 | neutral, kept (strictly less work) |
 
 Takeaway: per-cell content cost is already so lean that no micro-optimization clears the noise floor. The only measured path to 120 fps on scrollbar drag is not rendering cell content during scroll jumps (skeleton cells while `isScrollJumping`, filled on settle) — a visual trade-off, not an engineering one.
+
+## Stress page merged into `/data-grid` (2026-10-16)
+
+`/data-grid-stress` is gone. `/data-grid` now has row (10k, 100k, 500k) and column (16, 32, 64) dropdowns, stored as `rowCount` and `columnCount` in the URL. Rows come from a seeded pool, so 500k generate fast and deterministically. Columns past the 15 real ones plus actions are read-only mirrors (Name 2, …). `pnpm profile:scroll` defaults to `/data-grid?rowCount=100k&columnCount=64`; set `PAGE_PATH` for other sizes. Numbers measured on the old page's 100 synthetic columns don't compare directly.
