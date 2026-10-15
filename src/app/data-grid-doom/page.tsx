@@ -29,6 +29,8 @@ interface DoomEngine {
   frame: () => number;
   step: () => void;
   key: (pressed: boolean, doomKey: number) => void;
+  /** Mouse button bits (1 fires). The port ignores mouse movement, so there's no mouse turning. */
+  mouse: (buttons: number) => void;
 }
 
 let enginePromise: Promise<DoomEngine> | null = null;
@@ -73,6 +75,7 @@ function loadDoom(): Promise<DoomEngine> {
       step: () => exports.doom_loop_step(),
       key: (pressed, doomKey) =>
         exports.add_browser_event(pressed ? 0 : 1, doomKey),
+      mouse: (buttons) => exports.add_browser_event(2, buttons),
     };
   })();
   return enginePromise;
@@ -87,6 +90,18 @@ const EXTRA_KEYS: Record<number, number> = {
   69: 32, // E: use, like Space
   70: 157, // F: fire, like Ctrl (Ctrl with the arrow keys switches Spaces on macOS)
 };
+
+// Keyboard Lock API, Chromium only
+function getKeyboard() {
+  return (
+    navigator as Navigator & {
+      keyboard?: {
+        lock: (keys: string[]) => Promise<void>;
+        unlock: () => void;
+      };
+    }
+  ).keyboard;
+}
 
 // DOOM resets a cheat on any key outside its sequence, so remapped letters would break them.
 // The page spots cheats itself and replays them as plain letters instead.
@@ -215,6 +230,65 @@ function DoomGrid({
     readOnly: true,
   });
 
+  const fullscreenRef = React.useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [viewport, setViewport] = React.useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
+
+  React.useEffect(() => {
+    const onResize = () =>
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    const onFullscreenChange = () => {
+      const isActive = document.fullscreenElement === fullscreenRef.current;
+      setIsFullscreen(isActive);
+      if (!isActive) getKeyboard()?.unlock();
+      onResize();
+    };
+    window.addEventListener("resize", onResize);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, []);
+
+  const onFullscreen = React.useCallback(async () => {
+    setIsPlaying(true);
+    await fullscreenRef.current?.requestFullscreen();
+    // Browsers exit fullscreen on Esc, but DOOM needs it for menus: where supported, holding Esc exits instead
+    await getKeyboard()
+      ?.lock(["Escape"])
+      .catch(() => {});
+  }, []);
+
+  // Alt+Enter (Option+Enter on macOS) toggles fullscreen, the classic PC game shortcut
+  React.useEffect(() => {
+    if (source !== "doom") return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.altKey || event.key !== "Enter") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (document.fullscreenElement) void document.exitFullscreen();
+      else void onFullscreen();
+    };
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [source, onFullscreen]);
+
+  // Left click fires; caught before the grid so it doesn't select cells
+  const onPointerFire = React.useCallback(
+    (event: React.PointerEvent) => {
+      if (!isPlaying || event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const buttons = event.type === "pointerdown" ? 1 : 0;
+      void loadDoom().then((engine) => engine.mouse(buttons));
+    },
+    [isPlaying],
+  );
+
   // Play mode takes the keyboard before the grid's own navigation sees it
   React.useEffect(() => {
     if (!isPlaying || source !== "doom") return;
@@ -225,6 +299,8 @@ function DoomGrid({
     let typed = "";
     const onKey = (event: KeyboardEvent) => {
       if (!engine || event.metaKey) return;
+      // Alt+Enter is the fullscreen shortcut, not game input
+      if (event.altKey && event.key === "Enter") return;
       const pressed = event.type === "keydown";
       engine.key(
         pressed,
@@ -451,11 +527,13 @@ function DoomGrid({
 
   const gridWidth = width * CELL_SIZE + 2;
   const gridHeight = (height + 1) * CELL_SIZE + 2;
-  const fit = Math.min(
-    1,
-    (window.innerWidth - 32) / gridWidth,
-    (window.innerHeight - 140) / gridHeight,
-  );
+  const fit = isFullscreen
+    ? Math.min(viewport.width / gridWidth, viewport.height / gridHeight)
+    : Math.min(
+        1,
+        (viewport.width - 32) / gridWidth,
+        (viewport.height - 140) / gridHeight,
+      );
   // Whole-pixel cells: fractional ones leave anti-aliased seams that read as grid lines
   const zoom = Math.max(1, Math.floor(CELL_SIZE * fit)) / CELL_SIZE;
 
@@ -496,20 +574,42 @@ function DoomGrid({
             {isPlaying ? "Stop playing" : "Play"}
           </Button>
         )}
+        {source === "doom" && (
+          <Button
+            size="sm"
+            variant="outline"
+            title="Alt+Enter (Option+Enter on macOS)"
+            onClick={(event) => {
+              event.currentTarget.blur();
+              void onFullscreen();
+            }}
+          >
+            Fullscreen
+          </Button>
+        )}
         {isPlaying && (
           <span className="text-muted-foreground">
-            WASD or arrows move (A and D strafe, arrows turn), F or Ctrl fires,
-            E or Space uses, Enter and Esc for menus. ⌘ shortcuts still reach
-            the browser.
+            WASD or arrows move (A and D strafe, arrows turn), F, Ctrl or click
+            fires, E or Space uses, Enter and Esc for menus. Alt+Enter toggles
+            fullscreen. ⌘ shortcuts still reach the browser.
           </span>
         )}
       </div>
       <div
-        // Grid lines cost a border per cell and darken the picture
-        className="[&_[data-slot=data-grid-cell]]:border-0 [&_[data-slot=data-grid-row]]:border-0"
-        style={{ zoom, width: gridWidth }}
+        ref={fullscreenRef}
+        className={
+          isFullscreen ? "flex items-center justify-center bg-black" : undefined
+        }
+        onPointerDownCapture={onPointerFire}
+        onPointerUpCapture={onPointerFire}
       >
-        <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+        <div
+          // Grid lines cost a border per cell and darken the picture
+          className="[&_[data-slot=data-grid-cell]]:border-0 [&_[data-slot=data-grid-row]]:border-0 [&_[role=grid]]:border-0"
+          style={{ zoom, width: gridWidth }}
+        >
+          <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+        </div>
       </div>
       {source === "doom" && (
         <p className="text-xs text-muted-foreground">
