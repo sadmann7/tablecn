@@ -244,6 +244,32 @@ const STRESS_STEPS: StressStep[] = [
     },
   },
   {
+    name: "Edit cells",
+    run: async ({ table, signal, measure }) => {
+      const rows = table.getRowModel().rows.slice(0, 5);
+      for (const row of rows) {
+        if (signal.aborted) return;
+        await measure(() =>
+          table.updateCells({
+            rowId: row.id,
+            columnId: "name",
+            value: `${row.original.name ?? ""} (edited)`,
+          }),
+        );
+      }
+      // Put the original values back so the run leaves the data as it found it
+      await measure(() =>
+        table.updateCells(
+          rows.map((row) => ({
+            rowId: row.id,
+            columnId: "name",
+            value: row.original.name,
+          })),
+        ),
+      );
+    },
+  },
+  {
     name: "Select all + scroll",
     run: async ({ table, grid, signal, measure }) => {
       await measure(() => table.selectAllDataCells());
