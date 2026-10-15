@@ -201,21 +201,23 @@ function DataGridViewport<TData extends RowData>({
         direction === "forward"
           ? Math.ceil(overscan / 3)
           : direction === "backward"
-            ? overscan * 2
+            ? overscan * 2 - Math.ceil(overscan / 3)
             : overscan;
-      const after =
-        direction === "forward"
-          ? overscan * 2
-          : direction === "backward"
-            ? Math.ceil(overscan / 3)
-            : overscan;
-      const start = Math.max(0, startIndex - before);
-      const end = Math.min(count - 1, endIndex + after);
+      // Rows are keyed by slot, so the count stays fixed: a changing count would remap every key and re-render every row
+      const viewportHeight = rowVirtualizerRef.current?.scrollRect?.height ?? 0;
+      const visibleCount =
+        viewportHeight > 0
+          ? Math.ceil(viewportHeight / rowSize) + 1
+          : endIndex - startIndex + 1;
+      const total = Math.min(count, visibleCount + overscan * 2);
+      const start = Math.max(0, Math.min(startIndex - before, count - total));
       const indexes: Array<number> = [];
-      for (let index = start; index <= end; index++) indexes.push(index);
+      for (let index = start; index < start + total; index++) {
+        indexes.push(index);
+      }
       return indexes;
     },
-    [rowVirtualizerRef],
+    [rowVirtualizerRef, rowSize],
   );
 
   const rowVirtualizer = useVirtualizer({
@@ -461,13 +463,14 @@ function DataGridViewport<TData extends RowData>({
           }
         >
           <DataGridRowContext value={rowContext}>
-            {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+            {rowVirtualizer.getVirtualItems().map((virtualItem, _, items) => {
               const row = rows[virtualItem.index];
               if (!row) return null;
 
               return (
                 <DataGridRow
-                  key={row.id}
+                  // Keyed by slot so a row scrolling in reuses the elements of the row that scrolled out
+                  key={virtualItem.index % items.length}
                   row={row}
                   virtualItem={virtualItem}
                   columnWindow={columnWindow}
