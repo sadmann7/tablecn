@@ -14,7 +14,10 @@ import { Fps } from "@/registry/bases/radix/ui/fps";
 
 // DOOM rendered through the data grid, one cell per sampled pixel.
 // The engine is diekmann/wasm-fizzbuzz (vanilla DOOM compiled to wasm32 with the shareware WAD embedded), loaded at runtime and never bundled.
-// Query params: res=40|64|80|106|128|160 (columns, 16:10), mode=data|dom, source=doom|plasma, damage (plasma only), auto=1 to expose measurements
+// Query params: res=40|64|80|106|128|160|192|320 (columns, 16:10), mode=data|dom|gradient, source=doom|plasma, damage (plasma only), auto=1 to expose measurements
+// Native 320 defaults to gradient mode: 64,000 per-cell style writes cap out well under 10 fps, while one
+// run-length-encoded linear-gradient per row keeps the whole screen under 200 writes a frame. An adaptive
+// per-frame row budget keeps the frame rate up on large screens by refreshing the picture progressively.
 
 const DOOM_WASM_URL = "https://diekmann.github.io/wasm-fizzbuzz/doom/doom.wasm";
 const SCREEN_WIDTH = 640;
@@ -160,9 +163,19 @@ function toColor(rgb: number) {
 function getParams() {
   const params = new URLSearchParams(window.location.search);
   const res = Number(params.get("res") ?? 128);
+  const columns = (RESOLUTIONS as readonly number[]).includes(res) ? res : 128;
+  const modeParam = params.get("mode");
+  const mode =
+    modeParam === "data" || modeParam === "dom" || modeParam === "gradient"
+      ? modeParam
+      : columns === NATIVE_RESOLUTION
+        ? "gradient"
+        : "dom";
   return {
-    columns: (RESOLUTIONS as readonly number[]).includes(res) ? res : 128,
-    mode: params.get("mode") === "data" ? "data" : "dom",
+    columns,
+    mode,
+    // Resolution links keep an explicit mode but let the per-resolution default apply otherwise
+    modeParam: mode === modeParam ? modeParam : null,
     source: params.get("source") === "plasma" ? "plasma" : "doom",
     damage: Number(params.get("damage") ?? 1),
     auto: params.get("auto") === "1",
@@ -183,6 +196,7 @@ export default function DataGridDoomPage() {
 function DoomGrid({
   columns: width,
   mode,
+  modeParam,
   source,
   damage,
   auto,
@@ -215,7 +229,7 @@ function DoomGrid({
         maxSize: CELL_SIZE,
         // Direct writes color the grid's own cell element, so each pixel is one element less
         cell:
-          mode === "dom"
+          mode !== "data"
             ? () => null
             : ({ getValue }) => (
                 <div
@@ -346,6 +360,19 @@ function DoomGrid({
     let paints = 0;
     let engineFrames = 0;
     let pixels: HTMLElement[][] | null = null;
+    let rowElements: HTMLElement[] | null = null;
+    // Gradient mode paints at most `rowBudget` rows per frame, round-robin, carrying the
+    // rest over: on screens where rastering every row would blow the frame budget, the
+    // frame rate holds and the picture refreshes progressively instead
+    const pendingRows = new Uint8Array(height);
+    let rowBudget = height;
+    let paintCursor = 0;
+    let deltaEma = 0;
+    // Gradient stop positions, precomputed: percentages survive zoom and fullscreen scaling
+    const stops = Array.from(
+      { length: width + 1 },
+      (_, x) => `${((x * 100) / width).toFixed(2)}%`,
+    );
     const current = new Int32Array(width * height).fill(-1);
     // Cells whose color changed since the last paint, so direct writes skip the rest
     const dirty = new Uint8Array(width * height);
@@ -369,6 +396,35 @@ function DoomGrid({
         (result[y] ??= [])[x] = cell;
       }
       return result;
+    };
+
+    const collectRows = () => {
+      const result: HTMLElement[] = [];
+      for (const row of document.querySelectorAll<HTMLElement>(
+        '[role="grid"] [data-slot="data-grid-row"]',
+      )) {
+        const index = Number(row.dataset.index);
+        if (Number.isInteger(index)) result[index] = row;
+      }
+      return result;
+    };
+
+    // One scanline as a hard-stop gradient, run-length encoded: DOOM's flats and the
+    // 4-bit color mask leave long runs, so most rows need far fewer than `width` stops
+    const buildRowGradient = (y: number) => {
+      const offset = y * width;
+      const parts: string[] = [];
+      let runColor = current[offset]!;
+      let runStart = 0;
+      for (let x = 1; x <= width; x++) {
+        dirty[offset + x - 1] = 0;
+        const color = x < width ? current[offset + x]! : -1;
+        if (color === runColor) continue;
+        parts.push(`${toColor(runColor)} ${stops[runStart]} ${stops[x]}`);
+        runColor = color;
+        runStart = x;
+      }
+      return `linear-gradient(90deg,${parts.join(",")})`;
     };
 
     // Samples the source into `current`, returning the rows that changed
@@ -427,6 +483,23 @@ function DoomGrid({
     };
 
     const paint = (changed: number[]) => {
+      if (mode === "gradient") {
+        rowElements ??= collectRows();
+        for (const y of changed) pendingRows[y] = 1;
+        let painted = 0;
+        const cursor = paintCursor;
+        for (let i = 0; i < height && painted < rowBudget; i++) {
+          const y = (cursor + i) % height;
+          if (!pendingRows[y]) continue;
+          pendingRows[y] = 0;
+          const row = rowElements[y];
+          if (row) row.style.backgroundImage = buildRowGradient(y);
+          painted++;
+          paintCursor = (y + 1) % height;
+        }
+        if (painted > 0) paints++;
+        return;
+      }
       if (changed.length === 0) return;
       paints++;
       if (mode === "dom") {
@@ -458,7 +531,19 @@ function DoomGrid({
     const step = (now: number) => {
       if (disposed) return;
       rafId = requestAnimationFrame(step);
-      if (last) deltas.push(now - last);
+      if (last) {
+        const delta = now - last;
+        deltas.push(delta);
+        // Hold ~30fps by painting fewer rows per frame when raster runs slow
+        // (big windows, fullscreen); paint everything again once frames are cheap.
+        // Smoothed, with slow growth, so a 120Hz display's cheap frames between
+        // heavy ones don't swing the budget into a stutter
+        if (mode === "gradient") {
+          deltaEma = deltaEma === 0 ? delta : deltaEma * 0.8 + delta * 0.2;
+          if (deltaEma > 34) rowBudget = Math.max(16, (rowBudget * 7) >> 3);
+          else if (deltaEma < 24) rowBudget = Math.min(height, rowBudget + 2);
+        }
+      }
       last = now;
       tick++;
 
@@ -557,7 +642,7 @@ function DoomGrid({
           {RESOLUTIONS.map((res) => (
             <a
               key={res}
-              href={`?res=${res}&mode=${mode}`}
+              href={`?res=${res}${modeParam ? `&mode=${modeParam}` : ""}`}
               className={
                 res === width
                   ? "rounded bg-accent px-1.5 py-0.5 font-medium"
@@ -611,8 +696,13 @@ function DoomGrid({
         onPointerUpCapture={onPointerFire}
       >
         <div
-          // Grid lines cost a border per cell and darken the picture
-          className="**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0"
+          // Grid lines cost a border per cell and darken the picture.
+          // Gradient mode paints the picture on the row element, underneath the theme's opaque cells
+          className={`**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
+            mode === "gradient"
+              ? " **:data-[slot=data-grid-cell]:bg-transparent!"
+              : ""
+          }`}
           style={{ zoom, width: gridWidth }}
         >
           <DataGrid {...dataGridProps} table={table} height={gridHeight} />
