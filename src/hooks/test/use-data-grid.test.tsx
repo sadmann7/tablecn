@@ -1430,6 +1430,42 @@ describe("useDataGrid", () => {
       ]);
     });
 
+    it("should recompute matches when a row is edited or a column is hidden", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("rodney");
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "1", columnId: "name" },
+      ]);
+
+      rerender({
+        data: testData.map((row) =>
+          row.id === "1" ? { ...row, trick: "Rodney flip" } : row,
+        ),
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "trick" },
+        { rowId: "1", columnId: "name" },
+      ]);
+
+      act(() => {
+        result.current.table.setColumnVisibility({ name: false });
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "trick" },
+      ]);
+    });
+
     it("should skip utility columns", () => {
       const { result } = renderHook(
         () =>
