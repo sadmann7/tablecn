@@ -4,16 +4,19 @@ import type { Table } from "@tanstack/react-table";
 
 import { Gauge, Square } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { FilterValue, RowHeightValue } from "@/lib/data-grid-types";
 
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/registry/bases/radix/ui/popover";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/registry/bases/radix/ui/dialog";
 
 import type { Person } from "../lib/seeds";
 
@@ -359,6 +362,27 @@ function resetGrid(table: PersonTable, grid: HTMLDivElement) {
   grid.scrollLeft = 0;
 }
 
+const TOAST_ID = "data-grid-stress-test";
+
+function getTotals(results: StressResult[]) {
+  if (results.length === 0) return null;
+  const frames = results.reduce((sum, result) => sum + result.frames, 0);
+  const durationMs = results.reduce(
+    (sum, result) => sum + result.durationMs,
+    0,
+  );
+  const slowest = results.reduce((worst, result) =>
+    result.maxFrameMs > worst.maxFrameMs ? result : worst,
+  );
+  return {
+    fps: durationMs > 0 ? (frames * 1000) / durationMs : 0,
+    maxFrameMs: slowest.maxFrameMs,
+    slowestStep: slowest.name,
+    longFrames: results.reduce((sum, result) => sum + result.longFrames, 0),
+    longTaskMs: results.reduce((sum, result) => sum + result.longTaskMs, 0),
+  };
+}
+
 interface DataGridStressTestProps {
   table: PersonTable;
   dataGridRef: React.RefObject<HTMLDivElement | null>;
@@ -368,12 +392,22 @@ export function DataGridStressTest({
   table,
   dataGridRef,
 }: DataGridStressTestProps) {
-  const [open, setOpen] = React.useState(false);
   const [results, setResults] = React.useState<StressResult[]>([]);
-  const [currentStep, setCurrentStep] = React.useState<string | null>(null);
+  const [isRunning, setIsRunning] = React.useState(false);
+  const [isResultsOpen, setIsResultsOpen] = React.useState(false);
   const abortRef = React.useRef<AbortController | null>(null);
 
-  React.useEffect(() => () => abortRef.current?.abort(), []);
+  React.useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      toast.dismiss(TOAST_ID);
+    },
+    [],
+  );
+
+  const onStop = React.useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const onRun = React.useCallback(async () => {
     const grid = dataGridRef.current;
@@ -381,102 +415,114 @@ export function DataGridStressTest({
 
     const controller = new AbortController();
     abortRef.current = controller;
+    const runResults: StressResult[] = [];
     setResults([]);
+    setIsResultsOpen(false);
+    setIsRunning(true);
     resetGrid(table, grid);
     await pause(controller.signal, 5);
 
     try {
-      for (const step of STRESS_STEPS) {
+      for (const [index, step] of STRESS_STEPS.entries()) {
         if (controller.signal.aborted) break;
-        setCurrentStep(step.name);
+        const previous = runResults.at(-1);
+        // One toast updated in place keeps the grid visible while the run drives it
+        toast.loading(
+          `Running ${step.name} · ${index + 1}/${STRESS_STEPS.length}`,
+          {
+            id: TOAST_ID,
+            description: previous
+              ? `${previous.name}: ${previous.fps.toFixed(0)} fps, ${formatMs(previous.maxFrameMs)} slowest frame`
+              : "Scrolling, sorting, filtering and searching the grid",
+            duration: Number.POSITIVE_INFINITY,
+            action: {
+              label: "Stop",
+              onClick: (event) => {
+                // The summary replaces this toast, which sonner ignores once it is dismissed
+                event.preventDefault();
+                onStop();
+              },
+            },
+          },
+        );
         const result = await runStep(step, table, grid, controller.signal);
         if (controller.signal.aborted) break;
-        setResults((prev) => [...prev, result]);
+        runResults.push(result);
+        setResults([...runResults]);
       }
     } finally {
       resetGrid(table, grid);
       abortRef.current = null;
-      setCurrentStep(null);
+      setIsRunning(false);
     }
-  }, [table, dataGridRef]);
 
-  const onStop = React.useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
+    const totals = getTotals(runResults);
+    if (!totals) {
+      toast("Stress test stopped", { id: TOAST_ID, duration: 3000 });
+      return;
+    }
 
-  // Opening the popover starts a fresh run, so the button is a single click
-  const onOpenChange = React.useCallback(
-    (nextOpen: boolean) => {
-      setOpen(nextOpen);
-      if (nextOpen) void onRun();
-    },
-    [onRun],
-  );
-
-  const isRunning = currentStep !== null;
-  const totals = React.useMemo(() => {
-    if (results.length === 0) return null;
-    const frames = results.reduce((sum, result) => sum + result.frames, 0);
-    const durationMs = results.reduce(
-      (sum, result) => sum + result.durationMs,
-      0,
+    toast(
+      controller.signal.aborted
+        ? `Stress test stopped · ${runResults.length}/${STRESS_STEPS.length}`
+        : "Stress test finished",
+      {
+        id: TOAST_ID,
+        description: (
+          <div className="flex flex-col tabular-nums">
+            <span>
+              {totals.fps.toFixed(0)} fps · {formatMs(totals.maxFrameMs)}{" "}
+              slowest frame · {totals.longFrames} janks
+            </span>
+            <span>Slowest step: {totals.slowestStep}</span>
+          </div>
+        ),
+        duration: Number.POSITIVE_INFINITY,
+        closeButton: true,
+        action: {
+          label: "View results",
+          onClick: (event) => {
+            // Keep the summary around after opening the full results
+            event.preventDefault();
+            setIsResultsOpen(true);
+          },
+        },
+      },
     );
-    return {
-      fps: (frames * 1000) / durationMs,
-      maxFrameMs: Math.max(...results.map((result) => result.maxFrameMs)),
-      longFrames: results.reduce((sum, result) => sum + result.longFrames, 0),
-      longTaskMs: results.reduce((sum, result) => sum + result.longTaskMs, 0),
-    };
-  }, [results]);
+  }, [table, dataGridRef, onStop]);
+
+  const totals = React.useMemo(() => getTotals(results), [results]);
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button variant="outline">
-          <Gauge className="text-muted-foreground" />
-          {isRunning
-            ? `Stress test ${results.length + 1}/${STRESS_STEPS.length}`
-            : "Stress test"}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-[min(36rem,calc(100vw-2rem))] gap-3"
-        // Keep the popover open while the run scrolls the grid
-        onInteractOutside={(event) => {
-          if (isRunning) event.preventDefault();
-        }}
+    <>
+      <Button
+        variant="outline"
+        onClick={isRunning ? onStop : () => void onRun()}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">Stress test</span>
-            <span className="text-xs text-muted-foreground">
-              {isRunning
-                ? `Running ${currentStep} (${results.length + 1}/${STRESS_STEPS.length})`
-                : "Scrolls, sorts, filters and searches the grid while measuring frames."}
-            </span>
-          </div>
-          {isRunning ? (
-            <Button size="sm" variant="outline" onClick={onStop}>
-              <Square />
-              Stop
-            </Button>
-          ) : (
-            <Button size="sm" onClick={onRun}>
-              <Gauge />
-              Run again
-            </Button>
-          )}
-        </div>
-        {results.length > 0 ? (
+        {isRunning ? (
+          <Square className="text-muted-foreground" />
+        ) : (
+          <Gauge className="text-muted-foreground" />
+        )}
+        {isRunning ? "Stop" : "Stress test"}
+      </Button>
+      <Dialog open={isResultsOpen} onOpenChange={setIsResultsOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Stress test results</DialogTitle>
+            <DialogDescription>
+              Frame times while the grid scrolls, sorts, filters, searches and
+              edits {table.getCoreRowModel().rows.length.toLocaleString()} rows.
+            </DialogDescription>
+          </DialogHeader>
           <div className="overflow-x-auto">
             <table className="w-full text-xs tabular-nums">
               <thead className="text-muted-foreground">
                 <tr className="border-b text-end [&>th]:px-1.5 [&>th]:py-1 [&>th]:font-normal">
                   <th className="text-start">Step</th>
                   <th>FPS</th>
-                  <th>p95</th>
-                  <th>Max</th>
+                  <th title="95% of frames were at least this fast">p95</th>
+                  <th title="Slowest frame">Max</th>
                   <th title={`Frames over ${LONG_FRAME_MS}ms`}>Janks</th>
                   <th title="Main thread time in long tasks">Long tasks</th>
                   <th title="Slowest update to paint">Update</th>
@@ -504,7 +550,7 @@ export function DataGridStressTest({
                   </tr>
                 ))}
               </tbody>
-              {totals && !isRunning ? (
+              {totals ? (
                 <tfoot className="font-medium">
                   <tr className="border-t text-end [&>td]:px-1.5 [&>td]:py-1">
                     <td className="text-start">Total</td>
@@ -521,9 +567,9 @@ export function DataGridStressTest({
               ) : null}
             </table>
           </div>
-        ) : null}
-      </PopoverContent>
-    </Popover>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
