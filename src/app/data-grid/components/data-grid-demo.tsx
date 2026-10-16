@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { Copy, Languages, Trash2 } from "lucide-react";
+import { Copy, Languages, Rows3, Trash2 } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
@@ -553,8 +553,14 @@ export function DataGridDemo() {
           if (next) void setRowCount(next);
         }}
       >
-        <SelectTrigger aria-label="Row count">
-          <SelectValue />
+        <SelectTrigger
+          aria-label="Row count"
+          className="[&_svg:nth-child(2)]:hidden"
+        >
+          <SelectValue>
+            <Rows3 />
+            {rowCount} rows
+          </SelectValue>
         </SelectTrigger>
         <SelectContent align="end">
           <SelectGroup>
@@ -577,8 +583,11 @@ export function DataGridDemo() {
           aria-orientation="horizontal"
           className="flex items-center gap-2 self-end"
         >
+          <Skeleton className="h-8 w-20 shrink-0 rounded-lg" />
           {sizeSelects}
-          <Skeleton className="h-8 w-80" />
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="h-8 w-20 shrink-0 rounded-lg" />
+          ))}
         </div>
         <Skeleton
           className="w-full"
