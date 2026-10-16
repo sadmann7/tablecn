@@ -3448,6 +3448,62 @@ describe("useDataGrid", () => {
       expect(rebuilt.rows[0]).toBe(after.rows[0]);
     });
 
+    it("should record per-row filter results and meta like TanStack's model", () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        {
+          id: "name",
+          accessorKey: "name",
+          filterFn: (row, columnId, value: string, addMeta) => {
+            const isMatch = String(row.getValue(columnId)).includes(value);
+            if (isMatch) addMeta?.({ matchedBy: value });
+            return isMatch;
+          },
+        },
+        {
+          id: "score",
+          accessorKey: "score",
+          filterFn: (row, columnId, value: number) =>
+            Number(row.getValue(columnId)) >= value,
+        },
+      ];
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setColumnFilters([
+          { id: "name", value: "o" },
+          { id: "score", value: 93 },
+        ]);
+      });
+
+      const { table } = result.current;
+      expect(table.getRowModel().rows.map((row) => row.id)).toEqual(["1", "2"]);
+
+      const coreRows = table.getCoreRowModel().rowsById;
+      expect(coreRows["1"]?.columnFilters).toEqual({ name: true, score: true });
+      expect(coreRows["3"]?.columnFilters).toEqual({
+        name: true,
+        score: false,
+      });
+      expect(coreRows["1"]?.columnFiltersMeta).toEqual({
+        name: { matchedBy: "o" },
+      });
+      expect(coreRows["2"]?.columnFiltersMeta).toEqual({
+        name: { matchedBy: "o" },
+      });
+
+      act(() => {
+        table.setColumnFilters([]);
+      });
+      expect(table.getRowModel().rows).toHaveLength(3);
+      expect(coreRows["1"]?.columnFilters).toEqual({});
+      expect(coreRows["1"]?.columnFiltersMeta).toEqual({});
+    });
+
     it("should hand column filters to onColumnFiltersChange", () => {
       const onColumnFiltersChange = vi.fn();
 

@@ -38,6 +38,7 @@ import {
 } from "@tanstack/react-table";
 import {
   column_getCanSort,
+  column_getFilterFn,
   column_getSortFn,
   table_autoResetCellSelection,
   table_autoResetExpanded,
@@ -1853,6 +1854,121 @@ const dataGridSelectionFeature: TableFeature = {
   },
 };
 
+type FilteredRow = Row<TableFeatures, RowData>;
+type FilterMetaMap = FilteredRow["columnFiltersMeta"];
+
+const EMPTY_FILTER_META: FilterMetaMap =
+  Object.freeze(makeObjectMap<FilterMetaMap[string]>());
+
+// Same rows and per-row filter results as `createFilteredRowModel`, without allocating a meta map
+// and a callback for every row on every filter change. Sub rows, leaf filtering and global filters
+// use TanStack's model as is.
+function createDataGridFilteredRowModel<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
+  const createFallback = createFilteredRowModel<TFeatures, TData>();
+  return (_table) => {
+    const table = _table as unknown as Table<TableFeatures, RowData>;
+    const getFallback = createFallback(_table);
+    return tableMemo({
+      feature: "columnFilteringFeature",
+      table: _table,
+      fnName: "table.getFilteredRowModel",
+      memoDeps: () => [
+        table.getPreFilteredRowModel(),
+        table.atoms.columnFilters?.get(),
+        table.atoms.globalFilter?.get(),
+      ],
+      fn: () =>
+        (getFilteredRowModel(table) ?? getFallback()) as unknown as RowModel<
+          TFeatures,
+          TData
+        >,
+      onAfterUpdate: skipFirstRun(() => table_autoResetPageIndex(table)),
+    });
+  };
+}
+
+function getFilteredRowModel(
+  table: Table<TableFeatures, RowData>,
+): RowModel<TableFeatures, RowData> | null {
+  const rowModel = table.getPreFilteredRowModel();
+  const globalFilter = table.atoms.globalFilter?.get();
+  const hasGlobalFilter =
+    globalFilter !== undefined && globalFilter !== null && globalFilter !== "";
+  if (
+    hasGlobalFilter ||
+    table.options.filterFromLeafRows ||
+    rowModel.flatRows.length !== rowModel.rows.length
+  ) {
+    return null;
+  }
+
+  const columnFilters = table.atoms.columnFilters?.get() ?? [];
+  const flatRows = rowModel.flatRows as Array<FilteredRow>;
+  if (!flatRows.length || !columnFilters.length) {
+    for (const row of flatRows) {
+      row.columnFilters = makeObjectMap();
+      row.columnFiltersMeta = makeObjectMap();
+    }
+    return rowModel;
+  }
+
+  const resolvedFilters: Array<{
+    id: string;
+    filterFn: NonNullable<ReturnType<typeof column_getFilterFn>>;
+    value: unknown;
+  }> = [];
+  for (const columnFilter of columnFilters) {
+    const column = table.getColumn(columnFilter.id);
+    if (!column) continue;
+    const filterFn = column_getFilterFn(column);
+    if (!filterFn) continue;
+    resolvedFilters.push({
+      id: columnFilter.id,
+      filterFn,
+      value:
+        filterFn.resolveFilterValue?.(columnFilter.value) ?? columnFilter.value,
+    });
+  }
+
+  // One meta callback for the whole pass, pointed at the row being filtered
+  let currentRow: FilteredRow | null = null;
+  let currentId = "";
+  const addMeta = (meta: FilterMetaMap[string]) => {
+    if (!currentRow) return;
+    if (currentRow.columnFiltersMeta === EMPTY_FILTER_META) {
+      currentRow.columnFiltersMeta = makeObjectMap();
+    }
+    currentRow.columnFiltersMeta[currentId] = meta;
+  };
+
+  const rows: Array<FilteredRow> = [];
+  const rowsById = makeObjectMap<FilteredRow>();
+  for (const row of flatRows) {
+    const results = makeObjectMap<boolean>();
+    row.columnFilters = results;
+    row.columnFiltersMeta = EMPTY_FILTER_META;
+    currentRow = row;
+
+    let isVisible = true;
+    for (const filter of resolvedFilters) {
+      currentId = filter.id;
+      const isMatch = filter.filterFn(row, filter.id, filter.value, addMeta);
+      results[filter.id] = isMatch;
+      if (!isMatch) isVisible = false;
+    }
+    if (isVisible) {
+      rows.push(row);
+      rowsById[row.id] = row;
+    }
+  }
+  currentRow = null;
+
+  return { rows, flatRows: rows.slice(), rowsById };
+}
+
 type CoreRow = Row<TableFeatures, RowData>;
 
 // Same rows as `createCoreRowModel`, but rows whose data object is unchanged at the same index
@@ -2286,7 +2402,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridSearchFeature,
   dataGridPresenceFeature,
   dataGridSelectionFeature,
-  filteredRowModel: createFilteredRowModel(),
+  filteredRowModel: createDataGridFilteredRowModel(),
   coreRowModel: createDataGridCoreRowModel(),
   sortedRowModel: createDataGridSortedRowModel(),
   sortFns: {
