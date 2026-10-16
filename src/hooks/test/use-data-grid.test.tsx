@@ -3228,6 +3228,80 @@ describe("useDataGrid", () => {
       );
     });
 
+    it("should flip sort directions to the same order as a fresh sort", () => {
+      interface TieData {
+        id: string;
+        group: string;
+        score: number;
+      }
+      const data: TieData[] = Array.from({ length: 40 }, (_, index) => ({
+        id: `${index}`,
+        group: ["b", "a", "c"][index % 3]!,
+        score: (index * 7) % 5,
+      }));
+      const columns: ColumnDef<DataGridFeatures, TieData>[] = [
+        { id: "group", accessorKey: "group" },
+        { id: "score", accessorKey: "score" },
+      ];
+
+      function getFreshIds(rows: TieData[], sorting: SortingState) {
+        const { result } = renderHook(
+          () => useDataGrid({ data: rows, columns, getRowId: (row) => row.id }),
+          { wrapper: createWrapper() },
+        );
+        act(() => {
+          result.current.table.setSorting(sorting);
+        });
+        return result.current.table.getRowModel().rows.map((row) => row.id);
+      }
+
+      const { result, rerender } = renderHook(
+        ({ rows }) =>
+          useDataGrid({ data: rows, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper(), initialProps: { rows: data } },
+      );
+
+      function getIds(sorting: SortingState) {
+        act(() => {
+          result.current.table.setSorting(sorting);
+        });
+        return result.current.table.getRowModel().rows.map((row) => row.id);
+      }
+
+      const toggles: SortingState[] = [
+        [{ id: "score", desc: false }],
+        [{ id: "score", desc: true }],
+        [{ id: "score", desc: false }],
+        [
+          { id: "group", desc: false },
+          { id: "score", desc: true },
+        ],
+        [
+          { id: "group", desc: true },
+          { id: "score", desc: false },
+        ],
+        // Flipping only one of the sorts needs a full sort
+        [
+          { id: "group", desc: true },
+          { id: "score", desc: true },
+        ],
+      ];
+      for (const sorting of toggles) {
+        expect(getIds(sorting)).toEqual(getFreshIds(data, sorting));
+      }
+
+      // New data must not reuse the order computed for the old rows
+      const edited = data.map((row) =>
+        row.id === "0" ? { ...row, group: "z" } : row,
+      );
+      rerender({ rows: edited });
+      const flipped: SortingState = [
+        { id: "group", desc: false },
+        { id: "score", desc: false },
+      ];
+      expect(getIds(flipped)).toEqual(getFreshIds(edited, flipped));
+    });
+
     it("should reuse unchanged rows when data changes", () => {
       const { result, rerender } = renderHook(
         ({ data }) =>
