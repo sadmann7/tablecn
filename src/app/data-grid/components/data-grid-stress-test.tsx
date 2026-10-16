@@ -2,7 +2,7 @@
 
 import type { Table } from "@tanstack/react-table";
 
-import { Gauge, Square } from "lucide-react";
+import { Gauge, RotateCcw, Square } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -362,8 +362,6 @@ function resetGrid(table: PersonTable, grid: HTMLDivElement) {
   grid.scrollLeft = 0;
 }
 
-const TOAST_ID = "data-grid-stress-test";
-
 function getTotals(results: StressResult[]) {
   if (results.length === 0) return null;
   const frames = results.reduce((sum, result) => sum + result.frames, 0);
@@ -395,12 +393,15 @@ export function DataGridStressTest({
   const [results, setResults] = React.useState<StressResult[]>([]);
   const [isRunning, setIsRunning] = React.useState(false);
   const [isResultsOpen, setIsResultsOpen] = React.useState(false);
+  const [rerunStep, setRerunStep] = React.useState<string | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
+  // Sonner ignores updates to a dismissed toast, so every run gets its own toast id
+  const toastIdRef = React.useRef("");
 
   React.useEffect(
     () => () => {
       abortRef.current?.abort();
-      toast.dismiss(TOAST_ID);
+      toast.dismiss(toastIdRef.current);
     },
     [],
   );
@@ -409,14 +410,37 @@ export function DataGridStressTest({
     abortRef.current?.abort();
   }, []);
 
+  const showProgress = React.useCallback(
+    (title: string, description: string) => {
+      // One toast updated in place keeps the grid visible while the run drives it
+      toast.loading(title, {
+        id: toastIdRef.current,
+        description,
+        duration: Number.POSITIVE_INFINITY,
+        action: {
+          label: "Stop",
+          onClick: (event) => {
+            // The summary replaces this toast, which sonner ignores once it is dismissed
+            event.preventDefault();
+            onStop();
+          },
+        },
+      });
+    },
+    [onStop],
+  );
+
   const onRun = React.useCallback(async () => {
     const grid = dataGridRef.current;
     if (!grid || abortRef.current) return;
 
     const controller = new AbortController();
     abortRef.current = controller;
+    toast.dismiss(toastIdRef.current);
+    toastIdRef.current = `stress-test-${Date.now()}`;
     const runResults: StressResult[] = [];
     setResults([]);
+    setRerunStep(null);
     setIsResultsOpen(false);
     setIsRunning(true);
     resetGrid(table, grid);
@@ -426,24 +450,11 @@ export function DataGridStressTest({
       for (const [index, step] of STRESS_STEPS.entries()) {
         if (controller.signal.aborted) break;
         const previous = runResults.at(-1);
-        // One toast updated in place keeps the grid visible while the run drives it
-        toast.loading(
+        showProgress(
           `Running ${step.name} · ${index + 1}/${STRESS_STEPS.length}`,
-          {
-            id: TOAST_ID,
-            description: previous
-              ? `${previous.name}: ${previous.fps.toFixed(0)} fps, ${formatMs(previous.maxFrameMs)} slowest frame`
-              : "Scrolling, sorting, filtering and searching the grid",
-            duration: Number.POSITIVE_INFINITY,
-            action: {
-              label: "Stop",
-              onClick: (event) => {
-                // The summary replaces this toast, which sonner ignores once it is dismissed
-                event.preventDefault();
-                onStop();
-              },
-            },
-          },
+          previous
+            ? `${previous.name}: ${previous.fps.toFixed(0)} fps, ${formatMs(previous.maxFrameMs)} slowest frame`
+            : "Scrolling, sorting, filtering and searching the grid",
         );
         const result = await runStep(step, table, grid, controller.signal);
         if (controller.signal.aborted) break;
@@ -458,7 +469,7 @@ export function DataGridStressTest({
 
     const totals = getTotals(runResults);
     if (!totals) {
-      toast("Stress test stopped", { id: TOAST_ID, duration: 3000 });
+      toast("Stress test stopped", { id: toastIdRef.current, duration: 3000 });
       return;
     }
 
@@ -467,7 +478,7 @@ export function DataGridStressTest({
         ? `Stress test stopped · ${runResults.length}/${STRESS_STEPS.length}`
         : "Stress test finished",
       {
-        id: TOAST_ID,
+        id: toastIdRef.current,
         description: (
           <div className="flex flex-col tabular-nums">
             <span>
@@ -481,15 +492,52 @@ export function DataGridStressTest({
         closeButton: true,
         action: {
           label: "View results",
-          onClick: (event) => {
-            // Keep the summary around after opening the full results
-            event.preventDefault();
-            setIsResultsOpen(true);
-          },
+          onClick: () => setIsResultsOpen(true),
         },
       },
     );
-  }, [table, dataGridRef, onStop]);
+  }, [table, dataGridRef, showProgress]);
+
+  const onRerunStep = React.useCallback(
+    async (name: string) => {
+      const grid = dataGridRef.current;
+      const step = STRESS_STEPS.find((item) => item.name === name);
+      if (!grid || !step || abortRef.current) return;
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      toastIdRef.current = `stress-test-${Date.now()}`;
+      // The dialog would cover the grid and its paint would skew the frames
+      setIsResultsOpen(false);
+      setIsRunning(true);
+      setRerunStep(name);
+      resetGrid(table, grid);
+      await pause(controller.signal, 5);
+
+      let result: StressResult | null = null;
+      try {
+        showProgress(
+          `Rerunning ${name}`,
+          "Results open again when it finishes",
+        );
+        result = await runStep(step, table, grid, controller.signal);
+      } finally {
+        resetGrid(table, grid);
+        abortRef.current = null;
+        setIsRunning(false);
+      }
+
+      const nextResult = controller.signal.aborted ? null : result;
+      if (nextResult) {
+        setResults((prev) =>
+          prev.map((item) => (item.name === name ? nextResult : item)),
+        );
+      }
+      toast.dismiss(toastIdRef.current);
+      setIsResultsOpen(true);
+    },
+    [table, dataGridRef, showProgress],
+  );
 
   const totals = React.useMemo(() => getTotals(results), [results]);
 
@@ -526,13 +574,17 @@ export function DataGridStressTest({
                   <th title={`Frames over ${LONG_FRAME_MS}ms`}>Janks</th>
                   <th title="Main thread time in long tasks">Long tasks</th>
                   <th title="Slowest update to paint">Update</th>
+                  <th>
+                    <span className="sr-only">Rerun</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {results.map((result) => (
                   <tr
                     key={result.name}
-                    className="border-b text-end last:border-0 [&>td]:px-1.5 [&>td]:py-1"
+                    data-rerun={result.name === rerunStep ? "" : undefined}
+                    className="border-b text-end last:border-0 data-rerun:bg-muted/50 [&>td]:px-1.5 [&>td]:py-1"
                   >
                     <td className="text-start">{result.name}</td>
                     <td className={getFpsClassName(result.fps)}>
@@ -546,6 +598,18 @@ export function DataGridStressTest({
                       {result.maxUpdateMs === null
                         ? "-"
                         : formatMs(result.maxUpdateMs)}
+                    </td>
+                    <td className="w-8">
+                      <Button
+                        aria-label={`Rerun ${result.name}`}
+                        title={`Rerun ${result.name}`}
+                        variant="ghost"
+                        size="icon-xs"
+                        disabled={isRunning}
+                        onClick={() => void onRerunStep(result.name)}
+                      >
+                        <RotateCcw />
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -561,6 +625,7 @@ export function DataGridStressTest({
                     <td>{formatMs(totals.maxFrameMs)}</td>
                     <td>{totals.longFrames}</td>
                     <td>{formatMs(totals.longTaskMs)}</td>
+                    <td />
                     <td />
                   </tr>
                 </tfoot>
