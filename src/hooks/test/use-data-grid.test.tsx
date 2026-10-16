@@ -1366,6 +1366,78 @@ describe("useDataGrid", () => {
       ]);
     });
 
+    it("should narrow matches as the query grows and widen them when it shrinks", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      function search(query: string) {
+        act(() => {
+          result.current.table.setSearchQuery(query);
+        });
+        return result.current.table.getSearchMatches();
+      }
+
+      // Every row and column checked directly, without any earlier query to narrow from
+      function getExpected(query: string) {
+        return testData.flatMap((row, index) =>
+          (["name", "trick", "score"] as const)
+            .filter((columnId) =>
+              String(row[columnId]).toLowerCase().includes(query),
+            )
+            .map((columnId) => ({ rowId: `${index}`, columnId })),
+        );
+      }
+
+      // Growing, shrinking and changing the query
+      for (const query of ["n", "ny", "nyj", "ki", "k", "9", "92", "2"]) {
+        expect(search(query)).toEqual(getExpected(query));
+      }
+
+      // Rows matching the same columns share one set, so unchanged rows keep the same reference
+      search("o");
+      const matchesByRowId = result.current.table.getSearchMatchesByRowId();
+      expect(matchesByRowId.get("0")).toEqual(new Set(["name"]));
+      expect(matchesByRowId.get("0")).toBe(matchesByRowId.get("1"));
+      search("on");
+      expect(result.current.table.getSearchMatchesByRowId().get("0")).toBe(
+        matchesByRowId.get("0"),
+      );
+    });
+
+    it("should group matches by row past 31 columns", () => {
+      const columnIds = Array.from({ length: 40 }, (_, index) => `c${index}`);
+      const data = [
+        Object.fromEntries([
+          ["id", "0"],
+          ...columnIds.map((id, index) => [
+            id,
+            index === 11 || index === 21 ? "match" : "",
+          ]),
+        ]),
+      ] as Array<Record<string, string>>;
+      const columns: ColumnDef<DataGridFeatures, Record<string, string>>[] =
+        columnIds.map((id) => ({ id, accessorKey: id }));
+
+      const { result } = renderHook(
+        () => useDataGrid({ data, columns, enableSearch: true }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("match");
+      });
+      expect(result.current.table.getSearchMatchesByRowId().get("0")).toEqual(
+        new Set(["c11", "c21"]),
+      );
+    });
+
     it("should recompute matches when a row is edited or a column is hidden", () => {
       const { result, rerender } = renderHook(
         ({ data }) =>
