@@ -1284,9 +1284,24 @@ const dataGridClipboardFeature: TableFeature = {
   },
 };
 
+interface SearchResult {
+  query: string;
+  rows: Array<SearchRow>;
+  columnsKey: string;
+  /** Every row's texts by position in `rows`, so later scans of the same rows skip the cache lookups. */
+  rowTexts: Array<Array<string>>;
+  /** Positions in `rows` with at least one match, for narrowing as the query grows. */
+  matchedRows: Array<number>;
+  matches: Array<CellPosition>;
+  matchesByRowId: Map<string, Set<string>>;
+}
+
 interface SearchTextCache {
   columnsKey: string;
   textsByRow: WeakMap<object, Array<string>>;
+  /** One shared set per combination of matching columns, so rows whose matches don't change keep the same set and skip re-rendering. */
+  columnSets: Map<number | string, Set<string>>;
+  result: SearchResult | null;
 }
 
 type SearchRow = ReturnType<DataGridInstance["getRowModel"]>["rows"][number];
@@ -1301,6 +1316,8 @@ function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
   if (cache.columnsKey !== columnsKey) {
     cache.columnsKey = columnsKey;
     cache.textsByRow = new WeakMap();
+    cache.columnSets = new Map();
+    cache.result = null;
   }
   return dataColumnIds;
 }
@@ -1344,15 +1361,75 @@ function getSearchMatches(
   const dataColumnIds = getSearchColumnIds(columns, cache);
   const lowerByValue = new Map<unknown, string>();
 
+  // A query that extends the previous one can only match rows that already matched
+  const previous = cache.result;
+  const isNarrowing =
+    previous !== null &&
+    previous.rows === rows &&
+    previous.columnsKey === cache.columnsKey &&
+    lowerQuery.includes(previous.query);
+  const candidateCount = isNarrowing
+    ? previous.matchedRows.length
+    : rows.length;
+
+  const hasSameRows =
+    previous !== null &&
+    previous.rows === rows &&
+    previous.columnsKey === cache.columnsKey;
+  const rowTexts: Array<Array<string>> = hasSameRows ? previous.rowTexts : [];
+  // Matching columns are tracked as bits, or as a string key past 31 columns
+  const useBitmask = dataColumnIds.length <= 31;
+
   const matches: Array<CellPosition> = [];
-  for (const row of rows) {
-    const texts = getRowSearchTexts(row, dataColumnIds, cache, lowerByValue);
+  const matchesByRowId = new Map<string, Set<string>>();
+  const matchedRows: Array<number> = [];
+
+  for (let candidate = 0; candidate < candidateCount; candidate++) {
+    const rowIndex = isNarrowing ? previous.matchedRows[candidate]! : candidate;
+    const row = rows[rowIndex]!;
+    let texts = rowTexts[rowIndex];
+    if (!texts) {
+      texts = getRowSearchTexts(row, dataColumnIds, cache, lowerByValue);
+      rowTexts[rowIndex] = texts;
+    }
+
+    let mask = 0;
+    let maskKey = "";
     for (let index = 0; index < texts.length; index++) {
       if (texts[index]!.includes(lowerQuery)) {
         matches.push({ rowId: row.id, columnId: dataColumnIds[index]! });
+        if (useBitmask) mask |= 1 << index;
+        else maskKey += `${index},`;
       }
     }
+    const setKey = useBitmask ? mask : maskKey;
+    if (!setKey) continue;
+
+    let columnSet = cache.columnSets.get(setKey);
+    if (!columnSet) {
+      columnSet = new Set(
+        useBitmask
+          ? dataColumnIds.filter((_, index) => mask & (1 << index))
+          : maskKey
+              .slice(0, -1)
+              .split(",")
+              .map((index) => dataColumnIds[Number(index)]!),
+      );
+      cache.columnSets.set(setKey, columnSet);
+    }
+    matchesByRowId.set(row.id, columnSet);
+    matchedRows.push(rowIndex);
   }
+
+  cache.result = {
+    query: lowerQuery,
+    rows,
+    columnsKey: cache.columnsKey,
+    rowTexts,
+    matchedRows,
+    matches,
+    matchesByRowId,
+  };
   return matches;
 }
 
@@ -1417,6 +1494,8 @@ const dataGridSearchFeature: TableFeature = {
     const searchTextCache: SearchTextCache = {
       columnsKey: "",
       textsByRow: new WeakMap(),
+      columnSets: new Map(),
+      result: null,
     };
 
     const setSearchQuery = (query: string) => {
@@ -1464,6 +1543,10 @@ const dataGridSearchFeature: TableFeature = {
       },
       table_getSearchMatchesByRowId: {
         fn: (matches: Array<CellPosition>) => {
+          // The scan already grouped its matches by row
+          const { result } = searchTextCache;
+          if (result?.matches === matches) return result.matchesByRowId;
+
           const matchesByRowId = new Map<string, Set<string>>();
           for (const { rowId, columnId } of matches) {
             let columnIds = matchesByRowId.get(rowId);
