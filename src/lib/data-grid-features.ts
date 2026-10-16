@@ -1389,7 +1389,6 @@ function getSearchMatches(
     previous.rows === rows &&
     previous.columnsKey === cache.columnsKey;
   const rowTexts: Array<Array<string>> = hasSameRows ? previous.rowTexts : [];
-  // Matching columns are tracked as bits, or as a string key past 31 columns
   const useBitmask = dataColumnIds.length <= 31;
 
   const matches: Array<CellPosition> = [];
@@ -2068,7 +2067,6 @@ function createDataGridSortedRowModel<
 }
 
 interface SortCache {
-  /** The top level rows the order was computed for. */
   rows: Array<SortedRow>;
   sorting: Array<{ id: string; desc: boolean }>;
   order: Array<number>;
@@ -2152,7 +2150,6 @@ function getSortedRowModel(
         ? rows.map((row) => row.getValue(sort.id))
         : null,
     );
-    // Value-level comparators from `constructSortFn` compare pre-resolved values
     const sortValues = resolvedSorting.map((sort, sortIndex) => {
       const values = rawValues[sortIndex];
       if (!sort.compareValues || !values) return null;
@@ -2168,7 +2165,6 @@ function getSortedRowModel(
         : null;
     });
 
-    // Compares two positions by every sort, returning 0 when they tie
     return (a: number, b: number) => {
       const rowA = rows[a]!;
       const rowB = rows[b]!;
