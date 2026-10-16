@@ -1364,7 +1364,6 @@ describe("useDataGrid", () => {
         );
       }
 
-      // Growing, shrinking and changing the query
       for (const query of ["n", "ny", "nyj", "ki", "k", "9", "92", "2"]) {
         expect(search(query)).toEqual(getExpected(query));
       }

@@ -27,7 +27,6 @@ interface StressContext {
   table: PersonTable;
   grid: HTMLDivElement;
   signal: AbortSignal;
-  /** Records how long an update took to reach the next painted frame. */
   measure: (update: () => void) => Promise<void>;
 }
 
@@ -97,7 +96,6 @@ interface ViewportCell {
   nextValue: unknown;
 }
 
-// The data cells currently on screen, each paired with another row's value of the same type
 function getViewportCells(table: PersonTable, grid: HTMLDivElement) {
   const rows = table.getRowModel().rows;
   const rowSize = table.getRowSize();
