@@ -26,6 +26,7 @@ import {
   type SortFn,
   type SortFnDef,
   sortFn_alphanumeric,
+  sortFn_alphanumericCaseSensitive,
   sortFn_datetime,
   sortFn_text,
   type Table,
@@ -1880,6 +1881,64 @@ interface ResolvedSort {
   compareValues: SortFnDef<TableFeatures, RowData>["sort"] | null;
 }
 
+const alphanumericCompares = new Set<unknown>([
+  sortFn_alphanumeric.sort,
+  sortFn_alphanumericCaseSensitive.sort,
+]);
+
+function compareBasic(a: unknown, b: unknown) {
+  return a === b ? 0 : (a as number) > (b as number) ? 1 : -1;
+}
+
+function getIsDigit(code: number) {
+  return code >= 48 && code <= 57;
+}
+
+// Encodes a value so plain string comparison matches TanStack's natural `compareAlphanumeric`:
+// text chunks end in "\u0000", and number chunks become "\u00ff" + digit count + digits without
+// leading zeros, which sorts them after text and by numeric value. Returns `null` for values the
+// encoding can't represent, such as text with "\u0000" or characters past Latin-1, which also
+// keeps keys one byte per character so comparisons stay fast.
+function getAlphanumericSortKey(value: unknown) {
+  if (typeof value !== "string") return null;
+  let key = "";
+  let index = 0;
+  while (index < value.length) {
+    const code = value.charCodeAt(index);
+    if (code === 0 || code >= 0xff) return null;
+    const isNumeric = getIsDigit(code);
+    let end = index + 1;
+    while (
+      end < value.length &&
+      getIsDigit(value.charCodeAt(end)) === isNumeric
+    ) {
+      end++;
+    }
+    if (isNumeric) {
+      let start = index;
+      while (start < end && value.charCodeAt(start) === 48) start++;
+      const digitCount = end - start;
+      // Longer numbers lose precision in TanStack's comparison, so they keep the comparator
+      if (digitCount > 15) return null;
+      key += `\u00ff${String.fromCharCode(48 + digitCount)}${value.slice(start, end)}`;
+    } else {
+      key += `${value.slice(index, end)}\u0000`;
+    }
+    index = end;
+  }
+  return key;
+}
+
+function getAlphanumericSortKeys(values: Array<unknown>) {
+  const keys: Array<string> = [];
+  for (const value of values) {
+    const key = getAlphanumericSortKey(value);
+    if (key === null) return null;
+    keys.push(key);
+  }
+  return keys;
+}
+
 function getValueSort(sortFn: SortedRowFn) {
   return "sort" in sortFn && typeof sortFn.sort === "function"
     ? (sortFn.sort as SortFnDef<TableFeatures, RowData>["sort"])
@@ -1952,7 +2011,16 @@ function getSortedRowModel(
       return resolve ? values.map((value) => resolve(value)) : values;
     });
 
+    // Natural sorts compare precomputed string keys instead of re-scanning both strings per comparison
+    const sortKeys = resolvedSorting.map((sort, sortIndex) => {
+      const values = sortValues[sortIndex];
+      return values && alphanumericCompares.has(sort.compareValues)
+        ? getAlphanumericSortKeys(values)
+        : null;
+    });
+
     const order = rows.map((_, index) => index);
+
     order.sort((a, b) => {
       const rowA = rows[a]!;
       const rowB = rows[b]!;
@@ -1972,7 +2040,10 @@ function getSortedRowModel(
           }
         }
 
-        if (sortInt === 0) {
+        const keys = sortKeys[i];
+        if (sortInt === 0 && keys) {
+          sortInt = compareBasic(keys[a], keys[b]);
+        } else if (sortInt === 0) {
           const values = sortValues[i];
           sortInt =
             values && sort.compareValues
