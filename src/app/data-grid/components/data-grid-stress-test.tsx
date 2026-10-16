@@ -1,6 +1,6 @@
 "use client";
 
-import type { Table } from "@tanstack/react-table";
+import type { Table as TanStackTable } from "@tanstack/react-table";
 
 import { Gauge, RotateCcw, Square } from "lucide-react";
 import * as React from "react";
@@ -19,10 +19,19 @@ import {
   DialogTitle,
 } from "@/registry/bases/radix/ui/dialog";
 import { ScrollArea, ScrollBar } from "@/registry/bases/radix/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/registry/bases/radix/ui/table";
 
 import type { Person } from "../lib/seeds";
 
-type PersonTable = Table<DataGridFeatures, Person>;
+type PersonTable = TanStackTable<DataGridFeatures, Person>;
 
 interface StressContext {
   table: PersonTable;
@@ -643,43 +652,53 @@ export function DataGridStressTest({
               edits {table.getCoreRowModel().rows.length.toLocaleString()} rows.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="-me-3 pe-3 *:data-[slot=scroll-area-viewport]:max-h-[min(60vh,32rem)]">
-            <table className="w-full text-xs tabular-nums">
-              <thead className="sticky top-0 z-10 bg-background text-muted-foreground">
-                <tr className="border-b text-end [&>th]:px-1.5 [&>th]:py-1 [&>th]:font-normal">
-                  <th className="text-start">Step</th>
-                  <th>FPS</th>
-                  <th title="95% of frames were at least this fast">p95</th>
-                  <th title="Slowest frame">Max</th>
-                  <th title={`Frames over ${LONG_FRAME_MS}ms`}>Janks</th>
-                  <th title="Main thread time in long tasks">Long tasks</th>
-                  <th title="Slowest update to paint">Update</th>
-                  <th>
+          {/* The table container's own overflow would capture the sticky header, so the scroll area scrolls both ways */}
+          <ScrollArea className="rounded-md border *:data-[slot=scroll-area-viewport]:max-h-[min(60vh,32rem)] **:data-[slot=table-container]:overflow-visible">
+            <Table className="text-xs tabular-nums">
+              {/* Collapsed table borders scroll with the body, so the sticky header draws its divider as a shadow */}
+              <TableHeader className="sticky top-0 z-10 bg-background [&_tr]:border-b-0">
+                <TableRow className="hover:bg-transparent [&>th]:h-8 [&>th]:px-2 [&>th]:text-end [&>th]:font-normal [&>th]:text-muted-foreground [&>th]:shadow-[inset_0_-1px_0_var(--color-border)]">
+                  <TableHead className="text-start!">Step</TableHead>
+                  <TableHead>FPS</TableHead>
+                  <TableHead title="95% of frames were at least this fast">
+                    p95
+                  </TableHead>
+                  <TableHead title="Slowest frame">Max</TableHead>
+                  <TableHead title={`Frames over ${LONG_FRAME_MS}ms`}>
+                    Janks
+                  </TableHead>
+                  <TableHead title="Main thread time in long tasks">
+                    Long tasks
+                  </TableHead>
+                  <TableHead title="Slowest update to paint">Update</TableHead>
+                  <TableHead className="w-8">
                     <span className="sr-only">Rerun</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {results.map((result) => (
-                  <tr
+                  <TableRow
                     key={result.name}
-                    data-rerun={result.name === rerunStep ? "" : undefined}
-                    className="border-b text-end last:border-0 data-rerun:bg-muted/50 [&>td]:px-1.5 [&>td]:py-1"
+                    data-state={
+                      result.name === rerunStep ? "selected" : undefined
+                    }
+                    className="text-end hover:bg-transparent [&>td]:px-2 [&>td]:py-1"
                   >
-                    <td className="text-start">{result.name}</td>
-                    <td className={getFpsClassName(result.fps)}>
+                    <TableCell className="text-start">{result.name}</TableCell>
+                    <TableCell className={getFpsClassName(result.fps)}>
                       {result.fps.toFixed(0)}
-                    </td>
-                    <td>{formatMs(result.p95FrameMs)}</td>
-                    <td>{formatMs(result.maxFrameMs)}</td>
-                    <td>{result.longFrames}</td>
-                    <td>{formatMs(result.longTaskMs)}</td>
-                    <td>
+                    </TableCell>
+                    <TableCell>{formatMs(result.p95FrameMs)}</TableCell>
+                    <TableCell>{formatMs(result.maxFrameMs)}</TableCell>
+                    <TableCell>{result.longFrames}</TableCell>
+                    <TableCell>{formatMs(result.longTaskMs)}</TableCell>
+                    <TableCell>
                       {result.maxUpdateMs === null
                         ? "-"
                         : formatMs(result.maxUpdateMs)}
-                    </td>
-                    <td className="w-8">
+                    </TableCell>
+                    <TableCell>
                       <Button
                         aria-label={`Rerun ${result.name}`}
                         title={`Rerun ${result.name}`}
@@ -690,27 +709,27 @@ export function DataGridStressTest({
                       >
                         <RotateCcw />
                       </Button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
+              </TableBody>
               {totals ? (
-                <tfoot className="font-medium">
-                  <tr className="border-t text-end [&>td]:px-1.5 [&>td]:py-1">
-                    <td className="text-start">Total</td>
-                    <td className={getFpsClassName(totals.fps)}>
+                <TableFooter>
+                  <TableRow className="text-end hover:bg-transparent [&>td]:px-2 [&>td]:py-1.5">
+                    <TableCell className="text-start">Total</TableCell>
+                    <TableCell className={getFpsClassName(totals.fps)}>
                       {totals.fps.toFixed(0)}
-                    </td>
-                    <td />
-                    <td>{formatMs(totals.maxFrameMs)}</td>
-                    <td>{totals.longFrames}</td>
-                    <td>{formatMs(totals.longTaskMs)}</td>
-                    <td />
-                    <td />
-                  </tr>
-                </tfoot>
+                    </TableCell>
+                    <TableCell />
+                    <TableCell>{formatMs(totals.maxFrameMs)}</TableCell>
+                    <TableCell>{totals.longFrames}</TableCell>
+                    <TableCell>{formatMs(totals.longTaskMs)}</TableCell>
+                    <TableCell />
+                    <TableCell />
+                  </TableRow>
+                </TableFooter>
               ) : null}
-            </table>
+            </Table>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </DialogContent>
