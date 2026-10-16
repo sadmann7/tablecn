@@ -1973,6 +1973,7 @@ function createDataGridSortedRowModel<
 >(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
   return (_table) => {
     const table = _table as unknown as Table<TableFeatures, RowData>;
+    const cache: { current: SortCache | null } = { current: null };
     return tableMemo({
       feature: "rowSortingFeature",
       table: _table,
@@ -1982,14 +1983,57 @@ function createDataGridSortedRowModel<
         table.getPreSortedRowModel(),
       ],
       fn: () =>
-        getSortedRowModel(table) as unknown as RowModel<TFeatures, TData>,
+        getSortedRowModel(table, cache) as unknown as RowModel<
+          TFeatures,
+          TData
+        >,
       onAfterUpdate: skipFirstRun(() => table_autoResetPageIndex(table)),
     });
   };
 }
 
+interface SortCache {
+  /** The top level rows the order was computed for. */
+  rows: Array<SortedRow>;
+  sorting: Array<{ id: string; desc: boolean }>;
+  order: Array<number>;
+  getIsTie: (a: number, b: number) => boolean;
+}
+
+function getIsFlippedSorting(
+  previous: SortCache["sorting"],
+  sorting: Array<ResolvedSort>,
+) {
+  return (
+    previous.length === sorting.length &&
+    sorting.every(
+      (sort, index) =>
+        sort.id === previous[index]?.id && sort.desc !== previous[index]?.desc,
+    )
+  );
+}
+
+// Flipping every direction reverses the order of tied groups, while rows inside a group keep their
+// data order, so the previous order is regrouped in one pass instead of sorted again
+function getFlippedOrder(
+  order: Array<number>,
+  getIsTie: (a: number, b: number) => boolean,
+) {
+  const flipped: Array<number> = [];
+  let groupEnd = order.length;
+  for (let index = order.length - 1; index >= 0; index--) {
+    const previous = order[index - 1];
+    if (previous === undefined || !getIsTie(previous, order[index]!)) {
+      for (let i = index; i < groupEnd; i++) flipped.push(order[i]!);
+      groupEnd = index;
+    }
+  }
+  return flipped;
+}
+
 function getSortedRowModel(
   table: Table<TableFeatures, RowData>,
+  cache: { current: SortCache | null },
 ): RowModel<TableFeatures, RowData> {
   const preSortedRowModel = table.getPreSortedRowModel();
   const sorting = table.atoms.sorting?.get();
@@ -2015,7 +2059,17 @@ function getSortedRowModel(
 
   const sortedFlatRows: Array<SortedRow> = [];
 
-  function sortRows(rows: Array<SortedRow>) {
+  // Sub rows sort per parent and first or last empty values stay put when flipped, so neither is cached
+  const isCacheable =
+    preSortedRowModel.flatRows.length === preSortedRowModel.rows.length &&
+    resolvedSorting.every(
+      ({ sortUndefined }) =>
+        sortUndefined !== "first" && sortUndefined !== "last",
+    );
+  const previous = cache.current;
+  cache.current = null;
+
+  function getRowsComparator(rows: Array<SortedRow>) {
     // Values are only read when a comparator or `sortUndefined` needs them,
     // custom row comparators read rows themselves
     const rawValues = resolvedSorting.map((sort) =>
@@ -2039,9 +2093,8 @@ function getSortedRowModel(
         : null;
     });
 
-    const order = rows.map((_, index) => index);
-
-    order.sort((a, b) => {
+    // Compares two positions by every sort, returning 0 when they tie
+    return (a: number, b: number) => {
       const rowA = rows[a]!;
       const rowB = rows[b]!;
       for (let i = 0; i < resolvedSorting.length; i++) {
@@ -2077,8 +2130,37 @@ function getSortedRowModel(
           return sortInt;
         }
       }
-      return rowA.index - rowB.index;
-    });
+      return 0;
+    };
+  }
+
+  function sortRows(rows: Array<SortedRow>, isTopLevel = false) {
+    let order: Array<number>;
+    let getIsTie: (a: number, b: number) => boolean;
+
+    if (
+      isTopLevel &&
+      previous &&
+      previous.rows === rows &&
+      getIsFlippedSorting(previous.sorting, resolvedSorting)
+    ) {
+      order = getFlippedOrder(previous.order, previous.getIsTie);
+      getIsTie = previous.getIsTie;
+    } else {
+      const compare = getRowsComparator(rows);
+      order = rows.map((_, index) => index);
+      order.sort((a, b) => compare(a, b) || rows[a]!.index - rows[b]!.index);
+      getIsTie = (a, b) => compare(a, b) === 0;
+    }
+
+    if (isTopLevel && isCacheable) {
+      cache.current = {
+        rows,
+        sorting: resolvedSorting.map(({ id, desc }) => ({ id, desc })),
+        order,
+        getIsTie,
+      };
+    }
 
     const sortedRows = order.map((index) => rows[index]!);
     let changed = false;
@@ -2104,7 +2186,7 @@ function getSortedRowModel(
   }
 
   return {
-    rows: sortRows(preSortedRowModel.rows).rows,
+    rows: sortRows(preSortedRowModel.rows, true).rows,
     flatRows: sortedFlatRows,
     rowsById: preSortedRowModel.rowsById,
   };
