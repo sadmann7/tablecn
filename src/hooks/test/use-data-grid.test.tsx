@@ -1,6 +1,11 @@
-import type { ColumnDef, SortingState, Table } from "@tanstack/react-table";
 import type * as React from "react";
 
+import {
+  type ColumnDef,
+  type SortingState,
+  sortFn_alphanumeric,
+  type Table,
+} from "@tanstack/react-table";
 import { act, render, renderHook } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -3226,6 +3231,101 @@ describe("useDataGrid", () => {
         "a",
         "e",
       ]);
+    });
+
+    it("should match TanStack's natural order for tricky values", () => {
+      const labels = [
+        "item10",
+        "Item2",
+        "item02",
+        "item2b",
+        "item",
+        "",
+        "0",
+        "00",
+        "007",
+        "10a",
+        "1a",
+        "a-1",
+        "a 1",
+        "a01",
+        "a1",
+        "ab",
+        "2024-01-05",
+        "2024-1-5",
+        "1234567890123456789",
+        "Zoë 3",
+        "zoe 3",
+      ];
+      const data = labels.map((label, index) => ({ id: `${index}`, label }));
+      const columns: ColumnDef<DataGridFeatures, (typeof data)[number]>[] = [
+        { id: "label", accessorKey: "label", sortFn: "alphanumeric" },
+      ];
+
+      const { result } = renderHook(
+        () => useDataGrid({ data, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+
+      const resolve = sortFn_alphanumeric.resolveDataValue!;
+      const expected = [...data]
+        .map((row, index) => ({ row, index }))
+        .sort(
+          (a, b) =>
+            sortFn_alphanumeric.sort(
+              resolve(a.row.label),
+              resolve(b.row.label),
+              {} as never,
+              {} as never,
+              "label",
+            ) || a.index - b.index,
+        )
+        .map(({ row }) => row.id);
+
+      for (const desc of [false, true]) {
+        act(() => {
+          result.current.table.setSorting([{ id: "label", desc }]);
+        });
+        const ids = result.current.table
+          .getRowModel()
+          .rows.map((row) => row.id);
+        // Descending flips the comparison but keeps ties in data order
+        expect(ids).toEqual(
+          desc
+            ? [...data]
+                .map((row, index) => ({ row, index }))
+                .sort(
+                  (a, b) =>
+                    -sortFn_alphanumeric.sort(
+                      resolve(a.row.label),
+                      resolve(b.row.label),
+                      {} as never,
+                      {} as never,
+                      "label",
+                    ) || a.index - b.index,
+                )
+                .map(({ row }) => row.id)
+            : expected,
+        );
+      }
+
+      // Without the out-of-range values every label takes the precomputed key path
+      const latinData = data.filter(
+        (row) => !row.label.includes("ë") && row.label.length < 16,
+      );
+      const { result: latinResult } = renderHook(
+        () =>
+          useDataGrid({ data: latinData, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+      act(() => {
+        latinResult.current.table.setSorting([{ id: "label", desc: false }]);
+      });
+      expect(
+        latinResult.current.table.getRowModel().rows.map((row) => row.id),
+      ).toEqual(
+        expected.filter((id) => latinData.some((row) => row.id === id)),
+      );
     });
 
     it("should reuse unchanged rows when data changes", () => {
