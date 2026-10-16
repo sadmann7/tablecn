@@ -3159,6 +3159,49 @@ describe("useDataGrid", () => {
       ]);
     });
 
+    it("should reuse unchanged rows when data changes", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            getRowId: (row) => row.id,
+          }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      const before = result.current.table.getCoreRowModel();
+      const edited = testData.map((row) =>
+        row.id === "2" ? { ...row, trick: "Impossible" } : row,
+      );
+      rerender({ data: edited });
+
+      const after = result.current.table.getCoreRowModel();
+      expect(after).not.toBe(before);
+      expect(after.rows[0]).toBe(before.rows[0]);
+      expect(after.rows[2]).toBe(before.rows[2]);
+      expect(after.rows[1]).not.toBe(before.rows[1]);
+      expect(after.rows[1]?.getValue("trick")).toBe("Impossible");
+      expect(after.rowsById["2"]).toBe(after.rows[1]);
+      expect(after.flatRows).toEqual(after.rows);
+
+      // Adding and removing rows rebuilds the id lookup
+      rerender({
+        data: [
+          edited[0]!,
+          edited[2]!,
+          { id: "4", name: "Elissa Steamer", trick: "Boardslide", score: 90 },
+        ],
+      });
+
+      const rebuilt = result.current.table.getCoreRowModel();
+      expect(rebuilt.rows.map((row) => row.id)).toEqual(["1", "3", "4"]);
+      expect(rebuilt.rows.map((row) => row.index)).toEqual([0, 1, 2]);
+      expect(rebuilt.rowsById["2"]).toBeUndefined();
+      expect(rebuilt.rowsById["4"]?.getValue("name")).toBe("Elissa Steamer");
+      expect(rebuilt.rows[0]).toBe(after.rows[0]);
+    });
+
     it("should hand column filters to onColumnFiltersChange", () => {
       const onColumnFiltersChange = vi.fn();
 
