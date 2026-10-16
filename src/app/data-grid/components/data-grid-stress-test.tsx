@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/registry/bases/radix/ui/dialog";
+import { ScrollArea, ScrollBar } from "@/registry/bases/radix/ui/scroll-area";
 
 import type { Person } from "../lib/seeds";
 
@@ -642,9 +643,9 @@ export function DataGridStressTest({
               edits {table.getCoreRowModel().rows.length.toLocaleString()} rows.
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-x-auto">
+          <ScrollArea className="-me-3 pe-3 *:data-[slot=scroll-area-viewport]:max-h-[min(60vh,32rem)]">
             <table className="w-full text-xs tabular-nums">
-              <thead className="text-muted-foreground">
+              <thead className="sticky top-0 z-10 bg-background text-muted-foreground">
                 <tr className="border-b text-end [&>th]:px-1.5 [&>th]:py-1 [&>th]:font-normal">
                   <th className="text-start">Step</th>
                   <th>FPS</th>
@@ -710,7 +711,8 @@ export function DataGridStressTest({
                 </tfoot>
               ) : null}
             </table>
-          </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </>
