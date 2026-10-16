@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { FilterValue, RowHeightValue } from "@/lib/data-grid-types";
 
+import { getIsDataColumn } from "@/lib/data-grid-utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Dialog,
@@ -57,14 +58,14 @@ function nextFrame() {
 async function animate(
   signal: AbortSignal,
   durationMs: number,
-  onFrame: (progress: number, frame: number) => void,
+  // Returning `true` ends the animation early
+  onFrame: (progress: number, frame: number) => boolean | void,
 ) {
   const start = performance.now();
   let frame = 0;
   while (!signal.aborted) {
     const progress = Math.min((performance.now() - start) / durationMs, 1);
-    onFrame(progress, frame++);
-    if (progress >= 1) break;
+    if (onFrame(progress, frame++) === true || progress >= 1) break;
     await nextFrame();
   }
 }
@@ -87,6 +88,51 @@ function createRandom(seed: number) {
     state = (state * 1664525 + 1013904223) >>> 0;
     return state / 2 ** 32;
   };
+}
+
+interface ViewportCell {
+  rowId: string;
+  columnId: string;
+  value: unknown;
+  nextValue: unknown;
+}
+
+// The data cells currently on screen, each paired with another row's value of the same type
+function getViewportCells(table: PersonTable, grid: HTMLDivElement) {
+  const rows = table.getRowModel().rows;
+  const rowSize = table.getRowSize();
+  const firstRow = Math.floor(grid.scrollTop / rowSize);
+  const rowCount = Math.ceil(grid.clientHeight / rowSize);
+
+  const columns = [];
+  let left = 0;
+  for (const column of table.getVisibleLeafColumns()) {
+    if (left - grid.scrollLeft > grid.clientWidth) break;
+    left += column.getSize();
+    if (getIsDataColumn(column) && column.getCanEdit()) columns.push(column);
+  }
+
+  const cells: ViewportCell[] = [];
+  for (let index = firstRow; index < firstRow + rowCount; index++) {
+    const row = rows[index];
+    const source = rows[(index + Math.floor(rows.length / 2)) % rows.length];
+    if (!row || !source) continue;
+    for (const column of columns) {
+      cells.push({
+        rowId: row.id,
+        columnId: column.id,
+        value: row.getValue(column.id),
+        nextValue: source.getValue(column.id),
+      });
+    }
+  }
+  return cells;
+}
+
+function restoreCells(table: PersonTable, cells: ViewportCell[]) {
+  table.updateCells(
+    cells.map(({ rowId, columnId, value }) => ({ rowId, columnId, value })),
+  );
 }
 
 function filter(id: keyof Person, value: FilterValue) {
@@ -247,29 +293,31 @@ const STRESS_STEPS: StressStep[] = [
     },
   },
   {
-    name: "Edit cells",
-    run: async ({ table, signal, measure }) => {
-      const rows = table.getRowModel().rows.slice(0, 5);
-      for (const row of rows) {
-        if (signal.aborted) return;
-        await measure(() =>
-          table.updateCells({
-            rowId: row.id,
-            columnId: "name",
-            value: `${row.original.name ?? ""} (edited)`,
-          }),
-        );
+    name: "Fill viewport cells",
+    run: async ({ table, grid, signal }) => {
+      // Fills one cell per frame, like an AI workflow autofilling the visible cells
+      const cells = getViewportCells(table, grid);
+      try {
+        await animate(signal, Number.POSITIVE_INFINITY, (_, frame) => {
+          const cell = cells[frame];
+          if (!cell) return true;
+          table.updateCells({ ...cell, value: cell.nextValue });
+        });
+      } finally {
+        restoreCells(table, cells);
       }
-      // Put the original values back so the run leaves the data as it found it
+    },
+  },
+  {
+    name: "Bulk fill viewport",
+    run: async ({ table, grid, measure }) => {
+      const cells = getViewportCells(table, grid);
       await measure(() =>
         table.updateCells(
-          rows.map((row) => ({
-            rowId: row.id,
-            columnId: "name",
-            value: row.original.name,
-          })),
+          cells.map((cell) => ({ ...cell, value: cell.nextValue })),
         ),
       );
+      await measure(() => restoreCells(table, cells));
     },
   },
   {
