@@ -115,7 +115,6 @@ interface Column_DataGridColumnOrdering {
 }
 
 interface StopEditingOptions {
-  /** Moves focus after committing, like Tab or the arrow keys. */
   direction?: NavigationDirection;
   moveToNextRow?: boolean;
 }
@@ -138,7 +137,6 @@ interface Cell_DataGridCellEditing {
 }
 
 interface TableOptions_DataGridData<TData extends RowData> {
-  /** Disables every data mutation, including cell edits and row deletion. */
   readOnly?: boolean;
   onDataChange?: (data: TData[]) => void;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
@@ -156,11 +154,8 @@ interface TableOptions_DataGridData<TData extends RowData> {
 
 interface Table_DataGridData {
   getIsReadOnly: () => boolean;
-  /** Writes values into editable cells and emits the next `data` through `onDataChange`. */
   updateCells: (updates: CellUpdate | Array<CellUpdate>) => void;
-  /** Resets cells to their variant's empty value. */
   clearCells: (cells: Array<CellPosition>) => void;
-  /** Deletes rows through `onRowsDelete`, then moves focus to the row that takes their place. */
   deleteRows: (rowIds: string[]) => Promise<void>;
 }
 
@@ -170,57 +165,43 @@ interface Cell_DataGridData {
 }
 
 interface TableState_DataGridNavigation {
-  /** Column whose header holds keyboard focus, which hides the focused cell while the selection stays. */
   focusedHeaderColumnId: string | null;
 }
 
 interface TableOptions_DataGridNavigation {
-  /** Reading direction, so left and right follow the visual layout. */
   dir?: Direction;
-  /** Brings a cell into view, provided by the layer that owns the scroll container. */
   onScrollToCell?: (cell: CellPosition) => void;
   onFocusedHeaderColumnIdChange?: OnChangeFn<string | null>;
 }
 
 interface NavigateOptions {
-  /** Moves the selection edge instead of focus, like holding Shift. */
   extend?: boolean;
-  /** Rows to move for `pageup` and `pagedown`. */
   pageSize?: number;
 }
 
 interface Table_DataGridNavigation {
-  /**
-   * Cell reached by moving from `from` in `direction`, or `null` when there is nowhere to go.
-   * Utility columns (`enableCellSelection: false`) are reachable with left and right only.
-   */
   getNavigationTarget: (
     from: CellPosition,
     direction: NavigationDirection,
     options?: NavigateOptions,
   ) => CellPosition | null;
-  /** Moves focus, or the selection edge when `extend` is set, and returns the cell it landed on. */
   navigate: (
     direction: NavigationDirection,
     options?: NavigateOptions,
   ) => CellPosition | null;
-  /** Scrolls a cell into view without moving focus or selection. */
   scrollToCell: (rowId: string, columnId: string) => void;
   getFocusedHeaderColumnId: () => string | null;
   setFocusedHeaderColumnId: (updater: Updater<string | null>) => void;
 }
 
 interface TableState_DataGridClipboard {
-  /** Cut source cells laid out in the same rows and columns as the clipboard text. */
   cutCellGrid: Array<Array<CellPosition | null>>;
   pasteDialog: PasteDialogState;
 }
 
 interface TableOptions_DataGridClipboard {
   enablePaste?: boolean;
-  /** Called with the parsed updates before they are written through `onDataChange`. */
   onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
-  /** Adds rows when a paste needs more rows than the table has. */
   onRowsAdd?: (count: number) => void | Promise<void>;
   onClipboardNotice?: (notice: ClipboardNotice) => void;
   onCutCellGridChange?: OnChangeFn<Array<Array<CellPosition | null>>>;
@@ -228,12 +209,10 @@ interface TableOptions_DataGridClipboard {
 }
 
 interface PasteCellsOptions {
-  /** Adds the rows a paste needs through `onRowsAdd` instead of asking first. */
   expandRows?: boolean;
 }
 
 interface Table_DataGridClipboard {
-  /** Selected cells in data columns, row by row in display order. */
   getSelectedCells: () => Array<CellPosition>;
   getCutCellGrid: () => Array<Array<CellPosition | null>>;
   setCutCellGrid: (updater: Updater<Array<Array<CellPosition | null>>>) => void;
@@ -242,16 +221,13 @@ interface Table_DataGridClipboard {
   setPasteDialog: (updater: Updater<PasteDialogState>) => void;
   resetPasteDialog: (defaultState?: boolean) => void;
   copySelectedCells: () => Promise<void>;
-  /** Copies the selection and clears it from its source on the next paste. */
   cutSelectedCells: () => Promise<void>;
-  /** Pastes clipboard text at the focused cell, or fills the selection with a single value. */
   pasteCells: (options?: PasteCellsOptions) => Promise<void>;
 }
 
 interface TableState_DataGridSearch {
   searchOpen: boolean;
   searchQuery: string;
-  /** Index into `getSearchMatches()` of the active match, `-1` when there is none. */
   searchMatchIndex: number;
 }
 
@@ -265,15 +241,11 @@ interface TableOptions_DataGridSearch {
 interface Table_DataGridSearch {
   getSearchOpen: () => boolean;
   openSearch: () => void;
-  /** Closes search, clears the query and leaves focus on the active match. */
   closeSearch: () => void;
   getSearchQuery: () => string;
-  /** Applies a query and moves focus to its first match. */
   setSearchQuery: (query: string) => void;
   getSearchMatchIndex: () => number;
-  /** Data cells whose value contains the query, row by row in display order. */
   getSearchMatches: () => Array<CellPosition>;
-  /** Matched column ids per row id, for re-rendering only the rows that match. */
   getSearchMatchesByRowId: () => Map<string, Set<string>>;
   getActiveSearchMatch: () => CellPosition | null;
   goToNextSearchMatch: () => void;
@@ -286,7 +258,6 @@ interface Cell_DataGridSearch {
 }
 
 interface TableState_DataGridPresence {
-  /** Cells collaborators are on, kept out of undo history since it comes from the network. */
   cellPresence: Array<CellPresence>;
 }
 
@@ -297,7 +268,6 @@ interface TableOptions_DataGridPresence {
 interface Table_DataGridPresence {
   getCellPresence: () => Array<CellPresence>;
   setCellPresence: (updater: Updater<Array<CellPresence>>) => void;
-  /** Collaborators per column id per row id, for re-rendering only the rows they are on. */
   getCellPresenceByRowId: () => Map<string, Map<string, CellPresence>>;
 }
 
@@ -311,9 +281,7 @@ interface TableState_DataGridSelection {
 }
 
 interface TableOptions_DataGridSelection {
-  /** Highlights the lone focused cell as a one-cell selection. */
   enableSingleCellSelection?: boolean;
-  /** Clicking a column header selects its cells instead of clearing the selection. */
   enableColumnSelection?: boolean;
   onCellDragAnchorChange?: OnChangeFn<CellPosition | null>;
   onContextMenuChange?: OnChangeFn<ContextMenuState>;
@@ -322,22 +290,14 @@ interface TableOptions_DataGridSelection {
 interface Table_DataGridSelection {
   getHasCellRangeSelection: () => boolean;
   getHasRowSelection: () => boolean;
-  /** Whether the cell is highlighted, the lone focused cell only counts with `enableSingleCellSelection`. */
   getIsCellSelected: (rowId: string, columnId: string) => boolean;
-  /** Number of highlighted cells, following the same rule as `getIsCellSelected`. */
   getSelectedRangeCellCount: () => number;
-  /** Clears cell and row selection, keeping the focused cell. */
   clearSelection: () => void;
-  /** Unlike `resetRowSelection`, skips `onRowSelectionChange` so the cell selection stays put. */
   clearRowSelection: () => void;
-  /** Selects every data cell while the focused cell stays active. */
   selectAllDataCells: () => void;
-  /** Moves the active range's far corner, keeping its anchor and any earlier ranges. */
   extendCellSelectionTo: (cell: CellPosition) => void;
-  /** Selects a column's cells, or clears the selection when column selection is off. */
   selectColumnCells: (columnId: string) => void;
   getCellDragAnchor: () => CellPosition | null;
-  /** Starts a drag selection from the cell and drops any row selection. */
   startCellDrag: (cell: CellPosition) => void;
   endCellDrag: () => void;
   getContextMenu: () => ContextMenuState;
@@ -1288,9 +1248,7 @@ interface SearchResult {
   query: string;
   rows: Array<SearchRow>;
   columnsKey: string;
-  /** Every row's texts by position in `rows`, so later scans of the same rows skip the cache lookups. */
   rowTexts: Array<Array<string>>;
-  /** Positions in `rows` with at least one match, for narrowing as the query grows. */
   matchedRows: Array<number>;
   matches: Array<CellPosition>;
   matchesByRowId: Map<string, Set<string>>;
@@ -1299,7 +1257,6 @@ interface SearchResult {
 interface SearchTextCache {
   columnsKey: string;
   textsByRow: WeakMap<object, Array<string>>;
-  /** One shared set per combination of matching columns, so rows whose matches don't change keep the same set and skip re-rendering. */
   columnSets: Map<number | string, Set<string>>;
   result: SearchResult | null;
 }
