@@ -16,7 +16,12 @@ import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { CellPresence, RowHeightValue } from "@/lib/data-grid-types";
+import type {
+  CellPresence,
+  ColumnWindow,
+  DataGridCellProps,
+  RowHeightValue,
+} from "@/lib/data-grid-types";
 
 import {
   flexRender,
@@ -25,8 +30,10 @@ import {
   getFocusedCellPosition,
   getRowCellSelectionKey,
   getRowHeightValue,
+  getWindowedColumns,
 } from "@/lib/data-grid-utils";
 import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
+import { DataGridCellPreview } from "@/registry/bases/radix/components/data-grid/data-grid-cell-preview";
 
 const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
 
@@ -35,7 +42,6 @@ interface DataGridRowContextValue {
   adjustLayout: boolean;
   readOnlyColumnIds: Set<string>;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
-  measureElement: (node: Element | null) => void;
 }
 
 export const DataGridRowContext =
@@ -54,6 +60,9 @@ interface DataGridRowProps<
 > extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
   virtualItem: VirtualItem;
+  columnWindow: ColumnWindow | null;
+  /** Cells mounted while this is true render previews until it turns false. */
+  isScrolling: boolean;
 }
 
 // Grid layout comes from context and table state comes from the row's subscription
@@ -63,7 +72,9 @@ export const DataGridRow = React.memo(
     prev.row.id === next.row.id &&
     prev.row.original === next.row.original &&
     prev.virtualItem.index === next.virtualItem.index &&
-    prev.virtualItem.start === next.virtualItem.start,
+    prev.virtualItem.start === next.virtualItem.start &&
+    prev.columnWindow === next.columnWindow &&
+    prev.isScrolling === next.isScrolling,
 ) as typeof DataGridRowImpl;
 
 function DataGridRowImpl<TData extends RowData>({
@@ -81,7 +92,6 @@ function DataGridRowImpl<TData extends RowData>({
     >
       {(rowState) => (
         <DataGridRowContent
-          row={row}
           virtualItem={virtualItem}
           rowState={rowState}
           {...props}
@@ -91,28 +101,25 @@ function DataGridRowImpl<TData extends RowData>({
   );
 }
 
-interface DataGridRowContentProps<
-  TData extends RowData,
-> extends DataGridRowProps<TData> {
+interface DataGridRowContentProps<TData extends RowData> extends Omit<
+  DataGridRowProps<TData>,
+  "row"
+> {
   rowState: RowState<TData>;
 }
 
 function DataGridRowContent<TData extends RowData>({
-  row,
   virtualItem,
+  columnWindow,
   rowState,
+  isScrolling,
   className,
   style,
   ref,
   ...props
 }: DataGridRowContentProps<TData>) {
-  const {
-    stretchColumns,
-    adjustLayout,
-    readOnlyColumnIds,
-    rowMapRef,
-    measureElement,
-  } = useDataGridRowContext();
+  const { stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef } =
+    useDataGridRowContext();
   const virtualRowIndex = virtualItem.index;
   const {
     visibleCells,
@@ -131,20 +138,18 @@ function DataGridRowContent<TData extends RowData>({
       if (typeof virtualRowIndex === "undefined") return;
 
       if (node) {
-        measureElement(node);
         rowMapRef.current?.set(virtualRowIndex, node);
       } else {
         rowMapRef.current?.delete(virtualRowIndex);
       }
     },
-    [virtualRowIndex, measureElement, rowMapRef],
+    [virtualRowIndex, rowMapRef],
   );
 
   const rowRef = useComposedRefs(ref, onRowChange);
 
   return (
     <div
-      key={row.id}
       role="row"
       aria-rowindex={virtualRowIndex + 2}
       aria-selected={isRowSelected}
@@ -153,11 +158,7 @@ function DataGridRowContent<TData extends RowData>({
       tabIndex={-1}
       {...props}
       ref={rowRef}
-      className={cn(
-        "absolute flex w-full border-b [content-visibility:auto]",
-        !adjustLayout && "will-change-transform",
-        className,
-      )}
+      className={cn("absolute flex w-full border-b", className)}
       style={{
         height: `${getRowHeightValue(rowHeight)}px`,
         ...(adjustLayout
@@ -166,7 +167,19 @@ function DataGridRowContent<TData extends RowData>({
         ...style,
       }}
     >
-      {visibleCells.map((cell, columnIndex) => {
+      {getWindowedColumns(visibleCells, columnWindow).map((entry) => {
+        if (entry.type === "spacer") {
+          return (
+            <div
+              key={entry.key}
+              aria-hidden="true"
+              className="shrink-0"
+              style={{ width: entry.size }}
+            />
+          );
+        }
+
+        const { item: cell, colIndex: columnIndex } = entry;
         const columnId = cell.column.id;
 
         const isCellFocused = focusedColumnId === columnId;
@@ -186,7 +199,7 @@ function DataGridRowContent<TData extends RowData>({
 
         return (
           <div
-            key={cell.id}
+            key={columnId}
             role={isUtilityCell ? "gridcell" : "none"}
             aria-colindex={isUtilityCell ? columnIndex + 1 : undefined}
             data-slot="data-grid-cell"
@@ -210,9 +223,10 @@ function DataGridRowContent<TData extends RowData>({
                 isRowSelected={isRowSelected}
               />
             ) : (
-              <DataGridCell
+              <DataGridDataCell
                 cell={cell}
                 columnIndex={columnIndex}
+                width={cell.column.getSize()}
                 rowHeight={rowHeight}
                 isFocused={isCellFocused}
                 isEditing={isCellEditing}
@@ -221,6 +235,7 @@ function DataGridRowContent<TData extends RowData>({
                 isActiveSearchMatch={isActiveSearchMatch}
                 presence={presenceColumns?.get(columnId) ?? null}
                 readOnly={readOnlyColumnIds.has(columnId)}
+                isScrolling={isScrolling}
               />
             )}
           </div>
@@ -228,6 +243,45 @@ function DataGridRowContent<TData extends RowData>({
       })}
     </div>
   );
+}
+
+interface DataGridDataCellProps<
+  TData extends RowData,
+> extends DataGridCellProps<TData> {
+  isScrolling: boolean;
+}
+
+function DataGridDataCell<TData extends RowData>({
+  isScrolling,
+  ...props
+}: DataGridDataCellProps<TData>) {
+  const [isPreview, setIsPreview] = React.useState(isScrolling);
+  const rowId = props.cell.row.id;
+  const [prevRowId, setPrevRowId] = React.useState(rowId);
+  // Rows are reused by slot, so a cell gets a new row mid scroll and should drop back to the cheap preview
+  if (rowId !== prevRowId) {
+    setPrevRowId(rowId);
+    if (isScrolling && !isPreview) setIsPreview(true);
+  }
+  if (isPreview && !isScrolling) setIsPreview(false);
+
+  if (isPreview && !props.isFocused && !props.isEditing) {
+    return (
+      <DataGridCellPreview
+        cell={props.cell}
+        columnIndex={props.columnIndex}
+        width={props.width}
+        rowHeight={props.rowHeight}
+        isSelected={props.isSelected}
+        isSearchMatch={props.isSearchMatch}
+        isActiveSearchMatch={props.isActiveSearchMatch}
+        readOnly={props.readOnly}
+      />
+    );
+  }
+
+  // Keyed by row so editing and other cell state never carry over to the next row in this slot
+  return <DataGridCell key={rowId} {...props} />;
 }
 
 interface DataGridUtilityCellProps<TData extends RowData> {
@@ -291,6 +345,8 @@ function DataGridUtilityCellImpl<TData extends RowData>({
 
 interface RowState<TData extends RowData> {
   visibleCells: Array<Cell<DataGridFeatures, TData>>;
+  /** Re-renders the row when columns resize, so cells get their new width. */
+  columnSizing: TableState<DataGridFeatures>["columnSizing"];
   rowHeight: RowHeightValue;
   focusedColumnId: string | null;
   editingColumnId: string | null;
@@ -327,6 +383,7 @@ function selectRowState<TData extends RowData>(
       ? currentRow
       : row
     ).getVisibleCells(),
+    columnSizing: state.columnSizing,
     rowHeight: state.rowHeight,
     focusedColumnId:
       state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId

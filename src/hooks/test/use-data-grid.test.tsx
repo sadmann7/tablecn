@@ -1,6 +1,11 @@
-import type { ColumnDef, SortingState, Table } from "@tanstack/react-table";
 import type * as React from "react";
 
+import {
+  type ColumnDef,
+  type SortingState,
+  sortFn_alphanumeric,
+  type Table,
+} from "@tanstack/react-table";
 import { act, render, renderHook } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -106,7 +111,7 @@ function fireCellEvent(
   const { dataGridRef, dataGridBodyProps } = result.current;
   const previousContainer = dataGridRef.current;
   const container = document.createElement("div");
-  container.dataset.slot = "grid";
+  container.dataset.slot = "data-grid";
   const cellElement = document.createElement("div");
   cellElement.dataset.slot = "data-grid-cell-wrapper";
   cellElement.dataset.rowId = rowId;
@@ -1330,6 +1335,113 @@ describe("useDataGrid", () => {
       ]);
     });
 
+    it("should narrow matches as the query grows and widen them when it shrinks", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      function search(query: string) {
+        act(() => {
+          result.current.table.setSearchQuery(query);
+        });
+        return result.current.table.getSearchMatches();
+      }
+
+      // Every row and column checked directly, without any earlier query to narrow from
+      function getExpected(query: string) {
+        return testData.flatMap((row, index) =>
+          (["name", "trick", "score"] as const)
+            .filter((columnId) =>
+              String(row[columnId]).toLowerCase().includes(query),
+            )
+            .map((columnId) => ({ rowId: `${index}`, columnId })),
+        );
+      }
+
+      for (const query of ["n", "ny", "nyj", "ki", "k", "9", "92", "2"]) {
+        expect(search(query)).toEqual(getExpected(query));
+      }
+
+      // Rows matching the same columns share one set, so unchanged rows keep the same reference
+      search("o");
+      const matchesByRowId = result.current.table.getSearchMatchesByRowId();
+      expect(matchesByRowId.get("0")).toEqual(new Set(["name"]));
+      expect(matchesByRowId.get("0")).toBe(matchesByRowId.get("1"));
+      search("on");
+      expect(result.current.table.getSearchMatchesByRowId().get("0")).toBe(
+        matchesByRowId.get("0"),
+      );
+    });
+
+    it("should group matches by row past 31 columns", () => {
+      const columnIds = Array.from({ length: 40 }, (_, index) => `c${index}`);
+      const data = [
+        Object.fromEntries([
+          ["id", "0"],
+          ...columnIds.map((id, index) => [
+            id,
+            index === 11 || index === 21 ? "match" : "",
+          ]),
+        ]),
+      ] as Array<Record<string, string>>;
+      const columns: ColumnDef<DataGridFeatures, Record<string, string>>[] =
+        columnIds.map((id) => ({ id, accessorKey: id }));
+
+      const { result } = renderHook(
+        () => useDataGrid({ data, columns, enableSearch: true }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("match");
+      });
+      expect(result.current.table.getSearchMatchesByRowId().get("0")).toEqual(
+        new Set(["c11", "c21"]),
+      );
+    });
+
+    it("should recompute matches when a row is edited or a column is hidden", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.table.setSearchQuery("rodney");
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "1", columnId: "name" },
+      ]);
+
+      rerender({
+        data: testData.map((row) =>
+          row.id === "1" ? { ...row, trick: "Rodney flip" } : row,
+        ),
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "trick" },
+        { rowId: "1", columnId: "name" },
+      ]);
+
+      act(() => {
+        result.current.table.setColumnVisibility({ name: false });
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "trick" },
+      ]);
+    });
+
     it("should skip utility columns", () => {
       const { result } = renderHook(
         () =>
@@ -1469,10 +1581,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.rowVirtualizerOptions.overscan).toBe(6);
-      expect(typeof result.current.rowVirtualizerOptions.measureElement).toBe(
-        "function",
-      );
+      expect(result.current.rowVirtualizerOptions).toEqual({ overscan: 6 });
     });
   });
 
@@ -3017,6 +3126,350 @@ describe("useDataGrid", () => {
       expect(result.current.table.state.sorting).toEqual([
         { id: "name", desc: false },
       ]);
+    });
+
+    it("should sort rows like the built-in sorted row model", () => {
+      interface SortData {
+        id: string;
+        label: string;
+        group: string;
+        score?: number;
+      }
+
+      const data: SortData[] = [
+        { id: "a", label: "Item10", group: "b", score: 2 },
+        { id: "b", label: "item2", group: "a" },
+        { id: "c", label: "Item1", group: "b", score: 1 },
+        { id: "d", label: "item2", group: "a", score: 3 },
+        { id: "e", label: "item20", group: "c", score: 2 },
+      ];
+      const columns: ColumnDef<DataGridFeatures, SortData>[] = [
+        { id: "label", accessorKey: "label" },
+        { id: "group", accessorKey: "group" },
+        { id: "score", accessorKey: "score", sortUndefined: "last" },
+        {
+          id: "length",
+          accessorFn: (row) => row.label.length,
+          sortFn: (rowA, rowB) =>
+            rowA.original.label.length - rowB.original.label.length,
+        },
+      ];
+
+      const { result } = renderHook(
+        () => useDataGrid({ data, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+
+      function getSortedIds(sorting: SortingState) {
+        act(() => {
+          result.current.table.setSorting(sorting);
+        });
+        return result.current.table.getRowModel().rows.map((row) => row.id);
+      }
+
+      // Natural, case-insensitive order with ties kept in data order
+      expect(getSortedIds([{ id: "label", desc: false }])).toEqual([
+        "c",
+        "b",
+        "d",
+        "a",
+        "e",
+      ]);
+      expect(getSortedIds([{ id: "label", desc: true }])).toEqual([
+        "e",
+        "a",
+        "b",
+        "d",
+        "c",
+      ]);
+      expect(
+        getSortedIds([
+          { id: "group", desc: false },
+          { id: "score", desc: true },
+        ]),
+      ).toEqual(["d", "b", "a", "c", "e"]);
+      expect(getSortedIds([{ id: "score", desc: false }])).toEqual([
+        "c",
+        "a",
+        "e",
+        "d",
+        "b",
+      ]);
+      expect(getSortedIds([{ id: "length", desc: false }])).toEqual([
+        "b",
+        "c",
+        "d",
+        "a",
+        "e",
+      ]);
+    });
+
+    it("should match TanStack's natural order for tricky values", () => {
+      const labels = [
+        "item10",
+        "Item2",
+        "item02",
+        "item2b",
+        "item",
+        "",
+        "0",
+        "00",
+        "007",
+        "10a",
+        "1a",
+        "a-1",
+        "a 1",
+        "a01",
+        "a1",
+        "ab",
+        "2024-01-05",
+        "2024-1-5",
+        "1234567890123456789",
+        "Zoë 3",
+        "zoe 3",
+      ];
+      const data = labels.map((label, index) => ({ id: `${index}`, label }));
+      const columns: ColumnDef<DataGridFeatures, (typeof data)[number]>[] = [
+        { id: "label", accessorKey: "label", sortFn: "alphanumeric" },
+      ];
+
+      const { result } = renderHook(
+        () => useDataGrid({ data, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+
+      const resolve = sortFn_alphanumeric.resolveDataValue!;
+      const expected = [...data]
+        .map((row, index) => ({ row, index }))
+        .sort(
+          (a, b) =>
+            sortFn_alphanumeric.sort(
+              resolve(a.row.label),
+              resolve(b.row.label),
+              {} as never,
+              {} as never,
+              "label",
+            ) || a.index - b.index,
+        )
+        .map(({ row }) => row.id);
+
+      for (const desc of [false, true]) {
+        act(() => {
+          result.current.table.setSorting([{ id: "label", desc }]);
+        });
+        const ids = result.current.table
+          .getRowModel()
+          .rows.map((row) => row.id);
+        // Descending flips the comparison but keeps ties in data order
+        expect(ids).toEqual(
+          desc
+            ? [...data]
+                .map((row, index) => ({ row, index }))
+                .sort(
+                  (a, b) =>
+                    -sortFn_alphanumeric.sort(
+                      resolve(a.row.label),
+                      resolve(b.row.label),
+                      {} as never,
+                      {} as never,
+                      "label",
+                    ) || a.index - b.index,
+                )
+                .map(({ row }) => row.id)
+            : expected,
+        );
+      }
+
+      // Without the out-of-range values every label takes the precomputed key path
+      const latinData = data.filter(
+        (row) => !row.label.includes("ë") && row.label.length < 16,
+      );
+      const { result: latinResult } = renderHook(
+        () =>
+          useDataGrid({ data: latinData, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+      act(() => {
+        latinResult.current.table.setSorting([{ id: "label", desc: false }]);
+      });
+      expect(
+        latinResult.current.table.getRowModel().rows.map((row) => row.id),
+      ).toEqual(
+        expected.filter((id) => latinData.some((row) => row.id === id)),
+      );
+    });
+
+    it("should flip sort directions to the same order as a fresh sort", () => {
+      interface TieData {
+        id: string;
+        group: string;
+        score: number;
+      }
+      const data: TieData[] = Array.from({ length: 40 }, (_, index) => ({
+        id: `${index}`,
+        group: ["b", "a", "c"][index % 3]!,
+        score: (index * 7) % 5,
+      }));
+      const columns: ColumnDef<DataGridFeatures, TieData>[] = [
+        { id: "group", accessorKey: "group" },
+        { id: "score", accessorKey: "score" },
+      ];
+
+      function getFreshIds(rows: TieData[], sorting: SortingState) {
+        const { result } = renderHook(
+          () => useDataGrid({ data: rows, columns, getRowId: (row) => row.id }),
+          { wrapper: createWrapper() },
+        );
+        act(() => {
+          result.current.table.setSorting(sorting);
+        });
+        return result.current.table.getRowModel().rows.map((row) => row.id);
+      }
+
+      const { result, rerender } = renderHook(
+        ({ rows }) =>
+          useDataGrid({ data: rows, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper(), initialProps: { rows: data } },
+      );
+
+      function getIds(sorting: SortingState) {
+        act(() => {
+          result.current.table.setSorting(sorting);
+        });
+        return result.current.table.getRowModel().rows.map((row) => row.id);
+      }
+
+      const toggles: SortingState[] = [
+        [{ id: "score", desc: false }],
+        [{ id: "score", desc: true }],
+        [{ id: "score", desc: false }],
+        [
+          { id: "group", desc: false },
+          { id: "score", desc: true },
+        ],
+        [
+          { id: "group", desc: true },
+          { id: "score", desc: false },
+        ],
+        // Flipping only one of the sorts needs a full sort
+        [
+          { id: "group", desc: true },
+          { id: "score", desc: true },
+        ],
+      ];
+      for (const sorting of toggles) {
+        expect(getIds(sorting)).toEqual(getFreshIds(data, sorting));
+      }
+
+      // New data must not reuse the order computed for the old rows
+      const edited = data.map((row) =>
+        row.id === "0" ? { ...row, group: "z" } : row,
+      );
+      rerender({ rows: edited });
+      const flipped: SortingState = [
+        { id: "group", desc: false },
+        { id: "score", desc: false },
+      ];
+      expect(getIds(flipped)).toEqual(getFreshIds(edited, flipped));
+    });
+
+    it("should reuse unchanged rows when data changes", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            getRowId: (row) => row.id,
+          }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      const before = result.current.table.getCoreRowModel();
+      const edited = testData.map((row) =>
+        row.id === "2" ? { ...row, trick: "Impossible" } : row,
+      );
+      rerender({ data: edited });
+
+      const after = result.current.table.getCoreRowModel();
+      expect(after).not.toBe(before);
+      expect(after.rows[0]).toBe(before.rows[0]);
+      expect(after.rows[2]).toBe(before.rows[2]);
+      expect(after.rows[1]).not.toBe(before.rows[1]);
+      expect(after.rows[1]?.getValue("trick")).toBe("Impossible");
+      expect(after.rowsById["2"]).toBe(after.rows[1]);
+      expect(after.flatRows).toEqual(after.rows);
+
+      // Adding and removing rows rebuilds the id lookup
+      rerender({
+        data: [
+          edited[0]!,
+          edited[2]!,
+          { id: "4", name: "Elissa Steamer", trick: "Boardslide", score: 90 },
+        ],
+      });
+
+      const rebuilt = result.current.table.getCoreRowModel();
+      expect(rebuilt.rows.map((row) => row.id)).toEqual(["1", "3", "4"]);
+      expect(rebuilt.rows.map((row) => row.index)).toEqual([0, 1, 2]);
+      expect(rebuilt.rowsById["2"]).toBeUndefined();
+      expect(rebuilt.rowsById["4"]?.getValue("name")).toBe("Elissa Steamer");
+      expect(rebuilt.rows[0]).toBe(after.rows[0]);
+    });
+
+    it("should record per-row filter results and meta like TanStack's model", () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        {
+          id: "name",
+          accessorKey: "name",
+          filterFn: (row, columnId, value: string, addMeta) => {
+            const isMatch = String(row.getValue(columnId)).includes(value);
+            if (isMatch) addMeta?.({ matchedBy: value });
+            return isMatch;
+          },
+        },
+        {
+          id: "score",
+          accessorKey: "score",
+          filterFn: (row, columnId, value: number) =>
+            Number(row.getValue(columnId)) >= value,
+        },
+      ];
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.setColumnFilters([
+          { id: "name", value: "o" },
+          { id: "score", value: 93 },
+        ]);
+      });
+
+      const { table } = result.current;
+      expect(table.getRowModel().rows.map((row) => row.id)).toEqual(["1", "2"]);
+
+      const coreRows = table.getCoreRowModel().rowsById;
+      expect(coreRows["1"]?.columnFilters).toEqual({ name: true, score: true });
+      expect(coreRows["3"]?.columnFilters).toEqual({
+        name: true,
+        score: false,
+      });
+      expect(coreRows["1"]?.columnFiltersMeta).toEqual({
+        name: { matchedBy: "o" },
+      });
+      expect(coreRows["2"]?.columnFiltersMeta).toEqual({
+        name: { matchedBy: "o" },
+      });
+
+      act(() => {
+        table.setColumnFilters([]);
+      });
+      expect(table.getRowModel().rows).toHaveLength(3);
+      expect(coreRows["1"]?.columnFilters).toEqual({});
+      expect(coreRows["1"]?.columnFiltersMeta).toEqual({});
     });
 
     it("should hand column filters to onColumnFiltersChange", () => {

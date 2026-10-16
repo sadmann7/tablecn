@@ -9,24 +9,41 @@ import {
   columnResizingFeature,
   columnSizingFeature,
   columnVisibilityFeature,
+  constructRow,
+  copyInstancePropertiesWithoutMemos,
   createFilteredRowModel,
-  createSortedRowModel,
+  makeObjectMap,
   makeStateUpdater,
   metaHelper,
   type OnChangeFn,
   type RowData,
   rowSelectionFeature,
+  type Row,
+  type RowModel,
   rowSortingFeature,
   setStateSlice,
+  skipFirstRun,
+  type SortFn,
+  type SortFnDef,
   sortFn_alphanumeric,
+  sortFn_alphanumericCaseSensitive,
   sortFn_datetime,
   sortFn_text,
   type Table,
   type TableFeature,
   type TableFeatures,
   tableFeatures,
+  tableMemo,
   type Updater,
 } from "@tanstack/react-table";
+import {
+  column_getCanSort,
+  column_getSortFn,
+  table_autoResetCellSelection,
+  table_autoResetExpanded,
+  table_autoResetPageIndex,
+  table_autoResetSorting,
+} from "@tanstack/react-table/static-functions";
 
 import type {
   CellPosition,
@@ -98,7 +115,6 @@ interface Column_DataGridColumnOrdering {
 }
 
 interface StopEditingOptions {
-  /** Moves focus after committing, like Tab or the arrow keys. */
   direction?: NavigationDirection;
   moveToNextRow?: boolean;
 }
@@ -121,7 +137,6 @@ interface Cell_DataGridCellEditing {
 }
 
 interface TableOptions_DataGridData<TData extends RowData> {
-  /** Disables every data mutation, including cell edits and row deletion. */
   readOnly?: boolean;
   onDataChange?: (data: TData[]) => void;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
@@ -139,11 +154,8 @@ interface TableOptions_DataGridData<TData extends RowData> {
 
 interface Table_DataGridData {
   getIsReadOnly: () => boolean;
-  /** Writes values into editable cells and emits the next `data` through `onDataChange`. */
   updateCells: (updates: CellUpdate | Array<CellUpdate>) => void;
-  /** Resets cells to their variant's empty value. */
   clearCells: (cells: Array<CellPosition>) => void;
-  /** Deletes rows through `onRowsDelete`, then moves focus to the row that takes their place. */
   deleteRows: (rowIds: string[]) => Promise<void>;
 }
 
@@ -153,57 +165,43 @@ interface Cell_DataGridData {
 }
 
 interface TableState_DataGridNavigation {
-  /** Column whose header holds keyboard focus, which hides the focused cell while the selection stays. */
   focusedHeaderColumnId: string | null;
 }
 
 interface TableOptions_DataGridNavigation {
-  /** Reading direction, so left and right follow the visual layout. */
   dir?: Direction;
-  /** Brings a cell into view, provided by the layer that owns the scroll container. */
   onScrollToCell?: (cell: CellPosition) => void;
   onFocusedHeaderColumnIdChange?: OnChangeFn<string | null>;
 }
 
 interface NavigateOptions {
-  /** Moves the selection edge instead of focus, like holding Shift. */
   extend?: boolean;
-  /** Rows to move for `pageup` and `pagedown`. */
   pageSize?: number;
 }
 
 interface Table_DataGridNavigation {
-  /**
-   * Cell reached by moving from `from` in `direction`, or `null` when there is nowhere to go.
-   * Utility columns (`enableCellSelection: false`) are reachable with left and right only.
-   */
   getNavigationTarget: (
     from: CellPosition,
     direction: NavigationDirection,
     options?: NavigateOptions,
   ) => CellPosition | null;
-  /** Moves focus, or the selection edge when `extend` is set, and returns the cell it landed on. */
   navigate: (
     direction: NavigationDirection,
     options?: NavigateOptions,
   ) => CellPosition | null;
-  /** Scrolls a cell into view without moving focus or selection. */
   scrollToCell: (rowId: string, columnId: string) => void;
   getFocusedHeaderColumnId: () => string | null;
   setFocusedHeaderColumnId: (updater: Updater<string | null>) => void;
 }
 
 interface TableState_DataGridClipboard {
-  /** Cut source cells laid out in the same rows and columns as the clipboard text. */
   cutCellGrid: Array<Array<CellPosition | null>>;
   pasteDialog: PasteDialogState;
 }
 
 interface TableOptions_DataGridClipboard {
   enablePaste?: boolean;
-  /** Called with the parsed updates before they are written through `onDataChange`. */
   onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
-  /** Adds rows when a paste needs more rows than the table has. */
   onRowsAdd?: (count: number) => void | Promise<void>;
   onClipboardNotice?: (notice: ClipboardNotice) => void;
   onCutCellGridChange?: OnChangeFn<Array<Array<CellPosition | null>>>;
@@ -211,12 +209,10 @@ interface TableOptions_DataGridClipboard {
 }
 
 interface PasteCellsOptions {
-  /** Adds the rows a paste needs through `onRowsAdd` instead of asking first. */
   expandRows?: boolean;
 }
 
 interface Table_DataGridClipboard {
-  /** Selected cells in data columns, row by row in display order. */
   getSelectedCells: () => Array<CellPosition>;
   getCutCellGrid: () => Array<Array<CellPosition | null>>;
   setCutCellGrid: (updater: Updater<Array<Array<CellPosition | null>>>) => void;
@@ -225,16 +221,13 @@ interface Table_DataGridClipboard {
   setPasteDialog: (updater: Updater<PasteDialogState>) => void;
   resetPasteDialog: (defaultState?: boolean) => void;
   copySelectedCells: () => Promise<void>;
-  /** Copies the selection and clears it from its source on the next paste. */
   cutSelectedCells: () => Promise<void>;
-  /** Pastes clipboard text at the focused cell, or fills the selection with a single value. */
   pasteCells: (options?: PasteCellsOptions) => Promise<void>;
 }
 
 interface TableState_DataGridSearch {
   searchOpen: boolean;
   searchQuery: string;
-  /** Index into `getSearchMatches()` of the active match, `-1` when there is none. */
   searchMatchIndex: number;
 }
 
@@ -248,15 +241,11 @@ interface TableOptions_DataGridSearch {
 interface Table_DataGridSearch {
   getSearchOpen: () => boolean;
   openSearch: () => void;
-  /** Closes search, clears the query and leaves focus on the active match. */
   closeSearch: () => void;
   getSearchQuery: () => string;
-  /** Applies a query and moves focus to its first match. */
   setSearchQuery: (query: string) => void;
   getSearchMatchIndex: () => number;
-  /** Data cells whose value contains the query, row by row in display order. */
   getSearchMatches: () => Array<CellPosition>;
-  /** Matched column ids per row id, for re-rendering only the rows that match. */
   getSearchMatchesByRowId: () => Map<string, Set<string>>;
   getActiveSearchMatch: () => CellPosition | null;
   goToNextSearchMatch: () => void;
@@ -269,7 +258,6 @@ interface Cell_DataGridSearch {
 }
 
 interface TableState_DataGridPresence {
-  /** Cells collaborators are on, kept out of undo history since it comes from the network. */
   cellPresence: Array<CellPresence>;
 }
 
@@ -280,7 +268,6 @@ interface TableOptions_DataGridPresence {
 interface Table_DataGridPresence {
   getCellPresence: () => Array<CellPresence>;
   setCellPresence: (updater: Updater<Array<CellPresence>>) => void;
-  /** Collaborators per column id per row id, for re-rendering only the rows they are on. */
   getCellPresenceByRowId: () => Map<string, Map<string, CellPresence>>;
 }
 
@@ -294,9 +281,7 @@ interface TableState_DataGridSelection {
 }
 
 interface TableOptions_DataGridSelection {
-  /** Highlights the lone focused cell as a one-cell selection. */
   enableSingleCellSelection?: boolean;
-  /** Clicking a column header selects its cells instead of clearing the selection. */
   enableColumnSelection?: boolean;
   onCellDragAnchorChange?: OnChangeFn<CellPosition | null>;
   onContextMenuChange?: OnChangeFn<ContextMenuState>;
@@ -305,22 +290,14 @@ interface TableOptions_DataGridSelection {
 interface Table_DataGridSelection {
   getHasCellRangeSelection: () => boolean;
   getHasRowSelection: () => boolean;
-  /** Whether the cell is highlighted, the lone focused cell only counts with `enableSingleCellSelection`. */
   getIsCellSelected: (rowId: string, columnId: string) => boolean;
-  /** Number of highlighted cells, following the same rule as `getIsCellSelected`. */
   getSelectedRangeCellCount: () => number;
-  /** Clears cell and row selection, keeping the focused cell. */
   clearSelection: () => void;
-  /** Unlike `resetRowSelection`, skips `onRowSelectionChange` so the cell selection stays put. */
   clearRowSelection: () => void;
-  /** Selects every data cell while the focused cell stays active. */
   selectAllDataCells: () => void;
-  /** Moves the active range's far corner, keeping its anchor and any earlier ranges. */
   extendCellSelectionTo: (cell: CellPosition) => void;
-  /** Selects a column's cells, or clears the selection when column selection is off. */
   selectColumnCells: (columnId: string) => void;
   getCellDragAnchor: () => CellPosition | null;
-  /** Starts a drag selection from the cell and drops any row selection. */
   startCellDrag: (cell: CellPosition) => void;
   endCellDrag: () => void;
   getContextMenu: () => ContextMenuState;
@@ -1267,29 +1244,175 @@ const dataGridClipboardFeature: TableFeature = {
   },
 };
 
-function getSearchMatches(
-  query: string,
-  rows: ReturnType<DataGridInstance["getRowModel"]>["rows"],
-  columns: ReturnType<DataGridInstance["getVisibleLeafColumns"]>,
-) {
-  const lowerQuery = query.trim().toLowerCase();
-  if (!lowerQuery) return [];
+interface SearchResult {
+  query: string;
+  rows: Array<SearchRow>;
+  columnsKey: string;
+  rowTexts: Array<Array<string>>;
+  matchedRows: Array<number>;
+  matches: Array<CellPosition>;
+  matchesByRowId: Map<string, Set<string>>;
+}
 
+interface SearchTextCache {
+  columnsKey: string;
+  textsByRow: WeakMap<object, Array<string>>;
+  columnSets: Map<number | string, Set<string>>;
+  result: SearchResult | null;
+}
+
+type SearchRow = ReturnType<DataGridInstance["getRowModel"]>["rows"][number];
+type SearchColumns = ReturnType<DataGridInstance["getVisibleLeafColumns"]>;
+
+function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
   const dataColumnIds = columns
     .filter(getIsDataColumn)
     .map((column) => column.id);
 
+  const columnsKey = dataColumnIds.join("\u0000");
+  if (cache.columnsKey !== columnsKey) {
+    cache.columnsKey = columnsKey;
+    cache.textsByRow = new WeakMap();
+    cache.columnSets = new Map();
+    cache.result = null;
+  }
+  return dataColumnIds;
+}
+
+// Lowercased cell text is cached per row data, so each keystroke only scans strings
+// instead of reading and stringifying every cell again, and edited rows refresh on their own.
+// Repeated values share one lowercased string to keep the cache small.
+function getRowSearchTexts(
+  row: SearchRow,
+  dataColumnIds: Array<string>,
+  cache: SearchTextCache,
+  lowerByValue: Map<unknown, string>,
+) {
+  const original = row.original;
+  const isCacheable = typeof original === "object" && original !== null;
+  let texts = isCacheable ? cache.textsByRow.get(original) : undefined;
+  if (texts) return texts;
+
+  texts = dataColumnIds.map((columnId) => {
+    const value = row.getValue(columnId);
+    let text = lowerByValue.get(value);
+    if (text === undefined) {
+      text = stringifyUnknown(value).toLowerCase();
+      lowerByValue.set(value, text);
+    }
+    return text;
+  });
+  if (isCacheable) cache.textsByRow.set(original, texts);
+  return texts;
+}
+
+function getSearchMatches(
+  query: string,
+  rows: Array<SearchRow>,
+  columns: SearchColumns,
+  cache: SearchTextCache,
+) {
+  const lowerQuery = query.trim().toLowerCase();
+  if (!lowerQuery) return [];
+
+  const dataColumnIds = getSearchColumnIds(columns, cache);
+  const lowerByValue = new Map<unknown, string>();
+
+  // A query that extends the previous one can only match rows that already matched
+  const previous = cache.result;
+  const isNarrowing =
+    previous !== null &&
+    previous.rows === rows &&
+    previous.columnsKey === cache.columnsKey &&
+    lowerQuery.includes(previous.query);
+  const candidateCount = isNarrowing
+    ? previous.matchedRows.length
+    : rows.length;
+
+  const hasSameRows =
+    previous !== null &&
+    previous.rows === rows &&
+    previous.columnsKey === cache.columnsKey;
+  const rowTexts: Array<Array<string>> = hasSameRows ? previous.rowTexts : [];
+  const useBitmask = dataColumnIds.length <= 31;
+
   const matches: Array<CellPosition> = [];
-  for (const row of rows) {
-    const cellsByColumnId = row.getAllCellsByColumnId();
-    for (const columnId of dataColumnIds) {
-      const value = cellsByColumnId[columnId]?.getValue();
-      if (stringifyUnknown(value).toLowerCase().includes(lowerQuery)) {
-        matches.push({ rowId: row.id, columnId });
+  const matchesByRowId = new Map<string, Set<string>>();
+  const matchedRows: Array<number> = [];
+
+  for (let candidate = 0; candidate < candidateCount; candidate++) {
+    const rowIndex = isNarrowing ? previous.matchedRows[candidate]! : candidate;
+    const row = rows[rowIndex]!;
+    let texts = rowTexts[rowIndex];
+    if (!texts) {
+      texts = getRowSearchTexts(row, dataColumnIds, cache, lowerByValue);
+      rowTexts[rowIndex] = texts;
+    }
+
+    let mask = 0;
+    let maskKey = "";
+    for (let index = 0; index < texts.length; index++) {
+      if (texts[index]!.includes(lowerQuery)) {
+        matches.push({ rowId: row.id, columnId: dataColumnIds[index]! });
+        if (useBitmask) mask |= 1 << index;
+        else maskKey += `${index},`;
       }
     }
+    const setKey = useBitmask ? mask : maskKey;
+    if (!setKey) continue;
+
+    let columnSet = cache.columnSets.get(setKey);
+    if (!columnSet) {
+      columnSet = new Set(
+        useBitmask
+          ? dataColumnIds.filter((_, index) => mask & (1 << index))
+          : maskKey
+              .slice(0, -1)
+              .split(",")
+              .map((index) => dataColumnIds[Number(index)]!),
+      );
+      cache.columnSets.set(setKey, columnSet);
+    }
+    matchesByRowId.set(row.id, columnSet);
+    matchedRows.push(rowIndex);
   }
+
+  cache.result = {
+    query: lowerQuery,
+    rows,
+    columnsKey: cache.columnsKey,
+    rowTexts,
+    matchedRows,
+    matches,
+    matchesByRowId,
+  };
   return matches;
+}
+
+// Fills the search text cache in idle time after search opens, so the first keystroke stays fast
+function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
+  if (typeof requestIdleCallback === "undefined") return;
+
+  const rows = table.getRowModel().rows;
+  const dataColumnIds = getSearchColumnIds(
+    table.getVisibleLeafColumns(),
+    cache,
+  );
+  const columnsKey = cache.columnsKey;
+  const lowerByValue = new Map<unknown, string>();
+  let index = 0;
+
+  function onIdle(deadline: IdleDeadline) {
+    if (!table.atoms.searchOpen.get() || cache.columnsKey !== columnsKey) {
+      return;
+    }
+    while (index < rows.length && deadline.timeRemaining() > 1) {
+      getRowSearchTexts(rows[index++]!, dataColumnIds, cache, lowerByValue);
+    }
+    if (index < rows.length) requestIdleCallback(onIdle);
+  }
+
+  requestIdleCallback(onIdle);
 }
 
 function goToSearchMatch(table: DataGridInstance, step: 1 | -1) {
@@ -1324,6 +1447,13 @@ const dataGridSearchFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
+    const searchTextCache: SearchTextCache = {
+      columnsKey: "",
+      textsByRow: new WeakMap(),
+      columnSets: new Map(),
+      result: null,
+    };
+
     const setSearchQuery = (query: string) => {
       setStateSlice(instance, "searchQuery", query);
       const firstMatch = instance.getSearchMatches()[0];
@@ -1341,6 +1471,7 @@ const dataGridSearchFeature: TableFeature = {
         fn: () => {
           if (!instance.options.enableSearch) return;
           setStateSlice(instance, "searchOpen", true);
+          warmSearchTextCache(instance, searchTextCache);
         },
       },
       table_closeSearch: {
@@ -1358,7 +1489,8 @@ const dataGridSearchFeature: TableFeature = {
         fn: () => instance.atoms.searchMatchIndex.get(),
       },
       table_getSearchMatches: {
-        fn: getSearchMatches,
+        fn: (query: string, rows: Array<SearchRow>, columns: SearchColumns) =>
+          getSearchMatches(query, rows, columns, searchTextCache),
         memoDeps: () => [
           instance.atoms.searchQuery.get(),
           instance.getRowModel().rows,
@@ -1367,6 +1499,10 @@ const dataGridSearchFeature: TableFeature = {
       },
       table_getSearchMatchesByRowId: {
         fn: (matches: Array<CellPosition>) => {
+          // The scan already grouped its matches by row
+          const { result } = searchTextCache;
+          if (result?.matches === matches) return result.matchesByRowId;
+
           const matchesByRowId = new Map<string, Set<string>>();
           for (const { rowId, columnId } of matches) {
             let columnIds = matchesByRowId.get(rowId);
@@ -1661,6 +1797,417 @@ const dataGridSelectionFeature: TableFeature = {
   },
 };
 
+type CoreRow = Row<TableFeatures, RowData>;
+
+// Same rows as `createCoreRowModel`, but rows whose data object is unchanged at the same index
+// are reused, so a cell edit rebuilds one row instead of every row and its caches
+function createDataGridCoreRowModel<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
+  return (_table) => {
+    const table = _table as unknown as Table<TableFeatures, RowData>;
+    let previous: RowModel<TableFeatures, RowData> | null = null;
+    return tableMemo({
+      feature: "coreRowModelsFeature",
+      table: _table,
+      fnName: "table.getCoreRowModel",
+      memoDeps: () => [table.options.data],
+      fn: () => {
+        previous = getCoreRowModel(table, previous);
+        return previous as unknown as RowModel<TFeatures, TData>;
+      },
+      onAfterUpdate: skipFirstRun(() => {
+        table_autoResetExpanded(table);
+        table_autoResetPageIndex(table);
+        table_autoResetSorting(table);
+        table_autoResetCellSelection(table);
+      }),
+    });
+  };
+}
+
+function getCoreRowModel(
+  table: Table<TableFeatures, RowData>,
+  previous: RowModel<TableFeatures, RowData> | null,
+): RowModel<TableFeatures, RowData> {
+  const { data, getSubRows } = table.options;
+
+  // Cell edits keep the row count and ids, so only the changed rows are swapped in
+  if (previous && !getSubRows && previous.rows.length === data.length) {
+    const rows = previous.rows.slice();
+    const changedRows: Array<CoreRow> = [];
+    let isSameShape = true;
+    for (let i = 0; i < data.length; i++) {
+      const originalRow = data[i]!;
+      const previousRow = rows[i]!;
+      if (previousRow.original === originalRow) continue;
+      const id = table.getRowId(originalRow, i);
+      if (id !== previousRow.id) {
+        isSameShape = false;
+        break;
+      }
+      const row = constructRow(table, id, originalRow, i, 0);
+      rows[i] = row;
+      changedRows.push(row);
+    }
+
+    if (isSameShape) {
+      // The previous model is replaced, so its id lookup is updated in place instead of copied
+      const rowsById = previous.rowsById;
+      for (const row of changedRows) rowsById[row.id] = row;
+      return { rows, flatRows: rows.slice(), rowsById };
+    }
+  }
+
+  const rowModel: RowModel<TableFeatures, RowData> = {
+    rows: [],
+    flatRows: [],
+    rowsById: makeObjectMap<CoreRow>(),
+  };
+
+  function accessRows(
+    originalRows: ReadonlyArray<RowData>,
+    depth: number,
+    previousRows: ReadonlyArray<CoreRow>,
+    parentRow?: CoreRow,
+  ) {
+    const rows: Array<CoreRow> = [];
+    for (let i = 0; i < originalRows.length; i++) {
+      const originalRow = originalRows[i]!;
+      const previousRow = previousRows[i];
+      // Sub rows are rebuilt from scratch, so only flat rows are reused
+      const row =
+        !getSubRows && previousRow?.original === originalRow
+          ? previousRow
+          : constructRow(
+              table,
+              table.getRowId(originalRow, i, parentRow),
+              originalRow,
+              i,
+              depth,
+              undefined,
+              parentRow?.id,
+            );
+      rowModel.flatRows.push(row);
+      rowModel.rowsById[row.id] = row;
+      rows.push(row);
+
+      if (getSubRows) {
+        row.originalSubRows = getSubRows(originalRow, i);
+        if (row.originalSubRows?.length) {
+          row.subRows = accessRows(row.originalSubRows, depth + 1, [], row);
+        }
+      }
+    }
+    return rows;
+  }
+
+  rowModel.rows = accessRows(data, 0, previous?.rows ?? []);
+  return rowModel;
+}
+
+type SortedRow = Row<TableFeatures, RowData>;
+type SortedRowFn = SortFn<TableFeatures, RowData>;
+
+interface ResolvedSort {
+  id: string;
+  desc: boolean;
+  invertSorting: boolean;
+  sortUndefined: false | -1 | 1 | "first" | "last" | undefined;
+  sortFn: SortedRowFn;
+  /** Set for comparators built with `constructSortFn`, which compare values instead of rows. */
+  compareValues: SortFnDef<TableFeatures, RowData>["sort"] | null;
+}
+
+const alphanumericCompares = new Set<unknown>([
+  sortFn_alphanumeric.sort,
+  sortFn_alphanumericCaseSensitive.sort,
+]);
+
+function compareBasic(a: unknown, b: unknown) {
+  return a === b ? 0 : (a as number) > (b as number) ? 1 : -1;
+}
+
+function getIsDigit(code: number) {
+  return code >= 48 && code <= 57;
+}
+
+// Encodes a value so plain string comparison matches TanStack's natural `compareAlphanumeric`:
+// text chunks end in "\u0000", and number chunks become "\u00ff" + digit count + digits without
+// leading zeros, which sorts them after text and by numeric value. Returns `null` for values the
+// encoding can't represent, such as text with "\u0000" or characters past Latin-1, which also
+// keeps keys one byte per character so comparisons stay fast.
+function getAlphanumericSortKey(value: unknown) {
+  if (typeof value !== "string") return null;
+  let key = "";
+  let index = 0;
+  while (index < value.length) {
+    const code = value.charCodeAt(index);
+    if (code === 0 || code >= 0xff) return null;
+    const isNumeric = getIsDigit(code);
+    let end = index + 1;
+    while (
+      end < value.length &&
+      getIsDigit(value.charCodeAt(end)) === isNumeric
+    ) {
+      end++;
+    }
+    if (isNumeric) {
+      let start = index;
+      while (start < end && value.charCodeAt(start) === 48) start++;
+      const digitCount = end - start;
+      // Longer numbers lose precision in TanStack's comparison, so they keep the comparator
+      if (digitCount > 15) return null;
+      key += `\u00ff${String.fromCharCode(48 + digitCount)}${value.slice(start, end)}`;
+    } else {
+      key += `${value.slice(index, end)}\u0000`;
+    }
+    index = end;
+  }
+  return key;
+}
+
+function getAlphanumericSortKeys(values: Array<unknown>) {
+  const keys: Array<string> = [];
+  for (const value of values) {
+    const key = getAlphanumericSortKey(value);
+    if (key === null) return null;
+    keys.push(key);
+  }
+  return keys;
+}
+
+function getValueSort(sortFn: SortedRowFn) {
+  return "sort" in sortFn && typeof sortFn.sort === "function"
+    ? (sortFn.sort as SortFnDef<TableFeatures, RowData>["sort"])
+    : null;
+}
+
+// Same ordering as `createSortedRowModel`, but each row's sort value is read and resolved once
+// per sort instead of on every comparison, which allocates lowercased strings millions of times
+function createDataGridSortedRowModel<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
+  return (_table) => {
+    const table = _table as unknown as Table<TableFeatures, RowData>;
+    const cache: { current: SortCache | null } = { current: null };
+    return tableMemo({
+      feature: "rowSortingFeature",
+      table: _table,
+      fnName: "table.getSortedRowModel",
+      memoDeps: () => [
+        table.atoms.sorting?.get(),
+        table.getPreSortedRowModel(),
+      ],
+      fn: () =>
+        getSortedRowModel(table, cache) as unknown as RowModel<
+          TFeatures,
+          TData
+        >,
+      onAfterUpdate: skipFirstRun(() => table_autoResetPageIndex(table)),
+    });
+  };
+}
+
+interface SortCache {
+  rows: Array<SortedRow>;
+  sorting: Array<{ id: string; desc: boolean }>;
+  order: Array<number>;
+  getIsTie: (a: number, b: number) => boolean;
+}
+
+function getIsFlippedSorting(
+  previous: SortCache["sorting"],
+  sorting: Array<ResolvedSort>,
+) {
+  return (
+    previous.length === sorting.length &&
+    sorting.every(
+      (sort, index) =>
+        sort.id === previous[index]?.id && sort.desc !== previous[index]?.desc,
+    )
+  );
+}
+
+// Flipping every direction reverses the order of tied groups, while rows inside a group keep their
+// data order, so the previous order is regrouped in one pass instead of sorted again
+function getFlippedOrder(
+  order: Array<number>,
+  getIsTie: (a: number, b: number) => boolean,
+) {
+  const flipped: Array<number> = [];
+  let groupEnd = order.length;
+  for (let index = order.length - 1; index >= 0; index--) {
+    const previous = order[index - 1];
+    if (previous === undefined || !getIsTie(previous, order[index]!)) {
+      for (let i = index; i < groupEnd; i++) flipped.push(order[i]!);
+      groupEnd = index;
+    }
+  }
+  return flipped;
+}
+
+function getSortedRowModel(
+  table: Table<TableFeatures, RowData>,
+  cache: { current: SortCache | null },
+): RowModel<TableFeatures, RowData> {
+  const preSortedRowModel = table.getPreSortedRowModel();
+  const sorting = table.atoms.sorting?.get();
+  if (!preSortedRowModel.rows.length || !sorting?.length) {
+    return preSortedRowModel;
+  }
+
+  const resolvedSorting: Array<ResolvedSort> = [];
+  for (const sort of sorting) {
+    const column = table.getColumn(sort.id);
+    if (!column || !column_getCanSort(column)) continue;
+    const sortFn = column_getSortFn(column);
+    resolvedSorting.push({
+      id: sort.id,
+      desc: sort.desc,
+      invertSorting: !!column.columnDef.invertSorting,
+      sortUndefined: column.columnDef.sortUndefined,
+      sortFn,
+      compareValues: getValueSort(sortFn),
+    });
+  }
+  if (!resolvedSorting.length) return preSortedRowModel;
+
+  const sortedFlatRows: Array<SortedRow> = [];
+
+  // Sub rows sort per parent and first or last empty values stay put when flipped, so neither is cached
+  const isCacheable =
+    preSortedRowModel.flatRows.length === preSortedRowModel.rows.length &&
+    resolvedSorting.every(
+      ({ sortUndefined }) =>
+        sortUndefined !== "first" && sortUndefined !== "last",
+    );
+  const previous = cache.current;
+  cache.current = null;
+
+  function getRowsComparator(rows: Array<SortedRow>) {
+    // Values are only read when a comparator or `sortUndefined` needs them,
+    // custom row comparators read rows themselves
+    const rawValues = resolvedSorting.map((sort) =>
+      sort.compareValues || sort.sortUndefined
+        ? rows.map((row) => row.getValue(sort.id))
+        : null,
+    );
+    const sortValues = resolvedSorting.map((sort, sortIndex) => {
+      const values = rawValues[sortIndex];
+      if (!sort.compareValues || !values) return null;
+      const resolve = sort.sortFn.resolveDataValue;
+      return resolve ? values.map((value) => resolve(value)) : values;
+    });
+
+    // Natural sorts compare precomputed string keys instead of re-scanning both strings per comparison
+    const sortKeys = resolvedSorting.map((sort, sortIndex) => {
+      const values = sortValues[sortIndex];
+      return values && alphanumericCompares.has(sort.compareValues)
+        ? getAlphanumericSortKeys(values)
+        : null;
+    });
+
+    return (a: number, b: number) => {
+      const rowA = rows[a]!;
+      const rowB = rows[b]!;
+      for (let i = 0; i < resolvedSorting.length; i++) {
+        const sort = resolvedSorting[i]!;
+        let sortInt = 0;
+
+        if (sort.sortUndefined) {
+          const values = rawValues[i]!;
+          const isAUndefined = values[a] === undefined;
+          const isBUndefined = values[b] === undefined;
+          if (isAUndefined && isBUndefined) continue;
+          if (isAUndefined || isBUndefined) {
+            if (sort.sortUndefined === "first") return isAUndefined ? -1 : 1;
+            if (sort.sortUndefined === "last") return isAUndefined ? 1 : -1;
+            sortInt = isAUndefined ? sort.sortUndefined : -sort.sortUndefined;
+          }
+        }
+
+        const keys = sortKeys[i];
+        if (sortInt === 0 && keys) {
+          sortInt = compareBasic(keys[a], keys[b]);
+        } else if (sortInt === 0) {
+          const values = sortValues[i];
+          sortInt =
+            values && sort.compareValues
+              ? sort.compareValues(values[a], values[b], rowA, rowB, sort.id)
+              : sort.sortFn(rowA, rowB, sort.id);
+        }
+
+        if (sortInt !== 0) {
+          if (sort.desc) sortInt *= -1;
+          if (sort.invertSorting) sortInt *= -1;
+          return sortInt;
+        }
+      }
+      return 0;
+    };
+  }
+
+  function sortRows(rows: Array<SortedRow>, isTopLevel = false) {
+    let order: Array<number>;
+    let getIsTie: (a: number, b: number) => boolean;
+
+    if (
+      isTopLevel &&
+      previous &&
+      previous.rows === rows &&
+      getIsFlippedSorting(previous.sorting, resolvedSorting)
+    ) {
+      order = getFlippedOrder(previous.order, previous.getIsTie);
+      getIsTie = previous.getIsTie;
+    } else {
+      const compare = getRowsComparator(rows);
+      order = rows.map((_, index) => index);
+      order.sort((a, b) => compare(a, b) || rows[a]!.index - rows[b]!.index);
+      getIsTie = (a, b) => compare(a, b) === 0;
+    }
+
+    if (isTopLevel && isCacheable) {
+      cache.current = {
+        rows,
+        sorting: resolvedSorting.map(({ id, desc }) => ({ id, desc })),
+        order,
+        getIsTie,
+      };
+    }
+
+    const sortedRows = order.map((index) => rows[index]!);
+    let changed = false;
+    for (let i = 0; i < sortedRows.length; i++) {
+      const row = sortedRows[i]!;
+      if (row !== rows[i]) changed = true;
+      const flatIndex = sortedFlatRows.length;
+      sortedFlatRows.push(row);
+
+      if (row.subRows.length) {
+        const sortedSubRows = sortRows(row.subRows);
+        if (sortedSubRows.changed) {
+          const cloned = Object.create(Object.getPrototypeOf(row));
+          copyInstancePropertiesWithoutMemos(cloned, row);
+          cloned.subRows = sortedSubRows.rows;
+          sortedRows[i] = cloned;
+          sortedFlatRows[flatIndex] = cloned;
+          changed = true;
+        }
+      }
+    }
+    return { rows: sortedRows, changed };
+  }
+
+  return {
+    rows: sortRows(preSortedRowModel.rows, true).rows,
+    flatRows: sortedFlatRows,
+    rowsById: preSortedRowModel.rowsById,
+  };
+}
+
 export const dataGridFeatures = tableFeatures({
   cellSelectionFeature,
   columnFilteringFeature,
@@ -1681,7 +2228,8 @@ export const dataGridFeatures = tableFeatures({
   dataGridPresenceFeature,
   dataGridSelectionFeature,
   filteredRowModel: createFilteredRowModel(),
-  sortedRowModel: createSortedRowModel(),
+  coreRowModel: createDataGridCoreRowModel(),
+  sortedRowModel: createDataGridSortedRowModel(),
   sortFns: {
     alphanumeric: sortFn_alphanumeric,
     datetime: sortFn_datetime,

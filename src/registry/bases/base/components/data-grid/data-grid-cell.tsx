@@ -29,6 +29,7 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.presence?.name !== next.presence?.name) return false;
   if (prev.readOnly !== next.readOnly) return false;
   if (prev.rowHeight !== next.rowHeight) return false;
+  if (prev.width !== next.width) return false;
   if (prev.cell.row.id !== next.cell.row.id) return false;
   if (prev.cell.column.id !== next.cell.column.id) return false;
 
