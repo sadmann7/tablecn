@@ -456,7 +456,8 @@ function DataGridDemoContent({
         const oldRow = data[rowIndex];
         const newRow = newData[rowIndex];
 
-        if (oldRow && newRow) {
+        // Edits copy only the rows they touch, so unchanged rows keep their identity
+        if (oldRow && newRow && oldRow !== newRow) {
           const allKeys = new Set([
             ...Object.keys(oldRow),
             ...Object.keys(newRow),

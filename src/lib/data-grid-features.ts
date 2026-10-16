@@ -9,8 +9,10 @@ import {
   columnResizingFeature,
   columnSizingFeature,
   columnVisibilityFeature,
+  constructRow,
   copyInstancePropertiesWithoutMemos,
   createFilteredRowModel,
+  makeObjectMap,
   makeStateUpdater,
   metaHelper,
   type OnChangeFn,
@@ -36,7 +38,10 @@ import {
 import {
   column_getCanSort,
   column_getSortFn,
+  table_autoResetCellSelection,
+  table_autoResetExpanded,
   table_autoResetPageIndex,
+  table_autoResetSorting,
 } from "@tanstack/react-table/static-functions";
 
 import type {
@@ -1752,6 +1757,116 @@ const dataGridSelectionFeature: TableFeature = {
   },
 };
 
+type CoreRow = Row<TableFeatures, RowData>;
+
+// Same rows as `createCoreRowModel`, but rows whose data object is unchanged at the same index
+// are reused, so a cell edit rebuilds one row instead of every row and its caches
+function createDataGridCoreRowModel<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
+  return (_table) => {
+    const table = _table as unknown as Table<TableFeatures, RowData>;
+    let previous: RowModel<TableFeatures, RowData> | null = null;
+    return tableMemo({
+      feature: "coreRowModelsFeature",
+      table: _table,
+      fnName: "table.getCoreRowModel",
+      memoDeps: () => [table.options.data],
+      fn: () => {
+        previous = getCoreRowModel(table, previous);
+        return previous as unknown as RowModel<TFeatures, TData>;
+      },
+      onAfterUpdate: skipFirstRun(() => {
+        table_autoResetExpanded(table);
+        table_autoResetPageIndex(table);
+        table_autoResetSorting(table);
+        table_autoResetCellSelection(table);
+      }),
+    });
+  };
+}
+
+function getCoreRowModel(
+  table: Table<TableFeatures, RowData>,
+  previous: RowModel<TableFeatures, RowData> | null,
+): RowModel<TableFeatures, RowData> {
+  const { data, getSubRows } = table.options;
+
+  // Cell edits keep the row count and ids, so only the changed rows are swapped in
+  if (previous && !getSubRows && previous.rows.length === data.length) {
+    const rows = previous.rows.slice();
+    const changedRows: Array<CoreRow> = [];
+    let isSameShape = true;
+    for (let i = 0; i < data.length; i++) {
+      const originalRow = data[i]!;
+      const previousRow = rows[i]!;
+      if (previousRow.original === originalRow) continue;
+      const id = table.getRowId(originalRow, i);
+      if (id !== previousRow.id) {
+        isSameShape = false;
+        break;
+      }
+      const row = constructRow(table, id, originalRow, i, 0);
+      rows[i] = row;
+      changedRows.push(row);
+    }
+
+    if (isSameShape) {
+      // The previous model is replaced, so its id lookup is updated in place instead of copied
+      const rowsById = previous.rowsById;
+      for (const row of changedRows) rowsById[row.id] = row;
+      return { rows, flatRows: rows.slice(), rowsById };
+    }
+  }
+
+  const rowModel: RowModel<TableFeatures, RowData> = {
+    rows: [],
+    flatRows: [],
+    rowsById: makeObjectMap<CoreRow>(),
+  };
+
+  function accessRows(
+    originalRows: ReadonlyArray<RowData>,
+    depth: number,
+    previousRows: ReadonlyArray<CoreRow>,
+    parentRow?: CoreRow,
+  ) {
+    const rows: Array<CoreRow> = [];
+    for (let i = 0; i < originalRows.length; i++) {
+      const originalRow = originalRows[i]!;
+      const previousRow = previousRows[i];
+      // Sub rows are rebuilt from scratch, so only flat rows are reused
+      const row =
+        !getSubRows && previousRow?.original === originalRow
+          ? previousRow
+          : constructRow(
+              table,
+              table.getRowId(originalRow, i, parentRow),
+              originalRow,
+              i,
+              depth,
+              undefined,
+              parentRow?.id,
+            );
+      rowModel.flatRows.push(row);
+      rowModel.rowsById[row.id] = row;
+      rows.push(row);
+
+      if (getSubRows) {
+        row.originalSubRows = getSubRows(originalRow, i);
+        if (row.originalSubRows?.length) {
+          row.subRows = accessRows(row.originalSubRows, depth + 1, [], row);
+        }
+      }
+    }
+    return rows;
+  }
+
+  rowModel.rows = accessRows(data, 0, previous?.rows ?? []);
+  return rowModel;
+}
+
 type SortedRow = Row<TableFeatures, RowData>;
 type SortedRowFn = SortFn<TableFeatures, RowData>;
 
@@ -1924,6 +2039,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridPresenceFeature,
   dataGridSelectionFeature,
   filteredRowModel: createFilteredRowModel(),
+  coreRowModel: createDataGridCoreRowModel(),
   sortedRowModel: createDataGridSortedRowModel(),
   sortFns: {
     alphanumeric: sortFn_alphanumeric,

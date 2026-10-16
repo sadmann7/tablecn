@@ -198,7 +198,7 @@ const STRESS_STEPS: StressStep[] = [
     },
   },
   {
-    name: "Sort + filter + scroll",
+    name: "Sort, filter, and scroll",
     run: async ({ table, grid, signal, measure }) => {
       await measure(() => {
         table.setColumnFilters([
@@ -273,7 +273,7 @@ const STRESS_STEPS: StressStep[] = [
     },
   },
   {
-    name: "Select all + scroll",
+    name: "Select all and scroll",
     run: async ({ table, grid, signal, measure }) => {
       await measure(() => table.selectAllDataCells());
       await animate(signal, 1000, () => {
