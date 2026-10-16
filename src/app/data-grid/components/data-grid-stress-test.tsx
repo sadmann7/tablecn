@@ -293,9 +293,9 @@ const STRESS_STEPS: StressStep[] = [
     },
   },
   {
-    name: "Fill viewport cells",
+    name: "Edit viewport cells",
     run: async ({ table, grid, signal }) => {
-      // Fills one cell per frame, like an AI workflow autofilling the visible cells
+      // Edits one cell per frame, like an AI workflow autofilling the visible cells
       const cells = getViewportCells(table, grid);
       try {
         await animate(signal, Number.POSITIVE_INFINITY, (_, frame) => {
@@ -309,7 +309,7 @@ const STRESS_STEPS: StressStep[] = [
     },
   },
   {
-    name: "Bulk fill viewport",
+    name: "Bulk edit viewport cells",
     run: async ({ table, grid, measure }) => {
       const cells = getViewportCells(table, grid);
       await measure(() =>
@@ -398,6 +398,35 @@ async function runStep(
     longTaskMs,
     maxUpdateMs: updateTimes.length > 0 ? Math.max(...updateTimes) : null,
   };
+}
+
+interface GridSnapshot {
+  cellSelection: ReturnType<PersonTable["atoms"]["cellSelection"]["get"]>;
+  activeElement: Element | null;
+}
+
+function getGridSnapshot(table: PersonTable): GridSnapshot {
+  return {
+    cellSelection: table.atoms.cellSelection.get(),
+    activeElement: document.activeElement,
+  };
+}
+
+// Search and edits focus cells along the way, so the selection and focus from before the run come back
+function restoreGridSnapshot(
+  table: PersonTable,
+  grid: HTMLDivElement,
+  snapshot: GridSnapshot,
+) {
+  table.setCellSelection(snapshot.cellSelection);
+  const activeElement = document.activeElement;
+  if (
+    activeElement instanceof HTMLElement &&
+    grid.contains(activeElement) &&
+    !grid.contains(snapshot.activeElement)
+  ) {
+    activeElement.blur();
+  }
 }
 
 function resetGrid(table: PersonTable, grid: HTMLDivElement) {
@@ -491,6 +520,7 @@ export function DataGridStressTest({
     setRerunStep(null);
     setIsResultsOpen(false);
     setIsRunning(true);
+    const snapshot = getGridSnapshot(table);
     resetGrid(table, grid);
     await pause(controller.signal, 5);
 
@@ -511,6 +541,7 @@ export function DataGridStressTest({
       }
     } finally {
       resetGrid(table, grid);
+      restoreGridSnapshot(table, grid, snapshot);
       abortRef.current = null;
       setIsRunning(false);
     }
@@ -559,6 +590,7 @@ export function DataGridStressTest({
       setIsResultsOpen(false);
       setIsRunning(true);
       setRerunStep(name);
+      const snapshot = getGridSnapshot(table);
       resetGrid(table, grid);
       await pause(controller.signal, 5);
 
@@ -571,6 +603,7 @@ export function DataGridStressTest({
         result = await runStep(step, table, grid, controller.signal);
       } finally {
         resetGrid(table, grid);
+        restoreGridSnapshot(table, grid, snapshot);
         abortRef.current = null;
         setIsRunning(false);
       }
