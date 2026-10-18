@@ -836,11 +836,21 @@ export function replaceEditableText(element: HTMLElement, text: string) {
   if (inserted && element.textContent !== textBeforeInsert) return;
 
   element.textContent = text;
+  moveCaretToEnd(element);
+  dispatchInsertTextInput(element, text);
+}
+
+export function moveCaretToEnd(element: HTMLElement) {
+  const selection = window.getSelection();
+  const range = document.createRange();
   range.selectNodeContents(element);
   range.collapse(false);
   selection?.removeAllRanges();
   selection?.addRange(range);
-  dispatchInsertTextInput(element, text);
+  element.scrollLeft =
+    getComputedStyle(element).direction === "rtl"
+      ? -element.scrollWidth
+      : element.scrollWidth;
 }
 
 export function flexRender<TProps extends object>(
