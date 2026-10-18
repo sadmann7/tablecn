@@ -465,31 +465,33 @@ function DataGridDemoContent({
   return (
     <DirectionProvider dir={dir}>
       <div className="container flex flex-col gap-4 py-4">
-        <div
-          role="toolbar"
-          aria-orientation="horizontal"
-          className="flex items-center gap-2 self-end"
-        >
-          <DataGridBenchmark
-            table={table}
-            dataGridRef={dataGridProps.dataGridRef}
-          />
+        <div className="flex items-center justify-between gap-2">
           {rowCountSelect}
-          <Toggle
-            aria-label="Toggle text direction"
-            dir={dir}
-            variant="outline"
-            className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
-            pressed={dir === "rtl"}
-            onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
+          <div
+            role="toolbar"
+            aria-orientation="horizontal"
+            className="flex items-center gap-2"
           >
-            <Languages className="text-muted-foreground" />
-            {dir === "ltr" ? "LTR" : "RTL"}
-          </Toggle>
-          <DataGridFilterMenu table={table} align="end" />
-          <DataGridSortMenu table={table} align="end" />
-          <DataGridRowHeightMenu table={table} align="end" />
-          <DataGridViewMenu table={table} align="end" />
+            <DataGridBenchmark
+              table={table}
+              dataGridRef={dataGridProps.dataGridRef}
+            />
+            <Toggle
+              aria-label="Toggle text direction"
+              dir={dir}
+              variant="outline"
+              className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
+              pressed={dir === "rtl"}
+              onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
+            >
+              <Languages className="text-muted-foreground" />
+              {dir === "ltr" ? "LTR" : "RTL"}
+            </Toggle>
+            <DataGridFilterMenu table={table} align="end" />
+            <DataGridSortMenu table={table} align="end" />
+            <DataGridRowHeightMenu table={table} align="end" />
+            <DataGridViewMenu table={table} align="end" />
+          </div>
         </div>
         <DataGridKeyboardShortcuts
           enableSearch
