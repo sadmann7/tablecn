@@ -1,7 +1,7 @@
 "use client";
 
 import { Subscribe, type Table } from "@tanstack/react-table";
-import { Building2, CheckCircle2, Copy, Eraser, Trash2, X } from "lucide-react";
+import { CheckCircle2, Copy, Eraser, Network, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -142,7 +142,7 @@ function PeopleGridActionBarImpl({
         </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <ActionBarTooltipItem label="Department" icon={<Building2 />} />
+            <ActionBarTooltipItem label="Department" icon={<Network />} />
           </DropdownMenuTrigger>
           <DropdownMenuContent data-grid-popover>
             {departments.map((department) => (
