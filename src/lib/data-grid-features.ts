@@ -64,6 +64,7 @@ import {
   getEmptyCellValue,
   getFocusedCellPosition,
   getHasCellRangeSelection,
+  getHasCustomCell,
   getIsDataColumn,
   getLineCount,
   getRowHeightValue,
@@ -437,7 +438,8 @@ function getCanEditColumn(column: {
   return (
     !options.readOnly &&
     options.enableCellEditing !== false &&
-    column.columnDef.enableCellEditing !== false
+    column.columnDef.enableCellEditing !== false &&
+    !getHasCustomCell(column)
   );
 }
 

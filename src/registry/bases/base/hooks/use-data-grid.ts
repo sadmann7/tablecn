@@ -35,10 +35,11 @@ import {
   getFocusedCellPosition,
   getHasCellRangeSelection,
   getIsDataColumn,
-  getIsInPopover,
   getIsEventOnScrollbar,
+  getIsInPopover,
   getRowIndexById,
   getSelectionEdgePosition,
+  renderDefaultCell,
   scrollCellIntoView,
   swapItems,
 } from "@/lib/data-grid-utils";
@@ -479,10 +480,11 @@ function useDataGrid<TData extends RowData>({
   const defaultColumn: Partial<ColumnDef<DataGridFeatures, TData>> =
     React.useMemo(
       () => ({
-        // Cell is rendered directly in DataGridRow to bypass flexRender's
-        // unstable cell.getContext() (https://github.com/TanStack/table/issues/4794)
         minSize: MIN_COLUMN_SIZE,
         maxSize: MAX_COLUMN_SIZE,
+        // Built-in editors render data cells directly, avoiding flexRender's unstable cell.getContext()
+        // (https://github.com/TanStack/table/issues/4794), so only a column's own `cell` goes through it
+        cell: renderDefaultCell as ColumnDef<DataGridFeatures, TData>["cell"],
       }),
       [],
     );

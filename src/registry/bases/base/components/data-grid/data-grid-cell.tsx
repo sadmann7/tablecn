@@ -6,8 +6,10 @@ import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
+import { getHasCustomCell } from "@/lib/data-grid-utils";
 import {
   CheckboxCell,
+  CustomCell,
   DateCell,
   FileCell,
   LongTextCell,
@@ -49,6 +51,8 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
 function DataGridCellImpl<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
+  if (getHasCustomCell(props.cell.column)) return <CustomCell {...props} />;
+
   const cellOpts = props.cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 

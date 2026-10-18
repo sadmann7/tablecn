@@ -15,6 +15,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import {
   getCellKey,
   getFocusedCellPosition,
+  getHasCustomCell,
   parseTsv,
   stringifyUnknown,
 } from "@/lib/data-grid-utils";
@@ -4150,6 +4151,41 @@ describe("useDataGrid", () => {
         rowId: "4",
         columnId: "trick",
       });
+    });
+  });
+
+  describe("custom cells", () => {
+    it("should render a column's own cell read-only unless it has a variant", () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name" },
+        {
+          id: "score",
+          accessorKey: "score",
+          cell: ({ getValue }) => `${String(getValue())} pts`,
+        },
+        {
+          id: "trick",
+          accessorKey: "trick",
+          cell: () => "unused",
+          meta: { cell: { variant: "short-text" } },
+        },
+      ];
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns }),
+        { wrapper: createWrapper() },
+      );
+      const column = (id: string) => {
+        const found = result.current.table.getColumn(id);
+        if (!found) throw new Error(`Missing column ${id}`);
+        return found;
+      };
+
+      expect(getHasCustomCell(column("name"))).toBe(false);
+      expect(getHasCustomCell(column("score"))).toBe(true);
+      expect(getHasCustomCell(column("trick"))).toBe(false);
+      expect(column("name").getCanEdit()).toBe(true);
+      expect(column("score").getCanEdit()).toBe(false);
+      expect(column("trick").getCanEdit()).toBe(true);
     });
   });
 

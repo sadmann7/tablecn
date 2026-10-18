@@ -28,6 +28,7 @@ import {
   getColumnBorderVisibility,
   getColumnPinningStyle,
   getFocusedCellPosition,
+  getIsDataColumn,
   getRowCellSelectionKey,
   getRowHeightValue,
   getWindowedColumns,
@@ -183,8 +184,7 @@ function DataGridRowContent<TData extends RowData>({
         const isCellFocused = focusedColumnId === columnId;
         const isCellEditing = editingColumnId === columnId;
         const isCellSelected = cellSelectionKey !== "" && cell.getIsSelected();
-        const isUtilityCell =
-          typeof cell.column.columnDef.header === "function";
+        const isUtilityCell = !getIsDataColumn(cell.column);
 
         const isSearchMatch = searchMatchColumns?.has(columnId) ?? false;
         const isActiveSearchMatch = activeSearchColumnId === columnId;

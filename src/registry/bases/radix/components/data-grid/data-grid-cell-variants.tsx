@@ -11,6 +11,7 @@ import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
+  flexRender,
   formatDateForDisplay,
   formatDateToString,
   formatFileSize,
@@ -61,6 +62,16 @@ import {
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
+
+export function CustomCell<TData extends RowData>(
+  props: DataGridCellProps<TData>,
+) {
+  return (
+    <DataGridCellWrapper<TData> {...props}>
+      {flexRender(props.cell.column.columnDef.cell, props.cell.getContext())}
+    </DataGridCellWrapper>
+  );
+}
 
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,

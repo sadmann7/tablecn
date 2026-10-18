@@ -8,11 +8,13 @@ import type { CellOpts, RowHeightValue } from "@/lib/data-grid-types";
 
 import { getBadgeOverflow } from "@/hooks/use-badge-overflow";
 import {
+  flexRender,
   formatDateForDisplay,
   getBooleanCellValue,
   getDateCellValue,
   getFileIcon,
   getFilesCellValue,
+  getHasCustomCell,
   getLineCount,
   getNumberCellValue,
   getOptionCellValue,
@@ -99,6 +101,12 @@ function getPreviewContent<TData extends RowData>(
   width: number,
   rowHeight: RowHeightValue,
 ): { className?: string; content: React.ReactNode } {
+  if (getHasCustomCell(cell.column)) {
+    return {
+      content: flexRender(cell.column.columnDef.cell, cell.getContext()),
+    };
+  }
+
   const value = cell.getValue();
   const lineClampClassName = LINE_CLAMP_CLASS_NAMES[rowHeight];
 
@@ -110,7 +118,7 @@ function getPreviewContent<TData extends RowData>(
         content: (
           <span
             data-checked={isChecked ? "" : undefined}
-            className="flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-primary dark:bg-input/30 data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary [&>svg]:size-3.5"
+            className="flex size-4 shrink-0 items-center justify-center rounded-lg border border-primary dark:bg-input/30 data-checked:bg-primary data-checked:text-primary-foreground dark:data-checked:bg-primary [&>svg]:size-3.5"
           >
             {isChecked ? (
               <IconPlaceholder

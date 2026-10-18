@@ -464,6 +464,21 @@ export function getHasCellRangeSelection(ranges: CellSelectionState) {
   );
 }
 
+// The grid's default `cell`, so a column that sets its own, like a chart, renders that instead of a built-in editor
+export function renderDefaultCell(context: { renderValue: () => unknown }) {
+  return getTextCellValue(context.renderValue());
+}
+
+export function getHasCustomCell(column: { columnDef: object }) {
+  const { cell, meta } = column.columnDef as {
+    cell?: unknown;
+    meta?: { cell?: { variant?: string } };
+  };
+  return (
+    !meta?.cell?.variant && cell !== undefined && cell !== renderDefaultCell
+  );
+}
+
 export function getIsDataColumn(
   column: { columnDef: { enableCellSelection?: boolean } } | undefined,
 ) {
