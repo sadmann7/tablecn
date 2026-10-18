@@ -3269,7 +3269,8 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      const resolve = sortFn_alphanumeric.resolveDataValue!;
+      const resolve =
+        sortFn_alphanumeric.resolveDataValue ?? ((value: unknown) => value);
       const expected = [...data]
         .map((row, index) => ({ row, index }))
         .sort(
@@ -3338,7 +3339,7 @@ describe("useDataGrid", () => {
       }
       const data: TieData[] = Array.from({ length: 40 }, (_, index) => ({
         id: `${index}`,
-        group: ["b", "a", "c"][index % 3]!,
+        group: ["b", "a", "c"][index % 3] ?? "a",
         score: (index * 7) % 5,
       }));
       const columns: ColumnDef<DataGridFeatures, TieData>[] = [
@@ -3432,8 +3433,7 @@ describe("useDataGrid", () => {
 
       rerender({
         data: [
-          edited[0]!,
-          edited[2]!,
+          ...edited.filter((row) => row.id !== "2"),
           { id: "4", name: "Elissa Steamer", trick: "Boardslide", score: 90 },
         ],
       });
