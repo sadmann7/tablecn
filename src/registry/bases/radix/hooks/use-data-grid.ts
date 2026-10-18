@@ -587,7 +587,7 @@ function useDataGrid<TData extends RowData>({
             for (let i = 0; i < count; i++) await onRowAdd?.();
           }
         : undefined,
-      onScrollToCell: (cell) =>
+      onCellScroll: (cell) =>
         revealCell(cell, { shouldFocus: false, shouldScroll: true }),
       onCellFocus: (cell) => focusCellElement(cell),
       onClipboardNotice: (notice) =>

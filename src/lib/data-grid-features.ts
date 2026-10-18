@@ -170,8 +170,7 @@ interface TableState_DataGridNavigation {
 
 interface TableOptions_DataGridNavigation {
   dir?: Direction;
-  onScrollToCell?: (cell: CellPosition) => void;
-  /** Moves keyboard focus to a cell, provided by the layer that owns the cell elements. */
+  onCellScroll?: (cell: CellPosition) => void;
   onCellFocus?: (cell: CellPosition) => void;
   onFocusedHeaderColumnIdChange?: OnChangeFn<string | null>;
 }
@@ -862,7 +861,7 @@ const dataGridNavigationFeature: TableFeature = {
       },
       table_scrollToCell: {
         fn: (rowId: string, columnId: string) =>
-          instance.options.onScrollToCell?.({ rowId, columnId }),
+          instance.options.onCellScroll?.({ rowId, columnId }),
       },
       table_getFocusedHeaderColumnId: {
         fn: () => instance.atoms.focusedHeaderColumnId.get(),
