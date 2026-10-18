@@ -52,7 +52,6 @@ interface DataGridCellPreviewProps<TData extends RowData> {
   readOnly: boolean;
 }
 
-// Static stand-in for a cell mounted while scrolling, without the data-row-id and data-column-id attributes so focus never lands on it
 export function DataGridCellPreview<TData extends RowData>({
   cell,
   columnIndex,
