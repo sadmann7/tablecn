@@ -191,8 +191,9 @@ export function generatePeople(count: number): Person[] {
   ));
   return Array.from({ length: count }, (_, i) => {
     const h = hash(i);
-    const base = seeds[i % POOL_SIZE]!;
-    const other = seeds[h % POOL_SIZE]!;
+    const base = seeds[i % POOL_SIZE];
+    const other = seeds[h % POOL_SIZE];
+    if (!base || !other) throw new Error("Seed pool is incomplete");
     const firstName = base.firstName;
     const lastName = other.lastName;
     return {

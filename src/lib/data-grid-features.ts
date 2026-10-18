@@ -1362,8 +1362,10 @@ function getSearchMatches(
   const matchedRows: Array<number> = [];
 
   for (let candidate = 0; candidate < candidateCount; candidate++) {
-    const rowIndex = isNarrowing ? previous.matchedRows[candidate]! : candidate;
-    const row = rows[rowIndex]!;
+    const rowIndex = isNarrowing ? previous.matchedRows[candidate] : candidate;
+    if (rowIndex === undefined) continue;
+    const row = rows[rowIndex];
+    if (!row) continue;
     let texts = rowTexts[rowIndex];
     if (!texts) {
       texts = getRowSearchTexts(row, readValues, cache, lowerByValue);
@@ -1373,11 +1375,13 @@ function getSearchMatches(
     let mask = 0;
     let maskKey = "";
     for (let index = 0; index < texts.length; index++) {
-      if (texts[index]!.includes(lowerQuery)) {
-        matches.push({ rowId: row.id, columnId: dataColumnIds[index]! });
-        if (useBitmask) mask |= 1 << index;
-        else maskKey += `${index},`;
+      const columnId = dataColumnIds[index];
+      if (columnId === undefined || !texts[index]?.includes(lowerQuery)) {
+        continue;
       }
+      matches.push({ rowId: row.id, columnId });
+      if (useBitmask) mask |= 1 << index;
+      else maskKey += `${index},`;
     }
     const setKey = useBitmask ? mask : maskKey;
     if (!setKey) continue;
@@ -1390,7 +1394,7 @@ function getSearchMatches(
           : maskKey
               .slice(0, -1)
               .split(",")
-              .map((index) => dataColumnIds[Number(index)]!),
+              .flatMap((index) => dataColumnIds[Number(index)] ?? []),
       );
       cache.columnSets.set(setKey, columnSet);
     }
@@ -1427,7 +1431,8 @@ function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
       return;
     }
     while (index < rows.length && deadline.timeRemaining() > 1) {
-      getRowSearchTexts(rows[index++]!, readValues, cache, lowerByValue);
+      const row = rows[index++];
+      if (row) getRowSearchTexts(row, readValues, cache, lowerByValue);
     }
     if (index < rows.length) requestIdleCallback(onIdle);
   }
@@ -1859,8 +1864,12 @@ function getCoreRowModel(
     const changedRows: Array<CoreRow> = [];
     let isSameShape = true;
     for (let i = 0; i < data.length; i++) {
-      const originalRow = data[i]!;
-      const previousRow = rows[i]!;
+      const originalRow = data[i];
+      const previousRow = rows[i];
+      if (originalRow === undefined || !previousRow) {
+        isSameShape = false;
+        break;
+      }
       if (previousRow.original === originalRow) continue;
       const id = table.getRowId(originalRow, i);
       if (id !== previousRow.id) {
@@ -1894,7 +1903,8 @@ function getCoreRowModel(
   ) {
     const rows: Array<CoreRow> = [];
     for (let i = 0; i < originalRows.length; i++) {
-      const originalRow = originalRows[i]!;
+      const originalRow = originalRows[i];
+      if (originalRow === undefined) continue;
       const previousRow = previousRows[i];
       // Sub rows are rebuilt from scratch, so only flat rows are reused
       const row =
@@ -2060,9 +2070,14 @@ function getFlippedOrder(
   const flipped: Array<number> = [];
   let groupEnd = order.length;
   for (let index = order.length - 1; index >= 0; index--) {
+    const current = order[index];
     const previous = order[index - 1];
-    if (previous === undefined || !getIsTie(previous, order[index]!)) {
-      for (let i = index; i < groupEnd; i++) flipped.push(order[i]!);
+    if (current === undefined) continue;
+    if (previous === undefined || !getIsTie(previous, current)) {
+      for (let i = index; i < groupEnd; i++) {
+        const rowIndex = order[i];
+        if (rowIndex !== undefined) flipped.push(rowIndex);
+      }
       groupEnd = index;
     }
   }
@@ -2131,14 +2146,16 @@ function getSortedRowModel(
     });
 
     return (a: number, b: number) => {
-      const rowA = rows[a]!;
-      const rowB = rows[b]!;
+      const rowA = rows[a];
+      const rowB = rows[b];
+      if (!rowA || !rowB) return 0;
       for (let i = 0; i < resolvedSorting.length; i++) {
-        const sort = resolvedSorting[i]!;
+        const sort = resolvedSorting[i];
+        if (!sort) continue;
         let sortInt = 0;
 
-        if (sort.sortUndefined) {
-          const values = rawValues[i]!;
+        const values = rawValues[i];
+        if (sort.sortUndefined && values) {
           const isAUndefined = values[a] === undefined;
           const isBUndefined = values[b] === undefined;
           if (isAUndefined && isBUndefined) continue;
@@ -2185,7 +2202,10 @@ function getSortedRowModel(
     } else {
       const compare = getRowsComparator(rows);
       order = rows.map((_, index) => index);
-      order.sort((a, b) => compare(a, b) || rows[a]!.index - rows[b]!.index);
+      order.sort(
+        (a, b) =>
+          compare(a, b) || (rows[a]?.index ?? 0) - (rows[b]?.index ?? 0),
+      );
       getIsTie = (a, b) => compare(a, b) === 0;
     }
 
@@ -2198,13 +2218,15 @@ function getSortedRowModel(
       };
     }
 
-    const sortedRows = order.map((index) => rows[index]!);
+    const sortedRows: Array<SortedRow> = [];
     let changed = false;
-    for (let i = 0; i < sortedRows.length; i++) {
-      const row = sortedRows[i]!;
-      if (row !== rows[i]) changed = true;
+    for (const index of order) {
+      const row = rows[index];
+      if (!row) continue;
+      if (row !== rows[sortedRows.length]) changed = true;
       const flatIndex = sortedFlatRows.length;
       sortedFlatRows.push(row);
+      sortedRows.push(row);
 
       if (row.subRows.length) {
         const sortedSubRows = sortRows(row.subRows);
@@ -2212,7 +2234,7 @@ function getSortedRowModel(
           const cloned = Object.create(Object.getPrototypeOf(row));
           copyInstancePropertiesWithoutMemos(cloned, row);
           cloned.subRows = sortedSubRows.rows;
-          sortedRows[i] = cloned;
+          sortedRows[sortedRows.length - 1] = cloned;
           sortedFlatRows[flatIndex] = cloned;
           changed = true;
         }
