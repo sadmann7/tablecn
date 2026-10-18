@@ -322,15 +322,19 @@ function DataGridDemoContent({
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
     React.useCallback(
-      (_event, options) => {
+      (eventDetails) => {
+        const afterRowId =
+          eventDetails.reason === "insert-below"
+            ? eventDetails.afterRowId
+            : undefined;
         const newRow: Person = {
           id: generateId(),
         };
 
         // Shift+Enter passes the focused row, so the new row goes right below it
         setData((prev) => {
-          const index = options?.afterRowId
-            ? prev.findIndex((row) => row.id === options.afterRowId)
+          const index = afterRowId
+            ? prev.findIndex((row) => row.id === afterRowId)
             : -1;
           return index === -1
             ? [...prev, newRow]

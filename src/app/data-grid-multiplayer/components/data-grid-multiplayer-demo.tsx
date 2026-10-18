@@ -403,9 +403,13 @@ export function DataGridMultiplayerDemo({
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
     React.useCallback(
-      (_event, options) => {
+      (eventDetails) => {
+        const afterRowId =
+          eventDetails.reason === "insert-below"
+            ? eventDetails.afterRowId
+            : undefined;
         // Shift+Enter passes the focused row, so the new skater goes right below it
-        const order = getInsertOrder(data, options?.afterRowId);
+        const order = getInsertOrder(data, afterRowId);
         const newSkater: SkaterSchema = {
           id: generateId(),
           name: null,

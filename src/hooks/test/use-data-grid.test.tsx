@@ -4047,28 +4047,33 @@ describe("useDataGrid", () => {
       expect(onRowAdd).toHaveBeenCalled();
     });
 
-    it("should not proceed if event is defaultPrevented", async () => {
-      const onRowAdd = vi.fn().mockResolvedValue({ rowId: "3" });
+    it("should pass the press and skip focusing the new row when canceled", async () => {
+      const onRowAdd = vi.fn(
+        (eventDetails: { reason: string; cancel: () => void }) => {
+          eventDetails.cancel();
+          return { rowId: "1", columnId: "trick" };
+        },
+      );
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
+            getRowId: (row) => row.id,
             onRowAdd,
           }),
         { wrapper: createWrapper() },
       );
 
-      const mockEvent = {
-        defaultPrevented: true,
-      } as React.MouseEvent<HTMLDivElement>;
-
       await act(async () => {
-        await result.current.onRowAdd?.(mockEvent);
+        await result.current.onRowAdd?.();
       });
 
-      expect(onRowAdd).toHaveBeenCalled();
+      expect(onRowAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: "add-row-press" }),
+      );
+      expect(getFocusedCell(result.current.table)).toBeNull();
     });
   });
 
@@ -4138,7 +4143,9 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(onRowAdd).toHaveBeenCalledWith(undefined, { afterRowId: "2" });
+      expect(onRowAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ reason: "insert-below", afterRowId: "2" }),
+      );
       expect(getFocusedCell(tableRef.current ?? undefined)).toEqual({
         rowId: "4",
         columnId: "trick",

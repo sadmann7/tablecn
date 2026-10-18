@@ -441,7 +441,7 @@ function DataGridViewport<TData extends RowData>({
 
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        void onRowAddRef.current();
+        void onRowAddRef.current(event);
       }
     },
     [onRowAddRef],

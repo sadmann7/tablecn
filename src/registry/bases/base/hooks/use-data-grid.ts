@@ -80,13 +80,26 @@ interface RowAddResult {
   columnId?: string;
 }
 
+type RowAddEventDetailsInit =
+  | {
+      reason: "add-row-press";
+      event?:
+        | React.MouseEvent<HTMLDivElement>
+        | React.KeyboardEvent<HTMLDivElement>;
+    }
+  | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
+  | { reason: "paste"; event?: undefined };
+
+type RowAddEventDetails = RowAddEventDetailsInit & {
+  cancel: () => void;
+};
+
 interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
 > {
   onRowAdd?: (
-    event?: React.MouseEvent<HTMLDivElement>,
-    options?: { afterRowId?: string },
+    eventDetails: RowAddEventDetails,
   ) => RowAddResult | Promise<RowAddResult | null> | null;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -598,7 +611,9 @@ function useDataGrid<TData extends RowData>({
         ? async (count) => {
             const { onRowsAdd, onRowAdd } = propsRef.current;
             if (onRowsAdd) return onRowsAdd(count);
-            for (let i = 0; i < count; i++) await onRowAdd?.();
+            for (let i = 0; i < count; i++) {
+              await onRowAdd?.({ reason: "paste", cancel: () => {} });
+            }
           }
         : undefined,
       onCellScroll: (cell) =>
@@ -684,26 +699,50 @@ function useDataGrid<TData extends RowData>({
     Pick<VirtualizerOptions<HTMLDivElement, Element>, "overscan">
   >(() => ({ overscan }), [overscan]);
 
-  const onRowAdd = React.useCallback(
-    async (event?: React.MouseEvent<HTMLDivElement>) => {
-      if (propsRef.current.readOnly || !propsRef.current.onRowAdd) return;
+  // Focuses the new row unless the callback canceled the grid's handling
+  const addRow = React.useCallback(
+    async (
+      init: RowAddEventDetailsInit,
+      getColumnId: (result: RowAddResult) => string | undefined,
+    ) => {
+      const { readOnly, onRowAdd: onRowAddProp } = propsRef.current;
+      if (readOnly || !onRowAddProp) return;
 
+      let isCanceled = false;
       let result: RowAddResult | null;
       try {
-        result = await propsRef.current.onRowAdd(event);
+        result = await onRowAddProp({
+          ...init,
+          cancel: () => {
+            isCanceled = true;
+          },
+        });
       } catch {
         return;
       }
 
-      if (result === null || event?.defaultPrevented) return;
+      if (!result || isCanceled) return;
 
-      const columnId = result.columnId ?? getNavigableColumnIds()[0];
+      const columnId = getColumnId(result);
       if (!columnId) return;
 
       tableRef.current?.clearSelection();
       focusCell(result.rowId, columnId);
     },
-    [propsRef, getNavigableColumnIds, focusCell],
+    [propsRef, focusCell],
+  );
+
+  const onRowAdd = React.useCallback(
+    (
+      event?:
+        | React.MouseEvent<HTMLDivElement>
+        | React.KeyboardEvent<HTMLDivElement>,
+    ) =>
+      addRow(
+        { reason: "add-row-press", event },
+        (result) => result.columnId ?? getNavigableColumnIds()[0],
+      ),
+    [addRow, getNavigableColumnIds],
   );
 
   const getColumnHeaderTrigger = React.useCallback((columnId: string) => {
@@ -1069,22 +1108,11 @@ function useDataGrid<TData extends RowData>({
           ? getNavigableColumnIds()[0]
           : focusedCell.columnId;
 
-        Promise.resolve(
-          propsRef.current.onRowAdd(undefined, {
-            afterRowId: focusedCell.rowId,
-          }),
-        )
-          .then((result) => {
-            // The new row sits right below, so it keeps the column the user was in
-            const columnId = currentColumnId ?? result?.columnId;
-            if (!result || !columnId) return;
-
-            tableRef.current?.clearSelection();
-            focusCell(result.rowId, columnId);
-          })
-          .catch(() => {
-            // Callback threw an error, don't proceed with focus
-          });
+        // The new row sits right below, so it keeps the column the user was in
+        void addRow(
+          { reason: "insert-below", event, afterRowId: focusedCell.rowId },
+          (result) => currentColumnId ?? result.columnId,
+        );
         return;
       }
 
@@ -1177,6 +1205,7 @@ function useDataGrid<TData extends RowData>({
       getNavigableColumnIds,
       getIsDataColumnId,
       onRowsDelete,
+      addRow,
       focusCell,
       focusColumnHeader,
       onColumnHeaderKeyDown,
