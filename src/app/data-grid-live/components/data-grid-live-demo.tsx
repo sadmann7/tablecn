@@ -83,6 +83,17 @@ const trickOptions = TRICKS.map((trick) => ({
   value: trick,
 }));
 
+function getComparableValue(value: unknown) {
+  return JSON.stringify(value instanceof Date ? value.toISOString() : value);
+}
+
+function getChangedKeys(previous: SkaterSchema, next: SkaterSchema) {
+  return (Object.keys(next) as Array<keyof SkaterSchema>).filter(
+    (key) =>
+      getComparableValue(previous[key]) !== getComparableValue(next[key]),
+  );
+}
+
 export function DataGridLiveDemo() {
   use(skatersCollection.preload());
 
@@ -260,45 +271,35 @@ export function DataGridLiveDemo() {
 
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
-      const currentIds = new Set(data.map((s) => s.id));
-      const newIds = new Set(newData.map((s) => s.id));
+      const currentById = new Map(data.map((skater) => [skater.id, skater]));
+      const newIds = new Set(newData.map((skater) => skater.id));
 
       // Undo of an add, or redo of a delete
-      for (const skater of data) {
-        if (!newIds.has(skater.id)) {
-          skatersCollection.delete(skater.id);
-        }
-      }
+      const deletedIds = data
+        .filter((skater) => !newIds.has(skater.id))
+        .map((skater) => skater.id);
+      // Undo of a delete, or redo of an add
+      const inserted = newData.filter((skater) => !currentById.has(skater.id));
+      const updated = newData.filter((skater) => {
+        const existingSkater = currentById.get(skater.id);
+        return (
+          existingSkater !== undefined &&
+          getChangedKeys(existingSkater, skater).length > 0
+        );
+      });
 
-      for (const skater of newData) {
-        if (!currentIds.has(skater.id)) {
-          // Undo of a delete, or redo of an add
-          skatersCollection.insert(skater);
-        } else {
-          const existingSkater = data.find((s) => s.id === skater.id);
-          if (!existingSkater) continue;
-
-          const hasChanges = (
-            Object.keys(skater) as Array<keyof SkaterSchema>
-          ).some((key) => {
-            const existingValue =
-              existingSkater[key] instanceof Date
-                ? (existingSkater[key] as Date).toISOString()
-                : existingSkater[key];
-            const newValue =
-              skater[key] instanceof Date
-                ? (skater[key] as Date).toISOString()
-                : skater[key];
-
-            return JSON.stringify(existingValue) !== JSON.stringify(newValue);
-          });
-
-          if (hasChanges) {
-            skatersCollection.update(skater.id, (draft) => {
-              Object.assign(draft, skater);
-            });
+      // One request per kind of change
+      if (deletedIds.length > 0) skatersCollection.delete(deletedIds);
+      if (inserted.length > 0) skatersCollection.insert(inserted);
+      if (updated.length > 0) {
+        const updatedById = new Map(
+          updated.map((skater) => [skater.id, skater]),
+        );
+        skatersCollection.update([...updatedById.keys()], (drafts) => {
+          for (const draft of drafts) {
+            Object.assign(draft, updatedById.get(draft.id));
           }
-        }
+        });
       }
     },
     [data],
@@ -316,50 +317,40 @@ export function DataGridLiveDemo() {
   > = React.useCallback(
     (newData) => {
       const cellUpdates: Array<UndoRedoCellUpdate> = [];
+      const changesById = new Map<string, Partial<SkaterSchema>>();
 
       for (const skater of newData) {
-        const existingSkater = data.find((s) => s.id === skater.id);
+        // Rows inserted since the last render aren't in `data` yet
+        const existingSkater = skatersCollection.get(skater.id);
+        if (!existingSkater) continue;
 
-        // For new rows (not yet in our stale closure data), still update them
-        // because onRowsAdd already created them in the collection
-        if (!existingSkater) {
-          skatersCollection.update(skater.id, (draft) => {
-            Object.assign(draft, skater);
+        const changedKeys = getChangedKeys(existingSkater, skater);
+        if (changedKeys.length === 0) continue;
+
+        const changes: Partial<SkaterSchema> = {};
+        for (const key of changedKeys) {
+          cellUpdates.push({
+            rowId: existingSkater.id,
+            columnId: key,
+            previousValue: existingSkater[key],
+            newValue: skater[key],
           });
-          continue;
+          (changes as Record<string, unknown>)[key] = skater[key];
         }
-
-        // Check if any field changed using JSON comparison for arrays/objects
-        for (const key of Object.keys(skater) as Array<keyof SkaterSchema>) {
-          const existingValue =
-            existingSkater[key] instanceof Date
-              ? (existingSkater[key] as Date).toISOString()
-              : existingSkater[key];
-          const newValue =
-            skater[key] instanceof Date
-              ? (skater[key] as Date).toISOString()
-              : skater[key];
-
-          if (JSON.stringify(existingValue) !== JSON.stringify(newValue)) {
-            cellUpdates.push({
-              rowId: existingSkater.id,
-              columnId: key,
-              previousValue: existingSkater[key],
-              newValue: skater[key],
-            });
-
-            skatersCollection.update(skater.id, (draft) => {
-              (draft as Record<string, unknown>)[key] = skater[key];
-            });
-          }
-        }
+        changesById.set(skater.id, changes);
       }
 
-      if (cellUpdates.length > 0) {
-        trackCellsUpdate(cellUpdates);
-      }
+      if (changesById.size === 0) return;
+
+      // One request for the whole change instead of one per cell
+      skatersCollection.update([...changesById.keys()], (drafts) => {
+        for (const draft of drafts) {
+          Object.assign(draft, changesById.get(draft.id));
+        }
+      });
+      trackCellsUpdate(cellUpdates);
     },
-    [data, trackCellsUpdate],
+    [trackCellsUpdate],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
@@ -416,9 +407,9 @@ export function DataGridLiveDemo() {
             updatedAt: new Date(),
           };
           newRows.push(newSkater);
-          skatersCollection.insert(newSkater);
         }
 
+        skatersCollection.insert(newRows);
         trackRowsAdd(newRows);
       },
       [data, trackRowsAdd],
