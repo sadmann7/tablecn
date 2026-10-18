@@ -836,11 +836,22 @@ export function replaceEditableText(element: HTMLElement, text: string) {
   if (inserted && element.textContent !== textBeforeInsert) return;
 
   element.textContent = text;
+  moveCaretToEnd(element);
+  dispatchInsertTextInput(element, text);
+}
+
+// Setting a selection doesn't scroll to it, so a value wider than the cell would leave the caret clipped
+export function moveCaretToEnd(element: HTMLElement) {
+  const selection = window.getSelection();
+  const range = document.createRange();
   range.selectNodeContents(element);
   range.collapse(false);
   selection?.removeAllRanges();
   selection?.addRange(range);
-  dispatchInsertTextInput(element, text);
+  element.scrollLeft =
+    getComputedStyle(element).direction === "rtl"
+      ? -element.scrollWidth
+      : element.scrollWidth;
 }
 
 export function flexRender<TProps extends object>(

@@ -27,6 +27,7 @@ import {
   getTextCellValue,
   getUrlHref,
   insertTextAtSelection,
+  moveCaretToEnd,
   parseLocalDate,
   replaceEditableText,
 } from "@/lib/data-grid-utils";
@@ -151,13 +152,11 @@ export function ShortTextCell<TData extends RowData>(
       if (pendingChar) {
         replaceEditableText(cellRef.current, pendingChar);
       } else if (cellRef.current.textContent) {
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNodeContents(cellRef.current);
-        range.collapse(false);
-        selection?.removeAllRanges();
-        selection?.addRange(range);
+        moveCaretToEnd(cellRef.current);
       }
+    } else if (!isEditing && wasEditing && cellRef.current) {
+      // Editing scrolls long values to the caret, so show them from the start again
+      cellRef.current.scrollLeft = 0;
     }
   }, [isEditing, value]);
 
@@ -552,12 +551,7 @@ export function UrlCell<TData extends RowData>(
         queueMicrotask(() => {
           if (cellRef.current && cellRef.current.contentEditable === "true") {
             cellRef.current.textContent = event.key;
-            const range = document.createRange();
-            const selection = window.getSelection();
-            range.selectNodeContents(cellRef.current);
-            range.collapse(false);
-            selection?.removeAllRanges();
-            selection?.addRange(range);
+            moveCaretToEnd(cellRef.current);
           }
         });
       }
@@ -598,13 +592,11 @@ export function UrlCell<TData extends RowData>(
       }
 
       if (cellRef.current.textContent) {
-        const range = document.createRange();
-        const selection = window.getSelection();
-        range.selectNodeContents(cellRef.current);
-        range.collapse(false);
-        selection?.removeAllRanges();
-        selection?.addRange(range);
+        moveCaretToEnd(cellRef.current);
       }
+    } else if (!isEditing && wasEditing && cellRef.current) {
+      // Editing scrolls long values to the caret, so show them from the start again
+      cellRef.current.scrollLeft = 0;
     }
   }, [isEditing, value]);
 
