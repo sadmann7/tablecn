@@ -62,6 +62,16 @@ function showClipboardToast({ variant, message }: ClipboardNotice) {
   else toast.success(message);
 }
 
+function showUndoRedoToast(action: "undo" | "redo", count: number) {
+  if (count === 0) {
+    toast.info(`No actions to ${action}`);
+    return;
+  }
+  toast.success(
+    `${count} action${count === 1 ? "" : "s"} ${action === "undo" ? "undone" : "redone"}`,
+  );
+}
+
 function selectGridLayoutState(state: TableState<DataGridFeatures>) {
   return {
     rowHeight: state.rowHeight,
@@ -694,7 +704,9 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (result === null || event?.defaultPrevented) return;
+      if (result === null) return;
+      tableRef.current?.recordRowsAdd([result.rowId]);
+      if (event?.defaultPrevented) return;
 
       const columnId = result.columnId ?? getNavigableColumnIds()[0];
       if (!columnId) return;
@@ -933,6 +945,20 @@ function useDataGrid<TData extends RowData>({
       // to ensure proper value commitment before navigation
       if (tableRef.current?.getEditingCell()) return;
 
+      const lowerKey = key.toLowerCase();
+      if (
+        currentTable?.options.enableUndoRedo &&
+        isCtrlPressed &&
+        !altKey &&
+        (lowerKey === "z" || lowerKey === "y")
+      ) {
+        event.preventDefault();
+        const isRedo = lowerKey === "y" || shiftKey;
+        const count = isRedo ? currentTable.redo() : currentTable.undo();
+        showUndoRedoToast(isRedo ? "redo" : "undo", count);
+        return;
+      }
+
       const headerCell =
         event.target instanceof Element
           ? event.target.closest<HTMLElement>(
@@ -1067,6 +1093,7 @@ function useDataGrid<TData extends RowData>({
 
         Promise.resolve(propsRef.current.onRowAdd())
           .then((result) => {
+            if (result) tableRef.current?.recordRowsAdd([result.rowId]);
             const columnId = result?.columnId ?? currentColumnId;
             if (!result || !columnId) return;
 

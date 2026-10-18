@@ -23,6 +23,7 @@ vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    info: vi.fn(),
   },
 }));
 
@@ -137,6 +138,28 @@ function fireCellEvent(
   } finally {
     dataGridRef.current = previousContainer;
   }
+}
+
+function useUndoRedoGrid({
+  enableUndoRedo = true,
+  maxUndoHistory,
+}: { enableUndoRedo?: boolean; maxUndoHistory?: number } = {}) {
+  const [data, setData] = useState(testData);
+  const grid = useDataGrid({
+    data,
+    columns: testColumns,
+    getRowId: (row) => row.id,
+    enableUndoRedo,
+    maxUndoHistory,
+    onDataChange: setData,
+    onRowsDelete: (rows) =>
+      setData((prev) => prev.filter((row) => !rows.includes(row))),
+  });
+  return { ...grid, data, setData };
+}
+
+function getNames(data: TestData[]) {
+  return data.map((row) => row.name);
 }
 
 function createWrapper() {
@@ -4026,6 +4049,178 @@ describe("useDataGrid", () => {
         rowId: "0",
         columnId: "name",
       });
+    });
+  });
+
+  describe("undo redo", () => {
+    it("should undo and redo cell edits", () => {
+      const { result } = renderHook(() => useUndoRedoGrid(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "2",
+          columnId: "trick",
+          value: "Impossible",
+        });
+      });
+      expect(result.current.data[1]?.trick).toBe("Impossible");
+      expect(result.current.table.getCanUndo()).toBe(true);
+
+      let count = 0;
+      act(() => {
+        count = result.current.table.undo();
+      });
+      expect(count).toBe(1);
+      expect(result.current.data[1]?.trick).toBe("Kickflip");
+      expect(result.current.table.getCanUndo()).toBe(false);
+      expect(result.current.table.getCanRedo()).toBe(true);
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(result.current.data[1]?.trick).toBe("Impossible");
+      expect(result.current.table.getCanRedo()).toBe(false);
+    });
+
+    it("should undo rapid edits to the same cell as one step", () => {
+      const { result } = renderHook(() => useUndoRedoGrid(), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "T",
+        });
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Tony",
+        });
+      });
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(result.current.data[0]?.name).toBe("Tony Hawk");
+      expect(result.current.table.getCanUndo()).toBe(false);
+    });
+
+    it("should restore deleted rows in place and delete them again on redo", async () => {
+      const { result } = renderHook(() => useUndoRedoGrid(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        await result.current.table.deleteRows(["2"]);
+      });
+      expect(getNames(result.current.data)).toEqual([
+        "Tony Hawk",
+        "Nyjah Huston",
+      ]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getNames(result.current.data)).toEqual(getNames(testData));
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(getNames(result.current.data)).toEqual([
+        "Tony Hawk",
+        "Nyjah Huston",
+      ]);
+    });
+
+    it("should undo recorded row adds and restore them on redo", () => {
+      const { result } = renderHook(() => useUndoRedoGrid(), {
+        wrapper: createWrapper(),
+      });
+      const added = {
+        id: "4",
+        name: "Elissa Steamer",
+        trick: "Boardslide",
+        score: 90,
+      };
+
+      act(() => {
+        result.current.setData((prev) => [
+          ...prev.slice(0, 1),
+          added,
+          ...prev.slice(1),
+        ]);
+      });
+      act(() => {
+        result.current.table.recordRowsAdd(["4"]);
+      });
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getNames(result.current.data)).toEqual(getNames(testData));
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(result.current.data[1]).toBe(added);
+    });
+
+    it("should drop the oldest steps past the history limit", () => {
+      const { result } = renderHook(
+        () => useUndoRedoGrid({ maxUndoHistory: 1 }),
+        { wrapper: createWrapper() },
+      );
+
+      for (const rowId of ["1", "2"]) {
+        act(() => {
+          result.current.table.updateCells({
+            rowId,
+            columnId: "score",
+            value: 0,
+          });
+        });
+        // Undo commits the pending edit as its own step, and redo puts it back
+        act(() => {
+          result.current.table.undo();
+          result.current.table.redo();
+        });
+      }
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(result.current.data[0]?.score).toBe(0);
+      expect(result.current.data[1]?.score).toBe(98);
+      expect(result.current.table.getCanUndo()).toBe(false);
+    });
+
+    it("should not record or undo anything unless enabled", () => {
+      const { result } = renderHook(
+        () => useUndoRedoGrid({ enableUndoRedo: false }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Changed",
+        });
+      });
+
+      let count = -1;
+      act(() => {
+        count = result.current.table.undo();
+      });
+      expect(count).toBe(0);
+      expect(result.current.table.getCanUndo()).toBe(false);
+      expect(result.current.data[0]?.name).toBe("Changed");
     });
   });
 

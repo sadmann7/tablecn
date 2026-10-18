@@ -307,6 +307,30 @@ interface Table_DataGridSelection {
   closeContextMenu: () => void;
 }
 
+interface UndoRedoState {
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+interface TableState_DataGridUndoRedo {
+  undoRedo: UndoRedoState;
+}
+
+interface TableOptions_DataGridUndoRedo {
+  enableUndoRedo?: boolean;
+  maxUndoHistory?: number;
+  onUndoRedoChange?: OnChangeFn<UndoRedoState>;
+}
+
+interface Table_DataGridUndoRedo {
+  getCanUndo: () => boolean;
+  getCanRedo: () => boolean;
+  undo: () => number;
+  redo: () => number;
+  clearUndoHistory: () => void;
+  recordRowsAdd: (rowIds: string[]) => void;
+}
+
 declare module "@tanstack/react-table" {
   interface Plugins {
     dataGridRowHeightFeature: TableFeature;
@@ -318,6 +342,7 @@ declare module "@tanstack/react-table" {
     dataGridSearchFeature: TableFeature;
     dataGridPresenceFeature: TableFeature;
     dataGridSelectionFeature: TableFeature;
+    dataGridUndoRedoFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
@@ -328,6 +353,7 @@ declare module "@tanstack/react-table" {
     dataGridSearchFeature: TableState_DataGridSearch;
     dataGridPresenceFeature: TableState_DataGridPresence;
     dataGridSelectionFeature: TableState_DataGridSelection;
+    dataGridUndoRedoFeature: TableState_DataGridUndoRedo;
   }
 
   interface TableOptions_FeatureMap<
@@ -342,6 +368,7 @@ declare module "@tanstack/react-table" {
     dataGridSearchFeature: TableOptions_DataGridSearch;
     dataGridPresenceFeature: TableOptions_DataGridPresence;
     dataGridSelectionFeature: TableOptions_DataGridSelection;
+    dataGridUndoRedoFeature: TableOptions_DataGridUndoRedo;
   }
 
   interface ColumnDef_FeatureMap<
@@ -365,6 +392,7 @@ declare module "@tanstack/react-table" {
     dataGridSearchFeature: Table_DataGridSearch;
     dataGridPresenceFeature: Table_DataGridPresence;
     dataGridSelectionFeature: Table_DataGridSelection;
+    dataGridUndoRedoFeature: Table_DataGridUndoRedo;
   }
 
   interface Column_FeatureMap<
@@ -561,6 +589,7 @@ function updateCells(
   const data = table.options.data;
   const rowsById = table.getCoreRowModel().rowsById;
   const updatedRows = new Map<number, Record<string, unknown>>();
+  const changes: Array<CellChange> = [];
 
   for (const { rowId, columnId, value } of updateArray) {
     const row = rowsById[rowId];
@@ -571,6 +600,12 @@ function updateCells(
       updatedRow = copyRowRecord(data[row.index] ?? row.original);
       updatedRows.set(row.index, updatedRow);
     }
+    changes.push({
+      rowId,
+      columnId,
+      previousValue: updatedRow[columnId],
+      newValue: value,
+    });
     updatedRow[columnId] = value;
   }
 
@@ -581,6 +616,7 @@ function updateCells(
     nextData[index] = row;
   }
   table.options.onDataChange?.(nextData);
+  recordCellChanges(table, changes);
 }
 
 function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
@@ -620,10 +656,19 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
       ? table.getVisibleLeafColumns().find(getIsDataColumn)?.id
       : focusedColumn?.id;
 
+  const deletedRowIds = deletedRows.map((row) => row.id);
+  const positionedRows = deletedRows
+    .map((row) => ({
+      index: row.index,
+      row: table.options.data[row.index] ?? row.original,
+    }))
+    .sort((a, b) => a.index - b.index);
+
   await onRowsDelete(
     deletedRows.map((row) => row.original),
-    deletedRows.map((row) => row.id),
+    deletedRowIds,
   );
+  recordRows(table, "rows_delete", deletedRowIds, positionedRows);
 
   table.resetEditingCell(true);
   table.resetRowSelection(true);
@@ -1108,6 +1153,14 @@ async function pasteCells(
       if (expandRows) {
         await onRowsAdd(rowsNeeded);
         await waitForRowCount(table, rowCount + rowsNeeded);
+        recordRows(
+          table,
+          "rows_add",
+          table
+            .getRowModel()
+            .rows.slice(rowCount)
+            .map((row) => row.id),
+        );
       }
     }
 
@@ -2252,6 +2305,287 @@ function getSortedRowModel(
   };
 }
 
+const DEFAULT_MAX_UNDO_HISTORY = 100;
+const UNDO_BATCH_MS = 300;
+const EMPTY_UNDO_REDO_STATE: UndoRedoState = { canUndo: false, canRedo: false };
+
+interface CellChange {
+  rowId: string;
+  columnId: string;
+  previousValue: unknown;
+  newValue: unknown;
+}
+
+interface PositionedRow {
+  index: number;
+  row: RowData;
+}
+
+type UndoRedoEntry =
+  | { variant: "cells_update"; changes: Array<CellChange> }
+  | {
+      variant: "rows_add" | "rows_delete";
+      rowIds: Array<string>;
+      rows: Array<PositionedRow>;
+    };
+
+interface UndoRedoData {
+  _undoStack: Array<UndoRedoEntry>;
+  _redoStack: Array<UndoRedoEntry>;
+  _pendingCellChanges: Map<string, CellChange>;
+  _pendingTimeout: ReturnType<typeof setTimeout> | null;
+}
+
+function getUndoRedoData(table: object) {
+  return table as unknown as UndoRedoData;
+}
+
+function getUndoRedoEnabled(table: DataGridInstance) {
+  return !!table.options.enableUndoRedo && !table.options.readOnly;
+}
+
+function getEntryCount(entry: UndoRedoEntry) {
+  return entry.variant === "cells_update"
+    ? entry.changes.length
+    : entry.rowIds.length;
+}
+
+function syncUndoRedoState(table: DataGridInstance) {
+  const data = getUndoRedoData(table);
+  const next: UndoRedoState = {
+    canUndo: data._undoStack.length > 0 || data._pendingCellChanges.size > 0,
+    canRedo: data._redoStack.length > 0,
+  };
+  const current = table.atoms.undoRedo.get();
+  if (current.canUndo === next.canUndo && current.canRedo === next.canRedo) {
+    return;
+  }
+  table.options.onUndoRedoChange?.(next);
+}
+
+function commitPendingCellChanges(table: DataGridInstance) {
+  const data = getUndoRedoData(table);
+  if (data._pendingTimeout) {
+    clearTimeout(data._pendingTimeout);
+    data._pendingTimeout = null;
+  }
+  if (data._pendingCellChanges.size === 0) return;
+  const changes = [...data._pendingCellChanges.values()];
+  data._pendingCellChanges.clear();
+  pushUndoEntry(table, { variant: "cells_update", changes });
+}
+
+function pushUndoEntry(table: DataGridInstance, entry: UndoRedoEntry) {
+  const data = getUndoRedoData(table);
+  data._undoStack.push(entry);
+  const maxHistory = table.options.maxUndoHistory ?? DEFAULT_MAX_UNDO_HISTORY;
+  if (data._undoStack.length > maxHistory) data._undoStack.shift();
+  data._redoStack = [];
+  syncUndoRedoState(table);
+}
+
+// Rapid edits to the same cells, like typing or a paste followed by a fix, undo as one step
+function recordCellChanges(
+  table: DataGridInstance,
+  changes: Array<CellChange>,
+) {
+  if (!getUndoRedoEnabled(table)) return;
+  const data = getUndoRedoData(table);
+  let hasChanges = false;
+  for (const change of changes) {
+    if (Object.is(change.previousValue, change.newValue)) continue;
+    hasChanges = true;
+    const key = getCellKey(change.rowId, change.columnId);
+    const existing = data._pendingCellChanges.get(key);
+    data._pendingCellChanges.set(
+      key,
+      existing ? { ...existing, newValue: change.newValue } : change,
+    );
+  }
+  if (!hasChanges) return;
+
+  if (data._pendingTimeout) clearTimeout(data._pendingTimeout);
+  data._pendingTimeout = setTimeout(
+    () => commitPendingCellChanges(table),
+    UNDO_BATCH_MS,
+  );
+  syncUndoRedoState(table);
+}
+
+function recordRows(
+  table: DataGridInstance,
+  variant: "rows_add" | "rows_delete",
+  rowIds: Array<string>,
+  rows: Array<PositionedRow> = [],
+) {
+  if (!getUndoRedoEnabled(table) || rowIds.length === 0) return;
+  commitPendingCellChanges(table);
+  pushUndoEntry(table, { variant, rowIds, rows });
+}
+
+// Positions come from the data the rows are removed from, so reinserting them restores the order
+function removeRows(
+  table: DataGridInstance,
+  data: ReadonlyArray<RowData>,
+  rowIds: Array<string>,
+) {
+  const rowsById = table.getCoreRowModel().rowsById;
+  const removed: Array<PositionedRow> = [];
+  for (const rowId of rowIds) {
+    const row = rowsById[rowId];
+    const original = row ? data[row.index] : undefined;
+    if (row && original !== undefined) {
+      removed.push({ index: row.index, row: original });
+    }
+  }
+  removed.sort((a, b) => a.index - b.index);
+  const removedIndexes = new Set(removed.map(({ index }) => index));
+  return {
+    removed,
+    data: data.filter((_, index) => !removedIndexes.has(index)),
+  };
+}
+
+function insertRows(data: ReadonlyArray<RowData>, rows: Array<PositionedRow>) {
+  const next: Array<RowData> = [];
+  let dataIndex = 0;
+  let rowIndex = 0;
+  while (dataIndex < data.length || rowIndex < rows.length) {
+    const inserted = rows[rowIndex];
+    if (
+      inserted &&
+      (inserted.index <= next.length || dataIndex >= data.length)
+    ) {
+      next.push(inserted.row);
+      rowIndex++;
+      continue;
+    }
+    const row = data[dataIndex++];
+    if (row !== undefined) next.push(row);
+  }
+  return next;
+}
+
+function applyCellChanges(
+  table: DataGridInstance,
+  data: ReadonlyArray<RowData>,
+  changes: Array<CellChange>,
+  direction: "undo" | "redo",
+) {
+  const rowsById = table.getCoreRowModel().rowsById;
+  const next = [...data];
+  const copiedRows = new Map<number, Record<string, unknown>>();
+  for (const change of changes) {
+    const row = rowsById[change.rowId];
+    if (!row) continue;
+    let record = copiedRows.get(row.index);
+    if (!record) {
+      record = copyRowRecord(next[row.index] ?? row.original);
+      copiedRows.set(row.index, record);
+      next[row.index] = record;
+    }
+    record[change.columnId] =
+      direction === "undo" ? change.previousValue : change.newValue;
+  }
+  return next;
+}
+
+function applyUndoRedoEntry(
+  table: DataGridInstance,
+  entry: UndoRedoEntry,
+  direction: "undo" | "redo",
+) {
+  const data = table.options.data;
+  if (entry.variant === "cells_update") {
+    return applyCellChanges(table, data, entry.changes, direction);
+  }
+  const isRemoving = (entry.variant === "rows_add") === (direction === "undo");
+  if (isRemoving) {
+    const result = removeRows(table, data, entry.rowIds);
+    entry.rows = result.removed;
+    return result.data;
+  }
+  return insertRows(data, entry.rows);
+}
+
+function moveUndoRedoEntry(
+  table: DataGridInstance,
+  direction: "undo" | "redo",
+) {
+  if (!getUndoRedoEnabled(table)) return 0;
+  commitPendingCellChanges(table);
+  const data = getUndoRedoData(table);
+  const from = direction === "undo" ? data._undoStack : data._redoStack;
+  const to = direction === "undo" ? data._redoStack : data._undoStack;
+  const entry = from.pop();
+  if (!entry) return 0;
+
+  table.options.onDataChange?.(applyUndoRedoEntry(table, entry, direction));
+  to.push(entry);
+  syncUndoRedoState(table);
+  return getEntryCount(entry);
+}
+
+const dataGridUndoRedoFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    undoRedo: EMPTY_UNDO_REDO_STATE,
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: TableOptions_DataGridUndoRedo = {
+      onUndoRedoChange: makeStateUpdater("undoRedo", table),
+    };
+    return options;
+  },
+  initTableInstanceData: (table) => {
+    const data = getUndoRedoData(table);
+    data._undoStack = [];
+    data._redoStack = [];
+    data._pendingCellChanges = new Map();
+    data._pendingTimeout = null;
+  },
+  resetTableInstanceData: (table) => {
+    const data = getUndoRedoData(table);
+    if (data._pendingTimeout) clearTimeout(data._pendingTimeout);
+    data._undoStack = [];
+    data._redoStack = [];
+    data._pendingCellChanges.clear();
+    data._pendingTimeout = null;
+  },
+  constructTableAPIs: (table) => {
+    const instance = asDataGrid(table);
+
+    assignTableAPIs("dataGridUndoRedoFeature", table, {
+      table_getCanUndo: {
+        fn: () => instance.atoms.undoRedo.get().canUndo,
+      },
+      table_getCanRedo: {
+        fn: () => instance.atoms.undoRedo.get().canRedo,
+      },
+      table_undo: {
+        fn: () => moveUndoRedoEntry(instance, "undo"),
+      },
+      table_redo: {
+        fn: () => moveUndoRedoEntry(instance, "redo"),
+      },
+      table_clearUndoHistory: {
+        fn: () => {
+          const data = getUndoRedoData(instance);
+          if (data._pendingTimeout) clearTimeout(data._pendingTimeout);
+          data._undoStack = [];
+          data._redoStack = [];
+          data._pendingCellChanges.clear();
+          data._pendingTimeout = null;
+          syncUndoRedoState(instance);
+        },
+      },
+      table_recordRowsAdd: {
+        fn: (rowIds: string[]) => recordRows(instance, "rows_add", rowIds),
+      },
+    });
+  },
+};
+
 export const dataGridFeatures = tableFeatures({
   cellSelectionFeature,
   columnFilteringFeature,
@@ -2271,6 +2605,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridSearchFeature,
   dataGridPresenceFeature,
   dataGridSelectionFeature,
+  dataGridUndoRedoFeature,
   filteredRowModel: createFilteredRowModel(),
   coreRowModel: createDataGridCoreRowModel(),
   sortedRowModel: createDataGridSortedRowModel(),

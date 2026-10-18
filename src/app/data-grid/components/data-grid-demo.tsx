@@ -1,6 +1,6 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
+import type { ColumnDef, Table } from "@tanstack/react-table";
 
 import {
   Copy,
@@ -17,10 +17,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 
-import {
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-} from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -90,29 +86,24 @@ function DataGridDemoContent({
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo({
-      data,
-      onDataChange: setData,
-      getRowId: (row) => row.id,
-    });
+  // Duplicating is an app action, so it records its rows for undo through the table
+  const tableRef = React.useRef<Table<DataGridFeatures, Person> | null>(null);
 
-  const onRowsDuplicate = React.useCallback(
-    (rows: Person[]) => {
-      const copies = new Map(
-        rows.map((row) => [row.id, { ...row, id: generateId() }]),
-      );
+  const onRowsDuplicate = React.useCallback((rows: Person[]) => {
+    const copies = new Map(
+      rows.map((row) => [row.id, { ...row, id: generateId() }]),
+    );
 
-      setData((prev) =>
-        prev.flatMap((row) => {
-          const copy = copies.get(row.id);
-          return copy ? [row, copy] : [row];
-        }),
-      );
-      trackRowsAdd([...copies.values()]);
-    },
-    [trackRowsAdd],
-  );
+    setData((prev) =>
+      prev.flatMap((row) => {
+        const copy = copies.get(row.id);
+        return copy ? [row, copy] : [row];
+      }),
+    );
+    tableRef.current?.recordRowsAdd(
+      [...copies.values()].map((copy) => copy.id),
+    );
+  }, []);
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(() => {
     const dataColumns: ColumnDef<DataGridFeatures, Person>[] = [
@@ -327,37 +318,27 @@ function DataGridDemoContent({
       };
 
       setData((prev) => [...prev, newRow]);
-      trackRowsAdd([newRow]);
 
       return {
         rowId: newRow.id,
         columnId: "name",
       };
-    }, [trackRowsAdd]);
+    }, []);
 
   const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
-    React.useCallback(
-      (count: number) => {
-        const newRows: Person[] = Array.from({ length: count }, () => ({
-          id: generateId(),
-        }));
+    React.useCallback((count: number) => {
+      const newRows: Person[] = Array.from({ length: count }, () => ({
+        id: generateId(),
+      }));
 
-        setData((prev) => [...prev, ...newRows]);
-        trackRowsAdd(newRows);
-      },
-      [trackRowsAdd],
-    );
+      setData((prev) => [...prev, ...newRows]);
+    }, []);
 
   const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
-    React.useCallback(
-      (rows) => {
-        // Capture the rows before they are removed so undo can restore them
-        trackRowsDelete(rows);
-        const deleted = new Set(rows);
-        setData((prev) => prev.filter((row) => !deleted.has(row)));
-      },
-      [trackRowsDelete],
-    );
+    React.useCallback((rows) => {
+      const deleted = new Set(rows);
+      setData((prev) => prev.filter((row) => !deleted.has(row)));
+    }, []);
 
   const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
     React.useCallback(async ({ files, rowId: _rowId, columnId: _columnId }) => {
@@ -380,56 +361,11 @@ function DataGridDemoContent({
       );
     }, []);
 
-  const onDataChange = React.useCallback(
-    (newData: Person[]) => {
-      const cellUpdates: Array<UndoRedoCellUpdate> = [];
-
-      const maxLength = Math.max(data.length, newData.length);
-      for (let rowIndex = 0; rowIndex < maxLength; rowIndex++) {
-        const oldRow = data[rowIndex];
-        const newRow = newData[rowIndex];
-
-        // Edits copy only the rows they touch, so unchanged rows keep their identity
-        if (oldRow && newRow && oldRow !== newRow) {
-          const allKeys = new Set([
-            ...Object.keys(oldRow),
-            ...Object.keys(newRow),
-          ]);
-
-          for (const key of allKeys) {
-            const oldValue = (oldRow as unknown as Record<string, unknown>)[
-              key
-            ];
-            const newValue = (newRow as unknown as Record<string, unknown>)[
-              key
-            ];
-
-            if (!Object.is(oldValue, newValue)) {
-              cellUpdates.push({
-                rowId: oldRow.id,
-                columnId: key,
-                previousValue: oldValue,
-                newValue,
-              });
-            }
-          }
-        }
-      }
-
-      if (cellUpdates.length > 0) {
-        trackCellsUpdate(cellUpdates);
-      }
-
-      setData(newData);
-    },
-    [data, trackCellsUpdate],
-  );
-
   const height = Math.max(400, windowSize.height - 150);
 
   const { table, ...dataGridProps } = useDataGrid({
     data,
-    onDataChange,
+    onDataChange: setData,
     columns,
     onRowAdd,
     onRowsAdd,
@@ -446,7 +382,9 @@ function DataGridDemoContent({
     dir,
     enableSearch: true,
     enablePaste: true,
+    enableUndoRedo: true,
   });
+  tableRef.current = table;
 
   return (
     <DirectionProvider dir={dir}>

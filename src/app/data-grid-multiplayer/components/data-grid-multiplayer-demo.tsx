@@ -1,7 +1,12 @@
 "use client";
 
 import type { UserPresence } from "@party/types";
-import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
+import type {
+  ColumnDef,
+  Row,
+  SortingState,
+  Table,
+} from "@tanstack/react-table";
 
 import { TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
@@ -20,10 +25,6 @@ import {
   getStyleIcon,
 } from "@/app/lib/utils";
 import { skaters } from "@/db/schema";
-import {
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-} from "@/hooks/use-data-grid-undo-redo";
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
@@ -58,6 +59,10 @@ import { DataGridShareMenu } from "./data-grid-share-menu";
 type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
 
 // The server doesn't echo your own cell back, so your presence takes it from the grid
+function getSerializedValue(value: unknown) {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
 function getPresenceUsers(
   users: Record<string, UserPresence>,
   currentUserId: string,
@@ -131,69 +136,10 @@ export function DataGridMultiplayerDemo({
     sendActiveCell,
   } = useMultiplayerRoom(roomId);
 
-  const undoRedoOnDataChange = React.useCallback(
-    (newData: SkaterSchema[]) => {
-      const currentIds = new Set(data.map((s) => s.id));
-      const newIds = new Set(newData.map((s) => s.id));
-
-      const deletedIds: string[] = [];
-      for (const skater of data) {
-        if (!newIds.has(skater.id)) {
-          multiplayerCollection.delete(skater.id);
-          deletedIds.push(skater.id);
-        }
-      }
-      if (deletedIds.length > 0) sendRowsDelete(deletedIds);
-
-      const insertedRows: SkaterSchema[] = [];
-      for (const skater of newData) {
-        if (!currentIds.has(skater.id)) {
-          multiplayerCollection.insert(skater);
-          insertedRows.push(skater);
-        } else {
-          const existing = data.find((s) => s.id === skater.id);
-          if (!existing) continue;
-
-          const changedKeys = (
-            Object.keys(skater) as Array<keyof SkaterSchema>
-          ).filter((key) => {
-            const ev =
-              existing[key] instanceof Date
-                ? (existing[key] as Date).toISOString()
-                : existing[key];
-            const nv =
-              skater[key] instanceof Date
-                ? (skater[key] as Date).toISOString()
-                : skater[key];
-            return JSON.stringify(ev) !== JSON.stringify(nv);
-          });
-
-          if (changedKeys.length > 0) {
-            multiplayerCollection.update(skater.id, (draft) => {
-              Object.assign(draft, skater);
-            });
-            for (const key of changedKeys) {
-              const nv =
-                skater[key] instanceof Date
-                  ? (skater[key] as Date).toISOString()
-                  : skater[key];
-              sendCellUpdate(skater.id, key, nv);
-            }
-          }
-        }
-      }
-      if (insertedRows.length > 0)
-        sendRowsAdd(insertedRows.map(serializeSkater));
-    },
-    [data, sendRowsDelete, sendRowsAdd, sendCellUpdate],
+  // Duplicating is an app action, so it records its rows for undo through the table
+  const tableRef = React.useRef<Table<DataGridFeatures, SkaterSchema> | null>(
+    null,
   );
-
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo<SkaterSchema>({
-      data,
-      onDataChange: undoRedoOnDataChange,
-      getRowId: (row) => row.id,
-    });
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
@@ -220,9 +166,9 @@ export function DataGridMultiplayerDemo({
 
       multiplayerCollection.insert(copies);
       sendRowsAdd(copies.map(serializeSkater));
-      trackRowsAdd(copies);
+      tableRef.current?.recordRowsAdd(copies.map((copy) => copy.id));
     },
-    [data, sendRowsAdd, trackRowsAdd],
+    [data, sendRowsAdd],
   );
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
@@ -354,50 +300,50 @@ export function DataGridMultiplayerDemo({
     [filterFn, onRowsDuplicate],
   );
 
+  // Edits, and undo and redo of adds and deletes, all arrive here as the next data
   const onDataChange: NonNullable<
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
     (newData) => {
-      const cellUpdates: Array<UndoRedoCellUpdate> = [];
+      const newIds = new Set(newData.map((skater) => skater.id));
+      const deletedIds = data
+        .filter((skater) => !newIds.has(skater.id))
+        .map((skater) => skater.id);
+      if (deletedIds.length > 0) {
+        multiplayerCollection.delete(deletedIds);
+        sendRowsDelete(deletedIds);
+      }
 
+      const insertedRows: SkaterSchema[] = [];
       for (const skater of newData) {
-        const existing = data.find((s) => s.id === skater.id);
-
+        const existing = multiplayerCollection.get(skater.id);
         if (!existing) {
           multiplayerCollection.insert(skater);
+          insertedRows.push(skater);
           continue;
         }
 
+        const changes: Partial<SkaterSchema> = {};
         for (const key of Object.keys(skater) as Array<keyof SkaterSchema>) {
-          const ev =
-            existing[key] instanceof Date
-              ? (existing[key] as Date).toISOString()
-              : existing[key];
-          const nv =
-            skater[key] instanceof Date
-              ? (skater[key] as Date).toISOString()
-              : skater[key];
-
-          if (JSON.stringify(ev) !== JSON.stringify(nv)) {
-            cellUpdates.push({
-              rowId: existing.id,
-              columnId: key,
-              previousValue: existing[key],
-              newValue: skater[key],
-            });
-
-            multiplayerCollection.update(skater.id, (draft) => {
-              (draft as Record<string, unknown>)[key] = skater[key];
-            });
-
-            sendCellUpdate(existing.id, key, nv);
+          const previousValue = getSerializedValue(existing[key]);
+          const nextValue = getSerializedValue(skater[key]);
+          if (JSON.stringify(previousValue) === JSON.stringify(nextValue)) {
+            continue;
           }
+          (changes as Record<string, unknown>)[key] = skater[key];
+          sendCellUpdate(skater.id, key, nextValue);
+        }
+        if (Object.keys(changes).length > 0) {
+          multiplayerCollection.update(skater.id, (draft) => {
+            Object.assign(draft, changes);
+          });
         }
       }
-
-      if (cellUpdates.length > 0) trackCellsUpdate(cellUpdates);
+      if (insertedRows.length > 0) {
+        sendRowsAdd(insertedRows.map(serializeSkater));
+      }
     },
-    [data, trackCellsUpdate, sendCellUpdate],
+    [data, sendRowsDelete, sendRowsAdd, sendCellUpdate],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
@@ -422,10 +368,9 @@ export function DataGridMultiplayerDemo({
 
       multiplayerCollection.insert(newSkater);
       sendRowAdd(serializeSkater(newSkater));
-      trackRowsAdd([newSkater]);
 
       return { rowId: newSkater.id, columnId: "name" };
-    }, [data, trackRowsAdd, sendRowAdd]);
+    }, [data, sendRowAdd]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
     React.useCallback(
@@ -455,9 +400,8 @@ export function DataGridMultiplayerDemo({
         }
 
         sendRowsAdd(newRows.map(serializeSkater));
-        trackRowsAdd(newRows);
       },
-      [data, trackRowsAdd, sendRowsAdd],
+      [data, sendRowsAdd],
     );
 
   const onRowsDelete: NonNullable<
@@ -465,11 +409,10 @@ export function DataGridMultiplayerDemo({
   > = React.useCallback(
     (rowsToDelete) => {
       const ids = rowsToDelete.map((s) => s.id);
-      trackRowsDelete(rowsToDelete);
       multiplayerCollection.delete(ids);
       sendRowsDelete(ids);
     },
-    [trackRowsDelete, sendRowsDelete],
+    [sendRowsDelete],
   );
 
   const onFilesUpload: NonNullable<
@@ -573,7 +516,9 @@ export function DataGridMultiplayerDemo({
     manualSorting: true,
     enableSearch: true,
     enablePaste: true,
+    enableUndoRedo: true,
   });
+  tableRef.current = table;
 
   React.useEffect(() => {
     let prevCellKey: string | null = null;

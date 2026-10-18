@@ -792,44 +792,6 @@
           "target": "src/components/data-grid/data-grid-skeleton.tsx"
         }
       ]
-    },
-    {
-      "name": "use-data-grid-undo-redo",
-      "type": "registry:hook",
-      "title": "Use Data Grid Undo Redo",
-      "description": "An undo/redo hook for the data grid with keyboard shortcuts and history management",
-      "registryDependencies": [],
-      "dependencies": ["@tanstack/react-table", "sonner"],
-      "files": [
-        {
-          "path": "src/hooks/use-data-grid-undo-redo.ts",
-          "type": "registry:hook"
-        },
-        {
-          "path": "src/hooks/use-value-as-ref.ts",
-          "type": "registry:hook"
-        },
-        {
-          "path": "src/hooks/use-ref-with-init.ts",
-          "type": "registry:hook"
-        },
-        {
-          "path": "src/hooks/use-isomorphic-layout-effect.ts",
-          "type": "registry:hook"
-        },
-        {
-          "path": "src/lib/data-grid-utils.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/lib/data-grid-features.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/lib/data-grid-types.ts",
-          "type": "registry:lib"
-        }
-      ]
     }
   ]
 }

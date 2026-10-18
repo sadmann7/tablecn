@@ -1,6 +1,11 @@
 "use client";
 
-import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
+import type {
+  ColumnDef,
+  Row,
+  SortingState,
+  Table,
+} from "@tanstack/react-table";
 
 import { useLiveQuery } from "@tanstack/react-db";
 import { Copy, Trash2 } from "lucide-react";
@@ -16,10 +21,6 @@ import {
   getStyleIcon,
 } from "@/app/lib/utils";
 import { skaters } from "@/db/schema";
-import {
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-} from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -133,76 +134,38 @@ export function DataGridLiveDemo({
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
-  const undoRedoOnDataChange = React.useCallback(
-    (newData: SkaterSchema[]) => {
-      const currentById = new Map(data.map((skater) => [skater.id, skater]));
-      const newIds = new Set(newData.map((skater) => skater.id));
-
-      // Undo of an add, or redo of a delete
-      const deletedIds = data
-        .filter((skater) => !newIds.has(skater.id))
-        .map((skater) => skater.id);
-      // Undo of a delete, or redo of an add
-      const inserted = newData.filter((skater) => !currentById.has(skater.id));
-      const updated = newData.filter((skater) => {
-        const existingSkater = currentById.get(skater.id);
-        return (
-          existingSkater !== undefined &&
-          getChangedKeys(existingSkater, skater).length > 0
-        );
-      });
-
-      if (deletedIds.length > 0) skatersCollection.delete(deletedIds);
-      if (inserted.length > 0) skatersCollection.insert(inserted);
-      if (updated.length > 0) {
-        const updatedById = new Map(
-          updated.map((skater) => [skater.id, skater]),
-        );
-        skatersCollection.update([...updatedById.keys()], (drafts) => {
-          for (const draft of drafts) {
-            Object.assign(draft, updatedById.get(draft.id));
-          }
-        });
-      }
-    },
-    [data],
-  );
-
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo<SkaterSchema>({
-      data,
-      onDataChange: undoRedoOnDataChange,
-      getRowId: (row) => row.id,
-    });
-
+  // Edits, and undo and redo of adds and deletes, all arrive here as the next data
   const onDataChange: NonNullable<
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
     (newData) => {
-      const cellUpdates: Array<UndoRedoCellUpdate> = [];
+      const newIds = new Set(newData.map((skater) => skater.id));
+      const deletedIds = data
+        .filter((skater) => !newIds.has(skater.id))
+        .map((skater) => skater.id);
+      const inserted: SkaterSchema[] = [];
       const changesById = new Map<string, Partial<SkaterSchema>>();
 
       for (const skater of newData) {
         // Rows inserted since the last render aren't in `data` yet
         const existingSkater = skatersCollection.get(skater.id);
-        if (!existingSkater) continue;
+        if (!existingSkater) {
+          inserted.push(skater);
+          continue;
+        }
 
         const changedKeys = getChangedKeys(existingSkater, skater);
         if (changedKeys.length === 0) continue;
 
         const changes: Partial<SkaterSchema> = {};
         for (const key of changedKeys) {
-          cellUpdates.push({
-            rowId: existingSkater.id,
-            columnId: key,
-            previousValue: existingSkater[key],
-            newValue: skater[key],
-          });
           (changes as Record<string, unknown>)[key] = skater[key];
         }
         changesById.set(skater.id, changes);
       }
 
+      if (deletedIds.length > 0) skatersCollection.delete(deletedIds);
+      if (inserted.length > 0) skatersCollection.insert(inserted);
       if (changesById.size === 0) return;
 
       // Batched so a paste stays under the API rate limit
@@ -211,9 +174,8 @@ export function DataGridLiveDemo({
           Object.assign(draft, changesById.get(draft.id));
         }
       });
-      trackCellsUpdate(cellUpdates);
     },
-    [trackCellsUpdate],
+    [data],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
@@ -238,13 +200,11 @@ export function DataGridLiveDemo({
 
       skatersCollection.insert(newSkater);
 
-      trackRowsAdd([newSkater]);
-
       return {
         rowId: newSkater.id,
         columnId: "name",
       };
-    }, [data, trackRowsAdd]);
+    }, [data]);
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
     React.useCallback(
@@ -273,23 +233,15 @@ export function DataGridLiveDemo({
         }
 
         skatersCollection.insert(newRows);
-        trackRowsAdd(newRows);
       },
-      [data, trackRowsAdd],
+      [data],
     );
 
   const onRowsDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onRowsDelete"]
-  > = React.useCallback(
-    (rowsToDelete) => {
-      // Track for undo/redo (before deletion to capture the rows)
-      trackRowsDelete(rowsToDelete);
-
-      // Use batch delete - single transaction for all deletions
-      skatersCollection.delete(rowsToDelete.map((skater) => skater.id));
-    },
-    [trackRowsDelete],
-  );
+  > = React.useCallback((rowsToDelete) => {
+    skatersCollection.delete(rowsToDelete.map((skater) => skater.id));
+  }, []);
 
   const onFilesUpload: NonNullable<
     UseDataGridProps<SkaterSchema>["onFilesUpload"]
@@ -360,6 +312,11 @@ export function DataGridLiveDemo({
     [isUploadConfigured],
   );
 
+  // Duplicating is an app action, so it records its rows for undo through the table
+  const tableRef = React.useRef<Table<DataGridFeatures, SkaterSchema> | null>(
+    null,
+  );
+
   // Each copy lands between its row and the next one, so it shows up right below the original
   const onRowsDuplicate = React.useCallback(
     (rows: SkaterSchema[]) => {
@@ -380,9 +337,9 @@ export function DataGridLiveDemo({
       });
 
       skatersCollection.insert(copies);
-      trackRowsAdd(copies);
+      tableRef.current?.recordRowsAdd(copies.map((copy) => copy.id));
     },
-    [data, trackRowsAdd],
+    [data],
   );
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
@@ -572,7 +529,9 @@ export function DataGridLiveDemo({
     manualSorting: true,
     enableSearch: true,
     enablePaste: true,
+    enableUndoRedo: true,
   });
+  tableRef.current = table;
 
   // Through the grid so bulk changes can be undone
   const onStatusUpdate = React.useCallback(
