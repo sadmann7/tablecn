@@ -594,15 +594,25 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
 
   const rowIdSet = new Set(rowIds);
   const rows = table.getRowModel().rows;
-  const deletedRows = rows.filter((row) => rowIdSet.has(row.id));
-  const firstDeletedRow = deletedRows[0];
-  if (!firstDeletedRow) return;
+  const deletedRows: typeof rows = [];
+  let firstDeletedIndex = -1;
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    if (!row || !rowIdSet.has(row.id)) continue;
+    if (firstDeletedIndex === -1) firstDeletedIndex = index;
+    deletedRows.push(row);
+  }
+  if (firstDeletedIndex === -1) return;
 
-  const remainingRows = rows.filter((row) => !rowIdSet.has(row.id));
-  const nextFocusedRow =
-    remainingRows[
-      Math.min(firstDeletedRow.getDisplayIndex(), remainingRows.length - 1)
-    ];
+  // Every row before the first deleted one stays, so the next row is the first survivor after it, or the one before it
+  let nextFocusedRow = rows[firstDeletedIndex - 1];
+  for (let index = firstDeletedIndex + 1; index < rows.length; index++) {
+    const row = rows[index];
+    if (row && !rowIdSet.has(row.id)) {
+      nextFocusedRow = row;
+      break;
+    }
+  }
   const focusedColumn = table.getFocusedCell()?.column;
   // Selecting rows focuses the select column, but the next row should land on a data cell
   const focusedColumnId =
