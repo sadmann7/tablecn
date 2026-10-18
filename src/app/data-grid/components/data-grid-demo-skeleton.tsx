@@ -4,8 +4,8 @@ import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 
 // Widths of the toolbar's default triggers, so nothing shifts when the grid mounts
 const TOOLBAR_ITEMS = [
-  { id: "stress-test", className: "w-[116px]" },
-  { id: "row-count", className: "w-[108px]" },
+  { id: "benchmark", className: "w-[119px]" },
+  { id: "row-count", className: "w-[99px]" },
   { id: "direction", className: "w-[65px]" },
   { id: "filter", className: "w-[78px]" },
   { id: "sort", className: "w-[72px]" },

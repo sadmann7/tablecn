@@ -33,19 +33,19 @@ import type { Person } from "../lib/seeds";
 
 type PersonTable = TanStackTable<DataGridFeatures, Person>;
 
-interface StressContext {
+interface BenchmarkContext {
   table: PersonTable;
   grid: HTMLDivElement;
   signal: AbortSignal;
   measure: (update: () => void) => Promise<void>;
 }
 
-interface StressStep {
+interface BenchmarkStep {
   name: string;
-  run: (ctx: StressContext) => Promise<void>;
+  run: (ctx: BenchmarkContext) => Promise<void>;
 }
 
-interface StressResult {
+interface BenchmarkResult {
   name: string;
   durationMs: number;
   frames: number;
@@ -147,7 +147,7 @@ function filter(id: keyof Person, value: FilterValue) {
   return { id, value };
 }
 
-const STRESS_STEPS: StressStep[] = [
+const BENCHMARK_STEPS: BenchmarkStep[] = [
   {
     name: "Wheel scroll",
     run: ({ grid, signal }) =>
@@ -348,11 +348,11 @@ function percentile(values: number[], p: number) {
 }
 
 async function runStep(
-  step: StressStep,
+  step: BenchmarkStep,
   table: PersonTable,
   grid: HTMLDivElement,
   signal: AbortSignal,
-): Promise<StressResult> {
+): Promise<BenchmarkResult> {
   const frameTimes: number[] = [];
   const updateTimes: number[] = [];
   let longTaskMs = 0;
@@ -448,7 +448,7 @@ function resetGrid(table: PersonTable, grid: HTMLDivElement) {
   grid.scrollLeft = 0;
 }
 
-function getTotals(results: StressResult[]) {
+function getTotals(results: BenchmarkResult[]) {
   if (results.length === 0) return null;
   const frames = results.reduce((sum, result) => sum + result.frames, 0);
   const durationMs = results.reduce(
@@ -467,16 +467,16 @@ function getTotals(results: StressResult[]) {
   };
 }
 
-interface DataGridStressTestProps {
+interface DataGridBenchmarkProps {
   table: PersonTable;
   dataGridRef: React.RefObject<HTMLDivElement | null>;
 }
 
-export function DataGridStressTest({
+export function DataGridBenchmark({
   table,
   dataGridRef,
-}: DataGridStressTestProps) {
-  const [results, setResults] = React.useState<StressResult[]>([]);
+}: DataGridBenchmarkProps) {
+  const [results, setResults] = React.useState<BenchmarkResult[]>([]);
   const [isRunning, setIsRunning] = React.useState(false);
   const [isResultsOpen, setIsResultsOpen] = React.useState(false);
   const [rerunStep, setRerunStep] = React.useState<string | null>(null);
@@ -523,8 +523,8 @@ export function DataGridStressTest({
     const controller = new AbortController();
     abortRef.current = controller;
     toast.dismiss(toastIdRef.current);
-    toastIdRef.current = `stress-test-${Date.now()}`;
-    const runResults: StressResult[] = [];
+    toastIdRef.current = `benchmark-${Date.now()}`;
+    const runResults: BenchmarkResult[] = [];
     setResults([]);
     setRerunStep(null);
     setIsResultsOpen(false);
@@ -534,11 +534,11 @@ export function DataGridStressTest({
     await pause(controller.signal, 5);
 
     try {
-      for (const [index, step] of STRESS_STEPS.entries()) {
+      for (const [index, step] of BENCHMARK_STEPS.entries()) {
         if (controller.signal.aborted) break;
         const previous = runResults.at(-1);
         showProgress(
-          `Running ${step.name} · ${index + 1}/${STRESS_STEPS.length}`,
+          `Running ${step.name} · ${index + 1}/${BENCHMARK_STEPS.length}`,
           previous
             ? `${previous.name}: ${previous.fps.toFixed(0)} fps, ${formatMs(previous.maxFrameMs)} slowest frame`
             : "Scrolling, sorting, filtering and searching the grid",
@@ -557,14 +557,14 @@ export function DataGridStressTest({
 
     const totals = getTotals(runResults);
     if (!totals) {
-      toast("Stress test stopped", { id: toastIdRef.current, duration: 3000 });
+      toast("Benchmark stopped", { id: toastIdRef.current, duration: 3000 });
       return;
     }
 
     toast(
       controller.signal.aborted
-        ? `Stress test stopped · ${runResults.length}/${STRESS_STEPS.length}`
-        : "Stress test finished",
+        ? `Benchmark stopped · ${runResults.length}/${BENCHMARK_STEPS.length}`
+        : "Benchmark finished",
       {
         id: toastIdRef.current,
         description: (
@@ -589,12 +589,12 @@ export function DataGridStressTest({
   const onRerunStep = React.useCallback(
     async (name: string) => {
       const grid = dataGridRef.current;
-      const step = STRESS_STEPS.find((item) => item.name === name);
+      const step = BENCHMARK_STEPS.find((item) => item.name === name);
       if (!grid || !step || abortRef.current) return;
 
       const controller = new AbortController();
       abortRef.current = controller;
-      toastIdRef.current = `stress-test-${Date.now()}`;
+      toastIdRef.current = `benchmark-${Date.now()}`;
       // The dialog would cover the grid and its paint would skew the frames
       setIsResultsOpen(false);
       setIsRunning(true);
@@ -603,7 +603,7 @@ export function DataGridStressTest({
       resetGrid(table, grid);
       await pause(controller.signal, 5);
 
-      let result: StressResult | null = null;
+      let result: BenchmarkResult | null = null;
       try {
         showProgress(
           `Rerunning ${name}`,
@@ -642,12 +642,12 @@ export function DataGridStressTest({
         ) : (
           <Gauge className="text-muted-foreground" />
         )}
-        {isRunning ? "Stop" : "Stress test"}
+        {isRunning ? "Stop" : "Benchmark"}
       </Button>
       <Dialog open={isResultsOpen} onOpenChange={setIsResultsOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Stress test results</DialogTitle>
+            <DialogTitle>Benchmark results</DialogTitle>
             <DialogDescription>
               Frame times while the grid scrolls, sorts, filters, searches and
               edits {table.getCoreRowModel().rows.length.toLocaleString()} rows.

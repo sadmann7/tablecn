@@ -58,8 +58,8 @@ import {
   skills,
   statuses,
 } from "../lib/seeds";
+import { DataGridBenchmark } from "./data-grid-benchmark";
 import { DataGridDemoSkeleton } from "./data-grid-demo-skeleton";
-import { DataGridStressTest } from "./data-grid-stress-test";
 import { PeopleGridActionBar } from "./people-grid-action-bar";
 
 const ROW_COUNTS = {
@@ -76,7 +76,7 @@ const ROW_COUNT_ICONS: Record<RowCount, LucideIcon> = {
 };
 
 interface DataGridDemoImplProps extends UseDataGridProps<Person> {
-  toolbar: React.ReactNode;
+  rowCountSelect: React.ReactNode;
   dir: Direction;
   onDirChange: (dir: Direction) => void;
   height: number;
@@ -84,7 +84,7 @@ interface DataGridDemoImplProps extends UseDataGridProps<Person> {
 }
 
 function DataGridDemoImpl({
-  toolbar,
+  rowCountSelect,
   dir,
   onDirChange,
   height,
@@ -112,11 +112,11 @@ function DataGridDemoImpl({
         aria-orientation="horizontal"
         className="flex items-center gap-2 self-end"
       >
-        <DataGridStressTest
+        <DataGridBenchmark
           table={table}
           dataGridRef={dataGridProps.dataGridRef}
         />
-        {toolbar}
+        {rowCountSelect}
         <Toggle
           aria-label="Toggle text direction"
           dir={dir}
@@ -157,12 +157,12 @@ function DataGridDemoImpl({
 
 interface DataGridDemoContentProps {
   initialRows: Person[];
-  toolbar: React.ReactNode;
+  rowCountSelect: React.ReactNode;
 }
 
 function DataGridDemoContent({
   initialRows,
-  toolbar,
+  rowCountSelect,
 }: DataGridDemoContentProps) {
   const [data, setData] = React.useState<Person[]>(initialRows);
   const [dir, setDir] = React.useState<Direction>("ltr");
@@ -519,7 +519,7 @@ function DataGridDemoContent({
         onFilesUpload={onFilesUpload}
         onFilesDelete={onFilesDelete}
         height={height}
-        toolbar={toolbar}
+        rowCountSelect={rowCountSelect}
         dir={dir}
         onDirChange={setDir}
       />
@@ -556,7 +556,7 @@ export function DataGridDemo() {
   }, [rowCount]);
 
   const RowCountIcon = ROW_COUNT_ICONS[rowCount];
-  const sizeSelects = (
+  const rowCountSelect = (
     <>
       <Select
         value={rowCount}
@@ -592,14 +592,14 @@ export function DataGridDemo() {
   );
 
   if (dataset?.rowCount !== rowCount) {
-    return <DataGridDemoSkeleton rowCountSelect={sizeSelects} />;
+    return <DataGridDemoSkeleton rowCountSelect={rowCountSelect} />;
   }
 
   return (
     <DataGridDemoContent
       key={dataset.rowCount}
       initialRows={dataset.rows}
-      toolbar={sizeSelects}
+      rowCountSelect={rowCountSelect}
     />
   );
 }
