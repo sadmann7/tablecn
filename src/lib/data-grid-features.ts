@@ -955,6 +955,12 @@ function pluralizeCells(count: number) {
   return `${count} cell${count !== 1 ? "s" : ""}`;
 }
 
+function quoteTsvField(field: string) {
+  return /[\t\n\r]/.test(field) || field.startsWith('"')
+    ? `"${field.replaceAll('"', '""')}"`
+    : field;
+}
+
 function serializeSelectedCells(table: DataGridInstance) {
   const cells = getSelectedCells(table);
   if (cells.length === 0) return null;
@@ -981,9 +987,11 @@ function serializeSelectedCells(table: DataGridInstance) {
           if (!cellKeys.has(getCellKey(row.id, columnId))) return "";
           const cell = cellsByColumnId[columnId];
           return cell
-            ? serializeCellValue(
-                cell.getValue(),
-                cell.column.columnDef.meta?.cell?.variant,
+            ? quoteTsvField(
+                serializeCellValue(
+                  cell.getValue(),
+                  cell.column.columnDef.meta?.cell?.variant,
+                ),
               )
             : "";
         })

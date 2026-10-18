@@ -979,13 +979,16 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
+      const canCopyCells =
+        !isUtilityCellFocused || !!currentTable?.getHasRowSelection();
+
       if (isCtrlPressed && !shiftKey && key === "a") {
         event.preventDefault();
         tableRef.current?.selectAllDataCells();
         return;
       }
 
-      if (isCtrlPressed && !shiftKey && key === "c" && !isUtilityCellFocused) {
+      if (isCtrlPressed && !shiftKey && key === "c" && canCopyCells) {
         event.preventDefault();
         void currentTable?.copySelectedCells();
         return;
@@ -995,7 +998,7 @@ function useDataGrid<TData extends RowData>({
         isCtrlPressed &&
         !shiftKey &&
         key === "x" &&
-        !isUtilityCellFocused &&
+        canCopyCells &&
         !propsRef.current.readOnly
       ) {
         event.preventDefault();

@@ -10,6 +10,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import {
   getCellKey,
   getFocusedCellPosition,
+  parseTsv,
   stringifyUnknown,
 } from "@/lib/data-grid-utils";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
@@ -815,6 +816,74 @@ describe("useDataGrid", () => {
   });
 
   describe("copy/cut/paste", () => {
+    it("should copy checked rows with the shortcut while the select cell is focused", async () => {
+      const tableRef: {
+        current: ReturnType<typeof useDataGrid<TestData>>["table"] | null;
+      } = { current: null };
+
+      function CopyGrid() {
+        const grid = useDataGrid({
+          data: testData,
+          columns: columnsWithSelect,
+        });
+        tableRef.current = grid.table;
+        return (
+          <div ref={grid.dataGridRef} data-slot="data-grid" tabIndex={0} />
+        );
+      }
+
+      const view = render(<CopyGrid />);
+      const grid = view.container.querySelector<HTMLElement>(
+        '[data-slot="data-grid"]',
+      );
+
+      act(() => {
+        tableRef.current?.setFocusedCell("0", "select");
+        tableRef.current?.setRowSelection({ "0": true, "1": true });
+      });
+      await act(async () => {
+        grid?.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "c",
+            ctrlKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        await Promise.resolve();
+      });
+
+      expect(mockClipboard.writeText).toHaveBeenCalledWith(
+        "Tony Hawk\t900\nRodney Mullen\tKickflip",
+      );
+    });
+
+    it("should quote copied values that contain tabs or newlines", async () => {
+      const data: TestData[] = [
+        { id: "0", name: 'Line one\nLine "two"', trick: "900", score: 1 },
+      ];
+      const { result } = renderHook(
+        () => useDataGrid({ data, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.selectCellRange({
+          anchorRowId: "0",
+          anchorColumnId: "name",
+          focusRowId: "0",
+          focusColumnId: "trick",
+        });
+      });
+      await act(async () => {
+        await result.current.table.copySelectedCells();
+      });
+
+      const text = mockClipboard.writeText.mock.calls.at(-1)?.[0] as string;
+      expect(text).toBe('"Line one\nLine ""two"""\t900');
+      expect(parseTsv(text, 2)).toEqual([['Line one\nLine "two"', "900"]]);
+    });
+
     it("should copy focused cell to clipboard", async () => {
       const { result } = renderHook(
         () =>
