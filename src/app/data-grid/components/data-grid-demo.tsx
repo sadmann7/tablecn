@@ -75,86 +75,6 @@ const ROW_COUNT_ICONS: Record<RowCount, LucideIcon> = {
   "500k": Rows4,
 };
 
-interface DataGridDemoImplProps extends UseDataGridProps<Person> {
-  rowCountSelect: React.ReactNode;
-  dir: Direction;
-  onDirChange: (dir: Direction) => void;
-  height: number;
-  onRowsDuplicate: (rows: Person[]) => void;
-}
-
-function DataGridDemoImpl({
-  rowCountSelect,
-  dir,
-  onDirChange,
-  height,
-  onRowsDuplicate,
-  ...props
-}: DataGridDemoImplProps) {
-  const { table, ...dataGridProps } = useDataGrid({
-    getRowId: (row) => row.id,
-    initialState: {
-      columnPinning: {
-        start: ["select"],
-        end: ["actions"],
-      },
-    },
-    dir,
-    enableSearch: true,
-    enablePaste: true,
-    ...props,
-  });
-
-  return (
-    <div className="container flex flex-col gap-4 py-4">
-      <div
-        role="toolbar"
-        aria-orientation="horizontal"
-        className="flex items-center gap-2 self-end"
-      >
-        <DataGridBenchmark
-          table={table}
-          dataGridRef={dataGridProps.dataGridRef}
-        />
-        {rowCountSelect}
-        <Toggle
-          aria-label="Toggle text direction"
-          dir={dir}
-          variant="outline"
-          className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
-          pressed={dir === "rtl"}
-          onPressedChange={(pressed) => onDirChange(pressed ? "rtl" : "ltr")}
-        >
-          <Languages className="text-muted-foreground" />
-          {dir === "ltr" ? "LTR" : "RTL"}
-        </Toggle>
-        <DataGridFilterMenu table={table} align="end" />
-        <DataGridSortMenu table={table} align="end" />
-        <DataGridRowHeightMenu table={table} align="end" />
-        <DataGridViewMenu table={table} align="end" />
-      </div>
-      <DataGridKeyboardShortcuts
-        enableSearch
-        enableUndoRedo
-        enablePaste
-        enableRowAdd
-        enableRowsDelete
-      />
-      <DataGrid
-        {...dataGridProps}
-        table={table}
-        height={height}
-        actionBar={
-          <PeopleGridActionBar
-            table={table}
-            onRowsDuplicate={onRowsDuplicate}
-          />
-        }
-      />
-    </div>
-  );
-}
-
 interface DataGridDemoContentProps {
   initialRows: Person[];
   rowCountSelect: React.ReactNode;
@@ -433,7 +353,8 @@ function DataGridDemoContent({
       (rows) => {
         // Capture the rows before they are removed so undo can restore them
         trackRowsDelete(rows);
-        setData((prev) => prev.filter((row) => !rows.includes(row)));
+        const deleted = new Set(rows);
+        setData((prev) => prev.filter((row) => !deleted.has(row)));
       },
       [trackRowsDelete],
     );
@@ -506,23 +427,75 @@ function DataGridDemoContent({
 
   const height = Math.max(400, windowSize.height - 150);
 
+  const { table, ...dataGridProps } = useDataGrid({
+    data,
+    onDataChange,
+    columns,
+    onRowAdd,
+    onRowsAdd,
+    onRowsDelete,
+    onFilesUpload,
+    onFilesDelete,
+    getRowId: (row) => row.id,
+    initialState: {
+      columnPinning: {
+        start: ["select"],
+        end: ["actions"],
+      },
+    },
+    dir,
+    enableSearch: true,
+    enablePaste: true,
+  });
+
   return (
     <DirectionProvider dir={dir}>
-      <DataGridDemoImpl
-        data={data}
-        onDataChange={onDataChange}
-        columns={columns}
-        onRowAdd={onRowAdd}
-        onRowsAdd={onRowsAdd}
-        onRowsDelete={onRowsDelete}
-        onRowsDuplicate={onRowsDuplicate}
-        onFilesUpload={onFilesUpload}
-        onFilesDelete={onFilesDelete}
-        height={height}
-        rowCountSelect={rowCountSelect}
-        dir={dir}
-        onDirChange={setDir}
-      />
+      <div className="container flex flex-col gap-4 py-4">
+        <div
+          role="toolbar"
+          aria-orientation="horizontal"
+          className="flex items-center gap-2 self-end"
+        >
+          <DataGridBenchmark
+            table={table}
+            dataGridRef={dataGridProps.dataGridRef}
+          />
+          {rowCountSelect}
+          <Toggle
+            aria-label="Toggle text direction"
+            dir={dir}
+            variant="outline"
+            className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
+            pressed={dir === "rtl"}
+            onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
+          >
+            <Languages className="text-muted-foreground" />
+            {dir === "ltr" ? "LTR" : "RTL"}
+          </Toggle>
+          <DataGridFilterMenu table={table} align="end" />
+          <DataGridSortMenu table={table} align="end" />
+          <DataGridRowHeightMenu table={table} align="end" />
+          <DataGridViewMenu table={table} align="end" />
+        </div>
+        <DataGridKeyboardShortcuts
+          enableSearch
+          enableUndoRedo
+          enablePaste
+          enableRowAdd
+          enableRowsDelete
+        />
+        <DataGrid
+          {...dataGridProps}
+          table={table}
+          height={height}
+          actionBar={
+            <PeopleGridActionBar
+              table={table}
+              onRowsDuplicate={onRowsDuplicate}
+            />
+          }
+        />
+      </div>
     </DirectionProvider>
   );
 }
