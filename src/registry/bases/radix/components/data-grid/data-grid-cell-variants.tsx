@@ -565,7 +565,6 @@ export function UrlCell<TData extends RowData>(
         return;
       }
 
-      // Check if URL was rejected due to dangerous protocol
       const href = getUrlHref(value);
       if (!href) {
         event.preventDefault();

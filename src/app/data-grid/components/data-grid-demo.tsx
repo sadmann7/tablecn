@@ -440,7 +440,6 @@ function DataGridDemoContent({
 
   const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
     React.useCallback(async ({ files, rowId: _rowId, columnId: _columnId }) => {
-      // Simulate an upload delay
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       return files.map((file) => ({

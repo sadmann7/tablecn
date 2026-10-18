@@ -3430,7 +3430,6 @@ describe("useDataGrid", () => {
       expect(after.rowsById["2"]).toBe(after.rows[1]);
       expect(after.flatRows).toEqual(after.rows);
 
-      // Adding and removing rows rebuilds the id lookup
       rerender({
         data: [
           edited[0]!,

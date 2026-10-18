@@ -1400,7 +1400,7 @@ function getSearchMatches(
   return matches;
 }
 
-// Fills the search text cache in idle time after search opens, so the first keystroke stays fast
+// Runs in idle time, so the first keystroke after opening search doesn't build the whole cache
 function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
   if (typeof requestIdleCallback === "undefined") return;
 
