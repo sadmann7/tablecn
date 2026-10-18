@@ -1,7 +1,7 @@
 "use client";
 
 import { Subscribe, type Table } from "@tanstack/react-table";
-import { CheckCircle2, Copy, Eraser, Trash2, X } from "lucide-react";
+import { Building2, CheckCircle2, Copy, Eraser, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -21,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
-import { type Person, statuses } from "../lib/seeds";
+import { departments, type Person, statuses } from "../lib/seeds";
 
 interface PeopleGridActionBarProps {
   table: Table<DataGridFeatures, Person>;
@@ -75,12 +75,12 @@ function PeopleGridActionBarImpl({
   );
 
   // Through the grid so bulk changes can be undone
-  const onStatusUpdate = React.useCallback(
-    (value: string) => {
+  const onCellsUpdate = React.useCallback(
+    (columnId: "status" | "department", value: string) => {
       table.updateCells(
         getTargetRows(table).map((row) => ({
           rowId: row.id,
-          columnId: "status",
+          columnId,
           value,
         })),
       );
@@ -133,9 +133,24 @@ function PeopleGridActionBarImpl({
             {statuses.map((status) => (
               <DropdownMenuItem
                 key={status}
-                onSelect={() => onStatusUpdate(status)}
+                onSelect={() => onCellsUpdate("status", status)}
               >
                 {status}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <ActionBarTooltipItem label="Department" icon={<Building2 />} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent data-grid-popover>
+            {departments.map((department) => (
+              <DropdownMenuItem
+                key={department}
+                onSelect={() => onCellsUpdate("department", department)}
+              >
+                {department}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
