@@ -70,6 +70,20 @@ const LINE_COUNTS: Record<RowHeightValue, number> = {
   "extra-tall": 4,
 };
 
+// Calling the accessor directly skips getValue's column lookup and cache write on every call,
+// which costs several times more on the first pass over a large column
+export function getValueReader(
+  column:
+    | { accessorFn?: (original: never, index: number) => unknown }
+    | undefined,
+) {
+  const accessorFn = column?.accessorFn as
+    | ((original: unknown, index: number) => unknown)
+    | undefined;
+  return (row: { original: unknown; index: number }) =>
+    accessorFn?.(row.original, row.index);
+}
+
 export function stringifyUnknown(value: unknown): string {
   if (value == null) return "";
   if (typeof value === "string") return value;

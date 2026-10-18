@@ -11,7 +11,7 @@ import type {
   TextFilterOperator,
 } from "@/lib/data-grid-types";
 
-import { stringifyUnknown } from "@/lib/data-grid-utils";
+import { getValueReader, stringifyUnknown } from "@/lib/data-grid-utils";
 
 export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
   label: string;
@@ -130,6 +130,7 @@ interface PreparedFilter {
   endDate: Date | null;
   valueDateText: string | null;
   anyOf: Set<unknown> | null;
+  readValue: ReturnType<typeof getValueReader> | null;
 }
 
 // Filter values stay the same object until the filter changes, so their derived values are
@@ -153,6 +154,7 @@ function getPreparedFilter(filter: FilterValue) {
     endDate: typeof endValue === "string" ? new Date(endValue) : null,
     valueDateText: valueDate?.toDateString() ?? null,
     anyOf: Array.isArray(value) ? new Set<unknown>(value) : null,
+    readValue: null,
   };
   preparedFilters.set(filter, prepared);
   return prepared;
@@ -183,7 +185,9 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
     const filter = getPreparedFilter(filterValue as FilterValue);
     const { operator, value, endValue } = filter;
 
-    const cellValue = row.getValue(columnId);
+    // Each filter object belongs to one column, so its reader is resolved once
+    filter.readValue ??= getValueReader(row.table.getColumn(columnId));
+    const cellValue = filter.readValue(row);
 
     if (operator === "isEmpty") return getIsEmptyValue(cellValue);
     if (operator === "isNotEmpty") return !getIsEmptyValue(cellValue);
