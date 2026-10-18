@@ -544,7 +544,7 @@ export function DataGridMultiplayerDemo({
         <div
           role="toolbar"
           aria-orientation="horizontal"
-          className="flex items-center gap-2"
+          className="ms-auto flex items-center gap-2"
         >
           <DataGridShareMenu roomId={roomId} />
           <DataGridKeyboardShortcuts
