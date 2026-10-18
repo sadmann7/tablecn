@@ -83,7 +83,24 @@ const trickOptions = TRICKS.map((trick) => ({
   value: trick,
 }));
 
-export function DataGridLiveDemo() {
+function getComparableValue(value: unknown) {
+  return JSON.stringify(value instanceof Date ? value.toISOString() : value);
+}
+
+function getChangedKeys(previous: SkaterSchema, next: SkaterSchema) {
+  return (Object.keys(next) as Array<keyof SkaterSchema>).filter(
+    (key) =>
+      getComparableValue(previous[key]) !== getComparableValue(next[key]),
+  );
+}
+
+interface DataGridLiveDemoProps {
+  isUploadConfigured: boolean;
+}
+
+export function DataGridLiveDemo({
+  isUploadConfigured,
+}: DataGridLiveDemoProps) {
   use(skatersCollection.preload());
 
   const windowSize = useWindowSize();
@@ -260,45 +277,34 @@ export function DataGridLiveDemo() {
 
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
-      const currentIds = new Set(data.map((s) => s.id));
-      const newIds = new Set(newData.map((s) => s.id));
+      const currentById = new Map(data.map((skater) => [skater.id, skater]));
+      const newIds = new Set(newData.map((skater) => skater.id));
 
       // Undo of an add, or redo of a delete
-      for (const skater of data) {
-        if (!newIds.has(skater.id)) {
-          skatersCollection.delete(skater.id);
-        }
-      }
+      const deletedIds = data
+        .filter((skater) => !newIds.has(skater.id))
+        .map((skater) => skater.id);
+      // Undo of a delete, or redo of an add
+      const inserted = newData.filter((skater) => !currentById.has(skater.id));
+      const updated = newData.filter((skater) => {
+        const existingSkater = currentById.get(skater.id);
+        return (
+          existingSkater !== undefined &&
+          getChangedKeys(existingSkater, skater).length > 0
+        );
+      });
 
-      for (const skater of newData) {
-        if (!currentIds.has(skater.id)) {
-          // Undo of a delete, or redo of an add
-          skatersCollection.insert(skater);
-        } else {
-          const existingSkater = data.find((s) => s.id === skater.id);
-          if (!existingSkater) continue;
-
-          const hasChanges = (
-            Object.keys(skater) as Array<keyof SkaterSchema>
-          ).some((key) => {
-            const existingValue =
-              existingSkater[key] instanceof Date
-                ? (existingSkater[key] as Date).toISOString()
-                : existingSkater[key];
-            const newValue =
-              skater[key] instanceof Date
-                ? (skater[key] as Date).toISOString()
-                : skater[key];
-
-            return JSON.stringify(existingValue) !== JSON.stringify(newValue);
-          });
-
-          if (hasChanges) {
-            skatersCollection.update(skater.id, (draft) => {
-              Object.assign(draft, skater);
-            });
+      if (deletedIds.length > 0) skatersCollection.delete(deletedIds);
+      if (inserted.length > 0) skatersCollection.insert(inserted);
+      if (updated.length > 0) {
+        const updatedById = new Map(
+          updated.map((skater) => [skater.id, skater]),
+        );
+        skatersCollection.update([...updatedById.keys()], (drafts) => {
+          for (const draft of drafts) {
+            Object.assign(draft, updatedById.get(draft.id));
           }
-        }
+        });
       }
     },
     [data],
@@ -316,50 +322,40 @@ export function DataGridLiveDemo() {
   > = React.useCallback(
     (newData) => {
       const cellUpdates: Array<UndoRedoCellUpdate> = [];
+      const changesById = new Map<string, Partial<SkaterSchema>>();
 
       for (const skater of newData) {
-        const existingSkater = data.find((s) => s.id === skater.id);
+        // Rows inserted since the last render aren't in `data` yet
+        const existingSkater = skatersCollection.get(skater.id);
+        if (!existingSkater) continue;
 
-        // For new rows (not yet in our stale closure data), still update them
-        // because onRowsAdd already created them in the collection
-        if (!existingSkater) {
-          skatersCollection.update(skater.id, (draft) => {
-            Object.assign(draft, skater);
+        const changedKeys = getChangedKeys(existingSkater, skater);
+        if (changedKeys.length === 0) continue;
+
+        const changes: Partial<SkaterSchema> = {};
+        for (const key of changedKeys) {
+          cellUpdates.push({
+            rowId: existingSkater.id,
+            columnId: key,
+            previousValue: existingSkater[key],
+            newValue: skater[key],
           });
-          continue;
+          (changes as Record<string, unknown>)[key] = skater[key];
         }
-
-        // Check if any field changed using JSON comparison for arrays/objects
-        for (const key of Object.keys(skater) as Array<keyof SkaterSchema>) {
-          const existingValue =
-            existingSkater[key] instanceof Date
-              ? (existingSkater[key] as Date).toISOString()
-              : existingSkater[key];
-          const newValue =
-            skater[key] instanceof Date
-              ? (skater[key] as Date).toISOString()
-              : skater[key];
-
-          if (JSON.stringify(existingValue) !== JSON.stringify(newValue)) {
-            cellUpdates.push({
-              rowId: existingSkater.id,
-              columnId: key,
-              previousValue: existingSkater[key],
-              newValue: skater[key],
-            });
-
-            skatersCollection.update(skater.id, (draft) => {
-              (draft as Record<string, unknown>)[key] = skater[key];
-            });
-          }
-        }
+        changesById.set(skater.id, changes);
       }
 
-      if (cellUpdates.length > 0) {
-        trackCellsUpdate(cellUpdates);
-      }
+      if (changesById.size === 0) return;
+
+      // Batched so a paste stays under the API rate limit
+      skatersCollection.update([...changesById.keys()], (drafts) => {
+        for (const draft of drafts) {
+          Object.assign(draft, changesById.get(draft.id));
+        }
+      });
+      trackCellsUpdate(cellUpdates);
     },
-    [data, trackCellsUpdate],
+    [trackCellsUpdate],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
@@ -416,9 +412,9 @@ export function DataGridLiveDemo() {
             updatedAt: new Date(),
           };
           newRows.push(newSkater);
-          skatersCollection.insert(newSkater);
         }
 
+        skatersCollection.insert(newRows);
         trackRowsAdd(newRows);
       },
       [data, trackRowsAdd],
@@ -441,23 +437,22 @@ export function DataGridLiveDemo() {
     UseDataGridProps<SkaterSchema>["onFilesUpload"]
   > = React.useCallback(
     async ({ files }) => {
-      try {
+      if (isUploadConfigured) {
+        // The file cell shows thrown errors and drops the pending files
         const uploadedFiles = await startUpload(files);
-
-        if (uploadedFiles) {
-          return uploadedFiles.map((file) => ({
-            id: file.key,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: file.ufsUrl,
-          }));
+        if (!uploadedFiles) {
+          throw new Error("Upload failed, please try again.");
         }
-      } catch {
-        // UploadThing not configured, fall back to simulation
+
+        return uploadedFiles.map((file) => ({
+          id: file.key,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: file.ufsUrl,
+        }));
       }
 
-      // Simulate upload for demo/development without UploadThing
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       return files.map((file) => ({
@@ -468,22 +463,33 @@ export function DataGridLiveDemo() {
         url: URL.createObjectURL(file),
       }));
     },
-    [startUpload],
+    [isUploadConfigured, startUpload],
   );
 
   const onFilesDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onFilesDelete"]
-  > = React.useCallback(async ({ fileIds }) => {
-    try {
-      await fetch("/api/uploadthing/delete", {
+  > = React.useCallback(
+    async ({ fileIds }) => {
+      // Simulated uploads only exist in the browser
+      if (!isUploadConfigured) return;
+
+      const response = await fetch("/api/uploadthing/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileKeys: fileIds }),
       });
-    } catch {
-      // UploadThing not configured or delete failed, ignore
-    }
-  }, []);
+
+      // Throwing keeps the file in the cell instead of orphaning it in storage
+      if (!response.ok) {
+        throw new Error(
+          response.status === 429
+            ? "Too many requests, please try again in a few seconds."
+            : "Couldn't delete the file, please try again.",
+        );
+      }
+    },
+    [isUploadConfigured],
+  );
 
   const { table, ...dataGridProps } = useDataGrid({
     data,
@@ -508,42 +514,39 @@ export function DataGridLiveDemo() {
     enablePaste: true,
   });
 
+  // Through the grid so bulk changes can be undone
   const onStatusUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
-      // Use batch update - single transaction for all updates
-      skatersCollection.update(
-        selectedRows.map((row) => row.original.id),
-        (drafts) => {
-          for (const draft of drafts) {
-            draft.status = value as never;
-          }
-        },
+      table.updateCells(
+        selectedRows.map((row) => ({
+          rowId: row.id,
+          columnId: "status",
+          value,
+        })),
       );
 
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [],
+    [table],
   );
 
   const onStyleUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
-      // Use batch update - single transaction for all updates
-      skatersCollection.update(
-        selectedRows.map((row) => row.original.id),
-        (drafts) => {
-          for (const draft of drafts) {
-            draft.style = value as never;
-          }
-        },
+      table.updateCells(
+        selectedRows.map((row) => ({
+          rowId: row.id,
+          columnId: "style",
+          value,
+        })),
       );
 
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [],
+    [table],
   );
 
   const onDelete = React.useCallback(
