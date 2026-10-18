@@ -577,6 +577,7 @@ function useDataGrid<TData extends RowData>({
         : undefined,
       onScrollToCell: (cell) =>
         revealCell(cell, { shouldFocus: false, shouldScroll: true }),
+      onFocusCell: (cell) => focusCellElement(cell),
       onClipboardNotice: (notice) =>
         (propsRef.current.onClipboardNotice ?? showClipboardToast)(notice),
       features: dataGridFeatures,
@@ -604,6 +605,7 @@ function useDataGrid<TData extends RowData>({
     canAddRows,
     dir,
     revealCell,
+    focusCellElement,
     onRowSelectionChange,
     onColumnVisibilityChange,
   ]);

@@ -1168,6 +1168,37 @@ describe("useDataGrid", () => {
 
       expect(onRowsDelete).not.toHaveBeenCalled();
     });
+
+    it("should focus a data cell in the next row when deleting from the select column", async () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "select", enableCellSelection: false, size: 40 },
+        ...testColumns,
+      ];
+
+      const { result, rerender } = renderHook(
+        ({ data }) =>
+          useDataGrid({
+            data,
+            columns,
+            getRowId: (row) => row.id,
+            onRowsDelete: (rows) => {
+              rerender({ data: data.filter((row) => !rows.includes(row)) });
+            },
+          }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.table.setFocusedCell("2", "select");
+      });
+      await act(async () => {
+        await result.current.table.deleteRows(["2"]);
+      });
+
+      const focusedCell = result.current.table.getFocusedCell();
+      expect(focusedCell?.row.id).toBe("3");
+      expect(focusedCell?.column.id).toBe("name");
+    });
   });
 
   describe("search functionality", () => {

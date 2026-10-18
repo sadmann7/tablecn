@@ -162,6 +162,8 @@ interface TableOptions_DataGridNavigation {
   dir?: Direction;
   /** Brings a cell into view, provided by the layer that owns the scroll container. */
   onScrollToCell?: (cell: CellPosition) => void;
+  /** Moves keyboard focus to a cell, provided by the layer that owns the cell elements. */
+  onFocusCell?: (cell: CellPosition) => void;
   onFocusedHeaderColumnIdChange?: OnChangeFn<string | null>;
 }
 
@@ -624,7 +626,12 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
     remainingRows[
       Math.min(firstDeletedRow.getDisplayIndex(), remainingRows.length - 1)
     ];
-  const focusedColumnId = table.getFocusedCell()?.column.id;
+  const focusedColumn = table.getFocusedCell()?.column;
+  // Selecting rows focuses the select column, but the next row should land on a data cell
+  const focusedColumnId =
+    focusedColumn && !getIsDataColumn(focusedColumn)
+      ? table.getVisibleLeafColumns().find(getIsDataColumn)?.id
+      : focusedColumn?.id;
 
   await onRowsDelete(
     deletedRows.map((row) => row.original),
@@ -635,6 +642,11 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
   table.resetRowSelection(true);
   if (nextFocusedRow && focusedColumnId) {
     table.setFocusedCell(nextFocusedRow.id, focusedColumnId);
+    // Deleting from outside the grid, like an action bar, would otherwise leave keyboard focus on the page
+    table.options.onFocusCell?.({
+      rowId: nextFocusedRow.id,
+      columnId: focusedColumnId,
+    });
   } else {
     table.resetCellSelection(true);
   }
