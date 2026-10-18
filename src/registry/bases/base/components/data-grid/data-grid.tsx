@@ -186,8 +186,12 @@ function DataGridViewport<TData extends RowData>({
     dataGridRef,
     headerRef,
     footerRef,
-    // The footer follows the last row until the body overflows, so row count and height move it
-    contentKey: `${rows.length}:${rowSize}:${hasFooter}`,
+    // The footer follows the last row until the body overflows, so only rows that fit move it.
+    // Past that, filtering or adding rows would remeasure, forcing a layout for no change
+    contentKey:
+      rows.length * rowSize > height
+        ? `overflow:${hasFooter}`
+        : `${rows.length}:${rowSize}:${hasFooter}`,
   });
 
   const isScrollJumpingRef = React.useRef(false);

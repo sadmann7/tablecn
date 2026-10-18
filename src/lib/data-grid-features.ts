@@ -69,6 +69,7 @@ import {
   getRowHeightValue,
   getRowIndexById,
   getTabTargetCell,
+  getValueReader,
   parsePastedCellValue,
   parseTsv,
   serializeCellValue,
@@ -1303,7 +1304,7 @@ function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
 // Repeated values share one lowercased string to keep the cache small.
 function getRowSearchTexts(
   row: SearchRow,
-  dataColumnIds: Array<string>,
+  readValues: Array<ReturnType<typeof getValueReader>>,
   cache: SearchTextCache,
   lowerByValue: Map<unknown, string>,
 ) {
@@ -1312,8 +1313,8 @@ function getRowSearchTexts(
   let texts = isCacheable ? cache.textsByRow.get(original) : undefined;
   if (texts) return texts;
 
-  texts = dataColumnIds.map((columnId) => {
-    const value = row.getValue(columnId);
+  texts = readValues.map((readValue) => {
+    const value = readValue(row);
     let text = lowerByValue.get(value);
     if (text === undefined) {
       text = stringifyUnknown(value).toLowerCase();
@@ -1335,6 +1336,7 @@ function getSearchMatches(
   if (!lowerQuery) return [];
 
   const dataColumnIds = getSearchColumnIds(columns, cache);
+  const readValues = columns.filter(getIsDataColumn).map(getValueReader);
   const lowerByValue = new Map<unknown, string>();
 
   // A query that extends the previous one can only match rows that already matched
@@ -1364,7 +1366,7 @@ function getSearchMatches(
     const row = rows[rowIndex]!;
     let texts = rowTexts[rowIndex];
     if (!texts) {
-      texts = getRowSearchTexts(row, dataColumnIds, cache, lowerByValue);
+      texts = getRowSearchTexts(row, readValues, cache, lowerByValue);
       rowTexts[rowIndex] = texts;
     }
 
@@ -1413,10 +1415,9 @@ function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
   if (typeof requestIdleCallback === "undefined") return;
 
   const rows = table.getRowModel().rows;
-  const dataColumnIds = getSearchColumnIds(
-    table.getVisibleLeafColumns(),
-    cache,
-  );
+  const columns = table.getVisibleLeafColumns();
+  getSearchColumnIds(columns, cache);
+  const readValues = columns.filter(getIsDataColumn).map(getValueReader);
   const columnsKey = cache.columnsKey;
   const lowerByValue = new Map<unknown, string>();
   let index = 0;
@@ -1426,7 +1427,7 @@ function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
       return;
     }
     while (index < rows.length && deadline.timeRemaining() > 1) {
-      getRowSearchTexts(rows[index++]!, dataColumnIds, cache, lowerByValue);
+      getRowSearchTexts(rows[index++]!, readValues, cache, lowerByValue);
     }
     if (index < rows.length) requestIdleCallback(onIdle);
   }
@@ -2111,7 +2112,7 @@ function getSortedRowModel(
     // custom row comparators read rows themselves
     const rawValues = resolvedSorting.map((sort) =>
       sort.compareValues || sort.sortUndefined
-        ? rows.map((row) => row.getValue(sort.id))
+        ? rows.map(getValueReader(table.getColumn(sort.id)))
         : null,
     );
     const sortValues = resolvedSorting.map((sort, sortIndex) => {

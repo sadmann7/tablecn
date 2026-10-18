@@ -10,10 +10,15 @@ import { getFilterFn } from "@/lib/data-grid-filters";
 const filterFn = getFilterFn<Record<string, unknown>>();
 
 function matches(cellValue: unknown, filter: FilterValue) {
-  const row = { getValue: () => cellValue } as unknown as Row<
-    DataGridFeatures,
-    Record<string, unknown>
-  >;
+  const row = {
+    original: { column: cellValue },
+    index: 0,
+    table: {
+      getColumn: () => ({
+        accessorFn: (original: Record<string, unknown>) => original.column,
+      }),
+    },
+  } as unknown as Row<DataGridFeatures, Record<string, unknown>>;
   return filterFn(row, "column", filter, () => {});
 }
 
