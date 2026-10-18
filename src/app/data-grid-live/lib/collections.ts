@@ -15,13 +15,9 @@ const skatersResponseSchema = z.object({ skaters: skaterSchema.array() });
 
 // Writes run in mutation order, so an update can't reach the server before its row's insert
 let pendingWrite: Promise<unknown> = Promise.resolve();
-let pendingWriteCount = 0;
 
 function enqueueWrite<T>(write: () => Promise<T>) {
-  pendingWriteCount++;
-  const result = pendingWrite.then(write, write).finally(() => {
-    pendingWriteCount--;
-  });
+  const result = pendingWrite.then(write, write);
   pendingWrite = result.catch((error: unknown) => {
     // Failed writes roll back, so tell the user instead of letting the edit vanish
     toast.error(
@@ -139,9 +135,3 @@ export const skatersCollection = createCollection(
       }),
   }),
 );
-
-// Skipped while writes are in flight, so a refetch that started before them can't show older values
-export function refreshSkaters() {
-  if (pendingWriteCount > 0) return;
-  void skatersCollection.utils.refetch();
-}

@@ -37,7 +37,7 @@ import {
 
 import type { SkaterSchema } from "../lib/validation";
 
-import { refreshSkaters, skatersCollection } from "../lib/collections";
+import { skatersCollection } from "../lib/collections";
 import { SkatersGridActionBar } from "./skaters-grid-action-bar";
 
 type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
@@ -102,11 +102,6 @@ export function DataGridLiveDemo({
   isUploadConfigured,
 }: DataGridLiveDemoProps) {
   use(skatersCollection.preload());
-
-  React.useEffect(() => {
-    window.addEventListener("focus", refreshSkaters);
-    return () => window.removeEventListener("focus", refreshSkaters);
-  }, []);
 
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
