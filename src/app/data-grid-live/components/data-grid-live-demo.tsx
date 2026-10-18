@@ -476,17 +476,28 @@ export function DataGridLiveDemo({
 
   const onFilesDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onFilesDelete"]
-  > = React.useCallback(async ({ fileIds }) => {
-    try {
-      await fetch("/api/uploadthing/delete", {
+  > = React.useCallback(
+    async ({ fileIds }) => {
+      // Simulated uploads only exist in the browser
+      if (!isUploadConfigured) return;
+
+      const response = await fetch("/api/uploadthing/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileKeys: fileIds }),
       });
-    } catch {
-      // UploadThing not configured or delete failed, ignore
-    }
-  }, []);
+
+      // Throwing keeps the file in the cell, so it isn't left in storage with nothing pointing to it
+      if (!response.ok) {
+        throw new Error(
+          response.status === 429
+            ? "Too many requests, please try again in a few seconds."
+            : "Couldn't delete the file, please try again.",
+        );
+      }
+    },
+    [isUploadConfigured],
+  );
 
   const { table, ...dataGridProps } = useDataGrid({
     data,
