@@ -162,17 +162,13 @@ function DataGridViewport<TData extends RowData>({
     count: rows.length,
     getScrollElement: () => dataGridRef.current,
     estimateSize: () => rowSize,
-    scrollPaddingStart:
-      (headerRef.current?.getBoundingClientRect().bottom ?? 0) -
-      (dataGridRef.current?.getBoundingClientRect().top ?? 0) +
-      VIEWPORT_OFFSET,
-    // Add extra row buffer to absorb virtual position drift after render measurements
+    scrollPaddingStart: VIEWPORT_OFFSET,
     scrollPaddingEnd:
+      (headerRef.current?.offsetHeight ?? 0) +
       (dataGridRef.current?.getBoundingClientRect().bottom ?? 0) -
       (footerRef.current?.getBoundingClientRect().top ??
         dataGridRef.current?.getBoundingClientRect().bottom ??
         0) +
-      rowSize +
       VIEWPORT_OFFSET,
   });
 
