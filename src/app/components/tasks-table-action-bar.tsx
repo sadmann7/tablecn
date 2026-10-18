@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { ActionBarTooltipItem } from "@/components/action-bar-tooltip-item";
 import { type Task, tasks } from "@/db/schema";
 import { getVisibleSelectedRows } from "@/lib/data-table-utils";
 import { exportTableToCSV } from "@/lib/export";
@@ -14,7 +15,6 @@ import {
   ActionBar,
   ActionBarClose,
   ActionBarGroup,
-  ActionBarItem,
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/registry/bases/radix/ui/action-bar";
@@ -124,10 +124,7 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
       <ActionBarGroup>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <ActionBarItem>
-              <CheckCircle2 />
-              Status
-            </ActionBarItem>
+            <ActionBarTooltipItem label="Status" icon={<CheckCircle2 />} />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             {tasks.status.enumValues.map((status) => (
@@ -143,10 +140,7 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
         </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <ActionBarItem>
-              <ArrowUp />
-              Priority
-            </ActionBarItem>
+            <ActionBarTooltipItem label="Priority" icon={<ArrowUp />} />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             {tasks.priority.enumValues.map((priority) => (
@@ -160,18 +154,18 @@ function TasksTableActionBarContent({ table }: TasksTableActionBarProps) {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <ActionBarItem onSelect={onTaskExport}>
-          <Download />
-          Export
-        </ActionBarItem>
-        <ActionBarItem
+        <ActionBarTooltipItem
+          label="Export"
+          icon={<Download />}
+          onSelect={onTaskExport}
+        />
+        <ActionBarTooltipItem
           variant="destructive"
+          label="Delete"
+          icon={<Trash2 />}
           disabled={isDeletePending}
           onSelect={onTaskDelete}
-        >
-          <Trash2 />
-          Delete
-        </ActionBarItem>
+        />
       </ActionBarGroup>
     </ActionBar>
   );
