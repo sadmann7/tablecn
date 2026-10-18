@@ -469,14 +469,25 @@ export function DataGridLiveDemo({
   const onFilesDelete: NonNullable<
     UseDataGridProps<SkaterSchema>["onFilesDelete"]
   > = React.useCallback(
-    async ({ fileIds }) => {
+    async ({ fileIds, rowId }) => {
       // Simulated uploads only exist in the browser
       if (!isUploadConfigured) return;
+
+      // Duplicated rows share their files, so keep any file another row still uses
+      const sharedIds = new Set(
+        skatersCollection.toArray.flatMap((skater) =>
+          skater.id === rowId
+            ? []
+            : (skater.media?.map((file) => file.id) ?? []),
+        ),
+      );
+      const fileKeys = fileIds.filter((id) => !sharedIds.has(id));
+      if (fileKeys.length === 0) return;
 
       const response = await fetch("/api/uploadthing/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileKeys: fileIds }),
+        body: JSON.stringify({ fileKeys }),
       });
 
       // Throwing keeps the file in the cell instead of orphaning it in storage
@@ -549,6 +560,35 @@ export function DataGridLiveDemo({
     [table],
   );
 
+  // Each copy lands between its row and the next one, so it shows up right below the original
+  const onDuplicate = React.useCallback(
+    (selectedRows: SkaterRows) => {
+      const orders = data.map((skater) => skater.order).sort((a, b) => a - b);
+      const now = new Date();
+      const copies = selectedRows.map((row) => {
+        const nextOrder = orders.find((order) => order > row.original.order);
+        return {
+          ...row.original,
+          id: generateId(),
+          order:
+            nextOrder === undefined
+              ? row.original.order + 1
+              : (row.original.order + nextOrder) / 2,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+
+      skatersCollection.insert(copies);
+      trackRowsAdd(copies);
+
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} duplicated`,
+      );
+    },
+    [data, trackRowsAdd],
+  );
+
   const onDelete = React.useCallback(
     (selectedRows: SkaterRows) => {
       void table.deleteRows(selectedRows.map((row) => row.id));
@@ -589,6 +629,7 @@ export function DataGridLiveDemo({
         styleOptions={styleOptions}
         onStatusUpdate={onStatusUpdate}
         onStyleUpdate={onStyleUpdate}
+        onDuplicate={onDuplicate}
         onDelete={onDelete}
       />
     </div>

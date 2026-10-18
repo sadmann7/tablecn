@@ -1,21 +1,27 @@
 "use client";
 
 import { Subscribe, type Table } from "@tanstack/react-table";
-import { Copy, Eraser, Trash2, X } from "lucide-react";
+import { CheckCircle2, Copy, Eraser, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
+import { ActionBarTooltipItem } from "@/components/action-bar-tooltip-item";
 import {
   ActionBar,
   ActionBarClose,
   ActionBarGroup,
-  ActionBarItem,
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/registry/bases/radix/ui/action-bar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/registry/bases/radix/ui/dropdown-menu";
 
-import type { Person } from "../lib/seeds";
+import { type Person, statuses } from "../lib/seeds";
 
 interface PeopleGridActionBarProps {
   table: Table<DataGridFeatures, Person>;
@@ -68,6 +74,20 @@ function PeopleGridActionBarImpl({
     [table, onRowsDuplicate],
   );
 
+  // Through the grid so bulk changes can be undone
+  const onStatusUpdate = React.useCallback(
+    (value: string) => {
+      table.updateCells(
+        getTargetRows(table).map((row) => ({
+          rowId: row.id,
+          columnId: "status",
+          value,
+        })),
+      );
+    },
+    [table],
+  );
+
   const onClear = React.useCallback(
     (event: Event) => {
       event.preventDefault();
@@ -86,7 +106,7 @@ function PeopleGridActionBarImpl({
       open={selectedCount > 0}
       onOpenChange={onOpenChange}
     >
-      <ActionBarSelection>
+      <ActionBarSelection className="whitespace-nowrap">
         <span className="font-medium">{selectedCount}</span>
         <span>
           {hasRowSelection
@@ -105,20 +125,39 @@ function PeopleGridActionBarImpl({
       </ActionBarSelection>
       <ActionBarSeparator />
       <ActionBarGroup>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <ActionBarTooltipItem label="Status" icon={<CheckCircle2 />} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent data-grid-popover>
+            {statuses.map((status) => (
+              <DropdownMenuItem
+                key={status}
+                onSelect={() => onStatusUpdate(status)}
+              >
+                {status}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
         {!hasRowSelection && (
-          <ActionBarItem onSelect={onClear}>
-            <Eraser />
-            Clear
-          </ActionBarItem>
+          <ActionBarTooltipItem
+            label="Clear"
+            icon={<Eraser />}
+            onSelect={onClear}
+          />
         )}
-        <ActionBarItem onSelect={onDuplicate}>
-          <Copy />
-          Duplicate
-        </ActionBarItem>
-        <ActionBarItem variant="destructive" onSelect={onDelete}>
-          <Trash2 />
-          Delete
-        </ActionBarItem>
+        <ActionBarTooltipItem
+          label="Duplicate"
+          icon={<Copy />}
+          onSelect={onDuplicate}
+        />
+        <ActionBarTooltipItem
+          variant="destructive"
+          label="Delete"
+          icon={<Trash2 />}
+          onSelect={onDelete}
+        />
       </ActionBarGroup>
     </ActionBar>
   );
