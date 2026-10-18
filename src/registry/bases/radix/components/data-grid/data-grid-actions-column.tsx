@@ -39,7 +39,7 @@ function DataGridActionsCell<TData extends RowData>({
             variant="ghost"
             size="icon-sm"
             tabIndex={-1}
-            className="size-6 -translate-y-[0.5px] text-muted-foreground transition-none data-[state=open]:bg-accent"
+            className="size-6 translate-y-[-0.5px] text-muted-foreground transition-none data-[state=open]:bg-accent"
           >
             <IconPlaceholder
               lucide="Ellipsis"
