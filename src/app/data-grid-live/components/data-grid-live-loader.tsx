@@ -2,24 +2,10 @@
 
 import dynamic from "next/dynamic";
 
-import {
-  DataGridSkeleton,
-  DataGridSkeletonGrid,
-  DataGridSkeletonToolbar,
-} from "@/registry/bases/radix/components/data-grid/data-grid-skeleton";
+import { DataGridLiveSkeleton } from "./data-grid-live-skeleton";
 
-// Dynamic import with ssr: false is required because:
-// 1. useLiveQuery uses useSyncExternalStore which needs getServerSnapshot for SSR
-// 2. Collection preload triggers fetch() which rejects during prerendering
+// Client only: the live query needs a server snapshot, and the collection's preload fetch fails while prerendering
 export const DataGridLiveLoader = dynamic(
   () => import("./data-grid-live-demo").then((mod) => mod.DataGridLiveDemo),
-  {
-    ssr: false,
-    loading: () => (
-      <DataGridSkeleton className="container flex flex-col gap-4 py-4">
-        <DataGridSkeletonToolbar actionCount={4} />
-        <DataGridSkeletonGrid />
-      </DataGridSkeleton>
-    ),
-  },
+  { ssr: false, loading: () => <DataGridLiveSkeleton /> },
 );

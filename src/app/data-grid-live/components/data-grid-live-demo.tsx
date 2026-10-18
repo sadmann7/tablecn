@@ -95,7 +95,6 @@ function getChangedKeys(previous: SkaterSchema, next: SkaterSchema) {
 }
 
 interface DataGridLiveDemoProps {
-  /** Without UploadThing configured, uploads are simulated with local object URLs. */
   isUploadConfigured: boolean;
 }
 
@@ -300,7 +299,6 @@ export function DataGridLiveDemo({
         );
       });
 
-      // One request per kind of change
       if (deletedIds.length > 0) skatersCollection.delete(deletedIds);
       if (inserted.length > 0) skatersCollection.insert(inserted);
       if (updated.length > 0) {
@@ -354,7 +352,7 @@ export function DataGridLiveDemo({
 
       if (changesById.size === 0) return;
 
-      // One request for the whole change instead of one per cell
+      // Batched so a paste stays under the API rate limit
       skatersCollection.update([...changesById.keys()], (drafts) => {
         for (const draft of drafts) {
           Object.assign(draft, changesById.get(draft.id));
@@ -445,7 +443,7 @@ export function DataGridLiveDemo({
   > = React.useCallback(
     async ({ files }) => {
       if (isUploadConfigured) {
-        // Errors reach the file cell, which shows them and drops the pending files
+        // The file cell shows thrown errors and drops the pending files
         const uploadedFiles = await startUpload(files);
         if (!uploadedFiles) {
           throw new Error("Upload failed, please try again.");
@@ -460,7 +458,6 @@ export function DataGridLiveDemo({
         }));
       }
 
-      // Simulate uploads in development without UploadThing
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       return files.map((file) => ({
@@ -487,7 +484,7 @@ export function DataGridLiveDemo({
         body: JSON.stringify({ fileKeys: fileIds }),
       });
 
-      // Throwing keeps the file in the cell, so it isn't left in storage with nothing pointing to it
+      // Throwing keeps the file in the cell instead of orphaning it in storage
       if (!response.ok) {
         throw new Error(
           response.status === 429
@@ -522,7 +519,7 @@ export function DataGridLiveDemo({
     enablePaste: true,
   });
 
-  // Bulk changes go through the grid like any edit, so they're one request and can be undone
+  // Through the grid so bulk changes can be undone
   const onStatusUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
       table.updateCells(

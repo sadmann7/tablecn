@@ -23,7 +23,7 @@ function enqueueWrite<T>(write: () => Promise<T>) {
     pendingWriteCount--;
   });
   pendingWrite = result.catch((error: unknown) => {
-    // A failed write rolls its change back, so say so instead of letting the edit vanish
+    // Failed writes roll back, so tell the user instead of letting the edit vanish
     toast.error(
       error instanceof Error ? error.message : "Couldn't save your changes",
     );
@@ -140,8 +140,7 @@ export const skatersCollection = createCollection(
   }),
 );
 
-// Picks up changes made in other tabs, skipped while local writes are in flight so a refetch
-// that started before them can't show older values
+// Skipped while writes are in flight, so a refetch that started before them can't show older values
 export function refreshSkaters() {
   if (pendingWriteCount > 0) return;
   void skatersCollection.utils.refetch();
