@@ -303,7 +303,6 @@ const STRESS_STEPS: StressStep[] = [
   {
     name: "Edit viewport cells",
     run: async ({ table, grid, signal }) => {
-      // Edits one cell per frame, like an AI workflow autofilling the visible cells
       const cells = getViewportCells(table, grid);
       try {
         await animate(signal, Number.POSITIVE_INFINITY, (_, frame) => {
