@@ -484,10 +484,23 @@ function useDataGrid<TData extends RowData>({
       if (!container.contains(target)) return null;
 
       const cellElement = target.closest<HTMLElement>(
-        '[data-slot="data-grid-cell-wrapper"]',
+        '[data-slot="data-grid-cell-wrapper"], [data-slot="data-grid-cell-preview"]',
       );
-      const rowId = cellElement?.dataset.rowId;
-      const columnId = cellElement?.dataset.columnId;
+      if (!cellElement) return null;
+
+      let rowId = cellElement.dataset.rowId;
+      let columnId = cellElement.dataset.columnId;
+      // Previews stay mounted briefly after a scroll stops, so they resolve through their row and column instead of dropping the press
+      if (cellElement.dataset.slot === "data-grid-cell-preview") {
+        const rowIndex = cellElement.closest<HTMLElement>(
+          '[data-slot="data-grid-row"]',
+        )?.dataset.index;
+        rowId =
+          rowIndex === undefined
+            ? undefined
+            : tableRef.current?.getRowModel().rows[Number(rowIndex)]?.id;
+        columnId = cellElement.parentElement?.dataset.columnId;
+      }
       if (!rowId || !columnId) return null;
 
       const editingCell = tableRef.current?.getEditingCell();
