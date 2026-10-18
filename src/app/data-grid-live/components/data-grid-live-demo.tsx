@@ -37,7 +37,7 @@ import {
 
 import type { SkaterSchema } from "../lib/validation";
 
-import { skatersCollection } from "../lib/collections";
+import { refreshSkaters, skatersCollection } from "../lib/collections";
 import { SkatersGridActionBar } from "./skaters-grid-action-bar";
 
 type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
@@ -94,8 +94,20 @@ function getChangedKeys(previous: SkaterSchema, next: SkaterSchema) {
   );
 }
 
-export function DataGridLiveDemo() {
+interface DataGridLiveDemoProps {
+  /** Without UploadThing configured, uploads are simulated with local object URLs. */
+  isUploadConfigured: boolean;
+}
+
+export function DataGridLiveDemo({
+  isUploadConfigured,
+}: DataGridLiveDemoProps) {
   use(skatersCollection.preload());
+
+  React.useEffect(() => {
+    window.addEventListener("focus", refreshSkaters);
+    return () => window.removeEventListener("focus", refreshSkaters);
+  }, []);
 
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -432,23 +444,23 @@ export function DataGridLiveDemo() {
     UseDataGridProps<SkaterSchema>["onFilesUpload"]
   > = React.useCallback(
     async ({ files }) => {
-      try {
+      if (isUploadConfigured) {
+        // Errors reach the file cell, which shows them and drops the pending files
         const uploadedFiles = await startUpload(files);
-
-        if (uploadedFiles) {
-          return uploadedFiles.map((file) => ({
-            id: file.key,
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: file.ufsUrl,
-          }));
+        if (!uploadedFiles) {
+          throw new Error("Upload failed, please try again.");
         }
-      } catch {
-        // UploadThing not configured, fall back to simulation
+
+        return uploadedFiles.map((file) => ({
+          id: file.key,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: file.ufsUrl,
+        }));
       }
 
-      // Simulate upload for demo/development without UploadThing
+      // Simulate uploads in development without UploadThing
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       return files.map((file) => ({
@@ -459,7 +471,7 @@ export function DataGridLiveDemo() {
         url: URL.createObjectURL(file),
       }));
     },
-    [startUpload],
+    [isUploadConfigured, startUpload],
   );
 
   const onFilesDelete: NonNullable<
@@ -499,42 +511,39 @@ export function DataGridLiveDemo() {
     enablePaste: true,
   });
 
+  // Bulk changes go through the grid like any edit, so they're one request and can be undone
   const onStatusUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
-      // Use batch update - single transaction for all updates
-      skatersCollection.update(
-        selectedRows.map((row) => row.original.id),
-        (drafts) => {
-          for (const draft of drafts) {
-            draft.status = value as never;
-          }
-        },
+      table.updateCells(
+        selectedRows.map((row) => ({
+          rowId: row.id,
+          columnId: "status",
+          value,
+        })),
       );
 
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [],
+    [table],
   );
 
   const onStyleUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
-      // Use batch update - single transaction for all updates
-      skatersCollection.update(
-        selectedRows.map((row) => row.original.id),
-        (drafts) => {
-          for (const draft of drafts) {
-            draft.style = value as never;
-          }
-        },
+      table.updateCells(
+        selectedRows.map((row) => ({
+          rowId: row.id,
+          columnId: "style",
+          value,
+        })),
       );
 
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [],
+    [table],
   );
 
   const onDelete = React.useCallback(

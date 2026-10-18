@@ -1,6 +1,7 @@
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import { createCollection } from "@tanstack/react-db";
 import { QueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { getAbsoluteUrl } from "@/lib/utils";
@@ -14,11 +15,29 @@ const skatersResponseSchema = z.object({ skaters: skaterSchema.array() });
 
 // Writes run in mutation order, so an update can't reach the server before its row's insert
 let pendingWrite: Promise<unknown> = Promise.resolve();
+let pendingWriteCount = 0;
 
 function enqueueWrite<T>(write: () => Promise<T>) {
-  const result = pendingWrite.then(write, write);
-  pendingWrite = result.catch(() => undefined);
+  pendingWriteCount++;
+  const result = pendingWrite.then(write, write).finally(() => {
+    pendingWriteCount--;
+  });
+  pendingWrite = result.catch((error: unknown) => {
+    // A failed write rolls its change back, so say so instead of letting the edit vanish
+    toast.error(
+      error instanceof Error ? error.message : "Couldn't save your changes",
+    );
+  });
   return result;
+}
+
+function assertWriteOk(response: Response) {
+  if (response.ok) return;
+  throw new Error(
+    response.status === 429
+      ? "Too many changes at once, so the last one was undone. Try again in a few seconds."
+      : "Couldn't save your changes, so they were undone.",
+  );
 }
 
 export const skatersCollection = createCollection(
@@ -63,9 +82,7 @@ export const skatersCollection = createCollection(
           body: JSON.stringify({ skaters: skatersToInsert }),
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to create skaters");
-        }
+        assertWriteOk(response);
 
         const { skaters } = skatersResponseSchema.parse(await response.json());
         collection.utils.writeInsert(skaters);
@@ -93,9 +110,7 @@ export const skatersCollection = createCollection(
           body: JSON.stringify({ updates }),
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to update skaters");
-        }
+        assertWriteOk(response);
 
         const { skaters } = skatersResponseSchema.parse(await response.json());
         collection.utils.writeUpdate(skaters);
@@ -116,9 +131,7 @@ export const skatersCollection = createCollection(
           body: JSON.stringify({ ids }),
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to delete skaters");
-        }
+        assertWriteOk(response);
 
         collection.utils.writeDelete(ids);
 
@@ -126,3 +139,10 @@ export const skatersCollection = createCollection(
       }),
   }),
 );
+
+// Picks up changes made in other tabs, skipped while local writes are in flight so a refetch
+// that started before them can't show older values
+export function refreshSkaters() {
+  if (pendingWriteCount > 0) return;
+  void skatersCollection.utils.refetch();
+}

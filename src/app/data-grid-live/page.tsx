@@ -1,37 +1,12 @@
-"use client";
+import { env } from "@/env";
 
-import dynamic from "next/dynamic";
-
-import {
-  DataGridSkeleton,
-  DataGridSkeletonGrid,
-  DataGridSkeletonToolbar,
-} from "@/registry/bases/radix/components/data-grid/data-grid-skeleton";
-
-// Dynamic import with ssr: false is required because:
-// 1. useLiveQuery uses useSyncExternalStore which needs getServerSnapshot for SSR
-// 2. Collection preload triggers fetch() which rejects during prerendering
-const DataGridLiveDemo = dynamic(
-  () =>
-    import("./components/data-grid-live-demo").then(
-      (mod) => mod.DataGridLiveDemo,
-    ),
-  {
-    ssr: false,
-    loading: () => (
-      <DataGridSkeleton className="container flex flex-col gap-4 py-4">
-        <DataGridSkeletonToolbar actionCount={4} />
-        <DataGridSkeletonGrid />
-      </DataGridSkeleton>
-    ),
-  },
-);
+import { DataGridLiveLoader } from "./components/data-grid-live-loader";
 
 export default function DataGridLivePage() {
   return (
     <>
       <h1 className="sr-only">Data Grid Live</h1>
-      <DataGridLiveDemo />
+      <DataGridLiveLoader isUploadConfigured={!!env.UPLOADTHING_TOKEN} />
     </>
   );
 }
