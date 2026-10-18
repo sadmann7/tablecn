@@ -61,11 +61,9 @@ interface DataGridRowProps<
   row: Row<DataGridFeatures, TData>;
   virtualItem: VirtualItem;
   columnWindow: ColumnWindow | null;
-  /** Cells mounted while this is true render previews until it turns false. */
   isScrolling: boolean;
 }
 
-// Grid layout comes from context and table state comes from the row's subscription
 export const DataGridRow = React.memo(
   DataGridRowImpl,
   (prev, next) =>
@@ -345,12 +343,10 @@ function DataGridUtilityCellImpl<TData extends RowData>({
 
 interface RowState<TData extends RowData> {
   visibleCells: Array<Cell<DataGridFeatures, TData>>;
-  /** Re-renders the row when columns resize, so cells get their new width. */
   columnSizing: TableState<DataGridFeatures>["columnSizing"];
   rowHeight: RowHeightValue;
   focusedColumnId: string | null;
   editingColumnId: string | null;
-  /** Selected column spans for this row, `""` when none of its cells are selected. */
   cellSelectionKey: string;
   searchMatchColumns: Set<string> | null;
   activeSearchColumnId: string | null;

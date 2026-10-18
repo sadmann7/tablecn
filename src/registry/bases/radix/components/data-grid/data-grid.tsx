@@ -48,7 +48,6 @@ interface DataGridProps<TData extends RowData>
   dir?: Direction;
   height?: number;
   stretchColumns?: boolean;
-  /** Rendered while rows or a range of cells are selected, such as an `ActionBar` with bulk actions. */
   actionBar?: React.ReactNode;
 }
 
@@ -148,7 +147,6 @@ type DataGridViewportProps<TData extends RowData> = Pick<
   stretchColumns: boolean;
 };
 
-// Owns the virtualizer and its scroll container so scroll frames re-render here, not in the component calling useDataGrid
 function DataGridViewport<TData extends RowData>({
   table,
   dataGridRef,
@@ -581,7 +579,6 @@ interface DataGridHeaderProps<TData extends RowData> {
   stretchColumns: boolean;
 }
 
-// The viewport re-renders on every scroll frame, so the header only follows its own state
 const DataGridHeader = React.memo(
   DataGridHeaderImpl,
   (prev, next) =>

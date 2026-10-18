@@ -62,7 +62,6 @@ interface GetDataGridActionsColumnOptions<TData extends RowData> extends Omit<
   Partial<ColumnDef<DataGridFeatures, TData>>,
   "id" | "header" | "cell"
 > {
-  /** Renders the row's menu items, such as `DropdownMenuItem`s. */
   actions: (context: DataGridActionsContext<TData>) => React.ReactNode;
 }
 
