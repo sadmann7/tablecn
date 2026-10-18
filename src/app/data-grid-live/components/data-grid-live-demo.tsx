@@ -3,6 +3,7 @@
 import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { useLiveQuery } from "@tanstack/react-db";
+import { Copy, Trash2 } from "lucide-react";
 import * as React from "react";
 import { use } from "react";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
 import { useUploadThing } from "@/lib/uploadthing";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
 import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
@@ -34,6 +36,10 @@ import {
   type UseDataGridProps,
   useDataGrid,
 } from "@/registry/bases/radix/hooks/use-data-grid";
+import {
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/registry/bases/radix/ui/dropdown-menu";
 
 import type { SkaterSchema } from "../lib/validation";
 
@@ -126,154 +132,6 @@ export function DataGridLiveDemo({
   const { startUpload } = useUploadThing("skaterMedia");
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
-
-  const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
-    () => [
-      getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
-      {
-        id: "name",
-        accessorKey: "name",
-        header: "Name",
-        minSize: 200,
-        filterFn,
-        meta: {
-          label: "Name",
-          cell: {
-            variant: "short-text",
-          },
-        },
-      },
-      {
-        id: "email",
-        accessorKey: "email",
-        header: "Email",
-        minSize: 250,
-        filterFn,
-        meta: {
-          label: "Email",
-          cell: {
-            variant: "short-text",
-          },
-        },
-      },
-      {
-        id: "stance",
-        accessorKey: "stance",
-        header: "Stance",
-        minSize: 140,
-        filterFn,
-        meta: {
-          label: "Stance",
-          cell: {
-            variant: "select",
-            options: stanceOptions,
-          },
-        },
-      },
-      {
-        id: "style",
-        accessorKey: "style",
-        header: "Style",
-        minSize: 160,
-        filterFn,
-        meta: {
-          label: "Style",
-          cell: {
-            variant: "select",
-            options: styleOptions,
-          },
-        },
-      },
-      {
-        id: "status",
-        accessorKey: "status",
-        header: "Status",
-        minSize: 160,
-        filterFn,
-        meta: {
-          label: "Status",
-          cell: {
-            variant: "select",
-            options: statusOptions,
-          },
-        },
-      },
-      {
-        id: "tricks",
-        accessorKey: "tricks",
-        header: "Tricks",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Tricks",
-          cell: {
-            variant: "multi-select",
-            options: trickOptions,
-          },
-        },
-      },
-      {
-        id: "yearsSkating",
-        accessorKey: "yearsSkating",
-        header: "Years Skating",
-        minSize: 160,
-        filterFn,
-        meta: {
-          label: "Years Skating",
-          cell: {
-            variant: "number",
-            min: 0,
-            max: 50,
-            step: 1,
-          },
-        },
-      },
-      {
-        id: "startedSkating",
-        accessorKey: "startedSkating",
-        header: "Skating Since",
-        minSize: 170,
-        filterFn,
-        meta: {
-          label: "Skating Since",
-          cell: {
-            variant: "date",
-          },
-        },
-      },
-      {
-        id: "isPro",
-        accessorKey: "isPro",
-        header: "Pro",
-        minSize: 90,
-        filterFn,
-        meta: {
-          label: "Pro",
-          cell: {
-            variant: "checkbox",
-          },
-        },
-      },
-      {
-        id: "media",
-        accessorKey: "media",
-        header: "Media",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Media",
-          cell: {
-            variant: "file",
-            maxFileSize: 10 * 1024 * 1024,
-            maxFiles: 5,
-            accept: "image/*,pdf/*,audio/*,video/*",
-            multiple: true,
-          },
-        },
-      },
-    ],
-    [filterFn],
-  );
 
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
@@ -502,6 +360,197 @@ export function DataGridLiveDemo({
     [isUploadConfigured],
   );
 
+  // Each copy lands between its row and the next one, so it shows up right below the original
+  const onRowsDuplicate = React.useCallback(
+    (rows: SkaterSchema[]) => {
+      const orders = data.map((skater) => skater.order).sort((a, b) => a - b);
+      const now = new Date();
+      const copies = rows.map((row) => {
+        const nextOrder = orders.find((order) => order > row.order);
+        return {
+          ...row,
+          id: generateId(),
+          order:
+            nextOrder === undefined
+              ? row.order + 1
+              : (row.order + nextOrder) / 2,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+
+      skatersCollection.insert(copies);
+      trackRowsAdd(copies);
+    },
+    [data, trackRowsAdd],
+  );
+
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
+    () => [
+      getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
+      {
+        id: "name",
+        accessorKey: "name",
+        header: "Name",
+        minSize: 200,
+        filterFn,
+        meta: {
+          label: "Name",
+          cell: {
+            variant: "short-text",
+          },
+        },
+      },
+      {
+        id: "email",
+        accessorKey: "email",
+        header: "Email",
+        minSize: 250,
+        filterFn,
+        meta: {
+          label: "Email",
+          cell: {
+            variant: "short-text",
+          },
+        },
+      },
+      {
+        id: "stance",
+        accessorKey: "stance",
+        header: "Stance",
+        minSize: 140,
+        filterFn,
+        meta: {
+          label: "Stance",
+          cell: {
+            variant: "select",
+            options: stanceOptions,
+          },
+        },
+      },
+      {
+        id: "style",
+        accessorKey: "style",
+        header: "Style",
+        minSize: 160,
+        filterFn,
+        meta: {
+          label: "Style",
+          cell: {
+            variant: "select",
+            options: styleOptions,
+          },
+        },
+      },
+      {
+        id: "status",
+        accessorKey: "status",
+        header: "Status",
+        minSize: 160,
+        filterFn,
+        meta: {
+          label: "Status",
+          cell: {
+            variant: "select",
+            options: statusOptions,
+          },
+        },
+      },
+      {
+        id: "tricks",
+        accessorKey: "tricks",
+        header: "Tricks",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Tricks",
+          cell: {
+            variant: "multi-select",
+            options: trickOptions,
+          },
+        },
+      },
+      {
+        id: "yearsSkating",
+        accessorKey: "yearsSkating",
+        header: "Years Skating",
+        minSize: 160,
+        filterFn,
+        meta: {
+          label: "Years Skating",
+          cell: {
+            variant: "number",
+            min: 0,
+            max: 50,
+            step: 1,
+          },
+        },
+      },
+      {
+        id: "startedSkating",
+        accessorKey: "startedSkating",
+        header: "Skating Since",
+        minSize: 170,
+        filterFn,
+        meta: {
+          label: "Skating Since",
+          cell: {
+            variant: "date",
+          },
+        },
+      },
+      {
+        id: "isPro",
+        accessorKey: "isPro",
+        header: "Pro",
+        minSize: 90,
+        filterFn,
+        meta: {
+          label: "Pro",
+          cell: {
+            variant: "checkbox",
+          },
+        },
+      },
+      {
+        id: "media",
+        accessorKey: "media",
+        header: "Media",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Media",
+          cell: {
+            variant: "file",
+            maxFileSize: 10 * 1024 * 1024,
+            maxFiles: 5,
+            accept: "image/*,pdf/*,audio/*,video/*",
+            multiple: true,
+          },
+        },
+      },
+      getDataGridActionsColumn<SkaterSchema>({
+        actions: ({ row, table }) => (
+          <>
+            <DropdownMenuItem onSelect={() => onRowsDuplicate([row.original])}>
+              <Copy />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => void table.deleteRows([row.id])}
+            >
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          </>
+        ),
+      }),
+    ],
+    [filterFn, onRowsDuplicate],
+  );
+
   const { table, ...dataGridProps } = useDataGrid({
     data,
     onDataChange,
@@ -515,7 +564,7 @@ export function DataGridLiveDemo({
     initialState: {
       columnPinning: {
         start: ["select"],
-        end: [],
+        end: ["actions"],
       },
     },
     state: { sorting },
@@ -560,33 +609,14 @@ export function DataGridLiveDemo({
     [table],
   );
 
-  // Each copy lands between its row and the next one, so it shows up right below the original
   const onDuplicate = React.useCallback(
     (selectedRows: SkaterRows) => {
-      const orders = data.map((skater) => skater.order).sort((a, b) => a - b);
-      const now = new Date();
-      const copies = selectedRows.map((row) => {
-        const nextOrder = orders.find((order) => order > row.original.order);
-        return {
-          ...row.original,
-          id: generateId(),
-          order:
-            nextOrder === undefined
-              ? row.original.order + 1
-              : (row.original.order + nextOrder) / 2,
-          createdAt: now,
-          updatedAt: now,
-        };
-      });
-
-      skatersCollection.insert(copies);
-      trackRowsAdd(copies);
-
+      onRowsDuplicate(selectedRows.map((row) => row.original));
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} duplicated`,
       );
     },
-    [data, trackRowsAdd],
+    [onRowsDuplicate],
   );
 
   const onDelete = React.useCallback(
