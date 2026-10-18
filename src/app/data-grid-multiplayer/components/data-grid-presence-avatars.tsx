@@ -32,7 +32,6 @@ function getInitials(name: string): string {
 interface DataGridPresenceAvatarsProps {
   users: Record<string, UserPresence>;
   currentUserId: string;
-  /** Describes the cell someone is on, such as "Name · row 3", or `null` when they're not on one. */
   getCellLabel: (activeCell: ActiveCell) => string | null;
   onUserClick?: (userId: string, user: UserPresence) => void;
 }

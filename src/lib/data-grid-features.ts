@@ -1956,7 +1956,6 @@ interface ResolvedSort {
   invertSorting: boolean;
   sortUndefined: false | -1 | 1 | "first" | "last" | undefined;
   sortFn: SortedRowFn;
-  /** Set for comparators built with `constructSortFn`, which compare values instead of rows. */
   compareValues: SortFnDef<TableFeatures, RowData>["sort"] | null;
 }
 

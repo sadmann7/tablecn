@@ -54,7 +54,6 @@ interface BenchmarkResult {
   maxFrameMs: number;
   longFrames: number;
   longTaskMs: number;
-  /** Slowest time from a state update to the next painted frame, for sort, filter and similar steps. */
   maxUpdateMs: number | null;
 }
 

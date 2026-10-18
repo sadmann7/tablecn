@@ -110,7 +110,6 @@ export interface DataGridColumnMeta {
 export interface DataGridCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
   columnIndex: number;
-  /** Column width in pixels, so cells can lay out content without measuring the DOM. */
   width: number;
   rowHeight: RowHeightValue;
   isEditing: boolean;
@@ -186,7 +185,6 @@ export interface FilterValue {
 }
 
 export interface ColumnWindowItem {
-  /** Index within the unpinned (center) visible columns. */
   index: number;
   start: number;
   end: number;
