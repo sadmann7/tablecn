@@ -163,7 +163,7 @@ interface TableOptions_DataGridNavigation {
   /** Brings a cell into view, provided by the layer that owns the scroll container. */
   onScrollToCell?: (cell: CellPosition) => void;
   /** Moves keyboard focus to a cell, provided by the layer that owns the cell elements. */
-  onFocusCell?: (cell: CellPosition) => void;
+  onCellFocus?: (cell: CellPosition) => void;
   onFocusedHeaderColumnIdChange?: OnChangeFn<string | null>;
 }
 
@@ -643,7 +643,7 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
   if (nextFocusedRow && focusedColumnId) {
     table.setFocusedCell(nextFocusedRow.id, focusedColumnId);
     // Deleting from outside the grid, like an action bar, would otherwise leave keyboard focus on the page
-    table.options.onFocusCell?.({
+    table.options.onCellFocus?.({
       rowId: nextFocusedRow.id,
       columnId: focusedColumnId,
     });
