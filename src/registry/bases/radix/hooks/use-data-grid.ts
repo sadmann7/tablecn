@@ -701,7 +701,6 @@ function useDataGrid<TData extends RowData>({
     Pick<VirtualizerOptions<HTMLDivElement, Element>, "overscan">
   >(() => ({ overscan }), [overscan]);
 
-  // Focuses the new row unless the callback canceled the grid's handling
   const addRow = React.useCallback(
     async (
       init: RowAddEventDetailsInit,

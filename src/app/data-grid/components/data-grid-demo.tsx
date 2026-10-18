@@ -331,7 +331,6 @@ function DataGridDemoContent({
           id: generateId(),
         };
 
-        // Shift+Enter passes the focused row, so the new row goes right below it
         setData((prev) => {
           const index = afterRowId
             ? prev.findIndex((row) => row.id === afterRowId)

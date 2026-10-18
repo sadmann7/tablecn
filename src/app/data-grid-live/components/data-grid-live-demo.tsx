@@ -224,7 +224,6 @@ export function DataGridLiveDemo({
           eventDetails.reason === "insert-below"
             ? eventDetails.afterRowId
             : undefined;
-        // Shift+Enter passes the focused row, so the new skater goes right below it
         const order = getInsertOrder(data, afterRowId);
         const newSkater: SkaterSchema = {
           id: generateId(),

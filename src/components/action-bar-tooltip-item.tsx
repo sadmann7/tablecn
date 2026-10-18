@@ -16,7 +16,6 @@ interface ActionBarTooltipItemProps extends React.ComponentProps<
   icon: React.ReactNode;
 }
 
-// Shows only its icon, with the label in a tooltip, so the bar stays compact
 export function ActionBarTooltipItem({
   label,
   icon,
