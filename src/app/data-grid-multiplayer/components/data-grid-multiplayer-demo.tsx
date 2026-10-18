@@ -5,12 +5,13 @@ import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
+import { Copy, Languages, Trash2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
 import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { CellPresence } from "@/lib/data-grid-types";
+import type { CellPresence, Direction } from "@/lib/data-grid-types";
 
 import { SkatersGridActionBar } from "@/app/data-grid-live/components/skaters-grid-action-bar";
 import {
@@ -27,7 +28,9 @@ import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
+import { useUploadThing } from "@/lib/uploadthing";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
 import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
 import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
 import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
@@ -38,6 +41,12 @@ import {
   type UseDataGridProps,
   useDataGrid,
 } from "@/registry/bases/radix/hooks/use-data-grid";
+import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
+import {
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/registry/bases/radix/ui/dropdown-menu";
+import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
 import {
   multiplayerCollection,
@@ -84,13 +93,16 @@ const trickOptions = TRICKS.map((trick) => ({
 
 interface DataGridMultiplayerDemoProps {
   roomId: string;
+  isUploadConfigured: boolean;
 }
 
 export function DataGridMultiplayerDemo({
   roomId,
+  isUploadConfigured,
 }: DataGridMultiplayerDemoProps) {
   const windowSize = useWindowSize();
   const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [dir, setDir] = React.useState<Direction>("ltr");
 
   const { data } = useLiveQuery({
     query: (q) => {
@@ -185,6 +197,34 @@ export function DataGridMultiplayerDemo({
 
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
+  const { startUpload } = useUploadThing("skaterMedia");
+
+  // Each copy lands between its row and the next one, so it shows up right below the original
+  const onRowsDuplicate = React.useCallback(
+    (rows: SkaterSchema[]) => {
+      const orders = data.map((skater) => skater.order).sort((a, b) => a - b);
+      const now = new Date();
+      const copies = rows.map((row) => {
+        const nextOrder = orders.find((order) => order > row.order);
+        return {
+          ...row,
+          id: generateId(),
+          order:
+            nextOrder === undefined
+              ? row.order + 1
+              : (row.order + nextOrder) / 2,
+          createdAt: now,
+          updatedAt: now,
+        };
+      });
+
+      multiplayerCollection.insert(copies);
+      sendRowsAdd(copies.map(serializeSkater));
+      trackRowsAdd(copies);
+    },
+    [data, sendRowsAdd, trackRowsAdd],
+  );
+
   const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
     () => [
       getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
@@ -275,8 +315,43 @@ export function DataGridMultiplayerDemo({
         filterFn,
         meta: { label: "Pro", cell: { variant: "checkbox" } },
       },
+      {
+        id: "media",
+        accessorKey: "media",
+        header: "Media",
+        minSize: 240,
+        filterFn,
+        meta: {
+          label: "Media",
+          cell: {
+            variant: "file",
+            maxFileSize: 10 * 1024 * 1024,
+            maxFiles: 5,
+            accept: "image/*,pdf/*,audio/*,video/*",
+            multiple: true,
+          },
+        },
+      },
+      getDataGridActionsColumn<SkaterSchema>({
+        actions: ({ row, table }) => (
+          <>
+            <DropdownMenuItem onSelect={() => onRowsDuplicate([row.original])}>
+              <Copy />
+              Duplicate
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              variant="destructive"
+              onSelect={() => void table.deleteRows([row.id])}
+            >
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          </>
+        ),
+      }),
     ],
-    [filterFn],
+    [filterFn, onRowsDuplicate],
   );
 
   const onDataChange: NonNullable<
@@ -397,6 +472,74 @@ export function DataGridMultiplayerDemo({
     [trackRowsDelete, sendRowsDelete],
   );
 
+  const onFilesUpload: NonNullable<
+    UseDataGridProps<SkaterSchema>["onFilesUpload"]
+  > = React.useCallback(
+    async ({ files }) => {
+      if (isUploadConfigured) {
+        const uploadedFiles = await startUpload(files);
+        if (!uploadedFiles) {
+          throw new Error("Upload failed, please try again.");
+        }
+
+        return uploadedFiles.map((file) => ({
+          id: file.key,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          url: file.ufsUrl,
+        }));
+      }
+
+      // Simulated uploads are blob URLs, so other people in the room can't open them
+      await new Promise((resolve) => setTimeout(resolve, 800));
+
+      return files.map((file) => ({
+        id: crypto.randomUUID(),
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: URL.createObjectURL(file),
+      }));
+    },
+    [isUploadConfigured, startUpload],
+  );
+
+  const onFilesDelete: NonNullable<
+    UseDataGridProps<SkaterSchema>["onFilesDelete"]
+  > = React.useCallback(
+    async ({ fileIds, rowId }) => {
+      // Simulated uploads only exist in the browser
+      if (!isUploadConfigured) return;
+
+      // Duplicated rows share their files, so keep any file another row still uses
+      const sharedIds = new Set(
+        multiplayerCollection.toArray.flatMap((skater) =>
+          skater.id === rowId
+            ? []
+            : (skater.media?.map((file) => file.id) ?? []),
+        ),
+      );
+      const fileKeys = fileIds.filter((id) => !sharedIds.has(id));
+      if (fileKeys.length === 0) return;
+
+      const response = await fetch("/api/uploadthing/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileKeys }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          response.status === 429
+            ? "Too many requests, please try again in a few seconds."
+            : "Couldn't delete the file, please try again.",
+        );
+      }
+    },
+    [isUploadConfigured],
+  );
+
   const cellPresence = React.useMemo(() => {
     const presence: Array<CellPresence> = [];
 
@@ -417,11 +560,14 @@ export function DataGridMultiplayerDemo({
     onRowAdd,
     onRowsAdd,
     onRowsDelete,
+    onFilesUpload,
+    onFilesDelete,
     columns,
     getRowId: (row) => row.id,
     initialState: {
-      columnPinning: { start: ["select"], end: [] },
+      columnPinning: { start: ["select"], end: ["actions"] },
     },
+    dir,
     state: { cellPresence, sorting },
     onSortingChange: setSorting,
     manualSorting: true,
@@ -477,6 +623,16 @@ export function DataGridMultiplayerDemo({
     [sendCellUpdate],
   );
 
+  const onDuplicate = React.useCallback(
+    (selectedRows: SkaterRows) => {
+      onRowsDuplicate(selectedRows.map((row) => row.original));
+      toast.success(
+        `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} duplicated`,
+      );
+    },
+    [onRowsDuplicate],
+  );
+
   const onDelete = React.useCallback(
     (selectedRows: SkaterRows) => {
       void table.deleteRows(selectedRows.map((row) => row.id));
@@ -521,54 +677,68 @@ export function DataGridMultiplayerDemo({
   const height = Math.max(400, windowSize.height - 150);
 
   return (
-    <div className="container flex flex-col gap-4 py-4">
-      <div className="flex items-center justify-between gap-2">
-        <table.Subscribe
-          selector={() => {
-            const focusedCell = table.getFocusedCell();
-            return {
-              rowId: focusedCell?.row.id ?? null,
-              columnId: focusedCell?.column.id ?? null,
-            };
-          }}
-        >
-          {(focusedCell) => (
-            <DataGridPresenceAvatars
-              users={getPresenceUsers(users, currentUserId, focusedCell)}
-              currentUserId={currentUserId}
-              getCellLabel={getCellLabel}
-              onUserClick={onUserClick}
+    <DirectionProvider dir={dir}>
+      <div className="container flex flex-col gap-4 py-4">
+        <div className="flex items-center justify-between gap-2">
+          <table.Subscribe
+            selector={() => {
+              const focusedCell = table.getFocusedCell();
+              return {
+                rowId: focusedCell?.row.id ?? null,
+                columnId: focusedCell?.column.id ?? null,
+              };
+            }}
+          >
+            {(focusedCell) => (
+              <DataGridPresenceAvatars
+                users={getPresenceUsers(users, currentUserId, focusedCell)}
+                currentUserId={currentUserId}
+                getCellLabel={getCellLabel}
+                onUserClick={onUserClick}
+              />
+            )}
+          </table.Subscribe>
+          <div
+            role="toolbar"
+            aria-orientation="horizontal"
+            className="ms-auto flex items-center gap-2"
+          >
+            <DataGridShareMenu roomId={roomId} />
+            <Toggle
+              aria-label="Toggle text direction"
+              dir={dir}
+              variant="outline"
+              className="bg-background dark:bg-input/30 dark:hover:bg-input/50"
+              pressed={dir === "rtl"}
+              onPressedChange={(pressed) => setDir(pressed ? "rtl" : "ltr")}
+            >
+              <Languages className="text-muted-foreground" />
+              {dir === "ltr" ? "LTR" : "RTL"}
+            </Toggle>
+            <DataGridKeyboardShortcuts
+              enableSearch
+              enableUndoRedo
+              enablePaste
+              enableRowAdd
+              enableRowsDelete
             />
-          )}
-        </table.Subscribe>
-        <div
-          role="toolbar"
-          aria-orientation="horizontal"
-          className="ms-auto flex items-center gap-2"
-        >
-          <DataGridShareMenu roomId={roomId} />
-          <DataGridKeyboardShortcuts
-            enableSearch
-            enableUndoRedo
-            enablePaste
-            enableRowAdd
-            enableRowsDelete
-          />
-          <DataGridFilterMenu table={table} align="end" />
-          <DataGridSortMenu table={table} align="end" />
-          <DataGridRowHeightMenu table={table} align="end" />
-          <DataGridViewMenu table={table} align="end" />
+            <DataGridFilterMenu table={table} align="end" />
+            <DataGridSortMenu table={table} align="end" />
+            <DataGridRowHeightMenu table={table} align="end" />
+            <DataGridViewMenu table={table} align="end" />
+          </div>
         </div>
+        <DataGrid {...dataGridProps} table={table} height={height} />
+        <SkatersGridActionBar
+          table={table}
+          statusOptions={statusOptions}
+          styleOptions={styleOptions}
+          onStatusUpdate={onStatusUpdate}
+          onStyleUpdate={onStyleUpdate}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
+        />
       </div>
-      <DataGrid {...dataGridProps} table={table} height={height} />
-      <SkatersGridActionBar
-        table={table}
-        statusOptions={statusOptions}
-        styleOptions={styleOptions}
-        onStatusUpdate={onStatusUpdate}
-        onStyleUpdate={onStyleUpdate}
-        onDelete={onDelete}
-      />
-    </div>
+    </DirectionProvider>
   );
 }
