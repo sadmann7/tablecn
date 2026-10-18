@@ -948,7 +948,64 @@ function quoteTsvField(field: string) {
     : field;
 }
 
-function serializeSelectedCells(table: DataGridInstance) {
+// One rectangular range covers every cell in its box, so it serializes straight from the rows without per-cell lookups
+function serializeCellRange(
+  table: DataGridInstance,
+  bound: ReturnType<DataGridInstance["getCellSelectionBounds"]>[number],
+  includeCellGrid: boolean,
+) {
+  const columnIndexes = table.getCellSelectionColumnIndexes();
+  const columns = table.getVisibleLeafColumns().filter((column) => {
+    const columnIndex = columnIndexes[column.id];
+    return (
+      getIsDataColumn(column) &&
+      columnIndex !== undefined &&
+      columnIndex >= bound.minColumnIndex &&
+      columnIndex <= bound.maxColumnIndex
+    );
+  });
+  const rows = table
+    .getRowModel()
+    .rows.slice(bound.minRowIndex, bound.maxRowIndex + 1);
+  if (columns.length === 0 || rows.length === 0) return null;
+
+  const readValues = columns.map(getValueReader);
+  const variants = columns.map(
+    (column) => column.columnDef.meta?.cell?.variant,
+  );
+  const lines: Array<string> = [];
+  for (const row of rows) {
+    let line = "";
+    for (let index = 0; index < columns.length; index++) {
+      if (index > 0) line += "\t";
+      line += quoteTsvField(
+        serializeCellValue(readValues[index]?.(row), variants[index]),
+      );
+    }
+    lines.push(line);
+  }
+
+  return {
+    text: lines.join("\n"),
+    cellGrid: includeCellGrid
+      ? rows.map((row) =>
+          columns.map((column) => ({ rowId: row.id, columnId: column.id })),
+        )
+      : [],
+    cellCount: rows.length * columns.length,
+  };
+}
+
+function serializeSelectedCells(
+  table: DataGridInstance,
+  includeCellGrid: boolean,
+) {
+  const bounds = table.getCellSelectionBounds();
+  const [bound] = bounds;
+  if (bounds.length === 1 && bound) {
+    return serializeCellRange(table, bound, includeCellGrid);
+  }
+
   const cells = getSelectedCells(table);
   if (cells.length === 0) return null;
 
@@ -993,7 +1050,7 @@ async function writeSelectedCells(table: DataGridInstance, isCut: boolean) {
   const notify = table.options.onClipboardNotice;
   if (isCut && table.options.readOnly) return;
 
-  const serialized = serializeSelectedCells(table);
+  const serialized = serializeSelectedCells(table, isCut);
   if (!serialized) return;
 
   try {
