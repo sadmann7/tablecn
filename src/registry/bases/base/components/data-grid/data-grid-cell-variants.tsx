@@ -155,7 +155,6 @@ export function ShortTextCell<TData extends RowData>(
         moveCaretToEnd(cellRef.current);
       }
     } else if (!isEditing && wasEditing && cellRef.current) {
-      // Editing scrolls long values to the caret, so show them from the start again
       cellRef.current.scrollLeft = 0;
     }
   }, [isEditing, value]);
@@ -598,7 +597,6 @@ export function UrlCell<TData extends RowData>(
         moveCaretToEnd(cellRef.current);
       }
     } else if (!isEditing && wasEditing && cellRef.current) {
-      // Editing scrolls long values to the caret, so show them from the start again
       cellRef.current.scrollLeft = 0;
     }
   }, [isEditing, value]);

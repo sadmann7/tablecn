@@ -840,7 +840,6 @@ export function replaceEditableText(element: HTMLElement, text: string) {
   dispatchInsertTextInput(element, text);
 }
 
-// Setting a selection doesn't scroll to it, so a value wider than the cell would leave the caret clipped
 export function moveCaretToEnd(element: HTMLElement) {
   const selection = window.getSelection();
   const range = document.createRange();
