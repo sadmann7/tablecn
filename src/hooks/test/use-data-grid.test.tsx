@@ -4098,6 +4098,54 @@ describe("useDataGrid", () => {
     });
   });
 
+  describe("insert row below", () => {
+    it("should pass the focused row to onRowAdd and keep the column on Shift+Enter", async () => {
+      const onRowAdd = vi.fn(() => ({ rowId: "4", columnId: "name" }));
+      const tableRef: {
+        current: ReturnType<typeof useDataGrid<TestData>>["table"] | null;
+      } = { current: null };
+
+      function InsertGrid() {
+        const grid = useDataGrid({
+          data: testData,
+          columns: testColumns,
+          getRowId: (row) => row.id,
+          onRowAdd,
+        });
+        tableRef.current = grid.table;
+        return (
+          <div ref={grid.dataGridRef} data-slot="data-grid" tabIndex={0} />
+        );
+      }
+
+      const view = render(<InsertGrid />);
+      const grid = view.container.querySelector<HTMLElement>(
+        '[data-slot="data-grid"]',
+      );
+
+      act(() => {
+        tableRef.current?.setFocusedCell("2", "trick");
+      });
+      await act(async () => {
+        grid?.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: "Enter",
+            shiftKey: true,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+        await Promise.resolve();
+      });
+
+      expect(onRowAdd).toHaveBeenCalledWith(undefined, { afterRowId: "2" });
+      expect(getFocusedCell(tableRef.current ?? undefined)).toEqual({
+        rowId: "4",
+        columnId: "trick",
+      });
+    });
+  });
+
   describe("row identity", () => {
     const sortedByScoreDesc = {
       data: testData,

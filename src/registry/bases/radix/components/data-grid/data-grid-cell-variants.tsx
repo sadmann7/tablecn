@@ -827,7 +827,7 @@ export function SelectCell<TData extends RowData>(
     >
       {isEditing ? (
         <Select
-          value={value}
+          value={value ?? ""}
           onValueChange={onValueChange}
           open={isEditing}
           onOpenChange={onOpenChange}

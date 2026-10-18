@@ -321,19 +321,30 @@ function DataGridDemoContent({
   }, [filterFn, onRowsDuplicate]);
 
   const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
-    React.useCallback(() => {
-      const newRow: Person = {
-        id: generateId(),
-      };
+    React.useCallback(
+      (_event, options) => {
+        const newRow: Person = {
+          id: generateId(),
+        };
 
-      setData((prev) => [...prev, newRow]);
-      trackRowsAdd([newRow]);
+        // Shift+Enter passes the focused row, so the new row goes right below it
+        setData((prev) => {
+          const index = options?.afterRowId
+            ? prev.findIndex((row) => row.id === options.afterRowId)
+            : -1;
+          return index === -1
+            ? [...prev, newRow]
+            : [...prev.slice(0, index + 1), newRow, ...prev.slice(index + 1)];
+        });
+        trackRowsAdd([newRow]);
 
-      return {
-        rowId: newRow.id,
-        columnId: "name",
-      };
-    }, [trackRowsAdd]);
+        return {
+          rowId: newRow.id,
+          columnId: "name",
+        };
+      },
+      [trackRowsAdd],
+    );
 
   const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
     React.useCallback(

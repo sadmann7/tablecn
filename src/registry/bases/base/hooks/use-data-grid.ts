@@ -86,6 +86,7 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
 > {
   onRowAdd?: (
     event?: React.MouseEvent<HTMLDivElement>,
+    options?: { afterRowId?: string },
   ) => RowAddResult | Promise<RowAddResult | null> | null;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
@@ -1068,9 +1069,14 @@ function useDataGrid<TData extends RowData>({
           ? getNavigableColumnIds()[0]
           : focusedCell.columnId;
 
-        Promise.resolve(propsRef.current.onRowAdd())
+        Promise.resolve(
+          propsRef.current.onRowAdd(undefined, {
+            afterRowId: focusedCell.rowId,
+          }),
+        )
           .then((result) => {
-            const columnId = result?.columnId ?? currentColumnId;
+            // The new row sits right below, so it keeps the column the user was in
+            const columnId = currentColumnId ?? result?.columnId;
             if (!result || !columnId) return;
 
             tableRef.current?.clearSelection();

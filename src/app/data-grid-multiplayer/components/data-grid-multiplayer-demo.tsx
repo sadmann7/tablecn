@@ -14,6 +14,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellPresence, Direction } from "@/lib/data-grid-types";
 
 import { SkatersGridActionBar } from "@/app/data-grid-live/components/skaters-grid-action-bar";
+import { getInsertOrder } from "@/app/data-grid-live/lib/order";
 import {
   getSkaterStatusIcon,
   getStanceIcon,
@@ -401,31 +402,35 @@ export function DataGridMultiplayerDemo({
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
-    React.useCallback(() => {
-      const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
-      const newSkater: SkaterSchema = {
-        id: generateId(),
-        name: null,
-        email: null,
-        stance: null,
-        style: null,
-        status: null,
-        yearsSkating: null,
-        startedSkating: null,
-        isPro: false,
-        tricks: null,
-        media: null,
-        order: maxOrder + 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+    React.useCallback(
+      (_event, options) => {
+        // Shift+Enter passes the focused row, so the new skater goes right below it
+        const order = getInsertOrder(data, options?.afterRowId);
+        const newSkater: SkaterSchema = {
+          id: generateId(),
+          name: null,
+          email: null,
+          stance: null,
+          style: null,
+          status: null,
+          yearsSkating: null,
+          startedSkating: null,
+          isPro: false,
+          tricks: null,
+          media: null,
+          order,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
-      multiplayerCollection.insert(newSkater);
-      sendRowAdd(serializeSkater(newSkater));
-      trackRowsAdd([newSkater]);
+        multiplayerCollection.insert(newSkater);
+        sendRowAdd(serializeSkater(newSkater));
+        trackRowsAdd([newSkater]);
 
-      return { rowId: newSkater.id, columnId: "name" };
-    }, [data, trackRowsAdd, sendRowAdd]);
+        return { rowId: newSkater.id, columnId: "name" };
+      },
+      [data, trackRowsAdd, sendRowAdd],
+    );
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
     React.useCallback(
