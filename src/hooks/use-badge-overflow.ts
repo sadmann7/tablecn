@@ -4,8 +4,8 @@ const badgeWidthCache = new Map<string, number>();
 
 const DEFAULT_CONTAINER_PADDING = 16; // px-2 = 8px * 2
 const DEFAULT_BADGE_GAP = 4; // gap-1 = 4px
-const DEFAULT_OVERFLOW_BADGE_WIDTH = 40; // Approximate width of "+N" badge
-// Badge chrome around the text: px-1.5 padding plus the 1px border on each side
+const DEFAULT_OVERFLOW_BADGE_WIDTH = 40; // Approx. "+N" badge width
+// px-1.5 padding + 1px border, each side
 const BADGE_CHROME_WIDTH = 12 + 2;
 const BADGE_ICON_GAP = 4; // gap-1 between icon and text
 const BADGE_FONT_SIZE = 12; // text-xs
@@ -14,7 +14,6 @@ const BADGE_FONT_WEIGHT = 500; // font-medium
 let measureContext: CanvasRenderingContext2D | null = null;
 let measureFont: string | null = null;
 
-// Canvas text metrics never touch layout, unlike measuring a DOM node mid scroll
 function measureTextWidth(text: string): number {
   if (!measureContext) {
     measureContext = document.createElement("canvas").getContext("2d");
@@ -54,7 +53,6 @@ function measureBadgeWidth({
       (maxWidth ? Math.min(textWidth, maxWidth) : textWidth),
   );
 
-  // Widths measured with a fallback font would stick around after the web font loads
   if (document.fonts?.status !== "loading") {
     badgeWidthCache.set(cacheKey, width);
   }
@@ -98,7 +96,6 @@ export function getBadgeListWidth<T>({
 }
 
 interface UseBadgeOverflowProps<T> extends GetBadgeListWidthProps<T> {
-  /** Outer width of the badge container, including its padding. */
   containerWidth: number;
   lineCount: number;
   overflowBadgeWidth?: number;
