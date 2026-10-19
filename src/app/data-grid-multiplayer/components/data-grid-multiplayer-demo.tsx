@@ -3,7 +3,7 @@
 import type { UserPresence } from "@party/types";
 import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
-import { TRICKS } from "@party/constants";
+import { SEED_FILE_ID_PREFIX, TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
 import { Copy, Languages, Trash2 } from "lucide-react";
 import * as React from "react";
@@ -500,7 +500,9 @@ export function DataGridMultiplayerDemo({
             : (skater.media?.map((file) => file.id) ?? []),
         ),
       );
-      const fileKeys = fileIds.filter((id) => !sharedIds.has(id));
+      const fileKeys = fileIds.filter(
+        (id) => !id.startsWith(SEED_FILE_ID_PREFIX) && !sharedIds.has(id),
+      );
       if (fileKeys.length === 0) return;
 
       const response = await fetch("/api/uploadthing/delete", {

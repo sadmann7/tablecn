@@ -1,4 +1,5 @@
 export const PUBLIC_ROOM_ID = "lobby";
+export const SEED_FILE_ID_PREFIX = "seed-";
 export const PRIVATE_ROOM_ID_PATTERN = /^(?:[a-z0-9]{8}|[a-z0-9]{16})$/;
 
 export const ADJECTIVES = [

@@ -27,28 +27,30 @@ src/
 ├── hooks/
 │   ├── use-data-table.ts         # Data Table logic (sorting, filtering, pagination)
 │   ├── use-data-grid.ts          # Data Grid logic (editing, selection, virtualization…)
-│   └── use-multiplayer-room.ts   # PartyKit WebSocket connection and collection sync
+│   └── use-multiplayer-room.ts   # Room WebSocket connection and presence
 │
 ├── db/                           # Drizzle schema, migrations, and seed scripts
 ├── config/                       # Site config and navigation links
 └── styles/                       # Global styles
 
-party/                            # PartyKit server (runs separately via pnpm dev:multiplayer)
-├── index.ts                      # WebSocket server for connections, presence, and mutations
+party/                            # PartyServer room server (runs separately via pnpm dev:multiplayer)
+├── index.ts                      # Rooms: connections, presence, writes, acks, and catch-up
+├── db.ts                         # Loads and saves a room's rows in PostgreSQL
 ├── types.ts                      # Shared message types (client ↔ server)
 ├── constants.ts                  # Shared constants (colors, adjectives, animals…)
-└── seeds.ts                      # Initial seed data for the multiplayer room
+└── seeds.ts                      # Seed rows for new rooms
+```
 
 ### Data Table vs Data Grid
 
 | | Data Table | Data Grid |
 | --- | --- | --- |
 | **Hook** | `use-data-table.ts` | `use-data-grid.ts` |
-| **Data source** | PostgreSQL (server actions) | In-memory / TanStack DB |
+| **Data source** | PostgreSQL (server actions) | In-memory (demo), PostgreSQL through the room server (multiplayer) |
 | **Editing** | Read-only rows | Inline cell editing |
 | **Virtualization** | Pagination | Infinite scrolling |
 | **Real-time sync** | No | Yes (TanStack DB collection) |
-| **Multiplayer** | No | Yes (via PartyKit) |
+| **Multiplayer** | No | Yes (PartyServer on Durable Objects) |
 
 ## Getting started
 
@@ -88,9 +90,11 @@ For the standard data table and data grid:
 pnpm dev
 ```
 
-For the multiplayer data-grid:
+For the multiplayer data-grid, which saves rooms to PostgreSQL, start the database and push the schema first:
 
 ```shell
+pnpm db:start
+pnpm db:setup
 pnpm dev:multiplayer
 ```
 
