@@ -160,7 +160,6 @@ function DataGridSelectHeader<TData extends RowData>({
   );
 }
 
-// The memoized grid header doesn't follow selection or filters, so select-all subscribes on its own
 function selectSelectAllState(state: TableState<DataGridFeatures>) {
   return {
     rowSelection: state.rowSelection,
@@ -192,7 +191,6 @@ function DataGridSelectCell<TData extends RowData>({
   const onToggle = React.useCallback(
     (checked: boolean, shiftKey: boolean) => {
       table.setFocusedCell(row.id, column.id);
-      // The checkbox renders a button, so the handler can't read `checked` from the event target
       row.getToggleSelectedHandler()({ target: { checked }, shiftKey });
     },
     [table, row, column],
