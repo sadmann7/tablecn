@@ -399,20 +399,6 @@ function DataGridViewport<TData extends RowData>({
     [onRowAddRef],
   );
 
-  const onDataGridKeyDownCapture = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== "Tab" || !event.shiftKey) return;
-      const container = event.currentTarget;
-      if (event.target === container) return;
-
-      container.tabIndex = -1;
-      requestAnimationFrame(() => {
-        container.tabIndex = 0;
-      });
-    },
-    [],
-  );
-
   const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       event.preventDefault();
@@ -447,7 +433,6 @@ function DataGridViewport<TData extends RowData>({
         ...columnSizeVars,
         maxHeight: `${height}px`,
       }}
-      onKeyDownCapture={onDataGridKeyDownCapture}
       onContextMenu={onDataGridContextMenu}
     >
       <DataGridHeader

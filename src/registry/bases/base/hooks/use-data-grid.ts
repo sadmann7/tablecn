@@ -529,7 +529,6 @@ function useDataGrid<TData extends RowData>({
   >(() => {
     let hoveredCellKey: string | null = null;
 
-    // React bubbles events out of portalled editors too, so only cells mounted in the grid count
     function getEventCell(event: React.SyntheticEvent) {
       const container = dataGridRef.current;
       const target = event.target;
@@ -543,7 +542,6 @@ function useDataGrid<TData extends RowData>({
 
       let rowId = cellElement.dataset.rowId;
       let columnId = cellElement.dataset.columnId;
-      // Previews stay mounted briefly after a scroll stops, so they resolve through their row and column instead of dropping the press
       if (cellElement.dataset.slot === "data-grid-cell-preview") {
         const rowIndex = cellElement.closest<HTMLElement>(
           '[data-slot="data-grid-row"]',
@@ -792,7 +790,7 @@ function useDataGrid<TData extends RowData>({
     [getColumnHeaderTrigger],
   );
 
-  const onGridTabBackOut = React.useCallback(() => {
+  const skipDataGridTabStop = React.useCallback(() => {
     const container = dataGridRef.current;
     if (!container) return;
 
@@ -923,7 +921,7 @@ function useDataGrid<TData extends RowData>({
         case "Tab":
           if (shiftKey) {
             if (headerIndex === 0) {
-              onGridTabBackOut();
+              skipDataGridTabStop();
               return true;
             }
             focusHeaderAt(headerIndex - 1);
@@ -950,7 +948,7 @@ function useDataGrid<TData extends RowData>({
       getNavigableColumnIds,
       getColumnHeaderTrigger,
       focusColumnHeader,
-      onGridTabBackOut,
+      skipDataGridTabStop,
       focusCell,
       getRowIdAt,
     ],
@@ -1225,7 +1223,7 @@ function useDataGrid<TData extends RowData>({
 
           direction = shiftKey ? "shift+tab" : "tab";
           if (!currentTable?.getNavigationTarget(focusedCell, direction)) {
-            if (shiftKey) onGridTabBackOut();
+            if (shiftKey) skipDataGridTabStop();
             return;
           }
           break;
@@ -1252,7 +1250,7 @@ function useDataGrid<TData extends RowData>({
       focusCell,
       focusColumnHeader,
       onColumnHeaderKeyDown,
-      onGridTabBackOut,
+      skipDataGridTabStop,
       getRowIndex,
     ],
   );
@@ -1616,7 +1614,7 @@ function useDataGrid<TData extends RowData>({
           event.clientY,
         );
 
-        // Compensate for event.target bubbling up
+        // Compensates for event.target bubbling up
         const isInsidePopover = elements.some((element) =>
           getIsInPopover(element),
         );
