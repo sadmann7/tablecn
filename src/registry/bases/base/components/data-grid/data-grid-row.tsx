@@ -256,7 +256,7 @@ function DataGridDataCell<TData extends RowData>({
   const [isPreview, setIsPreview] = React.useState(isScrolling);
   const rowId = props.cell.row.id;
   const [prevRowId, setPrevRowId] = React.useState(rowId);
-  // Rows are reused by slot, so a cell gets a new row mid scroll and should drop back to the cheap preview
+
   if (rowId !== prevRowId) {
     setPrevRowId(rowId);
     if (isScrolling && !isPreview) setIsPreview(true);
@@ -278,7 +278,6 @@ function DataGridDataCell<TData extends RowData>({
     );
   }
 
-  // Keyed by row so editing and other cell state never carry over to the next row in this slot
   return <DataGridCell key={rowId} {...props} />;
 }
 
@@ -297,7 +296,6 @@ function DataGridUtilityCellImpl<TData extends RowData>({
   isFocused,
   isRowSelected,
 }: DataGridUtilityCellProps<TData>) {
-  // Clicking a control in the cell moves DOM focus without going through grid navigation
   const onFocus = React.useCallback(() => {
     const { table, row, column } = cell;
     const ranges = table.atoms.cellSelection.get();
@@ -307,7 +305,6 @@ function DataGridUtilityCellImpl<TData extends RowData>({
     }
 
     if (table.getHasRowSelection()) {
-      // Keeps the selected rows and only moves the focus marker
       table.setCellSelection([
         ...ranges.slice(0, -1),
         {
@@ -354,7 +351,6 @@ interface RowState<TData extends RowData> {
   isRowSelected: boolean;
 }
 
-// Only primitives and memoized references, so the shallow compare skips rows whose slice didn't change
 function selectRowState<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
   state: TableState<DataGridFeatures>,
@@ -369,9 +365,7 @@ function selectRowState<TData extends RowData>(
     table.options.enableSingleCellSelection || table.getHasCellRangeSelection()
       ? table.getCellSelectionBounds()
       : EMPTY_CELL_SELECTION_BOUNDS;
-
   const isRowSelected = !!state.rowSelection[rowId];
-  // The memoized row can hold a Row from before the data changed, whose cells no longer resolve their selection
   const currentRow = table.getRowModel().rows[rowIndex];
 
   return {
@@ -386,7 +380,6 @@ function selectRowState<TData extends RowData>(
         ? activeRange.anchorColumnId
         : null,
     editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
-    // While rows are selected, only their cells highlight, not the focused cell that keeps focus in place
     cellSelectionKey:
       !isRowSelected && getHasKeys(state.rowSelection)
         ? ""

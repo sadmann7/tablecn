@@ -94,7 +94,6 @@ export function DataGridCellPreview<TData extends RowData>({
   );
 }
 
-// Each preview mounts as few elements as possible, since every element inserted mid scroll is matched against the whole stylesheet
 function getPreviewContent<TData extends RowData>(
   cell: Cell<DataGridFeatures, TData>,
   cellOpts: CellOpts | undefined,
@@ -113,6 +112,7 @@ function getPreviewContent<TData extends RowData>(
   switch (cellOpts?.variant) {
     case "checkbox": {
       const isChecked = getBooleanCellValue(value);
+
       return {
         className: "flex justify-center pt-2.5",
         content: (
@@ -138,6 +138,7 @@ function getPreviewContent<TData extends RowData>(
       const label =
         cellOpts.options.find((option) => option.value === selectedValue)
           ?.label ?? selectedValue;
+
       return {
         content: label ? (
           <span
@@ -155,6 +156,7 @@ function getPreviewContent<TData extends RowData>(
     case "multi-select": {
       const values = getOptionsCellValue(value);
       if (values.length === 0) return { content: null };
+
       const labels = values.map(
         (item) =>
           cellOpts.options.find((option) => option.value === item)?.label ??
@@ -166,6 +168,7 @@ function getPreviewContent<TData extends RowData>(
         containerWidth: width,
         lineCount: getLineCount(rowHeight),
       });
+
       return {
         className: BADGE_LIST_CLASS_NAME,
         content: (
@@ -185,6 +188,7 @@ function getPreviewContent<TData extends RowData>(
     case "file": {
       const files = getFilesCellValue(value);
       if (files.length === 0) return { content: null };
+
       const { visibleItems, hiddenCount } = getBadgeOverflow({
         items: files,
         getLabel: (file) => file.name,
@@ -194,6 +198,7 @@ function getPreviewContent<TData extends RowData>(
         iconSize: 12,
         maxWidth: 100,
       });
+
       return {
         className: BADGE_LIST_CLASS_NAME,
         content: (
@@ -222,7 +227,7 @@ function getPreviewContent<TData extends RowData>(
     case "url": {
       const url = getTextCellValue(value);
       if (!url) return { content: null };
-      // Keeps its own clipping box so the unbroken URL stops at the content edge, not in the padding
+
       return {
         content: (
           <div className={cn("size-full overflow-hidden", lineClampClassName)}>
@@ -242,7 +247,6 @@ function getPreviewContent<TData extends RowData>(
         content: getNumberCellValue(value) ?? "",
       };
     default:
-      // Wrapping text needs its own clamped box: clamped on the padded cell, the next line still paints into the bottom padding
       return {
         content: (
           <div className={lineClampClassName}>{getTextCellValue(value)}</div>
