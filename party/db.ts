@@ -36,7 +36,9 @@ function toRecord(roomId: string, payload: RowPayload): NewSkater {
 }
 
 export function createRoomDb(connectionString: string) {
-  const db = drizzle(postgres(connectionString, { max: 1 }));
+  const db = drizzle(
+    postgres(connectionString, { max: 1, fetch_types: false }),
+  );
 
   return {
     async loadRows(roomId: string) {
