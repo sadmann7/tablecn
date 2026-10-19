@@ -2066,7 +2066,11 @@ function createDataGridSortedRowModel<
 >(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
   return (_table) => {
     const table = _table as unknown as Table<TableFeatures, RowData>;
-    const cache: { current: SortCache | null } = { current: null };
+    const cache: SortCaches = {
+      current: null,
+      unfiltered: null,
+      filtered: null,
+    };
     return tableMemo({
       feature: "rowSortingFeature",
       table: _table,
@@ -2090,6 +2094,51 @@ interface SortCache {
   sorting: Array<{ id: string; desc: boolean }>;
   order: Array<number>;
   getIsTie: (a: number, b: number) => boolean;
+}
+
+interface SortCaches {
+  current: SortCache | null;
+  unfiltered: SortCache | null;
+  filtered: Pick<SortCache, "rows" | "sorting" | "order"> | null;
+}
+
+function getIsSameSorting(
+  previous: SortCache["sorting"],
+  sorting: Array<ResolvedSort>,
+) {
+  return (
+    previous.length === sorting.length &&
+    sorting.every(
+      (sort, index) =>
+        sort.id === previous[index]?.id && sort.desc === previous[index]?.desc,
+    )
+  );
+}
+
+function getUpdatedUnfilteredCache(
+  table: Table<TableFeatures, RowData>,
+  cache: SortCache,
+  rows: Array<SortedRow>,
+  sorting: Array<ResolvedSort>,
+): SortCache | null {
+  if (cache.rows === rows) return cache;
+  if (cache.rows.length !== rows.length) return null;
+
+  const columns = sorting.map((sort) => table.getColumn(sort.id));
+  if (columns.some((column) => !column?.accessorFn)) return null;
+  const readValues = columns.map(getColumnValueReader);
+
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    const previousRow = cache.rows[index];
+    if (row === previousRow) continue;
+    if (!row || !previousRow || row.id !== previousRow.id) return null;
+    for (const readValue of readValues) {
+      if (!Object.is(readValue(row), readValue(previousRow))) return null;
+    }
+  }
+
+  return { ...cache, rows };
 }
 
 function getIsFlippedSorting(
@@ -2128,7 +2177,7 @@ function getFlippedOrder(
 
 function getSortedRowModel(
   table: Table<TableFeatures, RowData>,
-  cache: { current: SortCache | null },
+  cache: SortCaches,
 ): RowModel<TableFeatures, RowData> {
   const preSortedRowModel = table.getPreSortedRowModel();
   const sorting = table.atoms.sorting?.get();
@@ -2162,6 +2211,78 @@ function getSortedRowModel(
     );
   const previous = cache.current;
   cache.current = null;
+
+  const unfilteredRowModel = table.getPreFilteredRowModel();
+  const unfilteredRows = unfilteredRowModel.rows;
+  const isFlat =
+    preSortedRowModel.flatRows.length === preSortedRowModel.rows.length &&
+    unfilteredRowModel.flatRows.length === unfilteredRows.length;
+  const isFiltered = preSortedRowModel.rows !== unfilteredRows;
+
+  let unfiltered =
+    isFlat && cache.unfiltered
+      ? getUpdatedUnfilteredCache(
+          table,
+          cache.unfiltered,
+          unfilteredRows,
+          resolvedSorting,
+        )
+      : null;
+  if (
+    unfiltered &&
+    !getIsSameSorting(unfiltered.sorting, resolvedSorting) &&
+    !(isCacheable && getIsFlippedSorting(unfiltered.sorting, resolvedSorting))
+  ) {
+    unfiltered = null;
+  }
+  cache.unfiltered = unfiltered;
+
+  const previousFiltered = cache.filtered;
+  cache.filtered = null;
+
+  if (unfiltered) {
+    const sorting = resolvedSorting.map(({ id, desc }) => ({ id, desc }));
+    const rowsById = preSortedRowModel.rowsById;
+    let order: Array<number>;
+
+    if (
+      isFiltered &&
+      isCacheable &&
+      previousFiltered?.rows === preSortedRowModel.rows &&
+      getIsFlippedSorting(previousFiltered.sorting, resolvedSorting)
+    ) {
+      order = getFlippedOrder(previousFiltered.order, unfiltered.getIsTie);
+    } else {
+      if (!getIsSameSorting(unfiltered.sorting, resolvedSorting)) {
+        unfiltered = {
+          ...unfiltered,
+          sorting,
+          order: getFlippedOrder(unfiltered.order, unfiltered.getIsTie),
+        };
+        cache.unfiltered = unfiltered;
+      }
+      if (isCacheable && !isFiltered) cache.current = unfiltered;
+
+      order = isFiltered ? [] : unfiltered.order;
+      if (isFiltered) {
+        for (const index of unfiltered.order) {
+          const row = unfilteredRows[index];
+          if (row && rowsById[row.id] === row) order.push(index);
+        }
+      }
+    }
+
+    if (isFiltered) {
+      cache.filtered = { rows: preSortedRowModel.rows, sorting, order };
+    }
+
+    const rows: Array<SortedRow> = [];
+    for (const index of order) {
+      const row = unfilteredRows[index];
+      if (row) rows.push(row);
+    }
+    return { rows, flatRows: rows.slice(), rowsById };
+  }
 
   function getRowsComparator(rows: Array<SortedRow>) {
     const rawValues = resolvedSorting.map((sort) =>
@@ -2247,13 +2368,15 @@ function getSortedRowModel(
       getIsTie = (a, b) => compare(a, b) === 0;
     }
 
-    if (isTopLevel && isCacheable) {
-      cache.current = {
+    if (isTopLevel) {
+      const sortCache: SortCache = {
         rows,
         sorting: resolvedSorting.map(({ id, desc }) => ({ id, desc })),
         order,
         getIsTie,
       };
+      if (isCacheable) cache.current = sortCache;
+      if (isFlat && !isFiltered) cache.unfiltered = sortCache;
     }
 
     const sortedRows: Array<SortedRow> = [];

@@ -2,6 +2,7 @@ import type * as React from "react";
 
 import {
   type ColumnDef,
+  type ColumnFiltersState,
   type SortingState,
   sortFn_alphanumeric,
   type Table,
@@ -3522,6 +3523,98 @@ describe("useDataGrid", () => {
         { id: "score", desc: false },
       ];
       expect(getIds(flipped)).toEqual(getFreshIds(edited, flipped));
+    });
+
+    it("should keep sorted results when filters and data change", () => {
+      interface FilterSortData {
+        id: string;
+        group: string;
+        score: number;
+        note: string;
+      }
+      const data: FilterSortData[] = Array.from({ length: 60 }, (_, index) => ({
+        id: `${index}`,
+        group: ["b", "a", "c", "ab"][index % 4] ?? "a",
+        score: (index * 7) % 9,
+        note: `note ${index}`,
+      }));
+      const columns: ColumnDef<DataGridFeatures, FilterSortData>[] = [
+        { id: "group", accessorKey: "group", filterFn: simpleFilterFn },
+        { id: "score", accessorKey: "score", filterFn: simpleFilterFn },
+        { id: "note", accessorKey: "note", filterFn: simpleFilterFn },
+      ];
+
+      function getFreshIds(
+        rows: FilterSortData[],
+        sorting: SortingState,
+        columnFilters: ColumnFiltersState,
+      ) {
+        const { result } = renderHook(
+          () => useDataGrid({ data: rows, columns, getRowId: (row) => row.id }),
+          { wrapper: createWrapper() },
+        );
+        act(() => {
+          result.current.table.setColumnFilters(columnFilters);
+          result.current.table.setSorting(sorting);
+        });
+        return result.current.table.getRowModel().rows.map((row) => row.id);
+      }
+
+      const { result, rerender } = renderHook(
+        ({ rows }) =>
+          useDataGrid({ data: rows, columns, getRowId: (row) => row.id }),
+        { wrapper: createWrapper(), initialProps: { rows: data } },
+      );
+      let rows = data;
+      let sorting: SortingState = [
+        { id: "score", desc: false },
+        { id: "group", desc: true },
+      ];
+      let columnFilters: ColumnFiltersState = [];
+
+      function expectFreshOrder() {
+        const ids = result.current.table
+          .getRowModel()
+          .rows.map((row) => row.id);
+        expect(ids).toEqual(getFreshIds(rows, sorting, columnFilters));
+      }
+
+      function update(next: {
+        sorting?: SortingState;
+        columnFilters?: ColumnFiltersState;
+      }) {
+        sorting = next.sorting ?? sorting;
+        columnFilters = next.columnFilters ?? columnFilters;
+        act(() => {
+          result.current.table.setSorting(sorting);
+          result.current.table.setColumnFilters(columnFilters);
+        });
+        expectFreshOrder();
+      }
+
+      update({});
+      update({ columnFilters: [{ id: "group", value: "a" }] });
+      update({ columnFilters: [{ id: "group", value: "ab" }] });
+      update({
+        sorting: [
+          { id: "score", desc: true },
+          { id: "group", desc: false },
+        ],
+      });
+      update({ columnFilters: [{ id: "note", value: "1" }] });
+      update({ columnFilters: [] });
+
+      rows = rows.map((row) =>
+        row.id === "12" ? { ...row, note: "edited" } : row,
+      );
+      rerender({ rows });
+      update({ columnFilters: [{ id: "note", value: "edit" }] });
+      update({ columnFilters: [{ id: "group", value: "a" }] });
+
+      rows = rows.map((row) => (row.id === "13" ? { ...row, score: 99 } : row));
+      rerender({ rows });
+      expectFreshOrder();
+      update({ columnFilters: [{ id: "group", value: "b" }] });
     });
 
     it("should reuse unchanged rows when data changes", () => {
