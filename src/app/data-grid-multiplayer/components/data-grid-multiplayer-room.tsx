@@ -29,6 +29,7 @@ export function DataGridMultiplayerRoom({
 
   return (
     <DataGridMultiplayerDemo
+      key={roomId}
       roomId={roomId}
       isUploadConfigured={isUploadConfigured}
     />

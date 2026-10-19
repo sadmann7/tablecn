@@ -60,7 +60,7 @@ import {
 } from "../lib/seeds";
 import { DataGridBenchmark } from "./data-grid-benchmark";
 import { DataGridDemoSkeleton } from "./data-grid-demo-skeleton";
-import { PeopleGridActionBar } from "./people-grid-action-bar";
+import { PeopleDataGridActionBar } from "./people-data-grid-action-bar";
 
 const ROW_COUNTS = {
   "10k": 10_000,
@@ -505,7 +505,7 @@ function DataGridDemoContent({
           table={table}
           height={height}
           actionBar={
-            <PeopleGridActionBar
+            <PeopleDataGridActionBar
               table={table}
               onRowsDuplicate={onRowsDuplicate}
             />

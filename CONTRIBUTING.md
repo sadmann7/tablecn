@@ -16,8 +16,7 @@ src/
 ├── app/
 │   ├── page.tsx                  # Data Table demo (home page)
 │   ├── data-grid/                # Data Grid demo
-│   ├── data-grid-live/           # Data Grid with live data sync (TanStack DB and TanStack Query)
-│   └── data-grid-multiplayer/    # Data Grid with multiplayer collaboration (PartyKit)
+│   └── data-grid-multiplayer/    # Data Grid with real-time collaboration (PartyServer and TanStack DB)
 │
 ├── components/
 │   ├── data-table/               # Data Table ui components (toolbar, filters, pagination…)

@@ -50,7 +50,7 @@ export const tasks = pgTable("tasks", {
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 
-// For data-grid-live
+// For data-grid-multiplayer
 export const skaters = pgTable("skaters", {
   id: varchar("id", { length: 30 })
     .$defaultFn(() => generateId())

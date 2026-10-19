@@ -23,15 +23,15 @@ import {
 
 import { departments, type Person, statuses } from "../lib/seeds";
 
-interface PeopleGridActionBarProps {
+interface PeopleDataGridActionBarProps {
   table: Table<DataGridFeatures, Person>;
   onRowsDuplicate: (rows: Person[]) => void;
 }
 
-export function PeopleGridActionBar({
+export function PeopleDataGridActionBar({
   table,
   onRowsDuplicate,
-}: PeopleGridActionBarProps) {
+}: PeopleDataGridActionBarProps) {
   return (
     <Subscribe
       source={table.store}
@@ -41,7 +41,7 @@ export function PeopleGridActionBar({
       })}
     >
       {() => (
-        <PeopleGridActionBarImpl
+        <PeopleDataGridActionBarImpl
           table={table}
           onRowsDuplicate={onRowsDuplicate}
         />
@@ -50,10 +50,10 @@ export function PeopleGridActionBar({
   );
 }
 
-function PeopleGridActionBarImpl({
+function PeopleDataGridActionBarImpl({
   table,
   onRowsDuplicate,
-}: PeopleGridActionBarProps) {
+}: PeopleDataGridActionBarProps) {
   const hasRowSelection = table.getHasRowSelection();
   const selectedCount = hasRowSelection
     ? table.getSelectedRowIds().length
@@ -74,9 +74,11 @@ function PeopleGridActionBarImpl({
     [table, onRowsDuplicate],
   );
 
-  // Through the grid so bulk changes can be undone
   const onCellsUpdate = React.useCallback(
-    (columnId: "status" | "department", value: string) => {
+    <TColumnId extends keyof Person>(
+      columnId: TColumnId,
+      value: Person[TColumnId],
+    ) => {
       table.updateCells(
         getTargetRows(table).map((row) => ({
           rowId: row.id,
