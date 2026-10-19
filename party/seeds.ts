@@ -33,6 +33,7 @@ function generateSeedRow(order: number): RowPayload {
   };
 }
 
-export const seedRows: RowPayload[] = Array.from({ length: 20 }, (_, i) =>
-  generateSeedRow(i + 1),
-);
+// Fresh ids per room, since every room's rows share one table
+export function createSeedRows(): RowPayload[] {
+  return Array.from({ length: 20 }, (_, i) => generateSeedRow(i + 1));
+}

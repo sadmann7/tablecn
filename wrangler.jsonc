@@ -3,6 +3,7 @@
   "name": "tablecn",
   "main": "party/index.ts",
   "compatibility_date": "2026-06-13",
+  "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
     "bindings": [{ "name": "Main", "class_name": "SkaterRoom" }],
   },

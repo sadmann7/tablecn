@@ -20,13 +20,16 @@ import {
   PRIVATE_ROOM_ID_PATTERN,
   PUBLIC_ROOM_ID,
 } from "./constants";
-import { seedRows } from "./seeds";
+import { createRoomDb, type RoomDb } from "./db";
+import { createSeedRows } from "./seeds";
 
 const RESET_DELAY = 10 * 60 * 1000;
 const PERSIST_DELAY = 500;
 
 interface Env {
   Main: DurableObjectNamespace<SkaterRoom>;
+  HYPERDRIVE?: Hyperdrive;
+  DATABASE_URL?: string;
 }
 
 interface PresenceState {
@@ -53,27 +56,85 @@ export class SkaterRoom extends Server<Env> {
   static options = { hibernate: true };
 
   rows: RowPayload[] = [];
+  private db: RoomDb | null = null;
+  private isLoaded = false;
+  private dirtyIds = new Set<string>();
+  private deletedIds = new Set<string>();
   private persistTimeout: ReturnType<typeof setTimeout> | null = null;
+  private pendingSave: Promise<void> = Promise.resolve();
 
-  async onStart() {
-    const stored = await this.ctx.storage.get<RowPayload[]>("rows");
-    if (Array.isArray(stored) && stored.length > 0) {
-      this.rows = stored;
-    } else {
-      this.rows = structuredClone(seedRows);
-      await this.ctx.storage.put("rows", this.rows);
+  private getDb() {
+    const connectionString =
+      this.env.HYPERDRIVE?.connectionString ?? this.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("Set DATABASE_URL or a HYPERDRIVE binding");
     }
+    this.db ??= createRoomDb(connectionString);
+    return this.db;
   }
 
-  private persistRows() {
+  async onStart() {
+    await this.ensureLoaded();
+  }
+
+  private async ensureLoaded() {
+    if (this.isLoaded) return;
+
+    const rows = await this.getDb().loadRows(this.name);
+    if (rows.length > 0) {
+      this.rows = rows;
+    } else {
+      this.rows = createSeedRows();
+      await this.getDb().replaceRows(this.name, this.rows);
+    }
+    this.isLoaded = true;
+  }
+
+  private persistRows({
+    upserts = [],
+    deletes = [],
+  }: {
+    upserts?: string[];
+    deletes?: string[];
+  }) {
+    for (const id of upserts) this.dirtyIds.add(id);
+    for (const id of deletes) {
+      this.dirtyIds.delete(id);
+      this.deletedIds.add(id);
+    }
     if (this.persistTimeout) return;
 
     this.persistTimeout = setTimeout(() => {
       this.persistTimeout = null;
-      this.ctx.storage
-        .put("rows", this.rows)
-        .catch((err) => console.error("[party] Failed to persist rows:", err));
+      void this.flushRows();
     }, PERSIST_DELAY);
+  }
+
+  // Saves run one after another, so a delete can't land before the insert it follows
+  private flushRows() {
+    if (this.persistTimeout) {
+      clearTimeout(this.persistTimeout);
+      this.persistTimeout = null;
+    }
+
+    const dirtyIds = this.dirtyIds;
+    const deletes = [...this.deletedIds];
+    this.dirtyIds = new Set();
+    this.deletedIds = new Set();
+    const upserts = this.rows.filter((row) => dirtyIds.has(row.id as string));
+    if (upserts.length === 0 && deletes.length === 0) return this.pendingSave;
+
+    this.pendingSave = this.pendingSave.then(() =>
+      this.getDb()
+        .saveRows(this.name, { upserts, deletes })
+        .catch((error: unknown) => {
+          console.error("[party] Failed to save rows:", error);
+          // Retried with the next change
+          for (const row of upserts) this.dirtyIds.add(row.id as string);
+          for (const id of deletes) this.deletedIds.add(id);
+        }),
+    );
+    return this.pendingSave;
   }
 
   private getUserId(connection: PresenceConnection) {
@@ -99,20 +160,21 @@ export class SkaterRoom extends Server<Env> {
   async onAlarm() {
     if (Object.keys(this.getUsers()).length > 0) return;
 
-    if (this.persistTimeout) {
-      clearTimeout(this.persistTimeout);
-      this.persistTimeout = null;
-    }
-    this.rows = structuredClone(seedRows);
+    await this.flushRows();
     if (this.name === PUBLIC_ROOM_ID) {
-      await this.ctx.storage.delete("rows");
+      this.rows = createSeedRows();
+      await this.getDb().replaceRows(this.name, this.rows);
     } else {
-      await this.ctx.storage.deleteAll();
+      // Private rooms are seeded again only if someone comes back
+      this.rows = [];
+      this.isLoaded = false;
+      await this.getDb().replaceRows(this.name, []);
     }
   }
 
-  onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
+  async onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
     void this.ctx.storage.deleteAlarm();
+    await this.ensureLoaded();
 
     const url = new URL(ctx.request.url);
     const userId = url.searchParams.get("clientId") ?? connection.id;
@@ -153,6 +215,7 @@ export class SkaterRoom extends Server<Env> {
     this.broadcast(JSON.stringify(leaveMsg), [connection.id]);
 
     if (Object.keys(users).length === 0) {
+      void this.flushRows();
       void this.ctx.storage.setAlarm(Date.now() + RESET_DELAY);
     }
   }
@@ -172,7 +235,7 @@ export class SkaterRoom extends Server<Env> {
     switch (msg.type) {
       case "row-add": {
         this.rows.push(msg.row);
-        this.persistRows();
+        this.persistRows({ upserts: [msg.row.id as string] });
         this.broadcast(
           JSON.stringify({
             type: "row-add",
@@ -186,7 +249,7 @@ export class SkaterRoom extends Server<Env> {
 
       case "rows-add": {
         this.rows.push(...msg.rows);
-        this.persistRows();
+        this.persistRows({ upserts: msg.rows.map((row) => row.id as string) });
         this.broadcast(
           JSON.stringify({
             type: "rows-add",
@@ -200,8 +263,9 @@ export class SkaterRoom extends Server<Env> {
 
       case "cell-update": {
         const row = this.rows.find((r) => r.id === msg.rowId);
-        if (row) row[msg.columnId] = msg.value;
-        this.persistRows();
+        if (!row) break;
+        row[msg.columnId] = msg.value;
+        this.persistRows({ upserts: [msg.rowId] });
         this.broadcast(
           JSON.stringify({
             type: "cell-update",
@@ -217,7 +281,7 @@ export class SkaterRoom extends Server<Env> {
 
       case "rows-delete": {
         this.rows = this.rows.filter((r) => !msg.ids.includes(r.id as string));
-        this.persistRows();
+        this.persistRows({ deletes: msg.ids });
         this.broadcast(
           JSON.stringify({
             type: "rows-delete",
