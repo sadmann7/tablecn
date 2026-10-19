@@ -13,7 +13,6 @@ import type {
   ClientMessage,
   RowChange,
   RowPayload,
-  SequencedChange,
   ServerMessage,
   UserPresence,
 } from "./types";
@@ -25,17 +24,14 @@ import {
   PRIVATE_ROOM_ID_PATTERN,
   PUBLIC_ROOM_ID,
 } from "./constants";
-import { createRoomDb, type RoomDb } from "./db";
 import { createSeedRows } from "./seeds";
 
 const RESET_DELAY = 10 * 60 * 1000;
 const PERSIST_DELAY = 500;
-const CHANGE_LOG_SIZE = 500;
+const ROWS_KEY = "skaters";
 
 interface Env {
   Main: DurableObjectNamespace<SkaterRoom>;
-  HYPERDRIVE?: Hyperdrive;
-  DATABASE_URL?: string;
 }
 
 interface PresenceState {
@@ -62,90 +58,27 @@ export class SkaterRoom extends Server<Env> {
   static options = { hibernate: true };
 
   rows: RowPayload[] = [];
-  private epoch = crypto.randomUUID();
-  private seq = 0;
-  private changeLog: SequencedChange[] = [];
-  private db: RoomDb | null = null;
-  private isLoaded = false;
-  private dirtyIds = new Set<string>();
-  private deletedIds = new Set<string>();
   private persistTimeout: ReturnType<typeof setTimeout> | null = null;
-  private pendingSave: Promise<void> = Promise.resolve();
-
-  private getDb() {
-    const connectionString =
-      this.env.HYPERDRIVE?.connectionString ?? this.env.DATABASE_URL;
-    if (!connectionString) {
-      throw new Error("Set DATABASE_URL or a HYPERDRIVE binding");
-    }
-    this.db ??= createRoomDb(connectionString);
-    return this.db;
-  }
 
   async onStart() {
-    await this.ensureLoaded();
-  }
-
-  private async ensureLoaded() {
-    if (this.isLoaded) return;
-
-    const startedAt = Date.now();
-    const rows = await this.getDb().loadRows(this.name);
-    if (rows.length > 0) {
-      this.rows = rows;
+    const stored = await this.ctx.storage.get<RowPayload[]>(ROWS_KEY);
+    if (Array.isArray(stored) && stored.length > 0) {
+      this.rows = stored;
     } else {
       this.rows = createSeedRows();
-      this.persistRows({ upserts: this.rows.map((row) => row.id as string) });
+      await this.ctx.storage.put(ROWS_KEY, this.rows);
     }
-    this.isLoaded = true;
-    console.log(
-      `[party] Loaded ${this.name} in ${Date.now() - startedAt}ms (${rows.length > 0 ? `${rows.length} rows` : "seeded"})`,
-    );
   }
 
-  private persistRows({
-    upserts = [],
-    deletes = [],
-  }: {
-    upserts?: string[];
-    deletes?: string[];
-  }) {
-    for (const id of upserts) this.dirtyIds.add(id);
-    for (const id of deletes) {
-      this.dirtyIds.delete(id);
-      this.deletedIds.add(id);
-    }
+  private persistRows() {
     if (this.persistTimeout) return;
 
     this.persistTimeout = setTimeout(() => {
       this.persistTimeout = null;
-      void this.flushRows();
+      this.ctx.storage
+        .put(ROWS_KEY, this.rows)
+        .catch((err) => console.error("[party] Failed to persist rows:", err));
     }, PERSIST_DELAY);
-  }
-
-  private flushRows() {
-    if (this.persistTimeout) {
-      clearTimeout(this.persistTimeout);
-      this.persistTimeout = null;
-    }
-
-    const dirtyIds = this.dirtyIds;
-    const deletes = [...this.deletedIds];
-    this.dirtyIds = new Set();
-    this.deletedIds = new Set();
-    const upserts = this.rows.filter((row) => dirtyIds.has(row.id as string));
-    if (upserts.length === 0 && deletes.length === 0) return this.pendingSave;
-
-    this.pendingSave = this.pendingSave.then(() =>
-      this.getDb()
-        .saveRows(this.name, { upserts, deletes })
-        .catch((error: unknown) => {
-          console.error("[party] Failed to save rows:", error);
-          for (const row of upserts) this.dirtyIds.add(row.id as string);
-          for (const id of deletes) this.deletedIds.add(id);
-        }),
-    );
-    return this.pendingSave;
   }
 
   private getUserId(connection: PresenceConnection) {
@@ -171,22 +104,20 @@ export class SkaterRoom extends Server<Env> {
   async onAlarm() {
     if (Object.keys(this.getUsers()).length > 0) return;
 
-    await this.flushRows();
-    this.epoch = crypto.randomUUID();
-    this.changeLog = [];
+    if (this.persistTimeout) {
+      clearTimeout(this.persistTimeout);
+      this.persistTimeout = null;
+    }
+    this.rows = createSeedRows();
     if (this.name === PUBLIC_ROOM_ID) {
-      this.rows = createSeedRows();
-      await this.getDb().replaceRows(this.name, this.rows);
+      await this.ctx.storage.delete(ROWS_KEY);
     } else {
-      this.rows = [];
-      this.isLoaded = false;
-      await this.getDb().replaceRows(this.name, []);
+      await this.ctx.storage.deleteAll();
     }
   }
 
-  async onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
+  onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
     void this.ctx.storage.deleteAlarm();
-    await this.ensureLoaded();
 
     const url = new URL(ctx.request.url);
     const userId = url.searchParams.get("clientId") ?? connection.id;
@@ -204,16 +135,12 @@ export class SkaterRoom extends Server<Env> {
     connection.setState({ userId, user });
 
     connection.send(
-      JSON.stringify(
-        this.getCatchUp(url, users, userId) ?? {
-          type: "snapshot",
-          users,
-          userId,
-          rows: this.rows,
-          epoch: this.epoch,
-          seq: this.seq,
-        },
-      ),
+      JSON.stringify({
+        type: "snapshot",
+        users,
+        userId,
+        rows: this.rows,
+      } satisfies ServerMessage),
     );
 
     if (isNewUser) {
@@ -222,49 +149,20 @@ export class SkaterRoom extends Server<Env> {
     }
   }
 
-  private getCatchUp(
-    url: URL,
-    users: Record<string, UserPresence>,
-    userId: string,
-  ): ServerMessage | null {
-    const lastSeq = Number(url.searchParams.get("seq"));
-    if (url.searchParams.get("epoch") !== this.epoch) return null;
-    if (!Number.isInteger(lastSeq) || lastSeq > this.seq) return null;
-
-    const oldestSeq = this.changeLog[0]?.seq ?? this.seq + 1;
-    if (lastSeq < oldestSeq - 1) return null;
-
-    return {
-      type: "catch-up",
-      users,
-      userId,
-      changes: this.changeLog.filter((change) => change.seq > lastSeq),
-      epoch: this.epoch,
-      seq: this.seq,
-    };
-  }
-
   private commitChange(
     sender: PresenceConnection,
     mutationId: string,
     change: RowChange,
   ) {
-    this.seq += 1;
-    const sequenced: SequencedChange = {
-      ...change,
-      seq: this.seq,
-      userId: this.getUserId(sender),
-    };
-    this.changeLog.push(sequenced);
-    if (this.changeLog.length > CHANGE_LOG_SIZE) this.changeLog.shift();
-
-    this.broadcast(JSON.stringify(sequenced), [sender.id]);
-    sender.send(
+    this.broadcast(
       JSON.stringify({
-        type: "ack",
-        mutationId,
-        seq: this.seq,
+        ...change,
+        userId: this.getUserId(sender),
       } satisfies ServerMessage),
+      [sender.id],
+    );
+    sender.send(
+      JSON.stringify({ type: "ack", mutationId } satisfies ServerMessage),
     );
   }
 
@@ -319,7 +217,6 @@ export class SkaterRoom extends Server<Env> {
     this.broadcast(JSON.stringify(leaveMsg), [connection.id]);
 
     if (Object.keys(users).length === 0) {
-      void this.flushRows();
       void this.ctx.storage.setAlarm(Date.now() + RESET_DELAY);
     }
   }
@@ -347,9 +244,7 @@ export class SkaterRoom extends Server<Env> {
           const row = this.rows.find((r) => r.id === update.rowId);
           if (row) row[update.columnId] = update.value;
         }
-        this.persistRows({
-          upserts: msg.updates.map((update) => update.rowId),
-        });
+        this.persistRows();
         this.commitChange(sender, msg.mutationId, {
           type: "cells-update",
           updates: msg.updates,
@@ -364,7 +259,7 @@ export class SkaterRoom extends Server<Env> {
           break;
         }
         this.rows.push(...msg.rows);
-        this.persistRows({ upserts: msg.rows.map((row) => row.id as string) });
+        this.persistRows();
         this.commitChange(sender, msg.mutationId, {
           type: "rows-add",
           rows: msg.rows,
@@ -375,7 +270,7 @@ export class SkaterRoom extends Server<Env> {
       case "rows-delete": {
         const ids = new Set(msg.ids);
         this.rows = this.rows.filter((r) => !ids.has(r.id as string));
-        this.persistRows({ deletes: msg.ids });
+        this.persistRows();
         this.commitChange(sender, msg.mutationId, {
           type: "rows-delete",
           ids: msg.ids,

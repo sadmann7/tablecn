@@ -28,27 +28,15 @@ export type RowChange =
   | { type: "rows-add"; rows: RowPayload[] }
   | { type: "rows-delete"; ids: string[] };
 
-export type SequencedChange = RowChange & { seq: number; userId: string };
-
 export type ServerMessage =
   | {
       type: "snapshot";
       users: Record<string, UserPresence>;
       userId: string;
       rows: RowPayload[];
-      epoch: string;
-      seq: number;
     }
-  | {
-      type: "catch-up";
-      users: Record<string, UserPresence>;
-      userId: string;
-      changes: SequencedChange[];
-      epoch: string;
-      seq: number;
-    }
-  | SequencedChange
-  | { type: "ack"; mutationId: string; seq: number }
+  | (RowChange & { userId: string })
+  | { type: "ack"; mutationId: string }
   | { type: "reject"; mutationId: string; reason: string }
   | {
       type: "active-cell";

@@ -3,12 +3,8 @@
   "name": "tablecn",
   "main": "party/index.ts",
   "compatibility_date": "2026-06-13",
-  "compatibility_flags": ["nodejs_compat"],
   "durable_objects": {
     "bindings": [{ "name": "Main", "class_name": "SkaterRoom" }],
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SkaterRoom"] }],
-  "hyperdrive": [
-    { "binding": "HYPERDRIVE", "id": "83c21ad69f5e4cbba0cfd04c6c039389" },
-  ],
 }
