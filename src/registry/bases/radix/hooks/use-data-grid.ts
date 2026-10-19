@@ -519,9 +519,7 @@ function useDataGrid<TData extends RowData>({
       () => ({
         minSize: MIN_COLUMN_SIZE,
         maxSize: MAX_COLUMN_SIZE,
-        // Built-in editors render data cells directly, avoiding flexRender's unstable cell.getContext()
-        // (https://github.com/TanStack/table/issues/4794), so only a column's own `cell` goes through it
-        cell: renderDefaultCell as ColumnDef<DataGridFeatures, TData>["cell"],
+        cell: renderDefaultCell,
       }),
       [],
     );
