@@ -81,7 +81,7 @@ function SkatersGridActionBarImpl<TData extends RowData>({
 
   return (
     <ActionBar
-      data-grid-popover
+      data-grid-popover=""
       open={selectedCount > 0}
       onOpenChange={onOpenChange}
     >
