@@ -8,6 +8,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import { insertTextAtSelection } from "@/lib/data-grid-utils";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
@@ -208,6 +209,45 @@ describe("DataGrid rendering", () => {
     expect(getCellWrapper(container, "1", "name")?.textContent).toBe(
       "Rider: Tony Hawk",
     );
+  });
+
+  it("labels row action triggers by default or with getAriaLabel", () => {
+    const { rerender } = render(<></>);
+
+    function Grid({
+      getAriaLabel,
+    }: {
+      getAriaLabel?: (row: { original: TestData }) => string;
+    }) {
+      const columns = React.useMemo<ColumnDef<DataGridFeatures, TestData>[]>(
+        () => [
+          ...testColumns,
+          getDataGridActionsColumn<TestData>({
+            actions: () => null,
+            getAriaLabel,
+          }),
+        ],
+        [getAriaLabel],
+      );
+      const dataGrid = useDataGrid({
+        data: testData,
+        columns,
+        getRowId: (row) => row.id,
+      });
+      return <DataGrid {...dataGrid} />;
+    }
+
+    rerender(<Grid />);
+    expect(
+      screen.getByRole("button", { name: "Open actions for row 1" }),
+    ).not.toBeNull();
+
+    rerender(
+      <Grid getAriaLabel={(row) => `Open actions for ${row.original.name}`} />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Open actions for Tony Hawk" }),
+    ).not.toBeNull();
   });
 
   it("renders cells that are memo or forwardRef components", () => {
