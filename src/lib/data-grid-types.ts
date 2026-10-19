@@ -6,8 +6,8 @@ export type Direction = "ltr" | "rtl";
 
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
-export interface ColumnValueReader {
-  (row: { original: unknown; index: number }): unknown;
+export interface ColumnValueReader<TData extends RowData = RowData> {
+  (row: { original: TData; index: number }): unknown;
 }
 
 export interface CellSelectOption {

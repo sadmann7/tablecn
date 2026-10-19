@@ -70,14 +70,12 @@ const LINE_COUNTS: Record<RowHeightValue, number> = {
   "extra-tall": 4,
 };
 
-export function getColumnValueReader(
+export function getColumnValueReader<TData extends RowData>(
   column:
-    | { accessorFn?: (original: never, index: number) => unknown }
+    | { accessorFn?: (original: TData, index: number) => unknown }
     | undefined,
-): ColumnValueReader {
-  const accessorFn = column?.accessorFn as
-    | ((original: unknown, index: number) => unknown)
-    | undefined;
+): ColumnValueReader<TData> {
+  const accessorFn = column?.accessorFn;
   return (row) => accessorFn?.(row.original, row.index);
 }
 

@@ -121,7 +121,7 @@ const DATE_OPERATORS = new Set<FilterOperator>([
   "isBetween",
 ]);
 
-interface PreparedFilter {
+interface PreparedFilter<TData extends RowData> {
   operator: FilterOperator;
   value: FilterValue["value"];
   endValue: FilterValue["endValue"];
@@ -131,14 +131,13 @@ interface PreparedFilter {
   endDate: Date | null;
   valueDateText: string | null;
   anyOf: Set<unknown> | null;
-  readValue: ColumnValueReader | null;
+  readValue: ColumnValueReader<TData> | null;
 }
 
-// Filter values stay the same object until the filter changes, so their derived values are
-// computed once per filter instead of once per row
-const preparedFilters = new WeakMap<object, PreparedFilter>();
-
-function getPreparedFilter(filter: FilterValue) {
+function getPreparedFilter<TData extends RowData>(
+  preparedFilters: WeakMap<object, PreparedFilter<TData>>,
+  filter: FilterValue,
+) {
   let prepared = preparedFilters.get(filter);
   if (prepared) return prepared;
 
@@ -174,6 +173,10 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
   DataGridFeatures,
   TData
 > {
+  // Filter values stay the same object until the filter changes, so their derived values are
+  // computed once per filter instead of once per row
+  const preparedFilters = new WeakMap<object, PreparedFilter<TData>>();
+
   return (
     row: Row<DataGridFeatures, TData>,
     columnId: string,
@@ -183,7 +186,10 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
       return true;
     }
 
-    const filter = getPreparedFilter(filterValue as FilterValue);
+    const filter = getPreparedFilter(
+      preparedFilters,
+      filterValue as FilterValue,
+    );
     const { operator, value, endValue } = filter;
 
     // Each filter object belongs to one column, so its reader is resolved once
