@@ -58,11 +58,6 @@ const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
 const UTILITY_COLUMN_IDS = new Set(["select", "actions"]);
 const SEARCH_SHORTCUT_KEY = "f";
 
-function showClipboardToast({ variant, message }: ClipboardNotice) {
-  if (variant === "error") toast.error(message);
-  else toast.success(message);
-}
-
 let nextObjectId = 0;
 const objectIds = new WeakMap<object, number>();
 
@@ -99,6 +94,11 @@ function useStableProps<TProps extends object>(
   }, [propsKey]);
 }
 
+function showClipboardToast({ variant, message }: ClipboardNotice) {
+  if (variant === "error") toast.error(message);
+  else toast.success(message);
+}
+
 function selectGridLayoutState(state: TableState<DataGridFeatures>) {
   return {
     rowHeight: state.rowHeight,
@@ -117,7 +117,7 @@ interface RowAddResult {
   columnId?: string;
 }
 
-type RowAddEventDetailsInit =
+type RowAddTrigger =
   | {
       reason: "add-row-press";
       event?:
@@ -127,7 +127,7 @@ type RowAddEventDetailsInit =
   | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
   | { reason: "paste"; event?: undefined };
 
-type RowAddEventDetails = RowAddEventDetailsInit & {
+type RowAddEventDetails = RowAddTrigger & {
   cancel: () => void;
 };
 
@@ -665,18 +665,18 @@ function useDataGrid<TData extends RowData>({
       dir,
     };
   }, [
-    propsRef,
     stableProps,
+    canAddRows,
+    propsRef,
+    revealCell,
+    focusCellElement,
     data,
     tableColumns,
     defaultColumn,
     enableCellEditing,
-    canAddRows,
-    dir,
-    revealCell,
-    focusCellElement,
     onRowSelectionChange,
     onColumnVisibilityChange,
+    dir,
   ]);
 
   const table = useTable(tableOptions, selectGridLayoutState);
@@ -729,7 +729,7 @@ function useDataGrid<TData extends RowData>({
 
   const addRow = React.useCallback(
     async (
-      init: RowAddEventDetailsInit,
+      trigger: RowAddTrigger,
       getColumnId: (result: RowAddResult) => string | undefined,
     ) => {
       const { readOnly, onRowAdd: onRowAddProp } = propsRef.current;
@@ -739,7 +739,7 @@ function useDataGrid<TData extends RowData>({
       let result: RowAddResult | null;
       try {
         result = await onRowAddProp({
-          ...init,
+          ...trigger,
           cancel: () => {
             isCanceled = true;
           },
