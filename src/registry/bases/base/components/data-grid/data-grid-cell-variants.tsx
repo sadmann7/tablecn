@@ -94,7 +94,6 @@ export function ShortTextCell<TData extends RowData>(
   }
 
   const onBlur = React.useCallback(() => {
-    // Read the current value directly from the DOM to avoid stale state
     const currentValue = cellRef.current?.textContent ?? "";
     if (!readOnly && currentValue !== initialValue) {
       cell.setValue(currentValue);
@@ -259,7 +258,6 @@ export function LongTextCell<TData extends RowData>(
     const length = textarea.value.length;
     textarea.setSelectionRange(length, length);
 
-    // Insert the typed character after focus settles
     if (pendingCharRef.current) {
       const char = pendingCharRef.current;
       pendingCharRef.current = null;
@@ -327,7 +325,6 @@ export function LongTextCell<TData extends RowData>(
         });
         return;
       }
-      // Stop propagation to prevent grid navigation
       event.stopPropagation();
     },
     [cell, onSave, onCancel, value, initialValue],
@@ -586,7 +583,6 @@ export function UrlCell<TData extends RowData>(
         return;
       }
 
-      // Stop propagation to prevent grid from interfering with link navigation
       event.stopPropagation();
     },
     [isEditing, value],
@@ -718,7 +714,6 @@ export function CheckboxCell<TData extends RowData>(
   const onCheckboxMouseDown = React.useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
-      // Keep focus on the cell, not the checkbox inside it
       event.preventDefault();
       cell.table.setFocusedCell(cell.row.id, cell.column.id);
       containerRef.current?.focus();
@@ -802,7 +797,6 @@ export function SelectCell<TData extends RowData>(
     [cell, readOnly],
   );
 
-  // The select's trigger unmounts once editing stops, so return focus to the cell
   const getFinalFocus = React.useCallback(() => {
     const container = containerRef.current;
     if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
