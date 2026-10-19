@@ -79,10 +79,8 @@ function ContextMenuImpl<TData extends RowData>({
     [contextMenu.x, contextMenu.y],
   );
 
-  const onCloseAutoFocus: NonNullable<
-    React.ComponentProps<typeof DropdownMenuContent>["onCloseAutoFocus"]
-  > = React.useCallback(
-    (event) => {
+  const onCloseAutoFocus = React.useCallback(
+    (event: Event) => {
       event.preventDefault();
       const focusedCell = table.getFocusedCell();
       if (focusedCell && table.options.onCellFocus) {

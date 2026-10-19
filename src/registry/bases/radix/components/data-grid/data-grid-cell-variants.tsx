@@ -251,9 +251,7 @@ export function LongTextCell<TData extends RowData>(
     [cell, value, initialValue, readOnly],
   );
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
+  const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
     if (textareaRef.current) {
       textareaRef.current.focus();
@@ -973,9 +971,7 @@ export function MultiSelectCell<TData extends RowData>(
     [cell, readOnly],
   );
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
+  const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
     inputRef.current?.focus();
   }, []);
