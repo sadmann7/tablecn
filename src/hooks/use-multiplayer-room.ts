@@ -1,13 +1,15 @@
 "use client";
 
-import type { RowPayload, ServerMessage, UserPresence } from "@party/types";
+import type { ServerMessage, UserPresence } from "@party/types";
 
 import { ADJECTIVES, ANIMALS, COLORS } from "@party/constants";
 import PartySocket from "partysocket";
 import * as React from "react";
 
-import { skaterSchema } from "@/app/data-grid-live/lib/validation";
-import { multiplayerCollection } from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
+import {
+  createSkatersCollection,
+  type SkatersCollection,
+} from "@/app/data-grid-multiplayer/lib/multiplayer-collection";
 import { env } from "@/env";
 import { generateId } from "@/lib/id";
 
@@ -54,127 +56,93 @@ function getOrCreateIdentity(): Identity {
   return identity;
 }
 
-function parseRow(raw: RowPayload) {
-  const result = skaterSchema.safeParse(raw);
-  if (result.success) return result.data;
-  return null;
+interface Room {
+  socket: PartySocket;
+  collection: SkatersCollection;
+  subscribe: (listener: (message: ServerMessage) => void) => () => void;
+}
+
+function createRoom(roomId: string): Room {
+  const identity = getOrCreateIdentity();
+  let epoch: string | null = null;
+  let lastSeq = 0;
+
+  const socket = new PartySocket({
+    host: PARTYKIT_HOST,
+    room: roomId,
+    id: generateId(),
+    query: () => ({
+      clientId: identity.clientId,
+      name: identity.name,
+      color: identity.color,
+      ...(epoch ? { epoch, seq: String(lastSeq) } : {}),
+    }),
+    startClosed: true,
+  });
+
+  const listeners = new Set<(message: ServerMessage) => void>();
+  socket.addEventListener("message", (event: MessageEvent) => {
+    let message: ServerMessage;
+    try {
+      message = JSON.parse(event.data as string) as ServerMessage;
+    } catch {
+      return;
+    }
+    if (message.type === "snapshot" || message.type === "catch-up") {
+      epoch = message.epoch;
+      lastSeq = message.seq;
+    } else if ("seq" in message) {
+      lastSeq = message.seq;
+    }
+    for (const listener of listeners) listener(message);
+  });
+
+  function subscribe(listener: (message: ServerMessage) => void) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+
+  const collection = createSkatersCollection({
+    send: (message) => socket.send(JSON.stringify(message)),
+    subscribe,
+  });
+
+  return { socket, collection, subscribe };
 }
 
 interface UseMultiplayerRoomReturn {
+  collection: SkatersCollection;
   users: Record<string, UserPresence>;
   currentUserId: string;
-  sendCellUpdate: (rowId: string, columnId: string, value: unknown) => void;
-  sendRowAdd: (row: RowPayload) => void;
-  sendRowsAdd: (rows: RowPayload[]) => void;
-  sendRowsDelete: (ids: string[]) => void;
   sendActiveCell: (rowId: string | null, columnId: string | null) => void;
 }
 
 export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
+  const [room] = React.useState(() => createRoom(roomId));
   const [users, setUsers] = React.useState<Record<string, UserPresence>>({});
   const [currentUserId, setCurrentUserId] = React.useState("");
 
-  const socketRef = React.useRef<PartySocket | null>(null);
   const activeCellMessageRef = React.useRef<string | null>(null);
   const activeCellTimeoutRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
-    const knownIds = new Set<string>();
-    const identity = getOrCreateIdentity();
+    const { socket } = room;
 
-    const socket = new PartySocket({
-      host: PARTYKIT_HOST,
-      room: roomId,
-      id: generateId(),
-      query: {
-        clientId: identity.clientId,
-        name: identity.name,
-        color: identity.color,
-      },
-    });
-    socketRef.current = socket;
-
-    socket.addEventListener("open", () => {
+    function onOpen() {
       if (activeCellMessageRef.current) {
         socket.send(activeCellMessageRef.current);
       }
-    });
+    }
+    socket.addEventListener("open", onOpen);
 
-    socket.addEventListener("message", (evt: MessageEvent) => {
-      let msg: ServerMessage;
-      try {
-        msg = JSON.parse(evt.data as string) as ServerMessage;
-      } catch {
-        return;
-      }
-
+    const unsubscribe = room.subscribe((msg) => {
       switch (msg.type) {
-        case "snapshot": {
+        case "snapshot":
+        case "catch-up": {
           setCurrentUserId(msg.userId);
           setUsers(msg.users);
-          const snapshotIds = new Set<string>();
-          for (const raw of msg.rows ?? []) {
-            const row = parseRow(raw);
-            if (!row) continue;
-            snapshotIds.add(row.id);
-            if (knownIds.has(row.id)) {
-              multiplayerCollection.update(row.id, (draft) => {
-                Object.assign(draft, row);
-              });
-            } else {
-              multiplayerCollection.insert(row);
-              knownIds.add(row.id);
-            }
-          }
-          const removedIds = [...knownIds].filter((id) => !snapshotIds.has(id));
-          if (removedIds.length > 0) {
-            multiplayerCollection.delete(removedIds);
-            for (const id of removedIds) knownIds.delete(id);
-          }
-          break;
-        }
-
-        case "cell-update": {
-          multiplayerCollection.update(msg.rowId, (draft) => {
-            const key = msg.columnId as keyof typeof draft;
-            const raw = msg.value;
-            if (
-              (key === "startedSkating" ||
-                key === "createdAt" ||
-                key === "updatedAt") &&
-              typeof raw === "string"
-            ) {
-              (draft as Record<string, unknown>)[key] = new Date(raw);
-            } else {
-              (draft as Record<string, unknown>)[key] = raw;
-            }
-          });
-          break;
-        }
-
-        case "row-add": {
-          const row = parseRow(msg.row);
-          if (row) {
-            multiplayerCollection.insert(row);
-            knownIds.add(row.id);
-          }
-          break;
-        }
-
-        case "rows-add": {
-          for (const raw of msg.rows) {
-            const row = parseRow(raw);
-            if (row) {
-              multiplayerCollection.insert(row);
-              knownIds.add(row.id);
-            }
-          }
-          break;
-        }
-
-        case "rows-delete": {
-          multiplayerCollection.delete(msg.ids);
-          for (const id of msg.ids) knownIds.delete(id);
           break;
         }
 
@@ -209,6 +177,8 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       }
     });
 
+    socket.reconnect();
+
     let hiddenTimeout = 0;
     function onVisibilityChange() {
       window.clearTimeout(hiddenTimeout);
@@ -226,38 +196,17 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.clearTimeout(hiddenTimeout);
+      socket.removeEventListener("open", onOpen);
+      unsubscribe();
       socket.close();
       if (activeCellTimeoutRef.current !== null) {
         window.clearTimeout(activeCellTimeoutRef.current);
         activeCellTimeoutRef.current = null;
       }
-      socketRef.current = null;
       activeCellMessageRef.current = null;
       setUsers({});
-      if (knownIds.size > 0) multiplayerCollection.delete([...knownIds]);
     };
-  }, [roomId]);
-
-  const sendCellUpdate = React.useCallback(
-    (rowId: string, columnId: string, value: unknown) => {
-      socketRef.current?.send(
-        JSON.stringify({ type: "cell-update", rowId, columnId, value }),
-      );
-    },
-    [],
-  );
-
-  const sendRowAdd = React.useCallback((row: RowPayload) => {
-    socketRef.current?.send(JSON.stringify({ type: "row-add", row }));
-  }, []);
-
-  const sendRowsAdd = React.useCallback((rows: RowPayload[]) => {
-    socketRef.current?.send(JSON.stringify({ type: "rows-add", rows }));
-  }, []);
-
-  const sendRowsDelete = React.useCallback((ids: string[]) => {
-    socketRef.current?.send(JSON.stringify({ type: "rows-delete", ids }));
-  }, []);
+  }, [room]);
 
   const sendActiveCell = React.useCallback(
     (rowId: string | null, columnId: string | null) => {
@@ -271,20 +220,17 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
       activeCellTimeoutRef.current = window.setTimeout(() => {
         activeCellTimeoutRef.current = null;
         if (activeCellMessageRef.current) {
-          socketRef.current?.send(activeCellMessageRef.current);
+          room.socket.send(activeCellMessageRef.current);
         }
       }, ACTIVE_CELL_THROTTLE_MS);
     },
-    [],
+    [room],
   );
 
   return {
+    collection: room.collection,
     users,
     currentUserId,
-    sendCellUpdate,
-    sendRowAdd,
-    sendRowsAdd,
-    sendRowsDelete,
     sendActiveCell,
   };
 }

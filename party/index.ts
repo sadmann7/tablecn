@@ -6,9 +6,14 @@ import {
   type WSMessage,
 } from "partyserver";
 
+import { skaterSchema } from "@/app/data-grid-multiplayer/lib/validation";
+
 import type {
+  CellUpdate,
   ClientMessage,
+  RowChange,
   RowPayload,
+  SequencedChange,
   ServerMessage,
   UserPresence,
 } from "./types";
@@ -20,13 +25,17 @@ import {
   PRIVATE_ROOM_ID_PATTERN,
   PUBLIC_ROOM_ID,
 } from "./constants";
-import { seedRows } from "./seeds";
+import { createRoomDb, type RoomDb } from "./db";
+import { createSeedRows } from "./seeds";
 
 const RESET_DELAY = 10 * 60 * 1000;
 const PERSIST_DELAY = 500;
+const CHANGE_LOG_SIZE = 500;
 
 interface Env {
   Main: DurableObjectNamespace<SkaterRoom>;
+  HYPERDRIVE?: Hyperdrive;
+  DATABASE_URL?: string;
 }
 
 interface PresenceState {
@@ -53,27 +62,86 @@ export class SkaterRoom extends Server<Env> {
   static options = { hibernate: true };
 
   rows: RowPayload[] = [];
+  private epoch = crypto.randomUUID();
+  private seq = 0;
+  private changeLog: SequencedChange[] = [];
+  private db: RoomDb | null = null;
+  private isLoaded = false;
+  private dirtyIds = new Set<string>();
+  private deletedIds = new Set<string>();
   private persistTimeout: ReturnType<typeof setTimeout> | null = null;
+  private pendingSave: Promise<void> = Promise.resolve();
 
-  async onStart() {
-    const stored = await this.ctx.storage.get<RowPayload[]>("rows");
-    if (Array.isArray(stored) && stored.length > 0) {
-      this.rows = stored;
-    } else {
-      this.rows = structuredClone(seedRows);
-      await this.ctx.storage.put("rows", this.rows);
+  private getDb() {
+    const connectionString =
+      this.env.HYPERDRIVE?.connectionString ?? this.env.DATABASE_URL;
+    if (!connectionString) {
+      throw new Error("Set DATABASE_URL or a HYPERDRIVE binding");
     }
+    this.db ??= createRoomDb(connectionString);
+    return this.db;
   }
 
-  private persistRows() {
+  async onStart() {
+    await this.ensureLoaded();
+  }
+
+  private async ensureLoaded() {
+    if (this.isLoaded) return;
+
+    const rows = await this.getDb().loadRows(this.name);
+    if (rows.length > 0) {
+      this.rows = rows;
+    } else {
+      this.rows = createSeedRows();
+      await this.getDb().replaceRows(this.name, this.rows);
+    }
+    this.isLoaded = true;
+  }
+
+  private persistRows({
+    upserts = [],
+    deletes = [],
+  }: {
+    upserts?: string[];
+    deletes?: string[];
+  }) {
+    for (const id of upserts) this.dirtyIds.add(id);
+    for (const id of deletes) {
+      this.dirtyIds.delete(id);
+      this.deletedIds.add(id);
+    }
     if (this.persistTimeout) return;
 
     this.persistTimeout = setTimeout(() => {
       this.persistTimeout = null;
-      this.ctx.storage
-        .put("rows", this.rows)
-        .catch((err) => console.error("[party] Failed to persist rows:", err));
+      void this.flushRows();
     }, PERSIST_DELAY);
+  }
+
+  private flushRows() {
+    if (this.persistTimeout) {
+      clearTimeout(this.persistTimeout);
+      this.persistTimeout = null;
+    }
+
+    const dirtyIds = this.dirtyIds;
+    const deletes = [...this.deletedIds];
+    this.dirtyIds = new Set();
+    this.deletedIds = new Set();
+    const upserts = this.rows.filter((row) => dirtyIds.has(row.id as string));
+    if (upserts.length === 0 && deletes.length === 0) return this.pendingSave;
+
+    this.pendingSave = this.pendingSave.then(() =>
+      this.getDb()
+        .saveRows(this.name, { upserts, deletes })
+        .catch((error: unknown) => {
+          console.error("[party] Failed to save rows:", error);
+          for (const row of upserts) this.dirtyIds.add(row.id as string);
+          for (const id of deletes) this.deletedIds.add(id);
+        }),
+    );
+    return this.pendingSave;
   }
 
   private getUserId(connection: PresenceConnection) {
@@ -99,20 +167,22 @@ export class SkaterRoom extends Server<Env> {
   async onAlarm() {
     if (Object.keys(this.getUsers()).length > 0) return;
 
-    if (this.persistTimeout) {
-      clearTimeout(this.persistTimeout);
-      this.persistTimeout = null;
-    }
-    this.rows = structuredClone(seedRows);
+    await this.flushRows();
+    this.epoch = crypto.randomUUID();
+    this.changeLog = [];
     if (this.name === PUBLIC_ROOM_ID) {
-      await this.ctx.storage.delete("rows");
+      this.rows = createSeedRows();
+      await this.getDb().replaceRows(this.name, this.rows);
     } else {
-      await this.ctx.storage.deleteAll();
+      this.rows = [];
+      this.isLoaded = false;
+      await this.getDb().replaceRows(this.name, []);
     }
   }
 
-  onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
+  async onConnect(connection: PresenceConnection, ctx: ConnectionContext) {
     void this.ctx.storage.deleteAlarm();
+    await this.ensureLoaded();
 
     const url = new URL(ctx.request.url);
     const userId = url.searchParams.get("clientId") ?? connection.id;
@@ -129,18 +199,110 @@ export class SkaterRoom extends Server<Env> {
     }
     connection.setState({ userId, user });
 
-    const snapshot: ServerMessage = {
-      type: "snapshot",
-      users,
-      userId,
-      rows: this.rows,
-    };
-    connection.send(JSON.stringify(snapshot));
+    connection.send(
+      JSON.stringify(
+        this.getCatchUp(url, users, userId) ?? {
+          type: "snapshot",
+          users,
+          userId,
+          rows: this.rows,
+          epoch: this.epoch,
+          seq: this.seq,
+        },
+      ),
+    );
 
     if (isNewUser) {
       const joinMsg: ServerMessage = { type: "user-join", userId, user };
       this.broadcast(JSON.stringify(joinMsg), [connection.id]);
     }
+  }
+
+  private getCatchUp(
+    url: URL,
+    users: Record<string, UserPresence>,
+    userId: string,
+  ): ServerMessage | null {
+    const lastSeq = Number(url.searchParams.get("seq"));
+    if (url.searchParams.get("epoch") !== this.epoch) return null;
+    if (!Number.isInteger(lastSeq) || lastSeq > this.seq) return null;
+
+    const oldestSeq = this.changeLog[0]?.seq ?? this.seq + 1;
+    if (lastSeq < oldestSeq - 1) return null;
+
+    return {
+      type: "catch-up",
+      users,
+      userId,
+      changes: this.changeLog.filter((change) => change.seq > lastSeq),
+      epoch: this.epoch,
+      seq: this.seq,
+    };
+  }
+
+  private commitChange(
+    sender: PresenceConnection,
+    mutationId: string,
+    change: RowChange,
+  ) {
+    this.seq += 1;
+    const sequenced: SequencedChange = {
+      ...change,
+      seq: this.seq,
+      userId: this.getUserId(sender),
+    };
+    this.changeLog.push(sequenced);
+    if (this.changeLog.length > CHANGE_LOG_SIZE) this.changeLog.shift();
+
+    this.broadcast(JSON.stringify(sequenced), [sender.id]);
+    sender.send(
+      JSON.stringify({
+        type: "ack",
+        mutationId,
+        seq: this.seq,
+      } satisfies ServerMessage),
+    );
+  }
+
+  private reject(
+    sender: PresenceConnection,
+    mutationId: string,
+    reason: string,
+  ) {
+    sender.send(
+      JSON.stringify({
+        type: "reject",
+        mutationId,
+        reason,
+      } satisfies ServerMessage),
+    );
+  }
+
+  private getInvalidUpdate(updates: CellUpdate[]) {
+    for (const update of updates) {
+      const row = this.rows.find((r) => r.id === update.rowId);
+      if (!row) return "The row was deleted";
+      if (
+        update.columnId === "id" ||
+        !(update.columnId in skaterSchema.shape)
+      ) {
+        return `Unknown column ${update.columnId}`;
+      }
+      const merged = { ...row, [update.columnId]: update.value };
+      if (!skaterSchema.safeParse(merged).success) {
+        return `Invalid value for ${update.columnId}`;
+      }
+    }
+    return null;
+  }
+
+  private getInvalidRows(rows: RowPayload[]) {
+    for (const row of rows) {
+      if (this.rows.some((r) => r.id === row.id))
+        return "The row already exists";
+      if (!skaterSchema.safeParse(row).success) return "Invalid row";
+    }
+    return null;
   }
 
   onClose(connection: PresenceConnection) {
@@ -153,6 +315,7 @@ export class SkaterRoom extends Server<Env> {
     this.broadcast(JSON.stringify(leaveMsg), [connection.id]);
 
     if (Object.keys(users).length === 0) {
+      void this.flushRows();
       void this.ctx.storage.setAlarm(Date.now() + RESET_DELAY);
     }
   }
@@ -170,62 +333,49 @@ export class SkaterRoom extends Server<Env> {
     const userId = this.getUserId(sender);
 
     switch (msg.type) {
-      case "row-add": {
-        this.rows.push(msg.row);
-        this.persistRows();
-        this.broadcast(
-          JSON.stringify({
-            type: "row-add",
-            row: msg.row,
-            userId,
-          } satisfies ServerMessage),
-          [sender.id],
-        );
+      case "cells-update": {
+        const invalid = this.getInvalidUpdate(msg.updates);
+        if (invalid) {
+          this.reject(sender, msg.mutationId, invalid);
+          break;
+        }
+        for (const update of msg.updates) {
+          const row = this.rows.find((r) => r.id === update.rowId);
+          if (row) row[update.columnId] = update.value;
+        }
+        this.persistRows({
+          upserts: msg.updates.map((update) => update.rowId),
+        });
+        this.commitChange(sender, msg.mutationId, {
+          type: "cells-update",
+          updates: msg.updates,
+        });
         break;
       }
 
       case "rows-add": {
+        const invalid = this.getInvalidRows(msg.rows);
+        if (invalid) {
+          this.reject(sender, msg.mutationId, invalid);
+          break;
+        }
         this.rows.push(...msg.rows);
-        this.persistRows();
-        this.broadcast(
-          JSON.stringify({
-            type: "rows-add",
-            rows: msg.rows,
-            userId,
-          } satisfies ServerMessage),
-          [sender.id],
-        );
-        break;
-      }
-
-      case "cell-update": {
-        const row = this.rows.find((r) => r.id === msg.rowId);
-        if (row) row[msg.columnId] = msg.value;
-        this.persistRows();
-        this.broadcast(
-          JSON.stringify({
-            type: "cell-update",
-            rowId: msg.rowId,
-            columnId: msg.columnId,
-            value: msg.value,
-            userId,
-          } satisfies ServerMessage),
-          [sender.id],
-        );
+        this.persistRows({ upserts: msg.rows.map((row) => row.id as string) });
+        this.commitChange(sender, msg.mutationId, {
+          type: "rows-add",
+          rows: msg.rows,
+        });
         break;
       }
 
       case "rows-delete": {
-        this.rows = this.rows.filter((r) => !msg.ids.includes(r.id as string));
-        this.persistRows();
-        this.broadcast(
-          JSON.stringify({
-            type: "rows-delete",
-            ids: msg.ids,
-            userId,
-          } satisfies ServerMessage),
-          [sender.id],
-        );
+        const ids = new Set(msg.ids);
+        this.rows = this.rows.filter((r) => !ids.has(r.id as string));
+        this.persistRows({ deletes: msg.ids });
+        this.commitChange(sender, msg.mutationId, {
+          type: "rows-delete",
+          ids: msg.ids,
+        });
         break;
       }
 

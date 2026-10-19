@@ -13,6 +13,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/data-grid-live",
+        destination: "/data-grid-multiplayer",
+        permanent: true,
+      },
+      {
         source: "/docs/components/:name((?!radix|base)[^/]+)",
         destination: "/docs/components/base/:name",
         permanent: false,
@@ -35,7 +40,6 @@ const nextConfig: NextConfig = {
   typescript: { ignoreBuildErrors: true },
   experimental: {
     optimizePackageImports: [
-      "@tanstack/query-db-collection",
       "@tanstack/react-db",
       "@tanstack/react-query",
       "@tanstack/react-table",

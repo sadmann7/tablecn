@@ -1,5 +1,6 @@
 "use client";
 
+import { PUBLIC_ROOM_ID } from "@party/constants";
 import { Link2, LogOut, Plus, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
@@ -14,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
-import { createRoomId, getRoomPath, PUBLIC_ROOM_ID } from "../lib/rooms";
+import { createRoomId, getRoomPath } from "../lib/rooms";
 
 interface DataGridShareMenuProps {
   roomId: string;

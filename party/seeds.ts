@@ -2,7 +2,41 @@ import { faker } from "@faker-js/faker";
 
 import type { RowPayload } from "./types";
 
-import { STANCES, STATUSES, STYLES, TRICKS } from "./constants";
+import {
+  SEED_FILE_ID_PREFIX,
+  STANCES,
+  STATUSES,
+  STYLES,
+  TRICKS,
+} from "./constants";
+
+const SAMPLE_MEDIA = [
+  { name: "trick_clip.mp4", type: "video/mp4", sizeRange: [5000, 50000] },
+  { name: "skate_edit.mp4", type: "video/mp4", sizeRange: [10000, 100000] },
+  { name: "photo_1.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
+  { name: "photo_2.jpg", type: "image/jpeg", sizeRange: [500, 3000] },
+  {
+    name: "sponsor_contract.pdf",
+    type: "application/pdf",
+    sizeRange: [100, 500],
+  },
+] as const;
+
+function generateSeedMedia() {
+  if (!faker.datatype.boolean({ probability: 0.3 })) return null;
+
+  return faker.helpers
+    .arrayElements(SAMPLE_MEDIA, { min: 1, max: 2 })
+    .map((file) => ({
+      id: `${SEED_FILE_ID_PREFIX}${faker.string.alphanumeric(10)}`,
+      name: file.name,
+      size:
+        faker.number.int({ min: file.sizeRange[0], max: file.sizeRange[1] }) *
+        1024,
+      type: file.type,
+      url: `https://example.com/media/${file.name}`,
+    }));
+}
 
 function generateSeedRow(order: number): RowPayload {
   const firstName = faker.person.firstName();
@@ -26,13 +60,13 @@ function generateSeedRow(order: number): RowPayload {
       trickCount > 0
         ? faker.helpers.arrayElements([...TRICKS], trickCount)
         : null,
-    media: null,
+    media: generateSeedMedia(),
     order,
     createdAt: now,
     updatedAt: now,
   };
 }
 
-export const seedRows: RowPayload[] = Array.from({ length: 20 }, (_, i) =>
-  generateSeedRow(i + 1),
-);
+export function createSeedRows(): RowPayload[] {
+  return Array.from({ length: 20 }, (_, i) => generateSeedRow(i + 1));
+}

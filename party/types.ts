@@ -11,12 +11,24 @@ export interface UserPresence {
 
 export type RowPayload = Record<string, unknown>;
 
+export interface CellUpdate {
+  rowId: string;
+  columnId: string;
+  value: unknown;
+}
+
 export type ClientMessage =
-  | { type: "cell-update"; rowId: string; columnId: string; value: unknown }
-  | { type: "row-add"; row: RowPayload }
-  | { type: "rows-add"; rows: RowPayload[] }
-  | { type: "rows-delete"; ids: string[] }
+  | { type: "cells-update"; mutationId: string; updates: CellUpdate[] }
+  | { type: "rows-add"; mutationId: string; rows: RowPayload[] }
+  | { type: "rows-delete"; mutationId: string; ids: string[] }
   | { type: "active-cell"; rowId: string | null; columnId: string | null };
+
+export type RowChange =
+  | { type: "cells-update"; updates: CellUpdate[] }
+  | { type: "rows-add"; rows: RowPayload[] }
+  | { type: "rows-delete"; ids: string[] };
+
+export type SequencedChange = RowChange & { seq: number; userId: string };
 
 export type ServerMessage =
   | {
@@ -24,17 +36,20 @@ export type ServerMessage =
       users: Record<string, UserPresence>;
       userId: string;
       rows: RowPayload[];
+      epoch: string;
+      seq: number;
     }
   | {
-      type: "cell-update";
-      rowId: string;
-      columnId: string;
-      value: unknown;
+      type: "catch-up";
+      users: Record<string, UserPresence>;
       userId: string;
+      changes: SequencedChange[];
+      epoch: string;
+      seq: number;
     }
-  | { type: "row-add"; row: RowPayload; userId: string }
-  | { type: "rows-add"; rows: RowPayload[]; userId: string }
-  | { type: "rows-delete"; ids: string[]; userId: string }
+  | SequencedChange
+  | { type: "ack"; mutationId: string; seq: number }
+  | { type: "reject"; mutationId: string; reason: string }
   | {
       type: "active-cell";
       userId: string;

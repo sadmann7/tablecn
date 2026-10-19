@@ -1,9 +1,9 @@
 "use client";
 
+import { PUBLIC_ROOM_ID } from "@party/constants";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 
-import { PUBLIC_ROOM_ID } from "../lib/rooms";
 import { DataGridMultiplayerSkeleton } from "./data-grid-multiplayer-skeleton";
 
 const DataGridMultiplayerDemo = dynamic(
@@ -29,6 +29,7 @@ export function DataGridMultiplayerRoom({
 
   return (
     <DataGridMultiplayerDemo
+      key={roomId}
       roomId={roomId}
       isUploadConfigured={isUploadConfigured}
     />

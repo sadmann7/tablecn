@@ -29,7 +29,7 @@ import {
 
 type SkaterRows<TData extends RowData> = Array<Row<DataGridFeatures, TData>>;
 
-interface SkatersGridActionBarProps<TData extends RowData> {
+interface SkatersDataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
   statusOptions?: CellSelectOption[];
   styleOptions?: CellSelectOption[];
@@ -39,8 +39,8 @@ interface SkatersGridActionBarProps<TData extends RowData> {
   onDelete?: (rows: SkaterRows<TData>) => void;
 }
 
-export function SkatersGridActionBar<TData extends RowData>(
-  props: SkatersGridActionBarProps<TData>,
+export function SkatersDataGridActionBar<TData extends RowData>(
+  props: SkatersDataGridActionBarProps<TData>,
 ) {
   return (
     <Subscribe
@@ -50,12 +50,12 @@ export function SkatersGridActionBar<TData extends RowData>(
         cellSelection: state.cellSelection,
       })}
     >
-      {() => <SkatersGridActionBarImpl {...props} />}
+      {() => <SkatersDataGridActionBarImpl {...props} />}
     </Subscribe>
   );
 }
 
-function SkatersGridActionBarImpl<TData extends RowData>({
+function SkatersDataGridActionBarImpl<TData extends RowData>({
   table,
   statusOptions,
   styleOptions,
@@ -63,7 +63,7 @@ function SkatersGridActionBarImpl<TData extends RowData>({
   onStyleUpdate,
   onDuplicate,
   onDelete,
-}: SkatersGridActionBarProps<TData>) {
+}: SkatersDataGridActionBarProps<TData>) {
   const hasRowSelection = table.getHasRowSelection();
   const selectedCount = hasRowSelection
     ? table.getSelectedRowIds().length

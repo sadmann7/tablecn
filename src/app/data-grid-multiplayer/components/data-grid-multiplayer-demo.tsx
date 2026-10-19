@@ -3,18 +3,18 @@
 import type { UserPresence } from "@party/types";
 import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
-import { TRICKS } from "@party/constants";
+import { SEED_FILE_ID_PREFIX, TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
 import { Copy, Languages, Trash2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { SkaterSchema } from "@/app/data-grid-live/lib/validation";
+import type { SkaterSchema } from "@/app/data-grid-multiplayer/lib/validation";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellPresence, Direction } from "@/lib/data-grid-types";
 
-import { SkatersGridActionBar } from "@/app/data-grid-live/components/skaters-grid-action-bar";
-import { getInsertOrder } from "@/app/data-grid-live/lib/order";
+import { SkatersDataGridActionBar } from "@/app/data-grid-multiplayer/components/skaters-data-grid-action-bar";
+import { getInsertOrder } from "@/app/data-grid-multiplayer/lib/order";
 import {
   getSkaterStatusIcon,
   getStanceIcon,
@@ -49,10 +49,6 @@ import {
 } from "@/registry/bases/radix/ui/dropdown-menu";
 import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
-import {
-  multiplayerCollection,
-  serializeSkater,
-} from "../lib/multiplayer-collection";
 import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 import { DataGridShareMenu } from "./data-grid-share-menu";
 
@@ -105,9 +101,12 @@ export function DataGridMultiplayerDemo({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [dir, setDir] = React.useState<Direction>("ltr");
 
+  const { collection, users, currentUserId, sendActiveCell } =
+    useMultiplayerRoom(roomId);
+
   const { data } = useLiveQuery({
     query: (q) => {
-      let query = q.from({ skater: multiplayerCollection });
+      let query = q.from({ skater: collection });
       for (const sort of sorting) {
         const field = sort.id as keyof SkaterSchema;
 
@@ -122,34 +121,19 @@ export function DataGridMultiplayerDemo({
     },
   });
 
-  const {
-    users,
-    currentUserId,
-    sendCellUpdate,
-    sendRowAdd,
-    sendRowsAdd,
-    sendRowsDelete,
-    sendActiveCell,
-  } = useMultiplayerRoom(roomId);
-
   const undoRedoOnDataChange = React.useCallback(
     (newData: SkaterSchema[]) => {
       const currentIds = new Set(data.map((s) => s.id));
       const newIds = new Set(newData.map((s) => s.id));
 
-      const deletedIds: string[] = [];
-      for (const skater of data) {
-        if (!newIds.has(skater.id)) {
-          multiplayerCollection.delete(skater.id);
-          deletedIds.push(skater.id);
-        }
-      }
-      if (deletedIds.length > 0) sendRowsDelete(deletedIds);
+      const deletedIds = data
+        .filter((skater) => !newIds.has(skater.id))
+        .map((skater) => skater.id);
+      if (deletedIds.length > 0) collection.delete(deletedIds);
 
       const insertedRows: SkaterSchema[] = [];
       for (const skater of newData) {
         if (!currentIds.has(skater.id)) {
-          multiplayerCollection.insert(skater);
           insertedRows.push(skater);
         } else {
           const existing = data.find((s) => s.id === skater.id);
@@ -170,23 +154,17 @@ export function DataGridMultiplayerDemo({
           });
 
           if (changedKeys.length > 0) {
-            multiplayerCollection.update(skater.id, (draft) => {
-              Object.assign(draft, skater);
+            collection.update(skater.id, (draft) => {
+              for (const key of changedKeys) {
+                (draft as Record<string, unknown>)[key] = skater[key];
+              }
             });
-            for (const key of changedKeys) {
-              const nv =
-                skater[key] instanceof Date
-                  ? (skater[key] as Date).toISOString()
-                  : skater[key];
-              sendCellUpdate(skater.id, key, nv);
-            }
           }
         }
       }
-      if (insertedRows.length > 0)
-        sendRowsAdd(insertedRows.map(serializeSkater));
+      if (insertedRows.length > 0) collection.insert(insertedRows);
     },
-    [data, sendRowsDelete, sendRowsAdd, sendCellUpdate],
+    [collection, data],
   );
 
   const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
@@ -219,11 +197,10 @@ export function DataGridMultiplayerDemo({
         };
       });
 
-      multiplayerCollection.insert(copies);
-      sendRowsAdd(copies.map(serializeSkater));
+      collection.insert(copies);
       trackRowsAdd(copies);
     },
-    [data, sendRowsAdd, trackRowsAdd],
+    [collection, data, trackRowsAdd],
   );
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
@@ -365,7 +342,7 @@ export function DataGridMultiplayerDemo({
         const existing = data.find((s) => s.id === skater.id);
 
         if (!existing) {
-          multiplayerCollection.insert(skater);
+          collection.insert(skater);
           continue;
         }
 
@@ -387,18 +364,16 @@ export function DataGridMultiplayerDemo({
               newValue: skater[key],
             });
 
-            multiplayerCollection.update(skater.id, (draft) => {
+            collection.update(skater.id, (draft) => {
               (draft as Record<string, unknown>)[key] = skater[key];
             });
-
-            sendCellUpdate(existing.id, key, nv);
           }
         }
       }
 
       if (cellUpdates.length > 0) trackCellsUpdate(cellUpdates);
     },
-    [data, trackCellsUpdate, sendCellUpdate],
+    [collection, data, trackCellsUpdate],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
@@ -426,13 +401,12 @@ export function DataGridMultiplayerDemo({
           updatedAt: new Date(),
         };
 
-        multiplayerCollection.insert(newSkater);
-        sendRowAdd(serializeSkater(newSkater));
+        collection.insert(newSkater);
         trackRowsAdd([newSkater]);
 
         return { rowId: newSkater.id, columnId: "name" };
       },
-      [data, trackRowsAdd, sendRowAdd],
+      [collection, data, trackRowsAdd],
     );
 
   const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
@@ -459,13 +433,12 @@ export function DataGridMultiplayerDemo({
             updatedAt: new Date(),
           };
           newRows.push(newSkater);
-          multiplayerCollection.insert(newSkater);
         }
 
-        sendRowsAdd(newRows.map(serializeSkater));
+        collection.insert(newRows);
         trackRowsAdd(newRows);
       },
-      [data, trackRowsAdd, sendRowsAdd],
+      [collection, data, trackRowsAdd],
     );
 
   const onRowsDelete: NonNullable<
@@ -474,10 +447,9 @@ export function DataGridMultiplayerDemo({
     (rowsToDelete) => {
       const ids = rowsToDelete.map((s) => s.id);
       trackRowsDelete(rowsToDelete);
-      multiplayerCollection.delete(ids);
-      sendRowsDelete(ids);
+      collection.delete(ids);
     },
-    [trackRowsDelete, sendRowsDelete],
+    [collection, trackRowsDelete],
   );
 
   const onFilesUpload: NonNullable<
@@ -522,13 +494,15 @@ export function DataGridMultiplayerDemo({
 
       // Duplicated rows share their files, so keep any file another row still uses
       const sharedIds = new Set(
-        multiplayerCollection.toArray.flatMap((skater) =>
+        collection.toArray.flatMap((skater) =>
           skater.id === rowId
             ? []
             : (skater.media?.map((file) => file.id) ?? []),
         ),
       );
-      const fileKeys = fileIds.filter((id) => !sharedIds.has(id));
+      const fileKeys = fileIds.filter(
+        (id) => !id.startsWith(SEED_FILE_ID_PREFIX) && !sharedIds.has(id),
+      );
       if (fileKeys.length === 0) return;
 
       const response = await fetch("/api/uploadthing/delete", {
@@ -605,30 +579,34 @@ export function DataGridMultiplayerDemo({
 
   const onStatusUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
-      const ids = selectedRows.map((row) => row.original.id);
-      multiplayerCollection.update(ids, (drafts) => {
-        for (const draft of drafts) draft.status = value as never;
-      });
-      for (const id of ids) sendCellUpdate(id, "status", value);
+      table.updateCells(
+        selectedRows.map((row) => ({
+          rowId: row.id,
+          columnId: "status",
+          value,
+        })),
+      );
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [sendCellUpdate],
+    [table],
   );
 
   const onStyleUpdate = React.useCallback(
     (value: string, selectedRows: SkaterRows) => {
-      const ids = selectedRows.map((row) => row.original.id);
-      multiplayerCollection.update(ids, (drafts) => {
-        for (const draft of drafts) draft.style = value as never;
-      });
-      for (const id of ids) sendCellUpdate(id, "style", value);
+      table.updateCells(
+        selectedRows.map((row) => ({
+          rowId: row.id,
+          columnId: "style",
+          value,
+        })),
+      );
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} updated`,
       );
     },
-    [sendCellUpdate],
+    [table],
   );
 
   const onDuplicate = React.useCallback(
@@ -737,7 +715,7 @@ export function DataGridMultiplayerDemo({
           </div>
         </div>
         <DataGrid {...dataGridProps} table={table} height={height} />
-        <SkatersGridActionBar
+        <SkatersDataGridActionBar
           table={table}
           statusOptions={statusOptions}
           styleOptions={styleOptions}
