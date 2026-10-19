@@ -20,10 +20,18 @@ import {
 import { generateId } from "@/lib/id";
 
 const ACK_TIMEOUT_MS = 30_000;
+const CONNECT_TIMEOUT_MS = 10_000;
 
 type SyncParams = Parameters<SyncConfig<SkaterSchema, string>["sync"]>[0];
 type SkaterChange = ChangeMessageOrDeleteKeyMessage<SkaterSchema, string>;
 type MutationMessage = Extract<ClientMessage, { mutationId: string }>;
+
+interface PendingMutation {
+  message: MutationMessage;
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timeout: ReturnType<typeof setTimeout>;
+}
 
 export interface RoomConnection {
   send: (message: ClientMessage) => void;
@@ -47,10 +55,7 @@ function serializeSkater(row: SkaterSchema): RowPayload {
 
 export function createSkatersCollection(connection: RoomConnection) {
   let syncParams: SyncParams | null = null;
-  const pendingAcks = new Map<
-    string,
-    { resolve: () => void; reject: (error: Error) => void }
-  >();
+  const pendingMutations = new Map<string, PendingMutation>();
 
   function writeSynced(changes: SkaterChange[], immediate = false) {
     if (!syncParams || changes.length === 0) return;
@@ -99,26 +104,43 @@ export function createSkatersCollection(connection: RoomConnection) {
     }
   }
 
+  function startAckTimeout(mutationId: string) {
+    return setTimeout(() => {
+      settleMutation(
+        mutationId,
+        new Error("The room didn't confirm your change"),
+      );
+    }, ACK_TIMEOUT_MS);
+  }
+
+  function settleMutation(mutationId: string, error?: Error) {
+    const pending = pendingMutations.get(mutationId);
+    if (!pending) return;
+    pendingMutations.delete(mutationId);
+    clearTimeout(pending.timeout);
+    if (error) pending.reject(error);
+    else pending.resolve();
+  }
+
+  function resendPendingMutations() {
+    for (const [mutationId, pending] of pendingMutations) {
+      clearTimeout(pending.timeout);
+      pending.timeout = startAckTimeout(mutationId);
+      connection.send(pending.message);
+    }
+  }
+
   async function sendMutation(change: RowChange) {
-    const mutationId = generateId();
+    const message = { ...change, mutationId: generateId() } as MutationMessage;
     try {
       await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          pendingAcks.delete(mutationId);
-          reject(new Error("The room didn't confirm your change"));
-        }, ACK_TIMEOUT_MS);
-
-        pendingAcks.set(mutationId, {
-          resolve: () => {
-            clearTimeout(timeout);
-            resolve();
-          },
-          reject: (error) => {
-            clearTimeout(timeout);
-            reject(error);
-          },
+        pendingMutations.set(message.mutationId, {
+          message,
+          resolve,
+          reject,
+          timeout: startAckTimeout(message.mutationId),
         });
-        connection.send({ ...change, mutationId } as MutationMessage);
+        connection.send(message);
       });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
@@ -130,14 +152,12 @@ export function createSkatersCollection(connection: RoomConnection) {
   function onServerMessage(message: ServerMessage) {
     switch (message.type) {
       case "ack": {
-        pendingAcks.get(message.mutationId)?.resolve();
-        pendingAcks.delete(message.mutationId);
+        settleMutation(message.mutationId);
         return;
       }
 
       case "reject": {
-        pendingAcks.get(message.mutationId)?.reject(new Error(message.reason));
-        pendingAcks.delete(message.mutationId);
+        settleMutation(message.mutationId, new Error(message.reason));
         return;
       }
     }
@@ -154,6 +174,7 @@ export function createSkatersCollection(connection: RoomConnection) {
         }
         void syncParams.commit();
         syncParams.markReady();
+        resendPendingMutations();
         break;
       }
 
@@ -173,7 +194,13 @@ export function createSkatersCollection(connection: RoomConnection) {
       sync: (params) => {
         syncParams = params;
         const unsubscribe = connection.subscribe(onServerMessage);
+        const connectTimeout = setTimeout(() => {
+          if (params.collection.status === "loading") {
+            params.markError(new Error("Couldn't reach the room"));
+          }
+        }, CONNECT_TIMEOUT_MS);
         return () => {
+          clearTimeout(connectTimeout);
           unsubscribe();
           syncParams = null;
         };

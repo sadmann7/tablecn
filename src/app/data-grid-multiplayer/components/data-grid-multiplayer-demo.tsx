@@ -5,7 +5,7 @@ import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
 
 import { SEED_FILE_ID_PREFIX, TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
-import { Copy, Languages, Trash2 } from "lucide-react";
+import { Copy, Languages, Trash2, WifiOff } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -42,6 +42,11 @@ import {
   useDataGrid,
   type UseDataGridProps,
 } from "@/registry/bases/radix/hooks/use-data-grid";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/registry/bases/radix/ui/alert";
 import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
 import {
   DropdownMenuItem,
@@ -104,7 +109,7 @@ export function DataGridMultiplayerDemo({
   const { collection, users, currentUserId, sendActiveCell } =
     useMultiplayerRoom(roomId);
 
-  const { data } = useLiveQuery({
+  const { data, isError } = useLiveQuery({
     query: (q) => {
       let query = q.from({ skater: collection });
       for (const sort of sorting) {
@@ -714,6 +719,13 @@ export function DataGridMultiplayerDemo({
             <DataGridViewMenu table={table} align="end" />
           </div>
         </div>
+        {isError && (
+          <Alert variant="destructive">
+            <WifiOff />
+            <AlertTitle>Couldn&apos;t reach the room</AlertTitle>
+            <AlertDescription>Retrying in the background.</AlertDescription>
+          </Alert>
+        )}
         <DataGrid {...dataGridProps} table={table} height={height} />
         <SkatersDataGridActionBar
           table={table}

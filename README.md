@@ -97,6 +97,8 @@ pnpm dev:multiplayer
 
 This starts the Next.js dev server and the [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) worker (via `wrangler dev`) concurrently. Each room keeps its rows in its Durable Object's storage and seeds them the first time it's opened, so no database is needed.
 
+Rooms are temporary: each one resets to fresh seed rows 10 minutes after its last user leaves. When two people edit the same cell at once, the last write wins.
+
 ## Deployment
 
 Follow the deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify), and [Docker](https://create.t3.gg/en/deployment/docker).
