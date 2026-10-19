@@ -40,6 +40,7 @@ import type {
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
+const UNSAFE_PROTOCOL_REGEX = /^(javascript|data|vbscript|file):/i;
 
 const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
 const VALID_BOOLEANS = new Set([
@@ -975,7 +976,7 @@ export function getUrlHref(urlString: string): string {
 
   const trimmed = urlString.trim();
 
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
+  if (UNSAFE_PROTOCOL_REGEX.test(trimmed)) {
     return "";
   }
 
