@@ -607,7 +607,6 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
   }
   if (firstDeletedIndex === -1) return;
 
-  // Every row before the first deleted one stays, so the next row is the first survivor after it, or the one before it
   let nextFocusedRow = rows[firstDeletedIndex - 1];
   for (let index = firstDeletedIndex + 1; index < rows.length; index++) {
     const row = rows[index];
@@ -617,7 +616,6 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
     }
   }
   const focusedColumn = table.getFocusedCell()?.column;
-  // Selecting rows focuses the select column, but the next row should land on a data cell
   const focusedColumnId =
     focusedColumn && !getIsDataColumn(focusedColumn)
       ? table.getVisibleLeafColumns().find(getIsDataColumn)?.id
@@ -632,7 +630,6 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
   table.resetRowSelection(true);
   if (nextFocusedRow && focusedColumnId) {
     table.setFocusedCell(nextFocusedRow.id, focusedColumnId);
-    // Deleting from outside the grid, like an action bar, would otherwise leave keyboard focus on the page
     table.options.onCellFocus?.({
       rowId: nextFocusedRow.id,
       columnId: focusedColumnId,
@@ -951,7 +948,6 @@ function quoteTsvField(field: string) {
     : field;
 }
 
-// One rectangular range covers every cell in its box, so it serializes straight from the rows without per-cell lookups
 function serializeCellRange(
   table: DataGridInstance,
   bound: ReturnType<DataGridInstance["getCellSelectionBounds"]>[number],
@@ -1083,7 +1079,6 @@ async function waitForRowCount(table: DataGridInstance, rowCount: number) {
     table.getRowModel().rows.length < rowCount;
     attempt++
   ) {
-    // New rows only reach the table after the consumer's data update re-renders it
     await new Promise((resolve) =>
       setTimeout(resolve, ROWS_ADD_POLL_INTERVAL_MS),
     );
@@ -1369,9 +1364,6 @@ function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
   return dataColumnIds;
 }
 
-// Lowercased cell text is cached per row data, so each keystroke only scans strings
-// instead of reading and stringifying every cell again, and edited rows refresh on their own.
-// Repeated values share one lowercased string to keep the cache small.
 function getRowSearchTexts(
   row: SearchRow,
   readValues: Array<ColumnValueReader>,
@@ -1409,7 +1401,6 @@ function getSearchMatches(
   const readValues = columns.filter(getIsDataColumn).map(getColumnValueReader);
   const lowerByValue = new Map<unknown, string>();
 
-  // A query that extends the previous one can only match rows that already matched
   const previous = cache.result;
   const isNarrowing =
     previous !== null &&
@@ -1484,7 +1475,6 @@ function getSearchMatches(
   return matches;
 }
 
-// Runs in idle time, so the first keystroke after opening search doesn't build the whole cache
 function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
   if (typeof requestIdleCallback === "undefined") return;
 
@@ -1594,7 +1584,6 @@ const dataGridSearchFeature: TableFeature = {
       },
       table_getSearchMatchesByRowId: {
         fn: (matches: Array<CellPosition>) => {
-          // The scan already grouped its matches by row
           const { result } = searchTextCache;
           if (result?.matches === matches) return result.matchesByRowId;
 
@@ -1726,7 +1715,6 @@ function selectAllDataCells(table: DataGridInstance) {
   };
   const focusedCell = getFocusedCellPosition(table.atoms.cellSelection.get());
 
-  // The focused cell stays the active range so selecting everything doesn't move focus
   table.setCellSelection(
     focusedCell
       ? [
@@ -1894,8 +1882,6 @@ const dataGridSelectionFeature: TableFeature = {
 
 type CoreRow = Row<TableFeatures, RowData>;
 
-// Same rows as `createCoreRowModel`, but rows whose data object is unchanged at the same index
-// are reused, so a cell edit rebuilds one row instead of every row and its caches
 function createDataGridCoreRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -1928,7 +1914,6 @@ function getCoreRowModel(
 ): RowModel<TableFeatures, RowData> {
   const { data, getSubRows } = table.options;
 
-  // Cell edits keep the row count and ids, so only the changed rows are swapped in
   if (previous && !getSubRows && previous.rows.length === data.length) {
     const rows = previous.rows.slice();
     const changedRows: Array<CoreRow> = [];
@@ -1952,7 +1937,6 @@ function getCoreRowModel(
     }
 
     if (isSameShape) {
-      // The previous model is replaced, so its id lookup is updated in place instead of copied
       const rowsById = previous.rowsById;
       for (const row of changedRows) rowsById[row.id] = row;
       return { rows, flatRows: rows.slice(), rowsById };
@@ -1976,7 +1960,6 @@ function getCoreRowModel(
       const originalRow = originalRows[i];
       if (originalRow === undefined) continue;
       const previousRow = previousRows[i];
-      // Sub rows are rebuilt from scratch, so only flat rows are reused
       const row =
         !getSubRows && previousRow?.original === originalRow
           ? previousRow
@@ -2032,11 +2015,6 @@ function getIsDigit(code: number) {
   return code >= 48 && code <= 57;
 }
 
-// Encodes a value so plain string comparison matches TanStack's natural `compareAlphanumeric`:
-// text chunks end in "\u0000", and number chunks become "\u00ff" + digit count + digits without
-// leading zeros, which sorts them after text and by numeric value. Returns `null` for values the
-// encoding can't represent, such as text with "\u0000" or characters past Latin-1, which also
-// keeps keys one byte per character so comparisons stay fast.
 function getAlphanumericSortKey(value: unknown) {
   if (typeof value !== "string") return null;
   let key = "";
@@ -2056,7 +2034,6 @@ function getAlphanumericSortKey(value: unknown) {
       let start = index;
       while (start < end && value.charCodeAt(start) === 48) start++;
       const digitCount = end - start;
-      // Longer numbers lose precision in TanStack's comparison, so they keep the comparator
       if (digitCount > 15) return null;
       key += `\u00ff${String.fromCharCode(48 + digitCount)}${value.slice(start, end)}`;
     } else {
@@ -2083,8 +2060,6 @@ function getValueSort(sortFn: SortedRowFn) {
     : null;
 }
 
-// Same ordering as `createSortedRowModel`, but each row's sort value is read and resolved once
-// per sort instead of on every comparison, which allocates lowercased strings millions of times
 function createDataGridSortedRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -2130,8 +2105,6 @@ function getIsFlippedSorting(
   );
 }
 
-// Flipping every direction reverses the order of tied groups, while rows inside a group keep their
-// data order, so the previous order is regrouped in one pass instead of sorted again
 function getFlippedOrder(
   order: Array<number>,
   getIsTie: (a: number, b: number) => boolean,
@@ -2181,7 +2154,6 @@ function getSortedRowModel(
 
   const sortedFlatRows: Array<SortedRow> = [];
 
-  // Sub rows sort per parent and first or last empty values stay put when flipped, so neither is cached
   const isCacheable =
     preSortedRowModel.flatRows.length === preSortedRowModel.rows.length &&
     resolvedSorting.every(
@@ -2192,8 +2164,6 @@ function getSortedRowModel(
   cache.current = null;
 
   function getRowsComparator(rows: Array<SortedRow>) {
-    // Values are only read when a comparator or `sortUndefined` needs them,
-    // custom row comparators read rows themselves
     const rawValues = resolvedSorting.map((sort) =>
       sort.compareValues || sort.sortUndefined
         ? rows.map(getColumnValueReader(table.getColumn(sort.id)))
@@ -2206,7 +2176,6 @@ function getSortedRowModel(
       return resolve ? values.map((value) => resolve(value)) : values;
     });
 
-    // Natural sorts compare precomputed string keys instead of re-scanning both strings per comparison
     const sortKeys = resolvedSorting.map((sort, sortIndex) => {
       const values = sortValues[sortIndex];
       return values && alphanumericCompares.has(sort.compareValues)
