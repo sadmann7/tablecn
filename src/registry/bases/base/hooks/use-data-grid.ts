@@ -1564,6 +1564,32 @@ function useDataGrid<TData extends RowData>({
     };
   }, [table, revealCell, focusCellElement]);
 
+  const { pasteDialog: pasteDialogAtom, cellSelection: cellSelectionAtom } =
+    table.atoms;
+
+  React.useEffect(() => {
+    let prevPasteDialogOpen = pasteDialogAtom.get().open;
+    let rafId = 0;
+
+    const subscription = pasteDialogAtom.subscribe(() => {
+      const isPasteDialogOpen = pasteDialogAtom.get().open;
+      const wasPasteDialogOpen = prevPasteDialogOpen;
+      prevPasteDialogOpen = isPasteDialogOpen;
+      if (!wasPasteDialogOpen || isPasteDialogOpen) return;
+
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const focusedCell = getFocusedCellPosition(cellSelectionAtom.get());
+        if (focusedCell) focusCellElement(focusedCell);
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      subscription.unsubscribe();
+    };
+  }, [pasteDialogAtom, cellSelectionAtom, focusCellElement]);
+
   React.useLayoutEffect(() => {
     const pending = pendingFocusRef.current;
     if (!pending) return;

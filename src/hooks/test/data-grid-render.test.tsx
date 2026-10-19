@@ -719,6 +719,29 @@ describe("DataGrid rendering", () => {
     expect(table.getIsCellSelected("1", "name")).toBe(true);
   });
 
+  it("returns focus to the focused cell when the paste dialog closes", async () => {
+    const { container, table } = renderGrid();
+
+    act(() => {
+      table.setFocusedCell("2", "trick");
+    });
+    act(() => {
+      document.body.focus();
+      table.setPasteDialog({ open: true, rowsNeeded: 1, clipboardText: "x" });
+    });
+    act(() => {
+      screen.getByRole("button", { name: "Cancel" }).click();
+    });
+    await act(
+      () =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+    );
+
+    expect(document.activeElement).toBe(
+      getCellWrapper(container, "2", "trick"),
+    );
+  });
+
   it("only mounts the columns inside the horizontal viewport", () => {
     const wideColumns = Array.from(
       { length: 30 },
