@@ -655,8 +655,8 @@ function DataGridFilterInput<TData extends RowData>({
             placeholder="Start"
             value={(localValue as number | undefined) ?? ""}
             onChange={(event) => {
-              const val = event.target.value;
-              const newValue = val === "" ? undefined : Number(val);
+              const value = event.target.value;
+              const newValue = value === "" ? undefined : Number(value);
               setLocalValue(newValue);
               debouncedOnChange(newValue);
             }}
@@ -669,8 +669,8 @@ function DataGridFilterInput<TData extends RowData>({
             placeholder="End"
             value={(localEndValue as number | undefined) ?? ""}
             onChange={(event) => {
-              const val = event.target.value;
-              const newValue = val === "" ? undefined : Number(val);
+              const value = event.target.value;
+              const newValue = value === "" ? undefined : Number(value);
               setLocalEndValue(newValue);
               debouncedOnEndValueChange(newValue);
             }}
@@ -688,8 +688,8 @@ function DataGridFilterInput<TData extends RowData>({
         placeholder={placeholder}
         value={(localValue as number | undefined) ?? ""}
         onChange={(event) => {
-          const val = event.target.value;
-          const newValue = val === "" ? undefined : Number(val);
+          const value = event.target.value;
+          const newValue = value === "" ? undefined : Number(value);
           setLocalValue(newValue);
           debouncedOnChange(newValue);
         }}
@@ -941,8 +941,8 @@ function DataGridFilterInput<TData extends RowData>({
           className="w-full flex-1"
           value={(localValue as string | undefined) ?? ""}
           onChange={(event) => {
-            const val = event.target.value;
-            const newValue = val === "" ? undefined : val;
+            const value = event.target.value;
+            const newValue = value === "" ? undefined : value;
             setLocalValue(newValue);
             debouncedOnChange(newValue);
           }}
@@ -954,8 +954,8 @@ function DataGridFilterInput<TData extends RowData>({
           className="w-full flex-1"
           value={(localEndValue as string | undefined) ?? ""}
           onChange={(event) => {
-            const val = event.target.value;
-            const newValue = val === "" ? undefined : val;
+            const value = event.target.value;
+            const newValue = value === "" ? undefined : value;
             setLocalEndValue(newValue);
             debouncedOnEndValueChange(newValue);
           }}
@@ -971,8 +971,8 @@ function DataGridFilterInput<TData extends RowData>({
       placeholder={placeholder}
       value={(localValue as string | undefined) ?? ""}
       onChange={(event) => {
-        const val = event.target.value;
-        const newValue = val === "" ? undefined : val;
+        const value = event.target.value;
+        const newValue = value === "" ? undefined : value;
         setLocalValue(newValue);
         debouncedOnChange(newValue);
       }}

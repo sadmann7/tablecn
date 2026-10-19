@@ -1025,7 +1025,7 @@ export function MultiSelectCell<TData extends RowData>(
   );
 
   const displayLabels = selectedValues
-    .map((val) => optionByValue.get(val)?.label ?? val)
+    .map((value) => optionByValue.get(value)?.label ?? value)
     .filter(Boolean);
 
   const selectedValuesSet = React.useMemo(
