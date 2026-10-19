@@ -1567,7 +1567,6 @@ function useDataGrid<TData extends RowData>({
   const { pasteDialog: pasteDialogAtom, cellSelection: cellSelectionAtom } =
     table.atoms;
 
-  // Keyed on the atoms, since `table` changes when the dialog opens or closes
   React.useEffect(() => {
     let prevPasteDialogOpen = pasteDialogAtom.get().open;
     let rafId = 0;
@@ -1578,7 +1577,6 @@ function useDataGrid<TData extends RowData>({
       prevPasteDialogOpen = isPasteDialogOpen;
       if (!wasPasteDialogOpen || isPasteDialogOpen) return;
 
-      // Waits a frame for the dialog to unmount, or its focus trap pulls focus back
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const focusedCell = getFocusedCellPosition(cellSelectionAtom.get());

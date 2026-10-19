@@ -725,7 +725,6 @@ describe("DataGrid rendering", () => {
     act(() => {
       table.setFocusedCell("2", "trick");
     });
-    // Rows added by the paste remount the cell the dialog would restore focus to
     act(() => {
       document.body.focus();
       table.setPasteDialog({ open: true, rowsNeeded: 1, clipboardText: "x" });
