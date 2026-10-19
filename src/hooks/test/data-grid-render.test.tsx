@@ -116,6 +116,53 @@ describe("DataGrid rendering", () => {
     vi.restoreAllMocks();
   });
 
+  it("re-renders cells whose value comes from an accessor or another field", () => {
+    const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+      {
+        id: "label",
+        accessorFn: (row) => `${row.name} (${row.trick})`,
+        header: "Label",
+      },
+      {
+        id: "summary",
+        accessorKey: "name",
+        header: "Summary",
+        cell: ({ row }) => `Trick: ${row.original.trick}`,
+      },
+    ];
+    function Harness({ data }: { data: TestData[] }) {
+      const dataGrid = useDataGrid({
+        data,
+        columns,
+        getRowId: (row) => row.id,
+      });
+      return <DataGrid {...dataGrid} />;
+    }
+
+    const { container, rerender } = render(<Harness data={testData} />);
+    expect(getCellWrapper(container, "1", "label")?.textContent).toBe(
+      "Tony Hawk (900)",
+    );
+    expect(getCellWrapper(container, "1", "summary")?.textContent).toBe(
+      "Trick: 900",
+    );
+
+    rerender(
+      <Harness
+        data={testData.map((row) =>
+          row.id === "1" ? { ...row, trick: "Ollie" } : row,
+        )}
+      />,
+    );
+
+    expect(getCellWrapper(container, "1", "label")?.textContent).toBe(
+      "Tony Hawk (Ollie)",
+    );
+    expect(getCellWrapper(container, "1", "summary")?.textContent).toBe(
+      "Trick: Ollie",
+    );
+  });
+
   it("syncs a controlled textarea after inserting text at the caret", () => {
     function Editor() {
       const [value, setValue] = React.useState("900");
