@@ -50,6 +50,7 @@ import type {
   CellPresence,
   ClipboardNotice,
   CellUpdate,
+  ColumnValueReader,
   ContextMenuState,
   DataGridColumnMeta,
   FileCellData,
@@ -70,7 +71,7 @@ import {
   getRowHeightValue,
   getRowIndexById,
   getTabTargetCell,
-  getValueReader,
+  getColumnValueReader,
   parsePastedCellValue,
   parseTsv,
   serializeCellValue,
@@ -971,7 +972,7 @@ function serializeCellRange(
     .rows.slice(bound.minRowIndex, bound.maxRowIndex + 1);
   if (columns.length === 0 || rows.length === 0) return null;
 
-  const readValues = columns.map(getValueReader);
+  const readValues = columns.map(getColumnValueReader);
   const variants = columns.map(
     (column) => column.columnDef.meta?.cell?.variant,
   );
@@ -1373,7 +1374,7 @@ function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
 // Repeated values share one lowercased string to keep the cache small.
 function getRowSearchTexts(
   row: SearchRow,
-  readValues: Array<ReturnType<typeof getValueReader>>,
+  readValues: Array<ColumnValueReader>,
   cache: SearchTextCache,
   lowerByValue: Map<unknown, string>,
 ) {
@@ -1405,7 +1406,7 @@ function getSearchMatches(
   if (!lowerQuery) return [];
 
   const dataColumnIds = getSearchColumnIds(columns, cache);
-  const readValues = columns.filter(getIsDataColumn).map(getValueReader);
+  const readValues = columns.filter(getIsDataColumn).map(getColumnValueReader);
   const lowerByValue = new Map<unknown, string>();
 
   // A query that extends the previous one can only match rows that already matched
@@ -1490,7 +1491,7 @@ function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
   const rows = table.getRowModel().rows;
   const columns = table.getVisibleLeafColumns();
   getSearchColumnIds(columns, cache);
-  const readValues = columns.filter(getIsDataColumn).map(getValueReader);
+  const readValues = columns.filter(getIsDataColumn).map(getColumnValueReader);
   const columnsKey = cache.columnsKey;
   const lowerByValue = new Map<unknown, string>();
   let index = 0;
@@ -2195,7 +2196,7 @@ function getSortedRowModel(
     // custom row comparators read rows themselves
     const rawValues = resolvedSorting.map((sort) =>
       sort.compareValues || sort.sortUndefined
-        ? rows.map(getValueReader(table.getColumn(sort.id)))
+        ? rows.map(getColumnValueReader(table.getColumn(sort.id)))
         : null,
     );
     const sortValues = resolvedSorting.map((sort, sortIndex) => {

@@ -6,6 +6,10 @@ export type Direction = "ltr" | "rtl";
 
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
+export interface ColumnValueReader {
+  (row: { original: unknown; index: number }): unknown;
+}
+
 export interface CellSelectOption {
   label: string;
   value: string;

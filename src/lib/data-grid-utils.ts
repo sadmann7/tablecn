@@ -31,6 +31,7 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellOpts,
   CellPosition,
+  ColumnValueReader,
   ColumnWindow,
   FileCellData,
   RowHeightValue,
@@ -72,16 +73,15 @@ const LINE_COUNTS: Record<RowHeightValue, number> = {
 
 // Calling the accessor directly skips getValue's column lookup and cache write on every call,
 // which costs several times more on the first pass over a large column
-export function getValueReader(
+export function getColumnValueReader(
   column:
     | { accessorFn?: (original: never, index: number) => unknown }
     | undefined,
-) {
+): ColumnValueReader {
   const accessorFn = column?.accessorFn as
     | ((original: unknown, index: number) => unknown)
     | undefined;
-  return (row: { original: unknown; index: number }) =>
-    accessorFn?.(row.original, row.index);
+  return (row) => accessorFn?.(row.original, row.index);
 }
 
 export function stringifyUnknown(value: unknown): string {

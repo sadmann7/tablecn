@@ -3,6 +3,7 @@ import type { FilterFn, Row, RowData } from "@tanstack/react-table";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   BooleanFilterOperator,
+  ColumnValueReader,
   DateFilterOperator,
   FilterOperator,
   FilterValue,
@@ -11,7 +12,7 @@ import type {
   TextFilterOperator,
 } from "@/lib/data-grid-types";
 
-import { getValueReader, stringifyUnknown } from "@/lib/data-grid-utils";
+import { getColumnValueReader, stringifyUnknown } from "@/lib/data-grid-utils";
 
 export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
   label: string;
@@ -130,7 +131,7 @@ interface PreparedFilter {
   endDate: Date | null;
   valueDateText: string | null;
   anyOf: Set<unknown> | null;
-  readValue: ReturnType<typeof getValueReader> | null;
+  readValue: ColumnValueReader | null;
 }
 
 // Filter values stay the same object until the filter changes, so their derived values are
@@ -186,7 +187,7 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
     const { operator, value, endValue } = filter;
 
     // Each filter object belongs to one column, so its reader is resolved once
-    filter.readValue ??= getValueReader(row.table.getColumn(columnId));
+    filter.readValue ??= getColumnValueReader(row.table.getColumn(columnId));
     const cellValue = filter.readValue(row);
 
     if (operator === "isEmpty") return getIsEmptyValue(cellValue);
