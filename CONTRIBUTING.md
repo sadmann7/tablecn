@@ -34,8 +34,7 @@ src/
 └── styles/                       # Global styles
 
 party/                            # PartyServer room server (runs separately via pnpm dev:multiplayer)
-├── index.ts                      # Rooms: connections, presence, writes, acks, and catch-up
-├── db.ts                         # Loads and saves a room's rows in PostgreSQL
+├── index.ts                      # Rooms: connections, presence, writes, and acks
 ├── types.ts                      # Shared message types (client ↔ server)
 ├── constants.ts                  # Shared constants (colors, adjectives, animals…)
 └── seeds.ts                      # Seed rows for new rooms
@@ -46,7 +45,7 @@ party/                            # PartyServer room server (runs separately via
 | | Data Table | Data Grid |
 | --- | --- | --- |
 | **Hook** | `use-data-table.ts` | `use-data-grid.ts` |
-| **Data source** | PostgreSQL (server actions) | In-memory (demo), PostgreSQL through the room server (multiplayer) |
+| **Data source** | PostgreSQL (server actions) | In-memory (demo), Durable Object storage (multiplayer) |
 | **Editing** | Read-only rows | Inline cell editing |
 | **Virtualization** | Pagination | Infinite scrolling |
 | **Real-time sync** | No | Yes (TanStack DB collection) |
@@ -90,11 +89,9 @@ For the standard data table and data grid:
 pnpm dev
 ```
 
-For the multiplayer data-grid, which saves rooms to PostgreSQL, start the database and push the schema first:
+For the multiplayer data-grid:
 
 ```shell
-pnpm db:start
-pnpm db:setup
 pnpm dev:multiplayer
 ```
 

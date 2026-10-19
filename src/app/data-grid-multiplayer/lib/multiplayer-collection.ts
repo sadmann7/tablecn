@@ -157,14 +157,6 @@ export function createSkatersCollection(connection: RoomConnection) {
         break;
       }
 
-      case "catch-up": {
-        for (const change of message.changes) {
-          writeSynced(getRowChanges(change));
-        }
-        syncParams.markReady();
-        break;
-      }
-
       case "cells-update":
       case "rows-add":
       case "rows-delete": {

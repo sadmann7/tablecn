@@ -18,7 +18,7 @@ See the [documentation](https://diceui.com/docs/components/base/data-table) to g
 - **Database:** [PostgreSQL](https://www.postgresql.org)
 - **ORM:** [Drizzle ORM](https://orm.drizzle.team)
 - **Validation:** [Zod](https://zod.dev)
-- **Multiplayer:** [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) on Cloudflare Durable Objects, with [Hyperdrive](https://developers.cloudflare.com/hyperdrive)
+- **Multiplayer:** [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) on Cloudflare Durable Objects
 
 ## Features
 
@@ -89,25 +89,19 @@ See the [documentation](https://diceui.com/docs/components/base/data-table) to g
 
 ### Multiplayer
 
-Multiplayer rooms save to the same PostgreSQL database as the data table, so start it and push the schema first (`pnpm db:start` and `pnpm db:setup`), or point `DATABASE_URL` at a hosted database. Then run:
+To run the multiplayer demo locally:
 
 ```bash
 pnpm dev:multiplayer
 ```
 
-This starts the Next.js dev server and the [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) worker (via `wrangler dev`) concurrently. Locally, the worker connects to `DATABASE_URL` through Hyperdrive's local mode, and each room seeds its own rows the first time it's opened.
+This starts the Next.js dev server and the [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) worker (via `wrangler dev`) concurrently. Each room keeps its rows in its Durable Object's storage and seeds them the first time it's opened, so no database is needed.
 
 ## Deployment
 
 Follow the deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify), and [Docker](https://create.t3.gg/en/deployment/docker).
 
-The multiplayer demo runs on [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) as a Cloudflare Worker with Durable Objects, deployed separately to your Cloudflare account. The worker reaches your database through [Hyperdrive](https://developers.cloudflare.com/hyperdrive), so create a Hyperdrive config for it first:
-
-```bash
-pnpm exec wrangler hyperdrive create tablecn --connection-string="<your DATABASE_URL>"
-```
-
-Replace the `hyperdrive` id in `wrangler.jsonc` with the id it prints, then deploy:
+The multiplayer demo runs on [PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver) as a Cloudflare Worker with Durable Objects, deployed separately to your Cloudflare account:
 
 ```bash
 pnpm deploy:multiplayer
