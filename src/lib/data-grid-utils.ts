@@ -33,12 +33,14 @@ import type {
   CellPosition,
   ColumnValueReader,
   ColumnWindow,
+  DataGridColumnMeta,
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
+
 const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
 const VALID_BOOLEANS = new Set([
   "true",
@@ -51,10 +53,7 @@ const VALID_BOOLEANS = new Set([
   "unchecked",
 ]);
 
-// Unit separator, so row ids and column ids may contain any printable character
 const CELL_KEY_SEPARATOR = "\u001f";
-
-// Overlay scrollbars take no layout space, so presses this close to the edge are treated as scrollbar presses
 const SCROLLBAR_HITBOX_SIZE = 16;
 
 const ROW_HEIGHTS: Record<RowHeightValue, number> = {
@@ -63,7 +62,6 @@ const ROW_HEIGHTS: Record<RowHeightValue, number> = {
   tall: 76,
   "extra-tall": 96,
 };
-
 const LINE_COUNTS: Record<RowHeightValue, number> = {
   short: 1,
   medium: 2,
@@ -71,8 +69,6 @@ const LINE_COUNTS: Record<RowHeightValue, number> = {
   "extra-tall": 4,
 };
 
-// Calling the accessor directly skips getValue's column lookup and cache write on every call,
-// which costs several times more on the first pass over a large column
 export function getColumnValueReader(
   column:
     | { accessorFn?: (original: never, index: number) => unknown }
@@ -464,16 +460,14 @@ export function getHasCellRangeSelection(ranges: CellSelectionState) {
   );
 }
 
-// The grid's default `cell`, so a column that sets its own, like a chart, renders that instead of a built-in editor
 export function renderDefaultCell(context: { renderValue: () => unknown }) {
   return getTextCellValue(context.renderValue());
 }
 
-export function getHasCustomCell(column: { columnDef: object }) {
-  const { cell, meta } = column.columnDef as {
-    cell?: unknown;
-    meta?: { cell?: { variant?: string } };
-  };
+export function getHasCustomCell(column: {
+  columnDef: { cell?: unknown; meta?: DataGridColumnMeta };
+}) {
+  const { cell, meta } = column.columnDef;
   return (
     !meta?.cell?.variant && cell !== undefined && cell !== renderDefaultCell
   );
@@ -583,7 +577,6 @@ type WindowedColumnEntry<T> =
   | { type: "column"; item: T; colIndex: number }
   | { type: "spacer"; key: string; size: number };
 
-// `items` must be in render order: start pinned, unpinned, end pinned
 export function getWindowedColumns<T>(
   items: T[],
   columnWindow: ColumnWindow | null,
@@ -609,7 +602,6 @@ export function getWindowedColumns<T>(
     if (windowItem.start > offset) {
       entries.push({
         type: "spacer",
-        // Keyed by position, not column index, so the leading spacer survives window shifts
         key: spacerCount++ === 0 ? "spacer-start" : `spacer-${spacerCount}`,
         size: windowItem.start - offset,
       });
@@ -745,7 +737,6 @@ export function scrollCellIntoView<TData extends RowData>(params: {
   const isActuallyRtl = isRtl || hasNegativeScroll;
 
   const currentTable = tableRef.current;
-  // Pinned cells are always in view, and the pinned-area math below would treat them as hidden behind it
   const columnId = targetCell.dataset.columnId;
   if (columnId && currentTable?.getColumn(columnId)?.getIsPinned()) return;
 
@@ -984,7 +975,6 @@ export function getUrlHref(urlString: string): string {
 
   const trimmed = urlString.trim();
 
-  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
   if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
     return "";
   }
@@ -1003,7 +993,6 @@ export function parseLocalDate(dateStr: unknown): Date | null {
   const [year, month, day] = dateStr.split("-").map(Number);
   if (!year || !month || !day) return null;
   const date = new Date(year, month - 1, day);
-  // Verify date wasn't auto-corrected (e.g. Feb 30 -> Mar 1)
   if (
     date.getFullYear() !== year ||
     date.getMonth() !== month - 1 ||

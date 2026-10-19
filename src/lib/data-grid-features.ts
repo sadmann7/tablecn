@@ -433,7 +433,8 @@ const dataGridRowHeightFeature: TableFeature = {
 
 function getCanEditColumn(column: {
   table: object;
-  columnDef: ColumnDef_DataGridCellEditing;
+  columnDef: ColumnDef_DataGridCellEditing &
+    Parameters<typeof getHasCustomCell>[0]["columnDef"];
 }) {
   const { options } = asDataGrid(column.table);
   return (
