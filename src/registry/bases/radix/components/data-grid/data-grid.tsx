@@ -2,6 +2,7 @@
 
 import {
   type Column,
+  flexRender,
   type HeaderGroup,
   type RowData,
   type TableState,
@@ -22,7 +23,6 @@ import type { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
 import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
-  flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
   getWindowedColumns,
@@ -489,6 +489,7 @@ function DataGridViewport<TData extends RowData>({
                 <DataGridRow
                   key={virtualItem.index % items.length}
                   row={row}
+                  leafColumns={leafColumns}
                   virtualItem={virtualItem}
                   columnWindow={columnWindow}
                   isScrolling={isScrolling || deferredIsScrolling}
@@ -660,8 +661,9 @@ function DataGridHeaderImpl<TData extends RowData>({
                         width: `calc(var(--header-${header.id}-size) * 1px)`,
                       }}
                     >
-                      {header.isPlaceholder ? null : typeof header.column
-                          .columnDef.header === "function" ? (
+                      {header.isPlaceholder ? null : header.column.columnDef
+                          .header !== undefined &&
+                        typeof header.column.columnDef.header !== "string" ? (
                         <div
                           className={cn(
                             "size-full px-3 py-1.5 group-focus-within/header:ring-1 group-focus-within/header:ring-ring group-focus-within/header:ring-inset",

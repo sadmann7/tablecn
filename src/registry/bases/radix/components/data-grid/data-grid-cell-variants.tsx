@@ -1,7 +1,6 @@
 "use client";
 
-import type { RowData } from "@tanstack/react-table";
-
+import { flexRender, type RowData } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
 import { toast } from "sonner";
@@ -11,7 +10,6 @@ import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
-  flexRender,
   formatDateForDisplay,
   formatDateToString,
   formatFileSize,

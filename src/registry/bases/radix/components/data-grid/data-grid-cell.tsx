@@ -34,7 +34,9 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.width !== next.width) return false;
   if (prev.cell.row.id !== next.cell.row.id) return false;
   if (prev.cell.column.id !== next.cell.column.id) return false;
-
+  if (prev.cell.column.columnDef.cell !== next.cell.column.columnDef.cell) {
+    return false;
+  }
   if (getHasCustomCell(next.cell.column)) {
     return prev.cell.row.original === next.cell.row.original;
   }

@@ -8,13 +8,11 @@ import type { CellOpts, RowHeightValue } from "@/lib/data-grid-types";
 
 import { getBadgeOverflow } from "@/hooks/use-badge-overflow";
 import {
-  flexRender,
   formatDateForDisplay,
   getBooleanCellValue,
   getDateCellValue,
   getFileIcon,
   getFilesCellValue,
-  getHasCustomCell,
   getLineCount,
   getNumberCellValue,
   getOptionCellValue,
@@ -100,12 +98,6 @@ function getPreviewContent<TData extends RowData>(
   width: number,
   rowHeight: RowHeightValue,
 ): { className?: string; content: React.ReactNode } {
-  if (getHasCustomCell(cell.column)) {
-    return {
-      content: flexRender(cell.column.columnDef.cell, cell.getContext()),
-    };
-  }
-
   const value = cell.getValue();
   const lineClampClassName = LINE_CLAMP_CLASS_NAMES[rowHeight];
 

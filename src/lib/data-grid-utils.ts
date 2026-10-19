@@ -450,16 +450,6 @@ export function getHasCellRangeSelection(ranges: CellSelectionState) {
   );
 }
 
-export function flexRender<TProps extends object>(
-  Comp: ((props: TProps) => React.ReactNode) | string | undefined,
-  props: TProps,
-): React.ReactNode {
-  if (typeof Comp === "string") {
-    return Comp;
-  }
-  return Comp?.(props);
-}
-
 export function renderDefaultCell(context: { renderValue: () => unknown }) {
   return getTextCellValue(context.renderValue());
 }

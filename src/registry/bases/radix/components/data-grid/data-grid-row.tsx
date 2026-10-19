@@ -5,6 +5,8 @@ import type { VirtualItem } from "@tanstack/react-virtual";
 import {
   type Cell,
   type CellSelectionBounds,
+  type Column,
+  flexRender,
   type Row,
   type RowData,
   Subscribe,
@@ -24,10 +26,10 @@ import type {
 } from "@/lib/data-grid-types";
 
 import {
-  flexRender,
   getColumnBorderVisibility,
   getColumnPinningStyle,
   getFocusedCellPosition,
+  getHasCustomCell,
   getIsDataColumn,
   getRowCellSelectionKey,
   getRowHeightValue,
@@ -60,6 +62,7 @@ interface DataGridRowProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
+  leafColumns: Array<Column<DataGridFeatures, TData>>;
   virtualItem: VirtualItem;
   columnWindow: ColumnWindow | null;
   isScrolling: boolean;
@@ -70,6 +73,7 @@ export const DataGridRow = React.memo(
   (prev, next) =>
     prev.row.id === next.row.id &&
     prev.row.original === next.row.original &&
+    prev.leafColumns === next.leafColumns &&
     prev.virtualItem.index === next.virtualItem.index &&
     prev.virtualItem.start === next.virtualItem.start &&
     prev.columnWindow === next.columnWindow &&
@@ -78,6 +82,7 @@ export const DataGridRow = React.memo(
 
 function DataGridRowImpl<TData extends RowData>({
   row,
+  leafColumns: _leafColumns,
   virtualItem,
   ...props
 }: DataGridRowProps<TData>) {
@@ -102,7 +107,7 @@ function DataGridRowImpl<TData extends RowData>({
 
 interface DataGridRowContentProps<TData extends RowData> extends Omit<
   DataGridRowProps<TData>,
-  "row"
+  "row" | "leafColumns"
 > {
   rowState: RowState<TData>;
 }
@@ -263,7 +268,12 @@ function DataGridDataCell<TData extends RowData>({
   }
   if (isPreview && !isScrolling) setIsPreview(false);
 
-  if (isPreview && !props.isFocused && !props.isEditing) {
+  if (
+    isPreview &&
+    !props.isFocused &&
+    !props.isEditing &&
+    !getHasCustomCell(props.cell.column)
+  ) {
     return (
       <DataGridCellPreview
         cell={props.cell}
