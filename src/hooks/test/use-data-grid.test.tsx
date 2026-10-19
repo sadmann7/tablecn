@@ -3,8 +3,8 @@ import type * as React from "react";
 import {
   type ColumnDef,
   type ColumnFiltersState,
-  type SortingState,
   sortFn_alphanumeric,
+  type SortingState,
   type Table,
 } from "@tanstack/react-table";
 import { act, render, renderHook } from "@testing-library/react";

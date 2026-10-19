@@ -10,8 +10,8 @@ import {
 } from "@tanstack/react-table";
 import {
   defaultRangeExtractor,
-  useVirtualizer,
   type Range,
+  useVirtualizer,
   type Virtualizer,
 } from "@tanstack/react-virtual";
 import { cn } from "cn";

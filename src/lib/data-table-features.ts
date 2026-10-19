@@ -1,8 +1,8 @@
 import {
   assignPrototypeAPIs,
   assignTableAPIs,
-  type ColumnFilter,
   columnFacetingFeature,
+  type ColumnFilter,
   columnFilteringFeature,
   columnOrderingFeature,
   columnPinningFeature,
@@ -15,15 +15,15 @@ import {
   functionalUpdate,
   makeStateUpdater,
   metaHelper,
-  setStateSlice,
-  sortFn_alphanumeric,
-  sortFn_datetime,
-  sortFn_text,
   type OnChangeFn,
   type RowData,
   rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
+  setStateSlice,
+  sortFn_alphanumeric,
+  sortFn_datetime,
+  sortFn_text,
   type Table,
   type TableFeature,
   type TableFeatures,
@@ -44,8 +44,8 @@ import {
 } from "@/lib/data-table-filters";
 import {
   getIsPlainFilter,
-  normalizeColumnFilter,
   getPlainFilterValue,
+  normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
 interface TableState_DataTableFiltering {

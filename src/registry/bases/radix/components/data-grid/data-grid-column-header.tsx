@@ -22,8 +22,8 @@ import {
   getColumnFitSize,
   getColumnLabel,
   getColumnVariant,
-  getIsFileCellData,
   getIsEventOnScrollbar,
+  getIsFileCellData,
 } from "@/lib/data-grid-utils";
 import {
   DropdownMenu,

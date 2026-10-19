@@ -15,7 +15,7 @@
  * Set CPU_THROTTLE (for example 4) to emulate a slower CPU.
  */
 
-import { chromium, type CDPSession, type Page } from "@playwright/test";
+import { type CDPSession, chromium, type Page } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 

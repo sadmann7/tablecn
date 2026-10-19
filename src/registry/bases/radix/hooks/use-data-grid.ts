@@ -4,14 +4,14 @@ import {
   type CellSelectionState,
   type ColumnDef,
   type ColumnVisibilityState,
+  functionalUpdate,
+  makeStateUpdater,
   type RowData,
   type RowSelectionState,
   type Table,
   type TableOptions,
   type TableState,
   type Updater,
-  functionalUpdate,
-  makeStateUpdater,
   useTable,
 } from "@tanstack/react-table";
 import * as React from "react";

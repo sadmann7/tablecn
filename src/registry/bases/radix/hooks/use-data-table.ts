@@ -19,9 +19,9 @@ import * as React from "react";
 
 import type {
   ColumnFilterItem,
+  DataTableQueryKeys,
   FilterVariant,
   JoinOperator,
-  DataTableQueryKeys,
 } from "@/lib/data-table-types";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";

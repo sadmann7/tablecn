@@ -33,8 +33,8 @@ import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-
 import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
 import { DataGridViewMenu } from "@/registry/bases/radix/components/data-grid/data-grid-view-menu";
 import {
-  type UseDataGridProps,
   useDataGrid,
+  type UseDataGridProps,
 } from "@/registry/bases/radix/hooks/use-data-grid";
 import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
 import {

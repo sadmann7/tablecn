@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { tasksColumnConfigs, tasksDefaultSorting } from "@/app/lib/validations";
 import {
+  getColumnFilterParser,
   getColumnFilters,
   getColumnFiltersKey,
-  getColumnFilterParser,
   getColumnOptions,
   getDataTableQuery,
   getDataTableSearchParams,
