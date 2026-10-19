@@ -56,8 +56,8 @@ const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
 
 function ContextMenuImpl<TData extends RowData>({
   table,
-  contextMenu,
   dataGridRef,
+  contextMenu,
 }: ContextMenuProps<TData>) {
   const readOnly = table.getIsReadOnly();
   const canDeleteRows = !readOnly && !!table.options.onRowsDelete;

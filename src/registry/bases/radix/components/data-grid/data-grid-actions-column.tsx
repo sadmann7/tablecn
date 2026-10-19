@@ -26,8 +26,8 @@ interface DataGridActionsCellProps<
 }
 
 function DataGridActionsCell<TData extends RowData>({
-  row,
   table,
+  row,
   actions,
 }: DataGridActionsCellProps<TData>) {
   return (
@@ -78,7 +78,7 @@ export function getDataGridActionsColumn<TData extends RowData>({
     id: "actions",
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row, table }) => (
-      <DataGridActionsCell row={row} table={table} actions={actions} />
+      <DataGridActionsCell table={table} row={row} actions={actions} />
     ),
     size,
     minSize,

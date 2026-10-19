@@ -68,12 +68,12 @@ export function DataGridColumnHeader<TData extends RowData, TValue>(
 }
 
 function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
-  header,
   table,
+  header,
   isAnyColumnResizing,
-  className,
   onPointerDown,
   onMouseDown,
+  className,
   ...props
 }: DataGridColumnHeaderProps<TData, TValue> & {
   isAnyColumnResizing: boolean;
@@ -317,7 +317,7 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
         </DropdownMenuContent>
       </DropdownMenu>
       {header.column.getCanResize() && (
-        <DataGridColumnResizer header={header} table={table} label={label} />
+        <DataGridColumnResizer table={table} header={header} label={label} />
       )}
     </>
   );
@@ -350,8 +350,8 @@ interface DataGridColumnResizerProps<
 }
 
 function DataGridColumnResizerImpl<TData extends RowData, TValue>({
-  header,
   table,
+  header,
   label,
 }: DataGridColumnResizerProps<TData, TValue>) {
   const defaultColumnDef = table.getDefaultColumnDef();

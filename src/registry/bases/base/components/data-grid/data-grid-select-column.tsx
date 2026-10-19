@@ -19,16 +19,16 @@ type HitboxSize = "default" | "sm" | "lg";
 
 interface DataGridSelectHitboxProps {
   htmlFor: string;
-  children: React.ReactNode;
   size?: HitboxSize;
   debug?: boolean;
+  children: React.ReactNode;
 }
 
 function DataGridSelectHitbox({
   htmlFor,
-  children,
   size,
   debug,
+  children,
 }: DataGridSelectHitboxProps) {
   return (
     <div
@@ -61,10 +61,10 @@ interface DataGridSelectCheckboxProps extends Omit<
 }
 
 function DataGridSelectCheckbox({
+  checked,
   rowNumber,
   hitboxSize,
   debug,
-  checked,
   className,
   ...props
 }: DataGridSelectCheckboxProps) {
@@ -151,9 +151,9 @@ function DataGridSelectHeader<TData extends RowData>({
             table.getIsSomePageRowsSelected() &&
             !table.getIsAllPageRowsSelected()
           }
-          onCheckedChange={onCheckedChange}
           hitboxSize={hitboxSize}
           debug={debug}
+          onCheckedChange={onCheckedChange}
         />
       )}
     </Subscribe>
@@ -179,9 +179,9 @@ interface DataGridSelectCellProps<TData extends RowData> extends Pick<
 }
 
 function DataGridSelectCell<TData extends RowData>({
-  row,
-  column,
   table,
+  column,
+  row,
   hitboxSize,
   enableRowMarkers,
   readOnly,
@@ -226,11 +226,11 @@ function DataGridSelectCell<TData extends RowData>({
     <DataGridSelectCheckbox
       aria-label={rowNumber ? `Select row ${rowNumber}` : "Select row"}
       checked={row.getIsSelected()}
-      onCheckedChange={onCheckedChange}
-      onClick={onClick}
       rowNumber={rowNumber}
       hitboxSize={hitboxSize}
       debug={debug}
+      onCheckedChange={onCheckedChange}
+      onClick={onClick}
     />
   );
 }
@@ -271,12 +271,12 @@ export function getDataGridSelectColumn<TData extends RowData>({
     ),
     cell: ({ row, column, table }) => (
       <DataGridSelectCell
-        row={row}
-        column={column}
         table={table}
+        column={column}
+        row={row}
+        hitboxSize={hitboxSize}
         enableRowMarkers={enableRowMarkers}
         readOnly={readOnly}
-        hitboxSize={hitboxSize}
         debug={debug}
       />
     ),

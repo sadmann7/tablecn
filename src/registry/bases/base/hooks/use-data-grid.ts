@@ -99,11 +99,11 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
 > {
+  overscan?: number;
+  autoFocus?: boolean | Partial<CellPosition>;
   onRowAdd?: (
     eventDetails: RowAddEventDetails,
   ) => RowAddResult | Promise<RowAddResult | null> | null;
-  overscan?: number;
-  autoFocus?: boolean | Partial<CellPosition>;
 }
 
 function useDataGrid<TData extends RowData>({
@@ -1900,29 +1900,29 @@ function useDataGrid<TData extends RowData>({
 
   return React.useMemo(
     () => ({
+      table,
       dataGridRef,
       headerRef,
-      rowMapRef,
       footerRef,
-      dir,
-      table,
-      dataGridBodyProps,
+      rowMapRef,
       rowVirtualizerRef,
-      rowVirtualizerOptions,
       columnVirtualizerRef,
+      rowVirtualizerOptions,
+      dataGridBodyProps,
       columnSizeVars,
-      onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
+      dir,
       adjustLayout,
+      onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
     }),
     [
-      propsRef,
-      dir,
       table,
-      dataGridBodyProps,
+      propsRef,
       rowVirtualizerOptions,
+      dataGridBodyProps,
       columnSizeVars,
-      onRowAdd,
+      dir,
       adjustLayout,
+      onRowAdd,
     ],
   );
 }

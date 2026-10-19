@@ -738,9 +738,9 @@ export function CheckboxCell<TData extends RowData>(
       {...props}
       ref={containerRef}
       isEditing={false}
-      className="flex size-full justify-center"
       onClick={onWrapperClick}
       onKeyDown={onWrapperKeyDown}
+      className="flex size-full justify-center"
     >
       <Checkbox
         aria-label={getColumnLabel(cell.column)}
@@ -1753,14 +1753,14 @@ export function FileCell<TData extends RowData>(
     <DataGridCellWrapper<TData>
       {...props}
       ref={containerRef}
-      className={cn({
-        "ring-1 ring-primary/80 ring-inset": isDraggingOver,
-      })}
       onDragEnter={onCellDragEnter}
       onDragLeave={onCellDragLeave}
       onDragOver={onCellDragOver}
       onDrop={onCellDrop}
       onKeyDown={onWrapperKeyDown}
+      className={cn({
+        "ring-1 ring-primary/80 ring-inset": isDraggingOver,
+      })}
     >
       {isEditing ? (
         <Popover open={isEditing} onOpenChange={onOpenChange}>

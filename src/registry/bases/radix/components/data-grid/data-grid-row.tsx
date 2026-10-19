@@ -51,7 +51,7 @@ export const DataGridRowContext =
 function useDataGridRowContext() {
   const context = React.use(DataGridRowContext);
   if (!context) {
-    throw new Error("DataGridRow must be rendered within DataGrid");
+    throw new Error("`DataGridRow` must be rendered within `DataGrid`");
   }
   return context;
 }
@@ -108,13 +108,13 @@ interface DataGridRowContentProps<TData extends RowData> extends Omit<
 }
 
 function DataGridRowContent<TData extends RowData>({
+  ref,
   virtualItem,
   columnWindow,
   rowState,
   isScrolling,
   className,
   style,
-  ref,
   ...props
 }: DataGridRowContentProps<TData>) {
   const { stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef } =

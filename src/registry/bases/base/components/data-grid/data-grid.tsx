@@ -18,7 +18,7 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { ColumnWindow, Direction } from "@/lib/data-grid-types";
+import type { ColumnWindow } from "@/lib/data-grid-types";
 import type { useDataGrid } from "@/registry/bases/base/hooks/use-data-grid";
 
 import {
@@ -43,31 +43,30 @@ const SCROLL_JUMP_EXIT_ROWS_PER_COMMIT = 2;
 
 interface DataGridProps<TData extends RowData>
   extends
-    Omit<ReturnType<typeof useDataGrid<TData>>, "dir">,
-    React.ComponentProps<"div"> {
-  dir?: Direction;
+    ReturnType<typeof useDataGrid<TData>>,
+    Omit<React.ComponentProps<"div">, "dir"> {
   height?: number;
   stretchColumns?: boolean;
   actionBar?: React.ReactNode;
 }
 
 export function DataGrid<TData extends RowData>({
+  table,
   dataGridRef,
   headerRef,
-  rowMapRef,
   footerRef,
-  dir = "ltr",
-  table,
-  dataGridBodyProps,
+  rowMapRef,
   rowVirtualizerRef,
-  rowVirtualizerOptions,
   columnVirtualizerRef,
+  rowVirtualizerOptions,
+  dataGridBodyProps,
   columnSizeVars,
-  onRowAdd,
+  dir,
+  adjustLayout,
   height = 600,
   stretchColumns = false,
-  adjustLayout,
   actionBar,
+  onRowAdd,
   className,
   ...props
 }: DataGridProps<TData>) {
@@ -88,15 +87,15 @@ export function DataGrid<TData extends RowData>({
         footerRef={footerRef}
         rowMapRef={rowMapRef}
         rowVirtualizerRef={rowVirtualizerRef}
-        rowVirtualizerOptions={rowVirtualizerOptions}
         columnVirtualizerRef={columnVirtualizerRef}
+        rowVirtualizerOptions={rowVirtualizerOptions}
         dataGridBodyProps={dataGridBodyProps}
         columnSizeVars={columnSizeVars}
-        onRowAdd={onRowAdd}
-        adjustLayout={adjustLayout}
         dir={dir}
+        adjustLayout={adjustLayout}
         height={height}
         stretchColumns={stretchColumns}
+        onRowAdd={onRowAdd}
       />
       {actionBar ? (
         <DataGridActionBar table={table} actionBar={actionBar} />
@@ -135,17 +134,15 @@ type DataGridViewportProps<TData extends RowData> = Pick<
   | "footerRef"
   | "rowMapRef"
   | "rowVirtualizerRef"
-  | "rowVirtualizerOptions"
   | "columnVirtualizerRef"
+  | "rowVirtualizerOptions"
   | "dataGridBodyProps"
   | "columnSizeVars"
-  | "onRowAdd"
+  | "dir"
   | "adjustLayout"
-> & {
-  dir: Direction;
-  height: number;
-  stretchColumns: boolean;
-};
+  | "onRowAdd"
+> &
+  Required<Pick<DataGridProps<TData>, "height" | "stretchColumns">>;
 
 function DataGridViewport<TData extends RowData>({
   table,
@@ -154,15 +151,15 @@ function DataGridViewport<TData extends RowData>({
   footerRef,
   rowMapRef,
   rowVirtualizerRef,
-  rowVirtualizerOptions,
   columnVirtualizerRef,
+  rowVirtualizerOptions,
   dataGridBodyProps,
   columnSizeVars,
-  onRowAdd: onRowAddProp,
-  adjustLayout,
   dir,
+  adjustLayout,
   height,
   stretchColumns,
+  onRowAdd: onRowAddProp,
 }: DataGridViewportProps<TData>) {
   const rows = table.getRowModel().rows;
   const rowSize = table.getRowSize();
@@ -467,9 +464,9 @@ function DataGridViewport<TData extends RowData>({
     >
       <DataGridHeader
         table={table}
+        headerRef={headerRef}
         headerGroups={headerGroups}
         columnWindow={columnWindow}
-        headerRef={headerRef}
         stretchColumns={stretchColumns}
       />
       <div
@@ -571,12 +568,12 @@ const EMPTY_VIEWPORT_INSETS: ViewportInsets = {
   headerHeight: 0,
 };
 
-interface DataGridHeaderProps<TData extends RowData> {
-  table: DataGridProps<TData>["table"];
+interface DataGridHeaderProps<TData extends RowData>
+  extends
+    Pick<DataGridProps<TData>, "table" | "headerRef">,
+    Required<Pick<DataGridProps<TData>, "stretchColumns">> {
   headerGroups: Array<HeaderGroup<DataGridFeatures, TData>>;
   columnWindow: ColumnWindow | null;
-  headerRef: DataGridProps<TData>["headerRef"];
-  stretchColumns: boolean;
 }
 
 const DataGridHeader = React.memo(
@@ -591,9 +588,9 @@ const DataGridHeader = React.memo(
 
 function DataGridHeaderImpl<TData extends RowData>({
   table,
+  headerRef,
   headerGroups,
   columnWindow,
-  headerRef,
   stretchColumns,
 }: DataGridHeaderProps<TData>) {
   return (
@@ -692,8 +689,8 @@ function DataGridHeaderImpl<TData extends RowData>({
                         </div>
                       ) : (
                         <DataGridColumnHeader
-                          header={header}
                           table={table}
+                          header={header}
                           className={cornerClassName}
                         />
                       )}

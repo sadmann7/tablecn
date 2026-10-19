@@ -22,8 +22,8 @@ export function DataGridCellWrapper<TData extends RowData>({
   readOnly,
   rowHeight,
   width: _width,
-  className,
   onKeyDown: onKeyDownProp,
+  className,
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const rowId = cell.row.id;

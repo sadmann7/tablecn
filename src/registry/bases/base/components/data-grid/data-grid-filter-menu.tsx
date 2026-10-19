@@ -284,6 +284,7 @@ function DataGridFilterMenuImpl<TData extends RowData>({
               {columnFilters.map((filter, index) => (
                 <DataGridFilterItem
                   key={filter.id}
+                  table={table}
                   filter={filter}
                   index={index}
                   filterItemId={`${id}-filter-${filter.id}`}
@@ -291,7 +292,6 @@ function DataGridFilterMenuImpl<TData extends RowData>({
                   columns={columns}
                   columnLabels={columnLabels}
                   columnVariants={columnVariants}
-                  table={table}
                   onFilterUpdate={onFilterUpdate}
                   onFilterRemove={onFilterRemove}
                 />
@@ -332,6 +332,7 @@ function DataGridFilterMenuImpl<TData extends RowData>({
 }
 
 interface DataGridFilterItemProps<TData extends RowData> {
+  table: ReactTable<DataGridFeatures, TData, unknown>;
   filter: ColumnFilter;
   index: number;
   filterItemId: string;
@@ -339,12 +340,12 @@ interface DataGridFilterItemProps<TData extends RowData> {
   columns: { id: string; label: string }[];
   columnLabels: Map<string, string>;
   columnVariants: Map<string, string>;
-  table: ReactTable<DataGridFeatures, TData, unknown>;
   onFilterUpdate: (filterId: string, updates: Partial<ColumnFilter>) => void;
   onFilterRemove: (filterId: string) => void;
 }
 
 function DataGridFilterItem<TData extends RowData>({
+  table,
   filter,
   index,
   filterItemId,
@@ -352,7 +353,6 @@ function DataGridFilterItem<TData extends RowData>({
   columns,
   columnLabels,
   columnVariants,
-  table,
   onFilterUpdate,
   onFilterRemove,
 }: DataGridFilterItemProps<TData>) {
@@ -549,12 +549,12 @@ function DataGridFilterItem<TData extends RowData>({
         {needsValue && column ? (
           <DataGridFilterInput
             key={filter.id}
+            column={column}
             variant={variant}
             operator={operator}
-            column={column}
-            inputId={inputId}
             dir={dir}
             value={filterValue?.value}
+            inputId={inputId}
             endValue={filterValue?.endValue}
             onValueChange={onValueChange}
             onEndValueChange={onEndValueChange}
@@ -601,27 +601,27 @@ function DataGridFilterItem<TData extends RowData>({
 }
 
 interface DataGridFilterInputProps<TData extends RowData> {
+  column: Column<DataGridFeatures, TData>;
   variant: string;
   operator: FilterOperator;
   dir: "ltr" | "rtl";
-  placeholder?: string;
   value: string | number | string[] | undefined;
-  endValue?: string | number;
-  column: Column<DataGridFeatures, TData>;
   inputId: string;
+  placeholder?: string;
+  endValue?: string | number;
   onValueChange: (value: string | number | string[] | undefined) => void;
   onEndValueChange?: (value: string | number | string[] | undefined) => void;
 }
 
 function DataGridFilterInput<TData extends RowData>({
+  column,
   variant,
   operator,
   dir,
-  placeholder = "Value",
   value,
-  endValue,
-  column,
   inputId,
+  placeholder = "Value",
+  endValue,
   onValueChange,
   onEndValueChange,
 }: DataGridFilterInputProps<TData>) {
