@@ -2,15 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 
-import {
-  Copy,
-  Languages,
-  type LucideIcon,
-  Rows2,
-  Rows3,
-  Rows4,
-  Trash2,
-} from "lucide-react";
+import { Copy, Languages, Rows2, Rows3, Rows4, Trash2 } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
 
@@ -62,18 +54,17 @@ import { DataGridBenchmark } from "./data-grid-benchmark";
 import { DataGridDemoSkeleton } from "./data-grid-demo-skeleton";
 import { PeopleDataGridActionBar } from "./people-data-grid-action-bar";
 
-const ROW_COUNTS = {
-  "10k": 10_000,
-  "100k": 100_000,
-  "500k": 500_000,
-} as const;
-type RowCount = keyof typeof ROW_COUNTS;
-const ROW_COUNT_KEYS = Object.keys(ROW_COUNTS) as RowCount[];
-const ROW_COUNT_ICONS: Record<RowCount, LucideIcon> = {
-  "10k": Rows2,
-  "100k": Rows3,
-  "500k": Rows4,
-};
+const rowCounts = [
+  { value: "10k", count: 10_000, icon: Rows2 },
+  { value: "100k", count: 100_000, icon: Rows3 },
+  { value: "500k", count: 500_000, icon: Rows4 },
+] as const;
+
+type RowCount = (typeof rowCounts)[number]["value"];
+
+function getRowCountOption(value: RowCount) {
+  return rowCounts.find((option) => option.value === value) ?? rowCounts[1];
+}
 
 interface DataGridDemoContentProps {
   initialRows: Person[];
@@ -524,7 +515,7 @@ interface Dataset {
 export function DataGridDemo() {
   const [rowCount, setRowCount] = useQueryState(
     "rowCount",
-    parseAsStringEnum(ROW_COUNT_KEYS)
+    parseAsStringEnum(rowCounts.map((option) => option.value))
       .withDefault("100k")
       .withOptions({ clearOnDefault: true }),
   );
@@ -535,7 +526,10 @@ export function DataGridDemo() {
     let timeout = 0;
     const frame = requestAnimationFrame(() => {
       timeout = window.setTimeout(() => {
-        setDataset({ rowCount, rows: generatePeople(ROW_COUNTS[rowCount]) });
+        setDataset({
+          rowCount,
+          rows: generatePeople(getRowCountOption(rowCount).count),
+        });
       });
     });
     return () => {
@@ -544,40 +538,35 @@ export function DataGridDemo() {
     };
   }, [rowCount]);
 
-  const RowCountIcon = ROW_COUNT_ICONS[rowCount];
+  const selectedRowCount = getRowCountOption(rowCount);
   const rowCountSelect = (
-    <>
-      <Select
-        value={rowCount}
-        onValueChange={(value) => {
-          const next = ROW_COUNT_KEYS.find((key) => key === value);
-          if (next) void setRowCount(next);
-        }}
+    <Select
+      value={rowCount}
+      onValueChange={(value) => {
+        const option = rowCounts.find((item) => item.value === value);
+        if (option) void setRowCount(option.value);
+      }}
+    >
+      <SelectTrigger
+        aria-label="Row count"
+        className="[&_svg:nth-child(2)]:hidden"
       >
-        <SelectTrigger
-          aria-label="Row count"
-          className="[&_svg:nth-child(2)]:hidden"
-        >
-          <SelectValue>
-            <RowCountIcon />
-            {rowCount} rows
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent align="end">
-          <SelectGroup>
-            {ROW_COUNT_KEYS.map((key) => {
-              const Icon = ROW_COUNT_ICONS[key];
-              return (
-                <SelectItem key={key} value={key}>
-                  <Icon />
-                  {key} rows
-                </SelectItem>
-              );
-            })}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </>
+        <SelectValue>
+          <selectedRowCount.icon />
+          {selectedRowCount.value} rows
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent align="end">
+        <SelectGroup>
+          {rowCounts.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              <option.icon />
+              {option.value} rows
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   );
 
   if (dataset?.rowCount !== rowCount) {
