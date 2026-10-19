@@ -4,7 +4,6 @@ import {
   type ColumnSort,
   type ReactTable,
   type RowData,
-  type SortDirection,
   type SortingState,
   Subscribe,
 } from "@tanstack/react-table";
@@ -403,7 +402,7 @@ function DataTableSortItem({
           open={showDirectionSelector}
           onOpenChange={setShowDirectionSelector}
           value={sort.desc ? "desc" : "asc"}
-          onValueChange={(value: SortDirection) =>
+          onValueChange={(value) =>
             onSortUpdate(sort.id, { desc: value === "desc" })
           }
         >

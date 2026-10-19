@@ -135,7 +135,7 @@ function DataGridSelectHeader<TData extends RowData>({
 
   if (readOnly) {
     return (
-      <div className="mt-1 flex items-center ps-1 text-sm text-muted-foreground">
+      <div className="flex translate-y-0.5 items-center ps-1 text-sm text-muted-foreground">
         #
       </div>
     );
@@ -143,11 +143,12 @@ function DataGridSelectHeader<TData extends RowData>({
 
   return (
     <Subscribe source={table.store} selector={selectSelectAllState}>
-      {() => (
+      {({ rowSelection }) => (
         <DataGridSelectCheckbox
           aria-label="Select all"
-          checked={table.getIsAllPageRowsSelected()}
+          checked={getHasKeys(rowSelection) && table.getIsAllPageRowsSelected()}
           indeterminate={
+            getHasKeys(rowSelection) &&
             table.getIsSomePageRowsSelected() &&
             !table.getIsAllPageRowsSelected()
           }
@@ -165,6 +166,11 @@ function selectSelectAllState(state: TableState<DataGridFeatures>) {
     rowSelection: state.rowSelection,
     columnFilters: state.columnFilters,
   };
+}
+
+function getHasKeys(object: object) {
+  for (const _ in object) return true;
+  return false;
 }
 
 interface DataGridSelectCellProps<TData extends RowData> extends Pick<

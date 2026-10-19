@@ -795,7 +795,7 @@ export function SelectCell<TData extends RowData>(
     [cell, readOnly],
   );
 
-  const getFinalFocus = React.useCallback(() => {
+  const onFinalFocus = React.useCallback(() => {
     const container = containerRef.current;
     if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
       return false;
@@ -856,7 +856,7 @@ export function SelectCell<TData extends RowData>(
             alignOffset={-8}
             sideOffset={-8}
             className="min-w-[calc(var(--anchor-width)+16px)]"
-            finalFocus={getFinalFocus}
+            finalFocus={onFinalFocus}
           >
             <SelectGroup>
               {options.map((option) => (

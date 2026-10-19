@@ -74,6 +74,11 @@ function DataGridKeyboardShortcutsImpl({
     }
   }, []);
 
+  const onInitialFocus = React.useCallback(() => {
+    inputRef.current?.focus();
+    return false;
+  }, []);
+
   const onInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       setInput(event.target.value);
@@ -413,10 +418,7 @@ function DataGridKeyboardShortcutsImpl({
       <DialogContent
         dir={dir}
         className="max-w-2xl px-0"
-        initialFocus={() => {
-          inputRef.current?.focus();
-          return false;
-        }}
+        initialFocus={onInitialFocus}
         showCloseButton={false}
       >
         <DialogClose

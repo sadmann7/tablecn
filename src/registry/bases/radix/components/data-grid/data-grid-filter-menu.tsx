@@ -510,7 +510,10 @@ function DataGridFilterItem<TData extends RowData>({
           open={showOperatorSelector}
           onOpenChange={setShowOperatorSelector}
           value={operator}
-          onValueChange={onOperatorChange}
+          onValueChange={(value) => {
+            const operator = operators.find((option) => option.value === value);
+            if (operator) onOperatorChange(operator.value);
+          }}
         >
           <SelectTrigger
             aria-controls={operatorListboxId}
