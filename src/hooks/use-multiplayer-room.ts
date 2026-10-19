@@ -47,7 +47,9 @@ function getOrCreateIdentity(): Identity {
 
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
-  } catch {}
+  } catch {
+    // Fail silently if localStorage is not available
+  }
 
   return identity;
 }
