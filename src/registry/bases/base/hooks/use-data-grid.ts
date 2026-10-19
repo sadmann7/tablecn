@@ -542,6 +542,7 @@ function useDataGrid<TData extends RowData>({
 
       let rowId = cellElement.dataset.rowId;
       let columnId = cellElement.dataset.columnId;
+
       if (cellElement.dataset.slot === "data-grid-cell-preview") {
         const rowIndex = cellElement.closest<HTMLElement>(
           '[data-slot="data-grid-row"]',
@@ -723,6 +724,16 @@ function useDataGrid<TData extends RowData>({
     Pick<VirtualizerOptions<HTMLDivElement, Element>, "overscan">
   >(() => ({ overscan }), [overscan]);
 
+  const skipDataGridTabStop = React.useCallback(() => {
+    const container = dataGridRef.current;
+    if (!container) return;
+
+    container.tabIndex = -1;
+    requestAnimationFrame(() => {
+      container.tabIndex = 0;
+    });
+  }, []);
+
   const addRow = React.useCallback(
     async (
       trigger: RowAddTrigger,
@@ -789,18 +800,6 @@ function useDataGrid<TData extends RowData>({
     },
     [getColumnHeaderTrigger],
   );
-
-  const skipDataGridTabStop = React.useCallback(() => {
-    const container = dataGridRef.current;
-    if (!container) return;
-
-    // The container precedes every cell in the tab order, so it has to drop out
-    // until the browser finishes moving focus or Shift+Tab would land on it.
-    container.tabIndex = -1;
-    requestAnimationFrame(() => {
-      container.tabIndex = 0;
-    });
-  }, []);
 
   const onColumnHeaderKeyDown = React.useCallback(
     (event: KeyboardEvent, columnId: string) => {
@@ -907,7 +906,7 @@ function useDataGrid<TData extends RowData>({
         case "ArrowUp":
           break;
         case "ArrowDown": {
-          // Stops the menu trigger from opening its menu on ArrowDown
+          // Stops the menu trigger from opening its menu
           event.stopPropagation();
           const firstRowId = getRowIdAt(0);
           if (!firstRowId) break;
@@ -992,8 +991,6 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      // Cell editing keyboard events (Enter, Tab, Escape) are handled by the cell variants
-      // to ensure proper value commitment before navigation
       if (tableRef.current?.getEditingCell()) return;
 
       const headerCell =
@@ -1149,7 +1146,6 @@ function useDataGrid<TData extends RowData>({
           ? getNavigableColumnIds()[0]
           : focusedCell.columnId;
 
-        // The new row sits right below, so it keeps the column the user was in
         void addRow(
           { reason: "insert-below", event, afterRowId: focusedCell.rowId },
           (result) => currentColumnId ?? result.columnId,
@@ -1365,7 +1361,6 @@ function useDataGrid<TData extends RowData>({
     focusCell,
   ]);
 
-  // Forward keyboard focus entering the grid to the active cell, so the grid acts as a single tab stop
   React.useEffect(() => {
     const container = dataGridRef.current;
     if (!container) return;
@@ -1446,7 +1441,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, [getNavigableColumnIds, focusCell, focusCellElement, getFocusedCell]);
 
-  // Tracks whether keyboard focus sits in a column header, so the focused cell can step back while rows stay selected
   React.useEffect(() => {
     function onFocusIn(event: FocusEvent) {
       const target = event.target;
@@ -1466,7 +1460,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, []);
 
-  // Keeps focus on the grid when the focused cell unmounts during virtualization
   React.useEffect(() => {
     const container = dataGridRef.current;
     if (!container) return;
@@ -1474,11 +1467,9 @@ function useDataGrid<TData extends RowData>({
     let rafId = 0;
 
     function onFocusOut(event: FocusEvent) {
-      // A real relatedTarget means the user moved focus elsewhere on purpose
       if (event.relatedTarget || tableRef.current?.getEditingCell()) return;
 
       cancelAnimationFrame(rafId);
-      // Focus lands on the body only after the unmounted cell is removed from the DOM
       rafId = requestAnimationFrame(() => {
         const focusedCell = getFocusedCell();
         if (!focusedCell || !document.hasFocus()) return;
@@ -1523,13 +1514,11 @@ function useDataGrid<TData extends RowData>({
           table.getFocusedHeaderColumnId() === null &&
           dataGridRef.current?.contains(document.activeElement)
         ) {
-          // Header controls like select all keep focus, so toggling them doesn't scroll to the first row
           focusCellElement(focusedCell);
         }
         return;
       }
 
-      // Row selection mirrors whole rows into the cell selection, and revealing that edge would jump to the last column
       if (
         isEdgeChanged &&
         edgeCell &&
@@ -1575,7 +1564,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, [table, revealCell, focusCellElement]);
 
-  // Focuses a cell requested before its row was rendered, once it mounts
   React.useLayoutEffect(() => {
     const pending = pendingFocusRef.current;
     if (!pending) return;
