@@ -122,7 +122,7 @@ function fireCellEvent(
   dataGridRef.current = container;
 
   try {
-    dataGridBodyProps[type]({
+    dataGridBodyProps[type]?.({
       target: cellElement,
       currentTarget: container,
       button: 0,
@@ -135,7 +135,7 @@ function fireCellEvent(
       preventDefault: vi.fn(),
       stopPropagation: vi.fn(),
       ...init,
-    } as unknown as React.MouseEvent<HTMLElement>);
+    } as unknown as React.MouseEvent<HTMLDivElement>);
   } finally {
     dataGridRef.current = previousContainer;
   }
@@ -248,6 +248,55 @@ describe("useDataGrid", () => {
       expect(result.current.dataGridBodyProps.onDoubleClick).toBeDefined();
       expect(result.current.table.clearSelection).toBeDefined();
       expect(result.current.table.getIsCellSelected).toBeDefined();
+    });
+
+    it("should apply option changes on the next render", () => {
+      const { result, rerender } = renderHook(
+        ({ enableSearch }: { enableSearch: boolean }) =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch,
+          }),
+        { wrapper: createWrapper(), initialProps: { enableSearch: false } },
+      );
+
+      expect(result.current.table.options.enableSearch).toBe(false);
+
+      rerender({ enableSearch: true });
+
+      expect(result.current.table.options.enableSearch).toBe(true);
+    });
+
+    it("should keep the table options while only callbacks change", () => {
+      const firstOnSortingChange = vi.fn();
+      const secondOnSortingChange = vi.fn();
+
+      const { result, rerender } = renderHook(
+        ({ onSortingChange }: { onSortingChange: () => void }) =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onSortingChange,
+          }),
+        {
+          wrapper: createWrapper(),
+          initialProps: { onSortingChange: firstOnSortingChange },
+        },
+      );
+
+      const initialOptions = result.current.table.options;
+
+      rerender({ onSortingChange: secondOnSortingChange });
+
+      expect(result.current.table.options).toBe(initialOptions);
+
+      act(() => {
+        result.current.table.getColumn("name")?.toggleSorting(false);
+      });
+
+      expect(firstOnSortingChange).not.toHaveBeenCalled();
+      expect(secondOnSortingChange).toHaveBeenCalled();
     });
   });
 

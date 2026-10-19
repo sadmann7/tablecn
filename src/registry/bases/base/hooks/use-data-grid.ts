@@ -63,6 +63,60 @@ function showClipboardToast({ variant, message }: ClipboardNotice) {
   else toast.success(message);
 }
 
+// Keeps one object while only callback identities change, so the table options stay stable.
+// Callbacks call the latest version through the ref
+function useStableOptions<TOptions extends object>(
+  options: TOptions,
+  optionsRef: React.RefObject<TOptions>,
+): TOptions {
+  const optionsKey = getOptionsKey(options);
+  return React.useMemo(() => wrapCallbacks(options, optionsRef), [optionsKey]);
+}
+
+let nextObjectId = 0;
+const objectIds = new WeakMap<object, number>();
+
+function getOptionsKey(options: object) {
+  let key = "";
+  for (const [name, value] of Object.entries(options)) {
+    key += `${name}:`;
+    if (typeof value === "function") {
+      key += "fn";
+    } else if (typeof value === "object" && value !== null) {
+      let id = objectIds.get(value);
+      if (id === undefined) {
+        id = nextObjectId++;
+        objectIds.set(value, id);
+      }
+      key += `obj${id}`;
+    } else {
+      key += `${typeof value}${String(value)}`;
+    }
+    key += "\u0000";
+  }
+  return key;
+}
+
+function wrapCallbacks<TOptions extends object>(
+  options: TOptions,
+  optionsRef: React.RefObject<TOptions>,
+): TOptions {
+  const wrapped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(options)) {
+    wrapped[key] =
+      typeof value === "function"
+        ? (...args: unknown[]) =>
+            (
+              optionsRef.current as Record<
+                string,
+                ((...args: unknown[]) => unknown) | undefined
+              >
+            )[key]?.(...args)
+        : value;
+  }
+  return wrapped as TOptions;
+}
+
 function selectGridLayoutState(state: TableState<DataGridFeatures>) {
   return {
     rowHeight: state.rowHeight,
@@ -130,6 +184,7 @@ function useDataGrid<TData extends RowData>({
   } | null>(null);
 
   const propsRef = useValueAsRef(props);
+  const stableProps = useStableOptions(props, propsRef);
 
   const getRowIndex = React.useCallback((rowId: string) => {
     const currentTable = tableRef.current;
@@ -489,7 +544,9 @@ function useDataGrid<TData extends RowData>({
       [],
     );
 
-  const dataGridBodyEventHandlers = React.useMemo(() => {
+  const dataGridBodyEventHandlers = React.useMemo<
+    React.ComponentProps<"div">
+  >(() => {
     let hoveredCellKey: string | null = null;
 
     // React bubbles events out of portalled editors too, so only cells mounted in the grid count
@@ -532,23 +589,23 @@ function useDataGrid<TData extends RowData>({
     }
 
     return {
-      onClick: (event: React.MouseEvent<HTMLElement>) => {
+      onClick: (event) => {
         const cell = getPressedCell(event);
         if (!cell) return;
         event.preventDefault();
         onCellClick(cell.rowId, cell.columnId, event);
       },
-      onDoubleClick: (event: React.MouseEvent<HTMLElement>) => {
+      onDoubleClick: (event) => {
         const cell = getPressedCell(event);
         if (!cell) return;
         event.preventDefault();
         onCellDoubleClick(cell.rowId, cell.columnId);
       },
-      onMouseDown: (event: React.MouseEvent<HTMLElement>) => {
+      onMouseDown: (event) => {
         const cell = getPressedCell(event);
         if (cell) onCellMouseDown(cell.rowId, cell.columnId, event);
       },
-      onMouseOver: (event: React.MouseEvent<HTMLElement>) => {
+      onMouseOver: (event) => {
         const cell = getEventCell(event);
         const cellKey = cell ? getCellKey(cell.rowId, cell.columnId) : null;
         if (cellKey === hoveredCellKey) return;
@@ -558,10 +615,10 @@ function useDataGrid<TData extends RowData>({
       onMouseLeave: () => {
         hoveredCellKey = null;
       },
-      onMouseUp: (event: React.MouseEvent<HTMLElement>) => {
+      onMouseUp: (event) => {
         if (getEventCell(event)) onCellMouseUp();
       },
-      onContextMenu: (event: React.MouseEvent<HTMLElement>) => {
+      onContextMenu: (event) => {
         const cell = getEventCell(event);
         if (cell) onCellContextMenu(cell.rowId, cell.columnId, event);
       },
@@ -589,26 +646,16 @@ function useDataGrid<TData extends RowData>({
     [columns],
   );
 
-  const controlledState = props.state;
   const enableCellEditing =
     !props.readOnly && props.enableCellEditing !== false;
-  const hasEditingCellChange = !!props.onEditingCellChange;
-  const hasRowHeightChange = !!props.onRowHeightChange;
-  const canAddRows = !!props.onRowsAdd || !!props.onRowAdd;
+  const hasRowAdd = !!props.onRowAdd;
+  const canAddRows = !!props.onRowsAdd || hasRowAdd;
 
   const tableOptions = React.useMemo<
     TableOptions<DataGridFeatures, TData>
   >(() => {
     return {
-      ...propsRef.current,
-      ...(hasEditingCellChange && {
-        onEditingCellChange: (updater) =>
-          propsRef.current.onEditingCellChange?.(updater),
-      }),
-      ...(hasRowHeightChange && {
-        onRowHeightChange: (updater) =>
-          propsRef.current.onRowHeightChange?.(updater),
-      }),
+      ...stableProps,
       onRowsAdd: canAddRows
         ? async (count) => {
             const { onRowsAdd, onRowAdd } = propsRef.current;
@@ -627,7 +674,6 @@ function useDataGrid<TData extends RowData>({
       data,
       columns: tableColumns,
       defaultColumn,
-      state: controlledState,
       autoResetCellSelection: false,
       enableCellEditing,
       onRowSelectionChange,
@@ -638,13 +684,11 @@ function useDataGrid<TData extends RowData>({
     };
   }, [
     propsRef,
+    stableProps,
     data,
     tableColumns,
     defaultColumn,
-    controlledState,
     enableCellEditing,
-    hasEditingCellChange,
-    hasRowHeightChange,
     canAddRows,
     dir,
     revealCell,
@@ -655,7 +699,7 @@ function useDataGrid<TData extends RowData>({
 
   const table = useTable(tableOptions, selectGridLayoutState);
 
-  if (!tableRef.current) {
+  if (tableRef.current === null) {
     tableRef.current = table;
   }
 
@@ -1912,16 +1956,16 @@ function useDataGrid<TData extends RowData>({
       columnSizeVars,
       dir,
       adjustLayout,
-      onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
+      onRowAdd: hasRowAdd ? onRowAdd : undefined,
     }),
     [
       table,
-      propsRef,
       rowVirtualizerOptions,
       dataGridBodyProps,
       columnSizeVars,
       dir,
       adjustLayout,
+      hasRowAdd,
       onRowAdd,
     ],
   );
