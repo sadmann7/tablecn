@@ -161,6 +161,10 @@ export class SkaterRoom extends Server<Env> {
       } satisfies ServerMessage),
       [sender.id],
     );
+    this.ack(sender, mutationId);
+  }
+
+  private ack(sender: PresenceConnection, mutationId: string) {
     sender.send(
       JSON.stringify({ type: "ack", mutationId } satisfies ServerMessage),
     );
@@ -200,8 +204,6 @@ export class SkaterRoom extends Server<Env> {
 
   private getInvalidRows(rows: RowPayload[]) {
     for (const row of rows) {
-      if (this.rows.some((r) => r.id === row.id))
-        return "The row already exists";
       if (!skaterSchema.safeParse(row).success) return "Invalid row";
     }
     return null;
@@ -253,16 +255,22 @@ export class SkaterRoom extends Server<Env> {
       }
 
       case "rows-add": {
-        const invalid = this.getInvalidRows(msg.rows);
+        const existingIds = new Set(this.rows.map((r) => r.id));
+        const newRows = msg.rows.filter((row) => !existingIds.has(row.id));
+        if (newRows.length === 0) {
+          this.ack(sender, msg.mutationId);
+          break;
+        }
+        const invalid = this.getInvalidRows(newRows);
         if (invalid) {
           this.reject(sender, msg.mutationId, invalid);
           break;
         }
-        this.rows.push(...msg.rows);
+        this.rows.push(...newRows);
         this.persistRows();
         this.commitChange(sender, msg.mutationId, {
           type: "rows-add",
-          rows: msg.rows,
+          rows: newRows,
         });
         break;
       }
