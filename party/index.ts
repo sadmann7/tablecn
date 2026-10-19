@@ -62,7 +62,6 @@ export class SkaterRoom extends Server<Env> {
   static options = { hibernate: true };
 
   rows: RowPayload[] = [];
-  // A new epoch tells reconnecting clients their seq is from a room that restarted or reset
   private epoch = crypto.randomUUID();
   private seq = 0;
   private changeLog: SequencedChange[] = [];
@@ -120,7 +119,6 @@ export class SkaterRoom extends Server<Env> {
     }, PERSIST_DELAY);
   }
 
-  // Saves run one after another, so a delete can't land before the insert it follows
   private flushRows() {
     if (this.persistTimeout) {
       clearTimeout(this.persistTimeout);
@@ -139,7 +137,6 @@ export class SkaterRoom extends Server<Env> {
         .saveRows(this.name, { upserts, deletes })
         .catch((error: unknown) => {
           console.error("[party] Failed to save rows:", error);
-          // Retried with the next change
           for (const row of upserts) this.dirtyIds.add(row.id as string);
           for (const id of deletes) this.deletedIds.add(id);
         }),
@@ -177,7 +174,6 @@ export class SkaterRoom extends Server<Env> {
       this.rows = createSeedRows();
       await this.getDb().replaceRows(this.name, this.rows);
     } else {
-      // Private rooms are seeded again only if someone comes back
       this.rows = [];
       this.isLoaded = false;
       await this.getDb().replaceRows(this.name, []);

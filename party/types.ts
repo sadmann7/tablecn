@@ -28,7 +28,6 @@ export type RowChange =
   | { type: "rows-add"; rows: RowPayload[] }
   | { type: "rows-delete"; ids: string[] };
 
-// Every row change gets the room's next seq, so a reconnecting client can ask for what it missed
 export type SequencedChange = RowChange & { seq: number; userId: string };
 
 export type ServerMessage =

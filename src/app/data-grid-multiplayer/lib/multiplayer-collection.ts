@@ -59,7 +59,6 @@ export function createSkatersCollection(connection: RoomConnection) {
     void syncParams.commit();
   }
 
-  // Partial, so a confirmed or remote edit only touches the fields it changed
   function getCellChanges(updates: CellUpdate[]): SkaterChange[] {
     const byRow = new Map<string, Record<string, unknown>>();
     for (const { rowId, columnId, value } of updates) {
@@ -81,7 +80,6 @@ export function createSkatersCollection(connection: RoomConnection) {
     });
   }
 
-  // `has()` also sees pending local edits, so confirmed own changes skip it
   function getRowChanges(change: RowChange, isOwn = false): SkaterChange[] {
     const collection = syncParams?.collection;
     switch (change.type) {
@@ -101,7 +99,6 @@ export function createSkatersCollection(connection: RoomConnection) {
     }
   }
 
-  // Resolves on the room's ack; a reject or timeout throws so the collection rolls the edit back
   async function sendMutation(change: RowChange) {
     const mutationId = generateId();
     try {

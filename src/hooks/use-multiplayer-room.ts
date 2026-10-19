@@ -64,7 +64,6 @@ interface Room {
 
 function createRoom(roomId: string): Room {
   const identity = getOrCreateIdentity();
-  // Sent on every reconnect, so the room can send only the changes this client missed
   let epoch: string | null = null;
   let lastSeq = 0;
 

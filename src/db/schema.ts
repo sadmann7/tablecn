@@ -49,7 +49,6 @@ export const tasks = pgTable("tasks", {
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
 
-// Same shape as the grid's `FileCellData`, kept here so the room server doesn't import grid code
 interface SkaterMedia {
   id: string;
   name: string;
