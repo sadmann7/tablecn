@@ -10,8 +10,8 @@ import {
 } from "@tanstack/react-table";
 import {
   defaultRangeExtractor,
-  type Range,
   useVirtualizer,
+  type Range,
   type Virtualizer,
 } from "@tanstack/react-virtual";
 import { cn } from "cn";
@@ -172,20 +172,17 @@ function DataGridViewport<TData extends RowData>({
   const startWidth = getColumnsWidth(startColumns);
   const centerWidth = getColumnsWidth(centerColumns);
   const endWidth = getColumnsWidth(table.getEndVisibleLeafColumns());
+  const [insets, setInsets] = React.useState(EMPTY_VIEWPORT_INSETS);
+
   const isColumnVirtualizationEnabled =
     !stretchColumns && headerGroups.length === 1;
   const enableCellEditing = table.options.enableCellEditing;
   const hasFooter = !readOnly && !!onRowAddProp;
-
-  const [insets, setInsets] = React.useState(EMPTY_VIEWPORT_INSETS);
-  // The footer follows the last row until the body overflows, so only rows that fit move it.
-  // Past that, filtering or adding rows would remeasure, forcing a layout for no change
   const insetsKey =
     rows.length * rowSize > height
       ? `overflow:${hasFooter}`
       : `${rows.length}:${rowSize}:${hasFooter}`;
 
-  // Measures the sticky header and footer on resize instead of on every scroll frame, where reading layout would force it
   useIsoLayoutEffect(() => {
     const dataGrid = dataGridRef.current;
     if (!dataGrid) return;
@@ -225,7 +222,6 @@ function DataGridViewport<TData extends RowData>({
 
   const rowRangeExtractor = React.useCallback(
     ({ startIndex, endIndex, overscan: overscanProp, count }: Range) => {
-      // While jumping, every frame replaces all rows and pinning covers the gap, so overscan rows are wasted mounts
       const overscan = isScrollJumpingRef.current ? 0 : overscanProp;
       const direction = rowVirtualizerRef.current?.scrollDirection ?? null;
       const before =
@@ -234,7 +230,6 @@ function DataGridViewport<TData extends RowData>({
           : direction === "backward"
             ? overscan * 2 - Math.ceil(overscan / 3)
             : overscan;
-      // Rows are keyed by slot, so the count stays fixed: a changing count would remap every key and re-render every row
       const viewportHeight = rowVirtualizerRef.current?.scrollRect?.height ?? 0;
       const visibleCount =
         viewportHeight > 0
@@ -263,7 +258,6 @@ function DataGridViewport<TData extends RowData>({
 
   const centerColumnsRef = useValueAsRef(centerColumns);
 
-  // Keeps the focused and editing columns mounted while scrolled away, so keyboard focus and drafts survive
   const columnRangeExtractor = React.useCallback(
     (range: Range) => {
       const indexes = defaultRangeExtractor(range);
@@ -306,12 +300,8 @@ function DataGridViewport<TData extends RowData>({
   const scrollDelta = Math.abs(
     scrollOffset - committedScrollRef.current.offset,
   );
-  // Cells mounted during any scroll start as previews, since they look the same and cost far less to mount
   const isScrolling =
     rowVirtualizer.isScrolling || columnVirtualizer.isScrolling;
-  // Jumps past the leading overscan would scroll into blank space before React renders, which scrollbar drags do constantly.
-  // Pinned rows only move when the virtualizer re-renders, which it skips until the visible range changes, so unpin once
-  // commits slow down instead of holding rows behind a slowing fling and snapping them into place when it stops
   const isScrollJumping =
     rowVirtualizer.isScrolling &&
     scrollDelta >
@@ -319,7 +309,6 @@ function DataGridViewport<TData extends RowData>({
         (committedScrollRef.current.isJumping
           ? SCROLL_JUMP_EXIT_ROWS_PER_COMMIT
           : rowVirtualizer.options.overscan * 2);
-  // Cells leave preview mode in a transition, so React spreads the upgrade over frames and drops it if scrolling resumes
   const deferredIsScrolling = React.useDeferredValue(isScrolling);
 
   useIsoLayoutEffect(() => {
@@ -339,7 +328,7 @@ function DataGridViewport<TData extends RowData>({
         centerEnd: startWidth + centerWidth,
       })
     : "";
-  // Rows compare the window by reference, so it only changes when the mounted columns do
+
   const columnWindow = React.useMemo(
     () => parseColumnWindowKey(columnWindowKey),
     [columnWindowKey],
@@ -410,7 +399,6 @@ function DataGridViewport<TData extends RowData>({
     [onRowAddRef],
   );
 
-  // Skip the grid's own tab stop when Shift+Tab leaves a cell
   const onDataGridKeyDownCapture = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key !== "Tab" || !event.shiftKey) return;
@@ -479,7 +467,6 @@ function DataGridViewport<TData extends RowData>({
           height: `${rowVirtualizer.getTotalSize()}px`,
         }}
       >
-        {/* While jumping, rows are pinned and offset by the rendered scroll position, so the last rendered rows stay on screen when the compositor scrolls ahead of JS. Otherwise they scroll natively so the compositor keeps scrolling smooth */}
         <div
           data-slot="data-grid-rows"
           data-pinned={isScrollJumping ? "" : undefined}
@@ -500,7 +487,6 @@ function DataGridViewport<TData extends RowData>({
 
               return (
                 <DataGridRow
-                  // Keyed by slot so a row scrolling in reuses the elements of the row that scrolled out
                   key={virtualItem.index % items.length}
                   row={row}
                   virtualItem={virtualItem}
@@ -706,13 +692,6 @@ function DataGridHeaderImpl<TData extends RowData>({
   );
 }
 
-// A header with nothing to interact with, like the actions column's, shouldn't take focus when clicked
-function onHeaderCellMouseDown(event: React.MouseEvent<HTMLDivElement>) {
-  if (!event.currentTarget.querySelector("button, input, a[href]")) {
-    event.preventDefault();
-  }
-}
-
 function selectHeaderState(state: TableState<DataGridFeatures>) {
   return {
     sorting: state.sorting,
@@ -722,6 +701,12 @@ function selectHeaderState(state: TableState<DataGridFeatures>) {
     columnSizing: state.columnSizing,
     columnResizing: state.columnResizing,
   };
+}
+
+function onHeaderCellMouseDown(event: React.MouseEvent<HTMLDivElement>) {
+  if (!event.currentTarget.querySelector("button, input, a[href]")) {
+    event.preventDefault();
+  }
 }
 
 function getColumnsWidth<TData extends RowData>(
@@ -742,7 +727,6 @@ function getColumnWindowKey(params: {
   const { virtualizer, startCount, centerCount, centerStart, centerEnd } =
     params;
   const items = virtualizer.getVirtualItems();
-  // Before the scroll element is measured the virtualizer returns no items, so render every column instead of only the pinned ones
   if (centerCount > 0 && items.length === 0) return "";
   let key = `${startCount}|${centerCount}|${centerStart}|${centerEnd}|`;
   for (const item of items) {
