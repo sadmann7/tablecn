@@ -1,6 +1,11 @@
 "use client";
 
-import type { CellContext, ColumnDef, RowData } from "@tanstack/react-table";
+import type {
+  CellContext,
+  ColumnDef,
+  Row,
+  RowData,
+} from "@tanstack/react-table";
 
 import * as React from "react";
 
@@ -23,12 +28,14 @@ interface DataGridActionsCellProps<
   TData extends RowData,
 > extends DataGridActionsContext<TData> {
   actions: (context: DataGridActionsContext<TData>) => React.ReactNode;
+  getAriaLabel: (row: Row<DataGridFeatures, TData>) => string;
 }
 
 function DataGridActionsCell<TData extends RowData>({
   table,
   row,
   actions,
+  getAriaLabel,
 }: DataGridActionsCellProps<TData>) {
   return (
     <div className="-mx-3 flex justify-center">
@@ -36,7 +43,7 @@ function DataGridActionsCell<TData extends RowData>({
         <DropdownMenuTrigger
           render={
             <Button
-              aria-label={`Open actions for row ${row.getDisplayIndex() + 1}`}
+              aria-label={getAriaLabel(row)}
               variant="ghost"
               size="icon-sm"
               tabIndex={-1}
@@ -65,10 +72,12 @@ interface GetDataGridActionsColumnOptions<TData extends RowData> extends Omit<
   "id" | "header" | "cell"
 > {
   actions: (context: DataGridActionsContext<TData>) => React.ReactNode;
+  getAriaLabel?: (row: Row<DataGridFeatures, TData>) => string;
 }
 
 export function getDataGridActionsColumn<TData extends RowData>({
   actions,
+  getAriaLabel = (row) => `Open actions for row ${row.getDisplayIndex() + 1}`,
   size = 56,
   minSize = size,
   enableHiding = false,
@@ -80,7 +89,12 @@ export function getDataGridActionsColumn<TData extends RowData>({
     id: "actions",
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row, table }) => (
-      <DataGridActionsCell table={table} row={row} actions={actions} />
+      <DataGridActionsCell
+        table={table}
+        row={row}
+        actions={actions}
+        getAriaLabel={getAriaLabel}
+      />
     ),
     size,
     minSize,
