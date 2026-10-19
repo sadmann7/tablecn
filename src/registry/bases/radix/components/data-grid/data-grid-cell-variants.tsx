@@ -61,7 +61,7 @@ import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-// The cell wrapper's px-2 on one side, so the date editor lines up with the cell's edge
+// The cell's padding on each side (px-2), so editors line up with its edge
 const CELL_PADDING = 8;
 
 export function CustomCell<TData extends RowData>(
