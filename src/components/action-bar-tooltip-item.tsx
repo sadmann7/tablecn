@@ -24,7 +24,6 @@ export function ActionBarTooltipItem({
   const [open, setOpen] = React.useState(false);
   const isFocusReturnRef = React.useRef(false);
 
-  // Focus returning from a closed menu has no related target, so the tooltip stays shut
   const onFocus = React.useCallback((event: React.FocusEvent) => {
     if (event.relatedTarget) return;
     isFocusReturnRef.current = true;
