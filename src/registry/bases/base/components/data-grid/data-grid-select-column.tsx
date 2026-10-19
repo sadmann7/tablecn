@@ -19,16 +19,16 @@ type HitboxSize = "default" | "sm" | "lg";
 
 interface DataGridSelectHitboxProps {
   htmlFor: string;
-  children: React.ReactNode;
   size?: HitboxSize;
   debug?: boolean;
+  children: React.ReactNode;
 }
 
 function DataGridSelectHitbox({
   htmlFor,
-  children,
   size,
   debug,
+  children,
 }: DataGridSelectHitboxProps) {
   return (
     <div
@@ -61,10 +61,10 @@ interface DataGridSelectCheckboxProps extends Omit<
 }
 
 function DataGridSelectCheckbox({
+  checked,
   rowNumber,
   hitboxSize,
   debug,
-  checked,
   className,
   ...props
 }: DataGridSelectCheckboxProps) {
@@ -135,7 +135,7 @@ function DataGridSelectHeader<TData extends RowData>({
 
   if (readOnly) {
     return (
-      <div className="mt-1 flex items-center ps-1 text-sm text-muted-foreground">
+      <div className="flex translate-y-0.5 items-center ps-1 text-sm text-muted-foreground">
         #
       </div>
     );
@@ -143,29 +143,34 @@ function DataGridSelectHeader<TData extends RowData>({
 
   return (
     <Subscribe source={table.store} selector={selectSelectAllState}>
-      {() => (
+      {({ rowSelection }) => (
         <DataGridSelectCheckbox
           aria-label="Select all"
-          checked={table.getIsAllPageRowsSelected()}
+          checked={getHasKeys(rowSelection) && table.getIsAllPageRowsSelected()}
           indeterminate={
+            getHasKeys(rowSelection) &&
             table.getIsSomePageRowsSelected() &&
             !table.getIsAllPageRowsSelected()
           }
-          onCheckedChange={onCheckedChange}
           hitboxSize={hitboxSize}
           debug={debug}
+          onCheckedChange={onCheckedChange}
         />
       )}
     </Subscribe>
   );
 }
 
-// The memoized grid header doesn't follow selection or filters, so select-all subscribes on its own
 function selectSelectAllState(state: TableState<DataGridFeatures>) {
   return {
     rowSelection: state.rowSelection,
     columnFilters: state.columnFilters,
   };
+}
+
+function getHasKeys(object: object) {
+  for (const _ in object) return true;
+  return false;
 }
 
 interface DataGridSelectCellProps<TData extends RowData> extends Pick<
@@ -179,9 +184,9 @@ interface DataGridSelectCellProps<TData extends RowData> extends Pick<
 }
 
 function DataGridSelectCell<TData extends RowData>({
-  row,
-  column,
   table,
+  column,
+  row,
   hitboxSize,
   enableRowMarkers,
   readOnly,
@@ -192,7 +197,6 @@ function DataGridSelectCell<TData extends RowData>({
   const onToggle = React.useCallback(
     (checked: boolean, shiftKey: boolean) => {
       table.setFocusedCell(row.id, column.id);
-      // The checkbox renders a button, so the handler can't read `checked` from the event target
       row.getToggleSelectedHandler()({ target: { checked }, shiftKey });
     },
     [table, row, column],
@@ -226,11 +230,11 @@ function DataGridSelectCell<TData extends RowData>({
     <DataGridSelectCheckbox
       aria-label={rowNumber ? `Select row ${rowNumber}` : "Select row"}
       checked={row.getIsSelected()}
-      onCheckedChange={onCheckedChange}
-      onClick={onClick}
       rowNumber={rowNumber}
       hitboxSize={hitboxSize}
       debug={debug}
+      onCheckedChange={onCheckedChange}
+      onClick={onClick}
     />
   );
 }
@@ -271,12 +275,12 @@ export function getDataGridSelectColumn<TData extends RowData>({
     ),
     cell: ({ row, column, table }) => (
       <DataGridSelectCell
-        row={row}
-        column={column}
         table={table}
+        column={column}
+        row={row}
+        hitboxSize={hitboxSize}
         enableRowMarkers={enableRowMarkers}
         readOnly={readOnly}
-        hitboxSize={hitboxSize}
         debug={debug}
       />
     ),

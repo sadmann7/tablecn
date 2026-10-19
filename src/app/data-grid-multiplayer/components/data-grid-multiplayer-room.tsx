@@ -17,9 +17,20 @@ const DataGridMultiplayerDemo = dynamic(
   },
 );
 
-export function DataGridMultiplayerRoom() {
+interface DataGridMultiplayerRoomProps {
+  isUploadConfigured: boolean;
+}
+
+export function DataGridMultiplayerRoom({
+  isUploadConfigured,
+}: DataGridMultiplayerRoomProps) {
   const searchParams = useSearchParams();
   const roomId = searchParams.get("room") ?? PUBLIC_ROOM_ID;
 
-  return <DataGridMultiplayerDemo roomId={roomId} />;
+  return (
+    <DataGridMultiplayerDemo
+      roomId={roomId}
+      isUploadConfigured={isUploadConfigured}
+    />
+  );
 }

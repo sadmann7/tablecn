@@ -26,8 +26,8 @@ interface DataGridActionsCellProps<
 }
 
 function DataGridActionsCell<TData extends RowData>({
-  row,
   table,
+  row,
   actions,
 }: DataGridActionsCellProps<TData>) {
   return (
@@ -40,7 +40,7 @@ function DataGridActionsCell<TData extends RowData>({
               variant="ghost"
               size="icon-sm"
               tabIndex={-1}
-              className="size-6 -translate-y-[0.5px] text-muted-foreground transition-none data-popup-open:bg-accent"
+              className="size-6 translate-y-[-0.5px] text-muted-foreground transition-none data-popup-open:bg-accent"
             />
           }
         >
@@ -64,7 +64,6 @@ interface GetDataGridActionsColumnOptions<TData extends RowData> extends Omit<
   Partial<ColumnDef<DataGridFeatures, TData>>,
   "id" | "header" | "cell"
 > {
-  /** Renders the row's menu items, such as `DropdownMenuItem`s. */
   actions: (context: DataGridActionsContext<TData>) => React.ReactNode;
 }
 
@@ -81,7 +80,7 @@ export function getDataGridActionsColumn<TData extends RowData>({
     id: "actions",
     header: () => <span className="sr-only">Actions</span>,
     cell: ({ row, table }) => (
-      <DataGridActionsCell row={row} table={table} actions={actions} />
+      <DataGridActionsCell table={table} row={row} actions={actions} />
     ),
     size,
     minSize,

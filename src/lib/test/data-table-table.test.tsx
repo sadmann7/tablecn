@@ -497,10 +497,8 @@ describe("column layout styles", () => {
       insetInlineEnd: "var(--column-archived-offset)",
       insetInlineStart: undefined,
     });
-    expect(
-      table.getColumn("status") &&
-        getColumnPinningStyle(table.getColumn("status")!),
-    ).toMatchObject({
+    const statusColumn = table.getColumn("status");
+    expect(statusColumn && getColumnPinningStyle(statusColumn)).toMatchObject({
       position: "relative",
       opacity: 1,
       zIndex: undefined,

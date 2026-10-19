@@ -6,17 +6,17 @@ import {
   Subscribe,
   type Table,
 } from "@tanstack/react-table";
-import { CheckCircle2, Palette, Trash2, X } from "lucide-react";
+import { CheckCircle2, Copy, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellSelectOption } from "@/lib/data-grid-types";
 
+import { ActionBarTooltipItem } from "@/components/action-bar-tooltip-item";
 import {
   ActionBar,
   ActionBarClose,
   ActionBarGroup,
-  ActionBarItem,
   ActionBarSelection,
   ActionBarSeparator,
 } from "@/registry/bases/radix/ui/action-bar";
@@ -35,6 +35,7 @@ interface SkatersGridActionBarProps<TData extends RowData> {
   styleOptions?: CellSelectOption[];
   onStatusUpdate?: (value: string, rows: SkaterRows<TData>) => void;
   onStyleUpdate?: (value: string, rows: SkaterRows<TData>) => void;
+  onDuplicate?: (rows: SkaterRows<TData>) => void;
   onDelete?: (rows: SkaterRows<TData>) => void;
 }
 
@@ -60,6 +61,7 @@ function SkatersGridActionBarImpl<TData extends RowData>({
   styleOptions,
   onStatusUpdate,
   onStyleUpdate,
+  onDuplicate,
   onDelete,
 }: SkatersGridActionBarProps<TData>) {
   const hasRowSelection = table.getHasRowSelection();
@@ -83,7 +85,7 @@ function SkatersGridActionBarImpl<TData extends RowData>({
       open={selectedCount > 0}
       onOpenChange={onOpenChange}
     >
-      <ActionBarSelection>
+      <ActionBarSelection className="whitespace-nowrap">
         <span className="font-medium">{selectedCount}</span>
         <span>
           {hasRowSelection
@@ -105,10 +107,11 @@ function SkatersGridActionBarImpl<TData extends RowData>({
         {statusOptions && statusOptions.length > 0 && onStatusUpdate && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <ActionBarItem variant="secondary">
-                <CheckCircle2 />
-                Status
-              </ActionBarItem>
+              <ActionBarTooltipItem
+                variant="secondary"
+                label="Status"
+                icon={<CheckCircle2 />}
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent data-grid-popover>
               {statusOptions.map((option) => (
@@ -127,10 +130,11 @@ function SkatersGridActionBarImpl<TData extends RowData>({
         {styleOptions && styleOptions.length > 0 && onStyleUpdate && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <ActionBarItem variant="secondary">
-                <Palette />
-                Style
-              </ActionBarItem>
+              <ActionBarTooltipItem
+                variant="secondary"
+                label="Style"
+                icon={<Palette />}
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent data-grid-popover>
               {styleOptions.map((option) => (
@@ -146,14 +150,21 @@ function SkatersGridActionBarImpl<TData extends RowData>({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        {onDuplicate && (
+          <ActionBarTooltipItem
+            variant="secondary"
+            label="Duplicate"
+            icon={<Copy />}
+            onClick={() => onDuplicate(getTargetRows(table))}
+          />
+        )}
         {onDelete && (
-          <ActionBarItem
+          <ActionBarTooltipItem
             variant="destructive"
+            label="Delete"
+            icon={<Trash2 />}
             onClick={() => onDelete(getTargetRows(table))}
-          >
-            <Trash2 />
-            Delete
-          </ActionBarItem>
+          />
         )}
       </ActionBarGroup>
     </ActionBar>

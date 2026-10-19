@@ -56,8 +56,8 @@ const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
 
 function ContextMenuImpl<TData extends RowData>({
   table,
-  contextMenu,
   dataGridRef,
+  contextMenu,
 }: ContextMenuProps<TData>) {
   const readOnly = table.getIsReadOnly();
   const canDeleteRows = !readOnly && !!table.options.onRowsDelete;
@@ -84,9 +84,17 @@ function ContextMenuImpl<TData extends RowData>({
   > = React.useCallback(
     (event) => {
       event.preventDefault();
+      const focusedCell = table.getFocusedCell();
+      if (focusedCell && table.options.onCellFocus) {
+        table.options.onCellFocus({
+          rowId: focusedCell.row.id,
+          columnId: focusedCell.column.id,
+        });
+        return;
+      }
       dataGridRef.current?.focus();
     },
-    [dataGridRef],
+    [table, dataGridRef],
   );
 
   const onOpenChange = React.useCallback(

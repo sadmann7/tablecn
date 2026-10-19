@@ -5,14 +5,14 @@ import {
   type CellSelectionState,
   type ColumnDef,
   type ColumnVisibilityState,
+  functionalUpdate,
+  makeStateUpdater,
   type RowData,
   type RowSelectionState,
   type Table,
   type TableOptions,
   type TableState,
   type Updater,
-  functionalUpdate,
-  makeStateUpdater,
   useTable,
 } from "@tanstack/react-table";
 import * as React from "react";
@@ -35,10 +35,11 @@ import {
   getFocusedCellPosition,
   getHasCellRangeSelection,
   getIsDataColumn,
-  getIsInPopover,
   getIsEventOnScrollbar,
+  getIsInPopover,
   getRowIndexById,
   getSelectionEdgePosition,
+  renderDefaultCell,
   scrollCellIntoView,
   swapItems,
 } from "@/lib/data-grid-utils";
@@ -56,6 +57,42 @@ const AUTO_SCROLL_MAX_SPEED = 40;
 const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
 const UTILITY_COLUMN_IDS = new Set(["select", "actions"]);
 const SEARCH_SHORTCUT_KEY = "f";
+
+let nextObjectId = 0;
+const objectIds = new WeakMap<object, number>();
+
+function useStableProps<TProps extends object>(
+  props: TProps,
+  propsRef: React.RefObject<TProps>,
+): TProps {
+  let propsKey = "";
+  for (const [name, value] of Object.entries(props)) {
+    let valueKey = `${typeof value}${String(value)}`;
+    if (typeof value === "function") {
+      valueKey = "fn";
+    } else if (typeof value === "object" && value !== null) {
+      let id = objectIds.get(value);
+      if (id === undefined) {
+        id = nextObjectId++;
+        objectIds.set(value, id);
+      }
+      valueKey = `obj${id}`;
+    }
+    propsKey += `${name}:${valueKey}\u0000`;
+  }
+
+  return React.useMemo(() => {
+    const stableProps = { ...props };
+    for (const [key, value] of Object.entries(props)) {
+      if (typeof value !== "function") continue;
+      Reflect.set(stableProps, key, (...args: unknown[]) => {
+        const callback: unknown = Reflect.get(propsRef.current, key);
+        if (typeof callback === "function") return callback(...args);
+      });
+    }
+    return stableProps;
+  }, [propsKey]);
+}
 
 function showClipboardToast({ variant, message }: ClipboardNotice) {
   if (variant === "error") toast.error(message);
@@ -80,15 +117,29 @@ interface RowAddResult {
   columnId?: string;
 }
 
+type RowAddTrigger =
+  | {
+      reason: "add-row-press";
+      event?:
+        | React.MouseEvent<HTMLDivElement>
+        | React.KeyboardEvent<HTMLDivElement>;
+    }
+  | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
+  | { reason: "paste"; event?: undefined };
+
+type RowAddEventDetails = RowAddTrigger & {
+  cancel: () => void;
+};
+
 interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
 > {
-  onRowAdd?: (
-    event?: React.MouseEvent<HTMLDivElement>,
-  ) => RowAddResult | Promise<RowAddResult | null> | null;
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
+  onRowAdd?: (
+    eventDetails: RowAddEventDetails,
+  ) => RowAddResult | Promise<RowAddResult | null> | null;
 }
 
 function useDataGrid<TData extends RowData>({
@@ -104,6 +155,8 @@ function useDataGrid<TData extends RowData>({
   const tableRef = React.useRef<Table<DataGridFeatures, TData>>(null);
   const rowVirtualizerRef =
     React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
+  const columnVirtualizerRef =
+    React.useRef<Virtualizer<HTMLDivElement, Element>>(null);
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
@@ -113,6 +166,7 @@ function useDataGrid<TData extends RowData>({
   } | null>(null);
 
   const propsRef = useValueAsRef(props);
+  const stableProps = useStableProps(props, propsRef);
 
   const getRowIndex = React.useCallback((rowId: string) => {
     const currentTable = tableRef.current;
@@ -154,7 +208,17 @@ function useDataGrid<TData extends RowData>({
       }
 
       const cellElement = getCellElement(container, cell.rowId, cell.columnId);
-      if (!cellElement) return false;
+      if (!cellElement) {
+        const centerIndex = currentTable
+          .getCenterVisibleLeafColumns()
+          .findIndex((column) => column.id === cell.columnId);
+        if (shouldScroll && centerIndex !== -1) {
+          columnVirtualizerRef.current?.scrollToIndex(centerIndex, {
+            align: "auto",
+          });
+        }
+        return false;
+      }
 
       if (shouldScroll) {
         scrollCellIntoView({
@@ -453,18 +517,18 @@ function useDataGrid<TData extends RowData>({
   const defaultColumn: Partial<ColumnDef<DataGridFeatures, TData>> =
     React.useMemo(
       () => ({
-        // Cell is rendered directly in DataGridRow to bypass flexRender's
-        // unstable cell.getContext() (https://github.com/TanStack/table/issues/4794)
         minSize: MIN_COLUMN_SIZE,
         maxSize: MAX_COLUMN_SIZE,
+        cell: renderDefaultCell,
       }),
       [],
     );
 
-  const dataGridBodyEventHandlers = React.useMemo(() => {
+  const dataGridBodyEventHandlers = React.useMemo<
+    React.ComponentProps<"div">
+  >(() => {
     let hoveredCellKey: string | null = null;
 
-    // React bubbles events out of portalled editors too, so only cells mounted in the grid count
     function getEventCell(event: React.SyntheticEvent) {
       const container = dataGridRef.current;
       const target = event.target;
@@ -472,10 +536,23 @@ function useDataGrid<TData extends RowData>({
       if (!container.contains(target)) return null;
 
       const cellElement = target.closest<HTMLElement>(
-        '[data-slot="data-grid-cell-wrapper"]',
+        '[data-slot="data-grid-cell-wrapper"], [data-slot="data-grid-cell-preview"]',
       );
-      const rowId = cellElement?.dataset.rowId;
-      const columnId = cellElement?.dataset.columnId;
+      if (!cellElement) return null;
+
+      let rowId = cellElement.dataset.rowId;
+      let columnId = cellElement.dataset.columnId;
+
+      if (cellElement.dataset.slot === "data-grid-cell-preview") {
+        const rowIndex = cellElement.closest<HTMLElement>(
+          '[data-slot="data-grid-row"]',
+        )?.dataset.index;
+        rowId =
+          rowIndex === undefined
+            ? undefined
+            : tableRef.current?.getRowModel().rows[Number(rowIndex)]?.id;
+        columnId = cellElement.parentElement?.dataset.columnId;
+      }
       if (!rowId || !columnId) return null;
 
       const editingCell = tableRef.current?.getEditingCell();
@@ -491,23 +568,23 @@ function useDataGrid<TData extends RowData>({
     }
 
     return {
-      onClick: (event: React.MouseEvent<HTMLElement>) => {
+      onClick: (event) => {
         const cell = getPressedCell(event);
         if (!cell) return;
         event.preventDefault();
         onCellClick(cell.rowId, cell.columnId, event);
       },
-      onDoubleClick: (event: React.MouseEvent<HTMLElement>) => {
+      onDoubleClick: (event) => {
         const cell = getPressedCell(event);
         if (!cell) return;
         event.preventDefault();
         onCellDoubleClick(cell.rowId, cell.columnId);
       },
-      onMouseDown: (event: React.MouseEvent<HTMLElement>) => {
+      onMouseDown: (event) => {
         const cell = getPressedCell(event);
         if (cell) onCellMouseDown(cell.rowId, cell.columnId, event);
       },
-      onMouseOver: (event: React.MouseEvent<HTMLElement>) => {
+      onMouseOver: (event) => {
         const cell = getEventCell(event);
         const cellKey = cell ? getCellKey(cell.rowId, cell.columnId) : null;
         if (cellKey === hoveredCellKey) return;
@@ -517,10 +594,10 @@ function useDataGrid<TData extends RowData>({
       onMouseLeave: () => {
         hoveredCellKey = null;
       },
-      onMouseUp: (event: React.MouseEvent<HTMLElement>) => {
+      onMouseUp: (event) => {
         if (getEventCell(event)) onCellMouseUp();
       },
-      onContextMenu: (event: React.MouseEvent<HTMLElement>) => {
+      onContextMenu: (event) => {
         const cell = getEventCell(event);
         if (cell) onCellContextMenu(cell.rowId, cell.columnId, event);
       },
@@ -548,34 +625,26 @@ function useDataGrid<TData extends RowData>({
     [columns],
   );
 
-  const controlledState = props.state;
   const enableCellEditing =
     !props.readOnly && props.enableCellEditing !== false;
-  const hasEditingCellChange = !!props.onEditingCellChange;
-  const hasRowHeightChange = !!props.onRowHeightChange;
-  const canAddRows = !!props.onRowsAdd || !!props.onRowAdd;
+  const hasRowAdd = !!props.onRowAdd;
+  const canAddRows = !!props.onRowsAdd || hasRowAdd;
 
   const tableOptions = React.useMemo<
     TableOptions<DataGridFeatures, TData>
   >(() => {
     return {
-      ...propsRef.current,
-      ...(hasEditingCellChange && {
-        onEditingCellChange: (updater) =>
-          propsRef.current.onEditingCellChange?.(updater),
-      }),
-      ...(hasRowHeightChange && {
-        onRowHeightChange: (updater) =>
-          propsRef.current.onRowHeightChange?.(updater),
-      }),
+      ...stableProps,
       onRowsAdd: canAddRows
         ? async (count) => {
             const { onRowsAdd, onRowAdd } = propsRef.current;
             if (onRowsAdd) return onRowsAdd(count);
-            for (let i = 0; i < count; i++) await onRowAdd?.();
+            for (let i = 0; i < count; i++) {
+              await onRowAdd?.({ reason: "paste", cancel: () => {} });
+            }
           }
         : undefined,
-      onScrollToCell: (cell) =>
+      onCellScroll: (cell) =>
         revealCell(cell, { shouldFocus: false, shouldScroll: true }),
       onCellFocus: (cell) => focusCellElement(cell),
       onClipboardNotice: (notice) =>
@@ -584,7 +653,6 @@ function useDataGrid<TData extends RowData>({
       data,
       columns: tableColumns,
       defaultColumn,
-      state: controlledState,
       autoResetCellSelection: false,
       enableCellEditing,
       onRowSelectionChange,
@@ -594,25 +662,23 @@ function useDataGrid<TData extends RowData>({
       dir,
     };
   }, [
+    stableProps,
+    canAddRows,
     propsRef,
+    revealCell,
+    focusCellElement,
     data,
     tableColumns,
     defaultColumn,
-    controlledState,
     enableCellEditing,
-    hasEditingCellChange,
-    hasRowHeightChange,
-    canAddRows,
-    dir,
-    revealCell,
-    focusCellElement,
     onRowSelectionChange,
     onColumnVisibilityChange,
+    dir,
   ]);
 
   const table = useTable(tableOptions, selectGridLayoutState);
 
-  if (!tableRef.current) {
+  if (tableRef.current === null) {
     tableRef.current = table;
   }
 
@@ -655,40 +721,62 @@ function useDataGrid<TData extends RowData>({
   }, [isFirefox, table.state.columnPinning]);
 
   const rowVirtualizerOptions = React.useMemo<
-    Pick<
-      VirtualizerOptions<HTMLDivElement, Element>,
-      "overscan" | "measureElement"
-    >
-  >(
-    () => ({
-      overscan,
-      measureElement: isFirefox
-        ? undefined
-        : (element) => element.getBoundingClientRect().height,
-    }),
-    [overscan, isFirefox],
-  );
+    Pick<VirtualizerOptions<HTMLDivElement, Element>, "overscan">
+  >(() => ({ overscan }), [overscan]);
 
-  const onRowAdd = React.useCallback(
-    async (event?: React.MouseEvent<HTMLDivElement>) => {
-      if (propsRef.current.readOnly || !propsRef.current.onRowAdd) return;
+  const skipDataGridTabStop = React.useCallback(() => {
+    const container = dataGridRef.current;
+    if (!container) return;
 
+    container.tabIndex = -1;
+    requestAnimationFrame(() => {
+      container.tabIndex = 0;
+    });
+  }, []);
+
+  const addRow = React.useCallback(
+    async (
+      trigger: RowAddTrigger,
+      getColumnId: (result: RowAddResult) => string | undefined,
+    ) => {
+      const { readOnly, onRowAdd: onRowAddProp } = propsRef.current;
+      if (readOnly || !onRowAddProp) return;
+
+      let isCanceled = false;
       let result: RowAddResult | null;
       try {
-        result = await propsRef.current.onRowAdd(event);
+        result = await onRowAddProp({
+          ...trigger,
+          cancel: () => {
+            isCanceled = true;
+          },
+        });
       } catch {
         return;
       }
 
-      if (result === null || event?.defaultPrevented) return;
+      if (!result || isCanceled) return;
 
-      const columnId = result.columnId ?? getNavigableColumnIds()[0];
+      const columnId = getColumnId(result);
       if (!columnId) return;
 
       tableRef.current?.clearSelection();
       focusCell(result.rowId, columnId);
     },
-    [propsRef, getNavigableColumnIds, focusCell],
+    [propsRef, focusCell],
+  );
+
+  const onRowAdd = React.useCallback(
+    (
+      event?:
+        | React.MouseEvent<HTMLDivElement>
+        | React.KeyboardEvent<HTMLDivElement>,
+    ) =>
+      addRow(
+        { reason: "add-row-press", event },
+        (result) => result.columnId ?? getNavigableColumnIds()[0],
+      ),
+    [addRow, getNavigableColumnIds],
   );
 
   const getColumnHeaderTrigger = React.useCallback((columnId: string) => {
@@ -712,18 +800,6 @@ function useDataGrid<TData extends RowData>({
     },
     [getColumnHeaderTrigger],
   );
-
-  const onGridTabBackOut = React.useCallback(() => {
-    const container = dataGridRef.current;
-    if (!container) return;
-
-    // The container precedes every cell in the tab order, so it has to drop out
-    // until the browser finishes moving focus or Shift+Tab would land on it.
-    container.tabIndex = -1;
-    requestAnimationFrame(() => {
-      container.tabIndex = 0;
-    });
-  }, []);
 
   const onColumnHeaderKeyDown = React.useCallback(
     (event: KeyboardEvent, columnId: string) => {
@@ -830,7 +906,7 @@ function useDataGrid<TData extends RowData>({
         case "ArrowUp":
           break;
         case "ArrowDown": {
-          // Stops the menu trigger from opening its menu on ArrowDown
+          // Stops the menu trigger from opening its menu
           event.stopPropagation();
           const firstRowId = getRowIdAt(0);
           if (!firstRowId) break;
@@ -844,7 +920,7 @@ function useDataGrid<TData extends RowData>({
         case "Tab":
           if (shiftKey) {
             if (headerIndex === 0) {
-              onGridTabBackOut();
+              skipDataGridTabStop();
               return true;
             }
             focusHeaderAt(headerIndex - 1);
@@ -871,7 +947,7 @@ function useDataGrid<TData extends RowData>({
       getNavigableColumnIds,
       getColumnHeaderTrigger,
       focusColumnHeader,
-      onGridTabBackOut,
+      skipDataGridTabStop,
       focusCell,
       getRowIdAt,
     ],
@@ -915,8 +991,6 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      // Cell editing keyboard events (Enter, Tab, Escape) are handled by the cell variants
-      // to ensure proper value commitment before navigation
       if (tableRef.current?.getEditingCell()) return;
 
       const headerCell =
@@ -961,6 +1035,24 @@ function useDataGrid<TData extends RowData>({
       }
 
       if (!focusedCell) return;
+
+      if (
+        !headerColumnId &&
+        (key === "ContextMenu" || (shiftKey && key === "F10"))
+      ) {
+        event.preventDefault();
+        const container = dataGridRef.current;
+        const cellElement =
+          container &&
+          getCellElement(container, focusedCell.rowId, focusedCell.columnId);
+        if (!cellElement) return;
+        const rect = cellElement.getBoundingClientRect();
+        currentTable?.openContextMenu({
+          x: dir === "rtl" ? rect.right : rect.left,
+          y: rect.bottom,
+        });
+        return;
+      }
 
       let direction: NavigationDirection | null = null;
 
@@ -1054,17 +1146,10 @@ function useDataGrid<TData extends RowData>({
           ? getNavigableColumnIds()[0]
           : focusedCell.columnId;
 
-        Promise.resolve(propsRef.current.onRowAdd())
-          .then((result) => {
-            const columnId = result?.columnId ?? currentColumnId;
-            if (!result || !columnId) return;
-
-            tableRef.current?.clearSelection();
-            focusCell(result.rowId, columnId);
-          })
-          .catch(() => {
-            // Callback threw an error, don't proceed with focus
-          });
+        void addRow(
+          { reason: "insert-below", event, afterRowId: focusedCell.rowId },
+          (result) => currentColumnId ?? result.columnId,
+        );
         return;
       }
 
@@ -1134,7 +1219,7 @@ function useDataGrid<TData extends RowData>({
 
           direction = shiftKey ? "shift+tab" : "tab";
           if (!currentTable?.getNavigationTarget(focusedCell, direction)) {
-            if (shiftKey) onGridTabBackOut();
+            if (shiftKey) skipDataGridTabStop();
             return;
           }
           break;
@@ -1157,10 +1242,11 @@ function useDataGrid<TData extends RowData>({
       getNavigableColumnIds,
       getIsDataColumnId,
       onRowsDelete,
+      addRow,
       focusCell,
       focusColumnHeader,
       onColumnHeaderKeyDown,
-      onGridTabBackOut,
+      skipDataGridTabStop,
       getRowIndex,
     ],
   );
@@ -1275,7 +1361,6 @@ function useDataGrid<TData extends RowData>({
     focusCell,
   ]);
 
-  // Forward keyboard focus entering the grid to the active cell, so the grid acts as a single tab stop
   React.useEffect(() => {
     const container = dataGridRef.current;
     if (!container) return;
@@ -1356,7 +1441,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, [getNavigableColumnIds, focusCell, focusCellElement, getFocusedCell]);
 
-  // Tracks whether keyboard focus sits in a column header, so the focused cell can step back while rows stay selected
   React.useEffect(() => {
     function onFocusIn(event: FocusEvent) {
       const target = event.target;
@@ -1376,7 +1460,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, []);
 
-  // Keeps focus on the grid when the focused cell unmounts during virtualization
   React.useEffect(() => {
     const container = dataGridRef.current;
     if (!container) return;
@@ -1384,11 +1467,9 @@ function useDataGrid<TData extends RowData>({
     let rafId = 0;
 
     function onFocusOut(event: FocusEvent) {
-      // A real relatedTarget means the user moved focus elsewhere on purpose
       if (event.relatedTarget || tableRef.current?.getEditingCell()) return;
 
       cancelAnimationFrame(rafId);
-      // Focus lands on the body only after the unmounted cell is removed from the DOM
       rafId = requestAnimationFrame(() => {
         const focusedCell = getFocusedCell();
         if (!focusedCell || !document.hasFocus()) return;
@@ -1433,13 +1514,11 @@ function useDataGrid<TData extends RowData>({
           table.getFocusedHeaderColumnId() === null &&
           dataGridRef.current?.contains(document.activeElement)
         ) {
-          // Header controls like select all keep focus, so toggling them doesn't scroll to the first row
           focusCellElement(focusedCell);
         }
         return;
       }
 
-      // Row selection mirrors whole rows into the cell selection, and revealing that edge would jump to the last column
       if (
         isEdgeChanged &&
         edgeCell &&
@@ -1485,7 +1564,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, [table, revealCell, focusCellElement]);
 
-  // Focuses a cell requested before its row was rendered, once it mounts
   React.useLayoutEffect(() => {
     const pending = pendingFocusRef.current;
     if (!pending) return;
@@ -1524,7 +1602,6 @@ function useDataGrid<TData extends RowData>({
           event.clientY,
         );
 
-        // Compensate for event.target bubbling up
         const isInsidePopover = elements.some((element) =>
           getIsInPopover(element),
         );
@@ -1850,28 +1927,29 @@ function useDataGrid<TData extends RowData>({
 
   return React.useMemo(
     () => ({
+      table,
       dataGridRef,
       headerRef,
-      rowMapRef,
       footerRef,
-      dir,
-      table,
-      dataGridBodyProps,
+      rowMapRef,
       rowVirtualizerRef,
+      columnVirtualizerRef,
       rowVirtualizerOptions,
+      dataGridBodyProps,
       columnSizeVars,
-      onRowAdd: propsRef.current.onRowAdd ? onRowAdd : undefined,
+      dir,
       adjustLayout,
+      onRowAdd: hasRowAdd ? onRowAdd : undefined,
     }),
     [
-      propsRef,
-      dir,
       table,
-      dataGridBodyProps,
       rowVirtualizerOptions,
+      dataGridBodyProps,
       columnSizeVars,
-      onRowAdd,
+      dir,
       adjustLayout,
+      hasRowAdd,
+      onRowAdd,
     ],
   );
 }

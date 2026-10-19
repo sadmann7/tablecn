@@ -384,23 +384,24 @@ function useDataGridUndoRedo<TData>({
 
       const { getRowId, data: currentData } = propsRef.current;
 
-      const indexById = buildIndexById(currentData, getRowId);
+      const rowsById = new Map(rows.map((row) => [getRowId(row), row]));
+      const rowIds = new Set(rowsById.keys());
 
+      // Stops once every deleted row is found, instead of indexing the whole dataset, and finds them in order
       const rowsWithPositions: Array<{ index: number; row: TData }> = [];
-      for (const row of rows) {
-        const rowId = getRowId(row);
-        const currentIndex = indexById.get(rowId);
-        if (currentIndex !== undefined) {
-          rowsWithPositions.push({
-            index: currentIndex,
-            row: { ...row },
-          });
-        }
+      for (
+        let index = 0;
+        index < currentData.length && rowsById.size > 0;
+        index++
+      ) {
+        const currentRow = currentData[index];
+        if (currentRow === undefined) continue;
+        const rowId = getRowId(currentRow);
+        const row = rowsById.get(rowId);
+        if (row === undefined) continue;
+        rowsById.delete(rowId);
+        rowsWithPositions.push({ index, row: { ...row } });
       }
-
-      rowsWithPositions.sort((a, b) => a.index - b.index);
-
-      const rowIds = new Set(rows.map((row) => getRowId(row)));
 
       const entry: HistoryEntry<TData> = {
         variant: "rows_delete",

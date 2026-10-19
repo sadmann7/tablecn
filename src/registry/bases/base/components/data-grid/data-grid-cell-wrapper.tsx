@@ -21,8 +21,9 @@ export function DataGridCellWrapper<TData extends RowData>({
   presence,
   readOnly,
   rowHeight,
-  className,
+  width: _width,
   onKeyDown: onKeyDownProp,
+  className,
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const rowId = cell.row.id;
@@ -91,7 +92,7 @@ export function DataGridCellWrapper<TData extends RowData>({
         "size-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
           "ring-1 ring-inset": isFocused || !!presence,
-          "ring-ring": isFocused && !presence,
+          "ring-ring": isFocused,
           "bg-yellow-100 dark:bg-yellow-900/30":
             isSearchMatch && !isActiveSearchMatch,
           "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
@@ -109,7 +110,7 @@ export function DataGridCellWrapper<TData extends RowData>({
         className,
       )}
       style={
-        presence
+        presence && !isFocused
           ? ({ "--tw-ring-color": presence.color } as React.CSSProperties)
           : undefined
       }

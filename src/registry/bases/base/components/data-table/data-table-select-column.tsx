@@ -1,11 +1,11 @@
 "use client";
 
 import {
-  Subscribe,
   type CellContext,
   type ColumnDef,
   type HeaderContext,
   type RowData,
+  Subscribe,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 

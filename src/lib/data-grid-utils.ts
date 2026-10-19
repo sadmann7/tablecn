@@ -31,12 +31,17 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellOpts,
   CellPosition,
+  ColumnValueReader,
+  ColumnWindow,
+  DataGridColumnMeta,
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
 
 const DOMAIN_REGEX = /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i;
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}.*)?$/;
+const UNSAFE_PROTOCOL_REGEX = /^(javascript|data|vbscript|file):/i;
+
 const TRUTHY_BOOLEANS = new Set(["true", "1", "yes", "checked"]);
 const VALID_BOOLEANS = new Set([
   "true",
@@ -49,10 +54,7 @@ const VALID_BOOLEANS = new Set([
   "unchecked",
 ]);
 
-// Unit separator, so row ids and column ids may contain any printable character
 const CELL_KEY_SEPARATOR = "\u001f";
-
-// Overlay scrollbars take no layout space, so presses this close to the edge are treated as scrollbar presses
 const SCROLLBAR_HITBOX_SIZE = 16;
 
 const ROW_HEIGHTS: Record<RowHeightValue, number> = {
@@ -61,7 +63,6 @@ const ROW_HEIGHTS: Record<RowHeightValue, number> = {
   tall: 76,
   "extra-tall": 96,
 };
-
 const LINE_COUNTS: Record<RowHeightValue, number> = {
   short: 1,
   medium: 2,
@@ -211,7 +212,7 @@ function parseMultiSelectValues(text: string): string[] {
       return parsed.filter((item): item is string => typeof item === "string");
     }
   } catch {
-    // Fall back to comma separated values
+    // Falls back to comma-separated values
   }
   return text ? text.split(",").map((item) => item.trim()) : [];
 }
@@ -449,58 +450,67 @@ export function getHasCellRangeSelection(ranges: CellSelectionState) {
   );
 }
 
+export function renderDefaultCell(context: { renderValue: () => unknown }) {
+  return getTextCellValue(context.renderValue());
+}
+
+export function getHasCustomCell(column: {
+  columnDef: { cell?: unknown; meta?: DataGridColumnMeta };
+}) {
+  const { cell, meta } = column.columnDef;
+  return (
+    !meta?.cell?.variant && cell !== undefined && cell !== renderDefaultCell
+  );
+}
+
 export function getIsDataColumn(
   column: { columnDef: { enableCellSelection?: boolean } } | undefined,
 ) {
   return column?.columnDef.enableCellSelection !== false;
 }
 
-export function getRowIndexById<TData extends RowData>(
-  table: Table<DataGridFeatures, TData>,
-  rowId: string,
-) {
-  return table.getRowModel().rowsById[rowId]?.getDisplayIndex() ?? -1;
+export function getColumnValueReader<TData extends RowData>(
+  column:
+    | { accessorFn?: (original: TData, index: number) => unknown }
+    | undefined,
+): ColumnValueReader<TData> {
+  const accessorFn = column?.accessorFn;
+  return (row) => accessorFn?.(row.original, row.index);
 }
 
-export function getTabTargetCell(params: {
-  rowIndex: number;
-  columnId: string;
-  columnIds: string[];
-  rowCount: number;
-  isBackward: boolean;
-  getIsColumnTabbable?: (columnId: string) => boolean;
-}): { rowIndex: number; columnId: string } | null {
-  const {
-    rowIndex,
-    columnId,
-    columnIds,
-    rowCount,
-    isBackward,
-    getIsColumnTabbable = () => true,
-  } = params;
-  const colIndex = columnIds.indexOf(columnId);
-  if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
+export function getColumnLabel<TData extends RowData, TValue = unknown>(
+  column: Column<DataGridFeatures, TData, TValue>,
+): string {
+  const { header, meta } = column.columnDef;
+  if (meta?.label) return meta.label;
+  return typeof header === "string" ? header : column.id;
+}
 
-  const step = isBackward ? -1 : 1;
-  let nextRowIndex = rowIndex;
-  let nextColIndex = colIndex;
-
-  while (true) {
-    nextColIndex += step;
-    if (nextColIndex >= columnIds.length) {
-      nextColIndex = 0;
-      nextRowIndex++;
-    } else if (nextColIndex < 0) {
-      nextColIndex = columnIds.length - 1;
-      nextRowIndex--;
-    }
-
-    if (nextRowIndex < 0 || nextRowIndex >= rowCount) return null;
-
-    const nextColumnId = columnIds[nextColIndex];
-    if (nextColumnId && getIsColumnTabbable(nextColumnId)) {
-      return { rowIndex: nextRowIndex, columnId: nextColumnId };
-    }
+export function getColumnVariant(variant?: CellOpts["variant"]): {
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  label: string;
+} | null {
+  switch (variant) {
+    case "short-text":
+      return { label: "Short text", icon: BaselineIcon };
+    case "long-text":
+      return { label: "Long text", icon: TextInitialIcon };
+    case "number":
+      return { label: "Number", icon: HashIcon };
+    case "url":
+      return { label: "URL", icon: LinkIcon };
+    case "checkbox":
+      return { label: "Checkbox", icon: CheckSquareIcon };
+    case "select":
+      return { label: "Select", icon: ListIcon };
+    case "multi-select":
+      return { label: "Multi-select", icon: ListChecksIcon };
+    case "date":
+      return { label: "Date", icon: CalendarIcon };
+    case "file":
+      return { label: "File", icon: FileIcon };
+    default:
+      return null;
   }
 }
 
@@ -512,21 +522,10 @@ export function swapItems<T>(items: Array<T>, first: T, second: T) {
   });
 }
 
-export function getRowHeightValue(rowHeight: RowHeightValue): number {
-  return ROW_HEIGHTS[rowHeight];
-}
-
-export function getLineCount(rowHeight: RowHeightValue): number {
-  return LINE_COUNTS[rowHeight];
-}
-
 export function getColumnBorderVisibility<TData extends RowData>(params: {
   column: Column<DataGridFeatures, TData>;
   nextColumn?: Column<DataGridFeatures, TData>;
-}): {
-  showEndBorder: boolean;
-  showStartBorder: boolean;
-} {
+}) {
   const { column, nextColumn } = params;
 
   const isPinned = column.getIsPinned();
@@ -540,13 +539,68 @@ export function getColumnBorderVisibility<TData extends RowData>(params: {
     nextIsPinned === "end" && nextColumn?.getIsFirstColumn("end");
 
   const showEndBorder = !isBeforeRightPinned && !isLastRightPinnedColumn;
-
   const showStartBorder = isFirstRightPinnedColumn;
 
   return {
     showEndBorder,
     showStartBorder,
   };
+}
+
+type WindowedColumnEntry<T> =
+  | { type: "column"; item: T; colIndex: number }
+  | { type: "spacer"; key: string; size: number };
+
+export function getWindowedColumns<T>(
+  items: T[],
+  columnWindow: ColumnWindow | null,
+): Array<WindowedColumnEntry<T>> {
+  if (!columnWindow) {
+    return items.map((item, colIndex) => ({ type: "column", item, colIndex }));
+  }
+
+  const { startCount, centerCount, centerStart, centerEnd } = columnWindow;
+  const entries: Array<WindowedColumnEntry<T>> = [];
+
+  for (let colIndex = 0; colIndex < startCount; colIndex++) {
+    const item = items[colIndex];
+    if (item !== undefined) entries.push({ type: "column", item, colIndex });
+  }
+
+  let offset = centerStart;
+  let spacerCount = 0;
+  for (const windowItem of columnWindow.items) {
+    const colIndex = startCount + windowItem.index;
+    const item = items[colIndex];
+    if (item === undefined) continue;
+    if (windowItem.start > offset) {
+      entries.push({
+        type: "spacer",
+        key: spacerCount++ === 0 ? "spacer-start" : `spacer-${spacerCount}`,
+        size: windowItem.start - offset,
+      });
+    }
+    entries.push({ type: "column", item, colIndex });
+    offset = windowItem.end;
+  }
+  if (centerEnd > offset) {
+    entries.push({
+      type: "spacer",
+      key: "spacer-end",
+      size: centerEnd - offset,
+    });
+  }
+
+  for (
+    let colIndex = startCount + centerCount;
+    colIndex < items.length;
+    colIndex++
+  ) {
+    const item = items[colIndex];
+    if (item !== undefined) entries.push({ type: "column", item, colIndex });
+  }
+
+  return entries;
 }
 
 export function getColumnPinningStyle<TData extends RowData>(
@@ -639,6 +693,63 @@ export function getColumnFitSize(params: {
   return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
 }
 
+export function getRowIndexById<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  rowId: string,
+) {
+  return table.getRowModel().rowsById[rowId]?.getDisplayIndex() ?? -1;
+}
+
+export function getTabTargetCell(params: {
+  rowIndex: number;
+  columnId: string;
+  columnIds: string[];
+  rowCount: number;
+  isBackward: boolean;
+  getIsColumnTabbable?: (columnId: string) => boolean;
+}): { rowIndex: number; columnId: string } | null {
+  const {
+    rowIndex,
+    columnId,
+    columnIds,
+    rowCount,
+    isBackward,
+    getIsColumnTabbable = () => true,
+  } = params;
+  const colIndex = columnIds.indexOf(columnId);
+  if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
+
+  const step = isBackward ? -1 : 1;
+  let nextRowIndex = rowIndex;
+  let nextColIndex = colIndex;
+
+  while (true) {
+    nextColIndex += step;
+    if (nextColIndex >= columnIds.length) {
+      nextColIndex = 0;
+      nextRowIndex++;
+    } else if (nextColIndex < 0) {
+      nextColIndex = columnIds.length - 1;
+      nextRowIndex--;
+    }
+
+    if (nextRowIndex < 0 || nextRowIndex >= rowCount) return null;
+
+    const nextColumnId = columnIds[nextColIndex];
+    if (nextColumnId && getIsColumnTabbable(nextColumnId)) {
+      return { rowIndex: nextRowIndex, columnId: nextColumnId };
+    }
+  }
+}
+
+export function getRowHeightValue(rowHeight: RowHeightValue): number {
+  return ROW_HEIGHTS[rowHeight];
+}
+
+export function getLineCount(rowHeight: RowHeightValue): number {
+  return LINE_COUNTS[rowHeight];
+}
+
 export function scrollCellIntoView<TData extends RowData>(params: {
   container: HTMLDivElement;
   targetCell: HTMLDivElement;
@@ -657,7 +768,6 @@ export function scrollCellIntoView<TData extends RowData>(params: {
   const isActuallyRtl = isRtl || hasNegativeScroll;
 
   const currentTable = tableRef.current;
-  // Pinned cells are always in view, and the pinned-area math below would treat them as hidden behind it
   const columnId = targetCell.dataset.columnId;
   if (columnId && currentTable?.getColumn(columnId)?.getIsPinned()) return;
 
@@ -713,14 +823,6 @@ export function scrollCellIntoView<TData extends RowData>(params: {
 
 function escapeAttributeValue(value: string) {
   return value.replace(/["\\]/g, "\\$&");
-}
-
-export function getColumnLabel<TData extends RowData, TValue = unknown>(
-  column: Column<DataGridFeatures, TData, TValue>,
-): string {
-  const { header, meta } = column.columnDef;
-  if (meta?.label) return meta.label;
-  return typeof header === "string" ? header : column.id;
 }
 
 export function getCellElement(
@@ -853,51 +955,12 @@ export function moveCaretToEnd(element: HTMLElement) {
       : element.scrollWidth;
 }
 
-export function flexRender<TProps extends object>(
-  Comp: ((props: TProps) => React.ReactNode) | string | undefined,
-  props: TProps,
-): React.ReactNode {
-  if (typeof Comp === "string") {
-    return Comp;
-  }
-  return Comp?.(props);
-}
-
-export function getColumnVariant(variant?: CellOpts["variant"]): {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  label: string;
-} | null {
-  switch (variant) {
-    case "short-text":
-      return { label: "Short text", icon: BaselineIcon };
-    case "long-text":
-      return { label: "Long text", icon: TextInitialIcon };
-    case "number":
-      return { label: "Number", icon: HashIcon };
-    case "url":
-      return { label: "URL", icon: LinkIcon };
-    case "checkbox":
-      return { label: "Checkbox", icon: CheckSquareIcon };
-    case "select":
-      return { label: "Select", icon: ListIcon };
-    case "multi-select":
-      return { label: "Multi-select", icon: ListChecksIcon };
-    case "date":
-      return { label: "Date", icon: CalendarIcon };
-    case "file":
-      return { label: "File", icon: FileIcon };
-    default:
-      return null;
-  }
-}
-
 export function getUrlHref(urlString: string): string {
   if (!urlString || urlString.trim() === "") return "";
 
   const trimmed = urlString.trim();
 
-  // Reject dangerous protocols (extra safety, though our http:// prefix would neutralize them)
-  if (/^(javascript|data|vbscript|file):/i.test(trimmed)) {
+  if (UNSAFE_PROTOCOL_REGEX.test(trimmed)) {
     return "";
   }
 
@@ -915,7 +978,6 @@ export function parseLocalDate(dateStr: unknown): Date | null {
   const [year, month, day] = dateStr.split("-").map(Number);
   if (!year || !month || !day) return null;
   const date = new Date(year, month - 1, day);
-  // Verify date wasn't auto-corrected (e.g. Feb 30 -> Mar 1)
   if (
     date.getFullYear() !== year ||
     date.getMonth() !== month - 1 ||

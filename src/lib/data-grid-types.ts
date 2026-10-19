@@ -6,6 +6,48 @@ export type Direction = "ltr" | "rtl";
 
 export type RowHeightValue = "short" | "medium" | "tall" | "extra-tall";
 
+export type NavigationDirection =
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "home"
+  | "end"
+  | "ctrl+up"
+  | "ctrl+down"
+  | "ctrl+home"
+  | "ctrl+end"
+  | "pageup"
+  | "pagedown"
+  | "pageleft"
+  | "pageright"
+  | "tab"
+  | "shift+tab";
+
+export interface CellPosition {
+  rowId: string;
+  columnId: string;
+}
+
+export interface CellUpdate {
+  rowId: string;
+  columnId: string;
+  value: unknown;
+}
+
+export interface CellPresence extends CellPosition {
+  name: string;
+  color: string;
+}
+
+export interface FileCellData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
+
 export interface CellSelectOption {
   label: string;
   value: string;
@@ -51,20 +93,41 @@ export type CellOpts =
       multiple?: boolean;
     };
 
-export interface CellUpdate {
-  rowId: string;
-  columnId: string;
-  value: unknown;
+export interface DataGridColumnMeta {
+  label?: string;
+  cell?: CellOpts;
 }
 
-export interface CellPosition {
-  rowId: string;
-  columnId: string;
+export interface ColumnValueReader<TData extends RowData = RowData> {
+  (row: { original: TData; index: number }): unknown;
 }
 
-export interface CellPresence extends CellPosition {
-  name: string;
-  color: string;
+export interface ColumnWindowItem {
+  index: number;
+  start: number;
+  end: number;
+}
+
+export interface ColumnWindow {
+  items: ColumnWindowItem[];
+  centerStart: number;
+  centerEnd: number;
+  startCount: number;
+  centerCount: number;
+}
+
+export interface DataGridCellProps<TData extends RowData> {
+  cell: Cell<DataGridFeatures, TData>;
+  columnIndex: number;
+  width: number;
+  rowHeight: RowHeightValue;
+  isEditing: boolean;
+  isFocused: boolean;
+  isSelected: boolean;
+  isSearchMatch: boolean;
+  isActiveSearchMatch: boolean;
+  presence: CellPresence | null;
+  readOnly: boolean;
 }
 
 export interface ClipboardNotice {
@@ -82,50 +145,6 @@ export interface PasteDialogState {
   open: boolean;
   rowsNeeded: number;
   clipboardText: string;
-}
-
-export type NavigationDirection =
-  | "up"
-  | "down"
-  | "left"
-  | "right"
-  | "home"
-  | "end"
-  | "ctrl+up"
-  | "ctrl+down"
-  | "ctrl+home"
-  | "ctrl+end"
-  | "pageup"
-  | "pagedown"
-  | "pageleft"
-  | "pageright"
-  | "tab"
-  | "shift+tab";
-
-export interface DataGridColumnMeta {
-  label?: string;
-  cell?: CellOpts;
-}
-
-export interface DataGridCellProps<TData extends RowData> {
-  cell: Cell<DataGridFeatures, TData>;
-  columnIndex: number;
-  rowHeight: RowHeightValue;
-  isEditing: boolean;
-  isFocused: boolean;
-  isSelected: boolean;
-  isSearchMatch: boolean;
-  isActiveSearchMatch: boolean;
-  presence: CellPresence | null;
-  readOnly: boolean;
-}
-
-export interface FileCellData {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url?: string;
 }
 
 export type TextFilterOperator =

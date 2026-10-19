@@ -14,8 +14,8 @@ import {
   getEstimatedHoursRange,
   getRecentTasks,
   getTaskPriorityCounts,
-  getTaskStatusCounts,
   getTasks,
+  getTaskStatusCounts,
 } from "./lib/queries";
 import { searchParamsCache, tasksColumnConfigs } from "./lib/validations";
 

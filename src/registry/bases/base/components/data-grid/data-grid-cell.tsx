@@ -6,8 +6,10 @@ import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
+import { getHasCustomCell } from "@/lib/data-grid-utils";
 import {
   CheckboxCell,
+  CustomCell,
   DateCell,
   FileCell,
   LongTextCell,
@@ -29,25 +31,23 @@ export const DataGridCell = React.memo(DataGridCellImpl, (prev, next) => {
   if (prev.presence?.name !== next.presence?.name) return false;
   if (prev.readOnly !== next.readOnly) return false;
   if (prev.rowHeight !== next.rowHeight) return false;
+  if (prev.width !== next.width) return false;
   if (prev.cell.row.id !== next.cell.row.id) return false;
   if (prev.cell.column.id !== next.cell.column.id) return false;
-
-  // Check cell value using row.original instead of getValue() for stability
-  // getValue() is unstable and recreates on every render, breaking memoization
-  const prevValue = (prev.cell.row.original as Record<string, unknown>)[
-    prev.cell.column.id
-  ];
-  const nextValue = (next.cell.row.original as Record<string, unknown>)[
-    next.cell.column.id
-  ];
-  if (prevValue !== nextValue) return false;
-
-  return true;
+  if (prev.cell.column.columnDef.cell !== next.cell.column.columnDef.cell) {
+    return false;
+  }
+  if (getHasCustomCell(next.cell.column)) {
+    return prev.cell.row.original === next.cell.row.original;
+  }
+  return prev.cell.getValue() === next.cell.getValue();
 }) as typeof DataGridCellImpl;
 
 function DataGridCellImpl<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
+  if (getHasCustomCell(props.cell.column)) return <CustomCell {...props} />;
+
   const cellOpts = props.cell.column.columnDef.meta?.cell;
   const variant = cellOpts?.variant ?? "text";
 

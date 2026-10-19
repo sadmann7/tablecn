@@ -4,9 +4,10 @@ import { cn } from "cn";
 
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 
-interface DivProps extends React.ComponentProps<"div"> {}
-
-function DataGridSkeleton({ className, ...props }: DivProps) {
+function DataGridSkeleton({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="data-grid-skeleton"
@@ -19,7 +20,7 @@ function DataGridSkeleton({ className, ...props }: DivProps) {
   );
 }
 
-interface DataGridSkeletonToolbarProps extends DivProps {
+interface DataGridSkeletonToolbarProps extends React.ComponentProps<"div"> {
   align?: "start" | "center" | "end";
   actionCount?: number;
 }
@@ -51,7 +52,10 @@ function DataGridSkeletonToolbar({
   );
 }
 
-function DataGridSkeletonGrid({ className, ...props }: DivProps) {
+function DataGridSkeletonGrid({
+  className,
+  ...props
+}: React.ComponentProps<"div">) {
   return (
     <Skeleton
       data-slot="data-grid-skeleton-grid"

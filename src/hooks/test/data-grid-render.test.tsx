@@ -116,6 +116,172 @@ describe("DataGrid rendering", () => {
     vi.restoreAllMocks();
   });
 
+  it("gives custom headers their own hooks and renders memo headers", () => {
+    function CountHeader({ label }: { label: string }) {
+      const [count] = React.useState(1);
+      return <span>{`${label} ${count}`}</span>;
+    }
+    const MemoHeader = React.memo(function MemoHeader() {
+      return <span>memo header</span>;
+    });
+    const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+      {
+        id: "name",
+        accessorKey: "name",
+        header: function NameHeader() {
+          const [label] = React.useState("Name");
+          return <CountHeader label={label} />;
+        },
+      },
+      {
+        id: "trick",
+        accessorKey: "trick",
+        header: function TrickHeader() {
+          const [label] = React.useState("Trick");
+          React.useMemo(() => label, [label]);
+          return <CountHeader label={label} />;
+        },
+      },
+      { id: "id", accessorKey: "id", header: MemoHeader },
+    ];
+
+    const { container, table } = renderGrid(columns);
+    const headerText = () =>
+      Array.from(
+        container.querySelectorAll('[data-slot="data-grid-header-cell"]'),
+        (header) => header.textContent,
+      );
+
+    expect(headerText()).toEqual(["Name 1", "Trick 1", "memo header"]);
+
+    act(() => {
+      table.getColumn("name")?.toggleVisibility(false);
+    });
+
+    expect(headerText()).toEqual(["Trick 1", "memo header"]);
+  });
+
+  it("remounts a cell when its column's renderer changes", () => {
+    function Harness({
+      columns,
+    }: {
+      columns: ColumnDef<DataGridFeatures, TestData>[];
+    }) {
+      const dataGrid = useDataGrid({
+        data: testData,
+        columns,
+        getRowId: (row) => row.id,
+      });
+      return <DataGrid {...dataGrid} />;
+    }
+
+    const compact: ColumnDef<DataGridFeatures, TestData>[] = [
+      {
+        id: "name",
+        accessorKey: "name",
+        cell: function CompactCell({ getValue }) {
+          return <span>{String(getValue())}</span>;
+        },
+      },
+    ];
+    const detailed: ColumnDef<DataGridFeatures, TestData>[] = [
+      {
+        id: "name",
+        accessorKey: "name",
+        cell: function DetailedCell({ row }) {
+          const [prefix] = React.useState("Rider");
+          const label = React.useMemo(
+            () => `${prefix}: ${row.original.name}`,
+            [prefix, row.original.name],
+          );
+          return <span>{label}</span>;
+        },
+      },
+    ];
+
+    const { container, rerender } = render(<Harness columns={compact} />);
+    expect(getCellWrapper(container, "1", "name")?.textContent).toBe(
+      "Tony Hawk",
+    );
+
+    rerender(<Harness columns={detailed} />);
+    expect(getCellWrapper(container, "1", "name")?.textContent).toBe(
+      "Rider: Tony Hawk",
+    );
+  });
+
+  it("renders cells that are memo or forwardRef components", () => {
+    type CellProps = { row: { original: TestData } };
+    const MemoCell = React.memo(function MemoCell({ row }: CellProps) {
+      return <span>memo {row.original.name}</span>;
+    });
+    const ForwardRefCell = React.forwardRef<HTMLSpanElement, CellProps>(
+      function ForwardRefCell({ row }, ref) {
+        return <span ref={ref}>ref {row.original.trick}</span>;
+      },
+    );
+    const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+      { id: "memo", accessorKey: "name", cell: MemoCell },
+      { id: "forwardRef", accessorKey: "trick", cell: ForwardRefCell },
+    ];
+
+    const { container } = renderGrid(columns);
+
+    expect(getCellWrapper(container, "1", "memo")?.textContent).toBe(
+      "memo Tony Hawk",
+    );
+    expect(getCellWrapper(container, "1", "forwardRef")?.textContent).toBe(
+      "ref 900",
+    );
+  });
+
+  it("re-renders cells whose value comes from an accessor or another field", () => {
+    const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+      {
+        id: "label",
+        accessorFn: (row) => `${row.name} (${row.trick})`,
+        header: "Label",
+      },
+      {
+        id: "summary",
+        accessorKey: "name",
+        header: "Summary",
+        cell: ({ row }) => `Trick: ${row.original.trick}`,
+      },
+    ];
+    function Harness({ data }: { data: TestData[] }) {
+      const dataGrid = useDataGrid({
+        data,
+        columns,
+        getRowId: (row) => row.id,
+      });
+      return <DataGrid {...dataGrid} />;
+    }
+
+    const { container, rerender } = render(<Harness data={testData} />);
+    expect(getCellWrapper(container, "1", "label")?.textContent).toBe(
+      "Tony Hawk (900)",
+    );
+    expect(getCellWrapper(container, "1", "summary")?.textContent).toBe(
+      "Trick: 900",
+    );
+
+    rerender(
+      <Harness
+        data={testData.map((row) =>
+          row.id === "1" ? { ...row, trick: "Ollie" } : row,
+        )}
+      />,
+    );
+
+    expect(getCellWrapper(container, "1", "label")?.textContent).toBe(
+      "Tony Hawk (Ollie)",
+    );
+    expect(getCellWrapper(container, "1", "summary")?.textContent).toBe(
+      "Trick: Ollie",
+    );
+  });
+
   it("syncs a controlled textarea after inserting text at the caret", () => {
     function Editor() {
       const [value, setValue] = React.useState("900");
@@ -513,6 +679,30 @@ describe("DataGrid rendering", () => {
     expect(table.getIsCellSelected("1", "name")).toBe(true);
   });
 
+  it("only mounts the columns inside the horizontal viewport", () => {
+    const wideColumns = Array.from(
+      { length: 30 },
+      (_, index): ColumnDef<DataGridFeatures, TestData> => ({
+        id: `column${index}`,
+        accessorFn: (row) => row.name,
+        header: `Column ${index}`,
+        size: 100,
+      }),
+    );
+    const { container } = renderGrid(wideColumns);
+
+    const firstRowCells = container.querySelectorAll(
+      '[role="row"][aria-rowindex="2"] [role="gridcell"]',
+    );
+    expect(firstRowCells.length).toBeGreaterThan(0);
+    expect(firstRowCells.length).toBeLessThan(wideColumns.length);
+    expect(getCellWrapper(container, "1", "column0")).not.toBeNull();
+    expect(getCellWrapper(container, "1", "column29")).toBeNull();
+    expect(
+      container.querySelectorAll('[data-slot="data-grid-header-cell"]').length,
+    ).toBe(firstRowCells.length);
+  });
+
   it("updates rendered cells when columns are hidden or reordered", () => {
     const { container, table } = renderGrid();
 
@@ -575,6 +765,40 @@ describe("DataGrid rendering", () => {
 
     expect(screen.getByRole("menu")).not.toBeNull();
     expect(getHookRenderCount()).toBe(renderCountBefore);
+  });
+
+  it("opens the context menu at the focused cell from the keyboard", () => {
+    const { container, table } = renderGrid();
+    const cell = getCellWrapper(container, "1", "name");
+
+    function press(key: string, modifiers: KeyboardEventInit = {}) {
+      act(() => {
+        cell?.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true, ...modifiers }),
+        );
+      });
+    }
+
+    act(() => {
+      table.setFocusedCell("1", "name");
+    });
+
+    press("F10", { shiftKey: true });
+    expect(table.atoms.contextMenu.get()).toEqual({
+      open: true,
+      x: 0,
+      y: 600,
+    });
+    expect(screen.getByRole("menu")).not.toBeNull();
+
+    act(() => {
+      table.closeContextMenu();
+    });
+    press("F10");
+    expect(table.atoms.contextMenu.get().open).toBe(false);
+
+    press("ContextMenu");
+    expect(table.atoms.contextMenu.get().open).toBe(true);
   });
 
   it("makes the focusable cell wrapper the gridcell", () => {

@@ -3,6 +3,7 @@ import type { FilterFn, Row, RowData } from "@tanstack/react-table";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   BooleanFilterOperator,
+  ColumnValueReader,
   DateFilterOperator,
   FilterOperator,
   FilterValue,
@@ -11,7 +12,7 @@ import type {
   TextFilterOperator,
 } from "@/lib/data-grid-types";
 
-import { stringifyUnknown } from "@/lib/data-grid-utils";
+import { getColumnValueReader, stringifyUnknown } from "@/lib/data-grid-utils";
 
 export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
   label: string;
@@ -77,6 +78,14 @@ export const BOOLEAN_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is not", value: "isFalse" },
 ];
 
+const DATE_OPERATORS = new Set<FilterOperator>([
+  "before",
+  "after",
+  "onOrBefore",
+  "onOrAfter",
+  "isBetween",
+]);
+
 export function getDefaultOperator(variant: string): FilterOperator {
   switch (variant) {
     case "number":
@@ -112,10 +121,60 @@ export function getOperatorsForVariant(variant: string): ReadonlyArray<{
   }
 }
 
+interface PreparedFilter<TData extends RowData> {
+  operator: FilterOperator;
+  value: FilterValue["value"];
+  endValue: FilterValue["endValue"];
+  valueText: string;
+  lowerValueText: string;
+  valueDate: Date | null;
+  endDate: Date | null;
+  valueDateText: string | null;
+  anyOf: Set<unknown> | null;
+  readValue: ColumnValueReader<TData> | null;
+}
+
+function getPreparedFilter<TData extends RowData>(
+  preparedFilters: WeakMap<object, PreparedFilter<TData>>,
+  filter: FilterValue,
+) {
+  let prepared = preparedFilters.get(filter);
+  if (prepared) return prepared;
+
+  const { operator, value, endValue } = filter;
+  const valueText = stringifyUnknown(value);
+  const valueDate = typeof value === "string" ? new Date(value) : null;
+  prepared = {
+    operator,
+    value,
+    endValue,
+    valueText,
+    lowerValueText: valueText.toLowerCase(),
+    valueDate,
+    endDate: typeof endValue === "string" ? new Date(endValue) : null,
+    valueDateText: valueDate?.toDateString() ?? null,
+    anyOf: Array.isArray(value) ? new Set<unknown>(value) : null,
+    readValue: null,
+  };
+  preparedFilters.set(filter, prepared);
+  return prepared;
+}
+
+function getIsEmptyValue(value: unknown) {
+  return (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0)
+  );
+}
+
 export function getFilterFn<TData extends RowData>(): FilterFn<
   DataGridFeatures,
   TData
 > {
+  const preparedFilters = new WeakMap<object, PreparedFilter<TData>>();
+
   return (
     row: Row<DataGridFeatures, TData>,
     columnId: string,
@@ -125,168 +184,97 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
       return true;
     }
 
-    const filter = filterValue as FilterValue;
+    const filter = getPreparedFilter(
+      preparedFilters,
+      filterValue as FilterValue,
+    );
     const { operator, value, endValue } = filter;
 
-    const cellValue = row.getValue(columnId);
+    filter.readValue ??= getColumnValueReader(row.table.getColumn(columnId));
+    const cellValue = filter.readValue(row);
 
-    if (operator === "isEmpty") {
-      return (
-        cellValue === null ||
-        cellValue === undefined ||
-        cellValue === "" ||
-        (Array.isArray(cellValue) && cellValue.length === 0)
-      );
-    }
-
-    if (operator === "isNotEmpty") {
-      return !(
-        cellValue === null ||
-        cellValue === undefined ||
-        cellValue === "" ||
-        (Array.isArray(cellValue) && cellValue.length === 0)
-      );
-    }
-
-    if (operator === "isTrue") {
-      return cellValue === true;
-    }
-
-    if (operator === "isFalse") {
-      return cellValue === false || !cellValue;
-    }
+    if (operator === "isEmpty") return getIsEmptyValue(cellValue);
+    if (operator === "isNotEmpty") return !getIsEmptyValue(cellValue);
+    if (operator === "isTrue") return cellValue === true;
+    if (operator === "isFalse") return cellValue === false || !cellValue;
 
     if (value === undefined || value === null || value === "") {
       return true;
     }
 
-    const cellValueStr = stringifyUnknown(cellValue).toLowerCase();
-    const filterValueStr = stringifyUnknown(value).toLowerCase();
-
-    if (operator === "contains") {
-      return cellValueStr.includes(filterValueStr);
+    if (operator === "contains" || operator === "notContains") {
+      const isMatch = stringifyUnknown(cellValue)
+        .toLowerCase()
+        .includes(filter.lowerValueText);
+      return operator === "contains" ? isMatch : !isMatch;
     }
 
-    if (operator === "notContains") {
-      return !cellValueStr.includes(filterValueStr);
-    }
-
-    if (operator === "equals") {
+    if (operator === "equals" || operator === "notEquals") {
+      let isEqual: boolean;
       if (typeof cellValue === "number" && typeof value === "number") {
-        return cellValue === value;
+        isEqual = cellValue === value;
+      } else if (cellValue instanceof Date && typeof value === "string") {
+        isEqual = new Date(cellValue).toDateString() === filter.valueDateText;
+      } else {
+        isEqual =
+          stringifyUnknown(cellValue).toLowerCase() === filter.lowerValueText;
       }
-      if (cellValue instanceof Date && typeof value === "string") {
-        const cellDate = new Date(cellValue);
-        const filterDate = new Date(value);
-        return cellDate.toDateString() === filterDate.toDateString();
-      }
-      return cellValueStr === filterValueStr;
-    }
-
-    if (operator === "notEquals") {
-      if (typeof cellValue === "number" && typeof value === "number") {
-        return cellValue !== value;
-      }
-      if (cellValue instanceof Date && typeof value === "string") {
-        const cellDate = new Date(cellValue);
-        const filterDate = new Date(value);
-        return cellDate.toDateString() !== filterDate.toDateString();
-      }
-      return cellValueStr !== filterValueStr;
+      return operator === "equals" ? isEqual : !isEqual;
     }
 
     if (operator === "startsWith") {
-      return cellValueStr.startsWith(filterValueStr);
+      return stringifyUnknown(cellValue)
+        .toLowerCase()
+        .startsWith(filter.lowerValueText);
     }
 
     if (operator === "endsWith") {
-      return cellValueStr.endsWith(filterValueStr);
+      return stringifyUnknown(cellValue)
+        .toLowerCase()
+        .endsWith(filter.lowerValueText);
     }
 
     if (typeof cellValue === "number" && typeof value === "number") {
-      if (operator === "greaterThan") {
-        return cellValue > value;
-      }
-
-      if (operator === "greaterThanOrEqual") {
-        return cellValue >= value;
-      }
-
-      if (operator === "lessThan") {
-        return cellValue < value;
-      }
-
-      if (operator === "lessThanOrEqual") {
-        return cellValue <= value;
-      }
-
+      if (operator === "greaterThan") return cellValue > value;
+      if (operator === "greaterThanOrEqual") return cellValue >= value;
+      if (operator === "lessThan") return cellValue < value;
+      if (operator === "lessThanOrEqual") return cellValue <= value;
       if (operator === "isBetween" && typeof endValue === "number") {
         return cellValue >= value && cellValue <= endValue;
       }
     }
 
-    if (cellValue instanceof Date || typeof cellValue === "string") {
+    if (
+      DATE_OPERATORS.has(operator) &&
+      filter.valueDate &&
+      (cellValue instanceof Date || typeof cellValue === "string")
+    ) {
       const cellDate = new Date(cellValue);
-      if (!Number.isNaN(cellDate.getTime()) && typeof value === "string") {
-        const filterDate = new Date(value);
-
-        if (operator === "before") {
-          return cellDate < filterDate;
-        }
-
-        if (operator === "after") {
-          return cellDate > filterDate;
-        }
-
-        if (operator === "onOrBefore") {
-          return cellDate <= filterDate;
-        }
-
-        if (operator === "onOrAfter") {
-          return cellDate >= filterDate;
-        }
-
-        if (operator === "isBetween" && typeof endValue === "string") {
-          const filterDate2 = new Date(endValue);
-          return cellDate >= filterDate && cellDate <= filterDate2;
+      if (!Number.isNaN(cellDate.getTime())) {
+        const filterDate = filter.valueDate;
+        if (operator === "before") return cellDate < filterDate;
+        if (operator === "after") return cellDate > filterDate;
+        if (operator === "onOrBefore") return cellDate <= filterDate;
+        if (operator === "onOrAfter") return cellDate >= filterDate;
+        if (operator === "isBetween" && filter.endDate) {
+          return cellDate >= filterDate && cellDate <= filter.endDate;
         }
       }
     }
 
-    if (operator === "is") {
-      if (Array.isArray(cellValue)) {
-        return cellValue.some(
-          (v) => stringifyUnknown(v) === stringifyUnknown(value),
-        );
-      }
-      return stringifyUnknown(cellValue) === stringifyUnknown(value);
+    if (operator === "is" || operator === "isNot") {
+      const isMatch = Array.isArray(cellValue)
+        ? cellValue.some((item) => stringifyUnknown(item) === filter.valueText)
+        : stringifyUnknown(cellValue) === filter.valueText;
+      return operator === "is" ? isMatch : !isMatch;
     }
 
-    if (operator === "isNot") {
-      if (Array.isArray(cellValue)) {
-        return !cellValue.some(
-          (v) => stringifyUnknown(v) === stringifyUnknown(value),
-        );
-      }
-      return stringifyUnknown(cellValue) !== stringifyUnknown(value);
-    }
-
-    if (operator === "isAnyOf" && Array.isArray(value)) {
-      if (Array.isArray(cellValue)) {
-        return cellValue.some((v) =>
-          value.some((fv) => stringifyUnknown(v) === fv),
-        );
-      }
-      return value.some((fv) => stringifyUnknown(cellValue) === fv);
-    }
-
-    if (operator === "isNoneOf" && Array.isArray(value)) {
-      if (Array.isArray(cellValue)) {
-        return !cellValue.some((v) =>
-          value.some((fv) => stringifyUnknown(v) === fv),
-        );
-      }
-      return !value.some((fv) => stringifyUnknown(cellValue) === fv);
+    if ((operator === "isAnyOf" || operator === "isNoneOf") && filter.anyOf) {
+      const { anyOf } = filter;
+      const isMatch = Array.isArray(cellValue)
+        ? cellValue.some((item) => anyOf.has(stringifyUnknown(item)))
+        : anyOf.has(stringifyUnknown(cellValue));
+      return operator === "isAnyOf" ? isMatch : !isMatch;
     }
 
     return true;
