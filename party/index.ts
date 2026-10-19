@@ -89,14 +89,18 @@ export class SkaterRoom extends Server<Env> {
   private async ensureLoaded() {
     if (this.isLoaded) return;
 
+    const startedAt = Date.now();
     const rows = await this.getDb().loadRows(this.name);
     if (rows.length > 0) {
       this.rows = rows;
     } else {
       this.rows = createSeedRows();
-      await this.getDb().replaceRows(this.name, this.rows);
+      this.persistRows({ upserts: this.rows.map((row) => row.id as string) });
     }
     this.isLoaded = true;
+    console.log(
+      `[party] Loaded ${this.name} in ${Date.now() - startedAt}ms (${rows.length > 0 ? `${rows.length} rows` : "seeded"})`,
+    );
   }
 
   private persistRows({
