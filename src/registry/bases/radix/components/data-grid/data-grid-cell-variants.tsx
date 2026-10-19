@@ -851,6 +851,13 @@ export function SelectCell<TData extends RowData>(
           <SelectContent
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
+            position="popper"
+            align="start"
+            alignOffset={-CELL_PADDING}
+            sideOffset={-CELL_PADDING}
+            style={{
+              minWidth: `calc(var(--radix-select-trigger-width) + ${CELL_PADDING * 2}px)`,
+            }}
             onCloseAutoFocus={onCloseAutoFocus}
           >
             <SelectGroup>
