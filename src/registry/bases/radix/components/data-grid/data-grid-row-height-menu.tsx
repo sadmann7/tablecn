@@ -21,11 +21,17 @@ import {
 } from "@/registry/bases/radix/ui/select";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
+interface RowHeightOption {
+  label: string;
+  value: RowHeightValue;
+  icon: React.ComponentType<React.ComponentProps<"svg">>;
+}
+
 const rowHeights = [
   {
     label: "Short",
-    value: "short" as const,
-    icon: (props: React.ComponentProps<"svg">) => (
+    value: "short",
+    icon: (props) => (
       <IconPlaceholder
         lucide="MinusIcon"
         tabler="IconMinus"
@@ -38,8 +44,8 @@ const rowHeights = [
   },
   {
     label: "Medium",
-    value: "medium" as const,
-    icon: (props: React.ComponentProps<"svg">) => (
+    value: "medium",
+    icon: (props) => (
       <IconPlaceholder
         lucide="EqualIcon"
         tabler="IconMinus"
@@ -52,8 +58,8 @@ const rowHeights = [
   },
   {
     label: "Tall",
-    value: "tall" as const,
-    icon: (props: React.ComponentProps<"svg">) => (
+    value: "tall",
+    icon: (props) => (
       <IconPlaceholder
         lucide="AlignVerticalSpaceAroundIcon"
         tabler="IconLayoutRows"
@@ -66,8 +72,8 @@ const rowHeights = [
   },
   {
     label: "Extra Tall",
-    value: "extra-tall" as const,
-    icon: (props: React.ComponentProps<"svg">) => (
+    value: "extra-tall",
+    icon: (props) => (
       <IconPlaceholder
         lucide="ChevronsDownUpIcon"
         tabler="IconSelector"
@@ -78,7 +84,7 @@ const rowHeights = [
       />
     ),
   },
-] as const;
+] as const satisfies ReadonlyArray<RowHeightOption>;
 
 interface DataGridRowHeightMenuProps<
   TData extends RowData,
@@ -102,7 +108,10 @@ export function DataGridRowHeightMenu<TData extends RowData>({
         return (
           <Select
             value={rowHeight}
-            onValueChange={(value: RowHeightValue) => table.setRowHeight(value)}
+            onValueChange={(value) => {
+              const option = rowHeights.find((item) => item.value === value);
+              if (option) table.setRowHeight(option.value);
+            }}
             disabled={disabled}
           >
             <SelectTrigger
