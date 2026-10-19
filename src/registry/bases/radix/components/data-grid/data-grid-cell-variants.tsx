@@ -61,7 +61,7 @@ import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-// Matches the cell wrapper's px-2, so the date editor lines up with the cell's edge
+// The cell's padding on each side (px-2), so editors line up with its edge
 const CELL_PADDING = 8;
 
 export function CustomCell<TData extends RowData>(
@@ -851,6 +851,13 @@ export function SelectCell<TData extends RowData>(
           <SelectContent
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
+            position="popper"
+            align="start"
+            alignOffset={-CELL_PADDING}
+            sideOffset={-CELL_PADDING}
+            style={{
+              minWidth: `calc(var(--radix-select-trigger-width) + ${CELL_PADDING * 2}px)`,
+            }}
             onCloseAutoFocus={onCloseAutoFocus}
           >
             <SelectGroup>

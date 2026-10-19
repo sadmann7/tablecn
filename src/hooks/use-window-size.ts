@@ -21,7 +21,6 @@ export function useWindowSize(props: UseWindowSizeProps = {}): WindowSize {
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Set initial size after mount to avoid hydration mismatch
     setWindowSize({
       width: window.innerWidth,
       height: window.innerHeight,
