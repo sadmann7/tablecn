@@ -63,58 +63,40 @@ function showClipboardToast({ variant, message }: ClipboardNotice) {
   else toast.success(message);
 }
 
-// Keeps one object while only callback identities change, so the table options stay stable.
-// Callbacks call the latest version through the ref
-function useStableOptions<TOptions extends object>(
-  options: TOptions,
-  optionsRef: React.RefObject<TOptions>,
-): TOptions {
-  const optionsKey = getOptionsKey(options);
-  return React.useMemo(() => wrapCallbacks(options, optionsRef), [optionsKey]);
-}
-
 let nextObjectId = 0;
 const objectIds = new WeakMap<object, number>();
 
-function getOptionsKey(options: object) {
-  let key = "";
-  for (const [name, value] of Object.entries(options)) {
-    key += `${name}:`;
+function useStableProps<TProps extends object>(
+  props: TProps,
+  propsRef: React.RefObject<TProps>,
+): TProps {
+  let propsKey = "";
+  for (const [name, value] of Object.entries(props)) {
+    let valueKey = `${typeof value}${String(value)}`;
     if (typeof value === "function") {
-      key += "fn";
+      valueKey = "fn";
     } else if (typeof value === "object" && value !== null) {
       let id = objectIds.get(value);
       if (id === undefined) {
         id = nextObjectId++;
         objectIds.set(value, id);
       }
-      key += `obj${id}`;
-    } else {
-      key += `${typeof value}${String(value)}`;
+      valueKey = `obj${id}`;
     }
-    key += "\u0000";
+    propsKey += `${name}:${valueKey}\u0000`;
   }
-  return key;
-}
 
-function wrapCallbacks<TOptions extends object>(
-  options: TOptions,
-  optionsRef: React.RefObject<TOptions>,
-): TOptions {
-  const wrapped: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(options)) {
-    wrapped[key] =
-      typeof value === "function"
-        ? (...args: unknown[]) =>
-            (
-              optionsRef.current as Record<
-                string,
-                ((...args: unknown[]) => unknown) | undefined
-              >
-            )[key]?.(...args)
-        : value;
-  }
-  return wrapped as TOptions;
+  return React.useMemo(() => {
+    const stableProps = { ...props };
+    for (const [key, value] of Object.entries(props)) {
+      if (typeof value !== "function") continue;
+      Reflect.set(stableProps, key, (...args: unknown[]) => {
+        const callback: unknown = Reflect.get(propsRef.current, key);
+        if (typeof callback === "function") return callback(...args);
+      });
+    }
+    return stableProps;
+  }, [propsKey]);
 }
 
 function selectGridLayoutState(state: TableState<DataGridFeatures>) {
@@ -184,7 +166,7 @@ function useDataGrid<TData extends RowData>({
   } | null>(null);
 
   const propsRef = useValueAsRef(props);
-  const stableProps = useStableOptions(props, propsRef);
+  const stableProps = useStableProps(props, propsRef);
 
   const getRowIndex = React.useCallback((rowId: string) => {
     const currentTable = tableRef.current;
