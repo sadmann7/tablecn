@@ -22,7 +22,6 @@ interface Identity {
   color: string;
 }
 
-// Kept in localStorage so the same person comes back across tabs and visits, and the server can merge a browser's tabs into one user
 function getOrCreateIdentity(): Identity {
   let stored: Partial<Identity> | null = null;
   try {
@@ -48,9 +47,7 @@ function getOrCreateIdentity(): Identity {
 
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
-  } catch {
-    // Fail silently if localStorage is not available
-  }
+  } catch {}
 
   return identity;
 }
@@ -95,7 +92,6 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     });
     socketRef.current = socket;
 
-    // A reconnect is a new connection, so the server needs your active cell again
     socket.addEventListener("open", () => {
       if (activeCellMessageRef.current) {
         socket.send(activeCellMessageRef.current);
@@ -240,7 +236,6 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     };
   }, [roomId]);
 
-  // Stable so effects that depend on them, like sending the active cell, only run when their inputs change
   const sendCellUpdate = React.useCallback(
     (rowId: string, columnId: string, value: unknown) => {
       socketRef.current?.send(
