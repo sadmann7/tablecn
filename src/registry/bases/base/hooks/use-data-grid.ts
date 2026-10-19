@@ -1614,7 +1614,6 @@ function useDataGrid<TData extends RowData>({
           event.clientY,
         );
 
-        // Compensates for event.target bubbling up
         const isInsidePopover = elements.some((element) =>
           getIsInPopover(element),
         );
