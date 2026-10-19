@@ -102,7 +102,7 @@ function PeopleGridActionBarImpl({
 
   return (
     <ActionBar
-      data-grid-popover
+      data-grid-popover=""
       open={selectedCount > 0}
       onOpenChange={onOpenChange}
     >

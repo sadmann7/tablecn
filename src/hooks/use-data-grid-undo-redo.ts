@@ -450,7 +450,9 @@ function useDataGridUndoRedo<TData>({
           activeElement.tagName === "TEXTAREA";
         const isContentEditable =
           activeElement.getAttribute("contenteditable") === "true";
-        const isInPopover = getIsInPopover(activeElement);
+        const isInPopover =
+          getIsInPopover(activeElement) &&
+          activeElement.closest('[role="toolbar"]') === null;
 
         if (isInput || isContentEditable || isInPopover) return;
       }
