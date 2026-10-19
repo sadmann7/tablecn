@@ -1,6 +1,6 @@
 "use client";
 
-import type * as React from "react";
+import * as React from "react";
 
 import { ActionBarItem } from "@/registry/bases/radix/ui/action-bar";
 import {
@@ -21,9 +21,26 @@ export function ActionBarTooltipItem({
   icon,
   ...props
 }: ActionBarTooltipItemProps) {
+  const [open, setOpen] = React.useState(false);
+  const isFocusReturnRef = React.useRef(false);
+
+  // Focus returning from a closed menu has no related target, so the tooltip stays shut
+  const onFocus = React.useCallback((event: React.FocusEvent) => {
+    if (event.relatedTarget) return;
+    isFocusReturnRef.current = true;
+    queueMicrotask(() => {
+      isFocusReturnRef.current = false;
+    });
+  }, []);
+
+  const onOpenChange = React.useCallback((nextOpen: boolean) => {
+    if (nextOpen && isFocusReturnRef.current) return;
+    setOpen(nextOpen);
+  }, []);
+
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <Tooltip open={open} onOpenChange={onOpenChange}>
+      <TooltipTrigger asChild onFocus={onFocus}>
         <ActionBarItem aria-label={label} size="icon-sm" {...props}>
           {icon}
         </ActionBarItem>
