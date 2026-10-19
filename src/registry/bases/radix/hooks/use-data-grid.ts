@@ -1041,6 +1041,24 @@ function useDataGrid<TData extends RowData>({
 
       if (!focusedCell) return;
 
+      if (
+        !headerColumnId &&
+        (key === "ContextMenu" || (shiftKey && key === "F10"))
+      ) {
+        event.preventDefault();
+        const container = dataGridRef.current;
+        const cellElement =
+          container &&
+          getCellElement(container, focusedCell.rowId, focusedCell.columnId);
+        if (!cellElement) return;
+        const rect = cellElement.getBoundingClientRect();
+        currentTable?.openContextMenu({
+          x: dir === "rtl" ? rect.right : rect.left,
+          y: rect.bottom,
+        });
+        return;
+      }
+
       let direction: NavigationDirection | null = null;
 
       const isUtilityCellFocused = !getIsDataColumnId(focusedCell.columnId);

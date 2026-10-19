@@ -80,9 +80,17 @@ function ContextMenuImpl<TData extends RowData>({
   );
 
   const onFinalFocus = React.useCallback(() => {
+    const focusedCell = table.getFocusedCell();
+    if (focusedCell && table.options.onCellFocus) {
+      table.options.onCellFocus({
+        rowId: focusedCell.row.id,
+        columnId: focusedCell.column.id,
+      });
+      return false;
+    }
     dataGridRef.current?.focus();
     return false;
-  }, [dataGridRef]);
+  }, [table, dataGridRef]);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {

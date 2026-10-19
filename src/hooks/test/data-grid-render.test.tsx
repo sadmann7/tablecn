@@ -767,6 +767,40 @@ describe("DataGrid rendering", () => {
     expect(getHookRenderCount()).toBe(renderCountBefore);
   });
 
+  it("opens the context menu at the focused cell from the keyboard", () => {
+    const { container, table } = renderGrid();
+    const cell = getCellWrapper(container, "1", "name");
+
+    function press(key: string, modifiers: KeyboardEventInit = {}) {
+      act(() => {
+        cell?.dispatchEvent(
+          new KeyboardEvent("keydown", { key, bubbles: true, ...modifiers }),
+        );
+      });
+    }
+
+    act(() => {
+      table.setFocusedCell("1", "name");
+    });
+
+    press("F10", { shiftKey: true });
+    expect(table.atoms.contextMenu.get()).toEqual({
+      open: true,
+      x: 0,
+      y: 600,
+    });
+    expect(screen.getByRole("menu")).not.toBeNull();
+
+    act(() => {
+      table.closeContextMenu();
+    });
+    press("F10");
+    expect(table.atoms.contextMenu.get().open).toBe(false);
+
+    press("ContextMenu");
+    expect(table.atoms.contextMenu.get().open).toBe(true);
+  });
+
   it("makes the focusable cell wrapper the gridcell", () => {
     const { container } = renderGrid();
 
