@@ -61,6 +61,9 @@ import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
+// Matches the cell wrapper's px-2, so the date editor lines up with the cell's edge
+const CELL_PADDING = 8;
+
 export function CustomCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
@@ -248,9 +251,7 @@ export function LongTextCell<TData extends RowData>(
     [cell, value, initialValue, readOnly],
   );
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
+  const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
     if (textareaRef.current) {
       textareaRef.current.focus();
@@ -850,11 +851,6 @@ export function SelectCell<TData extends RowData>(
           <SelectContent
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
-            // Compensates for the wrapper padding
-            align="start"
-            alignOffset={-8}
-            sideOffset={-8}
-            className="min-w-[calc(var(--radix-select-trigger-width)+16px)]"
             onCloseAutoFocus={onCloseAutoFocus}
           >
             <SelectGroup>
@@ -975,9 +971,7 @@ export function MultiSelectCell<TData extends RowData>(
     [cell, readOnly],
   );
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
+  const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
     inputRef.current?.focus();
   }, []);
@@ -1180,14 +1174,12 @@ export function DateCell<TData extends RowData>(
     setValue(initialValue);
   }
 
-  // Parses the date as local time to avoid timezone shifts
   const selectedDate = value ? (parseLocalDate(value) ?? undefined) : undefined;
 
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
       if (!date || readOnly) return;
 
-      // Formats with local date parts to avoid timezone shifts
       const formattedDate = formatDateToString(date);
       setValue(formattedDate);
       cell.setValue(formattedDate);
@@ -1240,7 +1232,7 @@ export function DateCell<TData extends RowData>(
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
-            alignOffset={-8}
+            alignOffset={-CELL_PADDING}
             className="w-auto p-0"
           >
             <Calendar
@@ -1676,16 +1668,11 @@ export function FileCell<TData extends RowData>(
     [cell, readOnly],
   );
 
-  const onEscapeKeyDown: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onEscapeKeyDown"]
-  > = React.useCallback((event) => {
-    // Keeps Escape from reaching the grid's key handler, which would blur the cell
+  const onEscapeKeyDown = React.useCallback((event: Event) => {
     event.stopPropagation();
   }, []);
 
-  const onOpenAutoFocus: NonNullable<
-    React.ComponentProps<typeof PopoverContent>["onOpenAutoFocus"]
-  > = React.useCallback((event) => {
+  const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
     queueMicrotask(() => {
       dropzoneRef.current?.focus();

@@ -207,10 +207,8 @@ function DataGridSelectCell<TData extends RowData>({
     [onToggle],
   );
 
-  const onClick = React.useCallback<
-    NonNullable<React.ComponentProps<typeof Checkbox>["onClick"]>
-  >(
-    (event) => {
+  const onClick = React.useCallback(
+    (event: React.MouseEvent<HTMLElement>) => {
       if (!event.shiftKey) return;
       event.preventDefault();
       onToggle(!row.getIsSelected(), true);
