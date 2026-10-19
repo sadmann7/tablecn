@@ -4,7 +4,7 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { CellOpts, RowHeightValue } from "@/lib/data-grid-types";
+import type { RowHeightValue } from "@/lib/data-grid-types";
 
 import { getBadgeOverflow } from "@/hooks/use-badge-overflow";
 import {
@@ -62,12 +62,7 @@ export function DataGridCellPreview<TData extends RowData>({
   isActiveSearchMatch,
   readOnly,
 }: DataGridCellPreviewProps<TData>) {
-  const { className, content } = getPreviewContent(
-    cell,
-    cell.column.columnDef.meta?.cell,
-    width,
-    rowHeight,
-  );
+  const { className, content } = getPreviewContent({ cell, width, rowHeight });
 
   return (
     <div
@@ -92,12 +87,15 @@ export function DataGridCellPreview<TData extends RowData>({
   );
 }
 
-function getPreviewContent<TData extends RowData>(
-  cell: Cell<DataGridFeatures, TData>,
-  cellOpts: CellOpts | undefined,
-  width: number,
-  rowHeight: RowHeightValue,
-): { className?: string; content: React.ReactNode } {
+function getPreviewContent<TData extends RowData>({
+  cell,
+  width,
+  rowHeight,
+}: Pick<DataGridCellPreviewProps<TData>, "cell" | "width" | "rowHeight">): {
+  className?: string;
+  content: React.ReactNode;
+} {
+  const cellOpts = cell.column.columnDef.meta?.cell;
   const value = cell.getValue();
   const lineClampClassName = LINE_CLAMP_CLASS_NAMES[rowHeight];
 
