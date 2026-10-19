@@ -2,7 +2,7 @@ import * as React from "react";
 
 const badgeWidthCache = new Map<string, number>();
 
-const DEFAULT_CONTAINER_PADDING = 16; // px-2 = 8px * 2
+const DEFAULT_CONTAINER_PADDING = 16; // px-2 on both sides
 const DEFAULT_BADGE_GAP = 4; // gap-1 = 4px
 const DEFAULT_OVERFLOW_BADGE_WIDTH = 40; // Approx. "+N" badge width
 const BADGE_CHROME_WIDTH = 12 + 2; // px-1.5 + 1px border, each side
