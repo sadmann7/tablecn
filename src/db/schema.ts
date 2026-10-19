@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   doublePrecision,
-  index,
   integer,
   jsonb,
   real,
@@ -58,40 +57,35 @@ interface SkaterMedia {
 }
 
 // For data-grid-multiplayer
-export const skaters = pgTable(
-  "skaters",
-  {
-    id: varchar("id", { length: 30 })
-      .$defaultFn(() => generateId())
-      .primaryKey(),
-    roomId: varchar("room_id", { length: 30 }).notNull().default("lobby"),
-    order: doublePrecision("order").notNull().default(0),
-    name: varchar("name", { length: 128 }),
-    email: varchar("email", { length: 256 }),
-    stance: varchar("stance", {
-      length: 30,
-      enum: ["regular", "goofy"],
-    }),
-    style: varchar("style", {
-      length: 30,
-      enum: ["street", "vert", "park", "freestyle", "all-around"],
-    }),
-    status: varchar("status", {
-      length: 30,
-      enum: ["amateur", "sponsored", "pro", "legend"],
-    }),
-    yearsSkating: integer("years_skating"),
-    startedSkating: timestamp("started_skating"),
-    isPro: boolean("is_pro").notNull().default(false),
-    tricks: jsonb("tricks").$type<string[]>(),
-    media: jsonb("media").$type<Array<SkaterMedia>>(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .default(sql`current_timestamp`)
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [index("skaters_room_id_idx").on(table.roomId)],
-);
+export const skaters = pgTable("skaters", {
+  id: varchar("id", { length: 30 })
+    .$defaultFn(() => generateId())
+    .primaryKey(),
+  order: doublePrecision("order").notNull().default(0),
+  name: varchar("name", { length: 128 }),
+  email: varchar("email", { length: 256 }),
+  stance: varchar("stance", {
+    length: 30,
+    enum: ["regular", "goofy"],
+  }),
+  style: varchar("style", {
+    length: 30,
+    enum: ["street", "vert", "park", "freestyle", "all-around"],
+  }),
+  status: varchar("status", {
+    length: 30,
+    enum: ["amateur", "sponsored", "pro", "legend"],
+  }),
+  yearsSkating: integer("years_skating"),
+  startedSkating: timestamp("started_skating"),
+  isPro: boolean("is_pro").notNull().default(false),
+  tricks: jsonb("tricks").$type<string[]>(),
+  media: jsonb("media").$type<Array<SkaterMedia>>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .default(sql`current_timestamp`)
+    .$onUpdate(() => new Date()),
+});
 
 export type Skater = typeof skaters.$inferSelect;
 export type NewSkater = typeof skaters.$inferInsert;
