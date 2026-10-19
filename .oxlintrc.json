@@ -53,7 +53,7 @@
     "react/no-array-index-key": "off",
     "react/no-danger": "off",
     "react/no-unstable-nested-components": "off",
-    // "react/refs": "off",
+    "react/refs": "off",
     "react/set-state-in-effect": "off",
     "react/set-state-in-render": "off",
     "react/immutability": "off",
