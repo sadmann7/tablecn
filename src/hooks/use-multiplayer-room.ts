@@ -64,15 +64,20 @@ interface Room {
 
 function createRoom(roomId: string): Room {
   const identity = getOrCreateIdentity();
+  // Sent on every reconnect, so the room can send only the changes this client missed
+  let epoch: string | null = null;
+  let lastSeq = 0;
+
   const socket = new PartySocket({
     host: PARTYKIT_HOST,
     room: roomId,
     id: generateId(),
-    query: {
+    query: () => ({
       clientId: identity.clientId,
       name: identity.name,
       color: identity.color,
-    },
+      ...(epoch ? { epoch, seq: String(lastSeq) } : {}),
+    }),
     startClosed: true,
   });
 
@@ -83,6 +88,12 @@ function createRoom(roomId: string): Room {
       message = JSON.parse(event.data as string) as ServerMessage;
     } catch {
       return;
+    }
+    if (message.type === "snapshot" || message.type === "catch-up") {
+      epoch = message.epoch;
+      lastSeq = message.seq;
+    } else if ("seq" in message) {
+      lastSeq = message.seq;
     }
     for (const listener of listeners) listener(message);
   });
@@ -129,7 +140,8 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
 
     const unsubscribe = room.subscribe((msg) => {
       switch (msg.type) {
-        case "snapshot": {
+        case "snapshot":
+        case "catch-up": {
           setCurrentUserId(msg.userId);
           setUsers(msg.users);
           break;
