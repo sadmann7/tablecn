@@ -61,6 +61,8 @@ import { Skeleton } from "@/registry/bases/base/ui/skeleton";
 import { Textarea } from "@/registry/bases/base/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
+const CELL_PADDING = 8;
+
 export function CustomCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
@@ -851,11 +853,6 @@ export function SelectCell<TData extends RowData>(
           <SelectContent
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
-            // Compensates for the wrapper padding
-            align="start"
-            alignOffset={-8}
-            sideOffset={-8}
-            className="min-w-[calc(var(--anchor-width)+16px)]"
             finalFocus={onFinalFocus}
           >
             <SelectGroup>
@@ -1180,14 +1177,12 @@ export function DateCell<TData extends RowData>(
     setValue(initialValue);
   }
 
-  // Parses the date as local time to avoid timezone shifts
   const selectedDate = value ? (parseLocalDate(value) ?? undefined) : undefined;
 
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
       if (!date || readOnly) return;
 
-      // Formats with local date parts to avoid timezone shifts
       const formattedDate = formatDateToString(date);
       setValue(formattedDate);
       cell.setValue(formattedDate);
@@ -1241,7 +1236,7 @@ export function DateCell<TData extends RowData>(
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
-            alignOffset={-8}
+            alignOffset={-CELL_PADDING}
             className="w-auto p-0"
           >
             <Calendar
@@ -1679,7 +1674,6 @@ export function FileCell<TData extends RowData>(
 
   const onEditorKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      // Keeps Escape from reaching the grid's key handler, which would blur the cell
       if (event.key === "Escape") event.stopPropagation();
     },
     [],
