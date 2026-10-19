@@ -212,7 +212,7 @@ function parseMultiSelectValues(text: string): string[] {
       return parsed.filter((item): item is string => typeof item === "string");
     }
   } catch {
-    // Fall back to comma separated values
+    // Falls back to comma-separated values
   }
   return text ? text.split(",").map((item) => item.trim()) : [];
 }

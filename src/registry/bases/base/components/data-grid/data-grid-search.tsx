@@ -18,7 +18,7 @@ function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
     target.releasePointerCapture(event.pointerId);
   }
 
-  // Prevent the trigger from capturing focus from the input
+  // Keeps the trigger from taking focus from the input
   if (
     event.button === 0 &&
     event.ctrlKey === false &&

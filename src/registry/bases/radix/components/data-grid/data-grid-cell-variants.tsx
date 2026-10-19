@@ -850,7 +850,7 @@ export function SelectCell<TData extends RowData>(
           <SelectContent
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
-            // compensate for the wrapper padding
+            // Compensates for the wrapper padding
             align="start"
             alignOffset={-8}
             sideOffset={-8}
@@ -1180,14 +1180,14 @@ export function DateCell<TData extends RowData>(
     setValue(initialValue);
   }
 
-  // Parse date as local time to avoid timezone shifts
+  // Parses the date as local time to avoid timezone shifts
   const selectedDate = value ? (parseLocalDate(value) ?? undefined) : undefined;
 
   const onDateSelect = React.useCallback(
     (date: Date | undefined) => {
       if (!date || readOnly) return;
 
-      // Format using local date components to avoid timezone issues
+      // Formats with local date parts to avoid timezone shifts
       const formattedDate = formatDateToString(date);
       setValue(formattedDate);
       cell.setValue(formattedDate);
@@ -1679,8 +1679,7 @@ export function FileCell<TData extends RowData>(
   const onEscapeKeyDown: NonNullable<
     React.ComponentProps<typeof PopoverContent>["onEscapeKeyDown"]
   > = React.useCallback((event) => {
-    // Prevent the escape key from propagating to the data grid's keyboard handler
-    // which would call blurCell() and remove focus from the cell
+    // Keeps Escape from reaching the grid's key handler, which would blur the cell
     event.stopPropagation();
   }, []);
 
