@@ -78,6 +78,14 @@ export const BOOLEAN_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is not", value: "isFalse" },
 ];
 
+const DATE_OPERATORS = new Set<FilterOperator>([
+  "before",
+  "after",
+  "onOrBefore",
+  "onOrAfter",
+  "isBetween",
+]);
+
 export function getDefaultOperator(variant: string): FilterOperator {
   switch (variant) {
     case "number":
@@ -112,14 +120,6 @@ export function getOperatorsForVariant(variant: string): ReadonlyArray<{
       return TEXT_FILTER_OPERATORS;
   }
 }
-
-const DATE_OPERATORS = new Set<FilterOperator>([
-  "before",
-  "after",
-  "onOrBefore",
-  "onOrAfter",
-  "isBetween",
-]);
 
 interface PreparedFilter<TData extends RowData> {
   operator: FilterOperator;
@@ -173,8 +173,6 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
   DataGridFeatures,
   TData
 > {
-  // Filter values stay the same object until the filter changes, so their derived values are
-  // computed once per filter instead of once per row
   const preparedFilters = new WeakMap<object, PreparedFilter<TData>>();
 
   return (
@@ -192,7 +190,6 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
     );
     const { operator, value, endValue } = filter;
 
-    // Each filter object belongs to one column, so its reader is resolved once
     filter.readValue ??= getColumnValueReader(row.table.getColumn(columnId));
     const cellValue = filter.readValue(row);
 
@@ -247,7 +244,6 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
       }
     }
 
-    // Only date operators compare dates, so other operators skip parsing every cell
     if (
       DATE_OPERATORS.has(operator) &&
       filter.valueDate &&
