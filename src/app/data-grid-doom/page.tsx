@@ -414,11 +414,11 @@ function DoomGrid({
     const buildRowGradient = (y: number) => {
       const offset = y * width;
       const parts: string[] = [];
-      let runColor = current[offset]!;
+      let runColor = current[offset] ?? -1;
       let runStart = 0;
       for (let x = 1; x <= width; x++) {
         dirty[offset + x - 1] = 0;
-        const color = x < width ? current[offset + x]! : -1;
+        const color = x < width ? (current[offset + x] ?? -1) : -1;
         if (color === runColor) continue;
         parts.push(`${toColor(runColor)} ${stops[runStart]} ${stops[x]}`);
         runColor = color;
@@ -459,9 +459,9 @@ function DoomGrid({
           for (let sy = y0; sy < y1; sy += 2) {
             for (let sx = x0; sx < x1; sx += 2) {
               const i = (sy * SCREEN_WIDTH + sx) * 4;
-              r += screen[i]!;
-              g += screen[i + 1]!;
-              b += screen[i + 2]!;
+              r += screen[i] ?? 0;
+              g += screen[i + 1] ?? 0;
+              b += screen[i + 2] ?? 0;
               n++;
             }
           }
@@ -512,7 +512,8 @@ function DoomGrid({
             if (!dirty[index]) continue;
             dirty[index] = 0;
             const pixel = row[x];
-            if (pixel) pixel.style.backgroundColor = toColor(current[index]!);
+            if (pixel)
+              pixel.style.backgroundColor = toColor(current[index] ?? -1);
           }
         }
         return;
@@ -521,7 +522,7 @@ function DoomGrid({
       for (const y of changed) {
         const row: PixelRow = { id: `r${y}` };
         for (let x = 0; x < width; x++) {
-          row[`c${x}`] = current[y * width + x]!;
+          row[`c${x}`] = current[y * width + x] ?? -1;
         }
         next[y] = row;
       }
