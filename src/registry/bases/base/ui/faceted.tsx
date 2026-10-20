@@ -200,17 +200,20 @@ interface FacetedProps<Multiple extends boolean = false> extends Omit<
   multiple?: Multiple;
 }
 
-function Faceted<Multiple extends boolean = false>({
-  open: openProp,
-  defaultOpen = false,
-  onOpenChange,
-  value,
-  defaultValue,
-  onValueChange,
-  items = NO_ITEMS,
-  multiple = false as Multiple,
-  ...props
-}: FacetedProps<Multiple>) {
+function Faceted<Multiple extends boolean = false>(
+  props: FacetedProps<Multiple>,
+) {
+  const {
+    open: openProp,
+    defaultOpen = false,
+    onOpenChange,
+    value,
+    defaultValue,
+    onValueChange,
+    items = NO_ITEMS,
+    multiple = false as Multiple,
+    ...popoverProps
+  } = props;
   const controller: FacetedController = {
     open: openProp,
     onOpenChange,
@@ -219,7 +222,7 @@ function Faceted<Multiple extends boolean = false>({
       if (!getIsFacetedSelectedValue(nextValue, multiple)) return;
       onValueChange?.(nextValue);
     },
-    isControlled: value !== undefined,
+    isControlled: "value" in props,
     multiple,
     items,
   };
@@ -234,9 +237,10 @@ function Faceted<Multiple extends boolean = false>({
   const store = storeRef.current;
   const open = useFacetedStoreSelector(store, (state) => state.open);
 
+  const { isControlled } = controller;
   useIsoLayoutEffect(() => {
-    if (value !== undefined) store.notify();
-  }, [store, value]);
+    if (isControlled) store.notify();
+  }, [store, isControlled, value]);
 
   return (
     <FacetedStoreContext.Provider value={store}>
@@ -244,7 +248,7 @@ function Faceted<Multiple extends boolean = false>({
         data-slot="faceted"
         open={openProp ?? open}
         onOpenChange={store.setOpen}
-        {...props}
+        {...popoverProps}
       />
     </FacetedStoreContext.Provider>
   );
