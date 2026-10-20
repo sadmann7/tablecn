@@ -7,6 +7,7 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import { useMounted } from "@/hooks/use-mounted";
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -75,10 +76,15 @@ function loadDoom(): Promise<DoomEngine> {
     return {
       pixels: () => screen,
       frame: () => frame,
-      step: () => exports.doom_loop_step(),
-      key: (pressed, doomKey) =>
-        exports.add_browser_event(pressed ? 0 : 1, doomKey),
-      mouse: (buttons) => exports.add_browser_event(2, buttons),
+      step: () => {
+        exports.doom_loop_step();
+      },
+      key: (pressed, doomKey) => {
+        exports.add_browser_event(pressed ? 0 : 1, doomKey);
+      },
+      mouse: (buttons) => {
+        exports.add_browser_event(2, buttons);
+      },
     };
   })();
   return enginePromise;
@@ -86,13 +92,14 @@ function loadDoom(): Promise<DoomEngine> {
 
 // The modern re-releases' scheme on top of DOOM's own: WASD with A/D strafing
 // and E to use, as in the official Unity and KEX ports and the GZDoom family.
-// Fire stays on click and Ctrl, DOOM's own binding
-const EXTRA_KEYS: Record<number, number> = {
-  87: 173, // W: forward, like the up arrow
-  83: 175, // S: back, like the down arrow
-  65: 44, // A: strafe left, DOOM's ","
-  68: 46, // D: strafe right, DOOM's "."
-  69: 32, // E: use, like Space
+// Fire stays on click and Ctrl, DOOM's own binding. Keyed by the physical key
+// (KeyboardEvent.code), so WASD stays put on non-QWERTY layouts
+const EXTRA_KEYS: Record<string, number> = {
+  KeyW: 173, // Forward, like the up arrow
+  KeyS: 175, // Back, like the down arrow
+  KeyA: 44, // Strafe left, DOOM's ","
+  KeyD: 46, // Strafe right, DOOM's "."
+  KeyE: 32, // Use, like Space
 };
 
 // Keyboard Lock API, Chromium only
@@ -110,33 +117,35 @@ function getKeyboard() {
 // DOOM resets a cheat on any key outside its sequence, so remapped letters would break them.
 // The page spots cheats itself and replays them as plain letters instead.
 const CHEAT_PATTERN =
-  /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/;
+  /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/u;
 const KEY_RSHIFT = 182;
 
-// Browser keyCodes to DOOM's key codes (doomdef.h)
-function toDoomKey(keyCode: number) {
-  switch (keyCode) {
-    case 8:
-      return 127;
-    case 16:
-      return KEY_RSHIFT; // Shift: run
-    case 17:
-      return 157;
-    case 18:
-      return 184;
-    case 37:
-      return 172;
-    case 38:
-      return 173;
-    case 39:
-      return 174;
-    case 40:
-      return 175;
-    default:
-      if (keyCode >= 65 && keyCode <= 90) return keyCode + 32;
-      if (keyCode >= 112 && keyCode <= 123) return keyCode + 75;
-      return keyCode;
+// KeyboardEvent.key names to DOOM's key codes (doomdef.h)
+const NAMED_KEYS: Record<string, number> = {
+  Backspace: 127,
+  Shift: KEY_RSHIFT,
+  Control: 157,
+  Alt: 184,
+  ArrowLeft: 172,
+  ArrowUp: 173,
+  ArrowRight: 174,
+  ArrowDown: 175,
+  Escape: 27,
+  Enter: 13,
+  Tab: 9,
+  " ": 32,
+};
+
+// DOOM takes printable keys as lowercase ASCII and function keys from its own range
+function toDoomKey(event: KeyboardEvent) {
+  const named = NAMED_KEYS[event.key];
+  if (named !== undefined) return named;
+  if (event.key.length === 1) {
+    return event.key.toLowerCase().codePointAt(0) ?? 0;
   }
+  const functionKey = /^F(?<index>1[0-2]|[1-9])$/u.exec(event.key);
+  if (functionKey) return 186 + Number(functionKey.groups?.index);
+  return 0;
 }
 
 function plasma(x: number, y: number, t: number) {
@@ -208,8 +217,7 @@ function DoomGrid({
       return row;
     }),
   );
-  const frameRef = React.useRef(frame);
-  frameRef.current = frame;
+  const frameRef = useValueAsRef(frame);
   const [isReady, setIsReady] = React.useState(source !== "doom");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -220,7 +228,9 @@ function DoomGrid({
     // Double rAF so the stage gets one painted frame before the heavy mount
     let secondId = 0;
     const firstId = requestAnimationFrame(() => {
-      secondId = requestAnimationFrame(() => setShowGrid(true));
+      secondId = requestAnimationFrame(() => {
+        setShowGrid(true);
+      });
     });
     return () => {
       cancelAnimationFrame(firstId);
@@ -241,15 +251,15 @@ function DoomGrid({
         maxSize: CELL_SIZE,
         // Direct writes color the grid's own cell element, so each pixel is one element less
         cell:
-          mode !== "data"
-            ? () => null
-            : ({ getValue }) => (
+          mode === "data"
+            ? ({ getValue }) => (
                 <div
                   data-pixel=""
                   className="absolute inset-0"
                   style={{ backgroundColor: toColor(getValue() as number) }}
                 />
-              ),
+              )
+            : () => null,
       })),
     [width, mode],
   );
@@ -269,8 +279,9 @@ function DoomGrid({
   }));
 
   React.useEffect(() => {
-    const onResize = () =>
+    const onResize = () => {
       setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
     const onFullscreenChange = () => {
       const isActive = document.fullscreenElement === fullscreenRef.current;
       setIsFullscreen(isActive);
@@ -305,7 +316,9 @@ function DoomGrid({
       else void onFullscreen();
     };
     window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, true);
+    };
   }, [source, onFullscreen]);
 
   // Left click fires; caught before the grid so it doesn't select cells
@@ -315,7 +328,9 @@ function DoomGrid({
       event.preventDefault();
       event.stopPropagation();
       const buttons = event.type === "pointerdown" ? 1 : 0;
-      void loadDoom().then((engine) => engine.mouse(buttons));
+      void loadDoom().then((engine) => {
+        engine.mouse(buttons);
+      });
     },
     [isPlaying],
   );
@@ -333,11 +348,9 @@ function DoomGrid({
       // Alt+Enter is the fullscreen shortcut, not game input
       if (event.altKey && event.key === "Enter") return;
       const pressed = event.type === "keydown";
-      engine.key(
-        pressed,
-        EXTRA_KEYS[event.keyCode] ?? toDoomKey(event.keyCode),
-      );
-      if (pressed && /^[a-z0-9]$/i.test(event.key)) {
+      const doomKey = EXTRA_KEYS[event.code] ?? toDoomKey(event);
+      if (doomKey !== 0) engine.key(pressed, doomKey);
+      if (pressed && /^[a-z0-9]$/iu.test(event.key)) {
         typed = (typed + event.key.toLowerCase()).slice(-12);
         const cheat = CHEAT_PATTERN.exec(typed)?.[0];
         if (cheat) {
@@ -345,7 +358,7 @@ function DoomGrid({
           // Any key outside the sequence resets DOOM's matcher, then the cheat goes in clean
           for (const key of [
             KEY_RSHIFT,
-            ...cheat.split("").map((c) => c.charCodeAt(0)),
+            ...cheat.split("").map((c) => c.codePointAt(0) ?? 0),
           ]) {
             engine.key(true, key);
             engine.key(false, key);
@@ -666,7 +679,7 @@ function DoomGrid({
       disposed = true;
       cancelAnimationFrame(rafId);
     };
-  }, [showGrid, width, height, mode, source, damage, auto]);
+  }, [showGrid, width, height, mode, source, damage, auto, frameRef]);
 
   const gridWidth = width * CELL_SIZE + 2;
   const gridHeight = (height + 1) * CELL_SIZE + 2;
