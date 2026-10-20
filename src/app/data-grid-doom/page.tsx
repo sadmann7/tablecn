@@ -378,9 +378,13 @@ function DoomGrid({
     // rest over: on screens where rastering every row would blow the frame budget, the
     // frame rate holds and the picture refreshes progressively instead
     const pendingRows = new Uint8Array(height);
+    let pendingCount = 0;
     let rowBudget = height;
+    // Raster-health cap on the per-frame budget, shrunk when frames run slow
+    let budgetCap = height;
     let paintCursor = 0;
     let deltaEma = 0;
+    let vsyncMs = 1000 / 60;
     // Gradient stop positions, precomputed: percentages survive zoom and fullscreen scaling
     const stops = Array.from(
       { length: width + 1 },
@@ -495,52 +499,59 @@ function DoomGrid({
       return changed;
     };
 
-    const paint = (changed: number[]) => {
+    const paintRow = (y: number) => {
       if (mode === "gradient") {
         rowElements ??= collectRows();
-        for (const y of changed) pendingRows[y] = 1;
-        let painted = 0;
-        const cursor = paintCursor;
-        for (let i = 0; i < height && painted < rowBudget; i++) {
-          const y = (cursor + i) % height;
-          if (!pendingRows[y]) continue;
-          pendingRows[y] = 0;
-          const row = rowElements[y];
-          if (row) row.style.backgroundImage = buildRowGradient(y);
-          painted++;
-          paintCursor = (y + 1) % height;
-        }
-        // Drain-only calls don't count, so the counter stays comparable to the engine rate
-        if (changed.length > 0) paints++;
+        const row = rowElements[y];
+        if (row) row.style.backgroundImage = buildRowGradient(y);
         return;
       }
-      if (changed.length === 0) return;
-      paints++;
-      if (mode === "dom") {
-        pixels ??= collectPixels();
+      pixels ??= collectPixels();
+      const row = pixels[y];
+      if (!row) return;
+      for (let x = 0; x < width; x++) {
+        const index = y * width + x;
+        if (!dirty[index]) continue;
+        dirty[index] = 0;
+        const pixel = row[x];
+        if (pixel) pixel.style.backgroundColor = toColor(current[index] ?? -1);
+      }
+    };
+
+    const paint = (changed: number[]) => {
+      if (mode === "data") {
+        if (changed.length === 0) return;
+        paints++;
+        const next = frameRef.current.slice();
         for (const y of changed) {
-          const row = pixels[y];
-          if (!row) continue;
+          const row: PixelRow = { id: `r${y}` };
           for (let x = 0; x < width; x++) {
-            const index = y * width + x;
-            if (!dirty[index]) continue;
-            dirty[index] = 0;
-            const pixel = row[x];
-            if (pixel)
-              pixel.style.backgroundColor = toColor(current[index] ?? -1);
+            row[`c${x}`] = current[y * width + x] ?? -1;
           }
+          next[y] = row;
         }
+        setFrame(next);
         return;
       }
-      const next = frameRef.current.slice();
       for (const y of changed) {
-        const row: PixelRow = { id: `r${y}` };
-        for (let x = 0; x < width; x++) {
-          row[`c${x}`] = current[y * width + x] ?? -1;
+        if (!pendingRows[y]) {
+          pendingRows[y] = 1;
+          pendingCount++;
         }
-        next[y] = row;
       }
-      setFrame(next);
+      let painted = 0;
+      const cursor = paintCursor;
+      for (let i = 0; i < height && painted < rowBudget; i++) {
+        const y = (cursor + i) % height;
+        if (!pendingRows[y]) continue;
+        pendingRows[y] = 0;
+        pendingCount--;
+        paintRow(y);
+        painted++;
+        paintCursor = (y + 1) % height;
+      }
+      // Drain-only calls don't count, so the counter reads as complete frames a second
+      if (changed.length > 0) paints++;
     };
 
     const step = (now: number) => {
@@ -553,10 +564,12 @@ function DoomGrid({
         // (big windows, fullscreen); paint everything again once frames are cheap.
         // Smoothed, with slow growth, so a 120Hz display's cheap frames between
         // heavy ones don't swing the budget into a stutter
-        if (mode === "gradient") {
+        if (mode !== "data") {
           deltaEma = deltaEma === 0 ? delta : deltaEma * 0.8 + delta * 0.2;
-          if (deltaEma > 34) rowBudget = Math.max(16, (rowBudget * 7) >> 3);
-          else if (deltaEma < 24) rowBudget = Math.min(height, rowBudget + 2);
+          // The shortest recent delta approximates the display's vsync period
+          vsyncMs = Math.min(vsyncMs * 1.02, Math.max(2, delta));
+          if (deltaEma > 34) budgetCap = Math.max(16, (budgetCap * 7) >> 3);
+          else if (deltaEma < 24) budgetCap = Math.min(height, budgetCap + 2);
         }
       }
       last = now;
@@ -569,13 +582,32 @@ function DoomGrid({
         if (engineFrame === lastEngineFrame) {
           // The display runs faster than DOOM's 35Hz, so the frames in between
           // drain rows the budget carried over, keeping every batch small
-          if (mode === "gradient") paint([]);
+          if (mode !== "data") paint([]);
           return;
         }
         engineFrames += engineFrame - Math.max(lastEngineFrame, 0);
         lastEngineFrame = engineFrame;
+        // A torn picture looks worse than a skipped frame: while rows of the
+        // last sampled frame are still pending, drain them and skip this one.
+        // Only for gradient mode: dom mode repaints so slowly that coherent
+        // frames would be a slideshow, and its visible scan is part of the show
+        if (mode === "gradient" && pendingCount > 0) {
+          paint([]);
+          return;
+        }
       }
-      paint(sample());
+      const changed = sample();
+      if (mode !== "data" && changed.length > 0) {
+        // Split each frame's rows across the display frames before the next
+        // 35Hz engine frame, so every batch fits a vsync slot and the frame
+        // still completes in time, bounded by the raster-health cap
+        const idleSlots = Math.max(1, Math.floor(1000 / 35 / vsyncMs) - 1);
+        rowBudget = Math.min(
+          budgetCap,
+          Math.max(16, Math.ceil(changed.length / idleSlots)),
+        );
+      }
+      paint(changed);
 
       if (now - statsAt >= 1000) {
         setStats({
