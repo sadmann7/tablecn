@@ -32,7 +32,7 @@ interface DoomEngine {
   pixels: () => Uint8ClampedArray | null;
   frame: () => number;
   step: () => void;
-  key: (pressed: boolean, doomKey: number) => void;
+  key: (pressed: boolean, keyCode: number) => void;
   /** Mouse button bits (1 fires). The port ignores mouse movement, so there's no mouse turning. */
   mouse: (buttons: number) => void;
 }
@@ -79,8 +79,8 @@ function loadDoom(): Promise<DoomEngine> {
       step: () => {
         exports.doom_loop_step();
       },
-      key: (pressed, doomKey) => {
-        exports.add_browser_event(pressed ? 0 : 1, doomKey);
+      key: (pressed, keyCode) => {
+        exports.add_browser_event(pressed ? 0 : 1, keyCode);
       },
       mouse: (buttons) => {
         exports.add_browser_event(2, buttons);
@@ -94,7 +94,7 @@ function loadDoom(): Promise<DoomEngine> {
 // and E to use, as in the official Unity and KEX ports and the GZDoom family.
 // Fire stays on click and Ctrl, DOOM's own binding. Keyed by the physical key
 // (KeyboardEvent.code), so WASD stays put on non-QWERTY layouts
-const EXTRA_KEYS: Record<string, number> = {
+const EXTRA_KEY_CODES: Record<string, number> = {
   KeyW: 173, // Forward, like the up arrow
   KeyS: 175, // Back, like the down arrow
   KeyA: 44, // Strafe left, DOOM's ","
@@ -119,9 +119,10 @@ function getKeyboard() {
 const CHEAT_PATTERN =
   /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/u;
 const KEY_RSHIFT = 182;
+const KEY_F1 = 187;
 
 // KeyboardEvent.key names to DOOM's key codes (doomdef.h)
-const NAMED_KEYS: Record<string, number> = {
+const DOOM_KEY_CODES: Record<string, number> = {
   Backspace: 127,
   Shift: KEY_RSHIFT,
   Control: 157,
@@ -137,15 +138,15 @@ const NAMED_KEYS: Record<string, number> = {
 };
 
 // DOOM takes printable keys as lowercase ASCII and function keys from its own range
-function toDoomKey(event: KeyboardEvent) {
-  const named = NAMED_KEYS[event.key];
+function getDoomKeyCode(event: KeyboardEvent) {
+  const named = DOOM_KEY_CODES[event.key];
   if (named !== undefined) return named;
   if (event.key.length === 1) {
-    return event.key.toLowerCase().codePointAt(0) ?? 0;
+    return event.key.toLowerCase().codePointAt(0) ?? null;
   }
   const functionKey = /^F(?<index>1[0-2]|[1-9])$/u.exec(event.key);
-  if (functionKey) return 186 + Number(functionKey.groups?.index);
-  return 0;
+  if (functionKey) return KEY_F1 + Number(functionKey.groups?.index) - 1;
+  return null;
 }
 
 function plasma(x: number, y: number, t: number) {
@@ -348,8 +349,8 @@ function DoomGrid({
       // Alt+Enter is the fullscreen shortcut, not game input
       if (event.altKey && event.key === "Enter") return;
       const pressed = event.type === "keydown";
-      const doomKey = EXTRA_KEYS[event.code] ?? toDoomKey(event);
-      if (doomKey !== 0) engine.key(pressed, doomKey);
+      const keyCode = EXTRA_KEY_CODES[event.code] ?? getDoomKeyCode(event);
+      if (keyCode !== null) engine.key(pressed, keyCode);
       if (pressed && /^[a-z0-9]$/iu.test(event.key)) {
         typed = (typed + event.key.toLowerCase()).slice(-12);
         const cheat = CHEAT_PATTERN.exec(typed)?.[0];
