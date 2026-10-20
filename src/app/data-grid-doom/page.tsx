@@ -10,7 +10,6 @@ import { useMounted } from "@/hooks/use-mounted";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";
-import { Fps } from "@/registry/bases/radix/ui/fps";
 
 // DOOM rendered through the data grid, one cell per sampled pixel.
 // The engine is diekmann/wasm-fizzbuzz (vanilla DOOM compiled to wasm32 with the shareware WAD embedded), loaded at runtime and never bundled.
@@ -185,12 +184,7 @@ function getParams() {
 export default function DataGridDoomPage() {
   const mounted = useMounted();
   if (!mounted) return null;
-  return (
-    <>
-      <Fps strategy="fixed" />
-      <DoomGrid {...getParams()} />
-    </>
-  );
+  return <DoomGrid {...getParams()} />;
 }
 
 function DoomGrid({
@@ -211,9 +205,8 @@ function DoomGrid({
   );
   const frameRef = React.useRef(frame);
   frameRef.current = frame;
-  const [status, setStatus] = React.useState(
-    source === "doom" ? "Loading DOOM…" : "Plasma benchmark",
-  );
+  const [isReady, setIsReady] = React.useState(source !== "doom");
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const [stats, setStats] = React.useState({ paints: 0, engine: 0 });
 
@@ -601,11 +594,11 @@ function DoomGrid({
       loadDoom()
         .then((loaded) => {
           engine = loaded;
-          setStatus("Running the attract demo. Press Play to take control.");
+          setIsReady(true);
           start();
         })
         .catch((error: unknown) => {
-          setStatus(`Couldn't load DOOM: ${String(error)}`);
+          setLoadError(String(error));
         });
     } else {
       start();
@@ -624,70 +617,16 @@ function DoomGrid({
     : Math.min(
         1,
         (viewport.width - 32) / gridWidth,
-        (viewport.height - 140) / gridHeight,
+        // Leaves room for the nav above and the option bar and attribution below
+        (viewport.height - 128) / gridHeight,
       );
   // Whole-pixel cells: fractional ones leave anti-aliased seams that read as grid lines
   const zoom = Math.max(1, Math.floor(CELL_SIZE * fit)) / CELL_SIZE;
 
+  const stageWidth = Math.round(gridWidth * zoom);
+
   return (
-    <div className="container flex flex-col gap-3 py-4">
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="text-muted-foreground">
-          {width}×{height} cells · {mode} · {isPlaying ? "Playing" : status}
-        </span>
-        <span className="text-muted-foreground tabular-nums">
-          grid {stats.paints} fps
-          {source === "doom" ? ` · engine ${stats.engine} fps` : ""}
-        </span>
-        <span className="flex items-center gap-1">
-          {RESOLUTIONS.map((res) => (
-            <a
-              key={res}
-              href={`?res=${res}${modeParam ? `&mode=${modeParam}` : ""}`}
-              className={
-                res === width
-                  ? "rounded bg-accent px-1.5 py-0.5 font-medium"
-                  : "rounded px-1.5 py-0.5 text-muted-foreground hover:text-foreground"
-              }
-            >
-              {res}×{Math.round((res * SCREEN_HEIGHT) / SCREEN_WIDTH)}
-              {res === NATIVE_RESOLUTION ? " native" : ""}
-            </a>
-          ))}
-        </span>
-        {source === "doom" && (
-          <Button
-            size="sm"
-            variant={isPlaying ? "secondary" : "default"}
-            onClick={(event) => {
-              setIsPlaying((playing) => !playing);
-              event.currentTarget.blur();
-            }}
-          >
-            {isPlaying ? "Stop playing" : "Play"}
-          </Button>
-        )}
-        {source === "doom" && (
-          <Button
-            size="sm"
-            variant="outline"
-            title="Alt+Enter (Option+Enter on macOS)"
-            onClick={(event) => {
-              event.currentTarget.blur();
-              void onFullscreen();
-            }}
-          >
-            Fullscreen
-          </Button>
-        )}
-        {isPlaying && (
-          <span className="text-muted-foreground">
-            WASD or arrows move (A and D strafe, arrows turn), F, Ctrl or click
-            fires, E or Space uses, Enter and Esc for menus. Alt+Enter toggles
-            fullscreen. ⌘ shortcuts still reach the browser.
-          </span>
-        )}
-      </div>
+    <div className="container flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center gap-2 py-6">
       <div
         ref={fullscreenRef}
         className={
@@ -696,21 +635,105 @@ function DoomGrid({
         onPointerDownCapture={onPointerFire}
         onPointerUpCapture={onPointerFire}
       >
-        <div
-          // Grid lines cost a border per cell and darken the picture.
-          // Gradient mode paints the picture on the row element, underneath the theme's opaque cells
-          className={`**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
-            mode === "gradient"
-              ? " **:data-[slot=data-grid-cell]:bg-transparent!"
-              : ""
-          }`}
-          style={{ zoom, width: gridWidth }}
-        >
-          <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+        <div className="group relative">
+          <div
+            // Grid lines cost a border per cell and darken the picture.
+            // Gradient mode paints the picture on the row element, underneath the theme's opaque cells
+            className={`**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
+              mode === "gradient"
+                ? " **:data-[slot=data-grid-cell]:bg-transparent!"
+                : ""
+            }`}
+            style={{ zoom, width: gridWidth }}
+          >
+            <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+          </div>
+          {source === "doom" && !isPlaying && (
+            <button
+              type="button"
+              className="absolute inset-0 z-10 flex cursor-pointer flex-col items-center justify-center gap-3 bg-black/60 text-white focus:outline-none"
+              onClick={() => {
+                if (isReady) setIsPlaying(true);
+              }}
+            >
+              {loadError ? (
+                <span className="px-6 text-sm text-red-400">
+                  Couldn&apos;t load DOOM: {loadError}
+                </span>
+              ) : (
+                <>
+                  <span className="text-xl font-semibold tracking-wide">
+                    {isReady ? "Click to play" : "Loading DOOM…"}
+                  </span>
+                  {isReady && (
+                    <span className="px-6 text-center text-xs text-white/70">
+                      WASD or arrows move · F or click fires · E uses · Enter
+                      and Esc for menus · Alt+Enter fullscreen
+                    </span>
+                  )}
+                </>
+              )}
+            </button>
+          )}
+          {source === "doom" && isPlaying && (
+            <div className="absolute end-2 top-2 z-10 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="bg-black/60 text-white hover:bg-black/80"
+                title="Alt+Enter (Option+Enter on macOS)"
+                onClick={(event) => {
+                  event.currentTarget.blur();
+                  void onFullscreen();
+                }}
+              >
+                Fullscreen
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="bg-black/60 text-white hover:bg-black/80"
+                onClick={(event) => {
+                  setIsPlaying(false);
+                  event.currentTarget.blur();
+                }}
+              >
+                Stop
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+      <div
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground"
+        style={{ width: stageWidth }}
+      >
+        <span className="flex items-center gap-0.5">
+          {RESOLUTIONS.map((res) => (
+            <a
+              key={res}
+              href={`?res=${res}${modeParam ? `&mode=${modeParam}` : ""}`}
+              className={
+                res === width
+                  ? "rounded bg-accent px-1.5 py-0.5 font-medium text-foreground"
+                  : "rounded px-1.5 py-0.5 hover:text-foreground"
+              }
+            >
+              {res}×{Math.round((res * SCREEN_HEIGHT) / SCREEN_WIDTH)}
+              {res === NATIVE_RESOLUTION ? " native" : ""}
+            </a>
+          ))}
+        </span>
+        <span className="tabular-nums">
+          {mode} · grid {stats.paints} fps
+          {source === "doom" ? ` · engine ${stats.engine} fps` : ""}
+        </span>
+      </div>
       {source === "doom" && (
-        <p className="text-xs text-muted-foreground">
+        <p
+          className="text-[11px] text-muted-foreground/80"
+          style={{ width: stageWidth }}
+        >
           DOOM © id Software.{" "}
           <a
             href="https://github.com/id-Software/DOOM"
