@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-// The demo's rows live in the room server's durable object storage, so these
-// enums are defined here rather than in a database schema
 export const SKATER_STANCES = ["regular", "goofy"] as const;
 export const SKATER_STYLES = [
   "street",
