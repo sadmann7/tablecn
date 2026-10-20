@@ -26,6 +26,41 @@ const CELL_SIZE = 36;
 const RESOLUTIONS = [40, 64, 80, 106, 128, 160, 192, 320] as const;
 const NATIVE_RESOLUTION = 320;
 
+const KEY_RSHIFT = 182;
+const KEY_F1 = 187;
+
+const DOOM_KEY_CODES: Record<string, number> = {
+  Backspace: 127,
+  Shift: KEY_RSHIFT,
+  Control: 157,
+  Alt: 184,
+  ArrowLeft: 172,
+  ArrowUp: 173,
+  ArrowRight: 174,
+  ArrowDown: 175,
+  Escape: 27,
+  Enter: 13,
+  Tab: 9,
+  " ": 32,
+};
+
+// The modern re-releases' scheme on top of DOOM's own: WASD with A/D strafing
+// and E to use, as in the official Unity and KEX ports and the GZDoom family.
+// Fire stays on click and Ctrl, DOOM's own binding. Keyed by the physical key
+// (KeyboardEvent.code), so WASD stays put on non-QWERTY layouts
+const EXTRA_KEY_CODES: Record<string, number> = {
+  KeyW: 173, // Forward, like the up arrow
+  KeyS: 175, // Back, like the down arrow
+  KeyA: 44, // Strafe left, DOOM's ","
+  KeyD: 46, // Strafe right, DOOM's "."
+  KeyE: 32, // Use, like Space
+};
+
+// DOOM resets a cheat on any key outside its sequence, so remapped letters would break them.
+// The page spots cheats itself and replays them as plain letters instead.
+const CHEAT_PATTERN =
+  /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/u;
+
 type PixelRow = { id: string } & Record<string, number | string>;
 
 interface DoomEngine {
@@ -90,17 +125,17 @@ function loadDoom(): Promise<DoomEngine> {
   return enginePromise;
 }
 
-// The modern re-releases' scheme on top of DOOM's own: WASD with A/D strafing
-// and E to use, as in the official Unity and KEX ports and the GZDoom family.
-// Fire stays on click and Ctrl, DOOM's own binding. Keyed by the physical key
-// (KeyboardEvent.code), so WASD stays put on non-QWERTY layouts
-const EXTRA_KEY_CODES: Record<string, number> = {
-  KeyW: 173, // Forward, like the up arrow
-  KeyS: 175, // Back, like the down arrow
-  KeyA: 44, // Strafe left, DOOM's ","
-  KeyD: 46, // Strafe right, DOOM's "."
-  KeyE: 32, // Use, like Space
-};
+// DOOM takes printable keys as lowercase ASCII and function keys from its own range
+function getDoomKeyCode(event: KeyboardEvent) {
+  const named = DOOM_KEY_CODES[event.key];
+  if (named !== undefined) return named;
+  if (event.key.length === 1) {
+    return event.key.toLowerCase().codePointAt(0) ?? null;
+  }
+  const functionKey = /^F(?<index>1[0-2]|[1-9])$/u.exec(event.key);
+  if (functionKey) return KEY_F1 + Number(functionKey.groups?.index) - 1;
+  return null;
+}
 
 // Keyboard Lock API, Chromium only
 function getKeyboard() {
@@ -114,59 +149,26 @@ function getKeyboard() {
   ).keyboard;
 }
 
-// DOOM resets a cheat on any key outside its sequence, so remapped letters would break them.
-// The page spots cheats itself and replays them as plain letters instead.
-const CHEAT_PATTERN =
-  /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/u;
-const KEY_RSHIFT = 182;
-const KEY_F1 = 187;
-
-const DOOM_KEY_CODES: Record<string, number> = {
-  Backspace: 127,
-  Shift: KEY_RSHIFT,
-  Control: 157,
-  Alt: 184,
-  ArrowLeft: 172,
-  ArrowUp: 173,
-  ArrowRight: 174,
-  ArrowDown: 175,
-  Escape: 27,
-  Enter: 13,
-  Tab: 9,
-  " ": 32,
-};
-
-// DOOM takes printable keys as lowercase ASCII and function keys from its own range
-function getDoomKeyCode(event: KeyboardEvent) {
-  const named = DOOM_KEY_CODES[event.key];
-  if (named !== undefined) return named;
-  if (event.key.length === 1) {
-    return event.key.toLowerCase().codePointAt(0) ?? null;
-  }
-  const functionKey = /^F(?<index>1[0-2]|[1-9])$/u.exec(event.key);
-  if (functionKey) return KEY_F1 + Number(functionKey.groups?.index) - 1;
-  return null;
-}
-
-function plasma(x: number, y: number, t: number) {
-  const v =
+function getPlasmaColor(x: number, y: number, t: number) {
+  const wave =
     Math.sin(x * 0.17 + t) +
     Math.sin(y * 0.13 + t * 1.3) +
     Math.sin((x + y) * 0.11 + t * 0.7) +
     Math.sin(Math.hypot(x - 40, y - 25) * 0.2 - t * 1.7);
-  const i = Math.floor(((v + 4) / 8) * 255) & 255;
-  const r = Math.round(128 + 127 * Math.sin((i / 256) * Math.PI * 2));
-  const g = Math.round(128 + 127 * Math.sin((i / 256) * Math.PI * 2 + 2));
-  const b = Math.round(128 + 127 * Math.sin((i / 256) * Math.PI * 2 + 4));
+  const paletteIndex = Math.floor(((wave + 4) / 8) * 255) & 255;
+  const angle = (paletteIndex / 256) * Math.PI * 2;
+  const r = Math.round(128 + 127 * Math.sin(angle));
+  const g = Math.round(128 + 127 * Math.sin(angle + 2));
+  const b = Math.round(128 + 127 * Math.sin(angle + 4));
   return (r << 16) | (g << 8) | b;
 }
 
-const colorCache = new Map<number, string>();
-function toColor(rgb: number) {
-  let color = colorCache.get(rgb);
+const hexColorCache = new Map<number, string>();
+function getHexColor(rgb: number) {
+  let color = hexColorCache.get(rgb);
   if (color === undefined) {
     color = `#${rgb.toString(16).padStart(6, "0")}`;
-    colorCache.set(rgb, color);
+    hexColorCache.set(rgb, color);
   }
   return color;
 }
@@ -184,6 +186,7 @@ function getParams() {
       : columns === NATIVE_RESOLUTION
         ? "gradient"
         : "dom";
+
   return {
     columns,
     mode,
@@ -224,20 +227,13 @@ function DoomGrid({
   // The stage and loading overlay paint first; the grid, tens of thousands of
   // cells at higher resolutions, mounts a tick later instead of blanking the page
   const [showGrid, setShowGrid] = React.useState(false);
-  React.useEffect(() => {
-    // Double rAF so the stage gets one painted frame before the heavy mount
-    let secondId = 0;
-    const firstId = requestAnimationFrame(() => {
-      secondId = requestAnimationFrame(() => {
-        setShowGrid(true);
-      });
-    });
-    return () => {
-      cancelAnimationFrame(firstId);
-      cancelAnimationFrame(secondId);
-    };
-  }, []);
   const [stats, setStats] = React.useState({ paints: 0, engine: 0 });
+  const fullscreenRef = React.useRef<HTMLDivElement>(null);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [viewport, setViewport] = React.useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
     () =>
@@ -256,7 +252,7 @@ function DoomGrid({
                 <div
                   data-pixel=""
                   className="absolute inset-0"
-                  style={{ backgroundColor: toColor(getValue() as number) }}
+                  style={{ backgroundColor: getHexColor(getValue() as number) }}
                 />
               )
             : () => null,
@@ -271,12 +267,19 @@ function DoomGrid({
     readOnly: true,
   });
 
-  const fullscreenRef = React.useRef<HTMLDivElement>(null);
-  const [isFullscreen, setIsFullscreen] = React.useState(false);
-  const [viewport, setViewport] = React.useState(() => ({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  }));
+  React.useEffect(() => {
+    // Double rAF so the stage gets one painted frame before the heavy mount
+    let secondId = 0;
+    const firstId = requestAnimationFrame(() => {
+      secondId = requestAnimationFrame(() => {
+        setShowGrid(true);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstId);
+      cancelAnimationFrame(secondId);
+    };
+  }, []);
 
   React.useEffect(() => {
     const onResize = () => {
@@ -449,7 +452,7 @@ function DoomGrid({
         dirty[offset + x - 1] = 0;
         const color = x < width ? (current[offset + x] ?? -1) : -1;
         if (color === runColor) continue;
-        parts.push(`${toColor(runColor)} ${stops[runStart]} ${stops[x]}`);
+        parts.push(`${getHexColor(runColor)} ${stops[runStart]} ${stops[x]}`);
         runColor = color;
         runStart = x;
       }
@@ -463,7 +466,7 @@ function DoomGrid({
         for (let i = 0; i < changedRows; i++) {
           const y = (first + i) % height;
           for (let x = 0; x < width; x++) {
-            current[y * width + x] = plasma(x, y, tick * 0.08);
+            current[y * width + x] = getPlasmaColor(x, y, tick * 0.08);
             dirty[y * width + x] = 1;
           }
           changed.push(y);
@@ -525,7 +528,8 @@ function DoomGrid({
         if (!dirty[index]) continue;
         dirty[index] = 0;
         const pixel = row[x];
-        if (pixel) pixel.style.backgroundColor = toColor(current[index] ?? -1);
+        if (pixel)
+          pixel.style.backgroundColor = getHexColor(current[index] ?? -1);
       }
     };
 
