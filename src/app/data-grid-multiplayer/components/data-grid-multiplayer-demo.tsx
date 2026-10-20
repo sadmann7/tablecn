@@ -9,18 +9,22 @@ import { Copy, Languages, Trash2, WifiOff } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
-import type { SkaterSchema } from "@/app/data-grid-multiplayer/lib/validation";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { CellPresence, Direction } from "@/lib/data-grid-types";
 
 import { SkatersDataGridActionBar } from "@/app/data-grid-multiplayer/components/skaters-data-grid-action-bar";
 import { getInsertOrder } from "@/app/data-grid-multiplayer/lib/order";
 import {
+  SKATER_STANCES,
+  SKATER_STATUSES,
+  SKATER_STYLES,
+  type SkaterSchema,
+} from "@/app/data-grid-multiplayer/lib/validation";
+import {
   getSkaterStatusIcon,
   getStanceIcon,
   getStyleIcon,
 } from "@/app/lib/utils";
-import { skaters } from "@/db/schema";
 import {
   type UndoRedoCellUpdate,
   useDataGridUndoRedo,
@@ -70,19 +74,19 @@ function getPresenceUsers(
   return { ...users, [currentUserId]: { ...currentUser, activeCell } };
 }
 
-const stanceOptions = skaters.stance.enumValues.map((stance) => ({
+const stanceOptions = SKATER_STANCES.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
   value: stance,
   icon: getStanceIcon(stance),
 }));
 
-const styleOptions = skaters.style.enumValues.map((style) => ({
+const styleOptions = SKATER_STYLES.map((style) => ({
   label: style.charAt(0).toUpperCase() + style.slice(1).replace("-", " "),
   value: style,
   icon: getStyleIcon(style),
 }));
 
-const statusOptions = skaters.status.enumValues.map((status) => ({
+const statusOptions = SKATER_STATUSES.map((status) => ({
   label: status.charAt(0).toUpperCase() + status.slice(1),
   value: status,
   icon: getSkaterStatusIcon(status),
