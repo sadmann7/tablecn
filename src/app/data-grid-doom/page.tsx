@@ -7,7 +7,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
 import { useMounted } from "@/hooks/use-mounted";
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -220,7 +219,6 @@ function DoomGrid({
       return row;
     }),
   );
-  const frameRef = useValueAsRef(frame);
   const [isReady, setIsReady] = React.useState(source !== "doom");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -537,15 +535,21 @@ function DoomGrid({
       if (mode === "data") {
         if (changed.length === 0) return;
         paints++;
-        const next = frameRef.current.slice();
-        for (const y of changed) {
+        const rows = changed.map((y) => {
           const row: PixelRow = { id: `r${y}` };
           for (let x = 0; x < width; x++) {
             row[`c${x}`] = current[y * width + x] ?? -1;
           }
-          next[y] = row;
-        }
-        setFrame(next);
+          return row;
+        });
+        setFrame((previous) => {
+          const next = previous.slice();
+          for (const [index, y] of changed.entries()) {
+            const row = rows[index];
+            if (row) next[y] = row;
+          }
+          return next;
+        });
         return;
       }
       for (const y of changed) {
@@ -681,7 +685,7 @@ function DoomGrid({
       disposed = true;
       cancelAnimationFrame(rafId);
     };
-  }, [showGrid, width, height, mode, source, damage, auto, frameRef]);
+  }, [showGrid, width, height, mode, source, damage, auto]);
 
   const gridWidth = width * CELL_SIZE + 2;
   const gridHeight = (height + 1) * CELL_SIZE + 2;
