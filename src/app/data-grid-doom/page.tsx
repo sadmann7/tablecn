@@ -161,8 +161,10 @@ function toColor(rgb: number) {
 
 function getParams() {
   const params = new URLSearchParams(window.location.search);
-  const res = Number(params.get("res") ?? 128);
-  const columns = (RESOLUTIONS as readonly number[]).includes(res) ? res : 128;
+  const res = Number(params.get("res") ?? NATIVE_RESOLUTION);
+  const columns = (RESOLUTIONS as readonly number[]).includes(res)
+    ? res
+    : NATIVE_RESOLUTION;
   const modeParam = params.get("mode");
   const mode =
     modeParam === "data" || modeParam === "dom" || modeParam === "gradient"
@@ -505,7 +507,8 @@ function DoomGrid({
           painted++;
           paintCursor = (y + 1) % height;
         }
-        if (painted > 0) paints++;
+        // Drain-only calls don't count, so the counter stays comparable to the engine rate
+        if (changed.length > 0) paints++;
         return;
       }
       if (changed.length === 0) return;
@@ -560,7 +563,12 @@ function DoomGrid({
         if (!engine) return;
         engine.step();
         const engineFrame = engine.frame();
-        if (engineFrame === lastEngineFrame) return;
+        if (engineFrame === lastEngineFrame) {
+          // The display runs faster than DOOM's 35Hz, so the frames in between
+          // drain rows the budget carried over, keeping every batch small
+          if (mode === "gradient") paint([]);
+          return;
+        }
         engineFrames += engineFrame - Math.max(lastEngineFrame, 0);
         lastEngineFrame = engineFrame;
       }
