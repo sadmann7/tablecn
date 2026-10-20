@@ -5,7 +5,10 @@ import { describe, expect, it } from "vitest";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { FilterValue } from "@/lib/data-grid-types";
 
-import { getFilterFn } from "@/lib/data-grid-filters";
+import {
+  getFilterFn,
+  getFilterValueForOperator,
+} from "@/lib/data-grid-filters";
 
 const filterFn = getFilterFn<Record<string, unknown>>();
 
@@ -108,5 +111,32 @@ describe("getFilterFn", () => {
   it("should use the latest values when a filter object is replaced", () => {
     expect(matches("Sales", { operator: "contains", value: "sal" })).toBe(true);
     expect(matches("Sales", { operator: "contains", value: "hr" })).toBe(false);
+  });
+});
+
+describe("getFilterValueForOperator", () => {
+  it("wraps a single value when switching to a multi-value operator", () => {
+    expect(getFilterValueForOperator("active", "isAnyOf")).toEqual(["active"]);
+    expect(getFilterValueForOperator("active", "isNoneOf")).toEqual(["active"]);
+    expect(getFilterValueForOperator("", "isAnyOf")).toBeUndefined();
+    expect(getFilterValueForOperator(undefined, "isAnyOf")).toBeUndefined();
+  });
+
+  it("keeps the first value when switching to a single-value operator", () => {
+    expect(getFilterValueForOperator(["active"], "is")).toBe("active");
+    expect(getFilterValueForOperator(["active", "pro"], "isNot")).toBe(
+      "active",
+    );
+    expect(getFilterValueForOperator([], "is")).toBeUndefined();
+  });
+
+  it("leaves values alone between operators of the same shape", () => {
+    expect(getFilterValueForOperator("active", "isNot")).toBe("active");
+    expect(getFilterValueForOperator(["a", "b"], "isNoneOf")).toEqual([
+      "a",
+      "b",
+    ]);
+    expect(getFilterValueForOperator("active", "isEmpty")).toBe("active");
+    expect(getFilterValueForOperator(5, "greaterThan")).toBe(5);
   });
 });

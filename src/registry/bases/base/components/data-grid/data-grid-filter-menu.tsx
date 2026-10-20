@@ -17,6 +17,7 @@ import type { FilterOperator, FilterValue } from "@/lib/data-grid-types";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   getDefaultOperator,
+  getFilterValueForOperator,
   getOperatorsForVariant,
 } from "@/lib/data-grid-filters";
 import { formatDate } from "@/lib/format";
@@ -400,7 +401,7 @@ function DataGridFilterItem<TData extends RowData>({
       onFilterUpdate(filter.id, {
         value: {
           operator: newOperator,
-          value: filterValue?.value,
+          value: getFilterValueForOperator(filterValue?.value, newOperator),
           endValue: filterValue?.endValue,
         },
       });
