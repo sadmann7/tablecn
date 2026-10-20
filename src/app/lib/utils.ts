@@ -14,7 +14,9 @@ import {
   Timer,
 } from "lucide-react";
 
-import { type Skater, type Task, tasks } from "@/db/schema";
+import type { SkaterSchema } from "@/app/data-grid-multiplayer/lib/validation";
+
+import { type Task, tasks } from "@/db/schema";
 import { ColumnFilterItem } from "@/lib/data-table-types";
 import { generateId } from "@/lib/id";
 
@@ -120,8 +122,8 @@ export function sanitizeEnumFilters<TColumnId extends string>(
   });
 }
 
-export function getSkaterStatusIcon(status: Skater["status"]) {
-  const statusIcons: Record<NonNullable<Skater["status"]>, LucideIcon> = {
+export function getSkaterStatusIcon(status: SkaterSchema["status"]) {
+  const statusIcons: Record<NonNullable<SkaterSchema["status"]>, LucideIcon> = {
     amateur: Circle,
     sponsored: Timer,
     pro: CheckCircle2,
@@ -131,8 +133,8 @@ export function getSkaterStatusIcon(status: Skater["status"]) {
   return status ? statusIcons[status] : undefined;
 }
 
-export function getStanceIcon(stance: Skater["stance"]) {
-  const stanceIcons: Record<NonNullable<Skater["stance"]>, LucideIcon> = {
+export function getStanceIcon(stance: SkaterSchema["stance"]) {
+  const stanceIcons: Record<NonNullable<SkaterSchema["stance"]>, LucideIcon> = {
     regular: ArrowRightIcon,
     goofy: ArrowDownIcon,
   };
@@ -140,8 +142,8 @@ export function getStanceIcon(stance: Skater["stance"]) {
   return stance ? stanceIcons[stance] : undefined;
 }
 
-export function getStyleIcon(style: Skater["style"]) {
-  const styleIcons: Record<NonNullable<Skater["style"]>, LucideIcon> = {
+export function getStyleIcon(style: SkaterSchema["style"]) {
+  const styleIcons: Record<NonNullable<SkaterSchema["style"]>, LucideIcon> = {
     street: CircleCheck,
     vert: ArrowUpIcon,
     park: Circle,

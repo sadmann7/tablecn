@@ -1,13 +1,5 @@
 import { sql } from "drizzle-orm";
-import {
-  boolean,
-  doublePrecision,
-  integer,
-  jsonb,
-  real,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { boolean, real, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { pgTable } from "@/db/utils";
 import { generateId } from "@/lib/id";
@@ -47,45 +39,3 @@ export const tasks = pgTable("tasks", {
 
 export type Task = typeof tasks.$inferSelect;
 export type NewTask = typeof tasks.$inferInsert;
-
-interface SkaterMedia {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url?: string;
-}
-
-// For data-grid-multiplayer
-export const skaters = pgTable("skaters", {
-  id: varchar("id", { length: 30 })
-    .$defaultFn(() => generateId())
-    .primaryKey(),
-  order: doublePrecision("order").notNull().default(0),
-  name: varchar("name", { length: 128 }),
-  email: varchar("email", { length: 256 }),
-  stance: varchar("stance", {
-    length: 30,
-    enum: ["regular", "goofy"],
-  }),
-  style: varchar("style", {
-    length: 30,
-    enum: ["street", "vert", "park", "freestyle", "all-around"],
-  }),
-  status: varchar("status", {
-    length: 30,
-    enum: ["amateur", "sponsored", "pro", "legend"],
-  }),
-  yearsSkating: integer("years_skating"),
-  startedSkating: timestamp("started_skating"),
-  isPro: boolean("is_pro").notNull().default(false),
-  tricks: jsonb("tricks").$type<string[]>(),
-  media: jsonb("media").$type<Array<SkaterMedia>>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .default(sql`current_timestamp`)
-    .$onUpdate(() => new Date()),
-});
-
-export type Skater = typeof skaters.$inferSelect;
-export type NewSkater = typeof skaters.$inferInsert;

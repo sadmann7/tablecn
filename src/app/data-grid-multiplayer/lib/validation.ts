@@ -1,6 +1,19 @@
 import { z } from "zod";
 
-import { skaters } from "@/db/schema";
+export const SKATER_STANCES = ["regular", "goofy"] as const;
+export const SKATER_STYLES = [
+  "street",
+  "vert",
+  "park",
+  "freestyle",
+  "all-around",
+] as const;
+export const SKATER_STATUSES = [
+  "amateur",
+  "sponsored",
+  "pro",
+  "legend",
+] as const;
 
 const mediaSchema = z.object({
   id: z.string(),
@@ -15,9 +28,9 @@ export const skaterSchema = z.object({
   order: z.number(),
   name: z.string().nullable(),
   email: z.string().nullable(),
-  stance: z.enum(skaters.stance.enumValues).nullable(),
-  style: z.enum(skaters.style.enumValues).nullable(),
-  status: z.enum(skaters.status.enumValues).nullable(),
+  stance: z.enum(SKATER_STANCES).nullable(),
+  style: z.enum(SKATER_STYLES).nullable(),
+  status: z.enum(SKATER_STATUSES).nullable(),
   yearsSkating: z.number().nullable(),
   startedSkating: z.coerce.date().nullable(),
   isPro: z.boolean(),
