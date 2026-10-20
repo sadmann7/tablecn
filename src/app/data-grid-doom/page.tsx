@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { ChevronDown } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -10,6 +11,16 @@ import { useMounted } from "@/hooks/use-mounted";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/registry/bases/radix/ui/dropdown-menu";
+import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
 
 // DOOM rendered through the data grid, one cell per sampled pixel.
 // The engine is diekmann/wasm-fizzbuzz (vanilla DOOM compiled to wasm32 with the shareware WAD embedded), loaded at runtime and never bundled.
@@ -54,6 +65,16 @@ const EXTRA_KEY_CODES: Record<string, number> = {
   KeyD: 46, // Strafe right, DOOM's "."
   KeyE: 32, // Use, like Space
 };
+
+const CONTROLS = [
+  { label: "Move", keys: ["W A S D", "Arrows"] },
+  { label: "Fire", keys: ["Click", "Ctrl"] },
+  { label: "Use", keys: ["E", "Space"] },
+  { label: "Run", keys: ["Shift"] },
+  { label: "Weapons", keys: ["1–7"] },
+  { label: "Menus", keys: ["Enter", "Esc"] },
+  { label: "Fullscreen", keys: ["Alt + Enter"] },
+] as const;
 
 // DOOM resets a cheat on any key outside its sequence, so remapped letters would break them.
 // The page spots cheats itself and replays them as plain letters instead.
@@ -172,6 +193,11 @@ function getHexColor(rgb: number) {
   return color;
 }
 
+function getResolutionLabel(columns: number) {
+  const rows = Math.round((columns * SCREEN_HEIGHT) / SCREEN_WIDTH);
+  return `${columns}×${rows}${columns === NATIVE_RESOLUTION ? " (native)" : ""}`;
+}
+
 function getParams() {
   const params = new URLSearchParams(window.location.search);
   const res = Number(params.get("res") ?? NATIVE_RESOLUTION);
@@ -232,6 +258,8 @@ function DoomGrid({
     width: window.innerWidth,
     height: window.innerHeight,
   }));
+  const chromeRef = React.useRef<HTMLDivElement>(null);
+  const [chromeHeight, setChromeHeight] = React.useState(64);
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
     () =>
@@ -294,6 +322,18 @@ function DoomGrid({
     return () => {
       window.removeEventListener("resize", onResize);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+    };
+  }, []);
+
+  React.useLayoutEffect(() => {
+    const chrome = chromeRef.current;
+    if (!chrome) return;
+    const observer = new ResizeObserver(() => {
+      setChromeHeight(chrome.offsetHeight);
+    });
+    observer.observe(chrome);
+    return () => {
+      observer.disconnect();
     };
   }, []);
 
@@ -688,35 +728,42 @@ function DoomGrid({
   }, [showGrid, width, height, mode, source, damage, auto]);
 
   const gridWidth = width * CELL_SIZE + 2;
-  const gridHeight = (height + 1) * CELL_SIZE + 2;
+  const gridHeight = height * CELL_SIZE + 2;
   const fit = isFullscreen
     ? Math.min(viewport.width / gridWidth, viewport.height / gridHeight)
     : Math.min(
         1,
         (viewport.width - 32) / gridWidth,
-        // Leaves room for the nav above and the option bar and attribution below
-        (viewport.height - 128) / gridHeight,
+        // The nav (3.5rem and its border), the page's padding and gap, and the toolbar and attribution below
+        (viewport.height - 57 - 32 - 12 - chromeHeight) / gridHeight,
       );
-  // Whole-pixel cells: fractional ones leave anti-aliased seams that read as grid lines
-  const zoom = Math.max(1, Math.floor(CELL_SIZE * fit)) / CELL_SIZE;
+  // Cells land on whole device pixels: fractional ones leave anti-aliased seams that read as grid lines
+  // Cells land on whole device pixels: fractional ones leave anti-aliased seams that read as grid lines
+  const pixelRatio = window.devicePixelRatio || 1;
+  const zoom =
+    Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
+    CELL_SIZE;
 
   const stageWidth = Math.round(gridWidth * zoom);
 
   return (
-    <div className="container flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center gap-2 py-6">
+    <div className="container flex min-h-[calc(100dvh-3.5rem-1px)] flex-col items-center justify-center gap-3 py-4">
+      <h1 className="sr-only">Data Grid DOOM</h1>
       <div
         ref={fullscreenRef}
         className={
-          isFullscreen ? "flex items-center justify-center bg-black" : undefined
+          isFullscreen
+            ? "flex items-center justify-center bg-black"
+            : "overflow-hidden rounded-lg ring-1 ring-border"
         }
         onPointerDownCapture={onPointerFire}
         onPointerUpCapture={onPointerFire}
       >
-        <div className="group relative">
+        <div className="relative">
           <div
             // Grid lines cost a border per cell and darken the picture.
             // Gradient mode paints the picture on the row element, underneath the theme's opaque cells
-            className={`bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
+            className={`bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
               mode === "gradient"
                 ? " **:data-[slot=data-grid-cell]:bg-transparent!"
                 : ""
@@ -730,37 +777,104 @@ function DoomGrid({
           {source === "doom" && !isPlaying && (
             <button
               type="button"
-              className="absolute inset-0 z-10 flex cursor-pointer flex-col items-center justify-center gap-3 bg-black/60 text-white focus:outline-none"
-              onClick={() => {
-                if (isReady) setIsPlaying(true);
-              }}
+              className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-background/80 p-6 backdrop-blur-sm focus:outline-none disabled:cursor-default"
+              disabled={!isReady}
+              onClick={() => setIsPlaying(true)}
             >
               {loadError ? (
-                <span className="px-6 text-sm text-red-400">
-                  Couldn&apos;t load DOOM: {loadError}
+                <span className="flex max-w-sm flex-col gap-1 text-center">
+                  <span className="font-medium text-destructive">
+                    Couldn&apos;t load DOOM
+                  </span>
+                  <span className="text-sm text-balance text-muted-foreground">
+                    {loadError}
+                  </span>
+                </span>
+              ) : isReady ? (
+                <span className="flex flex-col items-center gap-5">
+                  <span className="flex flex-col items-center gap-1">
+                    <span className="text-2xl font-semibold tracking-tight">
+                      Click to play
+                    </span>
+                    <span className="text-sm text-balance text-muted-foreground">
+                      Every cell is one pixel, painted by the tablecn data grid
+                    </span>
+                  </span>
+                  <span className="grid grid-cols-[auto_auto] items-center gap-x-6 gap-y-2 text-sm">
+                    {CONTROLS.map((control) => (
+                      <React.Fragment key={control.label}>
+                        <span className="text-start text-muted-foreground">
+                          {control.label}
+                        </span>
+                        <KbdGroup>
+                          {control.keys.map((key) => (
+                            <Kbd key={key}>{key}</Kbd>
+                          ))}
+                        </KbdGroup>
+                      </React.Fragment>
+                    ))}
+                  </span>
                 </span>
               ) : (
-                <>
-                  <span className="text-xl font-semibold tracking-wide">
-                    {isReady ? "Click to play" : "Loading DOOM…"}
+                <span className="flex flex-col items-center gap-1 text-center">
+                  <span className="text-lg font-medium">Loading DOOM…</span>
+                  <span className="text-sm text-balance text-muted-foreground">
+                    Fetching the shareware episode
                   </span>
-                  {isReady && (
-                    <span className="px-6 text-center text-xs text-white/70">
-                      WASD or arrows move · click or Ctrl fires · E or Space
-                      uses · Shift runs · 1–7 weapons · Enter and Esc for menus
-                      · Alt+Enter fullscreen
-                    </span>
-                  )}
-                </>
+                </span>
               )}
             </button>
           )}
-          {source === "doom" && isPlaying && (
-            <div className="absolute inset-e-2 top-2 z-10 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        </div>
+      </div>
+      <div
+        ref={chromeRef}
+        className="flex flex-col gap-2 text-xs text-muted-foreground"
+        style={{ width: stageWidth }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          {/* Not modal: a modal menu sets pointer-events on <body>, restyling every pixel cell */}
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" aria-label="Resolution">
+                {getResolutionLabel(width)}
+                <ChevronDown className="text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-auto">
+              <DropdownMenuLabel>Resolution</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value={String(width)}
+                onValueChange={(value) => {
+                  window.location.search = `?res=${value}${modeParam ? `&mode=${modeParam}` : ""}`;
+                }}
+              >
+                {RESOLUTIONS.map((res) => (
+                  <DropdownMenuRadioItem key={res} value={String(res)}>
+                    {getResolutionLabel(res)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {source === "doom" && (
+            <span className="flex items-center gap-1.5">
               <Button
                 size="sm"
-                variant="secondary"
-                className="bg-black/60 text-white hover:bg-black/80"
+                variant="outline"
+                disabled={!isReady}
+                onClick={(event) => {
+                  setIsPlaying((playing) => !playing);
+                  event.currentTarget.blur();
+                }}
+              >
+                {isPlaying ? "Stop" : "Play"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!isReady}
                 title="Alt+Enter (Option+Enter on macOS)"
                 onClick={(event) => {
                   event.currentTarget.blur();
@@ -769,72 +883,31 @@ function DoomGrid({
               >
                 Fullscreen
               </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="bg-black/60 text-white hover:bg-black/80"
-                onClick={(event) => {
-                  setIsPlaying(false);
-                  event.currentTarget.blur();
-                }}
-              >
-                Stop
-              </Button>
-            </div>
+            </span>
           )}
         </div>
+        <div className="flex items-start justify-between gap-4">
+          {source === "doom" ? (
+            <p className="text-muted-foreground/80">
+              DOOM © id Software · WebAssembly port by{" "}
+              <a
+                href="https://github.com/diekmann/wasm-fizzbuzz/tree/main/doom"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                diekmann
+              </a>
+            </p>
+          ) : (
+            <span />
+          )}
+          <span className="shrink-0 tabular-nums">
+            {mode} · grid {stats.paints} fps
+            {source === "doom" ? ` · engine ${stats.engine} fps` : ""}
+          </span>
+        </div>
       </div>
-      <div
-        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground"
-        style={{ width: stageWidth }}
-      >
-        <span className="flex items-center gap-0.5">
-          {RESOLUTIONS.map((res) => (
-            <a
-              key={res}
-              href={`?res=${res}${modeParam ? `&mode=${modeParam}` : ""}`}
-              className={
-                res === width
-                  ? "rounded bg-accent px-1.5 py-0.5 font-medium text-foreground"
-                  : "rounded px-1.5 py-0.5 hover:text-foreground"
-              }
-            >
-              {res}×{Math.round((res * SCREEN_HEIGHT) / SCREEN_WIDTH)}
-              {res === NATIVE_RESOLUTION ? " native" : ""}
-            </a>
-          ))}
-        </span>
-        <span className="tabular-nums">
-          {mode} · grid {stats.paints} fps
-          {source === "doom" ? ` · engine ${stats.engine} fps` : ""}
-        </span>
-      </div>
-      {source === "doom" && (
-        <p
-          className="text-[11px] text-muted-foreground/80"
-          style={{ width: stageWidth }}
-        >
-          DOOM © id Software.{" "}
-          <a
-            href="https://github.com/id-Software/DOOM"
-            target="_blank"
-            rel="noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            Source code
-          </a>{" "}
-          released under GPL-2.0. WebAssembly port by{" "}
-          <a
-            href="https://github.com/diekmann/wasm-fizzbuzz/tree/main/doom"
-            target="_blank"
-            rel="noreferrer"
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            diekmann
-          </a>
-          , with the shareware episode, loaded at runtime from its GitHub Pages.
-        </p>
-      )}
     </div>
   );
 }
