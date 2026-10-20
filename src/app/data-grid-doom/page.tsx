@@ -84,14 +84,15 @@ function loadDoom(): Promise<DoomEngine> {
   return enginePromise;
 }
 
-// Modern bindings on top of DOOM's own (keyCode to DOOM key codes from doomdef.h)
+// The modern re-releases' scheme on top of DOOM's own: WASD with A/D strafing
+// and E to use, as in the official Unity and KEX ports and the GZDoom family.
+// Fire stays on click and Ctrl, DOOM's own binding
 const EXTRA_KEYS: Record<number, number> = {
   87: 173, // W: forward, like the up arrow
   83: 175, // S: back, like the down arrow
   65: 44, // A: strafe left, DOOM's ","
   68: 46, // D: strafe right, DOOM's "."
   69: 32, // E: use, like Space
-  70: 157, // F: fire, like Ctrl (Ctrl with the arrow keys switches Spaces on macOS)
 };
 
 // Keyboard Lock API, Chromium only
@@ -117,6 +118,8 @@ function toDoomKey(keyCode: number) {
   switch (keyCode) {
     case 8:
       return 127;
+    case 16:
+      return KEY_RSHIFT; // Shift: run
     case 17:
       return 157;
     case 18:
@@ -692,8 +695,9 @@ function DoomGrid({
                   </span>
                   {isReady && (
                     <span className="px-6 text-center text-xs text-white/70">
-                      WASD or arrows move · F or click fires · E uses · Enter
-                      and Esc for menus · Alt+Enter fullscreen
+                      WASD or arrows move · click or Ctrl fires · E or Space
+                      uses · Shift runs · 1–7 weapons · Enter and Esc for menus
+                      · Alt+Enter fullscreen
                     </span>
                   )}
                 </>
@@ -701,7 +705,7 @@ function DoomGrid({
             </button>
           )}
           {source === "doom" && isPlaying && (
-            <div className="absolute end-2 top-2 z-10 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <div className="absolute inset-e-2 top-2 z-10 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
               <Button
                 size="sm"
                 variant="secondary"
