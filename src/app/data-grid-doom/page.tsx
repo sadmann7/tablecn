@@ -121,7 +121,6 @@ const CHEAT_PATTERN =
 const KEY_RSHIFT = 182;
 const KEY_F1 = 187;
 
-// KeyboardEvent.key names to DOOM's key codes (doomdef.h)
 const DOOM_KEY_CODES: Record<string, number> = {
   Backspace: 127,
   Shift: KEY_RSHIFT,
@@ -306,7 +305,6 @@ function DoomGrid({
       .catch(() => {});
   }, []);
 
-  // Alt+Enter (Option+Enter on macOS) toggles fullscreen, the classic PC game shortcut
   React.useEffect(() => {
     if (source !== "doom") return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -458,7 +456,6 @@ function DoomGrid({
       return `linear-gradient(90deg,${parts.join(",")})`;
     };
 
-    // Samples the source into `current`, returning the rows that changed
     const sample = (): number[] => {
       const changed: number[] = [];
       if (source === "plasma") {
