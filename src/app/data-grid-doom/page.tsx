@@ -208,6 +208,20 @@ function DoomGrid({
   const [isReady, setIsReady] = React.useState(source !== "doom");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  // The stage and loading overlay paint first; the grid, tens of thousands of
+  // cells at higher resolutions, mounts a tick later instead of blanking the page
+  const [showGrid, setShowGrid] = React.useState(false);
+  React.useEffect(() => {
+    // Double rAF so the stage gets one painted frame before the heavy mount
+    let secondId = 0;
+    const firstId = requestAnimationFrame(() => {
+      secondId = requestAnimationFrame(() => setShowGrid(true));
+    });
+    return () => {
+      cancelAnimationFrame(firstId);
+      cancelAnimationFrame(secondId);
+    };
+  }, []);
   const [stats, setStats] = React.useState({ paints: 0, engine: 0 });
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
@@ -345,6 +359,7 @@ function DoomGrid({
   }, [isPlaying, source]);
 
   React.useEffect(() => {
+    if (!showGrid) return;
     let rafId = 0;
     let disposed = false;
     let engine: DoomEngine | null = null;
@@ -382,7 +397,7 @@ function DoomGrid({
     const collectPixels = () => {
       const result: HTMLElement[][] = [];
       for (const cell of document.querySelectorAll<HTMLElement>(
-        '[role="grid"] [data-slot="data-grid-utility-cell"]',
+        '[role="grid"] [data-slot="data-grid-cell-wrapper"]',
       )) {
         const y = Number(cell.dataset.rowId?.slice(1));
         const x = Number(cell.dataset.columnId?.slice(1));
@@ -608,7 +623,7 @@ function DoomGrid({
       disposed = true;
       cancelAnimationFrame(rafId);
     };
-  }, [width, height, mode, source, damage, auto]);
+  }, [showGrid, width, height, mode, source, damage, auto]);
 
   const gridWidth = width * CELL_SIZE + 2;
   const gridHeight = (height + 1) * CELL_SIZE + 2;
@@ -639,14 +654,16 @@ function DoomGrid({
           <div
             // Grid lines cost a border per cell and darken the picture.
             // Gradient mode paints the picture on the row element, underneath the theme's opaque cells
-            className={`**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
+            className={`bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
               mode === "gradient"
                 ? " **:data-[slot=data-grid-cell]:bg-transparent!"
                 : ""
             }`}
-            style={{ zoom, width: gridWidth }}
+            style={{ zoom, width: gridWidth, height: gridHeight }}
           >
-            <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+            {showGrid && (
+              <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+            )}
           </div>
           {source === "doom" && !isPlaying && (
             <button
