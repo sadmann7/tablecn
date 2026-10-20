@@ -86,6 +86,22 @@ const DATE_OPERATORS = new Set<FilterOperator>([
   "isBetween",
 ]);
 
+export function getFilterValueForOperator(
+  value: FilterValue["value"],
+  operator: FilterOperator,
+): FilterValue["value"] {
+  if (operator === "isAnyOf" || operator === "isNoneOf") {
+    if (Array.isArray(value)) return value;
+    return typeof value === "string" && value !== "" ? [value] : undefined;
+  }
+
+  if ((operator === "is" || operator === "isNot") && Array.isArray(value)) {
+    return value[0];
+  }
+
+  return value;
+}
+
 export function getDefaultOperator(variant: string): FilterOperator {
   switch (variant) {
     case "number":
