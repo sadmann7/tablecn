@@ -288,13 +288,12 @@ export function DataGridDoomDemo({
     let engineFrames = 0;
     let pixels: HTMLElement[][] | null = null;
     let rowElements: HTMLElement[] | null = null;
-    // Gradient mode paints at most `rowBudget` rows a frame, round-robin, carrying the
-    // rest over, so slow screens refresh progressively instead of dropping frames
+    // Gradient mode paints whole pictures, since one split across display frames
+    // shows as tearing. Only when frames run slow does it cap the rows per frame,
+    // carrying the rest over, so the picture refreshes progressively instead
     const pendingRows = new Uint8Array(height);
     let pendingCount = 0;
     let rowBudget = height;
-    // Upper bound on `rowBudget`, shrunk when frames run slow
-    let budgetCap = height;
     let paintCursor = 0;
     let deltaEma = 0;
     let vsyncMs = 1000 / 60;
@@ -311,9 +310,14 @@ export function DataGridDoomDemo({
     let measureStart = 0;
     let statsAt = performance.now();
     // Fewer bits per channel as cells shrink: banding stops being visible while
-    // longer same-color runs keep the gradient rows cheap. 3 bits at native,
-    // where every paint touches the most cells
-    const colorMask = width >= 320 ? 0xe0 : width >= 160 ? 0xf0 : 0xf8;
+    // longer same-color runs keep the gradient rows cheap. 4 bits tops: 3 bits
+    // bought ~2fps at native but banded visibly
+    const colorMask = width >= 160 ? 0xf0 : 0xf8;
+    // Half a level, so channels round to the nearest level instead of always down,
+    // which would darken the picture and crush dark tints
+    const colorHalfStep = ((colorMask ^ 0xff) + 1) / 2;
+    const quantize = (sum: number, n: number) =>
+      Math.min(255, sum / n + colorHalfStep) & colorMask;
     const stepX = SCREEN_WIDTH / width;
     const stepY = SCREEN_HEIGHT / height;
     const changedRows = Math.max(1, Math.round(height * damage));
@@ -382,13 +386,12 @@ export function DataGridDoomDemo({
         for (let x = 0; x < width; x++) {
           const x0 = Math.floor(x * stepX);
           const x1 = Math.max(x0 + 1, Math.floor((x + 1) * stepX));
-          // Averaged so thin details like menu text survive; the frame is 320x200 doubled, so every other pixel is enough
           let r = 0;
           let g = 0;
           let b = 0;
           let n = 0;
-          for (let sy = y0; sy < y1; sy += 2) {
-            for (let sx = x0; sx < x1; sx += 2) {
+          for (let sy = y0; sy < y1; sy++) {
+            for (let sx = x0; sx < x1; sx++) {
               const i = (sy * SCREEN_WIDTH + sx) * 4;
               r += screen[i] ?? 0;
               g += screen[i + 1] ?? 0;
@@ -396,11 +399,9 @@ export function DataGridDoomDemo({
               n++;
             }
           }
-          // Rounded, so tiny shifts in an average don't count as a change
+          // Quantized, so tiny shifts in an average don't count as a change
           const rgb =
-            (((r / n) & colorMask) << 16) |
-            (((g / n) & colorMask) << 8) |
-            ((b / n) & colorMask);
+            (quantize(r, n) << 16) | (quantize(g, n) << 8) | quantize(b, n);
           const index = y * width + x;
           if (current[index] !== rgb) {
             current[index] = rgb;
@@ -485,14 +486,12 @@ export function DataGridDoomDemo({
         // again once they're cheap. Smoothed and slow to grow, so it doesn't stutter
         if (mode !== "data") {
           deltaEma = deltaEma === 0 ? delta : deltaEma * 0.8 + delta * 0.2;
-          // The shortest recent delta approximates vsync
-          vsyncMs = Math.min(vsyncMs * 1.02, Math.max(2, delta));
           // Relative to vsync too: at 30Hz (or Chrome's battery saver) every frame
           // takes ~33ms, so fixed 60Hz thresholds would only ever shrink
           if (deltaEma > Math.max(34, vsyncMs * 1.5)) {
-            budgetCap = Math.max(16, (budgetCap * 7) >> 3);
+            rowBudget = Math.max(16, (rowBudget * 7) >> 3);
           } else if (deltaEma < Math.max(30, vsyncMs * 1.25)) {
-            budgetCap = Math.min(height, budgetCap + 2);
+            rowBudget = Math.min(height, rowBudget + 2);
           }
         }
       }
@@ -536,14 +535,6 @@ export function DataGridDoomDemo({
         }
       }
       const changed = sample();
-      if (mode !== "data" && changed.length > 0) {
-        // Spread the rows over the display frames until the next engine frame
-        const idleSlots = Math.max(1, Math.floor(1000 / 35 / vsyncMs) - 1);
-        rowBudget = Math.min(
-          budgetCap,
-          Math.max(16, Math.ceil(changed.length / idleSlots)),
-        );
-      }
       paint(changed);
 
       if (now - statsAt >= 1000) {
@@ -577,11 +568,28 @@ export function DataGridDoomDemo({
       // Let the grid mount and measure first
       setTimeout(() => {
         if (disposed) return;
-        measureStart = performance.now() + 1500;
-        rafId = requestAnimationFrame(step);
-        setTimeout(() => {
-          deltas.length = 0;
-        }, 1500);
+        // Probe the display's refresh period while the page is still idle;
+        // once painting starts, every frame is heavy and would poison it
+        const probe: number[] = [];
+        let probeLast = 0;
+        const measureVsync = (now: number) => {
+          if (disposed) return;
+          if (probeLast) probe.push(now - probeLast);
+          probeLast = now;
+          if (probe.length < 12) {
+            rafId = requestAnimationFrame(measureVsync);
+            return;
+          }
+          probe.sort((a, b) => a - b);
+          const median = probe[Math.floor(probe.length / 2)] ?? 1000 / 60;
+          vsyncMs = Math.min(35, Math.max(3, median));
+          measureStart = performance.now() + 1500;
+          rafId = requestAnimationFrame(step);
+          setTimeout(() => {
+            deltas.length = 0;
+          }, 1500);
+        };
+        rafId = requestAnimationFrame(measureVsync);
       }, 500);
     };
 

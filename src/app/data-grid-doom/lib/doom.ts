@@ -1,8 +1,8 @@
 // Chocolate Doom built from cloudflare/doom-wasm (see /public/doom), with sound and music.
 // It renders into a hidden canvas that pixels() reads back once per engine frame
 const DOOM_BASE = "/doom/";
-export const SCREEN_WIDTH = 640;
-export const SCREEN_HEIGHT = 400;
+export const SCREEN_WIDTH = 320;
+export const SCREEN_HEIGHT = 200;
 
 export const KEY_RSHIFT = 182;
 const KEY_F1 = 187;
@@ -130,8 +130,7 @@ function noop() {}
 export function loadDoom(): Promise<DoomEngine> {
   enginePromise ??= new Promise<DoomEngine>((resolve, reject) => {
     const container = document.createElement("div");
-    container.style.cssText =
-      "position:fixed;left:-10000px;top:0;width:640px;height:400px;overflow:hidden;pointer-events:none";
+    container.style.cssText = `position:fixed;left:-10000px;top:0;width:${SCREEN_WIDTH}px;height:${SCREEN_HEIGHT}px;overflow:hidden;pointer-events:none`;
     container.setAttribute("aria-hidden", "true");
     const canvas = document.createElement("canvas");
     // The SDL keyboard hint below is resolved as a CSS selector
