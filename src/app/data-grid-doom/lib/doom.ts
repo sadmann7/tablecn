@@ -1,6 +1,5 @@
-// The engine is cloudflare/doom-wasm (Chocolate Doom compiled with emscripten against
-// SDL2 + SDL2_mixer, so sound effects and OPL music work), built into /public/doom.
-// It renders into a hidden canvas; pixels() reads that canvas back per engine frame
+// Chocolate Doom built from cloudflare/doom-wasm (see /public/doom), with sound and music.
+// It renders into a hidden canvas that pixels() reads back once per engine frame
 const DOOM_BASE = "/doom/";
 export const SCREEN_WIDTH = 640;
 export const SCREEN_HEIGHT = 400;
@@ -23,10 +22,8 @@ const DOOM_KEY_CODES: Record<string, number> = {
   " ": 32,
 };
 
-// The modern re-releases' scheme on top of DOOM's own: WASD with A/D strafing
-// and E to use, as in the official Unity and KEX ports and the GZDoom family.
-// Fire stays on click and Ctrl, DOOM's own binding. Keyed by the physical key
-// (KeyboardEvent.code), so WASD stays put on non-QWERTY layouts
+// The modern ports' WASD scheme on top of DOOM's own. Keyed by physical key, so it
+// stays put on non-QWERTY layouts
 export const EXTRA_KEY_CODES: Record<string, number> = {
   KeyW: 173, // Forward, like the up arrow
   KeyS: 175, // Back, like the down arrow
@@ -35,8 +32,7 @@ export const EXTRA_KEY_CODES: Record<string, number> = {
   KeyE: 32, // Use, like Space
 };
 
-// DOOM resets a cheat on any key outside its sequence, so remapped letters would break them.
-// The page spots cheats itself and replays them as plain letters instead.
+// Remapped letters would break DOOM's cheat matcher, so the page spots cheats and replays them
 export const CHEAT_PATTERN =
   /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/u;
 
@@ -45,12 +41,11 @@ export interface DoomEngine {
   frame: () => number;
   step: () => void;
   key: (pressed: boolean, keyCode: number) => void;
-  /** Mouse button bits (1 fires), forwarded to the engine canvas as mouse events. */
+  /** Mouse button bits; 1 fires. */
   mouse: (buttons: number) => void;
 }
 
-// The engine takes input as DOM events on its canvas, translated by SDL: each DOOM
-// key code the page sends maps back to the event fields of the key that means it
+// SDL reads input as DOM key events, so each DOOM key code maps back to its event fields
 const KEY_EVENT_FIELDS: Record<
   number,
   [key: string, code: string, which: number]
@@ -121,16 +116,14 @@ interface DoomModule {
 }
 
 let enginePromise: Promise<DoomEngine> | null = null;
-// Tears down the current instance's page-side pieces so a fresh one can mount
+// Removes the current instance's page-side pieces so a fresh one can mount
 let engineCleanup: (() => void) | null = null;
 
 function noop() {}
 
-// One engine at a time: the emscripten module holds global state, so it can't
-// be instantiated twice in the same memory
+// One engine at a time: the emscripten module holds global state
 export function loadDoom(): Promise<DoomEngine> {
   enginePromise ??= new Promise<DoomEngine>((resolve, reject) => {
-    // SDL drives the hidden canvas; the page samples it and paints the grid
     const container = document.createElement("div");
     container.style.cssText =
       "position:fixed;left:-10000px;top:0;width:640px;height:400px;overflow:hidden;pointer-events:none";
@@ -143,9 +136,8 @@ export function loadDoom(): Promise<DoomEngine> {
     container.append(canvas);
     document.body.append(container);
 
-    // The engine paces itself on its own loop, so a wasm trap never surfaces
-    // in a page call: spot it from the global error event and let step() throw,
-    // which the page answers by resetting and loading a fresh engine
+    // The engine runs its own loop, so a wasm trap only shows up as a global error.
+    // step() rethrows it, and the page restarts on a fresh engine
     let engineDead = false;
     const onEngineError = (event: ErrorEvent) => {
       const detail =
@@ -169,8 +161,7 @@ export function loadDoom(): Promise<DoomEngine> {
       resolve(engine);
     };
 
-    // The SDL software renderer presents each frame with putImageData: wrapping it
-    // counts engine frames and signals readiness off the first drawn picture
+    // SDL presents each frame with putImageData, so wrapping it counts frames
     const originalGetContext = canvas.getContext.bind(
       canvas,
     ) as typeof canvas.getContext;
@@ -190,8 +181,7 @@ export function loadDoom(): Promise<DoomEngine> {
           return originalPutImageData(...args);
         }) as CanvasRenderingContext2D["putImageData"];
       } else if (result && !context && !fallbackTicker) {
-        // A WebGL renderer presents off-screen where it can't be wrapped: count
-        // frames at DOOM's own 35Hz and read pixels back through drawImage
+        // A WebGL renderer can't be wrapped: count frames at DOOM's 35Hz instead
         fallbackTicker = window.setInterval(() => {
           frame++;
           onFirstFrame();
@@ -200,11 +190,8 @@ export function loadDoom(): Promise<DoomEngine> {
       return result;
     }) as typeof canvas.getContext;
 
-    // SDL registers its key handlers on the canvas (the hint below). They are
-    // captured here and called directly instead of going through the DOM:
-    // a dispatched event would first run the page's window-level capture
-    // handler, which forwards keys here (recursion) and stops propagation
-    // before the event could ever reach the canvas
+    // SDL's key handlers are captured and called directly: a dispatched event would hit
+    // the page's window-level key forwarder first, recursing and never reaching the canvas
     const sdlKeyHandlers: Record<string, (event: KeyboardEvent) => void> = {};
     const originalAddEventListener = canvas.addEventListener.bind(
       canvas,
@@ -224,7 +211,7 @@ export function loadDoom(): Promise<DoomEngine> {
       originalAddEventListener(type as never, listener, options);
     }) as typeof canvas.addEventListener;
 
-    // Pixel readback, one copy per engine frame however the engine presents
+    // One readback per engine frame
     let readCanvas: HTMLCanvasElement | null = null;
     let readContext: CanvasRenderingContext2D | null = null;
     let sampledFrame = -1;
@@ -277,8 +264,7 @@ export function loadDoom(): Promise<DoomEngine> {
         return sampled;
       },
       frame: () => frame,
-      // The engine paces itself off requestAnimationFrame; nothing to pump,
-      // but a crashed engine is reported here for the page to restart it
+      // Nothing to pump: the engine runs itself. Reports a crash for the page to restart
       step: () => {
         if (engineDead) throw new Error("The DOOM engine crashed");
       },
@@ -310,8 +296,7 @@ export function loadDoom(): Promise<DoomEngine> {
       onAbort: fail,
       preRun: [
         () => {
-          // Keyboard capture stays on the hidden canvas: SDL would otherwise
-          // listen on window, eating every keystroke on the page
+          // Keep SDL's keyboard on the hidden canvas, not window, which would eat every keystroke
           if (module.ENV)
             module.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas";
           module.FS?.createPreloadedFile(
@@ -373,9 +358,8 @@ export function loadDoom(): Promise<DoomEngine> {
   return enginePromise;
 }
 
-// A trapped engine can't run again, but a new instance gets fresh memory.
-// The old canvas must leave the document too: SDL finds its keyboard target
-// with a selector the dead canvas would still match
+// A trapped engine can't run again, but a new one gets fresh memory. The old canvas
+// goes too, or SDL's keyboard selector would still match it
 export function resetDoom() {
   engineCleanup?.();
   engineCleanup = null;

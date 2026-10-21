@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import { ChevronDown } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -43,21 +44,22 @@ import {
 } from "../lib/params";
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
-// DOOM rendered through the data grid, one cell per sampled pixel.
-// Native 320 defaults to gradient mode: 64,000 per-cell style writes cap out well under 10 fps, while one
-// run-length-encoded linear-gradient per row keeps the whole screen under 200 writes a frame. An adaptive
-// per-frame row budget keeps the frame rate up on large screens by refreshing the picture progressively.
-
 const CELL_SIZE = 36;
+
+// Only loaded in the browser, so the platform is known up front
+const IS_MAC =
+  typeof navigator !== "undefined" &&
+  /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+const FULLSCREEN_KEYS = IS_MAC ? "⌥ + Enter" : "Alt + Enter";
 
 const CONTROLS = [
   { label: "Move", keys: ["W A S D", "Arrows"] },
-  { label: "Fire", keys: ["Click", "Ctrl"] },
+  { label: "Fire", keys: ["Click", IS_MAC ? "⌃" : "Ctrl"] },
   { label: "Use", keys: ["E", "Space"] },
   { label: "Run", keys: ["Shift"] },
   { label: "Weapons", keys: ["1–7"] },
   { label: "Menus", keys: ["Enter", "Esc"] },
-  { label: "Fullscreen", keys: ["Alt + Enter"] },
+  { label: "Fullscreen", keys: [FULLSCREEN_KEYS] },
 ] as const;
 
 interface PixelRow {
@@ -84,9 +86,7 @@ export function DataGridDoomDemo({
   const [isReady, setIsReady] = React.useState(source !== "doom");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
-  // The stage and loading overlay paint first; the grid, tens of thousands of
-  // cells at higher resolutions, mounts a tick later instead of blanking the page
-  const [showGrid, setShowGrid] = React.useState(false);
+  const [shouldShowGrid, setShouldShowGrid] = React.useState(false);
   const [stats, setStats] = React.useState({ paints: 0, engine: 0 });
   const fullscreenRef = React.useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
@@ -108,7 +108,7 @@ export function DataGridDoomDemo({
         size: CELL_SIZE,
         minSize: CELL_SIZE,
         maxSize: CELL_SIZE,
-        // Direct writes color the grid's own cell element, so each pixel is one element less
+        // Direct writes color the grid's own cell, saving an element per pixel
         cell:
           mode === "data"
             ? ({ getValue }) => (
@@ -131,11 +131,10 @@ export function DataGridDoomDemo({
   });
 
   React.useEffect(() => {
-    // Double rAF so the stage gets one painted frame before the heavy mount
     let secondId = 0;
     const firstId = requestAnimationFrame(() => {
       secondId = requestAnimationFrame(() => {
-        setShowGrid(true);
+        setShouldShowGrid(true);
       });
     });
     return () => {
@@ -179,9 +178,10 @@ export function DataGridDoomDemo({
   const onFullscreen = React.useCallback(async () => {
     setIsPlaying(true);
     await fullscreenRef.current?.requestFullscreen();
-    // Browsers exit fullscreen on Esc, but DOOM needs it for menus: where supported, holding Esc exits instead
+    // DOOM needs Esc for menus: where supported, holding Esc exits fullscreen instead
     await getKeyboard()
       ?.lock(["Escape"])
+      // Rejects where locking isn't allowed, and Esc exits as usual
       .catch(() => {});
   }, []);
 
@@ -200,8 +200,8 @@ export function DataGridDoomDemo({
     };
   }, [source, onFullscreen]);
 
-  // Left click fires; caught before the grid so it doesn't select cells
-  const onPointerFire = React.useCallback(
+  // Left click triggers; caught before the grid so it doesn't select cells
+  const onPointerTrigger = React.useCallback(
     (event: React.PointerEvent) => {
       if (!isPlaying || event.button !== 0) return;
       event.preventDefault();
@@ -224,7 +224,6 @@ export function DataGridDoomDemo({
     let typed = "";
     const onKey = (event: KeyboardEvent) => {
       if (!engine || event.metaKey) return;
-      // Alt+Enter is the fullscreen shortcut, not game input
       if (event.altKey && event.key === "Enter") return;
       const pressed = event.type === "keydown";
       const keyCode = EXTRA_KEY_CODES[event.code] ?? getDoomKeyCode(event);
@@ -234,7 +233,7 @@ export function DataGridDoomDemo({
         const cheat = CHEAT_PATTERN.exec(typed)?.[0];
         if (cheat) {
           typed = "";
-          // Any key outside the sequence resets DOOM's matcher, then the cheat goes in clean
+          // An outside key resets DOOM's matcher, then the cheat goes in clean
           for (const key of [
             KEY_RSHIFT,
             ...cheat.split("").map((c) => c.codePointAt(0) ?? 0),
@@ -256,7 +255,7 @@ export function DataGridDoomDemo({
   }, [isPlaying, source]);
 
   React.useEffect(() => {
-    if (!showGrid) return;
+    if (!shouldShowGrid) return;
     let rafId = 0;
     let disposed = false;
     let engine: DoomEngine | null = null;
@@ -266,30 +265,29 @@ export function DataGridDoomDemo({
     let engineFrames = 0;
     let pixels: HTMLElement[][] | null = null;
     let rowElements: HTMLElement[] | null = null;
-    // Gradient mode paints at most `rowBudget` rows per frame, round-robin, carrying the
-    // rest over: on screens where rastering every row would blow the frame budget, the
-    // frame rate holds and the picture refreshes progressively instead
+    // Gradient mode paints at most `rowBudget` rows a frame, round-robin, carrying the
+    // rest over, so slow screens refresh progressively instead of dropping frames
     const pendingRows = new Uint8Array(height);
     let pendingCount = 0;
     let rowBudget = height;
-    // Raster-health cap on the per-frame budget, shrunk when frames run slow
+    // Upper bound on `rowBudget`, shrunk when frames run slow
     let budgetCap = height;
     let paintCursor = 0;
     let deltaEma = 0;
     let vsyncMs = 1000 / 60;
-    // Gradient stop positions, precomputed: percentages survive zoom and fullscreen scaling
+    // Percentages, so the stops survive any scale
     const stops = Array.from(
       { length: width + 1 },
       (_, x) => `${((x * 100) / width).toFixed(2)}%`,
     );
     const current = new Int32Array(width * height).fill(-1);
-    // Cells whose color changed since the last paint, so direct writes skip the rest
+    // Changed cells only, so direct writes skip the rest
     const dirty = new Uint8Array(width * height);
     const deltas: number[] = [];
     let last = 0;
     let measureStart = 0;
     let statsAt = performance.now();
-    // 4 bits per channel from 160 columns up, where cells are too small to show the banding and every write counts
+    // 4 bits per channel from 160 columns up: cells are too small to show banding
     const colorMask = width >= 160 ? 0xf0 : 0xf8;
     const stepX = SCREEN_WIDTH / width;
     const stepY = SCREEN_HEIGHT / height;
@@ -318,8 +316,8 @@ export function DataGridDoomDemo({
       return result;
     };
 
-    // One scanline as a hard-stop gradient, run-length encoded: DOOM's flats and the
-    // 4-bit color mask leave long runs, so most rows need far fewer than `width` stops
+    // One scanline as a run-length encoded hard-stop gradient: DOOM's flat colors
+    // leave long runs, so most rows need far fewer than `width` stops
     const buildRowGradient = (y: number) => {
       const offset = y * width;
       const parts: string[] = [];
@@ -359,7 +357,7 @@ export function DataGridDoomDemo({
         for (let x = 0; x < width; x++) {
           const x0 = Math.floor(x * stepX);
           const x1 = Math.max(x0 + 1, Math.floor((x + 1) * stepX));
-          // Averages the block so thin details like menu text survive; the frame is 320x200 doubled, so every other pixel is enough
+          // Averaged so thin details like menu text survive; the frame is 320x200 doubled, so every other pixel is enough
           let r = 0;
           let g = 0;
           let b = 0;
@@ -373,7 +371,7 @@ export function DataGridDoomDemo({
               n++;
             }
           }
-          // Rounding means tiny shifts in an average don't count as a changed pixel
+          // Rounded, so tiny shifts in an average don't count as a change
           const rgb =
             (((r / n) & colorMask) << 16) |
             (((g / n) & colorMask) << 8) |
@@ -448,7 +446,7 @@ export function DataGridDoomDemo({
         painted++;
         paintCursor = (y + 1) % height;
       }
-      // Drain-only calls don't count, so the counter reads as complete frames a second
+      // Drain-only calls don't count, so this reads as complete frames a second
       if (changed.length > 0) paints++;
     };
 
@@ -458,16 +456,14 @@ export function DataGridDoomDemo({
       if (last) {
         const delta = now - last;
         deltas.push(delta);
-        // Hold ~30fps by painting fewer rows per frame when raster runs slow
-        // (big windows, fullscreen); paint everything again once frames are cheap.
-        // Smoothed, with slow growth, so a 120Hz display's cheap frames between
-        // heavy ones don't swing the budget into a stutter
+        // Hold ~30fps by painting fewer rows when frames run slow, and all of them
+        // again once they're cheap. Smoothed and slow to grow, so it doesn't stutter
         if (mode !== "data") {
           deltaEma = deltaEma === 0 ? delta : deltaEma * 0.8 + delta * 0.2;
-          // The shortest recent delta approximates the display's vsync period
+          // The shortest recent delta approximates vsync
           vsyncMs = Math.min(vsyncMs * 1.02, Math.max(2, delta));
-          // Relative to vsync too: on a 30Hz display (or Chrome's battery saver cap)
-          // every frame takes ~33ms, so fixed 60Hz thresholds would only ever shrink
+          // Relative to vsync too: at 30Hz (or Chrome's battery saver) every frame
+          // takes ~33ms, so fixed 60Hz thresholds would only ever shrink
           if (deltaEma > Math.max(34, vsyncMs * 1.5)) {
             budgetCap = Math.max(16, (budgetCap * 7) >> 3);
           } else if (deltaEma < Math.max(24, vsyncMs * 1.25)) {
@@ -483,7 +479,7 @@ export function DataGridDoomDemo({
         try {
           engine.step();
         } catch {
-          // A trapped engine can't step again, so the title screen comes back on a new one
+          // A trapped engine can't step again, so restart on a new one
           engine = null;
           lastEngineFrame = -1;
           resetDoom();
@@ -501,17 +497,14 @@ export function DataGridDoomDemo({
         }
         const engineFrame = engine.frame();
         if (engineFrame === lastEngineFrame) {
-          // The display runs faster than DOOM's 35Hz, so the frames in between
-          // drain rows the budget carried over, keeping every batch small
+          // Frames between DOOM's 35Hz ticks drain the carried-over rows
           if (mode !== "data") paint([]);
           return;
         }
         engineFrames += engineFrame - Math.max(lastEngineFrame, 0);
         lastEngineFrame = engineFrame;
-        // A torn picture looks worse than a skipped frame: while rows of the
-        // last sampled frame are still pending, drain them and skip this one.
-        // Only for gradient mode: dom mode repaints so slowly that coherent
-        // frames would be a slideshow, and its visible scan is part of the show
+        // A torn picture looks worse than a skipped frame, so finish the last one first.
+        // Not in dom mode: it repaints so slowly that whole frames would be a slideshow
         if (mode === "gradient" && pendingCount > 0) {
           paint([]);
           return;
@@ -519,9 +512,7 @@ export function DataGridDoomDemo({
       }
       const changed = sample();
       if (mode !== "data" && changed.length > 0) {
-        // Split each frame's rows across the display frames before the next
-        // 35Hz engine frame, so every batch fits a vsync slot and the frame
-        // still completes in time, bounded by the raster-health cap
+        // Spread the rows over the display frames until the next engine frame
         const idleSlots = Math.max(1, Math.floor(1000 / 35 / vsyncMs) - 1);
         rowBudget = Math.min(
           budgetCap,
@@ -587,7 +578,7 @@ export function DataGridDoomDemo({
       disposed = true;
       cancelAnimationFrame(rafId);
     };
-  }, [showGrid, width, height, mode, source, damage, auto]);
+  }, [shouldShowGrid, width, height, mode, source, damage, auto]);
 
   const gridWidth = width * CELL_SIZE + 2;
   const gridHeight = height * CELL_SIZE + 2;
@@ -596,10 +587,10 @@ export function DataGridDoomDemo({
     : Math.min(
         1,
         (viewport.width - 32) / gridWidth,
-        // The nav (3.5rem and its border), the page's padding, and the toolbar above and attribution below with their gaps
+        // The nav, the page's padding, and the toolbar and credit rows with their gaps
         (viewport.height - 57 - 32 - 24 - chromeHeight) / gridHeight,
       );
-  // Cells land on whole device pixels: fractional ones leave anti-aliased seams that read as grid lines
+  // Whole device pixels per cell: fractional ones leave seams that read as grid lines
   const pixelRatio = window.devicePixelRatio || 1;
   const zoom =
     Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
@@ -614,14 +605,16 @@ export function DataGridDoomDemo({
         className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
         style={{ width: stageWidth }}
       >
-        {/* Not modal: a modal menu sets pointer-events on <body>, restyling every pixel cell */}
-        <DropdownMenu modal={false}>
+        <DropdownMenu
+          // The portal sets pointer-events on body, restyling every pixel cell
+          modal={false}
+        >
           <DropdownMenuTrigger asChild>
             <Button
               size="sm"
               variant="outline"
               aria-label="Resolution"
-              disabled={!showGrid || !isReady}
+              disabled={!shouldShowGrid || !isReady}
             >
               {getResolutionLabel(width)}
               <ChevronDown className="text-muted-foreground" />
@@ -661,7 +654,7 @@ export function DataGridDoomDemo({
               size="sm"
               variant="outline"
               disabled={!isReady}
-              title="Alt+Enter (Option+Enter on macOS)"
+              title={FULLSCREEN_KEYS}
               onClick={(event) => {
                 event.currentTarget.blur();
                 void onFullscreen();
@@ -674,33 +667,31 @@ export function DataGridDoomDemo({
       </div>
       <div
         ref={fullscreenRef}
-        // Fixed classes with :fullscreen variants: swapping them would restyle every cell below
+        // Fixed classes: swapping them would restyle every cell below
         className="flex items-center justify-center overflow-hidden rounded-lg ring-1 ring-border [&:fullscreen]:rounded-none [&:fullscreen]:bg-black [&:fullscreen]:ring-0"
-        onPointerDownCapture={onPointerFire}
-        onPointerUpCapture={onPointerFire}
+        onPointerDownCapture={onPointerTrigger}
+        onPointerUpCapture={onPointerTrigger}
       >
-        {/* Scaled with a transform, not zoom: a zoom change lays out every cell
-            again (over a second at 64,000), a transform only recomposites */}
         <div
           className="relative overflow-hidden"
           style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
         >
           <div
-            // Grid lines cost a border per cell and darken the picture.
-            // Gradient mode paints the picture on the row element, underneath the theme's opaque cells
-            className={`bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0${
-              mode === "gradient"
-                ? " **:data-[slot=data-grid-cell]:bg-transparent!"
-                : ""
-            }`}
+            // No grid lines, and transparent cells so gradient mode's rows show through
+            className={cn(
+              "bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0",
+              mode === "gradient" &&
+                "**:data-[slot=data-grid-cell]:bg-transparent!",
+            )}
             style={{
               width: gridWidth,
               height: gridHeight,
+              // Scaled with a transform, because changing zoom would lay out every cell again
               transform: `scale(${zoom})`,
               transformOrigin: "0 0",
             }}
           >
-            {showGrid && (
+            {shouldShowGrid && (
               <DataGrid {...dataGridProps} table={table} height={gridHeight} />
             )}
           </div>
