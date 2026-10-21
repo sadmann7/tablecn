@@ -489,7 +489,7 @@ export function DataGridDoomDemo({
           // takes ~33ms, so fixed 60Hz thresholds would only ever shrink
           if (deltaEma > Math.max(34, vsyncMs * 1.5)) {
             budgetCap = Math.max(16, (budgetCap * 7) >> 3);
-          } else if (deltaEma < Math.max(24, vsyncMs * 1.25)) {
+          } else if (deltaEma < Math.max(30, vsyncMs * 1.25)) {
             budgetCap = Math.min(height, budgetCap + 2);
           }
         }
