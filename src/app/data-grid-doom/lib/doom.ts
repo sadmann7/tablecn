@@ -47,11 +47,15 @@ export interface DoomEngine {
   mouse: (buttons: number) => void;
 }
 
+// The port has no file system, so saving or loading a game traps the engine.
+// Their shortcuts (save, load, quicksave, quickload) never reach it; the menu entries still do.
+const SAVE_LOAD_KEYS = new Set(["F2", "F3", "F6", "F9"]);
+
 let enginePromise: Promise<DoomEngine> | null = null;
 
 function noop() {}
 
-// One engine per page load: DOOM keeps global state, so it can't be instantiated twice in the same memory
+// One engine at a time: DOOM keeps global state, so it can't be instantiated twice in the same memory
 export function loadDoom(): Promise<DoomEngine> {
   enginePromise ??= (async () => {
     const memory = new WebAssembly.Memory({ initial: 108 });
@@ -100,10 +104,16 @@ export function loadDoom(): Promise<DoomEngine> {
   return enginePromise;
 }
 
+// A trapped engine can't run again, but a new instance gets fresh memory
+export function resetDoom() {
+  enginePromise = null;
+}
+
 // DOOM takes printable keys as lowercase ASCII and function keys from its own range
 export function getDoomKeyCode(event: KeyboardEvent) {
   const named = DOOM_KEY_CODES[event.key];
   if (named !== undefined) return named;
+  if (SAVE_LOAD_KEYS.has(event.key)) return null;
   if (event.key.length === 1) {
     return event.key.toLowerCase().codePointAt(0) ?? null;
   }

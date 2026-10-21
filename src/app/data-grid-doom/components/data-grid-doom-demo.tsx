@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { ChevronDown } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
@@ -29,6 +30,7 @@ import {
   getKeyboard,
   KEY_RSHIFT,
   loadDoom,
+  resetDoom,
   SCREEN_HEIGHT,
   SCREEN_WIDTH,
 } from "../lib/doom";
@@ -466,7 +468,25 @@ export function DataGridDoomDemo({
 
       if (source === "doom") {
         if (!engine) return;
-        engine.step();
+        try {
+          engine.step();
+        } catch {
+          // A trapped engine can't step again, so the title screen comes back on a new one
+          engine = null;
+          lastEngineFrame = -1;
+          resetDoom();
+          setIsPlaying(false);
+          setIsReady(false);
+          toast.error("DOOM crashed and restarted", {
+            description: "This port can't save or load games.",
+          });
+          void loadDoom().then((loaded) => {
+            if (disposed) return;
+            engine = loaded;
+            setIsReady(true);
+          });
+          return;
+        }
         const engineFrame = engine.frame();
         if (engineFrame === lastEngineFrame) {
           // The display runs faster than DOOM's 35Hz, so the frames in between
