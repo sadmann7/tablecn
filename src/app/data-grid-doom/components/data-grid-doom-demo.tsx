@@ -27,7 +27,9 @@ import {
   type DoomEngine,
   EXTRA_KEY_CODES,
   getDoomKeyCode,
+  getHexColor,
   getKeyboard,
+  getPlasmaColor,
   KEY_RSHIFT,
   loadDoom,
   resetDoom,
@@ -39,7 +41,6 @@ import {
   getResolutionLabel,
   RESOLUTIONS,
 } from "../lib/params";
-import { getHexColor, getPlasmaColor } from "../lib/pixels";
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
 // DOOM rendered through the data grid, one cell per sampled pixel.
@@ -59,7 +60,10 @@ const CONTROLS = [
   { label: "Fullscreen", keys: ["Alt + Enter"] },
 ] as const;
 
-type PixelRow = { id: string } & Record<string, number | string>;
+interface PixelRow {
+  id: string;
+  [key: string]: number | string;
+}
 
 export function DataGridDoomDemo({
   columns: width,
