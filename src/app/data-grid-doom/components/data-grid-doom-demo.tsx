@@ -3,7 +3,14 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { cn } from "cn";
-import { ChevronDown } from "lucide-react";
+import {
+  ChevronDown,
+  Maximize,
+  Pause,
+  Play,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -45,6 +52,7 @@ import {
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
 const CELL_SIZE = 36;
+const MUTED_STORAGE_KEY = "data-grid-doom-muted";
 
 // Only loaded in the browser, so the platform is known up front
 const IS_MAC =
@@ -86,6 +94,13 @@ export function DataGridDoomDemo({
   const [isReady, setIsReady] = React.useState(source !== "doom");
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const [isMuted, setIsMuted] = React.useState(() => {
+    try {
+      return localStorage.getItem(MUTED_STORAGE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
   const [shouldShowGrid, setShouldShowGrid] = React.useState(false);
   const [stats, setStats] = React.useState({ paints: 0, engine: 0 });
   const fullscreenRef = React.useRef<HTMLDivElement>(null);
@@ -174,6 +189,14 @@ export function DataGridDoomDemo({
       observer.disconnect();
     };
   }, []);
+
+  // Reapplied once the engine is ready, including a fresh one after a crash
+  React.useEffect(() => {
+    if (!isReady || source !== "doom") return;
+    void loadDoom().then((engine) => {
+      engine.setMuted(isMuted);
+    });
+  }, [isReady, isMuted, source]);
 
   const onFullscreen = React.useCallback(async () => {
     setIsPlaying(true);
@@ -640,27 +663,48 @@ export function DataGridDoomDemo({
         {source === "doom" && (
           <span className="flex items-center gap-1.5">
             <Button
-              size="sm"
+              size="icon-sm"
               variant="outline"
+              aria-label={isPlaying ? "Stop" : "Play"}
+              title={isPlaying ? "Stop" : "Play"}
               disabled={!isReady}
               onClick={(event) => {
                 setIsPlaying((playing) => !playing);
                 event.currentTarget.blur();
               }}
             >
-              {isPlaying ? "Stop" : "Play"}
+              {isPlaying ? <Pause /> : <Play />}
             </Button>
             <Button
-              size="sm"
+              size="icon-sm"
               variant="outline"
+              aria-label={isMuted ? "Unmute" : "Mute"}
+              title={isMuted ? "Unmute" : "Mute"}
+              onClick={(event) => {
+                event.currentTarget.blur();
+                const muted = !isMuted;
+                setIsMuted(muted);
+                try {
+                  localStorage.setItem(MUTED_STORAGE_KEY, muted ? "1" : "0");
+                } catch {
+                  // Storage can be off (private mode); muting still works until reload
+                }
+              }}
+            >
+              {isMuted ? <VolumeX /> : <Volume2 />}
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="outline"
+              aria-label="Fullscreen"
+              title={`Fullscreen (${FULLSCREEN_KEYS})`}
               disabled={!isReady}
-              title={FULLSCREEN_KEYS}
               onClick={(event) => {
                 event.currentTarget.blur();
                 void onFullscreen();
               }}
             >
-              Fullscreen
+              <Maximize />
             </Button>
           </span>
         )}

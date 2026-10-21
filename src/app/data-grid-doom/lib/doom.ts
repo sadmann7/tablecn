@@ -43,6 +43,7 @@ export interface DoomEngine {
   key: (pressed: boolean, keyCode: number) => void;
   /** Mouse button bits; 1 fires. */
   mouse: (buttons: number) => void;
+  setMuted: (muted: boolean) => void;
 }
 
 // SDL reads input as DOM key events, so each DOOM key code maps back to its event fields
@@ -95,6 +96,10 @@ function getKeyEventFields(doomCode: number) {
 
 interface DoomModule {
   canvas: HTMLCanvasElement;
+  SDL2?: {
+    audioContext?: AudioContext;
+    audio?: { scriptProcessorNode?: AudioNode };
+  };
   noInitialRun: boolean;
   preRun: (() => void)[];
   onRuntimeInitialized: () => void;
@@ -254,6 +259,23 @@ export function loadDoom(): Promise<DoomEngine> {
       handler(event);
     };
 
+    // SDL connects its audio straight to the speakers; routing it through a gain
+    // node mutes it without pausing the music or queueing sound effects
+    let isMuted = false;
+    let gainNode: GainNode | null = null;
+    const applyVolume = () => {
+      if (!gainNode) {
+        const audioContext = module.SDL2?.audioContext;
+        const source = module.SDL2?.audio?.scriptProcessorNode;
+        if (!audioContext || !source) return;
+        gainNode = audioContext.createGain();
+        gainNode.connect(audioContext.destination);
+        source.disconnect();
+        source.connect(gainNode);
+      }
+      gainNode.gain.value = isMuted ? 0 : 1;
+    };
+
     const engine: DoomEngine = {
       pixels: () => {
         if (frame === 0) return null;
@@ -267,6 +289,8 @@ export function loadDoom(): Promise<DoomEngine> {
       // Nothing to pump: the engine runs itself. Reports a crash for the page to restart
       step: () => {
         if (engineDead) throw new Error("The DOOM engine crashed");
+        // SDL opens its audio after startup, so keep trying until it exists
+        if (!gainNode) applyVolume();
       },
       key: dispatchKey,
       mouse: (buttons) => {
@@ -277,6 +301,10 @@ export function loadDoom(): Promise<DoomEngine> {
             cancelable: true,
           }),
         );
+      },
+      setMuted: (muted) => {
+        isMuted = muted;
+        applyVolume();
       },
     };
 
