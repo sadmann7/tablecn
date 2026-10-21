@@ -459,8 +459,13 @@ export function DataGridDoomDemo({
           deltaEma = deltaEma === 0 ? delta : deltaEma * 0.8 + delta * 0.2;
           // The shortest recent delta approximates the display's vsync period
           vsyncMs = Math.min(vsyncMs * 1.02, Math.max(2, delta));
-          if (deltaEma > 34) budgetCap = Math.max(16, (budgetCap * 7) >> 3);
-          else if (deltaEma < 24) budgetCap = Math.min(height, budgetCap + 2);
+          // Relative to vsync too: on a 30Hz display (or Chrome's battery saver cap)
+          // every frame takes ~33ms, so fixed 60Hz thresholds would only ever shrink
+          if (deltaEma > Math.max(34, vsyncMs * 1.5)) {
+            budgetCap = Math.max(16, (budgetCap * 7) >> 3);
+          } else if (deltaEma < Math.max(24, vsyncMs * 1.25)) {
+            budgetCap = Math.min(height, budgetCap + 2);
+          }
         }
       }
       last = now;
