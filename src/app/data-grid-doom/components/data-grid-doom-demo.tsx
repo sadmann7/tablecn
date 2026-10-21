@@ -310,8 +310,10 @@ export function DataGridDoomDemo({
     let last = 0;
     let measureStart = 0;
     let statsAt = performance.now();
-    // 4 bits per channel from 160 columns up: cells are too small to show banding
-    const colorMask = width >= 160 ? 0xf0 : 0xf8;
+    // Fewer bits per channel as cells shrink: banding stops being visible while
+    // longer same-color runs keep the gradient rows cheap. 3 bits at native,
+    // where every paint touches the most cells
+    const colorMask = width >= 320 ? 0xe0 : width >= 160 ? 0xf0 : 0xf8;
     const stepX = SCREEN_WIDTH / width;
     const stepY = SCREEN_HEIGHT / height;
     const changedRows = Math.max(1, Math.round(height * damage));
