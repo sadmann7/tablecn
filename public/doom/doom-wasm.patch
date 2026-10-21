@@ -1,0 +1,173 @@
+diff --git a/configure.ac b/configure.ac
+index ae1320b..2cec8d1 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -115,9 +115,9 @@ AS_IF([test "x$with_libpng" != xno], [
+ 
+ # TODO: We currently link everything against libraries that don't need it.
+ # Use the specific library CFLAGS/LIBS variables instead of setting them here.
+-EMFLAGS="-gsource-map -s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=[['FS','ccall']] -s SAFE_HEAP=1 -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s ASYNCIFY -O3 --source-map-base /"
++EMFLAGS="-s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=FS,ccall,callMain,ENV -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s ASYNCIFY -s ASYNCIFY_STACK_SIZE=1048576 -O3 -g0"
+ 
+-CFLAGS="$CFLAGS $SDL_CFLAGS ${SAMPLERATE_CFLAGS:-} ${PNG_CFLAGS:-} $EMFLAGS"
++CFLAGS="$CFLAGS $SDL_CFLAGS ${SAMPLERATE_CFLAGS:-} ${PNG_CFLAGS:-} $EMFLAGS -std=gnu11"
+ LDFLAGS="$LDFLAGS $SDL_LIBS ${SAMPLERATE_LIBS:-} ${PNG_LIBS:-} $EMFLAGS -lwebsocket.js"
+ 
+ AC_CHECK_LIB(m, log)
+diff --git a/opl/opl.c b/opl/opl.c
+index a1aa1d9..331db03 100644
+--- a/opl/opl.c
++++ b/opl/opl.c
+@@ -285,6 +285,14 @@ opl_init_result_t OPL_Detect(void)
+     int result1, result2;
+     int i;
+ 
++#ifdef __EMSCRIPTEN__
++    // The SDL driver's OPL clock only advances from the audio callback, which
++    // doesn't run until a user gesture unlocks the AudioContext, so the
++    // timer-based probe below can never pass at init. The emulated chip is
++    // always present.
++    return OPL_INIT_OPL3;
++#endif
++
+     // Reset both timers:
+     OPL_WriteRegister(OPL_REG_TIMER_CTRL, 0x60);
+ 
+@@ -480,6 +488,13 @@ void OPL_Delay(uint64_t us)
+         return;
+     }
+ 
++#ifdef __EMSCRIPTEN__
++    // The delay callback fires from the audio callback, which shares the main
++    // thread here: waiting would deadlock. The emulated OPL needs no hardware
++    // settle time, so don't wait.
++    return;
++#endif
++
+     // Create a callback that will signal this thread after the
+     // specified time.
+ 
+diff --git a/src/doom/d_main.c b/src/doom/d_main.c
+index 9a462e2..9810f6b 100644
+--- a/src/doom/d_main.c
++++ b/src/doom/d_main.c
+@@ -373,6 +373,16 @@ void D_RunFrame()
+     int tics;
+     static int wipestart;
+     static boolean wipe;
++    // The wipe below (and I_Sleep generally) suspends this iteration through
++    // asyncify. The browser keeps scheduling main-loop iterations while one
++    // is suspended, and reentering wasm then corrupts the asyncify rewind
++    // state, which shows up later as wild memory writes. Refuse to reenter.
++    static boolean in_frame;
++
++    if (in_frame) {
++        return;
++    }
++    in_frame = true;
+ 
+     if (wipe) {
+         do {
+@@ -386,6 +396,7 @@ void D_RunFrame()
+         I_UpdateNoBlit();
+         M_Drawer();       // menu is drawn even on top of wipes
+         I_FinishUpdate(); // page flip or blit buffer
++        in_frame = false;
+         return;
+     }
+ 
+@@ -409,6 +420,8 @@ void D_RunFrame()
+             I_FinishUpdate(); // page flip or blit buffer
+         }
+     }
++
++    in_frame = false;
+ }
+ 
+ //
+diff --git a/src/doom/p_setup.c b/src/doom/p_setup.c
+index 1a66fa4..db97fec 100644
+--- a/src/doom/p_setup.c
++++ b/src/doom/p_setup.c
+@@ -1,3 +1,4 @@
++#include <stdio.h>
+ //
+ // Copyright(C) 1993-1996 Id Software, Inc.
+ // Copyright(C) 2005-2014 Simon Howard
+diff --git a/src/doom/p_user.c b/src/doom/p_user.c
+index 772871e..beb4b9d 100644
+--- a/src/doom/p_user.c
++++ b/src/doom/p_user.c
+@@ -27,6 +27,8 @@
+ #include "p_local.h"
+ 
+ #include "doomstat.h"
++#include <stdio.h>
++#include <stdint.h>
+ 
+ 
+ 
+diff --git a/src/doomtype.h b/src/doomtype.h
+index 9947a07..cd668b5 100644
+--- a/src/doomtype.h
++++ b/src/doomtype.h
+@@ -100,21 +100,14 @@
+ 
+ #include <inttypes.h>
+ 
+-#if defined(__cplusplus) || defined(__bool_true_false_are_defined)
+-
+-// Use builtin bool type with C++.
+-
+-typedef bool boolean;
+-
+-#else
+-
+-typedef enum 
+-{
+-    false, 
+-    true
+-} boolean;
+-
+-#endif
++// One boolean for every translation unit: the emscripten headers that some
++// files include pull in <stdbool.h>, and letting those files fall into a
++// 1-byte bool while the rest use the 4-byte enum gives structs like player_t
++// two incompatible layouts in one binary. It must stay 4 bytes and plain
++// integer: the renderer stores -1 in a boolean as a third state.
++#include <stdbool.h>
++
++typedef int32_t boolean;
+ 
+ typedef uint8_t byte;
+ typedef uint8_t pixel_t;
+diff --git a/src/i_system.c b/src/i_system.c
+index 5546e04..350e2bf 100644
+--- a/src/i_system.c
++++ b/src/i_system.c
+@@ -268,6 +268,8 @@ void I_Error(const char *error, ...)
+     fprintf(stderr, "\n\n");
+     va_end(argptr);
+     fflush(stderr);
++    // Trap so the browser prints the wasm call stack of the error
++    __builtin_trap();
+ 
+     // Write a copy of the message into buffer.
+     va_start(argptr, error);
+diff --git a/src/i_video.c b/src/i_video.c
+index 919d63c..5c03a80 100644
+--- a/src/i_video.c
++++ b/src/i_video.c
+@@ -1166,7 +1166,12 @@ static void SetVideoMode(void)
+ 
+     // Set the highdpi flag - this makes a big difference on Macs with
+     // retina displays, especially when using small window sizes.
++#ifndef __EMSCRIPTEN__
++    // In the browser this doubles the canvas backing store per
++    // devicePixelRatio, making the software renderer upscale every frame for
++    // a canvas that is read back at its logical size anyway.
+     window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
++#endif
+ 
+     if (fullscreen)
+     {
