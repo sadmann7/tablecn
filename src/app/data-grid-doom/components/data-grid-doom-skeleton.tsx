@@ -1,6 +1,6 @@
 export function DataGridDoomSkeleton() {
   return (
-    <div className="container flex min-h-[calc(100dvh-3.5rem-1px)] flex-col items-center justify-center pt-4 pb-20.5">
+    <div className="container flex min-h-[calc(100dvh-3.5rem-1px)] flex-col items-center justify-center pt-7 pb-4">
       <DataGridDoomLoading />
     </div>
   );

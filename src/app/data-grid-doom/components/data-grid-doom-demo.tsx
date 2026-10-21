@@ -94,8 +94,9 @@ export function DataGridDoomDemo({
     width: window.innerWidth,
     height: window.innerHeight,
   }));
-  const chromeRef = React.useRef<HTMLDivElement>(null);
-  const [chromeHeight, setChromeHeight] = React.useState(64);
+  const toolbarRef = React.useRef<HTMLDivElement>(null);
+  const footerRef = React.useRef<HTMLDivElement>(null);
+  const [chromeHeight, setChromeHeight] = React.useState(48);
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
     () =>
@@ -162,12 +163,14 @@ export function DataGridDoomDemo({
   }, []);
 
   React.useLayoutEffect(() => {
-    const chrome = chromeRef.current;
-    if (!chrome) return;
+    const toolbar = toolbarRef.current;
+    const footer = footerRef.current;
+    if (!toolbar || !footer) return;
     const observer = new ResizeObserver(() => {
-      setChromeHeight(chrome.offsetHeight);
+      setChromeHeight(toolbar.offsetHeight + footer.offsetHeight);
     });
-    observer.observe(chrome);
+    observer.observe(toolbar);
+    observer.observe(footer);
     return () => {
       observer.disconnect();
     };
@@ -593,8 +596,8 @@ export function DataGridDoomDemo({
     : Math.min(
         1,
         (viewport.width - 32) / gridWidth,
-        // The nav (3.5rem and its border), the page's padding and gap, and the toolbar and attribution below
-        (viewport.height - 57 - 32 - 12 - chromeHeight) / gridHeight,
+        // The nav (3.5rem and its border), the page's padding, and the toolbar above and attribution below with their gaps
+        (viewport.height - 57 - 32 - 24 - chromeHeight) / gridHeight,
       );
   // Cells land on whole device pixels: fractional ones leave anti-aliased seams that read as grid lines
   const pixelRatio = window.devicePixelRatio || 1;
@@ -607,16 +610,81 @@ export function DataGridDoomDemo({
   return (
     <div className="container flex min-h-[calc(100dvh-3.5rem-1px)] flex-col items-center justify-center gap-3 py-4">
       <div
+        ref={toolbarRef}
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
+        style={{ width: stageWidth }}
+      >
+        {/* Not modal: a modal menu sets pointer-events on <body>, restyling every pixel cell */}
+        <DropdownMenu modal={false}>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label="Resolution"
+              disabled={!showGrid || !isReady}
+            >
+              {getResolutionLabel(width)}
+              <ChevronDown className="text-muted-foreground" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-auto">
+            <DropdownMenuLabel>Resolution</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuRadioGroup
+              value={String(width)}
+              onValueChange={(value) => {
+                window.location.search = `?res=${value}${modeParam ? `&mode=${modeParam}` : ""}`;
+              }}
+            >
+              {RESOLUTIONS.map((res) => (
+                <DropdownMenuRadioItem key={res} value={String(res)}>
+                  {getResolutionLabel(res)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {source === "doom" && (
+          <span className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!isReady}
+              onClick={(event) => {
+                setIsPlaying((playing) => !playing);
+                event.currentTarget.blur();
+              }}
+            >
+              {isPlaying ? "Stop" : "Play"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!isReady}
+              title="Alt+Enter (Option+Enter on macOS)"
+              onClick={(event) => {
+                event.currentTarget.blur();
+                void onFullscreen();
+              }}
+            >
+              Fullscreen
+            </Button>
+          </span>
+        )}
+      </div>
+      <div
         ref={fullscreenRef}
-        className={
-          isFullscreen
-            ? "flex items-center justify-center bg-black"
-            : "overflow-hidden rounded-lg ring-1 ring-border"
-        }
+        // Fixed classes with :fullscreen variants: swapping them would restyle every cell below
+        className="flex items-center justify-center overflow-hidden rounded-lg ring-1 ring-border [&:fullscreen]:rounded-none [&:fullscreen]:bg-black [&:fullscreen]:ring-0"
         onPointerDownCapture={onPointerFire}
         onPointerUpCapture={onPointerFire}
       >
-        <div className="relative">
+        {/* Scaled with a transform, not zoom: a zoom change lays out every cell
+            again (over a second at 64,000), a transform only recomposites */}
+        <div
+          className="relative overflow-hidden"
+          style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
+        >
           <div
             // Grid lines cost a border per cell and darken the picture.
             // Gradient mode paints the picture on the row element, underneath the theme's opaque cells
@@ -625,7 +693,12 @@ export function DataGridDoomDemo({
                 ? " **:data-[slot=data-grid-cell]:bg-transparent!"
                 : ""
             }`}
-            style={{ zoom, width: gridWidth, height: gridHeight }}
+            style={{
+              width: gridWidth,
+              height: gridHeight,
+              transform: `scale(${zoom})`,
+              transformOrigin: "0 0",
+            }}
           >
             {showGrid && (
               <DataGrid {...dataGridProps} table={table} height={gridHeight} />
@@ -681,108 +754,47 @@ export function DataGridDoomDemo({
         </div>
       </div>
       <div
-        ref={chromeRef}
-        className="flex flex-col gap-2 text-xs text-muted-foreground"
+        ref={footerRef}
+        className="flex items-start justify-between gap-4 text-xs text-muted-foreground"
         style={{ width: stageWidth }}
       >
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          {/* Not modal: a modal menu sets pointer-events on <body>, restyling every pixel cell */}
-          <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                aria-label="Resolution"
-                disabled={!showGrid || !isReady}
-              >
-                {getResolutionLabel(width)}
-                <ChevronDown className="text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-auto">
-              <DropdownMenuLabel>Resolution</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup
-                value={String(width)}
-                onValueChange={(value) => {
-                  window.location.search = `?res=${value}${modeParam ? `&mode=${modeParam}` : ""}`;
-                }}
-              >
-                {RESOLUTIONS.map((res) => (
-                  <DropdownMenuRadioItem key={res} value={String(res)}>
-                    {getResolutionLabel(res)}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {source === "doom" && (
-            <span className="flex items-center gap-1.5">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!isReady}
-                onClick={(event) => {
-                  setIsPlaying((playing) => !playing);
-                  event.currentTarget.blur();
-                }}
-              >
-                {isPlaying ? "Stop" : "Play"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!isReady}
-                title="Alt+Enter (Option+Enter on macOS)"
-                onClick={(event) => {
-                  event.currentTarget.blur();
-                  void onFullscreen();
-                }}
-              >
-                Fullscreen
-              </Button>
-            </span>
-          )}
-        </div>
-        <div className="flex items-start justify-between gap-4">
-          {source === "doom" ? (
-            <p className="text-muted-foreground/80">
-              DOOM © id Software ·{" "}
-              <a
-                href="https://www.chocolate-doom.org"
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                Chocolate Doom
-              </a>{" "}
-              (GPL-2.0,{" "}
-              <a
-                href="https://github.com/sadmann7/tablecn/tree/main/public/doom"
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                source
-              </a>
-              ), WebAssembly build via{" "}
-              <a
-                href="https://github.com/cloudflare/doom-wasm"
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                cloudflare/doom-wasm
-              </a>
-            </p>
-          ) : (
-            <span />
-          )}
-          <span className="shrink-0 tabular-nums">
-            {mode} · grid {stats.paints} fps
-            {source === "doom" ? ` · engine ${stats.engine} fps` : ""}
-          </span>
-        </div>
+        {source === "doom" ? (
+          <p className="text-muted-foreground/80">
+            DOOM © id Software ·{" "}
+            <a
+              href="https://www.chocolate-doom.org"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Chocolate Doom
+            </a>{" "}
+            (GPL-2.0,{" "}
+            <a
+              href="https://github.com/sadmann7/tablecn/tree/main/public/doom"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              source
+            </a>
+            ), WebAssembly build via{" "}
+            <a
+              href="https://github.com/cloudflare/doom-wasm"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              cloudflare/doom-wasm
+            </a>
+          </p>
+        ) : (
+          <span />
+        )}
+        <span className="shrink-0 tabular-nums">
+          {mode} · grid {stats.paints} fps
+          {source === "doom" ? ` · engine ${stats.engine} fps` : ""}
+        </span>
       </div>
     </div>
   );
