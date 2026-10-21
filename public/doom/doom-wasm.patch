@@ -47,11 +47,29 @@ index a1aa1d9..331db03 100644
      // Create a callback that will signal this thread after the
      // specified time.
  
+diff --git a/src/d_loop.c b/src/d_loop.c
+index e5f3a3c..4b8a938 100644
+--- a/src/d_loop.c
++++ b/src/d_loop.c
+@@ -670,7 +670,13 @@ void TryRunTics(void)
+                 return;
+             }
+ 
++#ifdef __EMSCRIPTEN__
++            // Nothing can sleep in the browser, so waiting here would spin on
++            // the clock: give the frame back and try again on the next one
++            return;
++#else
+             I_Sleep(1);
++#endif
+         }
+     }
+ 
 diff --git a/src/doom/d_main.c b/src/doom/d_main.c
-index 9a462e2..cfd8853 100644
+index 9a462e2..2710d1d 100644
 --- a/src/doom/d_main.c
 +++ b/src/doom/d_main.c
-@@ -373,19 +373,33 @@ void D_RunFrame()
+@@ -373,22 +373,50 @@ void D_RunFrame()
      int tics;
      static int wipestart;
      static boolean wipe;
@@ -90,7 +108,24 @@ index 9a462e2..cfd8853 100644
          return;
      }
  
-@@ -409,6 +423,8 @@ void D_RunFrame()
++#ifdef __EMSCRIPTEN__
++    // The display runs faster than DOOM's 35Hz: skip frames until the next
++    // tic is due, rather than running TryRunTics into a wait
++    {
++        static int last_tic = -1;
++        nowtime = I_GetTime();
++        if (nowtime == last_tic) {
++            in_frame = false;
++            return;
++        }
++        last_tic = nowtime;
++    }
++#endif
++
+     // frame syncronous IO operations
+     I_StartFrame();
+ 
+@@ -409,6 +437,8 @@ void D_RunFrame()
              I_FinishUpdate(); // page flip or blit buffer
          }
      }

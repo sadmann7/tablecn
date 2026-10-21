@@ -13,7 +13,8 @@ The complete source for this build is [doom-wasm-source.tar.gz](./doom-wasm-sour
 - `src/doomtype.h`: `boolean` is a 4-byte `int32_t` in every translation unit. Before this, some files saw a 1-byte `bool` and others a 4-byte enum.
 - `opl/opl.c`: OPL detection and delays don't wait on the audio callback, which shares the main thread in the browser. This enables music, which upstream ships disabled.
 - `src/i_video.c`: no HiDPI canvas in the browser.
-- `src/doom/d_main.c`: the screen wipe melts across main-loop iterations instead of sleeping, and the main loop doesn't reenter.
+- `src/doom/d_main.c`: the screen wipe melts across main-loop iterations instead of sleeping, the main loop doesn't reenter, and an iteration returns early until the next tic is due.
+- `src/d_loop.c`: `TryRunTics` returns instead of waiting for a tic, which would otherwise spin on the clock now that nothing sleeps.
 - `src/i_timer.c`, `src/net_websockets.c`, `src/doom/g_game.c`: no sleeping at all. The main loop is driven by `requestAnimationFrame`, so the build doesn't need ASYNCIFY, which instrumented every function and cost about a quarter of the engine's speed.
 - `src/i_system.c`: `I_Error` traps instead of continuing with corrupt state.
 - `src/doom/p_setup.c` and `src/doom/p_user.c`: extra standard includes.
