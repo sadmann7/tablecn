@@ -478,7 +478,7 @@ export function DataGridDoomDemo({
           setIsPlaying(false);
           setIsReady(false);
           toast.error("DOOM crashed and restarted", {
-            description: "This port can't save or load games.",
+            description: "The game is back at the title screen.",
           });
           void loadDoom().then((loaded) => {
             if (disposed) return;
@@ -738,14 +738,23 @@ export function DataGridDoomDemo({
         <div className="flex items-start justify-between gap-4">
           {source === "doom" ? (
             <p className="text-muted-foreground/80">
-              DOOM © id Software · WebAssembly port by{" "}
+              DOOM © id Software ·{" "}
               <a
-                href="https://github.com/diekmann/wasm-fizzbuzz/tree/main/doom"
+                href="https://www.chocolate-doom.org"
                 target="_blank"
                 rel="noreferrer"
                 className="underline underline-offset-2 hover:text-foreground"
               >
-                diekmann
+                Chocolate Doom
+              </a>{" "}
+              (GPL-2.0), WebAssembly build via{" "}
+              <a
+                href="https://github.com/cloudflare/doom-wasm"
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                cloudflare/doom-wasm
               </a>
             </p>
           ) : (
