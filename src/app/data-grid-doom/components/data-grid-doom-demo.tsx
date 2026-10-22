@@ -252,6 +252,12 @@ export function DataGridDoomDemo({
       if (!engine || event.metaKey) return;
       if (event.altKey && event.key === "Enter") return;
       const pressed = event.type === "keydown";
+      // Holding Esc is the way out of fullscreen; its auto-repeat would toggle DOOM's menu
+      if (pressed && event.repeat && event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       const keyCode = EXTRA_KEY_CODES[event.code] ?? getDoomKeyCode(event);
       if (keyCode !== null) engine.key(pressed, keyCode);
       if (pressed && /^[a-z0-9]$/iu.test(event.key)) {
