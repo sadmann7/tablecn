@@ -58,6 +58,8 @@ import type {
   NavigationDirection,
   PasteDialogState,
   RowHeightValue,
+  RowUpdate,
+  UpdateCellsOptions,
 } from "@/lib/data-grid-types";
 
 import {
@@ -142,6 +144,8 @@ interface Cell_DataGridCellEditing {
 interface TableOptions_DataGridData<TData extends RowData> {
   readOnly?: boolean;
   onDataChange?: (data: TData[]) => void;
+  /** How long batched updates wait before reaching `onDataChange`, in ms. Defaults to 500. */
+  batchUpdateDelay?: number;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
   onFilesUpload?: (params: {
     files: File[];
@@ -157,7 +161,16 @@ interface TableOptions_DataGridData<TData extends RowData> {
 
 interface Table_DataGridData {
   getIsReadOnly: () => boolean;
-  updateCells: (updates: CellUpdate | Array<CellUpdate>) => void;
+  updateCells: (
+    updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+    options?: UpdateCellsOptions,
+  ) => void;
+  /** Calls `listener` whenever `updateCells` changes the cell's value. */
+  subscribeCell: (
+    rowId: string,
+    columnId: string,
+    listener: () => void,
+  ) => () => void;
   clearCells: (cells: Array<CellPosition>) => void;
   deleteRows: (rowIds: string[]) => Promise<void>;
 }
@@ -544,10 +557,6 @@ interface DataGridCellRef {
   column: { id: string };
 }
 
-function copyRowRecord(row: RowData): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(row));
-}
-
 function getCanEditCell(table: DataGridInstance, columnId: string) {
   const column = table.getAllFlatColumnsById()[columnId];
   return column
@@ -555,36 +564,323 @@ function getCanEditCell(table: DataGridInstance, columnId: string) {
     : !table.options.readOnly && table.options.enableCellEditing !== false;
 }
 
+const DEFAULT_BATCH_UPDATE_DELAY = 500;
+
+type CellListeners = Set<() => void>;
+type RowValues = Record<string, unknown>;
+
+interface CellUpdateStore {
+  // Mounted cells' listeners by row and column ID, so updates to rows nobody shows
+  // cost one lookup
+  listeners: Map<string, Map<string, CellListeners>>;
+  // Batched values waiting for the next frame, merged so each cell keeps its latest
+  queued: Map<string, RowValues>;
+  // Batched values for rows nobody shows, which wait for the next `onDataChange` or
+  // for the row to come into view, so off-screen rows cost nothing each frame
+  deferred: Map<string, RowValues>;
+  // Rows written since the last `onDataChange`. Their values are in `copies`
+  pending: Set<string>;
+  // The copy each patched row shows instead of its data row, and that data row
+  copies: Map<string, { base: unknown; copy: RowValues }>;
+  notify: Set<CellListeners>;
+  isFrameScheduled: boolean;
+  frameHandle: ReturnType<typeof setTimeout> | number;
+  commitTimer: ReturnType<typeof setTimeout> | null;
+}
+
+const cellUpdateStores = new WeakMap<object, CellUpdateStore>();
+
+// Falls back to a timer where frames don't run, like tests
+function requestFrame(callback: () => void) {
+  return typeof requestAnimationFrame === "function"
+    ? requestAnimationFrame(callback)
+    : setTimeout(callback, 16);
+}
+
+function cancelFrame(handle: ReturnType<typeof setTimeout> | number) {
+  if (
+    typeof cancelAnimationFrame === "function" &&
+    typeof handle === "number"
+  ) {
+    cancelAnimationFrame(handle);
+  } else {
+    clearTimeout(handle);
+  }
+}
+
+function getHasKeys(object: object) {
+  for (const _ in object) return true;
+  return false;
+}
+
+function getCellUpdateStore(table: DataGridInstance) {
+  let store = cellUpdateStores.get(table);
+  if (!store) {
+    store = {
+      listeners: new Map(),
+      queued: new Map(),
+      deferred: new Map(),
+      pending: new Set(),
+      copies: new Map(),
+      notify: new Set(),
+      isFrameScheduled: false,
+      frameHandle: 0,
+      commitTimer: null,
+    };
+    cellUpdateStores.set(table, store);
+  }
+  return store;
+}
+
+function subscribeCell(
+  table: DataGridInstance,
+  rowId: string,
+  columnId: string,
+  listener: () => void,
+) {
+  const store = getCellUpdateStore(table);
+  const { listeners } = store;
+
+  // A row coming into view takes the batched values it waited for. Its cells compare
+  // what they rendered once subscribed, so none of them misses it
+  const waiting = store.deferred.get(rowId);
+  if (waiting) {
+    store.deferred.delete(rowId);
+    applyRowValues(table, store, new Map([[rowId, waiting]]));
+  }
+
+  let rowListeners = listeners.get(rowId);
+  if (!rowListeners) {
+    rowListeners = new Map();
+    listeners.set(rowId, rowListeners);
+  }
+  let cellListeners = rowListeners.get(columnId);
+  if (!cellListeners) {
+    cellListeners = new Set();
+    rowListeners.set(columnId, cellListeners);
+  }
+  cellListeners.add(listener);
+  return () => {
+    cellListeners.delete(listener);
+    if (cellListeners.size > 0) return;
+    rowListeners.delete(columnId);
+    if (rowListeners.size === 0) listeners.delete(rowId);
+  };
+}
+
+// Merges updates into one record of values per row, the last write to a cell winning
+function mergeUpdates(
+  updates: Array<CellUpdate | RowUpdate>,
+  getTarget: (rowId: string) => Map<string, RowValues>,
+) {
+  for (const update of updates) {
+    const target = getTarget(update.rowId);
+    let values = target.get(update.rowId);
+    if (!values) {
+      values = {};
+      target.set(update.rowId, values);
+    }
+    if ("values" in update) Object.assign(values, update.values);
+    else values[update.columnId] = update.value;
+  }
+}
+
+// The copy a row shows instead of its data row, made on its first write
+function getRowCopy(store: CellUpdateStore, rowId: string, current: RowValues) {
+  let shown = store.copies.get(rowId);
+  if (!shown || current !== shown.copy) {
+    shown = { base: current, copy: { ...current } };
+    store.copies.set(rowId, shown);
+  }
+  store.pending.add(rowId);
+  return shown.copy;
+}
+
+// Writes each row's values into the copy the grid shows instead of its data row, once
+// per row, and queues the listeners of the mounted cells whose values changed. Rows
+// without mounted cells take their values in one go, since nothing needs to know which
+// changed until `onDataChange`
+function applyRowValues(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  rows: Map<string, RowValues>,
+) {
+  const coreRowsById = table.getCoreRowModel().rowsById;
+  const shownRowsById = table.getRowModel().rowsById;
+
+  for (const [rowId, values] of rows) {
+    const row = coreRowsById[rowId];
+    if (!row) continue;
+
+    const current = row.original as RowValues;
+    const rowListeners = store.listeners.get(rowId);
+    let copy: RowValues | null = null;
+
+    if (rowListeners) {
+      for (const columnId in values) {
+        const value = values[columnId];
+        if (Object.is(current[columnId], value)) continue;
+        copy ??= getRowCopy(store, rowId, current);
+        copy[columnId] = value;
+        const cellListeners = rowListeners.get(columnId);
+        if (cellListeners) store.notify.add(cellListeners);
+      }
+      if (!copy) continue;
+    } else {
+      copy = Object.assign(getRowCopy(store, rowId, current), values);
+    }
+
+    // Filtering from leaf rows and grouping show copies of the core rows. Cached
+    // values reset since the copy changed, skipping caches nothing has filled
+    const shownRow = shownRowsById[rowId];
+    for (const target of shownRow && shownRow !== row
+      ? [row, shownRow]
+      : [row]) {
+      target.original = copy;
+      if (getHasKeys(target._valuesCache)) {
+        target._valuesCache = makeObjectMap();
+      }
+      if (getHasKeys(target._uniqueValuesCache)) {
+        target._uniqueValuesCache = makeObjectMap();
+      }
+    }
+  }
+}
+
+function notifyCells(store: CellUpdateStore) {
+  const notify = [...store.notify];
+  store.notify.clear();
+  for (const cellListeners of notify) {
+    for (const listener of cellListeners) listener();
+  }
+}
+
+// Applies the batched values waiting for a frame and tells the changed cells. Rows
+// nobody shows wait in `deferred`, unless `isComplete` applies everything
+function flushCellUpdates(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  isComplete = false,
+) {
+  if (store.isFrameScheduled) {
+    cancelFrame(store.frameHandle);
+    store.isFrameScheduled = false;
+  }
+  if (store.queued.size > 0) {
+    const shown = new Map<string, RowValues>();
+    for (const [rowId, values] of store.queued) {
+      const waiting = store.deferred.get(rowId);
+      if (waiting) Object.assign(waiting, values);
+      if (isComplete || store.listeners.has(rowId)) {
+        shown.set(rowId, waiting ?? values);
+        if (waiting) store.deferred.delete(rowId);
+      } else if (!waiting) {
+        store.deferred.set(rowId, values);
+      }
+    }
+    store.queued.clear();
+    applyRowValues(table, store, shown);
+  }
+  if (isComplete && store.deferred.size > 0) {
+    applyRowValues(table, store, store.deferred);
+    store.deferred.clear();
+  }
+  notifyCells(store);
+}
+
+// Builds the data with every pending value and reports it, reusing the row copies the
+// grid already shows, so rows don't rerender when it comes back as `data`
+function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
+  if (store.commitTimer !== null) {
+    clearTimeout(store.commitTimer);
+    store.commitTimer = null;
+  }
+  flushCellUpdates(table, store, true);
+  if (store.pending.size === 0) return;
+
+  const { data, onDataChange } = table.options;
+  if (!onDataChange) {
+    // The copies never leave the grid, so later updates reuse them
+    store.pending.clear();
+    return;
+  }
+
+  const rowsById = table.getCoreRowModel().rowsById;
+  const nextData = [...data];
+  for (const rowId of store.pending) {
+    const row = rowsById[rowId];
+    const shown = store.copies.get(rowId);
+    if (!row || !shown) continue;
+    const dataRow = data[row.index];
+    if (shown.base === dataRow) {
+      nextData[row.index] = shown.copy;
+      continue;
+    }
+    // The data changed since the patch, so the patched values go onto the new row
+    const base = shown.base as RowValues;
+    const copy = { ...((dataRow ?? row.original) as RowValues) };
+    for (const columnId in shown.copy) {
+      if (!Object.is(shown.copy[columnId], base[columnId])) {
+        copy[columnId] = shown.copy[columnId];
+      }
+    }
+    nextData[row.index] = copy;
+  }
+  store.pending.clear();
+  store.copies.clear();
+  onDataChange(nextData);
+}
+
+// Writes values into the rows the grid shows and notifies just the cells they change,
+// so an update renders only those cells. Batched updates apply once a frame and reach
+// `onDataChange` once per `batchUpdateDelay`, for live data
 function updateCells(
+  table: DataGridInstance,
+  updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+  options?: UpdateCellsOptions,
+) {
+  const updateArray = Array.isArray(updates) ? updates : [updates];
+  if (updateArray.length === 0) return;
+  const store = getCellUpdateStore(table);
+
+  if (options?.batch) {
+    // Rows nobody shows skip the frame and wait for the next `onDataChange`
+    mergeUpdates(updateArray, (rowId) =>
+      store.listeners.has(rowId) ? store.queued : store.deferred,
+    );
+    if (store.queued.size > 0 && !store.isFrameScheduled) {
+      store.isFrameScheduled = true;
+      store.frameHandle = requestFrame(() => {
+        store.isFrameScheduled = false;
+        flushCellUpdates(table, store);
+      });
+    }
+    store.commitTimer ??= setTimeout(
+      () => commitCellUpdates(table, store),
+      table.options.batchUpdateDelay ?? DEFAULT_BATCH_UPDATE_DELAY,
+    );
+    return;
+  }
+
+  // Batched values still waiting apply first, so this update lands after them
+  flushCellUpdates(table, store, true);
+  const rows = new Map<string, RowValues>();
+  mergeUpdates(updateArray, () => rows);
+  applyRowValues(table, store, rows);
+  commitCellUpdates(table, store);
+}
+
+// Edits made in the grid, which respect read-only grids and columns
+function updateEditableCells(
   table: DataGridInstance,
   updates: CellUpdate | Array<CellUpdate>,
 ) {
+  if (table.options.readOnly) return;
   const updateArray = Array.isArray(updates) ? updates : [updates];
-  if (table.options.readOnly || updateArray.length === 0) return;
-
-  const data = table.options.data;
-  const rowsById = table.getCoreRowModel().rowsById;
-  const updatedRows = new Map<number, Record<string, unknown>>();
-
-  for (const { rowId, columnId, value } of updateArray) {
-    const row = rowsById[rowId];
-    if (!row || !getCanEditCell(table, columnId)) continue;
-
-    let updatedRow = updatedRows.get(row.index);
-    if (!updatedRow) {
-      updatedRow = copyRowRecord(data[row.index] ?? row.original);
-      updatedRows.set(row.index, updatedRow);
-    }
-    updatedRow[columnId] = value;
-  }
-
-  if (updatedRows.size === 0) return;
-
-  const nextData = [...data];
-  for (const [index, row] of updatedRows) {
-    nextData[index] = row;
-  }
-  table.options.onDataChange?.(nextData);
+  updateCells(
+    table,
+    updateArray.filter(({ columnId }) => getCanEditCell(table, columnId)),
+  );
 }
 
 function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
@@ -649,12 +945,18 @@ const dataGridDataFeature: TableFeature = {
         fn: () => !!instance.options.readOnly,
       },
       table_updateCells: {
-        fn: (updates: CellUpdate | Array<CellUpdate>) =>
-          updateCells(instance, updates),
+        fn: (
+          updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+          options?: UpdateCellsOptions,
+        ) => updateCells(instance, updates, options),
+      },
+      table_subscribeCell: {
+        fn: (rowId: string, columnId: string, listener: () => void) =>
+          subscribeCell(instance, rowId, columnId, listener),
       },
       table_clearCells: {
         fn: (cells: Array<CellPosition>) =>
-          updateCells(
+          updateEditableCells(
             instance,
             cells.map(({ rowId, columnId }) => ({
               rowId,
@@ -672,7 +974,7 @@ const dataGridDataFeature: TableFeature = {
     assignPrototypeAPIs("dataGridDataFeature", prototype, table, {
       cell_setValue: {
         fn: (cell: DataGridCellRef, value: unknown) =>
-          updateCells(asDataGrid(cell.table), {
+          updateEditableCells(asDataGrid(cell.table), {
             rowId: cell.row.id,
             columnId: cell.column.id,
             value,
@@ -681,7 +983,7 @@ const dataGridDataFeature: TableFeature = {
       cell_clearValue: {
         fn: (cell: DataGridCellRef) => {
           const instance = asDataGrid(cell.table);
-          updateCells(instance, {
+          updateEditableCells(instance, {
             rowId: cell.row.id,
             columnId: cell.column.id,
             value: getEmptyValueForColumn(instance, cell.column.id),
@@ -1228,7 +1530,7 @@ async function pasteCells(
           value: getEmptyValueForColumn(table, cell.columnId),
         }));
       table.resetCutCellGrid(true);
-      updateCells(table, [...updates, ...clearedSourceUpdates]);
+      updateEditableCells(table, [...updates, ...clearedSourceUpdates]);
 
       const startRowId = rows[target.rowIndex]?.id;
       const startColumnId = dataColumnIds[target.columnIndex];

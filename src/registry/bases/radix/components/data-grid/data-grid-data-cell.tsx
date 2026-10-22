@@ -1,8 +1,9 @@
 "use client";
 
-import { flexRender, type RowData } from "@tanstack/react-table";
+import { type Cell, flexRender, type RowData } from "@tanstack/react-table";
 import * as React from "react";
 
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
 import { getHasCustomCell } from "@/lib/data-grid-utils";
@@ -61,14 +62,18 @@ export const DataGridDataCell = React.memo(
 
 function DataGridDataCellImpl<TData extends RowData>({
   isScrolling,
-  ...props
+  cell: propsCell,
+  ...rest
 }: DataGridDataCellProps<TData>) {
+  // Custom cells update their content alone, so only variants rerender here
+  const hasCustomCell = getHasCustomCell(propsCell.column);
+  const cell = useUpdatedCell(propsCell, !hasCustomCell);
+  const props = { ...rest, cell };
+
   // Cells mounted mid-scroll show a cheap preview until scrolling stops. The row
   // keys cells by cell ID, so a recycled row mounts fresh cells
   const [isPreview, setIsPreview] = React.useState(isScrolling);
   if (isPreview && !isScrolling) setIsPreview(false);
-
-  const hasCustomCell = getHasCustomCell(props.cell.column);
 
   if (isPreview && !props.isFocused && !props.isEditing && !hasCustomCell) {
     return (
@@ -93,7 +98,7 @@ function DataGridDataCellImpl<TData extends RowData>({
   if (hasCustomCell) {
     return (
       <DataGridCell {...props}>
-        {flexRender(props.cell.column.columnDef.cell, props.cell.getContext())}
+        <DataGridCustomCellContent cell={props.cell} />
       </DataGridCell>
     );
   }
@@ -138,4 +143,49 @@ function DataGridDataCellImpl<TData extends RowData>({
   }
 
   return <Comp {...props} />;
+}
+
+// Rerenders when `updateCells` changes the cell, then reads it from the current row
+// model, since a memoized row can still hold an older one
+function useUpdatedCell<TData extends RowData>(
+  cell: Cell<DataGridFeatures, TData>,
+  isEnabled = true,
+) {
+  const { table } = cell;
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
+  const [updateCount, onCellUpdate] = React.useReducer(
+    (count: number) => count + 1,
+    0,
+  );
+  // What the cell last rendered, for the check after subscribing
+  const renderedValueRef = React.useRef<unknown>(undefined);
+  renderedValueRef.current = cell.getValue();
+  React.useEffect(() => {
+    if (!isEnabled) return;
+    const unsubscribe = table.subscribeCell(rowId, columnId, onCellUpdate);
+    // Subscribing can apply values the row waited for while out of view
+    const value = table.getRowModel().rowsById[rowId]?.getValue(columnId);
+    if (!Object.is(value, renderedValueRef.current)) onCellUpdate();
+    return unsubscribe;
+  }, [isEnabled, table, rowId, columnId]);
+
+  if (updateCount === 0) return cell;
+  return (
+    table.getRowModel().rowsById[rowId]?.getAllCellsByColumnId()[columnId] ??
+    cell
+  );
+}
+
+const DataGridCustomCellContent = React.memo(
+  DataGridCustomCellContentImpl,
+) as typeof DataGridCustomCellContentImpl;
+
+function DataGridCustomCellContentImpl<TData extends RowData>({
+  cell: propsCell,
+}: {
+  cell: Cell<DataGridFeatures, TData>;
+}) {
+  const cell = useUpdatedCell(propsCell);
+  return flexRender(cell.column.columnDef.cell, cell.getContext());
 }

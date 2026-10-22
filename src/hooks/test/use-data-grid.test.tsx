@@ -614,11 +614,10 @@ describe("useDataGrid", () => {
 
       act(() => {
         startEditing(result.current.table, "0", "name");
-        result.current.table.updateCells({
-          rowId: "0",
-          columnId: "name",
-          value: "Changed",
-        });
+        result.current.table
+          .getRow("0")
+          .getAllCellsByColumnId()
+          .name?.setValue("Changed");
       });
 
       expect(result.current.table.getEditingCell()).toBeNull();
@@ -656,10 +655,9 @@ describe("useDataGrid", () => {
       expect(result.current.table.getEditingCell()).toBeNull();
 
       act(() => {
-        result.current.table.updateCells([
-          { rowId: "0", columnId: "name", value: "Changed" },
-          { rowId: "0", columnId: "trick", value: "Ollie" },
-        ]);
+        const cells = result.current.table.getRow("0").getAllCellsByColumnId();
+        cells.name?.setValue("Changed");
+        cells.trick?.setValue("Ollie");
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -1067,7 +1065,32 @@ describe("useDataGrid", () => {
       );
     });
 
-    it("should not update data in readOnly mode", () => {
+    it("should not edit data in readOnly mode", () => {
+      const onDataChange = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+            readOnly: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table
+          .getRow("0")
+          .getAllCellsByColumnId()
+          .name?.setValue("Updated Name");
+        result.current.table.clearCells([{ rowId: "0", columnId: "name" }]);
+      });
+
+      expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("updates data from code in readOnly mode", () => {
       const onDataChange = vi.fn();
 
       const { result } = renderHook(
@@ -1089,7 +1112,221 @@ describe("useDataGrid", () => {
         });
       });
 
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange.mock.calls[0]?.[0]?.[0]).toMatchObject({
+        name: "Updated Name",
+      });
+    });
+
+    it("shows updates right away and notifies only the changed cells", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      const onTrickChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+      table.subscribeCell("0", "trick", onTrickChange);
+
+      act(() => {
+        table.updateCells({ rowId: "0", columnId: "name", value: "Patched" });
+      });
+
+      expect(onNameChange).toHaveBeenCalledTimes(1);
+      expect(onTrickChange).not.toHaveBeenCalled();
+      expect(table.getRow("0").getValue("name")).toBe("Patched");
+      expect(testData[0]?.name).not.toBe("Patched");
+    });
+
+    it("reports batched updates once per batch delay", () => {
+      vi.useFakeTimers();
+      try {
+        const onDataChange = vi.fn();
+        const { result } = renderHook(
+          () =>
+            useDataGrid({
+              data: testData,
+              columns: testColumns,
+              onDataChange,
+              batchUpdateDelay: 200,
+            }),
+          { wrapper: createWrapper() },
+        );
+        const { table } = result.current;
+        const onNameChange = vi.fn();
+        table.subscribeCell("0", "name", onNameChange);
+
+        act(() => {
+          table.updateCells(
+            { rowId: "0", columnId: "name", value: "One" },
+            { batch: true },
+          );
+          table.updateCells(
+            { rowId: "1", columnId: "name", value: "Two" },
+            { batch: true },
+          );
+        });
+
+        // This suite runs animation frames immediately, so cells hear right away
+        expect(table.getRow("0").getValue("name")).toBe("One");
+        expect(onNameChange).toHaveBeenCalledTimes(1);
+        expect(onDataChange).not.toHaveBeenCalled();
+
+        act(() => {
+          vi.advanceTimersByTime(200);
+        });
+        expect(onDataChange).toHaveBeenCalledTimes(1);
+        const nextData = onDataChange.mock.calls[0]?.[0];
+        expect(nextData?.[0]).toMatchObject({ name: "One" });
+        expect(nextData?.[1]).toMatchObject({ name: "Two" });
+        expect(nextData?.[2]).toBe(testData[2]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("applies row updates and notifies the cells they change", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns: testColumns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      const onTrickChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+      table.subscribeCell("0", "trick", onTrickChange);
+
+      act(() => {
+        table.updateCells({
+          rowId: "0",
+          values: { name: "Patched", trick: testData[0]?.trick, score: 1 },
+        });
+      });
+
+      expect(onNameChange).toHaveBeenCalledTimes(1);
+      expect(onTrickChange).not.toHaveBeenCalled();
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange.mock.calls[0]?.[0]?.[0]).toMatchObject({
+        name: "Patched",
+        trick: testData[0]?.trick,
+        score: 1,
+      });
+    });
+
+    it("skips values that don't change", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns: testColumns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+      const onNameChange = vi.fn();
+      result.current.table.subscribeCell("0", "name", onNameChange);
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: testData[0]?.name,
+        });
+      });
+
+      expect(onNameChange).not.toHaveBeenCalled();
       expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("holds batched values for rows out of view until they come into view", () => {
+      vi.useFakeTimers();
+      try {
+        const frames: FrameRequestCallback[] = [];
+        vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+          frames.push(cb);
+          return frames.length;
+        });
+        const onDataChange = vi.fn();
+        const { result } = renderHook(
+          () =>
+            useDataGrid({
+              data: testData,
+              columns: testColumns,
+              onDataChange,
+              batchUpdateDelay: 200,
+            }),
+          { wrapper: createWrapper() },
+        );
+        const { table } = result.current;
+        table.subscribeCell("0", "name", vi.fn());
+
+        act(() => {
+          table.updateCells(
+            [
+              { rowId: "0", values: { name: "Shown" } },
+              { rowId: "1", values: { name: "Hidden" } },
+              { rowId: "2", values: { name: "Later" } },
+            ],
+            { batch: true },
+          );
+          frames[0]?.(0);
+        });
+
+        expect(table.getRow("0").getValue("name")).toBe("Shown");
+        expect(table.getRow("1").getValue("name")).toBe(testData[1]?.name);
+
+        table.subscribeCell("1", "name", vi.fn());
+        expect(table.getRow("1").getValue("name")).toBe("Hidden");
+
+        act(() => {
+          vi.advanceTimersByTime(200);
+        });
+        const nextData = onDataChange.mock.calls[0]?.[0];
+        expect(nextData?.map((row: TestData) => row.name)).toEqual([
+          "Shown",
+          "Hidden",
+          "Later",
+        ]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("applies batched updates once a frame, keeping each cell's latest", () => {
+      const frames: FrameRequestCallback[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+        frames.push(cb);
+        return frames.length;
+      });
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+
+      act(() => {
+        table.updateCells(
+          { rowId: "0", columnId: "name", value: "First" },
+          { batch: true },
+        );
+        table.updateCells(
+          { rowId: "0", values: { name: "Second" } },
+          { batch: true },
+        );
+      });
+
+      expect(frames).toHaveLength(1);
+      expect(table.getRow("0").getValue("name")).toBe(testData[0]?.name);
+      expect(onNameChange).not.toHaveBeenCalled();
+
+      act(() => {
+        frames[0]?.(0);
+      });
+
+      expect(table.getRow("0").getValue("name")).toBe("Second");
+      expect(onNameChange).toHaveBeenCalledTimes(1);
     });
 
     it("should update data correctly when filtering is applied", () => {

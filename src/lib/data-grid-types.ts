@@ -39,6 +39,22 @@ export interface CellUpdate {
   value: unknown;
 }
 
+/** Several cells of one row, keyed by column ID. */
+export interface RowUpdate {
+  rowId: string;
+  values: Record<string, unknown>;
+}
+
+export interface UpdateCellsOptions {
+  /**
+   * Applies the values once a frame, keeping each cell's latest, and reports them
+   * through `onDataChange` once per `batchUpdateDelay`, for live data that updates
+   * many times a second. Rows out of view take their values when they come into
+   * view or at the next `onDataChange`.
+   */
+  batch?: boolean;
+}
+
 export interface CellPresence extends CellPosition {
   name: string;
   color: string;

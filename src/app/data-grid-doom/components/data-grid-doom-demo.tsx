@@ -20,6 +20,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { RowUpdate } from "@/lib/data-grid-types";
 
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
@@ -197,7 +198,8 @@ export function DataGridDoomDemo({
   grid,
 }: DataGridDoomDemoProps) {
   const rowCount = Math.round((columnCount * SCREEN_HEIGHT) / SCREEN_WIDTH);
-  const [frame, setFrame] = React.useState<PixelRow[]>(() =>
+  // The grid's data stays put: frames go to the cells through `updateCells`
+  const [frame] = React.useState<PixelRow[]>(() =>
     Array.from({ length: rowCount }, (_, y) => {
       const row: PixelRow = { id: `r${y}` };
       for (let x = 0; x < columnCount; x++) row[`c${x}`] = 0;
@@ -494,6 +496,8 @@ export function DataGridDoomDemo({
     const stepX = SCREEN_WIDTH / columnCount;
     const stepY = SCREEN_HEIGHT / rowCount;
     const changedRows = Math.max(1, Math.round(rowCount * damage));
+    const rowIds = Array.from({ length: rowCount }, (_, y) => `r${y}`);
+    const columnIds = Array.from({ length: columnCount }, (_, x) => `c${x}`);
 
     const collectPixels = () => {
       const result: HTMLElement[][] = [];
@@ -611,21 +615,18 @@ export function DataGridDoomDemo({
       if (mode === "data") {
         if (changed.length === 0) return;
         paints++;
-        const rows = changed.map((y) => {
-          const row: PixelRow = { id: `r${y}` };
+        const updates: RowUpdate[] = [];
+        for (const y of changed) {
+          const values: RowUpdate["values"] = {};
           for (let x = 0; x < columnCount; x++) {
-            row[`c${x}`] = current[y * columnCount + x] ?? -1;
+            const index = y * columnCount + x;
+            if (!dirty[index]) continue;
+            dirty[index] = 0;
+            values[columnIds[x] ?? ""] = current[index] ?? -1;
           }
-          return row;
-        });
-        setFrame((previous) => {
-          const next = previous.slice();
-          for (const [index, y] of changed.entries()) {
-            const row = rows[index];
-            if (row) next[y] = row;
-          }
-          return next;
-        });
+          updates.push({ rowId: rowIds[y] ?? "", values });
+        }
+        table.updateCells(updates);
         return;
       }
       for (const y of changed) {
@@ -788,7 +789,16 @@ export function DataGridDoomDemo({
       disposed = true;
       cancelAnimationFrame(rafId);
     };
-  }, [shouldShowGrid, columnCount, rowCount, mode, source, damage, auto]);
+  }, [
+    shouldShowGrid,
+    columnCount,
+    rowCount,
+    mode,
+    source,
+    damage,
+    auto,
+    table,
+  ]);
 
   const stageWidth = Math.round(gridWidth * zoom);
 
