@@ -535,24 +535,13 @@ function useDataGrid<TData extends RowData>({
       if (!container || !(target instanceof Element)) return null;
       if (!container.contains(target)) return null;
 
+      // Utility cells handle their own pointer and focus events
       const cellElement = target.closest<HTMLElement>(
-        '[data-slot="data-grid-cell-wrapper"], [data-slot="data-grid-cell-preview"]',
+        '[data-slot="data-grid-cell"]:not([data-utility])',
       );
       if (!cellElement) return null;
 
-      let rowId = cellElement.dataset.rowId;
-      let columnId = cellElement.dataset.columnId;
-
-      if (cellElement.dataset.slot === "data-grid-cell-preview") {
-        const rowIndex = cellElement.closest<HTMLElement>(
-          '[data-slot="data-grid-row"]',
-        )?.dataset.index;
-        rowId =
-          rowIndex === undefined
-            ? undefined
-            : tableRef.current?.getRowModel().rows[Number(rowIndex)]?.id;
-        columnId = cellElement.parentElement?.dataset.columnId;
-      }
+      const { rowId, columnId } = cellElement.dataset;
       if (!rowId || !columnId) return null;
 
       const editingCell = tableRef.current?.getEditingCell();

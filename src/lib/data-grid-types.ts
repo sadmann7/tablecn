@@ -1,4 +1,8 @@
-import type { Cell, RowData } from "@tanstack/react-table";
+import type {
+  Cell,
+  ColumnPinningPosition,
+  RowData,
+} from "@tanstack/react-table";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
@@ -128,6 +132,11 @@ export interface DataGridCellProps<TData extends RowData> {
   isActiveSearchMatch: boolean;
   presence: CellPresence | null;
   readOnly: boolean;
+  pinned: ColumnPinningPosition;
+  pinnedOffset: number;
+  grow: boolean;
+  showStartBorder: boolean;
+  showEndBorder: boolean;
 }
 
 export interface ClipboardNotice {

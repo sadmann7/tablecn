@@ -1,4 +1,8 @@
-import type { Cell, RowData } from "@tanstack/react-table";
+import type {
+  Cell,
+  ColumnPinningPosition,
+  RowData,
+} from "@tanstack/react-table";
 
 import { cn } from "cn";
 import * as React from "react";
@@ -8,8 +12,10 @@ import type { RowHeightValue } from "@/lib/data-grid-types";
 
 import { getBadgeOverflow } from "@/hooks/use-badge-overflow";
 import {
+  CELL_TINTS,
   formatDateForDisplay,
   getBooleanCellValue,
+  getCellLayoutStyle,
   getDateCellValue,
   getFileIcon,
   getFilesCellValue,
@@ -50,6 +56,11 @@ interface DataGridCellPreviewProps<TData extends RowData> {
   isSearchMatch: boolean;
   isActiveSearchMatch: boolean;
   readOnly: boolean;
+  pinned: ColumnPinningPosition;
+  pinnedOffset: number;
+  grow: boolean;
+  showStartBorder: boolean;
+  showEndBorder: boolean;
 }
 
 export function DataGridCellPreview<TData extends RowData>({
@@ -61,8 +72,15 @@ export function DataGridCellPreview<TData extends RowData>({
   isSearchMatch,
   isActiveSearchMatch,
   readOnly,
+  pinned,
+  pinnedOffset,
+  grow,
+  showStartBorder,
+  showEndBorder,
 }: DataGridCellPreviewProps<TData>) {
   const { className, content } = getPreviewContent({ cell, width, rowHeight });
+  const columnId = cell.column.id;
+  const isTinted = isSelected || isSearchMatch || isActiveSearchMatch;
 
   return (
     <div
@@ -70,17 +88,28 @@ export function DataGridCellPreview<TData extends RowData>({
       aria-colindex={columnIndex + 1}
       aria-selected={isSelected}
       aria-readonly={readOnly || undefined}
-      data-slot="data-grid-cell-preview"
+      data-slot="data-grid-cell"
+      data-preview=""
+      data-row-id={cell.row.id}
+      data-column-id={columnId}
       className={cn(
-        "size-full cursor-default px-2 py-1.5 text-start text-sm",
+        "h-full cursor-default px-2 py-1.5 text-start text-sm",
         className,
         {
-          "bg-yellow-100 dark:bg-yellow-900/30":
-            isSearchMatch && !isActiveSearchMatch,
-          "bg-orange-200 dark:bg-orange-900/50": isActiveSearchMatch,
-          "bg-primary/10": isSelected,
+          grow,
+          "border-s": showStartBorder,
+          "border-e": showEndBorder,
+          "bg-background": !isTinted,
+          [CELL_TINTS.tinted]: isTinted,
+          [CELL_TINTS.selected]: isSelected,
+          [CELL_TINTS.activeSearchMatch]: isActiveSearchMatch && !isSelected,
+          [CELL_TINTS.searchMatch]:
+            isSearchMatch && !isActiveSearchMatch && !isSelected,
+          [CELL_TINTS.darkActiveSearchMatch]: isActiveSearchMatch,
+          [CELL_TINTS.darkSearchMatch]: isSearchMatch && !isActiveSearchMatch,
         },
       )}
+      style={getCellLayoutStyle({ width, pinned, pinnedOffset })}
     >
       {content}
     </div>

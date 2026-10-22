@@ -2,6 +2,7 @@ import type {
   CellSelectionBounds,
   CellSelectionState,
   Column,
+  ColumnPinningPosition,
   RowData,
   Table,
 } from "@tanstack/react-table";
@@ -621,6 +622,43 @@ export function getColumnPinningStyle<TData extends RowData>(
   };
 }
 
+// Tinted data cells paint `--cell-tint` inside their border over an opaque background,
+// so translucent borders stay neutral and pinned cells hide what scrolls beneath them.
+// Only tinted cells get the gradient layer, since painting one in every cell is slow.
+// Selection wins over search matches in light mode, and search matches in dark mode
+export const CELL_TINTS = {
+  tinted:
+    "[background:linear-gradient(var(--cell-tint,transparent),var(--cell-tint,transparent))_padding-box,var(--background)]",
+  selected:
+    "[--cell-tint:color-mix(in_oklab,var(--color-primary)_10%,transparent)]",
+  activeSearchMatch: "[--cell-tint:var(--color-orange-200)]",
+  searchMatch: "[--cell-tint:var(--color-yellow-100)]",
+  darkActiveSearchMatch:
+    "dark:[--cell-tint:color-mix(in_oklab,var(--color-orange-900)_50%,transparent)]",
+  darkSearchMatch:
+    "dark:[--cell-tint:color-mix(in_oklab,var(--color-yellow-900)_30%,transparent)]",
+} as const;
+
+// A data cell is a single element, so it carries its column's width and pinning itself.
+// The width is in pixels rather than the column's size variable, since resolving a
+// variable on every restyle of a cell is slow, and cells rerender on resize anyway
+export function getCellLayoutStyle(params: {
+  width: number;
+  pinned: ColumnPinningPosition;
+  pinnedOffset: number;
+}): React.CSSProperties {
+  const { width, pinned, pinnedOffset } = params;
+
+  return {
+    insetInlineStart: pinned === "start" ? `${pinnedOffset}px` : undefined,
+    insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
+    opacity: pinned ? 0.97 : undefined,
+    position: pinned ? "sticky" : "relative",
+    width,
+    zIndex: pinned ? 20 : undefined,
+  };
+}
+
 export function getColumnFitSize(params: {
   gridElement: HTMLElement;
   columnId: string;
@@ -642,12 +680,9 @@ export function getColumnFitSize(params: {
 
   let cellChromeSize = 0;
   for (const cellElement of cellElements) {
-    const wrapperElement = cellElement.querySelector<HTMLElement>(
-      '[data-slot="data-grid-cell-wrapper"]',
-    );
-    if (!wrapperElement) continue;
+    if (cellElement.dataset.slot !== "data-grid-cell") continue;
     cellChromeSize =
-      cellElement.getBoundingClientRect().width - wrapperElement.clientWidth;
+      cellElement.getBoundingClientRect().width - cellElement.clientWidth;
     break;
   }
 
@@ -831,12 +866,12 @@ export function getCellElement(
   columnId: string,
 ) {
   return container.querySelector<HTMLDivElement>(
-    `[data-row-id="${escapeAttributeValue(rowId)}"][data-column-id="${escapeAttributeValue(columnId)}"]`,
+    `[data-slot="data-grid-cell"]:not([data-preview])[data-row-id="${escapeAttributeValue(rowId)}"][data-column-id="${escapeAttributeValue(columnId)}"]`,
   );
 }
 
 export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
-  if (cellElement.dataset.slot === "data-grid-cell-wrapper") return cellElement;
+  if (cellElement.dataset.utility === undefined) return cellElement;
   return (
     cellElement.querySelector<HTMLElement>(
       'button, a[href], [role="checkbox"]',
