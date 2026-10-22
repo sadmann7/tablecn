@@ -9,6 +9,7 @@ import {
   ArrowRight,
   ArrowUp,
   ChevronDown,
+  Grid3x3,
   Maximize,
   Pause,
   Play,
@@ -33,6 +34,11 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/registry/bases/radix/ui/tooltip";
 
 import {
   CHEAT_PATTERN,
@@ -57,6 +63,12 @@ import {
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
 const CELL_SIZE = 36;
+// Grid view sizes in on-screen pixels: the stage is scaled down, so they're divided by
+// its zoom to stay visible at any resolution
+const GRID_LINE_PX = 1;
+const GRID_RING_PX = 2;
+// The grid view needs one cell per pixel, so it's limited to these modes and sizes
+const GRID_MAX_COLUMNS = 192;
 // Paints DOOM at a steady 30fps rather than up to 35, so frames arrive evenly with time
 // to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
@@ -70,6 +82,65 @@ const FULLSCREEN_KEYS = IS_MAC ? "⌥ + Enter" : "Alt + Enter";
 const PLAY_KEYS = "P";
 const MUTE_KEYS = "M";
 const PAGE_SHORTCUT_CODES = new Set(["KeyP", "KeyM"]);
+
+interface StageLayoutOptions {
+  width: number;
+  height: number;
+  viewport: { width: number; height: number };
+  chromeHeight: number;
+  isFullscreen: boolean;
+}
+
+function getStageLayout({
+  width,
+  height,
+  viewport,
+  chromeHeight,
+  isFullscreen,
+}: StageLayoutOptions) {
+  const gridWidth = width * CELL_SIZE + 2;
+  const gridHeight = height * CELL_SIZE + 2;
+  const availableWidth = isFullscreen ? viewport.width : viewport.width - 32;
+  // The nav, the page's padding, and the toolbar and credit rows with their gaps
+  const availableHeight = isFullscreen
+    ? viewport.height
+    : viewport.height - 57 - 32 - 24 - chromeHeight;
+  const fit = Math.min(
+    isFullscreen ? Number.POSITIVE_INFINITY : 1,
+    availableWidth / gridWidth,
+    availableHeight / gridHeight,
+  );
+  // Whole device pixels per cell: fractional ones leave seams that read as grid lines
+  const pixelRatio = window.devicePixelRatio || 1;
+  const zoom =
+    Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
+    CELL_SIZE;
+
+  return { zoom, gridWidth, gridHeight };
+}
+
+// The span is the trigger so the tooltip still shows while the button is disabled
+function ControlTooltip({
+  label,
+  keys,
+  children,
+}: {
+  label: string;
+  keys?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+        {keys ? <Kbd>{keys}</Kbd> : null}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
 function getIsPageShortcut(event: KeyboardEvent) {
   return (
@@ -107,7 +178,6 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
   { label: "Weapons", keys: ["1–7"] },
   { label: "Menus", keys: ["Enter", "Esc"] },
   { label: "Fullscreen", keys: [FULLSCREEN_KEYS] },
-  { label: "Stop", keys: [PLAY_KEYS] },
   { label: "Mute", keys: [MUTE_KEYS] },
 ];
 
@@ -123,6 +193,7 @@ export function DataGridDoomDemo({
   source,
   damage,
   auto,
+  grid,
 }: DoomParams) {
   const height = Math.round((width * SCREEN_HEIGHT) / SCREEN_WIDTH);
   const [frame, setFrame] = React.useState<PixelRow[]>(() =>
@@ -154,13 +225,24 @@ export function DataGridDoomDemo({
   const toolbarRef = React.useRef<HTMLDivElement>(null);
   const footerRef = React.useRef<HTMLDivElement>(null);
   const [chromeHeight, setChromeHeight] = React.useState(48);
+  const [isGridShown, setIsGridShown] = React.useState(grid);
+  const canShowGrid = mode !== "gradient" && width <= GRID_MAX_COLUMNS;
+  const showsGrid = isGridShown && canShowGrid;
+
+  const { zoom, gridWidth, gridHeight } = getStageLayout({
+    width,
+    height,
+    viewport,
+    chromeHeight,
+    isFullscreen,
+  });
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
     () =>
       Array.from({ length: width }, (_, x) => ({
         id: `c${x}`,
         accessorKey: `c${x}`,
-        // A function header makes this a utility column, which renders `cell` as is
+        // A function header renders as is, keeping the collapsed header row empty
         header: () => null,
         size: CELL_SIZE,
         minSize: CELL_SIZE,
@@ -294,10 +376,11 @@ export function DataGridDoomDemo({
     };
   }, [source, isReady, isPlaying, onFullscreen]);
 
-  // Triggers on left click, caught before the data grid so the click doesn't select cells
+  // Triggers on left click, caught before the data grid so the click doesn't select cells.
+  // In the grid view clicks select cells instead, and F or Ctrl fire
   const onPointerTrigger = React.useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!isPlaying || event.button !== 0) return;
+      if (!isPlaying || showsGrid || event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
       const buttons = event.type === "pointerdown" ? 1 : 0;
@@ -305,7 +388,7 @@ export function DataGridDoomDemo({
         engine.mouse(buttons);
       });
     },
-    [isPlaying],
+    [isPlaying, showsGrid],
   );
 
   // Play mode takes the keyboard before the grid's own navigation sees it
@@ -705,22 +788,6 @@ export function DataGridDoomDemo({
     };
   }, [shouldShowGrid, width, height, mode, source, damage, auto]);
 
-  const gridWidth = width * CELL_SIZE + 2;
-  const gridHeight = height * CELL_SIZE + 2;
-  const fit = isFullscreen
-    ? Math.min(viewport.width / gridWidth, viewport.height / gridHeight)
-    : Math.min(
-        1,
-        (viewport.width - 32) / gridWidth,
-        // The nav, the page's padding, and the toolbar and credit rows with their gaps
-        (viewport.height - 57 - 32 - 24 - chromeHeight) / gridHeight,
-      );
-  // Whole device pixels per cell: fractional ones leave seams that read as grid lines
-  const pixelRatio = window.devicePixelRatio || 1;
-  const zoom =
-    Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
-    CELL_SIZE;
-
   const stageWidth = Math.round(gridWidth * zoom);
 
   return (
@@ -730,81 +797,119 @@ export function DataGridDoomDemo({
         className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
         style={{ width: stageWidth }}
       >
-        <DropdownMenu
-          // The portal sets pointer-events on body, restyling every pixel cell
-          modal={false}
-        >
-          <DropdownMenuTrigger asChild>
+        <span className="flex items-center gap-1.5">
+          <DropdownMenu
+            // The portal sets pointer-events on body, restyling every pixel cell
+            modal={false}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label="Resolution"
+                disabled={!shouldShowGrid || !isReady}
+              >
+                {getResolutionLabel(width)}
+                <ChevronDown className="text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-auto">
+              <DropdownMenuLabel>Resolution</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value={String(width)}
+                onValueChange={(value) => {
+                  const search = new URLSearchParams({ res: value });
+                  if (modeParam) search.set("mode", modeParam);
+                  if (isGridShown) search.set("grid", "1");
+                  window.location.search = search.toString();
+                }}
+              >
+                {RESOLUTIONS.map((res) => (
+                  <DropdownMenuRadioItem key={res} value={String(res)}>
+                    {getResolutionLabel(res)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <ControlTooltip
+            label={
+              canShowGrid
+                ? showsGrid
+                  ? "Hide grid"
+                  : "Show grid"
+                : `Grid shows up to ${getResolutionLabel(GRID_MAX_COLUMNS)}`
+            }
+          >
             <Button
-              size="sm"
+              size="icon-sm"
               variant="outline"
-              aria-label="Resolution"
-              disabled={!shouldShowGrid || !isReady}
-            >
-              {getResolutionLabel(width)}
-              <ChevronDown className="text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-auto">
-            <DropdownMenuLabel>Resolution</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup
-              value={String(width)}
-              onValueChange={(value) => {
-                window.location.search = `?res=${value}${modeParam ? `&mode=${modeParam}` : ""}`;
+              aria-label={showsGrid ? "Hide grid" : "Show grid"}
+              aria-pressed={showsGrid}
+              disabled={!canShowGrid || !shouldShowGrid}
+              className={cn(showsGrid && "bg-accent text-accent-foreground")}
+              onClick={(event) => {
+                event.currentTarget.blur();
+                setIsGridShown((shown) => !shown);
               }}
             >
-              {RESOLUTIONS.map((res) => (
-                <DropdownMenuRadioItem key={res} value={String(res)}>
-                  {getResolutionLabel(res)}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Grid3x3 />
+            </Button>
+          </ControlTooltip>
+        </span>
         {source === "doom" && (
           <span className="flex items-center gap-1.5">
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label={isPlaying ? "Stop" : "Play"}
-              aria-keyshortcuts="P"
-              title={`${isPlaying ? "Stop" : "Play"} (${PLAY_KEYS})`}
-              disabled={!isReady}
-              onClick={(event) => {
-                setIsPlaying((playing) => !playing);
-                event.currentTarget.blur();
-              }}
+            <ControlTooltip
+              label={isPlaying ? "Pause" : "Play"}
+              keys={PLAY_KEYS}
             >
-              {isPlaying ? <Pause /> : <Play />}
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label={isMuted ? "Unmute" : "Mute"}
-              aria-keyshortcuts="M"
-              title={`${isMuted ? "Unmute" : "Mute"} (${MUTE_KEYS})`}
-              onClick={(event) => {
-                event.currentTarget.blur();
-                setIsMuted((muted) => !muted);
-              }}
+              <Button
+                size="icon-sm"
+                variant="outline"
+                aria-label={isPlaying ? "Pause" : "Play"}
+                aria-keyshortcuts="P"
+                disabled={!isReady}
+                onClick={(event) => {
+                  setIsPlaying((playing) => !playing);
+                  event.currentTarget.blur();
+                }}
+              >
+                {isPlaying ? <Pause /> : <Play />}
+              </Button>
+            </ControlTooltip>
+            <ControlTooltip
+              label={isMuted ? "Unmute" : "Mute"}
+              keys={MUTE_KEYS}
             >
-              {isMuted ? <VolumeX /> : <Volume2 />}
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label="Fullscreen"
-              aria-keyshortcuts="Alt+Enter"
-              title={`Fullscreen (${FULLSCREEN_KEYS})`}
-              disabled={!isReady}
-              onClick={(event) => {
-                event.currentTarget.blur();
-                void onFullscreen();
-              }}
-            >
-              <Maximize />
-            </Button>
+              <Button
+                size="icon-sm"
+                variant="outline"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+                aria-keyshortcuts="M"
+                onClick={(event) => {
+                  event.currentTarget.blur();
+                  setIsMuted((muted) => !muted);
+                }}
+              >
+                {isMuted ? <VolumeX /> : <Volume2 />}
+              </Button>
+            </ControlTooltip>
+            <ControlTooltip label="Fullscreen" keys={FULLSCREEN_KEYS}>
+              <Button
+                size="icon-sm"
+                variant="outline"
+                aria-label="Fullscreen"
+                aria-keyshortcuts="Alt+Enter"
+                disabled={!isReady}
+                onClick={(event) => {
+                  event.currentTarget.blur();
+                  void onFullscreen();
+                }}
+              >
+                <Maximize />
+              </Button>
+            </ControlTooltip>
           </span>
         )}
       </div>
@@ -820,18 +925,27 @@ export function DataGridDoomDemo({
           style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
         >
           <div
-            // Hides grid lines, plus cells in gradient mode since painting them slows Safari
+            // Hides grid lines, plus cells in gradient mode since painting them slows Safari.
+            // The grid view brings them back, with selection and focus drawn over the game in
+            // spreadsheet blue, which shows on dark and light pixels alike
             className={cn(
-              "bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0",
+              "bg-black **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:[[role=grid]]:border-0",
+              showsGrid
+                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:bg-blue-500/40 **:data-[slot=data-grid-row]:border-b-(length:--doom-line)"
+                : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}
-            style={{
-              width: gridWidth,
-              height: gridHeight,
-              // Scaled with a transform, because changing zoom would lay out every cell again
-              transform: `scale(${zoom})`,
-              transformOrigin: "0 0",
-            }}
+            style={
+              {
+                width: gridWidth,
+                height: gridHeight,
+                // Scaled with a transform, because changing zoom would lay out every cell again
+                transform: `scale(${zoom})`,
+                transformOrigin: "0 0",
+                "--doom-line": `${GRID_LINE_PX / zoom}px`,
+                "--doom-ring": `${GRID_RING_PX / zoom}px`,
+              } as React.CSSProperties
+            }
           >
             {shouldShowGrid && (
               <DataGrid {...dataGridProps} table={table} height={gridHeight} />
@@ -840,7 +954,8 @@ export function DataGridDoomDemo({
           {source === "doom" && !isPlaying && (
             <button
               type="button"
-              className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-background/80 p-6 backdrop-blur-sm focus:outline-none disabled:cursor-default"
+              // m-auto on the content centers it, and on a short stage scrolls it from the top
+              className="group absolute inset-0 z-10 flex cursor-pointer overflow-auto bg-background/80 p-6 backdrop-blur-sm *:m-auto focus:outline-none disabled:cursor-default"
               ref={overlayRef}
               disabled={!isReady}
               onClick={() => setIsPlaying(true)}
@@ -855,20 +970,23 @@ export function DataGridDoomDemo({
                   </span>
                 </span>
               ) : isReady ? (
-                <span className="flex flex-col items-center gap-5">
-                  <span className="flex flex-col items-center gap-1">
-                    <span className="text-2xl font-semibold tracking-tight">
+                <span className="flex w-72 flex-col rounded-xl border bg-background/70 text-sm shadow-lg transition-colors group-hover:border-foreground/20 group-focus-visible:border-foreground/20">
+                  <span className="flex flex-col items-center gap-1 px-4 pt-4 pb-3.5">
+                    <span className="text-xl font-semibold tracking-tight">
                       Click to play
                     </span>
-                    <span className="text-sm text-balance text-muted-foreground">
-                      {(width * height).toLocaleString("en-US")} data grid
-                      cells, one for every pixel
+                    <span className="text-xs text-balance text-muted-foreground tabular-nums">
+                      Rendered across {(width * height).toLocaleString("en-US")}{" "}
+                      data grid cells
                     </span>
                   </span>
-                  <span className="grid grid-cols-[auto_auto] items-center gap-x-6 gap-y-2 text-sm">
+                  <span className="flex flex-col border-t px-1.5 py-1.5">
                     {CONTROLS.map((control) => (
-                      <React.Fragment key={control.label}>
-                        <span className="text-start text-muted-foreground">
+                      <span
+                        key={control.label}
+                        className="flex items-center justify-between gap-3 px-2.5 py-1"
+                      >
+                        <span className="text-muted-foreground">
                           {control.label}
                         </span>
                         <KbdGroup>
@@ -883,7 +1001,7 @@ export function DataGridDoomDemo({
                             ),
                           )}
                         </KbdGroup>
-                      </React.Fragment>
+                      </span>
                     ))}
                   </span>
                 </span>
