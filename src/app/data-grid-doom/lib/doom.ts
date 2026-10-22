@@ -1,6 +1,7 @@
+import type { DoomWorkerRequest, DoomWorkerResponse } from "./doom.worker";
+
 // Chocolate Doom built from cloudflare/doom-wasm (see /public/doom), with sound and music.
-// The page reads DOOM's own 8-bit frame straight from memory
-const DOOM_BASE = "/doom/";
+// It runs in a Web Worker (doom.worker.ts): the page gets frames and plays its audio
 export const SCREEN_WIDTH = 320;
 export const SCREEN_HEIGHT = 200;
 
@@ -46,319 +47,193 @@ export interface DoomEngine {
   setMuted: (muted: boolean) => void;
 }
 
-// SDL reads input as DOM key events, so each DOOM key code maps back to its event fields
-const KEY_EVENT_FIELDS: Record<
-  number,
-  [key: string, code: string, which: number]
-> = {
-  173: ["ArrowUp", "ArrowUp", 38],
-  175: ["ArrowDown", "ArrowDown", 40],
-  172: ["ArrowLeft", "ArrowLeft", 37],
-  174: ["ArrowRight", "ArrowRight", 39],
-  [KEY_RSHIFT]: ["Shift", "ShiftLeft", 16],
-  157: ["Control", "ControlLeft", 17],
-  184: ["Alt", "AltLeft", 18],
-  27: ["Escape", "Escape", 27],
-  13: ["Enter", "Enter", 13],
-  9: ["Tab", "Tab", 9],
-  127: ["Backspace", "Backspace", 8],
-  32: [" ", "Space", 32],
-  44: [",", "Comma", 188],
-  46: [".", "Period", 190],
-  45: ["-", "Minus", 189],
-  61: ["=", "Equal", 187],
-  47: ["/", "Slash", 191],
-  59: [";", "Semicolon", 186],
-  39: ["'", "Quote", 222],
-  91: ["[", "BracketLeft", 219],
-  93: ["]", "BracketRight", 221],
-  96: ["`", "Backquote", 192],
-};
-
-function getKeyEventFields(doomCode: number) {
-  const named = KEY_EVENT_FIELDS[doomCode];
-  if (named) return named;
-  // Letters arrive as lowercase ASCII, digits as their ASCII codes
-  if (doomCode >= 97 && doomCode <= 122) {
-    const letter = String.fromCodePoint(doomCode);
-    return [letter, `Key${letter.toUpperCase()}`, doomCode - 32] as const;
+// Plays the samples the worker engine streams to it, on the audio thread. Reports
+// what it has played so the worker stays a few buffers ahead
+const AUDIO_WORKLET = `
+class DoomAudio extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.queue = [];
+    this.offset = 0;
+    this.played = 0;
+    this.calls = 0;
+    this.link = null;
+    this.port.onmessage = (event) => {
+      this.link = event.data;
+      this.link.onmessage = (message) => this.queue.push(message.data);
+    };
   }
-  if (doomCode >= 48 && doomCode <= 57) {
-    const digit = String.fromCodePoint(doomCode);
-    return [digit, `Digit${digit}`, doomCode] as const;
+  process(_inputs, outputs) {
+    const out = outputs[0];
+    const length = out[0].length;
+    let i = 0;
+    while (i < length && this.queue.length > 0) {
+      const chunk = this.queue[0];
+      const size = chunk[0].length;
+      const take = Math.min(length - i, size - this.offset);
+      for (let c = 0; c < out.length; c++) {
+        out[c].set((chunk[c] ?? chunk[0]).subarray(this.offset, this.offset + take), i);
+      }
+      i += take;
+      this.offset += take;
+      if (this.offset >= size) {
+        this.queue.shift();
+        this.offset = 0;
+      }
+    }
+    this.played += length;
+    if (this.link && ++this.calls % 4 === 0) {
+      this.link.postMessage(this.played);
+    }
+    return true;
   }
-  if (doomCode >= KEY_F1 && doomCode < KEY_F1 + 12) {
-    const index = doomCode - KEY_F1 + 1;
-    return [`F${index}`, `F${index}`, 111 + index] as const;
-  }
-  return null;
 }
+registerProcessor("doom-audio", DoomAudio);
+`;
 
-interface DoomModule {
-  canvas: HTMLCanvasElement;
-  HEAPU8?: Uint8Array;
-  _doom_attach_page?: () => void;
-  _doom_frame_count?: () => number;
-  _doom_palette?: () => number;
-  _doom_screen?: () => number;
-  SDL2?: {
-    audioContext?: AudioContext;
-    audio?: { scriptProcessorNode?: AudioNode };
-  };
-  noInitialRun: boolean;
-  preRun: (() => void)[];
-  onRuntimeInitialized: () => void;
-  onAbort?: (reason: unknown) => void;
-  locateFile: (path: string) => string;
-  print: (text: string) => void;
-  printErr: (text: string) => void;
-  callMain?: (args: string[]) => void;
-  ENV?: Record<string, string>;
-  FS?: {
-    createPreloadedFile: (
-      parent: string,
-      name: string,
-      url: string,
-      canRead: boolean,
-      canWrite: boolean,
-    ) => void;
-  };
-}
+const MIN_PRESS_MS = (2 * 1000) / 35;
 
 let enginePromise: Promise<DoomEngine> | null = null;
-// Removes the current instance's page-side pieces so a fresh one can mount
+// Removes the current instance's worker and audio so a fresh one can start
 let engineCleanup: (() => void) | null = null;
 
-function noop() {}
-
-// One engine at a time: the emscripten module holds global state
-export function loadDoom(): Promise<DoomEngine> {
-  enginePromise ??= new Promise<DoomEngine>((resolve, reject) => {
-    const container = document.createElement("div");
-    container.style.cssText = `position:fixed;left:-10000px;top:0;width:${SCREEN_WIDTH}px;height:${SCREEN_HEIGHT}px;overflow:hidden;pointer-events:none`;
-    container.setAttribute("aria-hidden", "true");
-    const canvas = document.createElement("canvas");
-    // The SDL keyboard hint below is resolved as a CSS selector
-    canvas.id = "canvas";
-    canvas.width = SCREEN_WIDTH;
-    canvas.height = SCREEN_HEIGHT;
-    container.append(canvas);
-    document.body.append(container);
-
-    // The engine runs its own loop, so a wasm trap only shows up as a global error.
-    // step() rethrows it, and the page restarts on a fresh engine
-    let engineDead = false;
-    const onEngineError = (event: ErrorEvent) => {
-      const detail =
-        event.error instanceof Error && event.error.stack
-          ? event.error.stack
-          : event.message;
-      if (detail.includes("websockets-doom")) engineDead = true;
+function startEngine(): Promise<DoomEngine> {
+  return new Promise<DoomEngine>((resolve, reject) => {
+    const worker = new Worker(new URL("./doom.worker.ts", import.meta.url), {
+      type: "module",
+    });
+    const audioContext = new AudioContext();
+    const gainNode = audioContext.createGain();
+    gainNode.connect(audioContext.destination);
+    // Browsers start audio suspended until a user gesture
+    const resumeAudio = () => {
+      void audioContext.resume();
     };
-    window.addEventListener("error", onEngineError);
+    window.addEventListener("pointerdown", resumeAudio, true);
+    window.addEventListener("keydown", resumeAudio, true);
 
     let settled = false;
-    // SDL mirrors the engine's window title into document.title
-    const pageTitle = document.title;
-
-    // SDL's key handlers are captured and called directly: a dispatched event would hit
-    // the page's window-level key forwarder first, recursing and never reaching the canvas
-    const sdlKeyHandlers: Record<string, (event: KeyboardEvent) => void> = {};
-    const originalAddEventListener = canvas.addEventListener.bind(
-      canvas,
-    ) as typeof canvas.addEventListener;
-    canvas.addEventListener = ((
-      type: string,
-      listener: EventListenerOrEventListenerObject,
-      options?: boolean | AddEventListenerOptions,
-    ) => {
-      if (
-        (type === "keydown" || type === "keyup") &&
-        typeof listener === "function"
-      ) {
-        sdlKeyHandlers[type] = listener as (event: KeyboardEvent) => void;
-        return;
-      }
-      originalAddEventListener(type as never, listener, options);
-    }) as typeof canvas.addEventListener;
-
-    // DOOM's 8-bit frame through its current palette, converted once per new frame
-    const rgba = new Uint8ClampedArray(SCREEN_WIDTH * SCREEN_HEIGHT * 4);
-    const rgba32 = new Uint32Array(rgba.buffer);
-    const palette32 = new Uint32Array(256);
-    let sampledFrame = -1;
-    const readPixels = () => {
-      const heap = module.HEAPU8;
-      const screen = module._doom_screen?.();
-      const palette = module._doom_palette?.();
-      if (!heap || !screen || !palette) return null;
-      for (let c = 0; c < 256; c++) {
-        const p = palette + c * 4;
-        palette32[c] =
-          0xff000000 |
-          ((heap[p + 2] ?? 0) << 16) |
-          ((heap[p + 1] ?? 0) << 8) |
-          (heap[p] ?? 0);
-      }
-      for (let i = 0; i < rgba32.length; i++) {
-        rgba32[i] = palette32[heap[screen + i] ?? 0] ?? 0;
-      }
-      return rgba;
+    let engineDead = false;
+    let frame = 0;
+    let pixels: Uint8ClampedArray | null = null;
+    const fail = (message: string) => {
+      engineDead = true;
+      if (settled) return;
+      settled = true;
+      reject(new Error(message));
     };
 
-    const dispatchKey = (pressed: boolean, doomCode: number) => {
-      const handler = sdlKeyHandlers[pressed ? "keydown" : "keyup"];
-      const fields = getKeyEventFields(doomCode);
-      if (!handler || !fields) return;
-      const [key, code, which] = fields;
-      const event = new KeyboardEvent(pressed ? "keydown" : "keyup", {
-        key,
-        code,
-        cancelable: true,
-      });
-      // The constructor ignores keyCode, but SDL's older key path still reads it
-      for (const property of ["keyCode", "which"] as const) {
-        Object.defineProperty(event, property, { value: which });
-      }
-      handler(event);
-    };
+    worker.addEventListener(
+      "message",
+      (event: MessageEvent<DoomWorkerResponse>) => {
+        const message = event.data;
+        if (message.type === "frame") {
+          // The previous frame's buffer goes back for reuse
+          if (pixels) {
+            const request: DoomWorkerRequest = {
+              type: "recycle",
+              buffer: pixels.buffer as ArrayBuffer,
+            };
+            worker.postMessage(request, [pixels.buffer]);
+          }
+          pixels = new Uint8ClampedArray(message.buffer);
+          frame = message.frame;
+        } else if (message.type === "ready") {
+          if (settled) return;
+          settled = true;
+          resolve(engine);
+        } else {
+          fail(message.message);
+        }
+      },
+    );
+    worker.addEventListener("error", (event) => {
+      fail(event.message || "The DOOM worker failed");
+    });
 
-    // SDL connects its audio straight to the speakers; routing it through a gain
-    // node mutes it without pausing the music or queueing sound effects
-    let isMuted = false;
-    let gainNode: GainNode | null = null;
-    const applyVolume = () => {
-      if (!gainNode) {
-        const audioContext = module.SDL2?.audioContext;
-        const source = module.SDL2?.audio?.scriptProcessorNode;
-        if (!audioContext || !source) return;
-        gainNode = audioContext.createGain();
-        gainNode.connect(audioContext.destination);
-        source.disconnect();
-        source.connect(gainNode);
-      }
-      gainNode.gain.value = isMuted ? 0 : 1;
+    let pressedAt = 0;
+    let releaseTimer = 0;
+    const postEvent = (event: [number, number, number, number]) => {
+      const request: DoomWorkerRequest = { type: "event", event };
+      worker.postMessage(request, []);
     };
 
     const engine: DoomEngine = {
-      pixels: () => {
-        const frame = module._doom_frame_count?.() ?? 0;
-        if (frame === 0) return null;
-        if (sampledFrame !== frame) {
-          if (!readPixels()) return null;
-          sampledFrame = frame;
-        }
-        return rgba;
-      },
-      frame: () => module._doom_frame_count?.() ?? 0,
-      // The engine runs its own loop, scheduled ahead of the page's in every frame,
-      // so a new frame is ready by the time the page samples. Reports a crash
+      pixels: () => pixels,
+      frame: () => frame,
       step: () => {
         if (engineDead) throw new Error("The DOOM engine crashed");
-        // SDL opens its audio after startup, so keep trying until it exists
-        if (!gainNode) applyVolume();
       },
-      key: dispatchKey,
+      // DOOM event types: 0 key down, 1 key up, 2 mouse. Printable keys also carry
+      // the typed character, which menus like the save-name prompt read
+      key: (pressed, keyCode) => {
+        const typed = keyCode >= 32 && keyCode < 127 ? keyCode : 0;
+        postEvent([pressed ? 0 : 1, keyCode, keyCode, typed]);
+      },
+      // DOOM reads the buttons once per tic, so a quick click whose press and release
+      // land in the same tic never fires: hold the press for at least two tics
       mouse: (buttons) => {
-        canvas.dispatchEvent(
-          new MouseEvent(buttons & 1 ? "mousedown" : "mouseup", {
-            button: 0,
-            buttons: buttons & 1,
-            cancelable: true,
-          }),
+        const pressed = buttons & 1;
+        if (pressed) {
+          window.clearTimeout(releaseTimer);
+          pressedAt = performance.now();
+          postEvent([2, 1, 0, 0]);
+          return;
+        }
+        const wait = pressedAt + MIN_PRESS_MS - performance.now();
+        releaseTimer = window.setTimeout(
+          () => {
+            postEvent([2, 0, 0, 0]);
+          },
+          Math.max(0, wait),
         );
       },
       setMuted: (muted) => {
-        isMuted = muted;
-        applyVolume();
+        gainNode.gain.value = muted ? 0 : 1;
       },
     };
-
-    const fail = (reason: unknown) => {
-      if (settled) return;
-      settled = true;
-      reject(reason instanceof Error ? reason : new Error(String(reason)));
-    };
-
-    const module: DoomModule = {
-      canvas,
-      noInitialRun: true,
-      locateFile: (path) => DOOM_BASE + path,
-      print: noop,
-      printErr: noop,
-      onAbort: fail,
-      preRun: [
-        () => {
-          // Keep SDL's keyboard on the hidden canvas, not window, which would eat every keystroke
-          if (module.ENV)
-            module.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas";
-          module.FS?.createPreloadedFile(
-            "",
-            "doom1.wad",
-            `${DOOM_BASE}doom1.wad`,
-            true,
-            true,
-          );
-          module.FS?.createPreloadedFile(
-            "",
-            "default.cfg",
-            `${DOOM_BASE}default.cfg`,
-            true,
-            true,
-          );
-          module.FS?.createPreloadedFile(
-            "",
-            "extra.cfg",
-            `${DOOM_BASE}extra.cfg`,
-            true,
-            true,
-          );
-        },
-      ],
-      onRuntimeInitialized: () => {
-        try {
-          module.callMain?.([
-            "-iwad",
-            "doom1.wad",
-            "-window",
-            "-nogui",
-            "-config",
-            "default.cfg",
-            // Video and input settings live in Chocolate Doom's extra config
-            "-extraconfig",
-            "extra.cfg",
-          ]);
-          // The page reads frames from memory, so SDL can skip presenting them
-          module._doom_attach_page?.();
-        } catch (error) {
-          fail(error);
-          return;
-        }
-        if (settled) return;
-        settled = true;
-        document.title = pageTitle;
-        resolve(engine);
-      },
-    };
-    (window as Window & { Module?: DoomModule }).Module = module;
 
     engineCleanup = () => {
-      window.removeEventListener("error", onEngineError);
-      container.remove();
+      worker.terminate();
+      void audioContext.close();
+      window.removeEventListener("pointerdown", resumeAudio, true);
+      window.removeEventListener("keydown", resumeAudio, true);
     };
 
-    const script = document.createElement("script");
-    script.src = `${DOOM_BASE}websockets-doom.js`;
-    script.addEventListener("error", () => {
-      fail(new Error(`Couldn't load ${script.src}`));
+    const setUp = async () => {
+      const url = URL.createObjectURL(
+        new Blob([AUDIO_WORKLET], { type: "text/javascript" }),
+      );
+      await audioContext.audioWorklet.addModule(url);
+      URL.revokeObjectURL(url);
+      const node = new AudioWorkletNode(audioContext, "doom-audio", {
+        numberOfInputs: 0,
+        outputChannelCount: [2],
+      });
+      node.connect(gainNode);
+      // The worklet and the worker talk directly, without the main thread
+      const channel = new MessageChannel();
+      node.port.postMessage(channel.port1, [channel.port1]);
+      const request: DoomWorkerRequest = {
+        type: "start",
+        sampleRate: audioContext.sampleRate,
+        audioPort: channel.port2,
+      };
+      worker.postMessage(request, [channel.port2]);
+    };
+    void setUp().catch((error: unknown) => {
+      fail(String(error));
     });
-    document.head.append(script);
   });
+}
+
+// One engine at a time, started on first use
+export function loadDoom(): Promise<DoomEngine> {
+  enginePromise ??= startEngine();
   return enginePromise;
 }
 
-// A trapped engine can't run again, but a new one gets fresh memory. The old canvas
-// goes too, or SDL's keyboard selector would still match it
+// A trapped engine can't run again: a fresh worker starts from scratch
 export function resetDoom() {
   engineCleanup?.();
   engineCleanup = null;

@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index ae1320b..288bd69 100644
+index ae1320b..16d69fc 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -115,9 +115,9 @@ AS_IF([test "x$with_libpng" != xno], [
@@ -7,7 +7,7 @@ index ae1320b..288bd69 100644
  # TODO: We currently link everything against libraries that don't need it.
  # Use the specific library CFLAGS/LIBS variables instead of setting them here.
 -EMFLAGS="-gsource-map -s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=[['FS','ccall']] -s SAFE_HEAP=1 -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s ASYNCIFY -O3 --source-map-base /"
-+EMFLAGS="-s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=FS,ccall,callMain,ENV,HEAPU8 -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -g0"
++EMFLAGS="-s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=FS,ccall,callMain,ENV,HEAPU8 -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -g0"
  
 -CFLAGS="$CFLAGS $SDL_CFLAGS ${SAMPLERATE_CFLAGS:-} ${PNG_CFLAGS:-} $EMFLAGS"
 +CFLAGS="$CFLAGS $SDL_CFLAGS ${SAMPLERATE_CFLAGS:-} ${PNG_CFLAGS:-} $EMFLAGS -std=gnu11"
@@ -219,6 +219,36 @@ index 9947a07..cd668b5 100644
  
  typedef uint8_t byte;
  typedef uint8_t pixel_t;
+diff --git a/src/i_input.c b/src/i_input.c
+index e91564c..5800ede 100644
+--- a/src/i_input.c
++++ b/src/i_input.c
+@@ -27,6 +27,25 @@
+ #include "m_argv.h"
+ #include "m_config.h"
+ 
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++
++// A page without SDL input (such as a worker with no canvas) posts DOOM events
++// directly: key codes as in doomkeys.h, mouse buttons as a bitmask
++EMSCRIPTEN_KEEPALIVE void doom_post_event(int type, int data1, int data2, int data3)
++{
++    event_t event;
++
++    event.type = type;
++    event.data1 = data1;
++    event.data2 = data2;
++    event.data3 = data3;
++    event.data4 = 0;
++    event.data5 = 0;
++    D_PostEvent(&event);
++}
++#endif
++
+ static const int scancode_translate_table[] = SCANCODE_TO_KEYS_ARRAY;
+ 
+ // Lookup table for mapping ASCII characters to their equivalent when
 diff --git a/src/i_system.c b/src/i_system.c
 index 5546e04..350e2bf 100644
 --- a/src/i_system.c
@@ -249,7 +279,7 @@ index ab9af25..b462c26 100644
  
  void I_WaitVBL(int count)
 diff --git a/src/i_video.c b/src/i_video.c
-index 919d63c..4050e57 100644
+index 919d63c..0878f74 100644
 --- a/src/i_video.c
 +++ b/src/i_video.c
 @@ -49,6 +49,10 @@
@@ -263,13 +293,13 @@ index 919d63c..4050e57 100644
  // These are (1) the window (or the full screen) that our game is rendered to
  // and (2) the renderer that scales the texture (see below) into this window.
  
-@@ -160,6 +164,35 @@ static boolean nograbmouse_override = false;
+@@ -160,6 +164,30 @@ static boolean nograbmouse_override = false;
  
  pixel_t *I_VideoBuffer = NULL;
  
 +#ifdef __EMSCRIPTEN__
-+// A page can drive the engine and read frames straight from memory: DOOM's
-+// own 8-bit frame and its palette, with no SDL conversion or canvas round trip
++// With -pageframes a page reads frames straight from memory: DOOM's own 8-bit
++// frame and its palette, with no SDL conversion or canvas round trip
 +static int frame_count;
 +static boolean page_attached;
 +
@@ -289,17 +319,12 @@ index 919d63c..4050e57 100644
 +    return frame_count;
 +}
 +
-+// The page reads frames itself, so presenting through SDL can be skipped
-+EMSCRIPTEN_KEEPALIVE void doom_attach_page(void)
-+{
-+    page_attached = true;
-+}
 +#endif
 +
  // If true, game is running as a screensaver
  
  boolean screensaver_mode = false;
-@@ -704,6 +737,12 @@ void I_FinishUpdate (void)
+@@ -704,6 +732,12 @@ void I_FinishUpdate (void)
      if (noblit)
          return;
  
@@ -312,7 +337,7 @@ index 919d63c..4050e57 100644
      if (need_resize)
      {
          if (SDL_GetTicks() > last_resize_time + RESIZE_DELAY)
-@@ -1166,7 +1205,12 @@ static void SetVideoMode(void)
+@@ -1166,7 +1200,12 @@ static void SetVideoMode(void)
  
      // Set the highdpi flag - this makes a big difference on Macs with
      // retina displays, especially when using small window sizes.
@@ -325,6 +350,32 @@ index 919d63c..4050e57 100644
  
      if (fullscreen)
      {
+@@ -1379,6 +1418,25 @@ void I_InitGraphics(void)
+         putenv(winenv);
+     }
+ 
++#ifdef __EMSCRIPTEN__
++    // With -pageframes the page reads frames from memory, possibly from a worker
++    // with no canvas: skip SDL video and keep only the 8-bit buffer DOOM draws into
++    if (M_ParmExists("-pageframes"))
++    {
++        page_attached = true;
++        screenbuffer = SDL_CreateRGBSurface(0, SCREENWIDTH, SCREENHEIGHT, 8,
++                                            0, 0, 0, 0);
++        doompal = W_CacheLumpName(DEH_String("PLAYPAL"), PU_CACHE);
++        I_SetPalette(doompal);
++        I_VideoBuffer = screenbuffer->pixels;
++        V_RestoreBuffer();
++        memset(I_VideoBuffer, 0, SCREENWIDTH * SCREENHEIGHT * sizeof(*I_VideoBuffer));
++        initialized = true;
++        I_AtExit(I_ShutdownGraphics, true);
++        return;
++    }
++#endif
++
+     SetSDLVideoDriver();
+ 
+     if (SDL_Init(SDL_INIT_VIDEO) < 0) 
 diff --git a/src/net_websockets.c b/src/net_websockets.c
 index 71a0028..3624ab7 100644
 --- a/src/net_websockets.c
