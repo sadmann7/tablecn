@@ -9,6 +9,7 @@ import {
   ArrowRight,
   ArrowUp,
   ChevronDown,
+  Grid3x3,
   Maximize,
   Pause,
   Play,
@@ -57,6 +58,16 @@ import {
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
 const CELL_SIZE = 36;
+// Grid view sizes in on-screen pixels: the stage is scaled down, so they're divided by
+// its zoom to stay readable at any resolution
+const GRID_HEADER_PX = 22;
+const GRID_ROW_NUMBER_PX = 34;
+const GRID_LABEL_PX = 11;
+const GRID_LINE_PX = 1;
+const GRID_RING_PX = 2;
+// The grid view needs one cell per pixel, so it's limited to these modes and sizes
+const GRID_MAX_COLUMNS = 160;
+const LABEL_STEPS = [1, 2, 5, 10, 20, 50];
 // Paints DOOM at a steady 30fps rather than up to 35, so frames arrive evenly with time
 // to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
@@ -70,6 +81,88 @@ const FULLSCREEN_KEYS = IS_MAC ? "⌥ + Enter" : "Alt + Enter";
 const PLAY_KEYS = "P";
 const MUTE_KEYS = "M";
 const PAGE_SHORTCUT_CODES = new Set(["KeyP", "KeyM"]);
+
+interface StageLayoutOptions {
+  width: number;
+  height: number;
+  viewport: { width: number; height: number };
+  chromeHeight: number;
+  isFullscreen: boolean;
+  isGridShown: boolean;
+}
+
+// Labels every 1st, 2nd, 5th or 10th cell, whichever spaces them at least `minPx` apart
+function getLabelStep(cellPx: number, minPx: number) {
+  return LABEL_STEPS.find((step) => step * cellPx >= minPx) ?? 50;
+}
+
+function getStageLayout({
+  width,
+  height,
+  viewport,
+  chromeHeight,
+  isFullscreen,
+  isGridShown,
+}: StageLayoutOptions) {
+  const pixelsWidth = width * CELL_SIZE + 2;
+  const pixelsHeight = height * CELL_SIZE + 2;
+  const rowNumberPx = isGridShown ? GRID_ROW_NUMBER_PX : 0;
+  const headerPx = isGridShown ? GRID_HEADER_PX : 0;
+  const availableWidth = isFullscreen ? viewport.width : viewport.width - 32;
+  // The nav, the page's padding, and the toolbar and credit rows with their gaps
+  const availableHeight = isFullscreen
+    ? viewport.height
+    : viewport.height - 57 - 32 - 24 - chromeHeight;
+  const fit = Math.min(
+    isFullscreen ? Number.POSITIVE_INFINITY : 1,
+    (availableWidth - rowNumberPx) / pixelsWidth,
+    (availableHeight - headerPx) / pixelsHeight,
+  );
+  // Whole device pixels per cell: fractional ones leave seams that read as grid lines
+  const pixelRatio = window.devicePixelRatio || 1;
+  const zoom =
+    Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
+    CELL_SIZE;
+  const rowNumberWidth = rowNumberPx / zoom;
+  const headerHeight = headerPx / zoom;
+  const cellPx = CELL_SIZE * zoom;
+
+  return {
+    zoom,
+    gridWidth: pixelsWidth + rowNumberWidth,
+    gridHeight: pixelsHeight + headerHeight,
+    rowNumberWidth,
+    headerHeight,
+    columnLabelStep: getLabelStep(cellPx, 26),
+    rowLabelStep: getLabelStep(cellPx, 14),
+  };
+}
+
+// Labels every `step` cells, plus the first once they're spaced out enough to fit it
+function getIsLabeled(index: number, step: number) {
+  return (index + 1) % step === 0 || (index === 0 && step >= 5);
+}
+
+// Above neighboring cells, since a label can be wider than its cell
+function GridLabel({
+  align = "center",
+  children,
+}: {
+  align?: "center" | "end";
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "pointer-events-none absolute inset-0 z-10 flex items-center whitespace-nowrap text-muted-foreground tabular-nums",
+        align === "end" ? "justify-end" : "justify-center",
+      )}
+      style={{ fontSize: "var(--doom-label-size)" }}
+    >
+      {children}
+    </span>
+  );
+}
 
 function getIsPageShortcut(event: KeyboardEvent) {
   return (
@@ -123,6 +216,7 @@ export function DataGridDoomDemo({
   source,
   damage,
   auto,
+  grid,
 }: DoomParams) {
   const height = Math.round((width * SCREEN_HEIGHT) / SCREEN_WIDTH);
   const [frame, setFrame] = React.useState<PixelRow[]>(() =>
@@ -154,14 +248,41 @@ export function DataGridDoomDemo({
   const toolbarRef = React.useRef<HTMLDivElement>(null);
   const footerRef = React.useRef<HTMLDivElement>(null);
   const [chromeHeight, setChromeHeight] = React.useState(48);
+  const [isGridShown, setIsGridShown] = React.useState(grid);
+  const canShowGrid = mode !== "gradient" && width <= GRID_MAX_COLUMNS;
+  const showsGrid = isGridShown && canShowGrid;
 
-  const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
-    () =>
-      Array.from({ length: width }, (_, x) => ({
+  const {
+    zoom,
+    gridWidth,
+    gridHeight,
+    rowNumberWidth,
+    headerHeight,
+    columnLabelStep,
+    rowLabelStep,
+  } = getStageLayout({
+    width,
+    height,
+    viewport,
+    chromeHeight,
+    isFullscreen,
+    isGridShown: showsGrid,
+  });
+
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(() => {
+    const pixelColumns: ColumnDef<DataGridFeatures, PixelRow>[] = Array.from(
+      { length: width },
+      (_, x) => ({
         id: `c${x}`,
         accessorKey: `c${x}`,
-        // A function header makes this a utility column, which renders `cell` as is
-        header: () => null,
+        // A function header renders as is, here a column number in the grid view
+        header: () =>
+          showsGrid && getIsLabeled(x, columnLabelStep) ? (
+            // The last column's label ends at the stage's edge instead of past it
+            <GridLabel align={x === width - 1 ? "end" : "center"}>
+              {x + 1}
+            </GridLabel>
+          ) : null,
         size: CELL_SIZE,
         minSize: CELL_SIZE,
         maxSize: CELL_SIZE,
@@ -176,9 +297,25 @@ export function DataGridDoomDemo({
                 />
               )
             : () => null,
-      })),
-    [width, mode],
-  );
+      }),
+    );
+    if (!showsGrid) return pixelColumns;
+    return [
+      {
+        id: "row",
+        header: () => null,
+        size: rowNumberWidth,
+        minSize: rowNumberWidth,
+        maxSize: rowNumberWidth,
+        enableCellSelection: false,
+        cell: ({ row }) =>
+          getIsLabeled(row.index, rowLabelStep) ? (
+            <GridLabel>{row.index + 1}</GridLabel>
+          ) : null,
+      },
+      ...pixelColumns,
+    ];
+  }, [width, mode, showsGrid, rowNumberWidth, columnLabelStep, rowLabelStep]);
 
   const { table, ...dataGridProps } = useDataGrid({
     data: frame,
@@ -294,10 +431,11 @@ export function DataGridDoomDemo({
     };
   }, [source, isReady, isPlaying, onFullscreen]);
 
-  // Triggers on left click, caught before the data grid so the click doesn't select cells
+  // Triggers on left click, caught before the data grid so the click doesn't select cells.
+  // In the grid view clicks select cells instead, and F or Ctrl fire
   const onPointerTrigger = React.useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
-      if (!isPlaying || event.button !== 0) return;
+      if (!isPlaying || showsGrid || event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
       const buttons = event.type === "pointerdown" ? 1 : 0;
@@ -305,7 +443,7 @@ export function DataGridDoomDemo({
         engine.mouse(buttons);
       });
     },
-    [isPlaying],
+    [isPlaying, showsGrid],
   );
 
   // Play mode takes the keyboard before the grid's own navigation sees it
@@ -705,22 +843,6 @@ export function DataGridDoomDemo({
     };
   }, [shouldShowGrid, width, height, mode, source, damage, auto]);
 
-  const gridWidth = width * CELL_SIZE + 2;
-  const gridHeight = height * CELL_SIZE + 2;
-  const fit = isFullscreen
-    ? Math.min(viewport.width / gridWidth, viewport.height / gridHeight)
-    : Math.min(
-        1,
-        (viewport.width - 32) / gridWidth,
-        // The nav, the page's padding, and the toolbar and credit rows with their gaps
-        (viewport.height - 57 - 32 - 24 - chromeHeight) / gridHeight,
-      );
-  // Whole device pixels per cell: fractional ones leave seams that read as grid lines
-  const pixelRatio = window.devicePixelRatio || 1;
-  const zoom =
-    Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
-    CELL_SIZE;
-
   const stageWidth = Math.round(gridWidth * zoom);
 
   return (
@@ -730,38 +852,62 @@ export function DataGridDoomDemo({
         className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2"
         style={{ width: stageWidth }}
       >
-        <DropdownMenu
-          // The portal sets pointer-events on body, restyling every pixel cell
-          modal={false}
-        >
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="sm"
-              variant="outline"
-              aria-label="Resolution"
-              disabled={!shouldShowGrid || !isReady}
-            >
-              {getResolutionLabel(width)}
-              <ChevronDown className="text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-auto">
-            <DropdownMenuLabel>Resolution</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup
-              value={String(width)}
-              onValueChange={(value) => {
-                window.location.search = `?res=${value}${modeParam ? `&mode=${modeParam}` : ""}`;
-              }}
-            >
-              {RESOLUTIONS.map((res) => (
-                <DropdownMenuRadioItem key={res} value={String(res)}>
-                  {getResolutionLabel(res)}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <span className="flex items-center gap-1.5">
+          <DropdownMenu
+            // The portal sets pointer-events on body, restyling every pixel cell
+            modal={false}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="sm"
+                variant="outline"
+                aria-label="Resolution"
+                disabled={!shouldShowGrid || !isReady}
+              >
+                {getResolutionLabel(width)}
+                <ChevronDown className="text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-auto">
+              <DropdownMenuLabel>Resolution</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup
+                value={String(width)}
+                onValueChange={(value) => {
+                  const search = new URLSearchParams({ res: value });
+                  if (modeParam) search.set("mode", modeParam);
+                  if (isGridShown) search.set("grid", "1");
+                  window.location.search = search.toString();
+                }}
+              >
+                {RESOLUTIONS.map((res) => (
+                  <DropdownMenuRadioItem key={res} value={String(res)}>
+                    {getResolutionLabel(res)}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            size="icon-sm"
+            variant="outline"
+            aria-label={showsGrid ? "Hide grid" : "Show grid"}
+            aria-pressed={showsGrid}
+            title={
+              canShowGrid
+                ? `${showsGrid ? "Hide grid" : "Show grid"} (click selects cells, F fires)`
+                : `The grid shows at ${getResolutionLabel(GRID_MAX_COLUMNS)} or lower`
+            }
+            disabled={!canShowGrid || !shouldShowGrid}
+            className={cn(showsGrid && "bg-accent text-accent-foreground")}
+            onClick={(event) => {
+              event.currentTarget.blur();
+              setIsGridShown((shown) => !shown);
+            }}
+          >
+            <Grid3x3 />
+          </Button>
+        </span>
         {source === "doom" && (
           <span className="flex items-center gap-1.5">
             <Button
@@ -820,18 +966,29 @@ export function DataGridDoomDemo({
           style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
         >
           <div
-            // Hides grid lines, plus cells in gradient mode since painting them slows Safari
+            // Hides grid lines, plus cells in gradient mode since painting them slows Safari.
+            // The grid view brings them back, with selection and focus drawn over the game in
+            // spreadsheet blue, which shows on dark and light pixels alike
             className={cn(
-              "bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0",
+              "bg-black **:[[role=grid]]:border-0",
+              showsGrid
+                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:bg-blue-500/40 **:data-[slot=data-grid-header]:border-b-(length:--doom-line) **:data-[slot=data-grid-header-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-header-row]:h-(--doom-header-height) **:data-[slot=data-grid-row]:border-b-(length:--doom-line)"
+                : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}
-            style={{
-              width: gridWidth,
-              height: gridHeight,
-              // Scaled with a transform, because changing zoom would lay out every cell again
-              transform: `scale(${zoom})`,
-              transformOrigin: "0 0",
-            }}
+            style={
+              {
+                width: gridWidth,
+                height: gridHeight,
+                // Scaled with a transform, because changing zoom would lay out every cell again
+                transform: `scale(${zoom})`,
+                transformOrigin: "0 0",
+                "--doom-line": `${GRID_LINE_PX / zoom}px`,
+                "--doom-ring": `${GRID_RING_PX / zoom}px`,
+                "--doom-label-size": `${GRID_LABEL_PX / zoom}px`,
+                "--doom-header-height": `${headerHeight}px`,
+              } as React.CSSProperties
+            }
           >
             {shouldShowGrid && (
               <DataGrid {...dataGridProps} table={table} height={gridHeight} />

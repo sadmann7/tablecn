@@ -14,7 +14,7 @@ function getDamage(value: string | null) {
   return Number.isFinite(damage) && damage > 0 ? Math.min(damage, 1) : 1;
 }
 
-// res=40|64|80|106|128|160|192|320 (columns, 16:10), mode=data|dom|gradient, source=doom|plasma, damage (plasma only), auto=1 to expose measurements
+// res=40|64|80|106|128|160|192|320 (columns, 16:10), mode=data|dom|gradient, source=doom|plasma, damage (plasma only), auto=1 to expose measurements, grid=1 to start with the grid shown
 export function getDoomParams(params: Pick<URLSearchParams, "get">) {
   const res = Number(params.get("res") ?? NATIVE_RESOLUTION);
   const columns = (RESOLUTIONS as readonly number[]).includes(res)
@@ -36,6 +36,7 @@ export function getDoomParams(params: Pick<URLSearchParams, "get">) {
     source: params.get("source") === "plasma" ? "plasma" : "doom",
     damage: getDamage(params.get("damage")),
     auto: params.get("auto") === "1",
+    grid: params.get("grid") === "1",
   } as const;
 }
 
