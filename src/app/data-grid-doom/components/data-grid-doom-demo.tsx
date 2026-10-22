@@ -4,7 +4,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { cn } from "cn";
 import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
   ChevronDown,
+  type LucideIcon,
   Maximize,
   Pause,
   Play,
@@ -38,6 +43,7 @@ import {
   getHexColor,
   getKeyboard,
   getPlasmaColor,
+  isTypingCheat,
   KEY_RSHIFT,
   loadDoom,
   resetDoom,
@@ -62,16 +68,50 @@ const IS_MAC =
   typeof navigator !== "undefined" &&
   /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 const FULLSCREEN_KEYS = IS_MAC ? "⌥ + Enter" : "Alt + Enter";
+// Like a video player's. During play they only apply while DOOM isn't reading
+// letters itself (its menu, the automap, or a cheat being typed)
+const PLAY_KEYS = "P";
+const MUTE_KEYS = "M";
+const PAGE_SHORTCUT_CODES = new Set(["KeyP", "KeyM"]);
 
-const CONTROLS = [
-  { label: "Move", keys: ["W A S D", "Arrows"] },
-  { label: "Fire", keys: ["Click", IS_MAC ? "⌃" : "Ctrl"] },
+function isPageShortcut(event: KeyboardEvent) {
+  return (
+    PAGE_SHORTCUT_CODES.has(event.code) &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey
+  );
+}
+
+// Text keys, or icons where the font's arrows would render unevenly
+type ControlKey = string | { label: string; icon: LucideIcon };
+
+const CONTROLS: { label: string; keys: ControlKey[] }[] = [
+  {
+    label: "Move",
+    keys: [
+      "W A S D",
+      { label: "Up arrow", icon: ArrowUp },
+      { label: "Down arrow", icon: ArrowDown },
+    ],
+  },
+  {
+    label: "Turn",
+    keys: [
+      { label: "Left arrow", icon: ArrowLeft },
+      { label: "Right arrow", icon: ArrowRight },
+    ],
+  },
+  { label: "Fire", keys: ["Click", "F", IS_MAC ? "⌃" : "Ctrl"] },
   { label: "Use", keys: ["E", "Space"] },
   { label: "Run", keys: ["Shift"] },
   { label: "Weapons", keys: ["1–7"] },
   { label: "Menus", keys: ["Enter", "Esc"] },
   { label: "Fullscreen", keys: [FULLSCREEN_KEYS] },
-] as const;
+  { label: "Stop", keys: [PLAY_KEYS] },
+  { label: "Mute", keys: [MUTE_KEYS] },
+];
 
 interface PixelRow {
   id: string;
@@ -107,6 +147,7 @@ export function DataGridDoomDemo({
   const [shouldShowGrid, setShouldShowGrid] = React.useState(false);
   const [stats, setStats] = React.useState({ paints: 0, engine: 0 });
   const fullscreenRef = React.useRef<HTMLDivElement>(null);
+  const overlayRef = React.useRef<HTMLButtonElement>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [viewport, setViewport] = React.useState(() => ({
     width: window.innerWidth,
@@ -193,6 +234,20 @@ export function DataGridDoomDemo({
     };
   }, []);
 
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(MUTED_STORAGE_KEY, isMuted ? "1" : "0");
+    } catch {
+      // Storage can be off (private mode); muting still works until reload
+    }
+  }, [isMuted]);
+
+  // Focused whenever it shows, so Enter or Space starts the game
+  React.useEffect(() => {
+    if (!isPlaying && isReady)
+      overlayRef.current?.focus({ preventScroll: true });
+  }, [isPlaying, isReady]);
+
   // Reapplied once the engine is ready, including a fresh one after a crash
   React.useEffect(() => {
     if (!isReady || source !== "doom") return;
@@ -222,17 +277,27 @@ export function DataGridDoomDemo({
   React.useEffect(() => {
     if (source !== "doom") return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (!event.altKey || event.key !== "Enter") return;
+      if (event.altKey && event.key === "Enter") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.repeat || !isReady) return;
+        if (document.fullscreenElement) void document.exitFullscreen();
+        else void onFullscreen();
+        return;
+      }
+      // During play the game's own key handler decides; stopped, the keys are free
+      if (isPlaying || !isPageShortcut(event)) return;
       event.preventDefault();
       event.stopPropagation();
-      if (document.fullscreenElement) void document.exitFullscreen();
-      else void onFullscreen();
+      if (event.repeat) return;
+      if (event.code === "KeyM") setIsMuted((muted) => !muted);
+      else if (isReady) setIsPlaying(true);
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => {
       window.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [source, onFullscreen]);
+  }, [source, isReady, isPlaying, onFullscreen]);
 
   // Left click triggers; caught before the grid so it doesn't select cells
   const onPointerTrigger = React.useCallback(
@@ -260,6 +325,18 @@ export function DataGridDoomDemo({
       if (!engine || event.metaKey) return;
       if (event.altKey && event.key === "Enter") return;
       const pressed = event.type === "keydown";
+      if (
+        isPageShortcut(event) &&
+        !engine.isMenuOrMapOpen() &&
+        !isTypingCheat(typed + event.key.toLowerCase())
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!pressed || event.repeat) return;
+        if (event.code === "KeyM") setIsMuted((muted) => !muted);
+        else setIsPlaying(false);
+        return;
+      }
       // Holding Esc is the way out of fullscreen; its auto-repeat would toggle DOOM's menu
       if (pressed && event.repeat && event.key === "Escape") {
         event.preventDefault();
@@ -698,7 +775,8 @@ export function DataGridDoomDemo({
               size="icon-sm"
               variant="outline"
               aria-label={isPlaying ? "Stop" : "Play"}
-              title={isPlaying ? "Stop" : "Play"}
+              aria-keyshortcuts="P"
+              title={`${isPlaying ? "Stop" : "Play"} (${PLAY_KEYS})`}
               disabled={!isReady}
               onClick={(event) => {
                 setIsPlaying((playing) => !playing);
@@ -711,16 +789,11 @@ export function DataGridDoomDemo({
               size="icon-sm"
               variant="outline"
               aria-label={isMuted ? "Unmute" : "Mute"}
-              title={isMuted ? "Unmute" : "Mute"}
+              aria-keyshortcuts="M"
+              title={`${isMuted ? "Unmute" : "Mute"} (${MUTE_KEYS})`}
               onClick={(event) => {
                 event.currentTarget.blur();
-                const muted = !isMuted;
-                setIsMuted(muted);
-                try {
-                  localStorage.setItem(MUTED_STORAGE_KEY, muted ? "1" : "0");
-                } catch {
-                  // Storage can be off (private mode); muting still works until reload
-                }
+                setIsMuted((muted) => !muted);
               }}
             >
               {isMuted ? <VolumeX /> : <Volume2 />}
@@ -729,6 +802,7 @@ export function DataGridDoomDemo({
               size="icon-sm"
               variant="outline"
               aria-label="Fullscreen"
+              aria-keyshortcuts="Alt+Enter"
               title={`Fullscreen (${FULLSCREEN_KEYS})`}
               disabled={!isReady}
               onClick={(event) => {
@@ -775,6 +849,7 @@ export function DataGridDoomDemo({
             <button
               type="button"
               className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-background/80 p-6 backdrop-blur-sm focus:outline-none disabled:cursor-default"
+              ref={overlayRef}
               disabled={!isReady}
               onClick={() => setIsPlaying(true)}
             >
@@ -805,9 +880,16 @@ export function DataGridDoomDemo({
                           {control.label}
                         </span>
                         <KbdGroup>
-                          {control.keys.map((key) => (
-                            <Kbd key={key}>{key}</Kbd>
-                          ))}
+                          {control.keys.map((key) =>
+                            typeof key === "string" ? (
+                              <Kbd key={key}>{key}</Kbd>
+                            ) : (
+                              <Kbd key={key.label}>
+                                <key.icon />
+                                <span className="sr-only">{key.label}</span>
+                              </Kbd>
+                            ),
+                          )}
                         </KbdGroup>
                       </React.Fragment>
                     ))}

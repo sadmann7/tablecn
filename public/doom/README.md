@@ -14,7 +14,7 @@ The complete source for this build is [doom-wasm-source.tar.gz](./doom-wasm-sour
 - `opl/opl.c`: OPL detection and delays don't wait on the audio callback, which shares the main thread in the browser. This enables music, which upstream ships disabled.
 - `src/i_video.c`: no HiDPI canvas in the browser. With `-pageframes` the engine skips SDL video entirely, so it can run in a Web Worker, and exports `doom_screen`, `doom_palette` and `doom_frame_count` so the page can read DOOM's 8-bit frame and palette from memory.
 - `src/i_input.c`: exports `doom_post_event`, so a page without SDL input can post DOOM key and mouse events directly.
-- `src/doom/g_game.c`: exports `doom_set_paused`, which pauses or resumes a level through DOOM's own pause event, only when that changes the state.
+- `src/doom/g_game.c`: exports `doom_set_paused`, which pauses or resumes a level through DOOM's own pause event, only when that changes the state, and `doom_menu_or_map_open`, so a page's letter shortcuts can leave DOOM's menu and automap alone.
 - `src/doom/d_main.c`: the screen wipe melts across main-loop iterations instead of sleeping, the main loop doesn't reenter, and an iteration returns early until the next tic is due, drawing nothing when no tic ran.
 - `src/d_loop.c`: `TryRunTics` returns instead of waiting for a tic, which would otherwise spin on the clock now that nothing sleeps.
 - `src/i_timer.c`, `src/net_websockets.c`, `src/doom/g_game.c`: no sleeping at all. The main loop is driven by `requestAnimationFrame`, so the build doesn't need ASYNCIFY, which instrumented every function and cost about a quarter of the engine's speed.

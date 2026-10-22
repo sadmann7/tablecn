@@ -27,6 +27,7 @@ interface WorkerModule {
   _doom_palette?: () => number;
   _doom_screen?: () => number;
   _doom_set_paused?: (on: number) => void;
+  _doom_menu_or_map_open?: () => number;
   _doom_post_event?: (
     type: number,
     data1: number,
@@ -44,7 +45,12 @@ export type DoomWorkerRequest =
 
 export type DoomWorkerResponse =
   | { type: "ready" }
-  | { type: "frame"; frame: number; buffer: ArrayBuffer }
+  | {
+      type: "frame";
+      frame: number;
+      buffer: ArrayBuffer;
+      menuOrMapOpen: boolean;
+    }
   | { type: "error"; message: string };
 
 const scope = self as DedicatedWorkerGlobalScope & {
@@ -159,7 +165,8 @@ function startFrames(module: WorkerModule) {
     for (let i = 0; i < rgba32.length; i++) {
       rgba32[i] = palette32[heap[screen + i] ?? 0] ?? 0;
     }
-    post({ type: "frame", frame, buffer }, [buffer]);
+    const menuOrMapOpen = Boolean(module._doom_menu_or_map_open?.());
+    post({ type: "frame", frame, buffer, menuOrMapOpen }, [buffer]);
   };
   setInterval(check, 4);
 }

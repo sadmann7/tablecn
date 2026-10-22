@@ -31,11 +31,34 @@ export const EXTRA_KEY_CODES: Record<string, number> = {
   KeyA: 44, // Strafe left, DOOM's ","
   KeyD: 46, // Strafe right, DOOM's "."
   KeyE: 32, // Use, like Space
+  KeyF: 157, // Fire, like Ctrl: easier to reach than Ctrl on a Mac keyboard
 };
 
 // Remapped letters would break DOOM's cheat matcher, so the page spots cheats and replays them
 export const CHEAT_PATTERN =
   /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/u;
+const CHEATS = [
+  "iddqd",
+  "idkfa",
+  "idfa",
+  "idspispopd",
+  "idclip",
+  "idchoppers",
+  "iddt",
+  "idmypos",
+  "idbehold",
+  "idclev",
+];
+
+// Whether the letters typed so far, ending in the latest one, start or spell a cheat
+export function isTypingCheat(typed: string) {
+  const start = typed.lastIndexOf("id");
+  if (start === -1) return false;
+  const tail = typed.slice(start);
+  return CHEATS.some(
+    (cheat) => cheat.startsWith(tail) || tail.startsWith(cheat),
+  );
+}
 
 export interface DoomEngine {
   pixels: () => Uint8ClampedArray | null;
@@ -47,6 +70,8 @@ export interface DoomEngine {
   setMuted: (muted: boolean) => void;
   /** Pauses or resumes a level; does nothing outside one. */
   setPaused: (paused: boolean) => void;
+  /** Whether DOOM's menu or automap is open, where DOOM reads letter keys itself. */
+  isMenuOrMapOpen: () => boolean;
 }
 
 // Plays the samples the worker engine streams to it, on the audio thread. Reports
@@ -117,6 +142,7 @@ function startEngine(): Promise<DoomEngine> {
     let settled = false;
     let engineDead = false;
     let frame = 0;
+    let menuOrMapOpen = false;
     let pixels: Uint8ClampedArray | null = null;
     const fail = (message: string) => {
       engineDead = true;
@@ -140,6 +166,7 @@ function startEngine(): Promise<DoomEngine> {
           }
           pixels = new Uint8ClampedArray(message.buffer);
           frame = message.frame;
+          menuOrMapOpen = message.menuOrMapOpen;
         } else if (message.type === "ready") {
           if (settled) return;
           settled = true;
@@ -193,6 +220,7 @@ function startEngine(): Promise<DoomEngine> {
       setMuted: (muted) => {
         gainNode.gain.value = muted ? 0 : 1;
       },
+      isMenuOrMapOpen: () => menuOrMapOpen,
       setPaused: (paused) => {
         const request: DoomWorkerRequest = { type: "pause", paused };
         worker.postMessage(request, []);
