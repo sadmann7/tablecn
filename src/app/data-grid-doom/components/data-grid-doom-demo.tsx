@@ -398,9 +398,8 @@ export function DataGridDoomDemo({
     let last = 0;
     let measureStart = 0;
     let statsAt = performance.now();
-    // Fewer bits per channel as cells shrink: banding stops being visible while
-    // longer same-color runs keep the gradient rows cheap. 4 bits tops: 3 bits
-    // bought ~2fps at native but banded visibly
+    // Uses fewer bits per channel at higher resolutions, where banding isn't visible and
+    // longer same-color runs keep gradient rows cheap. Stops at 4, since 3 banded visibly
     const colorMask = width >= 160 ? 0xf0 : 0xf8;
     // Half a level, so channels round to the nearest level instead of always down,
     // which would darken the picture and crush dark tints
