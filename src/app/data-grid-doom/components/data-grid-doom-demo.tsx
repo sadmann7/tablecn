@@ -378,9 +378,8 @@ export function DataGridDoomDemo({
     let engineFrames = 0;
     let pixels: HTMLElement[][] | null = null;
     let rowElements: HTMLElement[] | null = null;
-    // Gradient mode paints whole pictures, since one split across display frames
-    // shows as tearing. Only when frames run slow does it cap the rows per frame,
-    // carrying the rest over, so the picture refreshes progressively instead
+    // Paints whole pictures in gradient mode to avoid tearing, capping rows per frame
+    // and carrying the rest over only when frames run slow
     const pendingRows = new Uint8Array(height);
     let pendingCount = 0;
     let rowBudget = height;
