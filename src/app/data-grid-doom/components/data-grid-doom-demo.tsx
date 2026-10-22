@@ -9,7 +9,6 @@ import {
   ArrowRight,
   ArrowUp,
   ChevronDown,
-  type LucideIcon,
   Maximize,
   Pause,
   Play,
@@ -41,9 +40,9 @@ import {
   EXTRA_KEY_CODES,
   getDoomKeyCode,
   getHexColor,
+  getIsTypingCheat,
   getKeyboard,
   getPlasmaColor,
-  isTypingCheat,
   KEY_RSHIFT,
   loadDoom,
   resetDoom,
@@ -58,23 +57,21 @@ import {
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
 const CELL_SIZE = 36;
-// DOOM paints at a steady 30fps instead of up to 35, leaving the main thread room for
-// its audio. A few ms of slack so every 2nd frame at 60Hz (or 4th at 120Hz) qualifies
+// Paints DOOM at a steady 30fps rather than up to 35, so frames arrive evenly with time
+// to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
 const MUTED_STORAGE_KEY = "data-grid-doom-muted";
 
-// Only loaded in the browser, so the platform is known up front
 const IS_MAC =
   typeof navigator !== "undefined" &&
   /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 const FULLSCREEN_KEYS = IS_MAC ? "⌥ + Enter" : "Alt + Enter";
-// Like a video player's. During play they only apply while DOOM isn't reading
-// letters itself (its menu, the automap, or a cheat being typed)
+
 const PLAY_KEYS = "P";
 const MUTE_KEYS = "M";
 const PAGE_SHORTCUT_CODES = new Set(["KeyP", "KeyM"]);
 
-function isPageShortcut(event: KeyboardEvent) {
+function getIsPageShortcut(event: KeyboardEvent) {
   return (
     PAGE_SHORTCUT_CODES.has(event.code) &&
     !event.altKey &&
@@ -84,8 +81,9 @@ function isPageShortcut(event: KeyboardEvent) {
   );
 }
 
-// Text keys, or icons where the font's arrows would render unevenly
-type ControlKey = string | { label: string; icon: LucideIcon };
+type ControlKey =
+  | string
+  | { label: string; icon: React.ComponentType<React.ComponentProps<"svg">> };
 
 const CONTROLS: { label: string; keys: ControlKey[] }[] = [
   {
@@ -238,17 +236,15 @@ export function DataGridDoomDemo({
     try {
       localStorage.setItem(MUTED_STORAGE_KEY, isMuted ? "1" : "0");
     } catch {
-      // Storage can be off (private mode); muting still works until reload
+      // Skips saving without localStorage, so the choice only lasts until reload
     }
   }, [isMuted]);
 
-  // Focused whenever it shows, so Enter or Space starts the game
   React.useEffect(() => {
     if (!isPlaying && isReady)
       overlayRef.current?.focus({ preventScroll: true });
   }, [isPlaying, isReady]);
 
-  // Reapplied once the engine is ready, including a fresh one after a crash
   React.useEffect(() => {
     if (!isReady || source !== "doom") return;
     void loadDoom().then((engine) => {
@@ -256,7 +252,6 @@ export function DataGridDoomDemo({
     });
   }, [isReady, isMuted, source]);
 
-  // Stopping pauses the game, so it waits instead of playing on unattended
   React.useEffect(() => {
     if (!isReady || source !== "doom") return;
     void loadDoom().then((engine) => {
@@ -267,7 +262,7 @@ export function DataGridDoomDemo({
   const onFullscreen = React.useCallback(async () => {
     setIsPlaying(true);
     await fullscreenRef.current?.requestFullscreen();
-    // DOOM needs Esc for menus: where supported, holding Esc exits fullscreen instead
+    // Keeps Esc for DOOM's menus, so holding it exits fullscreen where supported
     await getKeyboard()
       ?.lock(["Escape"])
       // Rejects where locking isn't allowed, and Esc exits as usual
@@ -285,8 +280,8 @@ export function DataGridDoomDemo({
         else void onFullscreen();
         return;
       }
-      // During play the game's own key handler decides; stopped, the keys are free
-      if (isPlaying || !isPageShortcut(event)) return;
+      // Leaves play to the game's own key handler, since stopped the keys are free
+      if (isPlaying || !getIsPageShortcut(event)) return;
       event.preventDefault();
       event.stopPropagation();
       if (event.repeat) return;
@@ -299,9 +294,9 @@ export function DataGridDoomDemo({
     };
   }, [source, isReady, isPlaying, onFullscreen]);
 
-  // Left click triggers; caught before the grid so it doesn't select cells
+  // Triggers on left click, caught before the data grid so the click doesn't select cells
   const onPointerTrigger = React.useCallback(
-    (event: React.PointerEvent) => {
+    (event: React.PointerEvent<HTMLDivElement>) => {
       if (!isPlaying || event.button !== 0) return;
       event.preventDefault();
       event.stopPropagation();
@@ -326,9 +321,9 @@ export function DataGridDoomDemo({
       if (event.altKey && event.key === "Enter") return;
       const pressed = event.type === "keydown";
       if (
-        isPageShortcut(event) &&
+        getIsPageShortcut(event) &&
         !engine.isMenuOrMapOpen() &&
-        !isTypingCheat(typed + event.key.toLowerCase())
+        !getIsTypingCheat(typed + event.key.toLowerCase())
       ) {
         event.preventDefault();
         event.stopPropagation();
@@ -337,7 +332,7 @@ export function DataGridDoomDemo({
         else setIsPlaying(false);
         return;
       }
-      // Holding Esc is the way out of fullscreen; its auto-repeat would toggle DOOM's menu
+      // Ignores Esc's auto-repeat, since holding it exits fullscreen and repeats would toggle DOOM's menu
       if (pressed && event.repeat && event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
@@ -667,8 +662,8 @@ export function DataGridDoomDemo({
       // Let the grid mount and measure first
       setTimeout(() => {
         if (disposed) return;
-        // Probe the display's refresh period while the page is still idle;
-        // once painting starts, every frame is heavy and would poison it
+        // Probes the display's refresh period while the page is still idle, since
+        // once painting starts every frame is heavy and would skew it
         const probe: number[] = [];
         let probeLast = 0;
         const measureVsync = (now: number) => {
@@ -817,7 +812,7 @@ export function DataGridDoomDemo({
       </div>
       <div
         ref={fullscreenRef}
-        // Fixed classes: swapping them would restyle every cell below
+        // Swapping the classes would restyle every cell below
         className="flex items-center justify-center overflow-hidden rounded-lg ring-1 ring-border [&:fullscreen]:rounded-none [&:fullscreen]:bg-black [&:fullscreen]:ring-0"
         onPointerDownCapture={onPointerTrigger}
         onPointerUpCapture={onPointerTrigger}
@@ -827,8 +822,7 @@ export function DataGridDoomDemo({
           style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
         >
           <div
-            // No grid lines. Gradient mode paints on the rows, so its cells are hidden:
-            // transparent cells would still be painted, which Safari is slow at
+            // Hides grid lines, plus cells in gradient mode since painting them slows Safari
             className={cn(
               "bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",

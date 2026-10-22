@@ -51,7 +51,7 @@ const CHEATS = [
 ];
 
 // Whether the letters typed so far, ending in the latest one, start or spell a cheat
-export function isTypingCheat(typed: string) {
+export function getIsTypingCheat(typed: string) {
   const start = typed.lastIndexOf("id");
   if (start === -1) return false;
   const tail = typed.slice(start);

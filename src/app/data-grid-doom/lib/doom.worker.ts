@@ -2,7 +2,7 @@
 
 // Runs the engine off the main thread: DOOM's simulation, sound mixing and music
 // synthesis happen here, so the page's painting can't delay them. Frames go to the
-// page as RGBA buffers; audio streams straight to an AudioWorklet on the page
+// page as RGBA buffers, and audio streams straight to an AudioWorklet on the page
 
 const DOOM_BASE = "/doom/";
 const SCREEN_WIDTH = 320;
@@ -250,7 +250,7 @@ async function start(rate: number, audioPort: MessagePort) {
     },
   );
 
-  // The engine is an ES module exporting its factory; it's served as is, not bundled
+  // Imports the engine, an ES module exporting its factory, as served rather than bundled
   const engineUrl = new URL(
     `${DOOM_BASE}websockets-doom.js`,
     self.location.origin,
