@@ -66,7 +66,7 @@ const GRID_LABEL_PX = 11;
 const GRID_LINE_PX = 1;
 const GRID_RING_PX = 2;
 // The grid view needs one cell per pixel, so it's limited to these modes and sizes
-const GRID_MAX_COLUMNS = 160;
+const GRID_MAX_COLUMNS = 192;
 const LABEL_STEPS = [1, 2, 5, 10, 20, 50];
 // Paints DOOM at a steady 30fps rather than up to 35, so frames arrive evenly with time
 // to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
