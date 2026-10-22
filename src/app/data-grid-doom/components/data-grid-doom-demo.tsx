@@ -52,6 +52,9 @@ import {
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
 const CELL_SIZE = 36;
+// DOOM paints at a steady 30fps instead of up to 35, leaving the main thread room for
+// its audio. A few ms of slack so every 2nd frame at 60Hz (or 4th at 120Hz) qualifies
+const FRAME_INTERVAL_MS = 1000 / 30 - 4;
 const MUTED_STORAGE_KEY = "data-grid-doom-muted";
 
 // Only loaded in the browser, so the platform is known up front
@@ -283,6 +286,7 @@ export function DataGridDoomDemo({
     let disposed = false;
     let engine: DoomEngine | null = null;
     let lastEngineFrame = -1;
+    let lastFrameAt = 0;
     let tick = 0;
     let paints = 0;
     let engineFrames = 0;
@@ -520,11 +524,15 @@ export function DataGridDoomDemo({
           return;
         }
         const engineFrame = engine.frame();
-        if (engineFrame === lastEngineFrame) {
-          // Frames between DOOM's 35Hz ticks drain the carried-over rows
+        if (
+          engineFrame === lastEngineFrame ||
+          now - lastFrameAt < FRAME_INTERVAL_MS
+        ) {
+          // Frames between DOOM's tics, or ahead of the 30fps cadence, drain the carried-over rows
           if (mode !== "data") paint([]);
           return;
         }
+        lastFrameAt = now;
         engineFrames += engineFrame - Math.max(lastEngineFrame, 0);
         lastEngineFrame = engineFrame;
         // A torn picture looks worse than a skipped frame, so finish the last one first.
