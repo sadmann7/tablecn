@@ -12,6 +12,7 @@ import {
   Grid3x3,
   Maximize,
   Pause,
+  Play,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -177,7 +178,6 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
   { label: "Weapons", keys: ["1–7"] },
   { label: "Menus", keys: ["Enter", "Esc"] },
   { label: "Fullscreen", keys: [FULLSCREEN_KEYS] },
-  { label: "Pause", keys: [PLAY_KEYS] },
   { label: "Mute", keys: [MUTE_KEYS] },
 ];
 
@@ -860,23 +860,24 @@ export function DataGridDoomDemo({
         </span>
         {source === "doom" && (
           <span className="flex items-center gap-1.5">
-            {/* Only while playing: the overlay starts the game */}
-            {isPlaying && (
-              <ControlTooltip label="Pause" keys={PLAY_KEYS}>
-                <Button
-                  size="icon-sm"
-                  variant="outline"
-                  aria-label="Pause"
-                  aria-keyshortcuts="P"
-                  onClick={(event) => {
-                    setIsPlaying(false);
-                    event.currentTarget.blur();
-                  }}
-                >
-                  <Pause />
-                </Button>
-              </ControlTooltip>
-            )}
+            <ControlTooltip
+              label={isPlaying ? "Pause" : "Play"}
+              keys={PLAY_KEYS}
+            >
+              <Button
+                size="icon-sm"
+                variant="outline"
+                aria-label={isPlaying ? "Pause" : "Play"}
+                aria-keyshortcuts="P"
+                disabled={!isReady}
+                onClick={(event) => {
+                  setIsPlaying((playing) => !playing);
+                  event.currentTarget.blur();
+                }}
+              >
+                {isPlaying ? <Pause /> : <Play />}
+              </Button>
+            </ControlTooltip>
             <ControlTooltip
               label={isMuted ? "Unmute" : "Mute"}
               keys={MUTE_KEYS}
@@ -953,7 +954,8 @@ export function DataGridDoomDemo({
           {source === "doom" && !isPlaying && (
             <button
               type="button"
-              className="absolute inset-0 z-10 flex cursor-pointer items-center justify-center bg-background/80 p-6 backdrop-blur-sm focus:outline-none disabled:cursor-default"
+              // m-auto on the content centers it, and on a short stage scrolls it from the top
+              className="group absolute inset-0 z-10 flex cursor-pointer overflow-auto bg-background/80 p-6 backdrop-blur-sm *:m-auto focus:outline-none disabled:cursor-default"
               ref={overlayRef}
               disabled={!isReady}
               onClick={() => setIsPlaying(true)}
@@ -968,20 +970,23 @@ export function DataGridDoomDemo({
                   </span>
                 </span>
               ) : isReady ? (
-                <span className="flex flex-col items-center gap-5">
-                  <span className="flex flex-col items-center gap-1">
-                    <span className="text-2xl font-semibold tracking-tight">
+                <span className="flex w-72 flex-col rounded-xl border bg-background/70 text-sm shadow-lg transition-colors group-hover:border-foreground/20 group-focus-visible:border-foreground/20">
+                  <span className="flex flex-col items-center gap-1 px-4 pt-4 pb-3.5">
+                    <span className="text-xl font-semibold tracking-tight">
                       Click to play
                     </span>
-                    <span className="text-sm text-balance text-muted-foreground">
-                      {(width * height).toLocaleString("en-US")} data grid
-                      cells, one for every pixel
+                    <span className="text-xs text-balance text-muted-foreground tabular-nums">
+                      Rendered across {(width * height).toLocaleString("en-US")}{" "}
+                      data grid cells
                     </span>
                   </span>
-                  <span className="grid grid-cols-[auto_auto] items-center gap-x-6 gap-y-2 text-sm">
+                  <span className="flex flex-col border-t px-1.5 py-1.5">
                     {CONTROLS.map((control) => (
-                      <React.Fragment key={control.label}>
-                        <span className="text-start text-muted-foreground">
+                      <span
+                        key={control.label}
+                        className="flex items-center justify-between gap-3 px-2.5 py-1"
+                      >
+                        <span className="text-muted-foreground">
                           {control.label}
                         </span>
                         <KbdGroup>
@@ -996,7 +1001,7 @@ export function DataGridDoomDemo({
                             ),
                           )}
                         </KbdGroup>
-                      </React.Fragment>
+                      </span>
                     ))}
                   </span>
                 </span>
