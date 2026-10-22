@@ -59,15 +59,11 @@ import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
 
 const CELL_SIZE = 36;
 // Grid view sizes in on-screen pixels: the stage is scaled down, so they're divided by
-// its zoom to stay readable at any resolution
-const GRID_HEADER_PX = 22;
-const GRID_ROW_NUMBER_PX = 34;
-const GRID_LABEL_PX = 11;
+// its zoom to stay visible at any resolution
 const GRID_LINE_PX = 1;
 const GRID_RING_PX = 2;
 // The grid view needs one cell per pixel, so it's limited to these modes and sizes
 const GRID_MAX_COLUMNS = 192;
-const LABEL_STEPS = [1, 2, 5, 10, 20, 50];
 // Paints DOOM at a steady 30fps rather than up to 35, so frames arrive evenly with time
 // to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
@@ -88,12 +84,6 @@ interface StageLayoutOptions {
   viewport: { width: number; height: number };
   chromeHeight: number;
   isFullscreen: boolean;
-  isGridShown: boolean;
-}
-
-// Labels every 1st, 2nd, 5th or 10th cell, whichever spaces them at least `minPx` apart
-function getLabelStep(cellPx: number, minPx: number) {
-  return LABEL_STEPS.find((step) => step * cellPx >= minPx) ?? 50;
 }
 
 function getStageLayout({
@@ -102,12 +92,9 @@ function getStageLayout({
   viewport,
   chromeHeight,
   isFullscreen,
-  isGridShown,
 }: StageLayoutOptions) {
-  const pixelsWidth = width * CELL_SIZE + 2;
-  const pixelsHeight = height * CELL_SIZE + 2;
-  const rowNumberPx = isGridShown ? GRID_ROW_NUMBER_PX : 0;
-  const headerPx = isGridShown ? GRID_HEADER_PX : 0;
+  const gridWidth = width * CELL_SIZE + 2;
+  const gridHeight = height * CELL_SIZE + 2;
   const availableWidth = isFullscreen ? viewport.width : viewport.width - 32;
   // The nav, the page's padding, and the toolbar and credit rows with their gaps
   const availableHeight = isFullscreen
@@ -115,53 +102,16 @@ function getStageLayout({
     : viewport.height - 57 - 32 - 24 - chromeHeight;
   const fit = Math.min(
     isFullscreen ? Number.POSITIVE_INFINITY : 1,
-    (availableWidth - rowNumberPx) / pixelsWidth,
-    (availableHeight - headerPx) / pixelsHeight,
+    availableWidth / gridWidth,
+    availableHeight / gridHeight,
   );
   // Whole device pixels per cell: fractional ones leave seams that read as grid lines
   const pixelRatio = window.devicePixelRatio || 1;
   const zoom =
     Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
     CELL_SIZE;
-  const rowNumberWidth = rowNumberPx / zoom;
-  const headerHeight = headerPx / zoom;
-  const cellPx = CELL_SIZE * zoom;
 
-  return {
-    zoom,
-    gridWidth: pixelsWidth + rowNumberWidth,
-    gridHeight: pixelsHeight + headerHeight,
-    rowNumberWidth,
-    headerHeight,
-    columnLabelStep: getLabelStep(cellPx, 26),
-    rowLabelStep: getLabelStep(cellPx, 14),
-  };
-}
-
-// Labels every `step` cells, plus the first once they're spaced out enough to fit it
-function getIsLabeled(index: number, step: number) {
-  return (index + 1) % step === 0 || (index === 0 && step >= 5);
-}
-
-// Above neighboring cells, since a label can be wider than its cell
-function GridLabel({
-  align = "center",
-  children,
-}: {
-  align?: "center" | "end";
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        "pointer-events-none absolute inset-0 z-10 flex items-center whitespace-nowrap text-muted-foreground tabular-nums",
-        align === "end" ? "justify-end" : "justify-center",
-      )}
-      style={{ fontSize: "var(--doom-label-size)" }}
-    >
-      {children}
-    </span>
-  );
+  return { zoom, gridWidth, gridHeight };
 }
 
 function getIsPageShortcut(event: KeyboardEvent) {
@@ -252,37 +202,21 @@ export function DataGridDoomDemo({
   const canShowGrid = mode !== "gradient" && width <= GRID_MAX_COLUMNS;
   const showsGrid = isGridShown && canShowGrid;
 
-  const {
-    zoom,
-    gridWidth,
-    gridHeight,
-    rowNumberWidth,
-    headerHeight,
-    columnLabelStep,
-    rowLabelStep,
-  } = getStageLayout({
+  const { zoom, gridWidth, gridHeight } = getStageLayout({
     width,
     height,
     viewport,
     chromeHeight,
     isFullscreen,
-    isGridShown: showsGrid,
   });
 
-  const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(() => {
-    const pixelColumns: ColumnDef<DataGridFeatures, PixelRow>[] = Array.from(
-      { length: width },
-      (_, x) => ({
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
+    () =>
+      Array.from({ length: width }, (_, x) => ({
         id: `c${x}`,
         accessorKey: `c${x}`,
-        // A function header renders as is, here a column number in the grid view
-        header: () =>
-          showsGrid && getIsLabeled(x, columnLabelStep) ? (
-            // The last column's label ends at the stage's edge instead of past it
-            <GridLabel align={x === width - 1 ? "end" : "center"}>
-              {x + 1}
-            </GridLabel>
-          ) : null,
+        // A function header renders as is, keeping the collapsed header row empty
+        header: () => null,
         size: CELL_SIZE,
         minSize: CELL_SIZE,
         maxSize: CELL_SIZE,
@@ -297,25 +231,9 @@ export function DataGridDoomDemo({
                 />
               )
             : () => null,
-      }),
-    );
-    if (!showsGrid) return pixelColumns;
-    return [
-      {
-        id: "row",
-        header: () => null,
-        size: rowNumberWidth,
-        minSize: rowNumberWidth,
-        maxSize: rowNumberWidth,
-        enableCellSelection: false,
-        cell: ({ row }) =>
-          getIsLabeled(row.index, rowLabelStep) ? (
-            <GridLabel>{row.index + 1}</GridLabel>
-          ) : null,
-      },
-      ...pixelColumns,
-    ];
-  }, [width, mode, showsGrid, rowNumberWidth, columnLabelStep, rowLabelStep]);
+      })),
+    [width, mode],
+  );
 
   const { table, ...dataGridProps } = useDataGrid({
     data: frame,
@@ -970,10 +888,10 @@ export function DataGridDoomDemo({
             // The grid view brings them back, with selection and focus drawn over the game in
             // spreadsheet blue, which shows on dark and light pixels alike
             className={cn(
-              "bg-black **:[[role=grid]]:border-0",
+              "bg-black **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:[[role=grid]]:border-0",
               showsGrid
-                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:bg-blue-500/40 **:data-[slot=data-grid-header]:border-b-(length:--doom-line) **:data-[slot=data-grid-header-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-header-row]:h-(--doom-header-height) **:data-[slot=data-grid-row]:border-b-(length:--doom-line)"
-                : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0",
+                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:bg-blue-500/40 **:data-[slot=data-grid-row]:border-b-(length:--doom-line)"
+                : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}
             style={
@@ -985,8 +903,6 @@ export function DataGridDoomDemo({
                 transformOrigin: "0 0",
                 "--doom-line": `${GRID_LINE_PX / zoom}px`,
                 "--doom-ring": `${GRID_RING_PX / zoom}px`,
-                "--doom-label-size": `${GRID_LABEL_PX / zoom}px`,
-                "--doom-header-height": `${headerHeight}px`,
               } as React.CSSProperties
             }
           >
