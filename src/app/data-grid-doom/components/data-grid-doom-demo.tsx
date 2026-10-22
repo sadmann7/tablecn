@@ -739,11 +739,11 @@ export function DataGridDoomDemo({
           style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
         >
           <div
-            // No grid lines, and transparent cells so gradient mode's rows show through
+            // No grid lines. Gradient mode paints on the rows, so its cells are hidden:
+            // transparent cells would still be painted, which Safari is slow at
             className={cn(
               "bg-black **:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:data-[slot=data-grid-row]:border-0 **:[[role=grid]]:border-0",
-              mode === "gradient" &&
-                "**:data-[slot=data-grid-cell]:bg-transparent!",
+              mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}
             style={{
               width: gridWidth,
