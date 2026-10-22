@@ -45,6 +45,8 @@ export interface DoomEngine {
   /** Mouse button bits; 1 fires. */
   mouse: (buttons: number) => void;
   setMuted: (muted: boolean) => void;
+  /** Pauses or resumes a level; does nothing outside one. */
+  setPaused: (paused: boolean) => void;
 }
 
 // Plays the samples the worker engine streams to it, on the audio thread. Reports
@@ -190,6 +192,10 @@ function startEngine(): Promise<DoomEngine> {
       },
       setMuted: (muted) => {
         gainNode.gain.value = muted ? 0 : 1;
+      },
+      setPaused: (paused) => {
+        const request: DoomWorkerRequest = { type: "pause", paused };
+        worker.postMessage(request, []);
       },
     };
 

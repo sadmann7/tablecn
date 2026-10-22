@@ -152,10 +152,37 @@ index 9a462e2..629b3a8 100644
  
  //
 diff --git a/src/doom/g_game.c b/src/doom/g_game.c
-index f23586b..1e0fae9 100644
+index f23586b..9bd6fc1 100644
 --- a/src/doom/g_game.c
 +++ b/src/doom/g_game.c
-@@ -377,7 +377,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, int maketic)
+@@ -15,6 +15,7 @@
+ // DESCRIPTION:  none
+ //
+ 
++#include <emscripten.h>
+ #include <emscripten/websocket.h>
+ #include <math.h>
+ #include <stdlib.h>
+@@ -104,6 +105,18 @@ int timelimit;
+ 
+ boolean paused;
+ boolean sendpause; // send a pause event next tic
++
++#ifdef __EMSCRIPTEN__
++// Lets a page pause or resume a level, only asking for a pause event when that
++// changes the state, so it can't fall out of step with DOOM's own toggle
++EMSCRIPTEN_KEEPALIVE void doom_set_paused(int on)
++{
++    if (gamestate == GS_LEVEL && !demoplayback)
++    {
++        sendpause = (on != 0) != paused;
++    }
++}
++#endif
+ boolean sendsave;  // send a save event next tic
+ boolean usergame;  // ok to save / end game
+ 
+@@ -377,7 +390,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, int maketic)
          if (!fsce.isFullscreen) {
              printf("doom: 11, entering fullscreen");
              emscripten_request_fullscreen("#canvas", 1);

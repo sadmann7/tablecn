@@ -26,6 +26,7 @@ interface WorkerModule {
   _doom_frame_count?: () => number;
   _doom_palette?: () => number;
   _doom_screen?: () => number;
+  _doom_set_paused?: (on: number) => void;
   _doom_post_event?: (
     type: number,
     data1: number,
@@ -38,6 +39,7 @@ interface WorkerModule {
 export type DoomWorkerRequest =
   | { type: "start"; sampleRate: number; audioPort: MessagePort }
   | { type: "event"; event: [number, number, number, number] }
+  | { type: "pause"; paused: boolean }
   | { type: "recycle"; buffer: ArrayBuffer };
 
 export type DoomWorkerResponse =
@@ -235,6 +237,8 @@ async function start(rate: number, audioPort: MessagePort) {
       if (event.data.type === "event") {
         const [type, data1, data2, data3] = event.data.event;
         module._doom_post_event?.(type, data1, data2, data3);
+      } else if (event.data.type === "pause") {
+        module._doom_set_paused?.(event.data.paused ? 1 : 0);
       }
     },
   );

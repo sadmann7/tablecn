@@ -201,6 +201,14 @@ export function DataGridDoomDemo({
     });
   }, [isReady, isMuted, source]);
 
+  // Stopping pauses the game, so it waits instead of playing on unattended
+  React.useEffect(() => {
+    if (!isReady || source !== "doom") return;
+    void loadDoom().then((engine) => {
+      engine.setPaused(!isPlaying);
+    });
+  }, [isReady, isPlaying, source]);
+
   const onFullscreen = React.useCallback(async () => {
     setIsPlaying(true);
     await fullscreenRef.current?.requestFullscreen();
