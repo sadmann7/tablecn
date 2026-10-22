@@ -12,7 +12,6 @@ import {
   Grid3x3,
   Maximize,
   Pause,
-  Play,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -34,6 +33,11 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/registry/bases/radix/ui/tooltip";
 
 import {
   CHEAT_PATTERN,
@@ -114,6 +118,29 @@ function getStageLayout({
   return { zoom, gridWidth, gridHeight };
 }
 
+// The span is the trigger so the tooltip still shows while the button is disabled
+function ControlTooltip({
+  label,
+  keys,
+  children,
+}: {
+  label: string;
+  keys?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+        {keys ? <Kbd>{keys}</Kbd> : null}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function getIsPageShortcut(event: KeyboardEvent) {
   return (
     PAGE_SHORTCUT_CODES.has(event.code) &&
@@ -150,7 +177,7 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
   { label: "Weapons", keys: ["1–7"] },
   { label: "Menus", keys: ["Enter", "Esc"] },
   { label: "Fullscreen", keys: [FULLSCREEN_KEYS] },
-  { label: "Stop", keys: [PLAY_KEYS] },
+  { label: "Pause", keys: [PLAY_KEYS] },
   { label: "Mute", keys: [MUTE_KEYS] },
 ];
 
@@ -806,69 +833,82 @@ export function DataGridDoomDemo({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            size="icon-sm"
-            variant="outline"
-            aria-label={showsGrid ? "Hide grid" : "Show grid"}
-            aria-pressed={showsGrid}
-            title={
+          <ControlTooltip
+            label={
               canShowGrid
-                ? `${showsGrid ? "Hide grid" : "Show grid"} (click selects cells, F fires)`
-                : `The grid shows at ${getResolutionLabel(GRID_MAX_COLUMNS)} or lower`
+                ? showsGrid
+                  ? "Hide grid"
+                  : "Show grid"
+                : `Grid shows up to ${getResolutionLabel(GRID_MAX_COLUMNS)}`
             }
-            disabled={!canShowGrid || !shouldShowGrid}
-            className={cn(showsGrid && "bg-accent text-accent-foreground")}
-            onClick={(event) => {
-              event.currentTarget.blur();
-              setIsGridShown((shown) => !shown);
-            }}
           >
-            <Grid3x3 />
-          </Button>
+            <Button
+              size="icon-sm"
+              variant="outline"
+              aria-label={showsGrid ? "Hide grid" : "Show grid"}
+              aria-pressed={showsGrid}
+              disabled={!canShowGrid || !shouldShowGrid}
+              className={cn(showsGrid && "bg-accent text-accent-foreground")}
+              onClick={(event) => {
+                event.currentTarget.blur();
+                setIsGridShown((shown) => !shown);
+              }}
+            >
+              <Grid3x3 />
+            </Button>
+          </ControlTooltip>
         </span>
         {source === "doom" && (
           <span className="flex items-center gap-1.5">
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label={isPlaying ? "Stop" : "Play"}
-              aria-keyshortcuts="P"
-              title={`${isPlaying ? "Stop" : "Play"} (${PLAY_KEYS})`}
-              disabled={!isReady}
-              onClick={(event) => {
-                setIsPlaying((playing) => !playing);
-                event.currentTarget.blur();
-              }}
+            {/* Only while playing: the overlay starts the game */}
+            {isPlaying && (
+              <ControlTooltip label="Pause" keys={PLAY_KEYS}>
+                <Button
+                  size="icon-sm"
+                  variant="outline"
+                  aria-label="Pause"
+                  aria-keyshortcuts="P"
+                  onClick={(event) => {
+                    setIsPlaying(false);
+                    event.currentTarget.blur();
+                  }}
+                >
+                  <Pause />
+                </Button>
+              </ControlTooltip>
+            )}
+            <ControlTooltip
+              label={isMuted ? "Unmute" : "Mute"}
+              keys={MUTE_KEYS}
             >
-              {isPlaying ? <Pause /> : <Play />}
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label={isMuted ? "Unmute" : "Mute"}
-              aria-keyshortcuts="M"
-              title={`${isMuted ? "Unmute" : "Mute"} (${MUTE_KEYS})`}
-              onClick={(event) => {
-                event.currentTarget.blur();
-                setIsMuted((muted) => !muted);
-              }}
-            >
-              {isMuted ? <VolumeX /> : <Volume2 />}
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="outline"
-              aria-label="Fullscreen"
-              aria-keyshortcuts="Alt+Enter"
-              title={`Fullscreen (${FULLSCREEN_KEYS})`}
-              disabled={!isReady}
-              onClick={(event) => {
-                event.currentTarget.blur();
-                void onFullscreen();
-              }}
-            >
-              <Maximize />
-            </Button>
+              <Button
+                size="icon-sm"
+                variant="outline"
+                aria-label={isMuted ? "Unmute" : "Mute"}
+                aria-keyshortcuts="M"
+                onClick={(event) => {
+                  event.currentTarget.blur();
+                  setIsMuted((muted) => !muted);
+                }}
+              >
+                {isMuted ? <VolumeX /> : <Volume2 />}
+              </Button>
+            </ControlTooltip>
+            <ControlTooltip label="Fullscreen" keys={FULLSCREEN_KEYS}>
+              <Button
+                size="icon-sm"
+                variant="outline"
+                aria-label="Fullscreen"
+                aria-keyshortcuts="Alt+Enter"
+                disabled={!isReady}
+                onClick={(event) => {
+                  event.currentTarget.blur();
+                  void onFullscreen();
+                }}
+              >
+                <Maximize />
+              </Button>
+            </ControlTooltip>
           </span>
         )}
       </div>
