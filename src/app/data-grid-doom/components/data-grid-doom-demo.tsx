@@ -836,24 +836,16 @@ export function DataGridDoomDemo({
             >
               Chocolate Doom
             </a>{" "}
-            (GPL-2.0,{" "}
+            (
             <a
               href="https://github.com/sadmann7/tablecn/tree/main/public/doom"
               target="_blank"
               rel="noreferrer"
               className="underline underline-offset-2 hover:text-foreground"
             >
-              source
+              GPL source
             </a>
-            ), WebAssembly build via{" "}
-            <a
-              href="https://github.com/cloudflare/doom-wasm"
-              target="_blank"
-              rel="noreferrer"
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              cloudflare/doom-wasm
-            </a>
+            )
           </p>
         ) : (
           <span />
