@@ -1,5 +1,5 @@
 diff --git a/configure.ac b/configure.ac
-index ae1320b..3053b10 100644
+index ae1320b..288bd69 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -115,9 +115,9 @@ AS_IF([test "x$with_libpng" != xno], [
@@ -7,7 +7,7 @@ index ae1320b..3053b10 100644
  # TODO: We currently link everything against libraries that don't need it.
  # Use the specific library CFLAGS/LIBS variables instead of setting them here.
 -EMFLAGS="-gsource-map -s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=[['FS','ccall']] -s SAFE_HEAP=1 -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s ASYNCIFY -O3 --source-map-base /"
-+EMFLAGS="-s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=FS,ccall,callMain,ENV -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -g0"
++EMFLAGS="-s INVOKE_RUN=1 -s USE_SDL=2 -s USE_SDL_MIXER=2 -s LEGACY_GL_EMULATION=0 -s USE_SDL_NET=2 -s ASSERTIONS=0 -s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s FORCE_FILESYSTEM=1 -s EXPORTED_RUNTIME_METHODS=FS,ccall,callMain,ENV,HEAPU8 -s EXIT_RUNTIME=1 -s STACK_OVERFLOW_CHECK=1 -s PROXY_POSIX_SOCKETS=0 -s USE_PTHREADS=0 -s PROXY_TO_PTHREAD=0 -s TOTAL_MEMORY=64MB -s ERROR_ON_UNDEFINED_SYMBOLS=0 -O3 -g0"
  
 -CFLAGS="$CFLAGS $SDL_CFLAGS ${SAMPLERATE_CFLAGS:-} ${PNG_CFLAGS:-} $EMFLAGS"
 +CFLAGS="$CFLAGS $SDL_CFLAGS ${SAMPLERATE_CFLAGS:-} ${PNG_CFLAGS:-} $EMFLAGS -std=gnu11"
@@ -66,10 +66,10 @@ index e5f3a3c..4b8a938 100644
      }
  
 diff --git a/src/doom/d_main.c b/src/doom/d_main.c
-index 9a462e2..2710d1d 100644
+index 9a462e2..629b3a8 100644
 --- a/src/doom/d_main.c
 +++ b/src/doom/d_main.c
-@@ -373,22 +373,50 @@ void D_RunFrame()
+@@ -373,26 +373,67 @@ void D_RunFrame()
      int tics;
      static int wipestart;
      static boolean wipe;
@@ -125,7 +125,24 @@ index 9a462e2..2710d1d 100644
      // frame syncronous IO operations
      I_StartFrame();
  
-@@ -409,6 +437,8 @@ void D_RunFrame()
++#ifdef __EMSCRIPTEN__
++    {
++        // TryRunTics returns instead of waiting when no tic is due; with no new
++        // tic there's nothing new to draw, and before the first one nothing to draw
++        int previous_gametic = gametic;
++        TryRunTics();
++        if (gametic == previous_gametic) {
++            in_frame = false;
++            return;
++        }
++    }
++#else
+     TryRunTics(); // will run at least one tic
++#endif
+ 
+     S_UpdateSounds(players[consoleplayer].mo); // move positional sounds
+ 
+@@ -409,6 +450,8 @@ void D_RunFrame()
              I_FinishUpdate(); // page flip or blit buffer
          }
      }
@@ -232,10 +249,70 @@ index ab9af25..b462c26 100644
  
  void I_WaitVBL(int count)
 diff --git a/src/i_video.c b/src/i_video.c
-index 919d63c..5c03a80 100644
+index 919d63c..4050e57 100644
 --- a/src/i_video.c
 +++ b/src/i_video.c
-@@ -1166,7 +1166,12 @@ static void SetVideoMode(void)
+@@ -49,6 +49,10 @@
+ #include "w_wad.h"
+ #include "z_zone.h"
+ 
++#ifdef __EMSCRIPTEN__
++#include <emscripten.h>
++#endif
++
+ // These are (1) the window (or the full screen) that our game is rendered to
+ // and (2) the renderer that scales the texture (see below) into this window.
+ 
+@@ -160,6 +164,35 @@ static boolean nograbmouse_override = false;
+ 
+ pixel_t *I_VideoBuffer = NULL;
+ 
++#ifdef __EMSCRIPTEN__
++// A page can drive the engine and read frames straight from memory: DOOM's
++// own 8-bit frame and its palette, with no SDL conversion or canvas round trip
++static int frame_count;
++static boolean page_attached;
++
++EMSCRIPTEN_KEEPALIVE pixel_t *doom_screen(void)
++{
++    return I_VideoBuffer;
++}
++
++// SDL_Color entries: r, g, b, a
++EMSCRIPTEN_KEEPALIVE SDL_Color *doom_palette(void)
++{
++    return palette;
++}
++
++EMSCRIPTEN_KEEPALIVE int doom_frame_count(void)
++{
++    return frame_count;
++}
++
++// The page reads frames itself, so presenting through SDL can be skipped
++EMSCRIPTEN_KEEPALIVE void doom_attach_page(void)
++{
++    page_attached = true;
++}
++#endif
++
+ // If true, game is running as a screensaver
+ 
+ boolean screensaver_mode = false;
+@@ -704,6 +737,12 @@ void I_FinishUpdate (void)
+     if (noblit)
+         return;
+ 
++#ifdef __EMSCRIPTEN__
++    frame_count++;
++    if (page_attached)
++        return;
++#endif
++
+     if (need_resize)
+     {
+         if (SDL_GetTicks() > last_resize_time + RESIZE_DELAY)
+@@ -1166,7 +1205,12 @@ static void SetVideoMode(void)
  
      // Set the highdpi flag - this makes a big difference on Macs with
      // retina displays, especially when using small window sizes.

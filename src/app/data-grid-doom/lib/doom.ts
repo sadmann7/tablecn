@@ -1,5 +1,5 @@
 // Chocolate Doom built from cloudflare/doom-wasm (see /public/doom), with sound and music.
-// It renders into a hidden canvas that pixels() reads back once per engine frame
+// The page reads DOOM's own 8-bit frame straight from memory
 const DOOM_BASE = "/doom/";
 export const SCREEN_WIDTH = 320;
 export const SCREEN_HEIGHT = 200;
@@ -96,6 +96,11 @@ function getKeyEventFields(doomCode: number) {
 
 interface DoomModule {
   canvas: HTMLCanvasElement;
+  HEAPU8?: Uint8Array;
+  _doom_attach_page?: () => void;
+  _doom_frame_count?: () => number;
+  _doom_palette?: () => number;
+  _doom_screen?: () => number;
   SDL2?: {
     audioContext?: AudioContext;
     audio?: { scriptProcessorNode?: AudioNode };
@@ -152,47 +157,9 @@ export function loadDoom(): Promise<DoomEngine> {
     };
     window.addEventListener("error", onEngineError);
 
-    let frame = 0;
-    let context: CanvasRenderingContext2D | null = null;
-    let fallbackTicker = 0;
     let settled = false;
     // SDL mirrors the engine's window title into document.title
     const pageTitle = document.title;
-    const onFirstFrame = () => {
-      if (settled) return;
-      settled = true;
-      document.title = pageTitle;
-      resolve(engine);
-    };
-
-    // SDL presents each frame with putImageData, so wrapping it counts frames
-    const originalGetContext = canvas.getContext.bind(
-      canvas,
-    ) as typeof canvas.getContext;
-    canvas.getContext = ((type: string, options?: unknown) => {
-      const result = originalGetContext(
-        type as Parameters<typeof originalGetContext>[0],
-        options as never,
-      );
-      if (type === "2d" && result && !context) {
-        context = result as CanvasRenderingContext2D;
-        const originalPutImageData = context.putImageData.bind(context);
-        context.putImageData = ((
-          ...args: Parameters<CanvasRenderingContext2D["putImageData"]>
-        ) => {
-          frame++;
-          onFirstFrame();
-          return originalPutImageData(...args);
-        }) as CanvasRenderingContext2D["putImageData"];
-      } else if (result && !context && !fallbackTicker) {
-        // A WebGL renderer can't be wrapped: count frames at DOOM's 35Hz instead
-        fallbackTicker = window.setInterval(() => {
-          frame++;
-          onFirstFrame();
-        }, 1000 / 35);
-      }
-      return result;
-    }) as typeof canvas.getContext;
 
     // SDL's key handlers are captured and called directly: a dispatched event would hit
     // the page's window-level key forwarder first, recursing and never reaching the canvas
@@ -215,30 +182,28 @@ export function loadDoom(): Promise<DoomEngine> {
       originalAddEventListener(type as never, listener, options);
     }) as typeof canvas.addEventListener;
 
-    // One readback per engine frame
-    let readCanvas: HTMLCanvasElement | null = null;
-    let readContext: CanvasRenderingContext2D | null = null;
+    // DOOM's 8-bit frame through its current palette, converted once per new frame
+    const rgba = new Uint8ClampedArray(SCREEN_WIDTH * SCREEN_HEIGHT * 4);
+    const rgba32 = new Uint32Array(rgba.buffer);
+    const palette32 = new Uint32Array(256);
     let sampledFrame = -1;
-    let sampled: Uint8ClampedArray | null = null;
     const readPixels = () => {
-      if (
-        context &&
-        canvas.width === SCREEN_WIDTH &&
-        canvas.height === SCREEN_HEIGHT
-      ) {
-        return context.getImageData(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).data;
+      const heap = module.HEAPU8;
+      const screen = module._doom_screen?.();
+      const palette = module._doom_palette?.();
+      if (!heap || !screen || !palette) return null;
+      for (let c = 0; c < 256; c++) {
+        const p = palette + c * 4;
+        palette32[c] =
+          0xff000000 |
+          ((heap[p + 2] ?? 0) << 16) |
+          ((heap[p + 1] ?? 0) << 8) |
+          (heap[p] ?? 0);
       }
-      if (!readContext) {
-        readCanvas = document.createElement("canvas");
-        readCanvas.width = SCREEN_WIDTH;
-        readCanvas.height = SCREEN_HEIGHT;
-        readContext = readCanvas.getContext("2d", {
-          willReadFrequently: true,
-        });
-        if (!readContext) return null;
+      for (let i = 0; i < rgba32.length; i++) {
+        rgba32[i] = palette32[heap[screen + i] ?? 0] ?? 0;
       }
-      readContext.drawImage(canvas, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-      return readContext.getImageData(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT).data;
+      return rgba;
     };
 
     const dispatchKey = (pressed: boolean, doomCode: number) => {
@@ -277,15 +242,17 @@ export function loadDoom(): Promise<DoomEngine> {
 
     const engine: DoomEngine = {
       pixels: () => {
+        const frame = module._doom_frame_count?.() ?? 0;
         if (frame === 0) return null;
         if (sampledFrame !== frame) {
-          sampled = readPixels();
+          if (!readPixels()) return null;
           sampledFrame = frame;
         }
-        return sampled;
+        return rgba;
       },
-      frame: () => frame,
-      // Nothing to pump: the engine runs itself. Reports a crash for the page to restart
+      frame: () => module._doom_frame_count?.() ?? 0,
+      // The engine runs its own loop, scheduled ahead of the page's in every frame,
+      // so a new frame is ready by the time the page samples. Reports a crash
       step: () => {
         if (engineDead) throw new Error("The DOOM engine crashed");
         // SDL opens its audio after startup, so keep trying until it exists
@@ -310,7 +277,6 @@ export function loadDoom(): Promise<DoomEngine> {
     const fail = (reason: unknown) => {
       if (settled) return;
       settled = true;
-      if (fallbackTicker) window.clearInterval(fallbackTicker);
       reject(reason instanceof Error ? reason : new Error(String(reason)));
     };
 
@@ -362,16 +328,22 @@ export function loadDoom(): Promise<DoomEngine> {
             "-extraconfig",
             "extra.cfg",
           ]);
+          // The page reads frames from memory, so SDL can skip presenting them
+          module._doom_attach_page?.();
         } catch (error) {
           fail(error);
+          return;
         }
+        if (settled) return;
+        settled = true;
+        document.title = pageTitle;
+        resolve(engine);
       },
     };
     (window as Window & { Module?: DoomModule }).Module = module;
 
     engineCleanup = () => {
       window.removeEventListener("error", onEngineError);
-      if (fallbackTicker) window.clearInterval(fallbackTicker);
       container.remove();
     };
 
