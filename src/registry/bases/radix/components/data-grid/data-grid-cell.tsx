@@ -3,11 +3,16 @@
 import type { RowData } from "@tanstack/react-table";
 
 import { cn } from "cn";
+import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
-import { CELL_TINTS, getCellLayoutStyle } from "@/lib/data-grid-utils";
+import {
+  CELL_TINTS,
+  getCellFocusTarget,
+  getCellLayoutStyle,
+} from "@/lib/data-grid-utils";
 
 interface DataGridCellElementProps<TData extends RowData>
   extends DataGridCellProps<TData>, React.ComponentProps<"div"> {}
@@ -32,10 +37,26 @@ export function DataGridCell<TData extends RowData>({
   onKeyDown: onKeyDownProp,
   className,
   style,
+  ref,
   ...props
 }: DataGridCellElementProps<TData>) {
   const rowId = cell.row.id;
   const columnId = cell.column.id;
+  const cellRef = React.useRef<HTMLDivElement>(null);
+  const composedRef = useComposedRefs(ref, cellRef);
+
+  React.useLayoutEffect(() => {
+    if (!isFocused || isEditing) return;
+    const element = cellRef.current;
+    const grid = element?.closest('[role="grid"]');
+    const active = document.activeElement;
+    if (!element || !grid || !active || element.contains(active)) return;
+    const activeGrid = active
+      .closest('[data-slot="data-grid-cell"]')
+      ?.closest('[role="grid"]');
+    if (active !== grid && activeGrid !== grid) return;
+    getCellFocusTarget(element).focus({ preventScroll: true });
+  }, [isFocused, isEditing]);
   const isSelectionTinted = isSelected && !isEditing;
   const isTinted = isSelectionTinted || isSearchMatch || isActiveSearchMatch;
 
@@ -91,6 +112,7 @@ export function DataGridCell<TData extends RowData>({
       aria-selected={isSelected}
       aria-readonly={readOnly || undefined}
       {...props}
+      ref={composedRef}
       data-slot="data-grid-cell"
       data-row-id={rowId}
       data-column-id={columnId}
