@@ -517,6 +517,10 @@
         {
           "path": "src/lib/data-grid-features.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-row-models.ts",
+          "type": "registry:lib"
         }
       ]
     },
@@ -535,6 +539,10 @@
         },
         {
           "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-row-models.ts",
           "type": "registry:lib"
         },
         {
@@ -562,6 +570,10 @@
         },
         {
           "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-row-models.ts",
           "type": "registry:lib"
         },
         {
@@ -619,6 +631,10 @@
           "type": "registry:lib"
         },
         {
+          "path": "src/lib/data-grid-row-models.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "src/lib/data-grid-utils.ts",
           "type": "registry:lib"
         },
@@ -643,6 +659,10 @@
         },
         {
           "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-row-models.ts",
           "type": "registry:lib"
         },
         {
@@ -680,6 +700,10 @@
         },
         {
           "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-row-models.ts",
           "type": "registry:lib"
         },
         {
@@ -775,6 +799,10 @@
         },
         {
           "path": "src/lib/data-grid-features.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-row-models.ts",
           "type": "registry:lib"
         }
       ]
