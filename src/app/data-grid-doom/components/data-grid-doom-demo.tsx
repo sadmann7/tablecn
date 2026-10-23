@@ -976,8 +976,9 @@ export function DataGridDoomDemo({
                       Click to play
                     </span>
                     <span className="text-xs text-balance text-muted-foreground tabular-nums">
-                      Rendered across {(width * height).toLocaleString("en-US")}{" "}
-                      data grid cells
+                      {mode === "gradient"
+                        ? `Rendered across ${height.toLocaleString("en-US")} data grid rows, over ${(width * height).toLocaleString("en-US")} cells`
+                        : `Rendered across ${(width * height).toLocaleString("en-US")} data grid cells`}
                     </span>
                   </span>
                   <span className="flex flex-col border-t px-1.5 py-1.5">
