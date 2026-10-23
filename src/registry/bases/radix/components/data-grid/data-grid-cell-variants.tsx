@@ -445,7 +445,6 @@ export function NumberCell<TData extends RowData>(
     if (isEditing && !wasEditing && inputRef.current) {
       inputRef.current.focus();
 
-      // Typed through the browser, so the field's own undo can take it back
       const pendingChar = pendingCharRef.current;
       pendingCharRef.current = null;
       if (pendingChar) {
