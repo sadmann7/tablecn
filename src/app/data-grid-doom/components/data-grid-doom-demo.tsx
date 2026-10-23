@@ -69,7 +69,7 @@ const CELL_SIZE = 36;
 const GRID_LINE_PX = 1;
 const GRID_RING_PX = 2;
 // The grid view needs one cell per pixel, so it's limited to these modes and sizes
-const GRID_MAX_COLUMNS = 192;
+const GRID_MAX_COLUMN_COUNT = 192;
 // Paints DOOM at a steady 30fps rather than up to 35, so frames arrive evenly with time
 // to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
@@ -90,8 +90,8 @@ interface PixelRow {
 }
 
 interface StageLayoutOptions {
-  width: number;
-  height: number;
+  columnCount: number;
+  rowCount: number;
   viewport: {
     width: number;
     height: number;
@@ -101,14 +101,14 @@ interface StageLayoutOptions {
 }
 
 function getStageLayout({
-  width,
-  height,
+  columnCount,
+  rowCount,
   viewport,
   chromeHeight,
   isFullscreen,
 }: StageLayoutOptions) {
-  const gridWidth = width * CELL_SIZE + 2;
-  const gridHeight = height * CELL_SIZE + 2;
+  const gridWidth = columnCount * CELL_SIZE + 2;
+  const gridHeight = rowCount * CELL_SIZE + 2;
   const availableWidth = isFullscreen ? viewport.width : viewport.width - 32;
   // The nav, the page's padding, and the toolbar and credit rows with their gaps
   const availableHeight = isFullscreen
@@ -189,19 +189,18 @@ function ControlTooltip({ label, keys, children, ...props }: ControlProps) {
 interface DataGridDoomDemoProps extends DoomParams {}
 
 export function DataGridDoomDemo({
-  width,
+  columnCount,
   mode,
-  modeParam,
   source,
   damage,
   auto,
   grid,
 }: DataGridDoomDemoProps) {
-  const height = Math.round((width * SCREEN_HEIGHT) / SCREEN_WIDTH);
+  const rowCount = Math.round((columnCount * SCREEN_HEIGHT) / SCREEN_WIDTH);
   const [frame, setFrame] = React.useState<PixelRow[]>(() =>
-    Array.from({ length: height }, (_, y) => {
+    Array.from({ length: rowCount }, (_, y) => {
       const row: PixelRow = { id: `r${y}` };
-      for (let x = 0; x < width; x++) row[`c${x}`] = 0;
+      for (let x = 0; x < columnCount; x++) row[`c${x}`] = 0;
       return row;
     }),
   );
@@ -228,12 +227,13 @@ export function DataGridDoomDemo({
   const footerRef = React.useRef<HTMLDivElement>(null);
   const [chromeHeight, setChromeHeight] = React.useState(48);
   const [isGridShown, setIsGridShown] = React.useState(grid);
-  const canShowGrid = mode !== "gradient" && width <= GRID_MAX_COLUMNS;
+  const canShowGrid =
+    mode !== "gradient" && columnCount <= GRID_MAX_COLUMN_COUNT;
   const showsGrid = isGridShown && canShowGrid;
 
   const { zoom, gridWidth, gridHeight } = getStageLayout({
-    width,
-    height,
+    columnCount,
+    rowCount,
     viewport,
     chromeHeight,
     isFullscreen,
@@ -241,7 +241,7 @@ export function DataGridDoomDemo({
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
     () =>
-      Array.from({ length: width }, (_, x) => ({
+      Array.from({ length: columnCount }, (_, x) => ({
         id: `c${x}`,
         accessorKey: `c${x}`,
         // A function header renders as is, keeping the collapsed header row empty
@@ -261,7 +261,7 @@ export function DataGridDoomDemo({
               )
             : () => null,
       })),
-    [width, mode],
+    [columnCount, mode],
   );
 
   const { table, ...dataGridProps } = useDataGrid({
@@ -465,35 +465,35 @@ export function DataGridDoomDemo({
     let rowElements: HTMLElement[] | null = null;
     // Paints whole pictures in gradient mode to avoid tearing, capping rows per frame
     // and carrying the rest over only when frames run slow
-    const pendingRows = new Uint8Array(height);
+    const pendingRows = new Uint8Array(rowCount);
     let pendingCount = 0;
-    let rowBudget = height;
+    let rowBudget = rowCount;
     let paintCursor = 0;
     let deltaEma = 0;
     let vsyncMs = 1000 / 60;
     // Percentages, so the stops survive any scale
     const stops = Array.from(
-      { length: width + 1 },
-      (_, x) => `${((x * 100) / width).toFixed(2)}%`,
+      { length: columnCount + 1 },
+      (_, x) => `${((x * 100) / columnCount).toFixed(2)}%`,
     );
-    const current = new Int32Array(width * height).fill(-1);
+    const current = new Int32Array(columnCount * rowCount).fill(-1);
     // Changed cells only, so direct writes skip the rest
-    const dirty = new Uint8Array(width * height);
+    const dirty = new Uint8Array(columnCount * rowCount);
     const deltas: number[] = [];
     let last = 0;
     let measureStart = 0;
     let statsAt = performance.now();
     // Uses fewer bits per channel at higher resolutions, where banding isn't visible and
     // longer same-color runs keep gradient rows cheap. Stops at 4, since 3 banded visibly
-    const colorMask = width >= 160 ? 0xf0 : 0xf8;
+    const colorMask = columnCount >= 160 ? 0xf0 : 0xf8;
     // Half a level, so channels round to the nearest level instead of always down,
     // which would darken the picture and crush dark tints
     const colorHalfStep = ((colorMask ^ 0xff) + 1) / 2;
     const quantize = (sum: number, n: number) =>
       Math.min(255, sum / n + colorHalfStep) & colorMask;
-    const stepX = SCREEN_WIDTH / width;
-    const stepY = SCREEN_HEIGHT / height;
-    const changedRows = Math.max(1, Math.round(height * damage));
+    const stepX = SCREEN_WIDTH / columnCount;
+    const stepY = SCREEN_HEIGHT / rowCount;
+    const changedRows = Math.max(1, Math.round(rowCount * damage));
 
     const collectPixels = () => {
       const result: HTMLElement[][] = [];
@@ -519,15 +519,15 @@ export function DataGridDoomDemo({
     };
 
     // One scanline as a run-length encoded hard-stop gradient: DOOM's flat colors
-    // leave long runs, so most rows need far fewer than `width` stops
+    // leave long runs, so most rows need far fewer than `columnCount` stops
     const buildRowGradient = (y: number) => {
-      const offset = y * width;
+      const offset = y * columnCount;
       const parts: string[] = [];
       let runColor = current[offset] ?? -1;
       let runStart = 0;
-      for (let x = 1; x <= width; x++) {
+      for (let x = 1; x <= columnCount; x++) {
         dirty[offset + x - 1] = 0;
-        const color = x < width ? (current[offset + x] ?? -1) : -1;
+        const color = x < columnCount ? (current[offset + x] ?? -1) : -1;
         if (color === runColor) continue;
         parts.push(`${getHexColor(runColor)} ${stops[runStart]} ${stops[x]}`);
         runColor = color;
@@ -539,12 +539,12 @@ export function DataGridDoomDemo({
     const sample = (): number[] => {
       const changed: number[] = [];
       if (source === "plasma") {
-        const first = (tick * changedRows) % height;
+        const first = (tick * changedRows) % rowCount;
         for (let i = 0; i < changedRows; i++) {
-          const y = (first + i) % height;
-          for (let x = 0; x < width; x++) {
-            current[y * width + x] = getPlasmaColor(x, y, tick * 0.08);
-            dirty[y * width + x] = 1;
+          const y = (first + i) % rowCount;
+          for (let x = 0; x < columnCount; x++) {
+            current[y * columnCount + x] = getPlasmaColor(x, y, tick * 0.08);
+            dirty[y * columnCount + x] = 1;
           }
           changed.push(y);
         }
@@ -552,11 +552,11 @@ export function DataGridDoomDemo({
       }
       const screen = engine?.pixels();
       if (!screen) return changed;
-      for (let y = 0; y < height; y++) {
+      for (let y = 0; y < rowCount; y++) {
         const y0 = Math.floor(y * stepY);
         const y1 = Math.max(y0 + 1, Math.floor((y + 1) * stepY));
         let rowChanged = false;
-        for (let x = 0; x < width; x++) {
+        for (let x = 0; x < columnCount; x++) {
           const x0 = Math.floor(x * stepX);
           const x1 = Math.max(x0 + 1, Math.floor((x + 1) * stepX));
           let r = 0;
@@ -575,7 +575,7 @@ export function DataGridDoomDemo({
           // Quantized, so tiny shifts in an average don't count as a change
           const rgb =
             (quantize(r, n) << 16) | (quantize(g, n) << 8) | quantize(b, n);
-          const index = y * width + x;
+          const index = y * columnCount + x;
           if (current[index] !== rgb) {
             current[index] = rgb;
             dirty[index] = 1;
@@ -597,8 +597,8 @@ export function DataGridDoomDemo({
       pixels ??= collectPixels();
       const row = pixels[y];
       if (!row) return;
-      for (let x = 0; x < width; x++) {
-        const index = y * width + x;
+      for (let x = 0; x < columnCount; x++) {
+        const index = y * columnCount + x;
         if (!dirty[index]) continue;
         dirty[index] = 0;
         const pixel = row[x];
@@ -613,8 +613,8 @@ export function DataGridDoomDemo({
         paints++;
         const rows = changed.map((y) => {
           const row: PixelRow = { id: `r${y}` };
-          for (let x = 0; x < width; x++) {
-            row[`c${x}`] = current[y * width + x] ?? -1;
+          for (let x = 0; x < columnCount; x++) {
+            row[`c${x}`] = current[y * columnCount + x] ?? -1;
           }
           return row;
         });
@@ -636,14 +636,14 @@ export function DataGridDoomDemo({
       }
       let painted = 0;
       const cursor = paintCursor;
-      for (let i = 0; i < height && painted < rowBudget; i++) {
-        const y = (cursor + i) % height;
+      for (let i = 0; i < rowCount && painted < rowBudget; i++) {
+        const y = (cursor + i) % rowCount;
         if (!pendingRows[y]) continue;
         pendingRows[y] = 0;
         pendingCount--;
         paintRow(y);
         painted++;
-        paintCursor = (y + 1) % height;
+        paintCursor = (y + 1) % rowCount;
       }
       // Drain-only calls don't count, so this reads as complete frames a second
       if (changed.length > 0) paints++;
@@ -664,7 +664,7 @@ export function DataGridDoomDemo({
           if (deltaEma > Math.max(34, vsyncMs * 1.5)) {
             rowBudget = Math.max(16, (rowBudget * 7) >> 3);
           } else if (deltaEma < Math.max(30, vsyncMs * 1.25)) {
-            rowBudget = Math.min(height, rowBudget + 2);
+            rowBudget = Math.min(rowCount, rowBudget + 2);
           }
         }
       }
@@ -731,7 +731,7 @@ export function DataGridDoomDemo({
           __doomBench: {
             source,
             mode,
-            size: `${width}x${height}`,
+            size: `${columnCount}x${rowCount}`,
             fps: Math.round((deltas.length * 1000) / total),
             p95:
               Math.round((sorted[Math.floor(sorted.length * 0.95)] ?? 0) * 10) /
@@ -788,7 +788,7 @@ export function DataGridDoomDemo({
       disposed = true;
       cancelAnimationFrame(rafId);
     };
-  }, [shouldShowGrid, width, height, mode, source, damage, auto]);
+  }, [shouldShowGrid, columnCount, rowCount, mode, source, damage, auto]);
 
   const stageWidth = Math.round(gridWidth * zoom);
 
@@ -811,7 +811,7 @@ export function DataGridDoomDemo({
                 aria-label="Resolution"
                 disabled={!shouldShowGrid || !isReady}
               >
-                {getResolutionLabel(width)}
+                {getResolutionLabel(columnCount)}
                 <ChevronDown className="text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
@@ -819,11 +819,14 @@ export function DataGridDoomDemo({
               <DropdownMenuLabel>Resolution</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup
-                value={String(width)}
+                value={String(columnCount)}
                 onValueChange={(value) => {
-                  const search = new URLSearchParams({ res: value });
-                  if (modeParam) search.set("mode", modeParam);
+                  // Keeps the other params, so an explicit mode stays and a missing one
+                  // takes the new resolution's default
+                  const search = new URLSearchParams(window.location.search);
+                  search.set("res", value);
                   if (isGridShown) search.set("grid", "1");
+                  else search.delete("grid");
                   window.location.search = search.toString();
                 }}
               >
@@ -841,7 +844,7 @@ export function DataGridDoomDemo({
                 ? showsGrid
                   ? "Hide grid"
                   : "Show grid"
-                : `Grid shows up to ${getResolutionLabel(GRID_MAX_COLUMNS)}`
+                : `Grid shows up to ${getResolutionLabel(GRID_MAX_COLUMN_COUNT)}`
             }
           >
             <Toggle
@@ -976,8 +979,8 @@ export function DataGridDoomDemo({
                     </span>
                     <span className="text-xs text-balance text-muted-foreground tabular-nums">
                       {mode === "gradient"
-                        ? `Rendered across ${height.toLocaleString("en-US")} data grid rows, over ${(width * height).toLocaleString("en-US")} cells`
-                        : `Rendered across ${(width * height).toLocaleString("en-US")} data grid cells`}
+                        ? `Rendered across ${rowCount.toLocaleString("en-US")} data grid rows, over ${(columnCount * rowCount).toLocaleString("en-US")} cells`
+                        : `Rendered across ${(columnCount * rowCount).toLocaleString("en-US")} data grid cells`}
                     </span>
                   </span>
                   <span className="flex flex-col border-t px-1.5 py-1.5">
