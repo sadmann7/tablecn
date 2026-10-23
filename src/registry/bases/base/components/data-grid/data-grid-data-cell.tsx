@@ -158,16 +158,9 @@ function useUpdatedCell<TData extends RowData>(
     (count: number) => count + 1,
     0,
   );
-  // What the cell last rendered, for the check after subscribing
-  const renderedValueRef = React.useRef<unknown>(undefined);
-  renderedValueRef.current = cell.getValue();
   React.useEffect(() => {
     if (!isEnabled) return;
-    const unsubscribe = table.subscribeCell(rowId, columnId, onCellUpdate);
-    // Subscribing can apply values the row waited for while out of view
-    const value = table.getRowModel().rowsById[rowId]?.getValue(columnId);
-    if (!Object.is(value, renderedValueRef.current)) onCellUpdate();
-    return unsubscribe;
+    return table.subscribeCell(rowId, columnId, onCellUpdate);
   }, [isEnabled, table, rowId, columnId]);
 
   if (updateCount === 0) return cell;

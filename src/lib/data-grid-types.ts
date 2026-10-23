@@ -3,6 +3,7 @@ import type {
   ColumnPinningPosition,
   RowData,
 } from "@tanstack/react-table";
+import type * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
@@ -47,9 +48,47 @@ export interface CellChange {
   newValue: unknown;
 }
 
-export interface DataChangeDetails {
+/**
+ * What changed the data: an edit or paste in the grid, `table.updateCells`,
+ * `table.addRows`, `table.deleteRows`, or an undo or redo.
+ */
+export type DataChangeReason =
+  | "edit"
+  | "paste"
+  | "update-cells"
+  | "add-rows"
+  | "delete-rows"
+  | "undo"
+  | "redo";
+
+export interface DataChangeDetails<TData = unknown> {
+  reason: DataChangeReason;
   /** Every cell whose value changed, so consumers don't need to diff the data. */
   changes: CellChange[];
+  addedRows: TData[];
+  removedRows: TData[];
+}
+
+/** Why the grid asks `createRow` for a row. */
+export type CreateRowDetails =
+  | {
+      reason: "add-row-press";
+      event?:
+        | React.MouseEvent<HTMLDivElement>
+        | React.KeyboardEvent<HTMLDivElement>;
+    }
+  | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
+  | { reason: "paste"; event?: undefined };
+
+/** Where `addRows` puts the rows: after or before an existing row, or at the end. */
+export interface AddRowsOptions {
+  afterRowId?: string;
+  beforeRowId?: string;
+}
+
+export interface UndoRedoState {
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 /** Several cells of one row, keyed by column ID. */
@@ -66,6 +105,8 @@ export interface UpdateCellsOptions {
    * view or at the next `onDataChange`.
    */
   batch?: boolean;
+  /** Records the update for undo. Defaults to true, except for batched updates. */
+  history?: boolean;
 }
 
 export interface CellPresence extends CellPosition {

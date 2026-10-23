@@ -1417,9 +1417,9 @@ export function FileCell<TData extends RowData>(
 
           let uploadedFiles: FileCellData[] = [];
 
-          if (cell.table.options.onFilesUpload) {
+          if (cell.table.options.uploadFiles) {
             try {
-              uploadedFiles = await cell.table.options.onFilesUpload({
+              uploadedFiles = await cell.table.options.uploadFiles({
                 files: filesToValidate,
                 rowId,
                 columnId,
@@ -1483,9 +1483,9 @@ export function FileCell<TData extends RowData>(
 
       setDeletingFiles((prev) => new Set(prev).add(fileId));
 
-      if (cell.table.options.onFilesDelete) {
+      if (cell.table.options.deleteFiles) {
         try {
-          await cell.table.options.onFilesDelete({
+          await cell.table.options.deleteFiles({
             fileIds: [fileId],
             rowId,
             columnId,
@@ -1528,9 +1528,9 @@ export function FileCell<TData extends RowData>(
     const fileIds = files.map((f) => f.id);
     setDeletingFiles(new Set(fileIds));
 
-    if (cell.table.options.onFilesDelete && files.length > 0) {
+    if (cell.table.options.deleteFiles && files.length > 0) {
       try {
-        await cell.table.options.onFilesDelete({
+        await cell.table.options.deleteFiles({
           fileIds,
           rowId,
           columnId,

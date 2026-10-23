@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import type {
   CellPosition,
   ClipboardNotice,
+  CreateRowDetails,
   NavigationDirection,
 } from "@/lib/data-grid-types";
 
@@ -37,7 +38,8 @@ import {
   getIsDataColumn,
   getIsEventOnScrollbar,
   getIsInPopover,
-  getRowIndexById,
+  getIsTextInput,
+  getRowDisplayIndex,
   getSelectionEdgePosition,
   renderDefaultCell,
   scrollCellIntoView,
@@ -109,27 +111,9 @@ function selectGridLayoutState(state: TableState<DataGridFeatures>) {
     columnOrder: state.columnOrder,
     columnSizing: state.columnSizing,
     columnResizing: state.columnResizing,
+    undoRedo: state.undoRedo,
   };
 }
-
-interface RowAddResult {
-  rowId: string;
-  columnId?: string;
-}
-
-type RowAddTrigger =
-  | {
-      reason: "add-row-press";
-      event?:
-        | React.MouseEvent<HTMLDivElement>
-        | React.KeyboardEvent<HTMLDivElement>;
-    }
-  | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
-  | { reason: "paste"; event?: undefined };
-
-type RowAddEventDetails = RowAddTrigger & {
-  cancel: () => void;
-};
 
 interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
@@ -137,9 +121,6 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
 > {
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
-  onRowAdd?: (
-    eventDetails: RowAddEventDetails,
-  ) => RowAddResult | Promise<RowAddResult | null> | null;
 }
 
 function useDataGrid<TData extends RowData>({
@@ -184,13 +165,9 @@ function useDataGrid<TData extends RowData>({
   const propsRef = useValueAsRef(props);
   const stableProps = useStableProps(props, propsRef);
 
-  const getRowIndex = React.useCallback((rowId: string) => {
-    const currentTable = tableRef.current;
-    return currentTable ? getRowIndexById(currentTable, rowId) : -1;
-  }, []);
-
-  const getRowIdAt = React.useCallback(
-    (rowIndex: number) => tableRef.current?.getRowModel().rows[rowIndex]?.id,
+  const getRowIdAtDisplayIndex = React.useCallback(
+    (displayIndex: number) =>
+      tableRef.current?.getRowModel().rows[displayIndex]?.id,
     [],
   );
 
@@ -216,7 +193,7 @@ function useDataGrid<TData extends RowData>({
       const container = dataGridRef.current;
       if (!currentTable || !container) return false;
 
-      const rowIndex = getRowIndexById(currentTable, cell.rowId);
+      const rowIndex = getRowDisplayIndex(currentTable, cell.rowId);
       if (rowIndex === -1) return false;
 
       if (shouldScroll) {
@@ -311,8 +288,8 @@ function useDataGrid<TData extends RowData>({
     [],
   );
 
-  const onRowsDelete = React.useCallback(async (rowIds: string[]) => {
-    await tableRef.current?.deleteRows(rowIds);
+  const onRowsDelete = React.useCallback((rowIds: string[]) => {
+    tableRef.current?.deleteRows(rowIds);
     tableRef.current?.endCellDrag();
   }, []);
 
@@ -632,23 +609,13 @@ function useDataGrid<TData extends RowData>({
 
   const enableCellEditing =
     !props.readOnly && props.enableCellEditing !== false;
-  const hasRowAdd = !!props.onRowAdd;
-  const canAddRows = !!props.onRowsAdd || hasRowAdd;
+  const hasRowAdd = !!props.createRow;
 
   const tableOptions = React.useMemo<
     TableOptions<DataGridFeatures, TData>
   >(() => {
     return {
       ...stableProps,
-      onRowsAdd: canAddRows
-        ? async (count) => {
-            const { onRowsAdd, onRowAdd } = propsRef.current;
-            if (onRowsAdd) return onRowsAdd(count);
-            for (let i = 0; i < count; i++) {
-              await onRowAdd?.({ reason: "paste", cancel: () => {} });
-            }
-          }
-        : undefined,
       onCellScroll: (cell) =>
         revealCell(cell, { shouldFocus: false, shouldScroll: true }),
       onCellFocus: (cell) => focusCellElement(cell),
@@ -671,7 +638,6 @@ function useDataGrid<TData extends RowData>({
     };
   }, [
     stableProps,
-    canAddRows,
     propsRef,
     revealCell,
     focusCellElement,
@@ -744,34 +710,31 @@ function useDataGrid<TData extends RowData>({
     });
   }, []);
 
+  // Asks for a new row and adds it below `afterRowId`, or at the end, focusing it
   const addRow = React.useCallback(
-    async (
-      trigger: RowAddTrigger,
-      getColumnId: (result: RowAddResult) => string | undefined,
-    ) => {
-      const { readOnly, onRowAdd: onRowAddProp } = propsRef.current;
-      if (readOnly || !onRowAddProp) return;
+    async (trigger: CreateRowDetails, columnId: string | undefined) => {
+      const { readOnly, createRow } = propsRef.current;
+      if (readOnly || !createRow) return;
 
-      let isCanceled = false;
-      let result: RowAddResult | null;
+      let row: TData | null;
       try {
-        result = await onRowAddProp({
-          ...trigger,
-          cancel: () => {
-            isCanceled = true;
-          },
-        });
+        row = await createRow(trigger);
       } catch {
         return;
       }
+      const currentTable = tableRef.current;
+      if (!row || !currentTable) return;
 
-      if (!result || isCanceled) return;
+      const [rowId] = currentTable.addRows(
+        [row],
+        trigger.reason === "insert-below"
+          ? { afterRowId: trigger.afterRowId }
+          : undefined,
+      );
+      if (!rowId || !columnId) return;
 
-      const columnId = getColumnId(result);
-      if (!columnId) return;
-
-      tableRef.current?.clearSelection();
-      focusCell(result.rowId, columnId);
+      currentTable.clearSelection();
+      focusCell(rowId, columnId);
     },
     [propsRef, focusCell],
   );
@@ -784,9 +747,9 @@ function useDataGrid<TData extends RowData>({
     ) =>
       addRow(
         { reason: "add-row-press", event },
-        (result) => result.columnId ?? getNavigableColumnIds()[0],
+        getNavigableColumnIds().find(getIsDataColumnId),
       ),
-    [addRow, getNavigableColumnIds],
+    [addRow, getNavigableColumnIds, getIsDataColumnId],
   );
 
   const getColumnHeaderTrigger = React.useCallback((columnId: string) => {
@@ -918,7 +881,7 @@ function useDataGrid<TData extends RowData>({
         case "ArrowDown": {
           // Stops the menu trigger from opening its menu
           event.stopPropagation();
-          const firstRowId = getRowIdAt(0);
+          const firstRowId = getRowIdAtDisplayIndex(0);
           if (!firstRowId) break;
           tableRef.current?.clearRowSelection();
           focusCell(firstRowId, columnId);
@@ -937,7 +900,7 @@ function useDataGrid<TData extends RowData>({
           } else if (headerIndex < headerColumnIds.length - 1) {
             focusHeaderAt(headerIndex + 1);
           } else {
-            const firstRowId = getRowIdAt(0);
+            const firstRowId = getRowIdAtDisplayIndex(0);
             const firstColumnId = getNavigableColumnIds()[0];
             if (!firstRowId || !firstColumnId) return true;
             tableRef.current?.clearRowSelection();
@@ -959,7 +922,7 @@ function useDataGrid<TData extends RowData>({
       focusColumnHeader,
       skipDataGridTabStop,
       focusCell,
-      getRowIdAt,
+      getRowIdAtDisplayIndex,
     ],
   );
 
@@ -1018,7 +981,7 @@ function useDataGrid<TData extends RowData>({
         isCtrlPressed &&
         (key === "Backspace" || key === "Delete") &&
         !propsRef.current.readOnly &&
-        propsRef.current.onRowsDelete
+        propsRef.current.enableRowDeletion
       ) {
         const rowIds = new Set<string>();
 
@@ -1039,7 +1002,7 @@ function useDataGrid<TData extends RowData>({
 
         if (rowIds.size > 0) {
           event.preventDefault();
-          void onRowsDelete(Array.from(rowIds));
+          onRowsDelete(Array.from(rowIds));
         }
         return;
       }
@@ -1149,7 +1112,7 @@ function useDataGrid<TData extends RowData>({
         key === "Enter" &&
         shiftKey &&
         !propsRef.current.readOnly &&
-        propsRef.current.onRowAdd
+        propsRef.current.createRow
       ) {
         event.preventDefault();
         const currentColumnId = isUtilityCellFocused
@@ -1158,7 +1121,7 @@ function useDataGrid<TData extends RowData>({
 
         void addRow(
           { reason: "insert-below", event, afterRowId: focusedCell.rowId },
-          (result) => currentColumnId ?? result.columnId,
+          currentColumnId,
         );
         return;
       }
@@ -1173,7 +1136,8 @@ function useDataGrid<TData extends RowData>({
             direction = "ctrl+up";
           } else if (
             !shiftKey &&
-            getRowIndex(focusedCell.rowId) === 0 &&
+            !!currentTable &&
+            getRowDisplayIndex(currentTable, focusedCell.rowId) === 0 &&
             focusColumnHeader(focusedCell.columnId)
           ) {
             event.preventDefault();
@@ -1257,7 +1221,6 @@ function useDataGrid<TData extends RowData>({
       focusColumnHeader,
       onColumnHeaderKeyDown,
       skipDataGridTabStop,
-      getRowIndex,
     ],
   );
 
@@ -1312,6 +1275,32 @@ function useDataGrid<TData extends RowData>({
       }
 
       const isInDataGrid = dataGridElement.contains(target);
+
+      // Works from anywhere but text fields, editors and another grid, like an app's undo
+      const undoRedoKey = key.toLowerCase();
+      if (
+        currentTable &&
+        isCommandPressed &&
+        (undoRedoKey === "z" || undoRedoKey === "y") &&
+        (currentTable.options.enableUndoRedo ??
+          !currentTable.options.readOnly) &&
+        !getIsTextInput(target) &&
+        !(getIsInPopover(target) && !target.closest('[role="toolbar"]')) &&
+        (isInDataGrid || !target.closest('[role="grid"]'))
+      ) {
+        event.preventDefault();
+        const isRedo = undoRedoKey === "y" || shiftKey;
+        const count = isRedo ? currentTable.redo() : currentTable.undo();
+        if (count === 0) {
+          toast.info(isRedo ? "No actions to redo" : "No actions to undo");
+        } else {
+          toast.success(
+            `${count} action${count === 1 ? "" : "s"} ${isRedo ? "redone" : "undone"}`,
+          );
+        }
+        return;
+      }
+
       if (!isInDataGrid) return;
 
       if (key === "Escape") {

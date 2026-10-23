@@ -9,7 +9,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 
-import { useDataGridUndoRedo } from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -40,6 +39,7 @@ import {
 } from "@/registry/bases/radix/ui/select";
 import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
+import { duplicateRows } from "../lib/duplicate-rows";
 import {
   departments,
   generatePeople,
@@ -77,30 +77,6 @@ function DataGridDemoContent({
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
-
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo({
-      data,
-      onDataChange: setData,
-      getRowId: (row) => row.id,
-    });
-
-  const onRowsDuplicate = React.useCallback(
-    (rows: Person[]) => {
-      const copies = new Map(
-        rows.map((row) => [row.id, { ...row, id: generateId() }]),
-      );
-
-      setData((prev) =>
-        prev.flatMap((row) => {
-          const copy = copies.get(row.id);
-          return copy ? [row, copy] : [row];
-        }),
-      );
-      trackRowsAdd([...copies.values()]);
-    },
-    [trackRowsAdd],
-  );
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(() => {
     const dataColumns: ColumnDef<DataGridFeatures, Person>[] = [
@@ -290,14 +266,14 @@ function DataGridDemoContent({
       getDataGridActionsColumn<Person>({
         actions: ({ row, table }) => (
           <>
-            <DropdownMenuItem onSelect={() => onRowsDuplicate([row.original])}>
+            <DropdownMenuItem onSelect={() => duplicateRows(table, [row])}>
               <Copy />
               Duplicate
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onSelect={() => void table.deleteRows([row.id])}
+              onSelect={() => table.deleteRows([row.id])}
             >
               <Trash2 />
               Delete
@@ -306,62 +282,12 @@ function DataGridDemoContent({
         ),
       }),
     ];
-  }, [filterFn, onRowsDuplicate]);
+  }, [filterFn]);
 
-  const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
-    React.useCallback(
-      (eventDetails) => {
-        const afterRowId =
-          eventDetails.reason === "insert-below"
-            ? eventDetails.afterRowId
-            : undefined;
-        const newRow: Person = {
-          id: generateId(),
-        };
+  const createRow: NonNullable<UseDataGridProps<Person>["createRow"]> =
+    React.useCallback(() => ({ id: generateId() }), []);
 
-        setData((prev) => {
-          const index = afterRowId
-            ? prev.findIndex((row) => row.id === afterRowId)
-            : -1;
-          return index === -1
-            ? [...prev, newRow]
-            : [...prev.slice(0, index + 1), newRow, ...prev.slice(index + 1)];
-        });
-        trackRowsAdd([newRow]);
-
-        return {
-          rowId: newRow.id,
-          columnId: "name",
-        };
-      },
-      [trackRowsAdd],
-    );
-
-  const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
-    React.useCallback(
-      (count: number) => {
-        const newRows: Person[] = Array.from({ length: count }, () => ({
-          id: generateId(),
-        }));
-
-        setData((prev) => [...prev, ...newRows]);
-        trackRowsAdd(newRows);
-      },
-      [trackRowsAdd],
-    );
-
-  const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
-    React.useCallback(
-      (rows) => {
-        // Capture the rows before they are removed so undo can restore them
-        trackRowsDelete(rows);
-        const deleted = new Set(rows);
-        setData((prev) => prev.filter((row) => !deleted.has(row)));
-      },
-      [trackRowsDelete],
-    );
-
-  const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
+  const uploadFiles: NonNullable<UseDataGridProps<Person>["uploadFiles"]> =
     React.useCallback(async ({ files, rowId: _rowId, columnId: _columnId }) => {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
@@ -374,7 +300,7 @@ function DataGridDemoContent({
       }));
     }, []);
 
-  const onFilesDelete: NonNullable<UseDataGridProps<Person>["onFilesDelete"]> =
+  const deleteFiles: NonNullable<UseDataGridProps<Person>["deleteFiles"]> =
     React.useCallback(async ({ fileIds, rowId, columnId }) => {
       console.log(
         `Deleting ${fileIds.length} file(s) from row ${rowId}, column ${columnId}:`,
@@ -382,27 +308,16 @@ function DataGridDemoContent({
       );
     }, []);
 
-  const onDataChange: NonNullable<UseDataGridProps<Person>["onDataChange"]> =
-    React.useCallback(
-      (newData, { changes }) => {
-        trackCellsUpdate(changes);
-        setData(newData);
-      },
-      [trackCellsUpdate],
-    );
-
   const height = Math.max(400, windowSize.height - 150);
 
   const { table, ...dataGridProps } = useDataGrid({
     data,
-    onDataChange,
     columns,
-    onRowAdd,
-    onRowsAdd,
-    onRowsDelete,
-    onFilesUpload,
-    onFilesDelete,
     getRowId: (row) => row.id,
+    onDataChange: setData,
+    createRow,
+    uploadFiles,
+    deleteFiles,
     initialState: {
       columnPinning: {
         start: ["select"],
@@ -410,6 +325,7 @@ function DataGridDemoContent({
       },
     },
     dir,
+    enableRowDeletion: true,
     enableSearch: true,
     enablePaste: true,
   });
@@ -449,19 +365,14 @@ function DataGridDemoContent({
           enableSearch
           enableUndoRedo
           enablePaste
-          enableRowAdd
-          enableRowsDelete
+          enableRowCreation
+          enableRowDeletion
         />
         <DataGrid
           {...dataGridProps}
           table={table}
           height={height}
-          actionBar={
-            <PeopleDataGridActionBar
-              table={table}
-              onRowsDuplicate={onRowsDuplicate}
-            />
-          }
+          actionBar={<PeopleDataGridActionBar table={table} />}
         />
       </div>
     </DirectionProvider>

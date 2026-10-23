@@ -728,7 +728,8 @@ export function getColumnFitSize(params: {
   return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
 }
 
-export function getRowIndexById<TData extends RowData>(
+// Where the row shows in the grid, after sorting and filtering, or -1
+export function getRowDisplayIndex<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
   rowId: string,
 ) {
@@ -1071,4 +1072,13 @@ export function getFileIcon(
   )
     return Presentation;
   return File;
+}
+
+// Fields that take typing, where undo and similar shortcuts belong to the field
+export function getIsTextInput(element: Element) {
+  return (
+    element.tagName === "INPUT" ||
+    element.tagName === "TEXTAREA" ||
+    (element instanceof HTMLElement && element.isContentEditable)
+  );
 }
