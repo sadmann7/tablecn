@@ -33,7 +33,6 @@ export const patchedRows = new WeakSet();
 
 export interface RowChangeHint {
   from: ReadonlyArray<RowData>;
-  // Indices of the removed rows in `from`, and of the inserted rows in the new data
   removedIndexes: number[];
   insertedIndexes: number[];
 }

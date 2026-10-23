@@ -582,14 +582,17 @@ interface IndexedRow {
   index: number;
 }
 
-// A row to insert, at `index` in the data it ends up in, or at the end
 interface RowInsert {
   row: RowData;
   index?: number;
 }
 
-// One undoable step: the cells it changed, with their previous values, and the rows
-// it added or removed, at their indices in the data
+interface RowChanges {
+  inserts?: ReadonlyArray<RowInsert>;
+  removedRowIds?: ReadonlyArray<string>;
+  history?: boolean;
+}
+
 interface HistoryEntry {
   changes: CellChange[];
   addedRows: IndexedRow[];
@@ -601,35 +604,19 @@ type CellListeners = Set<() => void>;
 type RowValues = Record<string, unknown>;
 
 interface CellUpdateStore {
-  // Mounted cells' listeners by row and column ID, so updates to rows nobody shows
-  // cost one lookup
   listeners: Map<string, Map<string, CellListeners>>;
-  // Batched values waiting for the next frame, merged so each cell keeps its latest
   queued: Map<string, RowValues>;
-  // Batched values for rows nobody shows, which wait for the next `onDataChange` or
-  // for the row to come into view, so off-screen rows cost nothing each frame
   deferred: Map<string, RowValues>;
-  // Cells whose row took waiting values as it came into view, which render again as
-  // they subscribe, since they mounted with the old values
   lateKeys: Set<string>;
-  // Rows written since the last `onDataChange`. Their values are in `copies`
   pending: Set<string>;
-  // The copy each patched row shows instead of its data row, and that data row
   copies: Map<string, { base: unknown; copy: RowValues }>;
   notify: Set<CellListeners>;
-  // Cells written by updates that record history, since the last commit
   recordKeys: Set<string>;
-  // The data last reported through `onDataChange` and the `data` it came from, so a
-  // change made before the consumer passes it back builds on it
   reported: { from: ReadonlyArray<RowData>; data: RowData[] } | null;
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
-  // Stops the next cell edits merging into the last step
   isHistorySealed: boolean;
-  // Each row's index by ID in data the consumer hasn't passed back yet. It's per
-  // table, since grids sharing an array can give its rows different IDs
   rowIndexes: WeakMap<ReadonlyArray<RowData>, Map<string, number>>;
-  // What the running change reports as its reason, set by the outermost one
   reason: DataChangeReason | null;
   isFrameScheduled: boolean;
   frameHandle: ReturnType<typeof setTimeout> | number;
@@ -638,7 +625,6 @@ interface CellUpdateStore {
 
 const cellUpdateStores = new WeakMap<object, CellUpdateStore>();
 
-// Falls back to a timer where frames don't run, like tests
 function requestFrame(callback: () => void) {
   return typeof requestAnimationFrame === "function"
     ? requestAnimationFrame(callback)
@@ -1047,9 +1033,7 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
 function applyRowChanges(
   table: DataGridInstance,
   store: CellUpdateStore,
-  inserts: ReadonlyArray<RowInsert>,
-  removedRowIds: ReadonlyArray<string>,
-  shouldRecord: boolean,
+  { inserts = [], removedRowIds = [], history = true }: RowChanges,
 ) {
   // Cell values still waiting settle first, so the rows build on them
   commitCellUpdates(table, store);
@@ -1105,7 +1089,7 @@ function applyRowChanges(
     addedRows: addedRows.map(({ row }) => row),
     removedRows: removedRows.map(({ row }) => row),
   });
-  if (shouldRecord) {
+  if (history) {
     pushHistory(table, store, {
       changes: [],
       addedRows,
@@ -1134,13 +1118,9 @@ function addRows(
     }
   }
 
-  return applyRowChanges(
-    table,
-    store,
-    rows.map((row, offset) => ({ row, index: index + offset })),
-    [],
-    true,
-  ).map(({ row, index: rowIndex }) => table.getRowId(row, rowIndex));
+  return applyRowChanges(table, store, {
+    inserts: rows.map((row, offset) => ({ row, index: index + offset })),
+  }).map(({ row, index: rowIndex }) => table.getRowId(row, rowIndex));
 }
 
 // Applies a step backwards or forwards without recording it. Cells change on the rows
@@ -1174,20 +1154,16 @@ function applyHistoryEntry(
   };
   const applyRows = () =>
     isUndo
-      ? applyRowChanges(
-          table,
-          store,
-          getMissingRows(entry.removedRows),
-          getRowIds(entry.addedRows),
-          false,
-        )
-      : applyRowChanges(
-          table,
-          store,
-          getMissingRows(entry.addedRows),
-          getRowIds(entry.removedRows),
-          false,
-        );
+      ? applyRowChanges(table, store, {
+          inserts: getMissingRows(entry.removedRows),
+          removedRowIds: getRowIds(entry.addedRows),
+          history: false,
+        })
+      : applyRowChanges(table, store, {
+          inserts: getMissingRows(entry.addedRows),
+          removedRowIds: getRowIds(entry.removedRows),
+          history: false,
+        });
 
   if (isUndo) {
     applyCells();
@@ -1252,7 +1228,6 @@ function updateCells(
   }
 
   if (options?.batch) {
-    // Rows nobody shows skip the frame and wait for the next `onDataChange`
     mergeUpdates(updateArray, (rowId) =>
       store.listeners.has(rowId) ? store.queued : store.deferred,
     );
@@ -1327,13 +1302,9 @@ function deleteRows(table: DataGridInstance, rowIds: string[]) {
       ? table.getVisibleLeafColumns().find(getIsDataColumn)?.id
       : focusedColumn?.id;
 
-  applyRowChanges(
-    table,
-    getCellUpdateStore(table),
-    [],
-    deletedRows.map((row) => row.id),
-    true,
-  );
+  applyRowChanges(table, getCellUpdateStore(table), {
+    removedRowIds: deletedRows.map((row) => row.id),
+  });
 
   table.resetEditingCell(true);
   table.resetRowSelection(true);
