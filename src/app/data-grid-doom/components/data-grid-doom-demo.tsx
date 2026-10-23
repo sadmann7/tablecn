@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
+import { Toggle } from "@/registry/bases/radix/ui/toggle";
 import {
   Tooltip,
   TooltipContent,
@@ -83,10 +84,18 @@ const PLAY_KEYS = "P";
 const MUTE_KEYS = "M";
 const PAGE_SHORTCUT_CODES = new Set(["KeyP", "KeyM"]);
 
+interface PixelRow {
+  id: string;
+  [key: string]: number | string;
+}
+
 interface StageLayoutOptions {
   width: number;
   height: number;
-  viewport: { width: number; height: number };
+  viewport: {
+    width: number;
+    height: number;
+  };
   chromeHeight: number;
   isFullscreen: boolean;
 }
@@ -117,29 +126,6 @@ function getStageLayout({
     CELL_SIZE;
 
   return { zoom, gridWidth, gridHeight };
-}
-
-// The span is the trigger so the tooltip still shows while the button is disabled
-function ControlTooltip({
-  label,
-  keys,
-  children,
-}: {
-  label: string;
-  keys?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex">{children}</span>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={6}>
-        {label}
-        {keys ? <Kbd>{keys}</Kbd> : null}
-      </TooltipContent>
-    </Tooltip>
-  );
 }
 
 function getIsPageShortcut(event: KeyboardEvent) {
@@ -181,20 +167,36 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
   { label: "Mute", keys: [MUTE_KEYS] },
 ];
 
-interface PixelRow {
-  id: string;
-  [key: string]: number | string;
+interface ControlProps extends React.ComponentProps<typeof TooltipTrigger> {
+  label: string;
+  keys?: string;
 }
 
+function ControlTooltip({ label, keys, children, ...props }: ControlProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild {...props}>
+        <span className="inline-flex">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+        {keys ? <Kbd>{keys}</Kbd> : null}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+interface DataGridDoomDemoProps extends DoomParams {}
+
 export function DataGridDoomDemo({
-  columns: width,
+  width,
   mode,
   modeParam,
   source,
   damage,
   auto,
   grid,
-}: DoomParams) {
+}: DataGridDoomDemoProps) {
   const height = Math.round((width * SCREEN_HEIGHT) / SCREEN_WIDTH);
   const [frame, setFrame] = React.useState<PixelRow[]>(() =>
     Array.from({ length: height }, (_, y) => {
@@ -842,20 +844,18 @@ export function DataGridDoomDemo({
                 : `Grid shows up to ${getResolutionLabel(GRID_MAX_COLUMNS)}`
             }
           >
-            <Button
-              size="icon-sm"
+            <Toggle
+              size="sm"
               variant="outline"
-              aria-label={showsGrid ? "Hide grid" : "Show grid"}
-              aria-pressed={showsGrid}
+              aria-label="Show grid"
+              className="px-0"
+              pressed={showsGrid}
               disabled={!canShowGrid || !shouldShowGrid}
-              className={cn(showsGrid && "bg-accent text-accent-foreground")}
-              onClick={(event) => {
-                event.currentTarget.blur();
-                setIsGridShown((shown) => !shown);
-              }}
+              onClick={(event) => event.currentTarget.blur()}
+              onPressedChange={setIsGridShown}
             >
               <Grid3x3 />
-            </Button>
+            </Toggle>
           </ControlTooltip>
         </span>
         {source === "doom" && (
@@ -925,13 +925,12 @@ export function DataGridDoomDemo({
           style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
         >
           <div
-            // Hides grid lines, plus cells in gradient mode since painting them slows Safari.
-            // The grid view brings them back, with selection and focus drawn over the game in
-            // spreadsheet blue, which shows on dark and light pixels alike
+            // Hides grid lines, and cells in gradient mode since painting them slows Safari.
+            // The grid view draws selection in blue, which shows on any pixel
             className={cn(
               "bg-black **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:[[role=grid]]:border-0",
               showsGrid
-                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:bg-blue-500/40 **:data-[slot=data-grid-row]:border-b-(length:--doom-line)"
+                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-row]:border-b-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-selected:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-selected:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-selected:after:bg-blue-500/40"
                 : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}
