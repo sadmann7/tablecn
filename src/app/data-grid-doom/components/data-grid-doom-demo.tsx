@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 import { Kbd, KbdGroup } from "@/registry/bases/radix/ui/kbd";
+import { Toggle } from "@/registry/bases/radix/ui/toggle";
 import {
   Tooltip,
   TooltipContent,
@@ -842,20 +843,18 @@ export function DataGridDoomDemo({
                 : `Grid shows up to ${getResolutionLabel(GRID_MAX_COLUMNS)}`
             }
           >
-            <Button
-              size="icon-sm"
+            <Toggle
+              size="sm"
               variant="outline"
-              aria-label={showsGrid ? "Hide grid" : "Show grid"}
-              aria-pressed={showsGrid}
+              aria-label="Show grid"
+              className="px-0"
+              pressed={showsGrid}
               disabled={!canShowGrid || !shouldShowGrid}
-              className={cn(showsGrid && "bg-accent text-accent-foreground")}
-              onClick={(event) => {
-                event.currentTarget.blur();
-                setIsGridShown((shown) => !shown);
-              }}
+              onClick={(event) => event.currentTarget.blur()}
+              onPressedChange={setIsGridShown}
             >
               <Grid3x3 />
-            </Button>
+            </Toggle>
           </ControlTooltip>
         </span>
         {source === "doom" && (
