@@ -21,16 +21,15 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
+import { duplicateRows } from "../lib/duplicate-rows";
 import { departments, type Person, statuses } from "../lib/seeds";
 
 interface PeopleDataGridActionBarProps {
   table: Table<DataGridFeatures, Person>;
-  onRowsDuplicate: (rows: Person[]) => void;
 }
 
 export function PeopleDataGridActionBar({
   table,
-  onRowsDuplicate,
 }: PeopleDataGridActionBarProps) {
   return (
     <Subscribe
@@ -40,20 +39,12 @@ export function PeopleDataGridActionBar({
         cellSelection: state.cellSelection,
       })}
     >
-      {() => (
-        <PeopleDataGridActionBarImpl
-          table={table}
-          onRowsDuplicate={onRowsDuplicate}
-        />
-      )}
+      {() => <PeopleDataGridActionBarImpl table={table} />}
     </Subscribe>
   );
 }
 
-function PeopleDataGridActionBarImpl({
-  table,
-  onRowsDuplicate,
-}: PeopleDataGridActionBarProps) {
+function PeopleDataGridActionBarImpl({ table }: PeopleDataGridActionBarProps) {
   const hasRowSelection = table.getHasRowSelection();
   const selectedCount = hasRowSelection
     ? table.getSelectedRowIds().length
@@ -69,9 +60,9 @@ function PeopleDataGridActionBarImpl({
   const onDuplicate = React.useCallback(
     (event: Event) => {
       event.preventDefault();
-      onRowsDuplicate(getTargetRows(table).map((row) => row.original));
+      duplicateRows(table, getTargetRows(table));
     },
-    [table, onRowsDuplicate],
+    [table],
   );
 
   const onCellsUpdate = React.useCallback(
@@ -99,7 +90,7 @@ function PeopleDataGridActionBarImpl({
   );
 
   const onDelete = React.useCallback(() => {
-    void table.deleteRows(getTargetRows(table).map((row) => row.id));
+    table.deleteRows(getTargetRows(table).map((row) => row.id));
   }, [table]);
 
   return (

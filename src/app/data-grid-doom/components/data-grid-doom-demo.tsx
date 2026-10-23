@@ -20,7 +20,9 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
+import type { RowUpdate } from "@/lib/data-grid-types";
 
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -74,6 +76,10 @@ const GRID_MAX_COLUMN_COUNT = 192;
 // to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
 const MUTED_STORAGE_KEY = "data-grid-doom-muted";
+
+function writePixel(element: HTMLElement, value: unknown) {
+  element.style.backgroundColor = getHexColor(value as number);
+}
 
 const IS_MAC =
   typeof navigator !== "undefined" &&
@@ -197,7 +203,8 @@ export function DataGridDoomDemo({
   grid,
 }: DataGridDoomDemoProps) {
   const rowCount = Math.round((columnCount * SCREEN_HEIGHT) / SCREEN_WIDTH);
-  const [frame, setFrame] = React.useState<PixelRow[]>(() =>
+  // The grid's data stays put: frames go to the cells through `updateCells`
+  const [frame] = React.useState<PixelRow[]>(() =>
     Array.from({ length: rowCount }, (_, y) => {
       const row: PixelRow = { id: `r${y}` };
       for (let x = 0; x < columnCount; x++) row[`c${x}`] = 0;
@@ -249,17 +256,8 @@ export function DataGridDoomDemo({
         size: CELL_SIZE,
         minSize: CELL_SIZE,
         maxSize: CELL_SIZE,
-        // Direct writes color the grid's own cell, saving an element per pixel
-        cell:
-          mode === "data"
-            ? ({ getValue }) => (
-                <div
-                  data-pixel=""
-                  className="absolute inset-0"
-                  style={{ backgroundColor: getHexColor(getValue() as number) }}
-                />
-              )
-            : () => null,
+        cell: () => null,
+        meta: mode === "data" ? { writeCell: writePixel } : undefined,
       })),
     [columnCount, mode],
   );
@@ -270,6 +268,8 @@ export function DataGridDoomDemo({
     getRowId: (row) => row.id,
     readOnly: true,
   });
+  // A data change hands back a new `table`, which mustn't restart the paint loop
+  const tableRef = useValueAsRef(table);
 
   React.useEffect(() => {
     let secondId = 0;
@@ -494,11 +494,13 @@ export function DataGridDoomDemo({
     const stepX = SCREEN_WIDTH / columnCount;
     const stepY = SCREEN_HEIGHT / rowCount;
     const changedRows = Math.max(1, Math.round(rowCount * damage));
+    const rowIds = Array.from({ length: rowCount }, (_, y) => `r${y}`);
+    const columnIds = Array.from({ length: columnCount }, (_, x) => `c${x}`);
 
     const collectPixels = () => {
       const result: HTMLElement[][] = [];
       for (const cell of document.querySelectorAll<HTMLElement>(
-        '[role="grid"] [data-slot="data-grid-cell-wrapper"]',
+        '[role="grid"] [data-slot="data-grid-cell"]:not([data-utility])',
       )) {
         const y = Number(cell.dataset.rowId?.slice(1));
         const x = Number(cell.dataset.columnId?.slice(1));
@@ -611,21 +613,18 @@ export function DataGridDoomDemo({
       if (mode === "data") {
         if (changed.length === 0) return;
         paints++;
-        const rows = changed.map((y) => {
-          const row: PixelRow = { id: `r${y}` };
+        const updates: RowUpdate[] = [];
+        for (const y of changed) {
+          const values: RowUpdate["values"] = {};
           for (let x = 0; x < columnCount; x++) {
-            row[`c${x}`] = current[y * columnCount + x] ?? -1;
+            const index = y * columnCount + x;
+            if (!dirty[index]) continue;
+            dirty[index] = 0;
+            values[columnIds[x] ?? ""] = current[index] ?? -1;
           }
-          return row;
-        });
-        setFrame((previous) => {
-          const next = previous.slice();
-          for (const [index, y] of changed.entries()) {
-            const row = rows[index];
-            if (row) next[y] = row;
-          }
-          return next;
-        });
+          updates.push({ rowId: rowIds[y] ?? "", values });
+        }
+        tableRef.current.updateCells(updates, { batch: true });
         return;
       }
       for (const y of changed) {
@@ -788,7 +787,16 @@ export function DataGridDoomDemo({
       disposed = true;
       cancelAnimationFrame(rafId);
     };
-  }, [shouldShowGrid, columnCount, rowCount, mode, source, damage, auto]);
+  }, [
+    shouldShowGrid,
+    columnCount,
+    rowCount,
+    mode,
+    source,
+    damage,
+    auto,
+    tableRef,
+  ]);
 
   const stageWidth = Math.round(gridWidth * zoom);
 
@@ -933,7 +941,7 @@ export function DataGridDoomDemo({
             className={cn(
               "bg-black **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:[[role=grid]]:border-0",
               showsGrid
-                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-row]:border-b-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-selected:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-selected:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-selected:after:bg-blue-500/40"
+                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell]:bg-clip-padding **:data-[slot=data-grid-cell]:data-focused:before:absolute **:data-[slot=data-grid-cell]:data-focused:before:inset-0 **:data-[slot=data-grid-cell]:data-focused:before:z-10 **:data-[slot=data-grid-cell]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-row]:border-b-(length:--doom-line) **:data-[slot=data-grid-cell]:data-selected:after:absolute **:data-[slot=data-grid-cell]:data-selected:after:inset-0 **:data-[slot=data-grid-cell]:data-selected:after:bg-blue-500/40"
                 : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}

@@ -1,6 +1,7 @@
 "use client";
 
-import { flexRender, type RowData } from "@tanstack/react-table";
+import type { RowData } from "@tanstack/react-table";
+
 import { cn } from "cn";
 import * as React from "react";
 import { toast } from "sonner";
@@ -30,7 +31,7 @@ import {
   parseLocalDate,
   replaceEditableText,
 } from "@/lib/data-grid-utils";
-import { DataGridCellWrapper } from "@/registry/bases/base/components/data-grid/data-grid-cell-wrapper";
+import { DataGridCell } from "@/registry/bases/base/components/data-grid/data-grid-cell";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import { Calendar } from "@/registry/bases/base/ui/calendar";
@@ -63,16 +64,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 // The cell's padding on each side (px-2), so editors line up with its edge
 const CELL_PADDING = 8;
-
-export function CustomCell<TData extends RowData>(
-  props: DataGridCellProps<TData>,
-) {
-  return (
-    <DataGridCellWrapper<TData> {...props}>
-      {flexRender(props.cell.column.columnDef.cell, props.cell.getContext())}
-    </DataGridCellWrapper>
-  );
-}
 
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -173,7 +164,7 @@ export function ShortTextCell<TData extends RowData>(
   const displayValue = !isEditing ? (value ?? "") : "";
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -195,7 +186,7 @@ export function ShortTextCell<TData extends RowData>(
       >
         {displayValue}
       </div>
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -336,7 +327,7 @@ export function LongTextCell<TData extends RowData>(
       <PopoverTrigger
         nativeButton={false}
         render={
-          <DataGridCellWrapper<TData>
+          <DataGridCell<TData>
             {...props}
             ref={containerRef}
             onKeyDown={onWrapperKeyDown}
@@ -462,7 +453,7 @@ export function NumberCell<TData extends RowData>(
   }, [isEditing]);
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -483,7 +474,7 @@ export function NumberCell<TData extends RowData>(
       ) : (
         <span data-slot="data-grid-cell-content">{value}</span>
       )}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -621,7 +612,7 @@ export function UrlCell<TData extends RowData>(
   const isDangerousUrl = displayValue && !urlHref;
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -663,7 +654,7 @@ export function UrlCell<TData extends RowData>(
           {displayValue}
         </div>
       )}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -738,7 +729,7 @@ export function CheckboxCell<TData extends RowData>(
   );
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       isEditing={false}
@@ -757,7 +748,7 @@ export function CheckboxCell<TData extends RowData>(
         onMouseDown={onCheckboxMouseDown}
         onDoubleClick={onCheckboxDoubleClick}
       />
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -835,7 +826,7 @@ export function SelectCell<TData extends RowData>(
     : null;
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -889,7 +880,7 @@ export function SelectCell<TData extends RowData>(
           {displayLabel}
         </Badge>
       ) : null}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -1056,7 +1047,7 @@ export function MultiSelectCell<TData extends RowData>(
     });
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -1175,7 +1166,7 @@ export function MultiSelectCell<TData extends RowData>(
           )}
         </div>
       ) : null}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -1235,7 +1226,7 @@ export function DateCell<TData extends RowData>(
   );
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -1266,7 +1257,7 @@ export function DateCell<TData extends RowData>(
           </PopoverContent>
         )}
       </Popover>
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -1431,9 +1422,9 @@ export function FileCell<TData extends RowData>(
 
           let uploadedFiles: FileCellData[] = [];
 
-          if (cell.table.options.onFilesUpload) {
+          if (cell.table.options.uploadFiles) {
             try {
-              uploadedFiles = await cell.table.options.onFilesUpload({
+              uploadedFiles = await cell.table.options.uploadFiles({
                 files: filesToValidate,
                 rowId,
                 columnId,
@@ -1497,9 +1488,9 @@ export function FileCell<TData extends RowData>(
 
       setDeletingFiles((prev) => new Set(prev).add(fileId));
 
-      if (cell.table.options.onFilesDelete) {
+      if (cell.table.options.deleteFiles) {
         try {
-          await cell.table.options.onFilesDelete({
+          await cell.table.options.deleteFiles({
             fileIds: [fileId],
             rowId,
             columnId,
@@ -1542,9 +1533,9 @@ export function FileCell<TData extends RowData>(
     const fileIds = files.map((f) => f.id);
     setDeletingFiles(new Set(fileIds));
 
-    if (cell.table.options.onFilesDelete && files.length > 0) {
+    if (cell.table.options.deleteFiles && files.length > 0) {
       try {
-        await cell.table.options.onFilesDelete({
+        await cell.table.options.deleteFiles({
           fileIds,
           rowId,
           columnId,
@@ -1751,7 +1742,7 @@ export function FileCell<TData extends RowData>(
     });
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onDragEnter={onCellDragEnter}
@@ -1957,7 +1948,7 @@ export function FileCell<TData extends RowData>(
           )}
         </div>
       ) : null}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 

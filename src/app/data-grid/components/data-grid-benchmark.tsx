@@ -136,9 +136,12 @@ function getViewportCells(table: PersonTable, grid: HTMLDivElement) {
   return cells;
 }
 
+const BENCHMARK_UPDATE = { history: false } as const;
+
 function restoreCells(table: PersonTable, cells: ViewportCell[]) {
   table.updateCells(
     cells.map(({ rowId, columnId, value }) => ({ rowId, columnId, value })),
+    BENCHMARK_UPDATE,
   );
 }
 
@@ -307,7 +310,10 @@ const BENCHMARK_STEPS: BenchmarkStep[] = [
         await animate(signal, Number.POSITIVE_INFINITY, (_, frame) => {
           const cell = cells[frame];
           if (!cell) return true;
-          table.updateCells({ ...cell, value: cell.nextValue });
+          table.updateCells(
+            { ...cell, value: cell.nextValue },
+            BENCHMARK_UPDATE,
+          );
         });
       } finally {
         restoreCells(table, cells);
@@ -321,6 +327,7 @@ const BENCHMARK_STEPS: BenchmarkStep[] = [
       await measure(() =>
         table.updateCells(
           cells.map((cell) => ({ ...cell, value: cell.nextValue })),
+          BENCHMARK_UPDATE,
         ),
       );
       await measure(() => restoreCells(table, cells));

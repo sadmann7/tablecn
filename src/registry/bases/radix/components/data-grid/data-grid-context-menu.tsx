@@ -60,7 +60,7 @@ function ContextMenuImpl<TData extends RowData>({
   contextMenu,
 }: ContextMenuProps<TData>) {
   const readOnly = table.getIsReadOnly();
-  const canDeleteRows = !readOnly && !!table.options.onRowsDelete;
+  const canDeleteRows = !readOnly && !!table.options.enableRowDeletion;
 
   const triggerStyle = React.useMemo<React.CSSProperties>(
     () => ({
@@ -121,11 +121,11 @@ function ContextMenuImpl<TData extends RowData>({
     );
   }, [table]);
 
-  const onDelete = React.useCallback(async () => {
+  const onDelete = React.useCallback(() => {
     const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
     if (rowIds.size === 0) return;
 
-    await table.deleteRows(Array.from(rowIds));
+    table.deleteRows(Array.from(rowIds));
 
     toast.success(`${rowIds.size} row${rowIds.size !== 1 ? "s" : ""} deleted`);
   }, [table]);

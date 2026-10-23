@@ -9,57 +9,54 @@ import {
   columnResizingFeature,
   columnSizingFeature,
   columnVisibilityFeature,
-  constructRow,
-  copyInstancePropertiesWithoutMemos,
-  createFilteredRowModel,
   makeObjectMap,
   makeStateUpdater,
   metaHelper,
   type OnChangeFn,
-  type Row,
   type RowData,
-  type RowModel,
   rowSelectionFeature,
   rowSortingFeature,
   setStateSlice,
-  skipFirstRun,
-  type SortFn,
   sortFn_alphanumeric,
-  sortFn_alphanumericCaseSensitive,
   sortFn_datetime,
   sortFn_text,
-  type SortFnDef,
   type Table,
   type TableFeature,
   type TableFeatures,
   tableFeatures,
-  tableMemo,
   type Updater,
 } from "@tanstack/react-table";
-import {
-  column_getCanSort,
-  column_getSortFn,
-  table_autoResetCellSelection,
-  table_autoResetExpanded,
-  table_autoResetPageIndex,
-  table_autoResetSorting,
-} from "@tanstack/react-table/static-functions";
 
 import type {
+  AddRowsOptions,
+  CellChange,
   CellPosition,
   CellPresence,
   CellUpdate,
   ClipboardNotice,
   ColumnValueReader,
   ContextMenuState,
+  CreateRowDetails,
+  DataChangeDetails,
+  DataChangeReason,
   DataGridColumnMeta,
   Direction,
   FileCellData,
   NavigationDirection,
   PasteDialogState,
   RowHeightValue,
+  RowUpdate,
+  UndoRedoState,
+  UpdateCellsOptions,
 } from "@/lib/data-grid-types";
 
+import {
+  createDataGridCoreRowModel,
+  createDataGridFilteredRowModel,
+  createDataGridSortedRowModel,
+  patchedRows,
+  rowChangeHints,
+} from "@/lib/data-grid-row-models";
 import {
   getCellKey,
   getColumnValueReader,
@@ -69,8 +66,8 @@ import {
   getHasCustomCell,
   getIsDataColumn,
   getLineCount,
+  getRowDisplayIndex,
   getRowHeightValue,
-  getRowIndexById,
   getTabTargetCell,
   parsePastedCellValue,
   parseTsv,
@@ -139,27 +136,53 @@ interface Cell_DataGridCellEditing {
   startEditing: () => void;
 }
 
+interface TableState_DataGridData {
+  undoRedo: UndoRedoState;
+}
+
 interface TableOptions_DataGridData<TData extends RowData> {
   readOnly?: boolean;
-  onDataChange?: (data: TData[]) => void;
-  onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
-  onFilesUpload?: (params: {
+  onDataChange?: (data: TData[], details: DataChangeDetails<TData>) => void;
+  batchUpdateDelay?: number;
+  createRow?: (
+    details: CreateRowDetails,
+  ) => TData | null | Promise<TData | null>;
+  enableRowDeletion?: boolean;
+  enableUndoRedo?: boolean;
+  maxHistory?: number;
+  onUndoRedoChange?: OnChangeFn<UndoRedoState>;
+  uploadFiles?: (params: {
     files: File[];
     rowId: string;
     columnId: string;
   }) => Promise<FileCellData[]>;
-  onFilesDelete?: (params: {
+  deleteFiles?: (params: {
     fileIds: string[];
     rowId: string;
     columnId: string;
   }) => void | Promise<void>;
 }
 
-interface Table_DataGridData {
+interface Table_DataGridData<TData extends RowData> {
   getIsReadOnly: () => boolean;
-  updateCells: (updates: CellUpdate | Array<CellUpdate>) => void;
+  updateCells: (
+    updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+    options?: UpdateCellsOptions,
+  ) => void;
+  subscribeCell: (
+    rowId: string,
+    columnId: string,
+    listener: () => void,
+  ) => () => void;
   clearCells: (cells: Array<CellPosition>) => void;
-  deleteRows: (rowIds: string[]) => Promise<void>;
+  addRows: (rows: TData[], options?: AddRowsOptions) => string[];
+  deleteRows: (rowIds: string[]) => void;
+  undo: () => number;
+  redo: () => number;
+  getCanUndo: () => boolean;
+  getCanRedo: () => boolean;
+  clearHistory: () => void;
+  autoResetHistory: () => void;
 }
 
 interface Cell_DataGridData {
@@ -205,8 +228,6 @@ interface TableState_DataGridClipboard {
 
 interface TableOptions_DataGridClipboard {
   enablePaste?: boolean;
-  onPaste?: (updates: Array<CellUpdate>) => void | Promise<void>;
-  onRowsAdd?: (count: number) => void | Promise<void>;
   onClipboardNotice?: (notice: ClipboardNotice) => void;
   onCutCellGridChange?: OnChangeFn<Array<Array<CellPosition | null>>>;
   onPasteDialogChange?: OnChangeFn<PasteDialogState>;
@@ -325,6 +346,7 @@ declare module "@tanstack/react-table" {
   interface TableState_FeatureMap {
     dataGridRowHeightFeature: TableState_DataGridRowHeight;
     dataGridCellEditingFeature: TableState_DataGridCellEditing;
+    dataGridDataFeature: TableState_DataGridData;
     dataGridNavigationFeature: TableState_DataGridNavigation;
     dataGridClipboardFeature: TableState_DataGridClipboard;
     dataGridSearchFeature: TableState_DataGridSearch;
@@ -361,7 +383,7 @@ declare module "@tanstack/react-table" {
   > {
     dataGridRowHeightFeature: Table_DataGridRowHeight;
     dataGridCellEditingFeature: Table_DataGridCellEditing;
-    dataGridDataFeature: Table_DataGridData;
+    dataGridDataFeature: Table_DataGridData<TData>;
     dataGridNavigationFeature: Table_DataGridNavigation;
     dataGridClipboardFeature: Table_DataGridClipboard;
     dataGridSearchFeature: Table_DataGridSearch;
@@ -544,10 +566,6 @@ interface DataGridCellRef {
   column: { id: string };
 }
 
-function copyRowRecord(row: RowData): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(row));
-}
-
 function getCanEditCell(table: DataGridInstance, columnId: string) {
   const column = table.getAllFlatColumnsById()[columnId];
   return column
@@ -555,36 +573,724 @@ function getCanEditCell(table: DataGridInstance, columnId: string) {
     : !table.options.readOnly && table.options.enableCellEditing !== false;
 }
 
+const DEFAULT_BATCH_UPDATE_DELAY = 500;
+const DEFAULT_MAX_HISTORY = 100;
+// Cell edits this close together undo as one step, like typing
+const HISTORY_MERGE_DELAY = 300;
+
+interface IndexedRow {
+  row: RowData;
+  index: number;
+}
+
+interface RowInsert {
+  row: RowData;
+  index?: number;
+}
+
+interface HistoryEntry {
+  changes: CellChange[];
+  addedRows: IndexedRow[];
+  removedRows: IndexedRow[];
+  timestamp: number;
+}
+
+type CellListeners = Set<() => void>;
+type RowValues = Record<string, unknown>;
+
+interface CellUpdateStore {
+  listeners: Map<string, Map<string, CellListeners>>;
+  queued: Map<string, RowValues>;
+  deferred: Map<string, RowValues>;
+  lateKeys: Set<string>;
+  pending: Set<string>;
+  copies: Map<string, { base: unknown; copy: RowValues }>;
+  notify: Set<CellListeners>;
+  recordKeys: Set<string>;
+  reported: { from: ReadonlyArray<RowData>; data: RowData[] } | null;
+  undoStack: HistoryEntry[];
+  redoStack: HistoryEntry[];
+  isHistorySealed: boolean;
+  rowIndexes: WeakMap<ReadonlyArray<RowData>, Map<string, number>>;
+  reason: DataChangeReason | null;
+  isFrameScheduled: boolean;
+  frameHandle: ReturnType<typeof setTimeout> | number;
+  commitTimer: ReturnType<typeof setTimeout> | null;
+}
+
+const cellUpdateStores = new WeakMap<object, CellUpdateStore>();
+
+function requestFrame(callback: () => void) {
+  return typeof requestAnimationFrame === "function"
+    ? requestAnimationFrame(callback)
+    : setTimeout(callback, 16);
+}
+
+function cancelFrame(handle: ReturnType<typeof setTimeout> | number) {
+  if (
+    typeof cancelAnimationFrame === "function" &&
+    typeof handle === "number"
+  ) {
+    cancelAnimationFrame(handle);
+  } else {
+    clearTimeout(handle);
+  }
+}
+
+function getHasKeys(object: object) {
+  for (const _ in object) return true;
+  return false;
+}
+
+function getCellUpdateStore(table: DataGridInstance) {
+  let store = cellUpdateStores.get(table);
+  if (!store) {
+    store = {
+      listeners: new Map(),
+      queued: new Map(),
+      deferred: new Map(),
+      lateKeys: new Set(),
+      pending: new Set(),
+      copies: new Map(),
+      notify: new Set(),
+      recordKeys: new Set(),
+      rowIndexes: new WeakMap(),
+      reason: null,
+      reported: null,
+      undoStack: [],
+      redoStack: [],
+      isHistorySealed: false,
+      isFrameScheduled: false,
+      frameHandle: 0,
+      commitTimer: null,
+    };
+    cellUpdateStores.set(table, store);
+  }
+  return store;
+}
+
+function subscribeCell(
+  table: DataGridInstance,
+  rowId: string,
+  columnId: string,
+  listener: () => void,
+) {
+  const store = getCellUpdateStore(table);
+  const { listeners } = store;
+
+  const waiting = store.deferred.get(rowId);
+  if (waiting) {
+    store.deferred.delete(rowId);
+    const current = table.getCoreRowModel().rowsById[rowId]?.original as
+      | RowValues
+      | undefined;
+    for (const changedColumnId in waiting) {
+      if (!Object.is(current?.[changedColumnId], waiting[changedColumnId])) {
+        store.lateKeys.add(getCellKey(rowId, changedColumnId));
+      }
+    }
+    applyRowValues(table, store, new Map([[rowId, waiting]]));
+  }
+
+  let rowListeners = listeners.get(rowId);
+  if (!rowListeners) {
+    rowListeners = new Map();
+    listeners.set(rowId, rowListeners);
+  }
+  let cellListeners = rowListeners.get(columnId);
+  if (!cellListeners) {
+    cellListeners = new Set();
+    rowListeners.set(columnId, cellListeners);
+  }
+  cellListeners.add(listener);
+  if (
+    store.lateKeys.size > 0 &&
+    store.lateKeys.delete(getCellKey(rowId, columnId))
+  ) {
+    listener();
+  }
+  return () => {
+    cellListeners.delete(listener);
+    if (cellListeners.size > 0) return;
+    rowListeners.delete(columnId);
+    if (rowListeners.size === 0) listeners.delete(rowId);
+  };
+}
+
+function mergeUpdates(
+  updates: Array<CellUpdate | RowUpdate>,
+  getTarget: (rowId: string) => Map<string, RowValues>,
+) {
+  for (const update of updates) {
+    const target = getTarget(update.rowId);
+    let values = target.get(update.rowId);
+    if (!values) {
+      values = {};
+      target.set(update.rowId, values);
+    }
+    if ("values" in update) Object.assign(values, update.values);
+    else values[update.columnId] = update.value;
+  }
+}
+
+function getRowCopy(store: CellUpdateStore, rowId: string, current: RowValues) {
+  let shown = store.copies.get(rowId);
+  if (!shown || current !== shown.copy) {
+    shown = { base: current, copy: { ...current } };
+    store.copies.set(rowId, shown);
+  }
+  store.pending.add(rowId);
+  return shown.copy;
+}
+
+// Rows without mounted cells take their values in one go, since nothing needs to know
+// which changed until `onDataChange`
+function applyRowValues(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  rows: Map<string, RowValues>,
+) {
+  const coreRowsById = table.getCoreRowModel().rowsById;
+  const shownRowsById = table.getRowModel().rowsById;
+
+  for (const [rowId, values] of rows) {
+    const row = coreRowsById[rowId];
+    if (!row) continue;
+
+    const current = row.original as RowValues;
+    const rowListeners = store.listeners.get(rowId);
+    let copy: RowValues | null = null;
+
+    if (rowListeners) {
+      for (const columnId in values) {
+        const value = values[columnId];
+        if (Object.is(current[columnId], value)) continue;
+        copy ??= getRowCopy(store, rowId, current);
+        copy[columnId] = value;
+        const cellListeners = rowListeners.get(columnId);
+        if (cellListeners) store.notify.add(cellListeners);
+      }
+      if (!copy) continue;
+    } else {
+      copy = Object.assign(getRowCopy(store, rowId, current), values);
+    }
+
+    // Filtering from leaf rows and grouping show copies of the core rows. Cached
+    // values reset since the copy changed, skipping caches nothing has filled
+    const shownRow = shownRowsById[rowId];
+    for (const target of shownRow && shownRow !== row
+      ? [row, shownRow]
+      : [row]) {
+      target.original = copy;
+      patchedRows.add(target);
+      if (getHasKeys(target._valuesCache)) {
+        target._valuesCache = makeObjectMap();
+      }
+      if (getHasKeys(target._uniqueValuesCache)) {
+        target._uniqueValuesCache = makeObjectMap();
+      }
+    }
+  }
+}
+
+function notifyCells(store: CellUpdateStore) {
+  const notify = [...store.notify];
+  store.notify.clear();
+  for (const cellListeners of notify) {
+    for (const listener of cellListeners) listener();
+  }
+}
+
+// Rows nobody shows wait in `deferred`, unless `isComplete` applies everything
+function flushCellUpdates(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  isComplete = false,
+) {
+  if (store.isFrameScheduled) {
+    cancelFrame(store.frameHandle);
+    store.isFrameScheduled = false;
+  }
+  if (store.queued.size > 0) {
+    const shown = new Map<string, RowValues>();
+    for (const [rowId, values] of store.queued) {
+      const waiting = store.deferred.get(rowId);
+      if (waiting) Object.assign(waiting, values);
+      if (isComplete || store.listeners.has(rowId)) {
+        shown.set(rowId, waiting ?? values);
+        if (waiting) store.deferred.delete(rowId);
+      } else if (!waiting) {
+        store.deferred.set(rowId, values);
+      }
+    }
+    store.queued.clear();
+    applyRowValues(table, store, shown);
+  }
+  if (isComplete && store.deferred.size > 0) {
+    applyRowValues(table, store, store.deferred);
+    store.deferred.clear();
+  }
+  notifyCells(store);
+}
+
+// The last reported data until new `data` arrives, so quick changes build on each other
+function getCurrentData(table: DataGridInstance, store: CellUpdateStore) {
+  const { data } = table.options;
+  return store.reported?.from === data ? store.reported.data : data;
+}
+
+// Where a row sits in `data`. The core rows know, unless the data is one the
+// consumer hasn't passed back yet
+function getDataIndex(
+  table: DataGridInstance,
+  data: ReadonlyArray<RowData>,
+  rowId: string,
+) {
+  if (data === table.options.data) {
+    return table.getCoreRowModel().rowsById[rowId]?.index ?? -1;
+  }
+  const { rowIndexes } = getCellUpdateStore(table);
+  let indexes = rowIndexes.get(data);
+  if (!indexes) {
+    indexes = new Map();
+    for (let index = 0; index < data.length; index++) {
+      const row = data[index];
+      if (row !== undefined) indexes.set(table.getRowId(row, index), index);
+    }
+    rowIndexes.set(data, indexes);
+  }
+  return indexes.get(rowId) ?? -1;
+}
+
+function reportDataChange(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  nextData: RowData[],
+  details: Omit<DataChangeDetails<RowData>, "reason">,
+) {
+  store.reported = { from: table.options.data, data: nextData };
+  table.options.onDataChange?.(nextData, {
+    reason: store.reason ?? "update-cells",
+    ...details,
+  });
+}
+
+// Runs a change under a reason. Values still waiting report first under their own,
+// and the outermost change keeps its reason, so a paste that adds rows reports `paste`
+function runWithReason<T>(
+  table: DataGridInstance,
+  reason: DataChangeReason,
+  fn: () => T,
+): T {
+  const store = getCellUpdateStore(table);
+  if (store.reason) return fn();
+  commitCellUpdates(table, store);
+  store.reason = reason;
+  try {
+    return fn();
+  } finally {
+    store.reason = null;
+  }
+}
+
+function getIsUndoRedoEnabled(table: DataGridInstance) {
+  const { enableUndoRedo, readOnly } = table.options;
+  return enableUndoRedo ?? !readOnly;
+}
+
+function setUndoRedoState(table: DataGridInstance, store: CellUpdateStore) {
+  const canUndo = store.undoStack.length > 0;
+  const canRedo = store.redoStack.length > 0;
+  const current = table.atoms.undoRedo?.get();
+  if (current?.canUndo === canUndo && current.canRedo === canRedo) return;
+  setStateSlice(table, "undoRedo", { canUndo, canRedo });
+}
+
+function getIsCellsOnly(step: HistoryEntry) {
+  return step.addedRows.length === 0 && step.removedRows.length === 0;
+}
+
+function pushHistory(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  entry: HistoryEntry,
+) {
+  if (!getIsUndoRedoEnabled(table)) return;
+  const last = store.undoStack.at(-1);
+  if (
+    last &&
+    !store.isHistorySealed &&
+    getIsCellsOnly(last) &&
+    getIsCellsOnly(entry) &&
+    entry.timestamp - last.timestamp < HISTORY_MERGE_DELAY
+  ) {
+    const byKey = new Map(
+      last.changes.map((change) => [
+        getCellKey(change.rowId, change.columnId),
+        change,
+      ]),
+    );
+    for (const change of entry.changes) {
+      const key = getCellKey(change.rowId, change.columnId);
+      const existing = byKey.get(key);
+      byKey.set(
+        key,
+        existing ? { ...existing, newValue: change.newValue } : change,
+      );
+    }
+    last.changes = [...byKey.values()];
+    last.timestamp = entry.timestamp;
+  } else {
+    store.undoStack.push(entry);
+    const maxHistory = table.options.maxHistory ?? DEFAULT_MAX_HISTORY;
+    if (store.undoStack.length > maxHistory) store.undoStack.shift();
+  }
+  store.isHistorySealed = false;
+  store.redoStack = [];
+  setUndoRedoState(table, store);
+}
+
+// Reuses the row copies the grid already shows, so rows don't rerender when they come
+// back as `data`
+function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
+  if (store.commitTimer !== null) {
+    clearTimeout(store.commitTimer);
+    store.commitTimer = null;
+  }
+  flushCellUpdates(table, store, true);
+  if (store.pending.size === 0) return;
+
+  if (!table.options.onDataChange) {
+    // The copies never leave the grid, so later updates reuse them
+    store.pending.clear();
+    store.recordKeys.clear();
+    return;
+  }
+
+  const rowsById = table.getCoreRowModel().rowsById;
+  const data = getCurrentData(table, store);
+  const nextData = [...data];
+  const changes: CellChange[] = [];
+  const recordedChanges: CellChange[] = [];
+  for (const rowId of store.pending) {
+    const shown = store.copies.get(rowId);
+    const index = getDataIndex(table, data, rowId);
+    if (!shown || index === -1) continue;
+    const base = shown.base as RowValues;
+    const dataRow = (data[index] ?? rowsById[rowId]?.original) as RowValues;
+    // When the data changed since the patch, the patched values go onto its new row
+    const isSameBase = shown.base === dataRow;
+    const nextRow = isSameBase ? shown.copy : { ...dataRow };
+    let isRowChanged = false;
+    for (const columnId in shown.copy) {
+      const newValue = shown.copy[columnId];
+      if (Object.is(newValue, base[columnId])) continue;
+      if (!isSameBase) nextRow[columnId] = newValue;
+      if (Object.is(newValue, dataRow[columnId])) continue;
+      const change = {
+        rowId,
+        columnId,
+        previousValue: dataRow[columnId],
+        newValue,
+      };
+      changes.push(change);
+      if (store.recordKeys.has(getCellKey(rowId, columnId))) {
+        recordedChanges.push(change);
+      }
+      isRowChanged = true;
+    }
+    if (isRowChanged) nextData[index] = nextRow;
+  }
+  store.pending.clear();
+  store.copies.clear();
+  store.recordKeys.clear();
+  store.lateKeys.clear();
+  if (changes.length === 0) return;
+
+  reportDataChange(table, store, nextData, {
+    changes,
+    addedRows: [],
+    removedRows: [],
+  });
+  if (recordedChanges.length > 0) {
+    pushHistory(table, store, {
+      changes: recordedChanges,
+      addedRows: [],
+      removedRows: [],
+      timestamp: Date.now(),
+    });
+  }
+}
+
+// Adds and removes rows in one change. Each insert's index is where the row ends up,
+// so restoring removed rows at their old indices puts them back in place
+function applyRowChanges(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  inserts: ReadonlyArray<RowInsert>,
+  removedRowIds: ReadonlyArray<string>,
+  history = true,
+) {
+  // Cell values still waiting settle first, so the rows build on them
+  commitCellUpdates(table, store);
+  const data = getCurrentData(table, store);
+
+  const removedRows: IndexedRow[] = [];
+  for (const rowId of removedRowIds) {
+    const index = getDataIndex(table, data, rowId);
+    const row = data[index];
+    if (index !== -1 && row !== undefined) removedRows.push({ row, index });
+  }
+  removedRows.sort((a, b) => a.index - b.index);
+
+  let remaining: RowData[] = [...data];
+  if (removedRows.length > 0) {
+    const removedIndexes = new Set(removedRows.map(({ index }) => index));
+    remaining = data.filter((_, index) => !removedIndexes.has(index));
+  }
+
+  const addedRows: IndexedRow[] = inserts
+    .map(({ row, index }) => ({
+      row,
+      index: Math.max(0, index ?? Number.POSITIVE_INFINITY),
+    }))
+    .sort((a, b) => a.index - b.index);
+  const nextData: RowData[] = [];
+  let insertAt = 0;
+  for (let index = 0; index <= remaining.length; index++) {
+    while (insertAt < addedRows.length) {
+      const insert = addedRows[insertAt];
+      if (!insert || insert.index > nextData.length) break;
+      insert.index = nextData.length;
+      nextData.push(insert.row);
+      insertAt++;
+    }
+    if (index < remaining.length) nextData.push(remaining[index] as RowData);
+  }
+  for (; insertAt < addedRows.length; insertAt++) {
+    const insert = addedRows[insertAt];
+    if (!insert) continue;
+    insert.index = nextData.length;
+    nextData.push(insert.row);
+  }
+
+  if (addedRows.length === 0 && removedRows.length === 0) return addedRows;
+  rowChangeHints.set(nextData, {
+    from: data,
+    removedIndexes: removedRows.map(({ index }) => index),
+    insertedIndexes: addedRows.map(({ index }) => index),
+  });
+  reportDataChange(table, store, nextData, {
+    changes: [],
+    addedRows: addedRows.map(({ row }) => row),
+    removedRows: removedRows.map(({ row }) => row),
+  });
+  if (history) {
+    pushHistory(table, store, {
+      changes: [],
+      addedRows,
+      removedRows,
+      timestamp: Date.now(),
+    });
+    store.isHistorySealed = true;
+  }
+  return addedRows;
+}
+
+function addRows(
+  table: DataGridInstance,
+  rows: ReadonlyArray<RowData>,
+  { afterRowId, beforeRowId }: AddRowsOptions = {},
+) {
+  const store = getCellUpdateStore(table);
+  const data = getCurrentData(table, store);
+
+  let index = data.length;
+  const anchorRowId = afterRowId ?? beforeRowId;
+  if (anchorRowId !== undefined) {
+    const anchorIndex = getDataIndex(table, data, anchorRowId);
+    if (anchorIndex !== -1) {
+      index = afterRowId === undefined ? anchorIndex : anchorIndex + 1;
+    }
+  }
+
+  return applyRowChanges(
+    table,
+    store,
+    rows.map((row, offset) => ({ row, index: index + offset })),
+    [],
+  ).map(({ row, index: rowIndex }) => table.getRowId(row, rowIndex));
+}
+
+// Applies a step backwards or forwards without recording it. Cells change on the rows
+// a step leaves in place, so undo restores cells before rows and redo after them
+function applyHistoryEntry(
+  table: DataGridInstance,
+  store: CellUpdateStore,
+  entry: HistoryEntry,
+  isUndo: boolean,
+) {
+  const applyCells = () =>
+    updateCells(
+      table,
+      entry.changes.map(({ rowId, columnId, previousValue, newValue }) => ({
+        rowId,
+        columnId,
+        value: isUndo ? previousValue : newValue,
+      })),
+      { history: false },
+    );
+  const getRowIds = (rows: IndexedRow[]) =>
+    rows.map(({ row, index }) => table.getRowId(row, index));
+  // Data that changed since the step may already hold a row it brings back
+  const getMissingRows = (rows: IndexedRow[]) => {
+    if (!table.options.getRowId) return rows;
+    const data = getCurrentData(table, store);
+    return rows.filter(
+      ({ row, index }) =>
+        getDataIndex(table, data, table.getRowId(row, index)) === -1,
+    );
+  };
+  const applyRows = () =>
+    isUndo
+      ? applyRowChanges(
+          table,
+          store,
+          getMissingRows(entry.removedRows),
+          getRowIds(entry.addedRows),
+          false,
+        )
+      : applyRowChanges(
+          table,
+          store,
+          getMissingRows(entry.addedRows),
+          getRowIds(entry.removedRows),
+          false,
+        );
+
+  if (isUndo) {
+    applyCells();
+    applyRows();
+  } else {
+    applyRows();
+    applyCells();
+  }
+  return (
+    entry.changes.length + entry.addedRows.length + entry.removedRows.length
+  );
+}
+
+// Without `getRowId`, rows are known by index, so data from outside the grid leaves
+// the history pointing at the wrong rows
+function getIsHistoryStale(table: DataGridInstance, store: CellUpdateStore) {
+  return (
+    !table.options.getRowId &&
+    store.reported !== null &&
+    getCurrentData(table, store) !== store.reported.data
+  );
+}
+
+function undo(table: DataGridInstance) {
+  const store = getCellUpdateStore(table);
+  if (getIsHistoryStale(table, store)) {
+    clearHistory(table);
+    return 0;
+  }
+  const entry = store.undoStack.pop();
+  if (!entry) return 0;
+  const count = applyHistoryEntry(table, store, entry, true);
+  store.redoStack.push(entry);
+  store.isHistorySealed = true;
+  setUndoRedoState(table, store);
+  return count;
+}
+
+function redo(table: DataGridInstance) {
+  const store = getCellUpdateStore(table);
+  if (getIsHistoryStale(table, store)) {
+    clearHistory(table);
+    return 0;
+  }
+  const entry = store.redoStack.pop();
+  if (!entry) return 0;
+  const count = applyHistoryEntry(table, store, entry, false);
+  store.undoStack.push(entry);
+  store.isHistorySealed = true;
+  setUndoRedoState(table, store);
+  return count;
+}
+
+function autoResetHistory(table: DataGridInstance) {
+  if (getIsHistoryStale(table, getCellUpdateStore(table))) clearHistory(table);
+}
+
+function clearHistory(table: DataGridInstance) {
+  const store = getCellUpdateStore(table);
+  store.undoStack = [];
+  store.redoStack = [];
+  setUndoRedoState(table, store);
+}
+
 function updateCells(
+  table: DataGridInstance,
+  updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+  options?: UpdateCellsOptions,
+) {
+  const updateArray = Array.isArray(updates) ? updates : [updates];
+  if (updateArray.length === 0) return;
+  const store = getCellUpdateStore(table);
+
+  if (options?.history ?? !options?.batch) {
+    for (const update of updateArray) {
+      if ("values" in update) {
+        for (const columnId in update.values) {
+          store.recordKeys.add(getCellKey(update.rowId, columnId));
+        }
+      } else {
+        store.recordKeys.add(getCellKey(update.rowId, update.columnId));
+      }
+    }
+  }
+
+  if (options?.batch) {
+    mergeUpdates(updateArray, (rowId) =>
+      store.listeners.has(rowId) ? store.queued : store.deferred,
+    );
+    if (store.queued.size > 0 && !store.isFrameScheduled) {
+      store.isFrameScheduled = true;
+      store.frameHandle = requestFrame(() => {
+        store.isFrameScheduled = false;
+        flushCellUpdates(table, store);
+      });
+    }
+    store.commitTimer ??= setTimeout(
+      () => commitCellUpdates(table, store),
+      table.options.batchUpdateDelay ?? DEFAULT_BATCH_UPDATE_DELAY,
+    );
+    return;
+  }
+
+  // Batched values still waiting apply first, so this update lands after them
+  flushCellUpdates(table, store, true);
+  const rows = new Map<string, RowValues>();
+  mergeUpdates(updateArray, () => rows);
+  applyRowValues(table, store, rows);
+  commitCellUpdates(table, store);
+}
+
+// Edits made in the grid, which respect read-only grids and columns
+function updateEditableCells(
   table: DataGridInstance,
   updates: CellUpdate | Array<CellUpdate>,
 ) {
+  if (table.options.readOnly) return;
   const updateArray = Array.isArray(updates) ? updates : [updates];
-  if (table.options.readOnly || updateArray.length === 0) return;
-
-  const data = table.options.data;
-  const rowsById = table.getCoreRowModel().rowsById;
-  const updatedRows = new Map<number, Record<string, unknown>>();
-
-  for (const { rowId, columnId, value } of updateArray) {
-    const row = rowsById[rowId];
-    if (!row || !getCanEditCell(table, columnId)) continue;
-
-    let updatedRow = updatedRows.get(row.index);
-    if (!updatedRow) {
-      updatedRow = copyRowRecord(data[row.index] ?? row.original);
-      updatedRows.set(row.index, updatedRow);
-    }
-    updatedRow[columnId] = value;
-  }
-
-  if (updatedRows.size === 0) return;
-
-  const nextData = [...data];
-  for (const [index, row] of updatedRows) {
-    nextData[index] = row;
-  }
-  table.options.onDataChange?.(nextData);
+  runWithReason(table, "edit", () =>
+    updateCells(
+      table,
+      updateArray.filter(({ columnId }) => getCanEditCell(table, columnId)),
+    ),
+  );
 }
 
 function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
@@ -592,9 +1298,8 @@ function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
   return getEmptyCellValue(column?.columnDef.meta?.cell?.variant);
 }
 
-async function deleteRows(table: DataGridInstance, rowIds: string[]) {
-  const { readOnly, onRowsDelete } = table.options;
-  if (readOnly || !onRowsDelete || rowIds.length === 0) return;
+function deleteRows(table: DataGridInstance, rowIds: string[]) {
+  if (rowIds.length === 0) return;
 
   const rowIdSet = new Set(rowIds);
   const rows = table.getRowModel().rows;
@@ -622,8 +1327,10 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
       ? table.getVisibleLeafColumns().find(getIsDataColumn)?.id
       : focusedColumn?.id;
 
-  await onRowsDelete(
-    deletedRows.map((row) => row.original),
+  applyRowChanges(
+    table,
+    getCellUpdateStore(table),
+    [],
     deletedRows.map((row) => row.id),
   );
 
@@ -641,6 +1348,17 @@ async function deleteRows(table: DataGridInstance, rowIds: string[]) {
 }
 
 const dataGridDataFeature: TableFeature = {
+  getInitialState: (initialState) => ({
+    undoRedo: { canUndo: false, canRedo: false },
+    ...initialState,
+  }),
+  getDefaultTableOptions: (table) => {
+    const options: Pick<
+      TableOptions_DataGridData<RowData>,
+      "onUndoRedoChange"
+    > = { onUndoRedoChange: makeStateUpdater("undoRedo", table) };
+    return options;
+  },
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
@@ -649,12 +1367,18 @@ const dataGridDataFeature: TableFeature = {
         fn: () => !!instance.options.readOnly,
       },
       table_updateCells: {
-        fn: (updates: CellUpdate | Array<CellUpdate>) =>
-          updateCells(instance, updates),
+        fn: (
+          updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+          options?: UpdateCellsOptions,
+        ) => updateCells(instance, updates, options),
+      },
+      table_subscribeCell: {
+        fn: (rowId: string, columnId: string, listener: () => void) =>
+          subscribeCell(instance, rowId, columnId, listener),
       },
       table_clearCells: {
         fn: (cells: Array<CellPosition>) =>
-          updateCells(
+          updateEditableCells(
             instance,
             cells.map(({ rowId, columnId }) => ({
               rowId,
@@ -663,8 +1387,39 @@ const dataGridDataFeature: TableFeature = {
             })),
           ),
       },
+      table_addRows: {
+        fn: (rows: RowData[], options?: AddRowsOptions) =>
+          runWithReason(instance, "add-rows", () =>
+            addRows(instance, rows, options),
+          ),
+      },
       table_deleteRows: {
-        fn: (rowIds: string[]) => deleteRows(instance, rowIds),
+        fn: (rowIds: string[]) =>
+          runWithReason(instance, "delete-rows", () =>
+            deleteRows(instance, rowIds),
+          ),
+      },
+      table_undo: {
+        fn: () => runWithReason(instance, "undo", () => undo(instance)),
+      },
+      table_redo: {
+        fn: () => runWithReason(instance, "redo", () => redo(instance)),
+      },
+      table_getCanUndo: {
+        fn: () =>
+          instance.atoms.undoRedo.get().canUndo &&
+          !getIsHistoryStale(instance, getCellUpdateStore(instance)),
+      },
+      table_getCanRedo: {
+        fn: () =>
+          instance.atoms.undoRedo.get().canRedo &&
+          !getIsHistoryStale(instance, getCellUpdateStore(instance)),
+      },
+      table_clearHistory: {
+        fn: () => clearHistory(instance),
+      },
+      table_autoResetHistory: {
+        fn: () => autoResetHistory(instance),
       },
     });
   },
@@ -672,7 +1427,7 @@ const dataGridDataFeature: TableFeature = {
     assignPrototypeAPIs("dataGridDataFeature", prototype, table, {
       cell_setValue: {
         fn: (cell: DataGridCellRef, value: unknown) =>
-          updateCells(asDataGrid(cell.table), {
+          updateEditableCells(asDataGrid(cell.table), {
             rowId: cell.row.id,
             columnId: cell.column.id,
             value,
@@ -681,7 +1436,7 @@ const dataGridDataFeature: TableFeature = {
       cell_clearValue: {
         fn: (cell: DataGridCellRef) => {
           const instance = asDataGrid(cell.table);
-          updateCells(instance, {
+          updateEditableCells(instance, {
             rowId: cell.row.id,
             columnId: cell.column.id,
             value: getEmptyValueForColumn(instance, cell.column.id),
@@ -702,7 +1457,7 @@ function getNavigationTarget(
   options: NavigateOptions = {},
 ): CellPosition | null {
   const rows = table.getRowModel().rows;
-  const rowIndex = getRowIndexById(table, from.rowId);
+  const rowIndex = getRowDisplayIndex(table, from.rowId);
   if (rowIndex === -1) return null;
 
   const columnIds = table.getVisibleLeafColumns().map((column) => column.id);
@@ -1094,7 +1849,7 @@ function getPasteTarget(
 ) {
   const rows = table.getRowModel().rows;
   const target = {
-    rowIndex: getRowIndexById(table, focusedCell.rowId),
+    rowIndex: getRowDisplayIndex(table, focusedCell.rowId),
     columnIndex: dataColumnIds.indexOf(focusedCell.columnId),
     values: clipboardRows,
     isFill: false,
@@ -1138,7 +1893,7 @@ async function pasteCells(
   table: DataGridInstance,
   { expandRows = false }: PasteCellsOptions = {},
 ) {
-  const { readOnly, onRowsAdd, onPaste } = table.options;
+  const { readOnly, createRow } = table.options;
   const notify = table.options.onClipboardNotice;
   if (readOnly) return;
 
@@ -1164,14 +1919,19 @@ async function pasteCells(
     const rowCount = table.getRowModel().rows.length;
     const rowsNeeded = target.rowIndex + target.values.length - rowCount;
 
-    if (rowsNeeded > 0 && onRowsAdd) {
+    if (rowsNeeded > 0 && createRow) {
       if (!expandRows && !pasteDialog.clipboardText) {
         table.setPasteDialog({ open: true, rowsNeeded, clipboardText });
         return;
       }
       if (expandRows) {
-        await onRowsAdd(rowsNeeded);
-        await waitForRowCount(table, rowCount + rowsNeeded);
+        const newRows: RowData[] = [];
+        for (let i = 0; i < rowsNeeded; i++) {
+          const row = await createRow({ reason: "paste" });
+          if (row) newRows.push(row);
+        }
+        runWithReason(table, "paste", () => table.addRows(newRows));
+        await waitForRowCount(table, rowCount + newRows.length);
       }
     }
 
@@ -1217,8 +1977,6 @@ async function pasteCells(
     }
 
     if (updates.length > 0) {
-      await onPaste?.(updates);
-
       const clearedSourceUpdates = movedSourceCells
         .filter(
           (cell) => !writtenCellKeys.has(getCellKey(cell.rowId, cell.columnId)),
@@ -1228,7 +1986,9 @@ async function pasteCells(
           value: getEmptyValueForColumn(table, cell.columnId),
         }));
       table.resetCutCellGrid(true);
-      updateCells(table, [...updates, ...clearedSourceUpdates]);
+      runWithReason(table, "paste", () =>
+        updateEditableCells(table, [...updates, ...clearedSourceUpdates]),
+      );
 
       const startRowId = rows[target.rowIndex]?.id;
       const startColumnId = dataColumnIds[target.columnIndex];
@@ -1881,537 +2641,6 @@ const dataGridSelectionFeature: TableFeature = {
   },
 };
 
-type CoreRow = Row<TableFeatures, RowData>;
-
-function createDataGridCoreRowModel<
-  TFeatures extends TableFeatures,
-  TData extends RowData,
->(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
-  return (_table) => {
-    const table = _table as unknown as Table<TableFeatures, RowData>;
-    let previous: RowModel<TableFeatures, RowData> | null = null;
-    return tableMemo({
-      feature: "coreRowModelsFeature",
-      table: _table,
-      fnName: "table.getCoreRowModel",
-      memoDeps: () => [table.options.data],
-      fn: () => {
-        previous = getCoreRowModel(table, previous);
-        return previous as unknown as RowModel<TFeatures, TData>;
-      },
-      onAfterUpdate: skipFirstRun(() => {
-        table_autoResetExpanded(table);
-        table_autoResetPageIndex(table);
-        table_autoResetSorting(table);
-        table_autoResetCellSelection(table);
-      }),
-    });
-  };
-}
-
-function getCoreRowModel(
-  table: Table<TableFeatures, RowData>,
-  previous: RowModel<TableFeatures, RowData> | null,
-): RowModel<TableFeatures, RowData> {
-  const { data, getSubRows } = table.options;
-
-  if (previous && !getSubRows && previous.rows.length === data.length) {
-    const rows = previous.rows.slice();
-    const changedRows: Array<CoreRow> = [];
-    let isSameShape = true;
-    for (let i = 0; i < data.length; i++) {
-      const originalRow = data[i];
-      const previousRow = rows[i];
-      if (originalRow === undefined || !previousRow) {
-        isSameShape = false;
-        break;
-      }
-      if (previousRow.original === originalRow) continue;
-      const id = table.getRowId(originalRow, i);
-      if (id !== previousRow.id) {
-        isSameShape = false;
-        break;
-      }
-      const row = constructRow(table, id, originalRow, i, 0);
-      rows[i] = row;
-      changedRows.push(row);
-    }
-
-    if (isSameShape) {
-      const rowsById = previous.rowsById;
-      for (const row of changedRows) rowsById[row.id] = row;
-      return { rows, flatRows: rows.slice(), rowsById };
-    }
-  }
-
-  const rowModel: RowModel<TableFeatures, RowData> = {
-    rows: [],
-    flatRows: [],
-    rowsById: makeObjectMap<CoreRow>(),
-  };
-
-  function accessRows(
-    originalRows: ReadonlyArray<RowData>,
-    depth: number,
-    previousRows: ReadonlyArray<CoreRow>,
-    parentRow?: CoreRow,
-  ) {
-    const rows: Array<CoreRow> = [];
-    for (let i = 0; i < originalRows.length; i++) {
-      const originalRow = originalRows[i];
-      if (originalRow === undefined) continue;
-      const previousRow = previousRows[i];
-      const row =
-        !getSubRows && previousRow?.original === originalRow
-          ? previousRow
-          : constructRow(
-              table,
-              table.getRowId(originalRow, i, parentRow),
-              originalRow,
-              i,
-              depth,
-              undefined,
-              parentRow?.id,
-            );
-      rowModel.flatRows.push(row);
-      rowModel.rowsById[row.id] = row;
-      rows.push(row);
-
-      if (getSubRows) {
-        row.originalSubRows = getSubRows(originalRow, i);
-        if (row.originalSubRows?.length) {
-          row.subRows = accessRows(row.originalSubRows, depth + 1, [], row);
-        }
-      }
-    }
-    return rows;
-  }
-
-  rowModel.rows = accessRows(data, 0, previous?.rows ?? []);
-  return rowModel;
-}
-
-type SortedRow = Row<TableFeatures, RowData>;
-type SortedRowFn = SortFn<TableFeatures, RowData>;
-
-interface ResolvedSort {
-  id: string;
-  desc: boolean;
-  invertSorting: boolean;
-  sortUndefined: false | -1 | 1 | "first" | "last" | undefined;
-  sortFn: SortedRowFn;
-  compareValues: SortFnDef<TableFeatures, RowData>["sort"] | null;
-}
-
-const alphanumericCompares = new Set<unknown>([
-  sortFn_alphanumeric.sort,
-  sortFn_alphanumericCaseSensitive.sort,
-]);
-
-function compareBasic(a: unknown, b: unknown) {
-  return a === b ? 0 : (a as number) > (b as number) ? 1 : -1;
-}
-
-function getIsDigit(code: number) {
-  return code >= 48 && code <= 57;
-}
-
-function getAlphanumericSortKey(value: unknown) {
-  if (typeof value !== "string") return null;
-  let key = "";
-  let index = 0;
-  while (index < value.length) {
-    const code = value.charCodeAt(index);
-    if (code === 0 || code >= 0xff) return null;
-    const isNumeric = getIsDigit(code);
-    let end = index + 1;
-    while (
-      end < value.length &&
-      getIsDigit(value.charCodeAt(end)) === isNumeric
-    ) {
-      end++;
-    }
-    if (isNumeric) {
-      let start = index;
-      while (start < end && value.charCodeAt(start) === 48) start++;
-      const digitCount = end - start;
-      if (digitCount > 15) return null;
-      key += `\u00ff${String.fromCharCode(48 + digitCount)}${value.slice(start, end)}`;
-    } else {
-      key += `${value.slice(index, end)}\u0000`;
-    }
-    index = end;
-  }
-  return key;
-}
-
-function getAlphanumericSortKeys(values: Array<unknown>) {
-  const keys: Array<string> = [];
-  for (const value of values) {
-    const key = getAlphanumericSortKey(value);
-    if (key === null) return null;
-    keys.push(key);
-  }
-  return keys;
-}
-
-function getValueSort(sortFn: SortedRowFn) {
-  return "sort" in sortFn && typeof sortFn.sort === "function"
-    ? (sortFn.sort as SortFnDef<TableFeatures, RowData>["sort"])
-    : null;
-}
-
-function createDataGridSortedRowModel<
-  TFeatures extends TableFeatures,
-  TData extends RowData,
->(): (table: Table<TFeatures, TData>) => () => RowModel<TFeatures, TData> {
-  return (_table) => {
-    const table = _table as unknown as Table<TableFeatures, RowData>;
-    const cache: SortCaches = {
-      current: null,
-      unfiltered: null,
-      filtered: null,
-    };
-    return tableMemo({
-      feature: "rowSortingFeature",
-      table: _table,
-      fnName: "table.getSortedRowModel",
-      memoDeps: () => [
-        table.atoms.sorting?.get(),
-        table.getPreSortedRowModel(),
-      ],
-      fn: () =>
-        getSortedRowModel(table, cache) as unknown as RowModel<
-          TFeatures,
-          TData
-        >,
-      onAfterUpdate: skipFirstRun(() => table_autoResetPageIndex(table)),
-    });
-  };
-}
-
-interface SortCache {
-  rows: Array<SortedRow>;
-  sorting: Array<{ id: string; desc: boolean }>;
-  order: Array<number>;
-  getIsTie: (a: number, b: number) => boolean;
-}
-
-interface SortCaches {
-  current: SortCache | null;
-  unfiltered: SortCache | null;
-  filtered: Pick<SortCache, "rows" | "sorting" | "order"> | null;
-}
-
-function getIsSameSorting(
-  previous: SortCache["sorting"],
-  sorting: Array<ResolvedSort>,
-) {
-  return (
-    previous.length === sorting.length &&
-    sorting.every(
-      (sort, index) =>
-        sort.id === previous[index]?.id && sort.desc === previous[index]?.desc,
-    )
-  );
-}
-
-function getUpdatedUnfilteredCache(
-  table: Table<TableFeatures, RowData>,
-  cache: SortCache,
-  rows: Array<SortedRow>,
-  sorting: Array<ResolvedSort>,
-): SortCache | null {
-  if (cache.rows === rows) return cache;
-  if (cache.rows.length !== rows.length) return null;
-
-  const columns = sorting.map((sort) => table.getColumn(sort.id));
-  if (columns.some((column) => !column?.accessorFn)) return null;
-  const readValues = columns.map(getColumnValueReader);
-
-  for (let index = 0; index < rows.length; index++) {
-    const row = rows[index];
-    const previousRow = cache.rows[index];
-    if (row === previousRow) continue;
-    if (!row || !previousRow || row.id !== previousRow.id) return null;
-    for (const readValue of readValues) {
-      if (!Object.is(readValue(row), readValue(previousRow))) return null;
-    }
-  }
-
-  return { ...cache, rows };
-}
-
-function getIsFlippedSorting(
-  previous: SortCache["sorting"],
-  sorting: Array<ResolvedSort>,
-) {
-  return (
-    previous.length === sorting.length &&
-    sorting.every(
-      (sort, index) =>
-        sort.id === previous[index]?.id && sort.desc !== previous[index]?.desc,
-    )
-  );
-}
-
-function getFlippedOrder(
-  order: Array<number>,
-  getIsTie: (a: number, b: number) => boolean,
-) {
-  const flipped: Array<number> = [];
-  let groupEnd = order.length;
-  for (let index = order.length - 1; index >= 0; index--) {
-    const current = order[index];
-    const previous = order[index - 1];
-    if (current === undefined) continue;
-    if (previous === undefined || !getIsTie(previous, current)) {
-      for (let i = index; i < groupEnd; i++) {
-        const rowIndex = order[i];
-        if (rowIndex !== undefined) flipped.push(rowIndex);
-      }
-      groupEnd = index;
-    }
-  }
-  return flipped;
-}
-
-function getSortedRowModel(
-  table: Table<TableFeatures, RowData>,
-  cache: SortCaches,
-): RowModel<TableFeatures, RowData> {
-  const preSortedRowModel = table.getPreSortedRowModel();
-  const sorting = table.atoms.sorting?.get();
-  if (!preSortedRowModel.rows.length || !sorting?.length) {
-    return preSortedRowModel;
-  }
-
-  const resolvedSorting: Array<ResolvedSort> = [];
-  for (const sort of sorting) {
-    const column = table.getColumn(sort.id);
-    if (!column || !column_getCanSort(column)) continue;
-    const sortFn = column_getSortFn(column);
-    resolvedSorting.push({
-      id: sort.id,
-      desc: sort.desc,
-      invertSorting: !!column.columnDef.invertSorting,
-      sortUndefined: column.columnDef.sortUndefined,
-      sortFn,
-      compareValues: getValueSort(sortFn),
-    });
-  }
-  if (!resolvedSorting.length) return preSortedRowModel;
-
-  const sortedFlatRows: Array<SortedRow> = [];
-
-  const isCacheable =
-    preSortedRowModel.flatRows.length === preSortedRowModel.rows.length &&
-    resolvedSorting.every(
-      ({ sortUndefined }) =>
-        sortUndefined !== "first" && sortUndefined !== "last",
-    );
-  const previous = cache.current;
-  cache.current = null;
-
-  const unfilteredRowModel = table.getPreFilteredRowModel();
-  const unfilteredRows = unfilteredRowModel.rows;
-  const isFlat =
-    preSortedRowModel.flatRows.length === preSortedRowModel.rows.length &&
-    unfilteredRowModel.flatRows.length === unfilteredRows.length;
-  const isFiltered = preSortedRowModel.rows !== unfilteredRows;
-
-  let unfiltered =
-    isFlat && cache.unfiltered
-      ? getUpdatedUnfilteredCache(
-          table,
-          cache.unfiltered,
-          unfilteredRows,
-          resolvedSorting,
-        )
-      : null;
-  if (
-    unfiltered &&
-    !getIsSameSorting(unfiltered.sorting, resolvedSorting) &&
-    !(isCacheable && getIsFlippedSorting(unfiltered.sorting, resolvedSorting))
-  ) {
-    unfiltered = null;
-  }
-  cache.unfiltered = unfiltered;
-
-  const previousFiltered = cache.filtered;
-  cache.filtered = null;
-
-  if (unfiltered) {
-    const sorting = resolvedSorting.map(({ id, desc }) => ({ id, desc }));
-    const rowsById = preSortedRowModel.rowsById;
-    let order: Array<number>;
-
-    if (
-      isFiltered &&
-      isCacheable &&
-      previousFiltered?.rows === preSortedRowModel.rows &&
-      getIsFlippedSorting(previousFiltered.sorting, resolvedSorting)
-    ) {
-      order = getFlippedOrder(previousFiltered.order, unfiltered.getIsTie);
-    } else {
-      if (!getIsSameSorting(unfiltered.sorting, resolvedSorting)) {
-        unfiltered = {
-          ...unfiltered,
-          sorting,
-          order: getFlippedOrder(unfiltered.order, unfiltered.getIsTie),
-        };
-        cache.unfiltered = unfiltered;
-      }
-      if (isCacheable && !isFiltered) cache.current = unfiltered;
-
-      order = isFiltered ? [] : unfiltered.order;
-      if (isFiltered) {
-        for (const index of unfiltered.order) {
-          const row = unfilteredRows[index];
-          if (row && rowsById[row.id] === row) order.push(index);
-        }
-      }
-    }
-
-    if (isFiltered) {
-      cache.filtered = { rows: preSortedRowModel.rows, sorting, order };
-    }
-
-    const rows: Array<SortedRow> = [];
-    for (const index of order) {
-      const row = unfilteredRows[index];
-      if (row) rows.push(row);
-    }
-    return { rows, flatRows: rows.slice(), rowsById };
-  }
-
-  function getRowsComparator(rows: Array<SortedRow>) {
-    const rawValues = resolvedSorting.map((sort) =>
-      sort.compareValues || sort.sortUndefined
-        ? rows.map(getColumnValueReader(table.getColumn(sort.id)))
-        : null,
-    );
-    const sortValues = resolvedSorting.map((sort, sortIndex) => {
-      const values = rawValues[sortIndex];
-      if (!sort.compareValues || !values) return null;
-      const resolve = sort.sortFn.resolveDataValue;
-      return resolve ? values.map((value) => resolve(value)) : values;
-    });
-
-    const sortKeys = resolvedSorting.map((sort, sortIndex) => {
-      const values = sortValues[sortIndex];
-      return values && alphanumericCompares.has(sort.compareValues)
-        ? getAlphanumericSortKeys(values)
-        : null;
-    });
-
-    return (a: number, b: number) => {
-      const rowA = rows[a];
-      const rowB = rows[b];
-      if (!rowA || !rowB) return 0;
-      for (let i = 0; i < resolvedSorting.length; i++) {
-        const sort = resolvedSorting[i];
-        if (!sort) continue;
-        let sortInt = 0;
-
-        const values = rawValues[i];
-        if (sort.sortUndefined && values) {
-          const isAUndefined = values[a] === undefined;
-          const isBUndefined = values[b] === undefined;
-          if (isAUndefined && isBUndefined) continue;
-          if (isAUndefined || isBUndefined) {
-            if (sort.sortUndefined === "first") return isAUndefined ? -1 : 1;
-            if (sort.sortUndefined === "last") return isAUndefined ? 1 : -1;
-            sortInt = isAUndefined ? sort.sortUndefined : -sort.sortUndefined;
-          }
-        }
-
-        const keys = sortKeys[i];
-        if (sortInt === 0 && keys) {
-          sortInt = compareBasic(keys[a], keys[b]);
-        } else if (sortInt === 0) {
-          const values = sortValues[i];
-          sortInt =
-            values && sort.compareValues
-              ? sort.compareValues(values[a], values[b], rowA, rowB, sort.id)
-              : sort.sortFn(rowA, rowB, sort.id);
-        }
-
-        if (sortInt !== 0) {
-          if (sort.desc) sortInt *= -1;
-          if (sort.invertSorting) sortInt *= -1;
-          return sortInt;
-        }
-      }
-      return 0;
-    };
-  }
-
-  function sortRows(rows: Array<SortedRow>, isTopLevel = false) {
-    let order: Array<number>;
-    let getIsTie: (a: number, b: number) => boolean;
-
-    if (
-      isTopLevel &&
-      previous &&
-      previous.rows === rows &&
-      getIsFlippedSorting(previous.sorting, resolvedSorting)
-    ) {
-      order = getFlippedOrder(previous.order, previous.getIsTie);
-      getIsTie = previous.getIsTie;
-    } else {
-      const compare = getRowsComparator(rows);
-      order = rows.map((_, index) => index);
-      order.sort(
-        (a, b) =>
-          compare(a, b) || (rows[a]?.index ?? 0) - (rows[b]?.index ?? 0),
-      );
-      getIsTie = (a, b) => compare(a, b) === 0;
-    }
-
-    if (isTopLevel) {
-      const sortCache: SortCache = {
-        rows,
-        sorting: resolvedSorting.map(({ id, desc }) => ({ id, desc })),
-        order,
-        getIsTie,
-      };
-      if (isCacheable) cache.current = sortCache;
-      if (isFlat && !isFiltered) cache.unfiltered = sortCache;
-    }
-
-    const sortedRows: Array<SortedRow> = [];
-    let changed = false;
-    for (const index of order) {
-      const row = rows[index];
-      if (!row) continue;
-      if (row !== rows[sortedRows.length]) changed = true;
-      const flatIndex = sortedFlatRows.length;
-      sortedFlatRows.push(row);
-      sortedRows.push(row);
-
-      if (row.subRows.length) {
-        const sortedSubRows = sortRows(row.subRows);
-        if (sortedSubRows.changed) {
-          const cloned = Object.create(Object.getPrototypeOf(row));
-          copyInstancePropertiesWithoutMemos(cloned, row);
-          cloned.subRows = sortedSubRows.rows;
-          sortedRows[sortedRows.length - 1] = cloned;
-          sortedFlatRows[flatIndex] = cloned;
-          changed = true;
-        }
-      }
-    }
-    return { rows: sortedRows, changed };
-  }
-
-  return {
-    rows: sortRows(preSortedRowModel.rows, true).rows,
-    flatRows: sortedFlatRows,
-    rowsById: preSortedRowModel.rowsById,
-  };
-}
-
 export const dataGridFeatures = tableFeatures({
   cellSelectionFeature,
   columnFilteringFeature,
@@ -2431,7 +2660,7 @@ export const dataGridFeatures = tableFeatures({
   dataGridSearchFeature,
   dataGridPresenceFeature,
   dataGridSelectionFeature,
-  filteredRowModel: createFilteredRowModel(),
+  filteredRowModel: createDataGridFilteredRowModel(),
   coreRowModel: createDataGridCoreRowModel(),
   sortedRowModel: createDataGridSortedRowModel(),
   sortFns: {

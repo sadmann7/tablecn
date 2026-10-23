@@ -26,7 +26,7 @@ export function getDoomParams(params: Pick<URLSearchParams, "get">) {
       ? modeParam
       : columnCount === NATIVE_RESOLUTION
         ? "gradient"
-        : "dom";
+        : "data";
 
   return {
     columnCount,

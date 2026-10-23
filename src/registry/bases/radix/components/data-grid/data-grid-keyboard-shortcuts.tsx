@@ -31,8 +31,8 @@ interface DataGridKeyboardShortcutsProps {
   enableSearch?: boolean;
   enableUndoRedo?: boolean;
   enablePaste?: boolean;
-  enableRowAdd?: boolean;
-  enableRowsDelete?: boolean;
+  enableRowCreation?: boolean;
+  enableRowDeletion?: boolean;
 }
 
 export const DataGridKeyboardShortcuts = React.memo(
@@ -42,8 +42,8 @@ export const DataGridKeyboardShortcuts = React.memo(
       prev.enableSearch === next.enableSearch &&
       prev.enableUndoRedo === next.enableUndoRedo &&
       prev.enablePaste === next.enablePaste &&
-      prev.enableRowAdd === next.enableRowAdd &&
-      prev.enableRowsDelete === next.enableRowsDelete
+      prev.enableRowCreation === next.enableRowCreation &&
+      prev.enableRowDeletion === next.enableRowDeletion
     );
   },
 );
@@ -52,8 +52,8 @@ function DataGridKeyboardShortcutsImpl({
   enableSearch = false,
   enableUndoRedo = false,
   enablePaste = false,
-  enableRowAdd = false,
-  enableRowsDelete = false,
+  enableRowCreation = false,
+  enableRowDeletion = false,
 }: DataGridKeyboardShortcutsProps) {
   const dir = useDirection();
   const [open, setOpen] = React.useState(false);
@@ -246,7 +246,7 @@ function DataGridKeyboardShortcutsImpl({
             keys: [modKey, "Enter"],
             description: "Open link (in URL cell)",
           },
-          ...(enableRowAdd
+          ...(enableRowCreation
             ? [
                 {
                   keys: ["Shift", "Enter"],
@@ -278,7 +278,7 @@ function DataGridKeyboardShortcutsImpl({
             keys: ["Backspace"],
             description: "Clear selected cells",
           },
-          ...(enableRowsDelete
+          ...(enableRowDeletion
             ? [
                 {
                   keys: [modKey, "Backspace"],
@@ -378,8 +378,8 @@ function DataGridKeyboardShortcutsImpl({
       enableSearch,
       enableUndoRedo,
       enablePaste,
-      enableRowAdd,
-      enableRowsDelete,
+      enableRowCreation,
+      enableRowDeletion,
     ],
   );
 
