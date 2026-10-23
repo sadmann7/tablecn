@@ -182,6 +182,7 @@ interface Table_DataGridData<TData extends RowData> {
   getCanUndo: () => boolean;
   getCanRedo: () => boolean;
   clearHistory: () => void;
+  autoResetHistory: () => void;
 }
 
 interface Cell_DataGridData {
@@ -587,12 +588,6 @@ interface RowInsert {
   index?: number;
 }
 
-interface RowChanges {
-  inserts?: ReadonlyArray<RowInsert>;
-  removedRowIds?: ReadonlyArray<string>;
-  history?: boolean;
-}
-
 interface HistoryEntry {
   changes: CellChange[];
   addedRows: IndexedRow[];
@@ -838,8 +833,7 @@ function flushCellUpdates(
   notifyCells(store);
 }
 
-// The data changes build on: what was last reported, until the consumer passes back
-// new `data`
+// The last reported data until new `data` arrives, so quick changes build on each other
 function getCurrentData(table: DataGridInstance, store: CellUpdateStore) {
   const { data } = table.options;
   return store.reported?.from === data ? store.reported.data : data;
@@ -1033,7 +1027,9 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
 function applyRowChanges(
   table: DataGridInstance,
   store: CellUpdateStore,
-  { inserts = [], removedRowIds = [], history = true }: RowChanges,
+  inserts: ReadonlyArray<RowInsert>,
+  removedRowIds: ReadonlyArray<string>,
+  history = true,
 ) {
   // Cell values still waiting settle first, so the rows build on them
   commitCellUpdates(table, store);
@@ -1118,9 +1114,12 @@ function addRows(
     }
   }
 
-  return applyRowChanges(table, store, {
-    inserts: rows.map((row, offset) => ({ row, index: index + offset })),
-  }).map(({ row, index: rowIndex }) => table.getRowId(row, rowIndex));
+  return applyRowChanges(
+    table,
+    store,
+    rows.map((row, offset) => ({ row, index: index + offset })),
+    [],
+  ).map(({ row, index: rowIndex }) => table.getRowId(row, rowIndex));
 }
 
 // Applies a step backwards or forwards without recording it. Cells change on the rows
@@ -1154,16 +1153,20 @@ function applyHistoryEntry(
   };
   const applyRows = () =>
     isUndo
-      ? applyRowChanges(table, store, {
-          inserts: getMissingRows(entry.removedRows),
-          removedRowIds: getRowIds(entry.addedRows),
-          history: false,
-        })
-      : applyRowChanges(table, store, {
-          inserts: getMissingRows(entry.addedRows),
-          removedRowIds: getRowIds(entry.removedRows),
-          history: false,
-        });
+      ? applyRowChanges(
+          table,
+          store,
+          getMissingRows(entry.removedRows),
+          getRowIds(entry.addedRows),
+          false,
+        )
+      : applyRowChanges(
+          table,
+          store,
+          getMissingRows(entry.addedRows),
+          getRowIds(entry.removedRows),
+          false,
+        );
 
   if (isUndo) {
     applyCells();
@@ -1177,8 +1180,22 @@ function applyHistoryEntry(
   );
 }
 
+// Without `getRowId`, rows are known by index, so data from outside the grid leaves
+// the history pointing at the wrong rows
+function getIsHistoryStale(table: DataGridInstance, store: CellUpdateStore) {
+  return (
+    !table.options.getRowId &&
+    store.reported !== null &&
+    getCurrentData(table, store) !== store.reported.data
+  );
+}
+
 function undo(table: DataGridInstance) {
   const store = getCellUpdateStore(table);
+  if (getIsHistoryStale(table, store)) {
+    clearHistory(table);
+    return 0;
+  }
   const entry = store.undoStack.pop();
   if (!entry) return 0;
   const count = applyHistoryEntry(table, store, entry, true);
@@ -1190,6 +1207,10 @@ function undo(table: DataGridInstance) {
 
 function redo(table: DataGridInstance) {
   const store = getCellUpdateStore(table);
+  if (getIsHistoryStale(table, store)) {
+    clearHistory(table);
+    return 0;
+  }
   const entry = store.redoStack.pop();
   if (!entry) return 0;
   const count = applyHistoryEntry(table, store, entry, false);
@@ -1197,6 +1218,10 @@ function redo(table: DataGridInstance) {
   store.isHistorySealed = true;
   setUndoRedoState(table, store);
   return count;
+}
+
+function autoResetHistory(table: DataGridInstance) {
+  if (getIsHistoryStale(table, getCellUpdateStore(table))) clearHistory(table);
 }
 
 function clearHistory(table: DataGridInstance) {
@@ -1302,9 +1327,12 @@ function deleteRows(table: DataGridInstance, rowIds: string[]) {
       ? table.getVisibleLeafColumns().find(getIsDataColumn)?.id
       : focusedColumn?.id;
 
-  applyRowChanges(table, getCellUpdateStore(table), {
-    removedRowIds: deletedRows.map((row) => row.id),
-  });
+  applyRowChanges(
+    table,
+    getCellUpdateStore(table),
+    [],
+    deletedRows.map((row) => row.id),
+  );
 
   table.resetEditingCell(true);
   table.resetRowSelection(true);
@@ -1378,13 +1406,20 @@ const dataGridDataFeature: TableFeature = {
         fn: () => runWithReason(instance, "redo", () => redo(instance)),
       },
       table_getCanUndo: {
-        fn: () => instance.atoms.undoRedo.get().canUndo,
+        fn: () =>
+          instance.atoms.undoRedo.get().canUndo &&
+          !getIsHistoryStale(instance, getCellUpdateStore(instance)),
       },
       table_getCanRedo: {
-        fn: () => instance.atoms.undoRedo.get().canRedo,
+        fn: () =>
+          instance.atoms.undoRedo.get().canRedo &&
+          !getIsHistoryStale(instance, getCellUpdateStore(instance)),
       },
       table_clearHistory: {
         fn: () => clearHistory(instance),
+      },
+      table_autoResetHistory: {
+        fn: () => autoResetHistory(instance),
       },
     });
   },

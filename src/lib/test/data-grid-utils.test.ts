@@ -5,6 +5,7 @@ import {
   getCellKey,
   getDateCellValue,
   getFilesCellValue,
+  getIsEditableTarget,
   getIsInPopover,
   getIsPointOnScrollbar,
   getNumberCellValue,
@@ -44,33 +45,252 @@ function createScrollContainer({
   return container;
 }
 
-describe("getIsPointOnScrollbar", () => {
-  it("detects presses on the vertical scrollbar edge", () => {
-    const container = createScrollContainer();
-    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(true);
-    expect(getIsPointOnScrollbar(container, 700, 300)).toBe(false);
+describe("cell value narrowing", () => {
+  it("narrows number values", () => {
+    expect(getNumberCellValue(42)).toBe(42);
+    expect(getNumberCellValue("3.5")).toBe(3.5);
+    expect(getNumberCellValue("")).toBeNull();
+    expect(getNumberCellValue("abc")).toBeNull();
+    expect(getNumberCellValue(Number.NaN)).toBeNull();
+    expect(getNumberCellValue(undefined)).toBeNull();
   });
 
-  it("uses the start edge for the vertical scrollbar in rtl", () => {
-    const container = createScrollContainer({ dir: "rtl" });
-    expect(getIsPointOnScrollbar(container, 5, 300)).toBe(true);
-    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
+  it("narrows boolean values", () => {
+    expect(getBooleanCellValue(true)).toBe(true);
+    expect(getBooleanCellValue("Yes")).toBe(true);
+    expect(getBooleanCellValue(1)).toBe(true);
+    expect(getBooleanCellValue("false")).toBe(false);
+    expect(getBooleanCellValue(null)).toBe(false);
   });
 
-  it("detects presses on the horizontal scrollbar edge", () => {
-    const container = createScrollContainer();
-    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(true);
-    expect(getIsPointOnScrollbar(container, 300, 500)).toBe(false);
+  it("narrows date values to local date strings", () => {
+    expect(getDateCellValue("2026-10-08")).toBe("2026-10-08");
+    expect(getDateCellValue(new Date(2026, 9, 8))).toBe("2026-10-08");
+    expect(getDateCellValue(new Date("invalid"))).toBe("");
+    expect(getDateCellValue(null)).toBe("");
   });
 
-  it("ignores edges of axes that do not scroll", () => {
-    const container = createScrollContainer({
-      canScrollY: false,
-      canScrollX: false,
+  it("narrows option values", () => {
+    expect(getOptionCellValue("regular")).toBe("regular");
+    expect(getOptionCellValue(null)).toBeUndefined();
+    expect(getOptionsCellValue(["goofy", 1, "regular"])).toEqual([
+      "goofy",
+      "regular",
+    ]);
+    expect(getOptionsCellValue("goofy")).toEqual([]);
+  });
+
+  it("narrows file values", () => {
+    const file = { id: "1", name: "a.png", size: 10, type: "image/png" };
+    expect(getFilesCellValue([file, { id: "2" }])).toEqual([file]);
+    expect(getFilesCellValue(null)).toEqual([]);
+  });
+});
+
+describe("parsePastedCellValue", () => {
+  const options = [
+    { label: "Goofy", value: "goofy" },
+    { label: "Regular", value: "regular" },
+  ];
+
+  it("parses numbers and rejects non-numeric text", () => {
+    expect(parsePastedCellValue("42.5", { variant: "number" })).toEqual({
+      value: 42.5,
     });
-    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
-    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(false);
-    expect(getIsPointOnScrollbar(null, 795, 300)).toBe(false);
+    expect(parsePastedCellValue("", { variant: "number" })).toEqual({
+      value: null,
+    });
+    expect(parsePastedCellValue("abc", { variant: "number" })).toBeNull();
+  });
+
+  it("parses checkbox words", () => {
+    expect(parsePastedCellValue("Yes", { variant: "checkbox" })).toEqual({
+      value: true,
+    });
+    expect(parsePastedCellValue("unchecked", { variant: "checkbox" })).toEqual({
+      value: false,
+    });
+    expect(parsePastedCellValue("maybe", { variant: "checkbox" })).toBeNull();
+  });
+
+  it("matches select options by value or label", () => {
+    const cellOpts = { variant: "select" as const, options };
+    expect(parsePastedCellValue("Goofy", cellOpts)).toEqual({
+      value: "goofy",
+    });
+    expect(parsePastedCellValue("switch", cellOpts)).toBeNull();
+  });
+
+  it("parses multi-select from JSON or comma separated text", () => {
+    const cellOpts = { variant: "multi-select" as const, options };
+    expect(parsePastedCellValue('["goofy","nope"]', cellOpts)).toEqual({
+      value: ["goofy"],
+    });
+    expect(parsePastedCellValue("Regular, Goofy", cellOpts)).toEqual({
+      value: ["regular", "goofy"],
+    });
+    expect(parsePastedCellValue("nope", cellOpts)).toBeNull();
+  });
+
+  it("accepts urls and bare domains only", () => {
+    expect(parsePastedCellValue("example.com/a", { variant: "url" })).toEqual({
+      value: "example.com/a",
+    });
+    expect(parsePastedCellValue("not a url", { variant: "url" })).toBeNull();
+  });
+
+  it("turns JSON text into readable strings for text cells", () => {
+    expect(parsePastedCellValue('["a","b"]', undefined)).toEqual({
+      value: "a, b",
+    });
+    expect(parsePastedCellValue("true", { variant: "short-text" })).toEqual({
+      value: "Checked",
+    });
+  });
+
+  it("round-trips serialized multi-select values", () => {
+    const text = serializeCellValue(["goofy", "regular"], "multi-select");
+    expect(
+      parsePastedCellValue(text, { variant: "multi-select", options }),
+    ).toEqual({ value: ["goofy", "regular"] });
+  });
+});
+
+describe("parseTsv", () => {
+  describe("basic parsing", () => {
+    it("should parse simple single-row TSV", () => {
+      expect(parseTsv("Alice\tKickflip\t95", 3)).toEqual([
+        ["Alice", "Kickflip", "95"],
+      ]);
+    });
+
+    it("should parse multiple rows", () => {
+      expect(parseTsv("Alice\tKickflip\t95\nBob\tOllie\t88", 3)).toEqual([
+        ["Alice", "Kickflip", "95"],
+        ["Bob", "Ollie", "88"],
+      ]);
+    });
+
+    it("should handle single-column paste", () => {
+      expect(parseTsv("Alice\nBob\nCharlie", 1)).toEqual([
+        ["Alice"],
+        ["Bob"],
+        ["Charlie"],
+      ]);
+    });
+
+    it("should skip empty rows", () => {
+      expect(parseTsv("Alice\tKickflip\t95\n\nBob\tOllie\t88", 3)).toEqual([
+        ["Alice", "Kickflip", "95"],
+        ["Bob", "Ollie", "88"],
+      ]);
+    });
+  });
+
+  describe("quoted fields (standard TSV)", () => {
+    it("should handle quoted multiline content", () => {
+      const text =
+        'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98';
+      expect(parseTsv(text, 3)).toEqual([
+        ["Alice", "Kickflip", "95"],
+        ["Bob", "Trick with\nmultiple\nlines", "98"],
+      ]);
+    });
+
+    it("should handle escaped quotes", () => {
+      const text = '"She said ""hello"""\t42';
+      expect(parseTsv(text, 2)).toEqual([['She said "hello"', "42"]]);
+    });
+
+    it("should handle Windows line endings", () => {
+      const text = '"Line 1\r\nLine 2"\tvalue';
+      expect(parseTsv(text, 2)).toEqual([["Line 1\r\nLine 2", "value"]]);
+    });
+
+    it("should handle mixed quoted and unquoted fields", () => {
+      const text = 'plain\t"quoted\nfield"\t123';
+      expect(parseTsv(text, 3)).toEqual([["plain", "quoted\nfield", "123"]]);
+    });
+  });
+
+  describe("unquoted multiline (tab counting)", () => {
+    it("should handle multiline in last column", () => {
+      const text = "Alice\tKickflip\t95\nBob\tTrick with\nmultiple\nlines\t98";
+      expect(parseTsv(text, 3)).toEqual([
+        ["Alice", "Kickflip", "95"],
+        ["Bob", "Trick with\nmultiple\nlines", "98"],
+      ]);
+    });
+
+    it("should handle multiline in middle column", () => {
+      const text =
+        "Alice\tShort note\t95\nBob\tLine 1\nLine 2\nLine 3\t88\nCharlie\tSimple\t77";
+      expect(parseTsv(text, 3)).toEqual([
+        ["Alice", "Short note", "95"],
+        ["Bob", "Line 1\nLine 2\nLine 3", "88"],
+        ["Charlie", "Simple", "77"],
+      ]);
+    });
+
+    it("should handle multiple rows with multiline in middle columns", () => {
+      const text = [
+        "Alice\tShort\t1",
+        "Bob\tMulti",
+        "line",
+        "content\t2",
+        "Charlie\tAnother",
+        "multi\t3",
+        "Dave\tPlain\t4",
+      ].join("\n");
+      expect(parseTsv(text, 3)).toEqual([
+        ["Alice", "Short", "1"],
+        ["Bob", "Multi\nline\ncontent", "2"],
+        ["Charlie", "Another\nmulti", "3"],
+        ["Dave", "Plain", "4"],
+      ]);
+    });
+  });
+
+  describe("data with JSON values (no false positives)", () => {
+    it("should use tab counting when quotes are inside field values not delimiters", () => {
+      const text = 'Alice\t["React","Node.js"]\t95\nBob\t["Python"]\t88';
+      expect(parseTsv(text, 3)).toEqual([
+        ["Alice", '["React","Node.js"]', "95"],
+        ["Bob", '["Python"]', "88"],
+      ]);
+    });
+
+    it("should handle JSON values with unquoted multiline", () => {
+      const text = [
+        'Alice\tShort note\t["React"]\t1',
+        "Bob\tLine 1",
+        'Line 2\t["Python"]\t2',
+        'Charlie\tPlain\t["SQL"]\t3',
+      ].join("\n");
+      expect(parseTsv(text, 4)).toEqual([
+        ["Alice", "Short note", '["React"]', "1"],
+        ["Bob", "Line 1\nLine 2", '["Python"]', "2"],
+        ["Charlie", "Plain", '["SQL"]', "3"],
+      ]);
+    });
+  });
+
+  describe("edge cases", () => {
+    it("should return empty array for empty string", () => {
+      expect(parseTsv("", 0)).toEqual([]);
+    });
+
+    it("should handle single cell", () => {
+      expect(parseTsv("hello", 1)).toEqual([["hello"]]);
+    });
+
+    it("should fallback to simple split when no tabs detected", () => {
+      expect(parseTsv("line1\nline2\nline3", 1)).toEqual([
+        ["line1"],
+        ["line2"],
+        ["line3"],
+      ]);
+    });
   });
 });
 
@@ -91,6 +311,80 @@ describe("getCellKey", () => {
 
   it("returns empty ids for malformed keys", () => {
     expect(parseCellKey("0:name")).toEqual({ rowId: "", columnId: "" });
+  });
+});
+
+describe("getWindowedColumns", () => {
+  const items = ["select", "a", "b", "c", "d", "e", "actions"];
+
+  it("renders every item without a window", () => {
+    expect(
+      getWindowedColumns(items, null).map((entry) =>
+        entry.type === "column" ? entry.item : entry.type,
+      ),
+    ).toEqual(items);
+  });
+
+  it("keeps pinned items and fills gaps around windowed items with spacers", () => {
+    const entries = getWindowedColumns(items, {
+      startCount: 1,
+      centerCount: 5,
+      centerStart: 40,
+      centerEnd: 540,
+      items: [
+        { index: 1, start: 140, end: 240 },
+        { index: 2, start: 240, end: 340 },
+        { index: 4, start: 440, end: 540 },
+      ],
+    });
+
+    expect(
+      entries.map((entry) =>
+        entry.type === "column"
+          ? `${entry.item}@${entry.colIndex}`
+          : `spacer:${entry.size}`,
+      ),
+    ).toEqual([
+      "select@0",
+      "spacer:100",
+      "b@2",
+      "c@3",
+      "spacer:100",
+      "e@5",
+      "actions@6",
+    ]);
+  });
+
+  it("keeps the leading spacer key stable when the window shifts", () => {
+    const getLeadingSpacerKey = (index: number) => {
+      const entry = getWindowedColumns(items, {
+        startCount: 1,
+        centerCount: 5,
+        centerStart: 40,
+        centerEnd: 540,
+        items: [{ index, start: 40 + index * 100, end: 140 + index * 100 }],
+      }).find((entry) => entry.type === "spacer");
+      return entry?.type === "spacer" ? entry.key : null;
+    };
+
+    expect(getLeadingSpacerKey(1)).toBe("spacer-start");
+    expect(getLeadingSpacerKey(3)).toBe("spacer-start");
+  });
+
+  it("adds a trailing spacer when the window ends before the last column", () => {
+    const entries = getWindowedColumns(items, {
+      startCount: 1,
+      centerCount: 5,
+      centerStart: 40,
+      centerEnd: 540,
+      items: [{ index: 0, start: 40, end: 140 }],
+    });
+
+    expect(entries.at(-2)).toEqual({
+      type: "spacer",
+      key: "spacer-end",
+      size: 400,
+    });
   });
 });
 
@@ -233,144 +527,6 @@ describe("getTabTargetCell", () => {
   });
 });
 
-describe("parseTsv", () => {
-  describe("basic parsing", () => {
-    it("should parse simple single-row TSV", () => {
-      expect(parseTsv("Alice\tKickflip\t95", 3)).toEqual([
-        ["Alice", "Kickflip", "95"],
-      ]);
-    });
-
-    it("should parse multiple rows", () => {
-      expect(parseTsv("Alice\tKickflip\t95\nBob\tOllie\t88", 3)).toEqual([
-        ["Alice", "Kickflip", "95"],
-        ["Bob", "Ollie", "88"],
-      ]);
-    });
-
-    it("should handle single-column paste", () => {
-      expect(parseTsv("Alice\nBob\nCharlie", 1)).toEqual([
-        ["Alice"],
-        ["Bob"],
-        ["Charlie"],
-      ]);
-    });
-
-    it("should skip empty rows", () => {
-      expect(parseTsv("Alice\tKickflip\t95\n\nBob\tOllie\t88", 3)).toEqual([
-        ["Alice", "Kickflip", "95"],
-        ["Bob", "Ollie", "88"],
-      ]);
-    });
-  });
-
-  describe("quoted fields (standard TSV)", () => {
-    it("should handle quoted multiline content", () => {
-      const text =
-        'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98';
-      expect(parseTsv(text, 3)).toEqual([
-        ["Alice", "Kickflip", "95"],
-        ["Bob", "Trick with\nmultiple\nlines", "98"],
-      ]);
-    });
-
-    it("should handle escaped quotes", () => {
-      const text = '"She said ""hello"""\t42';
-      expect(parseTsv(text, 2)).toEqual([['She said "hello"', "42"]]);
-    });
-
-    it("should handle Windows line endings", () => {
-      const text = '"Line 1\r\nLine 2"\tvalue';
-      expect(parseTsv(text, 2)).toEqual([["Line 1\r\nLine 2", "value"]]);
-    });
-
-    it("should handle mixed quoted and unquoted fields", () => {
-      const text = 'plain\t"quoted\nfield"\t123';
-      expect(parseTsv(text, 3)).toEqual([["plain", "quoted\nfield", "123"]]);
-    });
-  });
-
-  describe("unquoted multiline (tab counting)", () => {
-    it("should handle multiline in last column", () => {
-      const text = "Alice\tKickflip\t95\nBob\tTrick with\nmultiple\nlines\t98";
-      expect(parseTsv(text, 3)).toEqual([
-        ["Alice", "Kickflip", "95"],
-        ["Bob", "Trick with\nmultiple\nlines", "98"],
-      ]);
-    });
-
-    it("should handle multiline in middle column", () => {
-      const text =
-        "Alice\tShort note\t95\nBob\tLine 1\nLine 2\nLine 3\t88\nCharlie\tSimple\t77";
-      expect(parseTsv(text, 3)).toEqual([
-        ["Alice", "Short note", "95"],
-        ["Bob", "Line 1\nLine 2\nLine 3", "88"],
-        ["Charlie", "Simple", "77"],
-      ]);
-    });
-
-    it("should handle multiple rows with multiline in middle columns", () => {
-      const text = [
-        "Alice\tShort\t1",
-        "Bob\tMulti",
-        "line",
-        "content\t2",
-        "Charlie\tAnother",
-        "multi\t3",
-        "Dave\tPlain\t4",
-      ].join("\n");
-      expect(parseTsv(text, 3)).toEqual([
-        ["Alice", "Short", "1"],
-        ["Bob", "Multi\nline\ncontent", "2"],
-        ["Charlie", "Another\nmulti", "3"],
-        ["Dave", "Plain", "4"],
-      ]);
-    });
-  });
-
-  describe("data with JSON values (no false positives)", () => {
-    it("should use tab counting when quotes are inside field values not delimiters", () => {
-      const text = 'Alice\t["React","Node.js"]\t95\nBob\t["Python"]\t88';
-      expect(parseTsv(text, 3)).toEqual([
-        ["Alice", '["React","Node.js"]', "95"],
-        ["Bob", '["Python"]', "88"],
-      ]);
-    });
-
-    it("should handle JSON values with unquoted multiline", () => {
-      const text = [
-        'Alice\tShort note\t["React"]\t1',
-        "Bob\tLine 1",
-        'Line 2\t["Python"]\t2',
-        'Charlie\tPlain\t["SQL"]\t3',
-      ].join("\n");
-      expect(parseTsv(text, 4)).toEqual([
-        ["Alice", "Short note", '["React"]', "1"],
-        ["Bob", "Line 1\nLine 2", '["Python"]', "2"],
-        ["Charlie", "Plain", '["SQL"]', "3"],
-      ]);
-    });
-  });
-
-  describe("edge cases", () => {
-    it("should return empty array for empty string", () => {
-      expect(parseTsv("", 0)).toEqual([]);
-    });
-
-    it("should handle single cell", () => {
-      expect(parseTsv("hello", 1)).toEqual([["hello"]]);
-    });
-
-    it("should fallback to simple split when no tabs detected", () => {
-      expect(parseTsv("line1\nline2\nline3", 1)).toEqual([
-        ["line1"],
-        ["line2"],
-        ["line3"],
-      ]);
-    });
-  });
-});
-
 describe("getIsInPopover", () => {
   it.each([
     "dropdown-menu-content",
@@ -397,72 +553,49 @@ describe("getIsInPopover", () => {
   });
 });
 
-describe("parsePastedCellValue", () => {
-  const options = [
-    { label: "Goofy", value: "goofy" },
-    { label: "Regular", value: "regular" },
-  ];
+describe("getIsEditableTarget", () => {
+  it("matches fields that take typing", () => {
+    expect(getIsEditableTarget(null)).toBe(false);
+    expect(getIsEditableTarget(document.createElement("div"))).toBe(false);
+    expect(getIsEditableTarget(document.createElement("input"))).toBe(true);
+    expect(getIsEditableTarget(document.createElement("textarea"))).toBe(true);
+    expect(getIsEditableTarget(document.createElement("select"))).toBe(true);
 
-  it("parses numbers and rejects non-numeric text", () => {
-    expect(parsePastedCellValue("42.5", { variant: "number" })).toEqual({
-      value: 42.5,
-    });
-    expect(parsePastedCellValue("", { variant: "number" })).toEqual({
-      value: null,
-    });
-    expect(parsePastedCellValue("abc", { variant: "number" })).toBeNull();
+    const editable = document.createElement("div");
+    editable.contentEditable = "true";
+    document.body.append(editable);
+    expect(getIsEditableTarget(editable)).toBe(true);
+    editable.remove();
+  });
+});
+
+describe("getIsPointOnScrollbar", () => {
+  it("detects presses on the vertical scrollbar edge", () => {
+    const container = createScrollContainer();
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 700, 300)).toBe(false);
   });
 
-  it("parses checkbox words", () => {
-    expect(parsePastedCellValue("Yes", { variant: "checkbox" })).toEqual({
-      value: true,
-    });
-    expect(parsePastedCellValue("unchecked", { variant: "checkbox" })).toEqual({
-      value: false,
-    });
-    expect(parsePastedCellValue("maybe", { variant: "checkbox" })).toBeNull();
+  it("uses the start edge for the vertical scrollbar in rtl", () => {
+    const container = createScrollContainer({ dir: "rtl" });
+    expect(getIsPointOnScrollbar(container, 5, 300)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
   });
 
-  it("matches select options by value or label", () => {
-    const cellOpts = { variant: "select" as const, options };
-    expect(parsePastedCellValue("Goofy", cellOpts)).toEqual({
-      value: "goofy",
-    });
-    expect(parsePastedCellValue("switch", cellOpts)).toBeNull();
+  it("detects presses on the horizontal scrollbar edge", () => {
+    const container = createScrollContainer();
+    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(true);
+    expect(getIsPointOnScrollbar(container, 300, 500)).toBe(false);
   });
 
-  it("parses multi-select from JSON or comma separated text", () => {
-    const cellOpts = { variant: "multi-select" as const, options };
-    expect(parsePastedCellValue('["goofy","nope"]', cellOpts)).toEqual({
-      value: ["goofy"],
+  it("ignores edges of axes that do not scroll", () => {
+    const container = createScrollContainer({
+      canScrollY: false,
+      canScrollX: false,
     });
-    expect(parsePastedCellValue("Regular, Goofy", cellOpts)).toEqual({
-      value: ["regular", "goofy"],
-    });
-    expect(parsePastedCellValue("nope", cellOpts)).toBeNull();
-  });
-
-  it("accepts urls and bare domains only", () => {
-    expect(parsePastedCellValue("example.com/a", { variant: "url" })).toEqual({
-      value: "example.com/a",
-    });
-    expect(parsePastedCellValue("not a url", { variant: "url" })).toBeNull();
-  });
-
-  it("turns JSON text into readable strings for text cells", () => {
-    expect(parsePastedCellValue('["a","b"]', undefined)).toEqual({
-      value: "a, b",
-    });
-    expect(parsePastedCellValue("true", { variant: "short-text" })).toEqual({
-      value: "Checked",
-    });
-  });
-
-  it("round-trips serialized multi-select values", () => {
-    const text = serializeCellValue(["goofy", "regular"], "multi-select");
-    expect(
-      parsePastedCellValue(text, { variant: "multi-select", options }),
-    ).toEqual({ value: ["goofy", "regular"] });
+    expect(getIsPointOnScrollbar(container, 795, 300)).toBe(false);
+    expect(getIsPointOnScrollbar(container, 300, 595)).toBe(false);
+    expect(getIsPointOnScrollbar(null, 795, 300)).toBe(false);
   });
 });
 
@@ -517,121 +650,5 @@ describe("replaceEditableText", () => {
     expect(selection?.isCollapsed).toBe(true);
     expect(selection?.focusOffset).toBe(1);
     expect(inputData).toBe("a");
-  });
-});
-
-describe("cell value narrowing", () => {
-  it("narrows number values", () => {
-    expect(getNumberCellValue(42)).toBe(42);
-    expect(getNumberCellValue("3.5")).toBe(3.5);
-    expect(getNumberCellValue("")).toBeNull();
-    expect(getNumberCellValue("abc")).toBeNull();
-    expect(getNumberCellValue(Number.NaN)).toBeNull();
-    expect(getNumberCellValue(undefined)).toBeNull();
-  });
-
-  it("narrows boolean values", () => {
-    expect(getBooleanCellValue(true)).toBe(true);
-    expect(getBooleanCellValue("Yes")).toBe(true);
-    expect(getBooleanCellValue(1)).toBe(true);
-    expect(getBooleanCellValue("false")).toBe(false);
-    expect(getBooleanCellValue(null)).toBe(false);
-  });
-
-  it("narrows date values to local date strings", () => {
-    expect(getDateCellValue("2026-10-08")).toBe("2026-10-08");
-    expect(getDateCellValue(new Date(2026, 9, 8))).toBe("2026-10-08");
-    expect(getDateCellValue(new Date("invalid"))).toBe("");
-    expect(getDateCellValue(null)).toBe("");
-  });
-
-  it("narrows option values", () => {
-    expect(getOptionCellValue("regular")).toBe("regular");
-    expect(getOptionCellValue(null)).toBeUndefined();
-    expect(getOptionsCellValue(["goofy", 1, "regular"])).toEqual([
-      "goofy",
-      "regular",
-    ]);
-    expect(getOptionsCellValue("goofy")).toEqual([]);
-  });
-
-  it("narrows file values", () => {
-    const file = { id: "1", name: "a.png", size: 10, type: "image/png" };
-    expect(getFilesCellValue([file, { id: "2" }])).toEqual([file]);
-    expect(getFilesCellValue(null)).toEqual([]);
-  });
-});
-
-describe("getWindowedColumns", () => {
-  const items = ["select", "a", "b", "c", "d", "e", "actions"];
-
-  it("renders every item without a window", () => {
-    expect(
-      getWindowedColumns(items, null).map((entry) =>
-        entry.type === "column" ? entry.item : entry.type,
-      ),
-    ).toEqual(items);
-  });
-
-  it("keeps pinned items and fills gaps around windowed items with spacers", () => {
-    const entries = getWindowedColumns(items, {
-      startCount: 1,
-      centerCount: 5,
-      centerStart: 40,
-      centerEnd: 540,
-      items: [
-        { index: 1, start: 140, end: 240 },
-        { index: 2, start: 240, end: 340 },
-        { index: 4, start: 440, end: 540 },
-      ],
-    });
-
-    expect(
-      entries.map((entry) =>
-        entry.type === "column"
-          ? `${entry.item}@${entry.colIndex}`
-          : `spacer:${entry.size}`,
-      ),
-    ).toEqual([
-      "select@0",
-      "spacer:100",
-      "b@2",
-      "c@3",
-      "spacer:100",
-      "e@5",
-      "actions@6",
-    ]);
-  });
-
-  it("keeps the leading spacer key stable when the window shifts", () => {
-    const getLeadingSpacerKey = (index: number) => {
-      const entry = getWindowedColumns(items, {
-        startCount: 1,
-        centerCount: 5,
-        centerStart: 40,
-        centerEnd: 540,
-        items: [{ index, start: 40 + index * 100, end: 140 + index * 100 }],
-      }).find((entry) => entry.type === "spacer");
-      return entry?.type === "spacer" ? entry.key : null;
-    };
-
-    expect(getLeadingSpacerKey(1)).toBe("spacer-start");
-    expect(getLeadingSpacerKey(3)).toBe("spacer-start");
-  });
-
-  it("adds a trailing spacer when the window ends before the last column", () => {
-    const entries = getWindowedColumns(items, {
-      startCount: 1,
-      centerCount: 5,
-      centerStart: 40,
-      centerEnd: 540,
-      items: [{ index: 0, start: 40, end: 140 }],
-    });
-
-    expect(entries.at(-2)).toEqual({
-      type: "spacer",
-      key: "spacer-end",
-      size: 400,
-    });
   });
 });

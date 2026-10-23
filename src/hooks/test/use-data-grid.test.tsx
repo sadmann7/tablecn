@@ -1251,7 +1251,7 @@ describe("useDataGrid", () => {
       expect(getShownNames(result)).toEqual(["Tony Hawk", "Nyjah Huston"]);
     });
 
-    it("clears history when new data replaces rows without getRowId", () => {
+    it("clears history when new data replaces rows without getRowId", async () => {
       const { result } = renderEditableGrid({ getRowId: undefined });
 
       act(() => {
@@ -1263,10 +1263,31 @@ describe("useDataGrid", () => {
         result.current.setData([testData[2] as TestData]);
       });
       expect(result.current.table.getCanUndo()).toBe(false);
+      // Rendering the grid reads the rows, which resets the stored state just after
+      await act(async () => {
+        result.current.table.getRowModel();
+      });
+      expect(result.current.table.atoms.undoRedo.get()).toEqual({
+        canUndo: false,
+        canRedo: false,
+      });
       act(() => {
         expect(result.current.table.undo()).toBe(0);
       });
       expect(getNames(result)).toEqual(["Nyjah Huston"]);
+    });
+
+    it("undoes without getRowId before the new data comes back", () => {
+      const { result } = renderEditableGrid({ getRowId: undefined });
+
+      act(() => {
+        result.current.table.addRows([
+          { id: "4", name: "Leticia Bufoni", trick: "Kickflip", score: 90 },
+        ]);
+        expect(result.current.table.getCanUndo()).toBe(true);
+        expect(result.current.table.undo()).toBe(1);
+      });
+      expect(getNames(result)).toEqual(testData.map((row) => row.name));
     });
 
     it("keeps history across new data with getRowId, without duplicating rows", () => {

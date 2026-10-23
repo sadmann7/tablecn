@@ -893,6 +893,17 @@ export function getIsInPopover(element: unknown): boolean {
   );
 }
 
+export function getIsEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
+  );
+}
+
 export function getIsPointOnScrollbar(
   container: HTMLElement | null,
   clientX: number,
@@ -1072,13 +1083,4 @@ export function getFileIcon(
   )
     return Presentation;
   return File;
-}
-
-// Fields that take typing, where undo and similar shortcuts belong to the field
-export function getIsTextInput(element: Element) {
-  return (
-    element.tagName === "INPUT" ||
-    element.tagName === "TEXTAREA" ||
-    (element instanceof HTMLElement && element.isContentEditable)
-  );
 }

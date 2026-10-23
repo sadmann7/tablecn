@@ -37,9 +37,9 @@ import {
   getFocusedCellPosition,
   getHasCellRangeSelection,
   getIsDataColumn,
+  getIsEditableTarget,
   getIsEventOnScrollbar,
   getIsInPopover,
-  getIsTextInput,
   getRowDisplayIndex,
   getSelectionEdgePosition,
   renderDefaultCell,
@@ -238,7 +238,6 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      // Keeps keyboard handling on the grid until the cell mounts
       pendingFocusRef.current = { cell, shouldScroll };
       const container = dataGridRef.current;
       if (container && document.activeElement !== container) {
@@ -527,7 +526,7 @@ function useDataGrid<TData extends RowData>({
       if (!container || !(target instanceof Element)) return null;
       if (!container.contains(target)) return null;
 
-      // Utility cells handle their own pointer and focus events
+      // Utility cells manage their own pointer and focus events
       const cellElement = target.closest<HTMLElement>(
         '[data-slot="data-grid-cell"]:not([data-utility])',
       );
@@ -649,13 +648,6 @@ function useDataGrid<TData extends RowData>({
   ]);
 
   const table = useTable(tableOptions, selectGridLayoutState);
-
-  // New data from outside the grid shifts index-based row IDs, so history no longer
-  // points at the right rows
-  const hasRowId = !!props.getRowId;
-  React.useEffect(() => {
-    if (!hasRowId && data !== internalData.value) table.clearHistory();
-  }, [hasRowId, data, internalData.value, table]);
 
   if (tableRef.current === null) {
     tableRef.current = table;
@@ -1286,7 +1278,7 @@ function useDataGrid<TData extends RowData>({
         (undoRedoKey === "z" || undoRedoKey === "y") &&
         (currentTable.options.enableUndoRedo ??
           !currentTable.options.readOnly) &&
-        !getIsTextInput(target) &&
+        !getIsEditableTarget(target) &&
         !(getIsInPopover(target) && !target.closest('[role="toolbar"]')) &&
         (isInDataGrid || !target.closest('[role="grid"]'))
       ) {
@@ -1537,7 +1529,6 @@ function useDataGrid<TData extends RowData>({
       prevEditingCell = editingCell;
       if (!wasEditing || editingCell) return;
 
-      // Editors may live in portals outside the grid, so focus returns to the cell unconditionally
       const focusedCell = getFocusedCellPosition(
         table.atoms.cellSelection.get(),
       );

@@ -106,6 +106,7 @@ export function createDataGridCoreRowModel<
         table_autoResetPageIndex(table);
         table_autoResetSorting(table);
         table_autoResetCellSelection(table);
+        table.autoResetHistory?.();
       }),
     });
   };
