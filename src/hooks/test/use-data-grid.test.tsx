@@ -5079,6 +5079,45 @@ describe("useDataGrid", () => {
       expect(updatedData[2]).toBe(testData[2]);
     });
 
+    it("keeps changes the consumer doesn't pass back, until new data arrives", () => {
+      const onDataChange = vi.fn();
+      const { result, rerender } = renderHook(
+        ({ data }: { data: TestData[] }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            getRowId: (row) => row.id,
+            onDataChange,
+          }),
+        { initialProps: { data: testData }, wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Edited",
+        });
+      });
+      act(() => {
+        result.current.table.addRows([
+          { id: "new", name: "New", trick: "", score: 0 },
+        ]);
+      });
+
+      expect(onDataChange).toHaveBeenCalledTimes(2);
+      expect(result.current.table.getRow("1").getValue("name")).toBe("Edited");
+      expect(result.current.table.getRowModel().rows).toHaveLength(
+        testData.length + 1,
+      );
+
+      const nextData = testData.slice(0, 2);
+      rerender({ data: nextData });
+      expect(
+        result.current.table.getRowModel().rows.map((row) => row.original),
+      ).toEqual(nextData);
+    });
+
     it("reports deleted rows through onDataChange", () => {
       const onDataChange = vi.fn();
       const { result } = renderHook(

@@ -154,30 +154,19 @@ interface TableState_DataGridData {
 interface TableOptions_DataGridData<TData extends RowData> {
   readOnly?: boolean;
   onDataChange?: (data: TData[], details: DataChangeDetails<TData>) => void;
-  /** How long batched updates wait before reaching `onDataChange`, in ms. Defaults to 500. */
   batchUpdateDelay?: number;
-  /**
-   * Creates a row to add, or returns null to add nothing. Turns on adding rows with
-   * the add-row button, Shift+Enter, and pastes that run past the last row. The grid
-   * places, focuses and records the row, and reports it through `onDataChange`.
-   */
   createRow?: (
     details: CreateRowDetails,
   ) => TData | null | Promise<TData | null>;
-  /** Lets people delete rows from the keyboard and the context menu. */
   enableRowDeletion?: boolean;
-  /** Records edits for undo and redo. Defaults to true unless the grid is read-only. */
   enableUndoRedo?: boolean;
-  /** How many steps undo keeps. Defaults to 100. */
   maxHistory?: number;
   onUndoRedoChange?: OnChangeFn<UndoRedoState>;
-  /** Uploads files added to a file cell, returning what the cell stores. */
   uploadFiles?: (params: {
     files: File[];
     rowId: string;
     columnId: string;
   }) => Promise<FileCellData[]>;
-  /** Deletes the stored files removed from a file cell. */
   deleteFiles?: (params: {
     fileIds: string[];
     rowId: string;
@@ -191,19 +180,15 @@ interface Table_DataGridData<TData extends RowData> {
     updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
     options?: UpdateCellsOptions,
   ) => void;
-  /** Calls `listener` whenever `updateCells` changes the cell's value. */
   subscribeCell: (
     rowId: string,
     columnId: string,
     listener: () => void,
   ) => () => void;
   clearCells: (cells: Array<CellPosition>) => void;
-  /** Adds rows at the end, or next to a row, returning their IDs. */
   addRows: (rows: TData[], options?: AddRowsOptions) => string[];
   deleteRows: (rowIds: string[]) => void;
-  /** Undoes the last step, returning how many cells and rows it changed. */
   undo: () => number;
-  /** Redoes the last undone step, returning how many cells and rows it changed. */
   redo: () => number;
   getCanUndo: () => boolean;
   getCanRedo: () => boolean;

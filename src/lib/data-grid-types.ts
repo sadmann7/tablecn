@@ -40,7 +40,6 @@ export interface CellUpdate {
   value: unknown;
 }
 
-/** A cell whose value `onDataChange` reports as changed. */
 export interface CellChange {
   rowId: string;
   columnId: string;
@@ -48,10 +47,6 @@ export interface CellChange {
   newValue: unknown;
 }
 
-/**
- * What changed the data: an edit or paste in the grid, `table.updateCells`,
- * `table.addRows`, `table.deleteRows`, or an undo or redo.
- */
 export type DataChangeReason =
   | "edit"
   | "paste"
@@ -63,13 +58,11 @@ export type DataChangeReason =
 
 export interface DataChangeDetails<TData = unknown> {
   reason: DataChangeReason;
-  /** Every cell whose value changed, so consumers don't need to diff the data. */
   changes: CellChange[];
   addedRows: TData[];
   removedRows: TData[];
 }
 
-/** Why the grid asks `createRow` for a row. */
 export type CreateRowDetails =
   | {
       reason: "add-row-press";
@@ -80,7 +73,6 @@ export type CreateRowDetails =
   | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
   | { reason: "paste"; event?: undefined };
 
-/** Where `addRows` puts the rows: after or before an existing row, or at the end. */
 export interface AddRowsOptions {
   afterRowId?: string;
   beforeRowId?: string;
@@ -91,21 +83,13 @@ export interface UndoRedoState {
   canRedo: boolean;
 }
 
-/** Several cells of one row, keyed by column ID. */
 export interface RowUpdate {
   rowId: string;
   values: Record<string, unknown>;
 }
 
 export interface UpdateCellsOptions {
-  /**
-   * Applies the values once a frame, keeping each cell's latest, and reports them
-   * through `onDataChange` once per `batchUpdateDelay`, for live data that updates
-   * many times a second. Rows out of view take their values when they come into
-   * view or at the next `onDataChange`.
-   */
   batch?: boolean;
-  /** Records the update for undo. Defaults to true, except for batched updates. */
   history?: boolean;
 }
 
@@ -170,10 +154,6 @@ export type CellOpts =
 export interface DataGridColumnMeta {
   label?: string;
   cell?: CellOpts;
-  /**
-   * Writes each value straight into the cell's element instead of rendering it, for
-   * live data that changes many cells a frame. The cell renders nothing else.
-   */
   writeCell?: (element: HTMLElement, value: unknown) => void;
 }
 
