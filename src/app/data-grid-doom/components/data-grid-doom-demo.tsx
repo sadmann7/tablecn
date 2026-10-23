@@ -84,10 +84,18 @@ const PLAY_KEYS = "P";
 const MUTE_KEYS = "M";
 const PAGE_SHORTCUT_CODES = new Set(["KeyP", "KeyM"]);
 
+interface PixelRow {
+  id: string;
+  [key: string]: number | string;
+}
+
 interface StageLayoutOptions {
   width: number;
   height: number;
-  viewport: { width: number; height: number };
+  viewport: {
+    width: number;
+    height: number;
+  };
   chromeHeight: number;
   isFullscreen: boolean;
 }
@@ -159,11 +167,6 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
   { label: "Mute", keys: [MUTE_KEYS] },
 ];
 
-interface PixelRow {
-  id: string;
-  [key: string]: number | string;
-}
-
 interface ControlProps extends React.ComponentProps<typeof TooltipTrigger> {
   label: string;
   keys?: string;
@@ -183,15 +186,17 @@ function ControlTooltip({ label, keys, children, ...props }: ControlProps) {
   );
 }
 
+interface DataGridDoomDemoProps extends DoomParams {}
+
 export function DataGridDoomDemo({
-  columns: width,
+  width,
   mode,
   modeParam,
   source,
   damage,
   auto,
   grid,
-}: DoomParams) {
+}: DataGridDoomDemoProps) {
   const height = Math.round((width * SCREEN_HEIGHT) / SCREEN_WIDTH);
   const [frame, setFrame] = React.useState<PixelRow[]>(() =>
     Array.from({ length: height }, (_, y) => {
