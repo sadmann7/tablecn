@@ -53,6 +53,8 @@ export const DataGridDataCell = React.memo(
     if (prev.cell.column.columnDef.cell !== next.cell.column.columnDef.cell) {
       return false;
     }
+    // Written cells take their values straight from `updateCells`
+    if (next.cell.column.columnDef.meta?.writeCell) return true;
     if (getHasCustomCell(next.cell.column)) {
       return prev.cell.row.original === next.cell.row.original;
     }
@@ -65,15 +67,20 @@ function DataGridDataCellImpl<TData extends RowData>({
   cell: propsCell,
   ...rest
 }: DataGridDataCellProps<TData>) {
-  // Custom cells update their content alone, so only variants rerender here
+  // Custom and written cells update their content alone, so only variants rerender here
+  const writeCell = propsCell.column.columnDef.meta?.writeCell;
   const hasCustomCell = getHasCustomCell(propsCell.column);
-  const cell = useUpdatedCell(propsCell, !hasCustomCell);
+  const cell = useUpdatedCell(propsCell, !hasCustomCell && !writeCell);
   const props = { ...rest, cell };
 
   // Cells mounted mid-scroll show a cheap preview until scrolling stops. The row
   // keys cells by cell ID, so a recycled row mounts fresh cells
   const [isPreview, setIsPreview] = React.useState(isScrolling);
   if (isPreview && !isScrolling) setIsPreview(false);
+
+  if (writeCell) {
+    return <DataGridWrittenCell {...props} writeCell={writeCell} />;
+  }
 
   if (isPreview && !props.isFocused && !props.isEditing && !hasCustomCell) {
     return (
@@ -168,6 +175,33 @@ function useUpdatedCell<TData extends RowData>(
     table.getRowModel().rowsById[rowId]?.getAllCellsByColumnId()[columnId] ??
     cell
   );
+}
+
+// Writes each value into the element as `updateCells` changes it, so a live update
+// costs a style write rather than a render
+function DataGridWrittenCell<TData extends RowData>({
+  writeCell,
+  ...props
+}: DataGridCellProps<TData> & {
+  writeCell: (element: HTMLElement, value: unknown) => void;
+}) {
+  const { table } = props.cell;
+  const rowId = props.cell.row.id;
+  const columnId = props.cell.column.id;
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    const write = () => {
+      const row = table.getRowModel().rowsById[rowId];
+      writeCell(element, row?.getValue(columnId));
+    };
+    write();
+    return table.subscribeCell(rowId, columnId, write);
+  }, [table, rowId, columnId, writeCell]);
+
+  return <DataGridCell {...props} ref={ref} />;
 }
 
 const DataGridCustomCellContent = React.memo(

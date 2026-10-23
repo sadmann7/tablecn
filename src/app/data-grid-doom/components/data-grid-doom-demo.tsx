@@ -77,6 +77,10 @@ const GRID_MAX_COLUMN_COUNT = 192;
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
 const MUTED_STORAGE_KEY = "data-grid-doom-muted";
 
+function writePixel(element: HTMLElement, value: unknown) {
+  element.style.backgroundColor = getHexColor(value as number);
+}
+
 const IS_MAC =
   typeof navigator !== "undefined" &&
   /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -252,17 +256,10 @@ export function DataGridDoomDemo({
         size: CELL_SIZE,
         minSize: CELL_SIZE,
         maxSize: CELL_SIZE,
-        // Direct writes color the grid's own cell, saving an element per pixel
-        cell:
-          mode === "data"
-            ? ({ getValue }) => (
-                <div
-                  data-pixel=""
-                  className="absolute inset-0"
-                  style={{ backgroundColor: getHexColor(getValue() as number) }}
-                />
-              )
-            : () => null,
+        // Every mode colors the grid's own cell: data mode writes each value into it
+        // as `updateCells` changes it, and the others paint it directly
+        cell: () => null,
+        meta: mode === "data" ? { writeCell: writePixel } : undefined,
       })),
     [columnCount, mode],
   );

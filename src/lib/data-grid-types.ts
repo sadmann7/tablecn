@@ -170,6 +170,11 @@ export type CellOpts =
 export interface DataGridColumnMeta {
   label?: string;
   cell?: CellOpts;
+  /**
+   * Writes each value straight into the cell's element instead of rendering it, for
+   * live data that changes many cells a frame. The cell renders nothing else.
+   */
+  writeCell?: (element: HTMLElement, value: unknown) => void;
 }
 
 export interface ColumnValueReader<TData extends RowData = RowData> {
