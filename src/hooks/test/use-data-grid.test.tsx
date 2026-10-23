@@ -1026,7 +1026,7 @@ describe("useDataGrid", () => {
             getRowId: (row) => row.id,
             ...options,
           });
-          return { ...grid, data };
+          return { ...grid, data, setData };
         },
         { wrapper: createWrapper() },
       );
@@ -1034,6 +1034,14 @@ describe("useDataGrid", () => {
 
     function getNames(result: { current: { data: TestData[] } }) {
       return result.current.data.map((row) => row.name);
+    }
+
+    function getShownNames(result: {
+      current: { table: Table<DataGridFeatures, TestData> };
+    }) {
+      return result.current.table
+        .getRowModel()
+        .rows.map((row) => row.original.name);
     }
 
     it("undoes and redoes a cell edit", () => {
@@ -1162,6 +1170,132 @@ describe("useDataGrid", () => {
         result.current.table.redo();
       });
       expect(result.current.data.map((row) => row.id)).toEqual(["2"]);
+    });
+
+    it("undoes an edit that moved a row while sorted", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.setSorting([{ id: "score", desc: true }]);
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "3",
+          columnId: "score",
+          value: 99,
+        });
+      });
+      expect(getShownNames(result)).toEqual([
+        "Nyjah Huston",
+        "Rodney Mullen",
+        "Tony Hawk",
+      ]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getShownNames(result)).toEqual([
+        "Rodney Mullen",
+        "Tony Hawk",
+        "Nyjah Huston",
+      ]);
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(getShownNames(result)[0]).toBe("Nyjah Huston");
+    });
+
+    it("restores a deleted row into the sorted order", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.setSorting([{ id: "score", desc: false }]);
+      });
+      act(() => {
+        result.current.table.deleteRows(["2"]);
+      });
+      expect(getShownNames(result)).toEqual(["Nyjah Huston", "Tony Hawk"]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getShownNames(result)).toEqual([
+        "Nyjah Huston",
+        "Tony Hawk",
+        "Rodney Mullen",
+      ]);
+      expect(getNames(result)).toEqual(testData.map((row) => row.name));
+    });
+
+    it("brings back a row that an edit hid behind a filter", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.setColumnFilters([{ id: "name", value: "h" }]);
+      });
+      expect(getShownNames(result)).toEqual(["Tony Hawk", "Nyjah Huston"]);
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Bucky Lasek",
+        });
+      });
+      expect(getShownNames(result)).toEqual(["Nyjah Huston"]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getShownNames(result)).toEqual(["Tony Hawk", "Nyjah Huston"]);
+    });
+
+    it("clears history when new data replaces rows without getRowId", () => {
+      const { result } = renderEditableGrid({ getRowId: undefined });
+
+      act(() => {
+        result.current.table.deleteRows(["0"]);
+      });
+      expect(result.current.table.getCanUndo()).toBe(true);
+
+      act(() => {
+        result.current.setData([testData[2] as TestData]);
+      });
+      expect(result.current.table.getCanUndo()).toBe(false);
+      act(() => {
+        expect(result.current.table.undo()).toBe(0);
+      });
+      expect(getNames(result)).toEqual(["Nyjah Huston"]);
+    });
+
+    it("keeps history across new data with getRowId, without duplicating rows", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.deleteRows(["2"]);
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "3",
+          columnId: "name",
+          value: "Edited",
+        });
+      });
+
+      // A refetch brings the deleted row back and drops the edited one
+      act(() => {
+        result.current.setData(testData.slice(0, 2).map((row) => ({ ...row })));
+      });
+      expect(result.current.table.getCanUndo()).toBe(true);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getNames(result)).toEqual(["Tony Hawk", "Rodney Mullen"]);
     });
 
     it("removes added rows on undo and puts them back on redo", () => {

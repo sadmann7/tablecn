@@ -1163,19 +1163,28 @@ function applyHistoryEntry(
     );
   const getRowIds = (rows: IndexedRow[]) =>
     rows.map(({ row, index }) => table.getRowId(row, index));
+  // Data that changed since the step may already hold a row it brings back
+  const getMissingRows = (rows: IndexedRow[]) => {
+    if (!table.options.getRowId) return rows;
+    const data = getCurrentData(table, store);
+    return rows.filter(
+      ({ row, index }) =>
+        getDataIndex(table, data, table.getRowId(row, index)) === -1,
+    );
+  };
   const applyRows = () =>
     isUndo
       ? applyRowChanges(
           table,
           store,
-          entry.removedRows,
+          getMissingRows(entry.removedRows),
           getRowIds(entry.addedRows),
           false,
         )
       : applyRowChanges(
           table,
           store,
-          entry.addedRows,
+          getMissingRows(entry.addedRows),
           getRowIds(entry.removedRows),
           false,
         );

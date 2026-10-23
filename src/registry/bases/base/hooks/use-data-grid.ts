@@ -650,6 +650,13 @@ function useDataGrid<TData extends RowData>({
 
   const table = useTable(tableOptions, selectGridLayoutState);
 
+  // New data from outside the grid shifts index-based row IDs, so history no longer
+  // points at the right rows
+  const hasRowId = !!props.getRowId;
+  React.useEffect(() => {
+    if (!hasRowId && data !== internalData.value) table.clearHistory();
+  }, [hasRowId, data, internalData.value, table]);
+
   if (tableRef.current === null) {
     tableRef.current = table;
   }
