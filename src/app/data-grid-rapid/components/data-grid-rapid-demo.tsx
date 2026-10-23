@@ -30,13 +30,13 @@ import {
 } from "@/registry/bases/radix/ui/toggle-group";
 
 import {
-  createQuotes,
+  createMarket,
   createRandom,
   type Quote,
   QUOTE_FIELDS,
   SECTORS,
-  tickQuotes,
-} from "../lib/market";
+  tickMarket,
+} from "../lib/rapid";
 
 const ROW_COUNTS = [1_000, 5_000, 20_000] as const;
 const TICK_RATES = [10, 30, 60] as const;
@@ -56,6 +56,12 @@ const signedFormat = new Intl.NumberFormat("en-US", {
   signDisplay: "exceptZero",
 });
 const volumeFormat = new Intl.NumberFormat("en-US");
+const marketCapFormat = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 2,
+});
 
 interface QuoteCellProps {
   value: number;
@@ -161,19 +167,19 @@ function useFrameStats(updatedCellsRef: React.RefObject<number>) {
   return stats;
 }
 
-interface DataGridMarketContentProps {
+interface DataGridRapidContentProps {
   rowCount: number;
   rowCountSelect: React.ReactNode;
 }
 
-function DataGridMarketContent({
+function DataGridRapidContent({
   rowCount,
   rowCountSelect,
-}: DataGridMarketContentProps) {
+}: DataGridRapidContentProps) {
   // The simulated feed's own state, which ticks mutate in place
-  const [quotes] = React.useState(() => createQuotes(rowCount));
+  const [market] = React.useState(() => createMarket(rowCount));
   const [data, setData] = React.useState(() =>
-    quotes.map((quote) => ({ ...quote })),
+    market.quotes.map((quote) => ({ ...quote })),
   );
   const [isRunning, setIsRunning] = React.useState(true);
   const [flow, setFlow] = React.useState<Flow>("cells");
@@ -226,6 +232,7 @@ function DataGridMarketContent({
       getQuoteColumn("high", "High", priceFormat),
       getQuoteColumn("low", "Low", priceFormat),
       getQuoteColumn("volume", "Volume", volumeFormat, { size: 130 }),
+      getQuoteColumn("marketCap", "Mkt Cap", marketCapFormat, { size: 120 }),
     ],
     [],
   );
@@ -243,7 +250,8 @@ function DataGridMarketContent({
     if (!isRunning) return;
     const random = createRandom(Date.now());
     const intervalId = window.setInterval(() => {
-      const moved = tickQuotes(quotes, tickShare, random);
+      const moved = tickMarket(market, tickShare, random);
+      const { quotes } = market;
       updatedCellsRef.current += moved.length * QUOTE_FIELDS.length;
 
       if (flow === "cells") {
@@ -269,7 +277,7 @@ function DataGridMarketContent({
       });
     }, 1000 / tickRate);
     return () => window.clearInterval(intervalId);
-  }, [isRunning, flow, tickRate, tickShare, quotes, tableRef]);
+  }, [isRunning, flow, tickRate, tickShare, market, tableRef]);
 
   const height = Math.max(400, windowSize.height - 150);
 
@@ -355,7 +363,7 @@ function DataGridMarketContent({
   );
 }
 
-export function DataGridMarketDemo() {
+export function DataGridRapidDemo() {
   const [rowCount, setRowCount] = React.useState<number>(5_000);
 
   const rowCountSelect = (
@@ -379,7 +387,7 @@ export function DataGridMarketDemo() {
   );
 
   return (
-    <DataGridMarketContent
+    <DataGridRapidContent
       key={rowCount}
       rowCount={rowCount}
       rowCountSelect={rowCountSelect}
