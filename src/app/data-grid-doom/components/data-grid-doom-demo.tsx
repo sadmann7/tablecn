@@ -924,13 +924,12 @@ export function DataGridDoomDemo({
           style={{ width: gridWidth * zoom, height: gridHeight * zoom }}
         >
           <div
-            // Hides grid lines, plus cells in gradient mode since painting them slows Safari.
-            // The grid view brings them back, with selection and focus drawn over the game in
-            // spreadsheet blue, which shows on dark and light pixels alike
+            // Hides grid lines, and cells in gradient mode since painting them slows Safari.
+            // The grid view draws selection in blue, which shows on any pixel
             className={cn(
               "bg-black **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:[[role=grid]]:border-0",
               showsGrid
-                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-[selected]:after:bg-blue-500/40 **:data-[slot=data-grid-row]:border-b-(length:--doom-line)"
+                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-focused:before:absolute **:data-[slot=data-grid-cell-wrapper]:data-focused:before:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:z-10 **:data-[slot=data-grid-cell-wrapper]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-row]:border-b-(length:--doom-line) **:data-[slot=data-grid-cell-wrapper]:data-selected:after:absolute **:data-[slot=data-grid-cell-wrapper]:data-selected:after:inset-0 **:data-[slot=data-grid-cell-wrapper]:data-selected:after:bg-blue-500/40"
                 : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}
