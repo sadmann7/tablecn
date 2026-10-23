@@ -6,7 +6,6 @@ import { generateId } from "@/lib/id";
 
 import type { Person } from "./seeds";
 
-// Adds a copy of each row right below it
 export function duplicateRows(
   table: Table<DataGridFeatures, Person>,
   rows: Array<Row<DataGridFeatures, Person>>,

@@ -15,7 +15,6 @@ export interface Quote {
   marketCap: number;
 }
 
-// The fields a tick changes, which are the cells it updates
 export const QUOTE_FIELDS = [
   "price",
   "change",
@@ -131,7 +130,6 @@ export function createRandom(seed: number) {
   };
 }
 
-// A standard normal draw
 function getNormal(random: () => number) {
   const u = Math.max(random(), Number.EPSILON);
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
@@ -145,7 +143,6 @@ function roundPrice(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-// Built from the company name, like most tickers, with letters swapped in on clashes
 function getSymbol(
   prefix: string,
   suffix: string,
@@ -261,7 +258,6 @@ export function createMarket(count: number, seed = 1): Market {
   return { quotes, models, activityTotals };
 }
 
-// Picks a quote, busy ones more often
 function pickQuoteIndex(market: Market, random: () => number) {
   const { activityTotals } = market;
   const target = random() * (activityTotals.at(-1) ?? 0);
@@ -275,8 +271,8 @@ function pickQuoteIndex(market: Market, random: () => number) {
   return low;
 }
 
-// Trades a share of the quotes, in place, and returns which moved. Every quote follows
-// one market move and its sector's, plus its own noise, so sectors move together
+// Every quote follows one market move and its sector's, plus its own noise, so
+// sectors move together
 export function tickMarket(
   market: Market,
   share: number,

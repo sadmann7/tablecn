@@ -710,7 +710,6 @@ function useDataGrid<TData extends RowData>({
     });
   }, []);
 
-  // Asks for a new row and adds it below `afterRowId`, or at the end, focusing it
   const addRow = React.useCallback(
     async (trigger: CreateRowDetails, columnId: string | undefined) => {
       const { readOnly, createRow } = propsRef.current;

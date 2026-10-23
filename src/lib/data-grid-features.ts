@@ -728,7 +728,6 @@ function subscribeCell(
   const store = getCellUpdateStore(table);
   const { listeners } = store;
 
-  // A row coming into view takes the batched values it waited for
   const waiting = store.deferred.get(rowId);
   if (waiting) {
     store.deferred.delete(rowId);
@@ -768,7 +767,6 @@ function subscribeCell(
   };
 }
 
-// Merges updates into one record of values per row, the last write to a cell winning
 function mergeUpdates(
   updates: Array<CellUpdate | RowUpdate>,
   getTarget: (rowId: string) => Map<string, RowValues>,
@@ -785,7 +783,6 @@ function mergeUpdates(
   }
 }
 
-// The copy a row shows instead of its data row, made on its first write
 function getRowCopy(store: CellUpdateStore, rowId: string, current: RowValues) {
   let shown = store.copies.get(rowId);
   if (!shown || current !== shown.copy) {
@@ -796,10 +793,8 @@ function getRowCopy(store: CellUpdateStore, rowId: string, current: RowValues) {
   return shown.copy;
 }
 
-// Writes each row's values into the copy the grid shows instead of its data row, once
-// per row, and queues the listeners of the mounted cells whose values changed. Rows
-// without mounted cells take their values in one go, since nothing needs to know which
-// changed until `onDataChange`
+// Rows without mounted cells take their values in one go, since nothing needs to know
+// which changed until `onDataChange`
 function applyRowValues(
   table: DataGridInstance,
   store: CellUpdateStore,
@@ -856,8 +851,7 @@ function notifyCells(store: CellUpdateStore) {
   }
 }
 
-// Applies the batched values waiting for a frame and tells the changed cells. Rows
-// nobody shows wait in `deferred`, unless `isComplete` applies everything
+// Rows nobody shows wait in `deferred`, unless `isComplete` applies everything
 function flushCellUpdates(
   table: DataGridInstance,
   store: CellUpdateStore,
@@ -978,7 +972,6 @@ function getIsCellsOnly(step: HistoryEntry) {
   return step.addedRows.length === 0 && step.removedRows.length === 0;
 }
 
-// Adds a step, merging cell edits made in quick succession into the last one
 function pushHistory(
   table: DataGridInstance,
   store: CellUpdateStore,
@@ -1019,8 +1012,8 @@ function pushHistory(
   setUndoRedoState(table, store);
 }
 
-// Builds the data with every pending value and reports it, reusing the row copies the
-// grid already shows, so rows don't rerender when it comes back as `data`
+// Reuses the row copies the grid already shows, so rows don't rerender when they come
+// back as `data`
 function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
   if (store.commitTimer !== null) {
     clearTimeout(store.commitTimer);
@@ -1166,7 +1159,6 @@ function applyRowChanges(
   return addedRows;
 }
 
-// Adds the rows together at the end, or right after or before an existing row
 function addRows(
   table: DataGridInstance,
   rows: ReadonlyArray<RowData>,
@@ -1271,9 +1263,6 @@ function clearHistory(table: DataGridInstance) {
   setUndoRedoState(table, store);
 }
 
-// Writes values into the rows the grid shows and notifies just the cells they change,
-// so an update renders only those cells. Batched updates apply once a frame and reach
-// `onDataChange` once per `batchUpdateDelay`, for live data
 function updateCells(
   table: DataGridInstance,
   updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,

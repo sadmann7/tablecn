@@ -136,7 +136,6 @@ function getViewportCells(table: PersonTable, grid: HTMLDivElement) {
   return cells;
 }
 
-// The benchmark's edits stay out of undo history
 const BENCHMARK_UPDATE = { history: false } as const;
 
 function restoreCells(table: PersonTable, cells: ViewportCell[]) {

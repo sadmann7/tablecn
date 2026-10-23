@@ -131,7 +131,6 @@ interface FrameStats {
   cellsPerSecond: number;
 }
 
-// Frames a second, the 95th percentile frame time, and cells updated a second
 function useFrameStats(updatedCellsRef: React.RefObject<number>) {
   const [stats, setStats] = React.useState<FrameStats>({
     fps: 0,

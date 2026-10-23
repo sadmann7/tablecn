@@ -177,8 +177,7 @@ function useUpdatedCell<TData extends RowData>(
   );
 }
 
-// Writes each value into the element as `updateCells` changes it, so a live update
-// costs a style write rather than a render
+// A live update costs a style write here rather than a render
 function DataGridWrittenCell<TData extends RowData>({
   writeCell,
   ...props

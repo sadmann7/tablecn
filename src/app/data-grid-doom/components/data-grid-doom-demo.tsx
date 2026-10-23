@@ -256,8 +256,6 @@ export function DataGridDoomDemo({
         size: CELL_SIZE,
         minSize: CELL_SIZE,
         maxSize: CELL_SIZE,
-        // Every mode colors the grid's own cell: data mode writes each value into it
-        // as `updateCells` changes it, and the others paint it directly
         cell: () => null,
         meta: mode === "data" ? { writeCell: writePixel } : undefined,
       })),
@@ -626,7 +624,6 @@ export function DataGridDoomDemo({
           }
           updates.push({ rowId: rowIds[y] ?? "", values });
         }
-        // Batched, so cells update once a frame and the grid's data catches up twice a second
         tableRef.current.updateCells(updates, { batch: true });
         return;
       }
