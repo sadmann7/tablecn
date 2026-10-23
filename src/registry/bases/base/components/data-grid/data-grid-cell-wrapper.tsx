@@ -34,8 +34,6 @@ export function DataGridCellWrapper<TData extends RowData>({
   const cellRef = React.useRef<HTMLDivElement>(null);
   const composedRef = useMergedRefs(ref, cellRef);
 
-  // The focused cell can come into view after focus moved to it, so it takes focus
-  // from the grid or another cell in it
   React.useLayoutEffect(() => {
     if (!isFocused || isEditing) return;
     const element = cellRef.current;
