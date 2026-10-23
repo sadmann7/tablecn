@@ -9,10 +9,7 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 
-import {
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-} from "@/hooks/use-data-grid-undo-redo";
+import { useDataGridUndoRedo } from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -385,50 +382,14 @@ function DataGridDemoContent({
       );
     }, []);
 
-  const onDataChange = React.useCallback(
-    (newData: Person[]) => {
-      const cellUpdates: Array<UndoRedoCellUpdate> = [];
-
-      const maxLength = Math.max(data.length, newData.length);
-      for (let rowIndex = 0; rowIndex < maxLength; rowIndex++) {
-        const oldRow = data[rowIndex];
-        const newRow = newData[rowIndex];
-
-        // Edits copy only the rows they touch, so unchanged rows keep their identity
-        if (oldRow && newRow && oldRow !== newRow) {
-          const allKeys = new Set([
-            ...Object.keys(oldRow),
-            ...Object.keys(newRow),
-          ]);
-
-          for (const key of allKeys) {
-            const oldValue = (oldRow as unknown as Record<string, unknown>)[
-              key
-            ];
-            const newValue = (newRow as unknown as Record<string, unknown>)[
-              key
-            ];
-
-            if (!Object.is(oldValue, newValue)) {
-              cellUpdates.push({
-                rowId: oldRow.id,
-                columnId: key,
-                previousValue: oldValue,
-                newValue,
-              });
-            }
-          }
-        }
-      }
-
-      if (cellUpdates.length > 0) {
-        trackCellsUpdate(cellUpdates);
-      }
-
-      setData(newData);
-    },
-    [data, trackCellsUpdate],
-  );
+  const onDataChange: NonNullable<UseDataGridProps<Person>["onDataChange"]> =
+    React.useCallback(
+      (newData, { changes }) => {
+        trackCellsUpdate(changes);
+        setData(newData);
+      },
+      [trackCellsUpdate],
+    );
 
   const height = Math.max(400, windowSize.height - 150);
 

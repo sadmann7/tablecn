@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { RowUpdate } from "@/lib/data-grid-types";
 
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -272,6 +273,8 @@ export function DataGridDoomDemo({
     getRowId: (row) => row.id,
     readOnly: true,
   });
+  // A data change hands back a new `table`, which mustn't restart the paint loop
+  const tableRef = useValueAsRef(table);
 
   React.useEffect(() => {
     let secondId = 0;
@@ -626,7 +629,8 @@ export function DataGridDoomDemo({
           }
           updates.push({ rowId: rowIds[y] ?? "", values });
         }
-        table.updateCells(updates);
+        // Batched, so cells update once a frame and the grid's data catches up twice a second
+        tableRef.current.updateCells(updates, { batch: true });
         return;
       }
       for (const y of changed) {
@@ -797,7 +801,7 @@ export function DataGridDoomDemo({
     source,
     damage,
     auto,
-    table,
+    tableRef,
   ]);
 
   const stageWidth = Math.round(gridWidth * zoom);

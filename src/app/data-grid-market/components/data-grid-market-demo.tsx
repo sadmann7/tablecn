@@ -9,6 +9,7 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { RowUpdate } from "@/lib/data-grid-types";
 
+import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
@@ -232,10 +233,11 @@ function DataGridMarketContent({
   const { table, ...dataGridProps } = useDataGrid({
     data,
     columns,
-    onDataChange: setData,
     getRowId: (row) => row.symbol,
     readOnly: true,
   });
+  // A data change hands back a new `table`, which mustn't restart the feed
+  const tableRef = useValueAsRef(table);
 
   React.useEffect(() => {
     if (!isRunning) return;
@@ -253,7 +255,7 @@ function DataGridMarketContent({
           for (const field of QUOTE_FIELDS) values[field] = quote[field];
           updates.push({ rowId: quote.symbol, values });
         }
-        table.updateCells(updates, { batch: true });
+        tableRef.current.updateCells(updates, { batch: true });
         return;
       }
 
@@ -267,7 +269,7 @@ function DataGridMarketContent({
       });
     }, 1000 / tickRate);
     return () => window.clearInterval(intervalId);
-  }, [isRunning, flow, tickRate, tickShare, quotes, table]);
+  }, [isRunning, flow, tickRate, tickShare, quotes, tableRef]);
 
   const height = Math.max(400, windowSize.height - 150);
 

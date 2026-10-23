@@ -25,10 +25,7 @@ import {
   getStanceIcon,
   getStyleIcon,
 } from "@/app/lib/utils";
-import {
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-} from "@/hooks/use-data-grid-undo-redo";
+import { useDataGridUndoRedo } from "@/hooks/use-data-grid-undo-redo";
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
@@ -344,45 +341,15 @@ export function DataGridMultiplayerDemo({
   const onDataChange: NonNullable<
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
-    (newData) => {
-      const cellUpdates: Array<UndoRedoCellUpdate> = [];
-
-      for (const skater of newData) {
-        const existing = data.find((s) => s.id === skater.id);
-
-        if (!existing) {
-          collection.insert(skater);
-          continue;
-        }
-
-        for (const key of Object.keys(skater) as Array<keyof SkaterSchema>) {
-          const ev =
-            existing[key] instanceof Date
-              ? (existing[key] as Date).toISOString()
-              : existing[key];
-          const nv =
-            skater[key] instanceof Date
-              ? (skater[key] as Date).toISOString()
-              : skater[key];
-
-          if (JSON.stringify(ev) !== JSON.stringify(nv)) {
-            cellUpdates.push({
-              rowId: existing.id,
-              columnId: key,
-              previousValue: existing[key],
-              newValue: skater[key],
-            });
-
-            collection.update(skater.id, (draft) => {
-              (draft as Record<string, unknown>)[key] = skater[key];
-            });
-          }
-        }
+    (_newData, { changes }) => {
+      for (const { rowId, columnId, newValue } of changes) {
+        collection.update(rowId, (draft) => {
+          (draft as Record<string, unknown>)[columnId] = newValue;
+        });
       }
-
-      if (cellUpdates.length > 0) trackCellsUpdate(cellUpdates);
+      trackCellsUpdate(changes);
     },
-    [collection, data, trackCellsUpdate],
+    [collection, trackCellsUpdate],
   );
 
   const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =

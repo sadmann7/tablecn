@@ -1034,6 +1034,16 @@ describe("useDataGrid", () => {
         expect.arrayContaining([
           expect.objectContaining({ name: "Updated Name" }),
         ]),
+        {
+          changes: [
+            {
+              rowId: "0",
+              columnId: "name",
+              previousValue: "Tony Hawk",
+              newValue: "Updated Name",
+            },
+          ],
+        },
       );
     });
 
@@ -1062,6 +1072,12 @@ describe("useDataGrid", () => {
           expect.objectContaining({ name: "Updated Name 1" }),
           expect.objectContaining({ name: "Updated Name 2" }),
         ]),
+        {
+          changes: expect.arrayContaining([
+            expect.objectContaining({ newValue: "Updated Name 1" }),
+            expect.objectContaining({ newValue: "Updated Name 2" }),
+          ]),
+        },
       );
     });
 
@@ -1238,6 +1254,79 @@ describe("useDataGrid", () => {
       expect(onDataChange).not.toHaveBeenCalled();
     });
 
+    it("keeps updates itself without onDataChange, so sorting follows them", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            initialState: { sorting: [{ id: "score", desc: true }] },
+          }),
+        { wrapper: createWrapper() },
+      );
+      expect(result.current.table.getRowModel().rows[0]?.id).toBe("1");
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "2",
+          columnId: "score",
+          value: 100,
+        });
+      });
+
+      expect(result.current.table.getRowModel().rows[0]?.id).toBe("2");
+      expect(testData[2]?.score).toBe(92);
+    });
+
+    it("sorts by updated values when onDataChange feeds them back", () => {
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          return useDataGrid({
+            data,
+            onDataChange: setData,
+            columns: testColumns,
+            initialState: { sorting: [{ id: "score", desc: true }] },
+          });
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "2",
+          columnId: "score",
+          value: 100,
+        });
+      });
+
+      expect(
+        result.current.table.getRowModel().rows.map((row) => row.id),
+      ).toEqual(["2", "1", "0"]);
+    });
+
+    it("starts over from a new data prop without onDataChange", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) => useDataGrid({ data, columns: testColumns }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Patched",
+        });
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe("Patched");
+
+      const nextData = testData.map((row) => ({ ...row }));
+      rerender({ data: nextData });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        testData[0]?.name,
+      );
+    });
+
     it("holds batched values for rows out of view until they come into view", () => {
       vi.useFakeTimers();
       try {
@@ -1290,6 +1379,24 @@ describe("useDataGrid", () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it("doesn't report rows whose values come back the same", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns: testColumns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          values: { name: testData[0]?.name, score: testData[0]?.score },
+        });
+      });
+
+      expect(onDataChange).not.toHaveBeenCalled();
     });
 
     it("applies batched updates once a frame, keeping each cell's latest", () => {

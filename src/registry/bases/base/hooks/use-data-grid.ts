@@ -143,12 +143,28 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
 }
 
 function useDataGrid<TData extends RowData>({
-  data,
+  data: dataProp,
   columns,
   overscan = OVERSCAN,
   dir: dirProp,
   ...props
 }: UseDataGridProps<TData>) {
+  // Without `onDataChange` the grid keeps the data itself, so updates still reach
+  // sorting, filtering and search. It remembers the prop it came from, so a new
+  // `data` prop starts it over
+  const [ownData, setOwnData] = React.useState({
+    from: dataProp,
+    data: dataProp,
+  });
+  const dataPropRef = useValueAsRef(dataProp);
+  const onOwnDataChange = React.useCallback(
+    (nextData: TData[]) =>
+      setOwnData({ from: dataPropRef.current, data: nextData }),
+    [dataPropRef],
+  );
+  const isDataControlled = props.onDataChange !== undefined;
+  const data =
+    isDataControlled || ownData.from !== dataProp ? dataProp : ownData.data;
   const contextDir = useDirection();
   const dir = dirProp ?? contextDir;
   const dataGridRef = React.useRef<HTMLDivElement>(null);
@@ -640,6 +656,9 @@ function useDataGrid<TData extends RowData>({
         (propsRef.current.onClipboardNotice ?? showClipboardToast)(notice),
       features: dataGridFeatures,
       data,
+      onDataChange: isDataControlled
+        ? stableProps.onDataChange
+        : onOwnDataChange,
       columns: tableColumns,
       defaultColumn,
       autoResetCellSelection: false,
@@ -657,6 +676,8 @@ function useDataGrid<TData extends RowData>({
     revealCell,
     focusCellElement,
     data,
+    isDataControlled,
+    onOwnDataChange,
     tableColumns,
     defaultColumn,
     enableCellEditing,

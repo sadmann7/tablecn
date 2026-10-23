@@ -46,12 +46,14 @@ import {
 } from "@tanstack/react-table/static-functions";
 
 import type {
+  CellChange,
   CellPosition,
   CellPresence,
   CellUpdate,
   ClipboardNotice,
   ColumnValueReader,
   ContextMenuState,
+  DataChangeDetails,
   DataGridColumnMeta,
   Direction,
   FileCellData,
@@ -143,7 +145,7 @@ interface Cell_DataGridCellEditing {
 
 interface TableOptions_DataGridData<TData extends RowData> {
   readOnly?: boolean;
-  onDataChange?: (data: TData[]) => void;
+  onDataChange?: (data: TData[], details: DataChangeDetails) => void;
   /** How long batched updates wait before reaching `onDataChange`, in ms. Defaults to 500. */
   batchUpdateDelay?: number;
   onRowsDelete?: (rows: TData[], rowIds: string[]) => void | Promise<void>;
@@ -590,6 +592,11 @@ interface CellUpdateStore {
 
 const cellUpdateStores = new WeakMap<object, CellUpdateStore>();
 
+// Rows whose `original` was swapped for a copy in place. The row models rebuild them
+// even when the data hands back that copy, and the sort cache doesn't trust their
+// old values, so sorting and filtering see what changed
+const patchedRows = new WeakSet();
+
 // Falls back to a timer where frames don't run, like tests
 function requestFrame(callback: () => void) {
   return typeof requestAnimationFrame === "function"
@@ -737,6 +744,7 @@ function applyRowValues(
       ? [row, shownRow]
       : [row]) {
       target.original = copy;
+      patchedRows.add(target);
       if (getHasKeys(target._valuesCache)) {
         target._valuesCache = makeObjectMap();
       }
@@ -807,28 +815,36 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
 
   const rowsById = table.getCoreRowModel().rowsById;
   const nextData = [...data];
+  const changes: CellChange[] = [];
   for (const rowId of store.pending) {
     const row = rowsById[rowId];
     const shown = store.copies.get(rowId);
     if (!row || !shown) continue;
-    const dataRow = data[row.index];
-    if (shown.base === dataRow) {
-      nextData[row.index] = shown.copy;
-      continue;
-    }
-    // The data changed since the patch, so the patched values go onto the new row
     const base = shown.base as RowValues;
-    const copy = { ...((dataRow ?? row.original) as RowValues) };
+    const dataRow = (data[row.index] ?? row.original) as RowValues;
+    // When the data changed since the patch, the patched values go onto its new row
+    const isSameBase = shown.base === dataRow;
+    const nextRow = isSameBase ? shown.copy : { ...dataRow };
+    let isRowChanged = false;
     for (const columnId in shown.copy) {
-      if (!Object.is(shown.copy[columnId], base[columnId])) {
-        copy[columnId] = shown.copy[columnId];
-      }
+      const newValue = shown.copy[columnId];
+      if (Object.is(newValue, base[columnId])) continue;
+      if (!isSameBase) nextRow[columnId] = newValue;
+      if (Object.is(newValue, dataRow[columnId])) continue;
+      changes.push({
+        rowId,
+        columnId,
+        previousValue: dataRow[columnId],
+        newValue,
+      });
+      isRowChanged = true;
     }
-    nextData[row.index] = copy;
+    if (isRowChanged) nextData[row.index] = nextRow;
   }
   store.pending.clear();
   store.copies.clear();
-  onDataChange(nextData);
+  if (changes.length === 0) return;
+  onDataChange(nextData, { changes });
 }
 
 // Writes values into the rows the grid shows and notifies just the cells they change,
@@ -2211,6 +2227,10 @@ function createDataGridCoreRowModel<
   };
 }
 
+function getIsReusableRow(row: CoreRow, originalRow: RowData) {
+  return row.original === originalRow && !patchedRows.has(row);
+}
+
 function getCoreRowModel(
   table: Table<TableFeatures, RowData>,
   previous: RowModel<TableFeatures, RowData> | null,
@@ -2228,7 +2248,7 @@ function getCoreRowModel(
         isSameShape = false;
         break;
       }
-      if (previousRow.original === originalRow) continue;
+      if (getIsReusableRow(previousRow, originalRow)) continue;
       const id = table.getRowId(originalRow, i);
       if (id !== previousRow.id) {
         isSameShape = false;
@@ -2264,7 +2284,7 @@ function getCoreRowModel(
       if (originalRow === undefined) continue;
       const previousRow = previousRows[i];
       const row =
-        !getSubRows && previousRow?.original === originalRow
+        !getSubRows && previousRow && getIsReusableRow(previousRow, originalRow)
           ? previousRow
           : constructRow(
               table,
@@ -2436,6 +2456,7 @@ function getUpdatedUnfilteredCache(
     const previousRow = cache.rows[index];
     if (row === previousRow) continue;
     if (!row || !previousRow || row.id !== previousRow.id) return null;
+    if (patchedRows.has(previousRow)) return null;
     for (const readValue of readValues) {
       if (!Object.is(readValue(row), readValue(previousRow))) return null;
     }

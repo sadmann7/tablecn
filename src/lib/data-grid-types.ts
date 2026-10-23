@@ -39,6 +39,19 @@ export interface CellUpdate {
   value: unknown;
 }
 
+/** A cell whose value `onDataChange` reports as changed. */
+export interface CellChange {
+  rowId: string;
+  columnId: string;
+  previousValue: unknown;
+  newValue: unknown;
+}
+
+export interface DataChangeDetails {
+  /** Every cell whose value changed, so consumers don't need to diff the data. */
+  changes: CellChange[];
+}
+
 /** Several cells of one row, keyed by column ID. */
 export interface RowUpdate {
   rowId: string;
