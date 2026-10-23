@@ -3,9 +3,9 @@ import { SCREEN_HEIGHT, SCREEN_WIDTH } from "./doom";
 export const RESOLUTIONS = [40, 64, 80, 106, 128, 160, 192, 320] as const;
 export const NATIVE_RESOLUTION = 320;
 
-export function getResolutionLabel(width: number) {
-  const height = Math.round((width * SCREEN_HEIGHT) / SCREEN_WIDTH);
-  return `${width}×${height}${width === NATIVE_RESOLUTION ? " (native)" : ""}`;
+export function getResolutionLabel(columnCount: number) {
+  const rowCount = Math.round((columnCount * SCREEN_HEIGHT) / SCREEN_WIDTH);
+  return `${columnCount}×${rowCount}${columnCount === NATIVE_RESOLUTION ? " (native)" : ""}`;
 }
 
 // The share of rows the plasma benchmark changes each frame, from just over 0 to all of them
@@ -17,22 +17,20 @@ function getDamage(value: string | null) {
 // res=40|64|80|106|128|160|192|320 (columns, 16:10), mode=data|dom|gradient, source=doom|plasma, damage (plasma only), auto=1 to expose measurements, grid=1 to start with the grid shown
 export function getDoomParams(params: Pick<URLSearchParams, "get">) {
   const res = Number(params.get("res") ?? NATIVE_RESOLUTION);
-  const width = (RESOLUTIONS as readonly number[]).includes(res)
+  const columnCount = (RESOLUTIONS as readonly number[]).includes(res)
     ? res
     : NATIVE_RESOLUTION;
   const modeParam = params.get("mode");
   const mode =
     modeParam === "data" || modeParam === "dom" || modeParam === "gradient"
       ? modeParam
-      : width === NATIVE_RESOLUTION
+      : columnCount === NATIVE_RESOLUTION
         ? "gradient"
         : "dom";
 
   return {
-    width,
+    columnCount,
     mode,
-    // Resolution links keep an explicit mode but let the per-resolution default apply otherwise
-    modeParam: mode === modeParam ? modeParam : null,
     source: params.get("source") === "plasma" ? "plasma" : "doom",
     damage: getDamage(params.get("damage")),
     auto: params.get("auto") === "1",
