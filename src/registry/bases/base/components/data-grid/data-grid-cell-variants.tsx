@@ -385,6 +385,7 @@ export function NumberCell<TData extends RowData>(
   const step = numberCellOpts?.step;
 
   const prevIsEditingRef = React.useRef(false);
+  const pendingCharRef = React.useRef<string | null>(null);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -435,7 +436,7 @@ export function NumberCell<TData extends RowData>(
         if (event.key === "Backspace") {
           setValue("");
         } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          setValue(event.key);
+          pendingCharRef.current = event.key;
         }
       }
     },
@@ -448,6 +449,15 @@ export function NumberCell<TData extends RowData>(
 
     if (isEditing && !wasEditing && inputRef.current) {
       inputRef.current.focus();
+
+      const pendingChar = pendingCharRef.current;
+      pendingCharRef.current = null;
+      if (pendingChar) {
+        inputRef.current.select();
+        if (!document.execCommand("insertText", false, pendingChar)) {
+          setValue(pendingChar);
+        }
+      }
     }
   }, [isEditing]);
 
@@ -462,7 +472,7 @@ export function NumberCell<TData extends RowData>(
           aria-label={getColumnLabel(cell.column)}
           type="number"
           ref={inputRef}
-          value={value}
+          defaultValue={value}
           min={min}
           max={max}
           step={step}
@@ -486,6 +496,7 @@ export function UrlCell<TData extends RowData>(
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
+  const pendingCharRef = React.useRef<string | null>(null);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -557,14 +568,7 @@ export function UrlCell<TData extends RowData>(
         !event.ctrlKey &&
         !event.metaKey
       ) {
-        setValue(event.key);
-
-        queueMicrotask(() => {
-          if (cellRef.current && cellRef.current.contentEditable === "true") {
-            cellRef.current.textContent = event.key;
-            moveCaretToEnd(cellRef.current);
-          }
-        });
+        pendingCharRef.current = event.key;
       }
     },
     [cell, isEditing, isFocused, initialValue, value, readOnly],
@@ -600,7 +604,11 @@ export function UrlCell<TData extends RowData>(
         cellRef.current.textContent = value;
       }
 
-      if (cellRef.current.textContent) {
+      const pendingChar = pendingCharRef.current;
+      pendingCharRef.current = null;
+      if (pendingChar) {
+        replaceEditableText(cellRef.current, pendingChar);
+      } else if (cellRef.current.textContent) {
         moveCaretToEnd(cellRef.current);
       }
     } else if (!isEditing && wasEditing && cellRef.current) {

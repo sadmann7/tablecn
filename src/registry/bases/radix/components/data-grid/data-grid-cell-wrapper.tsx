@@ -3,6 +3,7 @@
 import type { RowData } from "@tanstack/react-table";
 
 import { cn } from "cn";
+import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridCellProps } from "@/lib/data-grid-types";
@@ -25,10 +26,26 @@ export function DataGridCellWrapper<TData extends RowData>({
   width: _width,
   onKeyDown: onKeyDownProp,
   className,
+  ref,
   ...props
 }: DataGridCellWrapperProps<TData>) {
   const rowId = cell.row.id;
   const columnId = cell.column.id;
+  const cellRef = React.useRef<HTMLDivElement>(null);
+  const composedRef = useComposedRefs(ref, cellRef);
+
+  React.useLayoutEffect(() => {
+    if (!isFocused || isEditing) return;
+    const element = cellRef.current;
+    const grid = element?.closest('[role="grid"]');
+    const active = document.activeElement;
+    if (!element || !grid || !active || element.contains(active)) return;
+    const activeGrid = active
+      .closest('[data-slot="data-grid-row"]')
+      ?.closest('[role="grid"]');
+    if (active !== grid && activeGrid !== grid) return;
+    element.focus({ preventScroll: true });
+  }, [isFocused, isEditing]);
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -82,6 +99,7 @@ export function DataGridCellWrapper<TData extends RowData>({
       aria-selected={isSelected}
       aria-readonly={readOnly || undefined}
       {...props}
+      ref={composedRef}
       data-slot="data-grid-cell-wrapper"
       data-row-id={rowId}
       data-column-id={columnId}
