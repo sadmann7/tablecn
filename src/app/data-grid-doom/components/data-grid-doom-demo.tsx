@@ -120,29 +120,6 @@ function getStageLayout({
   return { zoom, gridWidth, gridHeight };
 }
 
-// The span is the trigger so the tooltip still shows while the button is disabled
-function ControlTooltip({
-  label,
-  keys,
-  children,
-}: {
-  label: string;
-  keys?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span className="inline-flex">{children}</span>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={6}>
-        {label}
-        {keys ? <Kbd>{keys}</Kbd> : null}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
 function getIsPageShortcut(event: KeyboardEvent) {
   return (
     PAGE_SHORTCUT_CODES.has(event.code) &&
@@ -185,6 +162,25 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
 interface PixelRow {
   id: string;
   [key: string]: number | string;
+}
+
+interface ControlProps extends React.ComponentProps<typeof TooltipTrigger> {
+  label: string;
+  keys?: string;
+}
+
+function ControlTooltip({ label, keys, children, ...props }: ControlProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild {...props}>
+        <span className="inline-flex">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+        {keys ? <Kbd>{keys}</Kbd> : null}
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 export function DataGridDoomDemo({
