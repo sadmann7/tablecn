@@ -249,7 +249,7 @@ function useDataGrid<TData extends RowData>({
       // Keeps keyboard handling on the grid until the cell mounts
       pendingFocusRef.current = { cell, shouldScroll };
       const container = dataGridRef.current;
-      if (container && !container.contains(document.activeElement)) {
+      if (container && document.activeElement !== container) {
         container.focus({ preventScroll: true });
       }
     },
