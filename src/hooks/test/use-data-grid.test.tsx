@@ -1374,6 +1374,32 @@ describe("useDataGrid", () => {
       expect(readOnly.result.current.table.getCanUndo()).toBe(false);
     });
 
+    it("undoes only the recorded cells of a row that also took batched values", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.updateCells(
+          { rowId: "1", values: { trick: "Ollie", score: 50 } },
+          { batch: true },
+        );
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Edited",
+        });
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+
+      const row = result.current.table.getCoreRowModel().rowsById["1"];
+      expect(row?.original).toMatchObject({
+        name: "Tony Hawk",
+        trick: "Ollie",
+        score: 50,
+      });
+    });
+
     it("keeps the rows that stay when rows are added or removed", () => {
       const { result } = renderEditableGrid();
       const before = result.current.table.getCoreRowModel().rowsById;

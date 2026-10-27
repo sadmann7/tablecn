@@ -606,7 +606,7 @@ interface CellUpdateStore {
   pending: Set<string>;
   copies: Map<string, { base: unknown; copy: RowValues }>;
   notify: Set<CellListeners>;
-  recordKeys: Set<string>;
+  recordedCells: Map<string, Set<string>>;
   reported: { from: ReadonlyArray<RowData>; data: RowData[] } | null;
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
@@ -653,7 +653,7 @@ function getCellUpdateStore(table: DataGridInstance) {
       pending: new Set(),
       copies: new Map(),
       notify: new Set(),
-      recordKeys: new Set(),
+      recordedCells: new Map(),
       rowIndexes: new WeakMap(),
       reason: null,
       reported: null,
@@ -963,7 +963,7 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
   if (!table.options.onDataChange) {
     // The copies never leave the grid, so later updates reuse them
     store.pending.clear();
-    store.recordKeys.clear();
+    store.recordedCells.clear();
     return;
   }
 
@@ -978,6 +978,7 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
     if (!shown || index === -1) continue;
     const base = shown.base as RowValues;
     const dataRow = (data[index] ?? rowsById[rowId]?.original) as RowValues;
+    const recordedColumnIds = store.recordedCells.get(rowId);
     // When the data changed since the patch, the patched values go onto its new row
     const isSameBase = shown.base === dataRow;
     const nextRow = isSameBase ? shown.copy : { ...dataRow };
@@ -994,16 +995,14 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
         newValue,
       };
       changes.push(change);
-      if (store.recordKeys.has(getCellKey(rowId, columnId))) {
-        recordedChanges.push(change);
-      }
+      if (recordedColumnIds?.has(columnId)) recordedChanges.push(change);
       isRowChanged = true;
     }
     if (isRowChanged) nextData[index] = nextRow;
   }
   store.pending.clear();
   store.copies.clear();
-  store.recordKeys.clear();
+  store.recordedCells.clear();
   store.lateKeys.clear();
   if (changes.length === 0) return;
 
@@ -1242,12 +1241,15 @@ function updateCells(
 
   if (options?.history ?? !options?.batch) {
     for (const update of updateArray) {
+      let columnIds = store.recordedCells.get(update.rowId);
+      if (!columnIds) {
+        columnIds = new Set();
+        store.recordedCells.set(update.rowId, columnIds);
+      }
       if ("values" in update) {
-        for (const columnId in update.values) {
-          store.recordKeys.add(getCellKey(update.rowId, columnId));
-        }
+        for (const columnId in update.values) columnIds.add(columnId);
       } else {
-        store.recordKeys.add(getCellKey(update.rowId, update.columnId));
+        columnIds.add(update.columnId);
       }
     }
   }
