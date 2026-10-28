@@ -622,7 +622,10 @@ function DataGridRapidContent({
               />
             </output>
           </div>
-          <Separator orientation="vertical" className="mx-2 h-5 self-center" />
+          <Separator
+            orientation="vertical"
+            className="mx-2 data-vertical:h-5 data-vertical:self-center"
+          />
           <DataGridSortMenu table={table} align="end" />
           <DataGridViewMenu table={table} align="end" />
         </div>
