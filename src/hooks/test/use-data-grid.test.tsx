@@ -185,6 +185,7 @@ describe("useDataGrid", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   describe("initialization", () => {
@@ -1667,49 +1668,45 @@ describe("useDataGrid", () => {
 
     it("reports batched updates once per batch delay", () => {
       vi.useFakeTimers();
-      try {
-        const onDataChange = vi.fn();
-        const { result } = renderHook(
-          () =>
-            useDataGrid({
-              data: testData,
-              columns: testColumns,
-              onDataChange,
-              batchUpdateDelay: 200,
-            }),
-          { wrapper: createWrapper() },
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+            batchUpdateDelay: 200,
+          }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+
+      act(() => {
+        table.updateCells(
+          { rowId: "0", columnId: "name", value: "One" },
+          { batch: true },
         );
-        const { table } = result.current;
-        const onNameChange = vi.fn();
-        table.subscribeCell("0", "name", onNameChange);
+        table.updateCells(
+          { rowId: "1", columnId: "name", value: "Two" },
+          { batch: true },
+        );
+      });
 
-        act(() => {
-          table.updateCells(
-            { rowId: "0", columnId: "name", value: "One" },
-            { batch: true },
-          );
-          table.updateCells(
-            { rowId: "1", columnId: "name", value: "Two" },
-            { batch: true },
-          );
-        });
+      // This suite runs animation frames immediately, so cells hear right away
+      expect(table.getRow("0").getValue("name")).toBe("One");
+      expect(onNameChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange).not.toHaveBeenCalled();
 
-        // This suite runs animation frames immediately, so cells hear right away
-        expect(table.getRow("0").getValue("name")).toBe("One");
-        expect(onNameChange).toHaveBeenCalledTimes(1);
-        expect(onDataChange).not.toHaveBeenCalled();
-
-        act(() => {
-          vi.advanceTimersByTime(200);
-        });
-        expect(onDataChange).toHaveBeenCalledTimes(1);
-        const nextData = onDataChange.mock.calls[0]?.[0];
-        expect(nextData?.[0]).toMatchObject({ name: "One" });
-        expect(nextData?.[1]).toMatchObject({ name: "Two" });
-        expect(nextData?.[2]).toBe(testData[2]);
-      } finally {
-        vi.useRealTimers();
-      }
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const nextData = onDataChange.mock.calls[0]?.[0];
+      expect(nextData?.[0]).toMatchObject({ name: "One" });
+      expect(nextData?.[1]).toMatchObject({ name: "Two" });
+      expect(nextData?.[2]).toBe(testData[2]);
     });
 
     it("applies row updates and notifies the cells they change", () => {
@@ -1839,56 +1836,52 @@ describe("useDataGrid", () => {
 
     it("holds batched values for rows out of view until they come into view", () => {
       vi.useFakeTimers();
-      try {
-        const frames: FrameRequestCallback[] = [];
-        vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
-          frames.push(cb);
-          return frames.length;
-        });
-        const onDataChange = vi.fn();
-        const { result } = renderHook(
-          () =>
-            useDataGrid({
-              data: testData,
-              columns: testColumns,
-              onDataChange,
-              batchUpdateDelay: 200,
-            }),
-          { wrapper: createWrapper() },
+      const frames: FrameRequestCallback[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+        frames.push(cb);
+        return frames.length;
+      });
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+            batchUpdateDelay: 200,
+          }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      table.subscribeCell("0", "name", vi.fn());
+
+      act(() => {
+        table.updateCells(
+          [
+            { rowId: "0", values: { name: "Shown" } },
+            { rowId: "1", values: { name: "Hidden" } },
+            { rowId: "2", values: { name: "Later" } },
+          ],
+          { batch: true },
         );
-        const { table } = result.current;
-        table.subscribeCell("0", "name", vi.fn());
+        frames[0]?.(0);
+      });
 
-        act(() => {
-          table.updateCells(
-            [
-              { rowId: "0", values: { name: "Shown" } },
-              { rowId: "1", values: { name: "Hidden" } },
-              { rowId: "2", values: { name: "Later" } },
-            ],
-            { batch: true },
-          );
-          frames[0]?.(0);
-        });
+      expect(table.getRow("0").getValue("name")).toBe("Shown");
+      expect(table.getRow("1").getValue("name")).toBe(testData[1]?.name);
 
-        expect(table.getRow("0").getValue("name")).toBe("Shown");
-        expect(table.getRow("1").getValue("name")).toBe(testData[1]?.name);
+      table.subscribeCell("1", "name", vi.fn());
+      expect(table.getRow("1").getValue("name")).toBe("Hidden");
 
-        table.subscribeCell("1", "name", vi.fn());
-        expect(table.getRow("1").getValue("name")).toBe("Hidden");
-
-        act(() => {
-          vi.advanceTimersByTime(200);
-        });
-        const nextData = onDataChange.mock.calls[0]?.[0];
-        expect(nextData?.map((row: TestData) => row.name)).toEqual([
-          "Shown",
-          "Hidden",
-          "Later",
-        ]);
-      } finally {
-        vi.useRealTimers();
-      }
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      const nextData = onDataChange.mock.calls[0]?.[0];
+      expect(nextData?.map((row: TestData) => row.name)).toEqual([
+        "Shown",
+        "Hidden",
+        "Later",
+      ]);
     });
 
     it("doesn't report rows whose values come back the same", () => {
