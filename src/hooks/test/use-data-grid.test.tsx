@@ -1666,6 +1666,67 @@ describe("useDataGrid", () => {
       expect(testData[0]?.name).not.toBe("Patched");
     });
 
+    it("notifies computed columns and custom cells when another field changes", () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name" },
+        { id: "trick", accessorKey: "trick", cell: ({ row }) => row.id },
+        { id: "score", accessorKey: "score" },
+        {
+          id: "label",
+          accessorFn: (row) => `${row.name} (${row.score})`,
+        },
+      ];
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      const onTrickChange = vi.fn();
+      const onLabelChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+      table.subscribeCell("0", "trick", onTrickChange);
+      table.subscribeCell("0", "label", onLabelChange);
+
+      act(() => {
+        table.updateCells({ rowId: "0", columnId: "score", value: 50 });
+      });
+
+      expect(onNameChange).not.toHaveBeenCalled();
+      expect(onTrickChange).toHaveBeenCalledTimes(1);
+      expect(onLabelChange).toHaveBeenCalledTimes(1);
+      expect(table.getRow("0").getValue("label")).toBe("Tony Hawk (50)");
+    });
+
+    it("updates a computed cell that mounts after its row's batched values", () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name" },
+        { id: "score", accessorKey: "score" },
+        {
+          id: "label",
+          accessorFn: (row) => `${row.name} (${row.score})`,
+        },
+      ];
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+
+      act(() => {
+        table.updateCells(
+          { rowId: "1", columnId: "score", value: 60 },
+          { batch: true },
+        );
+      });
+      table.subscribeCell("1", "name", vi.fn());
+      const onLabelChange = vi.fn();
+      table.subscribeCell("1", "label", onLabelChange);
+
+      expect(onLabelChange).toHaveBeenCalledTimes(1);
+      expect(table.getRow("1").getValue("label")).toBe("Rodney Mullen (60)");
+    });
+
     it("reports batched updates once per batch delay", () => {
       vi.useFakeTimers();
       const onDataChange = vi.fn();

@@ -322,6 +322,34 @@ describe("DataGrid rendering", () => {
     );
   });
 
+  it("updates cells whose value comes from an accessor or another field through updateCells", () => {
+    const { container, table } = renderGrid([
+      { id: "trick", accessorKey: "trick", header: "Trick" },
+      {
+        id: "label",
+        accessorFn: (row) => `${row.name} (${row.trick})`,
+        header: "Label",
+      },
+      {
+        id: "summary",
+        accessorKey: "name",
+        header: "Summary",
+        cell: ({ row }) => `Trick: ${row.original.trick}`,
+      },
+    ]);
+
+    act(() => {
+      table.updateCells({ rowId: "1", columnId: "trick", value: "Ollie" });
+    });
+
+    expect(getCellWrapper(container, "1", "label")?.textContent).toBe(
+      "Tony Hawk (Ollie)",
+    );
+    expect(getCellWrapper(container, "1", "summary")?.textContent).toBe(
+      "Trick: Ollie",
+    );
+  });
+
   it("syncs a controlled textarea after inserting text at the caret", () => {
     function Editor() {
       const [value, setValue] = React.useState("900");

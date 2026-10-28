@@ -669,6 +669,24 @@ function getCellUpdateStore(table: DataGridInstance) {
   return store;
 }
 
+const dependentColumnIdsCache = new WeakMap<object, string[]>();
+
+function getDependentColumnIds(table: DataGridInstance) {
+  const columns = table.getAllLeafColumns();
+  let columnIds = dependentColumnIdsCache.get(columns);
+  if (!columnIds) {
+    columnIds = [];
+    for (const column of columns) {
+      const { accessorKey } = column.columnDef as { accessorKey?: unknown };
+      if (accessorKey !== column.id || getHasCustomCell(column)) {
+        columnIds.push(column.id);
+      }
+    }
+    dependentColumnIdsCache.set(columns, columnIds);
+  }
+  return columnIds;
+}
+
 function subscribeCell(
   table: DataGridInstance,
   rowId: string,
@@ -684,9 +702,16 @@ function subscribeCell(
     const current = table.getCoreRowModel().rowsById[rowId]?.original as
       | RowValues
       | undefined;
+    let isRowChanged = false;
     for (const changedColumnId in waiting) {
       if (!Object.is(current?.[changedColumnId], waiting[changedColumnId])) {
         store.lateKeys.add(getCellKey(rowId, changedColumnId));
+        isRowChanged = true;
+      }
+    }
+    if (isRowChanged) {
+      for (const dependentColumnId of getDependentColumnIds(table)) {
+        store.lateKeys.add(getCellKey(rowId, dependentColumnId));
       }
     }
     applyRowValues(table, store, new Map([[rowId, waiting]]));
@@ -752,6 +777,7 @@ function applyRowValues(
 ) {
   const coreRowsById = table.getCoreRowModel().rowsById;
   const shownRowsById = table.getRowModel().rowsById;
+  let dependentColumnIds: string[] | undefined;
 
   for (const [rowId, values] of rows) {
     const row = coreRowsById[rowId];
@@ -771,6 +797,11 @@ function applyRowValues(
         if (cellListeners) store.notify.add(cellListeners);
       }
       if (!copy) continue;
+      dependentColumnIds ??= getDependentColumnIds(table);
+      for (const dependentColumnId of dependentColumnIds) {
+        const cellListeners = rowListeners.get(dependentColumnId);
+        if (cellListeners) store.notify.add(cellListeners);
+      }
     } else {
       copy = Object.assign(getRowCopy(store, rowId, current), values);
     }
