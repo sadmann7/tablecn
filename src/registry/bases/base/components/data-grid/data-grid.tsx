@@ -581,7 +581,7 @@ function DataGridHeaderImpl<TData extends RowData>({
               aria-rowindex={rowIndex + 1}
               data-slot="data-grid-header-row"
               tabIndex={-1}
-              className="flex w-full"
+              className="flex w-full overflow-x-clip"
             >
               {getWindowedColumns(headerGroup.headers, columnWindow).map(
                 (entry) => {
