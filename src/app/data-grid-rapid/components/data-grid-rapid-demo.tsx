@@ -312,27 +312,18 @@ function useMarketBreadth(market: Market) {
   return breadth;
 }
 
-function MarketBreadthBar({ advancing, declining }: MarketBreadth) {
-  const total = advancing + declining;
-  const share = total === 0 ? 50 : (advancing * 100) / total;
-
+function MarketBreadthPills({ advancing, declining }: MarketBreadth) {
   return (
     <div
       role="img"
       aria-label={`${advancing} advancing, ${declining} declining`}
-      className="flex items-center gap-2 font-medium tabular-nums"
+      className="flex items-center gap-1 font-medium tabular-nums"
     >
-      <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+      <span className="flex items-center gap-0.5 rounded-sm bg-emerald-500/10 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
         <ArrowUp className="size-3" />
         {volumeFormat.format(advancing)}
       </span>
-      <span className="flex h-1.5 w-24 overflow-hidden rounded-full bg-red-500/70">
-        <span
-          className="h-full bg-emerald-500 transition-[width] duration-500"
-          style={{ width: `${share}%` }}
-        />
-      </span>
-      <span className="flex items-center gap-0.5 text-red-600 dark:text-red-400">
+      <span className="flex items-center gap-0.5 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-red-700 dark:bg-red-500/15 dark:text-red-400">
         <ArrowDown className="size-3" />
         {volumeFormat.format(declining)}
       </span>
@@ -618,7 +609,7 @@ function DataGridRapidContent({
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <MarketBreadthBar {...breadth} />
+            <MarketBreadthPills {...breadth} />
             <output
               aria-label="Frame stats"
               className="flex gap-3 tabular-nums"
