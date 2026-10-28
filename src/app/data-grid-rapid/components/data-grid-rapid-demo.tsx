@@ -40,6 +40,7 @@ import {
 const ROW_COUNTS = [1_000, 5_000, 20_000] as const;
 const TICK_RATES = [10, 30, 60] as const;
 const TICK_SHARES = [0.05, 0.2, 0.5] as const;
+const MAX_TICKS_PER_FRAME = 4;
 
 const FLOWS = [
   {
@@ -77,17 +78,23 @@ type Trend = "up" | "down";
 
 // The direction of the last move, with a key that changes on every move so the
 // flash restarts: a remounted element fades out of its `starting:` style again
+const FLASH_COOLDOWN_MS = 250;
+
 function useTrend(value: number) {
   const [state, setState] = React.useState<{
     value: number;
     trend: Trend | null;
     key: number;
-  }>({ value, trend: null, key: 0 });
+    flashedAt: number;
+  }>({ value, trend: null, key: 0, flashedAt: 0 });
   if (state.value !== value) {
+    const now = performance.now();
+    const canFlash = now - state.flashedAt >= FLASH_COOLDOWN_MS;
     setState({
       value,
       trend: value > state.value ? "up" : "down",
-      key: state.key + 1,
+      key: canFlash ? state.key + 1 : state.key,
+      flashedAt: canFlash ? now : state.flashedAt,
     });
   }
   return state;
@@ -424,10 +431,25 @@ function DataGridRapidContent({
   React.useEffect(() => {
     if (!isRunning) return;
     const random = createRandom(Date.now());
-    const intervalId = window.setInterval(() => {
-      const moved = tickMarket(market, tickShare, random);
+    let frameId = 0;
+    let last = performance.now();
+    let dueTicks = 0;
+    const onFrame = (now: number) => {
+      frameId = requestAnimationFrame(onFrame);
+      dueTicks = Math.min(
+        dueTicks + ((now - last) * tickRate) / 1000,
+        MAX_TICKS_PER_FRAME,
+      );
+      last = now;
+      if (dueTicks < 1) return;
+
+      const moved = new Set<number>();
+      for (; dueTicks >= 1; dueTicks--) {
+        const tickMoved = tickMarket(market, tickShare, random);
+        updatedCellsRef.current += tickMoved.length * QUOTE_FIELDS.length;
+        for (const index of tickMoved) moved.add(index);
+      }
       const { quotes } = market;
-      updatedCellsRef.current += moved.length * QUOTE_FIELDS.length;
 
       if (flow === "cells") {
         const updates: RowUpdate[] = [];
@@ -450,8 +472,9 @@ function DataGridRapidContent({
         }
         return next;
       });
-    }, 1000 / tickRate);
-    return () => window.clearInterval(intervalId);
+    };
+    frameId = requestAnimationFrame(onFrame);
+    return () => cancelAnimationFrame(frameId);
   }, [isRunning, flow, tickRate, tickShare, market, tableRef]);
 
   const height = Math.max(400, windowSize.height - 150);
