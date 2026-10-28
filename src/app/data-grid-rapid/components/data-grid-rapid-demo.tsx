@@ -21,6 +21,7 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/radix/ui/select";
@@ -28,6 +29,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@/registry/bases/radix/ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/registry/bases/radix/ui/tooltip";
 
 import {
   createMarket,
@@ -43,9 +49,20 @@ const ROW_COUNTS = [1_000, 5_000, 20_000] as const;
 const TICK_RATES = [10, 30, 60] as const;
 const TICK_SHARES = [0.05, 0.2, 0.5] as const;
 
-// How a tick reaches the grid: `updateCells` patches just the changed cells, while
-// `data` replaces the changed rows in a new array, like a plain React state update
-type Flow = "cells" | "data";
+const FLOWS = [
+  {
+    value: "cells",
+    label: "updateCells",
+    description: "Patches only the changed cells",
+  },
+  {
+    value: "data",
+    label: "setData",
+    description: "Passes a new data array, like a React state update",
+  },
+] as const;
+
+type Flow = (typeof FLOWS)[number]["value"];
 
 const priceFormat = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
@@ -179,7 +196,7 @@ function VolumeCell({ value }: { value: number }) {
     <span className="absolute inset-0 flex items-center justify-end px-2 tabular-nums">
       <span
         aria-hidden="true"
-        className="absolute inset-y-2 end-1 rounded-sm bg-sky-500/10 transition-[width] duration-300 dark:bg-sky-400/15"
+        className="absolute inset-y-2 inset-e-1 rounded-sm bg-sky-500/10 transition-[width] duration-300 dark:bg-sky-400/15"
         style={{ width: `calc(${(share * 100).toFixed(1)}% - 0.5rem)` }}
       />
       <span className="relative">{volumeFormat.format(value)}</span>
@@ -455,12 +472,22 @@ function DataGridRapidContent({
               if (value) setFlow(value as Flow);
             }}
           >
-            <ToggleGroupItem value="cells" title="table.updateCells">
-              Cells
-            </ToggleGroupItem>
-            <ToggleGroupItem value="data" title="A new data array">
-              Data
-            </ToggleGroupItem>
+            {FLOWS.map((option) => (
+              <ToggleGroupItem
+                key={option.value}
+                value={option.value}
+                className="font-mono text-xs"
+              >
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>{option.label}</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={6}>
+                    {option.description}
+                  </TooltipContent>
+                </Tooltip>
+              </ToggleGroupItem>
+            ))}
           </ToggleGroup>
           <Select
             value={String(tickRate)}
@@ -469,8 +496,9 @@ function DataGridRapidContent({
             <SelectTrigger aria-label="Ticks per second">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" align="start">
               <SelectGroup>
+                <SelectLabel>Ticks per second</SelectLabel>
                 {TICK_RATES.map((rate) => (
                   <SelectItem key={rate} value={String(rate)}>
                     {rate} ticks/s
@@ -486,8 +514,9 @@ function DataGridRapidContent({
             <SelectTrigger aria-label="Rows per tick">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent position="popper" align="start">
               <SelectGroup>
+                <SelectLabel>Rows per tick</SelectLabel>
                 {TICK_SHARES.map((share) => (
                   <SelectItem key={share} value={String(share)}>
                     {share * 100}% of rows
@@ -526,8 +555,9 @@ export function DataGridRapidDemo() {
       <SelectTrigger aria-label="Tickers">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent position="popper" align="start">
         <SelectGroup>
+          <SelectLabel>Tickers</SelectLabel>
           {ROW_COUNTS.map((count) => (
             <SelectItem key={count} value={String(count)}>
               {volumeFormat.format(count)} tickers
