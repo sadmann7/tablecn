@@ -13,6 +13,7 @@ export interface Quote {
   high: number;
   low: number;
   marketCap: number;
+  history: number[];
 }
 
 export const QUOTE_FIELDS = [
@@ -25,7 +26,10 @@ export const QUOTE_FIELDS = [
   "high",
   "low",
   "marketCap",
+  "history",
 ] as const satisfies ReadonlyArray<keyof Quote>;
+
+const HISTORY_LENGTH = 40;
 
 interface SectorProfile {
   // Yearly volatility of a large company in the sector
@@ -80,7 +84,7 @@ const SECTOR_PROFILES = {
 
 type Sector = keyof typeof SECTOR_PROFILES;
 
-export const SECTORS = Object.keys(SECTOR_PROFILES) as Sector[];
+const SECTORS = Object.keys(SECTOR_PROFILES) as Sector[];
 
 const NAME_PREFIXES = [
   "Apex",
@@ -233,7 +237,15 @@ export function createMarket(count: number, seed = 1): Market {
       spread: 0.0002 + smallness * 0.002,
       activity: Math.max(0.05, size - 8),
     };
-    const change = roundPrice(open - previousClose);
+    // A stretch of trading before the feed starts, so ranges and trends aren't flat
+    const history = [open];
+    for (let step = 1; step < HISTORY_LENGTH; step++) {
+      const last = history[step - 1] ?? open;
+      const move = getNormal(random) * model.volatility * STEP_SCALE * 1.5;
+      history.push(Math.max(0.01, roundPrice(last * Math.exp(move))));
+    }
+    const price = history.at(-1) ?? open;
+    const change = roundPrice(price - previousClose);
 
     quotes.push({
       symbol: getSymbol(prefix, suffix, random, symbols),
@@ -241,14 +253,15 @@ export function createMarket(count: number, seed = 1): Market {
       sector,
       previousClose,
       open,
-      price: open,
+      price,
       change,
       changePercent: Math.round((change / previousClose) * 10000) / 100,
-      ...getQuotePrices(open, model.spread),
+      ...getQuotePrices(price, model.spread),
       volume: Math.round((model.shares * 0.002 * random()) / 100) * 100,
-      high: open,
-      low: open,
-      marketCap: model.shares * open,
+      high: Math.max(...history),
+      low: Math.min(...history),
+      marketCap: model.shares * price,
+      history,
     });
     models.push(model);
     activityTotal += model.activity;
@@ -317,6 +330,7 @@ export function tickMarket(
     quote.high = Math.max(quote.high, price);
     quote.low = Math.min(quote.low, price);
     quote.marketCap = model.shares * price;
+    quote.history = [...quote.history.slice(1 - HISTORY_LENGTH), price];
   }
   return [...moved];
 }

@@ -33,7 +33,6 @@ import {
   type Market,
   type Quote,
   QUOTE_FIELDS,
-  SECTORS,
   tickMarket,
 } from "../lib/rapid";
 
@@ -185,26 +184,94 @@ function TickCell({
   );
 }
 
-// A bar behind the number, on a log scale since volumes span several orders of magnitude
+// On a log scale, since volumes span several orders of magnitude
+const MIN_VOLUME_LOG = Math.log10(1_000);
 const MAX_VOLUME_LOG = Math.log10(5_000_000);
 
 function VolumeCell({ value }: { value: number }) {
-  const share = Math.min(1, Math.log10(Math.max(1, value)) / MAX_VOLUME_LOG);
+  const share = Math.min(
+    1,
+    Math.max(0, Math.log10(Math.max(1, value)) - MIN_VOLUME_LOG) /
+      (MAX_VOLUME_LOG - MIN_VOLUME_LOG),
+  );
 
   return (
-    <span className="absolute inset-0 flex items-center justify-end px-2 tabular-nums">
-      <span
+    <span className="absolute inset-0 flex items-center gap-2 px-2 tabular-nums">
+      <span aria-hidden="true" className="h-1 flex-1 rounded-full bg-muted">
+        <span
+          className="block h-full rounded-full bg-muted-foreground/50 transition-[width] duration-300"
+          style={{ width: `${(share * 100).toFixed(1)}%` }}
+        />
+      </span>
+      <span className="text-end">{volumeFormat.format(value)}</span>
+    </span>
+  );
+}
+
+function TrendCell({ quote }: { quote: Quote }) {
+  const { history, change } = quote;
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const price of history) {
+    min = Math.min(min, price);
+    max = Math.max(max, price);
+  }
+  const span = max - min || 1;
+  const points = history
+    .map(
+      (price, index) => `${index},${(((max - price) / span) * 100).toFixed(1)}`,
+    )
+    .join(" ");
+
+  return (
+    <span className="absolute inset-x-2 inset-y-2.5 flex">
+      <svg
         aria-hidden="true"
-        className="absolute inset-y-2 inset-e-1 rounded-sm bg-sky-500/10 transition-[width] duration-300 dark:bg-sky-400/15"
-        style={{ width: `calc(${(share * 100).toFixed(1)}% - 0.5rem)` }}
-      />
-      <span className="relative">{volumeFormat.format(value)}</span>
+        viewBox={`0 -4 ${Math.max(1, history.length - 1)} 108`}
+        preserveAspectRatio="none"
+        className={cn(
+          "size-full overflow-visible",
+          change >= 0
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-red-600 dark:text-red-400",
+        )}
+      >
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function RangeCell({ quote }: { quote: Quote }) {
+  const { low, high, price, change } = quote;
+  const position = high === low ? 50 : ((price - low) * 100) / (high - low);
+
+  return (
+    <span className="absolute inset-0 flex items-center gap-2 px-2 text-xs text-muted-foreground tabular-nums">
+      <span className="w-12 text-end">{priceFormat.format(low)}</span>
+      <span className="relative h-1 flex-1 rounded-full bg-muted">
+        <span
+          className={cn(
+            "absolute top-1/2 size-2 -translate-1/2 rounded-full ring-2 ring-background transition-[left] duration-300",
+            change >= 0 ? "bg-emerald-500" : "bg-red-500",
+          )}
+          style={{ left: `${position}%` }}
+        />
+      </span>
+      <span className="w-12">{priceFormat.format(high)}</span>
     </span>
   );
 }
 
 function getQuoteColumn(
-  id: (typeof QUOTE_FIELDS)[number],
+  id: Exclude<(typeof QUOTE_FIELDS)[number], "history">,
   label: string,
   renderCell: (value: number) => React.ReactNode,
   size = 110,
@@ -361,29 +428,6 @@ function DataGridRapidContent({
         size: 120,
         meta: { label: "Symbol", cell: { variant: "short-text" } },
       },
-      {
-        id: "name",
-        accessorKey: "name",
-        header: "Name",
-        size: 190,
-        meta: { label: "Name", cell: { variant: "short-text" } },
-      },
-      {
-        id: "sector",
-        accessorKey: "sector",
-        header: "Sector",
-        size: 140,
-        meta: {
-          label: "Sector",
-          cell: {
-            variant: "select",
-            options: SECTORS.map((sector) => ({
-              label: sector,
-              value: sector,
-            })),
-          },
-        },
-      },
       getQuoteColumn("price", "Price", (value) => <PriceCell value={value} />),
       getQuoteColumn("change", "Change", (value) => (
         <ChangeCell value={value} />
@@ -391,18 +435,34 @@ function DataGridRapidContent({
       getQuoteColumn("changePercent", "Change %", (value) => (
         <ChangePercentCell value={value} />
       )),
+      {
+        id: "history",
+        accessorKey: "history",
+        header: "Trend",
+        size: 130,
+        enableSorting: false,
+        meta: { label: "Trend" },
+        cell: ({ row }) => <TrendCell quote={row.original} />,
+      },
       getQuoteColumn("bid", "Bid", (value) => (
         <TickCell value={value} format={priceFormat} />
       )),
       getQuoteColumn("ask", "Ask", (value) => (
         <TickCell value={value} format={priceFormat} />
       )),
-      getQuoteColumn("high", "High", (value) => (
-        <TickCell value={value} format={priceFormat} isMuted />
-      )),
-      getQuoteColumn("low", "Low", (value) => (
-        <TickCell value={value} format={priceFormat} isMuted />
-      )),
+      {
+        id: "range",
+        // Where the price sits in the day's range, so sorting puts quotes near
+        // their high first
+        accessorFn: (quote) =>
+          quote.high === quote.low
+            ? 0.5
+            : (quote.price - quote.low) / (quote.high - quote.low),
+        header: "Day range",
+        size: 200,
+        meta: { label: "Day range" },
+        cell: ({ row }) => <RangeCell quote={row.original} />,
+      },
       getQuoteColumn(
         "volume",
         "Volume",
@@ -576,7 +636,12 @@ function DataGridRapidContent({
           <DataGridViewMenu table={table} align="end" />
         </div>
       </div>
-      <DataGrid {...dataGridProps} table={table} height={height} />
+      <DataGrid
+        {...dataGridProps}
+        table={table}
+        height={height}
+        stretchColumns
+      />
     </div>
   );
 }
