@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { cn } from "cn";
-import { Pause, Play } from "lucide-react";
+import { ArrowDown, ArrowUp, Pause, Play } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -32,6 +32,7 @@ import {
 import {
   createMarket,
   createRandom,
+  type Market,
   type Quote,
   QUOTE_FIELDS,
   SECTORS,
@@ -63,41 +64,125 @@ const marketCapFormat = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-interface QuoteCellProps {
-  value: number;
-  format: Intl.NumberFormat;
-  suffix?: string;
-  isSigned?: boolean;
-}
+type Trend = "up" | "down";
 
-// Flashes green or red when the value moves: the span remounts on every change, so
-// its starting style fades out again
-function QuoteCell({ value, format, suffix, isSigned }: QuoteCellProps) {
-  const [flash, setFlash] = React.useState<{
+// The direction of the last move, with a key that changes on every move so the
+// flash restarts: a remounted element fades out of its `starting:` style again
+function useTrend(value: number) {
+  const [state, setState] = React.useState<{
     value: number;
-    trend: "up" | "down" | null;
+    trend: Trend | null;
     key: number;
   }>({ value, trend: null, key: 0 });
-  if (flash.value !== value) {
-    setFlash({
+  if (state.value !== value) {
+    setState({
       value,
-      trend: value > flash.value ? "up" : "down",
-      key: flash.key + 1,
+      trend: value > state.value ? "up" : "down",
+      key: state.key + 1,
     });
   }
+  return state;
+}
+
+function PriceCell({ value }: { value: number }) {
+  const { trend, key } = useTrend(value);
+  const Arrow = trend === "down" ? ArrowDown : ArrowUp;
+
+  return (
+    <span className="absolute inset-0 flex items-center justify-end gap-1 px-2 font-medium tabular-nums">
+      <Arrow
+        aria-hidden="true"
+        className={cn(
+          "size-3.5",
+          trend === "up" && "text-emerald-600 dark:text-emerald-400",
+          trend === "down" && "text-red-600 dark:text-red-400",
+          !trend && "invisible",
+        )}
+      />
+      <span
+        key={key}
+        data-trend={trend ?? undefined}
+        className="-me-1 rounded-sm px-1 transition-colors duration-700 data-[trend=down]:starting:bg-red-500/30 data-[trend=up]:starting:bg-emerald-500/30"
+      >
+        {priceFormat.format(value)}
+      </span>
+    </span>
+  );
+}
+
+function ChangeCell({ value }: { value: number }) {
+  return (
+    <span
+      className={cn(
+        "absolute inset-0 flex items-center justify-end px-2 tabular-nums",
+        value > 0 && "text-emerald-600 dark:text-emerald-400",
+        value < 0 && "text-red-600 dark:text-red-400",
+      )}
+    >
+      {signedFormat.format(value)}
+    </span>
+  );
+}
+
+function ChangePercentCell({ value }: { value: number }) {
+  return (
+    <span className="absolute inset-0 flex items-center justify-end px-2">
+      <span
+        className={cn(
+          "rounded-sm px-1.5 py-0.5 text-xs font-medium tabular-nums",
+          value > 0 &&
+            "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
+          value < 0 &&
+            "bg-red-500/10 text-red-700 dark:bg-red-500/15 dark:text-red-400",
+          value === 0 && "bg-muted text-muted-foreground",
+        )}
+      >
+        {signedFormat.format(value)}%
+      </span>
+    </span>
+  );
+}
+
+// Moves show as a brief change of text color, quieter than the price's flash
+function TickCell({
+  value,
+  format,
+  isMuted,
+}: {
+  value: number;
+  format: Intl.NumberFormat;
+  isMuted?: boolean;
+}) {
+  const { trend, key } = useTrend(value);
 
   return (
     <span
-      key={flash.key}
-      data-trend={flash.trend ?? undefined}
+      key={key}
+      data-trend={trend ?? undefined}
       className={cn(
-        "absolute inset-0 flex items-center justify-end px-2 tabular-nums transition-colors duration-700 data-[trend=down]:starting:bg-red-500/25 data-[trend=up]:starting:bg-emerald-500/25",
-        isSigned && value > 0 && "text-emerald-600 dark:text-emerald-400",
-        isSigned && value < 0 && "text-red-600 dark:text-red-400",
+        "absolute inset-0 flex items-center justify-end px-2 tabular-nums transition-colors duration-700 data-[trend=down]:starting:text-red-500 data-[trend=up]:starting:text-emerald-500",
+        isMuted && "text-muted-foreground",
       )}
     >
       {format.format(value)}
-      {suffix}
+    </span>
+  );
+}
+
+// A bar behind the number, on a log scale since volumes span several orders of magnitude
+const MAX_VOLUME_LOG = Math.log10(5_000_000);
+
+function VolumeCell({ value }: { value: number }) {
+  const share = Math.min(1, Math.log10(Math.max(1, value)) / MAX_VOLUME_LOG);
+
+  return (
+    <span className="absolute inset-0 flex items-center justify-end px-2 tabular-nums">
+      <span
+        aria-hidden="true"
+        className="absolute inset-y-2 end-1 rounded-sm bg-sky-500/10 transition-[width] duration-300 dark:bg-sky-400/15"
+        style={{ width: `calc(${(share * 100).toFixed(1)}% - 0.5rem)` }}
+      />
+      <span className="relative">{volumeFormat.format(value)}</span>
     </span>
   );
 }
@@ -105,24 +190,71 @@ function QuoteCell({ value, format, suffix, isSigned }: QuoteCellProps) {
 function getQuoteColumn(
   id: (typeof QUOTE_FIELDS)[number],
   label: string,
-  format: Intl.NumberFormat,
-  options: { suffix?: string; isSigned?: boolean; size?: number } = {},
+  renderCell: (value: number) => React.ReactNode,
+  size = 110,
 ): ColumnDef<DataGridFeatures, Quote> {
   return {
     id,
     accessorKey: id,
     header: label,
-    size: options.size ?? 110,
+    size,
     meta: { label },
-    cell: ({ getValue }) => (
-      <QuoteCell
-        value={getValue() as number}
-        format={format}
-        suffix={options.suffix}
-        isSigned={options.isSigned}
-      />
-    ),
+    cell: ({ getValue }) => renderCell(getValue() as number),
   };
+}
+
+interface MarketBreadth {
+  advancing: number;
+  declining: number;
+}
+
+// Counts are read from the feed's own state, so this costs one pass a second
+function useMarketBreadth(market: Market) {
+  const getBreadth = React.useCallback(() => {
+    let advancing = 0;
+    let declining = 0;
+    for (const quote of market.quotes) {
+      if (quote.change > 0) advancing++;
+      else if (quote.change < 0) declining++;
+    }
+    return { advancing, declining };
+  }, [market]);
+  const [breadth, setBreadth] = React.useState<MarketBreadth>(getBreadth);
+
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => setBreadth(getBreadth()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [getBreadth]);
+
+  return breadth;
+}
+
+function MarketBreadthBar({ advancing, declining }: MarketBreadth) {
+  const total = advancing + declining;
+  const share = total === 0 ? 50 : (advancing * 100) / total;
+
+  return (
+    <div
+      role="img"
+      aria-label={`${advancing} advancing, ${declining} declining`}
+      className="flex items-center gap-2 text-xs font-medium tabular-nums"
+    >
+      <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
+        <ArrowUp className="size-3" />
+        {volumeFormat.format(advancing)}
+      </span>
+      <span className="flex h-1.5 w-24 overflow-hidden rounded-full bg-red-500/70">
+        <span
+          className="h-full bg-emerald-500 transition-[width] duration-500"
+          style={{ width: `${share}%` }}
+        />
+      </span>
+      <span className="flex items-center gap-0.5 text-red-600 dark:text-red-400">
+        <ArrowDown className="size-3" />
+        {volumeFormat.format(declining)}
+      </span>
+    </div>
+  );
 }
 
 interface FrameStats {
@@ -186,6 +318,7 @@ function DataGridRapidContent({
   const [tickShare, setTickShare] = React.useState<number>(0.2);
   const updatedCellsRef = React.useRef(0);
   const stats = useFrameStats(updatedCellsRef);
+  const breadth = useMarketBreadth(market);
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, Quote>[]>(
@@ -220,18 +353,37 @@ function DataGridRapidContent({
           },
         },
       },
-      getQuoteColumn("price", "Price", priceFormat),
-      getQuoteColumn("change", "Change", signedFormat, { isSigned: true }),
-      getQuoteColumn("changePercent", "Change %", signedFormat, {
-        suffix: "%",
-        isSigned: true,
-      }),
-      getQuoteColumn("bid", "Bid", priceFormat),
-      getQuoteColumn("ask", "Ask", priceFormat),
-      getQuoteColumn("high", "High", priceFormat),
-      getQuoteColumn("low", "Low", priceFormat),
-      getQuoteColumn("volume", "Volume", volumeFormat, { size: 130 }),
-      getQuoteColumn("marketCap", "Mkt Cap", marketCapFormat, { size: 120 }),
+      getQuoteColumn("price", "Price", (value) => <PriceCell value={value} />),
+      getQuoteColumn("change", "Change", (value) => (
+        <ChangeCell value={value} />
+      )),
+      getQuoteColumn("changePercent", "Change %", (value) => (
+        <ChangePercentCell value={value} />
+      )),
+      getQuoteColumn("bid", "Bid", (value) => (
+        <TickCell value={value} format={priceFormat} />
+      )),
+      getQuoteColumn("ask", "Ask", (value) => (
+        <TickCell value={value} format={priceFormat} />
+      )),
+      getQuoteColumn("high", "High", (value) => (
+        <TickCell value={value} format={priceFormat} isMuted />
+      )),
+      getQuoteColumn("low", "Low", (value) => (
+        <TickCell value={value} format={priceFormat} isMuted />
+      )),
+      getQuoteColumn(
+        "volume",
+        "Volume",
+        (value) => <VolumeCell value={value} />,
+        130,
+      ),
+      getQuoteColumn(
+        "marketCap",
+        "Mkt Cap",
+        (value) => <TickCell value={value} format={marketCapFormat} isMuted />,
+        120,
+      ),
     ],
     [],
   );
@@ -346,9 +498,10 @@ function DataGridRapidContent({
           </Select>
         </div>
         <div className="flex items-center gap-2">
+          <MarketBreadthBar {...breadth} />
           <output
             aria-label="Frame stats"
-            className="font-mono text-xs text-muted-foreground tabular-nums"
+            className="ms-2 me-1 font-mono text-xs text-muted-foreground tabular-nums"
           >
             {stats.fps} fps · p95 {stats.p95}ms ·{" "}
             {volumeFormat.format(stats.cellsPerSecond)} cells/s
