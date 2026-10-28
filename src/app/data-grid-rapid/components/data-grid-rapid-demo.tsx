@@ -25,15 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/registry/bases/radix/ui/select";
-import {
-  ToggleGroup,
-  ToggleGroupItem,
-} from "@/registry/bases/radix/ui/toggle-group";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/registry/bases/radix/ui/tooltip";
+import { Separator } from "@/registry/bases/radix/ui/separator";
 
 import {
   createMarket,
@@ -254,7 +246,7 @@ function MarketBreadthBar({ advancing, declining }: MarketBreadth) {
     <div
       role="img"
       aria-label={`${advancing} advancing, ${declining} declining`}
-      className="flex items-center gap-2 text-xs font-medium tabular-nums"
+      className="flex items-center gap-2 font-medium tabular-nums"
     >
       <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400">
         <ArrowUp className="size-3" />
@@ -271,6 +263,21 @@ function MarketBreadthBar({ advancing, declining }: MarketBreadth) {
         {volumeFormat.format(declining)}
       </span>
     </div>
+  );
+}
+
+interface StatProps {
+  label?: string;
+  value: React.ReactNode;
+  unit: string;
+}
+
+function Stat({ label, value, unit }: StatProps) {
+  return (
+    <span>
+      {label ? `${label} ` : null}
+      <span className="font-medium text-foreground">{value}</span> {unit}
+    </span>
   );
 }
 
@@ -453,7 +460,6 @@ function DataGridRapidContent({
     <div className="container flex flex-col gap-4 py-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          {rowCountSelect}
           <Button
             variant="outline"
             aria-label={isRunning ? "Pause the feed" : "Resume the feed"}
@@ -462,33 +468,34 @@ function DataGridRapidContent({
             {isRunning ? <Pause /> : <Play />}
             {isRunning ? "Pause" : "Resume"}
           </Button>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            spacing={0}
-            aria-label="How ticks reach the grid"
+          {rowCountSelect}
+          <Select
             value={flow}
-            onValueChange={(value) => {
-              if (value) setFlow(value as Flow);
-            }}
+            onValueChange={(value) => setFlow(value as Flow)}
           >
-            {FLOWS.map((option) => (
-              <ToggleGroupItem
-                key={option.value}
-                value={option.value}
-                className="font-mono text-xs"
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>{option.label}</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" sideOffset={6}>
-                    {option.description}
-                  </TooltipContent>
-                </Tooltip>
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+            <SelectTrigger aria-label="Update with">
+              <SelectValue>
+                <span className="font-mono text-xs">
+                  {FLOWS.find((option) => option.value === flow)?.label}
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent position="popper" align="start">
+              <SelectGroup>
+                <SelectLabel>Update with</SelectLabel>
+                {FLOWS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <span className="flex flex-col">
+                      <span className="font-mono text-xs">{option.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {option.description}
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           <Select
             value={String(tickRate)}
             onValueChange={(value) => setTickRate(Number(value))}
@@ -527,14 +534,21 @@ function DataGridRapidContent({
           </Select>
         </div>
         <div className="flex items-center gap-2">
-          <MarketBreadthBar {...breadth} />
-          <output
-            aria-label="Frame stats"
-            className="ms-2 me-1 font-mono text-xs text-muted-foreground tabular-nums"
-          >
-            {stats.fps} fps · p95 {stats.p95}ms ·{" "}
-            {volumeFormat.format(stats.cellsPerSecond)} cells/s
-          </output>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <MarketBreadthBar {...breadth} />
+            <output
+              aria-label="Frame stats"
+              className="flex gap-3 tabular-nums"
+            >
+              <Stat value={stats.fps} unit="fps" />
+              <Stat label="p95" value={stats.p95} unit="ms" />
+              <Stat
+                value={volumeFormat.format(stats.cellsPerSecond)}
+                unit="cells/s"
+              />
+            </output>
+          </div>
+          <Separator orientation="vertical" className="mx-2 h-5 self-center" />
           <DataGridSortMenu table={table} align="end" />
           <DataGridViewMenu table={table} align="end" />
         </div>
