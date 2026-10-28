@@ -1,6 +1,7 @@
 "use client";
 
-import { createColumnHelper } from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
+
 import { cn } from "cn";
 import { ArrowDown, ArrowUp, Pause, Play } from "lucide-react";
 import * as React from "react";
@@ -269,70 +270,21 @@ function RangeCell({ quote }: { quote: Quote }) {
   );
 }
 
-function getQuoteHeader(label: string, size = 110) {
-  return { header: label, size, meta: { label } };
+function getQuoteColumn(
+  id: Exclude<(typeof QUOTE_FIELDS)[number], "history">,
+  label: string,
+  renderCell: (value: number) => React.ReactNode,
+  size = 110,
+): ColumnDef<DataGridFeatures, Quote> {
+  return {
+    id,
+    accessorKey: id,
+    header: label,
+    size,
+    meta: { label },
+    cell: ({ getValue }) => renderCell(getValue() as number),
+  };
 }
-
-const columnHelper = createColumnHelper<DataGridFeatures, Quote>();
-
-const columns = columnHelper.columns([
-  columnHelper.accessor("symbol", {
-    ...getQuoteHeader("Symbol", 120),
-    meta: { label: "Symbol", cell: { variant: "short-text" } },
-  }),
-  columnHelper.accessor("price", {
-    ...getQuoteHeader("Price"),
-    cell: ({ getValue }) => <PriceCell value={getValue()} />,
-  }),
-  columnHelper.accessor("change", {
-    ...getQuoteHeader("Change"),
-    cell: ({ getValue }) => <ChangeCell value={getValue()} />,
-  }),
-  columnHelper.accessor("changePercent", {
-    ...getQuoteHeader("Change %"),
-    cell: ({ getValue }) => <ChangePercentCell value={getValue()} />,
-  }),
-  columnHelper.accessor("history", {
-    ...getQuoteHeader("Trend", 130),
-    enableSorting: false,
-    cell: ({ row }) => <TrendCell quote={row.original} />,
-  }),
-  columnHelper.accessor("bid", {
-    ...getQuoteHeader("Bid"),
-    cell: ({ getValue }) => (
-      <TickCell value={getValue()} format={priceFormat} />
-    ),
-  }),
-  columnHelper.accessor("ask", {
-    ...getQuoteHeader("Ask"),
-    cell: ({ getValue }) => (
-      <TickCell value={getValue()} format={priceFormat} />
-    ),
-  }),
-  // Where the price sits in the day's range, so sorting puts quotes near their
-  // high first
-  columnHelper.accessor(
-    (quote) =>
-      quote.high === quote.low
-        ? 0.5
-        : (quote.price - quote.low) / (quote.high - quote.low),
-    {
-      id: "range",
-      ...getQuoteHeader("Day range", 200),
-      cell: ({ row }) => <RangeCell quote={row.original} />,
-    },
-  ),
-  columnHelper.accessor("volume", {
-    ...getQuoteHeader("Volume", 130),
-    cell: ({ getValue }) => <VolumeCell value={getValue()} />,
-  }),
-  columnHelper.accessor("marketCap", {
-    ...getQuoteHeader("Mkt Cap", 120),
-    cell: ({ getValue }) => (
-      <TickCell value={getValue()} format={marketCapFormat} isMuted />
-    ),
-  }),
-]);
 
 interface MarketBreadth {
   advancing: number;
@@ -457,6 +409,66 @@ function DataGridRapidContent({
   const stats = useFrameStats(updatedCellsRef);
   const breadth = useMarketBreadth(market);
   const windowSize = useWindowSize({ defaultHeight: 760 });
+
+  const columns = React.useMemo<ColumnDef<DataGridFeatures, Quote>[]>(
+    () => [
+      {
+        id: "symbol",
+        accessorKey: "symbol",
+        header: "Symbol",
+        size: 120,
+        meta: { label: "Symbol", cell: { variant: "short-text" } },
+      },
+      getQuoteColumn("price", "Price", (value) => <PriceCell value={value} />),
+      getQuoteColumn("change", "Change", (value) => (
+        <ChangeCell value={value} />
+      )),
+      getQuoteColumn("changePercent", "Change %", (value) => (
+        <ChangePercentCell value={value} />
+      )),
+      {
+        id: "history",
+        accessorKey: "history",
+        header: "Trend",
+        size: 130,
+        enableSorting: false,
+        meta: { label: "Trend" },
+        cell: ({ row }) => <TrendCell quote={row.original} />,
+      },
+      getQuoteColumn("bid", "Bid", (value) => (
+        <TickCell value={value} format={priceFormat} />
+      )),
+      getQuoteColumn("ask", "Ask", (value) => (
+        <TickCell value={value} format={priceFormat} />
+      )),
+      {
+        id: "range",
+        // Where the price sits in the day's range, so sorting puts quotes near
+        // their high first
+        accessorFn: (quote) =>
+          quote.high === quote.low
+            ? 0.5
+            : (quote.price - quote.low) / (quote.high - quote.low),
+        header: "Day range",
+        size: 200,
+        meta: { label: "Day range" },
+        cell: ({ row }) => <RangeCell quote={row.original} />,
+      },
+      getQuoteColumn(
+        "volume",
+        "Volume",
+        (value) => <VolumeCell value={value} />,
+        130,
+      ),
+      getQuoteColumn(
+        "marketCap",
+        "Mkt Cap",
+        (value) => <TickCell value={value} format={marketCapFormat} isMuted />,
+        120,
+      ),
+    ],
+    [],
+  );
 
   const { table, ...dataGridProps } = useDataGrid({
     data,
