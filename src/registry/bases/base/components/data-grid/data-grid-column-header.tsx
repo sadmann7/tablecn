@@ -81,8 +81,9 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
   const column = header.column;
   const label = getColumnLabel(column);
 
-  const cellVariant = column.columnDef.meta?.cell;
-  const columnVariant = getColumnVariant(cellVariant?.variant);
+  const meta = column.columnDef.meta;
+  const columnVariant = getColumnVariant(meta?.cell?.variant);
+  const ColumnIcon = meta?.icon ?? columnVariant?.icon;
 
   const pinnedPosition = column.getIsPinned();
   const isPinnedLeft = pinnedPosition === "start";
@@ -162,20 +163,23 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
           {...props}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
-            {columnVariant && (
-              <TooltipProvider delay={100}>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <columnVariant.icon className="size-3.5 shrink-0 text-muted-foreground" />
-                    }
-                  />
-                  <TooltipContent side="top">
-                    <p>{columnVariant.label}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            {ColumnIcon &&
+              (columnVariant ? (
+                <TooltipProvider delay={100}>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <ColumnIcon className="size-3.5 shrink-0 text-muted-foreground" />
+                      }
+                    />
+                    <TooltipContent side="top">
+                      <p>{columnVariant.label}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <ColumnIcon className="size-3.5 shrink-0 text-muted-foreground" />
+              ))}
             <span className="truncate">{label}</span>
           </div>
           <IconPlaceholder

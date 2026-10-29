@@ -153,6 +153,7 @@ export type CellOpts =
 
 export interface DataGridColumnMeta {
   label?: string;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
   cell?: CellOpts;
   writeCell?: (element: HTMLElement, value: unknown) => void;
 }
