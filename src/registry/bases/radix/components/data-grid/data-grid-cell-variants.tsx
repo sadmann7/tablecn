@@ -14,6 +14,7 @@ import {
   formatDateForDisplay,
   formatDateToString,
   formatFileSize,
+  formatNumberForDisplay,
   getBooleanCellValue,
   getCellKey,
   getColumnLabel,
@@ -173,6 +174,7 @@ export function ShortTextCell<TData extends RowData>(
         role={isEditing ? "textbox" : undefined}
         aria-label={isEditing ? getColumnLabel(cell.column) : undefined}
         data-slot="data-grid-cell-content"
+        dir="auto"
         contentEditable={isEditing}
         tabIndex={-1}
         ref={cellRef}
@@ -328,7 +330,9 @@ export function LongTextCell<TData extends RowData>(
           ref={containerRef}
           onKeyDown={onWrapperKeyDown}
         >
-          <span data-slot="data-grid-cell-content">{value}</span>
+          <span data-slot="data-grid-cell-content" dir="auto">
+            {value}
+          </span>
         </DataGridCell>
       </PopoverAnchor>
       <PopoverContent
@@ -369,6 +373,8 @@ export function NumberCell<TData extends RowData>(
   const min = numberCellOpts?.min;
   const max = numberCellOpts?.max;
   const step = numberCellOpts?.step;
+  const format = numberCellOpts?.format;
+  const displayNumber = getNumberCellValue(value);
 
   const prevIsEditingRef = React.useRef(false);
   const pendingCharRef = React.useRef<string | null>(null);
@@ -467,7 +473,15 @@ export function NumberCell<TData extends RowData>(
           onChange={onChange}
         />
       ) : (
-        <span data-slot="data-grid-cell-content">{value}</span>
+        <span
+          data-slot="data-grid-cell-content"
+          dir="auto"
+          className="tabular-nums"
+        >
+          {displayNumber === null
+            ? ""
+            : formatNumberForDisplay(displayNumber, format)}
+        </span>
       )}
     </DataGridCell>
   );
@@ -615,6 +629,7 @@ export function UrlCell<TData extends RowData>(
       {!isEditing && displayValue ? (
         <div
           data-slot="data-grid-cell-content"
+          dir="auto"
           className="size-full overflow-hidden"
         >
           <a
@@ -635,6 +650,7 @@ export function UrlCell<TData extends RowData>(
           role={isEditing ? "textbox" : undefined}
           aria-label={isEditing ? getColumnLabel(cell.column) : undefined}
           data-slot="data-grid-cell-content"
+          dir="auto"
           contentEditable={isEditing}
           tabIndex={-1}
           ref={cellRef}
@@ -839,7 +855,7 @@ export function SelectCell<TData extends RowData>(
             {displayLabel ? (
               <Badge
                 variant="secondary"
-                className="px-1.5 py-px whitespace-pre-wrap"
+                className="h-auto px-1.5 py-px whitespace-pre-wrap"
               >
                 <SelectValue />
               </Badge>
@@ -871,8 +887,9 @@ export function SelectCell<TData extends RowData>(
       ) : displayLabel ? (
         <Badge
           data-slot="data-grid-cell-content"
+          dir="auto"
           variant="secondary"
-          className="px-1.5 py-px whitespace-pre-wrap"
+          className="h-auto px-1.5 py-px whitespace-pre-wrap"
         >
           {displayLabel}
         </Badge>
@@ -1147,14 +1164,22 @@ export function MultiSelectCell<TData extends RowData>(
             <Badge
               key={selectedValues[index]}
               variant="secondary"
-              className="px-1.5 py-px"
+              className={cn(
+                "max-w-full px-1.5 py-px",
+                hiddenBadgeCount > 0 &&
+                  index === visibleLabels.length - 1 &&
+                  "max-w-[calc(100%-2.75rem)]",
+              )}
             >
-              {label}
+              <span dir="auto" className="truncate">
+                {label}
+              </span>
             </Badge>
           ))}
           {hiddenBadgeCount > 0 && (
             <Badge
               variant="outline"
+              dir="ltr"
               className="px-1.5 py-px text-muted-foreground"
             >
               +{hiddenBadgeCount}
@@ -1173,6 +1198,7 @@ export function DateCell<TData extends RowData>(
   const initialValue = getDateCellValue(cell.getValue());
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const isInvalidDate = value !== "" && !parseLocalDate(value);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -1229,7 +1255,12 @@ export function DateCell<TData extends RowData>(
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
-          <span data-slot="data-grid-cell-content">
+          <span
+            data-slot="data-grid-cell-content"
+            dir="auto"
+            data-invalid={isInvalidDate ? "" : undefined}
+            className="data-invalid:text-destructive"
+          >
             {formatDateForDisplay(value)}
           </span>
         </PopoverAnchor>
@@ -1925,13 +1956,16 @@ export function FileCell<TData extends RowData>(
                 className="gap-1 px-1.5 py-px"
               >
                 {FileIcon && <FileIcon className="size-3 shrink-0" />}
-                <span className="max-w-25 truncate">{file.name}</span>
+                <span dir="auto" className="max-w-25 truncate">
+                  {file.name}
+                </span>
               </Badge>
             );
           })}
           {hiddenFileCount > 0 && (
             <Badge
               variant="outline"
+              dir="ltr"
               className="px-1.5 py-px text-muted-foreground"
             >
               +{hiddenFileCount}

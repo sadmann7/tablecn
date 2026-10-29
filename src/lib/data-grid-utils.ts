@@ -107,6 +107,21 @@ export function getNumberCellValue(value: unknown): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
+const numberFormatCache = new Map<string, Intl.NumberFormat>();
+
+export function formatNumberForDisplay(
+  value: number,
+  options?: Intl.NumberFormatOptions,
+): string {
+  const key = options ? JSON.stringify(options) : "";
+  let formatter = numberFormatCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(undefined, options);
+    numberFormatCache.set(key, formatter);
+  }
+  return formatter.format(value);
+}
+
 export function getBooleanCellValue(value: unknown): boolean {
   if (typeof value === "boolean") return value;
   if (typeof value === "string") {
@@ -778,8 +793,20 @@ export function getTabTargetCell(params: {
   }
 }
 
+let rootFontScale: number | null = null;
+
+export function getRootFontScale(): number {
+  if (rootFontScale !== null) return rootFontScale;
+  if (typeof document === "undefined") return 1;
+  const fontSize = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize,
+  );
+  rootFontScale = fontSize > 0 ? fontSize / 16 : 1;
+  return rootFontScale;
+}
+
 export function getRowHeightValue(rowHeight: RowHeightValue): number {
-  return ROW_HEIGHTS[rowHeight];
+  return Math.round(ROW_HEIGHTS[rowHeight] * getRootFontScale());
 }
 
 export function getLineCount(rowHeight: RowHeightValue): number {
@@ -1022,7 +1049,9 @@ export function parseLocalDate(dateStr: unknown): Date | null {
   if (!dateStr) return null;
   if (dateStr instanceof Date) return dateStr;
   if (typeof dateStr !== "string") return null;
-  const [year, month, day] = dateStr.split("-").map(Number);
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|T)/.exec(dateStr);
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
   if (!year || !month || !day) return null;
   const date = new Date(year, month - 1, day);
   if (

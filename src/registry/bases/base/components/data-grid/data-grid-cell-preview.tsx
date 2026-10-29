@@ -14,6 +14,7 @@ import { getBadgeOverflow } from "@/hooks/use-badge-overflow";
 import {
   CELL_TINTS,
   formatDateForDisplay,
+  formatNumberForDisplay,
   getBooleanCellValue,
   getCellLayoutStyle,
   getDateCellValue,
@@ -25,6 +26,7 @@ import {
   getOptionsCellValue,
   getTextCellValue,
   getUrlHref,
+  parseLocalDate,
 } from "@/lib/data-grid-utils";
 import { badgeVariants } from "@/registry/bases/base/ui/badge";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
@@ -126,7 +128,10 @@ function getPreviewContent<TData extends RowData>({
 } {
   const cellOpts = cell.column.columnDef.meta?.cell;
   const value = cell.getValue();
-  const lineClampClassName = LINE_CLAMP_CLASS_NAMES[rowHeight];
+  const lineClampClassName = cn(
+    "w-fit max-w-full wrap-anywhere",
+    LINE_CLAMP_CLASS_NAMES[rowHeight],
+  );
 
   switch (cellOpts?.variant) {
     case "checkbox": {
@@ -161,9 +166,10 @@ function getPreviewContent<TData extends RowData>({
       return {
         content: label ? (
           <span
+            dir="auto"
             className={cn(
               BADGE_CLASS_NAME,
-              "whitespace-pre-wrap",
+              "h-auto whitespace-pre-wrap",
               lineClampClassName,
             )}
           >
@@ -193,12 +199,25 @@ function getPreviewContent<TData extends RowData>({
         content: (
           <>
             {visibleItems.map((label, index) => (
-              <span key={values[index]} className={BADGE_CLASS_NAME}>
-                {label}
+              <span
+                key={values[index]}
+                className={cn(
+                  BADGE_CLASS_NAME,
+                  "max-w-full",
+                  hiddenCount > 0 &&
+                    index === visibleItems.length - 1 &&
+                    "max-w-[calc(100%-2.75rem)]",
+                )}
+              >
+                <span dir="auto" className="truncate">
+                  {label}
+                </span>
               </span>
             ))}
             {hiddenCount > 0 && (
-              <span className={OVERFLOW_BADGE_CLASS_NAME}>+{hiddenCount}</span>
+              <span dir="ltr" className={OVERFLOW_BADGE_CLASS_NAME}>
+                +{hiddenCount}
+              </span>
             )}
           </>
         ),
@@ -227,29 +246,45 @@ function getPreviewContent<TData extends RowData>({
               return (
                 <span key={file.id} className={cn(BADGE_CLASS_NAME, "gap-1")}>
                   {FileIcon && <FileIcon className="size-3 shrink-0" />}
-                  <span className="max-w-25 truncate">{file.name}</span>
+                  <span dir="auto" className="max-w-25 truncate">
+                    {file.name}
+                  </span>
                 </span>
               );
             })}
             {hiddenCount > 0 && (
-              <span className={OVERFLOW_BADGE_CLASS_NAME}>+{hiddenCount}</span>
+              <span dir="ltr" className={OVERFLOW_BADGE_CLASS_NAME}>
+                +{hiddenCount}
+              </span>
             )}
           </>
         ),
       };
     }
-    case "date":
+    case "date": {
+      const date = getDateCellValue(value);
       return {
-        className: lineClampClassName,
-        content: formatDateForDisplay(getDateCellValue(value)),
+        content: (
+          <div
+            dir="auto"
+            data-invalid={date && !parseLocalDate(date) ? "" : undefined}
+            className={cn(lineClampClassName, "data-invalid:text-destructive")}
+          >
+            {formatDateForDisplay(date)}
+          </div>
+        ),
       };
+    }
     case "url": {
       const url = getTextCellValue(value);
       if (!url) return { content: null };
 
       return {
         content: (
-          <div className={cn("size-full overflow-hidden", lineClampClassName)}>
+          <div
+            dir="auto"
+            className={cn("size-full overflow-hidden", lineClampClassName)}
+          >
             <span
               data-invalid={getUrlHref(url) ? undefined : ""}
               className="truncate text-primary underline decoration-primary/30 underline-offset-2 data-invalid:text-destructive data-invalid:decoration-destructive/50"
@@ -260,15 +295,24 @@ function getPreviewContent<TData extends RowData>({
         ),
       };
     }
-    case "number":
+    case "number": {
+      const number = getNumberCellValue(value);
       return {
-        className: lineClampClassName,
-        content: getNumberCellValue(value) ?? "",
+        content: (
+          <div dir="auto" className={cn(lineClampClassName, "tabular-nums")}>
+            {number === null
+              ? ""
+              : formatNumberForDisplay(number, cellOpts.format)}
+          </div>
+        ),
       };
+    }
     default:
       return {
         content: (
-          <div className={lineClampClassName}>{getTextCellValue(value)}</div>
+          <div dir="auto" className={lineClampClassName}>
+            {getTextCellValue(value)}
+          </div>
         ),
       };
   }

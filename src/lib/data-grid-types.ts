@@ -125,6 +125,7 @@ export type CellOpts =
       min?: number;
       max?: number;
       step?: number;
+      format?: Intl.NumberFormatOptions;
     }
   | {
       variant: "select";

@@ -138,6 +138,8 @@ export function DataGridCell<TData extends RowData>({
           [CELL_TINTS.darkActiveSearchMatch]: isActiveSearchMatch,
           [CELL_TINTS.darkSearchMatch]: isSearchMatch && !isActiveSearchMatch,
           "cursor-default": !isEditing,
+          "**:data-[slot=data-grid-cell-content]:w-fit **:data-[slot=data-grid-cell-content]:max-w-full **:data-[slot=data-grid-cell-content]:wrap-anywhere":
+            !isEditing,
           "**:data-[slot=data-grid-cell-content]:line-clamp-1":
             !isEditing && rowHeight === "short",
           "**:data-[slot=data-grid-cell-content]:line-clamp-2":
