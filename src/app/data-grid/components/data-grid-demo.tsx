@@ -9,10 +9,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 
-import {
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-} from "@/hooks/use-data-grid-undo-redo";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -43,6 +39,7 @@ import {
 } from "@/registry/bases/radix/ui/select";
 import { Toggle } from "@/registry/bases/radix/ui/toggle";
 
+import { duplicateRows } from "../lib/duplicate-rows";
 import {
   departments,
   generatePeople,
@@ -50,6 +47,7 @@ import {
   skills,
   statuses,
 } from "../lib/seeds";
+import { worstCasePeople } from "../lib/worst-case";
 import { DataGridBenchmark } from "./data-grid-benchmark";
 import { DataGridDemoSkeleton } from "./data-grid-demo-skeleton";
 import { PeopleDataGridActionBar } from "./people-data-grid-action-bar";
@@ -61,6 +59,53 @@ const rowCounts = [
 ] as const;
 
 type RowCount = (typeof rowCounts)[number]["value"];
+
+const dataModes = [
+  { value: "demo", label: "Demo data" },
+  { value: "worst", label: "Worst case" },
+  { value: "empty", label: "Empty" },
+  { value: "one", label: "One" },
+] as const;
+
+type DataMode = (typeof dataModes)[number]["value"];
+
+const isDev = process.env.NODE_ENV === "development";
+
+function getRows(dataMode: DataMode, rowCount: RowCount) {
+  if (!isDev || dataMode === "demo") {
+    return generatePeople(getRowCountOption(rowCount).count);
+  }
+  if (dataMode === "worst") return worstCasePeople;
+  if (dataMode === "one") return worstCasePeople.slice(0, 1);
+  return [];
+}
+
+function DataModeToggle({
+  value,
+  onValueChange,
+}: {
+  value: DataMode;
+  onValueChange: (value: DataMode) => void;
+}) {
+  return (
+    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 gap-0.5 rounded-full bg-neutral-200 p-0.5 font-sans text-xs shadow-sm">
+      {dataModes.map((mode) => (
+        <button
+          key={mode.value}
+          type="button"
+          className={
+            mode.value === value
+              ? "rounded-full bg-white px-3 py-1 text-neutral-900 shadow-sm"
+              : "rounded-full px-3 py-1 text-neutral-600"
+          }
+          onClick={() => onValueChange(mode.value)}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function getRowCountOption(value: RowCount) {
   return rowCounts.find((option) => option.value === value) ?? rowCounts[1];
@@ -80,30 +125,6 @@ function DataGridDemoContent({
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
-
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo({
-      data,
-      onDataChange: setData,
-      getRowId: (row) => row.id,
-    });
-
-  const onRowsDuplicate = React.useCallback(
-    (rows: Person[]) => {
-      const copies = new Map(
-        rows.map((row) => [row.id, { ...row, id: generateId() }]),
-      );
-
-      setData((prev) =>
-        prev.flatMap((row) => {
-          const copy = copies.get(row.id);
-          return copy ? [row, copy] : [row];
-        }),
-      );
-      trackRowsAdd([...copies.values()]);
-    },
-    [trackRowsAdd],
-  );
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(() => {
     const dataColumns: ColumnDef<DataGridFeatures, Person>[] = [
@@ -238,6 +259,11 @@ function DataGridDemoContent({
             variant: "number",
             min: 0,
             step: 1000,
+            format: {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            },
           },
         },
       },
@@ -293,14 +319,14 @@ function DataGridDemoContent({
       getDataGridActionsColumn<Person>({
         actions: ({ row, table }) => (
           <>
-            <DropdownMenuItem onSelect={() => onRowsDuplicate([row.original])}>
+            <DropdownMenuItem onSelect={() => duplicateRows(table, [row])}>
               <Copy />
               Duplicate
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onSelect={() => void table.deleteRows([row.id])}
+              onSelect={() => table.deleteRows([row.id])}
             >
               <Trash2 />
               Delete
@@ -309,62 +335,12 @@ function DataGridDemoContent({
         ),
       }),
     ];
-  }, [filterFn, onRowsDuplicate]);
+  }, [filterFn]);
 
-  const onRowAdd: NonNullable<UseDataGridProps<Person>["onRowAdd"]> =
-    React.useCallback(
-      (eventDetails) => {
-        const afterRowId =
-          eventDetails.reason === "insert-below"
-            ? eventDetails.afterRowId
-            : undefined;
-        const newRow: Person = {
-          id: generateId(),
-        };
+  const createRow: NonNullable<UseDataGridProps<Person>["createRow"]> =
+    React.useCallback(() => ({ id: generateId() }), []);
 
-        setData((prev) => {
-          const index = afterRowId
-            ? prev.findIndex((row) => row.id === afterRowId)
-            : -1;
-          return index === -1
-            ? [...prev, newRow]
-            : [...prev.slice(0, index + 1), newRow, ...prev.slice(index + 1)];
-        });
-        trackRowsAdd([newRow]);
-
-        return {
-          rowId: newRow.id,
-          columnId: "name",
-        };
-      },
-      [trackRowsAdd],
-    );
-
-  const onRowsAdd: NonNullable<UseDataGridProps<Person>["onRowsAdd"]> =
-    React.useCallback(
-      (count: number) => {
-        const newRows: Person[] = Array.from({ length: count }, () => ({
-          id: generateId(),
-        }));
-
-        setData((prev) => [...prev, ...newRows]);
-        trackRowsAdd(newRows);
-      },
-      [trackRowsAdd],
-    );
-
-  const onRowsDelete: NonNullable<UseDataGridProps<Person>["onRowsDelete"]> =
-    React.useCallback(
-      (rows) => {
-        // Capture the rows before they are removed so undo can restore them
-        trackRowsDelete(rows);
-        const deleted = new Set(rows);
-        setData((prev) => prev.filter((row) => !deleted.has(row)));
-      },
-      [trackRowsDelete],
-    );
-
-  const onFilesUpload: NonNullable<UseDataGridProps<Person>["onFilesUpload"]> =
+  const uploadFiles: NonNullable<UseDataGridProps<Person>["uploadFiles"]> =
     React.useCallback(async ({ files, rowId: _rowId, columnId: _columnId }) => {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
@@ -377,7 +353,7 @@ function DataGridDemoContent({
       }));
     }, []);
 
-  const onFilesDelete: NonNullable<UseDataGridProps<Person>["onFilesDelete"]> =
+  const deleteFiles: NonNullable<UseDataGridProps<Person>["deleteFiles"]> =
     React.useCallback(async ({ fileIds, rowId, columnId }) => {
       console.log(
         `Deleting ${fileIds.length} file(s) from row ${rowId}, column ${columnId}:`,
@@ -385,63 +361,16 @@ function DataGridDemoContent({
       );
     }, []);
 
-  const onDataChange = React.useCallback(
-    (newData: Person[]) => {
-      const cellUpdates: Array<UndoRedoCellUpdate> = [];
-
-      const maxLength = Math.max(data.length, newData.length);
-      for (let rowIndex = 0; rowIndex < maxLength; rowIndex++) {
-        const oldRow = data[rowIndex];
-        const newRow = newData[rowIndex];
-
-        // Edits copy only the rows they touch, so unchanged rows keep their identity
-        if (oldRow && newRow && oldRow !== newRow) {
-          const allKeys = new Set([
-            ...Object.keys(oldRow),
-            ...Object.keys(newRow),
-          ]);
-
-          for (const key of allKeys) {
-            const oldValue = (oldRow as unknown as Record<string, unknown>)[
-              key
-            ];
-            const newValue = (newRow as unknown as Record<string, unknown>)[
-              key
-            ];
-
-            if (!Object.is(oldValue, newValue)) {
-              cellUpdates.push({
-                rowId: oldRow.id,
-                columnId: key,
-                previousValue: oldValue,
-                newValue,
-              });
-            }
-          }
-        }
-      }
-
-      if (cellUpdates.length > 0) {
-        trackCellsUpdate(cellUpdates);
-      }
-
-      setData(newData);
-    },
-    [data, trackCellsUpdate],
-  );
-
   const height = Math.max(400, windowSize.height - 150);
 
   const { table, ...dataGridProps } = useDataGrid({
     data,
-    onDataChange,
     columns,
-    onRowAdd,
-    onRowsAdd,
-    onRowsDelete,
-    onFilesUpload,
-    onFilesDelete,
     getRowId: (row) => row.id,
+    onDataChange: setData,
+    createRow,
+    uploadFiles,
+    deleteFiles,
     initialState: {
       columnPinning: {
         start: ["select"],
@@ -449,6 +378,7 @@ function DataGridDemoContent({
       },
     },
     dir,
+    enableRowDeletion: true,
     enableSearch: true,
     enablePaste: true,
   });
@@ -456,12 +386,12 @@ function DataGridDemoContent({
   return (
     <DirectionProvider dir={dir}>
       <div className="container flex flex-col gap-4 py-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           {rowCountSelect}
           <div
             role="toolbar"
             aria-orientation="horizontal"
-            className="flex items-center gap-2"
+            className="flex flex-wrap items-center gap-2"
           >
             <DataGridBenchmark
               table={table}
@@ -488,19 +418,14 @@ function DataGridDemoContent({
           enableSearch
           enableUndoRedo
           enablePaste
-          enableRowAdd
-          enableRowsDelete
+          enableRowCreation
+          enableRowDeletion
         />
         <DataGrid
           {...dataGridProps}
           table={table}
           height={height}
-          actionBar={
-            <PeopleDataGridActionBar
-              table={table}
-              onRowsDuplicate={onRowsDuplicate}
-            />
-          }
+          actionBar={<PeopleDataGridActionBar table={table} />}
         />
       </div>
     </DirectionProvider>
@@ -508,7 +433,7 @@ function DataGridDemoContent({
 }
 
 interface Dataset {
-  rowCount: RowCount;
+  key: string;
   rows: Person[];
 }
 
@@ -519,7 +444,12 @@ export function DataGridDemo() {
       .withDefault("100k")
       .withOptions({ clearOnDefault: true }),
   );
+  const [dataMode, setDataMode] = useQueryState(
+    "data",
+    parseAsStringEnum<DataMode>(dataModes.map((mode) => mode.value)),
+  );
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
+  const datasetKey = `${dataMode}-${rowCount}`;
 
   // Generating hundreds of thousands of rows takes a moment, so it runs after the skeleton has painted
   React.useEffect(() => {
@@ -527,8 +457,8 @@ export function DataGridDemo() {
     const frame = requestAnimationFrame(() => {
       timeout = window.setTimeout(() => {
         setDataset({
-          rowCount,
-          rows: generatePeople(getRowCountOption(rowCount).count),
+          key: datasetKey,
+          rows: getRows(dataMode ?? "demo", rowCount),
         });
       });
     });
@@ -536,7 +466,7 @@ export function DataGridDemo() {
       cancelAnimationFrame(frame);
       clearTimeout(timeout);
     };
-  }, [rowCount]);
+  }, [datasetKey, dataMode, rowCount]);
 
   const selectedRowCount = getRowCountOption(rowCount);
   const rowCountSelect = (
@@ -569,15 +499,31 @@ export function DataGridDemo() {
     </Select>
   );
 
-  if (dataset?.rowCount !== rowCount) {
-    return <DataGridDemoSkeleton rowCountSelect={rowCountSelect} />;
+  const dataModeToggle =
+    isDev && dataMode ? (
+      <DataModeToggle
+        value={dataMode}
+        onValueChange={(value) => void setDataMode(value)}
+      />
+    ) : null;
+
+  if (dataset?.key !== datasetKey) {
+    return (
+      <>
+        <DataGridDemoSkeleton rowCountSelect={rowCountSelect} />
+        {dataModeToggle}
+      </>
+    );
   }
 
   return (
-    <DataGridDemoContent
-      key={dataset.rowCount}
-      initialRows={dataset.rows}
-      rowCountSelect={rowCountSelect}
-    />
+    <>
+      <DataGridDemoContent
+        key={dataset.key}
+        initialRows={dataset.rows}
+        rowCountSelect={rowCountSelect}
+      />
+      {dataModeToggle}
+    </>
   );
 }

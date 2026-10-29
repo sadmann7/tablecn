@@ -6,6 +6,7 @@ import {
   type Cell,
   type CellSelectionBounds,
   type Column,
+  type ColumnPinningPosition,
   flexRender,
   type Row,
   type RowData,
@@ -21,22 +22,20 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellPresence,
   ColumnWindow,
-  DataGridCellProps,
   RowHeightValue,
 } from "@/lib/data-grid-types";
 
 import {
+  CELL_TINTS,
+  getCellLayoutStyle,
   getColumnBorderVisibility,
-  getColumnPinningStyle,
   getFocusedCellPosition,
-  getHasCustomCell,
   getIsDataColumn,
   getRowCellSelectionKey,
   getRowHeightValue,
   getWindowedColumns,
 } from "@/lib/data-grid-utils";
-import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
-import { DataGridCellPreview } from "@/registry/bases/radix/components/data-grid/data-grid-cell-preview";
+import { DataGridDataCell } from "@/registry/bases/radix/components/data-grid/data-grid-data-cell";
 
 const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
 
@@ -200,101 +199,72 @@ function DataGridRowContent<TData extends RowData>({
           nextColumn: nextCell?.column,
         });
 
+        const pinned = cell.column.getIsPinned();
+        const pinnedOffset =
+          pinned === "start"
+            ? cell.column.getStart("start")
+            : pinned === "end"
+              ? cell.column.getAfter("end")
+              : 0;
+
+        if (isUtilityCell) {
+          const isSelectColumn = columnId === "select";
+
+          return (
+            <DataGridUtilityCell
+              key={columnId}
+              cell={cell}
+              columnIndex={columnIndex}
+              width={cell.column.getSize()}
+              isFocused={isCellFocused}
+              isRowSelected={isRowSelected}
+              pinned={pinned}
+              pinnedOffset={pinnedOffset}
+              grow={stretchColumns && !isSelectColumn}
+              showStartBorder={showStartBorder && !isSelectColumn}
+              showEndBorder={showEndBorder && !isSelectColumn}
+            />
+          );
+        }
+
         return (
-          <div
+          <DataGridDataCell
             key={columnId}
-            role={isUtilityCell ? "gridcell" : "none"}
-            aria-colindex={isUtilityCell ? columnIndex + 1 : undefined}
-            data-slot="data-grid-cell"
-            data-column-id={columnId}
-            data-highlighted={isCellFocused ? "" : undefined}
-            tabIndex={isUtilityCell ? -1 : undefined}
-            className={cn({
-              grow: stretchColumns && columnId !== "select",
-              "border-e": showEndBorder && columnId !== "select",
-              "border-s": showStartBorder && columnId !== "select",
-            })}
-            style={{
-              ...getColumnPinningStyle(cell.column),
-              width: `calc(var(--col-${columnId}-size) * 1px)`,
-            }}
-          >
-            {isUtilityCell ? (
-              <DataGridUtilityCell
-                cell={cell}
-                isFocused={isCellFocused}
-                isRowSelected={isRowSelected}
-              />
-            ) : (
-              <DataGridDataCell
-                cell={cell}
-                columnIndex={columnIndex}
-                width={cell.column.getSize()}
-                rowHeight={rowHeight}
-                isFocused={isCellFocused}
-                isEditing={isCellEditing}
-                isSelected={isCellSelected}
-                isSearchMatch={isSearchMatch}
-                isActiveSearchMatch={isActiveSearchMatch}
-                presence={presenceColumns?.get(columnId) ?? null}
-                readOnly={readOnlyColumnIds.has(columnId)}
-                isScrolling={isScrolling}
-              />
-            )}
-          </div>
+            cell={cell}
+            columnIndex={columnIndex}
+            width={cell.column.getSize()}
+            rowHeight={rowHeight}
+            isFocused={isCellFocused}
+            isEditing={isCellEditing}
+            isSelected={isCellSelected}
+            isSearchMatch={isSearchMatch}
+            isActiveSearchMatch={isActiveSearchMatch}
+            presence={presenceColumns?.get(columnId) ?? null}
+            readOnly={readOnlyColumnIds.has(columnId)}
+            pinned={pinned}
+            pinnedOffset={pinnedOffset}
+            grow={stretchColumns}
+            showStartBorder={showStartBorder}
+            showEndBorder={showEndBorder}
+            isScrolling={isScrolling}
+          />
         );
       })}
     </div>
   );
 }
 
-interface DataGridDataCellProps<
-  TData extends RowData,
-> extends DataGridCellProps<TData> {
-  isScrolling: boolean;
-}
-
-function DataGridDataCell<TData extends RowData>({
-  isScrolling,
-  ...props
-}: DataGridDataCellProps<TData>) {
-  const [isPreview, setIsPreview] = React.useState(isScrolling);
-  const rowId = props.cell.row.id;
-  const [prevRowId, setPrevRowId] = React.useState(rowId);
-
-  if (rowId !== prevRowId) {
-    setPrevRowId(rowId);
-    if (isScrolling && !isPreview) setIsPreview(true);
-  }
-  if (isPreview && !isScrolling) setIsPreview(false);
-
-  if (
-    isPreview &&
-    !props.isFocused &&
-    !props.isEditing &&
-    !getHasCustomCell(props.cell.column)
-  ) {
-    return (
-      <DataGridCellPreview
-        cell={props.cell}
-        columnIndex={props.columnIndex}
-        width={props.width}
-        rowHeight={props.rowHeight}
-        isSelected={props.isSelected}
-        isSearchMatch={props.isSearchMatch}
-        isActiveSearchMatch={props.isActiveSearchMatch}
-        readOnly={props.readOnly}
-      />
-    );
-  }
-
-  return <DataGridCell key={rowId} {...props} />;
-}
-
 interface DataGridUtilityCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
+  columnIndex: number;
+  width: number;
   isFocused: boolean;
   isRowSelected: boolean;
+  pinned: ColumnPinningPosition;
+  pinnedOffset: number;
+  grow: boolean;
+  showStartBorder: boolean;
+  showEndBorder: boolean;
 }
 
 const DataGridUtilityCell = React.memo(
@@ -303,8 +273,15 @@ const DataGridUtilityCell = React.memo(
 
 function DataGridUtilityCellImpl<TData extends RowData>({
   cell,
+  columnIndex,
+  width,
   isFocused,
   isRowSelected,
+  pinned,
+  pinnedOffset,
+  grow,
+  showStartBorder,
+  showEndBorder,
 }: DataGridUtilityCellProps<TData>) {
   const onFocus = React.useCallback(() => {
     const { table, row, column } = cell;
@@ -332,16 +309,25 @@ function DataGridUtilityCellImpl<TData extends RowData>({
 
   return (
     <div
-      data-slot="data-grid-utility-cell"
+      role="gridcell"
+      aria-colindex={columnIndex + 1}
+      data-slot="data-grid-cell"
+      data-utility=""
       data-row-id={cell.row.id}
       data-column-id={cell.column.id}
       data-focused={isFocused ? "" : undefined}
       tabIndex={-1}
       onFocus={onFocus}
-      className={cn("size-full px-3 py-1.5 outline-none", {
-        "bg-primary/10": isRowSelected,
+      className={cn("h-full px-3 py-1.5 outline-none", {
+        grow,
+        "border-s": showStartBorder,
+        "border-e": showEndBorder,
+        "bg-background": !isRowSelected,
+        [CELL_TINTS.tinted]: isRowSelected,
+        [CELL_TINTS.selected]: isRowSelected,
         "ring-1 ring-ring ring-inset": isFocused,
       })}
+      style={getCellLayoutStyle({ width, pinned, pinnedOffset })}
     >
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </div>

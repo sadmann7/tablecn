@@ -20,7 +20,10 @@ import {
   parseTsv,
   stringifyUnknown,
 } from "@/lib/data-grid-utils";
-import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
+import {
+  useDataGrid,
+  type UseDataGridProps,
+} from "@/registry/bases/radix/hooks/use-data-grid";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -116,7 +119,7 @@ function fireCellEvent(
   const container = document.createElement("div");
   container.dataset.slot = "data-grid";
   const cellElement = document.createElement("div");
-  cellElement.dataset.slot = "data-grid-cell-wrapper";
+  cellElement.dataset.slot = "data-grid-cell";
   cellElement.dataset.rowId = rowId;
   cellElement.dataset.columnId = columnId;
   container.append(cellElement);
@@ -182,6 +185,7 @@ describe("useDataGrid", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   describe("initialization", () => {
@@ -614,11 +618,10 @@ describe("useDataGrid", () => {
 
       act(() => {
         startEditing(result.current.table, "0", "name");
-        result.current.table.updateCells({
-          rowId: "0",
-          columnId: "name",
-          value: "Changed",
-        });
+        result.current.table
+          .getRow("0")
+          .getAllCellsByColumnId()
+          .name?.setValue("Changed");
       });
 
       expect(result.current.table.getEditingCell()).toBeNull();
@@ -656,10 +659,9 @@ describe("useDataGrid", () => {
       expect(result.current.table.getEditingCell()).toBeNull();
 
       act(() => {
-        result.current.table.updateCells([
-          { rowId: "0", columnId: "name", value: "Changed" },
-          { rowId: "0", columnId: "trick", value: "Ollie" },
-        ]);
+        const cells = result.current.table.getRow("0").getAllCellsByColumnId();
+        cells.name?.setValue("Changed");
+        cells.trick?.setValue("Ollie");
       });
 
       expect(onDataChange).toHaveBeenCalledTimes(1);
@@ -1010,6 +1012,510 @@ describe("useDataGrid", () => {
     });
   });
 
+  describe("undo and redo", () => {
+    function renderEditableGrid(
+      options: Partial<UseDataGridProps<TestData>> = {},
+      initialData: TestData[] = testData,
+    ) {
+      return renderHook(
+        () => {
+          const [data, setData] = useState(initialData);
+          const grid = useDataGrid({
+            data,
+            onDataChange: setData,
+            columns: testColumns,
+            getRowId: (row) => row.id,
+            ...options,
+          });
+          return { ...grid, data, setData };
+        },
+        { wrapper: createWrapper() },
+      );
+    }
+
+    function getNames(result: { current: { data: TestData[] } }) {
+      return result.current.data.map((row) => row.name);
+    }
+
+    function getShownNames(result: {
+      current: { table: Table<DataGridFeatures, TestData> };
+    }) {
+      return result.current.table
+        .getRowModel()
+        .rows.map((row) => row.original.name);
+    }
+
+    it("undoes and redoes a cell edit", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table
+          .getRow("1")
+          .getAllCellsByColumnId()
+          .name?.setValue("Edited");
+      });
+      expect(getNames(result)[0]).toBe("Edited");
+      expect(result.current.table.getCanUndo()).toBe(true);
+
+      act(() => {
+        expect(result.current.table.undo()).toBe(1);
+      });
+      expect(getNames(result)[0]).toBe("Tony Hawk");
+      expect(result.current.table.getCanUndo()).toBe(false);
+      expect(result.current.table.getCanRedo()).toBe(true);
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(getNames(result)[0]).toBe("Edited");
+    });
+
+    it("reports why the data changed", async () => {
+      const reasons: string[] = [];
+      mockClipboard.readText.mockResolvedValue("Pasted");
+
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          return useDataGrid({
+            data,
+            columns: testColumns,
+            getRowId: (row) => row.id,
+            onDataChange: (nextData, details) => {
+              reasons.push(details.reason);
+              setData(nextData);
+            },
+          });
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table
+          .getRow("1")
+          .getAllCellsByColumnId()
+          .name?.setValue("Edited");
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+      act(() => {
+        result.current.table.redo();
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "2",
+          columnId: "name",
+          value: "Updated",
+        });
+      });
+      act(() => {
+        result.current.table.setFocusedCell("3", "name");
+      });
+      await act(async () => {
+        await result.current.table.pasteCells();
+      });
+      act(() => {
+        result.current.table.addRows([
+          { id: "new", name: "", trick: "", score: 0 },
+        ]);
+      });
+      act(() => {
+        result.current.table.deleteRows(["new"]);
+      });
+
+      expect(reasons).toEqual([
+        "edit",
+        "undo",
+        "redo",
+        "update-cells",
+        "paste",
+        "add-rows",
+        "delete-rows",
+      ]);
+    });
+
+    it("merges edits made in quick succession into one step", () => {
+      const { result } = renderEditableGrid();
+      const getNameCell = () =>
+        result.current.table.getRow("1").getAllCellsByColumnId().name;
+
+      act(() => {
+        getNameCell()?.setValue("T");
+      });
+      act(() => {
+        getNameCell()?.setValue("To");
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+
+      expect(getNames(result)[0]).toBe("Tony Hawk");
+      expect(result.current.table.getCanUndo()).toBe(false);
+    });
+
+    it("restores deleted rows where they were", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.deleteRows(["1", "3"]);
+      });
+      expect(result.current.data.map((row) => row.id)).toEqual(["2"]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(result.current.data).toEqual(testData);
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(result.current.data.map((row) => row.id)).toEqual(["2"]);
+    });
+
+    it("undoes an edit that moved a row while sorted", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.setSorting([{ id: "score", desc: true }]);
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "3",
+          columnId: "score",
+          value: 99,
+        });
+      });
+      expect(getShownNames(result)).toEqual([
+        "Nyjah Huston",
+        "Rodney Mullen",
+        "Tony Hawk",
+      ]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getShownNames(result)).toEqual([
+        "Rodney Mullen",
+        "Tony Hawk",
+        "Nyjah Huston",
+      ]);
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(getShownNames(result)[0]).toBe("Nyjah Huston");
+    });
+
+    it("restores a deleted row into the sorted order", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.setSorting([{ id: "score", desc: false }]);
+      });
+      act(() => {
+        result.current.table.deleteRows(["2"]);
+      });
+      expect(getShownNames(result)).toEqual(["Nyjah Huston", "Tony Hawk"]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getShownNames(result)).toEqual([
+        "Nyjah Huston",
+        "Tony Hawk",
+        "Rodney Mullen",
+      ]);
+      expect(getNames(result)).toEqual(testData.map((row) => row.name));
+    });
+
+    it("brings back a row that an edit hid behind a filter", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.setColumnFilters([{ id: "name", value: "h" }]);
+      });
+      expect(getShownNames(result)).toEqual(["Tony Hawk", "Nyjah Huston"]);
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Bucky Lasek",
+        });
+      });
+      expect(getShownNames(result)).toEqual(["Nyjah Huston"]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getShownNames(result)).toEqual(["Tony Hawk", "Nyjah Huston"]);
+    });
+
+    it("clears history when new data replaces rows without getRowId", async () => {
+      const { result } = renderEditableGrid({ getRowId: undefined });
+
+      act(() => {
+        result.current.table.deleteRows(["0"]);
+      });
+      expect(result.current.table.getCanUndo()).toBe(true);
+
+      act(() => {
+        result.current.setData([testData[2] as TestData]);
+      });
+      expect(result.current.table.getCanUndo()).toBe(false);
+      // Rendering the grid reads the rows, which resets the stored state just after
+      await act(async () => {
+        result.current.table.getRowModel();
+      });
+      expect(result.current.table.atoms.undoRedo.get()).toEqual({
+        canUndo: false,
+        canRedo: false,
+      });
+      act(() => {
+        expect(result.current.table.undo()).toBe(0);
+      });
+      expect(getNames(result)).toEqual(["Nyjah Huston"]);
+    });
+
+    it("undoes without getRowId before the new data comes back", () => {
+      const { result } = renderEditableGrid({ getRowId: undefined });
+
+      act(() => {
+        result.current.table.addRows([
+          { id: "4", name: "Leticia Bufoni", trick: "Kickflip", score: 90 },
+        ]);
+        expect(result.current.table.getCanUndo()).toBe(true);
+        expect(result.current.table.undo()).toBe(1);
+      });
+      expect(getNames(result)).toEqual(testData.map((row) => row.name));
+    });
+
+    it("keeps history across new data with getRowId, without duplicating rows", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.deleteRows(["2"]);
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "3",
+          columnId: "name",
+          value: "Edited",
+        });
+      });
+
+      // A refetch brings the deleted row back and drops the edited one
+      act(() => {
+        result.current.setData(testData.slice(0, 2).map((row) => ({ ...row })));
+      });
+      expect(result.current.table.getCanUndo()).toBe(true);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(getNames(result)).toEqual(["Tony Hawk", "Rodney Mullen"]);
+    });
+
+    it("removes added rows on undo and puts them back on redo", () => {
+      const { result } = renderEditableGrid();
+      const newRow = { id: "4", name: "New", trick: "", score: 0 };
+
+      act(() => {
+        expect(
+          result.current.table.addRows([newRow], { afterRowId: "1" }),
+        ).toEqual(["4"]);
+      });
+      expect(result.current.data.map((row) => row.id)).toEqual([
+        "1",
+        "4",
+        "2",
+        "3",
+      ]);
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(result.current.data).toEqual(testData);
+
+      act(() => {
+        result.current.table.redo();
+      });
+      expect(result.current.data.map((row) => row.id)).toEqual([
+        "1",
+        "4",
+        "2",
+        "3",
+      ]);
+    });
+
+    it("keeps updates without history and read-only grids out of it", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.updateCells(
+          { rowId: "1", columnId: "name", value: "Remote" },
+          { history: false },
+        );
+      });
+      expect(getNames(result)[0]).toBe("Remote");
+      expect(result.current.table.getCanUndo()).toBe(false);
+
+      const readOnly = renderEditableGrid({ readOnly: true });
+      act(() => {
+        readOnly.result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Code",
+        });
+      });
+      expect(readOnly.result.current.table.getCanUndo()).toBe(false);
+    });
+
+    it("undoes only the recorded cells of a row that also took batched values", () => {
+      const { result } = renderEditableGrid();
+
+      act(() => {
+        result.current.table.updateCells(
+          { rowId: "1", values: { trick: "Ollie", score: 50 } },
+          { batch: true },
+        );
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Edited",
+        });
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+
+      const row = result.current.table.getCoreRowModel().rowsById["1"];
+      expect(row?.original).toMatchObject({
+        name: "Tony Hawk",
+        trick: "Ollie",
+        score: 50,
+      });
+    });
+
+    it("keeps the rows that stay when rows are added or removed", () => {
+      const { result } = renderEditableGrid();
+      const before = result.current.table.getCoreRowModel().rowsById;
+      const third = before["3"];
+
+      act(() => {
+        result.current.table.deleteRows(["1"]);
+      });
+      const after = result.current.table.getCoreRowModel().rowsById;
+      expect(after["3"]).toBe(third);
+      expect(after["3"]?.index).toBe(1);
+      expect(after["1"]).toBeUndefined();
+
+      act(() => {
+        result.current.table.undo();
+      });
+      const restored = result.current.table.getCoreRowModel();
+      expect(restored.rowsById["3"]).toBe(third);
+      expect(restored.rows.map((row) => [row.id, row.index])).toEqual([
+        ["1", 0],
+        ["2", 1],
+        ["3", 2],
+      ]);
+    });
+
+    it("keeps the same order as a full sort when edits move a few rows", () => {
+      let seed = 7;
+      const random = () => {
+        seed = (seed * 16807) % 2147483647;
+        return seed / 2147483647;
+      };
+      const rows: TestData[] = Array.from({ length: 300 }, (_, index) => ({
+        id: String(index),
+        name: `Skater ${Math.floor(random() * 40)}`,
+        trick: "Ollie",
+        score: Math.floor(random() * 20),
+      }));
+      const sorting = [
+        { id: "score", desc: true },
+        { id: "name", desc: false },
+      ];
+      const { result } = renderEditableGrid(
+        { initialState: { sorting } },
+        rows,
+      );
+
+      for (let round = 0; round < 6; round++) {
+        act(() => {
+          result.current.table.updateCells(
+            Array.from({ length: 4 }, () => {
+              const rowId = String(Math.floor(random() * rows.length));
+              return random() < 0.5
+                ? { rowId, columnId: "score", value: Math.floor(random() * 20) }
+                : {
+                    rowId,
+                    columnId: "name",
+                    value: `Skater ${Math.floor(random() * 40)}`,
+                  };
+            }),
+          );
+        });
+        const { result: fresh } = renderHook(
+          () =>
+            useDataGrid({
+              data: result.current.data,
+              columns: testColumns,
+              getRowId: (row) => row.id,
+              initialState: { sorting },
+            }),
+          { wrapper: createWrapper() },
+        );
+        expect(
+          result.current.table.getRowModel().rows.map((row) => row.id),
+        ).toEqual(fresh.current.table.getRowModel().rows.map((row) => row.id));
+      }
+    });
+
+    it("adds rows at the end, or before or after a row", () => {
+      const { result } = renderEditableGrid();
+      const getIds = () => result.current.data.map((row) => row.id);
+      const newRow = (id: string) => ({ id, name: id, trick: "", score: 0 });
+
+      act(() => {
+        result.current.table.addRows([newRow("end")]);
+      });
+      act(() => {
+        result.current.table.addRows([newRow("a"), newRow("b")], {
+          beforeRowId: "1",
+        });
+      });
+      act(() => {
+        result.current.table.addRows([newRow("c")], { afterRowId: "2" });
+      });
+
+      expect(getIds()).toEqual(["a", "b", "1", "2", "c", "3", "end"]);
+    });
+
+    it("keeps at most maxHistory steps", () => {
+      const { result } = renderEditableGrid({ maxHistory: 1 });
+
+      act(() => {
+        result.current.table.deleteRows(["1"]);
+      });
+      act(() => {
+        result.current.table.deleteRows(["2"]);
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+
+      expect(result.current.table.getCanUndo()).toBe(false);
+      expect(result.current.data.map((row) => row.id)).toEqual(["2", "3"]);
+    });
+  });
+
   describe("data updates", () => {
     it("should call onDataChange when updating data", () => {
       const onDataChange = vi.fn();
@@ -1036,6 +1542,19 @@ describe("useDataGrid", () => {
         expect.arrayContaining([
           expect.objectContaining({ name: "Updated Name" }),
         ]),
+        {
+          reason: "update-cells",
+          changes: [
+            {
+              rowId: "0",
+              columnId: "name",
+              previousValue: "Tony Hawk",
+              newValue: "Updated Name",
+            },
+          ],
+          addedRows: [],
+          removedRows: [],
+        },
       );
     });
 
@@ -1064,10 +1583,41 @@ describe("useDataGrid", () => {
           expect.objectContaining({ name: "Updated Name 1" }),
           expect.objectContaining({ name: "Updated Name 2" }),
         ]),
+        expect.objectContaining({
+          changes: expect.arrayContaining([
+            expect.objectContaining({ newValue: "Updated Name 1" }),
+            expect.objectContaining({ newValue: "Updated Name 2" }),
+          ]),
+        }),
       );
     });
 
-    it("should not update data in readOnly mode", () => {
+    it("should not edit data in readOnly mode", () => {
+      const onDataChange = vi.fn();
+
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+            readOnly: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table
+          .getRow("0")
+          .getAllCellsByColumnId()
+          .name?.setValue("Updated Name");
+        result.current.table.clearCells([{ rowId: "0", columnId: "name" }]);
+      });
+
+      expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("updates data from code in readOnly mode", () => {
       const onDataChange = vi.fn();
 
       const { result } = renderHook(
@@ -1089,7 +1639,392 @@ describe("useDataGrid", () => {
         });
       });
 
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange.mock.calls[0]?.[0]?.[0]).toMatchObject({
+        name: "Updated Name",
+      });
+    });
+
+    it("shows updates right away and notifies only the changed cells", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      const onTrickChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+      table.subscribeCell("0", "trick", onTrickChange);
+
+      act(() => {
+        table.updateCells({ rowId: "0", columnId: "name", value: "Patched" });
+      });
+
+      expect(onNameChange).toHaveBeenCalledTimes(1);
+      expect(onTrickChange).not.toHaveBeenCalled();
+      expect(table.getRow("0").getValue("name")).toBe("Patched");
+      expect(testData[0]?.name).not.toBe("Patched");
+    });
+
+    it("notifies computed columns and custom cells when another field changes", () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name" },
+        { id: "trick", accessorKey: "trick", cell: ({ row }) => row.id },
+        { id: "score", accessorKey: "score" },
+        {
+          id: "label",
+          accessorFn: (row) => `${row.name} (${row.score})`,
+        },
+      ];
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      const onTrickChange = vi.fn();
+      const onLabelChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+      table.subscribeCell("0", "trick", onTrickChange);
+      table.subscribeCell("0", "label", onLabelChange);
+
+      act(() => {
+        table.updateCells({ rowId: "0", columnId: "score", value: 50 });
+      });
+
+      expect(onNameChange).not.toHaveBeenCalled();
+      expect(onTrickChange).toHaveBeenCalledTimes(1);
+      expect(onLabelChange).toHaveBeenCalledTimes(1);
+      expect(table.getRow("0").getValue("label")).toBe("Tony Hawk (50)");
+    });
+
+    it("updates a computed cell that mounts after its row's batched values", () => {
+      const columns: ColumnDef<DataGridFeatures, TestData>[] = [
+        { id: "name", accessorKey: "name" },
+        { id: "score", accessorKey: "score" },
+        {
+          id: "label",
+          accessorFn: (row) => `${row.name} (${row.score})`,
+        },
+      ];
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+
+      act(() => {
+        table.updateCells(
+          { rowId: "1", columnId: "score", value: 60 },
+          { batch: true },
+        );
+      });
+      table.subscribeCell("1", "name", vi.fn());
+      const onLabelChange = vi.fn();
+      table.subscribeCell("1", "label", onLabelChange);
+
+      expect(onLabelChange).toHaveBeenCalledTimes(1);
+      expect(table.getRow("1").getValue("label")).toBe("Rodney Mullen (60)");
+    });
+
+    it("reports batched updates once per batch delay", () => {
+      vi.useFakeTimers();
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+            batchUpdateDelay: 200,
+          }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+
+      act(() => {
+        table.updateCells(
+          { rowId: "0", columnId: "name", value: "One" },
+          { batch: true },
+        );
+        table.updateCells(
+          { rowId: "1", columnId: "name", value: "Two" },
+          { batch: true },
+        );
+      });
+
+      // This suite runs animation frames immediately, so cells hear right away
+      expect(table.getRow("0").getValue("name")).toBe("One");
+      expect(onNameChange).toHaveBeenCalledTimes(1);
       expect(onDataChange).not.toHaveBeenCalled();
+
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      const nextData = onDataChange.mock.calls[0]?.[0];
+      expect(nextData?.[0]).toMatchObject({ name: "One" });
+      expect(nextData?.[1]).toMatchObject({ name: "Two" });
+      expect(nextData?.[2]).toBe(testData[2]);
+    });
+
+    it("applies row updates and notifies the cells they change", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns: testColumns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      const onTrickChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+      table.subscribeCell("0", "trick", onTrickChange);
+
+      act(() => {
+        table.updateCells({
+          rowId: "0",
+          values: { name: "Patched", trick: testData[0]?.trick, score: 1 },
+        });
+      });
+
+      expect(onNameChange).toHaveBeenCalledTimes(1);
+      expect(onTrickChange).not.toHaveBeenCalled();
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange.mock.calls[0]?.[0]?.[0]).toMatchObject({
+        name: "Patched",
+        trick: testData[0]?.trick,
+        score: 1,
+      });
+    });
+
+    it("skips values that don't change", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns: testColumns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+      const onNameChange = vi.fn();
+      result.current.table.subscribeCell("0", "name", onNameChange);
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: testData[0]?.name,
+        });
+      });
+
+      expect(onNameChange).not.toHaveBeenCalled();
+      expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("keeps updates itself without onDataChange, so sorting follows them", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            initialState: { sorting: [{ id: "score", desc: true }] },
+          }),
+        { wrapper: createWrapper() },
+      );
+      expect(result.current.table.getRowModel().rows[0]?.id).toBe("1");
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "2",
+          columnId: "score",
+          value: 100,
+        });
+      });
+
+      expect(result.current.table.getRowModel().rows[0]?.id).toBe("2");
+      expect(testData[2]?.score).toBe(92);
+    });
+
+    it("sorts by updated values when onDataChange feeds them back", () => {
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          return useDataGrid({
+            data,
+            onDataChange: setData,
+            columns: testColumns,
+            initialState: { sorting: [{ id: "score", desc: true }] },
+          });
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "2",
+          columnId: "score",
+          value: 100,
+        });
+      });
+
+      expect(
+        result.current.table.getRowModel().rows.map((row) => row.id),
+      ).toEqual(["2", "1", "0"]);
+    });
+
+    it("starts over from a new data prop without onDataChange", () => {
+      const { result, rerender } = renderHook(
+        ({ data }) => useDataGrid({ data, columns: testColumns }),
+        { wrapper: createWrapper(), initialProps: { data: testData } },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Patched",
+        });
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe("Patched");
+
+      const nextData = testData.map((row) => ({ ...row }));
+      rerender({ data: nextData });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        testData[0]?.name,
+      );
+    });
+
+    it("holds batched values for rows out of view until they come into view", () => {
+      vi.useFakeTimers();
+      const frames: FrameRequestCallback[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+        frames.push(cb);
+        return frames.length;
+      });
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+            batchUpdateDelay: 200,
+          }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      table.subscribeCell("0", "name", vi.fn());
+
+      act(() => {
+        table.updateCells(
+          [
+            { rowId: "0", values: { name: "Shown" } },
+            { rowId: "1", values: { name: "Hidden" } },
+            { rowId: "2", values: { name: "Later" } },
+          ],
+          { batch: true },
+        );
+        frames[0]?.(0);
+      });
+
+      expect(table.getRow("0").getValue("name")).toBe("Shown");
+      expect(table.getRow("1").getValue("name")).toBe(testData[1]?.name);
+
+      table.subscribeCell("1", "name", vi.fn());
+      expect(table.getRow("1").getValue("name")).toBe("Hidden");
+
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      const nextData = onDataChange.mock.calls[0]?.[0];
+      expect(nextData?.map((row: TestData) => row.name)).toEqual([
+        "Shown",
+        "Hidden",
+        "Later",
+      ]);
+    });
+
+    it("doesn't report rows whose values come back the same", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () =>
+          useDataGrid({ data: testData, columns: testColumns, onDataChange }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          values: { name: testData[0]?.name, score: testData[0]?.score },
+        });
+      });
+
+      expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("tells each changed cell of a row coming into view, as it subscribes", () => {
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+
+      act(() => {
+        table.updateCells(
+          { rowId: "1", values: { name: "Hidden", trick: "Ollie" } },
+          { batch: true },
+        );
+      });
+
+      const onName = vi.fn();
+      const onTrick = vi.fn();
+      const onScore = vi.fn();
+      table.subscribeCell("1", "name", onName);
+      table.subscribeCell("1", "trick", onTrick);
+      table.subscribeCell("1", "score", onScore);
+
+      expect(onName).toHaveBeenCalledTimes(1);
+      expect(onTrick).toHaveBeenCalledTimes(1);
+      expect(onScore).not.toHaveBeenCalled();
+      expect(table.getRow("1").getValue("trick")).toBe("Ollie");
+    });
+
+    it("applies batched updates once a frame, keeping each cell's latest", () => {
+      const frames: FrameRequestCallback[] = [];
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
+        frames.push(cb);
+        return frames.length;
+      });
+      const { result } = renderHook(
+        () => useDataGrid({ data: testData, columns: testColumns }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      const onNameChange = vi.fn();
+      table.subscribeCell("0", "name", onNameChange);
+
+      act(() => {
+        table.updateCells(
+          { rowId: "0", columnId: "name", value: "First" },
+          { batch: true },
+        );
+        table.updateCells(
+          { rowId: "0", values: { name: "Second" } },
+          { batch: true },
+        );
+      });
+
+      expect(frames).toHaveLength(1);
+      expect(table.getRow("0").getValue("name")).toBe(testData[0]?.name);
+      expect(onNameChange).not.toHaveBeenCalled();
+
+      act(() => {
+        frames[0]?.(0);
+      });
+
+      expect(table.getRow("0").getValue("name")).toBe("Second");
+      expect(onNameChange).toHaveBeenCalledTimes(1);
     });
 
     it("should update data correctly when filtering is applied", () => {
@@ -1196,15 +2131,20 @@ describe("useDataGrid", () => {
   });
 
   describe("row operations", () => {
-    it("should call onRowAdd when adding a row", async () => {
-      const onRowAdd = vi.fn().mockResolvedValue({ rowId: "3" });
+    it("should call createRow when adding a row", async () => {
+      const createRow = vi.fn(async (): Promise<TestData | null> => ({
+        id: "4",
+        name: "New",
+        trick: "",
+        score: 0,
+      }));
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowAdd,
+            createRow,
           }),
         { wrapper: createWrapper() },
       );
@@ -1215,18 +2155,23 @@ describe("useDataGrid", () => {
         await result.current.onRowAdd?.();
       });
 
-      expect(onRowAdd).toHaveBeenCalled();
+      expect(createRow).toHaveBeenCalled();
     });
 
     it("should not provide onRowAdd in readOnly mode", () => {
-      const onRowAdd = vi.fn().mockResolvedValue({ rowId: "3" });
+      const createRow = vi.fn(async (): Promise<TestData | null> => ({
+        id: "4",
+        name: "New",
+        trick: "",
+        score: 0,
+      }));
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowAdd,
+            createRow,
             readOnly: true,
           }),
         { wrapper: createWrapper() },
@@ -1236,15 +2181,15 @@ describe("useDataGrid", () => {
       expect(result.current.onRowAdd).toBeDefined();
     });
 
-    it("should delete rows and focus the row that takes their place", async () => {
-      const onRowsDelete = vi.fn().mockResolvedValue(undefined);
+    it("should delete rows and focus the row that takes their place", () => {
+      const onDataChange = vi.fn();
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowsDelete,
+            onDataChange,
           }),
         { wrapper: createWrapper() },
       );
@@ -1253,45 +2198,43 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onClick", "0", "trick");
       });
 
-      await act(async () => {
-        await result.current.table.deleteRows(["0"]);
+      act(() => {
+        result.current.table.deleteRows(["0"]);
       });
 
-      expect(onRowsDelete).toHaveBeenCalledWith([testData[0]], ["0"]);
+      expect(onDataChange).toHaveBeenCalledWith([testData[1], testData[2]], {
+        reason: "delete-rows",
+        changes: [],
+        addedRows: [],
+        removedRows: [testData[0]],
+      });
       expect(getFocusedCell(result.current.table)).toEqual({
         rowId: "1",
         columnId: "trick",
       });
     });
 
-    it("should not delete rows without onRowsDelete or when read-only", async () => {
-      const onRowsDelete = vi.fn();
+    it("deletes rows from code even when read-only", () => {
+      const onDataChange = vi.fn();
 
-      const { result, rerender } = renderHook(
-        ({ readOnly }) =>
+      const { result } = renderHook(
+        () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowsDelete: readOnly === undefined ? undefined : onRowsDelete,
-            readOnly,
+            onDataChange,
+            readOnly: true,
           }),
-        {
-          wrapper: createWrapper(),
-          initialProps: { readOnly: undefined as boolean | undefined },
-        },
+        { wrapper: createWrapper() },
       );
 
-      await act(async () => {
-        await result.current.table.deleteRows(["0"]);
+      act(() => {
+        result.current.table.deleteRows(["0"]);
       });
 
-      rerender({ readOnly: true });
-
-      await act(async () => {
-        await result.current.table.deleteRows(["0"]);
-      });
-
-      expect(onRowsDelete).not.toHaveBeenCalled();
+      expect(onDataChange.mock.calls[0]?.[1]?.removedRows).toEqual([
+        testData[0],
+      ]);
     });
 
     it("should focus a data cell in the next row when deleting from the select column", async () => {
@@ -1306,8 +2249,8 @@ describe("useDataGrid", () => {
             data,
             columns,
             getRowId: (row) => row.id,
-            onRowsDelete: (rows) => {
-              rerender({ data: data.filter((row) => !rows.includes(row)) });
+            onDataChange: (nextData) => {
+              rerender({ data: nextData });
             },
           }),
         { wrapper: createWrapper(), initialProps: { data: testData } },
@@ -1316,8 +2259,8 @@ describe("useDataGrid", () => {
       act(() => {
         result.current.table.setFocusedCell("2", "select");
       });
-      await act(async () => {
-        await result.current.table.deleteRows(["2"]);
+      act(() => {
+        result.current.table.deleteRows(["2"]);
       });
 
       const focusedCell = result.current.table.getFocusedCell();
@@ -1891,7 +2834,12 @@ describe("useDataGrid", () => {
 
   describe("clipboard feature", () => {
     it("should ask before adding rows a paste needs", async () => {
-      const onRowsAdd = vi.fn();
+      const createRow = vi.fn((): TestData => ({
+        id: "new",
+        name: "",
+        trick: "",
+        score: 0,
+      }));
       mockClipboard.readText.mockResolvedValue("a\nb\nc");
 
       const { result } = renderHook(
@@ -1899,7 +2847,7 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowsAdd,
+            createRow,
           }),
         { wrapper: createWrapper() },
       );
@@ -1917,11 +2865,16 @@ describe("useDataGrid", () => {
         rowsNeeded: 2,
         clipboardText: "a\nb\nc",
       });
-      expect(onRowsAdd).not.toHaveBeenCalled();
+      expect(createRow).not.toHaveBeenCalled();
     });
 
     it("should paste only what fits when the dialog declines new rows", async () => {
-      const onRowsAdd = vi.fn();
+      const createRow = vi.fn((): TestData => ({
+        id: "new",
+        name: "",
+        trick: "",
+        score: 0,
+      }));
       const onDataChange = vi.fn();
       mockClipboard.readText.mockResolvedValue("a\nb\nc");
 
@@ -1930,7 +2883,7 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowsAdd,
+            createRow,
             onDataChange,
           }),
         { wrapper: createWrapper() },
@@ -1946,14 +2899,19 @@ describe("useDataGrid", () => {
         await result.current.table.pasteCells({ expandRows: false });
       });
 
-      expect(onRowsAdd).not.toHaveBeenCalled();
+      expect(createRow).not.toHaveBeenCalled();
       expect(onDataChange).toHaveBeenCalledTimes(1);
       expect(onDataChange.mock.calls[0]?.[0][2].name).toBe("a");
       expect(result.current.table.getPasteDialog().open).toBe(false);
     });
 
-    it("should add rows through onRowsAdd when expanding", async () => {
-      const onRowsAdd = vi.fn();
+    it("should add rows through createRow when expanding", async () => {
+      const createRow = vi.fn((): TestData => ({
+        id: "new",
+        name: "",
+        trick: "",
+        score: 0,
+      }));
       mockClipboard.readText.mockResolvedValue("a\nb");
       vi.useFakeTimers();
 
@@ -1962,7 +2920,7 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowsAdd,
+            createRow,
           }),
         { wrapper: createWrapper() },
       );
@@ -1978,7 +2936,8 @@ describe("useDataGrid", () => {
       });
       vi.useRealTimers();
 
-      expect(onRowsAdd).toHaveBeenCalledWith(1);
+      expect(createRow).toHaveBeenCalledTimes(1);
+      expect(createRow).toHaveBeenCalledWith({ reason: "paste" });
     });
 
     it("should report results through onClipboardNotice", async () => {
@@ -2062,7 +3021,12 @@ describe("useDataGrid", () => {
 
     it("should handle paste with clipboardText in pasteDialog state", async () => {
       const onDataChange = vi.fn();
-      const onRowAdd = vi.fn().mockResolvedValue({ rowId: "3" });
+      const createRow = vi.fn(async (): Promise<TestData | null> => ({
+        id: "4",
+        name: "New",
+        trick: "",
+        score: 0,
+      }));
 
       const { result } = renderHook(
         () =>
@@ -2070,7 +3034,7 @@ describe("useDataGrid", () => {
             data: testData,
             columns: testColumns,
             onDataChange,
-            onRowAdd,
+            createRow,
             enablePaste: true,
           }),
         { wrapper: createWrapper() },
@@ -2111,41 +3075,8 @@ describe("useDataGrid", () => {
       expect(onDataChange).not.toHaveBeenCalled();
     });
 
-    it("should call onPaste callback when provided", async () => {
-      const onPaste = vi.fn().mockResolvedValue(undefined);
-      mockClipboard.readText.mockResolvedValue("New Name");
-
-      const { result } = renderHook(
-        () =>
-          useDataGrid({
-            data: testData,
-            columns: testColumns,
-            onPaste,
-          }),
-        { wrapper: createWrapper() },
-      );
-
-      act(() => {
-        fireCellEvent(result, "onClick", "0", "name");
-      });
-
-      await act(async () => {
-        await result.current.table.pasteCells();
-      });
-
-      expect(onPaste).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            rowId: "0",
-            columnId: "name",
-            value: "New Name",
-          }),
-        ]),
-      );
-    });
-
     it("should preserve multiline content within cells when pasting", async () => {
-      const onPaste = vi.fn().mockResolvedValue(undefined);
+      const onDataChange = vi.fn();
       mockClipboard.readText.mockResolvedValue(
         'Alice\tKickflip\t95\nBob\t"Trick with\nmultiple\nlines"\t98',
       );
@@ -2155,7 +3086,7 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onPaste,
+            onDataChange,
           }),
         { wrapper: createWrapper() },
       );
@@ -2168,29 +3099,21 @@ describe("useDataGrid", () => {
         await result.current.table.pasteCells();
       });
 
-      expect(onPaste).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            rowId: "0",
-            columnId: "score",
-            value: 95,
-          }),
-          expect.objectContaining({
-            rowId: "1",
-            columnId: "trick",
-            value: "Trick with\nmultiple\nlines",
-          }),
-          expect.objectContaining({
-            rowId: "1",
-            columnId: "score",
-            value: 98,
-          }),
-        ]),
-      );
+      const nextData = onDataChange.mock.calls[0]?.[0];
+      expect(nextData?.[0]).toMatchObject({
+        name: "Alice",
+        trick: "Kickflip",
+        score: 95,
+      });
+      expect(nextData?.[1]).toMatchObject({
+        name: "Bob",
+        trick: "Trick with\nmultiple\nlines",
+        score: 98,
+      });
     });
 
     it("should preserve unquoted multiline content when pasting (Excel format)", async () => {
-      const onPaste = vi.fn().mockResolvedValue(undefined);
+      const onDataChange = vi.fn();
       mockClipboard.readText.mockResolvedValue(
         "Alice\tKickflip\t95\nBob\tTrick with\nmultiple\nlines\t98",
       );
@@ -2200,7 +3123,7 @@ describe("useDataGrid", () => {
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onPaste,
+            onDataChange,
           }),
         { wrapper: createWrapper() },
       );
@@ -2213,25 +3136,17 @@ describe("useDataGrid", () => {
         await result.current.table.pasteCells();
       });
 
-      expect(onPaste).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({
-            rowId: "0",
-            columnId: "score",
-            value: 95,
-          }),
-          expect.objectContaining({
-            rowId: "1",
-            columnId: "trick",
-            value: "Trick with\nmultiple\nlines",
-          }),
-          expect.objectContaining({
-            rowId: "1",
-            columnId: "score",
-            value: 98,
-          }),
-        ]),
-      );
+      const nextData = onDataChange.mock.calls[0]?.[0];
+      expect(nextData?.[0]).toMatchObject({
+        name: "Alice",
+        trick: "Kickflip",
+        score: 95,
+      });
+      expect(nextData?.[1]).toMatchObject({
+        name: "Bob",
+        trick: "Trick with\nmultiple\nlines",
+        score: 98,
+      });
     });
   });
 
@@ -3770,23 +4685,23 @@ describe("useDataGrid", () => {
   });
 
   describe("file operations", () => {
-    it("should provide onFilesUpload when prop is provided", () => {
-      const onFilesUpload = vi.fn().mockResolvedValue([]);
+    it("should provide uploadFiles when prop is provided", () => {
+      const uploadFiles = vi.fn().mockResolvedValue([]);
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onFilesUpload,
+            uploadFiles,
           }),
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.table.options.onFilesUpload).toBeDefined();
+      expect(result.current.table.options.uploadFiles).toBeDefined();
     });
 
-    it("should not provide onFilesUpload when prop is not provided", () => {
+    it("should not provide uploadFiles when prop is not provided", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -3796,26 +4711,26 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.table.options.onFilesUpload).toBeUndefined();
+      expect(result.current.table.options.uploadFiles).toBeUndefined();
     });
 
-    it("should provide onFilesDelete when prop is provided", () => {
-      const onFilesDelete = vi.fn().mockResolvedValue(undefined);
+    it("should provide deleteFiles when prop is provided", () => {
+      const deleteFiles = vi.fn().mockResolvedValue(undefined);
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onFilesDelete,
+            deleteFiles,
           }),
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.table.options.onFilesDelete).toBeDefined();
+      expect(result.current.table.options.deleteFiles).toBeDefined();
     });
 
-    it("should not provide onFilesDelete when prop is not provided", () => {
+    it("should not provide deleteFiles when prop is not provided", () => {
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -3825,7 +4740,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      expect(result.current.table.options.onFilesDelete).toBeUndefined();
+      expect(result.current.table.options.deleteFiles).toBeUndefined();
     });
   });
 
@@ -4149,16 +5064,16 @@ describe("useDataGrid", () => {
     });
   });
 
-  describe("onRowAdd with error handling", () => {
-    it("should not proceed if onRowAdd throws an error", async () => {
-      const onRowAdd = vi.fn().mockRejectedValue(new Error("Failed to add"));
+  describe("createRow with error handling", () => {
+    it("should not proceed if createRow throws an error", async () => {
+      const createRow = vi.fn().mockRejectedValue(new Error("Failed to add"));
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowAdd,
+            createRow,
           }),
         { wrapper: createWrapper() },
       );
@@ -4167,18 +5082,18 @@ describe("useDataGrid", () => {
         await result.current.onRowAdd?.();
       });
 
-      expect(onRowAdd).toHaveBeenCalled();
+      expect(createRow).toHaveBeenCalled();
     });
 
-    it("should not proceed if onRowAdd returns null", async () => {
-      const onRowAdd = vi.fn().mockResolvedValue(null);
+    it("should not proceed if createRow returns null", async () => {
+      const createRow = vi.fn().mockResolvedValue(null);
 
       const { result } = renderHook(
         () =>
           useDataGrid({
             data: testData,
             columns: testColumns,
-            onRowAdd,
+            createRow,
           }),
         { wrapper: createWrapper() },
       );
@@ -4187,16 +5102,17 @@ describe("useDataGrid", () => {
         await result.current.onRowAdd?.();
       });
 
-      expect(onRowAdd).toHaveBeenCalled();
+      expect(createRow).toHaveBeenCalled();
     });
 
-    it("should pass the press and skip focusing the new row when canceled", async () => {
-      const onRowAdd = vi.fn(
-        (eventDetails: { reason: string; cancel: () => void }) => {
-          eventDetails.cancel();
-          return { rowId: "1", columnId: "trick" };
-        },
-      );
+    it("should add the created row at the end and focus its first data cell", async () => {
+      const createRow = vi.fn(() => ({
+        id: "4",
+        name: "New",
+        trick: "",
+        score: 0,
+      }));
+      const onDataChange = vi.fn();
 
       const { result } = renderHook(
         () =>
@@ -4204,7 +5120,8 @@ describe("useDataGrid", () => {
             data: testData,
             columns: testColumns,
             getRowId: (row) => row.id,
-            onRowAdd,
+            createRow,
+            onDataChange,
           }),
         { wrapper: createWrapper() },
       );
@@ -4213,10 +5130,16 @@ describe("useDataGrid", () => {
         await result.current.onRowAdd?.();
       });
 
-      expect(onRowAdd).toHaveBeenCalledWith(
+      expect(createRow).toHaveBeenCalledWith(
         expect.objectContaining({ reason: "add-row-press" }),
       );
-      expect(getFocusedCell(result.current.table)).toBeNull();
+      expect(
+        onDataChange.mock.calls[0]?.[0]?.map((row: TestData) => row.id),
+      ).toEqual(["1", "2", "3", "4"]);
+      expect(getFocusedCell(result.current.table)).toEqual({
+        rowId: "4",
+        columnId: "name",
+      });
     });
   });
 
@@ -4247,8 +5170,14 @@ describe("useDataGrid", () => {
   });
 
   describe("insert row below", () => {
-    it("should pass the focused row to onRowAdd and keep the column on Shift+Enter", async () => {
-      const onRowAdd = vi.fn(() => ({ rowId: "4", columnId: "name" }));
+    it("should pass the focused row to createRow and keep the column on Shift+Enter", async () => {
+      const createRow = vi.fn(() => ({
+        id: "4",
+        name: "New",
+        trick: "",
+        score: 0,
+      }));
+      const onDataChange = vi.fn();
       const tableRef: {
         current: ReturnType<typeof useDataGrid<TestData>>["table"] | null;
       } = { current: null };
@@ -4258,7 +5187,8 @@ describe("useDataGrid", () => {
           data: testData,
           columns: testColumns,
           getRowId: (row) => row.id,
-          onRowAdd,
+          createRow,
+          onDataChange,
         });
         tableRef.current = grid.table;
         return (
@@ -4286,9 +5216,12 @@ describe("useDataGrid", () => {
         await Promise.resolve();
       });
 
-      expect(onRowAdd).toHaveBeenCalledWith(
+      expect(createRow).toHaveBeenCalledWith(
         expect.objectContaining({ reason: "insert-below", afterRowId: "2" }),
       );
+      expect(
+        onDataChange.mock.calls[0]?.[0]?.map((row: TestData) => row.id),
+      ).toEqual(["1", "2", "4", "3"]);
       expect(getFocusedCell(tableRef.current ?? undefined)).toEqual({
         rowId: "4",
         columnId: "trick",
@@ -4381,18 +5314,62 @@ describe("useDataGrid", () => {
       expect(updatedData[2]).toBe(testData[2]);
     });
 
-    it("passes the deleted rows and their ids to onRowsDelete", async () => {
-      const onRowsDelete = vi.fn();
+    it("keeps changes the consumer doesn't pass back, until new data arrives", () => {
+      const onDataChange = vi.fn();
+      const { result, rerender } = renderHook(
+        ({ data }: { data: TestData[] }) =>
+          useDataGrid({
+            data,
+            columns: testColumns,
+            getRowId: (row) => row.id,
+            onDataChange,
+          }),
+        { initialProps: { data: testData }, wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Edited",
+        });
+      });
+      act(() => {
+        result.current.table.addRows([
+          { id: "new", name: "New", trick: "", score: 0 },
+        ]);
+      });
+
+      expect(onDataChange).toHaveBeenCalledTimes(2);
+      expect(result.current.table.getRow("1").getValue("name")).toBe("Edited");
+      expect(result.current.table.getRowModel().rows).toHaveLength(
+        testData.length + 1,
+      );
+
+      const nextData = testData.slice(0, 2);
+      rerender({ data: nextData });
+      expect(
+        result.current.table.getRowModel().rows.map((row) => row.original),
+      ).toEqual(nextData);
+    });
+
+    it("reports deleted rows through onDataChange", () => {
+      const onDataChange = vi.fn();
       const { result } = renderHook(
-        () => useDataGrid({ ...sortedByScoreDesc, onRowsDelete }),
+        () => useDataGrid({ ...sortedByScoreDesc, onDataChange }),
         { wrapper: createWrapper() },
       );
 
-      await act(async () => {
-        await result.current.table.deleteRows(["3", "missing"]);
+      act(() => {
+        result.current.table.deleteRows(["3", "missing"]);
       });
 
-      expect(onRowsDelete).toHaveBeenCalledWith([testData[2]], ["3"]);
+      expect(onDataChange).toHaveBeenCalledWith([testData[0], testData[1]], {
+        reason: "delete-rows",
+        changes: [],
+        addedRows: [],
+        removedRows: [testData[2]],
+      });
     });
 
     it("copies a range in display order", async () => {

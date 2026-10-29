@@ -1,5 +1,7 @@
 import * as React from "react";
 
+import { getRootFontScale } from "@/lib/data-grid-utils";
+
 const badgeWidthCache = new Map<string, number>();
 
 const DEFAULT_CONTAINER_PADDING = 16; // px-2 on both sides
@@ -91,7 +93,7 @@ export function getBadgeListWidth<T>({
       }) + badgeGap;
   }
 
-  return width;
+  return width * getRootFontScale();
 }
 
 interface UseBadgeOverflowProps<T> extends GetBadgeListWidthProps<T> {
@@ -118,7 +120,10 @@ export function getBadgeOverflow<T>({
   iconSize,
   maxWidth,
 }: UseBadgeOverflowProps<T>): UseBadgeOverflowReturn<T> {
-  const containerWidth = Math.max(0, outerWidth - containerPadding);
+  const containerWidth = Math.max(
+    0,
+    outerWidth / getRootFontScale() - containerPadding,
+  );
 
   if (!containerWidth || items.length === 0) {
     return { visibleItems: items, hiddenCount: 0, containerWidth };
@@ -131,12 +136,10 @@ export function getBadgeOverflow<T>({
   for (const item of items) {
     const label = getLabel(item);
     const cacheKey = cacheKeyPrefix ? `${cacheKeyPrefix}:${label}` : label;
-    const badgeWidth = measureBadgeWidth({
-      label,
-      cacheKey,
-      iconSize,
-      maxWidth,
-    });
+    const badgeWidth = Math.min(
+      containerWidth - badgeGap,
+      measureBadgeWidth({ label, cacheKey, iconSize, maxWidth }),
+    );
     const widthWithGap = badgeWidth + badgeGap;
 
     if (currentLineWidth + widthWithGap <= containerWidth) {
@@ -149,7 +152,7 @@ export function getBadgeOverflow<T>({
     } else {
       if (
         currentLineWidth + overflowBadgeWidth > containerWidth &&
-        visible.length > 0
+        visible.length > 1
       ) {
         visible.pop();
       }

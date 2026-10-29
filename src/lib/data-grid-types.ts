@@ -1,4 +1,9 @@
-import type { Cell, RowData } from "@tanstack/react-table";
+import type {
+  Cell,
+  ColumnPinningPosition,
+  RowData,
+} from "@tanstack/react-table";
+import type * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
@@ -35,6 +40,59 @@ export interface CellUpdate {
   value: unknown;
 }
 
+export interface CellChange {
+  rowId: string;
+  columnId: string;
+  previousValue: unknown;
+  newValue: unknown;
+}
+
+export type DataChangeReason =
+  | "edit"
+  | "paste"
+  | "update-cells"
+  | "add-rows"
+  | "delete-rows"
+  | "undo"
+  | "redo";
+
+export interface DataChangeDetails<TData = unknown> {
+  reason: DataChangeReason;
+  changes: CellChange[];
+  addedRows: TData[];
+  removedRows: TData[];
+}
+
+export type CreateRowDetails =
+  | {
+      reason: "add-row-press";
+      event?:
+        | React.MouseEvent<HTMLDivElement>
+        | React.KeyboardEvent<HTMLDivElement>;
+    }
+  | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
+  | { reason: "paste"; event?: undefined };
+
+export interface AddRowsOptions {
+  afterRowId?: string;
+  beforeRowId?: string;
+}
+
+export interface UndoRedoState {
+  canUndo: boolean;
+  canRedo: boolean;
+}
+
+export interface RowUpdate {
+  rowId: string;
+  values: Record<string, unknown>;
+}
+
+export interface UpdateCellsOptions {
+  batch?: boolean;
+  history?: boolean;
+}
+
 export interface CellPresence extends CellPosition {
   name: string;
   color: string;
@@ -67,6 +125,7 @@ export type CellOpts =
       min?: number;
       max?: number;
       step?: number;
+      format?: Intl.NumberFormatOptions;
     }
   | {
       variant: "select";
@@ -95,7 +154,9 @@ export type CellOpts =
 
 export interface DataGridColumnMeta {
   label?: string;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
   cell?: CellOpts;
+  writeCell?: (element: HTMLElement, value: unknown) => void;
 }
 
 export interface ColumnValueReader<TData extends RowData = RowData> {
@@ -128,6 +189,11 @@ export interface DataGridCellProps<TData extends RowData> {
   isActiveSearchMatch: boolean;
   presence: CellPresence | null;
   readOnly: boolean;
+  pinned: ColumnPinningPosition;
+  pinnedOffset: number;
+  grow: boolean;
+  showStartBorder: boolean;
+  showEndBorder: boolean;
 }
 
 export interface ClipboardNotice {

@@ -1,6 +1,7 @@
 "use client";
 
-import { flexRender, type RowData } from "@tanstack/react-table";
+import type { RowData } from "@tanstack/react-table";
+
 import { cn } from "cn";
 import * as React from "react";
 import { toast } from "sonner";
@@ -13,6 +14,7 @@ import {
   formatDateForDisplay,
   formatDateToString,
   formatFileSize,
+  formatNumberForDisplay,
   getBooleanCellValue,
   getCellKey,
   getColumnLabel,
@@ -30,7 +32,7 @@ import {
   parseLocalDate,
   replaceEditableText,
 } from "@/lib/data-grid-utils";
-import { DataGridCellWrapper } from "@/registry/bases/radix/components/data-grid/data-grid-cell-wrapper";
+import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
@@ -63,16 +65,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 // The cell's padding on each side (px-2), so editors line up with its edge
 const CELL_PADDING = 8;
-
-export function CustomCell<TData extends RowData>(
-  props: DataGridCellProps<TData>,
-) {
-  return (
-    <DataGridCellWrapper<TData> {...props}>
-      {flexRender(props.cell.column.columnDef.cell, props.cell.getContext())}
-    </DataGridCellWrapper>
-  );
-}
 
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -173,7 +165,7 @@ export function ShortTextCell<TData extends RowData>(
   const displayValue = !isEditing ? (value ?? "") : "";
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -182,6 +174,7 @@ export function ShortTextCell<TData extends RowData>(
         role={isEditing ? "textbox" : undefined}
         aria-label={isEditing ? getColumnLabel(cell.column) : undefined}
         data-slot="data-grid-cell-content"
+        dir="auto"
         contentEditable={isEditing}
         tabIndex={-1}
         ref={cellRef}
@@ -195,7 +188,7 @@ export function ShortTextCell<TData extends RowData>(
       >
         {displayValue}
       </div>
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -332,13 +325,15 @@ export function LongTextCell<TData extends RowData>(
   return (
     <Popover open={isEditing} onOpenChange={onOpenChange}>
       <PopoverAnchor asChild>
-        <DataGridCellWrapper<TData>
+        <DataGridCell<TData>
           {...props}
           ref={containerRef}
           onKeyDown={onWrapperKeyDown}
         >
-          <span data-slot="data-grid-cell-content">{value}</span>
-        </DataGridCellWrapper>
+          <span data-slot="data-grid-cell-content" dir="auto">
+            {value}
+          </span>
+        </DataGridCell>
       </PopoverAnchor>
       <PopoverContent
         aria-label={getColumnLabel(cell.column)}
@@ -378,6 +373,8 @@ export function NumberCell<TData extends RowData>(
   const min = numberCellOpts?.min;
   const max = numberCellOpts?.max;
   const step = numberCellOpts?.step;
+  const format = numberCellOpts?.format;
+  const displayNumber = getNumberCellValue(value);
 
   const prevIsEditingRef = React.useRef(false);
   const pendingCharRef = React.useRef<string | null>(null);
@@ -457,7 +454,7 @@ export function NumberCell<TData extends RowData>(
   }, [isEditing]);
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -476,9 +473,17 @@ export function NumberCell<TData extends RowData>(
           onChange={onChange}
         />
       ) : (
-        <span data-slot="data-grid-cell-content">{value}</span>
+        <span
+          data-slot="data-grid-cell-content"
+          dir="auto"
+          className="tabular-nums"
+        >
+          {displayNumber === null
+            ? ""
+            : formatNumberForDisplay(displayNumber, format)}
+        </span>
       )}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -616,7 +621,7 @@ export function UrlCell<TData extends RowData>(
   const isDangerousUrl = displayValue && !urlHref;
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -624,6 +629,7 @@ export function UrlCell<TData extends RowData>(
       {!isEditing && displayValue ? (
         <div
           data-slot="data-grid-cell-content"
+          dir="auto"
           className="size-full overflow-hidden"
         >
           <a
@@ -644,6 +650,7 @@ export function UrlCell<TData extends RowData>(
           role={isEditing ? "textbox" : undefined}
           aria-label={isEditing ? getColumnLabel(cell.column) : undefined}
           data-slot="data-grid-cell-content"
+          dir="auto"
           contentEditable={isEditing}
           tabIndex={-1}
           ref={cellRef}
@@ -658,7 +665,7 @@ export function UrlCell<TData extends RowData>(
           {displayValue}
         </div>
       )}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -733,7 +740,7 @@ export function CheckboxCell<TData extends RowData>(
   );
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       isEditing={false}
@@ -752,7 +759,7 @@ export function CheckboxCell<TData extends RowData>(
         onMouseDown={onCheckboxMouseDown}
         onDoubleClick={onCheckboxDoubleClick}
       />
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -832,7 +839,7 @@ export function SelectCell<TData extends RowData>(
     : null;
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -848,7 +855,7 @@ export function SelectCell<TData extends RowData>(
             {displayLabel ? (
               <Badge
                 variant="secondary"
-                className="px-1.5 py-px whitespace-pre-wrap"
+                className="h-auto px-1.5 py-px whitespace-pre-wrap"
               >
                 <SelectValue />
               </Badge>
@@ -880,13 +887,14 @@ export function SelectCell<TData extends RowData>(
       ) : displayLabel ? (
         <Badge
           data-slot="data-grid-cell-content"
+          dir="auto"
           variant="secondary"
-          className="px-1.5 py-px whitespace-pre-wrap"
+          className="h-auto px-1.5 py-px whitespace-pre-wrap"
         >
           {displayLabel}
         </Badge>
       ) : null}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -1053,7 +1061,7 @@ export function MultiSelectCell<TData extends RowData>(
     });
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
@@ -1156,14 +1164,22 @@ export function MultiSelectCell<TData extends RowData>(
             <Badge
               key={selectedValues[index]}
               variant="secondary"
-              className="px-1.5 py-px"
+              className={cn(
+                "max-w-full px-1.5 py-px",
+                hiddenBadgeCount > 0 &&
+                  index === visibleLabels.length - 1 &&
+                  "max-w-[calc(100%-2.75rem)]",
+              )}
             >
-              {label}
+              <span dir="auto" className="truncate">
+                {label}
+              </span>
             </Badge>
           ))}
           {hiddenBadgeCount > 0 && (
             <Badge
               variant="outline"
+              dir="ltr"
               className="px-1.5 py-px text-muted-foreground"
             >
               +{hiddenBadgeCount}
@@ -1171,7 +1187,7 @@ export function MultiSelectCell<TData extends RowData>(
           )}
         </div>
       ) : null}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -1182,6 +1198,7 @@ export function DateCell<TData extends RowData>(
   const initialValue = getDateCellValue(cell.getValue());
   const [value, setValue] = React.useState(initialValue);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const isInvalidDate = value !== "" && !parseLocalDate(value);
 
   const prevInitialValueRef = React.useRef(initialValue);
   if (initialValue !== prevInitialValueRef.current) {
@@ -1231,14 +1248,19 @@ export function DateCell<TData extends RowData>(
   );
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onKeyDown={onWrapperKeyDown}
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
-          <span data-slot="data-grid-cell-content">
+          <span
+            data-slot="data-grid-cell-content"
+            dir="auto"
+            data-invalid={isInvalidDate ? "" : undefined}
+            className="data-invalid:text-destructive"
+          >
             {formatDateForDisplay(value)}
           </span>
         </PopoverAnchor>
@@ -1261,7 +1283,7 @@ export function DateCell<TData extends RowData>(
           </PopoverContent>
         )}
       </Popover>
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 
@@ -1426,9 +1448,9 @@ export function FileCell<TData extends RowData>(
 
           let uploadedFiles: FileCellData[] = [];
 
-          if (cell.table.options.onFilesUpload) {
+          if (cell.table.options.uploadFiles) {
             try {
-              uploadedFiles = await cell.table.options.onFilesUpload({
+              uploadedFiles = await cell.table.options.uploadFiles({
                 files: filesToValidate,
                 rowId,
                 columnId,
@@ -1492,9 +1514,9 @@ export function FileCell<TData extends RowData>(
 
       setDeletingFiles((prev) => new Set(prev).add(fileId));
 
-      if (cell.table.options.onFilesDelete) {
+      if (cell.table.options.deleteFiles) {
         try {
-          await cell.table.options.onFilesDelete({
+          await cell.table.options.deleteFiles({
             fileIds: [fileId],
             rowId,
             columnId,
@@ -1537,9 +1559,9 @@ export function FileCell<TData extends RowData>(
     const fileIds = files.map((f) => f.id);
     setDeletingFiles(new Set(fileIds));
 
-    if (cell.table.options.onFilesDelete && files.length > 0) {
+    if (cell.table.options.deleteFiles && files.length > 0) {
       try {
-        await cell.table.options.onFilesDelete({
+        await cell.table.options.deleteFiles({
           fileIds,
           rowId,
           columnId,
@@ -1743,7 +1765,7 @@ export function FileCell<TData extends RowData>(
     });
 
   return (
-    <DataGridCellWrapper<TData>
+    <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onDragEnter={onCellDragEnter}
@@ -1934,13 +1956,16 @@ export function FileCell<TData extends RowData>(
                 className="gap-1 px-1.5 py-px"
               >
                 {FileIcon && <FileIcon className="size-3 shrink-0" />}
-                <span className="max-w-25 truncate">{file.name}</span>
+                <span dir="auto" className="max-w-25 truncate">
+                  {file.name}
+                </span>
               </Badge>
             );
           })}
           {hiddenFileCount > 0 && (
             <Badge
               variant="outline"
+              dir="ltr"
               className="px-1.5 py-px text-muted-foreground"
             >
               +{hiddenFileCount}
@@ -1948,7 +1973,7 @@ export function FileCell<TData extends RowData>(
           )}
         </div>
       ) : null}
-    </DataGridCellWrapper>
+    </DataGridCell>
   );
 }
 

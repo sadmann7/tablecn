@@ -353,6 +353,10 @@ function DataGridViewport<TData extends RowData>({
   }, [rowVirtualizerRef, rowVirtualizer]);
 
   useIsoLayoutEffect(() => {
+    rowVirtualizer.measure();
+  }, [rowVirtualizer, table.state.rowHeight]);
+
+  useIsoLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
       columnVirtualizer.measure();
@@ -361,7 +365,6 @@ function DataGridViewport<TData extends RowData>({
   }, [
     rowVirtualizer,
     columnVirtualizer,
-    table.state.rowHeight,
     table.state.columnFilters,
     table.state.columnOrder,
     table.state.columnPinning,
@@ -581,7 +584,7 @@ function DataGridHeaderImpl<TData extends RowData>({
               aria-rowindex={rowIndex + 1}
               data-slot="data-grid-header-row"
               tabIndex={-1}
-              className="flex w-full"
+              className="flex w-full overflow-x-clip"
             >
               {getWindowedColumns(headerGroup.headers, columnWindow).map(
                 (entry) => {

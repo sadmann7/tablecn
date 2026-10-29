@@ -73,7 +73,7 @@ function getCellWrapper(
   columnId: string,
 ) {
   return container.querySelector<HTMLElement>(
-    `[data-slot="data-grid-cell-wrapper"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
+    `[data-slot="data-grid-cell"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
   );
 }
 
@@ -313,6 +313,34 @@ describe("DataGrid rendering", () => {
         )}
       />,
     );
+
+    expect(getCellWrapper(container, "1", "label")?.textContent).toBe(
+      "Tony Hawk (Ollie)",
+    );
+    expect(getCellWrapper(container, "1", "summary")?.textContent).toBe(
+      "Trick: Ollie",
+    );
+  });
+
+  it("updates cells whose value comes from an accessor or another field through updateCells", () => {
+    const { container, table } = renderGrid([
+      { id: "trick", accessorKey: "trick", header: "Trick" },
+      {
+        id: "label",
+        accessorFn: (row) => `${row.name} (${row.trick})`,
+        header: "Label",
+      },
+      {
+        id: "summary",
+        accessorKey: "name",
+        header: "Summary",
+        cell: ({ row }) => `Trick: ${row.original.trick}`,
+      },
+    ]);
+
+    act(() => {
+      table.updateCells({ rowId: "1", columnId: "trick", value: "Ollie" });
+    });
 
     expect(getCellWrapper(container, "1", "label")?.textContent).toBe(
       "Tony Hawk (Ollie)",
@@ -772,7 +800,7 @@ describe("DataGrid rendering", () => {
     function getRowColumnIds() {
       return Array.from(
         container.querySelectorAll<HTMLElement>(
-          '[data-slot="data-grid-cell-wrapper"][data-row-id="1"]',
+          '[data-slot="data-grid-cell"][data-row-id="1"]',
         ),
         (element) => element.dataset.columnId,
       );
@@ -870,7 +898,7 @@ describe("DataGrid rendering", () => {
     const wrapper = getCellWrapper(container, "1", "name");
     expect(wrapper?.getAttribute("role")).toBe("gridcell");
     expect(wrapper?.getAttribute("aria-colindex")).toBe("1");
-    expect(wrapper?.parentElement?.getAttribute("role")).toBe("none");
+    expect(wrapper?.parentElement?.getAttribute("role")).toBe("row");
     expect(
       wrapper
         ?.querySelector('[data-slot="data-grid-cell-content"]')
@@ -891,7 +919,7 @@ describe("DataGrid rendering", () => {
     expect(
       screen
         .getByRole("textbox", { name: "Name" })
-        .closest('[data-slot="data-grid-cell-wrapper"]'),
+        .closest('[data-slot="data-grid-cell"]'),
     ).toBe(getCellWrapper(container, "1", "name"));
   });
 

@@ -11,5 +11,6 @@ export const NAV_LINKS = [
   { href: "/", label: "Data Table" },
   { href: "/data-grid", label: "Data Grid" },
   { href: "/data-grid-multiplayer", label: "Data Grid Multiplayer" },
+  { href: "/data-grid-rapid", label: "Data Grid Rapid" },
   { href: "/data-grid-doom", label: "Data Grid DOOM" },
 ] as const;

@@ -1,7 +1,12 @@
 "use client";
 
 import type { UserPresence } from "@party/types";
-import type { ColumnDef, Row, SortingState } from "@tanstack/react-table";
+import type {
+  ColumnDef,
+  Row,
+  SortingState,
+  Table,
+} from "@tanstack/react-table";
 
 import { SEED_FILE_ID_PREFIX, TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
@@ -25,10 +30,6 @@ import {
   getStanceIcon,
   getStyleIcon,
 } from "@/app/lib/utils";
-import {
-  type UndoRedoCellUpdate,
-  useDataGridUndoRedo,
-} from "@/hooks/use-data-grid-undo-redo";
 import { useMultiplayerRoom } from "@/hooks/use-multiplayer-room";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
@@ -62,6 +63,31 @@ import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 import { DataGridShareMenu } from "./data-grid-share-menu";
 
 type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
+
+// Each copy lands between its row and the next one, so it shows up right below the original
+function duplicateSkaters(
+  table: Table<DataGridFeatures, SkaterSchema>,
+  rows: SkaterRows,
+) {
+  const orders = table.options.data
+    .map((skater) => skater.order)
+    .sort((a, b) => a - b);
+  const now = new Date();
+  for (const row of rows) {
+    const nextOrder = orders.find((order) => order > row.original.order);
+    const copy: SkaterSchema = {
+      ...row.original,
+      id: generateId(),
+      order:
+        nextOrder === undefined
+          ? row.original.order + 1
+          : (row.original.order + nextOrder) / 2,
+      createdAt: now,
+      updatedAt: now,
+    };
+    table.addRows([copy], { afterRowId: row.id });
+  }
+}
 
 // The server doesn't echo your own cell back, so your presence takes it from the grid
 function getPresenceUsers(
@@ -130,87 +156,9 @@ export function DataGridMultiplayerDemo({
     },
   });
 
-  const undoRedoOnDataChange = React.useCallback(
-    (newData: SkaterSchema[]) => {
-      const currentIds = new Set(data.map((s) => s.id));
-      const newIds = new Set(newData.map((s) => s.id));
-
-      const deletedIds = data
-        .filter((skater) => !newIds.has(skater.id))
-        .map((skater) => skater.id);
-      if (deletedIds.length > 0) collection.delete(deletedIds);
-
-      const insertedRows: SkaterSchema[] = [];
-      for (const skater of newData) {
-        if (!currentIds.has(skater.id)) {
-          insertedRows.push(skater);
-        } else {
-          const existing = data.find((s) => s.id === skater.id);
-          if (!existing) continue;
-
-          const changedKeys = (
-            Object.keys(skater) as Array<keyof SkaterSchema>
-          ).filter((key) => {
-            const ev =
-              existing[key] instanceof Date
-                ? (existing[key] as Date).toISOString()
-                : existing[key];
-            const nv =
-              skater[key] instanceof Date
-                ? (skater[key] as Date).toISOString()
-                : skater[key];
-            return JSON.stringify(ev) !== JSON.stringify(nv);
-          });
-
-          if (changedKeys.length > 0) {
-            collection.update(skater.id, (draft) => {
-              for (const key of changedKeys) {
-                (draft as Record<string, unknown>)[key] = skater[key];
-              }
-            });
-          }
-        }
-      }
-      if (insertedRows.length > 0) collection.insert(insertedRows);
-    },
-    [collection, data],
-  );
-
-  const { trackCellsUpdate, trackRowsAdd, trackRowsDelete } =
-    useDataGridUndoRedo<SkaterSchema>({
-      data,
-      onDataChange: undoRedoOnDataChange,
-      getRowId: (row) => row.id,
-    });
-
   const filterFn = React.useMemo(() => getFilterFn<SkaterSchema>(), []);
 
   const { startUpload } = useUploadThing("skaterMedia");
-
-  // Each copy lands between its row and the next one, so it shows up right below the original
-  const onRowsDuplicate = React.useCallback(
-    (rows: SkaterSchema[]) => {
-      const orders = data.map((skater) => skater.order).sort((a, b) => a - b);
-      const now = new Date();
-      const copies = rows.map((row) => {
-        const nextOrder = orders.find((order) => order > row.order);
-        return {
-          ...row,
-          id: generateId(),
-          order:
-            nextOrder === undefined
-              ? row.order + 1
-              : (row.order + nextOrder) / 2,
-          createdAt: now,
-          updatedAt: now,
-        };
-      });
-
-      collection.insert(copies);
-      trackRowsAdd(copies);
-    },
-    [collection, data, trackRowsAdd],
-  );
 
   const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
     () => [
@@ -322,14 +270,14 @@ export function DataGridMultiplayerDemo({
       getDataGridActionsColumn<SkaterSchema>({
         actions: ({ row, table }) => (
           <>
-            <DropdownMenuItem onSelect={() => onRowsDuplicate([row.original])}>
+            <DropdownMenuItem onSelect={() => duplicateSkaters(table, [row])}>
               <Copy />
               Duplicate
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
-              onSelect={() => void table.deleteRows([row.id])}
+              onSelect={() => table.deleteRows([row.id])}
             >
               <Trash2 />
               Delete
@@ -338,54 +286,27 @@ export function DataGridMultiplayerDemo({
         ),
       }),
     ],
-    [filterFn, onRowsDuplicate],
+    [filterFn],
   );
 
   const onDataChange: NonNullable<
     UseDataGridProps<SkaterSchema>["onDataChange"]
   > = React.useCallback(
-    (newData) => {
-      const cellUpdates: Array<UndoRedoCellUpdate> = [];
-
-      for (const skater of newData) {
-        const existing = data.find((s) => s.id === skater.id);
-
-        if (!existing) {
-          collection.insert(skater);
-          continue;
-        }
-
-        for (const key of Object.keys(skater) as Array<keyof SkaterSchema>) {
-          const ev =
-            existing[key] instanceof Date
-              ? (existing[key] as Date).toISOString()
-              : existing[key];
-          const nv =
-            skater[key] instanceof Date
-              ? (skater[key] as Date).toISOString()
-              : skater[key];
-
-          if (JSON.stringify(ev) !== JSON.stringify(nv)) {
-            cellUpdates.push({
-              rowId: existing.id,
-              columnId: key,
-              previousValue: existing[key],
-              newValue: skater[key],
-            });
-
-            collection.update(skater.id, (draft) => {
-              (draft as Record<string, unknown>)[key] = skater[key];
-            });
-          }
-        }
+    (_newData, { changes, addedRows, removedRows }) => {
+      if (removedRows.length > 0) {
+        collection.delete(removedRows.map((skater) => skater.id));
       }
-
-      if (cellUpdates.length > 0) trackCellsUpdate(cellUpdates);
+      if (addedRows.length > 0) collection.insert(addedRows);
+      for (const { rowId, columnId, newValue } of changes) {
+        collection.update(rowId, (draft) => {
+          (draft as Record<string, unknown>)[columnId] = newValue;
+        });
+      }
     },
-    [collection, data, trackCellsUpdate],
+    [collection],
   );
 
-  const onRowAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowAdd"]> =
+  const createRow: NonNullable<UseDataGridProps<SkaterSchema>["createRow"]> =
     React.useCallback(
       (eventDetails) => {
         const afterRowId =
@@ -410,59 +331,13 @@ export function DataGridMultiplayerDemo({
           updatedAt: new Date(),
         };
 
-        collection.insert(newSkater);
-        trackRowsAdd([newSkater]);
-
-        return { rowId: newSkater.id, columnId: "name" };
+        return newSkater;
       },
-      [collection, data, trackRowsAdd],
+      [data],
     );
 
-  const onRowsAdd: NonNullable<UseDataGridProps<SkaterSchema>["onRowsAdd"]> =
-    React.useCallback(
-      (count: number) => {
-        const maxOrder = data.reduce((max, s) => Math.max(max, s.order), 0);
-        const newRows: SkaterSchema[] = [];
-
-        for (let i = 0; i < count; i++) {
-          const newSkater: SkaterSchema = {
-            id: generateId(),
-            name: null,
-            email: null,
-            stance: null,
-            style: null,
-            status: null,
-            yearsSkating: null,
-            startedSkating: null,
-            isPro: false,
-            tricks: null,
-            media: null,
-            order: maxOrder + i + 1,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          };
-          newRows.push(newSkater);
-        }
-
-        collection.insert(newRows);
-        trackRowsAdd(newRows);
-      },
-      [collection, data, trackRowsAdd],
-    );
-
-  const onRowsDelete: NonNullable<
-    UseDataGridProps<SkaterSchema>["onRowsDelete"]
-  > = React.useCallback(
-    (rowsToDelete) => {
-      const ids = rowsToDelete.map((s) => s.id);
-      trackRowsDelete(rowsToDelete);
-      collection.delete(ids);
-    },
-    [collection, trackRowsDelete],
-  );
-
-  const onFilesUpload: NonNullable<
-    UseDataGridProps<SkaterSchema>["onFilesUpload"]
+  const uploadFiles: NonNullable<
+    UseDataGridProps<SkaterSchema>["uploadFiles"]
   > = React.useCallback(
     async ({ files }) => {
       if (isUploadConfigured) {
@@ -494,8 +369,8 @@ export function DataGridMultiplayerDemo({
     [isUploadConfigured, startUpload],
   );
 
-  const onFilesDelete: NonNullable<
-    UseDataGridProps<SkaterSchema>["onFilesDelete"]
+  const deleteFiles: NonNullable<
+    UseDataGridProps<SkaterSchema>["deleteFiles"]
   > = React.useCallback(
     async ({ fileIds, rowId }) => {
       // Simulated uploads only exist in the browser
@@ -547,23 +422,22 @@ export function DataGridMultiplayerDemo({
 
   const { table, ...dataGridProps } = useDataGrid({
     data,
-    onDataChange,
-    onRowAdd,
-    onRowsAdd,
-    onRowsDelete,
-    onFilesUpload,
-    onFilesDelete,
     columns,
     getRowId: (row) => row.id,
+    onDataChange,
+    createRow,
+    uploadFiles,
+    deleteFiles,
     initialState: {
       columnPinning: { start: ["select"], end: ["actions"] },
     },
     dir,
     state: { cellPresence, sorting },
     onSortingChange: setSorting,
-    manualSorting: true,
+    enableRowDeletion: true,
     enableSearch: true,
     enablePaste: true,
+    manualSorting: true,
   });
 
   React.useEffect(() => {
@@ -620,17 +494,17 @@ export function DataGridMultiplayerDemo({
 
   const onDuplicate = React.useCallback(
     (selectedRows: SkaterRows) => {
-      onRowsDuplicate(selectedRows.map((row) => row.original));
+      duplicateSkaters(table, selectedRows);
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} duplicated`,
       );
     },
-    [onRowsDuplicate],
+    [table],
   );
 
   const onDelete = React.useCallback(
     (selectedRows: SkaterRows) => {
-      void table.deleteRows(selectedRows.map((row) => row.id));
+      table.deleteRows(selectedRows.map((row) => row.id));
       toast.success(
         `${selectedRows.length} skater${selectedRows.length === 1 ? "" : "s"} deleted`,
       );
@@ -714,8 +588,8 @@ export function DataGridMultiplayerDemo({
               enableSearch
               enableUndoRedo
               enablePaste
-              enableRowAdd
-              enableRowsDelete
+              enableRowCreation
+              enableRowDeletion
             />
             <DataGridFilterMenu table={table} align="end" />
             <DataGridSortMenu table={table} align="end" />

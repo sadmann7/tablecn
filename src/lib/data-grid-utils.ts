@@ -2,6 +2,7 @@ import type {
   CellSelectionBounds,
   CellSelectionState,
   Column,
+  ColumnPinningPosition,
   RowData,
   Table,
 } from "@tanstack/react-table";
@@ -33,7 +34,6 @@ import type {
   CellPosition,
   ColumnValueReader,
   ColumnWindow,
-  DataGridColumnMeta,
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
@@ -104,6 +104,28 @@ export function getNumberCellValue(value: unknown): number | null {
   if (typeof value !== "string" || value.trim() === "") return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+let defaultNumberFormat: Intl.NumberFormat | null = null;
+const numberFormatCache = new WeakMap<
+  Intl.NumberFormatOptions,
+  Intl.NumberFormat
+>();
+
+export function formatNumberForDisplay(
+  value: number,
+  options?: Intl.NumberFormatOptions,
+): string {
+  if (!options) {
+    defaultNumberFormat ??= new Intl.NumberFormat();
+    return defaultNumberFormat.format(value);
+  }
+  let formatter = numberFormatCache.get(options);
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(undefined, options);
+    numberFormatCache.set(options, formatter);
+  }
+  return formatter.format(value);
 }
 
 export function getBooleanCellValue(value: unknown): boolean {
@@ -443,6 +465,7 @@ export function getSelectionEdgePosition(
 export function getHasCellRangeSelection(ranges: CellSelectionState) {
   const range = getActiveCellRange(ranges);
   if (!range) return false;
+
   return (
     ranges.length > 1 ||
     range.anchorRowId !== range.focusRowId ||
@@ -454,17 +477,18 @@ export function renderDefaultCell(context: { renderValue: () => unknown }) {
   return getTextCellValue(context.renderValue());
 }
 
-export function getHasCustomCell(column: {
-  columnDef: { cell?: unknown; meta?: DataGridColumnMeta };
-}) {
+export function getHasCustomCell<TData extends RowData>(
+  column: Column<DataGridFeatures, TData>,
+) {
   const { cell, meta } = column.columnDef;
+
   return (
     !meta?.cell?.variant && cell !== undefined && cell !== renderDefaultCell
   );
 }
 
-export function getIsDataColumn(
-  column: { columnDef: { enableCellSelection?: boolean } } | undefined,
+export function getIsDataColumn<TData extends RowData>(
+  column: Column<DataGridFeatures, TData> | undefined,
 ) {
   return column?.columnDef.enableCellSelection !== false;
 }
@@ -475,6 +499,7 @@ export function getColumnValueReader<TData extends RowData>(
     | undefined,
 ): ColumnValueReader<TData> {
   const accessorFn = column?.accessorFn;
+
   return (row) => accessorFn?.(row.original, row.index);
 }
 
@@ -483,6 +508,7 @@ export function getColumnLabel<TData extends RowData, TValue = unknown>(
 ): string {
   const { header, meta } = column.columnDef;
   if (meta?.label) return meta.label;
+
   return typeof header === "string" ? header : column.id;
 }
 
@@ -522,12 +548,13 @@ export function swapItems<T>(items: Array<T>, first: T, second: T) {
   });
 }
 
-export function getColumnBorderVisibility<TData extends RowData>(params: {
+export function getColumnBorderVisibility<TData extends RowData>({
+  column,
+  nextColumn,
+}: {
   column: Column<DataGridFeatures, TData>;
   nextColumn?: Column<DataGridFeatures, TData>;
 }) {
-  const { column, nextColumn } = params;
-
   const isPinned = column.getIsPinned();
   const isFirstRightPinnedColumn =
     isPinned === "end" && column.getIsFirstColumn("end");
@@ -621,20 +648,50 @@ export function getColumnPinningStyle<TData extends RowData>(
   };
 }
 
-export function getColumnFitSize(params: {
+export const CELL_TINTS = {
+  tinted: "bg-(--cell-tint,var(--background))",
+  selected:
+    "[--cell-tint:color-mix(in_srgb,var(--color-primary)_10%,var(--background))]",
+  activeSearchMatch: "[--cell-tint:var(--color-orange-200)]",
+  searchMatch: "[--cell-tint:var(--color-yellow-100)]",
+  darkActiveSearchMatch:
+    "dark:[--cell-tint:color-mix(in_srgb,var(--color-orange-900)_50%,var(--background))]",
+  darkSearchMatch:
+    "dark:[--cell-tint:color-mix(in_srgb,var(--color-yellow-900)_30%,var(--background))]",
+} as const;
+
+export function getCellLayoutStyle({
+  width,
+  pinned,
+  pinnedOffset,
+}: {
+  width: number;
+  pinned: ColumnPinningPosition;
+  pinnedOffset: number;
+}): React.CSSProperties {
+  return {
+    insetInlineStart: pinned === "start" ? `${pinnedOffset}px` : undefined,
+    insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
+    opacity: pinned ? 0.97 : undefined,
+    position: pinned ? "sticky" : "relative",
+    width,
+    zIndex: pinned ? 20 : undefined,
+  };
+}
+
+export function getColumnFitSize({
+  gridElement,
+  columnId,
+  minSize,
+  maxSize,
+  wrapperContentSize = 0,
+}: {
   gridElement: HTMLElement;
   columnId: string;
   minSize: number;
   maxSize: number;
   wrapperContentSize?: number;
 }): number | null {
-  const {
-    gridElement,
-    columnId,
-    minSize,
-    maxSize,
-    wrapperContentSize = 0,
-  } = params;
   const cellElements = gridElement.querySelectorAll<HTMLElement>(
     `:is([data-slot="data-grid-header-cell"], [data-slot="data-grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
   );
@@ -642,12 +699,9 @@ export function getColumnFitSize(params: {
 
   let cellChromeSize = 0;
   for (const cellElement of cellElements) {
-    const wrapperElement = cellElement.querySelector<HTMLElement>(
-      '[data-slot="data-grid-cell-wrapper"]',
-    );
-    if (!wrapperElement) continue;
+    if (cellElement.dataset.slot !== "data-grid-cell") continue;
     cellChromeSize =
-      cellElement.getBoundingClientRect().width - wrapperElement.clientWidth;
+      cellElement.getBoundingClientRect().width - cellElement.clientWidth;
     break;
   }
 
@@ -693,14 +747,21 @@ export function getColumnFitSize(params: {
   return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
 }
 
-export function getRowIndexById<TData extends RowData>(
+export function getRowDisplayIndex<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
   rowId: string,
 ) {
   return table.getRowModel().rowsById[rowId]?.getDisplayIndex() ?? -1;
 }
 
-export function getTabTargetCell(params: {
+export function getTabTargetCell({
+  rowIndex,
+  columnId,
+  columnIds,
+  rowCount,
+  isBackward,
+  getIsColumnTabbable = () => true,
+}: {
   rowIndex: number;
   columnId: string;
   columnIds: string[];
@@ -708,14 +769,6 @@ export function getTabTargetCell(params: {
   isBackward: boolean;
   getIsColumnTabbable?: (columnId: string) => boolean;
 }): { rowIndex: number; columnId: string } | null {
-  const {
-    rowIndex,
-    columnId,
-    columnIds,
-    rowCount,
-    isBackward,
-    getIsColumnTabbable = () => true,
-  } = params;
   const colIndex = columnIds.indexOf(columnId);
   if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
 
@@ -742,8 +795,20 @@ export function getTabTargetCell(params: {
   }
 }
 
+let rootFontScale: number | null = null;
+
+export function getRootFontScale(): number {
+  if (rootFontScale !== null) return rootFontScale;
+  if (typeof document === "undefined") return 1;
+  const fontSize = Number.parseFloat(
+    getComputedStyle(document.documentElement).fontSize,
+  );
+  rootFontScale = fontSize > 0 ? fontSize / 16 : 1;
+  return rootFontScale;
+}
+
 export function getRowHeightValue(rowHeight: RowHeightValue): number {
-  return ROW_HEIGHTS[rowHeight];
+  return Math.round(ROW_HEIGHTS[rowHeight] * getRootFontScale());
 }
 
 export function getLineCount(rowHeight: RowHeightValue): number {
@@ -831,12 +896,12 @@ export function getCellElement(
   columnId: string,
 ) {
   return container.querySelector<HTMLDivElement>(
-    `[data-row-id="${escapeAttributeValue(rowId)}"][data-column-id="${escapeAttributeValue(columnId)}"]`,
+    `[data-slot="data-grid-cell"]:not([data-preview])[data-row-id="${escapeAttributeValue(rowId)}"][data-column-id="${escapeAttributeValue(columnId)}"]`,
   );
 }
 
 export function getCellFocusTarget(cellElement: HTMLElement): HTMLElement {
-  if (cellElement.dataset.slot === "data-grid-cell-wrapper") return cellElement;
+  if (cellElement.dataset.utility === undefined) return cellElement;
   return (
     cellElement.querySelector<HTMLElement>(
       'button, a[href], [role="checkbox"]',
@@ -854,6 +919,17 @@ export function getIsInPopover(element: unknown): boolean {
     element.closest("[data-slot='popover-content']") !== null ||
     element.closest("[data-slot='select-content']") !== null ||
     element.closest("[data-slot='faceted-content']") !== null
+  );
+}
+
+export function getIsEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return (
+    target.isContentEditable ||
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement
   );
 }
 
@@ -975,7 +1051,9 @@ export function parseLocalDate(dateStr: unknown): Date | null {
   if (!dateStr) return null;
   if (dateStr instanceof Date) return dateStr;
   if (typeof dateStr !== "string") return null;
-  const [year, month, day] = dateStr.split("-").map(Number);
+  const match = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:$|T)/.exec(dateStr);
+  if (!match) return null;
+  const [year, month, day] = match.slice(1).map(Number);
   if (!year || !month || !day) return null;
   const date = new Date(year, month - 1, day);
   if (

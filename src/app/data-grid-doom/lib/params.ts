@@ -2,6 +2,7 @@ import { SCREEN_HEIGHT, SCREEN_WIDTH } from "./doom";
 
 export const RESOLUTIONS = [40, 64, 80, 106, 128, 160, 192, 320] as const;
 export const NATIVE_RESOLUTION = 320;
+const DEFAULT_RESOLUTION = 192;
 
 export function getResolutionLabel(columnCount: number) {
   const rowCount = Math.round((columnCount * SCREEN_HEIGHT) / SCREEN_WIDTH);
@@ -16,17 +17,17 @@ function getDamage(value: string | null) {
 
 // res=40|64|80|106|128|160|192|320 (columns, 16:10), mode=data|dom|gradient, source=doom|plasma, damage (plasma only), auto=1 to expose measurements, grid=1 to start with the grid shown
 export function getDoomParams(params: Pick<URLSearchParams, "get">) {
-  const res = Number(params.get("res") ?? NATIVE_RESOLUTION);
+  const res = Number(params.get("res") ?? DEFAULT_RESOLUTION);
   const columnCount = (RESOLUTIONS as readonly number[]).includes(res)
     ? res
-    : NATIVE_RESOLUTION;
+    : DEFAULT_RESOLUTION;
   const modeParam = params.get("mode");
   const mode =
     modeParam === "data" || modeParam === "dom" || modeParam === "gradient"
       ? modeParam
       : columnCount === NATIVE_RESOLUTION
         ? "gradient"
-        : "dom";
+        : "data";
 
   return {
     columnCount,
