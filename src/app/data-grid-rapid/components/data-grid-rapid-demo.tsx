@@ -3,11 +3,25 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { cn } from "cn";
-import { ArrowDown, ArrowUp, Pause, Play } from "lucide-react";
+import {
+  Activity,
+  ArrowDown,
+  ArrowUp,
+  ChartColumn,
+  Diff,
+  DollarSign,
+  HandCoins,
+  Landmark,
+  MoveHorizontal,
+  Pause,
+  Percent,
+  Play,
+  Tag,
+} from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { RowUpdate } from "@/lib/data-grid-types";
+import type { DataGridColumnMeta, RowUpdate } from "@/lib/data-grid-types";
 
 import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { useWindowSize } from "@/hooks/use-window-size";
@@ -273,6 +287,7 @@ function RangeCell({ quote }: { quote: Quote }) {
 function getQuoteColumn(
   id: Exclude<(typeof QUOTE_FIELDS)[number], "history">,
   label: string,
+  icon: DataGridColumnMeta["icon"],
   renderCell: (value: number) => React.ReactNode,
   size = 110,
 ): ColumnDef<DataGridFeatures, Quote> {
@@ -281,7 +296,7 @@ function getQuoteColumn(
     accessorKey: id,
     header: label,
     size,
-    meta: { label },
+    meta: { label, icon },
     cell: ({ getValue }) => renderCell(getValue() as number),
   };
 }
@@ -419,26 +434,32 @@ function DataGridRapidContent({
         size: 120,
         meta: { label: "Symbol", cell: { variant: "short-text" } },
       },
-      getQuoteColumn("price", "Price", (value) => <PriceCell value={value} />),
-      getQuoteColumn("change", "Change", (value) => (
+      getQuoteColumn("price", "Price", DollarSign, (value) => (
+        <PriceCell value={value} />
+      )),
+      getQuoteColumn("change", "Change", Diff, (value) => (
         <ChangeCell value={value} />
       )),
-      getQuoteColumn("changePercent", "Change %", (value) => (
-        <ChangePercentCell value={value} />
-      )),
+      getQuoteColumn(
+        "changePercent",
+        "Change %",
+        Percent,
+        (value) => <ChangePercentCell value={value} />,
+        125,
+      ),
       {
         id: "history",
         accessorKey: "history",
         header: "Trend",
         size: 130,
         enableSorting: false,
-        meta: { label: "Trend" },
+        meta: { label: "Trend", icon: Activity },
         cell: ({ row }) => <TrendCell quote={row.original} />,
       },
-      getQuoteColumn("bid", "Bid", (value) => (
+      getQuoteColumn("bid", "Bid", HandCoins, (value) => (
         <TickCell value={value} format={priceFormat} />
       )),
-      getQuoteColumn("ask", "Ask", (value) => (
+      getQuoteColumn("ask", "Ask", Tag, (value) => (
         <TickCell value={value} format={priceFormat} />
       )),
       {
@@ -451,18 +472,20 @@ function DataGridRapidContent({
             : (quote.price - quote.low) / (quote.high - quote.low),
         header: "Day range",
         size: 200,
-        meta: { label: "Day range" },
+        meta: { label: "Day range", icon: MoveHorizontal },
         cell: ({ row }) => <RangeCell quote={row.original} />,
       },
       getQuoteColumn(
         "volume",
         "Volume",
+        ChartColumn,
         (value) => <VolumeCell value={value} />,
         130,
       ),
       getQuoteColumn(
         "marketCap",
         "Mkt Cap",
+        Landmark,
         (value) => <TickCell value={value} format={marketCapFormat} isMuted />,
         120,
       ),
