@@ -47,6 +47,7 @@ import {
   skills,
   statuses,
 } from "../lib/seeds";
+import { worstCasePeople } from "../lib/worst-case";
 import { DataGridBenchmark } from "./data-grid-benchmark";
 import { DataGridDemoSkeleton } from "./data-grid-demo-skeleton";
 import { PeopleDataGridActionBar } from "./people-data-grid-action-bar";
@@ -58,6 +59,53 @@ const rowCounts = [
 ] as const;
 
 type RowCount = (typeof rowCounts)[number]["value"];
+
+const dataModes = [
+  { value: "demo", label: "Demo data" },
+  { value: "worst", label: "Worst case" },
+  { value: "empty", label: "Empty" },
+  { value: "one", label: "One" },
+] as const;
+
+type DataMode = (typeof dataModes)[number]["value"];
+
+const isDev = process.env.NODE_ENV === "development";
+
+function getRows(dataMode: DataMode, rowCount: RowCount) {
+  if (!isDev || dataMode === "demo") {
+    return generatePeople(getRowCountOption(rowCount).count);
+  }
+  if (dataMode === "worst") return worstCasePeople;
+  if (dataMode === "one") return worstCasePeople.slice(0, 1);
+  return [];
+}
+
+function DataModeToggle({
+  value,
+  onValueChange,
+}: {
+  value: DataMode;
+  onValueChange: (value: DataMode) => void;
+}) {
+  return (
+    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 gap-0.5 rounded-full bg-neutral-200 p-0.5 font-sans text-xs shadow-sm">
+      {dataModes.map((mode) => (
+        <button
+          key={mode.value}
+          type="button"
+          className={
+            mode.value === value
+              ? "rounded-full bg-white px-3 py-1 text-neutral-900 shadow-sm"
+              : "rounded-full px-3 py-1 text-neutral-600"
+          }
+          onClick={() => onValueChange(mode.value)}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function getRowCountOption(value: RowCount) {
   return rowCounts.find((option) => option.value === value) ?? rowCounts[1];
@@ -211,6 +259,11 @@ function DataGridDemoContent({
             variant: "number",
             min: 0,
             step: 1000,
+            format: {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: 0,
+            },
           },
         },
       },
@@ -333,12 +386,12 @@ function DataGridDemoContent({
   return (
     <DirectionProvider dir={dir}>
       <div className="container flex flex-col gap-4 py-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           {rowCountSelect}
           <div
             role="toolbar"
             aria-orientation="horizontal"
-            className="flex items-center gap-2"
+            className="flex flex-wrap items-center gap-2"
           >
             <DataGridBenchmark
               table={table}
@@ -380,7 +433,7 @@ function DataGridDemoContent({
 }
 
 interface Dataset {
-  rowCount: RowCount;
+  key: string;
   rows: Person[];
 }
 
@@ -391,7 +444,14 @@ export function DataGridDemo() {
       .withDefault("100k")
       .withOptions({ clearOnDefault: true }),
   );
+  const [dataMode, setDataMode] = useQueryState(
+    "data",
+    parseAsStringEnum<DataMode>(dataModes.map((mode) => mode.value))
+      .withDefault("demo")
+      .withOptions({ clearOnDefault: true }),
+  );
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
+  const datasetKey = `${dataMode}-${rowCount}`;
 
   // Generating hundreds of thousands of rows takes a moment, so it runs after the skeleton has painted
   React.useEffect(() => {
@@ -399,8 +459,8 @@ export function DataGridDemo() {
     const frame = requestAnimationFrame(() => {
       timeout = window.setTimeout(() => {
         setDataset({
-          rowCount,
-          rows: generatePeople(getRowCountOption(rowCount).count),
+          key: datasetKey,
+          rows: getRows(dataMode, rowCount),
         });
       });
     });
@@ -408,7 +468,7 @@ export function DataGridDemo() {
       cancelAnimationFrame(frame);
       clearTimeout(timeout);
     };
-  }, [rowCount]);
+  }, [datasetKey, dataMode, rowCount]);
 
   const selectedRowCount = getRowCountOption(rowCount);
   const rowCountSelect = (
@@ -441,15 +501,30 @@ export function DataGridDemo() {
     </Select>
   );
 
-  if (dataset?.rowCount !== rowCount) {
-    return <DataGridDemoSkeleton rowCountSelect={rowCountSelect} />;
+  const dataModeToggle = isDev ? (
+    <DataModeToggle
+      value={dataMode}
+      onValueChange={(value) => void setDataMode(value)}
+    />
+  ) : null;
+
+  if (dataset?.key !== datasetKey) {
+    return (
+      <>
+        <DataGridDemoSkeleton rowCountSelect={rowCountSelect} />
+        {dataModeToggle}
+      </>
+    );
   }
 
   return (
-    <DataGridDemoContent
-      key={dataset.rowCount}
-      initialRows={dataset.rows}
-      rowCountSelect={rowCountSelect}
-    />
+    <>
+      <DataGridDemoContent
+        key={dataset.key}
+        initialRows={dataset.rows}
+        rowCountSelect={rowCountSelect}
+      />
+      {dataModeToggle}
+    </>
   );
 }
