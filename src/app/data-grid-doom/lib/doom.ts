@@ -75,7 +75,9 @@ export interface DoomEngine {
 }
 
 // Plays the samples the worker engine streams to it, on the audio thread. Reports
-// what it has played so the worker stays a few buffers ahead
+// what it has taken from the queue so the worker stays a few buffers ahead. Silence
+// played while the queue is empty doesn't count, or the worker would queue extra
+// samples to cover it and the audio would fall behind the game
 const AUDIO_WORKLET = `
 class DoomAudio extends AudioWorkletProcessor {
   constructor() {
@@ -103,12 +105,12 @@ class DoomAudio extends AudioWorkletProcessor {
       }
       i += take;
       this.offset += take;
+      this.played += take;
       if (this.offset >= size) {
         this.queue.shift();
         this.offset = 0;
       }
     }
-    this.played += length;
     if (this.link && ++this.calls % 4 === 0) {
       this.link.postMessage(this.played);
     }
