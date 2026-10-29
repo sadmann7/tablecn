@@ -3,6 +3,7 @@ import {
   assignTableAPIs,
   type CellData,
   cellSelectionFeature,
+  Column,
   columnFilteringFeature,
   columnOrderingFeature,
   columnPinningFeature,
@@ -453,11 +454,9 @@ const dataGridRowHeightFeature: TableFeature = {
   },
 };
 
-function getCanEditColumn(column: {
-  table: object;
-  columnDef: ColumnDef_DataGridCellEditing &
-    Parameters<typeof getHasCustomCell>[0]["columnDef"];
-}) {
+function getCanEditColumn<TData extends RowData>(
+  column: Column<DataGridFeatures, TData>,
+) {
   const { options } = asDataGrid(column.table);
   return (
     !options.readOnly &&

@@ -227,10 +227,9 @@ function DataGridRowContent<TData extends RowData>({
           );
         }
 
-        // Keyed by cell, so a row recycled for another row ID mounts fresh cells
         return (
           <DataGridDataCell
-            key={cell.id}
+            key={columnId}
             cell={cell}
             columnIndex={columnIndex}
             width={cell.column.getSize()}

@@ -26,9 +26,6 @@ import {
 
 import { getColumnValueReader } from "@/lib/data-grid-utils";
 
-// Rows whose `original` was swapped for a copy in place. The row models rebuild them
-// even when the data hands back that copy, and the sort cache doesn't trust their
-// old values, so sorting and filtering see what changed
 export const patchedRows = new WeakSet();
 
 export interface RowChangeHint {
@@ -37,8 +34,6 @@ export interface RowChangeHint {
   insertedIndexes: number[];
 }
 
-// What a row change did to the data it was built from, so the core row model can shift
-// its rows instead of rebuilding every row after the change
 export const rowChangeHints = new WeakMap<
   ReadonlyArray<RowData>,
   RowChangeHint
@@ -46,9 +41,6 @@ export const rowChangeHints = new WeakMap<
 
 type CoreRow = Row<TableFeatures, RowData>;
 
-// TanStack's filtered row model, except that with no filters it hands back the rows
-// as they are. TanStack resets every row's filter results on each data change, which
-// allocates two objects per row, so only the first pass after filters clear does that
 export function createDataGridFilteredRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -112,9 +104,6 @@ export function createDataGridCoreRowModel<
   };
 }
 
-// Rebuilds the core rows after rows were added or removed, reusing every row that
-// stayed and updating its index, so the change costs index writes, not new rows.
-// Needs `getRowId`, since index-based IDs would change too
 function getShiftedRowModel(
   table: Table<TableFeatures, RowData>,
   previous: RowModel<TableFeatures, RowData>,
@@ -376,11 +365,8 @@ function getIsSameSorting(
   );
 }
 
-// Past this share of changed rows, sorting everything again is cheaper
 const MAX_RESORTED_SHARE = 1 / 8;
 
-// Keeps the cached order when rows kept their sort values, and moves just the rows
-// whose values changed when there are few of them, instead of sorting every row again
 function getUpdatedUnfilteredCache(
   table: Table<TableFeatures, RowData>,
   cache: SortCache,
@@ -458,8 +444,6 @@ function getUpdatedUnfilteredCache(
   };
 }
 
-// Compares rows like the full sort, reading values as it goes instead of up front,
-// for the few comparisons moving changed rows takes
 function getLazyRowsComparator(
   rows: Array<SortedRow>,
   sorting: Array<ResolvedSort>,

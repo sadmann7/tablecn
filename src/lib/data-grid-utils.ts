@@ -34,7 +34,6 @@ import type {
   CellPosition,
   ColumnValueReader,
   ColumnWindow,
-  DataGridColumnMeta,
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
@@ -107,17 +106,24 @@ export function getNumberCellValue(value: unknown): number | null {
   return Number.isFinite(num) ? num : null;
 }
 
-const numberFormatCache = new Map<string, Intl.NumberFormat>();
+let defaultNumberFormat: Intl.NumberFormat | null = null;
+const numberFormatCache = new WeakMap<
+  Intl.NumberFormatOptions,
+  Intl.NumberFormat
+>();
 
 export function formatNumberForDisplay(
   value: number,
   options?: Intl.NumberFormatOptions,
 ): string {
-  const key = options ? JSON.stringify(options) : "";
-  let formatter = numberFormatCache.get(key);
+  if (!options) {
+    defaultNumberFormat ??= new Intl.NumberFormat();
+    return defaultNumberFormat.format(value);
+  }
+  let formatter = numberFormatCache.get(options);
   if (!formatter) {
     formatter = new Intl.NumberFormat(undefined, options);
-    numberFormatCache.set(key, formatter);
+    numberFormatCache.set(options, formatter);
   }
   return formatter.format(value);
 }
@@ -459,6 +465,7 @@ export function getSelectionEdgePosition(
 export function getHasCellRangeSelection(ranges: CellSelectionState) {
   const range = getActiveCellRange(ranges);
   if (!range) return false;
+
   return (
     ranges.length > 1 ||
     range.anchorRowId !== range.focusRowId ||
@@ -470,17 +477,18 @@ export function renderDefaultCell(context: { renderValue: () => unknown }) {
   return getTextCellValue(context.renderValue());
 }
 
-export function getHasCustomCell(column: {
-  columnDef: { cell?: unknown; meta?: DataGridColumnMeta };
-}) {
+export function getHasCustomCell<TData extends RowData>(
+  column: Column<DataGridFeatures, TData>,
+) {
   const { cell, meta } = column.columnDef;
+
   return (
     !meta?.cell?.variant && cell !== undefined && cell !== renderDefaultCell
   );
 }
 
-export function getIsDataColumn(
-  column: { columnDef: { enableCellSelection?: boolean } } | undefined,
+export function getIsDataColumn<TData extends RowData>(
+  column: Column<DataGridFeatures, TData> | undefined,
 ) {
   return column?.columnDef.enableCellSelection !== false;
 }
@@ -491,6 +499,7 @@ export function getColumnValueReader<TData extends RowData>(
     | undefined,
 ): ColumnValueReader<TData> {
   const accessorFn = column?.accessorFn;
+
   return (row) => accessorFn?.(row.original, row.index);
 }
 
@@ -499,6 +508,7 @@ export function getColumnLabel<TData extends RowData, TValue = unknown>(
 ): string {
   const { header, meta } = column.columnDef;
   if (meta?.label) return meta.label;
+
   return typeof header === "string" ? header : column.id;
 }
 
@@ -538,12 +548,13 @@ export function swapItems<T>(items: Array<T>, first: T, second: T) {
   });
 }
 
-export function getColumnBorderVisibility<TData extends RowData>(params: {
+export function getColumnBorderVisibility<TData extends RowData>({
+  column,
+  nextColumn,
+}: {
   column: Column<DataGridFeatures, TData>;
   nextColumn?: Column<DataGridFeatures, TData>;
 }) {
-  const { column, nextColumn } = params;
-
   const isPinned = column.getIsPinned();
   const isFirstRightPinnedColumn =
     isPinned === "end" && column.getIsFirstColumn("end");
@@ -637,33 +648,27 @@ export function getColumnPinningStyle<TData extends RowData>(
   };
 }
 
-// Tinted data cells paint `--cell-tint` inside their border over an opaque background,
-// so translucent borders stay neutral and pinned cells hide what scrolls beneath them.
-// Only tinted cells get the gradient layer, since painting one in every cell is slow.
-// Selection wins over search matches in light mode, and search matches in dark mode
 export const CELL_TINTS = {
-  tinted:
-    "[background:linear-gradient(var(--cell-tint,transparent),var(--cell-tint,transparent))_padding-box,var(--background)]",
+  tinted: "bg-(--cell-tint,var(--background))",
   selected:
-    "[--cell-tint:color-mix(in_oklab,var(--color-primary)_10%,transparent)]",
+    "[--cell-tint:color-mix(in_srgb,var(--color-primary)_10%,var(--background))]",
   activeSearchMatch: "[--cell-tint:var(--color-orange-200)]",
   searchMatch: "[--cell-tint:var(--color-yellow-100)]",
   darkActiveSearchMatch:
-    "dark:[--cell-tint:color-mix(in_oklab,var(--color-orange-900)_50%,transparent)]",
+    "dark:[--cell-tint:color-mix(in_srgb,var(--color-orange-900)_50%,var(--background))]",
   darkSearchMatch:
-    "dark:[--cell-tint:color-mix(in_oklab,var(--color-yellow-900)_30%,transparent)]",
+    "dark:[--cell-tint:color-mix(in_srgb,var(--color-yellow-900)_30%,var(--background))]",
 } as const;
 
-// A data cell is a single element, so it carries its column's width and pinning itself.
-// The width is in pixels rather than the column's size variable, since resolving a
-// variable on every restyle of a cell is slow, and cells rerender on resize anyway
-export function getCellLayoutStyle(params: {
+export function getCellLayoutStyle({
+  width,
+  pinned,
+  pinnedOffset,
+}: {
   width: number;
   pinned: ColumnPinningPosition;
   pinnedOffset: number;
 }): React.CSSProperties {
-  const { width, pinned, pinnedOffset } = params;
-
   return {
     insetInlineStart: pinned === "start" ? `${pinnedOffset}px` : undefined,
     insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
@@ -674,20 +679,19 @@ export function getCellLayoutStyle(params: {
   };
 }
 
-export function getColumnFitSize(params: {
+export function getColumnFitSize({
+  gridElement,
+  columnId,
+  minSize,
+  maxSize,
+  wrapperContentSize = 0,
+}: {
   gridElement: HTMLElement;
   columnId: string;
   minSize: number;
   maxSize: number;
   wrapperContentSize?: number;
 }): number | null {
-  const {
-    gridElement,
-    columnId,
-    minSize,
-    maxSize,
-    wrapperContentSize = 0,
-  } = params;
   const cellElements = gridElement.querySelectorAll<HTMLElement>(
     `:is([data-slot="data-grid-header-cell"], [data-slot="data-grid-cell"])[data-column-id="${CSS.escape(columnId)}"]`,
   );
@@ -743,7 +747,6 @@ export function getColumnFitSize(params: {
   return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
 }
 
-// Where the row shows in the grid, after sorting and filtering, or -1
 export function getRowDisplayIndex<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
   rowId: string,
@@ -751,7 +754,14 @@ export function getRowDisplayIndex<TData extends RowData>(
   return table.getRowModel().rowsById[rowId]?.getDisplayIndex() ?? -1;
 }
 
-export function getTabTargetCell(params: {
+export function getTabTargetCell({
+  rowIndex,
+  columnId,
+  columnIds,
+  rowCount,
+  isBackward,
+  getIsColumnTabbable = () => true,
+}: {
   rowIndex: number;
   columnId: string;
   columnIds: string[];
@@ -759,14 +769,6 @@ export function getTabTargetCell(params: {
   isBackward: boolean;
   getIsColumnTabbable?: (columnId: string) => boolean;
 }): { rowIndex: number; columnId: string } | null {
-  const {
-    rowIndex,
-    columnId,
-    columnIds,
-    rowCount,
-    isBackward,
-    getIsColumnTabbable = () => true,
-  } = params;
   const colIndex = columnIds.indexOf(columnId);
   if (colIndex === -1 || !columnIds.some(getIsColumnTabbable)) return null;
 
