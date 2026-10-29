@@ -353,6 +353,10 @@ function DataGridViewport<TData extends RowData>({
   }, [rowVirtualizerRef, rowVirtualizer]);
 
   useIsoLayoutEffect(() => {
+    rowVirtualizer.measure();
+  }, [rowVirtualizer, table.state.rowHeight]);
+
+  useIsoLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
       columnVirtualizer.measure();
@@ -361,7 +365,6 @@ function DataGridViewport<TData extends RowData>({
   }, [
     rowVirtualizer,
     columnVirtualizer,
-    table.state.rowHeight,
     table.state.columnFilters,
     table.state.columnOrder,
     table.state.columnPinning,
