@@ -446,9 +446,7 @@ export function DataGridDemo() {
   );
   const [dataMode, setDataMode] = useQueryState(
     "data",
-    parseAsStringEnum<DataMode>(dataModes.map((mode) => mode.value))
-      .withDefault("demo")
-      .withOptions({ clearOnDefault: true }),
+    parseAsStringEnum<DataMode>(dataModes.map((mode) => mode.value)),
   );
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
   const datasetKey = `${dataMode}-${rowCount}`;
@@ -460,7 +458,7 @@ export function DataGridDemo() {
       timeout = window.setTimeout(() => {
         setDataset({
           key: datasetKey,
-          rows: getRows(dataMode, rowCount),
+          rows: getRows(dataMode ?? "demo", rowCount),
         });
       });
     });
@@ -501,12 +499,13 @@ export function DataGridDemo() {
     </Select>
   );
 
-  const dataModeToggle = isDev ? (
-    <DataModeToggle
-      value={dataMode}
-      onValueChange={(value) => void setDataMode(value)}
-    />
-  ) : null;
+  const dataModeToggle =
+    isDev && dataMode ? (
+      <DataModeToggle
+        value={dataMode}
+        onValueChange={(value) => void setDataMode(value)}
+      />
+    ) : null;
 
   if (dataset?.key !== datasetKey) {
     return (
