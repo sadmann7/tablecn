@@ -30,6 +30,7 @@
   "oxc.enable": true,
   "tailwindCSS.validate": true,
   "tailwindCSS.lint.cssConflict": "ignore",
+  "tailwindCSS.lint.suggestCanonicalClasses": "ignore",
   "tailwindCSS.experimental.configFile": {
     "src/styles/globals.css": ["src/**"]
   },
