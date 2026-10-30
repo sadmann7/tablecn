@@ -1476,7 +1476,6 @@ export function FileCell<TData extends RowData>(
         }));
       }
 
-      // Each uploaded file replaces one temp file, so files sharing a name each get their own
       const unmatchedFiles = [...uploadedFiles];
       const finalFiles = filesWithTemp
         .map((f) => {
