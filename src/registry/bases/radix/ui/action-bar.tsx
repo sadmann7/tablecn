@@ -30,6 +30,10 @@ type RootElement = React.ComponentRef<typeof ActionBar>;
 type ItemElement = React.ComponentRef<typeof ActionBarItem>;
 type CloseElement = React.ComponentRef<typeof ActionBarClose>;
 
+function subscribe() {
+  return () => {};
+}
+
 function focusFirst(
   candidates: React.RefObject<HTMLElement | null>[],
   preventScroll = false,
@@ -141,7 +145,11 @@ function ActionBar(props: ActionBarProps) {
     ...rootProps
   } = props;
 
-  const [mounted, setMounted] = React.useState(false);
+  const mounted = React.useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
 
   const rootRef = React.useRef<RootElement>(null);
   const composedRef = useComposedRefs(ref, rootRef);
@@ -152,10 +160,6 @@ function ActionBar(props: ActionBarProps) {
   });
 
   const dir = useDirection(dirProp);
-
-  React.useLayoutEffect(() => {
-    setMounted(true);
-  }, []);
 
   React.useEffect(() => {
     if (!open) return;

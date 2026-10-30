@@ -75,6 +75,11 @@ function DataGridSearchImpl<TData extends RowData>({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
   const [hasQuery, setHasQuery] = React.useState(searchQuery.length > 0);
+  const [prevSearchOpen, setPrevSearchOpen] = React.useState(searchOpen);
+  if (searchOpen !== prevSearchOpen) {
+    setPrevSearchOpen(searchOpen);
+    if (!searchOpen) setHasQuery(false);
+  }
 
   React.useEffect(() => {
     if (searchOpen) {
@@ -85,7 +90,6 @@ function DataGridSearchImpl<TData extends RowData>({
     }
 
     isComposingRef.current = false;
-    setHasQuery(false);
   }, [searchOpen]);
 
   React.useEffect(() => {

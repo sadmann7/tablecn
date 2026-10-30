@@ -10,45 +10,35 @@ interface UseWindowSizeProps {
   defaultHeight?: number;
 }
 
-export function useWindowSize(props: UseWindowSizeProps = {}): WindowSize {
-  const { defaultWidth = 0, defaultHeight = 0 } = props;
+function subscribe(onStoreChange: () => void) {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-  const [windowSize, setWindowSize] = React.useState<WindowSize>({
-    width: defaultWidth,
-    height: defaultHeight,
-  });
+  function onResize() {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(onStoreChange, 150);
+  }
 
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
+  window.addEventListener("resize", onResize);
+  return () => {
+    window.removeEventListener("resize", onResize);
+    clearTimeout(timeoutId);
+  };
+}
 
-    setWindowSize({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
+export function useWindowSize({
+  defaultWidth = 0,
+  defaultHeight = 0,
+}: UseWindowSizeProps = {}): WindowSize {
+  const width = React.useSyncExternalStore(
+    subscribe,
+    () => window.innerWidth,
+    () => defaultWidth,
+  );
+  const height = React.useSyncExternalStore(
+    subscribe,
+    () => window.innerHeight,
+    () => defaultHeight,
+  );
 
-    let timeoutId: NodeJS.Timeout | null = null;
-
-    function onResize() {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-
-      timeoutId = setTimeout(() => {
-        setWindowSize({
-          width: window.innerWidth,
-          height: window.innerHeight,
-        });
-      }, 150);
-    }
-
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, []);
-
-  return windowSize;
+  return React.useMemo(() => ({ width, height }), [width, height]);
 }

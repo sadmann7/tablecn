@@ -33,6 +33,10 @@ const fpsVariants = cva(
   },
 );
 
+function subscribe() {
+  return () => {};
+}
+
 interface FpsProps
   extends
     React.ComponentProps<"div">,
@@ -59,12 +63,14 @@ function Fps(props: FpsProps) {
     ...fpsProps
   } = props;
 
-  const [mounted, setMounted] = React.useState(false);
+  const mounted = React.useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
   const [fps, setFps] = React.useState(0);
   const frameCountRef = React.useRef(0);
   const lastTimeRef = React.useRef(performance.now());
-
-  React.useLayoutEffect(() => setMounted(true), []);
 
   const status = React.useMemo(() => {
     if (fps < errorThreshold) return "error";
