@@ -63,10 +63,6 @@ function Fps(props: FpsProps) {
   const [fps, setFps] = React.useState(0);
   const frameCountRef = React.useRef(0);
   const lastTimeRef = React.useRef(performance.now());
-  const animationFrameRef = React.useRef<number | null>(null);
-  const updateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
 
   React.useLayoutEffect(() => setMounted(true), []);
 
@@ -79,6 +75,7 @@ function Fps(props: FpsProps) {
   React.useEffect(() => {
     if (!enabled || typeof window === "undefined") return;
 
+    let frame = 0;
     function measureFps() {
       const now = performance.now();
       const delta = now - lastTimeRef.current;
@@ -91,19 +88,12 @@ function Fps(props: FpsProps) {
         lastTimeRef.current = now;
       }
 
-      animationFrameRef.current = requestAnimationFrame(measureFps);
+      frame = requestAnimationFrame(measureFps);
     }
 
-    animationFrameRef.current = requestAnimationFrame(measureFps);
+    frame = requestAnimationFrame(measureFps);
 
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (updateTimeoutRef.current !== null) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-    };
+    return () => cancelAnimationFrame(frame);
   }, [enabled, updateInterval]);
 
   if (!enabled) return null;

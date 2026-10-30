@@ -124,12 +124,12 @@ function DataTableSliderFilterContent<TData extends RowData>({
     return { min: minValue, max: maxValue, step };
   }, [column, defaultRange]);
 
-  // An open-ended bound, like `estimatedHours=,8`, shows as the column limit.
   const bounds = parseRangeBounds(columnFilterValueProp);
   const columnFilterValue: RangeValue | undefined = bounds
     ? [bounds[0] ?? min, bounds[1] ?? max]
     : undefined;
   const range: RangeValue = columnFilterValue ?? [min, max];
+  const [rangeStart, rangeEnd] = range;
 
   const formatValue = React.useCallback((value: number) => {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -138,21 +138,25 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const onFromInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
-      if (!Number.isNaN(numValue) && numValue >= min && numValue <= range[1]) {
-        column.setFilterValue([numValue, range[1]]);
+      if (!Number.isNaN(numValue) && numValue >= min && numValue <= rangeEnd) {
+        column.setFilterValue([numValue, rangeEnd]);
       }
     },
-    [column, min, range],
+    [column, min, rangeEnd],
   );
 
   const onToInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
-      if (!Number.isNaN(numValue) && numValue <= max && numValue >= range[0]) {
-        column.setFilterValue([range[0], numValue]);
+      if (
+        !Number.isNaN(numValue) &&
+        numValue <= max &&
+        numValue >= rangeStart
+      ) {
+        column.setFilterValue([rangeStart, numValue]);
       }
     },
-    [column, max, range],
+    [column, max, rangeStart],
   );
 
   const onSliderValueChange = React.useCallback(

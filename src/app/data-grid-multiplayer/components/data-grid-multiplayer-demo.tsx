@@ -403,7 +403,7 @@ export function DataGridMultiplayerDemo({
         );
       }
     },
-    [isUploadConfigured],
+    [collection, isUploadConfigured],
   );
 
   const cellPresence = React.useMemo(() => {

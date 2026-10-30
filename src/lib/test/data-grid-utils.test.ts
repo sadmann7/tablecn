@@ -608,7 +608,7 @@ describe("insertTextAtSelection", () => {
 
     let inputData = "";
     textarea.addEventListener("input", (event) => {
-      inputData = (event as InputEvent).data ?? "";
+      inputData = event.data ?? "";
     });
 
     insertTextAtSelection(textarea, "!");
@@ -640,7 +640,7 @@ describe("replaceEditableText", () => {
 
     let inputData = "";
     element.addEventListener("input", (event) => {
-      inputData = (event as InputEvent).data ?? "";
+      inputData = event.data ?? "";
     });
 
     replaceEditableText(element, "a");

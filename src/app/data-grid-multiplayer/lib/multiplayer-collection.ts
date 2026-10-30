@@ -131,7 +131,7 @@ export function createSkatersCollection(connection: RoomConnection) {
   }
 
   async function sendMutation(change: RowChange) {
-    const message = { ...change, mutationId: generateId() } as MutationMessage;
+    const message = { ...change, mutationId: generateId() };
     try {
       await new Promise<void>((resolve, reject) => {
         pendingMutations.set(message.mutationId, {

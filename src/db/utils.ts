@@ -23,7 +23,7 @@ export function takeFirstOrThrow<TItem>(items: TItem[], errorMessage?: string) {
   return first;
 }
 
-export function isEmpty<TColumn extends AnyColumn>(column: TColumn) {
+export function isEmpty(column: AnyColumn) {
   if (column.dataType === "string") {
     return sql<boolean>`
       case

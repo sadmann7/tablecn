@@ -343,6 +343,7 @@ export function stringifyFilterValue(value: unknown): string {
   if (value == null) return "";
   if (value instanceof Date) return value.toISOString();
   if (typeof value === "object") return JSON.stringify(value);
+  // oxlint-disable-next-line typescript/no-unnecessary-type-assertion -- narrows `unknown` for no-base-to-string
   return String(value as string | number | boolean | bigint);
 }
 

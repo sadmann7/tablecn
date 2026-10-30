@@ -536,6 +536,7 @@ describe("useDataGrid", () => {
         {
           wrapper: createWrapper(),
           initialProps: {
+            // oxlint-disable-next-line typescript/no-unnecessary-type-assertion -- widens the prop so the rerender below can pass `null`
             editingCell: { rowId: "0", columnId: "name" } as {
               rowId: string;
               columnId: string;
@@ -738,7 +739,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       act(() => {
@@ -761,7 +762,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onClick", "1", "trick", {
           shiftKey: true,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       expect(getFocusedCell(result.current.table)).toEqual({
@@ -786,7 +787,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onClick", "2", "score", {
           metaKey: true,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       expect(getFocusedCell(result.current.table)).toEqual({
@@ -802,7 +803,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onClick", "0", "name", {
           ctrlKey: true,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       expect(getSelectedCellKeys(result.current.table)).toEqual([
@@ -820,7 +821,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "0", "trick", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
       act(() => {
         fireCellEvent(result, "onMouseOver", "2", "score");
@@ -856,7 +857,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onClick", "1", "trick", {
           shiftKey: true,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       rerender({
@@ -3189,7 +3190,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
       act(() => {
         fireCellEvent(result, "onMouseOver", "0", "trick");
@@ -3229,7 +3230,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
       act(() => {
         fireCellEvent(result, "onMouseOver", "1", "name");
@@ -3279,7 +3280,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       await act(async () => {
@@ -3363,7 +3364,7 @@ describe("useDataGrid", () => {
           ctrlKey: false,
           metaKey: false,
           shiftKey: false,
-        } as unknown as React.MouseEvent);
+        });
       });
 
       act(() => {
@@ -3413,7 +3414,7 @@ describe("useDataGrid", () => {
           ctrlKey: false,
           metaKey: false,
           shiftKey: false,
-        } as unknown as React.MouseEvent);
+        });
       });
 
       act(() => {
@@ -3585,7 +3586,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       act(() => {
@@ -4809,7 +4810,7 @@ describe("useDataGrid", () => {
           ctrlKey: false,
           metaKey: false,
           shiftKey: false,
-        } as unknown as React.MouseEvent);
+        });
         await Promise.resolve();
       });
 
@@ -4863,7 +4864,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onClick", "1", "trick", {
           shiftKey: true,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       expect(result.current.table.getCellSelectionBounds()).toEqual([
@@ -5053,7 +5054,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       act(() => {
@@ -5381,7 +5382,7 @@ describe("useDataGrid", () => {
         fireCellEvent(result, "onMouseDown", "2", "name", {
           button: 0,
           preventDefault: vi.fn(),
-        } as unknown as React.MouseEvent);
+        });
       });
 
       act(() => {

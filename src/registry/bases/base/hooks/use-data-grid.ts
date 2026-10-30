@@ -94,6 +94,7 @@ function useStableProps<TProps extends object>(
       });
     }
     return stableProps;
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- callbacks read `propsRef`, so only non-function prop changes rebuild
   }, [propsKey]);
 }
 
@@ -669,6 +670,7 @@ function useDataGrid<TData extends RowData>({
       colSizes[`--col-${header.column.id}-size`] = header.column.getSize();
     }
     return colSizes;
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- the table is stable, so its columns and sizing state invalidate the sizes
   }, [tableColumns, table.state.columnResizing, table.state.columnSizing]);
 
   const isFirefox = React.useSyncExternalStore(
@@ -1208,7 +1210,6 @@ function useDataGrid<TData extends RowData>({
       getIsDataColumnId,
       onRowsDelete,
       addRow,
-      focusCell,
       focusColumnHeader,
       onColumnHeaderKeyDown,
       skipDataGridTabStop,

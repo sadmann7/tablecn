@@ -379,6 +379,7 @@ function DataGridViewport<TData extends RowData>({
           .filter((column) => !column.getCanEdit())
           .map((column) => column.id),
       ),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- `getCanEdit` reads these table options, so they invalidate the set
     [leafColumns, readOnly, enableCellEditing],
   );
 
