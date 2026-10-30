@@ -83,13 +83,13 @@ export function DataGridFilterMenu<TData extends RowData>(
   return (
     <Subscribe source={props.table.atoms.columnFilters}>
       {(columnFilters) => (
-        <DataGridFilterMenuImpl {...props} columnFilters={columnFilters} />
+        <DataGridFilterMenuContent {...props} columnFilters={columnFilters} />
       )}
     </Subscribe>
   );
 }
 
-function DataGridFilterMenuImpl<TData extends RowData>({
+function DataGridFilterMenuContent<TData extends RowData>({
   table,
   columnFilters,
   disabled,

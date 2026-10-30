@@ -67,12 +67,12 @@ export function DataGridSortMenu<TData extends RowData>(
 ) {
   return (
     <Subscribe source={props.table.atoms.sorting}>
-      {(sorting) => <DataGridSortMenuImpl {...props} sorting={sorting} />}
+      {(sorting) => <DataGridSortMenuContent {...props} sorting={sorting} />}
     </Subscribe>
   );
 }
 
-function DataGridSortMenuImpl<TData extends RowData>({
+function DataGridSortMenuContent<TData extends RowData>({
   table,
   sorting,
   disabled,

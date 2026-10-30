@@ -56,7 +56,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>(
       selector={(columnResizing) => !!columnResizing.isResizingColumn}
     >
       {(isAnyColumnResizing) => (
-        <DataGridColumnHeaderImpl
+        <DataGridColumnHeaderContent
           {...props}
           isAnyColumnResizing={isAnyColumnResizing}
         />
@@ -65,7 +65,7 @@ export function DataGridColumnHeader<TData extends RowData, TValue>(
   );
 }
 
-function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
+function DataGridColumnHeaderContent<TData extends RowData, TValue>({
   table,
   header,
   isAnyColumnResizing,

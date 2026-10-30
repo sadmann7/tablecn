@@ -40,12 +40,14 @@ export function DataGridSearch<TData extends RowData>({
         matchCount: table.getSearchMatches().length,
       })}
     >
-      {(searchState) => <DataGridSearchView table={table} {...searchState} />}
+      {(searchState) => (
+        <DataGridSearchContent table={table} {...searchState} />
+      )}
     </table.Subscribe>
   );
 }
 
-interface DataGridSearchViewProps<
+interface DataGridSearchContentProps<
   TData extends RowData,
 > extends DataGridSearchProps<TData> {
   searchOpen: boolean;
@@ -54,24 +56,27 @@ interface DataGridSearchViewProps<
   matchCount: number;
 }
 
-const DataGridSearchView = React.memo(DataGridSearchImpl, (prev, next) => {
-  if (prev.table !== next.table) return false;
-  if (prev.searchOpen !== next.searchOpen) return false;
+const DataGridSearchContent = React.memo(
+  DataGridSearchContentImpl,
+  (prev, next) => {
+    if (prev.table !== next.table) return false;
+    if (prev.searchOpen !== next.searchOpen) return false;
 
-  if (!next.searchOpen) return true;
+    if (!next.searchOpen) return true;
 
-  return (
-    prev.matchIndex === next.matchIndex && prev.matchCount === next.matchCount
-  );
-}) as typeof DataGridSearchImpl;
+    return (
+      prev.matchIndex === next.matchIndex && prev.matchCount === next.matchCount
+    );
+  },
+) as typeof DataGridSearchContentImpl;
 
-function DataGridSearchImpl<TData extends RowData>({
+function DataGridSearchContentImpl<TData extends RowData>({
   table,
   searchOpen,
   searchQuery,
   matchIndex,
   matchCount,
-}: DataGridSearchViewProps<TData>) {
+}: DataGridSearchContentProps<TData>) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const isComposingRef = React.useRef(false);
   const [hasQuery, setHasQuery] = React.useState(searchQuery.length > 0);
