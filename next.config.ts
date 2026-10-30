@@ -11,7 +11,6 @@ import "./src/env";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  reactCompiler: true,
   async redirects() {
     return [
       {
