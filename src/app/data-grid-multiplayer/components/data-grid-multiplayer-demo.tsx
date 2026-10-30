@@ -313,8 +313,8 @@ export function DataGridMultiplayerDemo({
           eventDetails.reason === "insert-below"
             ? eventDetails.afterRowId
             : undefined;
-        const order = getInsertOrder(data, afterRowId);
-        const newSkater: SkaterSchema = {
+        const now = new Date();
+        return {
           id: generateId(),
           name: null,
           email: null,
@@ -326,12 +326,10 @@ export function DataGridMultiplayerDemo({
           isPro: false,
           tricks: null,
           media: null,
-          order,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          order: getInsertOrder(data, afterRowId),
+          createdAt: now,
+          updatedAt: now,
         };
-
-        return newSkater;
       },
       [data],
     );
@@ -514,10 +512,7 @@ export function DataGridMultiplayerDemo({
   );
 
   const onUserClick = React.useCallback(
-    (
-      _userId: string,
-      user: { activeCell: { rowId: string | null; columnId: string | null } },
-    ) => {
+    (_userId: string, user: UserPresence) => {
       const { rowId, columnId } = user.activeCell;
       if (!rowId || !columnId) return;
       table.scrollToCell(rowId, columnId);
@@ -526,13 +521,7 @@ export function DataGridMultiplayerDemo({
   );
 
   const getCellLabel = React.useCallback(
-    ({
-      rowId,
-      columnId,
-    }: {
-      rowId: string | null;
-      columnId: string | null;
-    }) => {
+    ({ rowId, columnId }: UserPresence["activeCell"]) => {
       if (!rowId || !columnId) return null;
       const row = table.getRowModel().rowsById[rowId];
       const column = table.getColumn(columnId);

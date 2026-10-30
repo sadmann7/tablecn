@@ -12,7 +12,6 @@ const AUDIO_AHEAD_BUFFERS = 3;
 
 interface WorkerModule {
   HEAPU8?: Uint8Array;
-  ENV?: Record<string, string>;
   FS?: {
     createPreloadedFile: (
       parent: string,

@@ -72,14 +72,15 @@ function Fps(props: FpsProps) {
   const frameCountRef = React.useRef(0);
   const lastTimeRef = React.useRef(performance.now());
 
-  const status = React.useMemo(() => {
-    if (fps < errorThreshold) return "error";
-    if (fps < warningThreshold) return "warning";
-    return "good";
-  }, [fps, errorThreshold, warningThreshold]);
+  const status =
+    fps < errorThreshold
+      ? "error"
+      : fps < warningThreshold
+        ? "warning"
+        : "good";
 
   React.useEffect(() => {
-    if (!enabled || typeof window === "undefined") return;
+    if (!enabled) return;
 
     let frame = 0;
     function measureFps() {
@@ -107,7 +108,7 @@ function Fps(props: FpsProps) {
   const portalContainer =
     strategy === "absolute"
       ? null
-      : (portalContainerProp ?? (mounted ? globalThis.document?.body : null));
+      : (portalContainerProp ?? (mounted ? document.body : null));
 
   const Comp = (
     <div

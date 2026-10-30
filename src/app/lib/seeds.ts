@@ -4,10 +4,8 @@ import { tasks } from "@/db/schema";
 import { generateRandomTasks } from "./utils";
 
 export async function seedTasks(input: { count: number }) {
-  const count = input.count ?? 100;
-
   try {
-    const allTasks = generateRandomTasks(count);
+    const allTasks = generateRandomTasks(input.count);
 
     await db.delete(tasks);
 

@@ -33,12 +33,7 @@ import { STYLES } from "../registry/styles";
 import { STYLES_ROOT, wipeRegistryOutput } from "./clean-registry";
 
 const STYLE_COMBINATIONS = BASES.flatMap((base) =>
-  STYLES.map((style) => ({
-    base,
-    style,
-    name: `${base.name}-${style.name}`,
-    title: `${base.title} ${style.title}`,
-  })),
+  STYLES.map((style) => ({ name: `${base.name}-${style.name}` })),
 );
 
 const ROOT = process.cwd();
@@ -121,11 +116,6 @@ function buildBase(baseName: string, outDir: string) {
     };
   });
 
-  const overrides = items.flatMap(
-    (item) =>
-      item.files?.filter((file) => file.path.startsWith(BASE_TREE)) ?? [],
-  );
-
   const registryPath = path.join(outDir, "registry.input.json");
   writeFileSync(registryPath, JSON.stringify({ ...registry, items }, null, 2));
 
@@ -134,8 +124,6 @@ function buildBase(baseName: string, outDir: string) {
     ["build", registryPath, "--output", path.join(outDir, "r")],
     { cwd: ROOT, stdio: "inherit" },
   );
-
-  return overrides.length;
 }
 
 function main() {
@@ -174,11 +162,7 @@ function main() {
   console.log("📦 Writing styles index...");
   writeFileSync(
     path.join(STYLES_ROOT, "index.json"),
-    `${JSON.stringify(
-      STYLE_COMBINATIONS.map(({ name }) => ({ name })),
-      null,
-      2,
-    )}\n`,
+    `${JSON.stringify(STYLE_COMBINATIONS, null, 2)}\n`,
   );
 
   const elapsed = ((performance.now() - totalStart) / 1000).toFixed(2);

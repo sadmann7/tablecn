@@ -5,9 +5,12 @@ import { useSelectedLayoutSegment } from "next/navigation";
 import { ActiveLink } from "@/components/active-link";
 import { DEFAULT_BASE } from "@/lib/constants";
 
-export function DocsLink({
-  ...props
-}: Omit<React.ComponentProps<typeof ActiveLink>, "href" | "target" | "rel">) {
+export function DocsLink(
+  props: Omit<
+    React.ComponentProps<typeof ActiveLink>,
+    "href" | "target" | "rel"
+  >,
+) {
   const segment = useSelectedLayoutSegment();
   const component = segment?.startsWith("data-grid")
     ? "data-grid"

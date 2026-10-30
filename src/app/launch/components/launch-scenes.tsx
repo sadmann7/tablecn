@@ -1,5 +1,7 @@
 import type * as React from "react";
 
+import { cn } from "cn";
+
 const TAGLINE =
   "A shadcn/ui data table with sorting, filtering, and pagination.";
 const WORDMARK = "tablecn";
@@ -25,21 +27,19 @@ interface LaunchLogoProps {
 function LaunchLogo({ size = "lg", delay = 0 }: LaunchLogoProps) {
   return (
     <div
-      className={
-        size === "lg"
-          ? "flex items-center gap-8 text-white"
-          : "flex items-center gap-6 text-white"
-      }
+      className={cn(
+        "flex items-center text-white",
+        size === "lg" ? "gap-8" : "gap-6",
+      )}
       role="img"
       aria-label={WORDMARK}
     >
       <div
         aria-hidden="true"
-        className={
-          size === "lg"
-            ? "grid size-26 grid-cols-2 gap-2.5"
-            : "grid size-20 grid-cols-2 gap-2"
-        }
+        className={cn(
+          "grid grid-cols-2",
+          size === "lg" ? "size-26 gap-2.5" : "size-20 gap-2",
+        )}
       >
         {[0, 1, 2, 3].map((index) => (
           <span
@@ -51,11 +51,10 @@ function LaunchLogo({ size = "lg", delay = 0 }: LaunchLogoProps) {
       </div>
       <span
         aria-hidden="true"
-        className={
-          size === "lg"
-            ? "flex text-[9rem] leading-none font-semibold tracking-tighter"
-            : "flex text-[7rem] leading-none font-semibold tracking-tighter"
-        }
+        className={cn(
+          "flex leading-none font-semibold tracking-tighter",
+          size === "lg" ? "text-[9rem]" : "text-[7rem]",
+        )}
       >
         {WORDMARK.split("").map((letter, index) => (
           <span

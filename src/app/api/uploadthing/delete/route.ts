@@ -21,7 +21,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Delete files from UploadThing
     const result = await utapi.deleteFiles(fileKeys);
 
     return NextResponse.json({ success: true, result });

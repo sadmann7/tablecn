@@ -190,7 +190,7 @@ function ActionBar(props: ActionBarProps) {
   );
 
   const portalContainer =
-    portalContainerProp ?? (mounted ? globalThis.document?.body : null);
+    portalContainerProp ?? (mounted ? document.body : null);
 
   if (!portalContainer || !open) return null;
 
@@ -347,10 +347,9 @@ function ActionBarGroup(props: DivProps) {
           );
           const currentItem = items.find((item) => item.id === tabStopId);
 
-          const candidateItems = [currentItem, ...items].filter(
-            Boolean,
-          ) as ItemData[];
-          const candidateRefs = candidateItems.map((item) => item.ref);
+          const candidateRefs = [currentItem, ...items]
+            .filter((item) => item !== undefined)
+            .map((item) => item.ref);
           focusFirst(candidateRefs, false);
         }
       }
@@ -519,42 +518,38 @@ function ActionBarItem(props: ActionBarItemProps) {
       if (event.target !== event.currentTarget) return;
 
       const key = getDirectionAwareKey(event.key, dir);
+      const [prevKey, nextKey] =
+        orientation === "horizontal"
+          ? ["ArrowLeft", "ArrowRight"]
+          : ["ArrowUp", "ArrowDown"];
       let focusIntent: "first" | "last" | "prev" | "next" | undefined;
+      if (key === prevKey) focusIntent = "prev";
+      else if (key === nextKey) focusIntent = "next";
+      else if (key === "Home") focusIntent = "first";
+      else if (key === "End") focusIntent = "last";
 
-      if (orientation === "horizontal") {
-        if (key === "ArrowLeft") focusIntent = "prev";
-        else if (key === "ArrowRight") focusIntent = "next";
-        else if (key === "Home") focusIntent = "first";
-        else if (key === "End") focusIntent = "last";
-      } else {
-        if (key === "ArrowUp") focusIntent = "prev";
-        else if (key === "ArrowDown") focusIntent = "next";
-        else if (key === "Home") focusIntent = "first";
-        else if (key === "End") focusIntent = "last";
+      if (!focusIntent) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) {
+        return;
+      }
+      event.preventDefault();
+
+      const items = focusContext.getItems().filter((item) => !item.disabled);
+      let candidateRefs = items.map((item) => item.ref);
+
+      if (focusIntent === "last") {
+        candidateRefs.reverse();
+      } else if (focusIntent === "prev" || focusIntent === "next") {
+        if (focusIntent === "prev") candidateRefs.reverse();
+        const currentIndex = candidateRefs.findIndex(
+          (ref) => ref.current === event.currentTarget,
+        );
+        candidateRefs = loop
+          ? wrapArray(candidateRefs, currentIndex + 1)
+          : candidateRefs.slice(currentIndex + 1);
       }
 
-      if (focusIntent !== undefined) {
-        if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey)
-          return;
-        event.preventDefault();
-
-        const items = focusContext.getItems().filter((item) => !item.disabled);
-        let candidateRefs = items.map((item) => item.ref);
-
-        if (focusIntent === "last") {
-          candidateRefs.reverse();
-        } else if (focusIntent === "prev" || focusIntent === "next") {
-          if (focusIntent === "prev") candidateRefs.reverse();
-          const currentIndex = candidateRefs.findIndex(
-            (ref) => ref.current === event.currentTarget,
-          );
-          candidateRefs = loop
-            ? wrapArray(candidateRefs, currentIndex + 1)
-            : candidateRefs.slice(currentIndex + 1);
-        }
-
-        queueMicrotask(() => focusFirst(candidateRefs));
-      }
+      queueMicrotask(() => focusFirst(candidateRefs));
     },
     [onKeyDownProp, focusContext, dir, orientation, loop],
   );

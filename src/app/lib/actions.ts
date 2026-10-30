@@ -12,22 +12,6 @@ import type { CreateTaskSchema, UpdateTaskSchema } from "./validations";
 
 import { generateRandomTasks, generateTaskCode } from "./utils";
 
-export async function seedTasks(input: { count: number }) {
-  const count = input.count ?? 100;
-
-  try {
-    const allTasks = generateRandomTasks(count);
-
-    await db.delete(tasks);
-
-    console.log("📝 Inserting tasks", allTasks.length);
-
-    await db.insert(tasks).values(allTasks).onConflictDoNothing();
-  } catch (err) {
-    console.error(err);
-  }
-}
-
 export async function createTask(input: CreateTaskSchema) {
   try {
     await db.transaction(async (tx) => {

@@ -89,10 +89,10 @@ const marketCapFormat = new Intl.NumberFormat("en-US", {
 
 type Trend = "up" | "down";
 
-// The direction of the last move, with a key that changes on every move so the
-// flash restarts: a remounted element fades out of its `starting:` style again
 const FLASH_COOLDOWN_MS = 250;
 
+// The direction of the last move, with a key that changes on every move so the
+// flash restarts: a remounted element fades out of its `starting:` style again
 function useTrend(value: number) {
   const [state, setState] = React.useState<{
     value: number;
@@ -568,7 +568,10 @@ function DataGridRapidContent({
           {rowCountSelect}
           <Select
             value={flow}
-            onValueChange={(value) => setFlow(value as Flow)}
+            onValueChange={(value) => {
+              const option = FLOWS.find((item) => item.value === value);
+              if (option) setFlow(option.value);
+            }}
           >
             <SelectTrigger aria-label="Update with">
               <SelectValue>

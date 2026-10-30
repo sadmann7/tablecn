@@ -341,7 +341,7 @@ function DataGridDemoContent({
     React.useCallback(() => ({ id: generateId() }), []);
 
   const uploadFiles: NonNullable<UseDataGridProps<Person>["uploadFiles"]> =
-    React.useCallback(async ({ files, rowId: _rowId, columnId: _columnId }) => {
+    React.useCallback(async ({ files }) => {
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       return files.map((file) => ({

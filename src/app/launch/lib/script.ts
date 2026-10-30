@@ -6,6 +6,11 @@ import type { DataMode, FilterMode } from "@/lib/flag";
 import { coerceFilterValue } from "@/lib/data-table-utils";
 
 import type { LaunchDirector } from "../components/launch-director";
+import type {
+  LaunchDemoAction,
+  LaunchServerAction,
+  LaunchTable,
+} from "./state";
 
 import {
   closeAllMenus,
@@ -26,11 +31,6 @@ import {
   replaceUrl,
   typeCommand,
 } from "./dom";
-import {
-  type LaunchDemoAction,
-  type LaunchServerAction,
-  type LaunchTable,
-} from "./state";
 
 export type LaunchSceneId =
   | "intro"

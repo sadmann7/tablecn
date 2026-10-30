@@ -30,7 +30,7 @@ const TRACE_CATEGORIES = [
   "v8.execute",
   "disabled-by-default-v8.cpu_profiler",
   "latencyInfo",
-].join(",");
+];
 
 interface Scenario {
   name: string;
@@ -214,7 +214,7 @@ async function recordTrace(
   const onData = ({ value }: { value: unknown[] }) => events.push(...value);
   cdp.on("Tracing.dataCollected", onData);
   await cdp.send("Tracing.start", {
-    traceConfig: { includedCategories: TRACE_CATEGORIES.split(",") },
+    traceConfig: { includedCategories: TRACE_CATEGORIES },
     transferMode: "ReportEvents",
   });
   // Starting the CPU profiler stalls the page, so keep that out of the scenario

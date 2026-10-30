@@ -150,7 +150,7 @@ export function filterColumns<T extends Table>({
           typeof filter.value === "string"
         ) {
           const today = new Date();
-          const [amount, unit] = filter.value.split(" ") ?? [];
+          const [amount, unit] = filter.value.split(" ");
           let startDate: Date;
           let endDate: Date;
 
