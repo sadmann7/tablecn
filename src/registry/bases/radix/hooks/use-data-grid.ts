@@ -126,18 +126,18 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
 }
 
 function useDataGrid<TData extends RowData>({
-  data,
+  data: dataProp,
   columns,
   overscan = OVERSCAN,
   dir: dirProp,
   ...props
 }: UseDataGridProps<TData>) {
   const [pendingEdit, setPendingEdit] = React.useState({
-    from: data,
-    to: data,
+    from: dataProp,
+    to: dataProp,
   });
-  const dataRef = useValueAsRef(data);
-  const tableData = pendingEdit.from === data ? pendingEdit.to : data;
+  const dataPropRef = useValueAsRef(dataProp);
+  const data = pendingEdit.from === dataProp ? pendingEdit.to : dataProp;
 
   const contextDir = useDirection();
   const dir = dirProp ?? contextDir;
@@ -161,10 +161,10 @@ function useDataGrid<TData extends RowData>({
 
   const onDataChange = React.useCallback(
     (nextData: TData[], details: DataChangeDetails<TData>) => {
-      setPendingEdit({ from: dataRef.current, to: nextData });
+      setPendingEdit({ from: dataPropRef.current, to: nextData });
       propsRef.current.onDataChange?.(nextData, details);
     },
-    [dataRef, propsRef],
+    [dataPropRef, propsRef],
   );
 
   const getRowIdAtDisplayIndex = React.useCallback(
@@ -623,7 +623,7 @@ function useDataGrid<TData extends RowData>({
       onClipboardNotice: (notice) =>
         (propsRef.current.onClipboardNotice ?? showClipboardToast)(notice),
       features: dataGridFeatures,
-      data: tableData,
+      data,
       onDataChange,
       columns: tableColumns,
       defaultColumn,
@@ -640,7 +640,7 @@ function useDataGrid<TData extends RowData>({
     propsRef,
     revealCell,
     focusCellElement,
-    tableData,
+    data,
     onDataChange,
     tableColumns,
     defaultColumn,
@@ -1321,7 +1321,7 @@ function useDataGrid<TData extends RowData>({
 
     if (
       autoFocus &&
-      tableData.length > 0 &&
+      data.length > 0 &&
       columns.length > 0 &&
       !getFocusedCell()
     ) {
@@ -1347,7 +1347,7 @@ function useDataGrid<TData extends RowData>({
     }
   }, [
     propsRef,
-    tableData,
+    data,
     columns,
     getFocusedCell,
     getNavigableColumnIds,
