@@ -126,20 +126,22 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
 }
 
 function useDataGrid<TData extends RowData>({
-  data: dataProp,
+  data,
   columns,
   overscan = OVERSCAN,
   dir: dirProp,
   ...props
 }: UseDataGridProps<TData>) {
-  const [internalData, setInternalData] = React.useState({
-    prop: dataProp,
-    value: dataProp,
+  const [pendingEdit, setPendingEdit] = React.useState({
+    from: data,
+    to: data,
   });
-  const dataPropRef = useValueAsRef(dataProp);
-  const data = internalData.prop === dataProp ? internalData.value : dataProp;
+  const dataRef = useValueAsRef(data);
+  const tableData = pendingEdit.from === data ? pendingEdit.to : data;
+
   const contextDir = useDirection();
   const dir = dirProp ?? contextDir;
+
   const dataGridRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<Table<DataGridFeatures, TData>>(null);
   const rowVirtualizerRef =
@@ -159,10 +161,10 @@ function useDataGrid<TData extends RowData>({
 
   const onDataChange = React.useCallback(
     (nextData: TData[], details: DataChangeDetails<TData>) => {
-      setInternalData({ prop: dataPropRef.current, value: nextData });
+      setPendingEdit({ from: dataRef.current, to: nextData });
       propsRef.current.onDataChange?.(nextData, details);
     },
-    [dataPropRef, propsRef],
+    [dataRef, propsRef],
   );
 
   const getRowIdAtDisplayIndex = React.useCallback(
@@ -621,7 +623,7 @@ function useDataGrid<TData extends RowData>({
       onClipboardNotice: (notice) =>
         (propsRef.current.onClipboardNotice ?? showClipboardToast)(notice),
       features: dataGridFeatures,
-      data,
+      data: tableData,
       onDataChange,
       columns: tableColumns,
       defaultColumn,
@@ -638,7 +640,7 @@ function useDataGrid<TData extends RowData>({
     propsRef,
     revealCell,
     focusCellElement,
-    data,
+    tableData,
     onDataChange,
     tableColumns,
     defaultColumn,
@@ -1319,7 +1321,7 @@ function useDataGrid<TData extends RowData>({
 
     if (
       autoFocus &&
-      data.length > 0 &&
+      tableData.length > 0 &&
       columns.length > 0 &&
       !getFocusedCell()
     ) {
@@ -1345,7 +1347,7 @@ function useDataGrid<TData extends RowData>({
     }
   }, [
     propsRef,
-    data,
+    tableData,
     columns,
     getFocusedCell,
     getNavigableColumnIds,
