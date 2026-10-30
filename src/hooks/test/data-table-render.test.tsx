@@ -151,9 +151,18 @@ describe("DataTable rendering", () => {
     expect(
       measure(() => table.getColumn("status")?.toggleVisibility(true)).cells,
     ).toBe(10);
-    expect(measure(() => table.getColumn("title")?.pin("start")).cells).toBe(
-      10,
+
+    // Pinning doesn't change a cell's content, so the compiler may skip its renderer
+    expect(
+      measure(() => table.getColumn("title")?.pin("start")).cells,
+    ).toBeLessThanOrEqual(10);
+    const titleCells = [...container.querySelectorAll("tbody td")].filter(
+      (cell) => cell.textContent?.startsWith("Task "),
     );
+    expect(titleCells).toHaveLength(10);
+    for (const cell of titleCells) {
+      expect((cell as HTMLElement).style.position).toBe("sticky");
+    }
   });
 
   it("does not re-render cells when columns resize", () => {

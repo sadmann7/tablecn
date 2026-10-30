@@ -166,7 +166,7 @@ function DataTableHeadCell<TData extends RowData>({
           aria-sort={ariaSort}
           colSpan={header.colSpan}
           className={getCellClassName(pinned)}
-          style={getColumnPinningStyle(header.column)}
+          style={getColumnPinningStyle(header.column, pinned)}
         >
           {header.isPlaceholder ? null : <FlexRender header={header} />}
         </TableHead>
@@ -263,7 +263,7 @@ function DataTableCellImpl<TData extends RowData>({
   return (
     <TableCell
       className={getCellClassName(pinned)}
-      style={getColumnPinningStyle(cell.column)}
+      style={getColumnPinningStyle(cell.column, pinned)}
     >
       <FlexRender cell={cell} />
     </TableCell>

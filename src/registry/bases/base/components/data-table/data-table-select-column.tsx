@@ -63,8 +63,9 @@ function DataTableSelectHeader<TData extends RowData>({
   debug,
 }: DataTableSelectHeaderProps<TData>) {
   return (
+    // Paging, sorting and filtering change the page's rows too, not just selection
     <Subscribe
-      source={table.atoms.rowSelection}
+      source={table.store}
       selector={() => ({
         checked: table.getIsAllPageRowsSelected(),
         indeterminate:

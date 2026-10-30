@@ -150,9 +150,8 @@ export function getVisibleSelectedRows<TData extends RowData>(
 
 export function getColumnPinningStyle<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
+  isPinned = column.getIsPinned(),
 ): React.CSSProperties {
-  const isPinned = column.getIsPinned();
-
   return {
     insetInlineStart:
       isPinned === "start"

@@ -79,9 +79,11 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.9",
     "@cloudflare/workers-types": "^5.20261009.1",
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.63.0",
+    "@rolldown/plugin-babel": "^0.3.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
