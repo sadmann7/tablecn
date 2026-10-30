@@ -584,7 +584,7 @@ function DataGridRapidContent({
                   <SelectItem key={option.value} value={option.value}>
                     <span className="flex flex-col">
                       <span className="font-mono text-xs">{option.label}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground!">
                         {option.description}
                       </span>
                     </span>

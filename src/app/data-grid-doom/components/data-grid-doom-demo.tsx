@@ -61,7 +61,6 @@ import {
 import {
   type DoomParams,
   getResolutionLabel,
-  NATIVE_RESOLUTION,
   RESOLUTIONS,
 } from "../lib/params";
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
@@ -841,16 +840,7 @@ export function DataGridDoomDemo({
               >
                 {RESOLUTIONS.map((res) => (
                   <DropdownMenuRadioItem key={res} value={String(res)}>
-                    {res === NATIVE_RESOLUTION ? (
-                      <span className="flex flex-col">
-                        {getResolutionLabel(res)}
-                        <span className="text-xs text-muted-foreground">
-                          Paints rows, since 64,000 cells outpace the browser
-                        </span>
-                      </span>
-                    ) : (
-                      getResolutionLabel(res)
-                    )}
+                    {getResolutionLabel(res)}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
