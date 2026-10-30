@@ -12,7 +12,7 @@ export async function seedTasks(input: { count: number }) {
     console.log("📝 Inserting tasks", allTasks.length);
 
     await db.insert(tasks).values(allTasks).onConflictDoNothing();
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.error(error);
   }
 }

@@ -58,10 +58,10 @@ export async function createTask(input: CreateTaskSchema) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -96,10 +96,10 @@ export async function updateTask(input: UpdateTaskSchema & { id: string }) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -137,10 +137,10 @@ export async function updateTasks(input: {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -169,10 +169,10 @@ export async function deleteTask(input: { id: string }) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -201,10 +201,10 @@ export async function deleteTasks(input: { ids: string[] }) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }

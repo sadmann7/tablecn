@@ -7,9 +7,9 @@ const SEED_FUNCTIONS = {
 type TableName = keyof typeof SEED_FUNCTIONS;
 const ALL_TABLES = Object.keys(SEED_FUNCTIONS) as TableName[];
 
-runSeed().catch((err) => {
+runSeed().catch((error) => {
   console.error("❌ Seed failed");
-  console.error(err);
+  console.error(error);
   process.exit(1);
 });
 

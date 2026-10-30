@@ -87,6 +87,7 @@
     "unicorn/no-new-array": "warn",
     "unicorn/no-invalid-remove-event-listener": "warn",
     "unicorn/no-array-sort": "off",
+    "unicorn/catch-error-name": ["warn", { "name": "error" }],
     "tablecn/helpers-below-first-use": "warn"
   },
   "overrides": [

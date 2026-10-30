@@ -64,7 +64,9 @@ export class SkaterRoom extends Server<Env> {
       this.persistTimeout = null;
       this.ctx.storage
         .put(ROWS_KEY, this.rows)
-        .catch((err) => console.error("[party] Failed to persist rows:", err));
+        .catch((error) =>
+          console.error("[party] Failed to persist rows:", error),
+        );
     }, PERSIST_DELAY);
   }
 
