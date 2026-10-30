@@ -58,9 +58,7 @@ export function DataTableRangeFilter<TData extends RowData>({
     (value: string, isMin?: boolean) => {
       const numValue = Number(value);
       const currentValues = getRangeFilterValues(filter.value);
-      const otherValue = isMin
-        ? (currentValues[1] ?? "")
-        : (currentValues[0] ?? "");
+      const otherValue = isMin ? currentValues[1] : currentValues[0];
 
       if (
         value === "" ||

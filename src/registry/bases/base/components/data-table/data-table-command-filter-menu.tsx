@@ -209,34 +209,34 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
       className="flex flex-wrap items-center gap-2"
     >
       {hasFilters && (
-        <div role="list" className="flex flex-wrap items-center gap-2">
-          {filters.map((filter) => (
-            <DataTableFilterItem
-              key={filter.filterId}
-              filter={filter}
-              filterItemId={`${id}-filter-${filter.filterId}`}
-              columns={columns}
-              onFilterUpdate={onFilterUpdate}
-              onFilterRemove={onFilterRemove}
+        <>
+          <div role="list" className="flex flex-wrap items-center gap-2">
+            {filters.map((filter) => (
+              <DataTableFilterItem
+                key={filter.filterId}
+                filter={filter}
+                filterItemId={`${id}-filter-${filter.filterId}`}
+                columns={columns}
+                onFilterUpdate={onFilterUpdate}
+                onFilterRemove={onFilterRemove}
+              />
+            ))}
+          </div>
+          <Button
+            aria-label="Reset all filters"
+            variant="outline"
+            size="icon"
+            onClick={onFiltersReset}
+          >
+            <IconPlaceholder
+              lucide="X"
+              tabler="IconX"
+              hugeicons="Cancel01Icon"
+              phosphor="XIcon"
+              remixicon="RiCloseLine"
             />
-          ))}
-        </div>
-      )}
-      {hasFilters && (
-        <Button
-          aria-label="Reset all filters"
-          variant="outline"
-          size="icon"
-          onClick={onFiltersReset}
-        >
-          <IconPlaceholder
-            lucide="X"
-            tabler="IconX"
-            hugeicons="Cancel01Icon"
-            phosphor="XIcon"
-            remixicon="RiCloseLine"
-          />
-        </Button>
+          </Button>
+        </>
       )}
       <Popover
         open={open}

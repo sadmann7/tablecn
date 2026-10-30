@@ -342,7 +342,7 @@ function useDataTable<TData extends RowData>({
     }),
   );
 
-  return React.useMemo(() => ({ table }), [table]);
+  return { table };
 }
 
 function subscribeToHistory(onChange: () => void) {

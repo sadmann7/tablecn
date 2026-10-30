@@ -101,7 +101,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
       [minValue, maxValue] = defaultRange;
     } else {
       const values = column.getFacetedMinMaxValues();
-      if (values && Array.isArray(values) && values.length === 2) {
+      if (Array.isArray(values) && values.length === 2) {
         const [facetMinValue, facetMaxValue] = values;
         if (
           typeof facetMinValue === "number" &&

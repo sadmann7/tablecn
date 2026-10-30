@@ -450,9 +450,7 @@ export function getIsActiveFilter(filter: ColumnFilterItem) {
     getIsValuelessOperator(filter.operator) ||
     (Array.isArray(filter.value)
       ? filter.value.some((value) => value !== "")
-      : filter.value !== "" &&
-        filter.value !== null &&
-        filter.value !== undefined)
+      : filter.value !== "")
   );
 }
 

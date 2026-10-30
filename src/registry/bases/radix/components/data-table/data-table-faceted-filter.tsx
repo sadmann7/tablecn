@@ -85,8 +85,8 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
     column?.setFilterValue(values.length > 0 ? values : undefined);
   }
 
-  function onReset(event?: React.MouseEvent) {
-    event?.stopPropagation();
+  function onReset(event: React.MouseEvent) {
+    event.stopPropagation();
     column?.setFilterValue(undefined);
   }
 

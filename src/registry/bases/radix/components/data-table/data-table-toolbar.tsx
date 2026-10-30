@@ -85,6 +85,7 @@ export function DataTableToolbar<TData extends RowData>({
     </div>
   );
 }
+
 interface DataTableToolbarFilterProps<TData extends RowData> {
   column: Column<DataTableFeatures, TData>;
 }
