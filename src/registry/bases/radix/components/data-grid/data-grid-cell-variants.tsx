@@ -32,7 +32,10 @@ import {
   parseLocalDate,
   replaceEditableText,
 } from "@/lib/data-grid-utils";
-import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
+import {
+  DataGridCell,
+  useCellValue,
+} from "@/registry/bases/radix/components/data-grid/data-grid-cell";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Calendar } from "@/registry/bases/radix/ui/calendar";
@@ -66,40 +69,51 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 // The cell's padding on each side (px-2), so editors line up with its edge
 const CELL_PADDING = 8;
 
+const OVERLAP_CELL_CLASS_NAME =
+  "data-[side=bottom]:-translate-y-(--radix-popover-trigger-height) data-[side=top]:translate-y-(--radix-popover-trigger-height)";
+
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = getTextCellValue(cell.getValue());
-  const [value, setValue] = React.useState(initialValue);
+  const initialValue = getTextCellValue(useCellValue(cell));
+  const [draft, setDraft] = React.useState<{
+    initialValue: string;
+    value: string;
+  } | null>(null);
+  const value =
+    isEditing && draft?.initialValue === initialValue
+      ? draft.value
+      : initialValue;
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
   const pendingCharRef = React.useRef<string | null>(null);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
-    setValue(initialValue);
-    if (cellRef.current && !isEditing) {
-      cellRef.current.textContent = initialValue;
+  // Typing replaces the text node React rendered, so a new value has to be written
+  // to the DOM directly
+  React.useLayoutEffect(() => {
+    const element = cellRef.current;
+    if (!isEditing && element && element.textContent !== initialValue) {
+      element.textContent = initialValue;
     }
-  }
+  }, [initialValue, isEditing]);
 
   const onBlur = React.useCallback(() => {
     const currentValue = cellRef.current?.textContent ?? "";
     if (!readOnly && currentValue !== initialValue) {
       cell.setValue(currentValue);
     }
+    setDraft(null);
     cell.table.stopEditing();
   }, [cell, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.InputEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
-      setValue(currentValue);
+      setDraft({ initialValue, value: currentValue });
     },
-    [],
+    [initialValue],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -111,6 +125,7 @@ export function ShortTextCell<TData extends RowData>(
           if (currentValue !== initialValue) {
             cell.setValue(currentValue);
           }
+          setDraft(null);
           cell.table.stopEditing({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
@@ -118,12 +133,13 @@ export function ShortTextCell<TData extends RowData>(
           if (currentValue !== initialValue) {
             cell.setValue(currentValue);
           }
+          setDraft(null);
           cell.table.stopEditing({
             direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(initialValue);
+          setDraft(null);
           cellRef.current?.blur();
         }
       } else if (
@@ -196,18 +212,18 @@ export function LongTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = getTextCellValue(cell.getValue());
-  const [value, setValue] = React.useState(initialValue);
+  const initialValue = getTextCellValue(useCellValue(cell));
+  const [draft, setDraft] = React.useState<{
+    initialValue: string;
+    value: string;
+  } | null>(null);
+  const value =
+    isEditing && draft?.initialValue === initialValue
+      ? draft.value
+      : initialValue;
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const pendingCharRef = React.useRef<string | null>(null);
-  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
-
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
-    setValue(initialValue);
-  }
 
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     if (!readOnly) {
@@ -219,11 +235,12 @@ export function LongTextCell<TData extends RowData>(
     if (!readOnly && value !== initialValue) {
       cell.setValue(value);
     }
+    setDraft(null);
     cell.table.stopEditing();
   }, [cell, value, initialValue, readOnly]);
 
   const onCancel = React.useCallback(() => {
-    setValue(initialValue);
+    setDraft(null);
     if (!readOnly) {
       cell.setValue(initialValue);
     }
@@ -238,6 +255,7 @@ export function LongTextCell<TData extends RowData>(
         if (!readOnly && value !== initialValue) {
           cell.setValue(value);
         }
+        setDraft(null);
         cell.table.stopEditing();
       }
     },
@@ -288,16 +306,17 @@ export function LongTextCell<TData extends RowData>(
     if (!readOnly && value !== initialValue) {
       cell.setValue(value);
     }
+    setDraft(null);
     cell.table.stopEditing();
   }, [cell, value, initialValue, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = event.target.value;
-      setValue(newValue);
+      setDraft({ initialValue, value: newValue });
       debouncedSave(newValue);
     },
-    [debouncedSave],
+    [debouncedSave, initialValue],
   );
 
   const onKeyDown = React.useCallback(
@@ -313,6 +332,7 @@ export function LongTextCell<TData extends RowData>(
         if (value !== initialValue) {
           cell.setValue(value);
         }
+        setDraft(null);
         cell.table.stopEditing({
           direction: event.shiftKey ? "shift+tab" : "tab",
         });
@@ -341,8 +361,8 @@ export function LongTextCell<TData extends RowData>(
         data-grid-cell-editor=""
         align="start"
         side="bottom"
-        sideOffset={sideOffset}
-        className="w-100 rounded-none p-0"
+        sideOffset={0}
+        className={cn("w-100 rounded-none p-0", OVERLAP_CELL_CLASS_NAME)}
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <Textarea
@@ -364,8 +384,15 @@ export function NumberCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = getNumberCellValue(cell.getValue());
-  const [value, setValue] = React.useState(String(initialValue ?? ""));
+  const initialValue = getNumberCellValue(useCellValue(cell));
+  const [draft, setDraft] = React.useState<{
+    initialValue: number | null;
+    value: string;
+  } | null>(null);
+  const value =
+    isEditing && draft?.initialValue === initialValue
+      ? draft.value
+      : String(initialValue ?? "");
   const inputRef = React.useRef<HTMLInputElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
@@ -380,25 +407,20 @@ export function NumberCell<TData extends RowData>(
   const prevIsEditingRef = React.useRef(false);
   const pendingCharRef = React.useRef<string | null>(null);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
-    setValue(String(initialValue ?? ""));
-  }
-
   const onBlur = React.useCallback(() => {
     const numValue = value === "" ? null : Number(value);
     if (!readOnly && numValue !== initialValue) {
       cell.setValue(numValue);
     }
+    setDraft(null);
     cell.table.stopEditing();
   }, [cell, initialValue, value, readOnly]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(event.target.value);
+      setDraft({ initialValue, value: event.target.value });
     },
-    [],
+    [initialValue],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -410,6 +432,7 @@ export function NumberCell<TData extends RowData>(
           if (numValue !== initialValue) {
             cell.setValue(numValue);
           }
+          setDraft(null);
           cell.table.stopEditing({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
@@ -417,12 +440,13 @@ export function NumberCell<TData extends RowData>(
           if (numValue !== initialValue) {
             cell.setValue(numValue);
           }
+          setDraft(null);
           cell.table.stopEditing({
             direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(String(initialValue ?? ""));
+          setDraft(null);
           inputRef.current?.blur();
         }
       } else if (
@@ -449,11 +473,11 @@ export function NumberCell<TData extends RowData>(
       if (pendingChar) {
         inputRef.current.select();
         if (!document.execCommand("insertText", false, pendingChar)) {
-          setValue(pendingChar);
+          setDraft({ initialValue, value: pendingChar });
         }
       }
     }
-  }, [isEditing]);
+  }, [isEditing, initialValue]);
 
   return (
     <DataGridCell<TData>
@@ -493,21 +517,26 @@ export function UrlCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, isFocused, readOnly } = props;
-  const initialValue = getTextCellValue(cell.getValue());
-  const [value, setValue] = React.useState(initialValue);
+  const initialValue = getTextCellValue(useCellValue(cell));
+  const [draft, setDraft] = React.useState<{
+    initialValue: string;
+    value: string;
+  } | null>(null);
+  const value =
+    isEditing && draft?.initialValue === initialValue
+      ? draft.value
+      : initialValue;
   const cellRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
   const pendingCharRef = React.useRef<string | null>(null);
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
-    setValue(initialValue);
-    if (cellRef.current && !isEditing) {
-      cellRef.current.textContent = initialValue;
+  React.useLayoutEffect(() => {
+    const element = cellRef.current;
+    if (!isEditing && element && element.textContent !== initialValue) {
+      element.textContent = initialValue;
     }
-  }
+  }, [initialValue, isEditing]);
 
   const onBlur = React.useCallback(() => {
     const currentValue = cellRef.current?.textContent?.trim() ?? "";
@@ -515,15 +544,16 @@ export function UrlCell<TData extends RowData>(
     if (!readOnly && currentValue !== initialValue) {
       cell.setValue(currentValue || null);
     }
+    setDraft(null);
     cell.table.stopEditing();
   }, [cell, initialValue, readOnly]);
 
   const onInput = React.useCallback(
     (event: React.InputEvent<HTMLDivElement>) => {
       const currentValue = event.currentTarget.textContent ?? "";
-      setValue(currentValue);
+      setDraft({ initialValue, value: currentValue });
     },
-    [],
+    [initialValue],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -535,6 +565,7 @@ export function UrlCell<TData extends RowData>(
           if (!readOnly && currentValue !== initialValue) {
             cell.setValue(currentValue || null);
           }
+          setDraft(null);
           cell.table.stopEditing({ moveToNextRow: true });
         } else if (event.key === "Tab") {
           event.preventDefault();
@@ -542,12 +573,13 @@ export function UrlCell<TData extends RowData>(
           if (!readOnly && currentValue !== initialValue) {
             cell.setValue(currentValue || null);
           }
+          setDraft(null);
           cell.table.stopEditing({
             direction: event.shiftKey ? "shift+tab" : "tab",
           });
         } else if (event.key === "Escape") {
           event.preventDefault();
-          setValue(initialValue);
+          setDraft(null);
           cellRef.current?.blur();
         }
       } else if (
@@ -675,20 +707,12 @@ export function CheckboxCell<TData extends RowData>(
   props: Omit<DataGridCellProps<TData>, "isEditing">,
 ) {
   const { cell, isFocused, readOnly } = props;
-  const initialValue = getBooleanCellValue(cell.getValue());
-  const [value, setValue] = React.useState(initialValue);
+  const value = getBooleanCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
-
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
-    setValue(initialValue);
-  }
 
   const onCheckedChange = React.useCallback(
     (checked: boolean) => {
       if (readOnly) return;
-      setValue(checked);
       cell.setValue(checked);
     },
     [cell, readOnly],
@@ -769,9 +793,7 @@ export function SelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, readOnly } = props;
-  const initialValue = getOptionCellValue(cell.getValue());
-
-  const [value, setValue] = React.useState(initialValue);
+  const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = React.useMemo(
@@ -783,16 +805,9 @@ export function SelectCell<TData extends RowData>(
     [options],
   );
 
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
-    setValue(initialValue);
-  }
-
   const onValueChange = React.useCallback(
     (newValue: string) => {
       if (readOnly) return;
-      setValue(newValue);
       cell.setValue(newValue);
       cell.table.stopEditing();
     },
@@ -824,7 +839,6 @@ export function SelectCell<TData extends RowData>(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
-        setValue(initialValue);
         cell.table.stopEditing();
       } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
@@ -833,7 +847,7 @@ export function SelectCell<TData extends RowData>(
         });
       }
     },
-    [cell, isEditing, initialValue],
+    [cell, isEditing],
   );
 
   const displayLabel = value
@@ -906,17 +920,22 @@ export function MultiSelectCell<TData extends RowData>(
   const { cell, width, rowHeight, isEditing, readOnly } = props;
   const rowId = cell.row.id;
   const columnId = cell.column.id;
+  const rawValue = useCellValue(cell);
   const cellValue = React.useMemo(
-    () => getOptionsCellValue(cell.getValue()),
-    [cell],
+    () => getOptionsCellValue(rawValue),
+    [rawValue],
   );
 
   const cellKey = getCellKey(rowId, columnId);
-  const prevCellKeyRef = React.useRef(cellKey);
 
-  const [selectedValues, setSelectedValues] =
-    React.useState<string[]>(cellValue);
-  const [searchValue, setSearchValue] = React.useState("");
+  const [draft, setDraft] = React.useState<{
+    cellValue: string[];
+    values: string[];
+  } | null>(null);
+  const selectedValues =
+    draft?.cellValue === cellValue ? draft.values : cellValue;
+  const [search, setSearch] = React.useState({ cellKey, value: "" });
+  const searchValue = search.cellKey === cellKey ? search.value : "";
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
@@ -928,36 +947,35 @@ export function MultiSelectCell<TData extends RowData>(
     () => new Map(options.map((option) => [option.value, option])),
     [options],
   );
-  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
-  const prevCellValueRef = React.useRef(cellValue);
-  if (cellValue !== prevCellValueRef.current) {
-    prevCellValueRef.current = cellValue;
-    setSelectedValues(cellValue);
-  }
+  const onSearchValueChange = React.useCallback(
+    (value: string) => setSearch({ cellKey, value }),
+    [cellKey],
+  );
 
-  if (prevCellKeyRef.current !== cellKey) {
-    prevCellKeyRef.current = cellKey;
-    setSearchValue("");
-  }
+  const commitValues = React.useCallback(
+    (newValues: string[]) => {
+      setDraft({ cellValue, values: newValues });
+      queueMicrotask(() => {
+        cell.setValue(newValues);
+        setDraft(null);
+        inputRef.current?.focus();
+      });
+    },
+    [cell, cellValue],
+  );
 
   const onValueChange = React.useCallback(
     (value: string) => {
       if (readOnly) return;
-      let newValues: string[] = [];
-      setSelectedValues((curr) => {
-        newValues = curr.includes(value)
-          ? curr.filter((v) => v !== value)
-          : [...curr, value];
-        return newValues;
-      });
-      queueMicrotask(() => {
-        cell.setValue(newValues);
-        inputRef.current?.focus();
-      });
-      setSearchValue("");
+      commitValues(
+        selectedValues.includes(value)
+          ? selectedValues.filter((v) => v !== value)
+          : [...selectedValues, value],
+      );
+      setSearch({ cellKey, value: "" });
     },
-    [cell, readOnly],
+    [readOnly, commitValues, selectedValues, cellKey],
   );
 
   const removeValue = React.useCallback(
@@ -965,22 +983,14 @@ export function MultiSelectCell<TData extends RowData>(
       if (readOnly) return;
       event?.stopPropagation();
       event?.preventDefault();
-      let newValues: string[] = [];
-      setSelectedValues((curr) => {
-        newValues = curr.filter((v) => v !== valueToRemove);
-        return newValues;
-      });
-      queueMicrotask(() => {
-        cell.setValue(newValues);
-        inputRef.current?.focus();
-      });
+      commitValues(selectedValues.filter((v) => v !== valueToRemove));
     },
-    [cell, readOnly],
+    [readOnly, commitValues, selectedValues],
   );
 
   const clearAll = React.useCallback(() => {
     if (readOnly) return;
-    setSelectedValues([]);
+    setDraft(null);
     cell.setValue([]);
     queueMicrotask(() => inputRef.current?.focus());
   }, [cell, readOnly]);
@@ -990,11 +1000,11 @@ export function MultiSelectCell<TData extends RowData>(
       if (open && !readOnly) {
         cell.startEditing();
       } else {
-        setSearchValue("");
+        setSearch({ cellKey, value: "" });
         cell.table.stopEditing();
       }
     },
-    [cell, readOnly],
+    [cell, readOnly, cellKey],
   );
 
   const onOpenAutoFocus = React.useCallback((event: Event) => {
@@ -1006,42 +1016,35 @@ export function MultiSelectCell<TData extends RowData>(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
-        setSelectedValues(cellValue);
-        setSearchValue("");
+        setDraft(null);
+        setSearch({ cellKey, value: "" });
         cell.table.stopEditing();
       } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
-        setSearchValue("");
+        setSearch({ cellKey, value: "" });
         cell.table.stopEditing({
           direction: event.shiftKey ? "shift+tab" : "tab",
         });
       }
     },
-    [cell, isEditing, cellValue],
+    [cell, isEditing, cellKey],
   );
 
   const onInputKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Backspace" && searchValue === "") {
         event.preventDefault();
-        let newValues: string[] | null = null;
-        setSelectedValues((curr) => {
-          if (curr.length === 0) return curr;
-          newValues = curr.slice(0, -1);
-          return newValues;
-        });
-        queueMicrotask(() => {
-          if (newValues !== null) {
-            cell.setValue(newValues);
-          }
-          inputRef.current?.focus();
-        });
+        if (selectedValues.length > 0) {
+          commitValues(selectedValues.slice(0, -1));
+        } else {
+          queueMicrotask(() => inputRef.current?.focus());
+        }
       }
       if (event.key === "Escape") {
         event.stopPropagation();
       }
     },
-    [searchValue, cell],
+    [searchValue, selectedValues, commitValues],
   );
 
   const displayLabels = selectedValues
@@ -1078,8 +1081,8 @@ export function MultiSelectCell<TData extends RowData>(
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
-            sideOffset={sideOffset}
-            className="w-75 rounded-none p-0"
+            sideOffset={0}
+            className={cn("w-75 rounded-none p-0", OVERLAP_CELL_CLASS_NAME)}
             onOpenAutoFocus={onOpenAutoFocus}
           >
             <Command className="**:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
@@ -1119,7 +1122,7 @@ export function MultiSelectCell<TData extends RowData>(
                   aria-label={`Search ${getColumnLabel(cell.column)}`}
                   ref={inputRef}
                   value={searchValue}
-                  onValueChange={setSearchValue}
+                  onValueChange={onSearchValueChange}
                   onKeyDown={onInputKeyDown}
                   placeholder="Search..."
                   className="p-0! placeholder:text-muted-foreground"
@@ -1198,16 +1201,9 @@ export function DateCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { cell, isEditing, readOnly } = props;
-  const initialValue = getDateCellValue(cell.getValue());
-  const [value, setValue] = React.useState(initialValue);
+  const value = getDateCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const isInvalidDate = value !== "" && !parseLocalDate(value);
-
-  const prevInitialValueRef = React.useRef(initialValue);
-  if (initialValue !== prevInitialValueRef.current) {
-    prevInitialValueRef.current = initialValue;
-    setValue(initialValue);
-  }
 
   const selectedDate = value ? (parseLocalDate(value) ?? undefined) : undefined;
 
@@ -1215,9 +1211,7 @@ export function DateCell<TData extends RowData>(
     (date: Date | undefined) => {
       if (!date || readOnly) return;
 
-      const formattedDate = formatDateToString(date);
-      setValue(formattedDate);
-      cell.setValue(formattedDate);
+      cell.setValue(formatDateToString(date));
       cell.table.stopEditing();
     },
     [cell, readOnly],
@@ -1238,7 +1232,6 @@ export function DateCell<TData extends RowData>(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing && event.key === "Escape") {
         event.preventDefault();
-        setValue(initialValue);
         cell.table.stopEditing();
       } else if (isEditing && event.key === "Tab") {
         event.preventDefault();
@@ -1247,7 +1240,7 @@ export function DateCell<TData extends RowData>(
         });
       }
     },
-    [cell, isEditing, initialValue],
+    [cell, isEditing],
   );
 
   return (
@@ -1296,18 +1289,20 @@ export function FileCell<TData extends RowData>(
   const { cell, width, rowHeight, isEditing, isFocused, readOnly } = props;
   const rowId = cell.row.id;
   const columnId = cell.column.id;
+  const rawValue = useCellValue(cell);
   const cellValue = React.useMemo(
-    () => getFilesCellValue(cell.getValue()),
-    [cell],
+    () => getFilesCellValue(rawValue),
+    [rawValue],
   );
-
-  const cellKey = getCellKey(rowId, columnId);
-  const prevCellKeyRef = React.useRef(cellKey);
 
   const labelId = React.useId();
   const descriptionId = React.useId();
 
-  const [files, setFiles] = React.useState<FileCellData[]>(cellValue);
+  const [draft, setDraft] = React.useState<{
+    cellValue: FileCellData[];
+    files: FileCellData[];
+  } | null>(null);
+  const files = draft?.cellValue === cellValue ? draft.files : cellValue;
   const [uploadingFiles, setUploadingFiles] = React.useState<Set<string>>(
     new Set(),
   );
@@ -1316,7 +1311,11 @@ export function FileCell<TData extends RowData>(
   );
   const [isDraggingOver, setIsDraggingOver] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [errorState, setErrorState] = React.useState<{
+    cellValue: FileCellData[];
+    message: string;
+  } | null>(null);
+  const error = errorState?.cellValue === cellValue ? errorState.message : null;
 
   const isUploading = uploadingFiles.size > 0;
   const isDeleting = deletingFiles.size > 0;
@@ -1325,7 +1324,6 @@ export function FileCell<TData extends RowData>(
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const dropzoneRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const sideOffset = -(containerRef.current?.clientHeight ?? 0);
 
   const fileCellOpts = cellOpts?.variant === "file" ? cellOpts : null;
   const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
@@ -1337,23 +1335,6 @@ export function FileCell<TData extends RowData>(
     () => (accept ? accept.split(",").map((t) => t.trim()) : null),
     [accept],
   );
-
-  const prevCellValueRef = React.useRef(cellValue);
-  if (cellValue !== prevCellValueRef.current) {
-    prevCellValueRef.current = cellValue;
-    for (const file of files) {
-      if (file.url) {
-        URL.revokeObjectURL(file.url);
-      }
-    }
-    setFiles(cellValue);
-    setError(null);
-  }
-
-  if (prevCellKeyRef.current !== cellKey) {
-    prevCellKeyRef.current = cellKey;
-    setError(null);
-  }
 
   const validateFile = React.useCallback(
     (file: File): string | null => {
@@ -1384,14 +1365,14 @@ export function FileCell<TData extends RowData>(
   const addFiles = React.useCallback(
     async (newFiles: File[]) => {
       if (readOnly || isPending) return;
-      setError(null);
+      setErrorState(null);
 
       if (maxFiles && files.length + newFiles.length > maxFiles) {
         const errorMessage = `Maximum ${maxFiles} files allowed`;
-        setError(errorMessage);
+        setErrorState({ cellValue, message: errorMessage });
         toast(errorMessage);
         setTimeout(() => {
-          setError(null);
+          setErrorState(null);
         }, 2000);
         return;
       }
@@ -1410,7 +1391,7 @@ export function FileCell<TData extends RowData>(
 
       const firstError = rejectedFiles[0];
       if (firstError) {
-        setError(firstError.reason);
+        setErrorState({ cellValue, message: firstError.reason });
 
         const truncatedName =
           firstError.name.length > 20
@@ -1428,7 +1409,7 @@ export function FileCell<TData extends RowData>(
         }
 
         setTimeout(() => {
-          setError(null);
+          setErrorState(null);
         }, 2000);
       }
 
@@ -1442,7 +1423,7 @@ export function FileCell<TData extends RowData>(
         url: undefined,
       }));
       const filesWithTemp = [...files, ...tempFiles];
-      setFiles(filesWithTemp);
+      setDraft({ cellValue, files: filesWithTemp });
 
       const uploadingIds = new Set<string>(tempFiles.map((f) => f.id));
       setUploadingFiles(uploadingIds);
@@ -1462,7 +1443,13 @@ export function FileCell<TData extends RowData>(
               ? error.message
               : `Failed to upload ${filesToValidate.length} file${filesToValidate.length !== 1 ? "s" : ""}`,
           );
-          setFiles((prev) => prev.filter((f) => !uploadingIds.has(f.id)));
+          setDraft(
+            (prev) =>
+              prev && {
+                ...prev,
+                files: prev.files.filter((f) => !uploadingIds.has(f.id)),
+              },
+          );
           setUploadingFiles(new Set());
           return;
         }
@@ -1485,17 +1472,27 @@ export function FileCell<TData extends RowData>(
         })
         .filter((f) => f.url !== undefined);
 
-      setFiles(finalFiles);
+      setDraft({ cellValue, files: finalFiles });
       setUploadingFiles(new Set());
       cell.setValue(finalFiles);
     },
-    [cell, files, maxFiles, validateFile, rowId, columnId, readOnly, isPending],
+    [
+      cell,
+      cellValue,
+      files,
+      maxFiles,
+      validateFile,
+      rowId,
+      columnId,
+      readOnly,
+      isPending,
+    ],
   );
 
   const removeFile = React.useCallback(
     async (fileId: string) => {
       if (readOnly || isPending) return;
-      setError(null);
+      setErrorState(null);
 
       const fileToRemove = files.find((f) => f.id === fileId);
       if (!fileToRemove) return;
@@ -1529,7 +1526,7 @@ export function FileCell<TData extends RowData>(
       }
 
       const updatedFiles = files.filter((f) => f.id !== fileId);
-      setFiles(updatedFiles);
+      setDraft({ cellValue, files: updatedFiles });
       setDeletingFiles((prev) => {
         const next = new Set(prev);
         next.delete(fileId);
@@ -1537,12 +1534,12 @@ export function FileCell<TData extends RowData>(
       });
       cell.setValue(updatedFiles);
     },
-    [cell, files, rowId, columnId, readOnly, isPending],
+    [cell, cellValue, files, rowId, columnId, readOnly, isPending],
   );
 
   const clearAll = React.useCallback(async () => {
     if (readOnly || isPending) return;
-    setError(null);
+    setErrorState(null);
 
     const fileIds = files.map((f) => f.id);
     setDeletingFiles(new Set(fileIds));
@@ -1568,10 +1565,10 @@ export function FileCell<TData extends RowData>(
         URL.revokeObjectURL(file.url);
       }
     }
-    setFiles([]);
+    setDraft({ cellValue, files: [] });
     setDeletingFiles(new Set());
     cell.setValue([]);
-  }, [cell, files, rowId, columnId, readOnly, isPending]);
+  }, [cell, cellValue, files, rowId, columnId, readOnly, isPending]);
 
   const onCellDragEnter = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -1682,7 +1679,7 @@ export function FileCell<TData extends RowData>(
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
-      setError(null);
+      setErrorState(null);
       if (open && !readOnly) {
         cell.startEditing();
       } else {
@@ -1708,8 +1705,8 @@ export function FileCell<TData extends RowData>(
       if (isEditing) {
         if (event.key === "Escape") {
           event.preventDefault();
-          setFiles(cellValue);
-          setError(null);
+          setDraft(null);
+          setErrorState(null);
           cell.table.stopEditing();
         } else if (event.key === " ") {
           event.preventDefault();
@@ -1725,7 +1722,7 @@ export function FileCell<TData extends RowData>(
         cell.startEditing();
       }
     },
-    [cell, isEditing, isFocused, cellValue, onDropzoneClick],
+    [cell, isEditing, isFocused, onDropzoneClick],
   );
 
   React.useEffect(() => {
@@ -1773,8 +1770,8 @@ export function FileCell<TData extends RowData>(
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
-            sideOffset={sideOffset}
-            className="w-100 rounded-none p-0"
+            sideOffset={0}
+            className={cn("w-100 rounded-none p-0", OVERLAP_CELL_CLASS_NAME)}
             onEscapeKeyDown={onEscapeKeyDown}
             onOpenAutoFocus={onOpenAutoFocus}
           >

@@ -101,6 +101,7 @@ function useTrend(value: number) {
     flashedAt: number;
   }>({ value, trend: null, key: 0, flashedAt: 0 });
   if (state.value !== value) {
+    // oxlint-disable-next-line react/purity -- the flash cooldown needs the time of this change, and an effect would add a render per tick
     const now = performance.now();
     const canFlash = now - state.flashedAt >= FLASH_COOLDOWN_MS;
     setState({

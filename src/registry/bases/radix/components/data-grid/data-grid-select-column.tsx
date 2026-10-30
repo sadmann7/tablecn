@@ -191,8 +191,6 @@ function DataGridSelectCell<TData extends RowData>({
   readOnly,
   debug,
 }: DataGridSelectCellProps<TData>) {
-  const rowNumber = enableRowMarkers ? row.getDisplayIndex() + 1 : undefined;
-
   const onToggle = React.useCallback(
     (checked: boolean, shiftKey: boolean) => {
       table.setFocusedCell(row.id, column.id);
@@ -215,24 +213,33 @@ function DataGridSelectCell<TData extends RowData>({
     [row, onToggle],
   );
 
-  if (readOnly) {
-    return (
-      <div className="flex items-center ps-1 text-xs text-muted-foreground tabular-nums">
-        {rowNumber ?? row.index + 1}
-      </div>
-    );
-  }
-
+  // `row` is stable, so selection and numbering come from a subscription
   return (
-    <DataGridSelectCheckbox
-      aria-label={rowNumber ? `Select row ${rowNumber}` : "Select row"}
-      checked={row.getIsSelected()}
-      rowNumber={rowNumber}
-      hitboxSize={hitboxSize}
-      debug={debug}
-      onCheckedChange={onCheckedChange}
-      onClick={onClick}
-    />
+    <Subscribe
+      source={table.store}
+      selector={() => ({
+        isSelected: row.getIsSelected(),
+        rowNumber: enableRowMarkers ? row.getDisplayIndex() + 1 : undefined,
+      })}
+    >
+      {({ isSelected, rowNumber }) =>
+        readOnly ? (
+          <div className="flex items-center ps-1 text-xs text-muted-foreground tabular-nums">
+            {rowNumber ?? row.index + 1}
+          </div>
+        ) : (
+          <DataGridSelectCheckbox
+            aria-label={rowNumber ? `Select row ${rowNumber}` : "Select row"}
+            checked={isSelected}
+            rowNumber={rowNumber}
+            hitboxSize={hitboxSize}
+            debug={debug}
+            onCheckedChange={onCheckedChange}
+            onClick={onClick}
+          />
+        )
+      }
+    </Subscribe>
   );
 }
 

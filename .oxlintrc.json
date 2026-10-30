@@ -51,19 +51,19 @@
     "no-new": "off",
     "no-underscore-dangle": "off",
     "react/exhaustive-deps": "warn",
-    "react/memo-dependencies": "off",
+    "react/memo-dependencies": "warn",
     "react/rules-of-hooks": "warn",
     "react/react-in-jsx-scope": "off",
     "react/no-array-index-key": "off",
-    "react/no-danger": "off",
+    "react/no-danger": "warn",
     "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
-    "react/refs": "off",
+    "react/refs": "warn",
     "react/set-state-in-effect": "warn",
     "react/set-state-in-render": "warn",
-    "react/immutability": "off",
-    "react/incompatible-library": "off",
-    "react/purity": "off",
-    "react/preserve-manual-memoization": "off",
+    "react/immutability": "warn",
+    "react/incompatible-library": "warn",
+    "react/purity": "warn",
+    "react/preserve-manual-memoization": "warn",
     "react/use-memo": "warn",
     "react/static-components": "warn",
     "nextjs/no-img-element": "off",
@@ -95,7 +95,9 @@
       },
       "rules": {
         "unicorn/consistent-function-scoping": "off",
-        "no-shadow": "off"
+        "no-shadow": "off",
+        "react/refs": "off",
+        "react/immutability": "off"
       }
     }
   ]

@@ -59,6 +59,8 @@ interface BenchmarkResult {
 
 const LONG_FRAME_MS = 50;
 
+let toastCount = 0;
+
 function nextFrame() {
   return new Promise<number>((resolve) => requestAnimationFrame(resolve));
 }
@@ -522,14 +524,14 @@ export function DataGridBenchmark({
     [onStop],
   );
 
-  const onRun = React.useCallback(async () => {
+  async function onRun() {
     const grid = dataGridRef.current;
     if (!grid || abortRef.current) return;
 
     const controller = new AbortController();
     abortRef.current = controller;
     toast.dismiss(toastIdRef.current);
-    toastIdRef.current = `benchmark-${Date.now()}`;
+    toastIdRef.current = `benchmark-${++toastCount}`;
     const runResults: BenchmarkResult[] = [];
     setResults([]);
     setRerunStep(null);
@@ -590,50 +592,44 @@ export function DataGridBenchmark({
         },
       },
     );
-  }, [table, dataGridRef, showProgress]);
+  }
 
-  const onRerunStep = React.useCallback(
-    async (name: string) => {
-      const grid = dataGridRef.current;
-      const step = BENCHMARK_STEPS.find((item) => item.name === name);
-      if (!grid || !step || abortRef.current) return;
+  async function onRerunStep(name: string) {
+    const grid = dataGridRef.current;
+    const step = BENCHMARK_STEPS.find((item) => item.name === name);
+    if (!grid || !step || abortRef.current) return;
 
-      const controller = new AbortController();
-      abortRef.current = controller;
-      toastIdRef.current = `benchmark-${Date.now()}`;
-      // The dialog would cover the grid and its paint would skew the frames
-      setIsResultsOpen(false);
-      setIsRunning(true);
-      setRerunStep(name);
-      const snapshot = getGridSnapshot(table);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    toastIdRef.current = `benchmark-${++toastCount}`;
+    // The dialog would cover the grid and its paint would skew the frames
+    setIsResultsOpen(false);
+    setIsRunning(true);
+    setRerunStep(name);
+    const snapshot = getGridSnapshot(table);
+    resetGrid(table, grid);
+    await pause(controller.signal, 5);
+
+    let result: BenchmarkResult | null = null;
+    try {
+      showProgress(`Rerunning ${name}`, "Results open again when it finishes");
+      result = await runStep(step, table, grid, controller.signal);
+    } finally {
       resetGrid(table, grid);
-      await pause(controller.signal, 5);
+      restoreGridSnapshot(table, grid, snapshot);
+      abortRef.current = null;
+      setIsRunning(false);
+    }
 
-      let result: BenchmarkResult | null = null;
-      try {
-        showProgress(
-          `Rerunning ${name}`,
-          "Results open again when it finishes",
-        );
-        result = await runStep(step, table, grid, controller.signal);
-      } finally {
-        resetGrid(table, grid);
-        restoreGridSnapshot(table, grid, snapshot);
-        abortRef.current = null;
-        setIsRunning(false);
-      }
-
-      const nextResult = controller.signal.aborted ? null : result;
-      if (nextResult) {
-        setResults((prev) =>
-          prev.map((item) => (item.name === name ? nextResult : item)),
-        );
-      }
-      toast.dismiss(toastIdRef.current);
-      setIsResultsOpen(true);
-    },
-    [table, dataGridRef, showProgress],
-  );
+    const nextResult = controller.signal.aborted ? null : result;
+    if (nextResult) {
+      setResults((prev) =>
+        prev.map((item) => (item.name === name ? nextResult : item)),
+      );
+    }
+    toast.dismiss(toastIdRef.current);
+    setIsResultsOpen(true);
+  }
 
   const totals = React.useMemo(() => getTotals(results), [results]);
 

@@ -64,13 +64,11 @@ export const DataGridDataCell = React.memo(
 
 function DataGridDataCellImpl<TData extends RowData>({
   isScrolling,
-  cell: propsCell,
-  ...rest
+  ...props
 }: DataGridDataCellProps<TData>) {
-  const writeCell = propsCell.column.columnDef.meta?.writeCell;
-  const hasCustomCell = getHasCustomCell(propsCell.column);
-  const cell = useUpdatedCell(propsCell, !hasCustomCell && !writeCell);
-  const props = { ...rest, cell };
+  const { cell } = props;
+  const writeCell = cell.column.columnDef.meta?.writeCell;
+  const hasCustomCell = getHasCustomCell(cell.column);
 
   const rowId = cell.row.id;
   const [isPreview, setIsPreview] = React.useState(isScrolling);
@@ -154,10 +152,12 @@ function DataGridDataCellImpl<TData extends RowData>({
   return <Comp key={rowId} {...props} />;
 }
 
+// Custom renderers read the stable `cell` through methods the compiler can't
+// track, so this re-renders them on each live update instead
 function useUpdatedCell<TData extends RowData>(
   cell: Cell<DataGridFeatures, TData>,
-  isEnabled = true,
 ) {
+  "use no memo";
   const { table } = cell;
   const rowId = cell.row.id;
   const columnId = cell.column.id;
@@ -166,10 +166,10 @@ function useUpdatedCell<TData extends RowData>(
     0,
   );
 
-  React.useEffect(() => {
-    if (!isEnabled) return;
-    return table.subscribeCell(rowId, columnId, onCellUpdate);
-  }, [isEnabled, table, rowId, columnId]);
+  React.useEffect(
+    () => table.subscribeCell(rowId, columnId, onCellUpdate),
+    [table, rowId, columnId],
+  );
 
   if (updateCount === 0) return cell;
 
@@ -219,6 +219,7 @@ interface DataGridCustomCellContentProps<TData extends RowData> {
 function DataGridCustomCellContentImpl<TData extends RowData>({
   cell: propsCell,
 }: DataGridCustomCellContentProps<TData>) {
+  "use no memo";
   const cell = useUpdatedCell(propsCell);
 
   return flexRender(cell.column.columnDef.cell, cell.getContext());

@@ -389,6 +389,7 @@ function SortableItem(props: SortableItemProps) {
     disabled,
     className,
     ref,
+    id: idProp,
     ...itemProps
   } = props;
 
@@ -407,7 +408,7 @@ function SortableItem(props: SortableItemProps) {
 
   const context = useSortableContext(ITEM_NAME);
   const instanceId = React.useId();
-  const id = itemProps.id ?? instanceId;
+  const id = idProp ?? instanceId;
 
   const {
     attributes,

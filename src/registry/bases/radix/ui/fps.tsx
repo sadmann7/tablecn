@@ -69,8 +69,6 @@ function Fps(props: FpsProps) {
     () => false,
   );
   const [fps, setFps] = React.useState(0);
-  const frameCountRef = React.useRef(0);
-  const lastTimeRef = React.useRef(performance.now());
 
   const status =
     fps < errorThreshold
@@ -83,16 +81,17 @@ function Fps(props: FpsProps) {
     if (!enabled) return;
 
     let frame = 0;
+    let frameCount = 0;
+    let lastTime = performance.now();
     function measureFps() {
       const now = performance.now();
-      const delta = now - lastTimeRef.current;
-      frameCountRef.current += 1;
+      const delta = now - lastTime;
+      frameCount += 1;
 
       if (delta >= updateInterval) {
-        const currentFps = Math.round((frameCountRef.current * 1000) / delta);
-        setFps(currentFps);
-        frameCountRef.current = 0;
-        lastTimeRef.current = now;
+        setFps(Math.round((frameCount * 1000) / delta));
+        frameCount = 0;
+        lastTime = now;
       }
 
       frame = requestAnimationFrame(measureFps);

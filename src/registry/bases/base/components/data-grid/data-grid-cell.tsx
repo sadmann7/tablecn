@@ -1,11 +1,12 @@
 "use client";
 
-import type { RowData } from "@tanstack/react-table";
+import type { Cell, RowData } from "@tanstack/react-table";
 
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { cn } from "cn";
 import * as React from "react";
 
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
 import {
@@ -153,4 +154,22 @@ export function DataGridCell<TData extends RowData>({
       onKeyDown={onKeyDown}
     />
   );
+}
+
+// Live updates patch the stable `cell` in place, so its value is read through a
+// subscription rather than `cell.getValue()` during render
+export function useCellValue<TData extends RowData>(
+  cell: Cell<DataGridFeatures, TData>,
+) {
+  const { table } = cell;
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
+
+  const subscribe = React.useCallback(
+    (onChange: () => void) => table.subscribeCell(rowId, columnId, onChange),
+    [table, rowId, columnId],
+  );
+  const getValue = () => cell.getValue();
+
+  return React.useSyncExternalStore(subscribe, getValue, getValue);
 }

@@ -5,7 +5,9 @@ export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
   delay: number,
 ) {
   const callbackRef = React.useRef(callback);
-  callbackRef.current = callback;
+  React.useLayoutEffect(() => {
+    callbackRef.current = callback;
+  });
 
   const debounceTimerRef = React.useRef(0);
 

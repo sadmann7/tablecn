@@ -1,5 +1,6 @@
 "use client";
 
+/* oxlint-disable react/refs -- the scenes pass a bag of element refs to `ref` props, which never reads `.current` during render */
 import * as React from "react";
 import { createPortal } from "react-dom";
 

@@ -1,5 +1,6 @@
 "use client";
 
+/* oxlint-disable react/refs -- passes the director's element refs to `ref` props, and the scene frame keeps the leaving scene's latest children in a ref */
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { cn } from "cn";

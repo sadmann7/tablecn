@@ -399,31 +399,21 @@ function DataGridFilterItem<TData extends RowData>({
     [filter.id, filterValue?.value, filterValue?.endValue, onFilterUpdate],
   );
 
-  const onValueChange = React.useCallback(
-    (newValue: string | number | string[] | undefined) => {
-      onFilterUpdate(filter.id, {
-        value: {
-          operator,
-          value: newValue,
-          endValue: filterValue?.endValue,
-        },
-      });
-    },
-    [filter.id, operator, filterValue?.endValue, onFilterUpdate],
-  );
+  function onValueChange(newValue: string | number | string[] | undefined) {
+    onFilterUpdate(filter.id, {
+      value: { operator, value: newValue, endValue: filterValue?.endValue },
+    });
+  }
 
-  const onEndValueChange = React.useCallback(
-    (newValue: string | number | string[] | undefined) => {
-      onFilterUpdate(filter.id, {
-        value: {
-          operator,
-          value: filterValue?.value,
-          endValue: newValue as string | number | undefined,
-        },
-      });
-    },
-    [filter.id, operator, filterValue?.value, onFilterUpdate],
-  );
+  function onEndValueChange(newValue: string | number | string[] | undefined) {
+    onFilterUpdate(filter.id, {
+      value: {
+        operator,
+        value: filterValue?.value,
+        endValue: newValue as string | number | undefined,
+      },
+    });
+  }
 
   return (
     <SortableItem id={filterItemId} value={filter.id} asChild>

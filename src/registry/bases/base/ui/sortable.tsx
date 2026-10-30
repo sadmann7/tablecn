@@ -333,14 +333,8 @@ function SortableContent(props: SortableContentProps) {
 
   const element = useRender({
     defaultTagName: "div",
-    props: mergeProps<"div">(
-      {
-        ref,
-        className,
-        children,
-      },
-      contentProps,
-    ),
+    ref,
+    props: mergeProps<"div">({ className, children }, contentProps),
     render,
     state: {
       slot: "sortable-content",
@@ -396,6 +390,7 @@ function SortableItem(props: SortableItemProps) {
     className,
     render,
     ref,
+    id: idProp,
     ...itemProps
   } = props;
 
@@ -414,7 +409,7 @@ function SortableItem(props: SortableItemProps) {
 
   const context = useSortableContext(ITEM_NAME);
   const instanceId = React.useId();
-  const id = itemProps.id ?? instanceId;
+  const id = idProp ?? instanceId;
 
   const {
     attributes,

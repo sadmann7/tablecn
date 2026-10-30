@@ -28,6 +28,7 @@ import {
   getUrlHref,
   parseLocalDate,
 } from "@/lib/data-grid-utils";
+import { useCellValue } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
 import { badgeVariants } from "@/registry/bases/radix/ui/badge";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
@@ -80,7 +81,13 @@ export function DataGridCellPreview<TData extends RowData>({
   showStartBorder,
   showEndBorder,
 }: DataGridCellPreviewProps<TData>) {
-  const { className, content } = getPreviewContent({ cell, width, rowHeight });
+  const value = useCellValue(cell);
+  const { className, content } = getPreviewContent({
+    cell,
+    value,
+    width,
+    rowHeight,
+  });
   const columnId = cell.column.id;
   const isTinted = isSelected || isSearchMatch || isActiveSearchMatch;
 
@@ -120,14 +127,16 @@ export function DataGridCellPreview<TData extends RowData>({
 
 function getPreviewContent<TData extends RowData>({
   cell,
+  value,
   width,
   rowHeight,
-}: Pick<DataGridCellPreviewProps<TData>, "cell" | "width" | "rowHeight">): {
+}: Pick<DataGridCellPreviewProps<TData>, "cell" | "width" | "rowHeight"> & {
+  value: unknown;
+}): {
   className?: string;
   content: React.ReactNode;
 } {
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const value = cell.getValue();
   const lineClampClassName = cn(
     "w-fit max-w-full wrap-anywhere",
     LINE_CLAMP_CLASS_NAMES[rowHeight],
