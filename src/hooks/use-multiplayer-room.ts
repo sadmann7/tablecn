@@ -29,18 +29,20 @@ function getOrCreateIdentity(): Identity {
   try {
     const value = localStorage.getItem(STORAGE_KEY);
     if (value) stored = JSON.parse(value) as Partial<Identity>;
-  } catch {}
+  } catch {
+    // Fails silently if localStorage is not available
+  }
 
   if (stored?.clientId && stored.name && stored.color) {
     return stored as Identity;
   }
 
-  const adj =
+  const adjective =
     ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
   const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
   const identity: Identity = {
     clientId: stored?.clientId ?? generateId(),
-    name: stored?.name ?? `${adj} ${animal}`,
+    name: stored?.name ?? `${adjective} ${animal}`,
     color:
       stored?.color ??
       COLORS[Math.floor(Math.random() * COLORS.length)] ??
