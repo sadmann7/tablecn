@@ -673,12 +673,7 @@ function useDataGrid<TData extends RowData>({
 
   const isFirefox = React.useSyncExternalStore(
     React.useCallback(() => () => {}, []),
-    React.useCallback(() => {
-      if (typeof window === "undefined" || typeof navigator === "undefined") {
-        return false;
-      }
-      return navigator.userAgent.indexOf("Firefox") !== -1;
-    }, []),
+    React.useCallback(() => navigator.userAgent.includes("Firefox"), []),
     React.useCallback(() => false, []),
   );
 
@@ -923,14 +918,16 @@ function useDataGrid<TData extends RowData>({
   const onDataGridKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
       const currentTable = tableRef.current;
-      const cellSelection = currentTable?.atoms.cellSelection.get() ?? [];
+      if (!currentTable) return;
+
+      const cellSelection = currentTable.atoms.cellSelection.get();
       const focusedCell = getFocusedCellPosition(cellSelection);
       const hasCellRangeSelection = getHasCellRangeSelection(cellSelection);
       const { key, ctrlKey, metaKey, shiftKey, altKey } = event;
       const isCtrlPressed = ctrlKey || metaKey;
 
       if (
-        currentTable?.options.enableSearch &&
+        currentTable.options.enableSearch &&
         isCtrlPressed &&
         !shiftKey &&
         key === SEARCH_SHORTCUT_KEY
@@ -940,7 +937,7 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (currentTable?.getSearchOpen() && !currentTable.getEditingCell()) {
+      if (currentTable.getSearchOpen() && !currentTable.getEditingCell()) {
         if (key === "Enter") {
           event.preventDefault();
           if (shiftKey) {
@@ -958,7 +955,7 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (tableRef.current?.getEditingCell()) return;
+      if (currentTable.getEditingCell()) return;
 
       const headerCell =
         event.target instanceof Element
@@ -979,14 +976,12 @@ function useDataGrid<TData extends RowData>({
       ) {
         const rowIds = new Set<string>();
 
-        if (tableRef.current?.getHasRowSelection()) {
-          const rows = tableRef.current?.getRowModel().rows ?? [];
-          for (const row of rows) {
-            if (currentTable?.atoms.rowSelection.get()[row.id]) {
-              rowIds.add(row.id);
-            }
+        if (currentTable.getHasRowSelection()) {
+          const rowSelection = currentTable.atoms.rowSelection.get();
+          for (const row of currentTable.getRowModel().rows) {
+            if (rowSelection[row.id]) rowIds.add(row.id);
           }
-        } else if (hasCellRangeSelection && currentTable) {
+        } else if (hasCellRangeSelection) {
           for (const { rowId } of currentTable.getSelectedCells()) {
             rowIds.add(rowId);
           }
@@ -1014,7 +1009,7 @@ function useDataGrid<TData extends RowData>({
           getCellElement(container, focusedCell.rowId, focusedCell.columnId);
         if (!cellElement) return;
         const rect = cellElement.getBoundingClientRect();
-        currentTable?.openContextMenu({
+        currentTable.openContextMenu({
           x: dir === "rtl" ? rect.right : rect.left,
           y: rect.bottom,
         });
@@ -1039,17 +1034,17 @@ function useDataGrid<TData extends RowData>({
       }
 
       const canCopyCells =
-        !isUtilityCellFocused || !!currentTable?.getHasRowSelection();
+        !isUtilityCellFocused || currentTable.getHasRowSelection();
 
       if (isCtrlPressed && !shiftKey && key === "a") {
         event.preventDefault();
-        tableRef.current?.selectAllDataCells();
+        currentTable.selectAllDataCells();
         return;
       }
 
       if (isCtrlPressed && !shiftKey && key === "c" && canCopyCells) {
         event.preventDefault();
-        void currentTable?.copySelectedCells();
+        void currentTable.copySelectedCells();
         return;
       }
 
@@ -1061,7 +1056,7 @@ function useDataGrid<TData extends RowData>({
         !propsRef.current.readOnly
       ) {
         event.preventDefault();
-        void currentTable?.cutSelectedCells();
+        void currentTable.cutSelectedCells();
         return;
       }
 
@@ -1074,7 +1069,7 @@ function useDataGrid<TData extends RowData>({
         !propsRef.current.readOnly
       ) {
         event.preventDefault();
-        void currentTable?.pasteCells();
+        void currentTable.pasteCells();
         return;
       }
 
@@ -1084,18 +1079,18 @@ function useDataGrid<TData extends RowData>({
         !isUtilityCellFocused &&
         !propsRef.current.readOnly
       ) {
-        const cellsToClear = currentTable?.getSelectedCells() ?? [];
+        const cellsToClear = currentTable.getSelectedCells();
 
         if (cellsToClear.length > 0) {
           event.preventDefault();
 
-          currentTable?.clearCells(cellsToClear);
+          currentTable.clearCells(cellsToClear);
 
           if (hasCellRangeSelection) {
-            tableRef.current?.clearSelection();
+            currentTable.clearSelection();
           }
 
-          if (currentTable?.getCutCellGrid().length) {
+          if (currentTable.getCutCellGrid().length) {
             currentTable.resetCutCellGrid(true);
           }
         }
@@ -1130,7 +1125,6 @@ function useDataGrid<TData extends RowData>({
             direction = "ctrl+up";
           } else if (
             !shiftKey &&
-            !!currentTable &&
             getRowDisplayIndex(currentTable, focusedCell.rowId) === 0 &&
             focusColumnHeader(focusedCell.columnId)
           ) {
@@ -1175,8 +1169,8 @@ function useDataGrid<TData extends RowData>({
           break;
         case "Escape":
           event.preventDefault();
-          if (hasCellRangeSelection || tableRef.current?.getHasRowSelection()) {
-            tableRef.current?.clearSelection();
+          if (hasCellRangeSelection || currentTable.getHasRowSelection()) {
+            currentTable.clearSelection();
           } else {
             blurCell();
             dataGridRef.current?.focus();
@@ -1186,7 +1180,7 @@ function useDataGrid<TData extends RowData>({
           if (isCtrlPressed || altKey) return;
 
           direction = shiftKey ? "shift+tab" : "tab";
-          if (!currentTable?.getNavigationTarget(focusedCell, direction)) {
+          if (!currentTable.getNavigationTarget(focusedCell, direction)) {
             if (shiftKey) skipDataGridTabStop();
             return;
           }
@@ -1194,13 +1188,13 @@ function useDataGrid<TData extends RowData>({
         }
       }
 
-      if (!direction || !currentTable) return;
+      if (!direction) return;
       event.preventDefault();
 
       const extend = shiftKey && key !== "Tab";
       const pageSize = rowVirtualizerRef.current?.getVirtualItems().length;
 
-      if (!extend && hasCellRangeSelection) tableRef.current?.clearSelection();
+      if (!extend && hasCellRangeSelection) currentTable.clearSelection();
       currentTable.navigate(direction, { extend, pageSize });
     },
     [

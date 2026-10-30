@@ -161,8 +161,9 @@ export function getEmptyCellValue(
   variant: CellOpts["variant"] | undefined,
 ): unknown {
   if (variant === "multi-select" || variant === "file") return [];
-  if (variant === "number" || variant === "date" || variant === "select")
+  if (variant === "number" || variant === "date" || variant === "select") {
     return null;
+  }
   if (variant === "checkbox") return false;
   return "";
 }
@@ -174,7 +175,6 @@ export function serializeCellValue(
   if (variant === "file" || variant === "multi-select") {
     return value ? JSON.stringify(value) : "";
   }
-  if (value instanceof Date) return value.toISOString();
   return stringifyUnknown(value);
 }
 
@@ -320,6 +320,14 @@ export function parseTsv(
     let currentField = "";
     let inQuotes = false;
     let i = 0;
+    const pushRow = () => {
+      currentRow.push(currentField);
+      if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = "";
+    };
 
     while (i < text.length) {
       const char = text[i];
@@ -345,20 +353,10 @@ export function parseTsv(
           currentField = "";
           i++;
         } else if (char === "\n") {
-          currentRow.push(currentField);
-          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-            rows.push(currentRow);
-          }
-          currentRow = [];
-          currentField = "";
+          pushRow();
           i++;
         } else if (char === "\r" && nextChar === "\n") {
-          currentRow.push(currentField);
-          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-            rows.push(currentRow);
-          }
-          currentRow = [];
-          currentField = "";
+          pushRow();
           i += 2;
         } else {
           currentField += char;
@@ -367,11 +365,7 @@ export function parseTsv(
       }
     }
 
-    currentRow.push(currentField);
-    if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-      rows.push(currentRow);
-    }
-
+    pushRow();
     return rows;
   }
 
@@ -869,7 +863,7 @@ export function scrollCellIntoView<TData extends RowData>(params: {
     if (isClippedRight) {
       scrollDelta = cellRect.right - viewportRight;
     } else if (isClippedLeft) {
-      scrollDelta = -(viewportLeft - cellRect.left);
+      scrollDelta = cellRect.left - viewportLeft;
     }
   } else {
     const shouldScrollRight = isActuallyRtl
@@ -879,7 +873,7 @@ export function scrollCellIntoView<TData extends RowData>(params: {
     if (shouldScrollRight) {
       scrollDelta = cellRect.right - viewportRight;
     } else {
-      scrollDelta = -(viewportLeft - cellRect.left);
+      scrollDelta = cellRect.left - viewportLeft;
     }
   }
 
@@ -1032,13 +1026,8 @@ export function moveCaretToEnd(element: HTMLElement) {
 }
 
 export function getUrlHref(urlString: string): string {
-  if (!urlString || urlString.trim() === "") return "";
-
   const trimmed = urlString.trim();
-
-  if (UNSAFE_PROTOCOL_REGEX.test(trimmed)) {
-    return "";
-  }
+  if (!trimmed || UNSAFE_PROTOCOL_REGEX.test(trimmed)) return "";
 
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
@@ -1074,7 +1063,6 @@ export function formatDateToString(date: Date): string {
 }
 
 export function formatDateForDisplay(dateStr: unknown): string {
-  if (!dateStr) return "";
   const date = parseLocalDate(dateStr);
   if (!date) return typeof dateStr === "string" ? dateStr : "";
   return date.toLocaleDateString();
@@ -1103,15 +1091,22 @@ export function getFileIcon(
     type.includes("word") ||
     type.includes("document") ||
     type.includes("doc")
-  )
+  ) {
     return FileText;
-  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
+  }
+  if (
+    type.includes("sheet") ||
+    type.includes("excel") ||
+    type.includes("xls")
+  ) {
     return FileSpreadsheet;
+  }
   if (
     type.includes("presentation") ||
     type.includes("powerpoint") ||
     type.includes("ppt")
-  )
+  ) {
     return Presentation;
+  }
   return File;
 }

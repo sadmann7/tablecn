@@ -212,7 +212,7 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
     if (operator === "isEmpty") return getIsEmptyValue(cellValue);
     if (operator === "isNotEmpty") return !getIsEmptyValue(cellValue);
     if (operator === "isTrue") return cellValue === true;
-    if (operator === "isFalse") return cellValue === false || !cellValue;
+    if (operator === "isFalse") return !cellValue;
 
     if (value === undefined || value === null || value === "") {
       return true;
@@ -230,7 +230,7 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
       if (typeof cellValue === "number" && typeof value === "number") {
         isEqual = cellValue === value;
       } else if (cellValue instanceof Date && typeof value === "string") {
-        isEqual = new Date(cellValue).toDateString() === filter.valueDateText;
+        isEqual = cellValue.toDateString() === filter.valueDateText;
       } else {
         isEqual =
           stringifyUnknown(cellValue).toLowerCase() === filter.lowerValueText;

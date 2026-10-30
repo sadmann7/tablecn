@@ -48,10 +48,10 @@ interface ContextMenuProps<
 const ContextMenu = React.memo(ContextMenuImpl, (prev, next) => {
   if (prev.contextMenu.open !== next.contextMenu.open) return false;
   if (!next.contextMenu.open) return true;
-  if (prev.contextMenu.x !== next.contextMenu.x) return false;
-  if (prev.contextMenu.y !== next.contextMenu.y) return false;
-
-  return true;
+  return (
+    prev.contextMenu.x === next.contextMenu.x &&
+    prev.contextMenu.y === next.contextMenu.y
+  );
 }) as typeof ContextMenuImpl;
 
 function ContextMenuImpl<TData extends RowData>({

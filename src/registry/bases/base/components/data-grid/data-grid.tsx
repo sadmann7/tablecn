@@ -189,8 +189,7 @@ function DataGridViewport<TData extends RowData>({
     const header = headerRef.current;
     const footer = footerRef.current;
 
-    function measure() {
-      if (!dataGrid) return;
+    const measure = () => {
       const gridRect = dataGrid.getBoundingClientRect();
       const next: ViewportInsets = {
         start:
@@ -208,7 +207,7 @@ function DataGridViewport<TData extends RowData>({
           ? prev
           : next,
       );
-    }
+    };
 
     measure();
     const observer = new ResizeObserver(measure);
@@ -425,7 +424,7 @@ function DataGridViewport<TData extends RowData>({
     <div
       role="grid"
       aria-label="Data grid"
-      aria-rowcount={rows.length + 1 + (!readOnly && onRowAddProp ? 1 : 0)}
+      aria-rowcount={rows.length + 1 + (hasFooter ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
       data-slot="data-grid"
@@ -487,7 +486,7 @@ function DataGridViewport<TData extends RowData>({
           </DataGridRowContext>
         </div>
       </div>
-      {!readOnly && onRowAddProp && (
+      {hasFooter && (
         <div
           role="rowgroup"
           data-slot="data-grid-footer"

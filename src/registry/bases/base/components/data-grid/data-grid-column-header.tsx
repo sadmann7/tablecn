@@ -8,7 +8,6 @@ import {
   type ReactTable,
   type RowData,
   type SortDirection,
-  type SortingState,
   Subscribe,
   type Table,
 } from "@tanstack/react-table";
@@ -91,7 +90,7 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
 
   const onSortingChange = React.useCallback(
     (direction: SortDirection) => {
-      table.setSorting((prev: SortingState) => {
+      table.setSorting((prev) => {
         const existingSortIndex = prev.findIndex(
           (sort) => sort.id === column.id,
         );
@@ -100,22 +99,17 @@ function DataGridColumnHeaderImpl<TData extends RowData, TValue>({
           desc: direction === "desc",
         };
 
-        if (existingSortIndex >= 0) {
-          const updated = [...prev];
-          updated[existingSortIndex] = newSort;
-          return updated;
-        } else {
-          return [...prev, newSort];
-        }
+        if (existingSortIndex === -1) return [...prev, newSort];
+        const updated = [...prev];
+        updated[existingSortIndex] = newSort;
+        return updated;
       });
     },
     [column.id, table],
   );
 
   const onSortRemove = React.useCallback(() => {
-    table.setSorting((prev: SortingState) =>
-      prev.filter((sort) => sort.id !== column.id),
-    );
+    table.setSorting((prev) => prev.filter((sort) => sort.id !== column.id));
   }, [column.id, table]);
 
   const onLeftPin = React.useCallback(() => {
@@ -332,17 +326,11 @@ const DataGridColumnResizer = React.memo(
   (prev, next) => {
     const prevColumn = prev.header.column;
     const nextColumn = next.header.column;
-
-    if (
-      prevColumn.getIsResizing() !== nextColumn.getIsResizing() ||
-      prevColumn.getSize() !== nextColumn.getSize()
-    ) {
-      return false;
-    }
-
-    if (prev.label !== next.label) return false;
-
-    return true;
+    return (
+      prevColumn.getIsResizing() === nextColumn.getIsResizing() &&
+      prevColumn.getSize() === nextColumn.getSize() &&
+      prev.label === next.label
+    );
   },
 ) as typeof DataGridColumnResizerImpl;
 

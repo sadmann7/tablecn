@@ -88,7 +88,7 @@ function DataGridDataCellImpl<TData extends RowData>({
   if (isPreview && !props.isFocused && !props.isEditing && !hasCustomCell) {
     return (
       <DataGridCellPreview
-        cell={props.cell}
+        cell={cell}
         columnIndex={props.columnIndex}
         width={props.width}
         rowHeight={props.rowHeight}
@@ -108,13 +108,12 @@ function DataGridDataCellImpl<TData extends RowData>({
   if (hasCustomCell) {
     return (
       <DataGridCell key={rowId} {...props}>
-        <DataGridCustomCellContent cell={props.cell} />
+        <DataGridCustomCellContent cell={cell} />
       </DataGridCell>
     );
   }
 
-  const cellOpts = props.cell.column.columnDef.meta?.cell;
-  const variant = cellOpts?.variant ?? "text";
+  const variant = cell.column.columnDef.meta?.cell?.variant ?? "text";
 
   let Comp: React.ComponentType<DataGridCellProps<TData>>;
 

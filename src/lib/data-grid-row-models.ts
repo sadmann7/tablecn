@@ -619,12 +619,14 @@ function getSortedRowModel(
       }
       if (isCacheable && !isFiltered) cache.current = unfiltered;
 
-      order = isFiltered ? [] : unfiltered.order;
       if (isFiltered) {
+        order = [];
         for (const index of unfiltered.order) {
           const row = unfilteredRows[index];
           if (row && rowsById[row.id] === row) order.push(index);
         }
+      } else {
+        order = unfiltered.order;
       }
     }
 

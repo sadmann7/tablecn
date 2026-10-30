@@ -101,7 +101,6 @@ function DataGridFilterMenuImpl<TData extends RowData>({
   const labelId = React.useId();
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
-  const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const { columnLabels, columns, columnVariants } = React.useMemo(() => {
     const labels = new Map<string, string>();
@@ -151,12 +150,11 @@ function DataGridFilterMenuImpl<TData extends RowData>({
 
   const onFilterUpdate = React.useCallback(
     (filterId: string, updates: Partial<ColumnFilter>) => {
-      table.setColumnFilters((prevFilters) => {
-        if (!prevFilters) return prevFilters;
-        return prevFilters.map((filter) =>
+      table.setColumnFilters((prevFilters) =>
+        prevFilters.map((filter) =>
           filter.id === filterId ? { ...filter, ...updates } : filter,
-        );
-      });
+        ),
+      );
     },
     [table],
   );
@@ -300,11 +298,7 @@ function DataGridFilterMenuImpl<TData extends RowData>({
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
-            <Button
-              ref={addButtonRef}
-              onClick={onFilterAdd}
-              disabled={columns.length === 0}
-            >
+            <Button onClick={onFilterAdd} disabled={columns.length === 0}>
               Add filter
             </Button>
             {columnFilters.length > 0 && (
@@ -449,11 +443,9 @@ function DataGridFilterItem<TData extends RowData>({
       }
     >
       <div className="min-w-18 text-center">
-        {index === 0 ? (
-          <span className="text-sm text-muted-foreground">Where</span>
-        ) : (
-          <span className="text-sm text-muted-foreground">And</span>
-        )}
+        <span className="text-sm text-muted-foreground">
+          {index === 0 ? "Where" : "And"}
+        </span>
       </div>
       <Faceted
         open={showFieldSelector}
@@ -489,7 +481,7 @@ function DataGridFilterItem<TData extends RowData>({
             />
           }
         >
-          <span className="truncate">{columnLabels.get(filter.id)}</span>
+          <span className="truncate">{label}</span>
           <IconPlaceholder
             lucide="ChevronsUpDown"
             tabler="IconSelector"
@@ -564,7 +556,7 @@ function DataGridFilterItem<TData extends RowData>({
           <div
             id={inputId}
             role="status"
-            aria-label={`${columnLabels.get(filter.id)} filter is empty`}
+            aria-label={`${label} filter is empty`}
             aria-live="polite"
             className="h-8 w-full rounded-lg border border-dashed border-input bg-transparent dark:bg-input/30"
           />

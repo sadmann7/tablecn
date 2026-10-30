@@ -162,7 +162,7 @@ export function ShortTextCell<TData extends RowData>(
     }
   }, [isEditing, value]);
 
-  const displayValue = !isEditing ? (value ?? "") : "";
+  const displayValue = isEditing ? "" : value;
 
   return (
     <DataGridCell<TData>
@@ -246,24 +246,25 @@ export function LongTextCell<TData extends RowData>(
 
   const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
-    if (textareaRef.current) {
-      textareaRef.current.focus();
-      const length = textareaRef.current.value.length;
-      textareaRef.current.setSelectionRange(length, length);
+    const textarea = textareaRef.current;
+    if (!textarea) return;
 
-      if (pendingCharRef.current) {
-        const char = pendingCharRef.current;
-        pendingCharRef.current = null;
-        requestAnimationFrame(() => {
-          const textarea = textareaRef.current;
-          if (textarea && document.activeElement === textarea) {
-            insertTextAtSelection(textarea, char);
-            textarea.scrollTop = textarea.scrollHeight;
-          }
-        });
-      } else {
-        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
-      }
+    textarea.focus();
+    const length = textarea.value.length;
+    textarea.setSelectionRange(length, length);
+
+    if (pendingCharRef.current) {
+      const char = pendingCharRef.current;
+      pendingCharRef.current = null;
+      requestAnimationFrame(() => {
+        const textarea = textareaRef.current;
+        if (textarea && document.activeElement === textarea) {
+          insertTextAtSelection(textarea, char);
+          textarea.scrollTop = textarea.scrollHeight;
+        }
+      });
+    } else {
+      textarea.scrollTop = textarea.scrollHeight;
     }
   }, []);
 
@@ -616,7 +617,7 @@ export function UrlCell<TData extends RowData>(
     }
   }, [isEditing, value]);
 
-  const displayValue = !isEditing ? (value ?? "") : "";
+  const displayValue = isEditing ? "" : value;
   const urlHref = displayValue ? getUrlHref(displayValue) : "";
   const isDangerousUrl = displayValue && !urlHref;
 
@@ -904,9 +905,10 @@ export function MultiSelectCell<TData extends RowData>(
   const { cell, width, rowHeight, isEditing, readOnly } = props;
   const rowId = cell.row.id;
   const columnId = cell.column.id;
-  const cellValue = React.useMemo(() => {
-    return getOptionsCellValue(cell.getValue());
-  }, [cell]);
+  const cellValue = React.useMemo(
+    () => getOptionsCellValue(cell.getValue()),
+    [cell],
+  );
 
   const cellKey = getCellKey(rowId, columnId);
   const prevCellKeyRef = React.useRef(cellKey);
@@ -1379,7 +1381,7 @@ export function FileCell<TData extends RowData>(
   );
 
   const addFiles = React.useCallback(
-    async (newFiles: File[], skipUpload = false) => {
+    async (newFiles: File[]) => {
       if (readOnly || isPending) return;
       setError(null);
 
@@ -1405,101 +1407,86 @@ export function FileCell<TData extends RowData>(
         filesToValidate.push(file);
       }
 
-      if (rejectedFiles.length > 0) {
-        const firstError = rejectedFiles[0];
-        if (firstError) {
-          setError(firstError.reason);
+      const firstError = rejectedFiles[0];
+      if (firstError) {
+        setError(firstError.reason);
 
-          const truncatedName =
-            firstError.name.length > 20
-              ? `${firstError.name.slice(0, 20)}...`
-              : firstError.name;
+        const truncatedName =
+          firstError.name.length > 20
+            ? `${firstError.name.slice(0, 20)}...`
+            : firstError.name;
 
-          if (rejectedFiles.length === 1) {
-            toast(firstError.reason, {
-              description: `"${truncatedName}" has been rejected`,
-            });
-          } else {
-            toast(firstError.reason, {
-              description: `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
-            });
-          }
-
-          setTimeout(() => {
-            setError(null);
-          }, 2000);
-        }
-      }
-
-      if (filesToValidate.length > 0) {
-        if (!skipUpload) {
-          const tempFiles = filesToValidate.map((f) => ({
-            id: crypto.randomUUID(),
-            name: f.name,
-            size: f.size,
-            type: f.type,
-            url: undefined,
-          }));
-          const filesWithTemp = [...files, ...tempFiles];
-          setFiles(filesWithTemp);
-
-          const uploadingIds = new Set<string>(tempFiles.map((f) => f.id));
-          setUploadingFiles(uploadingIds);
-
-          let uploadedFiles: FileCellData[] = [];
-
-          if (cell.table.options.uploadFiles) {
-            try {
-              uploadedFiles = await cell.table.options.uploadFiles({
-                files: filesToValidate,
-                rowId,
-                columnId,
-              });
-            } catch (error) {
-              toast.error(
-                error instanceof Error
-                  ? error.message
-                  : `Failed to upload ${filesToValidate.length} file${filesToValidate.length !== 1 ? "s" : ""}`,
-              );
-              setFiles((prev) => prev.filter((f) => !uploadingIds.has(f.id)));
-              setUploadingFiles(new Set());
-              return;
-            }
-          } else {
-            uploadedFiles = filesToValidate.map((f, i) => ({
-              id: tempFiles[i]?.id ?? crypto.randomUUID(),
-              name: f.name,
-              size: f.size,
-              type: f.type,
-              url: URL.createObjectURL(f),
-            }));
-          }
-
-          const finalFiles = filesWithTemp
-            .map((f) => {
-              if (uploadingIds.has(f.id)) {
-                return uploadedFiles.find((uf) => uf.name === f.name) ?? f;
-              }
-              return f;
-            })
-            .filter((f) => f.url !== undefined);
-
-          setFiles(finalFiles);
-          setUploadingFiles(new Set());
-          cell.setValue(finalFiles);
+        if (rejectedFiles.length === 1) {
+          toast(firstError.reason, {
+            description: `"${truncatedName}" has been rejected`,
+          });
         } else {
-          const newFilesData: FileCellData[] = filesToValidate.map((f) => ({
-            id: crypto.randomUUID(),
-            name: f.name,
-            size: f.size,
-            type: f.type,
-            url: URL.createObjectURL(f),
-          }));
-          const updatedFiles = [...files, ...newFilesData];
-          setFiles(updatedFiles);
-          cell.setValue(updatedFiles);
+          toast(firstError.reason, {
+            description: `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
+          });
         }
+
+        setTimeout(() => {
+          setError(null);
+        }, 2000);
       }
+
+      if (filesToValidate.length === 0) return;
+
+      const tempFiles = filesToValidate.map((f) => ({
+        id: crypto.randomUUID(),
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        url: undefined,
+      }));
+      const filesWithTemp = [...files, ...tempFiles];
+      setFiles(filesWithTemp);
+
+      const uploadingIds = new Set<string>(tempFiles.map((f) => f.id));
+      setUploadingFiles(uploadingIds);
+
+      let uploadedFiles: FileCellData[] = [];
+
+      if (cell.table.options.uploadFiles) {
+        try {
+          uploadedFiles = await cell.table.options.uploadFiles({
+            files: filesToValidate,
+            rowId,
+            columnId,
+          });
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : `Failed to upload ${filesToValidate.length} file${filesToValidate.length !== 1 ? "s" : ""}`,
+          );
+          setFiles((prev) => prev.filter((f) => !uploadingIds.has(f.id)));
+          setUploadingFiles(new Set());
+          return;
+        }
+      } else {
+        uploadedFiles = filesToValidate.map((f, i) => ({
+          id: tempFiles[i]?.id ?? crypto.randomUUID(),
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          url: URL.createObjectURL(f),
+        }));
+      }
+
+      const finalFiles = filesWithTemp
+        .map((f) => {
+          if (uploadingIds.has(f.id)) {
+            return uploadedFiles.find((uf) => uf.name === f.name) ?? f;
+          }
+          return f;
+        })
+        .filter((f) => f.url !== undefined);
+
+      setFiles(finalFiles);
+      setUploadingFiles(new Set());
+      cell.setValue(finalFiles);
     },
     [cell, files, maxFiles, validateFile, rowId, columnId, readOnly, isPending],
   );
@@ -1623,7 +1610,7 @@ export function FileCell<TData extends RowData>(
 
       const droppedFiles = Array.from(event.dataTransfer.files);
       if (droppedFiles.length > 0) {
-        void addFiles(droppedFiles, false);
+        void addFiles(droppedFiles);
       }
     },
     [addFiles],
@@ -1664,7 +1651,7 @@ export function FileCell<TData extends RowData>(
       setIsDragging(false);
 
       const droppedFiles = Array.from(event.dataTransfer.files);
-      void addFiles(droppedFiles, false);
+      void addFiles(droppedFiles);
     },
     [addFiles],
   );
@@ -1686,7 +1673,7 @@ export function FileCell<TData extends RowData>(
   const onFileInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFiles = Array.from(event.target.files ?? []);
-      void addFiles(selectedFiles, false);
+      void addFiles(selectedFiles);
       event.target.value = "";
     },
     [addFiles],
@@ -1694,11 +1681,10 @@ export function FileCell<TData extends RowData>(
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
+      setError(null);
       if (open && !readOnly) {
-        setError(null);
         cell.startEditing();
       } else {
-        setError(null);
         cell.table.stopEditing();
       }
     },

@@ -57,6 +57,7 @@ export function DataGridCell<TData extends RowData>({
     if (active !== grid && activeGrid !== grid) return;
     getCellFocusTarget(element).focus({ preventScroll: true });
   }, [isFocused, isEditing]);
+
   const isSelectionTinted = isSelected && !isEditing;
   const isTinted = isSelectionTinted || isSearchMatch || isActiveSearchMatch;
 
@@ -80,26 +81,16 @@ export function DataGridCell<TData extends RowData>({
         return;
       }
 
-      if (isFocused && !isEditing && !readOnly) {
-        if (event.key === "F2" || event.key === "Enter") {
-          event.preventDefault();
-          event.stopPropagation();
-          cell.startEditing();
-          return;
-        }
+      if (!isFocused || isEditing || readOnly) return;
 
-        if (event.key === " ") {
-          event.preventDefault();
-          event.stopPropagation();
-          cell.startEditing();
-          return;
-        }
-
-        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          event.preventDefault();
-          event.stopPropagation();
-          cell.startEditing();
-        }
+      if (
+        event.key === "F2" ||
+        event.key === "Enter" ||
+        (event.key.length === 1 && !event.ctrlKey && !event.metaKey)
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        cell.startEditing();
       }
     },
     [cell, onKeyDownProp, isFocused, isEditing, readOnly],

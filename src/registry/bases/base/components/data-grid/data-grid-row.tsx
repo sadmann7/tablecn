@@ -138,12 +138,10 @@ function DataGridRowContent<TData extends RowData>({
 
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
-      if (typeof virtualRowIndex === "undefined") return;
-
       if (node) {
-        rowMapRef.current?.set(virtualRowIndex, node);
+        rowMapRef.current.set(virtualRowIndex, node);
       } else {
-        rowMapRef.current?.delete(virtualRowIndex);
+        rowMapRef.current.delete(virtualRowIndex);
       }
     },
     [virtualRowIndex, rowMapRef],

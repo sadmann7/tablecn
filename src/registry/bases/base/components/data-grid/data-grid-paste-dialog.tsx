@@ -49,9 +49,7 @@ const PasteDialog = React.memo(PasteDialogImpl, (prev, next) => {
   if (prev.table !== next.table) return false;
   if (prev.pasteDialog.open !== next.pasteDialog.open) return false;
   if (!next.pasteDialog.open) return true;
-  if (prev.pasteDialog.rowsNeeded !== next.pasteDialog.rowsNeeded) return false;
-
-  return true;
+  return prev.pasteDialog.rowsNeeded === next.pasteDialog.rowsNeeded;
 }) as typeof PasteDialogImpl;
 
 function PasteDialogImpl<TData extends RowData>({
