@@ -43,6 +43,7 @@ import {
   getRowDisplayIndex,
   getSelectionEdgePosition,
   renderDefaultCell,
+  revokeFileObjectUrls,
   scrollCellIntoView,
   swapItems,
 } from "@/lib/data-grid-utils";
@@ -651,6 +652,9 @@ function useDataGrid<TData extends RowData>({
   ]);
 
   const table = useTable(tableOptions, selectGridLayoutState);
+
+  const { store } = table;
+  React.useEffect(() => () => revokeFileObjectUrls(store), [store]);
 
   if (tableRef.current === null) {
     tableRef.current = table;

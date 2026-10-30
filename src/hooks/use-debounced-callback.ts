@@ -16,14 +16,20 @@ export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
     [],
   );
 
-  return React.useCallback(
-    (...args: Parameters<T>) => {
+  return React.useMemo(() => {
+    function cancel() {
       window.clearTimeout(debounceTimerRef.current);
+    }
+
+    function debounced(...args: Parameters<T>) {
+      cancel();
       debounceTimerRef.current = window.setTimeout(
         () => callbackRef.current(...args),
         delay,
       );
-    },
-    [delay],
-  );
+    }
+
+    debounced.cancel = cancel;
+    return debounced;
+  }, [delay]);
 }

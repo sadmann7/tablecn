@@ -257,6 +257,10 @@ function getCheckbox(cell: HTMLElement) {
   return checkbox;
 }
 
+async function wait(ms: number) {
+  await act(() => new Promise((resolve) => setTimeout(resolve, ms)));
+}
+
 async function waitFrames(count = 2) {
   for (let index = 0; index < count; index++) {
     await act(
@@ -481,6 +485,34 @@ describe("DataGrid cells", () => {
       expect(getValue("1", "bio")).toBe("Landed the 900");
       expect(table.getEditingCell()).toBeNull();
     });
+
+    it("restores the value from when editing started after the auto-save", async () => {
+      const { getCell, getValue, focus } = renderGrid();
+
+      focus("1", "bio");
+      press(getCell("1", "bio"), "Enter");
+      const textarea = getTextarea();
+      fireEvent.change(textarea, { target: { value: "Typo" } });
+      await wait(400);
+      expect(getValue("1", "bio")).toBe("Typo");
+
+      press(getTextarea(), "Escape");
+
+      expect(getValue("1", "bio")).toBe("Landed the 900");
+    });
+
+    it("drops a pending auto-save on Escape", async () => {
+      const { getCell, getValue, focus } = renderGrid();
+
+      focus("1", "bio");
+      press(getCell("1", "bio"), "Enter");
+      const textarea = getTextarea();
+      fireEvent.change(textarea, { target: { value: "Typo" } });
+      press(textarea, "Escape");
+      await wait(400);
+
+      expect(getValue("1", "bio")).toBe("Landed the 900");
+    });
   });
 
   describe("checkbox", () => {
@@ -673,6 +705,70 @@ describe("DataGrid cells", () => {
       expect(grid.getValue("1", "media")).toEqual([
         expect.objectContaining({ name: "clip.pdf", url: "blob:clip" }),
       ]);
+    });
+
+    it("keeps a deleted file's object URL so undo can restore it", async () => {
+      vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:clip");
+      const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL");
+      const grid = renderGrid();
+      openFiles(grid, "1");
+
+      await act(async () => {
+        fireEvent.change(getFileInput(), {
+          target: {
+            files: [new File(["a"], "clip.pdf", { type: "application/pdf" })],
+          },
+        });
+      });
+      // Edits within 300ms merge into one undo step
+      await wait(400);
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: "Remove clip.pdf" }),
+        );
+      });
+      expect(grid.getValue("1", "media")).toEqual([]);
+
+      act(() => {
+        grid.table.undo();
+      });
+
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+      expect(grid.getValue("1", "media")).toEqual([
+        expect.objectContaining({ url: "blob:clip" }),
+      ]);
+    });
+
+    it("revokes only the object URLs it created when unmounted", async () => {
+      vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:grid");
+      const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL");
+      const media: FileCellData[] = [
+        {
+          id: "app",
+          name: "app.pdf",
+          size: 1,
+          type: "application/pdf",
+          url: "blob:app",
+        },
+      ];
+      const grid = renderGrid({
+        data: skaters.map((skater) =>
+          skater.id === "1" ? { ...skater, media } : skater,
+        ),
+      });
+      openFiles(grid, "1");
+
+      await act(async () => {
+        fireEvent.change(getFileInput(), {
+          target: {
+            files: [new File(["a"], "clip.pdf", { type: "application/pdf" })],
+          },
+        });
+      });
+      grid.unmount();
+
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:grid");
+      expect(revokeObjectURL).not.toHaveBeenCalledWith("blob:app");
     });
   });
 

@@ -1110,3 +1110,26 @@ export function getFileIcon(
   }
   return File;
 }
+
+const objectUrlsByStore = new WeakMap<object, Set<string>>();
+
+export function createFileObjectUrl<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  file: File,
+) {
+  const url = URL.createObjectURL(file);
+  let urls = objectUrlsByStore.get(table.store);
+  if (!urls) {
+    urls = new Set();
+    objectUrlsByStore.set(table.store, urls);
+  }
+  urls.add(url);
+  return url;
+}
+
+export function revokeFileObjectUrls(store: object) {
+  const urls = objectUrlsByStore.get(store);
+  if (!urls) return;
+  for (const url of urls) URL.revokeObjectURL(url);
+  objectUrlsByStore.delete(store);
+}

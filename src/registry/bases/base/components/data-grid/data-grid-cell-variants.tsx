@@ -16,6 +16,7 @@ import type {
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
+  createFileObjectUrl,
   formatDateForDisplay,
   formatDateToString,
   formatFileSize,
@@ -81,10 +82,7 @@ const getOverlapOffset: PopoverPrimitive.Positioner.Props["sideOffset"] = ({
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { onKeyDown, textProps } = useEditableText({
-    ...props,
-    format: PLAIN_TEXT,
-  });
+  const { onKeyDown, textProps } = useEditableText(props);
 
   return (
     <DataGridCell<TData> {...props} onKeyDown={onKeyDown}>
@@ -114,40 +112,60 @@ export function LongTextCell<TData extends RowData>(
     readOnly,
   });
 
+  const editStartValueRef = React.useRef(initialValue);
+  const isCancelingRef = React.useRef(false);
+  const wasEditingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (isEditing && !wasEditingRef.current) {
+      editStartValueRef.current = initialValue;
+      isCancelingRef.current = false;
+    }
+    wasEditingRef.current = isEditing;
+  }, [isEditing, initialValue]);
+
   const debouncedSave = useDebouncedCallback((newValue: string) => {
     if (!readOnly) {
       cell.setValue(newValue);
     }
   }, 300);
 
-  const save = React.useCallback(
+  const onSave = React.useCallback(
     (options?: SaveOptions) => {
+      debouncedSave.cancel();
+      if (isCancelingRef.current) {
+        cell.table.stopEditing(options);
+        return;
+      }
       if (!readOnly && value !== initialValue) {
         cell.setValue(value);
       }
       setDraft(null);
       cell.table.stopEditing(options);
     },
-    [cell, value, initialValue, readOnly],
+    [cell, value, initialValue, readOnly, debouncedSave],
   );
 
   const onCancel = React.useCallback(() => {
+    debouncedSave.cancel();
+    isCancelingRef.current = true;
     setDraft(null);
-    if (!readOnly) {
-      cell.setValue(initialValue);
+    const editStartValue = editStartValueRef.current;
+    if (!readOnly && getTextCellValue(cell.getValue()) !== editStartValue) {
+      cell.setValue(editStartValue);
     }
     cell.table.stopEditing();
-  }, [cell, initialValue, readOnly]);
+  }, [cell, readOnly, debouncedSave]);
 
   const onOpenChange = React.useCallback(
     (open: boolean) => {
       if (open && !readOnly) {
         cell.startEditing();
       } else {
-        save();
+        onSave();
       }
     },
-    [cell, readOnly, save],
+    [cell, readOnly, onSave],
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -175,7 +193,7 @@ export function LongTextCell<TData extends RowData>(
     return false;
   }, [pendingCharRef]);
 
-  const onBlur = React.useCallback(() => save(), [save]);
+  const onBlur = React.useCallback(() => onSave(), [onSave]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -193,15 +211,15 @@ export function LongTextCell<TData extends RowData>(
         onCancel();
       } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
-        save();
+        onSave();
       } else if (event.key === "Tab") {
         event.preventDefault();
-        save({ direction: getTabDirection(event) });
+        onSave({ direction: getTabDirection(event) });
         return;
       }
       event.stopPropagation();
     },
-    [save, onCancel],
+    [onSave, onCancel],
   );
 
   return (
@@ -373,7 +391,7 @@ export function UrlCell<TData extends RowData>(
   const { isEditing, isFocused } = props;
   const { value, onKeyDown, textProps } = useEditableText({
     ...props,
-    format: URL_TEXT,
+    parse: parseUrlText,
   });
 
   const onWrapperKeyDown = React.useCallback(
@@ -1162,7 +1180,7 @@ export function FileCell<TData extends RowData>(
           name: file.name,
           size: file.size,
           type: file.type,
-          url: URL.createObjectURL(file),
+          url: createFileObjectUrl(cell.table, file),
         }));
       }
 
@@ -1217,10 +1235,6 @@ export function FileCell<TData extends RowData>(
         }
       }
 
-      if (fileToRemove.url?.startsWith("blob:")) {
-        URL.revokeObjectURL(fileToRemove.url);
-      }
-
       cell.setValue(
         getFilesCellValue(cell.getValue()).filter((f) => f.id !== fileId),
       );
@@ -1256,11 +1270,6 @@ export function FileCell<TData extends RowData>(
       }
     }
 
-    for (const file of cellValue) {
-      if (file.url?.startsWith("blob:")) {
-        URL.revokeObjectURL(file.url);
-      }
-    }
     setDeletingFiles(new Set());
     cell.setValue([]);
   }, [cell, cellValue, rowId, columnId, readOnly, isPending]);
@@ -1651,20 +1660,13 @@ interface SaveOptions {
   direction?: NavigationDirection;
 }
 
-interface TextFormat {
-  parse: (text: string) => string;
-  toValue: (text: string) => string | null;
+function parsePlainText(text: string) {
+  return text;
 }
 
-const PLAIN_TEXT: TextFormat = {
-  parse: (text) => text,
-  toValue: (text) => text,
-};
-
-const URL_TEXT: TextFormat = {
-  parse: (text) => text.trim(),
-  toValue: (text) => text || null,
-};
+function parseUrlText(text: string) {
+  return text.trim() || null;
+}
 
 function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
   return event.shiftKey ? "shift+tab" : "tab";
@@ -1751,7 +1753,7 @@ function usePendingChar({
 interface UseEditableTextOptions<
   TData extends RowData,
 > extends DataGridCellProps<TData> {
-  format: TextFormat;
+  parse?: (text: string) => string | null;
 }
 
 function useEditableText<TData extends RowData>({
@@ -1759,7 +1761,7 @@ function useEditableText<TData extends RowData>({
   isEditing,
   isFocused,
   readOnly,
-  format,
+  parse = parsePlainText,
 }: UseEditableTextOptions<TData>) {
   const initialValue = getTextCellValue(useCellValue(cell));
   const [draft, setDraft] = React.useState<{
@@ -1812,14 +1814,14 @@ function useEditableText<TData extends RowData>({
 
   const save = React.useCallback(
     (options?: SaveOptions) => {
-      const text = format.parse(textRef.current?.textContent ?? "");
-      if (!readOnly && text !== initialValue) {
-        cell.setValue(format.toValue(text));
+      const value = parse(textRef.current?.textContent ?? "");
+      if (!readOnly && value !== parse(initialValue)) {
+        cell.setValue(value);
       }
       setDraft(null);
       cell.table.stopEditing(options);
     },
-    [cell, format, initialValue, readOnly],
+    [cell, parse, initialValue, readOnly],
   );
 
   const onBlur = React.useCallback(() => save(), [save]);
