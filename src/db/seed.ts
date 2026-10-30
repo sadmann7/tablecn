@@ -7,6 +7,30 @@ const SEED_FUNCTIONS = {
 type TableName = keyof typeof SEED_FUNCTIONS;
 const ALL_TABLES = Object.keys(SEED_FUNCTIONS) as TableName[];
 
+runSeed().catch((err) => {
+  console.error("❌ Seed failed");
+  console.error(err);
+  process.exit(1);
+});
+
+async function runSeed() {
+  const tables = parseArgs();
+
+  console.log(`⏳ Seeding: ${tables.join(", ")}...`);
+
+  const start = Date.now();
+
+  for (const table of tables) {
+    await SEED_FUNCTIONS[table]();
+  }
+
+  const end = Date.now();
+
+  console.log(`✅ Seed completed in ${end - start}ms`);
+
+  process.exit(0);
+}
+
 function parseArgs(): TableName[] {
   const args = process.argv.slice(2);
 
@@ -28,27 +52,3 @@ function parseArgs(): TableName[] {
 
   return tables;
 }
-
-async function runSeed() {
-  const tables = parseArgs();
-
-  console.log(`⏳ Seeding: ${tables.join(", ")}...`);
-
-  const start = Date.now();
-
-  for (const table of tables) {
-    await SEED_FUNCTIONS[table]();
-  }
-
-  const end = Date.now();
-
-  console.log(`✅ Seed completed in ${end - start}ms`);
-
-  process.exit(0);
-}
-
-runSeed().catch((err) => {
-  console.error("❌ Seed failed");
-  console.error(err);
-  process.exit(1);
-});

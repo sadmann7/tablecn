@@ -43,14 +43,6 @@ export function getDataTableSelectColumn<TData extends RowData>({
   };
 }
 
-function getHitboxClassName(debug?: boolean) {
-  return cn(
-    "select-none after:-inset-2",
-    debug &&
-      "after:border after:border-dashed after:border-red-500 after:bg-red-500/20",
-  );
-}
-
 interface DataTableSelectHeaderProps<TData extends RowData> extends Pick<
   HeaderContext<DataTableFeatures, TData>,
   "table"
@@ -83,6 +75,14 @@ function DataTableSelectHeader<TData extends RowData>({
         />
       )}
     </Subscribe>
+  );
+}
+
+function getHitboxClassName(debug?: boolean) {
+  return cn(
+    "select-none after:-inset-2",
+    debug &&
+      "after:border after:border-dashed after:border-red-500 after:bg-red-500/20",
   );
 }
 

@@ -156,18 +156,6 @@ function DataTableToolbarFilter<TData extends RowData>({
   }
 }
 
-function readFilterInputValue(value: unknown) {
-  if (typeof value === "string" || typeof value === "number") {
-    return String(value);
-  }
-
-  if (Array.isArray(value)) {
-    return value.join(",");
-  }
-
-  return "";
-}
-
 interface DataTableFilterInputProps<
   TData extends RowData,
 > extends React.ComponentProps<"input"> {
@@ -196,4 +184,16 @@ function DataTableFilterInput<TData extends RowData>({
       )}
     </Subscribe>
   );
+}
+
+function readFilterInputValue(value: unknown) {
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.join(",");
+  }
+
+  return "";
 }

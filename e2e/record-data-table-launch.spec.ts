@@ -4,7 +4,6 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const execFileAsync = promisify(execFile);
 const OUTPUT = path.resolve("recordings/data-table-launch.mp4");
 const FRAMES = path.resolve("recordings/.frames");
 
@@ -123,6 +122,8 @@ function readScreencastFrame(event: unknown) {
 
   return { data, sessionId, timestamp: metadata.timestamp };
 }
+
+const execFileAsync = promisify(execFile);
 
 async function encodeLoop(
   frames: CapturedFrame[],

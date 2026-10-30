@@ -41,19 +41,6 @@ interface PresenceState {
 
 type PresenceConnection = Connection<PresenceState>;
 
-function generateUserName(): string {
-  const adj =
-    ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
-  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
-  return `${adj} ${animal}`;
-}
-
-function pickColor(usedColors: string[]): string {
-  const available = COLORS.filter((c) => !usedColors.includes(c));
-  const pool = available.length > 0 ? available : COLORS;
-  return pool[Math.floor(Math.random() * pool.length)] ?? COLORS[0] ?? "";
-}
-
 export class SkaterRoom extends Server<Env> {
   static options = { hibernate: true };
 
@@ -311,15 +298,6 @@ export class SkaterRoom extends Server<Env> {
   }
 }
 
-function getIsValidRoom(request: Request) {
-  const room = new URL(request.url).pathname.split("/")[3];
-  return (
-    room === undefined ||
-    room === PUBLIC_ROOM_ID ||
-    PRIVATE_ROOM_ID_PATTERN.test(room)
-  );
-}
-
 export default {
   async fetch(request, env) {
     if (!getIsValidRoom(request)) {
@@ -332,3 +310,25 @@ export default {
     );
   },
 } satisfies ExportedHandler<Env>;
+
+function generateUserName(): string {
+  const adj =
+    ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
+  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
+  return `${adj} ${animal}`;
+}
+
+function pickColor(usedColors: string[]): string {
+  const available = COLORS.filter((c) => !usedColors.includes(c));
+  const pool = available.length > 0 ? available : COLORS;
+  return pool[Math.floor(Math.random() * pool.length)] ?? COLORS[0] ?? "";
+}
+
+function getIsValidRoom(request: Request) {
+  const room = new URL(request.url).pathname.split("/")[3];
+  return (
+    room === undefined ||
+    room === PUBLIC_ROOM_ID ||
+    PRIVATE_ROOM_ID_PATTERN.test(room)
+  );
+}

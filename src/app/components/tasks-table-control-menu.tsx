@@ -77,23 +77,6 @@ function TasksTableControlMenu() {
   );
 }
 
-function FlagGroupSkeleton({ flags }: { flags: readonly Flag[] }) {
-  return (
-    <div className="relative flex h-7 items-center">
-      {flags.map((flag) => (
-        <div
-          key={flag.value}
-          className="flex items-center gap-1 px-2 text-[0.8rem]"
-        >
-          <span className="invisible size-3.5 shrink-0" />
-          <span className="invisible">{flag.label}</span>
-        </div>
-      ))}
-      <Skeleton className="absolute inset-0 rounded-[min(var(--radius-md),10px)]" />
-    </div>
-  );
-}
-
 interface ControlGroupProps {
   label: string;
   children: React.ReactNode;
@@ -143,6 +126,23 @@ function TasksTableControlMenuSkeleton() {
       <ControlGroup label="Filter">
         <FlagGroupSkeleton flags={FILTER_MODES} />
       </ControlGroup>
+    </div>
+  );
+}
+
+function FlagGroupSkeleton({ flags }: { flags: readonly Flag[] }) {
+  return (
+    <div className="relative flex h-7 items-center">
+      {flags.map((flag) => (
+        <div
+          key={flag.value}
+          className="flex items-center gap-1 px-2 text-[0.8rem]"
+        >
+          <span className="invisible size-3.5 shrink-0" />
+          <span className="invisible">{flag.label}</span>
+        </div>
+      ))}
+      <Skeleton className="absolute inset-0 rounded-[min(var(--radius-md),10px)]" />
     </div>
   );
 }

@@ -10,16 +10,6 @@ import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { Input } from "@/registry/bases/radix/ui/input";
 
-function getRangeFilterValues(value: string | string[]): [string, string] {
-  if (Array.isArray(value)) return [value[0] ?? "", value[1] ?? ""];
-  return [value, ""];
-}
-
-/** Number inputs only accept plain numbers, so skip rounding and grouping. */
-function getInputValue(value: string) {
-  return value === "" || Number.isNaN(Number(value)) ? "" : value;
-}
-
 interface DataTableRangeFilterProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -118,4 +108,14 @@ export function DataTableRangeFilter<TData extends RowData>({
       />
     </div>
   );
+}
+
+function getRangeFilterValues(value: string | string[]): [string, string] {
+  if (Array.isArray(value)) return [value[0] ?? "", value[1] ?? ""];
+  return [value, ""];
+}
+
+/** Number inputs only accept plain numbers, so skip rounding and grouping. */
+function getInputValue(value: string) {
+  return value === "" || Number.isNaN(Number(value)) ? "" : value;
 }

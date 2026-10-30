@@ -21,30 +21,6 @@ import {
   serializeCellValue,
 } from "@/lib/data-grid-utils";
 
-function createScrollContainer({
-  dir = "ltr",
-  canScrollY = true,
-  canScrollX = true,
-}: {
-  dir?: "ltr" | "rtl";
-  canScrollY?: boolean;
-  canScrollX?: boolean;
-} = {}) {
-  const container = document.createElement("div");
-  container.dir = dir;
-  container.style.direction = dir;
-  document.body.replaceChildren(container);
-  container.getBoundingClientRect = () =>
-    ({ left: 0, top: 0, right: 800, bottom: 600 }) as DOMRect;
-  Object.defineProperties(container, {
-    clientHeight: { value: 600 },
-    scrollHeight: { value: canScrollY ? 6000 : 600 },
-    clientWidth: { value: 800 },
-    scrollWidth: { value: canScrollX ? 4000 : 800 },
-  });
-  return container;
-}
-
 describe("cell value narrowing", () => {
   it("narrows number values", () => {
     expect(getNumberCellValue(42)).toBe(42);
@@ -598,6 +574,30 @@ describe("getIsPointOnScrollbar", () => {
     expect(getIsPointOnScrollbar(null, 795, 300)).toBe(false);
   });
 });
+
+function createScrollContainer({
+  dir = "ltr",
+  canScrollY = true,
+  canScrollX = true,
+}: {
+  dir?: "ltr" | "rtl";
+  canScrollY?: boolean;
+  canScrollX?: boolean;
+} = {}) {
+  const container = document.createElement("div");
+  container.dir = dir;
+  container.style.direction = dir;
+  document.body.replaceChildren(container);
+  container.getBoundingClientRect = () =>
+    ({ left: 0, top: 0, right: 800, bottom: 600 }) as DOMRect;
+  Object.defineProperties(container, {
+    clientHeight: { value: 600 },
+    scrollHeight: { value: canScrollY ? 6000 : 600 },
+    clientWidth: { value: 800 },
+    scrollWidth: { value: canScrollX ? 4000 : 800 },
+  });
+  return container;
+}
 
 describe("insertTextAtSelection", () => {
   it("inserts at the caret and emits an input event", () => {

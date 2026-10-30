@@ -76,17 +76,6 @@ const columnsWithSelect: ColumnDef<DataGridFeatures, TestData>[] = [
   { id: "actions" },
 ];
 
-function startEditing(
-  table: ReturnType<typeof useDataGrid<TestData>>["table"],
-  rowId: string,
-  columnId: string,
-) {
-  const cellsByColumnId = table
-    .getCoreRowModel()
-    .rowsById[rowId]?.getAllCellsByColumnId();
-  cellsByColumnId?.[columnId]?.startEditing();
-}
-
 type GridBodyEventType =
   | "onClick"
   | "onDoubleClick"
@@ -94,62 +83,6 @@ type GridBodyEventType =
   | "onMouseOver"
   | "onMouseUp"
   | "onContextMenu";
-
-function getFocusedCell(table: Table<DataGridFeatures, TestData> | undefined) {
-  return getFocusedCellPosition(table?.atoms.cellSelection.get() ?? []);
-}
-
-function getSelectedCellKeys(
-  table: Table<DataGridFeatures, TestData> | undefined,
-) {
-  return (table?.getSelectedCells() ?? []).map(({ rowId, columnId }) =>
-    getCellKey(rowId, columnId),
-  );
-}
-
-function fireCellEvent(
-  result: { current: ReturnType<typeof useDataGrid<TestData>> },
-  type: GridBodyEventType,
-  rowId: string,
-  columnId: string,
-  init: object = {},
-) {
-  const { dataGridRef, dataGridBodyProps } = result.current;
-  const previousContainer = dataGridRef.current;
-  const container = document.createElement("div");
-  container.dataset.slot = "data-grid";
-  const cellElement = document.createElement("div");
-  cellElement.dataset.slot = "data-grid-cell";
-  cellElement.dataset.rowId = rowId;
-  cellElement.dataset.columnId = columnId;
-  container.append(cellElement);
-  dataGridRef.current = container;
-
-  try {
-    dataGridBodyProps[type]?.({
-      target: cellElement,
-      currentTarget: container,
-      button: 0,
-      clientX: 0,
-      clientY: 0,
-      ctrlKey: false,
-      metaKey: false,
-      shiftKey: false,
-      defaultPrevented: false,
-      preventDefault: vi.fn(),
-      stopPropagation: vi.fn(),
-      ...init,
-    } as unknown as React.MouseEvent<HTMLDivElement>);
-  } finally {
-    dataGridRef.current = previousContainer;
-  }
-}
-
-function createWrapper() {
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return <>{children}</>;
-  };
-}
 
 describe("useDataGrid", () => {
   let mockClipboard: {
@@ -5399,3 +5332,70 @@ describe("useDataGrid", () => {
     });
   });
 });
+
+function createWrapper() {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <>{children}</>;
+  };
+}
+
+function getFocusedCell(table: Table<DataGridFeatures, TestData> | undefined) {
+  return getFocusedCellPosition(table?.atoms.cellSelection.get() ?? []);
+}
+
+function fireCellEvent(
+  result: { current: ReturnType<typeof useDataGrid<TestData>> },
+  type: GridBodyEventType,
+  rowId: string,
+  columnId: string,
+  init: object = {},
+) {
+  const { dataGridRef, dataGridBodyProps } = result.current;
+  const previousContainer = dataGridRef.current;
+  const container = document.createElement("div");
+  container.dataset.slot = "data-grid";
+  const cellElement = document.createElement("div");
+  cellElement.dataset.slot = "data-grid-cell";
+  cellElement.dataset.rowId = rowId;
+  cellElement.dataset.columnId = columnId;
+  container.append(cellElement);
+  dataGridRef.current = container;
+
+  try {
+    dataGridBodyProps[type]?.({
+      target: cellElement,
+      currentTarget: container,
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+      defaultPrevented: false,
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn(),
+      ...init,
+    } as unknown as React.MouseEvent<HTMLDivElement>);
+  } finally {
+    dataGridRef.current = previousContainer;
+  }
+}
+
+function startEditing(
+  table: ReturnType<typeof useDataGrid<TestData>>["table"],
+  rowId: string,
+  columnId: string,
+) {
+  const cellsByColumnId = table
+    .getCoreRowModel()
+    .rowsById[rowId]?.getAllCellsByColumnId();
+  cellsByColumnId?.[columnId]?.startEditing();
+}
+
+function getSelectedCellKeys(
+  table: Table<DataGridFeatures, TestData> | undefined,
+) {
+  return (table?.getSelectedCells() ?? []).map(({ rowId, columnId }) =>
+    getCellKey(rowId, columnId),
+  );
+}

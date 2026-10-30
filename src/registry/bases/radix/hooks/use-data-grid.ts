@@ -62,62 +62,6 @@ const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
 const UTILITY_COLUMN_IDS = new Set(["select", "actions"]);
 const SEARCH_SHORTCUT_KEY = "f";
 
-let nextObjectId = 0;
-const objectIds = new WeakMap<object, number>();
-
-function useStableProps<TProps extends object>(
-  props: TProps,
-  propsRef: React.RefObject<TProps>,
-): TProps {
-  let propsKey = "";
-  for (const [name, value] of Object.entries(props)) {
-    let valueKey = `${typeof value}${String(value)}`;
-    if (typeof value === "function") {
-      valueKey = "fn";
-    } else if (typeof value === "object" && value !== null) {
-      let id = objectIds.get(value);
-      if (id === undefined) {
-        id = nextObjectId++;
-        objectIds.set(value, id);
-      }
-      valueKey = `obj${id}`;
-    }
-    propsKey += `${name}:${valueKey}\u0000`;
-  }
-
-  return React.useMemo(() => {
-    const stableProps = { ...props };
-    for (const [key, value] of Object.entries(props)) {
-      if (typeof value !== "function") continue;
-      Reflect.set(stableProps, key, (...args: unknown[]) => {
-        const callback: unknown = Reflect.get(propsRef.current, key);
-        if (typeof callback === "function") return callback(...args);
-      });
-    }
-    return stableProps;
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- callbacks read `propsRef`, so only non-function prop changes rebuild
-  }, [propsKey]);
-}
-
-function showClipboardToast({ variant, message }: ClipboardNotice) {
-  if (variant === "error") toast.error(message);
-  else toast.success(message);
-}
-
-function selectGridLayoutState(state: TableState<DataGridFeatures>) {
-  return {
-    rowHeight: state.rowHeight,
-    sorting: state.sorting,
-    columnFilters: state.columnFilters,
-    columnVisibility: state.columnVisibility,
-    columnPinning: state.columnPinning,
-    columnOrder: state.columnOrder,
-    columnSizing: state.columnSizing,
-    columnResizing: state.columnResizing,
-    undoRedo: state.undoRedo,
-  };
-}
-
 interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
@@ -1974,6 +1918,62 @@ function useDataGrid<TData extends RowData>({
       onRowAdd,
     ],
   );
+}
+
+let nextObjectId = 0;
+const objectIds = new WeakMap<object, number>();
+
+function useStableProps<TProps extends object>(
+  props: TProps,
+  propsRef: React.RefObject<TProps>,
+): TProps {
+  let propsKey = "";
+  for (const [name, value] of Object.entries(props)) {
+    let valueKey = `${typeof value}${String(value)}`;
+    if (typeof value === "function") {
+      valueKey = "fn";
+    } else if (typeof value === "object" && value !== null) {
+      let id = objectIds.get(value);
+      if (id === undefined) {
+        id = nextObjectId++;
+        objectIds.set(value, id);
+      }
+      valueKey = `obj${id}`;
+    }
+    propsKey += `${name}:${valueKey}\u0000`;
+  }
+
+  return React.useMemo(() => {
+    const stableProps = { ...props };
+    for (const [key, value] of Object.entries(props)) {
+      if (typeof value !== "function") continue;
+      Reflect.set(stableProps, key, (...args: unknown[]) => {
+        const callback: unknown = Reflect.get(propsRef.current, key);
+        if (typeof callback === "function") return callback(...args);
+      });
+    }
+    return stableProps;
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- callbacks read `propsRef`, so only non-function prop changes rebuild
+  }, [propsKey]);
+}
+
+function showClipboardToast({ variant, message }: ClipboardNotice) {
+  if (variant === "error") toast.error(message);
+  else toast.success(message);
+}
+
+function selectGridLayoutState(state: TableState<DataGridFeatures>) {
+  return {
+    rowHeight: state.rowHeight,
+    sorting: state.sorting,
+    columnFilters: state.columnFilters,
+    columnVisibility: state.columnVisibility,
+    columnPinning: state.columnPinning,
+    columnOrder: state.columnOrder,
+    columnSizing: state.columnSizing,
+    columnResizing: state.columnResizing,
+    undoRedo: state.undoRedo,
+  };
 }
 
 export { useDataGrid, type UseDataGridProps };

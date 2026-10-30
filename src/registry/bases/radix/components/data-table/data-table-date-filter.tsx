@@ -21,35 +21,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 type DateSelection = Date[] | DateRange;
 
-function getIsDateRange(value: DateSelection): value is DateRange {
-  return !Array.isArray(value);
-}
-
-function parseAsDate(timestamp: number | string | undefined): Date | undefined {
-  if (!timestamp) return undefined;
-  const numericTimestamp =
-    typeof timestamp === "string" ? Number(timestamp) : timestamp;
-  const date = new Date(numericTimestamp);
-  return !Number.isNaN(date.getTime()) ? date : undefined;
-}
-
-function parseColumnFilterValue(value: unknown) {
-  if (Array.isArray(value)) {
-    return value.map((item) =>
-      typeof item === "number" || typeof item === "string" ? item : undefined,
-    );
-  }
-  if (typeof value === "string" || typeof value === "number") return [value];
-  return [];
-}
-
-function formatDateRange(range: DateRange) {
-  if (range.from && range.to) {
-    return `${formatDate(range.from)} - ${formatDate(range.to)}`;
-  }
-  return formatDate(range.from ?? range.to);
-}
-
 interface DataTableDateFilterProps<TData extends RowData> {
   column: Column<DataTableFeatures, TData>;
   title?: string;
@@ -223,4 +194,33 @@ function DataTableDateFilterContent<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
+}
+
+function parseColumnFilterValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      typeof item === "number" || typeof item === "string" ? item : undefined,
+    );
+  }
+  if (typeof value === "string" || typeof value === "number") return [value];
+  return [];
+}
+
+function parseAsDate(timestamp: number | string | undefined): Date | undefined {
+  if (!timestamp) return undefined;
+  const numericTimestamp =
+    typeof timestamp === "string" ? Number(timestamp) : timestamp;
+  const date = new Date(numericTimestamp);
+  return !Number.isNaN(date.getTime()) ? date : undefined;
+}
+
+function getIsDateRange(value: DateSelection): value is DateRange {
+  return !Array.isArray(value);
+}
+
+function formatDateRange(range: DateRange) {
+  if (range.from && range.to) {
+    return `${formatDate(range.from)} - ${formatDate(range.to)}`;
+  }
+  return formatDate(range.from ?? range.to);
 }

@@ -4,15 +4,6 @@ import type { FilterOperator, FilterVariant } from "@/lib/data-table-types";
 
 import { matchesFilter } from "@/lib/data-table-filters";
 
-function match(
-  cell: unknown,
-  operator: FilterOperator,
-  variant: FilterVariant,
-  value: string | string[],
-) {
-  return matchesFilter(cell, { operator, variant, value });
-}
-
 describe("matchesFilter", () => {
   it("matches text by inclusion, and skips a filter with no text", () => {
     expect(match("Alpha", "iLike", "text", "alp")).toBe(true);
@@ -176,3 +167,12 @@ describe("matchesFilter", () => {
     expect(match("todo", "nope" as FilterOperator, "text", "todo")).toBe(true);
   });
 });
+
+function match(
+  cell: unknown,
+  operator: FilterOperator,
+  variant: FilterVariant,
+  value: string | string[],
+) {
+  return matchesFilter(cell, { operator, variant, value });
+}

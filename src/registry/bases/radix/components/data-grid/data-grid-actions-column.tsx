@@ -24,6 +24,44 @@ type DataGridActionsContext<TData extends RowData> = Pick<
   "row" | "table"
 >;
 
+interface GetDataGridActionsColumnOptions<TData extends RowData> extends Omit<
+  Partial<ColumnDef<DataGridFeatures, TData>>,
+  "id" | "header" | "cell"
+> {
+  actions: (context: DataGridActionsContext<TData>) => React.ReactNode;
+  getAriaLabel?: (row: Row<DataGridFeatures, TData>) => string;
+}
+
+export function getDataGridActionsColumn<TData extends RowData>({
+  actions,
+  getAriaLabel = (row) => `Open actions for row ${row.getDisplayIndex() + 1}`,
+  size = 56,
+  minSize = size,
+  enableHiding = false,
+  enableResizing = false,
+  enableSorting = false,
+  ...props
+}: GetDataGridActionsColumnOptions<TData>): ColumnDef<DataGridFeatures, TData> {
+  return {
+    id: "actions",
+    header: () => <span className="sr-only">Actions</span>,
+    cell: ({ row, table }) => (
+      <DataGridActionsCell
+        table={table}
+        row={row}
+        actions={actions}
+        getAriaLabel={getAriaLabel}
+      />
+    ),
+    size,
+    minSize,
+    enableHiding,
+    enableResizing,
+    enableSorting,
+    ...props,
+  };
+}
+
 interface DataGridActionsCellProps<
   TData extends RowData,
 > extends DataGridActionsContext<TData> {
@@ -63,42 +101,4 @@ function DataGridActionsCell<TData extends RowData>({
       </DropdownMenu>
     </div>
   );
-}
-
-interface GetDataGridActionsColumnOptions<TData extends RowData> extends Omit<
-  Partial<ColumnDef<DataGridFeatures, TData>>,
-  "id" | "header" | "cell"
-> {
-  actions: (context: DataGridActionsContext<TData>) => React.ReactNode;
-  getAriaLabel?: (row: Row<DataGridFeatures, TData>) => string;
-}
-
-export function getDataGridActionsColumn<TData extends RowData>({
-  actions,
-  getAriaLabel = (row) => `Open actions for row ${row.getDisplayIndex() + 1}`,
-  size = 56,
-  minSize = size,
-  enableHiding = false,
-  enableResizing = false,
-  enableSorting = false,
-  ...props
-}: GetDataGridActionsColumnOptions<TData>): ColumnDef<DataGridFeatures, TData> {
-  return {
-    id: "actions",
-    header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row, table }) => (
-      <DataGridActionsCell
-        table={table}
-        row={row}
-        actions={actions}
-        getAriaLabel={getAriaLabel}
-      />
-    ),
-    size,
-    minSize,
-    enableHiding,
-    enableResizing,
-    enableSorting,
-    ...props,
-  };
 }

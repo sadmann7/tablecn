@@ -24,82 +24,10 @@ interface Identity {
   color: string;
 }
 
-function getOrCreateIdentity(): Identity {
-  let stored: Partial<Identity> | null = null;
-  try {
-    const value = localStorage.getItem(STORAGE_KEY);
-    if (value) stored = JSON.parse(value) as Partial<Identity>;
-  } catch {
-    // Fails silently if localStorage is not available
-  }
-
-  if (stored?.clientId && stored.name && stored.color) {
-    return stored as Identity;
-  }
-
-  const adjective =
-    ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
-  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
-  const identity: Identity = {
-    clientId: stored?.clientId ?? generateId(),
-    name: stored?.name ?? `${adjective} ${animal}`,
-    color:
-      stored?.color ??
-      COLORS[Math.floor(Math.random() * COLORS.length)] ??
-      "#3b82f6",
-  };
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
-  } catch {}
-
-  return identity;
-}
-
 interface Room {
   socket: PartySocket;
   collection: SkatersCollection;
   subscribe: (listener: (message: ServerMessage) => void) => () => void;
-}
-
-function createRoom(roomId: string): Room {
-  const identity = getOrCreateIdentity();
-  const socket = new PartySocket({
-    host: PARTYKIT_HOST,
-    room: roomId,
-    id: generateId(),
-    query: {
-      clientId: identity.clientId,
-      name: identity.name,
-      color: identity.color,
-    },
-    startClosed: true,
-  });
-
-  const listeners = new Set<(message: ServerMessage) => void>();
-  socket.addEventListener("message", (event: MessageEvent) => {
-    let message: ServerMessage;
-    try {
-      message = JSON.parse(event.data as string) as ServerMessage;
-    } catch {
-      return;
-    }
-    for (const listener of listeners) listener(message);
-  });
-
-  function subscribe(listener: (message: ServerMessage) => void) {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }
-
-  const collection = createSkatersCollection({
-    send: (message) => socket.send(JSON.stringify(message)),
-    subscribe,
-  });
-
-  return { socket, collection, subscribe };
 }
 
 interface UseMultiplayerRoomReturn {
@@ -222,4 +150,76 @@ export function useMultiplayerRoom(roomId: string): UseMultiplayerRoomReturn {
     currentUserId,
     sendActiveCell,
   };
+}
+
+function createRoom(roomId: string): Room {
+  const identity = getOrCreateIdentity();
+  const socket = new PartySocket({
+    host: PARTYKIT_HOST,
+    room: roomId,
+    id: generateId(),
+    query: {
+      clientId: identity.clientId,
+      name: identity.name,
+      color: identity.color,
+    },
+    startClosed: true,
+  });
+
+  const listeners = new Set<(message: ServerMessage) => void>();
+  socket.addEventListener("message", (event: MessageEvent) => {
+    let message: ServerMessage;
+    try {
+      message = JSON.parse(event.data as string) as ServerMessage;
+    } catch {
+      return;
+    }
+    for (const listener of listeners) listener(message);
+  });
+
+  function subscribe(listener: (message: ServerMessage) => void) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+
+  const collection = createSkatersCollection({
+    send: (message) => socket.send(JSON.stringify(message)),
+    subscribe,
+  });
+
+  return { socket, collection, subscribe };
+}
+
+function getOrCreateIdentity(): Identity {
+  let stored: Partial<Identity> | null = null;
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    if (value) stored = JSON.parse(value) as Partial<Identity>;
+  } catch {
+    // Fails silently if localStorage is not available
+  }
+
+  if (stored?.clientId && stored.name && stored.color) {
+    return stored as Identity;
+  }
+
+  const adjective =
+    ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)] ?? "Swift";
+  const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? "Fox";
+  const identity: Identity = {
+    clientId: stored?.clientId ?? generateId(),
+    name: stored?.name ?? `${adjective} ${animal}`,
+    color:
+      stored?.color ??
+      COLORS[Math.floor(Math.random() * COLORS.length)] ??
+      "#3b82f6",
+  };
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(identity));
+  } catch {}
+
+  return identity;
 }

@@ -76,11 +76,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 // The cell's padding on each side (px-2), so editors line up with its edge
 const CELL_PADDING = 8;
 
-// Pulls an editor up over its cell, which is the row minus its bottom border
-function getOverlapOffset(rowHeight: RowHeightValue) {
-  return 1 - getRowHeightValue(rowHeight);
-}
-
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
@@ -1643,114 +1638,6 @@ export function FileCell<TData extends RowData>(
   );
 }
 
-function toastDangerousUrl() {
-  toast.error("Invalid URL", {
-    description:
-      "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
-  });
-}
-
-interface SaveOptions {
-  moveToNextRow?: boolean;
-  direction?: NavigationDirection;
-}
-
-function parsePlainText(text: string) {
-  return text;
-}
-
-function parseUrlText(text: string) {
-  return text.trim() || null;
-}
-
-function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
-  return event.shiftKey ? "shift+tab" : "tab";
-}
-
-function onEditKeyDown(
-  event: React.KeyboardEvent,
-  save: (options: SaveOptions) => void,
-  cancel: () => void,
-) {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    save({ moveToNextRow: true });
-  } else if (event.key === "Tab") {
-    event.preventDefault();
-    save({ direction: getTabDirection(event) });
-  } else if (event.key === "Escape") {
-    event.preventDefault();
-    cancel();
-  }
-}
-
-function onPopoverKeyDown<TData extends RowData>(
-  cell: DataGridCellProps<TData>["cell"],
-  event: React.KeyboardEvent,
-) {
-  if (event.key === "Escape") {
-    event.preventDefault();
-    cell.table.stopEditing();
-    return true;
-  }
-  if (event.key === "Tab") {
-    event.preventDefault();
-    cell.table.stopEditing({ direction: getTabDirection(event) });
-    return true;
-  }
-  return false;
-}
-
-function onEditingChange<TData extends RowData>(
-  cell: DataGridCellProps<TData>["cell"],
-  open: boolean,
-  readOnly: boolean,
-) {
-  if (open && !readOnly) {
-    cell.startEditing();
-  } else {
-    cell.table.stopEditing();
-  }
-}
-
-interface UsePendingCharOptions {
-  isFocused: boolean;
-  isEditing: boolean;
-  readOnly: boolean;
-}
-
-function usePendingChar({
-  isFocused,
-  isEditing,
-  readOnly,
-}: UsePendingCharOptions) {
-  const pendingCharRef = React.useRef<string | null>(null);
-
-  const onPendingCharKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
-      if (
-        isFocused &&
-        !isEditing &&
-        !readOnly &&
-        event.key.length === 1 &&
-        !event.ctrlKey &&
-        !event.metaKey
-      ) {
-        pendingCharRef.current = event.key;
-      }
-    },
-    [isFocused, isEditing, readOnly],
-  );
-
-  return { pendingCharRef, onPendingCharKeyDown };
-}
-
-interface UseEditableTextOptions<
-  TData extends RowData,
-> extends DataGridCellProps<TData> {
-  parse?: (text: string) => string | null;
-}
-
 function useEditableText<TData extends RowData>({
   cell,
   isEditing,
@@ -1860,6 +1747,10 @@ function useEditableText<TData extends RowData>({
   };
 }
 
+function parsePlainText(text: string) {
+  return text;
+}
+
 interface EditableTextProps extends React.ComponentProps<"div"> {
   isEditing: boolean;
   label: string;
@@ -1895,4 +1786,113 @@ function EditableText({
       {isEditing ? "" : value}
     </div>
   );
+}
+
+function usePendingChar({
+  isFocused,
+  isEditing,
+  readOnly,
+}: UsePendingCharOptions) {
+  const pendingCharRef = React.useRef<string | null>(null);
+
+  const onPendingCharKeyDown = React.useCallback(
+    (event: React.KeyboardEvent) => {
+      if (
+        isFocused &&
+        !isEditing &&
+        !readOnly &&
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        pendingCharRef.current = event.key;
+      }
+    },
+    [isFocused, isEditing, readOnly],
+  );
+
+  return { pendingCharRef, onPendingCharKeyDown };
+}
+
+function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
+  return event.shiftKey ? "shift+tab" : "tab";
+}
+
+// Pulls an editor up over its cell, which is the row minus its bottom border
+function getOverlapOffset(rowHeight: RowHeightValue) {
+  return 1 - getRowHeightValue(rowHeight);
+}
+
+function onEditKeyDown(
+  event: React.KeyboardEvent,
+  save: (options: SaveOptions) => void,
+  cancel: () => void,
+) {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    save({ moveToNextRow: true });
+  } else if (event.key === "Tab") {
+    event.preventDefault();
+    save({ direction: getTabDirection(event) });
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    cancel();
+  }
+}
+
+function parseUrlText(text: string) {
+  return text.trim() || null;
+}
+
+function toastDangerousUrl() {
+  toast.error("Invalid URL", {
+    description:
+      "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
+  });
+}
+
+function onEditingChange<TData extends RowData>(
+  cell: DataGridCellProps<TData>["cell"],
+  open: boolean,
+  readOnly: boolean,
+) {
+  if (open && !readOnly) {
+    cell.startEditing();
+  } else {
+    cell.table.stopEditing();
+  }
+}
+
+function onPopoverKeyDown<TData extends RowData>(
+  cell: DataGridCellProps<TData>["cell"],
+  event: React.KeyboardEvent,
+) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    cell.table.stopEditing();
+    return true;
+  }
+  if (event.key === "Tab") {
+    event.preventDefault();
+    cell.table.stopEditing({ direction: getTabDirection(event) });
+    return true;
+  }
+  return false;
+}
+
+interface SaveOptions {
+  moveToNextRow?: boolean;
+  direction?: NavigationDirection;
+}
+
+interface UsePendingCharOptions {
+  isFocused: boolean;
+  isEditing: boolean;
+  readOnly: boolean;
+}
+
+interface UseEditableTextOptions<
+  TData extends RowData,
+> extends DataGridCellProps<TData> {
+  parse?: (text: string) => string | null;
 }

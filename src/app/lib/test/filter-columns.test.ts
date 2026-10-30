@@ -7,26 +7,7 @@ import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 import { filterColumns, getColumn } from "@/app/lib/filter-columns";
 import { type Task, tasks } from "@/db/schema";
 
-const dialect = new PgDialect();
-
 type TaskColumnId = keyof Task;
-
-function columnFilter(
-  filter: Omit<ColumnFilterItem<TaskColumnId>, "filterId"> & {
-    filterId?: string;
-  },
-): ColumnFilterItem<TaskColumnId> {
-  return { filterId: `${filter.id}-0`, ...filter };
-}
-
-function compile(
-  filters: ColumnFilterItem<TaskColumnId>[],
-  joinOperator: JoinOperator = "and",
-) {
-  const statement = filterColumns({ table: tasks, filters, joinOperator });
-  if (!statement) return undefined;
-  return dialect.sqlToQuery(statement);
-}
 
 describe("filterColumns", () => {
   it("returns the column from the table", () => {
@@ -487,3 +468,22 @@ describe("filterColumns", () => {
     ).toThrow("Unsupported operator");
   });
 });
+
+const dialect = new PgDialect();
+
+function compile(
+  filters: ColumnFilterItem<TaskColumnId>[],
+  joinOperator: JoinOperator = "and",
+) {
+  const statement = filterColumns({ table: tasks, filters, joinOperator });
+  if (!statement) return undefined;
+  return dialect.sqlToQuery(statement);
+}
+
+function columnFilter(
+  filter: Omit<ColumnFilterItem<TaskColumnId>, "filterId"> & {
+    filterId?: string;
+  },
+): ColumnFilterItem<TaskColumnId> {
+  return { filterId: `${filter.id}-0`, ...filter };
+}

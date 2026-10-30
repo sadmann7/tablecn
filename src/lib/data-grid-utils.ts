@@ -178,67 +178,6 @@ export function serializeCellValue(
   return stringifyUnknown(value);
 }
 
-function matchSelectOption(
-  value: string,
-  options: { value: string; label: string }[],
-): string | undefined {
-  return options.find(
-    (o) =>
-      o.value === value ||
-      o.value.toLowerCase() === value.toLowerCase() ||
-      o.label.toLowerCase() === value.toLowerCase(),
-  )?.value;
-}
-
-function parseTextValue(text: string): unknown {
-  if (ISO_DATE_REGEX.test(text)) {
-    const date = new Date(text);
-    if (!Number.isNaN(date.getTime())) return date.toLocaleDateString();
-  }
-
-  const firstChar = text[0];
-  if (
-    firstChar !== "[" &&
-    firstChar !== "{" &&
-    firstChar !== "t" &&
-    firstChar !== "f"
-  ) {
-    return text;
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(text);
-    if (Array.isArray(parsed)) {
-      if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
-        return parsed.map((file) => file.name).join(", ");
-      }
-      if (parsed.every((item) => typeof item === "string")) {
-        return parsed.join(", ");
-      }
-    } else if (typeof parsed === "boolean") {
-      return parsed ? "Checked" : "Unchecked";
-    }
-  } catch {
-    const lower = text.toLowerCase();
-    if (lower === "true" || lower === "false") {
-      return lower === "true" ? "Checked" : "Unchecked";
-    }
-  }
-  return text;
-}
-
-function parseMultiSelectValues(text: string): string[] {
-  try {
-    const parsed: unknown = JSON.parse(text);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((item): item is string => typeof item === "string");
-    }
-  } catch {
-    // Falls back to comma-separated values
-  }
-  return text ? text.split(",").map((item) => item.trim()) : [];
-}
-
 export function parsePastedCellValue(
   text: string,
   cellOpts: CellOpts | undefined,
@@ -302,12 +241,6 @@ export function parsePastedCellValue(
     default:
       return { value: text ? parseTextValue(text) : "" };
   }
-}
-
-function countTabs(s: string): number {
-  let n = 0;
-  for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
-  return n;
 }
 
 export function parseTsv(
@@ -432,10 +365,6 @@ export function getRowCellSelectionKey(
     key += `${bound.minColumnIndex}:${bound.maxColumnIndex},`;
   }
   return key;
-}
-
-function getActiveCellRange(ranges: CellSelectionState) {
-  return ranges[ranges.length - 1] ?? null;
 }
 
 export function getFocusedCellPosition(
@@ -789,6 +718,77 @@ export function getTabTargetCell({
   }
 }
 
+function matchSelectOption(
+  value: string,
+  options: { value: string; label: string }[],
+): string | undefined {
+  return options.find(
+    (o) =>
+      o.value === value ||
+      o.value.toLowerCase() === value.toLowerCase() ||
+      o.label.toLowerCase() === value.toLowerCase(),
+  )?.value;
+}
+
+function parseMultiSelectValues(text: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === "string");
+    }
+  } catch {
+    // Falls back to comma-separated values
+  }
+  return text ? text.split(",").map((item) => item.trim()) : [];
+}
+
+function parseTextValue(text: string): unknown {
+  if (ISO_DATE_REGEX.test(text)) {
+    const date = new Date(text);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleDateString();
+  }
+
+  const firstChar = text[0];
+  if (
+    firstChar !== "[" &&
+    firstChar !== "{" &&
+    firstChar !== "t" &&
+    firstChar !== "f"
+  ) {
+    return text;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
+        return parsed.map((file) => file.name).join(", ");
+      }
+      if (parsed.every((item) => typeof item === "string")) {
+        return parsed.join(", ");
+      }
+    } else if (typeof parsed === "boolean") {
+      return parsed ? "Checked" : "Unchecked";
+    }
+  } catch {
+    const lower = text.toLowerCase();
+    if (lower === "true" || lower === "false") {
+      return lower === "true" ? "Checked" : "Unchecked";
+    }
+  }
+  return text;
+}
+
+function countTabs(s: string): number {
+  let n = 0;
+  for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
+  return n;
+}
+
+function getActiveCellRange(ranges: CellSelectionState) {
+  return ranges[ranges.length - 1] ?? null;
+}
+
 let rootFontScale: number | null = null;
 
 export function getRootFontScale(): number {
@@ -880,10 +880,6 @@ export function scrollCellIntoView<TData extends RowData>(params: {
   container.scrollLeft += scrollDelta;
 }
 
-function escapeAttributeValue(value: string) {
-  return value.replace(/["\\]/g, "\\$&");
-}
-
 export function getCellElement(
   container: HTMLElement,
   rowId: string,
@@ -957,23 +953,6 @@ export function getIsEventOnScrollbar(
     event.currentTarget.closest<HTMLElement>('[data-slot="data-grid"]'),
     event.clientX,
     event.clientY,
-  );
-}
-
-function execInsertText(text: string) {
-  return (
-    typeof document.execCommand === "function" &&
-    document.execCommand("insertText", false, text)
-  );
-}
-
-function dispatchInsertTextInput(element: HTMLElement, text: string) {
-  element.dispatchEvent(
-    new InputEvent("input", {
-      bubbles: true,
-      data: text,
-      inputType: "insertText",
-    }),
   );
 }
 
@@ -1109,6 +1088,27 @@ export function getFileIcon(
     return Presentation;
   }
   return File;
+}
+
+function escapeAttributeValue(value: string) {
+  return value.replace(/["\\]/g, "\\$&");
+}
+
+function execInsertText(text: string) {
+  return (
+    typeof document.execCommand === "function" &&
+    document.execCommand("insertText", false, text)
+  );
+}
+
+function dispatchInsertTextInput(element: HTMLElement, text: string) {
+  element.dispatchEvent(
+    new InputEvent("input", {
+      bubbles: true,
+      data: text,
+      inputType: "insertText",
+    }),
+  );
 }
 
 const objectUrlsByStore = new WeakMap<object, Set<string>>();

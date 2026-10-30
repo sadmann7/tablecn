@@ -29,11 +29,6 @@ import {
   normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
-const sortingItemSchema = z.object({
-  id: z.string(),
-  desc: z.boolean(),
-});
-
 export const getSortingStateParser = <TColumnId extends string = string>(
   columnIds?: readonly TColumnId[] | Set<TColumnId>,
 ) => {
@@ -59,12 +54,74 @@ export const getSortingStateParser = <TColumnId extends string = string>(
   });
 };
 
+function getIdSet<TColumnId extends string>(
+  ids?: readonly TColumnId[] | Set<TColumnId>,
+) {
+  if (!ids) return null;
+  return ids instanceof Set ? ids : new Set(ids);
+}
+
+const sortingItemSchema = z.object({
+  id: z.string(),
+  desc: z.boolean(),
+});
+
+function parseSorting(value: string): ColumnSortItem[] | null {
+  if (value.startsWith("[")) {
+    try {
+      const result = z.array(sortingItemSchema).safeParse(JSON.parse(value));
+      return result.success ? result.data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  const sorting: ColumnSortItem[] = [];
+
+  for (const part of value.split(",")) {
+    const index = part.lastIndexOf(".");
+    const order = part.slice(index + 1);
+
+    if (index <= 0 || (order !== "asc" && order !== "desc")) return null;
+
+    sorting.push({ id: part.slice(0, index), desc: order === "desc" });
+  }
+
+  return sorting;
+}
+
+function getHasKnownIds<
+  TColumnItem extends { id: string },
+  TColumnId extends string,
+>(
+  items: TColumnItem[],
+  ids: ReadonlySet<TColumnId> | null,
+): items is (TColumnItem & { id: TColumnId })[] {
+  const knownIds: ReadonlySet<string> | null = ids;
+  return knownIds === null || items.every((item) => knownIds.has(item.id));
+}
+
+function getIsSameSorting(a: ColumnSortItem[], b: ColumnSortItem[]) {
+  return (
+    a.length === b.length &&
+    a.every(
+      (item, index) => item.id === b[index]?.id && item.desc === b[index]?.desc,
+    )
+  );
+}
+
 const OPERATORS_BY_NAME = new Map(
   getKeys(FILTER_OPERATORS).flatMap((operator): [string, FilterOperator][] => [
     [FILTER_OPERATORS[operator], operator],
     [operator.toLowerCase(), operator],
   ]),
 );
+
+function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
+  return Object.keys(record).filter((key): key is TKey =>
+    Object.hasOwn(record, key),
+  );
+}
 
 const MAX_OPERATOR_PART_COUNT = 3;
 
@@ -260,18 +317,6 @@ export function getDataTableQuery<
   };
 }
 
-function getFilterParsers<TColumnId extends string>(
-  columns: Record<TColumnId, FilterVariant>,
-) {
-  const parsers = getKeys(columns).map(
-    (id) => [id, getColumnFilterParser(id, columns[id])] as const,
-  );
-  return Object.fromEntries(parsers) as Record<
-    TColumnId,
-    ReturnType<typeof getColumnFilterParser<TColumnId>>
-  >;
-}
-
 function splitFilterOperator(param: string, variant: FilterVariant) {
   const parts = param.split(".");
 
@@ -355,59 +400,14 @@ function getIsSameFilter(a: ColumnFilterItem, b: ColumnFilterItem) {
   );
 }
 
-function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
-  return Object.keys(record).filter((key): key is TKey =>
-    Object.hasOwn(record, key),
-  );
-}
-
-function parseSorting(value: string): ColumnSortItem[] | null {
-  if (value.startsWith("[")) {
-    try {
-      const result = z.array(sortingItemSchema).safeParse(JSON.parse(value));
-      return result.success ? result.data : null;
-    } catch {
-      return null;
-    }
-  }
-
-  const sorting: ColumnSortItem[] = [];
-
-  for (const part of value.split(",")) {
-    const index = part.lastIndexOf(".");
-    const order = part.slice(index + 1);
-
-    if (index <= 0 || (order !== "asc" && order !== "desc")) return null;
-
-    sorting.push({ id: part.slice(0, index), desc: order === "desc" });
-  }
-
-  return sorting;
-}
-
-function getIsSameSorting(a: ColumnSortItem[], b: ColumnSortItem[]) {
-  return (
-    a.length === b.length &&
-    a.every(
-      (item, index) => item.id === b[index]?.id && item.desc === b[index]?.desc,
-    )
-  );
-}
-
-function getIdSet<TColumnId extends string>(
-  ids?: readonly TColumnId[] | Set<TColumnId>,
+function getFilterParsers<TColumnId extends string>(
+  columns: Record<TColumnId, FilterVariant>,
 ) {
-  if (!ids) return null;
-  return ids instanceof Set ? ids : new Set(ids);
-}
-
-function getHasKnownIds<
-  TColumnItem extends { id: string },
-  TColumnId extends string,
->(
-  items: TColumnItem[],
-  ids: ReadonlySet<TColumnId> | null,
-): items is (TColumnItem & { id: TColumnId })[] {
-  const knownIds: ReadonlySet<string> | null = ids;
-  return knownIds === null || items.every((item) => knownIds.has(item.id));
+  const parsers = getKeys(columns).map(
+    (id) => [id, getColumnFilterParser(id, columns[id])] as const,
+  );
+  return Object.fromEntries(parsers) as Record<
+    TColumnId,
+    ReturnType<typeof getColumnFilterParser<TColumnId>>
+  >;
 }

@@ -150,41 +150,6 @@ interface PreparedFilter<TData extends RowData> {
   readValue: ColumnValueReader<TData> | null;
 }
 
-function getPreparedFilter<TData extends RowData>(
-  preparedFilters: WeakMap<object, PreparedFilter<TData>>,
-  filter: FilterValue,
-) {
-  let prepared = preparedFilters.get(filter);
-  if (prepared) return prepared;
-
-  const { operator, value, endValue } = filter;
-  const valueText = stringifyUnknown(value);
-  const valueDate = typeof value === "string" ? new Date(value) : null;
-  prepared = {
-    operator,
-    value,
-    endValue,
-    valueText,
-    lowerValueText: valueText.toLowerCase(),
-    valueDate,
-    endDate: typeof endValue === "string" ? new Date(endValue) : null,
-    valueDateText: valueDate?.toDateString() ?? null,
-    anyOf: Array.isArray(value) ? new Set<unknown>(value) : null,
-    readValue: null,
-  };
-  preparedFilters.set(filter, prepared);
-  return prepared;
-}
-
-function getIsEmptyValue(value: unknown) {
-  return (
-    value === null ||
-    value === undefined ||
-    value === "" ||
-    (Array.isArray(value) && value.length === 0)
-  );
-}
-
 export function getFilterFn<TData extends RowData>(): FilterFn<
   DataGridFeatures,
   TData
@@ -295,4 +260,39 @@ export function getFilterFn<TData extends RowData>(): FilterFn<
 
     return true;
   };
+}
+
+function getPreparedFilter<TData extends RowData>(
+  preparedFilters: WeakMap<object, PreparedFilter<TData>>,
+  filter: FilterValue,
+) {
+  let prepared = preparedFilters.get(filter);
+  if (prepared) return prepared;
+
+  const { operator, value, endValue } = filter;
+  const valueText = stringifyUnknown(value);
+  const valueDate = typeof value === "string" ? new Date(value) : null;
+  prepared = {
+    operator,
+    value,
+    endValue,
+    valueText,
+    lowerValueText: valueText.toLowerCase(),
+    valueDate,
+    endDate: typeof endValue === "string" ? new Date(endValue) : null,
+    valueDateText: valueDate?.toDateString() ?? null,
+    anyOf: Array.isArray(value) ? new Set<unknown>(value) : null,
+    readValue: null,
+  };
+  preparedFilters.set(filter, prepared);
+  return prepared;
+}
+
+function getIsEmptyValue(value: unknown) {
+  return (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0)
+  );
 }

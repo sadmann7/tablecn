@@ -64,10 +64,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
-function getIsRemoveKey(event: React.KeyboardEvent) {
-  return REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase());
-}
-
 type FilterUpdate = Partial<Omit<ColumnFilterItem, "filterId">>;
 type FilterSelector = "field" | "operator" | "value";
 
@@ -290,6 +286,10 @@ function DataTableFilterMenuContent<TData extends RowData>({
   );
 }
 
+function getIsRemoveKey(event: React.KeyboardEvent) {
+  return REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase());
+}
+
 interface DataTableFilterItemProps<TData extends RowData> {
   filter: ColumnFilterItem;
   index: number;
@@ -467,13 +467,6 @@ function FilterJoinOperator({
       </SelectContent>
     </Select>
   );
-}
-
-interface FilterSelectorProps {
-  filter: ColumnFilterItem;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
 }
 
 interface FilterFieldSelectorProps<
@@ -858,4 +851,11 @@ function DateFilterValue<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
+}
+
+interface FilterSelectorProps {
+  filter: ColumnFilterItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
 }

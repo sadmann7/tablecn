@@ -163,113 +163,6 @@ type GridOptions = Partial<
   columns?: ColumnDef<DataGridFeatures, Skater>[];
 };
 
-function renderGrid({
-  data = skaters,
-  columns: gridColumns = columns,
-  ...options
-}: GridOptions = {}) {
-  const gridRef: { current?: ReturnType<typeof useDataGrid<Skater>> } = {};
-
-  function Harness({ rows }: { rows: Skater[] }) {
-    const dataGrid = useDataGrid({
-      data: rows,
-      columns: gridColumns,
-      getRowId: (row) => row.id,
-      ...options,
-    });
-    gridRef.current = dataGrid;
-    return <DataGrid {...dataGrid} />;
-  }
-
-  const view = render(<Harness rows={data} />, { wrapper: TooltipProvider });
-  const rendered = gridRef.current?.table;
-  if (!rendered) throw new Error("Grid did not render");
-  const table = rendered;
-
-  function getCell(rowId: string, columnId: string) {
-    const cell = view.container.querySelector<HTMLElement>(
-      `[data-slot="data-grid-cell"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
-    );
-    if (!cell) throw new Error(`No cell ${rowId}/${columnId}`);
-    return cell;
-  }
-
-  function getValue(rowId: string, columnId: keyof Skater) {
-    return table.getCoreRowModel().rowsById[rowId]?.original[columnId];
-  }
-
-  function focus(rowId: string, columnId: string) {
-    act(() => {
-      table.setFocusedCell(rowId, columnId);
-    });
-  }
-
-  function rerenderRows(rows: Skater[]) {
-    view.rerender(<Harness rows={rows} />);
-  }
-
-  return { ...view, table, getCell, getValue, focus, rerenderRows };
-}
-
-function press(
-  target: Element | null | undefined,
-  key: string,
-  init: KeyboardEventInit = {},
-) {
-  if (!target) throw new Error(`No target for ${key}`);
-  act(() => {
-    target.dispatchEvent(
-      new KeyboardEvent("keydown", { key, bubbles: true, ...init }),
-    );
-  });
-}
-
-function getEditable(cell: HTMLElement) {
-  const editable = cell.querySelector<HTMLElement>(
-    '[data-slot="data-grid-cell-content"]',
-  );
-  if (!editable) throw new Error("No editable content");
-  return editable;
-}
-
-function typeText(editable: HTMLElement, text: string) {
-  act(() => {
-    editable.textContent = text;
-    editable.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-}
-
-function getInput(cell: HTMLElement) {
-  const input = cell.querySelector<HTMLInputElement>("input");
-  if (!input) throw new Error("No input");
-  return input;
-}
-
-function getTextarea() {
-  const textarea = document.querySelector<HTMLTextAreaElement>("textarea");
-  if (!textarea) throw new Error("No textarea");
-  return textarea;
-}
-
-function getCheckbox(cell: HTMLElement) {
-  const checkbox = cell.querySelector<HTMLElement>('[role="checkbox"]');
-  if (!checkbox) throw new Error("No checkbox");
-  return checkbox;
-}
-
-async function wait(ms: number) {
-  await act(() => new Promise((resolve) => setTimeout(resolve, ms)));
-}
-
-async function waitFrames(count = 2) {
-  for (let index = 0; index < count; index++) {
-    await act(
-      () =>
-        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
-    );
-  }
-}
-
 describe("DataGrid cells", () => {
   beforeEach(() => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
@@ -901,3 +794,110 @@ describe("DataGrid cells", () => {
     });
   });
 });
+
+function renderGrid({
+  data = skaters,
+  columns: gridColumns = columns,
+  ...options
+}: GridOptions = {}) {
+  const gridRef: { current?: ReturnType<typeof useDataGrid<Skater>> } = {};
+
+  function Harness({ rows }: { rows: Skater[] }) {
+    const dataGrid = useDataGrid({
+      data: rows,
+      columns: gridColumns,
+      getRowId: (row) => row.id,
+      ...options,
+    });
+    gridRef.current = dataGrid;
+    return <DataGrid {...dataGrid} />;
+  }
+
+  const view = render(<Harness rows={data} />, { wrapper: TooltipProvider });
+  const rendered = gridRef.current?.table;
+  if (!rendered) throw new Error("Grid did not render");
+  const table = rendered;
+
+  function getCell(rowId: string, columnId: string) {
+    const cell = view.container.querySelector<HTMLElement>(
+      `[data-slot="data-grid-cell"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
+    );
+    if (!cell) throw new Error(`No cell ${rowId}/${columnId}`);
+    return cell;
+  }
+
+  function getValue(rowId: string, columnId: keyof Skater) {
+    return table.getCoreRowModel().rowsById[rowId]?.original[columnId];
+  }
+
+  function focus(rowId: string, columnId: string) {
+    act(() => {
+      table.setFocusedCell(rowId, columnId);
+    });
+  }
+
+  function rerenderRows(rows: Skater[]) {
+    view.rerender(<Harness rows={rows} />);
+  }
+
+  return { ...view, table, getCell, getValue, focus, rerenderRows };
+}
+
+function press(
+  target: Element | null | undefined,
+  key: string,
+  init: KeyboardEventInit = {},
+) {
+  if (!target) throw new Error(`No target for ${key}`);
+  act(() => {
+    target.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, ...init }),
+    );
+  });
+}
+
+function getEditable(cell: HTMLElement) {
+  const editable = cell.querySelector<HTMLElement>(
+    '[data-slot="data-grid-cell-content"]',
+  );
+  if (!editable) throw new Error("No editable content");
+  return editable;
+}
+
+function typeText(editable: HTMLElement, text: string) {
+  act(() => {
+    editable.textContent = text;
+    editable.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+function getInput(cell: HTMLElement) {
+  const input = cell.querySelector<HTMLInputElement>("input");
+  if (!input) throw new Error("No input");
+  return input;
+}
+
+function getTextarea() {
+  const textarea = document.querySelector<HTMLTextAreaElement>("textarea");
+  if (!textarea) throw new Error("No textarea");
+  return textarea;
+}
+
+async function wait(ms: number) {
+  await act(() => new Promise((resolve) => setTimeout(resolve, ms)));
+}
+
+function getCheckbox(cell: HTMLElement) {
+  const checkbox = cell.querySelector<HTMLElement>('[role="checkbox"]');
+  if (!checkbox) throw new Error("No checkbox");
+  return checkbox;
+}
+
+async function waitFrames(count = 2) {
+  for (let index = 0; index < count; index++) {
+    await act(
+      () =>
+        new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
+    );
+  }
+}

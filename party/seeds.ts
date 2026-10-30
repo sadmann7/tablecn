@@ -22,20 +22,8 @@ const SAMPLE_MEDIA = [
   },
 ] as const;
 
-function generateSeedMedia() {
-  if (!faker.datatype.boolean({ probability: 0.7 })) return null;
-
-  return faker.helpers
-    .arrayElements(SAMPLE_MEDIA, { min: 1, max: 3 })
-    .map((file) => ({
-      id: `${SEED_FILE_ID_PREFIX}${faker.string.alphanumeric(10)}`,
-      name: file.name,
-      size:
-        faker.number.int({ min: file.sizeRange[0], max: file.sizeRange[1] }) *
-        1024,
-      type: file.type,
-      url: `https://example.com/media/${file.name}`,
-    }));
+export function createSeedRows(): RowPayload[] {
+  return Array.from({ length: 20 }, (_, i) => generateSeedRow(i + 1));
 }
 
 function generateSeedRow(order: number): RowPayload {
@@ -67,6 +55,18 @@ function generateSeedRow(order: number): RowPayload {
   };
 }
 
-export function createSeedRows(): RowPayload[] {
-  return Array.from({ length: 20 }, (_, i) => generateSeedRow(i + 1));
+function generateSeedMedia() {
+  if (!faker.datatype.boolean({ probability: 0.7 })) return null;
+
+  return faker.helpers
+    .arrayElements(SAMPLE_MEDIA, { min: 1, max: 3 })
+    .map((file) => ({
+      id: `${SEED_FILE_ID_PREFIX}${faker.string.alphanumeric(10)}`,
+      name: file.name,
+      size:
+        faker.number.int({ min: file.sizeRange[0], max: file.sizeRange[1] }) *
+        1024,
+      type: file.type,
+      url: `https://example.com/media/${file.name}`,
+    }));
 }

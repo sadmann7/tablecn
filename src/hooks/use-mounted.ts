@@ -1,5 +1,9 @@
 import * as React from "react";
 
+function useMounted() {
+  return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
 function subscribe() {
   return () => {};
 }
@@ -10,10 +14,6 @@ function getSnapshot() {
 
 function getServerSnapshot() {
   return false;
-}
-
-function useMounted() {
-  return React.useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 export { useMounted };

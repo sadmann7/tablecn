@@ -35,120 +35,6 @@ exactTitle.resolveFilterValue = (value) =>
   typeof value === "string" ? value.trim() : value;
 exactTitle.autoRemove = (value) => value === "";
 
-const columns = columnHelper.columns([
-  columnHelper.accessor("title", {
-    id: "title",
-    meta: { variant: "text" },
-  }),
-  columnHelper.accessor("title", {
-    id: "exact",
-    filterFn: exactTitle,
-  }),
-  columnHelper.accessor("title", {
-    id: "weird",
-    meta: { variant: "bogus" as FilterVariant },
-  }),
-  columnHelper.accessor("status", {
-    id: "status",
-    meta: { variant: "multiSelect" },
-  }),
-  columnHelper.accessor("hours", {
-    id: "hours",
-    meta: { variant: "range" },
-  }),
-  columnHelper.accessor("createdAt", {
-    id: "createdAt",
-    meta: { variant: "date" },
-  }),
-  columnHelper.accessor("archived", {
-    id: "archived",
-    meta: { variant: "boolean" },
-  }),
-  columnHelper.accessor("title", {
-    id: "a b",
-  }),
-]);
-
-const tasks: Task[] = [
-  {
-    id: "alpha",
-    title: "Alpha",
-    status: "todo",
-    hours: 2,
-    createdAt: new Date(2026, 9, 3, 9).getTime(),
-    archived: false,
-  },
-  {
-    id: "beta",
-    title: "Beta",
-    status: "done",
-    hours: 8,
-    createdAt: new Date(2026, 9, 4, 9).getTime(),
-    archived: true,
-    children: [
-      {
-        id: "child",
-        title: "Nested",
-        status: "todo",
-        hours: 1,
-        createdAt: new Date(2026, 9, 3, 12).getTime(),
-        archived: false,
-      },
-    ],
-  },
-  {
-    id: "gamma",
-    title: "Gamma",
-    status: "todo",
-    hours: 4,
-    createdAt: new Date(2026, 9, 5, 9).getTime(),
-    archived: false,
-  },
-];
-
-function renderTaskTable({
-  data = tasks,
-  filterFromLeafRows,
-  maxLeafRowFilterDepth,
-  joinOperator,
-}: {
-  data?: Task[];
-  filterFromLeafRows?: boolean;
-  maxLeafRowFilterDepth?: number;
-  joinOperator?: "and" | "or";
-} = {}) {
-  return renderHook(() =>
-    useTable({
-      features: dataTableFeatures,
-      columns,
-      data,
-      getRowId: (row) => row.id,
-      getSubRows: (row) => row.children,
-      filterFromLeafRows,
-      maxLeafRowFilterDepth,
-      initialState: joinOperator ? { joinOperator } : undefined,
-    }),
-  );
-}
-
-function rowIds(
-  table: ReturnType<typeof renderTaskTable>["result"]["current"],
-) {
-  return table.getFilteredRowModel().rows.map((row) => row.id);
-}
-
-function facetIds(
-  table: ReturnType<typeof renderTaskTable>["result"]["current"],
-  columnId: string,
-) {
-  return (
-    table
-      .getColumn(columnId)
-      ?.getFacetedRowModel()
-      .rows.map((row) => row.id) ?? []
-  );
-}
-
 describe("filtered rows", () => {
   it("keeps every row when nothing narrows them", () => {
     const { result } = renderTaskTable();
@@ -307,6 +193,108 @@ describe("filtered rows", () => {
   });
 });
 
+function rowIds(
+  table: ReturnType<typeof renderTaskTable>["result"]["current"],
+) {
+  return table.getFilteredRowModel().rows.map((row) => row.id);
+}
+
+const columns = columnHelper.columns([
+  columnHelper.accessor("title", {
+    id: "title",
+    meta: { variant: "text" },
+  }),
+  columnHelper.accessor("title", {
+    id: "exact",
+    filterFn: exactTitle,
+  }),
+  columnHelper.accessor("title", {
+    id: "weird",
+    meta: { variant: "bogus" as FilterVariant },
+  }),
+  columnHelper.accessor("status", {
+    id: "status",
+    meta: { variant: "multiSelect" },
+  }),
+  columnHelper.accessor("hours", {
+    id: "hours",
+    meta: { variant: "range" },
+  }),
+  columnHelper.accessor("createdAt", {
+    id: "createdAt",
+    meta: { variant: "date" },
+  }),
+  columnHelper.accessor("archived", {
+    id: "archived",
+    meta: { variant: "boolean" },
+  }),
+  columnHelper.accessor("title", {
+    id: "a b",
+  }),
+]);
+
+const tasks: Task[] = [
+  {
+    id: "alpha",
+    title: "Alpha",
+    status: "todo",
+    hours: 2,
+    createdAt: new Date(2026, 9, 3, 9).getTime(),
+    archived: false,
+  },
+  {
+    id: "beta",
+    title: "Beta",
+    status: "done",
+    hours: 8,
+    createdAt: new Date(2026, 9, 4, 9).getTime(),
+    archived: true,
+    children: [
+      {
+        id: "child",
+        title: "Nested",
+        status: "todo",
+        hours: 1,
+        createdAt: new Date(2026, 9, 3, 12).getTime(),
+        archived: false,
+      },
+    ],
+  },
+  {
+    id: "gamma",
+    title: "Gamma",
+    status: "todo",
+    hours: 4,
+    createdAt: new Date(2026, 9, 5, 9).getTime(),
+    archived: false,
+  },
+];
+
+function renderTaskTable({
+  data = tasks,
+  filterFromLeafRows,
+  maxLeafRowFilterDepth,
+  joinOperator,
+}: {
+  data?: Task[];
+  filterFromLeafRows?: boolean;
+  maxLeafRowFilterDepth?: number;
+  joinOperator?: "and" | "or";
+} = {}) {
+  return renderHook(() =>
+    useTable({
+      features: dataTableFeatures,
+      columns,
+      data,
+      getRowId: (row) => row.id,
+      getSubRows: (row) => row.children,
+      filterFromLeafRows,
+      maxLeafRowFilterDepth,
+      initialState: joinOperator ? { joinOperator } : undefined,
+    }),
+  );
+}
+
 describe("faceted rows", () => {
   it("ignores a column's own filter when building its facets", () => {
     const { result } = renderTaskTable();
@@ -355,6 +343,18 @@ describe("faceted rows", () => {
     );
   });
 });
+
+function facetIds(
+  table: ReturnType<typeof renderTaskTable>["result"]["current"],
+  columnId: string,
+) {
+  return (
+    table
+      .getColumn(columnId)
+      ?.getFacetedRowModel()
+      .rows.map((row) => row.id) ?? []
+  );
+}
 
 describe("column filter items", () => {
   it("adds, updates, and removes filters by id", () => {

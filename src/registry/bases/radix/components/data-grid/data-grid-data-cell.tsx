@@ -152,33 +152,6 @@ function DataGridDataCellImpl<TData extends RowData>({
   return <Comp key={rowId} {...props} />;
 }
 
-// Custom renderers read the stable `cell` through methods the compiler can't
-// track, so this re-renders them on each live update instead
-function useUpdatedCell<TData extends RowData>(
-  cell: Cell<DataGridFeatures, TData>,
-) {
-  "use no memo";
-  const { table } = cell;
-  const rowId = cell.row.id;
-  const columnId = cell.column.id;
-  const [updateCount, onCellUpdate] = React.useReducer(
-    (count: number) => count + 1,
-    0,
-  );
-
-  React.useEffect(
-    () => table.subscribeCell(rowId, columnId, onCellUpdate),
-    [table, rowId, columnId],
-  );
-
-  if (updateCount === 0) return cell;
-
-  return (
-    table.getRowModel().rowsById[rowId]?.getAllCellsByColumnId()[columnId] ??
-    cell
-  );
-}
-
 interface DataGridWrittenCellProps<
   TData extends RowData,
 > extends DataGridCellProps<TData> {
@@ -212,10 +185,6 @@ const DataGridCustomCellContent = React.memo(
   DataGridCustomCellContentImpl,
 ) as typeof DataGridCustomCellContentImpl;
 
-interface DataGridCustomCellContentProps<TData extends RowData> {
-  cell: Cell<DataGridFeatures, TData>;
-}
-
 function DataGridCustomCellContentImpl<TData extends RowData>({
   cell: propsCell,
 }: DataGridCustomCellContentProps<TData>) {
@@ -223,4 +192,35 @@ function DataGridCustomCellContentImpl<TData extends RowData>({
   const cell = useUpdatedCell(propsCell);
 
   return flexRender(cell.column.columnDef.cell, cell.getContext());
+}
+
+// Custom renderers read the stable `cell` through methods the compiler can't
+// track, so this re-renders them on each live update instead
+function useUpdatedCell<TData extends RowData>(
+  cell: Cell<DataGridFeatures, TData>,
+) {
+  "use no memo";
+  const { table } = cell;
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
+  const [updateCount, onCellUpdate] = React.useReducer(
+    (count: number) => count + 1,
+    0,
+  );
+
+  React.useEffect(
+    () => table.subscribeCell(rowId, columnId, onCellUpdate),
+    [table, rowId, columnId],
+  );
+
+  if (updateCount === 0) return cell;
+
+  return (
+    table.getRowModel().rowsById[rowId]?.getAllCellsByColumnId()[columnId] ??
+    cell
+  );
+}
+
+interface DataGridCustomCellContentProps<TData extends RowData> {
+  cell: Cell<DataGridFeatures, TData>;
 }

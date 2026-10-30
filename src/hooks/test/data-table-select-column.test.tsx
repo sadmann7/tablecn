@@ -18,12 +18,33 @@ interface Task {
   title: string;
 }
 
+const columnHelper = createColumnHelper<DataTableFeatures, Task>();
+
+describe("DataTableSelectHeader (base)", () => {
+  it("is checked and not indeterminate when every row is selected", () => {
+    const { table, selectAll } = renderTable();
+
+    act(() => table.toggleAllPageRowsSelected(true));
+
+    expect(selectAll.getAttribute("aria-checked")).toBe("true");
+    expect(selectAll.hasAttribute("data-checked")).toBe(true);
+    expect(selectAll.hasAttribute("data-indeterminate")).toBe(false);
+  });
+
+  it("is indeterminate when some rows are selected", () => {
+    const { table, selectAll } = renderTable();
+
+    act(() => table.getRow("0").toggleSelected(true));
+
+    expect(selectAll.getAttribute("aria-checked")).toBe("mixed");
+    expect(selectAll.hasAttribute("data-indeterminate")).toBe(true);
+  });
+});
+
 const data: Task[] = Array.from({ length: 5 }, (_, index) => ({
   id: String(index),
   title: `Task ${index}`,
 }));
-
-const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
 const columns = columnHelper.columns([
   getDataTableSelectColumn<Task>(),
@@ -60,24 +81,3 @@ function renderTable() {
     selectAll: screen.getByRole("checkbox", { name: "Select all" }),
   };
 }
-
-describe("DataTableSelectHeader (base)", () => {
-  it("is checked and not indeterminate when every row is selected", () => {
-    const { table, selectAll } = renderTable();
-
-    act(() => table.toggleAllPageRowsSelected(true));
-
-    expect(selectAll.getAttribute("aria-checked")).toBe("true");
-    expect(selectAll.hasAttribute("data-checked")).toBe(true);
-    expect(selectAll.hasAttribute("data-indeterminate")).toBe(false);
-  });
-
-  it("is indeterminate when some rows are selected", () => {
-    const { table, selectAll } = renderTable();
-
-    act(() => table.getRow("0").toggleSelected(true));
-
-    expect(selectAll.getAttribute("aria-checked")).toBe("mixed");
-    expect(selectAll.hasAttribute("data-indeterminate")).toBe(true);
-  });
-});

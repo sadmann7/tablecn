@@ -125,14 +125,6 @@ const FILTER_OPERATORS_BY_VARIANT: Record<
   multiSelect: MULTI_SELECT_OPERATORS,
 };
 
-function getColumnVar(columnId: string, property: "size" | "offset") {
-  const name = columnId.replace(
-    /[^a-zA-Z0-9-]/g,
-    (char) => `_${char.codePointAt(0)?.toString(16)}_`,
-  );
-  return `--column-${name}-${property}`;
-}
-
 export function getAriaSort(
   sorting: SortingState,
   columnId: string,
@@ -257,6 +249,14 @@ export function getSelectFilterValue(filter: ColumnFilterItem) {
   return typeof filter.value === "string" ? filter.value : undefined;
 }
 
+function getColumnVar(columnId: string, property: "size" | "offset") {
+  const name = columnId.replace(
+    /[^a-zA-Z0-9-]/g,
+    (char) => `_${char.codePointAt(0)?.toString(16)}_`,
+  );
+  return `--column-${name}-${property}`;
+}
+
 const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export function parseFilterDate(value: unknown): Date | undefined {
@@ -289,26 +289,8 @@ export function formatFilterDate(date: Date) {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-function getValidDate(date: Date) {
-  return Number.isNaN(date.getTime()) ? undefined : date;
-}
-
-function stringifyFilterDate(value: unknown) {
-  const date = parseFilterDate(value);
-  return date ? formatFilterDate(date) : "";
-}
-
 export function getIsDateVariant(variant: FilterVariant) {
   return variant === "date" || variant === "dateRange";
-}
-
-function getFilterValueStringifier(
-  variant: FilterVariant,
-  operator: FilterOperator,
-) {
-  return getIsDateVariant(variant) && operator !== "isRelativeToToday"
-    ? stringifyFilterDate
-    : stringifyFilterValue;
 }
 
 export function getFilterDates(value: ColumnFilterItem["value"]) {
@@ -457,4 +439,22 @@ export function getActiveFilters<TFilterItem extends ColumnFilterItem>(
   filters: TFilterItem[],
 ): TFilterItem[] {
   return filters.filter(getIsActiveFilter);
+}
+
+function getValidDate(date: Date) {
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function getFilterValueStringifier(
+  variant: FilterVariant,
+  operator: FilterOperator,
+) {
+  return getIsDateVariant(variant) && operator !== "isRelativeToToday"
+    ? stringifyFilterDate
+    : stringifyFilterValue;
+}
+
+function stringifyFilterDate(value: unknown) {
+  const date = parseFilterDate(value);
+  return date ? formatFilterDate(date) : "";
 }

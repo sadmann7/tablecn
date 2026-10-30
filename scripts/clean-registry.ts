@@ -26,48 +26,15 @@ interface Registry {
   items: { name: string }[];
 }
 
-function getItemNames() {
-  const registry = JSON.parse(
-    readFileSync(path.join(ROOT, "registry.json"), "utf8"),
-  ) as Registry;
+function wipeRegistryOutput(dryRun = false) {
+  if (!existsSync(OUT_ROOT)) return 0;
 
-  return registry.items.map((item) => item.name);
-}
-
-function getExpectedFiles() {
-  const items = getItemNames();
-  const files = new Set<string>([path.join(STYLES_ROOT, "index.json")]);
-
-  for (const base of BASES) {
-    for (const style of STYLES) {
-      const styleId = `${base.name}-${style.name}`;
-      files.add(path.join(STYLES_ROOT, styleId, "registry.json"));
-      for (const name of items) {
-        files.add(path.join(STYLES_ROOT, styleId, `${name}.json`));
-      }
-    }
+  const entries = readdirSync(OUT_ROOT);
+  for (const name of entries) {
+    remove(path.join(OUT_ROOT, name), dryRun, !dryRun);
   }
 
-  return files;
-}
-
-function listFiles(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const fullPath = path.join(dir, entry.name);
-    return entry.isDirectory() ? listFiles(fullPath) : [fullPath];
-  });
-}
-
-function listDirs(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    if (!entry.isDirectory()) return [];
-    const fullPath = path.join(dir, entry.name);
-    return [fullPath, ...listDirs(fullPath)];
-  });
+  return entries.length;
 }
 
 function remove(target: string, dryRun: boolean, silent = false) {
@@ -78,17 +45,6 @@ function remove(target: string, dryRun: boolean, silent = false) {
   }
   rmSync(target, { recursive: true, force: true });
   if (!silent) console.log(`  ✓ Removed ${relative}`);
-}
-
-function wipeRegistryOutput(dryRun = false) {
-  if (!existsSync(OUT_ROOT)) return 0;
-
-  const entries = readdirSync(OUT_ROOT);
-  for (const name of entries) {
-    remove(path.join(OUT_ROOT, name), dryRun, !dryRun);
-  }
-
-  return entries.length;
 }
 
 function cleanStaleRegistryOutput(dryRun = false) {
@@ -124,6 +80,61 @@ function cleanStaleRegistryOutput(dryRun = false) {
   }
 
   return { files: staleFiles.length, dirs: emptyDirs.length };
+}
+
+function getExpectedFiles() {
+  const items = getItemNames();
+  const files = new Set<string>([path.join(STYLES_ROOT, "index.json")]);
+
+  for (const base of BASES) {
+    for (const style of STYLES) {
+      const styleId = `${base.name}-${style.name}`;
+      files.add(path.join(STYLES_ROOT, styleId, "registry.json"));
+      for (const name of items) {
+        files.add(path.join(STYLES_ROOT, styleId, `${name}.json`));
+      }
+    }
+  }
+
+  return files;
+}
+
+function getItemNames() {
+  const registry = JSON.parse(
+    readFileSync(path.join(ROOT, "registry.json"), "utf8"),
+  ) as Registry;
+
+  return registry.items.map((item) => item.name);
+}
+
+function listFiles(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = path.join(dir, entry.name);
+    return entry.isDirectory() ? listFiles(fullPath) : [fullPath];
+  });
+}
+
+function listDirs(dir: string): string[] {
+  if (!existsSync(dir)) return [];
+
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    if (!entry.isDirectory()) return [];
+    const fullPath = path.join(dir, entry.name);
+    return [fullPath, ...listDirs(fullPath)];
+  });
+}
+
+export { cleanStaleRegistryOutput, OUT_ROOT, STYLES_ROOT, wipeRegistryOutput };
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  try {
+    main();
+  } catch (error) {
+    console.error("❌ Error during cleanup:", error);
+    process.exit(1);
+  }
 }
 
 function main() {
@@ -168,15 +179,4 @@ function main() {
   console.log(`  - Expected style directories: ${expectedStyleDirs}`);
   console.log(`  - Orphaned files ${dryRun ? "found" : "removed"}: ${files}`);
   console.log(`  - Empty directories ${dryRun ? "found" : "removed"}: ${dirs}`);
-}
-
-export { cleanStaleRegistryOutput, OUT_ROOT, STYLES_ROOT, wipeRegistryOutput };
-
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  try {
-    main();
-  } catch (error) {
-    console.error("❌ Error during cleanup:", error);
-    process.exit(1);
-  }
 }

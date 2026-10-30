@@ -11,19 +11,6 @@ import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return;
-  if (target.hasPointerCapture(event.pointerId)) {
-    target.releasePointerCapture(event.pointerId);
-  }
-
-  // Keeps the trigger from taking focus from the input
-  if (event.button === 0 && !event.ctrlKey && event.pointerType === "mouse") {
-    event.preventDefault();
-  }
-}
-
 interface DataGridSearchProps<TData extends RowData> {
   table: ReactTable<DataGridFeatures, TData, unknown>;
 }
@@ -251,4 +238,17 @@ function DataGridSearchContentImpl<TData extends RowData>({
       </div>
     </div>
   );
+}
+
+function onTriggerPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return;
+  if (target.hasPointerCapture(event.pointerId)) {
+    target.releasePointerCapture(event.pointerId);
+  }
+
+  // Keeps the trigger from taking focus from the input
+  if (event.button === 0 && !event.ctrlKey && event.pointerType === "mouse") {
+    event.preventDefault();
+  }
 }

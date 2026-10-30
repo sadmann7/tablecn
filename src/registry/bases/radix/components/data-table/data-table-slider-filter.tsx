@@ -26,35 +26,6 @@ interface Range {
 
 type RangeValue = [number, number];
 
-function getIsValidRange(value: unknown): value is RangeValue {
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  );
-}
-
-function parseRangeBounds(
-  value: unknown,
-): [number | undefined, number | undefined] | undefined {
-  if (!Array.isArray(value) || value.length !== 2) return undefined;
-
-  const [start, end] = value.map(parseRangeBound);
-  if (start === null || end === null) return undefined;
-  if (start === undefined && end === undefined) return undefined;
-
-  return [start, end];
-}
-
-function parseRangeBound(value: unknown) {
-  if (value === undefined || value === "") return undefined;
-  if (typeof value !== "number" && typeof value !== "string") return null;
-
-  const number = Number(value);
-  return Number.isNaN(number) ? null : number;
-}
-
 interface DataTableSliderFilterProps<TData extends RowData> {
   column: Column<DataTableFeatures, TData>;
   title?: string;
@@ -299,4 +270,33 @@ function DataTableSliderFilterContent<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
+}
+
+function getIsValidRange(value: unknown): value is RangeValue {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "number" &&
+    typeof value[1] === "number"
+  );
+}
+
+function parseRangeBounds(
+  value: unknown,
+): [number | undefined, number | undefined] | undefined {
+  if (!Array.isArray(value) || value.length !== 2) return undefined;
+
+  const [start, end] = value.map(parseRangeBound);
+  if (start === null || end === null) return undefined;
+  if (start === undefined && end === undefined) return undefined;
+
+  return [start, end];
+}
+
+function parseRangeBound(value: unknown) {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "number" && typeof value !== "string") return null;
+
+  const number = Number(value);
+  return Number.isNaN(number) ? null : number;
 }

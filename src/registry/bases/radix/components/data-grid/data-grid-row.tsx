@@ -49,14 +49,6 @@ interface DataGridRowContextValue {
 export const DataGridRowContext =
   React.createContext<DataGridRowContextValue | null>(null);
 
-function useDataGridRowContext() {
-  const context = React.use(DataGridRowContext);
-  if (!context) {
-    throw new Error("`DataGridRow` must be rendered within `DataGrid`");
-  }
-  return context;
-}
-
 interface DataGridRowProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -104,6 +96,52 @@ function DataGridRowImpl<TData extends RowData>({
       )}
     </Subscribe>
   );
+}
+
+function selectRowState<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  state: TableState<DataGridFeatures>,
+  row: Row<DataGridFeatures, TData>,
+  rowIndex: number,
+): RowState<TData> {
+  const rowId = row.id;
+  const activeRange = state.cellSelection[state.cellSelection.length - 1];
+  const editingCell = state.editingCell;
+  const activeSearchMatch = table.getActiveSearchMatch();
+  const cellSelectionBounds =
+    table.options.enableSingleCellSelection || table.getHasCellRangeSelection()
+      ? table.getCellSelectionBounds()
+      : EMPTY_CELL_SELECTION_BOUNDS;
+  const isRowSelected = !!state.rowSelection[rowId];
+  const currentRow = table.getRowModel().rows[rowIndex];
+
+  return {
+    visibleCells: (currentRow?.id === rowId
+      ? currentRow
+      : row
+    ).getVisibleCells(),
+    columnSizing: state.columnSizing,
+    rowHeight: state.rowHeight,
+    focusedColumnId:
+      state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId
+        ? activeRange.anchorColumnId
+        : null,
+    editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
+    cellSelectionKey:
+      !isRowSelected && getHasKeys(state.rowSelection)
+        ? ""
+        : getRowCellSelectionKey(cellSelectionBounds, rowIndex),
+    searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
+    activeSearchColumnId:
+      activeSearchMatch?.rowId === rowId ? activeSearchMatch.columnId : null,
+    presenceColumns: table.getCellPresenceByRowId().get(rowId) ?? null,
+    isRowSelected,
+  };
+}
+
+function getHasKeys(object: object) {
+  for (const _ in object) return true;
+  return false;
 }
 
 interface DataGridRowContentProps<TData extends RowData> extends Omit<
@@ -254,6 +292,14 @@ function DataGridRowContent<TData extends RowData>({
   );
 }
 
+function useDataGridRowContext() {
+  const context = React.use(DataGridRowContext);
+  if (!context) {
+    throw new Error("`DataGridRow` must be rendered within `DataGrid`");
+  }
+  return context;
+}
+
 interface DataGridUtilityCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
   columnIndex: number;
@@ -347,50 +393,4 @@ interface RowState<TData extends RowData> {
   activeSearchColumnId: string | null;
   presenceColumns: Map<string, CellPresence> | null;
   isRowSelected: boolean;
-}
-
-function selectRowState<TData extends RowData>(
-  table: Table<DataGridFeatures, TData>,
-  state: TableState<DataGridFeatures>,
-  row: Row<DataGridFeatures, TData>,
-  rowIndex: number,
-): RowState<TData> {
-  const rowId = row.id;
-  const activeRange = state.cellSelection[state.cellSelection.length - 1];
-  const editingCell = state.editingCell;
-  const activeSearchMatch = table.getActiveSearchMatch();
-  const cellSelectionBounds =
-    table.options.enableSingleCellSelection || table.getHasCellRangeSelection()
-      ? table.getCellSelectionBounds()
-      : EMPTY_CELL_SELECTION_BOUNDS;
-  const isRowSelected = !!state.rowSelection[rowId];
-  const currentRow = table.getRowModel().rows[rowIndex];
-
-  return {
-    visibleCells: (currentRow?.id === rowId
-      ? currentRow
-      : row
-    ).getVisibleCells(),
-    columnSizing: state.columnSizing,
-    rowHeight: state.rowHeight,
-    focusedColumnId:
-      state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId
-        ? activeRange.anchorColumnId
-        : null,
-    editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
-    cellSelectionKey:
-      !isRowSelected && getHasKeys(state.rowSelection)
-        ? ""
-        : getRowCellSelectionKey(cellSelectionBounds, rowIndex),
-    searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
-    activeSearchColumnId:
-      activeSearchMatch?.rowId === rowId ? activeSearchMatch.columnId : null,
-    presenceColumns: table.getCellPresenceByRowId().get(rowId) ?? null,
-    isRowSelected,
-  };
-}
-
-function getHasKeys(object: object) {
-  for (const _ in object) return true;
-  return false;
 }

@@ -95,14 +95,6 @@ declare module "@tanstack/react-table" {
 
 type DataTableInstance = Table<DataTableFeatures, RowData>;
 
-/**
- * Feature hooks get a `Table` generic over any features. This feature is only
- * registered in `dataTableFeatures`, so its hooks can use that table's types.
- */
-function asDataTable(table: object) {
-  return table as DataTableInstance;
-}
-
 const dataTableFilteringFeature: TableFeature = {
   getInitialState: (initialState) => ({
     joinOperator: "and",
@@ -202,6 +194,14 @@ const dataTableFilteringFeature: TableFeature = {
     });
   },
 };
+
+/**
+ * Feature hooks get a `Table` generic over any features. This feature is only
+ * registered in `dataTableFeatures`, so its hooks can use that table's types.
+ */
+function asDataTable(table: object) {
+  return table as DataTableInstance;
+}
 
 function getPlainFilter(
   instance: DataTableInstance,

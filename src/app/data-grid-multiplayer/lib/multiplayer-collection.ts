@@ -38,21 +38,6 @@ export interface RoomConnection {
   subscribe: (listener: (message: ServerMessage) => void) => () => void;
 }
 
-function parseSkater(raw: RowPayload) {
-  const result = skaterSchema.safeParse(raw);
-  return result.success ? result.data : null;
-}
-
-function serializeValue(value: unknown) {
-  return value instanceof Date ? value.toISOString() : value;
-}
-
-function serializeSkater(row: SkaterSchema): RowPayload {
-  return Object.fromEntries(
-    Object.entries(row).map(([key, value]) => [key, serializeValue(value)]),
-  );
-}
-
 export function createSkatersCollection(connection: RoomConnection) {
   let syncParams: SyncParams | null = null;
   const pendingMutations = new Map<string, PendingMutation>();
@@ -236,3 +221,18 @@ export function createSkatersCollection(connection: RoomConnection) {
 }
 
 export type SkatersCollection = ReturnType<typeof createSkatersCollection>;
+
+function parseSkater(raw: RowPayload) {
+  const result = skaterSchema.safeParse(raw);
+  return result.success ? result.data : null;
+}
+
+function serializeSkater(row: SkaterSchema): RowPayload {
+  return Object.fromEntries(
+    Object.entries(row).map(([key, value]) => [key, serializeValue(value)]),
+  );
+}
+
+function serializeValue(value: unknown) {
+  return value instanceof Date ? value.toISOString() : value;
+}

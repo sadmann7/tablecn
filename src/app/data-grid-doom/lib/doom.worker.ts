@@ -56,10 +56,6 @@ const scope = self as DedicatedWorkerGlobalScope & {
   AudioContext?: unknown;
 };
 
-function post(message: DoomWorkerResponse, transfer: Transferable[] = []) {
-  scope.postMessage(message, transfer);
-}
-
 // SDL's emscripten audio driver only needs an AudioContext with a script processor.
 // This one has no output of its own: the worker runs the processor's callback when
 // the page's worklet needs more samples, and hands the samples over
@@ -100,75 +96,19 @@ class WorkerAudioContext {
   }
 }
 
-function startAudio(port: MessagePort) {
-  let sent = 0;
-  let played = 0;
-  port.addEventListener("message", (event: MessageEvent<number>) => {
-    played = event.data;
-  });
-  port.start();
-  const pump = () => {
-    if (!processor?.onaudioprocess) return;
-    const { bufferSize, channels } = processor;
-    while (sent - played < bufferSize * AUDIO_AHEAD_BUFFERS) {
-      const data = Array.from(
-        { length: channels },
-        () => new Float32Array(bufferSize),
-      );
-      processor.onaudioprocess({
-        outputBuffer: {
-          numberOfChannels: channels,
-          length: bufferSize,
-          sampleRate,
-          getChannelData: (channel: number) => data[channel],
+scope.addEventListener(
+  "message",
+  (event: MessageEvent<DoomWorkerRequest>) => {
+    if (event.data.type === "start") {
+      void start(event.data.sampleRate, event.data.audioPort).catch(
+        (error: unknown) => {
+          post({ type: "error", message: String(error) });
         },
-      });
-      port.postMessage(
-        data,
-        data.map((channel) => channel.buffer),
       );
-      sent += bufferSize;
     }
-  };
-  setInterval(pump, 5);
-}
-
-function startFrames(module: WorkerModule) {
-  const spare: ArrayBuffer[] = [];
-  scope.addEventListener(
-    "message",
-    (event: MessageEvent<DoomWorkerRequest>) => {
-      if (event.data.type === "recycle") spare.push(event.data.buffer);
-    },
-  );
-  const palette32 = new Uint32Array(256);
-  let lastFrame = 0;
-  const check = () => {
-    const frame = module._doom_frame_count?.() ?? 0;
-    const heap = module.HEAPU8;
-    const screen = module._doom_screen?.();
-    const palette = module._doom_palette?.();
-    if (frame === lastFrame || !heap || !screen || !palette) return;
-    lastFrame = frame;
-    for (let c = 0; c < 256; c++) {
-      const p = palette + c * 4;
-      palette32[c] =
-        0xff000000 |
-        ((heap[p + 2] ?? 0) << 16) |
-        ((heap[p + 1] ?? 0) << 8) |
-        (heap[p] ?? 0);
-    }
-    const buffer =
-      spare.pop() ?? new ArrayBuffer(SCREEN_WIDTH * SCREEN_HEIGHT * 4);
-    const rgba32 = new Uint32Array(buffer);
-    for (let i = 0; i < rgba32.length; i++) {
-      rgba32[i] = palette32[heap[screen + i] ?? 0] ?? 0;
-    }
-    const menuOrMapOpen = Boolean(module._doom_menu_or_map_open?.());
-    post({ type: "frame", frame, buffer, menuOrMapOpen }, [buffer]);
-  };
-  setInterval(check, 4);
-}
+  },
+  { once: true },
+);
 
 async function start(rate: number, audioPort: MessagePort) {
   sampleRate = rate;
@@ -260,19 +200,79 @@ async function start(rate: number, audioPort: MessagePort) {
   await createDoom(module);
 }
 
-scope.addEventListener(
-  "message",
-  (event: MessageEvent<DoomWorkerRequest>) => {
-    if (event.data.type === "start") {
-      void start(event.data.sampleRate, event.data.audioPort).catch(
-        (error: unknown) => {
-          post({ type: "error", message: String(error) });
-        },
+function startAudio(port: MessagePort) {
+  let sent = 0;
+  let played = 0;
+  port.addEventListener("message", (event: MessageEvent<number>) => {
+    played = event.data;
+  });
+  port.start();
+  const pump = () => {
+    if (!processor?.onaudioprocess) return;
+    const { bufferSize, channels } = processor;
+    while (sent - played < bufferSize * AUDIO_AHEAD_BUFFERS) {
+      const data = Array.from(
+        { length: channels },
+        () => new Float32Array(bufferSize),
       );
+      processor.onaudioprocess({
+        outputBuffer: {
+          numberOfChannels: channels,
+          length: bufferSize,
+          sampleRate,
+          getChannelData: (channel: number) => data[channel],
+        },
+      });
+      port.postMessage(
+        data,
+        data.map((channel) => channel.buffer),
+      );
+      sent += bufferSize;
     }
-  },
-  { once: true },
-);
+  };
+  setInterval(pump, 5);
+}
+
+function startFrames(module: WorkerModule) {
+  const spare: ArrayBuffer[] = [];
+  scope.addEventListener(
+    "message",
+    (event: MessageEvent<DoomWorkerRequest>) => {
+      if (event.data.type === "recycle") spare.push(event.data.buffer);
+    },
+  );
+  const palette32 = new Uint32Array(256);
+  let lastFrame = 0;
+  const check = () => {
+    const frame = module._doom_frame_count?.() ?? 0;
+    const heap = module.HEAPU8;
+    const screen = module._doom_screen?.();
+    const palette = module._doom_palette?.();
+    if (frame === lastFrame || !heap || !screen || !palette) return;
+    lastFrame = frame;
+    for (let c = 0; c < 256; c++) {
+      const p = palette + c * 4;
+      palette32[c] =
+        0xff000000 |
+        ((heap[p + 2] ?? 0) << 16) |
+        ((heap[p + 1] ?? 0) << 8) |
+        (heap[p] ?? 0);
+    }
+    const buffer =
+      spare.pop() ?? new ArrayBuffer(SCREEN_WIDTH * SCREEN_HEIGHT * 4);
+    const rgba32 = new Uint32Array(buffer);
+    for (let i = 0; i < rgba32.length; i++) {
+      rgba32[i] = palette32[heap[screen + i] ?? 0] ?? 0;
+    }
+    const menuOrMapOpen = Boolean(module._doom_menu_or_map_open?.());
+    post({ type: "frame", frame, buffer, menuOrMapOpen }, [buffer]);
+  };
+  setInterval(check, 4);
+}
+
+function post(message: DoomWorkerResponse, transfer: Transferable[] = []) {
+  scope.postMessage(message, transfer);
+}
 
 scope.addEventListener("error", (event) => {
   post({ type: "error", message: event.message });

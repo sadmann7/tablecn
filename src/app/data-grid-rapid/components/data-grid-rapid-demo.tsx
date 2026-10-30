@@ -77,12 +77,6 @@ const signedFormat = new Intl.NumberFormat("en-US", {
   signDisplay: "exceptZero",
 });
 const volumeFormat = new Intl.NumberFormat("en-US");
-const marketCapFormat = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  notation: "compact",
-  maximumFractionDigits: 2,
-});
 
 const ROW_COUNT_OPTIONS = [1_000, 5_000, 20_000].map((count) => ({
   value: count,
@@ -112,34 +106,6 @@ const TICK_FLASH: Keyframe[] = [{ color: "var(--flash)" }, {}];
 const FLASH_COLORS =
   "data-[trend=down]:[--flash:var(--color-red-500)] data-[trend=up]:[--flash:var(--color-emerald-500)]";
 
-function useTrendFlash<TElement extends HTMLElement>(
-  value: number,
-  keyframes: Keyframe[],
-) {
-  const [state, setState] = React.useState<{
-    value: number;
-    trend: Trend | null;
-  }>({ value, trend: null });
-  if (state.value !== value) {
-    setState({ value, trend: value > state.value ? "up" : "down" });
-  }
-
-  const ref = React.useRef<TElement>(null);
-  const flashedAtRef = React.useRef(0);
-
-  React.useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element || !state.trend) return;
-
-    const now = performance.now();
-    if (now - flashedAtRef.current < FLASH_COOLDOWN_MS) return;
-    flashedAtRef.current = now;
-    element.animate(keyframes, FLASH_OPTIONS);
-  }, [state, keyframes]);
-
-  return { trend: state.trend, ref };
-}
-
 interface ValueCellProps {
   value: number;
 }
@@ -148,247 +114,12 @@ interface QuoteCellProps {
   quote: Quote;
 }
 
-function PriceCell({ value }: ValueCellProps) {
-  const { trend, ref } = useTrendFlash<HTMLSpanElement>(value, PRICE_FLASH);
-  const Arrow = trend === "down" ? ArrowDown : ArrowUp;
-
-  return (
-    <span className="absolute inset-0 flex items-center justify-end gap-1 px-2 font-medium tabular-nums">
-      <Arrow
-        aria-hidden="true"
-        className={cn(
-          "size-3.5",
-          trend === "up" && "text-emerald-600 dark:text-emerald-400",
-          trend === "down" && "text-red-600 dark:text-red-400",
-          !trend && "invisible",
-        )}
-      />
-      <span
-        ref={ref}
-        data-trend={trend ?? undefined}
-        className={cn("-me-1 rounded-sm px-1", FLASH_COLORS)}
-      >
-        {priceFormat.format(value)}
-      </span>
-    </span>
-  );
-}
-
-function ChangeCell({ value }: ValueCellProps) {
-  return (
-    <span
-      className={cn(
-        "absolute inset-0 flex items-center justify-end px-2 tabular-nums",
-        value > 0 && "text-emerald-600 dark:text-emerald-400",
-        value < 0 && "text-red-600 dark:text-red-400",
-      )}
-    >
-      {signedFormat.format(value)}
-    </span>
-  );
-}
-
-function ChangePercentCell({ value }: ValueCellProps) {
-  return (
-    <span className="absolute inset-0 flex items-center justify-end px-2">
-      <span
-        className={cn(
-          "rounded-sm px-1.5 py-0.5 text-xs font-medium tabular-nums",
-          value > 0 &&
-            "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
-          value < 0 &&
-            "bg-red-500/10 text-red-700 dark:bg-red-500/15 dark:text-red-400",
-          value === 0 && "bg-muted text-muted-foreground",
-        )}
-      >
-        {signedFormat.format(value)}%
-      </span>
-    </span>
-  );
-}
-
-interface TickCellProps extends ValueCellProps {
-  format: Intl.NumberFormat;
-  isMuted?: boolean;
-}
-
-function TickCell({ value, format, isMuted }: TickCellProps) {
-  const { trend, ref } = useTrendFlash<HTMLSpanElement>(value, TICK_FLASH);
-
-  return (
-    <span
-      ref={ref}
-      data-trend={trend ?? undefined}
-      className={cn(
-        "absolute inset-0 flex items-center justify-end px-2 tabular-nums",
-        FLASH_COLORS,
-        isMuted && "text-muted-foreground",
-      )}
-    >
-      {format.format(value)}
-    </span>
-  );
-}
-
 const MIN_VOLUME_LOG = Math.log10(1_000);
 const MAX_VOLUME_LOG = Math.log10(5_000_000);
-
-function VolumeCell({ value }: ValueCellProps) {
-  const share = Math.min(
-    1,
-    Math.max(0, Math.log10(Math.max(1, value)) - MIN_VOLUME_LOG) /
-      (MAX_VOLUME_LOG - MIN_VOLUME_LOG),
-  );
-
-  return (
-    <span className="absolute inset-0 flex items-center gap-2 px-2 tabular-nums">
-      <span aria-hidden="true" className="h-1 flex-1 rounded-full bg-muted">
-        <span
-          className="block h-full rounded-full bg-muted-foreground/50 transition-[width] duration-300"
-          style={{ width: `${(share * 100).toFixed(1)}%` }}
-        />
-      </span>
-      <span className="text-end">{volumeFormat.format(value)}</span>
-    </span>
-  );
-}
-
-function TrendCell({ quote }: QuoteCellProps) {
-  const { history, change } = quote;
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  for (const price of history) {
-    min = Math.min(min, price);
-    max = Math.max(max, price);
-  }
-  const span = max - min || 1;
-  const points = history
-    .map(
-      (price, index) => `${index},${(((max - price) / span) * 100).toFixed(1)}`,
-    )
-    .join(" ");
-
-  return (
-    <span className="absolute inset-x-2 inset-y-2.5 flex">
-      <svg
-        aria-hidden="true"
-        viewBox={`0 -4 ${Math.max(1, history.length - 1)} 108`}
-        preserveAspectRatio="none"
-        className={cn(
-          "size-full overflow-visible",
-          change >= 0
-            ? "text-emerald-600 dark:text-emerald-400"
-            : "text-red-600 dark:text-red-400",
-        )}
-      >
-        <polyline
-          points={points}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-    </span>
-  );
-}
-
-function RangeCell({ quote }: QuoteCellProps) {
-  const { low, high, price, change } = quote;
-  const position = high === low ? 50 : ((price - low) * 100) / (high - low);
-
-  return (
-    <span className="absolute inset-0 flex items-center gap-2 px-2 text-xs text-muted-foreground tabular-nums">
-      <span className="w-12 text-end">{priceFormat.format(low)}</span>
-      <span className="relative h-1 flex-1 rounded-full bg-muted">
-        <span
-          className={cn(
-            "absolute top-1/2 size-2 -translate-1/2 rounded-full ring-2 ring-background transition-[left] duration-300",
-            change >= 0 ? "bg-emerald-500" : "bg-red-500",
-          )}
-          style={{ left: `${position}%` }}
-        />
-      </span>
-      <span className="w-12">{priceFormat.format(high)}</span>
-    </span>
-  );
-}
-
-function getQuoteColumn(
-  id: Exclude<(typeof QUOTE_FIELDS)[number], "history">,
-  label: string,
-  icon: DataGridColumnMeta["icon"],
-  renderCell: (value: number) => React.ReactNode,
-  size = 110,
-): ColumnDef<DataGridFeatures, Quote> {
-  return {
-    id,
-    accessorKey: id,
-    header: label,
-    size,
-    meta: { label, icon },
-    cell: ({ getValue }) => renderCell(getValue() as number),
-  };
-}
 
 interface MarketBreadth {
   advancing: number;
   declining: number;
-}
-
-function useMarketBreadth(market: Market) {
-  const getBreadth = React.useCallback(() => {
-    let advancing = 0;
-    let declining = 0;
-    for (const quote of market.quotes) {
-      if (quote.change > 0) advancing++;
-      else if (quote.change < 0) declining++;
-    }
-    return { advancing, declining };
-  }, [market]);
-  const [breadth, setBreadth] = React.useState<MarketBreadth>(getBreadth);
-
-  React.useEffect(() => {
-    const intervalId = window.setInterval(() => setBreadth(getBreadth()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [getBreadth]);
-
-  return breadth;
-}
-
-function MarketBreadthPills({ advancing, declining }: MarketBreadth) {
-  return (
-    <div
-      role="img"
-      aria-label={`${advancing} advancing, ${declining} declining`}
-      className="flex items-center gap-1 font-medium tabular-nums"
-    >
-      <span className="flex items-center gap-0.5 rounded-sm bg-emerald-500/10 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
-        <ArrowUp className="size-3" />
-        {volumeFormat.format(advancing)}
-      </span>
-      <span className="flex items-center gap-0.5 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-red-700 dark:bg-red-500/15 dark:text-red-400">
-        <ArrowDown className="size-3" />
-        {volumeFormat.format(declining)}
-      </span>
-    </div>
-  );
-}
-
-interface StatProps {
-  label?: string;
-  value: React.ReactNode;
-  unit: string;
-}
-
-function Stat({ label, value, unit }: StatProps) {
-  return (
-    <span>
-      {label ? `${label} ` : null}
-      <span className="font-medium text-foreground">{value}</span> {unit}
-    </span>
-  );
 }
 
 interface OptionSelectOption<TValue extends string | number> {
@@ -397,95 +128,39 @@ interface OptionSelectOption<TValue extends string | number> {
   description?: string;
 }
 
-interface OptionSelectProps<TValue extends string | number> {
-  label: string;
-  value: TValue;
-  options: readonly OptionSelectOption<TValue>[];
-  onValueChange: (value: TValue) => void;
-}
-
-function OptionSelect<TValue extends string | number>({
-  label,
-  value,
-  options,
-  onValueChange,
-}: OptionSelectProps<TValue>) {
-  return (
-    <Select
-      value={String(value)}
-      onValueChange={(nextValue) => {
-        const option = options.find((item) => String(item.value) === nextValue);
-        if (option) onValueChange(option.value);
-      }}
-    >
-      <SelectTrigger aria-label={label}>
-        <SelectValue>
-          {options.find((option) => option.value === value)?.label}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent position="popper" align="start">
-        <SelectGroup>
-          <SelectLabel>{label}</SelectLabel>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={String(option.value)}>
-              {option.description ? (
-                <span className="flex flex-col">
-                  {option.label}
-                  <span className="text-xs text-muted-foreground!">
-                    {option.description}
-                  </span>
-                </span>
-              ) : (
-                option.label
-              )}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
-}
-
 interface FrameStats {
   fps: number;
   p95: number;
   cellsPerSecond: number;
 }
 
-function useFrameStats(updatedCellsRef: React.RefObject<number>) {
-  const [stats, setStats] = React.useState<FrameStats>({
-    fps: 0,
-    p95: 0,
-    cellsPerSecond: 0,
-  });
+export function DataGridRapidDemo() {
+  const [rowCount, setRowCount] = React.useState(5_000);
 
-  React.useEffect(() => {
-    let frameId = 0;
-    let last = 0;
-    let windowStart = performance.now();
-    const deltas: number[] = [];
-    const onFrame = (now: number) => {
-      frameId = requestAnimationFrame(onFrame);
-      if (last) deltas.push(now - last);
-      last = now;
-      if (now - windowStart < 1000) return;
-      const elapsed = now - windowStart;
-      deltas.sort((a, b) => a - b);
-      setStats({
-        fps: Math.round((deltas.length * 1000) / elapsed),
-        p95: Math.round(deltas[Math.floor(deltas.length * 0.95)] ?? 0),
-        cellsPerSecond: Math.round((updatedCellsRef.current * 1000) / elapsed),
-      });
-      deltas.length = 0;
-      updatedCellsRef.current = 0;
-      windowStart = now;
-    };
-    frameId = requestAnimationFrame(onFrame);
-    return () => cancelAnimationFrame(frameId);
-  }, [updatedCellsRef]);
+  const rowCountSelect = (
+    <OptionSelect
+      label="Tickers"
+      value={rowCount}
+      options={ROW_COUNT_OPTIONS}
+      onValueChange={setRowCount}
+    />
+  );
 
-  return stats;
+  return (
+    <DataGridRapidContent
+      key={rowCount}
+      rowCount={rowCount}
+      rowCountSelect={rowCountSelect}
+    />
+  );
 }
+
+const marketCapFormat = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 2,
+});
 
 interface DataGridRapidContentProps {
   rowCount: number;
@@ -700,23 +375,349 @@ function DataGridRapidContent({
   );
 }
 
-export function DataGridRapidDemo() {
-  const [rowCount, setRowCount] = React.useState(5_000);
+function useFrameStats(updatedCellsRef: React.RefObject<number>) {
+  const [stats, setStats] = React.useState<FrameStats>({
+    fps: 0,
+    p95: 0,
+    cellsPerSecond: 0,
+  });
 
-  const rowCountSelect = (
-    <OptionSelect
-      label="Tickers"
-      value={rowCount}
-      options={ROW_COUNT_OPTIONS}
-      onValueChange={setRowCount}
-    />
+  React.useEffect(() => {
+    let frameId = 0;
+    let last = 0;
+    let windowStart = performance.now();
+    const deltas: number[] = [];
+    const onFrame = (now: number) => {
+      frameId = requestAnimationFrame(onFrame);
+      if (last) deltas.push(now - last);
+      last = now;
+      if (now - windowStart < 1000) return;
+      const elapsed = now - windowStart;
+      deltas.sort((a, b) => a - b);
+      setStats({
+        fps: Math.round((deltas.length * 1000) / elapsed),
+        p95: Math.round(deltas[Math.floor(deltas.length * 0.95)] ?? 0),
+        cellsPerSecond: Math.round((updatedCellsRef.current * 1000) / elapsed),
+      });
+      deltas.length = 0;
+      updatedCellsRef.current = 0;
+      windowStart = now;
+    };
+    frameId = requestAnimationFrame(onFrame);
+    return () => cancelAnimationFrame(frameId);
+  }, [updatedCellsRef]);
+
+  return stats;
+}
+
+function useMarketBreadth(market: Market) {
+  const getBreadth = React.useCallback(() => {
+    let advancing = 0;
+    let declining = 0;
+    for (const quote of market.quotes) {
+      if (quote.change > 0) advancing++;
+      else if (quote.change < 0) declining++;
+    }
+    return { advancing, declining };
+  }, [market]);
+  const [breadth, setBreadth] = React.useState<MarketBreadth>(getBreadth);
+
+  React.useEffect(() => {
+    const intervalId = window.setInterval(() => setBreadth(getBreadth()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [getBreadth]);
+
+  return breadth;
+}
+
+function getQuoteColumn(
+  id: Exclude<(typeof QUOTE_FIELDS)[number], "history">,
+  label: string,
+  icon: DataGridColumnMeta["icon"],
+  renderCell: (value: number) => React.ReactNode,
+  size = 110,
+): ColumnDef<DataGridFeatures, Quote> {
+  return {
+    id,
+    accessorKey: id,
+    header: label,
+    size,
+    meta: { label, icon },
+    cell: ({ getValue }) => renderCell(getValue() as number),
+  };
+}
+
+function PriceCell({ value }: ValueCellProps) {
+  const { trend, ref } = useTrendFlash<HTMLSpanElement>(value, PRICE_FLASH);
+  const Arrow = trend === "down" ? ArrowDown : ArrowUp;
+
+  return (
+    <span className="absolute inset-0 flex items-center justify-end gap-1 px-2 font-medium tabular-nums">
+      <Arrow
+        aria-hidden="true"
+        className={cn(
+          "size-3.5",
+          trend === "up" && "text-emerald-600 dark:text-emerald-400",
+          trend === "down" && "text-red-600 dark:text-red-400",
+          !trend && "invisible",
+        )}
+      />
+      <span
+        ref={ref}
+        data-trend={trend ?? undefined}
+        className={cn("-me-1 rounded-sm px-1", FLASH_COLORS)}
+      >
+        {priceFormat.format(value)}
+      </span>
+    </span>
+  );
+}
+
+function useTrendFlash<TElement extends HTMLElement>(
+  value: number,
+  keyframes: Keyframe[],
+) {
+  const [state, setState] = React.useState<{
+    value: number;
+    trend: Trend | null;
+  }>({ value, trend: null });
+  if (state.value !== value) {
+    setState({ value, trend: value > state.value ? "up" : "down" });
+  }
+
+  const ref = React.useRef<TElement>(null);
+  const flashedAtRef = React.useRef(0);
+
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || !state.trend) return;
+
+    const now = performance.now();
+    if (now - flashedAtRef.current < FLASH_COOLDOWN_MS) return;
+    flashedAtRef.current = now;
+    element.animate(keyframes, FLASH_OPTIONS);
+  }, [state, keyframes]);
+
+  return { trend: state.trend, ref };
+}
+
+function ChangeCell({ value }: ValueCellProps) {
+  return (
+    <span
+      className={cn(
+        "absolute inset-0 flex items-center justify-end px-2 tabular-nums",
+        value > 0 && "text-emerald-600 dark:text-emerald-400",
+        value < 0 && "text-red-600 dark:text-red-400",
+      )}
+    >
+      {signedFormat.format(value)}
+    </span>
+  );
+}
+
+function ChangePercentCell({ value }: ValueCellProps) {
+  return (
+    <span className="absolute inset-0 flex items-center justify-end px-2">
+      <span
+        className={cn(
+          "rounded-sm px-1.5 py-0.5 text-xs font-medium tabular-nums",
+          value > 0 &&
+            "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
+          value < 0 &&
+            "bg-red-500/10 text-red-700 dark:bg-red-500/15 dark:text-red-400",
+          value === 0 && "bg-muted text-muted-foreground",
+        )}
+      >
+        {signedFormat.format(value)}%
+      </span>
+    </span>
+  );
+}
+
+function TrendCell({ quote }: QuoteCellProps) {
+  const { history, change } = quote;
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const price of history) {
+    min = Math.min(min, price);
+    max = Math.max(max, price);
+  }
+  const span = max - min || 1;
+  const points = history
+    .map(
+      (price, index) => `${index},${(((max - price) / span) * 100).toFixed(1)}`,
+    )
+    .join(" ");
+
+  return (
+    <span className="absolute inset-x-2 inset-y-2.5 flex">
+      <svg
+        aria-hidden="true"
+        viewBox={`0 -4 ${Math.max(1, history.length - 1)} 108`}
+        preserveAspectRatio="none"
+        className={cn(
+          "size-full overflow-visible",
+          change >= 0
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-red-600 dark:text-red-400",
+        )}
+      >
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+    </span>
+  );
+}
+
+interface TickCellProps extends ValueCellProps {
+  format: Intl.NumberFormat;
+  isMuted?: boolean;
+}
+
+function TickCell({ value, format, isMuted }: TickCellProps) {
+  const { trend, ref } = useTrendFlash<HTMLSpanElement>(value, TICK_FLASH);
+
+  return (
+    <span
+      ref={ref}
+      data-trend={trend ?? undefined}
+      className={cn(
+        "absolute inset-0 flex items-center justify-end px-2 tabular-nums",
+        FLASH_COLORS,
+        isMuted && "text-muted-foreground",
+      )}
+    >
+      {format.format(value)}
+    </span>
+  );
+}
+
+function RangeCell({ quote }: QuoteCellProps) {
+  const { low, high, price, change } = quote;
+  const position = high === low ? 50 : ((price - low) * 100) / (high - low);
+
+  return (
+    <span className="absolute inset-0 flex items-center gap-2 px-2 text-xs text-muted-foreground tabular-nums">
+      <span className="w-12 text-end">{priceFormat.format(low)}</span>
+      <span className="relative h-1 flex-1 rounded-full bg-muted">
+        <span
+          className={cn(
+            "absolute top-1/2 size-2 -translate-1/2 rounded-full ring-2 ring-background transition-[left] duration-300",
+            change >= 0 ? "bg-emerald-500" : "bg-red-500",
+          )}
+          style={{ left: `${position}%` }}
+        />
+      </span>
+      <span className="w-12">{priceFormat.format(high)}</span>
+    </span>
+  );
+}
+
+function VolumeCell({ value }: ValueCellProps) {
+  const share = Math.min(
+    1,
+    Math.max(0, Math.log10(Math.max(1, value)) - MIN_VOLUME_LOG) /
+      (MAX_VOLUME_LOG - MIN_VOLUME_LOG),
   );
 
   return (
-    <DataGridRapidContent
-      key={rowCount}
-      rowCount={rowCount}
-      rowCountSelect={rowCountSelect}
-    />
+    <span className="absolute inset-0 flex items-center gap-2 px-2 tabular-nums">
+      <span aria-hidden="true" className="h-1 flex-1 rounded-full bg-muted">
+        <span
+          className="block h-full rounded-full bg-muted-foreground/50 transition-[width] duration-300"
+          style={{ width: `${(share * 100).toFixed(1)}%` }}
+        />
+      </span>
+      <span className="text-end">{volumeFormat.format(value)}</span>
+    </span>
+  );
+}
+
+interface OptionSelectProps<TValue extends string | number> {
+  label: string;
+  value: TValue;
+  options: readonly OptionSelectOption<TValue>[];
+  onValueChange: (value: TValue) => void;
+}
+
+function OptionSelect<TValue extends string | number>({
+  label,
+  value,
+  options,
+  onValueChange,
+}: OptionSelectProps<TValue>) {
+  return (
+    <Select
+      value={String(value)}
+      onValueChange={(nextValue) => {
+        const option = options.find((item) => String(item.value) === nextValue);
+        if (option) onValueChange(option.value);
+      }}
+    >
+      <SelectTrigger aria-label={label}>
+        <SelectValue>
+          {options.find((option) => option.value === value)?.label}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent position="popper" align="start">
+        <SelectGroup>
+          <SelectLabel>{label}</SelectLabel>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={String(option.value)}>
+              {option.description ? (
+                <span className="flex flex-col">
+                  {option.label}
+                  <span className="text-xs text-muted-foreground!">
+                    {option.description}
+                  </span>
+                </span>
+              ) : (
+                option.label
+              )}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
+function MarketBreadthPills({ advancing, declining }: MarketBreadth) {
+  return (
+    <div
+      role="img"
+      aria-label={`${advancing} advancing, ${declining} declining`}
+      className="flex items-center gap-1 font-medium tabular-nums"
+    >
+      <span className="flex items-center gap-0.5 rounded-sm bg-emerald-500/10 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400">
+        <ArrowUp className="size-3" />
+        {volumeFormat.format(advancing)}
+      </span>
+      <span className="flex items-center gap-0.5 rounded-sm bg-red-500/10 px-1.5 py-0.5 text-red-700 dark:bg-red-500/15 dark:text-red-400">
+        <ArrowDown className="size-3" />
+        {volumeFormat.format(declining)}
+      </span>
+    </div>
+  );
+}
+
+interface StatProps {
+  label?: string;
+  value: React.ReactNode;
+  unit: string;
+}
+
+function Stat({ label, value, unit }: StatProps) {
+  return (
+    <span>
+      {label ? `${label} ` : null}
+      <span className="font-medium text-foreground">{value}</span> {unit}
+    </span>
   );
 }

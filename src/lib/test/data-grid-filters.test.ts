@@ -10,21 +10,6 @@ import {
   getFilterValueForOperator,
 } from "@/lib/data-grid-filters";
 
-const filterFn = getFilterFn<Record<string, unknown>>();
-
-function matches(cellValue: unknown, filter: FilterValue) {
-  const row = {
-    original: { column: cellValue },
-    index: 0,
-    table: {
-      getColumn: () => ({
-        accessorFn: (original: Record<string, unknown>) => original.column,
-      }),
-    },
-  } as unknown as Row<DataGridFeatures, Record<string, unknown>>;
-  return filterFn(row, "column", filter, () => {});
-}
-
 describe("getFilterFn", () => {
   it("should match text operators case-insensitively", () => {
     expect(matches("Engineering", { operator: "contains", value: "GIN" })).toBe(
@@ -113,6 +98,21 @@ describe("getFilterFn", () => {
     expect(matches("Sales", { operator: "contains", value: "hr" })).toBe(false);
   });
 });
+
+const filterFn = getFilterFn<Record<string, unknown>>();
+
+function matches(cellValue: unknown, filter: FilterValue) {
+  const row = {
+    original: { column: cellValue },
+    index: 0,
+    table: {
+      getColumn: () => ({
+        accessorFn: (original: Record<string, unknown>) => original.column,
+      }),
+    },
+  } as unknown as Row<DataGridFeatures, Record<string, unknown>>;
+  return filterFn(row, "column", filter, () => {});
+}
 
 describe("getFilterValueForOperator", () => {
   it("wraps a single value when switching to a multi-value operator", () => {

@@ -72,6 +72,102 @@ type DataMode = (typeof dataModes)[number]["value"];
 
 const isDev = process.env.NODE_ENV === "development";
 
+interface Dataset {
+  key: string;
+  rows: Person[];
+}
+
+export function DataGridDemo() {
+  const [rowCount, setRowCount] = useQueryState(
+    "rowCount",
+    parseAsStringEnum(rowCounts.map((option) => option.value))
+      .withDefault("100k")
+      .withOptions({ clearOnDefault: true }),
+  );
+  const [dataMode, setDataMode] = useQueryState(
+    "data",
+    parseAsStringEnum<DataMode>(dataModes.map((mode) => mode.value)),
+  );
+  const [dataset, setDataset] = React.useState<Dataset | null>(null);
+  const datasetKey = `${dataMode}-${rowCount}`;
+
+  // Generating hundreds of thousands of rows takes a moment, so it runs after the skeleton has painted
+  React.useEffect(() => {
+    let timeout = 0;
+    const frame = requestAnimationFrame(() => {
+      timeout = window.setTimeout(() => {
+        setDataset({
+          key: datasetKey,
+          rows: getRows(dataMode ?? "demo", rowCount),
+        });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timeout);
+    };
+  }, [datasetKey, dataMode, rowCount]);
+
+  const selectedRowCount = getRowCountOption(rowCount);
+  const rowCountSelect = (
+    <Select
+      value={rowCount}
+      onValueChange={(value) => {
+        const option = rowCounts.find((item) => item.value === value);
+        if (option) void setRowCount(option.value);
+      }}
+    >
+      <SelectTrigger
+        aria-label="Row count"
+        className="[&_svg:nth-child(2)]:hidden"
+      >
+        <SelectValue>
+          <selectedRowCount.icon />
+          {selectedRowCount.value} rows
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent align="end">
+        <SelectGroup>
+          {rowCounts.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              <option.icon />
+              {option.value} rows
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+
+  const dataModeToggle =
+    isDev && dataMode ? (
+      <DataModeToggle
+        value={dataMode}
+        onValueChange={(value) => void setDataMode(value)}
+      />
+    ) : null;
+
+  if (dataset?.key !== datasetKey) {
+    return (
+      <>
+        <DataGridDemoSkeleton rowCountSelect={rowCountSelect} />
+        {dataModeToggle}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <DataGridDemoContent
+        key={dataset.key}
+        initialRows={dataset.rows}
+        rowCountSelect={rowCountSelect}
+      />
+      {dataModeToggle}
+    </>
+  );
+}
+
 function getRows(dataMode: DataMode, rowCount: RowCount) {
   if (!isDev || dataMode === "demo") {
     return generatePeople(getRowCountOption(rowCount).count);
@@ -79,6 +175,10 @@ function getRows(dataMode: DataMode, rowCount: RowCount) {
   if (dataMode === "worst") return worstCasePeople;
   if (dataMode === "one") return worstCasePeople.slice(0, 1);
   return [];
+}
+
+function getRowCountOption(value: RowCount) {
+  return rowCounts.find((option) => option.value === value) ?? rowCounts[1];
 }
 
 interface DataModeToggleProps {
@@ -105,10 +205,6 @@ function DataModeToggle({ value, onValueChange }: DataModeToggleProps) {
       ))}
     </div>
   );
-}
-
-function getRowCountOption(value: RowCount) {
-  return rowCounts.find((option) => option.value === value) ?? rowCounts[1];
 }
 
 interface DataGridDemoContentProps {
@@ -429,101 +525,5 @@ function DataGridDemoContent({
         />
       </div>
     </DirectionProvider>
-  );
-}
-
-interface Dataset {
-  key: string;
-  rows: Person[];
-}
-
-export function DataGridDemo() {
-  const [rowCount, setRowCount] = useQueryState(
-    "rowCount",
-    parseAsStringEnum(rowCounts.map((option) => option.value))
-      .withDefault("100k")
-      .withOptions({ clearOnDefault: true }),
-  );
-  const [dataMode, setDataMode] = useQueryState(
-    "data",
-    parseAsStringEnum<DataMode>(dataModes.map((mode) => mode.value)),
-  );
-  const [dataset, setDataset] = React.useState<Dataset | null>(null);
-  const datasetKey = `${dataMode}-${rowCount}`;
-
-  // Generating hundreds of thousands of rows takes a moment, so it runs after the skeleton has painted
-  React.useEffect(() => {
-    let timeout = 0;
-    const frame = requestAnimationFrame(() => {
-      timeout = window.setTimeout(() => {
-        setDataset({
-          key: datasetKey,
-          rows: getRows(dataMode ?? "demo", rowCount),
-        });
-      });
-    });
-    return () => {
-      cancelAnimationFrame(frame);
-      clearTimeout(timeout);
-    };
-  }, [datasetKey, dataMode, rowCount]);
-
-  const selectedRowCount = getRowCountOption(rowCount);
-  const rowCountSelect = (
-    <Select
-      value={rowCount}
-      onValueChange={(value) => {
-        const option = rowCounts.find((item) => item.value === value);
-        if (option) void setRowCount(option.value);
-      }}
-    >
-      <SelectTrigger
-        aria-label="Row count"
-        className="[&_svg:nth-child(2)]:hidden"
-      >
-        <SelectValue>
-          <selectedRowCount.icon />
-          {selectedRowCount.value} rows
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent align="end">
-        <SelectGroup>
-          {rowCounts.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              <option.icon />
-              {option.value} rows
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
-  );
-
-  const dataModeToggle =
-    isDev && dataMode ? (
-      <DataModeToggle
-        value={dataMode}
-        onValueChange={(value) => void setDataMode(value)}
-      />
-    ) : null;
-
-  if (dataset?.key !== datasetKey) {
-    return (
-      <>
-        <DataGridDemoSkeleton rowCountSelect={rowCountSelect} />
-        {dataModeToggle}
-      </>
-    );
-  }
-
-  return (
-    <>
-      <DataGridDemoContent
-        key={dataset.key}
-        initialRows={dataset.rows}
-        rowCountSelect={rowCountSelect}
-      />
-      {dataModeToggle}
-    </>
   );
 }

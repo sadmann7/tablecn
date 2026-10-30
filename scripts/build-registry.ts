@@ -56,74 +56,11 @@ interface Registry {
   items: RegistryItem[];
 }
 
-/**
- * Repoints a file at the base tree when an override exists there.
- * `target` is deliberately untouched so consumers get the same paths either way.
- */
-function resolveFile(file: RegistryFile, baseName: string): RegistryFile {
-  if (baseName === "radix") return file;
-
-  const override = file.path.replace(RADIX_TREE, BASE_TREE);
-
-  return existsSync(path.join(ROOT, override))
-    ? { ...file, path: override }
-    : file;
-}
-
-/**
- * Base UI is a peer of the base tree, not of registry.json, so the dependency is
- * added per item based on what its resolved files actually import.
- */
-function withImportedDependencies(
-  dependencies: string[] | undefined,
-  files: RegistryFile[] | undefined,
-) {
-  const contents =
-    files?.map((file) => readFileSync(path.join(ROOT, file.path), "utf8")) ??
-    [];
-
-  const next = [...(dependencies ?? [])];
-
-  for (const pkg of [
-    "@base-ui/react",
-    "@base-ui/utils",
-    "@dnd-kit/core",
-    "@dnd-kit/modifiers",
-    "@dnd-kit/sortable",
-    "@dnd-kit/utilities",
-    "zod",
-  ] as const) {
-    if (contents.some((content) => content.includes(`"${pkg}`))) {
-      if (!next.includes(pkg)) next.push(pkg);
-    }
-  }
-
-  return next.length > 0 ? next : dependencies;
-}
-
-function buildBase(baseName: string, outDir: string) {
-  const registry = JSON.parse(
-    readFileSync(path.join(ROOT, "registry.json"), "utf8"),
-  ) as Registry;
-
-  const items = registry.items.map((item) => {
-    const files = item.files?.map((file) => resolveFile(file, baseName));
-
-    return {
-      ...item,
-      dependencies: withImportedDependencies(item.dependencies, files),
-      files,
-    };
-  });
-
-  const registryPath = path.join(outDir, "registry.input.json");
-  writeFileSync(registryPath, JSON.stringify({ ...registry, items }, null, 2));
-
-  execFileSync(
-    path.join(ROOT, "node_modules/.bin/shadcn"),
-    ["build", registryPath, "--output", path.join(outDir, "r")],
-    { cwd: ROOT, stdio: "inherit" },
-  );
+try {
+  main();
+} catch (error) {
+  console.error("❌ Registry build failed:", error);
+  process.exit(1);
 }
 
 function main() {
@@ -169,9 +106,72 @@ function main() {
   console.log(`\n✅ Build complete in ${elapsed}s!`);
 }
 
-try {
-  main();
-} catch (error) {
-  console.error("❌ Registry build failed:", error);
-  process.exit(1);
+function buildBase(baseName: string, outDir: string) {
+  const registry = JSON.parse(
+    readFileSync(path.join(ROOT, "registry.json"), "utf8"),
+  ) as Registry;
+
+  const items = registry.items.map((item) => {
+    const files = item.files?.map((file) => resolveFile(file, baseName));
+
+    return {
+      ...item,
+      dependencies: withImportedDependencies(item.dependencies, files),
+      files,
+    };
+  });
+
+  const registryPath = path.join(outDir, "registry.input.json");
+  writeFileSync(registryPath, JSON.stringify({ ...registry, items }, null, 2));
+
+  execFileSync(
+    path.join(ROOT, "node_modules/.bin/shadcn"),
+    ["build", registryPath, "--output", path.join(outDir, "r")],
+    { cwd: ROOT, stdio: "inherit" },
+  );
+}
+
+/**
+ * Repoints a file at the base tree when an override exists there.
+ * `target` is deliberately untouched so consumers get the same paths either way.
+ */
+function resolveFile(file: RegistryFile, baseName: string): RegistryFile {
+  if (baseName === "radix") return file;
+
+  const override = file.path.replace(RADIX_TREE, BASE_TREE);
+
+  return existsSync(path.join(ROOT, override))
+    ? { ...file, path: override }
+    : file;
+}
+
+/**
+ * Base UI is a peer of the base tree, not of registry.json, so the dependency is
+ * added per item based on what its resolved files actually import.
+ */
+function withImportedDependencies(
+  dependencies: string[] | undefined,
+  files: RegistryFile[] | undefined,
+) {
+  const contents =
+    files?.map((file) => readFileSync(path.join(ROOT, file.path), "utf8")) ??
+    [];
+
+  const next = [...(dependencies ?? [])];
+
+  for (const pkg of [
+    "@base-ui/react",
+    "@base-ui/utils",
+    "@dnd-kit/core",
+    "@dnd-kit/modifiers",
+    "@dnd-kit/sortable",
+    "@dnd-kit/utilities",
+    "zod",
+  ] as const) {
+    if (contents.some((content) => content.includes(`"${pkg}`))) {
+      if (!next.includes(pkg)) next.push(pkg);
+    }
+  }
+
+  return next.length > 0 ? next : dependencies;
 }

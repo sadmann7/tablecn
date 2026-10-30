@@ -66,10 +66,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
 
-function getIsRemoveKey(event: React.KeyboardEvent) {
-  return REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase());
-}
-
 type FilterUpdate = Partial<Omit<ColumnFilterItem, "filterId">>;
 type FilterSelector = "field" | "operator" | "value";
 
@@ -307,6 +303,10 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
   );
 }
 
+function getIsRemoveKey(event: React.KeyboardEvent) {
+  return REMOVE_FILTER_SHORTCUTS.includes(event.key.toLowerCase());
+}
+
 interface DataTableFilterItemProps<TData extends RowData> {
   filter: ColumnFilterItem;
   filterItemId: string;
@@ -392,172 +392,6 @@ function DataTableFilterItem<TData extends RowData>({
       </Button>
     </div>
   );
-}
-
-interface FilterFieldOptionsProps<TData extends RowData> {
-  columns: Column<DataTableFeatures, TData>[];
-  onSelect: (column: Column<DataTableFeatures, TData>) => void;
-}
-
-function FilterFieldOptions<TData extends RowData>({
-  columns,
-  onSelect,
-}: FilterFieldOptionsProps<TData>) {
-  return (
-    <>
-      <CommandEmpty>No fields found.</CommandEmpty>
-      <CommandGroup>
-        {columns.map((column) => (
-          <CommandItem
-            key={column.id}
-            value={column.id}
-            onSelect={() => onSelect(column)}
-          >
-            <ColumnLabel column={column} />
-          </CommandItem>
-        ))}
-      </CommandGroup>
-    </>
-  );
-}
-
-interface ColumnLabelProps<TData extends RowData> {
-  column: Column<DataTableFeatures, TData>;
-}
-
-function ColumnLabel<TData extends RowData>({
-  column,
-}: ColumnLabelProps<TData>) {
-  const columnMeta = column.columnDef.meta;
-
-  return (
-    <>
-      {columnMeta?.icon && <columnMeta.icon />}
-      <span className="truncate">{columnMeta?.label ?? column.id}</span>
-    </>
-  );
-}
-
-interface FilterValueOptionsProps<TData extends RowData> {
-  column: Column<DataTableFeatures, TData>;
-  search: string;
-  onSelect: (value: string) => void;
-}
-
-function FilterValueOptions<TData extends RowData>({
-  column,
-  search,
-  onSelect,
-}: FilterValueOptionsProps<TData>) {
-  const columnMeta = column.columnDef.meta;
-
-  switch (columnMeta?.variant ?? "text") {
-    case "boolean":
-      return (
-        <CommandGroup>
-          <CommandItem value="true" onSelect={() => onSelect("true")}>
-            True
-          </CommandItem>
-          <CommandItem value="false" onSelect={() => onSelect("false")}>
-            False
-          </CommandItem>
-        </CommandGroup>
-      );
-
-    case "select":
-    case "multiSelect":
-      return (
-        <>
-          <CommandEmpty>No options found.</CommandEmpty>
-          <CommandGroup>
-            {columnMeta?.options?.map((option) => (
-              <CommandItem
-                key={option.value}
-                value={option.value}
-                keywords={[option.label]}
-                className="[&>svg:last-child]:hidden"
-                onSelect={() => onSelect(option.value)}
-              >
-                {option.icon && <option.icon />}
-                <span className="truncate">{option.label}</span>
-                {option.count !== undefined && (
-                  <span className="ms-auto font-mono text-xs">
-                    {option.count}
-                  </span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </>
-      );
-
-    case "date":
-    case "dateRange":
-      return (
-        <Calendar
-          autoFocus
-          captionLayout="dropdown"
-          mode="single"
-          onSelect={(date) => onSelect(getFilterDateValue(date))}
-        />
-      );
-
-    default:
-      return <TextFilterValueOption search={search} onSelect={onSelect} />;
-  }
-}
-
-interface TextFilterValueOptionProps {
-  search: string;
-  onSelect: (value: string) => void;
-}
-
-function TextFilterValueOption({
-  search,
-  onSelect,
-}: TextFilterValueOptionProps) {
-  const isEmpty = !search.trim();
-
-  return (
-    <CommandGroup>
-      <CommandItem
-        value={search}
-        disabled={isEmpty}
-        onSelect={() => onSelect(search)}
-      >
-        {isEmpty ? (
-          <>
-            <IconPlaceholder
-              lucide="Text"
-              tabler="IconTextCaption"
-              hugeicons="TextCheckIcon"
-              phosphor="TextTIcon"
-              remixicon="RiTextWrap"
-            />
-            <span>Type to add filter...</span>
-          </>
-        ) : (
-          <>
-            <IconPlaceholder
-              lucide="BadgeCheck"
-              tabler="IconRosetteDiscountCheck"
-              hugeicons="CheckmarkBadgeIcon"
-              phosphor="CheckCircleIcon"
-              remixicon="RiCheckboxCircleLine"
-            />
-            <span className="truncate">Filter by &quot;{search}&quot;</span>
-          </>
-        )}
-      </CommandItem>
-    </CommandGroup>
-  );
-}
-
-interface FilterSelectorProps {
-  filter: ColumnFilterItem;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
 }
 
 interface FilterFieldSelectorProps<
@@ -975,4 +809,170 @@ function DateFilterValue<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
+}
+
+interface FilterValueOptionsProps<TData extends RowData> {
+  column: Column<DataTableFeatures, TData>;
+  search: string;
+  onSelect: (value: string) => void;
+}
+
+function FilterValueOptions<TData extends RowData>({
+  column,
+  search,
+  onSelect,
+}: FilterValueOptionsProps<TData>) {
+  const columnMeta = column.columnDef.meta;
+
+  switch (columnMeta?.variant ?? "text") {
+    case "boolean":
+      return (
+        <CommandGroup>
+          <CommandItem value="true" onSelect={() => onSelect("true")}>
+            True
+          </CommandItem>
+          <CommandItem value="false" onSelect={() => onSelect("false")}>
+            False
+          </CommandItem>
+        </CommandGroup>
+      );
+
+    case "select":
+    case "multiSelect":
+      return (
+        <>
+          <CommandEmpty>No options found.</CommandEmpty>
+          <CommandGroup>
+            {columnMeta?.options?.map((option) => (
+              <CommandItem
+                key={option.value}
+                value={option.value}
+                keywords={[option.label]}
+                className="[&>svg:last-child]:hidden"
+                onSelect={() => onSelect(option.value)}
+              >
+                {option.icon && <option.icon />}
+                <span className="truncate">{option.label}</span>
+                {option.count !== undefined && (
+                  <span className="ms-auto font-mono text-xs">
+                    {option.count}
+                  </span>
+                )}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </>
+      );
+
+    case "date":
+    case "dateRange":
+      return (
+        <Calendar
+          autoFocus
+          captionLayout="dropdown"
+          mode="single"
+          onSelect={(date) => onSelect(getFilterDateValue(date))}
+        />
+      );
+
+    default:
+      return <TextFilterValueOption search={search} onSelect={onSelect} />;
+  }
+}
+
+interface TextFilterValueOptionProps {
+  search: string;
+  onSelect: (value: string) => void;
+}
+
+function TextFilterValueOption({
+  search,
+  onSelect,
+}: TextFilterValueOptionProps) {
+  const isEmpty = !search.trim();
+
+  return (
+    <CommandGroup>
+      <CommandItem
+        value={search}
+        disabled={isEmpty}
+        onSelect={() => onSelect(search)}
+      >
+        {isEmpty ? (
+          <>
+            <IconPlaceholder
+              lucide="Text"
+              tabler="IconTextCaption"
+              hugeicons="TextCheckIcon"
+              phosphor="TextTIcon"
+              remixicon="RiTextWrap"
+            />
+            <span>Type to add filter...</span>
+          </>
+        ) : (
+          <>
+            <IconPlaceholder
+              lucide="BadgeCheck"
+              tabler="IconRosetteDiscountCheck"
+              hugeicons="CheckmarkBadgeIcon"
+              phosphor="CheckCircleIcon"
+              remixicon="RiCheckboxCircleLine"
+            />
+            <span className="truncate">Filter by &quot;{search}&quot;</span>
+          </>
+        )}
+      </CommandItem>
+    </CommandGroup>
+  );
+}
+
+interface FilterFieldOptionsProps<TData extends RowData> {
+  columns: Column<DataTableFeatures, TData>[];
+  onSelect: (column: Column<DataTableFeatures, TData>) => void;
+}
+
+function FilterFieldOptions<TData extends RowData>({
+  columns,
+  onSelect,
+}: FilterFieldOptionsProps<TData>) {
+  return (
+    <>
+      <CommandEmpty>No fields found.</CommandEmpty>
+      <CommandGroup>
+        {columns.map((column) => (
+          <CommandItem
+            key={column.id}
+            value={column.id}
+            onSelect={() => onSelect(column)}
+          >
+            <ColumnLabel column={column} />
+          </CommandItem>
+        ))}
+      </CommandGroup>
+    </>
+  );
+}
+
+interface ColumnLabelProps<TData extends RowData> {
+  column: Column<DataTableFeatures, TData>;
+}
+
+function ColumnLabel<TData extends RowData>({
+  column,
+}: ColumnLabelProps<TData>) {
+  const columnMeta = column.columnDef.meta;
+
+  return (
+    <>
+      {columnMeta?.icon && <columnMeta.icon />}
+      <span className="truncate">{columnMeta?.label ?? column.id}</span>
+    </>
+  );
+}
+
+interface FilterSelectorProps {
+  filter: ColumnFilterItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
 }

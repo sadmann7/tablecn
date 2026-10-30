@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc", "react", "import", "nextjs"],
+  "jsPlugins": ["./lint/plugin.ts"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
@@ -85,7 +86,8 @@
     ],
     "unicorn/no-new-array": "warn",
     "unicorn/no-invalid-remove-event-listener": "warn",
-    "unicorn/no-array-sort": "off"
+    "unicorn/no-array-sort": "off",
+    "tablecn/helpers-below-first-use": "warn"
   },
   "overrides": [
     {
@@ -98,6 +100,12 @@
         "no-shadow": "off",
         "react/refs": "off",
         "react/immutability": "off"
+      }
+    },
+    {
+      "files": ["src/registry/bases/*/ui/**"],
+      "rules": {
+        "tablecn/helpers-below-first-use": "off"
       }
     }
   ]

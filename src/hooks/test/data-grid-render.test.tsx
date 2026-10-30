@@ -40,61 +40,6 @@ const testColumns: ColumnDef<DataGridFeatures, TestData>[] = [
   { id: "trick", accessorKey: "trick", header: "Trick" },
 ];
 
-function renderGrid(columns = testColumns) {
-  const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
-  let hookRenderCount = 0;
-
-  function Harness() {
-    const dataGrid = useDataGrid({
-      data: testData,
-      columns,
-      getRowId: (row) => row.id,
-      enableSearch: true,
-    });
-    hookRenderCount++;
-    gridRef.current = dataGrid;
-    return <DataGrid {...dataGrid} />;
-  }
-
-  const view = render(<Harness />);
-  const table = gridRef.current?.table;
-  if (!table) throw new Error("Grid did not render");
-
-  return {
-    ...view,
-    table,
-    getHookRenderCount: () => hookRenderCount,
-  };
-}
-
-function getCellWrapper(
-  container: HTMLElement,
-  rowId: string,
-  columnId: string,
-) {
-  return container.querySelector<HTMLElement>(
-    `[data-slot="data-grid-cell"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
-  );
-}
-
-function getHeaderTrigger(container: HTMLElement, columnId: string) {
-  return container.querySelector<HTMLElement>(
-    `[data-slot="data-grid-header-cell"][data-column-id="${columnId}"] button`,
-  );
-}
-
-function pressHeaderKey(
-  target: HTMLElement | null,
-  key: string,
-  modifiers: Pick<KeyboardEventInit, "altKey" | "shiftKey">,
-) {
-  act(() => {
-    target?.dispatchEvent(
-      new KeyboardEvent("keydown", { key, bubbles: true, ...modifiers }),
-    );
-  });
-}
-
 describe("DataGrid rendering", () => {
   beforeEach(() => {
     // The virtualizer only renders rows once its scroll element has a size
@@ -952,3 +897,58 @@ describe("DataGrid rendering", () => {
     ).toEqual([["Trick", "descending"]]);
   });
 });
+
+function renderGrid(columns = testColumns) {
+  const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
+  let hookRenderCount = 0;
+
+  function Harness() {
+    const dataGrid = useDataGrid({
+      data: testData,
+      columns,
+      getRowId: (row) => row.id,
+      enableSearch: true,
+    });
+    hookRenderCount++;
+    gridRef.current = dataGrid;
+    return <DataGrid {...dataGrid} />;
+  }
+
+  const view = render(<Harness />);
+  const table = gridRef.current?.table;
+  if (!table) throw new Error("Grid did not render");
+
+  return {
+    ...view,
+    table,
+    getHookRenderCount: () => hookRenderCount,
+  };
+}
+
+function getCellWrapper(
+  container: HTMLElement,
+  rowId: string,
+  columnId: string,
+) {
+  return container.querySelector<HTMLElement>(
+    `[data-slot="data-grid-cell"][data-row-id="${rowId}"][data-column-id="${columnId}"]`,
+  );
+}
+
+function getHeaderTrigger(container: HTMLElement, columnId: string) {
+  return container.querySelector<HTMLElement>(
+    `[data-slot="data-grid-header-cell"][data-column-id="${columnId}"] button`,
+  );
+}
+
+function pressHeaderKey(
+  target: HTMLElement | null,
+  key: string,
+  modifiers: Pick<KeyboardEventInit, "altKey" | "shiftKey">,
+) {
+  act(() => {
+    target?.dispatchEvent(
+      new KeyboardEvent("keydown", { key, bubbles: true, ...modifiers }),
+    );
+  });
+}

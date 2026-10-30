@@ -201,6 +201,13 @@ export function filterColumns<T extends Table>({
   return validConditions.length > 0 ? joinFn(...validConditions) : undefined;
 }
 
+export function getColumn<T extends Table>(
+  table: T,
+  columnKey: keyof T,
+): AnyColumn {
+  return table[columnKey] as AnyColumn;
+}
+
 function getStartOfDay(value: unknown) {
   const date = parseFilterDate(value);
   return date ? startOfDay(date) : undefined;
@@ -209,11 +216,4 @@ function getStartOfDay(value: unknown) {
 function getEndOfDay(value: unknown) {
   const date = parseFilterDate(value);
   return date ? endOfDay(date) : undefined;
-}
-
-export function getColumn<T extends Table>(
-  table: T,
-  columnKey: keyof T,
-): AnyColumn {
-  return table[columnKey] as AnyColumn;
 }

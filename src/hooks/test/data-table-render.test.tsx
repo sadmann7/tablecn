@@ -20,6 +20,82 @@ interface Task {
   status: string;
 }
 
+describe("DataTable rendering", () => {
+  it("only re-renders the row when one row is selected", () => {
+    const { container, measure } = renderTable();
+    const checkbox = screen.getAllByRole("checkbox", { name: "Select row" })[0];
+    if (!checkbox) throw new Error("Missing row checkbox");
+
+    const counts = measure(() => fireEvent.click(checkbox));
+
+    expect(counts).toEqual({ cells: 0, headers: 0 });
+    expect(checkbox.getAttribute("data-state")).toBe("checked");
+    expect(
+      container.querySelectorAll('tr[data-state="selected"]'),
+    ).toHaveLength(1);
+  });
+
+  it("does not re-render cells or headers when every row is selected", () => {
+    const { container, measure } = renderTable();
+
+    const counts = measure(() =>
+      fireEvent.click(screen.getByRole("checkbox", { name: "Select all" })),
+    );
+
+    expect(counts).toEqual({ cells: 0, headers: 0 });
+    expect(
+      container.querySelectorAll('tr[data-state="selected"]'),
+    ).toHaveLength(10);
+  });
+
+  it("updates select all when the page changes", () => {
+    const { table } = renderTable();
+    const selectAll = screen.getByRole("checkbox", { name: "Select all" });
+
+    act(() => table.toggleAllPageRowsSelected(true));
+    expect(selectAll.getAttribute("data-state")).toBe("checked");
+
+    act(() => table.nextPage());
+    expect(selectAll.getAttribute("data-state")).toBe("unchecked");
+
+    act(() => table.previousPage());
+    expect(selectAll.getAttribute("data-state")).toBe("checked");
+  });
+
+  it("only renders the cells of a column whose visibility or pinning changes", () => {
+    const { container, table, measure } = renderTable();
+
+    expect(
+      measure(() => table.getColumn("status")?.toggleVisibility(false)).cells,
+    ).toBe(0);
+    expect(container.querySelectorAll("tbody td")).toHaveLength(20);
+
+    expect(
+      measure(() => table.getColumn("status")?.toggleVisibility(true)).cells,
+    ).toBe(10);
+
+    // Pinning doesn't change a cell's content, so the compiler may skip its renderer
+    expect(
+      measure(() => table.getColumn("title")?.pin("start")).cells,
+    ).toBeLessThanOrEqual(10);
+    const titleCells = [...container.querySelectorAll("tbody td")].filter(
+      (cell) => cell.textContent?.startsWith("Task "),
+    );
+    expect(titleCells).toHaveLength(10);
+    for (const cell of titleCells) {
+      expect((cell as HTMLElement).style.position).toBe("sticky");
+    }
+  });
+
+  it("does not re-render cells when columns resize", () => {
+    const { table, measure } = renderTable();
+
+    const counts = measure(() => table.setColumnSizing({ title: 300 }));
+
+    expect(counts).toEqual({ cells: 0, headers: 0 });
+  });
+});
+
 const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
   id: String(index),
   title: `Task ${String(index).padStart(2, "0")}`,
@@ -97,79 +173,3 @@ function renderTable() {
 
   return { ...view, table, measure };
 }
-
-describe("DataTable rendering", () => {
-  it("only re-renders the row when one row is selected", () => {
-    const { container, measure } = renderTable();
-    const checkbox = screen.getAllByRole("checkbox", { name: "Select row" })[0];
-    if (!checkbox) throw new Error("Missing row checkbox");
-
-    const counts = measure(() => fireEvent.click(checkbox));
-
-    expect(counts).toEqual({ cells: 0, headers: 0 });
-    expect(checkbox.getAttribute("data-state")).toBe("checked");
-    expect(
-      container.querySelectorAll('tr[data-state="selected"]'),
-    ).toHaveLength(1);
-  });
-
-  it("does not re-render cells or headers when every row is selected", () => {
-    const { container, measure } = renderTable();
-
-    const counts = measure(() =>
-      fireEvent.click(screen.getByRole("checkbox", { name: "Select all" })),
-    );
-
-    expect(counts).toEqual({ cells: 0, headers: 0 });
-    expect(
-      container.querySelectorAll('tr[data-state="selected"]'),
-    ).toHaveLength(10);
-  });
-
-  it("updates select all when the page changes", () => {
-    const { table } = renderTable();
-    const selectAll = screen.getByRole("checkbox", { name: "Select all" });
-
-    act(() => table.toggleAllPageRowsSelected(true));
-    expect(selectAll.getAttribute("data-state")).toBe("checked");
-
-    act(() => table.nextPage());
-    expect(selectAll.getAttribute("data-state")).toBe("unchecked");
-
-    act(() => table.previousPage());
-    expect(selectAll.getAttribute("data-state")).toBe("checked");
-  });
-
-  it("only renders the cells of a column whose visibility or pinning changes", () => {
-    const { container, table, measure } = renderTable();
-
-    expect(
-      measure(() => table.getColumn("status")?.toggleVisibility(false)).cells,
-    ).toBe(0);
-    expect(container.querySelectorAll("tbody td")).toHaveLength(20);
-
-    expect(
-      measure(() => table.getColumn("status")?.toggleVisibility(true)).cells,
-    ).toBe(10);
-
-    // Pinning doesn't change a cell's content, so the compiler may skip its renderer
-    expect(
-      measure(() => table.getColumn("title")?.pin("start")).cells,
-    ).toBeLessThanOrEqual(10);
-    const titleCells = [...container.querySelectorAll("tbody td")].filter(
-      (cell) => cell.textContent?.startsWith("Task "),
-    );
-    expect(titleCells).toHaveLength(10);
-    for (const cell of titleCells) {
-      expect((cell as HTMLElement).style.position).toBe("sticky");
-    }
-  });
-
-  it("does not re-render cells when columns resize", () => {
-    const { table, measure } = renderTable();
-
-    const counts = measure(() => table.setColumnSizing({ title: 300 }));
-
-    expect(counts).toEqual({ cells: 0, headers: 0 });
-  });
-});

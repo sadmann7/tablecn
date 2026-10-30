@@ -175,6 +175,14 @@ function DataTableHeadCell<TData extends RowData>({
   );
 }
 
+function getCellClassName(pinned: ColumnPinningPosition) {
+  return pinned
+    ? "overflow-hidden bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted"
+    : "overflow-hidden";
+}
+
+const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
+
 interface DataTableBodyProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
 }
@@ -212,11 +220,25 @@ function DataTableBody<TData extends RowData>({
   );
 }
 
+interface DataTableActionBarProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+  actionBar: React.ReactNode;
+}
+
+function DataTableActionBar<TData extends RowData>({
+  table,
+  actionBar,
+}: DataTableActionBarProps<TData>) {
+  return (
+    <table.Subscribe selector={() => getVisibleSelectedRows(table).length > 0}>
+      {(hasVisibleSelectedRows) => (hasVisibleSelectedRows ? actionBar : null)}
+    </table.Subscribe>
+  );
+}
+
 interface DataTableRowProps<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;
 }
-
-const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
 function DataTableRowImpl<TData extends RowData>({
   row,
@@ -268,26 +290,4 @@ function DataTableCellImpl<TData extends RowData>({
       <FlexRender cell={cell} />
     </TableCell>
   );
-}
-
-interface DataTableActionBarProps<TData extends RowData> {
-  table: ReactTable<DataTableFeatures, TData, unknown>;
-  actionBar: React.ReactNode;
-}
-
-function DataTableActionBar<TData extends RowData>({
-  table,
-  actionBar,
-}: DataTableActionBarProps<TData>) {
-  return (
-    <table.Subscribe selector={() => getVisibleSelectedRows(table).length > 0}>
-      {(hasVisibleSelectedRows) => (hasVisibleSelectedRows ? actionBar : null)}
-    </table.Subscribe>
-  );
-}
-
-function getCellClassName(pinned: ColumnPinningPosition) {
-  return pinned
-    ? "overflow-hidden bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted"
-    : "overflow-hidden";
 }
