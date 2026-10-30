@@ -73,6 +73,10 @@ const helpersBelowFirstUse = {
       for (const stateName of getStateNames(statement) ?? []) {
         if (!exported.has(stateName)) stateNames.add(stateName);
       }
+      const typeName = TYPE_TYPES.has(statement.type) ? statement.id?.name : "";
+      if (typeof typeName === "string" && typeName.endsWith("Props")) {
+        stateNames.add(typeName);
+      }
     }
     const references = new Map<string, Node[]>();
 
@@ -110,7 +114,9 @@ const helpersBelowFirstUse = {
           if (owner && !getIsRightAbove(layout, unit, owner)) {
             context.report({
               node,
-              message: `Move \`${unit.stateNames?.join("`, `")}\` right above \`${owner.helper}\`, the only code using it.`,
+              message: unit.isType
+                ? `Move \`${String(unit.statements[0]?.id?.name)}\` right above \`${getDeclaredNames(owner)[0] ?? ""}\`, which it types.`
+                : `Move \`${unit.stateNames?.join("`, `")}\` right above \`${owner.helper}\`, the only code using it.`,
               fix,
             });
           }
@@ -190,6 +196,34 @@ function getLayout(
       }
     }
     if (isOwned && owner?.helper && !eager.has(owner)) owners.set(unit, owner);
+  }
+  // A props type that drifted away from its component goes back above it, or
+  // above the memo wrapping it
+  const declarers = new Map<string, Unit>();
+  for (const unit of units) {
+    for (const name of getDeclaredNames(unit)) declarers.set(name, unit);
+  }
+  for (const unit of units) {
+    const name = unit.statements[0]?.id?.name;
+    if (!unit.isType || unit.isExported || typeof name !== "string") continue;
+    if (!name.endsWith("Props")) continue;
+    const component = name.slice(0, -"Props".length);
+    const wrapper =
+      declarers.get(component) ??
+      declarers.get(
+        `${component.charAt(0).toLowerCase()}${component.slice(1)}`,
+      );
+    const impl = declarers.get(`${component}Impl`);
+    const candidates = [wrapper, impl].filter((item) => item !== undefined);
+    const isShared = (references.get(name) ?? []).some((node) => {
+      const user = getUser(node);
+      return !user || !candidates.includes(user);
+    });
+    if (isShared || candidates.length === 0) continue;
+    // Either spot reads fine, so the one it already sits above wins
+    const next = units[units.indexOf(unit) + 1];
+    const owner = candidates.find((item) => item === next) ?? candidates[0];
+    if (owner && owner !== unit) owners.set(unit, owner);
   }
 
   const anchors = new Map<Unit, Unit>();
@@ -348,6 +382,24 @@ function getUnits(context: Context, helpers: Map<string, Node>) {
     index += statements.length - 1;
   }
   return units;
+}
+
+function getDeclaredNames(unit: Unit) {
+  const names: string[] = [];
+  for (const statement of unit.statements) {
+    const declaration =
+      statement.type === "ExportNamedDeclaration"
+        ? statement.declaration
+        : statement;
+    if (!declaration || TYPE_TYPES.has(declaration.type)) continue;
+    const id = declaration.id?.name;
+    if (typeof id === "string") names.push(id);
+    for (const declarator of declaration.declarations ?? []) {
+      const name = declarator.id?.name;
+      if (typeof name === "string") names.push(name);
+    }
+  }
+  return names;
 }
 
 function getExportedNames(body: Node[]) {

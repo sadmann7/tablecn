@@ -181,15 +181,19 @@ function DataGridWrittenCell<TData extends RowData>({
   return <DataGridCell {...props} ref={ref} />;
 }
 
+interface DataGridCustomCellContentProps<TData extends RowData> {
+  cell: Cell<DataGridFeatures, TData>;
+}
+
 const DataGridCustomCellContent = React.memo(
   DataGridCustomCellContentImpl,
 ) as typeof DataGridCustomCellContentImpl;
 
 function DataGridCustomCellContentImpl<TData extends RowData>({
-  cell: propsCell,
+  cell: cellProp,
 }: DataGridCustomCellContentProps<TData>) {
   "use no memo";
-  const cell = useUpdatedCell(propsCell);
+  const cell = useUpdatedCell(cellProp);
 
   return flexRender(cell.column.columnDef.cell, cell.getContext());
 }
@@ -219,8 +223,4 @@ function useUpdatedCell<TData extends RowData>(
     table.getRowModel().rowsById[rowId]?.getAllCellsByColumnId()[columnId] ??
     cell
   );
-}
-
-interface DataGridCustomCellContentProps<TData extends RowData> {
-  cell: Cell<DataGridFeatures, TData>;
 }
