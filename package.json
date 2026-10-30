@@ -11,7 +11,7 @@
     "deploy:multiplayer": "wrangler deploy",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "data-table-launch:record": "playwright test -c playwright.record.config.ts",
+    "table:record": "playwright test -c playwright.record.config.ts",
     "profile:scroll": "tsx --tsconfig ./tsconfig.scripts.json scripts/profile-data-grid-scroll.ts",
     "dev:docker": "pnpm db:start && pnpm dev",
     "start": "next start",
