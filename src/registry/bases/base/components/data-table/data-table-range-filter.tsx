@@ -59,13 +59,17 @@ export function DataTableRangeFilter<TData extends RowData>({
       const numValue = Number(value);
       const currentValues = getRangeFilterValues(filter.value);
       const otherValue = isMin ? currentValues[1] : currentValues[0];
+      // An empty bound is open, but `0` is a real bound
+      const otherNumber = Number(otherValue);
+      const otherBound =
+        otherValue === "" || Number.isNaN(otherNumber) ? null : otherNumber;
 
       if (
         value === "" ||
         (!Number.isNaN(numValue) &&
           (isMin
-            ? numValue >= min && numValue <= (Number(otherValue) || max)
-            : numValue <= max && numValue >= (Number(otherValue) || min)))
+            ? numValue >= min && numValue <= (otherBound ?? max)
+            : numValue <= max && numValue >= (otherBound ?? min)))
       ) {
         onFilterUpdate(filter.filterId, {
           value: isMin ? [value, otherValue] : [otherValue, value],

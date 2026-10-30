@@ -690,7 +690,7 @@ function FilterValueInput<TData extends RowData>(
       <div
         id={inputId}
         role="status"
-        aria-label={`${columnMeta?.label} filter is ${
+        aria-label={`${columnMeta?.label ?? column.id} filter is ${
           filter.operator === "isEmpty" ? "empty" : "not empty"
         }`}
         aria-live="polite"
@@ -719,7 +719,7 @@ function FilterValueInput<TData extends RowData>(
         <Input
           id={inputId}
           type={filter.variant === "text" ? "text" : "number"}
-          aria-label={`${columnMeta?.label} filter value`}
+          aria-label={`${columnMeta?.label ?? column.id} filter value`}
           inputMode={filter.variant === "text" ? undefined : "numeric"}
           placeholder={columnMeta?.placeholder ?? "Enter value..."}
           className="h-full w-24 rounded-none px-1.5"
@@ -766,7 +766,7 @@ function BooleanFilterValue<TData extends RowData>({
       <SelectTrigger
         id={inputId}
         aria-controls={listboxId}
-        aria-label={`${column.columnDef.meta?.label} boolean filter`}
+        aria-label={`${column.columnDef.meta?.label ?? column.id} boolean filter`}
         className="rounded-none bg-transparent px-1.5 py-0.5 [&_svg]:hidden"
       >
         <SelectValue />
@@ -811,7 +811,7 @@ function SelectFilterValue<TData extends RowData>({
         <Button
           id={inputId}
           aria-controls={listboxId}
-          aria-label={`${columnMeta?.label} filter value${multiple ? "s" : ""}`}
+          aria-label={`${columnMeta?.label ?? column.id} filter value${multiple ? "s" : ""}`}
           variant="ghost"
           className="h-full min-w-16 rounded-none border border-input px-1.5 dark:bg-input/30"
         >
@@ -824,7 +824,7 @@ function SelectFilterValue<TData extends RowData>({
       </FacetedTrigger>
       <FacetedContent dir={dir} id={listboxId} className="w-48">
         <FacetedInput
-          aria-label={`Search ${columnMeta?.label} options`}
+          aria-label={`Search ${columnMeta?.label ?? column.id} options`}
           placeholder="Search options..."
         />
         <FacetedList>
@@ -896,7 +896,7 @@ function DateFilterValue<TData extends RowData>({
 }: FilterValueInputProps<TData>) {
   const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
-  const label = column.columnDef.meta?.label;
+  const label = column.columnDef.meta?.label ?? column.id;
   const [startDate, endDate] = getFilterDates(filter.value);
 
   return (
