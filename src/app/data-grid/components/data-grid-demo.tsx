@@ -2,6 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { cn } from "cn";
 import { Copy, Languages, Rows2, Rows3, Rows4, Trash2 } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
@@ -80,24 +81,23 @@ function getRows(dataMode: DataMode, rowCount: RowCount) {
   return [];
 }
 
-function DataModeToggle({
-  value,
-  onValueChange,
-}: {
+interface DataModeToggleProps {
   value: DataMode;
   onValueChange: (value: DataMode) => void;
-}) {
+}
+
+function DataModeToggle({ value, onValueChange }: DataModeToggleProps) {
   return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 gap-0.5 rounded-full bg-neutral-200 p-0.5 font-sans text-xs shadow-sm">
+    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 gap-0.5 rounded-full border border-input bg-background p-0.5 font-sans text-xs shadow-sm">
       {dataModes.map((mode) => (
         <button
           key={mode.value}
           type="button"
-          className={
-            mode.value === value
-              ? "rounded-full bg-white px-3 py-1 text-neutral-900 shadow-sm"
-              : "rounded-full px-3 py-1 text-neutral-600"
-          }
+          aria-pressed={mode.value === value}
+          className={cn(
+            "rounded-full px-3 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+            mode.value === value && "bg-muted text-foreground",
+          )}
           onClick={() => onValueChange(mode.value)}
         >
           {mode.label}
