@@ -5,7 +5,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
-const OUTPUT = path.resolve("recordings/launch-demo.mp4");
+const OUTPUT = path.resolve("recordings/data-table-launch.mp4");
 const FRAMES = path.resolve("recordings/.frames");
 
 interface CapturedFrame {
@@ -21,7 +21,7 @@ interface PendingFrame {
 test("record one launch loop", async ({ page }) => {
   test.setTimeout(300_000);
 
-  await page.goto("/launch");
+  await page.goto("/data-table-launch");
   const stage = page.locator(".launch-stage");
   await page.evaluate(() => document.fonts.ready);
   // A click runs after the shortcut listener is attached. Hide the controls

@@ -1,6 +1,5 @@
 "use client";
 
-/* oxlint-disable react/refs -- passes the director's element refs to `ref` props, and the scene frame keeps the leaving scene's latest children in a ref */
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { cn } from "cn";
@@ -32,9 +31,9 @@ import {
   INITIAL_SORTING,
   serverReducer,
 } from "../lib/state";
-import { launchColumns } from "./launch-columns";
-import { LaunchControls } from "./launch-controls";
-import { LaunchCamera, useLaunchDirector } from "./launch-director";
+import { launchColumns } from "./data-table-launch-columns";
+import { LaunchControls } from "./data-table-launch-controls";
+import { LaunchCamera, useLaunchDirector } from "./data-table-launch-director";
 import {
   LaunchBackdrop,
   LaunchIntroScene,
@@ -42,8 +41,12 @@ import {
   LaunchOutroScene,
   LaunchStory,
   LaunchVariants,
-} from "./launch-scenes";
-import { LaunchNetwork, LaunchToolbar, LaunchWindow } from "./launch-window";
+} from "./data-table-launch-scenes";
+import {
+  LaunchNetwork,
+  LaunchToolbar,
+  LaunchWindow,
+} from "./data-table-launch-window";
 
 const VISIBLE_WINDOW: React.CSSProperties = {
   opacity: 1,
@@ -66,7 +69,7 @@ const WINDOW_SHOTS: Partial<Record<LaunchSceneId, React.CSSProperties>> = {
   },
 };
 
-export function LaunchDemo() {
+export function DataTableLaunchDemo() {
   const [demo, dispatchDemo] = React.useReducer(demoReducer, INITIAL_DEMO);
   const [server, dispatchServer] = React.useReducer(
     serverReducer,
@@ -104,7 +107,8 @@ export function LaunchDemo() {
   const isPending = isServerMode && server.request !== request;
   useLaunchServer({ table, request, isEnabled: isServerMode, dispatchServer });
 
-  const { director, refs } = useLaunchDirector();
+  const { director, attach } = useLaunchDirector();
+  const { stage } = attach;
   const {
     playback,
     progressRef,
@@ -128,7 +132,7 @@ export function LaunchDemo() {
       )}
     >
       <div
-        ref={refs.stage}
+        ref={stage}
         data-paused={playback.isPaused}
         data-scene={scene.id}
         data-cycle={playback.cycle}
@@ -136,7 +140,7 @@ export function LaunchDemo() {
         className="launch-stage relative h-270 w-480 shrink-0 overflow-hidden bg-[#09090b] font-sans"
       >
         <LaunchBackdrop />
-        <LaunchCamera refs={refs}>
+        <LaunchCamera attach={attach}>
           <div
             className="launch-window absolute top-27 left-180 w-282"
             style={WINDOW_SHOTS[scene.id] ?? VISIBLE_WINDOW}
@@ -164,9 +168,11 @@ export function LaunchDemo() {
             </LaunchWindow>
           </div>
         </LaunchCamera>
-        <LaunchSceneFrame sceneKey={`${playback.cycle}-${scene.id}`}>
-          <LaunchSceneContent scene={scene} columnCount={demo.columnCount} />
-        </LaunchSceneFrame>
+        <LaunchSceneFrame
+          sceneKey={`${playback.cycle}-${scene.id}`}
+          scene={scene}
+          columnCount={demo.columnCount}
+        />
         {demo.keystroke > 0 && (
           <LaunchKeystroke
             key={`${playback.cycle}-${demo.keystroke}`}
@@ -190,46 +196,52 @@ export function LaunchDemo() {
   );
 }
 
-interface LaunchSceneFrameProps {
+interface LaunchSceneFrameProps extends LaunchSceneContentProps {
   sceneKey: string;
-  children: React.ReactNode;
 }
 
-function LaunchSceneFrame({ sceneKey, children }: LaunchSceneFrameProps) {
-  const shownKey = React.useRef(sceneKey);
-  const shownNode = React.useRef(children);
-  const [leaving, setLeaving] = React.useState<{
-    key: string;
-    node: React.ReactNode;
-  } | null>(null);
+function LaunchSceneFrame(props: LaunchSceneFrameProps) {
+  const [shown, setShown] = React.useState(props);
+  const [leaving, setLeaving] = React.useState<LaunchSceneFrameProps | null>(
+    null,
+  );
 
-  if (shownKey.current !== sceneKey) {
-    setLeaving({ key: shownKey.current, node: shownNode.current });
-    shownKey.current = sceneKey;
+  if (shown.sceneKey !== props.sceneKey) {
+    setLeaving(shown);
+    setShown(props);
+  } else if (shown.columnCount !== props.columnCount) {
+    setShown(props);
   }
-
-  shownNode.current = children;
 
   function onLeaveEnd(event: React.AnimationEvent<HTMLDivElement>) {
     if (event.animationName !== "launch-scene-exit") return;
     const key = event.currentTarget.dataset.sceneKey;
-    setLeaving((current) => (current?.key === key ? null : current));
+    setLeaving((current) => (current?.sceneKey === key ? null : current));
   }
 
   return (
     <>
       {leaving && (
         <div
-          key={leaving.key}
-          data-scene-key={leaving.key}
+          key={leaving.sceneKey}
+          data-scene-key={leaving.sceneKey}
           className="launch-scene-exit pointer-events-none absolute inset-0"
           onAnimationEnd={onLeaveEnd}
         >
-          {leaving.node}
+          <LaunchSceneContent
+            scene={leaving.scene}
+            columnCount={leaving.columnCount}
+          />
         </div>
       )}
-      <div key={sceneKey} className="pointer-events-none absolute inset-0">
-        {children}
+      <div
+        key={props.sceneKey}
+        className="pointer-events-none absolute inset-0"
+      >
+        <LaunchSceneContent
+          scene={props.scene}
+          columnCount={props.columnCount}
+        />
       </div>
     </>
   );

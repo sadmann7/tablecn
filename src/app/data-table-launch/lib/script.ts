@@ -5,7 +5,7 @@ import type { DataMode, FilterMode } from "@/lib/flag";
 
 import { coerceFilterValue } from "@/lib/data-table-utils";
 
-import type { LaunchDirector } from "../components/launch-director";
+import type { LaunchDirector } from "../components/data-table-launch-director";
 import type {
   LaunchDemoAction,
   LaunchServerAction,

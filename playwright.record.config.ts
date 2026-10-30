@@ -5,7 +5,7 @@ const baseURL = "http://localhost:3100";
 
 export default defineConfig({
   testDir: "e2e",
-  testMatch: "**/record-launch.spec.ts",
+  testMatch: "**/record-data-table-launch.spec.ts",
   workers: 1,
   retries: 0,
   reporter: "list",

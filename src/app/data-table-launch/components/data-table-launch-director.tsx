@@ -1,6 +1,5 @@
 "use client";
 
-/* oxlint-disable react/refs -- the scenes pass a bag of element refs to `ref` props, which never reads `.current` during render */
 import * as React from "react";
 import { createPortal } from "react-dom";
 
@@ -25,34 +24,22 @@ export interface LaunchDirector {
   reset: () => void;
 }
 
-interface LaunchDirectorRefs {
-  stage: React.RefObject<HTMLDivElement | null>;
-  camera: React.RefObject<HTMLDivElement | null>;
-  overlay: React.RefObject<HTMLDivElement | null>;
-  overlayCamera: React.RefObject<HTMLDivElement | null>;
-  cursor: React.RefObject<HTMLDivElement | null>;
-  pointer: React.RefObject<SVGSVGElement | null>;
-  ripple: React.RefObject<HTMLSpanElement | null>;
+interface LaunchElements {
+  stage: HTMLDivElement | null;
+  camera: HTMLDivElement | null;
+  overlay: HTMLDivElement | null;
+  overlayCamera: HTMLDivElement | null;
+  cursor: HTMLDivElement | null;
+  pointer: SVGSVGElement | null;
+  ripple: HTMLSpanElement | null;
 }
 
+type LaunchDirectorAttach = {
+  [K in keyof LaunchElements]: (element: LaunchElements[K]) => void;
+};
+
 export function useLaunchDirector() {
-  const stage = React.useRef<HTMLDivElement>(null);
-  const camera = React.useRef<HTMLDivElement>(null);
-  const overlay = React.useRef<HTMLDivElement>(null);
-  const overlayCamera = React.useRef<HTMLDivElement>(null);
-  const cursor = React.useRef<HTMLDivElement>(null);
-  const pointer = React.useRef<SVGSVGElement>(null);
-  const ripple = React.useRef<HTMLSpanElement>(null);
-  const [refs] = React.useState<LaunchDirectorRefs>(() => ({
-    stage,
-    camera,
-    overlay,
-    overlayCamera,
-    cursor,
-    pointer,
-    ripple,
-  }));
-  const [director] = React.useState(() => createLaunchDirector(refs));
+  const [{ director, attach }] = React.useState(createLaunchDirector);
 
   React.useEffect(() => {
     const root = document.documentElement;
@@ -68,47 +55,51 @@ export function useLaunchDirector() {
     };
   }, []);
 
-  return { director, refs };
+  return { director, attach };
 }
 
 interface LaunchCameraProps {
-  refs: LaunchDirectorRefs;
+  attach: LaunchDirectorAttach;
   children: React.ReactNode;
 }
 
-export function LaunchCamera({ refs, children }: LaunchCameraProps) {
+export function LaunchCamera({ attach, children }: LaunchCameraProps) {
   const isMounted = React.useSyncExternalStore(
     subscribeToNothing,
     () => true,
     () => false,
   );
 
+  const { camera } = attach;
+
   return (
-    <div ref={refs.camera} className="launch-camera absolute inset-0">
+    <div ref={camera} className="launch-camera absolute inset-0">
       {children}
       {isMounted &&
-        createPortal(<LaunchCursorOverlay refs={refs} />, document.body)}
+        createPortal(<LaunchCursorOverlay attach={attach} />, document.body)}
     </div>
   );
 }
 
-function LaunchCursorOverlay({ refs }: { refs: LaunchDirectorRefs }) {
+function LaunchCursorOverlay({ attach }: { attach: LaunchDirectorAttach }) {
+  const { overlay, overlayCamera, cursor, ripple, pointer } = attach;
+
   return (
     <div
-      ref={refs.overlay}
+      ref={overlay}
       className="pointer-events-none fixed top-0 left-0 z-51 overflow-hidden"
     >
-      <div ref={refs.overlayCamera} className="launch-camera absolute inset-0">
+      <div ref={overlayCamera} className="launch-camera absolute inset-0">
         <div
-          ref={refs.cursor}
+          ref={cursor}
           className="launch-cursor absolute top-0 left-0 opacity-0"
         >
           <span
-            ref={refs.ripple}
+            ref={ripple}
             className="absolute -top-3.5 -left-3.5 size-7 rounded-full border border-white/80 opacity-0"
           />
           <svg
-            ref={refs.pointer}
+            ref={pointer}
             viewBox="0 0 24 24"
             aria-hidden="true"
             className="-mt-1 -ml-2 size-9 origin-top-left drop-shadow-[0_0.25rem_0.5rem_rgb(0_0_0/0.5)]"
@@ -141,10 +132,35 @@ function hover(target: Element | null | undefined) {
   target.dispatchEvent(new PointerEvent("pointermove", init));
 }
 
-function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
+function createLaunchDirector() {
+  const elements: LaunchElements = {
+    stage: null,
+    camera: null,
+    overlay: null,
+    overlayCamera: null,
+    cursor: null,
+    pointer: null,
+    ripple: null,
+  };
+
+  function setElement<K extends keyof LaunchElements>(key: K) {
+    return (element: LaunchElements[K]) => {
+      elements[key] = element;
+    };
+  }
+
+  const attach: LaunchDirectorAttach = {
+    stage: setElement("stage"),
+    camera: setElement("camera"),
+    overlay: setElement("overlay"),
+    overlayCamera: setElement("overlayCamera"),
+    cursor: setElement("cursor"),
+    pointer: setElement("pointer"),
+    ripple: setElement("ripple"),
+  };
+
   function getCameraPoint(target: Element | null | undefined) {
-    const stage = refs.stage.current;
-    const camera = refs.camera.current;
+    const { stage, camera } = elements;
     if (!stage || !camera || !target) return null;
 
     const stageRect = stage.getBoundingClientRect();
@@ -164,8 +180,7 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
   }
 
   function syncOverlay() {
-    const stage = refs.stage.current;
-    const overlay = refs.overlay.current;
+    const { stage, overlay } = elements;
     if (!stage || !overlay) return;
 
     const rect = stage.getBoundingClientRect();
@@ -176,21 +191,21 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
 
   function setCamera(scale: number, x: number, y: number) {
     const transform = `translate(${x}px, ${y}px) scale(${scale})`;
-    for (const layer of [refs.camera.current, refs.overlayCamera.current]) {
+    for (const layer of [elements.camera, elements.overlayCamera]) {
       if (layer) layer.style.transform = transform;
     }
     document.documentElement.style.setProperty(
       "--launch-camera-scale",
       String(scale),
     );
-    const stage = refs.stage.current;
+    const { stage } = elements;
     if (stage) stage.dataset.zoomed = String(scale > 1);
   }
 
   let hoverTimeout = 0;
 
   function moveCursor(target: Element | null | undefined) {
-    const cursor = refs.cursor.current;
+    const { cursor } = elements;
     const point = getCameraPoint(target);
     if (!cursor || !point) return;
 
@@ -212,9 +227,9 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     );
   }
 
-  return {
+  const director: LaunchDirector = {
     focus(target, { scale = DEFAULT_ZOOM, offsetX = 0, offsetY = 0 } = {}) {
-      const camera = refs.camera.current;
+      const { camera } = elements;
       const point = getCameraPoint(target);
       if (!camera || !point) return;
 
@@ -245,11 +260,11 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
       moveCursor(target);
       window.clearTimeout(hoverTimeout);
       hover(target);
-      refs.pointer.current?.animate(
+      elements.pointer?.animate(
         [{ scale: "1" }, { scale: "0.9" }, { scale: "1" }],
         { duration: 200, easing: "cubic-bezier(0.23, 1, 0.32, 1)" },
       );
-      refs.ripple.current?.animate(
+      elements.ripple?.animate(
         [
           { opacity: 0.6, scale: "0.2" },
           { opacity: 0, scale: "1.4" },
@@ -260,10 +275,12 @@ function createLaunchDirector(refs: LaunchDirectorRefs): LaunchDirector {
     reset() {
       window.clearTimeout(hoverTimeout);
       setCamera(1, 0, 0);
-      const cursor = refs.cursor.current;
+      const { cursor } = elements;
       if (cursor) cursor.style.opacity = "0";
     },
   };
+
+  return { director, attach };
 }
 
 function subscribeToNothing() {
