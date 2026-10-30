@@ -708,7 +708,10 @@ function useDataGrid<TData extends RowData>({
       let row: TData | null;
       try {
         row = await createRow(trigger);
-      } catch {
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : "Failed to add row",
+        );
         return;
       }
       const currentTable = tableRef.current;

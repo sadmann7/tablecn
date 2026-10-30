@@ -425,12 +425,13 @@ export function NumberCell<TData extends RowData>(
           setValue(String(initialValue ?? ""));
           inputRef.current?.blur();
         }
-      } else if (isFocused) {
-        if (event.key === "Backspace") {
-          setValue("");
-        } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          pendingCharRef.current = event.key;
-        }
+      } else if (
+        isFocused &&
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        pendingCharRef.current = event.key;
       }
     },
     [cell, isEditing, isFocused, initialValue, value],
@@ -1475,12 +1476,13 @@ export function FileCell<TData extends RowData>(
         }));
       }
 
+      // Each uploaded file replaces one temp file, so files sharing a name each get their own
+      const unmatchedFiles = [...uploadedFiles];
       const finalFiles = filesWithTemp
         .map((f) => {
-          if (uploadingIds.has(f.id)) {
-            return uploadedFiles.find((uf) => uf.name === f.name) ?? f;
-          }
-          return f;
+          if (!uploadingIds.has(f.id)) return f;
+          const index = unmatchedFiles.findIndex((uf) => uf.name === f.name);
+          return index === -1 ? f : (unmatchedFiles.splice(index, 1)[0] ?? f);
         })
         .filter((f) => f.url !== undefined);
 
