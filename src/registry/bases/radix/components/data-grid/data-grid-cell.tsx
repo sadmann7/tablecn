@@ -86,6 +86,7 @@ export function DataGridCell<TData extends RowData>({
       if (
         event.key === "F2" ||
         event.key === "Enter" ||
+        event.key === " " ||
         (event.key.length === 1 && !event.ctrlKey && !event.metaKey)
       ) {
         event.preventDefault();
