@@ -156,8 +156,6 @@ export function DataGridCell<TData extends RowData>({
   );
 }
 
-// Live updates patch the stable `cell` in place, so its value is read through a
-// subscription rather than `cell.getValue()` during render
 export function useCellValue<TData extends RowData>(
   cell: Cell<DataGridFeatures, TData>,
 ) {

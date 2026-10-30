@@ -172,6 +172,19 @@ function DataGridFilterMenuContent<TData extends RowData>({
     table.setColumnFilters(table.initialState.columnFilters ?? []);
   }, [table]);
 
+  const onTriggerKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (
+        REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase()) &&
+        columnFilters.length > 0
+      ) {
+        event.preventDefault();
+        onFiltersReset();
+      }
+    },
+    [columnFilters.length, onFiltersReset],
+  );
+
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (
@@ -196,19 +209,6 @@ function DataGridFilterMenuContent<TData extends RowData>({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
-
-  const onTriggerKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (
-        REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase()) &&
-        columnFilters.length > 0
-      ) {
-        event.preventDefault();
-        onFiltersReset();
-      }
-    },
-    [columnFilters.length, onFiltersReset],
-  );
 
   return (
     <Sortable
