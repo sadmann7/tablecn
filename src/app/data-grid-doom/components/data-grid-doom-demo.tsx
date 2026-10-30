@@ -951,7 +951,7 @@ export function DataGridDoomDemo({
             className={cn(
               "bg-black **:data-[slot=data-grid-header]:h-0 **:data-[slot=data-grid-header]:overflow-hidden **:data-[slot=data-grid-header]:border-0 **:[[role=grid]]:border-0",
               showsGrid
-                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell]:bg-clip-padding **:data-[slot=data-grid-cell]:data-focused:before:absolute **:data-[slot=data-grid-cell]:data-focused:before:inset-0 **:data-[slot=data-grid-cell]:data-focused:before:z-10 **:data-[slot=data-grid-cell]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-row]:border-b-(length:--doom-line) **:data-[slot=data-grid-cell]:data-selected:after:absolute **:data-[slot=data-grid-cell]:data-selected:after:inset-0 **:data-[slot=data-grid-cell]:data-selected:after:bg-blue-500/40"
+                ? "**:data-[slot=data-grid-cell]:border-e-(length:--doom-line) **:data-[slot=data-grid-cell]:bg-clip-padding **:data-[slot=data-grid-cell]:data-focused:before:absolute **:data-[slot=data-grid-cell]:data-focused:before:inset-0 **:data-[slot=data-grid-cell]:data-focused:before:z-10 **:data-[slot=data-grid-cell]:data-focused:before:shadow-[inset_0_0_0_var(--doom-ring)_var(--color-blue-500)] **:data-[slot=data-grid-cell]:data-[selected]:after:absolute **:data-[slot=data-grid-cell]:data-[selected]:after:inset-0 **:data-[slot=data-grid-cell]:data-[selected]:after:bg-blue-500/40 **:data-[slot=data-grid-row]:border-b-(length:--doom-line)"
                 : "**:data-[slot=data-grid-cell]:border-0 **:data-[slot=data-grid-row]:border-0",
               mode === "gradient" && "**:data-[slot=data-grid-cell]:invisible",
             )}
