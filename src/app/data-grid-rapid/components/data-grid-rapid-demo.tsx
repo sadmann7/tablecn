@@ -50,25 +50,22 @@ import {
   tickMarket,
 } from "../lib/rapid";
 
-const ROW_COUNTS = [1_000, 5_000, 20_000] as const;
-const TICK_RATES = [10, 30, 60] as const;
-const TICK_SHARES = [0.05, 0.2, 0.5] as const;
 const MAX_TICKS_PER_FRAME = 4;
 
-const FLOWS = [
+type Flow = "cells" | "data";
+
+const FLOW_OPTIONS = [
   {
     value: "cells",
-    label: "updateCells",
+    label: <span className="font-mono text-xs">updateCells</span>,
     description: "Patches only the changed cells",
   },
   {
     value: "data",
-    label: "setData",
+    label: <span className="font-mono text-xs">setData</span>,
     description: "Passes a new data array, like a React state update",
   },
-] as const;
-
-type Flow = (typeof FLOWS)[number]["value"];
+] satisfies OptionSelectOption<Flow>[];
 
 const priceFormat = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
@@ -87,35 +84,72 @@ const marketCapFormat = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
+const ROW_COUNT_OPTIONS = [1_000, 5_000, 20_000].map((count) => ({
+  value: count,
+  label: `${volumeFormat.format(count)} tickers`,
+}));
+const TICK_RATE_OPTIONS = [10, 30, 60].map((rate) => ({
+  value: rate,
+  label: `${rate} ticks/s`,
+}));
+const TICK_SHARE_OPTIONS = [0.05, 0.2, 0.5].map((share) => ({
+  value: share,
+  label: `${share * 100}% of rows`,
+}));
+
 type Trend = "up" | "down";
 
 const FLASH_COOLDOWN_MS = 250;
+const FLASH_OPTIONS: KeyframeAnimationOptions = {
+  duration: 700,
+  easing: "cubic-bezier(0.4, 0, 0.2, 1)",
+};
+const PRICE_FLASH: Keyframe[] = [
+  { backgroundColor: "color-mix(in oklab, var(--flash) 30%, transparent)" },
+  {},
+];
+const TICK_FLASH: Keyframe[] = [{ color: "var(--flash)" }, {}];
+const FLASH_COLORS =
+  "data-[trend=down]:[--flash:var(--color-red-500)] data-[trend=up]:[--flash:var(--color-emerald-500)]";
 
-// The direction of the last move, with a key that changes on every move so the
-// flash restarts: a remounted element fades out of its `starting:` style again
-function useTrend(value: number) {
+function useTrendFlash<TElement extends HTMLElement>(
+  value: number,
+  keyframes: Keyframe[],
+) {
   const [state, setState] = React.useState<{
     value: number;
     trend: Trend | null;
-    key: number;
-    flashedAt: number;
-  }>({ value, trend: null, key: 0, flashedAt: 0 });
+  }>({ value, trend: null });
   if (state.value !== value) {
-    // oxlint-disable-next-line react/purity -- the flash cooldown needs the time of this change, and an effect would add a render per tick
-    const now = performance.now();
-    const canFlash = now - state.flashedAt >= FLASH_COOLDOWN_MS;
-    setState({
-      value,
-      trend: value > state.value ? "up" : "down",
-      key: canFlash ? state.key + 1 : state.key,
-      flashedAt: canFlash ? now : state.flashedAt,
-    });
+    setState({ value, trend: value > state.value ? "up" : "down" });
   }
-  return state;
+
+  const ref = React.useRef<TElement>(null);
+  const flashedAtRef = React.useRef(0);
+
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || !state.trend) return;
+
+    const now = performance.now();
+    if (now - flashedAtRef.current < FLASH_COOLDOWN_MS) return;
+    flashedAtRef.current = now;
+    element.animate(keyframes, FLASH_OPTIONS);
+  }, [state, keyframes]);
+
+  return { trend: state.trend, ref };
 }
 
-function PriceCell({ value }: { value: number }) {
-  const { trend, key } = useTrend(value);
+interface ValueCellProps {
+  value: number;
+}
+
+interface QuoteCellProps {
+  quote: Quote;
+}
+
+function PriceCell({ value }: ValueCellProps) {
+  const { trend, ref } = useTrendFlash<HTMLSpanElement>(value, PRICE_FLASH);
   const Arrow = trend === "down" ? ArrowDown : ArrowUp;
 
   return (
@@ -130,9 +164,9 @@ function PriceCell({ value }: { value: number }) {
         )}
       />
       <span
-        key={key}
+        ref={ref}
         data-trend={trend ?? undefined}
-        className="-me-1 rounded-sm px-1 transition-colors duration-700 data-[trend=down]:starting:bg-red-500/30 data-[trend=up]:starting:bg-emerald-500/30"
+        className={cn("-me-1 rounded-sm px-1", FLASH_COLORS)}
       >
         {priceFormat.format(value)}
       </span>
@@ -140,7 +174,7 @@ function PriceCell({ value }: { value: number }) {
   );
 }
 
-function ChangeCell({ value }: { value: number }) {
+function ChangeCell({ value }: ValueCellProps) {
   return (
     <span
       className={cn(
@@ -154,7 +188,7 @@ function ChangeCell({ value }: { value: number }) {
   );
 }
 
-function ChangePercentCell({ value }: { value: number }) {
+function ChangePercentCell({ value }: ValueCellProps) {
   return (
     <span className="absolute inset-0 flex items-center justify-end px-2">
       <span
@@ -173,24 +207,21 @@ function ChangePercentCell({ value }: { value: number }) {
   );
 }
 
-// Moves show as a brief change of text color, quieter than the price's flash
-function TickCell({
-  value,
-  format,
-  isMuted,
-}: {
-  value: number;
+interface TickCellProps extends ValueCellProps {
   format: Intl.NumberFormat;
   isMuted?: boolean;
-}) {
-  const { trend, key } = useTrend(value);
+}
+
+function TickCell({ value, format, isMuted }: TickCellProps) {
+  const { trend, ref } = useTrendFlash<HTMLSpanElement>(value, TICK_FLASH);
 
   return (
     <span
-      key={key}
+      ref={ref}
       data-trend={trend ?? undefined}
       className={cn(
-        "absolute inset-0 flex items-center justify-end px-2 tabular-nums transition-colors duration-700 data-[trend=down]:starting:text-red-500 data-[trend=up]:starting:text-emerald-500",
+        "absolute inset-0 flex items-center justify-end px-2 tabular-nums",
+        FLASH_COLORS,
         isMuted && "text-muted-foreground",
       )}
     >
@@ -199,11 +230,10 @@ function TickCell({
   );
 }
 
-// On a log scale, since volumes span several orders of magnitude
 const MIN_VOLUME_LOG = Math.log10(1_000);
 const MAX_VOLUME_LOG = Math.log10(5_000_000);
 
-function VolumeCell({ value }: { value: number }) {
+function VolumeCell({ value }: ValueCellProps) {
   const share = Math.min(
     1,
     Math.max(0, Math.log10(Math.max(1, value)) - MIN_VOLUME_LOG) /
@@ -223,7 +253,7 @@ function VolumeCell({ value }: { value: number }) {
   );
 }
 
-function TrendCell({ quote }: { quote: Quote }) {
+function TrendCell({ quote }: QuoteCellProps) {
   const { history, change } = quote;
   let min = Number.POSITIVE_INFINITY;
   let max = Number.NEGATIVE_INFINITY;
@@ -264,7 +294,7 @@ function TrendCell({ quote }: { quote: Quote }) {
   );
 }
 
-function RangeCell({ quote }: { quote: Quote }) {
+function RangeCell({ quote }: QuoteCellProps) {
   const { low, high, price, change } = quote;
   const position = high === low ? 50 : ((price - low) * 100) / (high - low);
 
@@ -307,7 +337,6 @@ interface MarketBreadth {
   declining: number;
 }
 
-// Counts are read from the feed's own state, so this costs one pass a second
 function useMarketBreadth(market: Market) {
   const getBreadth = React.useCallback(() => {
     let advancing = 0;
@@ -362,6 +391,61 @@ function Stat({ label, value, unit }: StatProps) {
   );
 }
 
+interface OptionSelectOption<TValue extends string | number> {
+  value: TValue;
+  label: React.ReactNode;
+  description?: string;
+}
+
+interface OptionSelectProps<TValue extends string | number> {
+  label: string;
+  value: TValue;
+  options: readonly OptionSelectOption<TValue>[];
+  onValueChange: (value: TValue) => void;
+}
+
+function OptionSelect<TValue extends string | number>({
+  label,
+  value,
+  options,
+  onValueChange,
+}: OptionSelectProps<TValue>) {
+  return (
+    <Select
+      value={String(value)}
+      onValueChange={(nextValue) => {
+        const option = options.find((item) => String(item.value) === nextValue);
+        if (option) onValueChange(option.value);
+      }}
+    >
+      <SelectTrigger aria-label={label}>
+        <SelectValue>
+          {options.find((option) => option.value === value)?.label}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent position="popper" align="start">
+        <SelectGroup>
+          <SelectLabel>{label}</SelectLabel>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={String(option.value)}>
+              {option.description ? (
+                <span className="flex flex-col">
+                  {option.label}
+                  <span className="text-xs text-muted-foreground!">
+                    {option.description}
+                  </span>
+                </span>
+              ) : (
+                option.label
+              )}
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
+  );
+}
+
 interface FrameStats {
   fps: number;
   p95: number;
@@ -412,15 +496,14 @@ function DataGridRapidContent({
   rowCount,
   rowCountSelect,
 }: DataGridRapidContentProps) {
-  // The simulated feed's own state, which ticks mutate in place
   const [market] = React.useState(() => createMarket(rowCount));
   const [data, setData] = React.useState(() =>
     market.quotes.map((quote) => ({ ...quote })),
   );
   const [isRunning, setIsRunning] = React.useState(true);
   const [flow, setFlow] = React.useState<Flow>("cells");
-  const [tickRate, setTickRate] = React.useState<number>(10);
-  const [tickShare, setTickShare] = React.useState<number>(0.2);
+  const [tickRate, setTickRate] = React.useState(10);
+  const [tickShare, setTickShare] = React.useState(0.2);
   const updatedCellsRef = React.useRef(0);
   const stats = useFrameStats(updatedCellsRef);
   const breadth = useMarketBreadth(market);
@@ -465,8 +548,6 @@ function DataGridRapidContent({
       )),
       {
         id: "range",
-        // Where the price sits in the day's range, so sorting puts quotes near
-        // their high first
         accessorFn: (quote) =>
           quote.high === quote.low
             ? 0.5
@@ -500,7 +581,7 @@ function DataGridRapidContent({
     getRowId: (row) => row.symbol,
     readOnly: true,
   });
-  // A data change hands back a new `table`, which mustn't restart the feed
+
   const tableRef = useValueAsRef(table);
 
   React.useEffect(() => {
@@ -567,72 +648,24 @@ function DataGridRapidContent({
             {isRunning ? "Pause" : "Resume"}
           </Button>
           {rowCountSelect}
-          <Select
+          <OptionSelect
+            label="Update with"
             value={flow}
-            onValueChange={(value) => {
-              const option = FLOWS.find((item) => item.value === value);
-              if (option) setFlow(option.value);
-            }}
-          >
-            <SelectTrigger aria-label="Update with">
-              <SelectValue>
-                <span className="font-mono text-xs">
-                  {FLOWS.find((option) => option.value === flow)?.label}
-                </span>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent position="popper" align="start">
-              <SelectGroup>
-                <SelectLabel>Update with</SelectLabel>
-                {FLOWS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    <span className="flex flex-col">
-                      <span className="font-mono text-xs">{option.label}</span>
-                      <span className="text-xs text-muted-foreground!">
-                        {option.description}
-                      </span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Select
-            value={String(tickRate)}
-            onValueChange={(value) => setTickRate(Number(value))}
-          >
-            <SelectTrigger aria-label="Ticks per second">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper" align="start">
-              <SelectGroup>
-                <SelectLabel>Ticks per second</SelectLabel>
-                {TICK_RATES.map((rate) => (
-                  <SelectItem key={rate} value={String(rate)}>
-                    {rate} ticks/s
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-          <Select
-            value={String(tickShare)}
-            onValueChange={(value) => setTickShare(Number(value))}
-          >
-            <SelectTrigger aria-label="Rows per tick">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper" align="start">
-              <SelectGroup>
-                <SelectLabel>Rows per tick</SelectLabel>
-                {TICK_SHARES.map((share) => (
-                  <SelectItem key={share} value={String(share)}>
-                    {share * 100}% of rows
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+            options={FLOW_OPTIONS}
+            onValueChange={setFlow}
+          />
+          <OptionSelect
+            label="Ticks per second"
+            value={tickRate}
+            options={TICK_RATE_OPTIONS}
+            onValueChange={setTickRate}
+          />
+          <OptionSelect
+            label="Rows per tick"
+            value={tickShare}
+            options={TICK_SHARE_OPTIONS}
+            onValueChange={setTickShare}
+          />
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -668,27 +701,15 @@ function DataGridRapidContent({
 }
 
 export function DataGridRapidDemo() {
-  const [rowCount, setRowCount] = React.useState<number>(5_000);
+  const [rowCount, setRowCount] = React.useState(5_000);
 
   const rowCountSelect = (
-    <Select
-      value={String(rowCount)}
-      onValueChange={(value) => setRowCount(Number(value))}
-    >
-      <SelectTrigger aria-label="Tickers">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent position="popper" align="start">
-        <SelectGroup>
-          <SelectLabel>Tickers</SelectLabel>
-          {ROW_COUNTS.map((count) => (
-            <SelectItem key={count} value={String(count)}>
-              {volumeFormat.format(count)} tickers
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    <OptionSelect
+      label="Tickers"
+      value={rowCount}
+      options={ROW_COUNT_OPTIONS}
+      onValueChange={setRowCount}
+    />
   );
 
   return (
