@@ -9,6 +9,7 @@ import {
   type Row,
   type RowData,
   Subscribe,
+  type TableState,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
@@ -92,14 +93,7 @@ function DataTableLayout<TData extends RowData>({
   ...props
 }: DataTableLayoutProps<TData>) {
   return (
-    <table.Subscribe
-      selector={(state) => ({
-        columnOrder: state.columnOrder,
-        columnPinning: state.columnPinning,
-        columnSizing: state.columnSizing,
-        columnVisibility: state.columnVisibility,
-      })}
-    >
+    <table.Subscribe selector={selectLayoutState}>
       {() => (
         <Table
           className="table-fixed"
@@ -121,13 +115,7 @@ function DataTableHeader<TData extends RowData>({
   table,
 }: DataTableHeaderProps<TData>) {
   return (
-    <table.Subscribe
-      selector={(state) => ({
-        columnOrder: state.columnOrder,
-        columnPinning: state.columnPinning,
-        columnVisibility: state.columnVisibility,
-      })}
-    >
+    <table.Subscribe selector={selectHeaderState}>
       {() => (
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -290,4 +278,21 @@ function DataTableCellImpl<TData extends RowData>({
       <FlexRender cell={cell} />
     </TableCell>
   );
+}
+
+function selectLayoutState(state: TableState<DataTableFeatures>) {
+  return {
+    columnOrder: state.columnOrder,
+    columnPinning: state.columnPinning,
+    columnSizing: state.columnSizing,
+    columnVisibility: state.columnVisibility,
+  };
+}
+
+function selectHeaderState(state: TableState<DataTableFeatures>) {
+  return {
+    columnOrder: state.columnOrder,
+    columnPinning: state.columnPinning,
+    columnVisibility: state.columnVisibility,
+  };
 }

@@ -595,7 +595,7 @@ function useDataGrid<TData extends RowData>({
     dir,
   ]);
 
-  const table = useTable(tableOptions, selectGridLayoutState);
+  const table = useTable(tableOptions, selectTableState);
 
   const { store } = table;
   React.useEffect(() => () => revokeFileObjectUrls(store), [store]);
@@ -1957,12 +1957,7 @@ function useStableProps<TProps extends object>(
   }, [propsKey]);
 }
 
-function showClipboardToast({ variant, message }: ClipboardNotice) {
-  if (variant === "error") toast.error(message);
-  else toast.success(message);
-}
-
-function selectGridLayoutState(state: TableState<DataGridFeatures>) {
+function selectTableState(state: TableState<DataGridFeatures>) {
   return {
     rowHeight: state.rowHeight,
     sorting: state.sorting,
@@ -1974,6 +1969,11 @@ function selectGridLayoutState(state: TableState<DataGridFeatures>) {
     columnResizing: state.columnResizing,
     undoRedo: state.undoRedo,
   };
+}
+
+function showClipboardToast({ variant, message }: ClipboardNotice) {
+  if (variant === "error") toast.error(message);
+  else toast.success(message);
 }
 
 export { useDataGrid, type UseDataGridProps };
