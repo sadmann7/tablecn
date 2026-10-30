@@ -30,7 +30,7 @@ export const LAUNCH_LABELS = [
   "documentation",
 ] as const;
 
-export interface LaunchTask {
+export interface DataTableLaunchTask {
   id: string;
   code: string;
   title: string;
@@ -41,14 +41,14 @@ export interface LaunchTask {
   createdAt: Date;
 }
 
-const STATUS_ICONS: Record<LaunchTask["status"], LucideIcon> = {
+const STATUS_ICONS: Record<DataTableLaunchTask["status"], LucideIcon> = {
   todo: CircleHelp,
   "in-progress": Timer,
   done: CheckCircle2,
   canceled: CircleX,
 };
 
-const PRIORITY_ICONS: Record<LaunchTask["priority"], LucideIcon> = {
+const PRIORITY_ICONS: Record<DataTableLaunchTask["priority"], LucideIcon> = {
   low: ArrowDownIcon,
   medium: ArrowRightIcon,
   high: ArrowUpIcon,
@@ -101,15 +101,17 @@ export const launchHoursRange: [number, number] = [
   Math.max(...launchTasks.map((task) => task.estimatedHours)),
 ];
 
-export function getLaunchStatusIcon(status: LaunchTask["status"]) {
+export function getLaunchStatusIcon(status: DataTableLaunchTask["status"]) {
   return STATUS_ICONS[status];
 }
 
-export function getLaunchPriorityIcon(priority: LaunchTask["priority"]) {
+export function getLaunchPriorityIcon(
+  priority: DataTableLaunchTask["priority"],
+) {
   return PRIORITY_ICONS[priority];
 }
 
-export interface LaunchQuery {
+export interface DataTableLaunchQuery {
   filters: ColumnFilterItem[];
   joinOperator: JoinOperator;
   sorting: SortingState;
@@ -121,7 +123,7 @@ export function queryLaunchTasks({
   joinOperator,
   sorting,
   pagination,
-}: LaunchQuery) {
+}: DataTableLaunchQuery) {
   const activeFilters = getActiveFilters(filters);
   const rows = launchTasks.filter((task) => {
     if (activeFilters.length === 0) return true;
@@ -155,7 +157,7 @@ export function queryLaunchTasks({
   };
 }
 
-function getTaskValue(task: LaunchTask, columnId: string): unknown {
+function getTaskValue(task: DataTableLaunchTask, columnId: string): unknown {
   return Object.entries(task).find(([key]) => key === columnId)?.[1];
 }
 
@@ -165,7 +167,7 @@ function compareValues(a: unknown, b: unknown) {
   return String(a).localeCompare(String(b));
 }
 
-function createLaunchTasks(count: number): LaunchTask[] {
+function createLaunchTasks(count: number): DataTableLaunchTask[] {
   const random = createRandom(1164);
 
   return Array.from({ length: count }, (_, index) => ({

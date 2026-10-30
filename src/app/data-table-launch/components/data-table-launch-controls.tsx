@@ -8,7 +8,7 @@ import { Button } from "@/registry/bases/radix/ui/button";
 
 import { SCENES } from "../lib/script";
 
-interface LaunchControlsProps {
+interface DataTableLaunchControlsProps {
   scale: number;
   sceneIndex: number;
   isPaused: boolean;
@@ -19,7 +19,7 @@ interface LaunchControlsProps {
   onChromeToggle: () => void;
 }
 
-export function LaunchControls({
+export function DataTableLaunchControls({
   scale,
   sceneIndex,
   isPaused,
@@ -28,7 +28,7 @@ export function LaunchControls({
   onRestart,
   onSeek,
   onChromeToggle,
-}: LaunchControlsProps) {
+}: DataTableLaunchControlsProps) {
   return (
     <div
       className="absolute inset-x-0 bottom-4 flex justify-center"

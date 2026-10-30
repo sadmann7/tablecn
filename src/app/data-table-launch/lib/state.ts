@@ -7,9 +7,13 @@ import type {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { DataMode, FilterMode } from "@/lib/flag";
 
-import { type LaunchTask, queryLaunchTasks } from "./data";
+import { type DataTableLaunchTask, queryLaunchTasks } from "./data";
 
-export type LaunchTable = ReactTable<DataTableFeatures, LaunchTask, unknown>;
+export type DataTableLaunchTable = ReactTable<
+  DataTableFeatures,
+  DataTableLaunchTask,
+  unknown
+>;
 
 export const INITIAL_SORTING: SortingState = [{ id: "createdAt", desc: true }];
 export const INITIAL_PAGINATION: PaginationState = {
@@ -18,21 +22,21 @@ export const INITIAL_PAGINATION: PaginationState = {
 };
 export const NETWORK_LOG_SIZE = 3;
 
-export interface LaunchDemoState {
+export interface DataTableLaunchDemoState {
   columnCount: number;
   dataMode: DataMode;
   filterMode: FilterMode;
   keystroke: number;
 }
 
-export type LaunchDemoAction =
+export type DataTableLaunchDemoAction =
   | { type: "reset" }
   | { type: "columnCount"; columnCount: number }
   | { type: "dataMode"; dataMode: DataMode }
   | { type: "filterMode"; filterMode: FilterMode }
   | { type: "keystroke" };
 
-export const INITIAL_DEMO: LaunchDemoState = {
+export const INITIAL_DEMO: DataTableLaunchDemoState = {
   columnCount: 0,
   dataMode: "server",
   filterMode: "plain",
@@ -40,9 +44,9 @@ export const INITIAL_DEMO: LaunchDemoState = {
 };
 
 export function demoReducer(
-  state: LaunchDemoState,
-  action: LaunchDemoAction,
-): LaunchDemoState {
+  state: DataTableLaunchDemoState,
+  action: DataTableLaunchDemoAction,
+): DataTableLaunchDemoState {
   switch (action.type) {
     case "reset":
       return INITIAL_DEMO;
@@ -57,21 +61,21 @@ export function demoReducer(
   }
 }
 
-export interface LaunchRequest {
+export interface DataTableLaunchRequest {
   id: number;
   request: string;
   rowCount: number;
   latency: number;
 }
 
-export interface LaunchServerState {
+export interface DataTableLaunchServerState {
   request: string | null;
-  rows: LaunchTask[];
+  rows: DataTableLaunchTask[];
   pageCount: number;
-  log: LaunchRequest[];
+  log: DataTableLaunchRequest[];
 }
 
-export type LaunchServerAction =
+export type DataTableLaunchServerAction =
   | { type: "reset" }
   | {
       type: "resolve";
@@ -80,7 +84,7 @@ export type LaunchServerAction =
       result: ReturnType<typeof queryLaunchTasks>;
     };
 
-export function getInitialServer(): LaunchServerState {
+export function getInitialServer(): DataTableLaunchServerState {
   const { rows, pageCount } = queryLaunchTasks({
     filters: [],
     joinOperator: "and",
@@ -92,9 +96,9 @@ export function getInitialServer(): LaunchServerState {
 }
 
 export function serverReducer(
-  state: LaunchServerState,
-  action: LaunchServerAction,
-): LaunchServerState {
+  state: DataTableLaunchServerState,
+  action: DataTableLaunchServerAction,
+): DataTableLaunchServerState {
   switch (action.type) {
     case "reset":
       return { ...state, log: [] };

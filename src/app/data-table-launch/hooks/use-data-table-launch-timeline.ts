@@ -3,17 +3,17 @@ import * as React from "react";
 import { getIsEditableTarget } from "@/lib/data-table-utils";
 
 import {
+  type DataTableLaunchStep,
   getSceneIndex,
   LAUNCH_DURATION,
   LAUNCH_STEPS,
-  type LaunchStep,
   SCENES,
 } from "../lib/script";
 
 const MAX_FRAME_MS = 1000;
 const MAX_STEP_LAG_MS = 100;
 
-interface LaunchClock {
+interface DataTableLaunchClock {
   elapsed: number;
   stepIndex: number;
   cycle: number;
@@ -21,31 +21,33 @@ interface LaunchClock {
   replayTo: number | null;
 }
 
-interface LaunchPlayback {
+interface DataTableLaunchPlayback {
   sceneIndex: number;
   cycle: number;
   isPaused: boolean;
   isChromeHidden: boolean;
 }
 
-type LaunchPlaybackAction =
+type DataTableLaunchPlaybackAction =
   | { type: "scene"; sceneIndex: number; cycle: number }
   | { type: "pause"; isPaused: boolean }
   | { type: "chrome" };
 
-const INITIAL_PLAYBACK: LaunchPlayback = {
+const INITIAL_PLAYBACK: DataTableLaunchPlayback = {
   sceneIndex: 0,
   cycle: 0,
   isPaused: false,
   isChromeHidden: false,
 };
 
-export function useLaunchTimeline(onStep: (step: LaunchStep) => void) {
+export function useDataTableLaunchTimeline(
+  onStep: (step: DataTableLaunchStep) => void,
+) {
   const [playback, dispatch] = React.useReducer(
     playbackReducer,
     INITIAL_PLAYBACK,
   );
-  const clockRef = React.useRef<LaunchClock>({
+  const clockRef = React.useRef<DataTableLaunchClock>({
     elapsed: 0,
     stepIndex: 0,
     cycle: 0,
@@ -184,9 +186,9 @@ export function useLaunchTimeline(onStep: (step: LaunchStep) => void) {
 }
 
 function playbackReducer(
-  state: LaunchPlayback,
-  action: LaunchPlaybackAction,
-): LaunchPlayback {
+  state: DataTableLaunchPlayback,
+  action: DataTableLaunchPlaybackAction,
+): DataTableLaunchPlayback {
   switch (action.type) {
     case "scene":
       if (

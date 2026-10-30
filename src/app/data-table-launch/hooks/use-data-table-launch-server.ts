@@ -1,17 +1,20 @@
 import * as React from "react";
 
-import type { LaunchServerAction, LaunchTable } from "../lib/state";
+import type {
+  DataTableLaunchServerAction,
+  DataTableLaunchTable,
+} from "../lib/state";
 
 import { queryLaunchTasks } from "../lib/data";
 
 interface UseLaunchServerProps {
-  table: LaunchTable;
+  table: DataTableLaunchTable;
   request: string;
   isEnabled: boolean;
-  dispatchServer: React.Dispatch<LaunchServerAction>;
+  dispatchServer: React.Dispatch<DataTableLaunchServerAction>;
 }
 
-export function useLaunchServer({
+export function useDataTableLaunchServer({
   table,
   request,
   isEnabled,

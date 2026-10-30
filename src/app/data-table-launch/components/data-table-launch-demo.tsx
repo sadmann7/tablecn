@@ -11,16 +11,16 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 
-import { useLaunchServer } from "../hooks/use-launch-server";
-import { useLaunchTimeline } from "../hooks/use-launch-timeline";
+import { useDataTableLaunchServer } from "../hooks/use-data-table-launch-server";
+import { useDataTableLaunchTimeline } from "../hooks/use-data-table-launch-timeline";
 import { useStageScale } from "../hooks/use-stage-scale";
-import { type LaunchTask, launchTasks } from "../lib/data";
+import { type DataTableLaunchTask, launchTasks } from "../lib/data";
 import {
   COLUMN_SNIPPETS,
+  type DataTableLaunchScene,
+  type DataTableLaunchSceneId,
   FILTER_SHORTCUT_KEYS,
   LAUNCH_DURATION,
-  type LaunchScene,
-  type LaunchSceneId,
   SCENES,
 } from "../lib/script";
 import {
@@ -32,20 +32,23 @@ import {
   serverReducer,
 } from "../lib/state";
 import { launchColumns } from "./data-table-launch-columns";
-import { LaunchControls } from "./data-table-launch-controls";
-import { LaunchCamera, useLaunchDirector } from "./data-table-launch-director";
+import { DataTableLaunchControls } from "./data-table-launch-controls";
 import {
-  LaunchBackdrop,
-  LaunchIntroScene,
-  LaunchKeystroke,
-  LaunchOutroScene,
-  LaunchStory,
-  LaunchVariants,
+  DataTableLaunchCamera,
+  useDataTableLaunchDirector,
+} from "./data-table-launch-director";
+import {
+  DataTableLaunchBackdrop,
+  DataTableLaunchIntroScene,
+  DataTableLaunchKeystroke,
+  DataTableLaunchOutroScene,
+  DataTableLaunchStory,
+  DataTableLaunchVariants,
 } from "./data-table-launch-scenes";
 import {
-  LaunchNetwork,
-  LaunchToolbar,
-  LaunchWindow,
+  DataTableLaunchNetwork,
+  DataTableLaunchToolbar,
+  DataTableLaunchWindow,
 } from "./data-table-launch-window";
 
 const VISIBLE_WINDOW: React.CSSProperties = {
@@ -55,7 +58,9 @@ const VISIBLE_WINDOW: React.CSSProperties = {
   transitionDelay: "180ms",
 };
 
-const WINDOW_SHOTS: Partial<Record<LaunchSceneId, React.CSSProperties>> = {
+const WINDOW_SHOTS: Partial<
+  Record<DataTableLaunchSceneId, React.CSSProperties>
+> = {
   intro: {
     opacity: 0,
     filter: "blur(10px)",
@@ -95,7 +100,7 @@ export function DataTableLaunchDemo() {
       sorting: INITIAL_SORTING,
       pagination: INITIAL_PAGINATION,
     },
-    getRowId: (row: LaunchTask) => row.id,
+    getRowId: (row: DataTableLaunchTask) => row.id,
     clearOnDefault: true,
   };
   const { table } = useDataTable(
@@ -105,9 +110,14 @@ export function DataTableLaunchDemo() {
   );
 
   const isPending = isServerMode && server.request !== request;
-  useLaunchServer({ table, request, isEnabled: isServerMode, dispatchServer });
+  useDataTableLaunchServer({
+    table,
+    request,
+    isEnabled: isServerMode,
+    dispatchServer,
+  });
 
-  const { director, attach } = useLaunchDirector();
+  const { director, attach } = useDataTableLaunchDirector();
   const { stage } = attach;
   const {
     playback,
@@ -116,7 +126,7 @@ export function DataTableLaunchDemo() {
     onRestart,
     onSeek,
     onChromeToggle,
-  } = useLaunchTimeline((step) =>
+  } = useDataTableLaunchTimeline((step) =>
     step.run({ table, director, dispatchDemo, dispatchServer }),
   );
   const scale = useStageScale();
@@ -139,17 +149,17 @@ export function DataTableLaunchDemo() {
         data-duration={LAUNCH_DURATION}
         className="launch-stage relative h-270 w-480 shrink-0 overflow-hidden bg-[#09090b] font-sans"
       >
-        <LaunchBackdrop />
-        <LaunchCamera attach={attach}>
+        <DataTableLaunchBackdrop />
+        <DataTableLaunchCamera attach={attach}>
           <div
             className="launch-window absolute top-27 left-180 w-282"
             style={WINDOW_SHOTS[scene.id] ?? VISIBLE_WINDOW}
           >
-            <LaunchWindow
+            <DataTableLaunchWindow
               search={request}
               sheenKey={`${playback.cycle}-${scene.id === "intro" ? "hidden" : "shown"}`}
               network={
-                <LaunchNetwork
+                <DataTableLaunchNetwork
                   dataMode={demo.dataMode}
                   request={request}
                   isPending={isPending}
@@ -162,26 +172,29 @@ export function DataTableLaunchDemo() {
                 className="transition-opacity duration-300 data-[pending=true]:opacity-50"
               >
                 <DataTable table={table}>
-                  <LaunchToolbar table={table} filterMode={demo.filterMode} />
+                  <DataTableLaunchToolbar
+                    table={table}
+                    filterMode={demo.filterMode}
+                  />
                 </DataTable>
               </div>
-            </LaunchWindow>
+            </DataTableLaunchWindow>
           </div>
-        </LaunchCamera>
-        <LaunchSceneFrame
+        </DataTableLaunchCamera>
+        <DataTableLaunchSceneFrame
           sceneKey={`${playback.cycle}-${scene.id}`}
           scene={scene}
           columnCount={demo.columnCount}
         />
         {demo.keystroke > 0 && (
-          <LaunchKeystroke
+          <DataTableLaunchKeystroke
             key={`${playback.cycle}-${demo.keystroke}`}
             keys={FILTER_SHORTCUT_KEYS}
           />
         )}
       </div>
       {!playback.isChromeHidden && (
-        <LaunchControls
+        <DataTableLaunchControls
           scale={scale}
           sceneIndex={playback.sceneIndex}
           isPaused={playback.isPaused}
@@ -196,15 +209,14 @@ export function DataTableLaunchDemo() {
   );
 }
 
-interface LaunchSceneFrameProps extends LaunchSceneContentProps {
+interface DataTableLaunchSceneFrameProps extends DataTableLaunchSceneContentProps {
   sceneKey: string;
 }
 
-function LaunchSceneFrame(props: LaunchSceneFrameProps) {
+function DataTableLaunchSceneFrame(props: DataTableLaunchSceneFrameProps) {
   const [shown, setShown] = React.useState(props);
-  const [leaving, setLeaving] = React.useState<LaunchSceneFrameProps | null>(
-    null,
-  );
+  const [leaving, setLeaving] =
+    React.useState<DataTableLaunchSceneFrameProps | null>(null);
 
   if (shown.sceneKey !== props.sceneKey) {
     setLeaving(shown);
@@ -228,7 +240,7 @@ function LaunchSceneFrame(props: LaunchSceneFrameProps) {
           className="launch-scene-exit pointer-events-none absolute inset-0"
           onAnimationEnd={onLeaveEnd}
         >
-          <LaunchSceneContent
+          <DataTableLaunchSceneContent
             scene={leaving.scene}
             columnCount={leaving.columnCount}
           />
@@ -238,7 +250,7 @@ function LaunchSceneFrame(props: LaunchSceneFrameProps) {
         key={props.sceneKey}
         className="pointer-events-none absolute inset-0"
       >
-        <LaunchSceneContent
+        <DataTableLaunchSceneContent
           scene={props.scene}
           columnCount={props.columnCount}
         />
@@ -247,32 +259,37 @@ function LaunchSceneFrame(props: LaunchSceneFrameProps) {
   );
 }
 
-interface LaunchSceneContentProps {
-  scene: LaunchScene;
+interface DataTableLaunchSceneContentProps {
+  scene: DataTableLaunchScene;
   columnCount: number;
 }
 
-function LaunchSceneContent({ scene, columnCount }: LaunchSceneContentProps) {
-  if (scene.id === "intro") return <LaunchIntroScene />;
-  if (scene.id === "outro") return <LaunchOutroScene />;
+function DataTableLaunchSceneContent({
+  scene,
+  columnCount,
+}: DataTableLaunchSceneContentProps) {
+  if (scene.id === "intro") return <DataTableLaunchIntroScene />;
+  if (scene.id === "outro") return <DataTableLaunchOutroScene />;
   if (scene.id === "columns") {
-    return <LaunchColumnsStory columnCount={columnCount} />;
+    return <DataTableLaunchColumnsStory columnCount={columnCount} />;
   }
   if (!scene.story) return null;
 
-  return <LaunchStory {...scene.story} />;
+  return <DataTableLaunchStory {...scene.story} />;
 }
 
-interface LaunchColumnsStoryProps {
+interface DataTableLaunchColumnsStoryProps {
   columnCount: number;
 }
 
-function LaunchColumnsStory({ columnCount }: LaunchColumnsStoryProps) {
+function DataTableLaunchColumnsStory({
+  columnCount,
+}: DataTableLaunchColumnsStoryProps) {
   const snippet = COLUMN_SNIPPETS[Math.max(columnCount - 1, 0)];
   if (!snippet) return null;
 
   return (
-    <LaunchStory
+    <DataTableLaunchStory
       eyebrow="Columns"
       title="Define columns. Get filters."
       description="Set a variant in the column meta and the toolbar renders the matching filter."
@@ -289,7 +306,7 @@ function LaunchColumnsStory({ columnCount }: LaunchColumnsStoryProps) {
       ]}
       highlightedLines={columnCount > 0 ? [4, 5] : []}
     >
-      <LaunchVariants
+      <DataTableLaunchVariants
         variants={[...new Set(COLUMN_SNIPPETS.map((item) => item.variant))]}
         activeCount={
           new Set(
@@ -297,7 +314,7 @@ function LaunchColumnsStory({ columnCount }: LaunchColumnsStoryProps) {
           ).size
         }
       />
-    </LaunchStory>
+    </DataTableLaunchStory>
   );
 }
 
@@ -308,7 +325,7 @@ function LaunchColumnsStory({ columnCount }: LaunchColumnsStoryProps) {
 function getFilterableColumns(
   columnCount: number,
   urlFilterIds: string,
-): ColumnDef<DataTableFeatures, LaunchTask>[] {
+): ColumnDef<DataTableFeatures, DataTableLaunchTask>[] {
   const filterableIds = new Set([
     ...COLUMN_SNIPPETS.slice(0, columnCount).flatMap(
       (snippet) => snippet.columnIds,

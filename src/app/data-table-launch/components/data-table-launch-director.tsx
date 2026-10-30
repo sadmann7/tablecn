@@ -6,17 +6,17 @@ import { createPortal } from "react-dom";
 const DEFAULT_ZOOM = 1.6;
 const CURSOR_HOVER_DELAY = 260;
 
-interface LaunchFocusOptions {
+interface DataTableLaunchFocusOptions {
   scale?: number;
   /** Shifts the focus point from the target's center, in rem. */
   offsetX?: number;
   offsetY?: number;
 }
 
-export interface LaunchDirector {
+export interface DataTableLaunchDirector {
   focus: (
     target: Element | null | undefined,
-    options?: LaunchFocusOptions,
+    options?: DataTableLaunchFocusOptions,
   ) => void;
   zoomOut: () => void;
   moveCursor: (target: Element | null | undefined) => void;
@@ -24,7 +24,7 @@ export interface LaunchDirector {
   reset: () => void;
 }
 
-interface LaunchElements {
+interface DataTableLaunchElements {
   stage: HTMLDivElement | null;
   camera: HTMLDivElement | null;
   overlay: HTMLDivElement | null;
@@ -34,11 +34,13 @@ interface LaunchElements {
   ripple: HTMLSpanElement | null;
 }
 
-type LaunchDirectorAttach = {
-  [K in keyof LaunchElements]: (element: LaunchElements[K]) => void;
+type DataTableLaunchDirectorAttach = {
+  [K in keyof DataTableLaunchElements]: (
+    element: DataTableLaunchElements[K],
+  ) => void;
 };
 
-export function useLaunchDirector() {
+export function useDataTableLaunchDirector() {
   const [{ director, attach }] = React.useState(createLaunchDirector);
 
   React.useEffect(() => {
@@ -58,12 +60,15 @@ export function useLaunchDirector() {
   return { director, attach };
 }
 
-interface LaunchCameraProps {
-  attach: LaunchDirectorAttach;
+interface DataTableLaunchCameraProps {
+  attach: DataTableLaunchDirectorAttach;
   children: React.ReactNode;
 }
 
-export function LaunchCamera({ attach, children }: LaunchCameraProps) {
+export function DataTableLaunchCamera({
+  attach,
+  children,
+}: DataTableLaunchCameraProps) {
   const isMounted = React.useSyncExternalStore(
     subscribeToNothing,
     () => true,
@@ -76,64 +81,16 @@ export function LaunchCamera({ attach, children }: LaunchCameraProps) {
     <div ref={camera} className="launch-camera absolute inset-0">
       {children}
       {isMounted &&
-        createPortal(<LaunchCursorOverlay attach={attach} />, document.body)}
+        createPortal(
+          <DataTableLaunchCursorOverlay attach={attach} />,
+          document.body,
+        )}
     </div>
   );
-}
-
-function LaunchCursorOverlay({ attach }: { attach: LaunchDirectorAttach }) {
-  const { overlay, overlayCamera, cursor, ripple, pointer } = attach;
-
-  return (
-    <div
-      ref={overlay}
-      className="pointer-events-none fixed top-0 left-0 z-51 overflow-hidden"
-    >
-      <div ref={overlayCamera} className="launch-camera absolute inset-0">
-        <div
-          ref={cursor}
-          className="launch-cursor absolute top-0 left-0 opacity-0"
-        >
-          <span
-            ref={ripple}
-            className="absolute -top-3.5 -left-3.5 size-7 rounded-full border border-white/80 opacity-0"
-          />
-          <svg
-            ref={pointer}
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-            className="-mt-1 -ml-2 size-9 origin-top-left drop-shadow-[0_0.25rem_0.5rem_rgb(0_0_0/0.5)]"
-          >
-            <path
-              d="M5.5 3v16.5l4.4-4.2 2.8 6.4 2.7-1.2-2.8-6.3H19z"
-              fill="white"
-              stroke="black"
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function hover(target: Element | null | undefined) {
-  if (!target?.isConnected) return;
-
-  const rect = target.getBoundingClientRect();
-  const init: PointerEventInit = {
-    bubbles: true,
-    pointerType: "mouse",
-    clientX: rect.left + rect.width / 2,
-    clientY: rect.top + rect.height / 2,
-  };
-  target.dispatchEvent(new PointerEvent("pointerover", init));
-  target.dispatchEvent(new PointerEvent("pointermove", init));
 }
 
 function createLaunchDirector() {
-  const elements: LaunchElements = {
+  const elements: DataTableLaunchElements = {
     stage: null,
     camera: null,
     overlay: null,
@@ -143,13 +100,13 @@ function createLaunchDirector() {
     ripple: null,
   };
 
-  function setElement<K extends keyof LaunchElements>(key: K) {
-    return (element: LaunchElements[K]) => {
+  function setElement<K extends keyof DataTableLaunchElements>(key: K) {
+    return (element: DataTableLaunchElements[K]) => {
       elements[key] = element;
     };
   }
 
-  const attach: LaunchDirectorAttach = {
+  const attach: DataTableLaunchDirectorAttach = {
     stage: setElement("stage"),
     camera: setElement("camera"),
     overlay: setElement("overlay"),
@@ -227,7 +184,7 @@ function createLaunchDirector() {
     );
   }
 
-  const director: LaunchDirector = {
+  const director: DataTableLaunchDirector = {
     focus(target, { scale = DEFAULT_ZOOM, offsetX = 0, offsetY = 0 } = {}) {
       const { camera } = elements;
       const point = getCameraPoint(target);
@@ -283,10 +240,65 @@ function createLaunchDirector() {
   return { director, attach };
 }
 
-function subscribeToNothing() {
-  return () => {};
+function hover(target: Element | null | undefined) {
+  if (!target?.isConnected) return;
+
+  const rect = target.getBoundingClientRect();
+  const init: PointerEventInit = {
+    bubbles: true,
+    pointerType: "mouse",
+    clientX: rect.left + rect.width / 2,
+    clientY: rect.top + rect.height / 2,
+  };
+  target.dispatchEvent(new PointerEvent("pointerover", init));
+  target.dispatchEvent(new PointerEvent("pointermove", init));
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function subscribeToNothing() {
+  return () => {};
+}
+
+function DataTableLaunchCursorOverlay({
+  attach,
+}: {
+  attach: DataTableLaunchDirectorAttach;
+}) {
+  const { overlay, overlayCamera, cursor, ripple, pointer } = attach;
+
+  return (
+    <div
+      ref={overlay}
+      className="pointer-events-none fixed top-0 left-0 z-51 overflow-hidden"
+    >
+      <div ref={overlayCamera} className="launch-camera absolute inset-0">
+        <div
+          ref={cursor}
+          className="launch-cursor absolute top-0 left-0 opacity-0"
+        >
+          <span
+            ref={ripple}
+            className="absolute -top-3.5 -left-3.5 size-7 rounded-full border border-white/80 opacity-0"
+          />
+          <svg
+            ref={pointer}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            className="-mt-1 -ml-2 size-9 origin-top-left drop-shadow-[0_0.25rem_0.5rem_rgb(0_0_0/0.5)]"
+          >
+            <path
+              d="M5.5 3v16.5l4.4-4.2 2.8 6.4 2.7-1.2-2.8-6.3H19z"
+              fill="white"
+              stroke="black"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
 }
