@@ -42,6 +42,14 @@ const columns = columnHelper.columns([
   }),
 ]);
 
+const columnsWithoutRange = columnHelper.columns([
+  columnHelper.accessor("hours", {
+    id: "hours",
+    meta: { label: "Hours", variant: "number", filter: "range" },
+    enableColumnFilter: true,
+  }),
+]);
+
 describe("DataTableSliderFilter", () => {
   it("applies a valid bound while typing and holds one that crosses", () => {
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
@@ -115,14 +123,7 @@ describe("DataTableSliderFilter", () => {
   });
 
   it("reads the faceted range again when the popover opens", () => {
-    const facetedColumns = columnHelper.columns([
-      columnHelper.accessor("hours", {
-        id: "hours",
-        meta: { label: "Hours", variant: "number", filter: "range" },
-        enableColumnFilter: true,
-      }),
-    ]);
-    const { openFilter, rerenderData } = renderToolbar(facetedColumns);
+    const { openFilter, rerenderData } = renderToolbar(columnsWithoutRange);
     const [from, to] = openFilter();
     expect((from as HTMLInputElement).value).toBe("2");
     expect((to as HTMLInputElement).value).toBe("20");
@@ -132,6 +133,30 @@ describe("DataTableSliderFilter", () => {
     const [, nextTo] = openFilter();
 
     expect((nextTo as HTMLInputElement).value).toBe("90");
+  });
+});
+
+describe("DataTableSliderFilter in server mode", () => {
+  it("warns when the column has no meta.range", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      renderToolbar(columnsWithoutRange, { mode: "server" });
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('column "hours" has no `meta.range`'),
+      );
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("stays quiet when meta.range is set", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      renderToolbar(columns, { mode: "server" });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 
@@ -201,18 +226,30 @@ describe("DataTableRangeFilter", () => {
   });
 });
 
-function renderToolbar(toolbarColumns = columns) {
+function renderToolbar(
+  toolbarColumns = columns,
+  { mode = "client" }: { mode?: "client" | "server" } = {},
+) {
   const tableRef: {
     current?: ReturnType<typeof useDataTable<Task>>["table"];
   } = {};
 
   function Harness({ rows }: { rows: Task[] }) {
-    const { table } = useDataTable<Task>({
-      mode: "client",
-      data: rows,
-      columns: toolbarColumns,
-      getRowId: (row) => row.id,
-    });
+    const { table } = useDataTable<Task>(
+      mode === "server"
+        ? {
+            data: rows,
+            columns: toolbarColumns,
+            pageCount: 1,
+            getRowId: (row) => row.id,
+          }
+        : {
+            mode: "client",
+            data: rows,
+            columns: toolbarColumns,
+            getRowId: (row) => row.id,
+          },
+    );
     tableRef.current = table;
 
     return (

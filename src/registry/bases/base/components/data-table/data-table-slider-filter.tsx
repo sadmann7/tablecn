@@ -80,6 +80,14 @@ function DataTableSliderFilterContent<TData extends RowData>({
     if (open) setFacetedRange(getFacetedRange(column));
   }
 
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    if (defaultRange || !column.table.options.manualFiltering) return;
+    console.warn(
+      `DataTableSliderFilter: column "${column.id}" has no \`meta.range\`, so in server mode its bounds only cover the rows on the current page. Set \`meta.range\` to the full range of the data.`,
+    );
+  }, [column, defaultRange]);
+
   const bounds = parseRangeBounds(columnFilterValueProp);
   const columnFilterValue: RangeValue | undefined = bounds
     ? [bounds[0] ?? min, bounds[1] ?? max]

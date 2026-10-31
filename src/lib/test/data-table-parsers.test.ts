@@ -163,6 +163,18 @@ describe("parseColumnFilter", () => {
     ).toBe("2,8");
   });
 
+  it("swaps a reversed date range", () => {
+    expect(
+      parseColumnFilter("createdAt", "date-range", "2026-10-07,2026-10-01"),
+    ).toMatchObject({ value: ["2026-10-01", "2026-10-07"] });
+    expect(
+      parseColumnFilter("createdAt", "date", "between.2026-10-07,2026-10-01"),
+    ).toMatchObject({
+      operator: "isBetween",
+      value: ["2026-10-01", "2026-10-07"],
+    });
+  });
+
   it("drops filters without a value when parsing", () => {
     const parser = getColumnFilterParser("title", "text");
 

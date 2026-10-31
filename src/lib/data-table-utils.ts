@@ -513,12 +513,20 @@ function normalizeFilterValues(
   operator: FilterOperator,
   values: string[],
 ) {
-  if (
-    operator !== "isBetween" ||
-    (variant !== "number" && variant !== "range")
-  ) {
-    return values;
+  if (operator !== "isBetween") return values;
+
+  if (getIsDateVariant(variant)) {
+    const [start = "", end = ""] = values;
+    const startTime = parseFilterDate(start)?.getTime();
+    const endTime = parseFilterDate(end)?.getTime();
+    return startTime !== undefined &&
+      endTime !== undefined &&
+      startTime > endTime
+      ? [end, start]
+      : [start, end];
   }
+
+  if (variant !== "number" && variant !== "range") return values;
 
   const [start = "", end = ""] = values.map((value) => {
     const trimmed = value.trim();
