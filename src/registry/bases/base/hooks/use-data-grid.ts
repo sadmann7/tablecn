@@ -760,13 +760,14 @@ function useDataGrid<TData extends RowData>({
       switch (key) {
         case "ArrowLeft":
         case "ArrowRight": {
-          const isNext = (key === "ArrowRight") !== isRtl;
+          const step = (key === "ArrowRight") !== isRtl ? 1 : -1;
           if (altKey) {
-            resizeColumnBy(isNext ? COLUMN_RESIZE_STEP : -COLUMN_RESIZE_STEP);
+            resizeColumnBy(step * COLUMN_RESIZE_STEP);
           } else if (shiftKey) {
-            tableRef.current?.getColumn(columnId)?.move(isNext ? 1 : -1);
+            const column = tableRef.current?.getColumn(columnId);
+            column?.move(step);
           } else {
-            focusHeaderAt(headerIndex + (isNext ? 1 : -1));
+            focusHeaderAt(headerIndex + step);
           }
           break;
         }
