@@ -1,7 +1,6 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
-
+import { createColumnHelper } from "@tanstack/react-table";
 import { cn } from "cn";
 import { Copy, Languages, Rows2, Rows3, Rows4, Trash2 } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
@@ -207,6 +206,8 @@ function DataModeToggle({ value, onValueChange }: DataModeToggleProps) {
   );
 }
 
+const columnHelper = createColumnHelper<DataGridFeatures, Person>();
+
 interface DataGridDemoContentProps {
   initialRows: Person[];
   rowCountSelect: React.ReactNode;
@@ -222,11 +223,11 @@ function DataGridDemoContent({
 
   const filterFn = React.useMemo(() => getFilterFn<Person>(), []);
 
-  const columns = React.useMemo<ColumnDef<DataGridFeatures, Person>[]>(() => {
-    const dataColumns: ColumnDef<DataGridFeatures, Person>[] = [
-      {
+  const columns = React.useMemo(() => {
+    return columnHelper.columns([
+      getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
+      columnHelper.accessor("name", {
         id: "name",
-        accessorKey: "name",
         header: "Name",
         minSize: 180,
         filterFn,
@@ -236,10 +237,9 @@ function DataGridDemoContent({
             variant: "short-text",
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("age", {
         id: "age",
-        accessorKey: "age",
         header: "Age",
         minSize: 100,
         filterFn,
@@ -252,10 +252,9 @@ function DataGridDemoContent({
             step: 1,
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("email", {
         id: "email",
-        accessorKey: "email",
         header: "Email",
         minSize: 240,
         filterFn,
@@ -265,10 +264,9 @@ function DataGridDemoContent({
             variant: "short-text",
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("feedback", {
         id: "feedback",
-        accessorKey: "feedback",
         header: "Feedback",
         minSize: 200,
         filterFn,
@@ -278,10 +276,9 @@ function DataGridDemoContent({
             variant: "long-text",
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("department", {
         id: "department",
-        accessorKey: "department",
         header: "Department",
         minSize: 180,
         filterFn,
@@ -295,10 +292,9 @@ function DataGridDemoContent({
             })),
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("status", {
         id: "status",
-        accessorKey: "status",
         header: "Status",
         minSize: 180,
         filterFn,
@@ -312,10 +308,9 @@ function DataGridDemoContent({
             })),
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("skills", {
         id: "skills",
-        accessorKey: "skills",
         header: "Skills",
         minSize: 240,
         filterFn,
@@ -329,10 +324,9 @@ function DataGridDemoContent({
             })),
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("startDate", {
         id: "startDate",
-        accessorKey: "startDate",
         header: "Start Date",
         minSize: 150,
         filterFn,
@@ -342,10 +336,9 @@ function DataGridDemoContent({
             variant: "date",
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("salary", {
         id: "salary",
-        accessorKey: "salary",
         header: "Salary",
         minSize: 180,
         filterFn,
@@ -362,10 +355,9 @@ function DataGridDemoContent({
             },
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("isActive", {
         id: "isActive",
-        accessorKey: "isActive",
         header: "Active",
         minSize: 140,
         filterFn,
@@ -375,10 +367,9 @@ function DataGridDemoContent({
             variant: "checkbox",
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("website", {
         id: "website",
-        accessorKey: "website",
         header: "Website",
         minSize: 240,
         filterFn,
@@ -388,10 +379,9 @@ function DataGridDemoContent({
             variant: "url",
           },
         },
-      },
-      {
+      }),
+      columnHelper.accessor("attachments", {
         id: "attachments",
-        accessorKey: "attachments",
         header: "Attachments",
         minSize: 240,
         filterFn,
@@ -406,12 +396,7 @@ function DataGridDemoContent({
             multiple: true,
           },
         },
-      },
-    ];
-
-    return [
-      getDataGridSelectColumn<Person>({ enableRowMarkers: true }),
-      ...dataColumns,
+      }),
       getDataGridActionsColumn<Person>({
         actions: ({ row, table }) => (
           <>
@@ -430,7 +415,7 @@ function DataGridDemoContent({
           </>
         ),
       }),
-    ];
+    ]);
   }, [filterFn]);
 
   const createRow: NonNullable<UseDataGridProps<Person>["createRow"]> =

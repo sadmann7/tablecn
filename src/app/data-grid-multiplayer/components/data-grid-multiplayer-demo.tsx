@@ -1,15 +1,15 @@
 "use client";
 
 import type { UserPresence } from "@party/types";
-import type {
-  ColumnDef,
-  Row,
-  SortingState,
-  Table,
-} from "@tanstack/react-table";
 
 import { SEED_FILE_ID_PREFIX, TRICKS } from "@party/constants";
 import { useLiveQuery } from "@tanstack/react-db";
+import {
+  createColumnHelper,
+  type Row,
+  type SortingState,
+  type Table,
+} from "@tanstack/react-table";
 import { Copy, Languages, Trash2, WifiOff } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -87,6 +87,8 @@ const trickOptions = TRICKS.map((trick) => ({
   value: trick,
 }));
 
+const columnHelper = createColumnHelper<DataGridFeatures, SkaterSchema>();
+
 interface DataGridMultiplayerDemoProps {
   roomId: string;
   isUploadConfigured: boolean;
@@ -124,132 +126,123 @@ export function DataGridMultiplayerDemo({
 
   const { startUpload } = useUploadThing("skaterMedia");
 
-  const columns = React.useMemo<ColumnDef<DataGridFeatures, SkaterSchema>[]>(
-    () => [
-      getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
-      {
-        id: "name",
-        accessorKey: "name",
-        header: "Name",
-        minSize: 200,
-        filterFn,
-        meta: { label: "Name", cell: { variant: "short-text" } },
-      },
-      {
-        id: "email",
-        accessorKey: "email",
-        header: "Email",
-        minSize: 250,
-        filterFn,
-        meta: { label: "Email", cell: { variant: "short-text" } },
-      },
-      {
-        id: "stance",
-        accessorKey: "stance",
-        header: "Stance",
-        minSize: 140,
-        filterFn,
-        meta: {
-          label: "Stance",
-          cell: { variant: "select", options: stanceOptions },
-        },
-      },
-      {
-        id: "style",
-        accessorKey: "style",
-        header: "Style",
-        minSize: 160,
-        filterFn,
-        meta: {
-          label: "Style",
-          cell: { variant: "select", options: styleOptions },
-        },
-      },
-      {
-        id: "status",
-        accessorKey: "status",
-        header: "Status",
-        minSize: 160,
-        filterFn,
-        meta: {
-          label: "Status",
-          cell: { variant: "select", options: statusOptions },
-        },
-      },
-      {
-        id: "tricks",
-        accessorKey: "tricks",
-        header: "Tricks",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Tricks",
-          cell: { variant: "multi-select", options: trickOptions },
-        },
-      },
-      {
-        id: "yearsSkating",
-        accessorKey: "yearsSkating",
-        header: "Years Skating",
-        minSize: 160,
-        filterFn,
-        meta: {
-          label: "Years Skating",
-          cell: { variant: "number", min: 0, max: 50, step: 1 },
-        },
-      },
-      {
-        id: "startedSkating",
-        accessorKey: "startedSkating",
-        header: "Skating Since",
-        minSize: 170,
-        filterFn,
-        meta: { label: "Skating Since", cell: { variant: "date" } },
-      },
-      {
-        id: "isPro",
-        accessorKey: "isPro",
-        header: "Pro",
-        minSize: 90,
-        filterFn,
-        meta: { label: "Pro", cell: { variant: "checkbox" } },
-      },
-      {
-        id: "media",
-        accessorKey: "media",
-        header: "Media",
-        minSize: 240,
-        filterFn,
-        meta: {
-          label: "Media",
-          cell: {
-            variant: "file",
-            maxFileSize: 10 * 1024 * 1024,
-            maxFiles: 5,
-            accept: "image/*,pdf/*,audio/*,video/*",
-            multiple: true,
+  const columns = React.useMemo(
+    () =>
+      columnHelper.columns([
+        getDataGridSelectColumn<SkaterSchema>({ enableRowMarkers: true }),
+        columnHelper.accessor("name", {
+          id: "name",
+          header: "Name",
+          minSize: 200,
+          filterFn,
+          meta: { label: "Name", cell: { variant: "short-text" } },
+        }),
+        columnHelper.accessor("email", {
+          id: "email",
+          header: "Email",
+          minSize: 250,
+          filterFn,
+          meta: { label: "Email", cell: { variant: "short-text" } },
+        }),
+        columnHelper.accessor("stance", {
+          id: "stance",
+          header: "Stance",
+          minSize: 140,
+          filterFn,
+          meta: {
+            label: "Stance",
+            cell: { variant: "select", options: stanceOptions },
           },
-        },
-      },
-      getDataGridActionsColumn<SkaterSchema>({
-        actions: ({ row, table }) => (
-          <>
-            <DropdownMenuItem onSelect={() => duplicateSkaters(table, [row])}>
-              <Copy />
-              Duplicate
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onSelect={() => table.deleteRows([row.id])}
-            >
-              <Trash2 />
-              Delete
-            </DropdownMenuItem>
-          </>
-        ),
-      }),
-    ],
+        }),
+        columnHelper.accessor("style", {
+          id: "style",
+          header: "Style",
+          minSize: 160,
+          filterFn,
+          meta: {
+            label: "Style",
+            cell: { variant: "select", options: styleOptions },
+          },
+        }),
+        columnHelper.accessor("status", {
+          id: "status",
+          header: "Status",
+          minSize: 160,
+          filterFn,
+          meta: {
+            label: "Status",
+            cell: { variant: "select", options: statusOptions },
+          },
+        }),
+        columnHelper.accessor("tricks", {
+          id: "tricks",
+          header: "Tricks",
+          minSize: 240,
+          filterFn,
+          meta: {
+            label: "Tricks",
+            cell: { variant: "multi-select", options: trickOptions },
+          },
+        }),
+        columnHelper.accessor("yearsSkating", {
+          id: "yearsSkating",
+          header: "Years Skating",
+          minSize: 160,
+          filterFn,
+          meta: {
+            label: "Years Skating",
+            cell: { variant: "number", min: 0, max: 50, step: 1 },
+          },
+        }),
+        columnHelper.accessor("startedSkating", {
+          id: "startedSkating",
+          header: "Skating Since",
+          minSize: 170,
+          filterFn,
+          meta: { label: "Skating Since", cell: { variant: "date" } },
+        }),
+        columnHelper.accessor("isPro", {
+          id: "isPro",
+          header: "Pro",
+          minSize: 90,
+          filterFn,
+          meta: { label: "Pro", cell: { variant: "checkbox" } },
+        }),
+        columnHelper.accessor("media", {
+          id: "media",
+          header: "Media",
+          minSize: 240,
+          filterFn,
+          meta: {
+            label: "Media",
+            cell: {
+              variant: "file",
+              maxFileSize: 10 * 1024 * 1024,
+              maxFiles: 5,
+              accept: "image/*,pdf/*,audio/*,video/*",
+              multiple: true,
+            },
+          },
+        }),
+        getDataGridActionsColumn<SkaterSchema>({
+          actions: ({ row, table }) => (
+            <>
+              <DropdownMenuItem onSelect={() => duplicateSkaters(table, [row])}>
+                <Copy />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
+                onSelect={() => table.deleteRows([row.id])}
+              >
+                <Trash2 />
+                Delete
+              </DropdownMenuItem>
+            </>
+          ),
+        }),
+      ]),
     [filterFn],
   );
 
