@@ -71,6 +71,11 @@ const CELL_BORDER_WIDTH = 1;
 const CELL_EDITOR_CLASS_NAME =
   "rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
 
+interface SaveOptions {
+  moveToNextRow?: boolean;
+  direction?: NavigationDirection;
+}
+
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
@@ -81,11 +86,6 @@ export function ShortTextCell<TData extends RowData>(
       <EditableText {...textProps} />
     </DataGridCell>
   );
-}
-
-interface SaveOptions {
-  moveToNextRow?: boolean;
-  direction?: NavigationDirection;
 }
 
 export function LongTextCell<TData extends RowData>(
@@ -1954,16 +1954,16 @@ function onPopoverKeyDown<TData extends RowData>(
   return false;
 }
 
+function parseUrlText(text: string) {
+  return text.trim() || null;
+}
+
 function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
   return event.shiftKey ? "shift+tab" : "tab";
 }
 
 function getOverlapOffset(rowHeight: RowHeightValue) {
   return -getRowHeightValue(rowHeight);
-}
-
-function parseUrlText(text: string) {
-  return text.trim() || null;
 }
 
 function toastDangerousUrl() {
