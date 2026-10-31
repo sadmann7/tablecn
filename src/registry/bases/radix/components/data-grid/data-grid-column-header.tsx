@@ -44,8 +44,8 @@ interface DataGridColumnHeaderProps<
   TData extends RowData,
   TValue,
 > extends React.ComponentProps<typeof DropdownMenuTrigger> {
-  header: Header<DataGridFeatures, TData, TValue>;
   table: ReactTable<DataGridFeatures, TData, unknown>;
+  header: Header<DataGridFeatures, TData, TValue>;
 }
 
 export function DataGridColumnHeader<TData extends RowData, TValue>(
