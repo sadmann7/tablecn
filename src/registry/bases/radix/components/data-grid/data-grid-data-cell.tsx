@@ -198,8 +198,8 @@ function DataGridCustomCellContentImpl<TData extends RowData>({
   return flexRender(cell.column.columnDef.cell, cell.getContext());
 }
 
-// Custom renderers read the stable `cell` through methods the compiler can't
-// track, so this re-renders them on each live update instead
+// Live updates patch rows in place, so the `cell` prop never changes; this
+// re-renders on each update and skips the compiler, which would cache on it
 function useUpdatedCell<TData extends RowData>(
   cell: Cell<DataGridFeatures, TData>,
 ) {
