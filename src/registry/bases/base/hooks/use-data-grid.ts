@@ -45,7 +45,6 @@ import {
   renderDefaultCell,
   revokeFileObjectUrls,
   scrollCellIntoView,
-  swapItems,
 } from "@/lib/data-grid-utils";
 import { useDirection } from "@/registry/bases/base/ui/direction";
 
@@ -758,49 +757,6 @@ function useDataGrid<TData extends RowData>({
         currentTable.setColumnSizing((prev) => ({ ...prev, [columnId]: size }));
       }
 
-      function moveColumnBy(step: number) {
-        const currentTable = tableRef.current;
-        const column = currentTable?.getColumn(columnId);
-        if (!currentTable || !column?.getCanOrder()) return;
-
-        const pinnedPosition = column.getIsPinned();
-        const regionColumns = currentTable.getPinnedVisibleLeafColumns(
-          pinnedPosition || "center",
-        );
-        const targetColumn =
-          regionColumns[
-            regionColumns.findIndex((c) => c.id === columnId) + step
-          ];
-        if (!targetColumn?.getCanOrder()) return;
-        const targetColumnId = targetColumn.id;
-
-        if (pinnedPosition) {
-          currentTable.setColumnPinning((prev) => ({
-            ...prev,
-            [pinnedPosition]: swapItems(
-              prev[pinnedPosition] ?? [],
-              columnId,
-              targetColumnId,
-            ),
-          }));
-          return;
-        }
-
-        const leafColumnIds = currentTable
-          .getAllLeafColumns()
-          .map((leafColumn) => leafColumn.id);
-        currentTable.setColumnOrder((prev) =>
-          swapItems(
-            [
-              ...prev.filter((id) => leafColumnIds.includes(id)),
-              ...leafColumnIds.filter((id) => !prev.includes(id)),
-            ],
-            columnId,
-            targetColumnId,
-          ),
-        );
-      }
-
       switch (key) {
         case "ArrowLeft":
         case "ArrowRight": {
@@ -808,7 +764,7 @@ function useDataGrid<TData extends RowData>({
           if (altKey) {
             resizeColumnBy(isNext ? COLUMN_RESIZE_STEP : -COLUMN_RESIZE_STEP);
           } else if (shiftKey) {
-            moveColumnBy(isNext ? 1 : -1);
+            tableRef.current?.getColumn(columnId)?.move(isNext ? 1 : -1);
           } else {
             focusHeaderAt(headerIndex + (isNext ? 1 : -1));
           }

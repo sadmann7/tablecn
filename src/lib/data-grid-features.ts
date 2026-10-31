@@ -75,9 +75,11 @@ import {
   parseTsv,
   serializeCellValue,
   stringifyUnknown,
+  swapItems,
 } from "@/lib/data-grid-utils";
 
 type DataGridInstance = Table<DataGridFeatures, RowData>;
+type DataGridColumnInstance = Column<DataGridFeatures, RowData>;
 type DataGridCellInstance = Cell<DataGridFeatures, RowData>;
 
 interface TableState_DataGridRowHeight {
@@ -115,6 +117,8 @@ interface ColumnDef_DataGridColumnOrdering {
 
 interface Column_DataGridColumnOrdering {
   getCanOrder: () => boolean;
+  getCanMove: (step: number) => boolean;
+  move: (step: number) => void;
 }
 
 interface StopEditingOptions {
@@ -548,9 +552,53 @@ const dataGridColumnOrderingFeature: TableFeature = {
         fn: (column: { columnDef: ColumnDef_DataGridColumnOrdering }) =>
           column.columnDef.enableOrdering !== false,
       },
+      column_getCanMove: {
+        fn: (column: DataGridColumnInstance, step: number) =>
+          getMoveTarget(column, step) !== null,
+      },
+      column_move: {
+        fn: moveColumn,
+      },
     });
   },
 };
+
+function getMoveTarget(column: DataGridColumnInstance, step: number) {
+  if (!column.getCanOrder()) return null;
+  const position = column.getIsPinned() || "center";
+  const target =
+    column.table.getPinnedVisibleLeafColumns(position)[
+      column.getIndex(position) + step
+    ];
+  return target?.getCanOrder() ? target : null;
+}
+
+function moveColumn(column: DataGridColumnInstance, step: number) {
+  const target = getMoveTarget(column, step);
+  if (!target) return;
+  const { table } = column;
+  const position = column.getIsPinned();
+
+  if (position) {
+    table.setColumnPinning((prev) => ({
+      ...prev,
+      [position]: swapItems(prev[position] ?? [], column.id, target.id),
+    }));
+    return;
+  }
+
+  const leafColumnIds = table.getAllLeafColumns().map(({ id }) => id);
+  table.setColumnOrder((prev) =>
+    swapItems(
+      [
+        ...prev.filter((id) => leafColumnIds.includes(id)),
+        ...leafColumnIds.filter((id) => !prev.includes(id)),
+      ],
+      column.id,
+      target.id,
+    ),
+  );
+}
 
 const DEFAULT_BATCH_UPDATE_DELAY = 500;
 const DEFAULT_MAX_HISTORY = 100;
