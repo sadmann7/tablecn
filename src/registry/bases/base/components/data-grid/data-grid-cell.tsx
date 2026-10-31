@@ -52,7 +52,6 @@ export function DataGridCell<TData extends RowData>({
     const grid = element?.closest('[role="grid"]');
     const active = document.activeElement;
     if (!element || !grid || element.contains(active)) return;
-    // Focus that fell back to the page, like when an editor closed, returns too
     const isPageFocused = !active || active === document.body;
     const activeGrid = active
       ?.closest('[data-slot="data-grid-cell"]')
