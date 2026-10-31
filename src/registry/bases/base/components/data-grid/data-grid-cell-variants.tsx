@@ -1914,7 +1914,6 @@ function onEditingChange<TData extends RowData>(
   }
 }
 
-// A press on the editing cell itself keeps its editor open
 function getIsCellPress(
   container: HTMLElement | null,
   eventDetails: PopoverPrimitive.Root.ChangeEventDetails,
@@ -1927,7 +1926,6 @@ function getIsCellPress(
   );
 }
 
-// The cell gets focus back unless a click already moved it to another cell
 function getEditorFinalFocus(container: HTMLElement | null) {
   if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
     return false;
@@ -1935,7 +1933,6 @@ function getEditorFinalFocus(container: HTMLElement | null) {
   return container;
 }
 
-// Keeps focus in the menu when the cell under it is pressed
 function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
 }

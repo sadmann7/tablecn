@@ -1920,14 +1920,12 @@ function onEditingChange<TData extends RowData>(
   }
 }
 
-// A press on the editing cell itself keeps its editor open
 function onCellPointerDownOutside(container: HTMLElement | null, event: Event) {
   if (event.target instanceof Node && container?.contains(event.target)) {
     event.preventDefault();
   }
 }
 
-// The cell gets focus back unless a click already moved it to another cell
 function onEditorCloseAutoFocus(container: HTMLElement | null, event: Event) {
   event.preventDefault();
   if (!container?.closest('[role="grid"]')?.contains(document.activeElement)) {
@@ -1935,7 +1933,6 @@ function onEditorCloseAutoFocus(container: HTMLElement | null, event: Event) {
   }
 }
 
-// Keeps focus in the menu when the cell under it is pressed
 function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
 }
