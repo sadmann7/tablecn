@@ -1433,7 +1433,7 @@ function CellEditorPopover<TData extends RowData>({
   onOpenFocus,
   overlap,
   className,
-  ...contentProps
+  ...props
 }: CellEditorPopoverProps<TData>) {
   const onEditorOpenChange = React.useCallback(
     (nextOpen: boolean) => {
@@ -1472,7 +1472,7 @@ function CellEditorPopover<TData extends RowData>({
         onOpenAutoFocus={onOpenFocus ? onOpenAutoFocus : undefined}
         onPointerDownOutside={onPointerDownOutside}
         onCloseAutoFocus={onCloseAutoFocus}
-        {...contentProps}
+        {...props}
       />
     </Popover>
   );
