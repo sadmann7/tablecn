@@ -133,7 +133,6 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
             if (event.button !== 0) return;
             table.selectColumnCells(column.id);
           },
-          // Base UI opens the menu on mousedown, so a scrollbar press has to skip its handler there
           onMouseDown: (event) => {
             if (getIsEventOnScrollbar(event)) event.preventBaseUIHandler();
           },
@@ -379,8 +378,6 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
     [header.column, table, minSize, maxSize],
   );
 
-  // A resize ends any edit at once, like a press anywhere else in the grid,
-  // and leaves focus where it was instead of on the handle
   const onResizeStart = React.useCallback(
     (
       event:
@@ -389,7 +386,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
     ) => {
       if (event.type === "mousedown") event.preventDefault();
       if (table.getEditingCell()) {
-        // Blurring first lets the editor save, as when focus moves away
+        // Blur first so the editor saves, as when focus moves away
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }

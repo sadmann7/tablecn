@@ -122,21 +122,19 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
     column.pin(false);
   }, [column]);
 
-  const onTriggerPointerDown = React.useMemo(
+  const onTriggerPointerDown = React.useMemo<
+    React.PointerEventHandler<HTMLButtonElement>
+  >(
     () =>
-      composeEventHandlers(
-        onPointerDown,
-        (event: React.PointerEvent<HTMLButtonElement>) => {
-          // Also stops Radix from opening the menu on a scrollbar press
-          if (getIsEventOnScrollbar(event)) {
-            event.preventDefault();
-            return;
-          }
+      composeEventHandlers(onPointerDown, (event) => {
+        if (getIsEventOnScrollbar(event)) {
+          event.preventDefault();
+          return;
+        }
 
-          if (event.button !== 0) return;
-          table.selectColumnCells(column.id);
-        },
-      ),
+        if (event.button !== 0) return;
+        table.selectColumnCells(column.id);
+      }),
     [table, column.id, onPointerDown],
   );
 
@@ -372,8 +370,6 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
     [header.column, table, minSize, maxSize],
   );
 
-  // A resize ends any edit at once, like a press anywhere else in the grid,
-  // and leaves focus where it was instead of on the handle
   const onResizeStart = React.useCallback(
     (
       event:
@@ -382,7 +378,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
     ) => {
       if (event.type === "mousedown") event.preventDefault();
       if (table.getEditingCell()) {
-        // Blurring first lets the editor save, as when focus moves away
+        // Blur first so the editor saves, as when focus moves away
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }
