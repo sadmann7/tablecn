@@ -111,7 +111,7 @@ function DataGridDataCellImpl<TData extends RowData>({
     );
   }
 
-  const variant = cell.column.columnDef.meta?.cell?.variant ?? "text";
+  const variant = cell.column.columnDef.meta?.variant ?? "text";
 
   let Comp: React.ComponentType<DataGridCellProps<TData>>;
 

@@ -126,51 +126,49 @@ export interface CellSelectOption {
   count?: number;
 }
 
-export type CellOpts =
-  | {
-      variant: "short-text";
-    }
-  | {
-      variant: "long-text";
-    }
-  | {
-      variant: "number";
-      min?: number;
-      max?: number;
-      step?: number;
-      format?: Intl.NumberFormatOptions;
-    }
-  | {
-      variant: "select";
-      options: CellSelectOption[];
-    }
-  | {
-      variant: "multi-select";
-      options: CellSelectOption[];
-    }
-  | {
-      variant: "checkbox";
-    }
-  | {
-      variant: "date";
-    }
-  | {
-      variant: "url";
-    }
-  | {
-      variant: "file";
-      maxFileSize?: number;
-      maxFiles?: number;
-      accept?: string;
-      multiple?: boolean;
-    };
+export type PlainColumnVariant =
+  | "short-text"
+  | "long-text"
+  | "checkbox"
+  | "date"
+  | "url";
 
-export interface DataGridColumnMeta {
+export interface ColumnVariantOptions {
+  number: {
+    min?: number;
+    max?: number;
+    step?: number;
+    format?: Intl.NumberFormatOptions;
+  };
+  select: {
+    options: CellSelectOption[];
+  };
+  "multi-select": {
+    options: CellSelectOption[];
+  };
+  file: {
+    maxFileSize?: number;
+    maxFiles?: number;
+    accept?: string;
+    multiple?: boolean;
+  };
+}
+
+export type ColumnVariant = PlainColumnVariant | keyof ColumnVariantOptions;
+
+export type ColumnVariantMeta =
+  | { variant?: PlainColumnVariant }
+  | {
+      [TVariant in keyof ColumnVariantOptions]: {
+        variant: TVariant;
+      } & ColumnVariantOptions[TVariant];
+    }[keyof ColumnVariantOptions];
+
+export type DataGridColumnMeta = {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
-  cell?: CellOpts;
   writeCell?: (element: HTMLElement, value: unknown) => void;
-}
+} & ColumnVariantMeta;
 
 export interface ColumnValueReader<TData extends RowData = RowData> {
   (row: { original: TData; index: number }): unknown;

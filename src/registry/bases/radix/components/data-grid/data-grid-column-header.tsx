@@ -19,7 +19,7 @@ import { getBadgeListWidth } from "@/hooks/use-badge-overflow";
 import {
   getColumnFitSize,
   getColumnLabel,
-  getColumnVariant,
+  getColumnVariantLabel,
   getIsEventOnScrollbar,
   getIsFileCellData,
 } from "@/lib/data-grid-utils";
@@ -79,7 +79,7 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
   const label = getColumnLabel(column);
 
   const meta = column.columnDef.meta;
-  const columnVariant = getColumnVariant(meta?.cell?.variant);
+  const columnVariant = getColumnVariantLabel(meta?.variant);
   const ColumnIcon = meta?.icon ?? columnVariant?.icon;
 
   const onTriggerPointerDown = React.useCallback(
@@ -431,14 +431,14 @@ function getBadgeColumnContentSize<TData extends RowData, TValue>(
   column: Column<DataGridFeatures, TData, TValue>,
   table: Table<DataGridFeatures, TData>,
 ): number {
-  const cellOpts = column.columnDef.meta?.cell;
-  if (cellOpts?.variant !== "multi-select" && cellOpts?.variant !== "file") {
+  const meta = column.columnDef.meta;
+  if (meta?.variant !== "multi-select" && meta?.variant !== "file") {
     return 0;
   }
 
   const labelByValue = new Map(
-    cellOpts.variant === "multi-select"
-      ? cellOpts.options.map((option) => [option.value, option.label])
+    meta.variant === "multi-select"
+      ? meta.options.map((option) => [option.value, option.label])
       : [],
   );
 
@@ -448,7 +448,7 @@ function getBadgeColumnContentSize<TData extends RowData, TValue>(
     if (!Array.isArray(value)) continue;
 
     const rowContentSize =
-      cellOpts.variant === "multi-select"
+      meta.variant === "multi-select"
         ? getBadgeListWidth({
             items: value
               .filter((item): item is string => typeof item === "string")

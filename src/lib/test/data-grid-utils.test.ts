@@ -90,22 +90,22 @@ describe("parsePastedCellValue", () => {
   });
 
   it("matches select options by value or label", () => {
-    const cellOpts = { variant: "select" as const, options };
-    expect(parsePastedCellValue("Goofy", cellOpts)).toEqual({
+    const meta = { variant: "select" as const, options };
+    expect(parsePastedCellValue("Goofy", meta)).toEqual({
       value: "goofy",
     });
-    expect(parsePastedCellValue("switch", cellOpts)).toBeNull();
+    expect(parsePastedCellValue("switch", meta)).toBeNull();
   });
 
   it("parses multi-select from JSON or comma separated text", () => {
-    const cellOpts = { variant: "multi-select" as const, options };
-    expect(parsePastedCellValue('["goofy","nope"]', cellOpts)).toEqual({
+    const meta = { variant: "multi-select" as const, options };
+    expect(parsePastedCellValue('["goofy","nope"]', meta)).toEqual({
       value: ["goofy"],
     });
-    expect(parsePastedCellValue("Regular, Goofy", cellOpts)).toEqual({
+    expect(parsePastedCellValue("Regular, Goofy", meta)).toEqual({
       value: ["regular", "goofy"],
     });
-    expect(parsePastedCellValue("nope", cellOpts)).toBeNull();
+    expect(parsePastedCellValue("nope", meta)).toBeNull();
   });
 
   it("accepts urls and bare domains only", () => {

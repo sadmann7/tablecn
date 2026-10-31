@@ -136,13 +136,13 @@ function getPreviewContent<TData extends RowData>({
   className?: string;
   content: React.ReactNode;
 } {
-  const cellOpts = cell.column.columnDef.meta?.cell;
+  const meta = cell.column.columnDef.meta;
   const lineClampClassName = cn(
     "w-fit max-w-full wrap-anywhere",
     LINE_CLAMP_CLASS_NAMES[rowHeight],
   );
 
-  switch (cellOpts?.variant) {
+  switch (meta?.variant) {
     case "checkbox": {
       const isChecked = getBooleanCellValue(value);
 
@@ -169,8 +169,8 @@ function getPreviewContent<TData extends RowData>({
     case "select": {
       const selectedValue = getOptionCellValue(value);
       const label =
-        cellOpts.options.find((option) => option.value === selectedValue)
-          ?.label ?? selectedValue;
+        meta.options.find((option) => option.value === selectedValue)?.label ??
+        selectedValue;
 
       return {
         content: label ? (
@@ -193,8 +193,7 @@ function getPreviewContent<TData extends RowData>({
 
       const labels = values.map(
         (item) =>
-          cellOpts.options.find((option) => option.value === item)?.label ??
-          item,
+          meta.options.find((option) => option.value === item)?.label ?? item,
       );
       const { visibleItems, hiddenCount } = getBadgeOverflow({
         items: labels,
@@ -309,9 +308,7 @@ function getPreviewContent<TData extends RowData>({
       return {
         content: (
           <div dir="auto" className={cn(lineClampClassName, "tabular-nums")}>
-            {number === null
-              ? ""
-              : formatNumberForDisplay(number, cellOpts.format)}
+            {number === null ? "" : formatNumberForDisplay(number, meta.format)}
           </div>
         ),
       };

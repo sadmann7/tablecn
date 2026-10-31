@@ -135,14 +135,14 @@ export function DataGridMultiplayerDemo({
           header: "Name",
           minSize: 200,
           filterFn,
-          meta: { label: "Name", cell: { variant: "short-text" } },
+          meta: { label: "Name", variant: "short-text" },
         }),
         columnHelper.accessor("email", {
           id: "email",
           header: "Email",
           minSize: 250,
           filterFn,
-          meta: { label: "Email", cell: { variant: "short-text" } },
+          meta: { label: "Email", variant: "short-text" },
         }),
         columnHelper.accessor("stance", {
           id: "stance",
@@ -151,7 +151,8 @@ export function DataGridMultiplayerDemo({
           filterFn,
           meta: {
             label: "Stance",
-            cell: { variant: "select", options: stanceOptions },
+            variant: "select",
+            options: stanceOptions,
           },
         }),
         columnHelper.accessor("style", {
@@ -161,7 +162,8 @@ export function DataGridMultiplayerDemo({
           filterFn,
           meta: {
             label: "Style",
-            cell: { variant: "select", options: styleOptions },
+            variant: "select",
+            options: styleOptions,
           },
         }),
         columnHelper.accessor("status", {
@@ -171,7 +173,8 @@ export function DataGridMultiplayerDemo({
           filterFn,
           meta: {
             label: "Status",
-            cell: { variant: "select", options: statusOptions },
+            variant: "select",
+            options: statusOptions,
           },
         }),
         columnHelper.accessor("tricks", {
@@ -181,7 +184,8 @@ export function DataGridMultiplayerDemo({
           filterFn,
           meta: {
             label: "Tricks",
-            cell: { variant: "multi-select", options: trickOptions },
+            variant: "multi-select",
+            options: trickOptions,
           },
         }),
         columnHelper.accessor("yearsSkating", {
@@ -191,7 +195,10 @@ export function DataGridMultiplayerDemo({
           filterFn,
           meta: {
             label: "Years Skating",
-            cell: { variant: "number", min: 0, max: 50, step: 1 },
+            variant: "number",
+            min: 0,
+            max: 50,
+            step: 1,
           },
         }),
         columnHelper.accessor("startedSkating", {
@@ -199,14 +206,14 @@ export function DataGridMultiplayerDemo({
           header: "Skating Since",
           minSize: 170,
           filterFn,
-          meta: { label: "Skating Since", cell: { variant: "date" } },
+          meta: { label: "Skating Since", variant: "date" },
         }),
         columnHelper.accessor("isPro", {
           id: "isPro",
           header: "Pro",
           minSize: 90,
           filterFn,
-          meta: { label: "Pro", cell: { variant: "checkbox" } },
+          meta: { label: "Pro", variant: "checkbox" },
         }),
         columnHelper.accessor("media", {
           id: "media",
@@ -215,13 +222,11 @@ export function DataGridMultiplayerDemo({
           filterFn,
           meta: {
             label: "Media",
-            cell: {
-              variant: "file",
-              maxFileSize: 10 * 1024 * 1024,
-              maxFiles: 5,
-              accept: "image/*,pdf/*,audio/*,video/*",
-              multiple: true,
-            },
+            variant: "file",
+            maxFileSize: 10 * 1024 * 1024,
+            maxFiles: 5,
+            accept: "image/*,pdf/*,audio/*,video/*",
+            multiple: true,
           },
         }),
         getDataGridActionsColumn<SkaterSchema>({

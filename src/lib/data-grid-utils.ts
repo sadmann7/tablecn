@@ -30,10 +30,12 @@ import {
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
-  CellOpts,
   CellPosition,
   ColumnValueReader,
+  ColumnVariant,
+  ColumnVariantOptions,
   ColumnWindow,
+  DataGridColumnMeta,
   FileCellData,
   RowHeightValue,
 } from "@/lib/data-grid-types";
@@ -157,9 +159,7 @@ export function getFilesCellValue(value: unknown): FileCellData[] {
   return Array.isArray(value) ? value.filter(getIsFileCellData) : [];
 }
 
-export function getEmptyCellValue(
-  variant: CellOpts["variant"] | undefined,
-): unknown {
+export function getEmptyCellValue(variant: ColumnVariant | undefined): unknown {
   if (variant === "multi-select" || variant === "file") return [];
   if (variant === "number" || variant === "date" || variant === "select") {
     return null;
@@ -170,7 +170,7 @@ export function getEmptyCellValue(
 
 export function serializeCellValue(
   value: unknown,
-  variant: CellOpts["variant"] | undefined,
+  variant: ColumnVariant | undefined,
 ): string {
   if (variant === "file" || variant === "multi-select") {
     return value ? JSON.stringify(value) : "";
@@ -180,9 +180,9 @@ export function serializeCellValue(
 
 export function parsePastedCellValue(
   text: string,
-  cellOpts: CellOpts | undefined,
+  meta: DataGridColumnMeta | undefined,
 ): { value: unknown } | null {
-  switch (cellOpts?.variant) {
+  switch (meta?.variant) {
     case "number": {
       if (!text) return { value: null };
       const num = Number.parseFloat(text);
@@ -202,13 +202,13 @@ export function parsePastedCellValue(
     }
     case "select": {
       if (!text) return { value: null };
-      const matched = matchSelectOption(text, cellOpts.options);
+      const matched = matchSelectOption(text, meta.options);
       return matched ? { value: matched } : null;
     }
     case "multi-select": {
       const values = parseMultiSelectValues(text);
       const validated = values.flatMap((item) => {
-        const matched = matchSelectOption(item, cellOpts.options);
+        const matched = matchSelectOption(item, meta.options);
         return matched ? [matched] : [];
       });
       return values.length > 0 && validated.length === 0
@@ -405,9 +405,7 @@ export function getHasCustomCell<TData extends RowData>(
 ) {
   const { cell, meta } = column.columnDef;
 
-  return (
-    !meta?.cell?.variant && cell !== undefined && cell !== renderDefaultCell
-  );
+  return !meta?.variant && cell !== undefined && cell !== renderDefaultCell;
 }
 
 export function getIsDataColumn<TData extends RowData>(
@@ -435,7 +433,20 @@ export function getColumnLabel<TData extends RowData, TValue = unknown>(
   return typeof header === "string" ? header : column.id;
 }
 
-export function getColumnVariant(variant?: CellOpts["variant"]): {
+export function getColumnVariantOptions<
+  TData extends RowData,
+  TVariant extends keyof ColumnVariantOptions,
+>(
+  column: Column<DataGridFeatures, TData>,
+  variant: TVariant,
+): ColumnVariantOptions[TVariant] | null {
+  const meta = column.columnDef.meta;
+  return meta?.variant === variant
+    ? (meta as ColumnVariantOptions[TVariant])
+    : null;
+}
+
+export function getColumnVariantLabel(variant?: ColumnVariant): {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
 } | null {

@@ -112,7 +112,7 @@ function DataGridFilterMenuContent<TData extends RowData>({
       if (!column.getCanFilter()) continue;
 
       const label = column.columnDef.meta?.label ?? column.id;
-      const variant = column.columnDef.meta?.cell?.variant ?? "short-text";
+      const variant = column.columnDef.meta?.variant ?? "short-text";
 
       labels.set(column.id, label);
       variants.set(column.id, variant);
@@ -626,14 +626,13 @@ function DataGridFilterInput<TData extends RowData>({
     FILTER_DEBOUNCE_MS,
   );
 
-  const cellVariant = column.columnDef.meta?.cell;
+  const meta = column.columnDef.meta;
 
   const selectOptions = React.useMemo(() => {
-    return cellVariant?.variant === "select" ||
-      cellVariant?.variant === "multi-select"
-      ? cellVariant.options
+    return meta?.variant === "select" || meta?.variant === "multi-select"
+      ? meta.options
       : [];
-  }, [cellVariant]);
+  }, [meta]);
 
   const isBetween = operator === "isBetween";
 

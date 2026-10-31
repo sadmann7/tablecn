@@ -84,44 +84,42 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
     id: "name",
     accessorKey: "name",
     header: "Name",
-    meta: { cell: { variant: "short-text" } },
+    meta: { variant: "short-text" },
   },
   {
     id: "website",
     accessorKey: "website",
     header: "Website",
-    meta: { cell: { variant: "url" } },
+    meta: { variant: "url" },
   },
   {
     id: "age",
     accessorKey: "age",
     header: "Age",
-    meta: { cell: { variant: "number" } },
+    meta: { variant: "number" },
   },
   {
     id: "bio",
     accessorKey: "bio",
     header: "Bio",
-    meta: { cell: { variant: "long-text" } },
+    meta: { variant: "long-text" },
   },
   {
     id: "isPro",
     accessorKey: "isPro",
     header: "Pro",
-    meta: { cell: { variant: "checkbox" } },
+    meta: { variant: "checkbox" },
   },
   {
     id: "stance",
     accessorKey: "stance",
     header: "Stance",
     meta: {
-      cell: {
-        variant: "select",
-        options: [
-          { label: "Goofy", value: "goofy" },
-          { label: "Regular", value: "regular" },
-        ],
-      },
+      variant: "select",
+      options: [
+        { label: "Goofy", value: "goofy" },
+        { label: "Regular", value: "regular" },
+      ],
     },
   },
   {
@@ -129,27 +127,25 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
     accessorKey: "tricks",
     header: "Tricks",
     meta: {
-      cell: {
-        variant: "multi-select",
-        options: [
-          { label: "900", value: "900" },
-          { label: "Kickflip", value: "kickflip" },
-          { label: "Heelflip", value: "heelflip" },
-        ],
-      },
+      variant: "multi-select",
+      options: [
+        { label: "900", value: "900" },
+        { label: "Kickflip", value: "kickflip" },
+        { label: "Heelflip", value: "heelflip" },
+      ],
     },
   },
   {
     id: "joined",
     accessorKey: "joined",
     header: "Joined",
-    meta: { cell: { variant: "date" } },
+    meta: { variant: "date" },
   },
   {
     id: "media",
     accessorKey: "media",
     header: "Media",
-    meta: { cell: { variant: "file", multiple: true } },
+    meta: { variant: "file", multiple: true },
   },
 ];
 
@@ -546,7 +542,7 @@ describe("DataGrid cells", () => {
             column.id === "media"
               ? {
                   ...column,
-                  meta: { cell: { variant: "file", accept: "image/*" } },
+                  meta: { variant: "file", accept: "image/*" },
                 }
               : column,
           ),

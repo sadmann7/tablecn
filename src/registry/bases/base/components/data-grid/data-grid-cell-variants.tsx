@@ -9,7 +9,6 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type {
-  CellOpts,
   CellSelectOption,
   DataGridCellProps,
   FileCellData,
@@ -28,6 +27,7 @@ import {
   getBooleanCellValue,
   getCellKey,
   getColumnLabel,
+  getColumnVariantOptions,
   getDateCellValue,
   getFileIcon,
   getFilesCellValue,
@@ -241,11 +241,11 @@ export function NumberCell<TData extends RowData>(
   const isCancelingRef = React.useRef(false);
   const prevIsEditingRef = React.useRef(false);
 
-  const numberCellOpts = getVariantCellOpts(cell, "number");
-  const min = numberCellOpts?.min;
-  const max = numberCellOpts?.max;
-  const step = numberCellOpts?.step;
-  const format = numberCellOpts?.format;
+  const numberMeta = getColumnVariantOptions(cell.column, "number");
+  const min = numberMeta?.min;
+  const max = numberMeta?.max;
+  const step = numberMeta?.step;
+  const format = numberMeta?.format;
   const displayNumber = getNumberCellValue(value);
 
   const onSave = React.useCallback(
@@ -518,7 +518,8 @@ export function SelectCell<TData extends RowData>(
   const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const commandRef = React.useRef<HTMLDivElement>(null);
-  const options = getVariantCellOpts(cell, "select")?.options ?? NO_OPTIONS;
+  const options =
+    getColumnVariantOptions(cell.column, "select")?.options ?? NO_OPTIONS;
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
@@ -614,7 +615,7 @@ export function MultiSelectCell<TData extends RowData>(
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const options =
-    getVariantCellOpts(cell, "multi-select")?.options ?? NO_OPTIONS;
+    getColumnVariantOptions(cell.column, "multi-select")?.options ?? NO_OPTIONS;
 
   const commitValues = React.useCallback(
     (newValues: string[]) => {
@@ -915,11 +916,11 @@ export function FileCell<TData extends RowData>(
     [rawValue],
   );
 
-  const fileCellOpts = getVariantCellOpts(cell, "file");
-  const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
-  const maxFiles = fileCellOpts?.maxFiles ?? 10;
-  const accept = fileCellOpts?.accept;
-  const multiple = fileCellOpts?.multiple ?? false;
+  const fileMeta = getColumnVariantOptions(cell.column, "file");
+  const maxFileSize = fileMeta?.maxFileSize ?? 10 * 1024 * 1024;
+  const maxFiles = fileMeta?.maxFiles ?? 10;
+  const accept = fileMeta?.accept;
+  const multiple = fileMeta?.multiple ?? false;
 
   const {
     value: uploadingFiles,
@@ -1699,19 +1700,6 @@ function getPendingChar<TData extends RowData>(
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
-}
-
-function getVariantCellOpts<
-  TData extends RowData,
-  TVariant extends CellOpts["variant"],
->(
-  cell: DataGridCellProps<TData>["cell"],
-  variant: TVariant,
-): Extract<CellOpts, { variant: TVariant }> | null {
-  const cellOpts = cell.column.columnDef.meta?.cell;
-  return cellOpts?.variant === variant
-    ? (cellOpts as Extract<CellOpts, { variant: TVariant }>)
-    : null;
 }
 
 function getOptionLabel(options: CellSelectOption[], value: string) {
