@@ -18,6 +18,12 @@ import { DataTableSliderFilter } from "@/registry/bases/radix/components/data-ta
 import { DataTableViewOptions } from "@/registry/bases/radix/components/data-table/data-table-view-options";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/registry/bases/radix/ui/input-group";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataTableToolbarProps<
@@ -113,20 +119,14 @@ function DataTableToolbarFilter<TData extends RowData>({
 
     case "number":
       return (
-        <div className="relative">
-          <DataTableFilterInput
-            column={column}
-            type="number"
-            inputMode="numeric"
-            placeholder={placeholder}
-            className={cn("w-30", columnMeta.unit && "pe-8")}
-          />
-          {columnMeta.unit && (
-            <span className="absolute inset-e-0 top-0 bottom-0 flex items-center rounded-e-md bg-accent px-2 text-sm text-muted-foreground">
-              {columnMeta.unit}
-            </span>
-          )}
-        </div>
+        <DataTableFilterInput
+          column={column}
+          type="number"
+          inputMode="numeric"
+          placeholder={placeholder}
+          unit={columnMeta.unit}
+          className="w-30"
+        />
       );
 
     case "range":
@@ -162,11 +162,14 @@ interface DataTableFilterInputProps<
   TData extends RowData,
 > extends React.ComponentProps<"input"> {
   column: Column<DataTableFeatures, TData>;
+  unit?: string;
 }
 
 function DataTableFilterInput<TData extends RowData>({
   column,
   type = "text",
+  unit,
+  className,
   ...props
 }: DataTableFilterInputProps<TData>) {
   return (
@@ -174,16 +177,26 @@ function DataTableFilterInput<TData extends RowData>({
       source={column.table.atoms.columnFilters}
       selector={() => column.getFilterValue()}
     >
-      {(filterValue) => (
-        <Input
-          type={type}
-          {...props}
-          value={readFilterInputValue(filterValue)}
-          onChange={(event) =>
-            column.setFilterValue(event.target.value || undefined)
-          }
-        />
-      )}
+      {(filterValue) => {
+        const inputProps = {
+          type,
+          ...props,
+          value: readFilterInputValue(filterValue),
+          onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
+            column.setFilterValue(event.target.value || undefined),
+        };
+
+        if (!unit) return <Input {...inputProps} className={className} />;
+
+        return (
+          <InputGroup className={className}>
+            <InputGroupInput {...inputProps} />
+            <InputGroupAddon align="inline-end">
+              <InputGroupText>{unit}</InputGroupText>
+            </InputGroupAddon>
+          </InputGroup>
+        );
+      }}
     </Subscribe>
   );
 }

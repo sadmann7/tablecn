@@ -1,14 +1,18 @@
 "use client";
 
 import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
-import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { Button } from "@/registry/bases/base/ui/button";
 import { useDirection } from "@/registry/bases/base/ui/direction";
-import { Input } from "@/registry/bases/base/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/registry/bases/base/ui/input-group";
 import { Label } from "@/registry/bases/base/ui/label";
 import {
   Popover,
@@ -202,8 +206,8 @@ function DataTableSliderFilterContent<TData extends RowData>({
             <Label htmlFor={`${id}-from`} className="sr-only">
               From
             </Label>
-            <div className="relative">
-              <Input
+            <InputGroup className="w-24">
+              <InputGroupInput
                 id={`${id}-from`}
                 type="number"
                 aria-valuemin={min}
@@ -215,19 +219,18 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[0]?.toString()}
                 onChange={onFromInputChange}
-                className={cn("w-24", unit && "pe-8")}
               />
               {unit && (
-                <span className="absolute inset-e-0 top-0 bottom-0 flex items-center rounded-e-md bg-accent px-2 text-sm text-muted-foreground">
-                  {unit}
-                </span>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>{unit}</InputGroupText>
+                </InputGroupAddon>
               )}
-            </div>
+            </InputGroup>
             <Label htmlFor={`${id}-to`} className="sr-only">
               to
             </Label>
-            <div className="relative">
-              <Input
+            <InputGroup className="w-24">
+              <InputGroupInput
                 id={`${id}-to`}
                 type="number"
                 aria-valuemin={min}
@@ -239,14 +242,13 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={range[1]?.toString()}
                 onChange={onToInputChange}
-                className={cn("w-24", unit && "pe-8")}
               />
               {unit && (
-                <span className="absolute inset-e-0 top-0 bottom-0 flex items-center rounded-e-md bg-accent px-2 text-sm text-muted-foreground">
-                  {unit}
-                </span>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>{unit}</InputGroupText>
+                </InputGroupAddon>
               )}
-            </div>
+            </InputGroup>
           </div>
           <Label htmlFor={`${id}-slider`} className="sr-only">
             {title} slider
