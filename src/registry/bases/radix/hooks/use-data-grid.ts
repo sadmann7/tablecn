@@ -733,7 +733,7 @@ function useDataGrid<TData extends RowData>({
 
       const isRtl = dir === "rtl";
 
-      function focusHeaderAt(index: number) {
+      function focusColumnHeaderAt(index: number) {
         const targetColumnId = headerColumnIds[index];
         if (targetColumnId) focusColumnHeader(targetColumnId);
       }
@@ -767,15 +767,15 @@ function useDataGrid<TData extends RowData>({
             const column = tableRef.current?.getColumn(columnId);
             column?.move(step);
           } else {
-            focusHeaderAt(headerIndex + step);
+            focusColumnHeaderAt(headerIndex + step);
           }
           break;
         }
         case "Home":
-          focusHeaderAt(0);
+          focusColumnHeaderAt(0);
           break;
         case "End":
-          focusHeaderAt(headerColumnIds.length - 1);
+          focusColumnHeaderAt(headerColumnIds.length - 1);
           break;
         case "ArrowUp":
           break;
@@ -797,9 +797,9 @@ function useDataGrid<TData extends RowData>({
               skipDataGridTabStop();
               return true;
             }
-            focusHeaderAt(headerIndex - 1);
+            focusColumnHeaderAt(headerIndex - 1);
           } else if (headerIndex < headerColumnIds.length - 1) {
-            focusHeaderAt(headerIndex + 1);
+            focusColumnHeaderAt(headerIndex + 1);
           } else {
             const firstRowId = getRowIdAtDisplayIndex(0);
             const firstColumnId = getNavigableColumnIds()[0];
