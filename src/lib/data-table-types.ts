@@ -30,18 +30,19 @@ export type ColumnVariant =
   | "date"
   | "file";
 
-export type FilterStyle = "range" | "date-range";
+export type ColumnVariantFilter =
+  | { variant?: Exclude<ColumnVariant, "number" | "date">; filter?: never }
+  | { variant: "number"; filter?: "range" }
+  | { variant: "date"; filter?: "date-range" };
 
-export interface DataTableColumnMeta {
+export type DataTableColumnMeta = {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
   placeholder?: string;
-  variant?: ColumnVariant;
-  filter?: FilterStyle;
   options?: ColumnSelectOption[];
   range?: [number, number];
   unit?: string;
-}
+} & ColumnVariantFilter;
 
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;
@@ -74,11 +75,9 @@ declare module "@tanstack/react-table" {
   > {}
 }
 
-export interface DataTableColumnConfig {
-  variant?: ColumnVariant;
-  filter?: FilterStyle;
+export type DataTableColumnConfig = {
   isSortable?: boolean;
-}
+} & ColumnVariantFilter;
 
 export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
 
