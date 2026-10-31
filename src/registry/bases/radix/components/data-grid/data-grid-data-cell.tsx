@@ -42,7 +42,7 @@ export const DataGridDataCell = React.memo(
     if (prev.presence?.name !== next.presence?.name) return false;
     if (prev.readOnly !== next.readOnly) return false;
     if (prev.rowHeight !== next.rowHeight) return false;
-    if (prev.width !== next.width) return false;
+    if (prev.width !== next.width && getReadsWidth(next.cell)) return false;
     if (prev.pinned !== next.pinned) return false;
     if (prev.pinnedOffset !== next.pinnedOffset) return false;
     if (prev.grow !== next.grow) return false;
@@ -64,6 +64,13 @@ export const DataGridDataCell = React.memo(
     return prev.cell.getValue() === next.cell.getValue();
   },
 ) as typeof DataGridDataCellImpl;
+
+function getReadsWidth<TData extends RowData>(
+  cell: Cell<DataGridFeatures, TData>,
+) {
+  const variant = cell.column.columnDef.meta?.variant;
+  return variant === "multi-select" || variant === "file";
+}
 
 function DataGridDataCellImpl<TData extends RowData>({
   isScrolling,

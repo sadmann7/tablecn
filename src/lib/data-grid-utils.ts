@@ -598,11 +598,11 @@ export const CELL_TINTS = {
 } as const;
 
 export function getCellLayoutStyle({
-  width,
+  columnId,
   pinned,
   pinnedOffset,
 }: {
-  width: number;
+  columnId: string;
   pinned: ColumnPinningPosition;
   pinnedOffset: number;
 }): React.CSSProperties {
@@ -611,7 +611,7 @@ export function getCellLayoutStyle({
     insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
     opacity: pinned ? 0.97 : undefined,
     position: pinned ? "sticky" : "relative",
-    width,
+    width: `calc(var(--col-${columnId.replace(/[^\w-]/g, "\\$&")}-size) * 1px)`,
     zIndex: pinned ? 20 : undefined,
   };
 }
@@ -812,6 +812,13 @@ export function getRootFontScale(): number {
     getComputedStyle(document.documentElement).fontSize,
   );
   rootFontScale = fontSize > 0 ? fontSize / 16 : 1;
+  window.addEventListener(
+    "resize",
+    () => {
+      rootFontScale = null;
+    },
+    { once: true },
+  );
   return rootFontScale;
 }
 
@@ -1141,9 +1148,26 @@ export function createFileObjectUrl<TData extends RowData>(
   return url;
 }
 
-export function revokeFileObjectUrls(store: object) {
+export function revokeFileObjectUrls(
+  store: object,
+  data: readonly RowData[] = [],
+) {
   const urls = objectUrlsByStore.get(store);
   if (!urls) return;
-  for (const url of urls) URL.revokeObjectURL(url);
   objectUrlsByStore.delete(store);
+
+  const keptUrls = new Set<string>();
+  for (const row of data) {
+    if (typeof row !== "object" || row === null) continue;
+    for (const value of Object.values(row)) {
+      if (!Array.isArray(value)) continue;
+      for (const file of value) {
+        const url = (file as { url?: unknown } | null)?.url;
+        if (typeof url === "string" && urls.has(url)) keptUrls.add(url);
+      }
+    }
+  }
+  for (const url of urls) {
+    if (!keptUrls.has(url)) URL.revokeObjectURL(url);
+  }
 }

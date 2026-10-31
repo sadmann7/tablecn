@@ -403,6 +403,27 @@ describe("DataGrid cells", () => {
 
       expect(getValue("1", "bio")).toBe("Landed the 900");
     });
+
+    it("undoes a whole editing session in one step", async () => {
+      const { getCell, getValue, focus, table } = renderGrid();
+
+      focus("1", "bio");
+      press(getCell("1", "bio"), "Enter");
+      fireEvent.change(getTextarea(), { target: { value: "Vert" } });
+      await wait(400);
+      fireEvent.change(getTextarea(), { target: { value: "Vert legend" } });
+      await wait(400);
+      fireEvent.change(getTextarea(), { target: { value: "Vert legend!" } });
+      press(getTextarea(), "Enter", { metaKey: true });
+      expect(getValue("1", "bio")).toBe("Vert legend!");
+
+      act(() => {
+        table.undo();
+      });
+
+      expect(getValue("1", "bio")).toBe("Landed the 900");
+      expect(table.getCanUndo()).toBe(false);
+    });
   });
 
   describe("boolean", () => {
@@ -740,8 +761,8 @@ describe("DataGrid cells", () => {
           },
         });
       });
-      // Edits within 300ms merge into one undo step
-      await wait(400);
+      act(() => grid.table.stopEditing());
+      openFiles(grid, "1");
       await act(async () => {
         fireEvent.click(
           screen.getByRole("button", { name: "Remove clip.pdf" }),
@@ -789,6 +810,30 @@ describe("DataGrid cells", () => {
 
       expect(revokeObjectURL).toHaveBeenCalledWith("blob:grid");
       expect(revokeObjectURL).not.toHaveBeenCalledWith("blob:app");
+    });
+
+    it("keeps object URLs the parent still holds when unmounted", async () => {
+      vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:kept");
+      const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL");
+      let savedRows = skaters;
+      const grid = renderGrid({
+        onDataChange: (rows) => {
+          savedRows = rows;
+        },
+      });
+      openFiles(grid, "1");
+
+      await act(async () => {
+        fireEvent.change(getFileInput(), {
+          target: {
+            files: [new File(["a"], "clip.pdf", { type: "application/pdf" })],
+          },
+        });
+      });
+      grid.rerenderRows(savedRows);
+      grid.unmount();
+
+      expect(revokeObjectURL).not.toHaveBeenCalled();
     });
   });
 

@@ -166,6 +166,43 @@ describe("useDataTable", () => {
     expect(getLastSearch()?.get("joinOperator")).toBe("or");
   });
 
+  it("resets the page with the filter and writes both in one URL update", async () => {
+    vi.useFakeTimers();
+    const tasks: Task[] = Array.from({ length: 30 }, (_, index) => ({
+      id: String(index),
+      code: `T-${index}`,
+      title: index < 5 ? "bug" : "feat",
+      status: "todo",
+    }));
+    const { result, updates, getLastSearch } = renderDataTable("?page=3", {
+      mode: "client",
+      data: tasks,
+    });
+
+    act(() => {
+      result.current.table.setColumnFilters([{ id: "title", value: "bug" }]);
+    });
+    expect(result.current.table.state.pagination.pageIndex).toBe(0);
+    expect(result.current.table.getRowModel().rows).toHaveLength(5);
+
+    await act(() => vi.runAllTimersAsync());
+
+    expect(updates).toHaveLength(1);
+    expect(getLastSearch()?.toString()).toBe("page=1&title=bug");
+    expect(result.current.table.state.pagination.pageIndex).toBe(0);
+  });
+
+  it("writes only the pagination keys that changed", async () => {
+    const { result, getLastSearch } = renderDataTable("");
+
+    act(() => {
+      result.current.table.nextPage();
+    });
+
+    await waitFor(() => expect(getLastSearch()?.get("page")).toBe("2"));
+    expect(getLastSearch()?.has("perPage")).toBe(false);
+  });
+
   it("reads page, page size, sorting, and the join from the URL", () => {
     const { result } = renderDataTable(
       "?page=3&perPage=25&sort=title.desc&joinOperator=or",
@@ -349,7 +386,7 @@ function renderDataTable(
     return updates.at(-1)?.searchParams;
   }
 
-  return { ...hook, navigate, getLastSearch };
+  return { ...hook, updates, navigate, getLastSearch };
 }
 
 function getFilterSummary(filters: { id: string; value: unknown }[]) {

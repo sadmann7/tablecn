@@ -2,6 +2,7 @@ import * as React from "react";
 
 import { getRootFontScale } from "@/lib/data-grid-utils";
 
+const MAX_CACHED_BADGE_WIDTHS = 1000;
 const badgeWidthCache = new Map<string, number>();
 
 const DEFAULT_CONTAINER_PADDING = 16; // px-2 on both sides
@@ -180,6 +181,8 @@ function measureBadgeWidth({
 }: MeasureBadgeWidthProps): number {
   const cached = badgeWidthCache.get(cacheKey);
   if (cached !== undefined) {
+    badgeWidthCache.delete(cacheKey);
+    badgeWidthCache.set(cacheKey, cached);
     return cached;
   }
 
@@ -191,6 +194,10 @@ function measureBadgeWidth({
   );
 
   if (document.fonts?.status !== "loading") {
+    if (badgeWidthCache.size >= MAX_CACHED_BADGE_WIDTHS) {
+      const oldestKey = badgeWidthCache.keys().next().value;
+      if (oldestKey !== undefined) badgeWidthCache.delete(oldestKey);
+    }
     badgeWidthCache.set(cacheKey, width);
   }
   return width;

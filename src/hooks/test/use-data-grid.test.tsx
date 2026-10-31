@@ -2640,6 +2640,37 @@ describe("useDataGrid", () => {
       ];
     }
 
+    it("delivers pending batched updates on unmount and schedules nothing after", () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const onDataChange = vi.fn();
+      const { result, unmount } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            onDataChange,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells(
+          { rowId: "0", columnId: "name", value: "Xavier" },
+          { batch: true },
+        );
+      });
+      expect(onDataChange).not.toHaveBeenCalled();
+
+      unmount();
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(onDataChange.mock.calls[0]?.[0][0]).toMatchObject({
+        name: "Xavier",
+      });
+
+      vi.advanceTimersByTime(1000);
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+    });
+
     it("matches a row's latest text once its batched updates commit", () => {
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
       const { result } = renderHook(
@@ -2689,6 +2720,53 @@ describe("useDataGrid", () => {
         table.setSearchQuery("xavier");
       });
       expect(table.getSearchMatches()).toEqual([]);
+    });
+
+    it("re-matches only the rows an edit rebuilt", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.openSearch();
+        result.current.table.setSearchQuery("hawk");
+      });
+      const columnSet = result.current.table.getSearchMatchesByRowId().get("0");
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "name" },
+      ]);
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Rodney Hawkins",
+        });
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "name" },
+        { rowId: "1", columnId: "name" },
+      ]);
+      expect(result.current.table.getSearchMatchesByRowId().get("0")).toBe(
+        columnSet,
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Tony",
+        });
+      });
+      expect(result.current.table.getSearchMatches()).toEqual([
+        { rowId: "1", columnId: "name" },
+      ]);
     });
 
     it("should focus the first match and flag matching cells", () => {

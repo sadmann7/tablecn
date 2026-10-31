@@ -36,7 +36,7 @@ export function DataGridCell<TData extends RowData>({
   presence,
   readOnly,
   rowHeight,
-  width,
+  width: _width,
   pinned,
   pinnedOffset,
   grow,
@@ -194,7 +194,11 @@ export function DataGridCell<TData extends RowData>({
         className,
       )}
       style={{
-        ...getCellLayoutStyle({ width, pinned, pinnedOffset }),
+        ...getCellLayoutStyle({
+          columnId: cell.column.id,
+          pinned,
+          pinnedOffset,
+        }),
         ...(presence && !isFocused
           ? ({ "--tw-ring-color": presence.color } as React.CSSProperties)
           : null),

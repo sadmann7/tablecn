@@ -235,11 +235,17 @@ function DataGridViewport<TData extends RowData>({
     [rowVirtualizerRef, rowSize],
   );
 
+  const getRowKey = React.useCallback(
+    (index: number) => `${index}:${rowSize}`,
+    [rowSize],
+  );
+
   const rowVirtualizer = useVirtualizer({
     ...rowVirtualizerOptions,
     rangeExtractor: rowRangeExtractor,
     count: rows.length,
     getScrollElement: () => dataGridRef.current,
+    getItemKey: getRowKey,
     estimateSize: () => rowSize,
     scrollPaddingStart: VIEWPORT_OFFSET,
     scrollPaddingEnd: insets.start + insets.end + VIEWPORT_OFFSET,
@@ -340,10 +346,6 @@ function DataGridViewport<TData extends RowData>({
       }
     };
   }, [rowVirtualizerRef, rowVirtualizer]);
-
-  useIsoLayoutEffect(() => {
-    rowVirtualizer.measure();
-  }, [rowVirtualizer, table.state.rowHeight]);
 
   useIsoLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
