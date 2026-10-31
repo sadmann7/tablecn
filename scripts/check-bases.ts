@@ -3,10 +3,10 @@
  *
  * Each file under `src/registry/bases/radix` is compared with its counterpart
  * under `src/registry/bases/base`, after import paths are normalized. The
- * expected difference of every pair is recorded in `scripts/bases.json`:
- * `"identical"` for copies, or a hash of the lines that differ on purpose
- * (like Radix and Base UI APIs). Editing one copy without the other changes
- * that difference and fails the check.
+ * expected difference of every pair is recorded in
+ * `registry/base-differences.json`: `"identical"` for copies, or a hash of the
+ * lines that differ on purpose (like Radix and Base UI APIs). Editing one copy
+ * without the other changes that difference and fails the check.
  *
  *   pnpm check:bases                  fail on drift and print the difference
  *   pnpm check:bases --update         record the current differences
@@ -25,7 +25,7 @@ import { pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
 const BASES_ROOT = path.join(ROOT, "src/registry/bases");
-const SNAPSHOT_PATH = path.join(ROOT, "scripts/bases.json");
+const SNAPSHOT_PATH = path.join(ROOT, "registry/base-differences.json");
 const RADIX = "radix";
 const BASE = "base";
 
@@ -52,7 +52,9 @@ function checkBases() {
     for (const change of changes) console.error(`  ${change}`);
   }
   for (const file of removed) {
-    console.error(`\n${file}: in bases.json but no longer in either base`);
+    console.error(
+      `\n${file}: in base-differences.json but no longer in either base`,
+    );
   }
 
   if (drifted.length > 0 || removed.length > 0) {
@@ -69,7 +71,9 @@ function updateSnapshot() {
     getPairs().map(({ file, state }) => [file, state]),
   );
   writeFileSync(SNAPSHOT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`);
-  console.log(`Recorded ${Object.keys(snapshot).length} files in bases.json`);
+  console.log(
+    `Recorded ${Object.keys(snapshot).length} files in base-differences.json`,
+  );
 }
 
 function syncBases() {

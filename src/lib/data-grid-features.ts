@@ -4,7 +4,7 @@ import {
   type Cell,
   type CellData,
   cellSelectionFeature,
-  Column,
+  type Column,
   columnFilteringFeature,
   columnOrderingFeature,
   columnPinningFeature,
