@@ -334,6 +334,30 @@ describe("useDataGrid", () => {
       });
     });
 
+    it("records the key that started the edit", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table
+          .getCoreRowModel()
+          .rowsById["0"]?.getAllCellsByColumnId()
+          .name?.startEditing({ pendingChar: "a" });
+      });
+
+      expect(result.current.table.getEditingCell()).toEqual({
+        rowId: "0",
+        columnId: "name",
+        pendingChar: "a",
+      });
+    });
+
     it("should stop editing via table.stopEditing", async () => {
       const { result } = renderHook(
         () =>

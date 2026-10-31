@@ -1,6 +1,7 @@
 "use client";
 
-import { mergeProps } from "@base-ui/react/merge-props";
+import type { BaseUIEvent } from "@base-ui/react/types";
+
 import {
   type Column,
   type ColumnSort,
@@ -85,22 +86,26 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
   const columnVariant = getColumnVariant(meta?.cell?.variant);
   const ColumnIcon = meta?.icon ?? columnVariant?.icon;
 
-  const triggerHandlers = React.useMemo(
-    () =>
-      mergeProps<"button">(
-        {
-          onPointerDown: (event) => {
-            if (getIsEventOnScrollbar(event)) return;
-            if (event.button !== 0) return;
-            table.selectColumnCells(column.id);
-          },
-          onMouseDown: (event) => {
-            if (getIsEventOnScrollbar(event)) event.preventBaseUIHandler();
-          },
-        },
-        { onPointerDown, onMouseDown },
-      ),
-    [table, column.id, onPointerDown, onMouseDown],
+  const onTriggerPointerDown = React.useCallback(
+    (event: BaseUIEvent<React.PointerEvent<HTMLButtonElement>>) => {
+      onPointerDown?.(event);
+      if (event.defaultPrevented) return;
+
+      if (getIsEventOnScrollbar(event)) return;
+      if (event.button !== 0) return;
+      table.selectColumnCells(column.id);
+    },
+    [table, column.id, onPointerDown],
+  );
+
+  const onTriggerMouseDown = React.useCallback(
+    (event: BaseUIEvent<React.MouseEvent<HTMLButtonElement>>) => {
+      onMouseDown?.(event);
+      if (event.defaultPrevented) return;
+
+      if (getIsEventOnScrollbar(event)) event.preventBaseUIHandler();
+    },
+    [onMouseDown],
   );
 
   return (
@@ -113,7 +118,8 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
             isAnyColumnResizing && "pointer-events-none",
             className,
           )}
-          {...triggerHandlers}
+          onPointerDown={onTriggerPointerDown}
+          onMouseDown={onTriggerMouseDown}
           {...props}
         >
           <div className="flex min-w-0 flex-1 items-center gap-1.5">
@@ -145,7 +151,6 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
             className="shrink-0 text-muted-foreground"
           />
         </DropdownMenuTrigger>
-        {/* Open below the header row border instead of over it */}
         <DropdownMenuContent align="start" sideOffset={1} className="w-60">
           <DataGridColumnMenuItems column={column} />
         </DropdownMenuContent>
@@ -176,7 +181,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
   const leftPosition = isRtl ? "end" : "start";
   const rightPosition = isRtl ? "start" : "end";
 
-  const onSortingChange = (direction: SortDirection) => {
+  function onSortingChange(direction: SortDirection) {
     table.setSorting((prev) => {
       const existingSortIndex = prev.findIndex((sort) => sort.id === column.id);
       const newSort: ColumnSort = {
@@ -189,7 +194,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
       updated[existingSortIndex] = newSort;
       return updated;
     });
-  };
+  }
 
   return (
     <>

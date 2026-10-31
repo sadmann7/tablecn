@@ -34,6 +34,19 @@ export interface CellPosition {
   columnId: string;
 }
 
+export interface EditingCell extends CellPosition {
+  pendingChar?: string;
+}
+
+export interface StartEditingOptions {
+  pendingChar?: string;
+}
+
+export interface StopEditingOptions {
+  direction?: NavigationDirection;
+  moveToNextRow?: boolean;
+}
+
 export interface CellUpdate {
   rowId: string;
   columnId: string;

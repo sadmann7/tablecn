@@ -12,14 +12,15 @@ import type {
   CellSelectOption,
   DataGridCellProps,
   FileCellData,
-  NavigationDirection,
   RowHeightValue,
+  StopEditingOptions,
 } from "@/lib/data-grid-types";
 
 import { useBadgeOverflow } from "@/hooks/use-badge-overflow";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   createFileObjectUrl,
+  execInsertText,
   formatDateForDisplay,
   formatDateToString,
   formatFileSize,
@@ -73,18 +74,18 @@ const CELL_EDITOR_CLASS_NAME =
   "rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
 const CELL_BADGE_CLASS_NAME = "mt-0.5 mb-px h-4.25 px-1.5 py-0";
 
-interface SaveOptions {
-  moveToNextRow?: boolean;
-  direction?: NavigationDirection;
-}
-
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { onKeyDown, textProps } = useEditableText(props);
+  const { onCommit, onCancel, textProps } = useEditableText(props);
 
   return (
-    <DataGridCell<TData> {...props} onKeyDown={onKeyDown}>
+    <DataGridCell<TData>
+      {...props}
+      onCommit={onCommit}
+      onCancel={onCancel}
+      commitOnEnter
+    >
       <EditableText {...textProps} />
     </DataGridCell>
   );
@@ -93,7 +94,7 @@ export function ShortTextCell<TData extends RowData>(
 export function LongTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, isFocused, readOnly } = props;
+  const { cell, rowHeight, isEditing, readOnly } = props;
   const initialValue = getTextCellValue(useCellValue(cell));
   const { value, setDraftValue, clearDraft } = useCellDraft({
     key: initialValue,
@@ -102,11 +103,6 @@ export function LongTextCell<TData extends RowData>(
   });
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const { takePendingChar, onPendingCharKeyDown } = usePendingChar({
-    isFocused,
-    isEditing,
-    readOnly,
-  });
 
   const editStartValueRef = React.useRef(initialValue);
   const isCancelingRef = React.useRef(false);
@@ -127,7 +123,7 @@ export function LongTextCell<TData extends RowData>(
   }, 300);
 
   const onSave = React.useCallback(
-    (options?: SaveOptions) => {
+    (options?: StopEditingOptions) => {
       debouncedSave.cancel();
       if (isCancelingRef.current) {
         cell.table.stopEditing(options);
@@ -172,7 +168,7 @@ export function LongTextCell<TData extends RowData>(
     const length = textarea.value.length;
     textarea.setSelectionRange(length, length);
 
-    const pendingChar = takePendingChar();
+    const pendingChar = getPendingChar(cell);
     if (pendingChar) {
       requestAnimationFrame(() => {
         const textarea = textareaRef.current;
@@ -184,7 +180,7 @@ export function LongTextCell<TData extends RowData>(
     } else {
       textarea.scrollTop = textarea.scrollHeight;
     }
-  }, [takePendingChar]);
+  }, [cell]);
 
   const onBlur = React.useCallback(() => onSave(), [onSave]);
 
@@ -197,29 +193,12 @@ export function LongTextCell<TData extends RowData>(
     [debouncedSave, setDraftValue],
   );
 
-  const onKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onCancel();
-      } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
-        event.preventDefault();
-        onSave();
-      } else if (event.key === "Tab") {
-        event.preventDefault();
-        onSave({ direction: getTabDirection(event) });
-        return;
-      }
-      event.stopPropagation();
-    },
-    [onSave, onCancel],
-  );
-
   return (
     <DataGridCell<TData>
       {...props}
       ref={containerRef}
-      onKeyDown={onPendingCharKeyDown}
+      onCommit={onSave}
+      onCancel={onCancel}
     >
       <CellEditorPopover
         cell={cell}
@@ -227,11 +206,11 @@ export function LongTextCell<TData extends RowData>(
         readOnly={readOnly}
         rowHeight={rowHeight}
         containerRef={containerRef}
-        onOpenChange={onOpenChange}
-        overlap
         side="bottom"
         className="w-100"
+        onOpenChange={onOpenChange}
         onOpenFocus={onOpenFocus}
+        overlap
       >
         <Textarea
           aria-label={getColumnLabel(cell.column)}
@@ -241,7 +220,6 @@ export function LongTextCell<TData extends RowData>(
           value={value}
           onBlur={onBlur}
           onChange={onChange}
-          onKeyDown={onKeyDown}
         />
       </CellEditorPopover>
       <span data-slot="data-grid-cell-content" dir="auto">
@@ -254,7 +232,7 @@ export function LongTextCell<TData extends RowData>(
 export function NumberCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, isEditing, isFocused, readOnly } = props;
+  const { cell, isEditing, readOnly } = props;
   const initialValue = getNumberCellValue(useCellValue(cell));
   const { value, setDraftValue, clearDraft } = useCellDraft({
     key: initialValue,
@@ -264,11 +242,6 @@ export function NumberCell<TData extends RowData>(
   const inputRef = React.useRef<HTMLInputElement>(null);
   const isCancelingRef = React.useRef(false);
   const prevIsEditingRef = React.useRef(false);
-  const { pendingCharRef, onPendingCharKeyDown } = usePendingChar({
-    isFocused,
-    isEditing,
-    readOnly,
-  });
 
   const numberCellOpts = getVariantCellOpts(cell, "number");
   const min = numberCellOpts?.min;
@@ -278,7 +251,7 @@ export function NumberCell<TData extends RowData>(
   const displayNumber = getNumberCellValue(value);
 
   const onSave = React.useCallback(
-    (options?: SaveOptions) => {
+    (options?: StopEditingOptions) => {
       const numValue = value === "" ? null : Number(value);
       if (!readOnly && numValue !== initialValue) {
         cell.setValue(numValue);
@@ -306,20 +279,11 @@ export function NumberCell<TData extends RowData>(
     [setDraftValue],
   );
 
-  const onWrapperKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
-        endEditOnKey(event, onSave, () => {
-          clearDraft();
-          isCancelingRef.current = true;
-          inputRef.current?.blur();
-        });
-      } else {
-        onPendingCharKeyDown(event);
-      }
-    },
-    [isEditing, onSave, onPendingCharKeyDown, clearDraft],
-  );
+  const onCancel = React.useCallback(() => {
+    clearDraft();
+    isCancelingRef.current = true;
+    inputRef.current?.blur();
+  }, [clearDraft]);
 
   React.useEffect(() => {
     const wasEditing = prevIsEditingRef.current;
@@ -329,31 +293,35 @@ export function NumberCell<TData extends RowData>(
       isCancelingRef.current = false;
       inputRef.current.focus();
 
-      const pendingChar = pendingCharRef.current;
-      pendingCharRef.current = null;
+      const pendingChar = getPendingChar(cell);
       if (pendingChar) {
         inputRef.current.select();
-        if (!document.execCommand("insertText", false, pendingChar)) {
+        if (!execInsertText(pendingChar)) {
           setDraftValue(pendingChar);
         }
       }
     }
-  }, [isEditing, setDraftValue, pendingCharRef]);
+  }, [cell, isEditing, setDraftValue]);
 
   return (
-    <DataGridCell<TData> {...props} onKeyDown={onWrapperKeyDown}>
+    <DataGridCell<TData>
+      {...props}
+      onCommit={onSave}
+      onCancel={onCancel}
+      commitOnEnter
+    >
       {isEditing ? (
         <input
           aria-label={getColumnLabel(cell.column)}
           type="number"
           ref={inputRef}
-          defaultValue={value}
           min={min}
           max={max}
           step={step}
           className="w-full [appearance:textfield] border-none bg-transparent p-0 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          onBlur={onBlur}
+          defaultValue={value}
           onChange={onChange}
+          onBlur={onBlur}
         />
       ) : (
         <span
@@ -374,7 +342,7 @@ export function UrlCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
   const { isEditing, isFocused } = props;
-  const { value, onKeyDown, textProps } = useEditableText({
+  const { value, onCommit, onCancel, textProps } = useEditableText({
     ...props,
     parse: parseUrlText,
   });
@@ -395,11 +363,9 @@ export function UrlCell<TData extends RowData>(
         } else {
           toastDangerousUrl();
         }
-        return;
       }
-      onKeyDown(event);
     },
-    [isEditing, isFocused, value, onKeyDown],
+    [isEditing, isFocused, value],
   );
 
   const onLinkClick = React.useCallback(
@@ -426,7 +392,13 @@ export function UrlCell<TData extends RowData>(
   const isDangerousUrl = displayValue && !urlHref;
 
   return (
-    <DataGridCell<TData> {...props} onKeyDown={onWrapperKeyDown}>
+    <DataGridCell<TData>
+      {...props}
+      onCommit={onCommit}
+      onCancel={onCancel}
+      onKeyDown={onWrapperKeyDown}
+      commitOnEnter
+    >
       {!isEditing && displayValue ? (
         <div
           data-slot="data-grid-cell-content"
@@ -434,9 +406,9 @@ export function UrlCell<TData extends RowData>(
           className="size-full overflow-hidden"
         >
           <a
-            tabIndex={-1}
             data-focused={isFocused && !isDangerousUrl ? "" : undefined}
             data-invalid={isDangerousUrl ? "" : undefined}
+            tabIndex={-1}
             href={urlHref}
             target="_blank"
             rel="noopener noreferrer"
@@ -563,13 +535,6 @@ export function SelectCell<TData extends RowData>(
     commandRef.current?.focus();
   }, []);
 
-  const onWrapperKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) closeEditorOnKey(cell, event);
-    },
-    [cell, isEditing],
-  );
-
   const displayLabel = value ? getOptionLabel(options, value) : null;
 
   return (
@@ -577,7 +542,6 @@ export function SelectCell<TData extends RowData>(
       {...props}
       ref={containerRef}
       onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
-      onKeyDown={onWrapperKeyDown}
     >
       <CellEditorPopover
         cell={cell}
@@ -591,9 +555,9 @@ export function SelectCell<TData extends RowData>(
         <Command
           ref={commandRef}
           tabIndex={-1}
-          loop
-          defaultValue={value ?? undefined}
           className="bg-transparent p-px outline-none"
+          defaultValue={value ?? undefined}
+          loop
         >
           <CommandList>
             <CommandGroup className="p-1.5">
@@ -709,14 +673,19 @@ export function MultiSelectCell<TData extends RowData>(
     inputRef.current?.focus();
   }, []);
 
-  const onWrapperKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (!isEditing) return;
-      if (event.key === "Escape") clearDraft();
-      if (closeEditorOnKey(cell, event)) clearSearch();
+  const onCommit = React.useCallback(
+    (options?: StopEditingOptions) => {
+      clearSearch();
+      cell.table.stopEditing(options);
     },
-    [cell, isEditing, clearDraft, clearSearch],
+    [cell, clearSearch],
   );
+
+  const onCancel = React.useCallback(() => {
+    clearDraft();
+    clearSearch();
+    cell.table.stopEditing();
+  }, [cell, clearDraft, clearSearch]);
 
   const onInputKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -758,7 +727,8 @@ export function MultiSelectCell<TData extends RowData>(
     <DataGridCell<TData>
       {...props}
       ref={containerRef}
-      onKeyDown={onWrapperKeyDown}
+      onCommit={onCommit}
+      onCancel={onCancel}
     >
       {isEditing ? (
         <CellEditorPopover
@@ -767,13 +737,13 @@ export function MultiSelectCell<TData extends RowData>(
           readOnly={readOnly}
           rowHeight={rowHeight}
           containerRef={containerRef}
-          onOpenChange={onOpenChange}
-          overlap
           className="w-75"
           style={{
             minWidth: `calc(var(--radix-popover-trigger-width) + ${CELL_BORDER_WIDTH * 2}px)`,
           }}
+          onOpenChange={onOpenChange}
           onOpenFocus={onOpenFocus}
+          overlap
         >
           <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
             <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
@@ -901,19 +871,11 @@ export function DateCell<TData extends RowData>(
     [cell, readOnly],
   );
 
-  const onWrapperKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) closeEditorOnKey(cell, event);
-    },
-    [cell, isEditing],
-  );
-
   return (
     <DataGridCell<TData>
       {...props}
       ref={containerRef}
       onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
-      onKeyDown={onWrapperKeyDown}
     >
       <CellEditorPopover
         cell={cell}
@@ -1203,19 +1165,19 @@ export function FileCell<TData extends RowData>(
     });
   }, []);
 
+  const onCancel = React.useCallback(() => {
+    clearError();
+    cell.table.stopEditing();
+  }, [cell, clearError]);
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
-        if (event.key === " ") {
-          event.preventDefault();
-          onDropzoneClick();
-          return;
-        }
-        if (event.key === "Escape") clearError();
-        closeEditorOnKey(cell, event);
+      if (isEditing && event.key === " ") {
+        event.preventDefault();
+        onDropzoneClick();
       }
     },
-    [cell, isEditing, onDropzoneClick, clearError],
+    [isEditing, onDropzoneClick],
   );
 
   const lineCount = getLineCount(rowHeight);
@@ -1236,6 +1198,7 @@ export function FileCell<TData extends RowData>(
       {...props}
       ref={containerRef}
       {...cellDropProps}
+      onCancel={onCancel}
       onKeyDown={onWrapperKeyDown}
       className={cn({
         "ring-1 ring-primary/80 ring-inset": isDraggingOver,
@@ -1248,11 +1211,11 @@ export function FileCell<TData extends RowData>(
           readOnly={readOnly}
           rowHeight={rowHeight}
           containerRef={containerRef}
-          onOpenChange={onOpenChange}
-          overlap
           className="w-100"
+          onOpenChange={onOpenChange}
           onOpenFocus={onOpenFocus}
           onEscapeKeyDown={onEscapeKeyDown}
+          overlap
         >
           <div className="flex flex-col gap-2 p-3">
             <span id={labelId} className="sr-only">
@@ -1468,9 +1431,9 @@ function CellEditorPopover<TData extends RowData>({
   containerRef,
   onOpenChange,
   onOpenFocus,
-  overlap = false,
+  overlap,
   className,
-  ...contentProps
+  ...props
 }: CellEditorPopoverProps<TData>) {
   const onEditorOpenChange = React.useCallback(
     (nextOpen: boolean) => {
@@ -1509,7 +1472,7 @@ function CellEditorPopover<TData extends RowData>({
         onOpenAutoFocus={onOpenFocus ? onOpenAutoFocus : undefined}
         onPointerDownOutside={onPointerDownOutside}
         onCloseAutoFocus={onCloseAutoFocus}
-        {...contentProps}
+        {...props}
       />
     </Popover>
   );
@@ -1524,7 +1487,6 @@ interface UseEditableTextOptions<
 function useEditableText<TData extends RowData>({
   cell,
   isEditing,
-  isFocused,
   readOnly,
   parse = parsePlainText,
 }: UseEditableTextOptions<TData>) {
@@ -1536,11 +1498,6 @@ function useEditableText<TData extends RowData>({
   });
   const textRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
-  const { takePendingChar, onPendingCharKeyDown } = usePendingChar({
-    isFocused,
-    isEditing,
-    readOnly,
-  });
 
   React.useLayoutEffect(() => {
     const element = textRef.current;
@@ -1562,7 +1519,7 @@ function useEditableText<TData extends RowData>({
         element.textContent = value;
       }
 
-      const pendingChar = takePendingChar();
+      const pendingChar = getPendingChar(cell);
       if (pendingChar) {
         replaceEditableText(element, pendingChar);
       } else if (element.textContent) {
@@ -1571,10 +1528,10 @@ function useEditableText<TData extends RowData>({
     } else if (!isEditing && wasEditing) {
       element.scrollLeft = 0;
     }
-  }, [isEditing, value, takePendingChar]);
+  }, [cell, isEditing, value]);
 
   const onSave = React.useCallback(
-    (options?: SaveOptions) => {
+    (options?: StopEditingOptions) => {
       const value = parse(textRef.current?.textContent ?? "");
       if (!readOnly && value !== parse(initialValue)) {
         cell.setValue(value);
@@ -1594,27 +1551,19 @@ function useEditableText<TData extends RowData>({
     [setDraftValue],
   );
 
-  const onKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) {
-        endEditOnKey(event, onSave, () => {
-          clearDraft();
-          const element = textRef.current;
-          if (!element) return;
-          // Blurring saves the DOM text, so the typed text is undone first
-          element.textContent = initialValue;
-          element.blur();
-        });
-      } else {
-        onPendingCharKeyDown(event);
-      }
-    },
-    [isEditing, initialValue, onSave, onPendingCharKeyDown, clearDraft],
-  );
+  const onCancel = React.useCallback(() => {
+    clearDraft();
+    const element = textRef.current;
+    if (!element) return;
+    // Blurring saves the DOM text, so the typed text is undone first
+    element.textContent = initialValue;
+    element.blur();
+  }, [initialValue, clearDraft]);
 
   return {
     value,
-    onKeyDown,
+    onCommit: onSave,
+    onCancel,
     textProps: {
       ref: textRef,
       isEditing,
@@ -1699,61 +1648,6 @@ function useCellDraft<TValue>({
   return { value, setDraftValue, clearDraft };
 }
 
-interface UsePendingCharOptions {
-  isFocused: boolean;
-  isEditing: boolean;
-  readOnly: boolean;
-}
-
-function usePendingChar({
-  isFocused,
-  isEditing,
-  readOnly,
-}: UsePendingCharOptions) {
-  const pendingCharRef = React.useRef<string | null>(null);
-
-  const onPendingCharKeyDown = React.useCallback(
-    (event: React.KeyboardEvent) => {
-      if (
-        isFocused &&
-        !isEditing &&
-        !readOnly &&
-        event.key.length === 1 &&
-        !event.ctrlKey &&
-        !event.metaKey
-      ) {
-        pendingCharRef.current = event.key;
-      }
-    },
-    [isFocused, isEditing, readOnly],
-  );
-
-  const takePendingChar = React.useCallback(() => {
-    const pendingChar = pendingCharRef.current;
-    pendingCharRef.current = null;
-    return pendingChar;
-  }, []);
-
-  return { pendingCharRef, takePendingChar, onPendingCharKeyDown };
-}
-
-function endEditOnKey(
-  event: React.KeyboardEvent,
-  onSave: (options: SaveOptions) => void,
-  onCancel: () => void,
-) {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    onSave({ moveToNextRow: true });
-  } else if (event.key === "Tab") {
-    event.preventDefault();
-    onSave({ direction: getTabDirection(event) });
-  } else if (event.key === "Escape") {
-    event.preventDefault();
-    onCancel();
-  }
-}
-
 function useCellEditorDismiss(
   containerRef: React.RefObject<HTMLDivElement | null>,
 ) {
@@ -1799,29 +1693,14 @@ function setCellEditing<TData extends RowData>(
   }
 }
 
-function closeEditorOnKey<TData extends RowData>(
+function getPendingChar<TData extends RowData>(
   cell: DataGridCellProps<TData>["cell"],
-  event: React.KeyboardEvent,
 ) {
-  if (event.key === "Escape") {
-    event.preventDefault();
-    cell.table.stopEditing();
-    return true;
-  }
-  if (event.key === "Tab") {
-    event.preventDefault();
-    cell.table.stopEditing({ direction: getTabDirection(event) });
-    return true;
-  }
-  return false;
+  return cell.table.getEditingCell()?.pendingChar ?? null;
 }
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
-}
-
-function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
-  return event.shiftKey ? "shift+tab" : "tab";
 }
 
 function getVariantCellOpts<

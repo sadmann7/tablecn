@@ -195,6 +195,7 @@ describe("DataGrid cells", () => {
       expect(table.getEditingCell()).toEqual({
         rowId: "1",
         columnId: "name",
+        pendingChar: "Z",
       });
       expect(getEditable(getCell("1", "name")).textContent).toBe("Z");
     });
@@ -749,6 +750,141 @@ describe("DataGrid cells", () => {
 
       expect(revokeObjectURL).toHaveBeenCalledWith("blob:grid");
       expect(revokeObjectURL).not.toHaveBeenCalledWith("blob:app");
+    });
+  });
+
+  describe("editing keys", () => {
+    it("starts editing on F2 without a pending char", () => {
+      const { getCell, focus, table } = renderGrid();
+
+      focus("1", "name");
+      press(getCell("1", "name"), "F2");
+
+      expect(table.getEditingCell()).toEqual({
+        rowId: "1",
+        columnId: "name",
+      });
+      expect(getEditable(getCell("1", "name")).textContent).toBe("Tony Hawk");
+    });
+
+    it("appends the typed key to a long text", async () => {
+      const { getCell, focus, table } = renderGrid();
+
+      focus("1", "bio");
+      press(getCell("1", "bio"), "Q");
+      await waitFrames();
+
+      expect(table.getEditingCell()).toEqual({
+        rowId: "1",
+        columnId: "bio",
+        pendingChar: "Q",
+      });
+      expect(getTextarea().value).toBe("Landed the 900Q");
+    });
+
+    it("seeds a number with the typed digit", () => {
+      const { getCell, getValue, focus, table } = renderGrid();
+
+      focus("1", "age");
+      press(getCell("1", "age"), "4");
+
+      expect(table.getEditingCell()).toEqual({
+        rowId: "1",
+        columnId: "age",
+        pendingChar: "4",
+      });
+
+      press(getInput(getCell("1", "age")), "Enter");
+
+      expect(getValue("1", "age")).toBe(4);
+    });
+
+    it("saves on Shift+Tab and moves to the previous column", () => {
+      const { getCell, getValue, focus, table } = renderGrid();
+
+      focus("1", "website");
+      press(getCell("1", "website"), "Enter");
+      const editable = getEditable(getCell("1", "website"));
+      typeText(editable, "https://birdhouse.com");
+      press(editable, "Tab", { shiftKey: true });
+
+      expect(getValue("1", "website")).toBe("https://birdhouse.com");
+      expect(table.getEditingCell()).toBeNull();
+      expect(table.getFocusedCell()?.column.id).toBe("name");
+    });
+
+    it("closes a popover editor on Cmd+Enter without changing the value", () => {
+      const { getCell, getValue, focus, table } = renderGrid();
+
+      focus("1", "stance");
+      press(getCell("1", "stance"), "Enter");
+      press(document.activeElement, "Enter", { metaKey: true });
+
+      expect(getValue("1", "stance")).toBe("goofy");
+      expect(table.getEditingCell()).toBeNull();
+      expect(screen.queryByRole("option")).toBeNull();
+    });
+
+    it("closes a popover editor on Tab and moves to the next column", () => {
+      const { getCell, focus, table } = renderGrid();
+
+      focus("1", "stance");
+      press(getCell("1", "stance"), "Enter");
+      press(document.activeElement, "Tab");
+
+      expect(table.getEditingCell()).toBeNull();
+      expect(table.getFocusedCell()?.column.id).toBe("tricks");
+    });
+
+    it("closes the multi-select on Tab from its search input", () => {
+      const { getCell, focus, table } = renderGrid();
+
+      focus("1", "tricks");
+      press(getCell("1", "tricks"), "Enter");
+      press(screen.getByRole("combobox"), "Tab");
+
+      expect(table.getEditingCell()).toBeNull();
+      expect(table.getFocusedCell()?.column.id).toBe("joined");
+    });
+
+    it("closes the date editor on Escape and refocuses the cell", () => {
+      const { getCell, focus, table } = renderGrid();
+
+      focus("1", "joined");
+      press(getCell("1", "joined"), "Enter");
+      press(document.activeElement, "Escape");
+
+      expect(table.getEditingCell()).toBeNull();
+      expect(document.activeElement).toBe(getCell("1", "joined"));
+    });
+
+    it("lets a cell's own key handler veto editing", () => {
+      const open = vi.spyOn(window, "open").mockImplementation(() => null);
+      const { getCell, focus, table } = renderGrid();
+
+      focus("1", "website");
+      press(getCell("1", "website"), "Enter", { metaKey: true });
+
+      expect(open).toHaveBeenCalledTimes(1);
+      expect(open.mock.calls[0]?.[0]).toContain("tonyhawk.com");
+      expect(table.getEditingCell()).toBeNull();
+    });
+
+    it("opens the file picker on Space while editing", () => {
+      const click = vi
+        .spyOn(HTMLInputElement.prototype, "click")
+        .mockImplementation(() => {});
+      const { getCell, focus, table } = renderGrid();
+
+      focus("1", "media");
+      press(getCell("1", "media"), "Enter");
+      press(getCell("1", "media"), " ");
+
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(table.getEditingCell()).toEqual({
+        rowId: "1",
+        columnId: "media",
+      });
     });
   });
 
