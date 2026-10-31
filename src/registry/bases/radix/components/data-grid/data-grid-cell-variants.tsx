@@ -829,8 +829,8 @@ export function MultiSelectCell<TData extends RowData>(
             className="w-75 rounded-none p-0 ring-inset"
             onOpenAutoFocus={onOpenAutoFocus}
           >
-            <Command className="bg-transparent p-0 **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
-              <div className="flex flex-wrap items-center gap-1 border-b px-4 py-2 has-data-[slot=badge]:px-2">
+            <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
+              <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
                 {selectedValues.map((value) => {
                   const label = optionByValue.get(value)?.label ?? value;
 
@@ -868,13 +868,15 @@ export function MultiSelectCell<TData extends RowData>(
                   value={searchValue}
                   onValueChange={onSearchValueChange}
                   onKeyDown={onInputKeyDown}
-                  placeholder="Search..."
+                  placeholder={
+                    selectedValues.length > 0 ? undefined : "Search..."
+                  }
                   className="p-0! placeholder:text-muted-foreground"
                 />
               </div>
               <CommandList className="max-h-full">
                 <CommandEmpty>No options found.</CommandEmpty>
-                <CommandGroup className="max-h-75 scroll-py-2 overflow-x-hidden overflow-y-auto p-2">
+                <CommandGroup className="max-h-75 scroll-py-1.5 overflow-x-hidden overflow-y-auto p-1.5">
                   {options.map((option) => {
                     const isSelected = selectedValuesSet.has(option.value);
 
@@ -893,7 +895,7 @@ export function MultiSelectCell<TData extends RowData>(
                 {selectedValues.length > 0 && (
                   <>
                     <CommandSeparator />
-                    <CommandGroup className="p-2">
+                    <CommandGroup className="p-1.5">
                       <CommandItem
                         onSelect={clearAll}
                         className="justify-center text-muted-foreground"
