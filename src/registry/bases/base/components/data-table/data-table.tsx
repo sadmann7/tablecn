@@ -169,8 +169,6 @@ function getCellClassName(pinned: ColumnPinningPosition) {
     : "overflow-hidden";
 }
 
-const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
-
 interface DataTableBodyProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
 }
@@ -227,6 +225,8 @@ function DataTableActionBar<TData extends RowData>({
 interface DataTableRowProps<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;
 }
+
+const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
 function DataTableRowImpl<TData extends RowData>({
   row,

@@ -11,6 +11,10 @@ interface Node {
   declaration?: Node | null;
   declarations?: Node[];
   init?: Node | null;
+  expression?: Node;
+  callee?: Node;
+  arguments?: Node[];
+  property?: Node;
   specifiers?: { local: Node }[];
 }
 
@@ -111,9 +115,11 @@ export const topDownOrder = {
                 : `Move \`${unit.helper ?? ""}\` below its first use.`
               : layout.hoisted.has(unit)
                 ? `Move \`${getUnitName(unit)}\` above \`${getUnitName(owner)}\`, its first use.`
-                : unit.isType
-                  ? `Move \`${getDeclaredTypeName(unit)}\` right above \`${getDeclaredNames(owner)[0] ?? ""}\`, which it types.`
-                  : `Move \`${unit.stateNames?.join("`, `")}\` right above \`${owner.helper}\`, the only code using it.`,
+                : layout.wrappers.has(unit)
+                  ? `Move \`${getUnitName(unit)}\` right above \`${getUnitName(owner)}\`, which it wraps.`
+                  : unit.isType
+                    ? `Move \`${getDeclaredTypeName(unit)}\` right above \`${getDeclaredNames(owner)[0] ?? ""}\`, which it types.`
+                    : `Move \`${unit.stateNames?.join("`, `")}\` right above \`${owner.helper}\`, the only code using it.`,
             fix,
           });
         }
@@ -133,6 +139,8 @@ interface Layout {
   hoisted: Set<Unit>;
   // Helpers several declarations use, placed after the last one
   shared: Set<Unit>;
+  // Memo wrappers, which sit right above the component they wrap
+  wrappers: Set<Unit>;
   // The whole file in top-down order
   order: Unit[];
 }
@@ -153,9 +161,32 @@ function getLayout(
   }
   const getUser = (node: Node) => unitOf.get(getTopLevelStatement(node));
 
+  // A memo wrapper sits right above the component it wraps, and the component
+  // counts as used wherever the wrapper is
+  const wrappers = new Map<Unit, Unit>();
+  const wrapperNames = new Map<string, string>();
+  for (const unit of units) {
+    const statement = unit.statements[0];
+    if (unit.isExported || !statement) continue;
+    const wrapped = getWrappedName(statement);
+    const impl = wrapped && helperUnits.get(wrapped);
+    const name = statement.declarations?.[0]?.id?.name;
+    if (!impl || typeof name !== "string") continue;
+    wrappers.set(unit, impl);
+    wrapperNames.set(wrapped, name);
+  }
+  const getReferences = (name: string) => {
+    const wrapper = wrapperNames.get(name);
+    if (!wrapper) return references.get(name) ?? [];
+    const impl = helperUnits.get(name);
+    return (references.get(wrapper) ?? []).filter(
+      (node) => getUser(node) !== impl,
+    );
+  };
+
   const firstUses = new Map<Unit, Node>();
   for (const [name, unit] of helperUnits) {
-    const list = references.get(name) ?? [];
+    const list = getReferences(name);
     const first = list.reduce<Node | undefined>(
       (earliest, node) =>
         !earliest || node.range[0] < earliest.range[0] ? node : earliest,
@@ -168,7 +199,7 @@ function getLayout(
   const eager = new Set<Unit>();
   const queue: Unit[] = [];
   for (const [name, unit] of helperUnits) {
-    const list = references.get(name) ?? [];
+    const list = getReferences(name);
     if (list.some((node) => !getIsInsideFunction(node))) {
       eager.add(unit);
       queue.push(unit);
@@ -177,7 +208,7 @@ function getLayout(
   for (let unit = queue.shift(); unit; unit = queue.shift()) {
     for (const [name, other] of helperUnits) {
       if (eager.has(other)) continue;
-      const list = references.get(name) ?? [];
+      const list = getReferences(name);
       if (list.some((node) => getUser(node) === unit)) {
         eager.add(other);
         queue.push(other);
@@ -199,6 +230,7 @@ function getLayout(
     }
     if (isOwned && owner?.helper && !eager.has(owner)) owners.set(unit, owner);
   }
+  for (const [wrapper, impl] of wrappers) owners.set(wrapper, impl);
   // A props type that drifted away from its component goes back above it, or
   // above the memo wrapping it
   const declarers = new Map<string, Unit>();
@@ -237,7 +269,7 @@ function getLayout(
   const lastUsers = new Map<Unit, Unit>();
   for (const unit of units) {
     const users = new Set<Unit>();
-    for (const node of references.get(unit.helper ?? "") ?? []) {
+    for (const node of unit.helper ? getReferences(unit.helper) : []) {
       const user = getUser(node);
       if (user && user !== unit && !user.helper) users.add(user);
     }
@@ -271,6 +303,7 @@ function getLayout(
     owners,
     hoisted: new Set(hoisted.keys()),
     shared: new Set(lastUsers.keys()),
+    wrappers: new Set(wrappers.keys()),
   };
   return { ...layout, order: getOrder(layout, firstUses) };
 }
@@ -446,7 +479,8 @@ function getRunEnd(units: Unit[], user: Unit, owners: Map<Unit, Unit>) {
   let end = user;
   for (let index = units.indexOf(user) + 1; index < units.length; index++) {
     const unit = units[index];
-    if (!unit) break;
+    // The `export { … }` list closes the file, so helpers stay above it
+    if (!unit || getIsExportList(unit)) break;
     if (unit.helper || owners.has(unit) || unit.isType) {
       if (unit.isExported) end = unit;
       continue;
@@ -550,6 +584,7 @@ function getReorderFix(context: Context, layout: Layout): Fix {
 function getUnits(context: Context, helpers: Map<string, Node>) {
   const { text, ast } = context.sourceCode;
   const { body } = ast;
+  const exported = getExportedNames(body);
   const units: Unit[] = [];
   let previousEnd = body[0]?.range[0] ?? 0;
   for (let index = 0; index < body.length; index++) {
@@ -575,7 +610,10 @@ function getUnits(context: Context, helpers: Map<string, Node>) {
       end,
       separator: text.slice(previousEnd, start),
       statements,
-      isExported: statement.type.startsWith("Export"),
+      // Including what an `export { … }` list names further down
+      isExported:
+        statement.type.startsWith("Export") ||
+        getStatementNames(statement).some((name) => exported.has(name)),
       isType: !isProps && TYPE_TYPES.has(declaration?.type ?? ""),
       helper: helper && helpers.has(helper) ? helper : undefined,
       stateNames: getStateNames(statement),
@@ -606,6 +644,30 @@ function getHoistedNames(statement: Node) {
   return names;
 }
 
+// `Impl` in `const X = React.memo(Impl)`, through any `as` cast
+function getWrappedName(statement: Node) {
+  const declarations = statement.declarations ?? [];
+  if (statement.type !== "VariableDeclaration" || declarations.length !== 1) {
+    return undefined;
+  }
+  let init = declarations[0]?.init;
+  while (
+    init &&
+    (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression")
+  ) {
+    init = init.expression;
+  }
+  if (init?.type !== "CallExpression") return undefined;
+  const { callee } = init;
+  const calleeName =
+    callee?.type === "MemberExpression" ? callee.property?.name : callee?.name;
+  if (calleeName !== "memo" && calleeName !== "forwardRef") return undefined;
+  const wrapped = init.arguments?.[0];
+  return wrapped?.type === "Identifier" && typeof wrapped.name === "string"
+    ? wrapped.name
+    : undefined;
+}
+
 function getDeclaredTypeName(unit: Unit) {
   const name = unit.statements[0]?.id?.name;
   return typeof name === "string" ? name : "";
@@ -627,6 +689,22 @@ function getDeclaredNames(unit: Unit) {
     }
   }
   return names;
+}
+
+function getIsExportList(unit: Unit) {
+  const statement = unit.statements[0];
+  return (
+    statement?.type === "ExportAllDeclaration" ||
+    (statement?.type === "ExportNamedDeclaration" && !statement.declaration)
+  );
+}
+
+function getStatementNames(statement: Node) {
+  const names = [statement.id?.name];
+  for (const declarator of statement.declarations ?? []) {
+    names.push(declarator.id?.name);
+  }
+  return names.filter((name) => typeof name === "string");
 }
 
 function getExportedNames(body: Node[]) {

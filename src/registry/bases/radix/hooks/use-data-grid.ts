@@ -566,7 +566,7 @@ function useDataGrid<TData extends RowData>({
         revealCell(cell, { shouldFocus: false, shouldScroll: true }),
       onCellFocus: (cell) => focusCellElement(cell),
       onClipboardNotice: (notice) =>
-        (propsRef.current.onClipboardNotice ?? showClipboardToast)(notice),
+        (propsRef.current.onClipboardNotice ?? toastClipboardNotice)(notice),
       features: dataGridFeatures,
       data,
       onDataChange,
@@ -1971,7 +1971,7 @@ function selectTableState(state: TableState<DataGridFeatures>) {
   };
 }
 
-function showClipboardToast({ variant, message }: ClipboardNotice) {
+function toastClipboardNotice({ variant, message }: ClipboardNotice) {
   if (variant === "error") toast.error(message);
   else toast.success(message);
 }

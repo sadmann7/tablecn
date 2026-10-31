@@ -65,19 +65,6 @@ export function DataGridColumnHeader<TData extends RowData, TValue>(
   );
 }
 
-const DataGridColumnResizer = React.memo(
-  DataGridColumnResizerImpl,
-  (prev, next) => {
-    const prevColumn = prev.header.column;
-    const nextColumn = next.header.column;
-    return (
-      prevColumn.getIsResizing() === nextColumn.getIsResizing() &&
-      prevColumn.getSize() === nextColumn.getSize() &&
-      prev.label === next.label
-    );
-  },
-) as typeof DataGridColumnResizerImpl;
-
 function DataGridColumnHeaderContent<TData extends RowData, TValue>({
   table,
   header,
@@ -333,6 +320,19 @@ interface DataGridColumnResizerProps<
 > extends DataGridColumnHeaderProps<TData, TValue> {
   label: string;
 }
+
+const DataGridColumnResizer = React.memo(
+  DataGridColumnResizerImpl,
+  (prev, next) => {
+    const prevColumn = prev.header.column;
+    const nextColumn = next.header.column;
+    return (
+      prevColumn.getIsResizing() === nextColumn.getIsResizing() &&
+      prevColumn.getSize() === nextColumn.getSize() &&
+      prev.label === next.label
+    );
+  },
+) as typeof DataGridColumnResizerImpl;
 
 function DataGridColumnResizerImpl<TData extends RowData, TValue>({
   table,

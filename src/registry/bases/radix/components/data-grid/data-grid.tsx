@@ -104,16 +104,6 @@ export function DataGrid<TData extends RowData>({
   );
 }
 
-const DataGridHeader = React.memo(
-  DataGridHeaderImpl,
-  (prev, next) =>
-    prev.table.atoms === next.table.atoms &&
-    prev.headerGroups === next.headerGroups &&
-    prev.columnWindow === next.columnWindow &&
-    prev.headerRef === next.headerRef &&
-    prev.stretchColumns === next.stretchColumns,
-) as typeof DataGridHeaderImpl;
-
 interface ViewportInsets {
   start: number;
   end: number;
@@ -605,6 +595,16 @@ interface DataGridHeaderProps<TData extends RowData>
   headerGroups: Array<HeaderGroup<DataGridFeatures, TData>>;
   columnWindow: ColumnWindow | null;
 }
+
+const DataGridHeader = React.memo(
+  DataGridHeaderImpl,
+  (prev, next) =>
+    prev.table.atoms === next.table.atoms &&
+    prev.headerGroups === next.headerGroups &&
+    prev.columnWindow === next.columnWindow &&
+    prev.headerRef === next.headerRef &&
+    prev.stretchColumns === next.stretchColumns,
+) as typeof DataGridHeaderImpl;
 
 function DataGridHeaderImpl<TData extends RowData>({
   table,

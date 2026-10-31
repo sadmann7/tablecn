@@ -77,6 +77,23 @@ function TasksTableControlMenu() {
   );
 }
 
+function TasksTableControlMenuSkeleton() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <ControlGroup label="Mode">
+        <FlagGroupSkeleton flags={DATA_MODES} />
+      </ControlGroup>
+      <Separator
+        orientation="vertical"
+        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
+      />
+      <ControlGroup label="Filter">
+        <FlagGroupSkeleton flags={FILTER_MODES} />
+      </ControlGroup>
+    </div>
+  );
+}
+
 interface ControlItemProps {
   flag: Flag;
 }
@@ -96,23 +113,6 @@ function ControlItem({ flag }: ControlItemProps) {
         {flag.description}
       </TooltipContent>
     </Tooltip>
-  );
-}
-
-function TasksTableControlMenuSkeleton() {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <ControlGroup label="Mode">
-        <FlagGroupSkeleton flags={DATA_MODES} />
-      </ControlGroup>
-      <Separator
-        orientation="vertical"
-        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
-      />
-      <ControlGroup label="Filter">
-        <FlagGroupSkeleton flags={FILTER_MODES} />
-      </ControlGroup>
-    </div>
   );
 }
 

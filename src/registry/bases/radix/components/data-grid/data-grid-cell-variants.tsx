@@ -1831,14 +1831,6 @@ function usePendingChar({
   return { pendingCharRef, onPendingCharKeyDown };
 }
 
-function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
-  return event.shiftKey ? "shift+tab" : "tab";
-}
-
-function getOverlapOffset(rowHeight: RowHeightValue) {
-  return 1 - getRowHeightValue(rowHeight);
-}
-
 function onEditKeyDown(
   event: React.KeyboardEvent,
   save: (options: SaveOptions) => void,
@@ -1854,17 +1846,6 @@ function onEditKeyDown(
     event.preventDefault();
     cancel();
   }
-}
-
-function parseUrlText(text: string) {
-  return text.trim() || null;
-}
-
-function toastDangerousUrl() {
-  toast.error("Invalid URL", {
-    description:
-      "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
-  });
 }
 
 function onEditingChange<TData extends RowData>(
@@ -1894,4 +1875,23 @@ function onPopoverKeyDown<TData extends RowData>(
     return true;
   }
   return false;
+}
+
+function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
+  return event.shiftKey ? "shift+tab" : "tab";
+}
+
+function getOverlapOffset(rowHeight: RowHeightValue) {
+  return 1 - getRowHeightValue(rowHeight);
+}
+
+function parseUrlText(text: string) {
+  return text.trim() || null;
+}
+
+function toastDangerousUrl() {
+  toast.error("Invalid URL", {
+    description:
+      "URL contains a dangerous protocol (javascript:, data:, vbscript:, or file:)",
+  });
 }
