@@ -1,6 +1,12 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { act, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -557,6 +563,22 @@ describe("DataGrid rendering", () => {
     });
     expect(trickResizer.getAttribute("aria-valuemin")).toBe("60");
     expect(trickResizer.getAttribute("aria-valuemax")).toBe("800");
+  });
+
+  it("highlights a resize handle while its column resizes", async () => {
+    renderGrid();
+    const resizer = screen.getByRole("separator", {
+      name: "Resize Name column",
+    });
+
+    fireEvent.mouseDown(resizer, { clientX: 100 });
+    fireEvent.mouseMove(document, { clientX: 120 });
+    expect(resizer.classList.contains("bg-primary")).toBe(true);
+
+    fireEvent.mouseUp(document, { clientX: 120 });
+    await waitFor(() =>
+      expect(resizer.classList.contains("bg-primary")).toBe(false),
+    );
   });
 
   it("moves the focused header column with Shift+Arrow", () => {

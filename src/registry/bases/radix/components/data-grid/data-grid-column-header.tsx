@@ -53,12 +53,12 @@ export function DataGridColumnHeader<TData extends RowData, TValue>(
   return (
     <Subscribe
       source={props.table.atoms.columnResizing}
-      selector={(columnResizing) => !!columnResizing.isResizingColumn}
+      selector={(columnResizing) => columnResizing.isResizingColumn}
     >
-      {(isAnyColumnResizing) => (
+      {(resizingColumnId) => (
         <DataGridColumnHeaderContent
           {...props}
-          isAnyColumnResizing={isAnyColumnResizing}
+          resizingColumnId={resizingColumnId}
         />
       )}
     </Subscribe>
@@ -68,14 +68,15 @@ export function DataGridColumnHeader<TData extends RowData, TValue>(
 function DataGridColumnHeaderContent<TData extends RowData, TValue>({
   table,
   header,
-  isAnyColumnResizing,
+  resizingColumnId,
   onPointerDown,
   className,
   ...props
 }: DataGridColumnHeaderProps<TData, TValue> & {
-  isAnyColumnResizing: boolean;
+  resizingColumnId: string | false;
 }) {
   const column = header.column;
+  const isAnyColumnResizing = resizingColumnId !== false;
   const label = getColumnLabel(column);
 
   const meta = column.columnDef.meta;
@@ -141,7 +142,13 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
         </DropdownMenuContent>
       </DropdownMenu>
       {header.column.getCanResize() && (
-        <DataGridColumnResizer table={table} header={header} label={label} />
+        <DataGridColumnResizer
+          table={table}
+          header={header}
+          label={label}
+          isResizing={resizingColumnId === column.id}
+          isBeforePinned={getIsBeforePinned(header)}
+        />
       )}
     </>
   );
@@ -334,25 +341,24 @@ interface DataGridColumnResizerProps<
   TValue,
 > extends DataGridColumnHeaderProps<TData, TValue> {
   label: string;
+  isResizing: boolean;
+  isBeforePinned: boolean;
 }
 
 const DataGridColumnResizer = React.memo(
   DataGridColumnResizerImpl,
-  (prev, next) => {
-    const prevColumn = prev.header.column;
-    const nextColumn = next.header.column;
-    return (
-      prevColumn.getIsResizing() === nextColumn.getIsResizing() &&
-      prevColumn.getSize() === nextColumn.getSize() &&
-      prev.label === next.label
-    );
-  },
+  (prev, next) =>
+    prev.isResizing === next.isResizing &&
+    prev.isBeforePinned === next.isBeforePinned &&
+    prev.label === next.label,
 ) as typeof DataGridColumnResizerImpl;
 
 function DataGridColumnResizerImpl<TData extends RowData, TValue>({
   table,
   header,
   label,
+  isResizing,
+  isBeforePinned,
 }: DataGridColumnResizerProps<TData, TValue>) {
   const defaultColumnDef = table.getDefaultColumnDef();
   const minSize =
@@ -415,10 +421,11 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
       aria-valuemax={Number.isFinite(maxSize) ? maxSize : undefined}
       tabIndex={-1}
       className={cn(
-        "absolute -inset-e-px top-0 z-10 h-full w-0.5 cursor-ew-resize touch-none bg-border transition-opacity select-none after:absolute after:inset-y-0 after:inset-s-1/2 after:h-full after:w-4.5 after:-translate-x-1/2 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
-        header.column.getIsResizing()
-          ? "bg-primary"
-          : "opacity-0 hover:opacity-100",
+        "absolute top-0 h-full w-0.5 cursor-ew-resize touch-none bg-border transition-opacity select-none after:absolute after:inset-y-0 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
+        isBeforePinned
+          ? "inset-e-0 after:-inset-s-4 after:inset-e-0"
+          : "-inset-e-px after:-inset-x-2",
+        isResizing ? "z-30 bg-primary" : "z-10 opacity-0 hover:opacity-100",
       )}
       onMouseDown={onResizeStart}
       onTouchStart={onResizeStart}
@@ -467,4 +474,12 @@ function getBadgeColumnContentSize<TData extends RowData, TValue>(
   }
 
   return contentSize;
+}
+
+function getIsBeforePinned<TData extends RowData, TValue>(
+  header: Header<DataGridFeatures, TData, TValue>,
+) {
+  const headers = header.headerGroup?.headers ?? [];
+  const index = headers.findIndex((item) => item.id === header.id);
+  return !!headers[index + 1]?.column.getIsPinned();
 }
