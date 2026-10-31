@@ -88,6 +88,11 @@ export function ShortTextCell<TData extends RowData>(
   );
 }
 
+interface SaveOptions {
+  moveToNextRow?: boolean;
+  direction?: NavigationDirection;
+}
+
 export function LongTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
@@ -1638,6 +1643,12 @@ export function FileCell<TData extends RowData>(
   );
 }
 
+interface UseEditableTextOptions<
+  TData extends RowData,
+> extends DataGridCellProps<TData> {
+  parse?: (text: string) => string | null;
+}
+
 function useEditableText<TData extends RowData>({
   cell,
   isEditing,
@@ -1788,6 +1799,12 @@ function EditableText({
   );
 }
 
+interface UsePendingCharOptions {
+  isFocused: boolean;
+  isEditing: boolean;
+  readOnly: boolean;
+}
+
 function usePendingChar({
   isFocused,
   isEditing,
@@ -1878,21 +1895,4 @@ function onPopoverKeyDown<TData extends RowData>(
     return true;
   }
   return false;
-}
-
-interface SaveOptions {
-  moveToNextRow?: boolean;
-  direction?: NavigationDirection;
-}
-
-interface UsePendingCharOptions {
-  isFocused: boolean;
-  isEditing: boolean;
-  readOnly: boolean;
-}
-
-interface UseEditableTextOptions<
-  TData extends RowData,
-> extends DataGridCellProps<TData> {
-  parse?: (text: string) => string | null;
 }

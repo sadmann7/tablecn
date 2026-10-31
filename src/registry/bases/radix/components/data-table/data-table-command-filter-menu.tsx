@@ -398,6 +398,13 @@ function DataTableFilterItem<TData extends RowData>({
   );
 }
 
+interface FilterSelectorProps {
+  filter: ColumnFilterItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
+}
+
 interface FilterFieldSelectorProps<
   TData extends RowData,
 > extends FilterSelectorProps {
@@ -960,11 +967,4 @@ function ColumnLabel<TData extends RowData>({
       <span className="truncate">{columnMeta?.label ?? column.id}</span>
     </>
   );
-}
-
-interface FilterSelectorProps {
-  filter: ColumnFilterItem;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
 }

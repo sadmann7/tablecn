@@ -302,12 +302,49 @@ function getFilterVariant(meta: unknown): FilterVariant {
   return FILTER_VARIANTS.find((item) => item === variant) ?? "text";
 }
 
+interface FilteringColumn<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+> {
+  id: string;
+  columnDef: { meta?: unknown };
+  getFilterFn?: () => FilterFn<TFeatures, TData> | undefined;
+  getCanGlobalFilter?: () => boolean;
+}
+
+interface FilteringMembers<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+> {
+  atoms: {
+    columnFilters?: { get: () => ColumnFilter[] };
+    joinOperator?: { get: () => JoinOperator };
+    globalFilter?: { get: () => unknown };
+  };
+  options: { filterFromLeafRows?: boolean; maxLeafRowFilterDepth?: number };
+  getColumn: (
+    columnId: string,
+  ) => FilteringColumn<TFeatures, TData> | undefined;
+  getAllLeafColumns: () => FilteringColumn<TFeatures, TData>[];
+  getGlobalFilterFn?: () => FilterFn<TFeatures, TData> | undefined;
+  autoResetPageIndex?: () => void;
+}
+
+type FilteringInstance<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+> = FilteringMembers<TFeatures, TData> & Table<TFeatures, TData>;
+
 function asFilteringTable<
   TFeatures extends TableFeatures,
   TData extends RowData,
 >(table: Table<TFeatures, TData>) {
   return table as FilteringInstance<TFeatures, TData>;
 }
+
+type RowTest<TFeatures extends TableFeatures, TData extends RowData> = (
+  row: Row<TFeatures, TData>,
+) => boolean;
 
 function getFilteredRowModel<
   TFeatures extends TableFeatures,
@@ -555,40 +592,3 @@ function getFacetedRowModel<
     instance,
   );
 }
-
-type RowTest<TFeatures extends TableFeatures, TData extends RowData> = (
-  row: Row<TFeatures, TData>,
-) => boolean;
-
-interface FilteringColumn<
-  TFeatures extends TableFeatures,
-  TData extends RowData,
-> {
-  id: string;
-  columnDef: { meta?: unknown };
-  getFilterFn?: () => FilterFn<TFeatures, TData> | undefined;
-  getCanGlobalFilter?: () => boolean;
-}
-
-interface FilteringMembers<
-  TFeatures extends TableFeatures,
-  TData extends RowData,
-> {
-  atoms: {
-    columnFilters?: { get: () => ColumnFilter[] };
-    joinOperator?: { get: () => JoinOperator };
-    globalFilter?: { get: () => unknown };
-  };
-  options: { filterFromLeafRows?: boolean; maxLeafRowFilterDepth?: number };
-  getColumn: (
-    columnId: string,
-  ) => FilteringColumn<TFeatures, TData> | undefined;
-  getAllLeafColumns: () => FilteringColumn<TFeatures, TData>[];
-  getGlobalFilterFn?: () => FilterFn<TFeatures, TData> | undefined;
-  autoResetPageIndex?: () => void;
-}
-
-type FilteringInstance<
-  TFeatures extends TableFeatures,
-  TData extends RowData,
-> = FilteringMembers<TFeatures, TData> & Table<TFeatures, TData>;

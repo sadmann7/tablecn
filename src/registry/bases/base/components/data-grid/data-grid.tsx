@@ -114,6 +114,18 @@ const DataGridHeader = React.memo(
     prev.stretchColumns === next.stretchColumns,
 ) as typeof DataGridHeaderImpl;
 
+interface ViewportInsets {
+  start: number;
+  end: number;
+  headerHeight: number;
+}
+
+const EMPTY_VIEWPORT_INSETS: ViewportInsets = {
+  start: 0,
+  end: 0,
+  headerHeight: 0,
+};
+
 type DataGridViewportProps<TData extends RowData> = Pick<
   DataGridProps<TData>,
   | "table"
@@ -585,18 +597,6 @@ function DataGridActionBar<TData extends RowData>({
     </table.Subscribe>
   );
 }
-
-interface ViewportInsets {
-  start: number;
-  end: number;
-  headerHeight: number;
-}
-
-const EMPTY_VIEWPORT_INSETS: ViewportInsets = {
-  start: 0,
-  end: 0,
-  headerHeight: 0,
-};
 
 interface DataGridHeaderProps<TData extends RowData>
   extends

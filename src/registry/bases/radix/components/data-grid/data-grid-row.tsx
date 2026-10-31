@@ -98,6 +98,19 @@ function DataGridRowImpl<TData extends RowData>({
   );
 }
 
+interface RowState<TData extends RowData> {
+  visibleCells: Array<Cell<DataGridFeatures, TData>>;
+  columnSizing: TableState<DataGridFeatures>["columnSizing"];
+  rowHeight: RowHeightValue;
+  focusedColumnId: string | null;
+  editingColumnId: string | null;
+  cellSelectionKey: string;
+  searchMatchColumns: Set<string> | null;
+  activeSearchColumnId: string | null;
+  presenceColumns: Map<string, CellPresence> | null;
+  isRowSelected: boolean;
+}
+
 function selectRowState<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
   state: TableState<DataGridFeatures>,
@@ -380,17 +393,4 @@ function DataGridUtilityCellImpl<TData extends RowData>({
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </div>
   );
-}
-
-interface RowState<TData extends RowData> {
-  visibleCells: Array<Cell<DataGridFeatures, TData>>;
-  columnSizing: TableState<DataGridFeatures>["columnSizing"];
-  rowHeight: RowHeightValue;
-  focusedColumnId: string | null;
-  editingColumnId: string | null;
-  cellSelectionKey: string;
-  searchMatchColumns: Set<string> | null;
-  activeSearchColumnId: string | null;
-  presenceColumns: Map<string, CellPresence> | null;
-  isRowSelected: boolean;
 }

@@ -116,6 +116,19 @@ interface ResolvedSort {
   compareValues: SortFnDef<TableFeatures, RowData>["sort"] | null;
 }
 
+interface SortCache {
+  rows: Array<SortedRow>;
+  sorting: Array<{ id: string; desc: boolean }>;
+  order: Array<number>;
+  getIsTie: (a: number, b: number) => boolean;
+}
+
+interface SortCaches {
+  current: SortCache | null;
+  unfiltered: SortCache | null;
+  filtered: Pick<SortCache, "rows" | "sorting" | "order"> | null;
+}
+
 export function createDataGridSortedRowModel<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -530,6 +543,8 @@ function getValueSort(sortFn: SortedRowFn) {
     : null;
 }
 
+const MAX_RESORTED_SHARE = 1 / 8;
+
 function getUpdatedUnfilteredCache(
   table: Table<TableFeatures, RowData>,
   cache: SortCache,
@@ -556,7 +571,6 @@ function getUpdatedUnfilteredCache(
     const previousRow = cache.rows[index];
     if (row === previousRow) continue;
     if (!row || !previousRow || row.id !== previousRow.id) return null;
-    // A row patched in place already reads its new values, so it counts as changed
     const isChanged =
       patchedRows.has(previousRow) ||
       readValues.some(
@@ -568,7 +582,6 @@ function getUpdatedUnfilteredCache(
   }
   if (changed.length === 0) return { ...cache, rows };
 
-  // The cache may be sorted the other way, which the caller flips afterwards
   const cachedSorting = sorting.map((sort, index) => ({
     ...sort,
     desc: cache.sorting[index]?.desc ?? sort.desc,
@@ -753,18 +766,3 @@ function getIsDigit(code: number) {
 function compareBasic(a: unknown, b: unknown) {
   return a === b ? 0 : (a as number) > (b as number) ? 1 : -1;
 }
-
-interface SortCache {
-  rows: Array<SortedRow>;
-  sorting: Array<{ id: string; desc: boolean }>;
-  order: Array<number>;
-  getIsTie: (a: number, b: number) => boolean;
-}
-
-interface SortCaches {
-  current: SortCache | null;
-  unfiltered: SortCache | null;
-  filtered: Pick<SortCache, "rows" | "sorting" | "order"> | null;
-}
-
-const MAX_RESORTED_SHARE = 1 / 8;

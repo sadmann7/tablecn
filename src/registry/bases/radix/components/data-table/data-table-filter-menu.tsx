@@ -457,6 +457,13 @@ function FilterJoinOperator({
   );
 }
 
+interface FilterSelectorProps {
+  filter: ColumnFilterItem;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
+}
+
 interface FilterFieldSelectorProps<
   TData extends RowData,
 > extends FilterSelectorProps {
@@ -824,11 +831,4 @@ function DateFilterValue<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
-}
-
-interface FilterSelectorProps {
-  filter: ColumnFilterItem;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onFilterUpdate: (filterId: string, updates: FilterUpdate) => void;
 }

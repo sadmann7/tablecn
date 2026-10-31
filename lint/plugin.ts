@@ -10,6 +10,7 @@ interface Node {
   computed?: boolean;
   declaration?: Node | null;
   declarations?: Node[];
+  init?: Node | null;
   specifiers?: { local: Node }[];
 }
 
@@ -66,16 +67,15 @@ const helpersBelowFirstUse = {
     const { body } = context.sourceCode.ast;
     const exported = getExportedNames(body);
     const helpers = new Map<string, Node>();
-    const stateNames = new Set<string>();
+    const declaredNames = new Set<string>();
     for (const statement of body) {
       const name = getHelperName(statement);
       if (name && !exported.has(name)) helpers.set(name, statement);
       for (const stateName of getStateNames(statement) ?? []) {
-        if (!exported.has(stateName)) stateNames.add(stateName);
+        if (!exported.has(stateName)) declaredNames.add(stateName);
       }
-      const typeName = TYPE_TYPES.has(statement.type) ? statement.id?.name : "";
-      if (typeof typeName === "string" && typeName.endsWith("Props")) {
-        stateNames.add(typeName);
+      for (const hoistedName of getHoistedNames(statement)) {
+        declaredNames.add(hoistedName);
       }
     }
     const references = new Map<string, Node[]>();
@@ -83,7 +83,7 @@ const helpersBelowFirstUse = {
     function onIdentifier(node: Node) {
       const { name } = node;
       if (typeof name !== "string") return;
-      if (!helpers.has(name) && !stateNames.has(name)) return;
+      if (!helpers.has(name) && !declaredNames.has(name)) return;
       if (!getIsReference(node)) return;
       const helper = helpers.get(name);
       if (helper && getIsInside(node, helper)) return;
@@ -99,27 +99,21 @@ const helpersBelowFirstUse = {
         const layout = getLayout(context, helpers, references);
         const fix = () => getReorderFix(context, layout);
 
-        for (const unit of layout.units) {
+        for (const unit of getMisplaced(layout.units, layout)) {
           const node = unit.statements.at(-1);
           if (!node) continue;
-          const anchor = layout.anchors.get(unit);
-          if (unit.helper && anchor && unit.start < anchor.end) {
-            context.report({
-              node,
-              message: `Move \`${unit.helper}\` below its first use.`,
-              fix,
-            });
-          }
           const owner = layout.owners.get(unit);
-          if (owner && !getIsRightAbove(layout, unit, owner)) {
-            context.report({
-              node,
-              message: unit.isType
-                ? `Move \`${String(unit.statements[0]?.id?.name)}\` right above \`${getDeclaredNames(owner)[0] ?? ""}\`, which it types.`
-                : `Move \`${unit.stateNames?.join("`, `")}\` right above \`${owner.helper}\`, the only code using it.`,
-              fix,
-            });
-          }
+          context.report({
+            node,
+            message: !owner
+              ? `Move \`${unit.helper ?? ""}\` below its first use.`
+              : layout.hoisted.has(unit)
+                ? `Move \`${getUnitName(unit)}\` above \`${getUnitName(owner)}\`, its first use.`
+                : unit.isType
+                  ? `Move \`${getDeclaredTypeName(unit)}\` right above \`${getDeclaredNames(owner)[0] ?? ""}\`, which it types.`
+                  : `Move \`${unit.stateNames?.join("`, `")}\` right above \`${owner.helper}\`, the only code using it.`,
+            fix,
+          });
         }
       },
     };
@@ -131,11 +125,15 @@ interface Layout {
   // Where each helper must come after: its first user, or the end of the run of
   // exports that user is in
   anchors: Map<Unit, Unit>;
-  // The helper that alone uses a unit of module state
+  // The helper that alone uses a unit of module state, or the first user of a
+  // type or constant declared below it
   owners: Map<Unit, Unit>;
+  hoisted: Set<Unit>;
   // The whole file in top-down order
   order: Unit[];
 }
+
+type Rules = Omit<Layout, "order">;
 
 function getLayout(
   context: Context,
@@ -226,6 +224,11 @@ function getLayout(
     if (owner && owner !== unit) owners.set(unit, owner);
   }
 
+  // A type or constant declared below its first use moves above it. A use from
+  // another moving declaration counts from where that one lands
+  const hoisted = getHoisted(units, owners, references, getUser);
+  for (const [unit, user] of hoisted) owners.set(unit, user);
+
   const anchors = new Map<Unit, Unit>();
   for (const unit of units) {
     const firstUse = firstUses.get(unit);
@@ -234,21 +237,127 @@ function getLayout(
     anchors.set(unit, user.isExported ? getRunEnd(units, user, owners) : user);
   }
 
-  const order = getOrder(units, anchors, owners, firstUses);
-  return { units, anchors, owners, order };
+  const layout = { units, anchors, owners, hoisted: new Set(hoisted.keys()) };
+  return { ...layout, order: getOrder(layout, firstUses) };
 }
 
-function getOrder(
+function getHoisted(
   units: Unit[],
-  anchors: Map<Unit, Unit>,
   owners: Map<Unit, Unit>,
-  firstUses: Map<Unit, Node>,
+  references: Map<string, Node[]>,
+  getUser: (node: Node) => Unit | undefined,
 ) {
+  const hoisted = new Map<Unit, Unit>();
+  const getPosition = (unit: Unit, seen = new Set<Unit>()): number => {
+    const target = hoisted.get(unit);
+    if (!target || seen.has(unit)) return units.indexOf(unit);
+    seen.add(unit);
+    return getPosition(target, seen) - 0.5;
+  };
+  const candidates = units.filter(
+    (unit) => !owners.has(unit) && getIsDeclaration(unit),
+  );
+  for (let pass = 0; pass < units.length; pass++) {
+    let isChanged = false;
+    for (const unit of candidates) {
+      const statement = unit.statements[0];
+      if (!statement) continue;
+      const index = units.indexOf(unit);
+      let first: Unit | undefined;
+      for (const name of getHoistedNames(statement)) {
+        for (const node of references.get(name) ?? []) {
+          const user = getUser(node);
+          if (!user || user === unit) continue;
+          if (!first || getPosition(user) < getPosition(first)) first = user;
+        }
+      }
+      const target =
+        first &&
+        getPosition(first) < index &&
+        !getIsReadingBetween(units, unit, first)
+          ? first
+          : undefined;
+      if (target === hoisted.get(unit)) continue;
+      if (target) hoisted.set(unit, target);
+      else hoisted.delete(unit);
+      isChanged = true;
+    }
+    if (!isChanged) break;
+  }
+  return hoisted;
+}
+
+// A constant can't move above declarations its own value reads
+function getIsReadingBetween(units: Unit[], unit: Unit, target: Unit) {
+  if (unit.isType) return false;
+  const statement = unit.statements[0];
+  if (!statement) return false;
+  const start = Math.max(0, units.indexOf(target));
+  const names = units
+    .slice(start, units.indexOf(unit))
+    .flatMap((other) => [
+      ...getDeclaredNames(other),
+      ...(other.statements[0] ? getHoistedNames(other.statements[0]) : []),
+    ]);
+  const read = new Set<string>();
+  for (const declarator of statement.declarations ?? []) {
+    if (declarator.init) collectIdentifiers(declarator.init, read);
+  }
+  return names.some((name) => read.has(name));
+}
+
+function collectIdentifiers(node: Node, names: Set<string>) {
+  if (node.type === "Identifier" && typeof node.name === "string") {
+    names.add(node.name);
+  }
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "parent") continue;
+    for (const child of Array.isArray(value) ? value : [value]) {
+      if (child && typeof child === "object" && "type" in child) {
+        collectIdentifiers(child as Node, names);
+      }
+    }
+  }
+}
+
+// Moves only what breaks the order, and then whatever that move strands, so a
+// fix leaves the rest of the file as it was
+function getOrder(rules: Rules, firstUses: Map<Unit, Node>) {
+  const movable = new Set<Unit>();
+  let order = rules.units;
+  for (let pass = 0; pass <= rules.units.length; pass++) {
+    const misplaced = getMisplaced(order, rules).filter(
+      (unit) => !movable.has(unit),
+    );
+    if (misplaced.length === 0) break;
+    for (const unit of misplaced) movable.add(unit);
+    order = getPlacedOrder(rules, firstUses, movable);
+  }
+  return order;
+}
+
+function getMisplaced(order: Unit[], rules: Rules) {
+  const { anchors, owners, hoisted } = rules;
+  return order.filter((unit) => {
+    const anchor = anchors.get(unit);
+    if (anchor) return order.indexOf(unit) < order.indexOf(anchor);
+    const owner = owners.get(unit);
+    if (!owner) return false;
+    if (hoisted.has(unit)) return order.indexOf(unit) > order.indexOf(owner);
+    return !getIsRightAbove(order, owners, unit, owner);
+  });
+}
+
+function getPlacedOrder(
+  rules: Rules,
+  firstUses: Map<Unit, Node>,
+  movable: Set<Unit>,
+) {
+  const { units, anchors, owners } = rules;
   const children = new Map<Unit, Unit[]>();
   const states = new Map<Unit, Unit[]>();
-  const movable = new Set<Unit>();
   for (const [unit, anchor] of anchors) {
-    movable.add(unit);
+    if (!movable.has(unit)) continue;
     const list = children.get(anchor) ?? [];
     list.push(unit);
     children.set(anchor, list);
@@ -260,7 +369,7 @@ function getOrder(
     );
   }
   for (const [state, owner] of owners) {
-    movable.add(state);
+    if (!movable.has(state)) continue;
     const list = states.get(owner) ?? [];
     list.push(state);
     states.set(owner, list);
@@ -270,17 +379,18 @@ function getOrder(
   for (;;) {
     order = [];
     const placed = new Set<Unit>();
+    const placeState = (state: Unit) => {
+      if (placed.has(state)) return;
+      placed.add(state);
+      for (const other of states.get(state) ?? []) placeState(other);
+      order.push(state);
+    };
     const place = (unit: Unit) => {
       if (placed.has(unit)) return;
       placed.add(unit);
-      for (const state of states.get(unit) ?? []) {
-        placed.add(state);
-        order.push(state);
-      }
+      for (const state of states.get(unit) ?? []) placeState(state);
       order.push(unit);
-      for (const child of children.get(unit) ?? []) {
-        if (movable.has(child)) place(child);
-      }
+      for (const child of children.get(unit) ?? []) place(child);
     };
     for (const unit of units) {
       if (!movable.has(unit)) place(unit);
@@ -313,12 +423,41 @@ function getRunEnd(units: Unit[], user: Unit, owners: Map<Unit, Unit>) {
   return end;
 }
 
-function getIsRightAbove(layout: Layout, state: Unit, owner: Unit) {
-  const { units, owners } = layout;
-  for (let index = units.indexOf(state) + 1; index < units.length; index++) {
-    const unit = units[index];
+function getIsRightAbove(
+  order: Unit[],
+  owners: Map<Unit, Unit>,
+  state: Unit,
+  owner: Unit,
+) {
+  for (let index = order.indexOf(state) + 1; index < order.length; index++) {
+    const unit = order[index];
     if (unit === owner) return true;
-    if (!unit || owners.get(unit) !== owner) return false;
+    if (!unit) return false;
+    if (!getIsOwnedBy(owners, unit, owner) && !getIsDeclaration(unit)) {
+      return false;
+    }
+  }
+  return false;
+}
+
+// Types and constants can sit between state and its helper
+function getIsDeclaration(unit: Unit) {
+  const statement = unit.statements[0];
+  return (
+    !unit.isExported &&
+    unit.statements.length === 1 &&
+    statement !== undefined &&
+    getHoistedNames(statement).length > 0
+  );
+}
+
+// Through a chain, like a type above the constant it types
+function getIsOwnedBy(owners: Map<Unit, Unit>, unit: Unit, owner: Unit) {
+  const seen = new Set<Unit>();
+  for (let next = owners.get(unit); next; next = owners.get(next)) {
+    if (next === owner) return true;
+    if (seen.has(next)) return false;
+    seen.add(next);
   }
   return false;
 }
@@ -382,6 +521,31 @@ function getUnits(context: Context, helpers: Map<string, Node>) {
     index += statements.length - 1;
   }
   return units;
+}
+
+function getUnitName(unit: Unit) {
+  return unit.helper ?? getDeclaredNames(unit)[0] ?? getDeclaredTypeName(unit);
+}
+
+// Types and SCREAMING_CASE constants that aren't exported
+function getHoistedNames(statement: Node) {
+  if (TYPE_TYPES.has(statement.type)) {
+    const name = statement.id?.name;
+    return typeof name === "string" ? [name] : [];
+  }
+  if (statement.type !== "VariableDeclaration") return [];
+  const names: string[] = [];
+  for (const declarator of statement.declarations ?? []) {
+    const name = declarator.id?.type === "Identifier" ? declarator.id.name : "";
+    if (typeof name !== "string" || !CONSTANT_NAME.test(name)) return [];
+    names.push(name);
+  }
+  return names;
+}
+
+function getDeclaredTypeName(unit: Unit) {
+  const name = unit.statements[0]?.id?.name;
+  return typeof name === "string" ? name : "";
 }
 
 function getDeclaredNames(unit: Unit) {

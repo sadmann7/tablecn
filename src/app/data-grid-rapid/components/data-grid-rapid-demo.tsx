@@ -54,6 +54,12 @@ const MAX_TICKS_PER_FRAME = 4;
 
 type Flow = "cells" | "data";
 
+interface OptionSelectOption<TValue extends string | number> {
+  value: TValue;
+  label: React.ReactNode;
+  description?: string;
+}
+
 const FLOW_OPTIONS = [
   {
     value: "cells",
@@ -120,12 +126,6 @@ const MAX_VOLUME_LOG = Math.log10(5_000_000);
 interface MarketBreadth {
   advancing: number;
   declining: number;
-}
-
-interface OptionSelectOption<TValue extends string | number> {
-  value: TValue;
-  label: React.ReactNode;
-  description?: string;
 }
 
 interface FrameStats {
