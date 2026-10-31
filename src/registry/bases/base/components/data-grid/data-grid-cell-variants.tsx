@@ -1889,7 +1889,7 @@ function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
 
 const getOverlapOffset: PopoverPrimitive.Positioner.Props["sideOffset"] = ({
   anchor,
-}) => -anchor.height;
+}) => -anchor.height; // cell height
 
 function parseUrlText(text: string) {
   return text.trim() || null;

@@ -1882,7 +1882,7 @@ function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
 }
 
 function getOverlapOffset(rowHeight: RowHeightValue) {
-  return 1 - getRowHeightValue(rowHeight);
+  return 1 - getRowHeightValue(rowHeight); // bottom border - row height
 }
 
 function parseUrlText(text: string) {
