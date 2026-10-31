@@ -5,6 +5,7 @@ import {
   type RowData,
   Subscribe,
   type Table,
+  type TableState,
 } from "@tanstack/react-table";
 import { CheckCircle2, Copy, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
@@ -43,13 +44,7 @@ export function SkatersDataGridActionBar<TData extends RowData>(
   props: SkatersDataGridActionBarProps<TData>,
 ) {
   return (
-    <Subscribe
-      source={props.table.store}
-      selector={(state) => ({
-        rowSelection: state.rowSelection,
-        cellSelection: state.cellSelection,
-      })}
-    >
+    <Subscribe source={props.table.store} selector={selectSelectionState}>
       {() => <SkatersDataGridActionBarImpl {...props} />}
     </Subscribe>
   );
@@ -179,4 +174,11 @@ function getTargetRows<TData extends RowData>(
 
   const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
   return table.getRowModel().rows.filter((row) => rowIds.has(row.id));
+}
+
+function selectSelectionState(state: TableState<DataGridFeatures>) {
+  return {
+    rowSelection: state.rowSelection,
+    cellSelection: state.cellSelection,
+  };
 }

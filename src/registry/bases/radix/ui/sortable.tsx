@@ -120,6 +120,9 @@ function Sortable<T>(props: SortableProps<T>) {
     flatCursor = false,
     getItemValue: getItemValueProp,
     accessibility,
+    onDragStart: onDragStartProp,
+    onDragEnd: onDragEndProp,
+    onDragCancel: onDragCancelProp,
     ...sortableProps
   } = props;
 
@@ -158,23 +161,23 @@ function Sortable<T>(props: SortableProps<T>) {
 
   const onDragStart = React.useCallback(
     (event: DragStartEvent) => {
-      sortableProps.onDragStart?.(event);
+      onDragStartProp?.(event);
 
       if (event.activatorEvent.defaultPrevented) return;
 
       setActiveId(event.active.id);
     },
-    [sortableProps.onDragStart],
+    [onDragStartProp],
   );
 
   const onDragEnd = React.useCallback(
     (event: DragEndEvent) => {
-      sortableProps.onDragEnd?.(event);
+      onDragEndProp?.(event);
 
       if (event.activatorEvent.defaultPrevented) return;
 
       const { active, over } = event;
-      if (over && active.id !== over?.id) {
+      if (over && active.id !== over.id) {
         const activeIndex = value.findIndex(
           (item) => getItemValue(item) === active.id,
         );
@@ -190,18 +193,18 @@ function Sortable<T>(props: SortableProps<T>) {
       }
       setActiveId(null);
     },
-    [value, onValueChange, onMove, getItemValue, sortableProps.onDragEnd],
+    [value, onValueChange, onMove, getItemValue, onDragEndProp],
   );
 
   const onDragCancel = React.useCallback(
     (event: DragEndEvent) => {
-      sortableProps.onDragCancel?.(event);
+      onDragCancelProp?.(event);
 
       if (event.activatorEvent.defaultPrevented) return;
 
       setActiveId(null);
     },
-    [sortableProps.onDragCancel],
+    [onDragCancelProp],
   );
 
   const announcements: Announcements = React.useMemo(
@@ -386,6 +389,7 @@ function SortableItem(props: SortableItemProps) {
     disabled,
     className,
     ref,
+    id: idProp,
     ...itemProps
   } = props;
 
@@ -404,7 +408,7 @@ function SortableItem(props: SortableItemProps) {
 
   const context = useSortableContext(ITEM_NAME);
   const instanceId = React.useId();
-  const id = itemProps.id ?? instanceId;
+  const id = idProp ?? instanceId;
 
   const {
     attributes,
@@ -558,8 +562,7 @@ function SortableOverlay(props: SortableOverlayProps) {
 
   useLayoutEffect(() => setMounted(true), []);
 
-  const container =
-    containerProp ?? (mounted ? globalThis.document?.body : null);
+  const container = containerProp ?? (mounted ? document.body : null);
 
   if (!container) return null;
 

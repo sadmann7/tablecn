@@ -49,14 +49,6 @@ interface DataGridRowContextValue {
 export const DataGridRowContext =
   React.createContext<DataGridRowContextValue | null>(null);
 
-function useDataGridRowContext() {
-  const context = React.use(DataGridRowContext);
-  if (!context) {
-    throw new Error("`DataGridRow` must be rendered within `DataGrid`");
-  }
-  return context;
-}
-
 interface DataGridRowProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -85,6 +77,8 @@ function DataGridRowImpl<TData extends RowData>({
   virtualItem,
   ...props
 }: DataGridRowProps<TData>) {
+  // Re-renders on `leafColumns` changes so the selector re-reads the row's cells
+  "use no memo";
   const table = row.table;
   const rowIndex = virtualItem.index;
 
@@ -102,6 +96,65 @@ function DataGridRowImpl<TData extends RowData>({
       )}
     </Subscribe>
   );
+}
+
+interface RowState<TData extends RowData> {
+  visibleCells: Array<Cell<DataGridFeatures, TData>>;
+  columnSizing: TableState<DataGridFeatures>["columnSizing"];
+  rowHeight: RowHeightValue;
+  focusedColumnId: string | null;
+  editingColumnId: string | null;
+  cellSelectionKey: string;
+  searchMatchColumns: Set<string> | null;
+  activeSearchColumnId: string | null;
+  presenceColumns: Map<string, CellPresence> | null;
+  isRowSelected: boolean;
+}
+
+function selectRowState<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  state: TableState<DataGridFeatures>,
+  row: Row<DataGridFeatures, TData>,
+  rowIndex: number,
+): RowState<TData> {
+  const rowId = row.id;
+  const activeRange = state.cellSelection[state.cellSelection.length - 1];
+  const editingCell = state.editingCell;
+  const activeSearchMatch = table.getActiveSearchMatch();
+  const cellSelectionBounds =
+    table.options.enableSingleCellSelection || table.getHasCellRangeSelection()
+      ? table.getCellSelectionBounds()
+      : EMPTY_CELL_SELECTION_BOUNDS;
+  const isRowSelected = !!state.rowSelection[rowId];
+  const currentRow = table.getRowModel().rows[rowIndex];
+
+  return {
+    visibleCells: (currentRow?.id === rowId
+      ? currentRow
+      : row
+    ).getVisibleCells(),
+    columnSizing: state.columnSizing,
+    rowHeight: state.rowHeight,
+    focusedColumnId:
+      state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId
+        ? activeRange.anchorColumnId
+        : null,
+    editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
+    cellSelectionKey:
+      !isRowSelected && getHasKeys(state.rowSelection)
+        ? ""
+        : getRowCellSelectionKey(cellSelectionBounds, rowIndex),
+    searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
+    activeSearchColumnId:
+      activeSearchMatch?.rowId === rowId ? activeSearchMatch.columnId : null,
+    presenceColumns: table.getCellPresenceByRowId().get(rowId) ?? null,
+    isRowSelected,
+  };
+}
+
+function getHasKeys(object: object) {
+  for (const _ in object) return true;
+  return false;
 }
 
 interface DataGridRowContentProps<TData extends RowData> extends Omit<
@@ -138,12 +191,10 @@ function DataGridRowContent<TData extends RowData>({
 
   const onRowChange = React.useCallback(
     (node: HTMLDivElement | null) => {
-      if (typeof virtualRowIndex === "undefined") return;
-
       if (node) {
-        rowMapRef.current?.set(virtualRowIndex, node);
+        rowMapRef.current.set(virtualRowIndex, node);
       } else {
-        rowMapRef.current?.delete(virtualRowIndex);
+        rowMapRef.current.delete(virtualRowIndex);
       }
     },
     [virtualRowIndex, rowMapRef],
@@ -254,6 +305,14 @@ function DataGridRowContent<TData extends RowData>({
   );
 }
 
+function useDataGridRowContext() {
+  const context = React.use(DataGridRowContext);
+  if (!context) {
+    throw new Error("`DataGridRow` must be rendered within `DataGrid`");
+  }
+  return context;
+}
+
 interface DataGridUtilityCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
   columnIndex: number;
@@ -283,6 +342,8 @@ function DataGridUtilityCellImpl<TData extends RowData>({
   showStartBorder,
   showEndBorder,
 }: DataGridUtilityCellProps<TData>) {
+  // Utility renderers read row state, like selection, through the stable `cell`
+  "use no memo";
   const onFocus = React.useCallback(() => {
     const { table, row, column } = cell;
     const ranges = table.atoms.cellSelection.get();
@@ -318,7 +379,7 @@ function DataGridUtilityCellImpl<TData extends RowData>({
       data-focused={isFocused ? "" : undefined}
       tabIndex={-1}
       onFocus={onFocus}
-      className={cn("h-full px-3 py-1.5 outline-none", {
+      className={cn("h-full px-3 pt-1.75 pb-2 outline-none", {
         grow,
         "border-s": showStartBorder,
         "border-e": showEndBorder,
@@ -332,63 +393,4 @@ function DataGridUtilityCellImpl<TData extends RowData>({
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </div>
   );
-}
-
-interface RowState<TData extends RowData> {
-  visibleCells: Array<Cell<DataGridFeatures, TData>>;
-  columnSizing: TableState<DataGridFeatures>["columnSizing"];
-  rowHeight: RowHeightValue;
-  focusedColumnId: string | null;
-  editingColumnId: string | null;
-  cellSelectionKey: string;
-  searchMatchColumns: Set<string> | null;
-  activeSearchColumnId: string | null;
-  presenceColumns: Map<string, CellPresence> | null;
-  isRowSelected: boolean;
-}
-
-function selectRowState<TData extends RowData>(
-  table: Table<DataGridFeatures, TData>,
-  state: TableState<DataGridFeatures>,
-  row: Row<DataGridFeatures, TData>,
-  rowIndex: number,
-): RowState<TData> {
-  const rowId = row.id;
-  const activeRange = state.cellSelection[state.cellSelection.length - 1];
-  const editingCell = state.editingCell;
-  const activeSearchMatch = table.getActiveSearchMatch();
-  const cellSelectionBounds =
-    table.options.enableSingleCellSelection || table.getHasCellRangeSelection()
-      ? table.getCellSelectionBounds()
-      : EMPTY_CELL_SELECTION_BOUNDS;
-  const isRowSelected = !!state.rowSelection[rowId];
-  const currentRow = table.getRowModel().rows[rowIndex];
-
-  return {
-    visibleCells: (currentRow?.id === rowId
-      ? currentRow
-      : row
-    ).getVisibleCells(),
-    columnSizing: state.columnSizing,
-    rowHeight: state.rowHeight,
-    focusedColumnId:
-      state.focusedHeaderColumnId === null && activeRange?.anchorRowId === rowId
-        ? activeRange.anchorColumnId
-        : null,
-    editingColumnId: editingCell?.rowId === rowId ? editingCell.columnId : null,
-    cellSelectionKey:
-      !isRowSelected && getHasKeys(state.rowSelection)
-        ? ""
-        : getRowCellSelectionKey(cellSelectionBounds, rowIndex),
-    searchMatchColumns: table.getSearchMatchesByRowId().get(rowId) ?? null,
-    activeSearchColumnId:
-      activeSearchMatch?.rowId === rowId ? activeSearchMatch.columnId : null,
-    presenceColumns: table.getCellPresenceByRowId().get(rowId) ?? null,
-    isRowSelected,
-  };
-}
-
-function getHasKeys(object: object) {
-  for (const _ in object) return true;
-  return false;
 }

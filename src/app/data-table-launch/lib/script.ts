@@ -5,7 +5,12 @@ import type { DataMode, FilterMode } from "@/lib/flag";
 
 import { coerceFilterValue } from "@/lib/data-table-utils";
 
-import type { LaunchDirector } from "../components/launch-director";
+import type { DataTableLaunchDirector } from "../components/data-table-launch-director";
+import type {
+  DataTableLaunchDemoAction,
+  DataTableLaunchServerAction,
+  DataTableLaunchTable,
+} from "./state";
 
 import {
   closeAllMenus,
@@ -26,13 +31,8 @@ import {
   replaceUrl,
   typeCommand,
 } from "./dom";
-import {
-  type LaunchDemoAction,
-  type LaunchServerAction,
-  type LaunchTable,
-} from "./state";
 
-export type LaunchSceneId =
+export type DataTableLaunchSceneId =
   | "intro"
   | "columns"
   | "server"
@@ -42,7 +42,7 @@ export type LaunchSceneId =
   | "command"
   | "outro";
 
-export interface LaunchStoryContent {
+export interface DataTableLaunchStoryContent {
   eyebrow: string;
   title: string;
   description: string;
@@ -50,25 +50,25 @@ export interface LaunchStoryContent {
   highlightedLines: number[];
 }
 
-export interface LaunchStepContext {
-  table: LaunchTable;
-  director: LaunchDirector;
-  dispatchDemo: React.Dispatch<LaunchDemoAction>;
-  dispatchServer: React.Dispatch<LaunchServerAction>;
+export interface DataTableLaunchStepContext {
+  table: DataTableLaunchTable;
+  director: DataTableLaunchDirector;
+  dispatchDemo: React.Dispatch<DataTableLaunchDemoAction>;
+  dispatchServer: React.Dispatch<DataTableLaunchServerAction>;
 }
 
-type LaunchStepRun = (context: LaunchStepContext) => void;
+type DataTableLaunchStepRun = (context: DataTableLaunchStepContext) => void;
 
-export interface LaunchStep {
+export interface DataTableLaunchStep {
   at: number;
-  run: LaunchStepRun;
+  run: DataTableLaunchStepRun;
 }
 
-interface LaunchSceneScript {
-  id: LaunchSceneId;
+interface DataTableLaunchSceneScript {
+  id: DataTableLaunchSceneId;
   duration: number;
-  story?: LaunchStoryContent;
-  steps: LaunchStep[];
+  story?: DataTableLaunchStoryContent;
+  steps: DataTableLaunchStep[];
 }
 
 export const FILTER_SHORTCUT_KEYS = ["⌘", "⇧", "F"];
@@ -119,7 +119,7 @@ const FILTER_CODE = [
   "<DataTableCommandFilterMenu /> // command",
 ];
 
-const SCRIPT: LaunchSceneScript[] = [
+const SCRIPT: DataTableLaunchSceneScript[] = [
   {
     id: "intro",
     duration: 3200,
@@ -352,7 +352,7 @@ const SCRIPT: LaunchSceneScript[] = [
   },
 ];
 
-export interface LaunchScene extends LaunchSceneScript {
+export interface DataTableLaunchScene extends DataTableLaunchSceneScript {
   start: number;
 }
 
@@ -363,7 +363,7 @@ export const LAUNCH_DURATION = SCRIPT.reduce(
   0,
 );
 
-export const LAUNCH_STEPS: LaunchStep[] = SCENES.flatMap((scene) =>
+export const LAUNCH_STEPS: DataTableLaunchStep[] = SCENES.flatMap((scene) =>
   scene.steps.map((step) => ({ at: scene.start + step.at, run: step.run })),
 );
 
@@ -377,7 +377,9 @@ export function getSceneIndex(elapsed: number) {
   return index;
 }
 
-function getTimedScenes(script: LaunchSceneScript[]): LaunchScene[] {
+function getTimedScenes(
+  script: DataTableLaunchSceneScript[],
+): DataTableLaunchScene[] {
   let start = 0;
 
   return script.map((scene) => {
@@ -391,7 +393,7 @@ function resetDemo({
   director,
   dispatchDemo,
   dispatchServer,
-}: LaunchStepContext) {
+}: DataTableLaunchStepContext) {
   closeAllMenus();
   director.reset();
   replaceUrl("");
@@ -399,50 +401,53 @@ function resetDemo({
   dispatchServer({ type: "reset" });
 }
 
-function openFilterMenu({ dispatchDemo }: LaunchStepContext) {
+function openFilterMenu({ dispatchDemo }: DataTableLaunchStepContext) {
   if (getIsPopoverOpen()) return;
 
   dispatchDemo({ type: "keystroke" });
   pressFilterShortcut();
 }
 
-function showColumns(columnCount: number): LaunchStepRun {
+function showColumns(columnCount: number): DataTableLaunchStepRun {
   return ({ dispatchDemo }) =>
     dispatchDemo({ type: "columnCount", columnCount });
 }
 
-function setDataMode(dataMode: DataMode): LaunchStepRun {
+function setDataMode(dataMode: DataMode): DataTableLaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "dataMode", dataMode });
 }
 
-function setFilterMode(filterMode: FilterMode): LaunchStepRun {
+function setFilterMode(filterMode: FilterMode): DataTableLaunchStepRun {
   return ({ dispatchDemo }) => dispatchDemo({ type: "filterMode", filterMode });
 }
 
 function clickSteps<TTarget extends Element>(
   at: number,
   getTarget: () => TTarget | null | undefined,
-  act: (target: TTarget | null | undefined, context: LaunchStepContext) => void,
-): LaunchStep[] {
+  act: (
+    target: TTarget | null | undefined,
+    context: DataTableLaunchStepContext,
+  ) => void,
+): DataTableLaunchStep[] {
   return [
     { at, run: ({ director }) => director.click(getTarget()) },
     { at: at + PRESS_MS, run: (context) => act(getTarget(), context) },
   ];
 }
 
-function urlSteps(at: number, search: string): LaunchStep[] {
+function urlSteps(at: number, search: string): DataTableLaunchStep[] {
   return [{ at, run: () => replaceUrl(search) }];
 }
 
-function typeCommandStep(value: string): LaunchStepRun {
+function typeCommandStep(value: string): DataTableLaunchStepRun {
   return () => typeCommand(value);
 }
 
 function typeSteps(
   at: number,
   values: string[],
-  createRun: (value: string) => LaunchStepRun,
-): LaunchStep[] {
+  createRun: (value: string) => DataTableLaunchStepRun,
+): DataTableLaunchStep[] {
   return values.map((value, index) => ({
     at: at + index * TYPING_INTERVAL,
     run: createRun(value),
@@ -450,7 +455,7 @@ function typeSteps(
 }
 
 function setFilterValue(
-  table: LaunchTable,
+  table: DataTableLaunchTable,
   columnId: string,
   value: string | string[],
 ) {
@@ -463,7 +468,7 @@ function setFilterValue(
 }
 
 function setFilterOperator(
-  table: LaunchTable,
+  table: DataTableLaunchTable,
   columnId: string,
   operator: FilterOperator,
 ) {

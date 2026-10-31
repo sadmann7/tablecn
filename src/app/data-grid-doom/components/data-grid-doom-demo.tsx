@@ -61,7 +61,6 @@ import {
 import {
   type DoomParams,
   getResolutionLabel,
-  NATIVE_RESOLUTION,
   RESOLUTIONS,
 } from "../lib/params";
 import { DataGridDoomLoading } from "./data-grid-doom-skeleton";
@@ -77,10 +76,6 @@ const GRID_MAX_COLUMN_COUNT = 192;
 // to spare. The few ms of slack let every 2nd frame at 60Hz, or 4th at 120Hz, qualify
 const FRAME_INTERVAL_MS = 1000 / 30 - 4;
 const MUTED_STORAGE_KEY = "data-grid-doom-muted";
-
-function writePixel(element: HTMLElement, value: unknown) {
-  element.style.backgroundColor = getHexColor(value as number);
-}
 
 const IS_MAC =
   typeof navigator !== "undefined" &&
@@ -105,44 +100,6 @@ interface StageLayoutOptions {
   };
   chromeHeight: number;
   isFullscreen: boolean;
-}
-
-function getStageLayout({
-  columnCount,
-  rowCount,
-  viewport,
-  chromeHeight,
-  isFullscreen,
-}: StageLayoutOptions) {
-  const gridWidth = columnCount * CELL_SIZE + 2;
-  const gridHeight = rowCount * CELL_SIZE + 2;
-  const availableWidth = isFullscreen ? viewport.width : viewport.width - 32;
-  // The nav, the page's padding, and the toolbar and credit rows with their gaps
-  const availableHeight = isFullscreen
-    ? viewport.height
-    : viewport.height - 57 - 32 - 24 - chromeHeight;
-  const fit = Math.min(
-    isFullscreen ? Number.POSITIVE_INFINITY : 1,
-    availableWidth / gridWidth,
-    availableHeight / gridHeight,
-  );
-  // Whole device pixels per cell: fractional ones leave seams that read as grid lines
-  const pixelRatio = window.devicePixelRatio || 1;
-  const zoom =
-    Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
-    CELL_SIZE;
-
-  return { zoom, gridWidth, gridHeight };
-}
-
-function getIsPageShortcut(event: KeyboardEvent) {
-  return (
-    PAGE_SHORTCUT_CODES.has(event.code) &&
-    !event.altKey &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.shiftKey
-  );
 }
 
 type ControlKey =
@@ -177,20 +134,6 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
 interface ControlProps extends React.ComponentProps<typeof TooltipTrigger> {
   label: string;
   keys?: string;
-}
-
-function ControlTooltip({ label, keys, children, ...props }: ControlProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild {...props}>
-        <span className="inline-flex">{children}</span>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={6}>
-        {label}
-        {keys ? <Kbd>{keys}</Kbd> : null}
-      </TooltipContent>
-    </Tooltip>
-  );
 }
 
 interface DataGridDoomDemoProps extends DoomParams {}
@@ -841,16 +784,7 @@ export function DataGridDoomDemo({
               >
                 {RESOLUTIONS.map((res) => (
                   <DropdownMenuRadioItem key={res} value={String(res)}>
-                    {res === NATIVE_RESOLUTION ? (
-                      <span className="flex flex-col">
-                        {getResolutionLabel(res)}
-                        <span className="text-xs text-muted-foreground">
-                          Paints rows, since 64,000 cells outpace the browser
-                        </span>
-                      </span>
-                    ) : (
-                      getResolutionLabel(res)
-                    )}
+                    {getResolutionLabel(res)}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
@@ -1069,5 +1003,61 @@ export function DataGridDoomDemo({
         </span>
       </div>
     </div>
+  );
+}
+
+function getStageLayout({
+  columnCount,
+  rowCount,
+  viewport,
+  chromeHeight,
+  isFullscreen,
+}: StageLayoutOptions) {
+  const gridWidth = columnCount * CELL_SIZE + 2;
+  const gridHeight = rowCount * CELL_SIZE + 2;
+  const availableWidth = isFullscreen ? viewport.width : viewport.width - 32;
+  // The nav, the page's padding, and the toolbar and credit rows with their gaps
+  const availableHeight = isFullscreen
+    ? viewport.height
+    : viewport.height - 57 - 32 - 24 - chromeHeight;
+  const fit = Math.min(
+    isFullscreen ? Number.POSITIVE_INFINITY : 1,
+    availableWidth / gridWidth,
+    availableHeight / gridHeight,
+  );
+  // Whole device pixels per cell: fractional ones leave seams that read as grid lines
+  const pixelRatio = window.devicePixelRatio || 1;
+  const zoom =
+    Math.max(1, Math.floor(CELL_SIZE * fit * pixelRatio) / pixelRatio) /
+    CELL_SIZE;
+
+  return { zoom, gridWidth, gridHeight };
+}
+
+function writePixel(element: HTMLElement, value: unknown) {
+  element.style.backgroundColor = getHexColor(value as number);
+}
+
+function getIsPageShortcut(event: KeyboardEvent) {
+  return (
+    PAGE_SHORTCUT_CODES.has(event.code) &&
+    !event.altKey &&
+    !event.ctrlKey &&
+    !event.metaKey &&
+    !event.shiftKey
+  );
+}
+
+function ControlTooltip({ label, keys, children, ...props }: ControlProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild {...props}>
+        <span className="inline-flex">{children}</span>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {label}
+        {keys ? <Kbd>{keys}</Kbd> : null}
+      </TooltipContent>
+    </Tooltip>
   );
 }

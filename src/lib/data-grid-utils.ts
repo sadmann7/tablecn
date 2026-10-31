@@ -161,8 +161,9 @@ export function getEmptyCellValue(
   variant: CellOpts["variant"] | undefined,
 ): unknown {
   if (variant === "multi-select" || variant === "file") return [];
-  if (variant === "number" || variant === "date" || variant === "select")
+  if (variant === "number" || variant === "date" || variant === "select") {
     return null;
+  }
   if (variant === "checkbox") return false;
   return "";
 }
@@ -174,69 +175,7 @@ export function serializeCellValue(
   if (variant === "file" || variant === "multi-select") {
     return value ? JSON.stringify(value) : "";
   }
-  if (value instanceof Date) return value.toISOString();
   return stringifyUnknown(value);
-}
-
-function matchSelectOption(
-  value: string,
-  options: { value: string; label: string }[],
-): string | undefined {
-  return options.find(
-    (o) =>
-      o.value === value ||
-      o.value.toLowerCase() === value.toLowerCase() ||
-      o.label.toLowerCase() === value.toLowerCase(),
-  )?.value;
-}
-
-function parseTextValue(text: string): unknown {
-  if (ISO_DATE_REGEX.test(text)) {
-    const date = new Date(text);
-    if (!Number.isNaN(date.getTime())) return date.toLocaleDateString();
-  }
-
-  const firstChar = text[0];
-  if (
-    firstChar !== "[" &&
-    firstChar !== "{" &&
-    firstChar !== "t" &&
-    firstChar !== "f"
-  ) {
-    return text;
-  }
-
-  try {
-    const parsed: unknown = JSON.parse(text);
-    if (Array.isArray(parsed)) {
-      if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
-        return parsed.map((file) => file.name).join(", ");
-      }
-      if (parsed.every((item) => typeof item === "string")) {
-        return parsed.join(", ");
-      }
-    } else if (typeof parsed === "boolean") {
-      return parsed ? "Checked" : "Unchecked";
-    }
-  } catch {
-    const lower = text.toLowerCase();
-    if (lower === "true" || lower === "false") {
-      return lower === "true" ? "Checked" : "Unchecked";
-    }
-  }
-  return text;
-}
-
-function parseMultiSelectValues(text: string): string[] {
-  try {
-    const parsed: unknown = JSON.parse(text);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((item): item is string => typeof item === "string");
-    }
-  } catch {
-    // Falls back to comma-separated values
-  }
-  return text ? text.split(",").map((item) => item.trim()) : [];
 }
 
 export function parsePastedCellValue(
@@ -304,12 +243,6 @@ export function parsePastedCellValue(
   }
 }
 
-function countTabs(s: string): number {
-  let n = 0;
-  for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
-  return n;
-}
-
 export function parseTsv(
   text: string,
   fallbackColumnCount: number,
@@ -320,6 +253,14 @@ export function parseTsv(
     let currentField = "";
     let inQuotes = false;
     let i = 0;
+    const pushRow = () => {
+      currentRow.push(currentField);
+      if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentField = "";
+    };
 
     while (i < text.length) {
       const char = text[i];
@@ -345,20 +286,10 @@ export function parseTsv(
           currentField = "";
           i++;
         } else if (char === "\n") {
-          currentRow.push(currentField);
-          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-            rows.push(currentRow);
-          }
-          currentRow = [];
-          currentField = "";
+          pushRow();
           i++;
         } else if (char === "\r" && nextChar === "\n") {
-          currentRow.push(currentField);
-          if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-            rows.push(currentRow);
-          }
-          currentRow = [];
-          currentField = "";
+          pushRow();
           i += 2;
         } else {
           currentField += char;
@@ -367,11 +298,7 @@ export function parseTsv(
       }
     }
 
-    currentRow.push(currentField);
-    if (currentRow.length > 1 || currentRow.some((f) => f.length > 0)) {
-      rows.push(currentRow);
-    }
-
+    pushRow();
     return rows;
   }
 
@@ -438,10 +365,6 @@ export function getRowCellSelectionKey(
     key += `${bound.minColumnIndex}:${bound.maxColumnIndex},`;
   }
   return key;
-}
-
-function getActiveCellRange(ranges: CellSelectionState) {
-  return ranges[ranges.length - 1] ?? null;
 }
 
 export function getFocusedCellPosition(
@@ -795,6 +718,77 @@ export function getTabTargetCell({
   }
 }
 
+function matchSelectOption(
+  value: string,
+  options: { value: string; label: string }[],
+): string | undefined {
+  return options.find(
+    (o) =>
+      o.value === value ||
+      o.value.toLowerCase() === value.toLowerCase() ||
+      o.label.toLowerCase() === value.toLowerCase(),
+  )?.value;
+}
+
+function parseMultiSelectValues(text: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === "string");
+    }
+  } catch {
+    // Falls back to comma-separated values
+  }
+  return text ? text.split(",").map((item) => item.trim()) : [];
+}
+
+function parseTextValue(text: string): unknown {
+  if (ISO_DATE_REGEX.test(text)) {
+    const date = new Date(text);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleDateString();
+  }
+
+  const firstChar = text[0];
+  if (
+    firstChar !== "[" &&
+    firstChar !== "{" &&
+    firstChar !== "t" &&
+    firstChar !== "f"
+  ) {
+    return text;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      if (parsed.length > 0 && parsed.every(getIsFileCellData)) {
+        return parsed.map((file) => file.name).join(", ");
+      }
+      if (parsed.every((item) => typeof item === "string")) {
+        return parsed.join(", ");
+      }
+    } else if (typeof parsed === "boolean") {
+      return parsed ? "Checked" : "Unchecked";
+    }
+  } catch {
+    const lower = text.toLowerCase();
+    if (lower === "true" || lower === "false") {
+      return lower === "true" ? "Checked" : "Unchecked";
+    }
+  }
+  return text;
+}
+
+function countTabs(s: string): number {
+  let n = 0;
+  for (let i = 0; i < s.length; i++) if (s[i] === "\t") n++;
+  return n;
+}
+
+function getActiveCellRange(ranges: CellSelectionState) {
+  return ranges[ranges.length - 1] ?? null;
+}
+
 let rootFontScale: number | null = null;
 
 export function getRootFontScale(): number {
@@ -869,7 +863,7 @@ export function scrollCellIntoView<TData extends RowData>(params: {
     if (isClippedRight) {
       scrollDelta = cellRect.right - viewportRight;
     } else if (isClippedLeft) {
-      scrollDelta = -(viewportLeft - cellRect.left);
+      scrollDelta = cellRect.left - viewportLeft;
     }
   } else {
     const shouldScrollRight = isActuallyRtl
@@ -879,15 +873,11 @@ export function scrollCellIntoView<TData extends RowData>(params: {
     if (shouldScrollRight) {
       scrollDelta = cellRect.right - viewportRight;
     } else {
-      scrollDelta = -(viewportLeft - cellRect.left);
+      scrollDelta = cellRect.left - viewportLeft;
     }
   }
 
   container.scrollLeft += scrollDelta;
-}
-
-function escapeAttributeValue(value: string) {
-  return value.replace(/["\\]/g, "\\$&");
 }
 
 export function getCellElement(
@@ -966,23 +956,6 @@ export function getIsEventOnScrollbar(
   );
 }
 
-function execInsertText(text: string) {
-  return (
-    typeof document.execCommand === "function" &&
-    document.execCommand("insertText", false, text)
-  );
-}
-
-function dispatchInsertTextInput(element: HTMLElement, text: string) {
-  element.dispatchEvent(
-    new InputEvent("input", {
-      bubbles: true,
-      data: text,
-      inputType: "insertText",
-    }),
-  );
-}
-
 export function insertTextAtSelection(
   element: HTMLTextAreaElement | HTMLInputElement,
   text: string,
@@ -1032,13 +1005,8 @@ export function moveCaretToEnd(element: HTMLElement) {
 }
 
 export function getUrlHref(urlString: string): string {
-  if (!urlString || urlString.trim() === "") return "";
-
   const trimmed = urlString.trim();
-
-  if (UNSAFE_PROTOCOL_REGEX.test(trimmed)) {
-    return "";
-  }
+  if (!trimmed || UNSAFE_PROTOCOL_REGEX.test(trimmed)) return "";
 
   if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
     return trimmed;
@@ -1074,7 +1042,6 @@ export function formatDateToString(date: Date): string {
 }
 
 export function formatDateForDisplay(dateStr: unknown): string {
-  if (!dateStr) return "";
   const date = parseLocalDate(dateStr);
   if (!date) return typeof dateStr === "string" ? dateStr : "";
   return date.toLocaleDateString();
@@ -1103,15 +1070,66 @@ export function getFileIcon(
     type.includes("word") ||
     type.includes("document") ||
     type.includes("doc")
-  )
+  ) {
     return FileText;
-  if (type.includes("sheet") || type.includes("excel") || type.includes("xls"))
+  }
+  if (
+    type.includes("sheet") ||
+    type.includes("excel") ||
+    type.includes("xls")
+  ) {
     return FileSpreadsheet;
+  }
   if (
     type.includes("presentation") ||
     type.includes("powerpoint") ||
     type.includes("ppt")
-  )
+  ) {
     return Presentation;
+  }
   return File;
+}
+
+function escapeAttributeValue(value: string) {
+  return value.replace(/["\\]/g, "\\$&");
+}
+
+function execInsertText(text: string) {
+  return (
+    typeof document.execCommand === "function" &&
+    document.execCommand("insertText", false, text)
+  );
+}
+
+function dispatchInsertTextInput(element: HTMLElement, text: string) {
+  element.dispatchEvent(
+    new InputEvent("input", {
+      bubbles: true,
+      data: text,
+      inputType: "insertText",
+    }),
+  );
+}
+
+const objectUrlsByStore = new WeakMap<object, Set<string>>();
+
+export function createFileObjectUrl<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
+  file: File,
+) {
+  const url = URL.createObjectURL(file);
+  let urls = objectUrlsByStore.get(table.store);
+  if (!urls) {
+    urls = new Set();
+    objectUrlsByStore.set(table.store, urls);
+  }
+  urls.add(url);
+  return url;
+}
+
+export function revokeFileObjectUrls(store: object) {
+  const urls = objectUrlsByStore.get(store);
+  if (!urls) return;
+  for (const url of urls) URL.revokeObjectURL(url);
+  objectUrlsByStore.delete(store);
 }

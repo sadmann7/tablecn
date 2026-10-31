@@ -83,13 +83,13 @@ export function DataGridFilterMenu<TData extends RowData>(
   return (
     <Subscribe source={props.table.atoms.columnFilters}>
       {(columnFilters) => (
-        <DataGridFilterMenuImpl {...props} columnFilters={columnFilters} />
+        <DataGridFilterMenuContent {...props} columnFilters={columnFilters} />
       )}
     </Subscribe>
   );
 }
 
-function DataGridFilterMenuImpl<TData extends RowData>({
+function DataGridFilterMenuContent<TData extends RowData>({
   table,
   columnFilters,
   disabled,
@@ -101,7 +101,6 @@ function DataGridFilterMenuImpl<TData extends RowData>({
   const labelId = React.useId();
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
-  const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const { columnLabels, columns, columnVariants } = React.useMemo(() => {
     const labels = new Map<string, string>();
@@ -151,12 +150,11 @@ function DataGridFilterMenuImpl<TData extends RowData>({
 
   const onFilterUpdate = React.useCallback(
     (filterId: string, updates: Partial<ColumnFilter>) => {
-      table.setColumnFilters((prevFilters) => {
-        if (!prevFilters) return prevFilters;
-        return prevFilters.map((filter) =>
+      table.setColumnFilters((prevFilters) =>
+        prevFilters.map((filter) =>
           filter.id === filterId ? { ...filter, ...updates } : filter,
-        );
-      });
+        ),
+      );
     },
     [table],
   );
@@ -173,6 +171,19 @@ function DataGridFilterMenuImpl<TData extends RowData>({
   const onFiltersReset = React.useCallback(() => {
     table.setColumnFilters(table.initialState.columnFilters ?? []);
   }, [table]);
+
+  const onTriggerKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (
+        REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase()) &&
+        columnFilters.length > 0
+      ) {
+        event.preventDefault();
+        onFiltersReset();
+      }
+    },
+    [columnFilters.length, onFiltersReset],
+  );
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -198,19 +209,6 @@ function DataGridFilterMenuImpl<TData extends RowData>({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
-
-  const onTriggerKeyDown = React.useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (
-        REMOVE_FILTER_SHORTCUTS.has(event.key.toLowerCase()) &&
-        columnFilters.length > 0
-      ) {
-        event.preventDefault();
-        onFiltersReset();
-      }
-    },
-    [columnFilters.length, onFiltersReset],
-  );
 
   return (
     <Sortable
@@ -300,11 +298,7 @@ function DataGridFilterMenuImpl<TData extends RowData>({
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
-            <Button
-              ref={addButtonRef}
-              onClick={onFilterAdd}
-              disabled={columns.length === 0}
-            >
+            <Button onClick={onFilterAdd} disabled={columns.length === 0}>
               Add filter
             </Button>
             {columnFilters.length > 0 && (
@@ -409,31 +403,21 @@ function DataGridFilterItem<TData extends RowData>({
     [filter.id, filterValue?.value, filterValue?.endValue, onFilterUpdate],
   );
 
-  const onValueChange = React.useCallback(
-    (newValue: string | number | string[] | undefined) => {
-      onFilterUpdate(filter.id, {
-        value: {
-          operator,
-          value: newValue,
-          endValue: filterValue?.endValue,
-        },
-      });
-    },
-    [filter.id, operator, filterValue?.endValue, onFilterUpdate],
-  );
+  function onValueChange(newValue: string | number | string[] | undefined) {
+    onFilterUpdate(filter.id, {
+      value: { operator, value: newValue, endValue: filterValue?.endValue },
+    });
+  }
 
-  const onEndValueChange = React.useCallback(
-    (newValue: string | number | string[] | undefined) => {
-      onFilterUpdate(filter.id, {
-        value: {
-          operator,
-          value: filterValue?.value,
-          endValue: newValue as string | number | undefined,
-        },
-      });
-    },
-    [filter.id, operator, filterValue?.value, onFilterUpdate],
-  );
+  function onEndValueChange(newValue: string | number | string[] | undefined) {
+    onFilterUpdate(filter.id, {
+      value: {
+        operator,
+        value: filterValue?.value,
+        endValue: newValue as string | number | undefined,
+      },
+    });
+  }
 
   return (
     <SortableItem
@@ -449,11 +433,9 @@ function DataGridFilterItem<TData extends RowData>({
       }
     >
       <div className="min-w-18 text-center">
-        {index === 0 ? (
-          <span className="text-sm text-muted-foreground">Where</span>
-        ) : (
-          <span className="text-sm text-muted-foreground">And</span>
-        )}
+        <span className="text-sm text-muted-foreground">
+          {index === 0 ? "Where" : "And"}
+        </span>
       </div>
       <Faceted
         open={showFieldSelector}
@@ -489,7 +471,7 @@ function DataGridFilterItem<TData extends RowData>({
             />
           }
         >
-          <span className="truncate">{columnLabels.get(filter.id)}</span>
+          <span className="truncate">{label}</span>
           <IconPlaceholder
             lucide="ChevronsUpDown"
             tabler="IconSelector"
@@ -564,7 +546,7 @@ function DataGridFilterItem<TData extends RowData>({
           <div
             id={inputId}
             role="status"
-            aria-label={`${columnLabels.get(filter.id)} filter is empty`}
+            aria-label={`${label} filter is empty`}
             aria-live="polite"
             className="h-8 w-full rounded-lg border border-dashed border-input bg-transparent dark:bg-input/30"
           />
@@ -664,7 +646,7 @@ function DataGridFilterInput<TData extends RowData>({
             type="number"
             inputMode="numeric"
             placeholder="Start"
-            value={(localValue as number | undefined) ?? ""}
+            value={localValue ?? ""}
             onChange={(event) => {
               const value = event.target.value;
               const newValue = value === "" ? undefined : Number(value);
@@ -678,7 +660,7 @@ function DataGridFilterInput<TData extends RowData>({
             type="number"
             inputMode="numeric"
             placeholder="End"
-            value={(localEndValue as number | undefined) ?? ""}
+            value={localEndValue ?? ""}
             onChange={(event) => {
               const value = event.target.value;
               const newValue = value === "" ? undefined : Number(value);
@@ -697,7 +679,7 @@ function DataGridFilterInput<TData extends RowData>({
         type="number"
         inputMode="numeric"
         placeholder={placeholder}
-        value={(localValue as number | undefined) ?? ""}
+        value={localValue ?? ""}
         onChange={(event) => {
           const value = event.target.value;
           const newValue = value === "" ? undefined : Number(value);
@@ -958,7 +940,7 @@ function DataGridFilterInput<TData extends RowData>({
           type="text"
           placeholder="Start"
           className="w-full flex-1"
-          value={(localValue as string | undefined) ?? ""}
+          value={localValue ?? ""}
           onChange={(event) => {
             const value = event.target.value;
             const newValue = value === "" ? undefined : value;
@@ -971,7 +953,7 @@ function DataGridFilterInput<TData extends RowData>({
           type="text"
           placeholder="End"
           className="w-full flex-1"
-          value={(localEndValue as string | undefined) ?? ""}
+          value={localEndValue ?? ""}
           onChange={(event) => {
             const value = event.target.value;
             const newValue = value === "" ? undefined : value;
@@ -988,7 +970,7 @@ function DataGridFilterInput<TData extends RowData>({
       id={inputId}
       type="text"
       placeholder={placeholder}
-      value={(localValue as string | undefined) ?? ""}
+      value={localValue ?? ""}
       onChange={(event) => {
         const value = event.target.value;
         const newValue = value === "" ? undefined : value;

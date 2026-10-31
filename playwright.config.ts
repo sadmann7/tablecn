@@ -4,7 +4,7 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: "e2e",
-  testIgnore: "**/record-launch.spec.ts",
+  testIgnore: "**/record-data-table-launch.spec.ts",
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 2 : 0,

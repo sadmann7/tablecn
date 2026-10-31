@@ -4,15 +4,6 @@ import type { FilterOperator, FilterVariant } from "@/lib/data-table-types";
 
 import { matchesFilter } from "@/lib/data-table-filters";
 
-function match(
-  cell: unknown,
-  operator: FilterOperator,
-  variant: FilterVariant,
-  value: string | string[],
-) {
-  return matchesFilter(cell, { operator, variant, value });
-}
-
 describe("matchesFilter", () => {
   it("matches text by inclusion, and skips a filter with no text", () => {
     expect(match("Alpha", "iLike", "text", "alp")).toBe(true);
@@ -107,7 +98,7 @@ describe("matchesFilter", () => {
 
   it("matches a day, week, or month counted from today", () => {
     // June 15 sits clear of daylight-saving transitions, so each 24h
-    // step is a different calendar day.
+    // step is a different calendar day
     vi.useFakeTimers({ now: new Date(2026, 5, 15, 12), toFake: ["Date"] });
 
     try {
@@ -176,3 +167,12 @@ describe("matchesFilter", () => {
     expect(match("todo", "nope" as FilterOperator, "text", "todo")).toBe(true);
   });
 });
+
+function match(
+  cell: unknown,
+  operator: FilterOperator,
+  variant: FilterVariant,
+  value: string | string[],
+) {
+  return matchesFilter(cell, { operator, variant, value });
+}

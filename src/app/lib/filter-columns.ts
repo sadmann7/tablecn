@@ -97,7 +97,7 @@ export function filterColumns<T extends Table>({
         if (filter.variant !== "date" || typeof filter.value !== "string") {
           return undefined;
         }
-        // `lte` and `gte` include the whole day, `lt` and `gt` exclude it.
+        // `lte` and `gte` include the whole day, `lt` and `gt` exclude it
         const date =
           filter.operator === "lt" || filter.operator === "gte"
             ? getStartOfDay(filter.value)
@@ -150,7 +150,7 @@ export function filterColumns<T extends Table>({
           typeof filter.value === "string"
         ) {
           const today = new Date();
-          const [amount, unit] = filter.value.split(" ") ?? [];
+          const [amount, unit] = filter.value.split(" ");
           let startDate: Date;
           let endDate: Date;
 
@@ -201,6 +201,13 @@ export function filterColumns<T extends Table>({
   return validConditions.length > 0 ? joinFn(...validConditions) : undefined;
 }
 
+export function getColumn<T extends Table>(
+  table: T,
+  columnKey: keyof T,
+): AnyColumn {
+  return table[columnKey] as AnyColumn;
+}
+
 function getStartOfDay(value: unknown) {
   const date = parseFilterDate(value);
   return date ? startOfDay(date) : undefined;
@@ -209,11 +216,4 @@ function getStartOfDay(value: unknown) {
 function getEndOfDay(value: unknown) {
   const date = parseFilterDate(value);
   return date ? endOfDay(date) : undefined;
-}
-
-export function getColumn<T extends Table>(
-  table: T,
-  columnKey: keyof T,
-): AnyColumn {
-  return table[columnKey] as AnyColumn;
 }

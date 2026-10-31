@@ -33,12 +33,7 @@ import { STYLES } from "../registry/styles";
 import { STYLES_ROOT, wipeRegistryOutput } from "./clean-registry";
 
 const STYLE_COMBINATIONS = BASES.flatMap((base) =>
-  STYLES.map((style) => ({
-    base,
-    style,
-    name: `${base.name}-${style.name}`,
-    title: `${base.title} ${style.title}`,
-  })),
+  STYLES.map((style) => ({ name: `${base.name}-${style.name}` })),
 );
 
 const ROOT = process.cwd();
@@ -59,6 +54,81 @@ interface RegistryItem {
 
 interface Registry {
   items: RegistryItem[];
+}
+
+try {
+  main();
+} catch (error) {
+  console.error("❌ Registry build failed:", error);
+  process.exit(1);
+}
+
+function main() {
+  const totalStart = performance.now();
+
+  console.log("🧹 Cleaning registry output...");
+  wipeRegistryOutput();
+  mkdirSync(STYLES_ROOT, { recursive: true });
+
+  const scratch = mkdtempSync(path.join(tmpdir(), "tablecn-registry-"));
+
+  try {
+    console.log(`💅 Building ${STYLE_COMBINATIONS.length} style variants...`);
+
+    for (const base of BASES) {
+      const baseDir = path.join(scratch, base.name);
+      mkdirSync(baseDir, { recursive: true });
+
+      buildBase(base.name, baseDir);
+      const built = path.join(baseDir, "r");
+
+      for (const style of STYLES) {
+        cpSync(built, path.join(STYLES_ROOT, `${base.name}-${style.name}`), {
+          recursive: true,
+        });
+      }
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
+
+  for (const style of STYLE_COMBINATIONS) {
+    console.log(`   ✅ ${style.name}`);
+  }
+
+  console.log("📦 Writing styles index...");
+  writeFileSync(
+    path.join(STYLES_ROOT, "index.json"),
+    `${JSON.stringify(STYLE_COMBINATIONS, null, 2)}\n`,
+  );
+
+  const elapsed = ((performance.now() - totalStart) / 1000).toFixed(2);
+  console.log(`\n✅ Build complete in ${elapsed}s!`);
+}
+
+function buildBase(baseName: string, outDir: string) {
+  const registry = JSON.parse(
+    readFileSync(path.join(ROOT, "registry.json"), "utf8"),
+  ) as Registry;
+
+  const items = registry.items.map((item) => {
+    const files = item.files?.map((file) => resolveFile(file, baseName));
+
+    return {
+      ...item,
+      dependencies: withImportedDependencies(item.dependencies, files),
+      files,
+    };
+  });
+
+  const registryPath = path.join(outDir, "registry.input.json");
+  writeFileSync(registryPath, JSON.stringify({ ...registry, items }, null, 2));
+
+  execFileSync(
+    path.join(ROOT, "node_modules/.bin/shadcn"),
+    ["build", registryPath, "--output", path.join(outDir, "r")],
+    { cwd: ROOT, stdio: "inherit" },
+  );
 }
 
 /**
@@ -104,90 +174,4 @@ function withImportedDependencies(
   }
 
   return next.length > 0 ? next : dependencies;
-}
-
-function buildBase(baseName: string, outDir: string) {
-  const registry = JSON.parse(
-    readFileSync(path.join(ROOT, "registry.json"), "utf8"),
-  ) as Registry;
-
-  const items = registry.items.map((item) => {
-    const files = item.files?.map((file) => resolveFile(file, baseName));
-
-    return {
-      ...item,
-      dependencies: withImportedDependencies(item.dependencies, files),
-      files,
-    };
-  });
-
-  const overrides = items.flatMap(
-    (item) =>
-      item.files?.filter((file) => file.path.startsWith(BASE_TREE)) ?? [],
-  );
-
-  const registryPath = path.join(outDir, "registry.input.json");
-  writeFileSync(registryPath, JSON.stringify({ ...registry, items }, null, 2));
-
-  execFileSync(
-    path.join(ROOT, "node_modules/.bin/shadcn"),
-    ["build", registryPath, "--output", path.join(outDir, "r")],
-    { cwd: ROOT, stdio: "inherit" },
-  );
-
-  return overrides.length;
-}
-
-function main() {
-  const totalStart = performance.now();
-
-  console.log("🧹 Cleaning registry output...");
-  wipeRegistryOutput();
-  mkdirSync(STYLES_ROOT, { recursive: true });
-
-  const scratch = mkdtempSync(path.join(tmpdir(), "tablecn-registry-"));
-
-  try {
-    console.log(`💅 Building ${STYLE_COMBINATIONS.length} style variants...`);
-
-    for (const base of BASES) {
-      const baseDir = path.join(scratch, base.name);
-      mkdirSync(baseDir, { recursive: true });
-
-      buildBase(base.name, baseDir);
-      const built = path.join(baseDir, "r");
-
-      for (const style of STYLES) {
-        cpSync(built, path.join(STYLES_ROOT, `${base.name}-${style.name}`), {
-          recursive: true,
-        });
-      }
-    }
-  } finally {
-    rmSync(scratch, { recursive: true, force: true });
-  }
-
-  for (const style of STYLE_COMBINATIONS) {
-    console.log(`   ✅ ${style.name}`);
-  }
-
-  console.log("📦 Writing styles index...");
-  writeFileSync(
-    path.join(STYLES_ROOT, "index.json"),
-    `${JSON.stringify(
-      STYLE_COMBINATIONS.map(({ name }) => ({ name })),
-      null,
-      2,
-    )}\n`,
-  );
-
-  const elapsed = ((performance.now() - totalStart) / 1000).toFixed(2);
-  console.log(`\n✅ Build complete in ${elapsed}s!`);
-}
-
-try {
-  main();
-} catch (error) {
-  console.error("❌ Registry build failed:", error);
-  process.exit(1);
 }

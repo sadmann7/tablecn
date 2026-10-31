@@ -1,17 +1,20 @@
 import * as React from "react";
 
-import type { LaunchServerAction, LaunchTable } from "../lib/state";
+import type {
+  DataTableLaunchServerAction,
+  DataTableLaunchTable,
+} from "../lib/state";
 
 import { queryLaunchTasks } from "../lib/data";
 
 interface UseLaunchServerProps {
-  table: LaunchTable;
+  table: DataTableLaunchTable;
   request: string;
   isEnabled: boolean;
-  dispatchServer: React.Dispatch<LaunchServerAction>;
+  dispatchServer: React.Dispatch<DataTableLaunchServerAction>;
 }
 
-export function useLaunchServer({
+export function useDataTableLaunchServer({
   table,
   request,
   isEnabled,
@@ -35,7 +38,7 @@ export function useLaunchServer({
     if (!isEnabled) return;
 
     const latency = getLatency(request);
-    // Stands in for the network round trip, so the request shows as pending.
+    // Stands in for the network round trip, so the request shows as pending
     const timeout = window.setTimeout(() => onResolve(latency), latency);
 
     return () => window.clearTimeout(timeout);

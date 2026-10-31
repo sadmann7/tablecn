@@ -44,8 +44,7 @@ export function DataTableViewOptions<TData extends RowData>({
       table
         .getAllColumns()
         .filter(
-          (column) =>
-            typeof column.accessorFn !== "undefined" && column.getCanHide(),
+          (column) => column.accessorFn !== undefined && column.getCanHide(),
         ),
     [table],
   );

@@ -26,35 +26,6 @@ interface Range {
 
 type RangeValue = [number, number];
 
-function getIsValidRange(value: unknown): value is RangeValue {
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  );
-}
-
-function parseRangeBounds(
-  value: unknown,
-): [number | undefined, number | undefined] | undefined {
-  if (!Array.isArray(value) || value.length !== 2) return undefined;
-
-  const [start, end] = value.map(parseRangeBound);
-  if (start === null || end === null) return undefined;
-  if (start === undefined && end === undefined) return undefined;
-
-  return [start, end];
-}
-
-function parseRangeBound(value: unknown) {
-  if (value === undefined || value === "") return undefined;
-  if (typeof value !== "number" && typeof value !== "string") return null;
-
-  const number = Number(value);
-  return Number.isNaN(number) ? null : number;
-}
-
 interface DataTableSliderFilterProps<TData extends RowData> {
   column: Column<DataTableFeatures, TData>;
   title?: string;
@@ -101,7 +72,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
       [minValue, maxValue] = defaultRange;
     } else {
       const values = column.getFacetedMinMaxValues();
-      if (values && Array.isArray(values) && values.length === 2) {
+      if (Array.isArray(values) && values.length === 2) {
         const [facetMinValue, facetMaxValue] = values;
         if (
           typeof facetMinValue === "number" &&
@@ -124,12 +95,12 @@ function DataTableSliderFilterContent<TData extends RowData>({
     return { min: minValue, max: maxValue, step };
   }, [column, defaultRange]);
 
-  // An open-ended bound, like `estimatedHours=,8`, shows as the column limit.
   const bounds = parseRangeBounds(columnFilterValueProp);
   const columnFilterValue: RangeValue | undefined = bounds
     ? [bounds[0] ?? min, bounds[1] ?? max]
     : undefined;
   const range: RangeValue = columnFilterValue ?? [min, max];
+  const [rangeStart, rangeEnd] = range;
 
   const formatValue = React.useCallback((value: number) => {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -138,21 +109,25 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const onFromInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
-      if (!Number.isNaN(numValue) && numValue >= min && numValue <= range[1]) {
-        column.setFilterValue([numValue, range[1]]);
+      if (!Number.isNaN(numValue) && numValue >= min && numValue <= rangeEnd) {
+        column.setFilterValue([numValue, rangeEnd]);
       }
     },
-    [column, min, range],
+    [column, min, rangeEnd],
   );
 
   const onToInputChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const numValue = Number(event.target.value);
-      if (!Number.isNaN(numValue) && numValue <= max && numValue >= range[0]) {
-        column.setFilterValue([range[0], numValue]);
+      if (
+        !Number.isNaN(numValue) &&
+        numValue <= max &&
+        numValue >= rangeStart
+      ) {
+        column.setFilterValue([rangeStart, numValue]);
       }
     },
-    [column, max, range],
+    [column, max, rangeStart],
   );
 
   const onSliderValueChange = React.useCallback(
@@ -295,4 +270,33 @@ function DataTableSliderFilterContent<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
+}
+
+function getIsValidRange(value: unknown): value is RangeValue {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    typeof value[0] === "number" &&
+    typeof value[1] === "number"
+  );
+}
+
+function parseRangeBounds(
+  value: unknown,
+): [number | undefined, number | undefined] | undefined {
+  if (!Array.isArray(value) || value.length !== 2) return undefined;
+
+  const [start, end] = value.map(parseRangeBound);
+  if (start === null || end === null) return undefined;
+  if (start === undefined && end === undefined) return undefined;
+
+  return [start, end];
+}
+
+function parseRangeBound(value: unknown) {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "number" && typeof value !== "string") return null;
+
+  const number = Number(value);
+  return Number.isNaN(number) ? null : number;
 }

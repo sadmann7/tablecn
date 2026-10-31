@@ -20,15 +20,6 @@ const MAX_VISIBLE_USERS = 5;
 
 type ActiveCell = UserPresence["activeCell"];
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0] ?? "")
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
-
 interface DataGridPresenceAvatarsProps {
   users: Record<string, UserPresence>;
   currentUserId: string;
@@ -161,4 +152,13 @@ export function DataGridPresenceAvatars({
       )}
     </div>
   );
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 }

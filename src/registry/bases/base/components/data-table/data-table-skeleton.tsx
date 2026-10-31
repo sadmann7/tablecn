@@ -51,14 +51,9 @@ export function DataTableSkeleton({
         className="flex w-full items-center justify-between gap-2 overflow-auto p-1"
       >
         <div className="flex flex-1 items-center gap-2">
-          {filterCount > 0
-            ? Array.from({ length: filterCount }).map((_, i) => (
-                <Skeleton
-                  key={i}
-                  className="h-8 w-18 rounded-lg border-dashed"
-                />
-              ))
-            : null}
+          {Array.from({ length: filterCount }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-18 rounded-lg border-dashed" />
+          ))}
         </div>
         {withViewOptions ? (
           <Skeleton className="ms-auto hidden h-8 w-18 rounded-lg lg:flex" />
@@ -67,21 +62,19 @@ export function DataTableSkeleton({
       <div aria-hidden="true" className="rounded-md border">
         <Table>
           <TableHeader>
-            {Array.from({ length: 1 }).map((_, i) => (
-              <TableRow key={i} className="hover:bg-transparent">
-                {Array.from({ length: columnCount }).map((_, j) => (
-                  <TableHead
-                    key={j}
-                    style={{
-                      width: cozyCellWidths[j],
-                      minWidth: shrinkZero ? cozyCellWidths[j] : "auto",
-                    }}
-                  >
-                    <Skeleton className="h-6 w-full" />
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            <TableRow className="hover:bg-transparent">
+              {Array.from({ length: columnCount }).map((_, j) => (
+                <TableHead
+                  key={j}
+                  style={{
+                    width: cozyCellWidths[j],
+                    minWidth: shrinkZero ? cozyCellWidths[j] : "auto",
+                  }}
+                >
+                  <Skeleton className="h-6 w-full" />
+                </TableHead>
+              ))}
+            </TableRow>
           </TableHeader>
           <TableBody>
             {Array.from({ length: rowCount }).map((_, i) => (

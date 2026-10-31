@@ -134,49 +134,6 @@ export function createRandom(seed: number) {
   };
 }
 
-function getNormal(random: () => number) {
-  const u = Math.max(random(), Number.EPSILON);
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
-}
-
-function pick<T>(items: ReadonlyArray<T>, random: () => number): T {
-  return items[Math.floor(random() * items.length)] as T;
-}
-
-function roundPrice(value: number) {
-  return Math.round(value * 100) / 100;
-}
-
-function getSymbol(
-  prefix: string,
-  suffix: string,
-  random: () => number,
-  taken: Set<string>,
-) {
-  const letters = (prefix + suffix).toUpperCase().replace(/[^A-Z]/g, "");
-  const candidates = [
-    prefix.slice(0, 3).toUpperCase(),
-    (prefix.slice(0, 2) + suffix.slice(0, 1)).toUpperCase(),
-    (prefix.slice(0, 3) + suffix.slice(0, 1)).toUpperCase(),
-    (prefix.slice(0, 2) + suffix.slice(0, 2)).toUpperCase(),
-  ];
-  for (const symbol of candidates) {
-    if (taken.has(symbol)) continue;
-    taken.add(symbol);
-    return symbol;
-  }
-  for (;;) {
-    const length = random() < 0.5 ? 3 : 4;
-    let symbol = letters[0] ?? "X";
-    while (symbol.length < length) {
-      symbol += String.fromCharCode(65 + Math.floor(random() * 26));
-    }
-    if (taken.has(symbol)) continue;
-    taken.add(symbol);
-    return symbol;
-  }
-}
-
 interface QuoteModel {
   sector: Sector;
   // Yearly volatility, higher for smaller companies
@@ -194,14 +151,6 @@ export interface Market {
   models: QuoteModel[];
   // Running totals of `activity`, to pick busy quotes more often
   activityTotals: Float64Array;
-}
-
-function getQuotePrices(price: number, spread: number) {
-  const halfSpread = Math.max(0.01, roundPrice((price * spread) / 2));
-  return {
-    bid: roundPrice(price - halfSpread),
-    ask: roundPrice(price + halfSpread),
-  };
 }
 
 export function createMarket(count: number, seed = 1): Market {
@@ -271,19 +220,6 @@ export function createMarket(count: number, seed = 1): Market {
   return { quotes, models, activityTotals };
 }
 
-function pickQuoteIndex(market: Market, random: () => number) {
-  const { activityTotals } = market;
-  const target = random() * (activityTotals.at(-1) ?? 0);
-  let low = 0;
-  let high = activityTotals.length - 1;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if ((activityTotals[middle] ?? 0) < target) low = middle + 1;
-    else high = middle;
-  }
-  return low;
-}
-
 // Every quote follows one market move and its sector's, plus its own noise, so
 // sectors move together
 export function tickMarket(
@@ -333,4 +269,68 @@ export function tickMarket(
     quote.history = [...quote.history.slice(1 - HISTORY_LENGTH), price];
   }
   return [...moved];
+}
+
+function pick<T>(items: ReadonlyArray<T>, random: () => number): T {
+  return items[Math.floor(random() * items.length)] as T;
+}
+
+function getNormal(random: () => number) {
+  const u = Math.max(random(), Number.EPSILON);
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * random());
+}
+
+function getSymbol(
+  prefix: string,
+  suffix: string,
+  random: () => number,
+  taken: Set<string>,
+) {
+  const letters = (prefix + suffix).toUpperCase().replace(/[^A-Z]/g, "");
+  const candidates = [
+    prefix.slice(0, 3).toUpperCase(),
+    (prefix.slice(0, 2) + suffix.slice(0, 1)).toUpperCase(),
+    (prefix.slice(0, 3) + suffix.slice(0, 1)).toUpperCase(),
+    (prefix.slice(0, 2) + suffix.slice(0, 2)).toUpperCase(),
+  ];
+  for (const symbol of candidates) {
+    if (taken.has(symbol)) continue;
+    taken.add(symbol);
+    return symbol;
+  }
+  for (;;) {
+    const length = random() < 0.5 ? 3 : 4;
+    let symbol = letters[0] ?? "X";
+    while (symbol.length < length) {
+      symbol += String.fromCharCode(65 + Math.floor(random() * 26));
+    }
+    if (taken.has(symbol)) continue;
+    taken.add(symbol);
+    return symbol;
+  }
+}
+
+function getQuotePrices(price: number, spread: number) {
+  const halfSpread = Math.max(0.01, roundPrice((price * spread) / 2));
+  return {
+    bid: roundPrice(price - halfSpread),
+    ask: roundPrice(price + halfSpread),
+  };
+}
+
+function roundPrice(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function pickQuoteIndex(market: Market, random: () => number) {
+  const { activityTotals } = market;
+  const target = random() * (activityTotals.at(-1) ?? 0);
+  let low = 0;
+  let high = activityTotals.length - 1;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if ((activityTotals[middle] ?? 0) < target) low = middle + 1;
+    else high = middle;
+  }
+  return low;
 }

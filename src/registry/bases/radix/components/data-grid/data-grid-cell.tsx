@@ -1,11 +1,12 @@
 "use client";
 
-import type { RowData } from "@tanstack/react-table";
+import type { Cell, RowData } from "@tanstack/react-table";
 
 import { cn } from "cn";
 import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
+import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
 import {
@@ -57,6 +58,7 @@ export function DataGridCell<TData extends RowData>({
     if (active !== grid && activeGrid !== grid) return;
     getCellFocusTarget(element).focus({ preventScroll: true });
   }, [isFocused, isEditing]);
+
   const isSelectionTinted = isSelected && !isEditing;
   const isTinted = isSelectionTinted || isSearchMatch || isActiveSearchMatch;
 
@@ -80,26 +82,17 @@ export function DataGridCell<TData extends RowData>({
         return;
       }
 
-      if (isFocused && !isEditing && !readOnly) {
-        if (event.key === "F2" || event.key === "Enter") {
-          event.preventDefault();
-          event.stopPropagation();
-          cell.startEditing();
-          return;
-        }
+      if (!isFocused || isEditing || readOnly) return;
 
-        if (event.key === " ") {
-          event.preventDefault();
-          event.stopPropagation();
-          cell.startEditing();
-          return;
-        }
-
-        if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
-          event.preventDefault();
-          event.stopPropagation();
-          cell.startEditing();
-        }
+      if (
+        event.key === "F2" ||
+        event.key === "Enter" ||
+        event.key === " " ||
+        (event.key.length === 1 && !event.ctrlKey && !event.metaKey)
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        cell.startEditing();
       }
     },
     [cell, onKeyDownProp, isFocused, isEditing, readOnly],
@@ -121,7 +114,7 @@ export function DataGridCell<TData extends RowData>({
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
       className={cn(
-        "h-full px-2 py-1.5 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
+        "h-full px-2 pt-1.75 pb-2 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
         {
           grow,
           "border-s": showStartBorder,
@@ -161,4 +154,20 @@ export function DataGridCell<TData extends RowData>({
       onKeyDown={onKeyDown}
     />
   );
+}
+
+export function useCellValue<TData extends RowData>(
+  cell: Cell<DataGridFeatures, TData>,
+) {
+  const { table } = cell;
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
+
+  const subscribe = React.useCallback(
+    (onChange: () => void) => table.subscribeCell(rowId, columnId, onChange),
+    [table, rowId, columnId],
+  );
+  const getValue = () => cell.getValue();
+
+  return React.useSyncExternalStore(subscribe, getValue, getValue);
 }

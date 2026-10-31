@@ -5,6 +5,7 @@ import {
   type RowData,
   type SortingState,
   type TableOptions,
+  type TableState,
   type Updater,
   useTable,
 } from "@tanstack/react-table";
@@ -334,15 +335,10 @@ function useDataTable<TData extends RowData>({
       manualSorting: isServer,
       manualFiltering: isServer,
     },
-    (state) => ({
-      columnFilters: state.columnFilters,
-      joinOperator: state.joinOperator,
-      pagination: state.pagination,
-      sorting: state.sorting,
-    }),
+    selectTableState,
   );
 
-  return React.useMemo(() => ({ table }), [table]);
+  return { table };
 }
 
 function subscribeToHistory(onChange: () => void) {
@@ -356,6 +352,15 @@ function getLocationSearch() {
 
 function getServerLocationSearch() {
   return "";
+}
+
+function selectTableState(state: TableState<DataTableFeatures>) {
+  return {
+    columnFilters: state.columnFilters,
+    joinOperator: state.joinOperator,
+    pagination: state.pagination,
+    sorting: state.sorting,
+  };
 }
 
 export { useDataTable, type UseDataTableProps };

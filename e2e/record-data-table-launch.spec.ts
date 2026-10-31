@@ -4,8 +4,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const execFileAsync = promisify(execFile);
-const OUTPUT = path.resolve("recordings/launch-demo.mp4");
+const OUTPUT = path.resolve("recordings/data-table-launch.mp4");
 const FRAMES = path.resolve("recordings/.frames");
 
 interface CapturedFrame {
@@ -21,7 +20,7 @@ interface PendingFrame {
 test("record one launch loop", async ({ page }) => {
   test.setTimeout(300_000);
 
-  await page.goto("/launch");
+  await page.goto("/data-table-launch");
   const stage = page.locator(".launch-stage");
   await page.evaluate(() => document.fonts.ready);
   // A click runs after the shortcut listener is attached. Hide the controls
@@ -124,6 +123,8 @@ function readScreencastFrame(event: unknown) {
   return { data, sessionId, timestamp: metadata.timestamp };
 }
 
+const execFileAsync = promisify(execFile);
+
 async function encodeLoop(
   frames: CapturedFrame[],
   outputPath: string,
@@ -178,7 +179,7 @@ function concatList(frames: CapturedFrame[]) {
 
   for (const [index, frame] of frames.entries()) {
     const next = frames[index + 1];
-    // Keep dropped frames on the real clock instead of skipping ahead.
+    // Dropped frames hold for their real duration instead of being skipped
     const duration = next
       ? Math.max(0.001, next.timestamp - frame.timestamp)
       : 1 / 30;

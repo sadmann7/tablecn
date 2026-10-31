@@ -37,15 +37,6 @@ interface DataGridKeyboardShortcutsProps {
 
 export const DataGridKeyboardShortcuts = React.memo(
   DataGridKeyboardShortcutsImpl,
-  (prev, next) => {
-    return (
-      prev.enableSearch === next.enableSearch &&
-      prev.enableUndoRedo === next.enableUndoRedo &&
-      prev.enablePaste === next.enablePaste &&
-      prev.enableRowCreation === next.enableRowCreation &&
-      prev.enableRowDeletion === next.enableRowDeletion
-    );
-  },
 );
 
 function DataGridKeyboardShortcutsImpl({
@@ -61,9 +52,8 @@ function DataGridKeyboardShortcutsImpl({
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const isMac =
-    typeof navigator !== "undefined"
-      ? /Mac|iPhone|iPad|iPod/.test(navigator.userAgent)
-      : false;
+    typeof navigator !== "undefined" &&
+    /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
   const modKey = isMac ? "⌘" : "Ctrl";
 

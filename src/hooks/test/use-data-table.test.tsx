@@ -20,74 +20,6 @@ interface Task {
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
-const columns = columnHelper.columns([
-  columnHelper.accessor("code", { id: "code", enableSorting: false }),
-  columnHelper.accessor("title", {
-    id: "title",
-    meta: { variant: "text" },
-    enableColumnFilter: true,
-  }),
-  columnHelper.accessor("status", {
-    id: "status",
-    meta: { variant: "multiSelect" },
-    enableColumnFilter: true,
-  }),
-  columnHelper.display({ id: "actions" }),
-]);
-
-const data: Task[] = [];
-
-function renderDataTable(
-  search: string,
-  props: Partial<UseDataTableProps<Task>> = {},
-) {
-  const updates: UrlUpdateEvent[] = [];
-  let currentSearch = search;
-  window.history.replaceState(null, "", `/${search}`);
-
-  function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <NuqsTestingAdapter
-        hasMemory
-        searchParams={currentSearch}
-        onUrlUpdate={(event) => {
-          updates.push(event);
-        }}
-      >
-        {children}
-      </NuqsTestingAdapter>
-    );
-  }
-
-  const hook = renderHook(
-    () =>
-      useDataTable<Task>({
-        data,
-        columns,
-        pageCount: 10,
-        debounceMs: 10,
-        ...props,
-      } as UseDataTableProps<Task>),
-    { wrapper: Wrapper },
-  );
-
-  function navigate(nextSearch: string) {
-    currentSearch = nextSearch;
-    window.history.replaceState(null, "", `/${nextSearch}`);
-    hook.rerender();
-  }
-
-  function getLastSearch() {
-    return updates.at(-1)?.searchParams;
-  }
-
-  return { ...hook, navigate, getLastSearch };
-}
-
-function getFilterSummary(filters: { id: string; value: unknown }[]) {
-  return filters.map((filter) => [filter.id, filter.value]);
-}
-
 afterEach(() => {
   vi.useRealTimers();
   window.history.replaceState(null, "", "/");
@@ -143,7 +75,7 @@ describe("useDataTable", () => {
 
   it("lets an outside URL change replace the filters being edited", async () => {
     // Fake timers hold the debounced URL write until the outside URL change
-    // has landed, however slow the runner is.
+    // has landed, however slow the runner is
     vi.useFakeTimers();
     const { result, navigate, getLastSearch } = renderDataTable("?title=bug");
 
@@ -321,3 +253,71 @@ describe("useDataTable", () => {
     );
   });
 });
+
+const columns = columnHelper.columns([
+  columnHelper.accessor("code", { id: "code", enableSorting: false }),
+  columnHelper.accessor("title", {
+    id: "title",
+    meta: { variant: "text" },
+    enableColumnFilter: true,
+  }),
+  columnHelper.accessor("status", {
+    id: "status",
+    meta: { variant: "multiSelect" },
+    enableColumnFilter: true,
+  }),
+  columnHelper.display({ id: "actions" }),
+]);
+
+const data: Task[] = [];
+
+function renderDataTable(
+  search: string,
+  props: Partial<UseDataTableProps<Task>> = {},
+) {
+  const updates: UrlUpdateEvent[] = [];
+  let currentSearch = search;
+  window.history.replaceState(null, "", `/${search}`);
+
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <NuqsTestingAdapter
+        hasMemory
+        searchParams={currentSearch}
+        onUrlUpdate={(event) => {
+          updates.push(event);
+        }}
+      >
+        {children}
+      </NuqsTestingAdapter>
+    );
+  }
+
+  const hook = renderHook(
+    () =>
+      useDataTable<Task>({
+        data,
+        columns,
+        pageCount: 10,
+        debounceMs: 10,
+        ...props,
+      } as UseDataTableProps<Task>),
+    { wrapper: Wrapper },
+  );
+
+  function navigate(nextSearch: string) {
+    currentSearch = nextSearch;
+    window.history.replaceState(null, "", `/${nextSearch}`);
+    hook.rerender();
+  }
+
+  function getLastSearch() {
+    return updates.at(-1)?.searchParams;
+  }
+
+  return { ...hook, navigate, getLastSearch };
+}
+
+function getFilterSummary(filters: { id: string; value: unknown }[]) {
+  return filters.map((filter) => [filter.id, filter.value]);
+}

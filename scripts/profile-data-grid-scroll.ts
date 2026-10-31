@@ -30,7 +30,7 @@ const TRACE_CATEGORIES = [
   "v8.execute",
   "disabled-by-default-v8.cpu_profiler",
   "latencyInfo",
-].join(",");
+];
 
 interface Scenario {
   name: string;
@@ -107,129 +107,6 @@ interface FrameStats {
   loafScriptMs: number;
 }
 
-function startFrameRecorder() {
-  const recorder = {
-    deltas: [] as number[],
-    loafs: [] as Array<{ duration: number; scriptMs: number }>,
-    running: true,
-  };
-  let last = performance.now();
-  const tick = (now: number) => {
-    recorder.deltas.push(now - last);
-    last = now;
-    if (recorder.running) requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
-  const observer = new PerformanceObserver((list) => {
-    for (const entry of list.getEntries()) {
-      const scripts =
-        (entry as PerformanceEntry & { scripts?: Array<{ duration: number }> })
-          .scripts ?? [];
-      recorder.loafs.push({
-        duration: entry.duration,
-        scriptMs: scripts.reduce((sum, script) => sum + script.duration, 0),
-      });
-    }
-  });
-  try {
-    observer.observe({ type: "long-animation-frame", buffered: false });
-  } catch {
-    // Long animation frames are Chromium only
-  }
-  Object.assign(window, {
-    __frameRecorder: recorder,
-    __frameObserver: observer,
-  });
-}
-
-function stopFrameRecorder() {
-  const { __frameRecorder: recorder, __frameObserver: observer } =
-    window as unknown as {
-      __frameRecorder: {
-        deltas: number[];
-        loafs: Array<{ duration: number; scriptMs: number }>;
-        running: boolean;
-      };
-      __frameObserver: PerformanceObserver;
-    };
-  recorder.running = false;
-  observer.disconnect();
-  // The first delta spans the gap before recording started
-  return { deltas: recorder.deltas.slice(1), loafs: recorder.loafs };
-}
-
-function percentile(values: number[], q: number) {
-  const sorted = [...values].sort((a, b) => a - b);
-  return (
-    sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0
-  );
-}
-
-function measureVsync() {
-  return new Promise<number>((resolve) => {
-    const deltas: number[] = [];
-    let last = performance.now();
-    const tick = (now: number) => {
-      deltas.push(now - last);
-      last = now;
-      if (deltas.length < 120) requestAnimationFrame(tick);
-      else resolve(deltas.slice(1).sort((a, b) => a - b)[59] ?? 0);
-    };
-    requestAnimationFrame(tick);
-  });
-}
-
-function summarize(
-  deltas: number[],
-  loafs: Array<{ duration: number; scriptMs: number }>,
-  vsync: number,
-): FrameStats {
-  const at = (q: number) => percentile(deltas, q);
-  const total = deltas.reduce((sum, delta) => sum + delta, 0);
-  return {
-    frames: deltas.length,
-    fps: total > 0 ? (deltas.length * 1000) / total : 0,
-    p50: at(0.5),
-    p95: at(0.95),
-    p99: at(0.99),
-    max: Math.max(0, ...deltas),
-    droppedFrames: deltas.reduce(
-      (sum, delta) => sum + Math.max(0, Math.round(delta / vsync) - 1),
-      0,
-    ),
-    longAnimationFrames: loafs.length,
-    loafScriptMs: loafs.reduce((sum, loaf) => sum + loaf.scriptMs, 0),
-    // Filled in from the traced run
-    mainThreadMs: 0,
-  };
-}
-
-async function recordTrace(
-  page: Page,
-  cdp: CDPSession,
-  outFile: string,
-  run: () => Promise<void>,
-) {
-  const events: unknown[] = [];
-  const onData = ({ value }: { value: unknown[] }) => events.push(...value);
-  cdp.on("Tracing.dataCollected", onData);
-  await cdp.send("Tracing.start", {
-    traceConfig: { includedCategories: TRACE_CATEGORIES.split(",") },
-    transferMode: "ReportEvents",
-  });
-  // Starting the CPU profiler stalls the page, so keep that out of the scenario
-  await page.waitForTimeout(500);
-  await run();
-  const complete = new Promise<void>((resolve) =>
-    cdp.once("Tracing.tracingComplete", () => resolve()),
-  );
-  await cdp.send("Tracing.end");
-  await complete;
-  cdp.off("Tracing.dataCollected", onData);
-  await writeFile(outFile, JSON.stringify({ traceEvents: events }));
-  return getMainThreadBusyMs(events as TraceEvent[]);
-}
-
 interface TraceEvent {
   name: string;
   ph: string;
@@ -239,70 +116,10 @@ interface TraceEvent {
   args?: { name?: string };
 }
 
-/** Total duration of top-level tasks on the page's main thread, which shows headroom even when fps is capped. */
-function getMainThreadBusyMs(events: TraceEvent[]) {
-  const mainThreads = new Set(
-    events
-      .filter(
-        (event) =>
-          event.ph === "M" &&
-          event.name === "thread_name" &&
-          event.args?.name === "CrRendererMain",
-      )
-      .map((event) => `${event.pid}:${event.tid}`),
-  );
-  const busyByThread = new Map<string, number>();
-  for (const event of events) {
-    if (event.ph !== "X" || event.name !== "RunTask" || !event.dur) continue;
-    const thread = `${event.pid}:${event.tid}`;
-    if (!mainThreads.has(thread)) continue;
-    busyByThread.set(
-      thread,
-      (busyByThread.get(thread) ?? 0) + event.dur / 1000,
-    );
-  }
-  // Other renderers (extensions, about:blank) barely run, so the busiest one is the page
-  return Math.max(0, ...busyByThread.values());
-}
-
-function stripStyleRules(pattern: string) {
-  const regex = new RegExp(pattern);
-  let count = 0;
-  const strip = (
-    rules: CSSRuleList,
-    owner: CSSStyleSheet | CSSGroupingRule,
-  ) => {
-    for (let index = rules.length - 1; index >= 0; index--) {
-      const rule = rules[index];
-      if (rule instanceof CSSStyleRule && regex.test(rule.selectorText)) {
-        owner.deleteRule(index);
-        count++;
-      } else if (rule instanceof CSSGroupingRule) {
-        strip(rule.cssRules, rule);
-      }
-    }
-  };
-  for (const sheet of document.styleSheets) {
-    try {
-      strip(sheet.cssRules, sheet);
-    } catch {
-      // Cross-origin sheets are not readable
-    }
-  }
-  return count;
-}
-
-function round(value: number) {
-  return Math.round(value * 10) / 10;
-}
-
-async function resetScroll(page: Page) {
-  await page.evaluate((selector) => {
-    const grid = document.querySelector(selector);
-    grid?.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  }, GRID_SELECTOR);
-  await page.waitForTimeout(500);
-}
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
 
 async function main() {
   const label =
@@ -392,7 +209,190 @@ async function main() {
   console.log(`Traces and summary written to ${outDir}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+function stripStyleRules(pattern: string) {
+  const regex = new RegExp(pattern);
+  let count = 0;
+  const strip = (
+    rules: CSSRuleList,
+    owner: CSSStyleSheet | CSSGroupingRule,
+  ) => {
+    for (let index = rules.length - 1; index >= 0; index--) {
+      const rule = rules[index];
+      if (rule instanceof CSSStyleRule && regex.test(rule.selectorText)) {
+        owner.deleteRule(index);
+        count++;
+      } else if (rule instanceof CSSGroupingRule) {
+        strip(rule.cssRules, rule);
+      }
+    }
+  };
+  for (const sheet of document.styleSheets) {
+    try {
+      strip(sheet.cssRules, sheet);
+    } catch {
+      // Cross-origin sheets are not readable
+    }
+  }
+  return count;
+}
+
+function measureVsync() {
+  return new Promise<number>((resolve) => {
+    const deltas: number[] = [];
+    let last = performance.now();
+    const tick = (now: number) => {
+      deltas.push(now - last);
+      last = now;
+      if (deltas.length < 120) requestAnimationFrame(tick);
+      else resolve(deltas.slice(1).sort((a, b) => a - b)[59] ?? 0);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+async function resetScroll(page: Page) {
+  await page.evaluate((selector) => {
+    const grid = document.querySelector(selector);
+    grid?.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, GRID_SELECTOR);
+  await page.waitForTimeout(500);
+}
+
+function startFrameRecorder() {
+  const recorder = {
+    deltas: [] as number[],
+    loafs: [] as Array<{ duration: number; scriptMs: number }>,
+    running: true,
+  };
+  let last = performance.now();
+  const tick = (now: number) => {
+    recorder.deltas.push(now - last);
+    last = now;
+    if (recorder.running) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  const observer = new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) {
+      const scripts =
+        (entry as PerformanceEntry & { scripts?: Array<{ duration: number }> })
+          .scripts ?? [];
+      recorder.loafs.push({
+        duration: entry.duration,
+        scriptMs: scripts.reduce((sum, script) => sum + script.duration, 0),
+      });
+    }
+  });
+  try {
+    observer.observe({ type: "long-animation-frame", buffered: false });
+  } catch {
+    // Long animation frames are Chromium only
+  }
+  Object.assign(window, {
+    __frameRecorder: recorder,
+    __frameObserver: observer,
+  });
+}
+
+function stopFrameRecorder() {
+  const { __frameRecorder: recorder, __frameObserver: observer } =
+    window as unknown as {
+      __frameRecorder: {
+        deltas: number[];
+        loafs: Array<{ duration: number; scriptMs: number }>;
+        running: boolean;
+      };
+      __frameObserver: PerformanceObserver;
+    };
+  recorder.running = false;
+  observer.disconnect();
+  // The first delta spans the gap before recording started
+  return { deltas: recorder.deltas.slice(1), loafs: recorder.loafs };
+}
+
+function summarize(
+  deltas: number[],
+  loafs: Array<{ duration: number; scriptMs: number }>,
+  vsync: number,
+): FrameStats {
+  const at = (q: number) => percentile(deltas, q);
+  const total = deltas.reduce((sum, delta) => sum + delta, 0);
+  return {
+    frames: deltas.length,
+    fps: total > 0 ? (deltas.length * 1000) / total : 0,
+    p50: at(0.5),
+    p95: at(0.95),
+    p99: at(0.99),
+    max: Math.max(0, ...deltas),
+    droppedFrames: deltas.reduce(
+      (sum, delta) => sum + Math.max(0, Math.round(delta / vsync) - 1),
+      0,
+    ),
+    longAnimationFrames: loafs.length,
+    loafScriptMs: loafs.reduce((sum, loaf) => sum + loaf.scriptMs, 0),
+    // Filled in from the traced run
+    mainThreadMs: 0,
+  };
+}
+
+function percentile(values: number[], q: number) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return (
+    sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] ?? 0
+  );
+}
+
+async function recordTrace(
+  page: Page,
+  cdp: CDPSession,
+  outFile: string,
+  run: () => Promise<void>,
+) {
+  const events: unknown[] = [];
+  const onData = ({ value }: { value: unknown[] }) => events.push(...value);
+  cdp.on("Tracing.dataCollected", onData);
+  await cdp.send("Tracing.start", {
+    traceConfig: { includedCategories: TRACE_CATEGORIES },
+    transferMode: "ReportEvents",
+  });
+  // Starting the CPU profiler stalls the page, so keep that out of the scenario
+  await page.waitForTimeout(500);
+  await run();
+  const complete = new Promise<void>((resolve) =>
+    cdp.once("Tracing.tracingComplete", () => resolve()),
+  );
+  await cdp.send("Tracing.end");
+  await complete;
+  cdp.off("Tracing.dataCollected", onData);
+  await writeFile(outFile, JSON.stringify({ traceEvents: events }));
+  return getMainThreadBusyMs(events as TraceEvent[]);
+}
+
+/** Total duration of top-level tasks on the page's main thread, which shows headroom even when fps is capped. */
+function getMainThreadBusyMs(events: TraceEvent[]) {
+  const mainThreads = new Set(
+    events
+      .filter(
+        (event) =>
+          event.ph === "M" &&
+          event.name === "thread_name" &&
+          event.args?.name === "CrRendererMain",
+      )
+      .map((event) => `${event.pid}:${event.tid}`),
+  );
+  const busyByThread = new Map<string, number>();
+  for (const event of events) {
+    if (event.ph !== "X" || event.name !== "RunTask" || !event.dur) continue;
+    const thread = `${event.pid}:${event.tid}`;
+    if (!mainThreads.has(thread)) continue;
+    busyByThread.set(
+      thread,
+      (busyByThread.get(thread) ?? 0) + event.dur / 1000,
+    );
+  }
+  // Other renderers (extensions, about:blank) barely run, so the busiest one is the page
+  return Math.max(0, ...busyByThread.values());
+}
+
+function round(value: number) {
+  return Math.round(value * 10) / 10;
+}

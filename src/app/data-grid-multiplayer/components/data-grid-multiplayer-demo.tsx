@@ -64,42 +64,6 @@ import { DataGridShareMenu } from "./data-grid-share-menu";
 
 type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
 
-// Each copy lands between its row and the next one, so it shows up right below the original
-function duplicateSkaters(
-  table: Table<DataGridFeatures, SkaterSchema>,
-  rows: SkaterRows,
-) {
-  const orders = table.options.data
-    .map((skater) => skater.order)
-    .sort((a, b) => a - b);
-  const now = new Date();
-  for (const row of rows) {
-    const nextOrder = orders.find((order) => order > row.original.order);
-    const copy: SkaterSchema = {
-      ...row.original,
-      id: generateId(),
-      order:
-        nextOrder === undefined
-          ? row.original.order + 1
-          : (row.original.order + nextOrder) / 2,
-      createdAt: now,
-      updatedAt: now,
-    };
-    table.addRows([copy], { afterRowId: row.id });
-  }
-}
-
-// The server doesn't echo your own cell back, so your presence takes it from the grid
-function getPresenceUsers(
-  users: Record<string, UserPresence>,
-  currentUserId: string,
-  activeCell: UserPresence["activeCell"],
-) {
-  const currentUser = users[currentUserId];
-  if (!currentUser) return users;
-  return { ...users, [currentUserId]: { ...currentUser, activeCell } };
-}
-
 const stanceOptions = SKATER_STANCES.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
   value: stance,
@@ -313,8 +277,8 @@ export function DataGridMultiplayerDemo({
           eventDetails.reason === "insert-below"
             ? eventDetails.afterRowId
             : undefined;
-        const order = getInsertOrder(data, afterRowId);
-        const newSkater: SkaterSchema = {
+        const now = new Date();
+        return {
           id: generateId(),
           name: null,
           email: null,
@@ -326,12 +290,10 @@ export function DataGridMultiplayerDemo({
           isPro: false,
           tricks: null,
           media: null,
-          order,
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          order: getInsertOrder(data, afterRowId),
+          createdAt: now,
+          updatedAt: now,
         };
-
-        return newSkater;
       },
       [data],
     );
@@ -403,7 +365,7 @@ export function DataGridMultiplayerDemo({
         );
       }
     },
-    [isUploadConfigured],
+    [collection, isUploadConfigured],
   );
 
   const cellPresence = React.useMemo(() => {
@@ -514,10 +476,7 @@ export function DataGridMultiplayerDemo({
   );
 
   const onUserClick = React.useCallback(
-    (
-      _userId: string,
-      user: { activeCell: { rowId: string | null; columnId: string | null } },
-    ) => {
+    (_userId: string, user: UserPresence) => {
       const { rowId, columnId } = user.activeCell;
       if (!rowId || !columnId) return;
       table.scrollToCell(rowId, columnId);
@@ -526,13 +485,7 @@ export function DataGridMultiplayerDemo({
   );
 
   const getCellLabel = React.useCallback(
-    ({
-      rowId,
-      columnId,
-    }: {
-      rowId: string | null;
-      columnId: string | null;
-    }) => {
+    ({ rowId, columnId }: UserPresence["activeCell"]) => {
       if (!rowId || !columnId) return null;
       const row = table.getRowModel().rowsById[rowId];
       const column = table.getColumn(columnId);
@@ -617,4 +570,40 @@ export function DataGridMultiplayerDemo({
       </div>
     </DirectionProvider>
   );
+}
+
+// Each copy lands between its row and the next one, so it shows up right below the original
+function duplicateSkaters(
+  table: Table<DataGridFeatures, SkaterSchema>,
+  rows: SkaterRows,
+) {
+  const orders = table.options.data
+    .map((skater) => skater.order)
+    .sort((a, b) => a - b);
+  const now = new Date();
+  for (const row of rows) {
+    const nextOrder = orders.find((order) => order > row.original.order);
+    const copy: SkaterSchema = {
+      ...row.original,
+      id: generateId(),
+      order:
+        nextOrder === undefined
+          ? row.original.order + 1
+          : (row.original.order + nextOrder) / 2,
+      createdAt: now,
+      updatedAt: now,
+    };
+    table.addRows([copy], { afterRowId: row.id });
+  }
+}
+
+// The server doesn't echo your own cell back, so your presence takes it from the grid
+function getPresenceUsers(
+  users: Record<string, UserPresence>,
+  currentUserId: string,
+  activeCell: UserPresence["activeCell"],
+) {
+  const currentUser = users[currentUserId];
+  if (!currentUser) return users;
+  return { ...users, [currentUserId]: { ...currentUser, activeCell } };
 }

@@ -16,8 +16,8 @@ export async function runMigrate() {
   process.exit(0);
 }
 
-runMigrate().catch((err) => {
+runMigrate().catch((error) => {
   console.error("❌ Migration failed");
-  console.error(err);
+  console.error(error);
   process.exit(1);
 });

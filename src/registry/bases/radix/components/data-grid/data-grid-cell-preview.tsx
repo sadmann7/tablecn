@@ -28,19 +28,20 @@ import {
   getUrlHref,
   parseLocalDate,
 } from "@/lib/data-grid-utils";
+import { useCellValue } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
 import { badgeVariants } from "@/registry/bases/radix/ui/badge";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const BADGE_CLASS_NAME = cn(
   badgeVariants({ variant: "secondary" }),
-  "px-1.5 py-px",
+  "mt-0.5 mb-px h-4.25 px-1.5 py-0",
 );
 const OVERFLOW_BADGE_CLASS_NAME = cn(
   badgeVariants({ variant: "outline" }),
-  "px-1.5 py-px text-muted-foreground",
+  "mt-0.5 mb-px h-4.25 px-1.5 py-0 text-muted-foreground",
 );
 const BADGE_LIST_CLASS_NAME =
-  "flex flex-wrap content-start items-center gap-1 overflow-hidden";
+  "flex flex-wrap content-start items-center gap-x-1 overflow-hidden";
 
 const LINE_CLAMP_CLASS_NAMES: Record<RowHeightValue, string> = {
   short: "line-clamp-1",
@@ -80,7 +81,13 @@ export function DataGridCellPreview<TData extends RowData>({
   showStartBorder,
   showEndBorder,
 }: DataGridCellPreviewProps<TData>) {
-  const { className, content } = getPreviewContent({ cell, width, rowHeight });
+  const value = useCellValue(cell);
+  const { className, content } = getPreviewContent({
+    cell,
+    value,
+    width,
+    rowHeight,
+  });
   const columnId = cell.column.id;
   const isTinted = isSelected || isSearchMatch || isActiveSearchMatch;
 
@@ -95,7 +102,7 @@ export function DataGridCellPreview<TData extends RowData>({
       data-row-id={cell.row.id}
       data-column-id={columnId}
       className={cn(
-        "h-full cursor-default px-2 py-1.5 text-start text-sm",
+        "h-full cursor-default px-2 pt-1.75 pb-2 text-start text-sm",
         className,
         {
           grow,
@@ -120,14 +127,16 @@ export function DataGridCellPreview<TData extends RowData>({
 
 function getPreviewContent<TData extends RowData>({
   cell,
+  value,
   width,
   rowHeight,
-}: Pick<DataGridCellPreviewProps<TData>, "cell" | "width" | "rowHeight">): {
+}: Pick<DataGridCellPreviewProps<TData>, "cell" | "width" | "rowHeight"> & {
+  value: unknown;
+}): {
   className?: string;
   content: React.ReactNode;
 } {
   const cellOpts = cell.column.columnDef.meta?.cell;
-  const value = cell.getValue();
   const lineClampClassName = cn(
     "w-fit max-w-full wrap-anywhere",
     LINE_CLAMP_CLASS_NAMES[rowHeight],

@@ -34,29 +34,6 @@ const snapshot: ServerMessage = {
   ],
 };
 
-function createRoom() {
-  const sent: ClientMessage[] = [];
-  let listener: ((message: ServerMessage) => void) | null = null;
-
-  const collection = createSkatersCollection({
-    send: (message) => {
-      sent.push(message);
-    },
-    subscribe: (next) => {
-      listener = next;
-      return () => {
-        listener = null;
-      };
-    },
-  });
-
-  return {
-    collection,
-    sent,
-    emit: (message: ServerMessage) => listener?.(message),
-  };
-}
-
 describe("createSkatersCollection", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -97,3 +74,26 @@ describe("createSkatersCollection", () => {
     expect(collection.status).toBe("ready");
   });
 });
+
+function createRoom() {
+  const sent: ClientMessage[] = [];
+  let listener: ((message: ServerMessage) => void) | null = null;
+
+  const collection = createSkatersCollection({
+    send: (message) => {
+      sent.push(message);
+    },
+    subscribe: (next) => {
+      listener = next;
+      return () => {
+        listener = null;
+      };
+    },
+  });
+
+  return {
+    collection,
+    sent,
+    emit: (message: ServerMessage) => listener?.(message),
+  };
+}

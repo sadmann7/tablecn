@@ -10,16 +10,6 @@ import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { Input } from "@/registry/bases/radix/ui/input";
 
-function getRangeFilterValues(value: string | string[]): [string, string] {
-  if (Array.isArray(value)) return [value[0] ?? "", value[1] ?? ""];
-  return [value, ""];
-}
-
-/** Number inputs only accept plain numbers, so skip rounding and grouping. */
-function getInputValue(value: string) {
-  return value === "" || Number.isNaN(Number(value)) ? "" : value;
-}
-
 interface DataTableRangeFilterProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -58,16 +48,18 @@ export function DataTableRangeFilter<TData extends RowData>({
     (value: string, isMin?: boolean) => {
       const numValue = Number(value);
       const currentValues = getRangeFilterValues(filter.value);
-      const otherValue = isMin
-        ? (currentValues[1] ?? "")
-        : (currentValues[0] ?? "");
+      const otherValue = isMin ? currentValues[1] : currentValues[0];
+      // An empty bound is open, but `0` is a real bound
+      const otherNumber = Number(otherValue);
+      const otherBound =
+        otherValue === "" || Number.isNaN(otherNumber) ? null : otherNumber;
 
       if (
         value === "" ||
         (!Number.isNaN(numValue) &&
           (isMin
-            ? numValue >= min && numValue <= (Number(otherValue) || max)
-            : numValue <= max && numValue >= (Number(otherValue) || min)))
+            ? numValue >= min && numValue <= (otherBound ?? max)
+            : numValue <= max && numValue >= (otherBound ?? min)))
       ) {
         onFilterUpdate(filter.filterId, {
           value: isMin ? [value, otherValue] : [otherValue, value],
@@ -116,4 +108,14 @@ export function DataTableRangeFilter<TData extends RowData>({
       />
     </div>
   );
+}
+
+function getRangeFilterValues(value: string | string[]): [string, string] {
+  if (Array.isArray(value)) return [value[0] ?? "", value[1] ?? ""];
+  return [value, ""];
+}
+
+/** Number inputs only accept plain numbers, so skip rounding and grouping. */
+function getInputValue(value: string) {
+  return value === "" || Number.isNaN(Number(value)) ? "" : value;
 }

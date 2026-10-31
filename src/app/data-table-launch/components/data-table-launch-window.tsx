@@ -14,24 +14,24 @@ import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/d
 
 import { launchTasks } from "../lib/data";
 import {
-  type LaunchRequest,
-  type LaunchTable,
+  type DataTableLaunchRequest,
+  type DataTableLaunchTable,
   NETWORK_LOG_SIZE,
 } from "../lib/state";
 
-interface LaunchWindowProps {
+interface DataTableLaunchWindowProps {
   search: string;
   sheenKey: string;
   network: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function LaunchWindow({
+export function DataTableLaunchWindow({
   search,
   sheenKey,
   network,
   children,
-}: LaunchWindowProps) {
+}: DataTableLaunchWindowProps) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-background shadow-[0_40px_120px_-20px_rgb(0_0_0/0.8),0_0_0_1px_rgb(255_255_255/0.04)]">
       <div className="flex items-center gap-4 border-b border-white/10 bg-white/3 px-5 py-3">
@@ -40,7 +40,7 @@ export function LaunchWindow({
           <div className="size-3 rounded-full bg-white/15" />
           <div className="size-3 rounded-full bg-white/15" />
         </div>
-        <LaunchUrl search={search} />
+        <DataTableLaunchUrl search={search} />
       </div>
       <div className="flex flex-col gap-4 p-5">{children}</div>
       {network}
@@ -53,30 +53,15 @@ export function LaunchWindow({
   );
 }
 
-interface LaunchUrlProps {
-  search: string;
-}
-
-function LaunchUrl({ search }: LaunchUrlProps) {
-  return (
-    <div
-      data-launch="url"
-      className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-lg bg-white/5 px-4 font-mono text-base"
-    >
-      <span className="truncate text-white/50">
-        tablecn.com/tasks
-        {search && <span className="text-emerald-300">?{search}</span>}
-      </span>
-    </div>
-  );
-}
-
-interface LaunchToolbarProps {
-  table: LaunchTable;
+interface DataTableLaunchToolbarProps {
+  table: DataTableLaunchTable;
   filterMode: FilterMode;
 }
 
-export function LaunchToolbar({ table, filterMode }: LaunchToolbarProps) {
+export function DataTableLaunchToolbar({
+  table,
+  filterMode,
+}: DataTableLaunchToolbarProps) {
   if (filterMode === "plain") {
     return (
       <DataTableToolbar data-launch="toolbar" table={table}>
@@ -105,19 +90,19 @@ export function LaunchToolbar({ table, filterMode }: LaunchToolbarProps) {
   );
 }
 
-interface LaunchNetworkProps {
+interface DataTableLaunchNetworkProps {
   dataMode: DataMode;
   request: string;
   isPending: boolean;
-  log: LaunchRequest[];
+  log: DataTableLaunchRequest[];
 }
 
-export function LaunchNetwork({
+export function DataTableLaunchNetwork({
   dataMode,
   request,
   isPending,
   log,
-}: LaunchNetworkProps) {
+}: DataTableLaunchNetworkProps) {
   const isServerMode = dataMode === "server";
 
   return (
@@ -135,10 +120,28 @@ export function LaunchNetwork({
   );
 }
 
+interface DataTableLaunchUrlProps {
+  search: string;
+}
+
+function DataTableLaunchUrl({ search }: DataTableLaunchUrlProps) {
+  return (
+    <div
+      data-launch="url"
+      className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-lg bg-white/5 px-4 font-mono text-base"
+    >
+      <span className="truncate text-white/50">
+        tablecn.com/tasks
+        {search && <span className="text-emerald-300">?{search}</span>}
+      </span>
+    </div>
+  );
+}
+
 interface ServerNetworkLogProps {
   request: string;
   isPending: boolean;
-  log: LaunchRequest[];
+  log: DataTableLaunchRequest[];
 }
 
 function ServerNetworkLog({ request, isPending, log }: ServerNetworkLogProps) {
@@ -168,18 +171,6 @@ function ServerNetworkLog({ request, isPending, log }: ServerNetworkLogProps) {
   );
 }
 
-function ClientNetworkSummary() {
-  return (
-    <div className="launch-rise flex items-center gap-4 text-white/70">
-      <span className="w-12 text-emerald-300">0</span>
-      <span>requests</span>
-      <span className="font-sans text-white/50">
-        {launchTasks.length} rows sorted, filtered, and paginated in the browser
-      </span>
-    </div>
-  );
-}
-
 interface NetworkRowProps {
   status: React.ReactNode;
   path: string;
@@ -199,4 +190,16 @@ function NetworkRow({ status, path, detail }: NetworkRowProps) {
 
 function getRequestPath(request: string) {
   return request ? `/api/tasks?${request}` : "/api/tasks";
+}
+
+function ClientNetworkSummary() {
+  return (
+    <div className="launch-rise flex items-center gap-4 text-white/70">
+      <span className="w-12 text-emerald-300">0</span>
+      <span>requests</span>
+      <span className="font-sans text-white/50">
+        {launchTasks.length} rows sorted, filtered, and paginated in the browser
+      </span>
+    </div>
+  );
 }

@@ -12,54 +12,6 @@ const BADGE_ICON_GAP = 4; // gap-1 between icon and text
 const BADGE_FONT_SIZE = 12; // text-xs
 const BADGE_FONT_WEIGHT = 500; // font-medium
 
-let measureContext: CanvasRenderingContext2D | null = null;
-let measureFont: string | null = null;
-
-function measureTextWidth(text: string): number {
-  if (!measureContext) {
-    measureContext = document.createElement("canvas").getContext("2d");
-  }
-  if (!measureContext) return text.length * 7;
-
-  if (!measureFont) {
-    const fontFamily = getComputedStyle(document.body).fontFamily;
-    measureFont = `${BADGE_FONT_WEIGHT} ${BADGE_FONT_SIZE}px ${fontFamily}`;
-  }
-  measureContext.font = measureFont;
-  return measureContext.measureText(text).width;
-}
-
-interface MeasureBadgeWidthProps {
-  label: string;
-  cacheKey: string;
-  iconSize?: number;
-  maxWidth?: number;
-}
-
-function measureBadgeWidth({
-  label,
-  cacheKey,
-  iconSize,
-  maxWidth,
-}: MeasureBadgeWidthProps): number {
-  const cached = badgeWidthCache.get(cacheKey);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const textWidth = measureTextWidth(label);
-  const width = Math.ceil(
-    BADGE_CHROME_WIDTH +
-      (iconSize ? iconSize + BADGE_ICON_GAP : 0) +
-      (maxWidth ? Math.min(textWidth, maxWidth) : textWidth),
-  );
-
-  if (document.fonts?.status !== "loading") {
-    badgeWidthCache.set(cacheKey, width);
-  }
-  return width;
-}
-
 interface GetBadgeListWidthProps<T> {
   items: T[];
   getLabel: (item: T) => string;
@@ -211,4 +163,52 @@ export function useBadgeOverflow<T>({
 
 export function clearBadgeWidthCache(): void {
   badgeWidthCache.clear();
+}
+
+interface MeasureBadgeWidthProps {
+  label: string;
+  cacheKey: string;
+  iconSize?: number;
+  maxWidth?: number;
+}
+
+function measureBadgeWidth({
+  label,
+  cacheKey,
+  iconSize,
+  maxWidth,
+}: MeasureBadgeWidthProps): number {
+  const cached = badgeWidthCache.get(cacheKey);
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const textWidth = measureTextWidth(label);
+  const width = Math.ceil(
+    BADGE_CHROME_WIDTH +
+      (iconSize ? iconSize + BADGE_ICON_GAP : 0) +
+      (maxWidth ? Math.min(textWidth, maxWidth) : textWidth),
+  );
+
+  if (document.fonts?.status !== "loading") {
+    badgeWidthCache.set(cacheKey, width);
+  }
+  return width;
+}
+
+let measureContext: CanvasRenderingContext2D | null = null;
+let measureFont: string | null = null;
+
+function measureTextWidth(text: string): number {
+  if (!measureContext) {
+    measureContext = document.createElement("canvas").getContext("2d");
+  }
+  if (!measureContext) return text.length * 7;
+
+  if (!measureFont) {
+    const fontFamily = getComputedStyle(document.body).fontFamily;
+    measureFont = `${BADGE_FONT_WEIGHT} ${BADGE_FONT_SIZE}px ${fontFamily}`;
+  }
+  measureContext.font = measureFont;
+  return measureContext.measureText(text).width;
 }

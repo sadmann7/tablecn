@@ -5,12 +5,31 @@ import { describe, expect, it } from "vitest";
 import * as BaseFaceted from "@/registry/bases/base/ui/faceted";
 import * as RadixFaceted from "@/registry/bases/radix/ui/faceted";
 
+type FacetedModule = typeof RadixFaceted | typeof BaseFaceted;
+
+describe.each([
+  ["radix", RadixFaceted],
+  ["base", BaseFaceted],
+])("Faceted (%s)", (_name, ui) => {
+  it("keeps the indicator in sync when a single value is toggled repeatedly", () => {
+    render(<SingleSelect ui={ui} />);
+
+    for (let round = 0; round < 3; round++) {
+      toggleActive();
+      expect(screen.getByRole("button").textContent).toContain("Active");
+      expect(getActiveChecked()).toBe("true");
+
+      toggleActive();
+      expect(screen.getByRole("button").textContent).toContain("Pick a status");
+      expect(getActiveChecked()).toBe("false");
+    }
+  });
+});
+
 const items = [
   { label: "Active", value: "active" },
   { label: "Inactive", value: "inactive" },
 ];
-
-type FacetedModule = typeof RadixFaceted | typeof BaseFaceted;
 
 function SingleSelect({ ui }: { ui: FacetedModule }) {
   const {
@@ -67,22 +86,3 @@ function getActiveChecked() {
   });
   return checked;
 }
-
-describe.each([
-  ["radix", RadixFaceted],
-  ["base", BaseFaceted],
-])("Faceted (%s)", (_name, ui) => {
-  it("keeps the indicator in sync when a single value is toggled repeatedly", () => {
-    render(<SingleSelect ui={ui} />);
-
-    for (let round = 0; round < 3; round++) {
-      toggleActive();
-      expect(screen.getByRole("button").textContent).toContain("Active");
-      expect(getActiveChecked()).toBe("true");
-
-      toggleActive();
-      expect(screen.getByRole("button").textContent).toContain("Pick a status");
-      expect(getActiveChecked()).toBe("false");
-    }
-  });
-});

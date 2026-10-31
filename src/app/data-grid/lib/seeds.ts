@@ -45,6 +45,45 @@ export const skills = [
   "Agile",
 ] as const;
 
+interface SeedPerson extends Person {
+  firstName: string;
+  lastName: string;
+}
+
+const POOL_SIZE = 2000;
+let pool: SeedPerson[] | null = null;
+
+// Faker is too slow for hundreds of thousands of rows, so rows mix fields from a seeded pool:
+// deterministic, fast, and strings and arrays are shared instead of copied
+export function generatePeople(count: number): Person[] {
+  const seeds = (pool ??= Array.from({ length: POOL_SIZE }, (_, i) =>
+    generatePerson(i + 1),
+  ));
+  return Array.from({ length: count }, (_, i) => {
+    const h = hash(i);
+    const base = seeds[i % POOL_SIZE];
+    const other = seeds[h % POOL_SIZE];
+    if (!base || !other) throw new Error("Seed pool is incomplete");
+    const firstName = base.firstName;
+    const lastName = other.lastName;
+    return {
+      id: `person-${i}`,
+      name: `${firstName} ${lastName}`,
+      age: 22 + (h % 44),
+      email: `${firstName}.${lastName}${i}@example.com`.toLowerCase(),
+      website: other.website,
+      feedback: base.feedback,
+      salary: 40000 + (h % 111) * 1000,
+      department: departments[h % departments.length],
+      status: statuses[(h >>> 4) % statuses.length],
+      isActive: (h & 1) === 1,
+      startDate: other.startDate,
+      skills: base.skills,
+      attachments: other.attachments,
+    };
+  });
+}
+
 const feedbackNotes = [
   "Excellent team player with strong communication skills. Consistently meets deadlines and delivers high-quality work.",
   "Currently working on the Q4 project initiative. Requires additional training in advanced analytics tools.",
@@ -124,11 +163,6 @@ const sampleFiles = [
   { name: "Training_Video.mp4", type: "video/mp4", sizeRange: [5000, 15000] },
 ] as const;
 
-interface SeedPerson extends Person {
-  firstName: string;
-  lastName: string;
-}
-
 function generatePerson(id: number): SeedPerson {
   const firstName = faker.person.firstName();
   const lastName = faker.person.lastName();
@@ -173,43 +207,9 @@ function generatePerson(id: number): SeedPerson {
   };
 }
 
-const POOL_SIZE = 2000;
-let pool: SeedPerson[] | null = null;
-
 // Cheap deterministic integer hash, so large datasets vary per row without calling faker per row
 function hash(value: number) {
   let h = Math.imul(value ^ 0x9e3779b9, 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
   return (h ^ (h >>> 16)) >>> 0;
-}
-
-// Faker is too slow for hundreds of thousands of rows, so rows mix fields from a seeded pool:
-// deterministic, fast, and strings and arrays are shared instead of copied
-export function generatePeople(count: number): Person[] {
-  const seeds = (pool ??= Array.from({ length: POOL_SIZE }, (_, i) =>
-    generatePerson(i + 1),
-  ));
-  return Array.from({ length: count }, (_, i) => {
-    const h = hash(i);
-    const base = seeds[i % POOL_SIZE];
-    const other = seeds[h % POOL_SIZE];
-    if (!base || !other) throw new Error("Seed pool is incomplete");
-    const firstName = base.firstName;
-    const lastName = other.lastName;
-    return {
-      id: `person-${i}`,
-      name: `${firstName} ${lastName}`,
-      age: 22 + (h % 44),
-      email: `${firstName}.${lastName}${i}@example.com`.toLowerCase(),
-      website: other.website,
-      feedback: base.feedback,
-      salary: 40000 + (h % 111) * 1000,
-      department: departments[h % departments.length],
-      status: statuses[(h >>> 4) % statuses.length],
-      isActive: (h & 1) === 1,
-      startDate: other.startDate,
-      skills: base.skills,
-      attachments: other.attachments,
-    };
-  });
 }

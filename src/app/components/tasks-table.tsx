@@ -82,6 +82,7 @@ export function TasksTable({
         estimatedHoursRange,
         setRowAction,
       }),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- `countsKey` rebuilds the columns only when the counts change by value
     [countsKey],
   );
 
@@ -135,7 +136,7 @@ export function TasksTable({
       <DeleteTasksDialog
         open={rowAction?.variant === "delete"}
         onOpenChange={() => setRowAction(null)}
-        tasks={rowAction?.row.original ? [rowAction?.row.original] : []}
+        tasks={rowAction ? [rowAction.row.original] : []}
         showTrigger={false}
         onSuccess={() => rowAction?.row.toggleSelected(false)}
       />

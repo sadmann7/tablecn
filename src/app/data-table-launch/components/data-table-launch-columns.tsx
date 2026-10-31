@@ -17,15 +17,18 @@ import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-ta
 import { Badge } from "@/registry/bases/radix/ui/badge";
 
 import {
+  type DataTableLaunchTask,
   getLaunchPriorityIcon,
   getLaunchStatusIcon,
   launchHoursRange,
   launchPriorityOptions,
   launchStatusOptions,
-  type LaunchTask,
 } from "../lib/data";
 
-export const launchColumns: ColumnDef<DataTableFeatures, LaunchTask>[] = [
+export const launchColumns: ColumnDef<
+  DataTableFeatures,
+  DataTableLaunchTask
+>[] = [
   {
     id: "title",
     accessorKey: "title",

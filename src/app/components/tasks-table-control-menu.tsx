@@ -77,6 +77,45 @@ function TasksTableControlMenu() {
   );
 }
 
+function TasksTableControlMenuSkeleton() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <ControlGroup label="Mode">
+        <FlagGroupSkeleton flags={DATA_MODES} />
+      </ControlGroup>
+      <Separator
+        orientation="vertical"
+        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
+      />
+      <ControlGroup label="Filter">
+        <FlagGroupSkeleton flags={FILTER_MODES} />
+      </ControlGroup>
+    </div>
+  );
+}
+
+interface ControlItemProps {
+  flag: Flag;
+}
+
+function ControlItem({ flag }: ControlItemProps) {
+  const Icon = flag.icon;
+
+  return (
+    <Tooltip delayDuration={700}>
+      <ToggleGroupItem value={flag.value} className="px-2.5 text-xs" asChild>
+        <TooltipTrigger>
+          <Icon className="size-3.5" />
+          {flag.label}
+        </TooltipTrigger>
+      </ToggleGroupItem>
+      <TooltipContent side="bottom" sideOffset={6}>
+        {flag.description}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function FlagGroupSkeleton({ flags }: { flags: readonly Flag[] }) {
   return (
     <div className="relative flex h-7 items-center">
@@ -104,45 +143,6 @@ function ControlGroup({ label, children }: ControlGroupProps) {
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground">{label}</span>
       {children}
-    </div>
-  );
-}
-
-interface ControlItemProps {
-  flag: Flag;
-}
-
-function ControlItem({ flag }: ControlItemProps) {
-  const Icon = flag.icon;
-
-  return (
-    <Tooltip delayDuration={700}>
-      <ToggleGroupItem value={flag.value} className="px-2.5 text-xs" asChild>
-        <TooltipTrigger>
-          <Icon className="size-3.5" />
-          {flag.label}
-        </TooltipTrigger>
-      </ToggleGroupItem>
-      <TooltipContent side="bottom" sideOffset={6}>
-        {flag.description}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function TasksTableControlMenuSkeleton() {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      <ControlGroup label="Mode">
-        <FlagGroupSkeleton flags={DATA_MODES} />
-      </ControlGroup>
-      <Separator
-        orientation="vertical"
-        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
-      />
-      <ControlGroup label="Filter">
-        <FlagGroupSkeleton flags={FILTER_MODES} />
-      </ControlGroup>
     </div>
   );
 }

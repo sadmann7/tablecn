@@ -1,6 +1,6 @@
 "use client";
 
-import { Subscribe, type Table } from "@tanstack/react-table";
+import { Subscribe, type Table, type TableState } from "@tanstack/react-table";
 import { CheckCircle2, Copy, Eraser, Network, Trash2, X } from "lucide-react";
 import * as React from "react";
 
@@ -32,13 +32,7 @@ export function PeopleDataGridActionBar({
   table,
 }: PeopleDataGridActionBarProps) {
   return (
-    <Subscribe
-      source={table.store}
-      selector={(state) => ({
-        rowSelection: state.rowSelection,
-        cellSelection: state.cellSelection,
-      })}
-    >
+    <Subscribe source={table.store} selector={selectSelectionState}>
       {() => <PeopleDataGridActionBarImpl table={table} />}
     </Subscribe>
   );
@@ -177,4 +171,11 @@ function getTargetRows(table: Table<DataGridFeatures, Person>) {
 
   const rowIds = new Set(table.getSelectedCells().map((cell) => cell.rowId));
   return table.getRowModel().rows.filter((row) => rowIds.has(row.id));
+}
+
+function selectSelectionState(state: TableState<DataGridFeatures>) {
+  return {
+    rowSelection: state.rowSelection,
+    cellSelection: state.cellSelection,
+  };
 }

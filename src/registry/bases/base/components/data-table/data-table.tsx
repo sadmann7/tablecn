@@ -9,6 +9,7 @@ import {
   type Row,
   type RowData,
   Subscribe,
+  type TableState,
 } from "@tanstack/react-table";
 import { cn } from "cn";
 import * as React from "react";
@@ -92,14 +93,7 @@ function DataTableLayout<TData extends RowData>({
   ...props
 }: DataTableLayoutProps<TData>) {
   return (
-    <table.Subscribe
-      selector={(state) => ({
-        columnOrder: state.columnOrder,
-        columnPinning: state.columnPinning,
-        columnSizing: state.columnSizing,
-        columnVisibility: state.columnVisibility,
-      })}
-    >
+    <table.Subscribe selector={selectLayoutState}>
       {() => (
         <Table
           className="table-fixed"
@@ -121,13 +115,7 @@ function DataTableHeader<TData extends RowData>({
   table,
 }: DataTableHeaderProps<TData>) {
   return (
-    <table.Subscribe
-      selector={(state) => ({
-        columnOrder: state.columnOrder,
-        columnPinning: state.columnPinning,
-        columnVisibility: state.columnVisibility,
-      })}
-    >
+    <table.Subscribe selector={selectHeaderState}>
       {() => (
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -166,13 +154,19 @@ function DataTableHeadCell<TData extends RowData>({
           aria-sort={ariaSort}
           colSpan={header.colSpan}
           className={getCellClassName(pinned)}
-          style={getColumnPinningStyle(header.column)}
+          style={getColumnPinningStyle(header.column, pinned)}
         >
           {header.isPlaceholder ? null : <FlexRender header={header} />}
         </TableHead>
       )}
     </Subscribe>
   );
+}
+
+function getCellClassName(pinned: ColumnPinningPosition) {
+  return pinned
+    ? "overflow-hidden bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted"
+    : "overflow-hidden";
 }
 
 interface DataTableBodyProps<TData extends RowData> {
@@ -209,6 +203,22 @@ function DataTableBody<TData extends RowData>({
         <DataTableRow key={row.id} row={row} />
       ))}
     </TableBody>
+  );
+}
+
+interface DataTableActionBarProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+  actionBar: React.ReactNode;
+}
+
+function DataTableActionBar<TData extends RowData>({
+  table,
+  actionBar,
+}: DataTableActionBarProps<TData>) {
+  return (
+    <table.Subscribe selector={() => getVisibleSelectedRows(table).length > 0}>
+      {(hasVisibleSelectedRows) => (hasVisibleSelectedRows ? actionBar : null)}
+    </table.Subscribe>
   );
 }
 
@@ -263,31 +273,26 @@ function DataTableCellImpl<TData extends RowData>({
   return (
     <TableCell
       className={getCellClassName(pinned)}
-      style={getColumnPinningStyle(cell.column)}
+      style={getColumnPinningStyle(cell.column, pinned)}
     >
       <FlexRender cell={cell} />
     </TableCell>
   );
 }
 
-interface DataTableActionBarProps<TData extends RowData> {
-  table: ReactTable<DataTableFeatures, TData, unknown>;
-  actionBar: React.ReactNode;
+function selectLayoutState(state: TableState<DataTableFeatures>) {
+  return {
+    columnOrder: state.columnOrder,
+    columnPinning: state.columnPinning,
+    columnSizing: state.columnSizing,
+    columnVisibility: state.columnVisibility,
+  };
 }
 
-function DataTableActionBar<TData extends RowData>({
-  table,
-  actionBar,
-}: DataTableActionBarProps<TData>) {
-  return (
-    <table.Subscribe selector={() => getVisibleSelectedRows(table).length > 0}>
-      {(hasVisibleSelectedRows) => (hasVisibleSelectedRows ? actionBar : null)}
-    </table.Subscribe>
-  );
-}
-
-function getCellClassName(pinned: ColumnPinningPosition) {
-  return pinned
-    ? "overflow-hidden bg-background transition-colors group-hover/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-has-aria-expanded/row:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] group-data-[state=selected]/row:bg-muted"
-    : "overflow-hidden";
+function selectHeaderState(state: TableState<DataTableFeatures>) {
+  return {
+    columnOrder: state.columnOrder,
+    columnPinning: state.columnPinning,
+    columnVisibility: state.columnVisibility,
+  };
 }

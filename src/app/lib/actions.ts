@@ -12,22 +12,6 @@ import type { CreateTaskSchema, UpdateTaskSchema } from "./validations";
 
 import { generateRandomTasks, generateTaskCode } from "./utils";
 
-export async function seedTasks(input: { count: number }) {
-  const count = input.count ?? 100;
-
-  try {
-    const allTasks = generateRandomTasks(count);
-
-    await db.delete(tasks);
-
-    console.log("📝 Inserting tasks", allTasks.length);
-
-    await db.insert(tasks).values(allTasks).onConflictDoNothing();
-  } catch (err) {
-    console.error(err);
-  }
-}
-
 export async function createTask(input: CreateTaskSchema) {
   try {
     await db.transaction(async (tx) => {
@@ -47,7 +31,7 @@ export async function createTask(input: CreateTaskSchema) {
         })
         .then(takeFirstOrThrow);
 
-      // Delete a task to keep the total number of tasks constant
+      // The oldest task makes room, so the demo keeps the same number of tasks
       await tx.delete(tasks).where(
         eq(
           tasks.id,
@@ -74,10 +58,10 @@ export async function createTask(input: CreateTaskSchema) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -112,10 +96,10 @@ export async function updateTask(input: UpdateTaskSchema & { id: string }) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -153,10 +137,10 @@ export async function updateTasks(input: {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -168,7 +152,7 @@ export async function deleteTask(input: { id: string }) {
 
       const takenCodes = await tx.select({ code: tasks.code }).from(tasks);
 
-      // Create a new task for the deleted one
+      // A fresh task takes its place, so the demo keeps the same number of tasks
       await tx.insert(tasks).values(
         generateRandomTasks(
           1,
@@ -185,10 +169,10 @@ export async function deleteTask(input: { id: string }) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }
@@ -200,7 +184,7 @@ export async function deleteTasks(input: { ids: string[] }) {
 
       const takenCodes = await tx.select({ code: tasks.code }).from(tasks);
 
-      // Create new tasks for the deleted ones
+      // Fresh tasks take their place, so the demo keeps the same number of tasks
       await tx.insert(tasks).values(
         generateRandomTasks(
           input.ids.length,
@@ -217,10 +201,10 @@ export async function deleteTasks(input: { ids: string[] }) {
       data: null,
       error: null,
     };
-  } catch (err) {
+  } catch (error) {
     return {
       data: null,
-      error: getErrorMessage(err),
+      error: getErrorMessage(error),
     };
   }
 }

@@ -5,11 +5,13 @@
 
 import type { NextConfig } from "next";
 
-import { DEFAULT_STYLE_ID } from "./src/lib/constants";
+import { DEFAULT_STYLE_ID } from "@/lib/constants";
+
 import "./src/env";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  reactCompiler: true,
   async redirects() {
     return [
       {

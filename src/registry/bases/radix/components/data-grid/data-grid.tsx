@@ -104,27 +104,17 @@ export function DataGrid<TData extends RowData>({
   );
 }
 
-interface DataGridActionBarProps<TData extends RowData> extends Pick<
-  DataGridProps<TData>,
-  "table"
-> {
-  actionBar: React.ReactNode;
+interface ViewportInsets {
+  start: number;
+  end: number;
+  headerHeight: number;
 }
 
-function DataGridActionBar<TData extends RowData>({
-  table,
-  actionBar,
-}: DataGridActionBarProps<TData>) {
-  return (
-    <table.Subscribe
-      selector={() =>
-        table.getHasRowSelection() || table.getHasCellRangeSelection()
-      }
-    >
-      {(hasSelection) => (hasSelection ? actionBar : null)}
-    </table.Subscribe>
-  );
-}
+const EMPTY_VIEWPORT_INSETS: ViewportInsets = {
+  start: 0,
+  end: 0,
+  headerHeight: 0,
+};
 
 type DataGridViewportProps<TData extends RowData> = Pick<
   DataGridProps<TData>,
@@ -189,8 +179,7 @@ function DataGridViewport<TData extends RowData>({
     const header = headerRef.current;
     const footer = footerRef.current;
 
-    function measure() {
-      if (!dataGrid) return;
+    const measure = () => {
       const gridRect = dataGrid.getBoundingClientRect();
       const next: ViewportInsets = {
         start:
@@ -208,7 +197,7 @@ function DataGridViewport<TData extends RowData>({
           ? prev
           : next,
       );
-    }
+    };
 
     measure();
     const observer = new ResizeObserver(measure);
@@ -380,6 +369,7 @@ function DataGridViewport<TData extends RowData>({
           .filter((column) => !column.getCanEdit())
           .map((column) => column.id),
       ),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- `getCanEdit` reads these table options, so they invalidate the set
     [leafColumns, readOnly, enableCellEditing],
   );
 
@@ -425,7 +415,7 @@ function DataGridViewport<TData extends RowData>({
     <div
       role="grid"
       aria-label="Data grid"
-      aria-rowcount={rows.length + 1 + (!readOnly && onRowAddProp ? 1 : 0)}
+      aria-rowcount={rows.length + 1 + (hasFooter ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
       data-slot="data-grid"
@@ -487,7 +477,7 @@ function DataGridViewport<TData extends RowData>({
           </DataGridRowContext>
         </div>
       </div>
-      {!readOnly && onRowAddProp && (
+      {hasFooter && (
         <div
           role="rowgroup"
           data-slot="data-grid-footer"
@@ -531,17 +521,72 @@ function DataGridViewport<TData extends RowData>({
   );
 }
 
-interface ViewportInsets {
-  start: number;
-  end: number;
-  headerHeight: number;
+function getColumnsWidth<TData extends RowData>(
+  columns: Array<Column<DataGridFeatures, TData>>,
+) {
+  let width = 0;
+  for (const column of columns) width += column.getSize();
+  return width;
 }
 
-const EMPTY_VIEWPORT_INSETS: ViewportInsets = {
-  start: 0,
-  end: 0,
-  headerHeight: 0,
-};
+function getColumnWindowKey(params: {
+  virtualizer: Virtualizer<HTMLDivElement, Element>;
+  startCount: number;
+  centerCount: number;
+  centerStart: number;
+  centerEnd: number;
+}) {
+  const { virtualizer, startCount, centerCount, centerStart, centerEnd } =
+    params;
+  const items = virtualizer.getVirtualItems();
+  if (centerCount > 0 && items.length === 0) return "";
+  let key = `${startCount}|${centerCount}|${centerStart}|${centerEnd}|`;
+  for (const item of items) {
+    key += `${item.index}:${item.start}:${item.end},`;
+  }
+  return key;
+}
+
+function parseColumnWindowKey(key: string): ColumnWindow | null {
+  if (!key) return null;
+  const [startCount, centerCount, centerStart, centerEnd, items = ""] =
+    key.split("|");
+  return {
+    startCount: Number(startCount),
+    centerCount: Number(centerCount),
+    centerStart: Number(centerStart),
+    centerEnd: Number(centerEnd),
+    items: items
+      .split(",")
+      .filter(Boolean)
+      .map((item) => {
+        const [index, start, end] = item.split(":").map(Number);
+        return { index: index ?? 0, start: start ?? 0, end: end ?? 0 };
+      }),
+  };
+}
+
+interface DataGridActionBarProps<TData extends RowData> extends Pick<
+  DataGridProps<TData>,
+  "table"
+> {
+  actionBar: React.ReactNode;
+}
+
+function DataGridActionBar<TData extends RowData>({
+  table,
+  actionBar,
+}: DataGridActionBarProps<TData>) {
+  return (
+    <table.Subscribe
+      selector={() =>
+        table.getHasRowSelection() || table.getHasCellRangeSelection()
+      }
+    >
+      {(hasSelection) => (hasSelection ? actionBar : null)}
+    </table.Subscribe>
+  );
+}
 
 interface DataGridHeaderProps<TData extends RowData>
   extends
@@ -697,49 +742,4 @@ function onHeaderCellMouseDown(event: React.MouseEvent<HTMLDivElement>) {
   if (!event.currentTarget.querySelector("button, input, a[href]")) {
     event.preventDefault();
   }
-}
-
-function getColumnsWidth<TData extends RowData>(
-  columns: Array<Column<DataGridFeatures, TData>>,
-) {
-  let width = 0;
-  for (const column of columns) width += column.getSize();
-  return width;
-}
-
-function getColumnWindowKey(params: {
-  virtualizer: Virtualizer<HTMLDivElement, Element>;
-  startCount: number;
-  centerCount: number;
-  centerStart: number;
-  centerEnd: number;
-}) {
-  const { virtualizer, startCount, centerCount, centerStart, centerEnd } =
-    params;
-  const items = virtualizer.getVirtualItems();
-  if (centerCount > 0 && items.length === 0) return "";
-  let key = `${startCount}|${centerCount}|${centerStart}|${centerEnd}|`;
-  for (const item of items) {
-    key += `${item.index}:${item.start}:${item.end},`;
-  }
-  return key;
-}
-
-function parseColumnWindowKey(key: string): ColumnWindow | null {
-  if (!key) return null;
-  const [startCount, centerCount, centerStart, centerEnd, items = ""] =
-    key.split("|");
-  return {
-    startCount: Number(startCount),
-    centerCount: Number(centerCount),
-    centerStart: Number(centerStart),
-    centerEnd: Number(centerEnd),
-    items: items
-      .split(",")
-      .filter(Boolean)
-      .map((item) => {
-        const [index, start, end] = item.split(":").map(Number);
-        return { index: index ?? 0, start: start ?? 0, end: end ?? 0 };
-      }),
-  };
 }

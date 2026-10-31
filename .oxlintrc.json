@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc", "react", "import", "nextjs"],
+  "jsPlugins": ["./lint/plugin.ts"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
@@ -35,10 +36,10 @@
     "typescript/no-non-null-assertion": "warn",
     "typescript/no-unsafe-type-assertion": "off",
     "typescript/unbound-method": "off",
-    "typescript/no-unnecessary-type-assertion": "off",
+    "typescript/no-unnecessary-type-assertion": "warn",
     "typescript/consistent-return": "off",
-    "typescript/no-unnecessary-boolean-literal-compare": "off",
-    "typescript/no-unnecessary-type-parameters": "off",
+    "typescript/no-unnecessary-boolean-literal-compare": "warn",
+    "typescript/no-unnecessary-type-parameters": "warn",
     "typescript/no-floating-promises": "warn",
     "typescript/restrict-template-expressions": "warn",
     "typescript/no-redundant-type-constituents": "warn",
@@ -50,22 +51,22 @@
     "no-shadow": "off",
     "no-new": "off",
     "no-underscore-dangle": "off",
-    "react/exhaustive-deps": "off",
-    "react/memo-dependencies": "off",
+    "react/exhaustive-deps": "warn",
+    "react/memo-dependencies": "warn",
     "react/rules-of-hooks": "warn",
     "react/react-in-jsx-scope": "off",
     "react/no-array-index-key": "off",
-    "react/no-danger": "off",
-    "react/no-unstable-nested-components": "off",
-    "react/refs": "off",
-    "react/set-state-in-effect": "off",
-    "react/set-state-in-render": "off",
-    "react/immutability": "off",
-    "react/incompatible-library": "off",
-    "react/purity": "off",
-    "react/preserve-manual-memoization": "off",
-    "react/use-memo": "off",
-    "react/static-components": "off",
+    "react/no-danger": "warn",
+    "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
+    "react/refs": "warn",
+    "react/set-state-in-effect": "warn",
+    "react/set-state-in-render": "warn",
+    "react/immutability": "warn",
+    "react/incompatible-library": "warn",
+    "react/purity": "warn",
+    "react/preserve-manual-memoization": "warn",
+    "react/use-memo": "warn",
+    "react/static-components": "warn",
     "nextjs/no-img-element": "off",
     "nextjs/no-html-link-for-pages": "off",
     "nextjs/no-assign-module-variable": "off",
@@ -85,7 +86,10 @@
     ],
     "unicorn/no-new-array": "warn",
     "unicorn/no-invalid-remove-event-listener": "warn",
-    "unicorn/no-array-sort": "off"
+    "unicorn/no-array-sort": "off",
+    "unicorn/catch-error-name": ["warn", { "name": "error" }],
+    "tablecn/top-down-order": "warn",
+    "tablecn/comment-style": "warn"
   },
   "overrides": [
     {
@@ -95,7 +99,16 @@
       },
       "rules": {
         "unicorn/consistent-function-scoping": "off",
-        "no-shadow": "off"
+        "no-shadow": "off",
+        "react/refs": "off",
+        "react/immutability": "off"
+      }
+    },
+    {
+      "files": ["src/registry/bases/*/ui/**"],
+      "rules": {
+        "tablecn/top-down-order": "off",
+        "tablecn/comment-style": "off"
       }
     }
   ]

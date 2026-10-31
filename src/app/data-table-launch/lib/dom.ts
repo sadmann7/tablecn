@@ -117,7 +117,7 @@ export function typeCommand(value: string) {
   if (!input) return;
 
   // React tracks input values through the prototype setter, so assigning
-  // `input.value` directly would not fire onChange.
+  // `input.value` directly would not fire onChange
   Object.getOwnPropertyDescriptor(
     HTMLInputElement.prototype,
     "value",

@@ -35,7 +35,7 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   ...props
 }: DataTableColumnHeaderProps<TData, TValue>) {
   if (!column.getCanSort() && !column.getCanHide()) {
-    return <div className={cn(className)}>{label}</div>;
+    return <div className={className}>{label}</div>;
   }
 
   return (

@@ -21,71 +21,7 @@ interface Task {
   status: string;
 }
 
-const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
-  id: String(index),
-  title: `Task ${String(index).padStart(2, "0")}`,
-  status: index % 2 ? "todo" : "done",
-}));
-
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
-
-const columns = columnHelper.columns([
-  getDataTableSelectColumn<Task>(),
-  columnHelper.accessor("title", { id: "title", header: "Title" }),
-  columnHelper.accessor("status", {
-    id: "status",
-    header: "Status",
-    enableColumnFilter: true,
-    meta: {
-      label: "Status",
-      variant: "multiSelect",
-      options: [
-        { label: "Todo", value: "todo" },
-        { label: "Done", value: "done" },
-      ],
-    },
-  }),
-]);
-
-function renderTable(search = "") {
-  const tableRef: {
-    current?: ReturnType<typeof useDataTable<Task>>["table"];
-  } = {};
-
-  function Harness() {
-    const { table } = useDataTable<Task>({
-      mode: "client",
-      data,
-      columns,
-      getRowId: (row) => row.id,
-    });
-    tableRef.current = table;
-
-    return (
-      <DataTable aria-label="Tasks" table={table}>
-        <DataTableToolbar table={table} />
-      </DataTable>
-    );
-  }
-
-  const view = render(
-    <NuqsTestingAdapter hasMemory searchParams={search}>
-      <Harness />
-    </NuqsTestingAdapter>,
-  );
-
-  const table = tableRef.current;
-  if (!table) throw new Error("Table did not render");
-
-  return { ...view, table };
-}
-
-function getSortedHeaders(container: HTMLElement) {
-  return Array.from(container.querySelectorAll("th[aria-sort]"), (th) => [
-    th.textContent,
-    th.getAttribute("aria-sort"),
-  ]);
-}
 
 describe("DataTable accessibility", () => {
   it("names the table element", () => {
@@ -166,6 +102,70 @@ describe("DataTable accessibility", () => {
     expect(within(dialog).getByText("Clear filters")).toBeDefined();
   });
 });
+
+const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
+  id: String(index),
+  title: `Task ${String(index).padStart(2, "0")}`,
+  status: index % 2 ? "todo" : "done",
+}));
+
+const columns = columnHelper.columns([
+  getDataTableSelectColumn<Task>(),
+  columnHelper.accessor("title", { id: "title", header: "Title" }),
+  columnHelper.accessor("status", {
+    id: "status",
+    header: "Status",
+    enableColumnFilter: true,
+    meta: {
+      label: "Status",
+      variant: "multiSelect",
+      options: [
+        { label: "Todo", value: "todo" },
+        { label: "Done", value: "done" },
+      ],
+    },
+  }),
+]);
+
+function renderTable(search = "") {
+  const tableRef: {
+    current?: ReturnType<typeof useDataTable<Task>>["table"];
+  } = {};
+
+  function Harness() {
+    const { table } = useDataTable<Task>({
+      mode: "client",
+      data,
+      columns,
+      getRowId: (row) => row.id,
+    });
+    tableRef.current = table;
+
+    return (
+      <DataTable aria-label="Tasks" table={table}>
+        <DataTableToolbar table={table} />
+      </DataTable>
+    );
+  }
+
+  const view = render(
+    <NuqsTestingAdapter hasMemory searchParams={search}>
+      <Harness />
+    </NuqsTestingAdapter>,
+  );
+
+  const table = tableRef.current;
+  if (!table) throw new Error("Table did not render");
+
+  return { ...view, table };
+}
+
+function getSortedHeaders(container: HTMLElement) {
+  return Array.from(container.querySelectorAll("th[aria-sort]"), (th) => [
+    th.textContent,
+    th.getAttribute("aria-sort"),
+  ]);
+}
 
 describe("DataTableSkeleton accessibility", () => {
   it("announces loading and hides the placeholder table", () => {

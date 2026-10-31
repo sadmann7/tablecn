@@ -45,92 +45,10 @@ const features = tableFeatures({
   filterFns: { includesString: filterFn_includesString },
 });
 
-const stockFeatures = tableFeatures({
-  rowSortingFeature,
-  coreRowModel: createCoreRowModel(),
-  sortedRowModel: createSortedRowModel(),
-  sortFns,
-});
-
 const columns: ColumnDef<typeof features, Skater>[] = [
   { id: "name", accessorKey: "name", filterFn: "includesString" },
   { id: "score", accessorKey: "score", sortUndefined: "last" },
 ];
-
-function createSkaters(count: number): Skater[] {
-  return Array.from({ length: count }, (_, index) => ({
-    id: `r${index}`,
-    name: `Skater ${index}`,
-    score: index,
-  }));
-}
-
-function renderTable(initialData: Skater[], { withRowId = true } = {}) {
-  const { result, rerender } = renderHook(
-    ({ data }: { data: Skater[] }) =>
-      useTable({
-        features,
-        columns,
-        data,
-        getRowId: withRowId ? (row) => row.id : undefined,
-      }),
-    { initialProps: { data: initialData } },
-  );
-  return {
-    get table() {
-      return result.current;
-    },
-    setData: (data: Skater[]) => rerender({ data }),
-  };
-}
-
-// TanStack's own row models, to check ours against
-function renderStockTable(initialData: Skater[]) {
-  const { result, rerender } = renderHook(
-    ({ data }: { data: Skater[] }) =>
-      useTable({
-        features: stockFeatures,
-        columns: columns as ColumnDef<typeof stockFeatures, Skater>[],
-        data,
-        getRowId: (row) => row.id,
-      }),
-    { initialProps: { data: initialData } },
-  );
-  return {
-    get table() {
-      return result.current;
-    },
-    setData: (data: Skater[]) => rerender({ data }),
-  };
-}
-
-function getIds(rows: ReadonlyArray<{ id: string }>) {
-  return rows.map((row) => row.id);
-}
-
-function getSortedIds(
-  {
-    table,
-  }: ReturnType<typeof renderTable> | ReturnType<typeof renderStockTable>,
-  sorting: SortingState,
-) {
-  act(() => {
-    table.setSorting(sorting);
-  });
-  return getIds(table.getSortedRowModel().rows);
-}
-
-// The same seeded generator the demos use, so runs repeat
-function createRandom(seed: number) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let t = state;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 describe("createDataGridCoreRowModel", () => {
   it("builds a row for each data row", () => {
@@ -362,3 +280,85 @@ describe("createDataGridSortedRowModel", () => {
     }
   });
 });
+
+function getSortedIds(
+  {
+    table,
+  }: ReturnType<typeof renderTable> | ReturnType<typeof renderStockTable>,
+  sorting: SortingState,
+) {
+  act(() => {
+    table.setSorting(sorting);
+  });
+  return getIds(table.getSortedRowModel().rows);
+}
+
+const stockFeatures = tableFeatures({
+  rowSortingFeature,
+  coreRowModel: createCoreRowModel(),
+  sortedRowModel: createSortedRowModel(),
+  sortFns,
+});
+
+// TanStack's own row models, to check ours against
+function renderStockTable(initialData: Skater[]) {
+  const { result, rerender } = renderHook(
+    ({ data }: { data: Skater[] }) =>
+      useTable({
+        features: stockFeatures,
+        columns: columns as ColumnDef<typeof stockFeatures, Skater>[],
+        data,
+        getRowId: (row) => row.id,
+      }),
+    { initialProps: { data: initialData } },
+  );
+  return {
+    get table() {
+      return result.current;
+    },
+    setData: (data: Skater[]) => rerender({ data }),
+  };
+}
+
+// The same seeded generator the demos use, so runs repeat
+function createRandom(seed: number) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function createSkaters(count: number): Skater[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `r${index}`,
+    name: `Skater ${index}`,
+    score: index,
+  }));
+}
+
+function renderTable(initialData: Skater[], { withRowId = true } = {}) {
+  const { result, rerender } = renderHook(
+    ({ data }: { data: Skater[] }) =>
+      useTable({
+        features,
+        columns,
+        data,
+        getRowId: withRowId ? (row) => row.id : undefined,
+      }),
+    { initialProps: { data: initialData } },
+  );
+  return {
+    get table() {
+      return result.current;
+    },
+    setData: (data: Skater[]) => rerender({ data }),
+  };
+}
+
+function getIds(rows: ReadonlyArray<{ id: string }>) {
+  return rows.map((row) => row.id);
+}

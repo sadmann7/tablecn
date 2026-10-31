@@ -1,23 +1,14 @@
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { z } from "zod";
 
-export function getErrorMessage(err: unknown) {
-  const unknownError = "Something went wrong, please try again later.";
+export function getErrorMessage(error: unknown) {
+  if (isRedirectError(error)) throw error;
 
-  if (err instanceof z.ZodError) {
-    const errors = err.issues.map((issue) => {
-      return issue.message;
-    });
-    return errors.join("\n");
+  if (error instanceof z.ZodError) {
+    return error.issues.map((issue) => issue.message).join("\n");
   }
 
-  if (err instanceof Error) {
-    return err.message;
-  }
+  if (error instanceof Error) return error.message;
 
-  if (isRedirectError(err)) {
-    throw err;
-  }
-
-  return unknownError;
+  return "Something went wrong, please try again later.";
 }

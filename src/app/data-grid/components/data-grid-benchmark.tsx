@@ -59,44 +59,7 @@ interface BenchmarkResult {
 
 const LONG_FRAME_MS = 50;
 
-function nextFrame() {
-  return new Promise<number>((resolve) => requestAnimationFrame(resolve));
-}
-
-async function animate(
-  signal: AbortSignal,
-  durationMs: number,
-  // Returning `true` ends the animation early
-  onFrame: (progress: number, frame: number) => boolean | void,
-) {
-  const start = performance.now();
-  let frame = 0;
-  while (!signal.aborted) {
-    const progress = Math.min((performance.now() - start) / durationMs, 1);
-    if (onFrame(progress, frame++) === true || progress >= 1) break;
-    await nextFrame();
-  }
-}
-
-async function pause(signal: AbortSignal, frames: number) {
-  for (let i = 0; i < frames && !signal.aborted; i++) await nextFrame();
-}
-
-function getMaxScroll(grid: HTMLDivElement) {
-  return {
-    top: grid.scrollHeight - grid.clientHeight,
-    left: grid.scrollWidth - grid.clientWidth,
-  };
-}
-
-// Deterministic so runs are comparable
-function createRandom(seed: number) {
-  let state = seed;
-  return () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 2 ** 32;
-  };
-}
+let toastCount = 0;
 
 interface ViewportCell {
   rowId: string;
@@ -105,49 +68,7 @@ interface ViewportCell {
   nextValue: unknown;
 }
 
-function getViewportCells(table: PersonTable, grid: HTMLDivElement) {
-  const rows = table.getRowModel().rows;
-  const rowSize = table.getRowSize();
-  const firstRow = Math.floor(grid.scrollTop / rowSize);
-  const rowCount = Math.ceil(grid.clientHeight / rowSize);
-
-  const columns = [];
-  let left = 0;
-  for (const column of table.getVisibleLeafColumns()) {
-    if (left - grid.scrollLeft > grid.clientWidth) break;
-    left += column.getSize();
-    if (getIsDataColumn(column) && column.getCanEdit()) columns.push(column);
-  }
-
-  const cells: ViewportCell[] = [];
-  for (let index = firstRow; index < firstRow + rowCount; index++) {
-    const row = rows[index];
-    const source = rows[(index + Math.floor(rows.length / 2)) % rows.length];
-    if (!row || !source) continue;
-    for (const column of columns) {
-      cells.push({
-        rowId: row.id,
-        columnId: column.id,
-        value: row.getValue(column.id),
-        nextValue: source.getValue(column.id),
-      });
-    }
-  }
-  return cells;
-}
-
 const BENCHMARK_UPDATE = { history: false } as const;
-
-function restoreCells(table: PersonTable, cells: ViewportCell[]) {
-  table.updateCells(
-    cells.map(({ rowId, columnId, value }) => ({ rowId, columnId, value })),
-    BENCHMARK_UPDATE,
-  );
-}
-
-function filter(id: keyof Person, value: FilterValue) {
-  return { id, value };
-}
 
 const BENCHMARK_STEPS: BenchmarkStep[] = [
   {
@@ -345,132 +266,86 @@ const BENCHMARK_STEPS: BenchmarkStep[] = [
   },
 ];
 
-function percentile(values: number[], p: number) {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  return (
-    sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0
-  );
+async function animate(
+  signal: AbortSignal,
+  durationMs: number,
+  // Returning `true` ends the animation early
+  onFrame: (progress: number, frame: number) => boolean | void,
+) {
+  const start = performance.now();
+  let frame = 0;
+  while (!signal.aborted) {
+    const progress = Math.min((performance.now() - start) / durationMs, 1);
+    if (onFrame(progress, frame++) === true || progress >= 1) break;
+    await nextFrame();
+  }
 }
 
-async function runStep(
-  step: BenchmarkStep,
-  table: PersonTable,
-  grid: HTMLDivElement,
-  signal: AbortSignal,
-): Promise<BenchmarkResult> {
-  const frameTimes: number[] = [];
-  const updateTimes: number[] = [];
-  let longTaskMs = 0;
-  const sampler = { running: true };
+function nextFrame() {
+  return new Promise<number>((resolve) => requestAnimationFrame(resolve));
+}
 
-  let observer: PerformanceObserver | undefined;
-  if (PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
-    observer = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) longTaskMs += entry.duration;
-    });
-    observer.observe({ type: "longtask" });
-  }
-
-  let last = await nextFrame();
-  const start = last;
-  const sampleFrames = async () => {
-    while (sampler.running) {
-      const now = await nextFrame();
-      frameTimes.push(now - last);
-      last = now;
-    }
-  };
-  const sampling = sampleFrames();
-
-  const measure = async (update: () => void) => {
-    const updateStart = performance.now();
-    update();
-    // The second frame callback runs after the update has painted
-    await nextFrame();
-    await nextFrame();
-    updateTimes.push(performance.now() - updateStart);
-  };
-
-  try {
-    await step.run({ table, grid, signal, measure });
-    await pause(signal, 2);
-  } finally {
-    sampler.running = false;
-    await sampling;
-    observer?.disconnect();
-  }
-
-  const durationMs = last - start;
+function getMaxScroll(grid: HTMLDivElement) {
   return {
-    name: step.name,
-    durationMs,
-    frames: frameTimes.length,
-    fps: durationMs > 0 ? (frameTimes.length * 1000) / durationMs : 0,
-    p95FrameMs: percentile(frameTimes, 0.95),
-    maxFrameMs: Math.max(0, ...frameTimes),
-    longFrames: frameTimes.filter((time) => time > LONG_FRAME_MS).length,
-    longTaskMs,
-    maxUpdateMs: updateTimes.length > 0 ? Math.max(...updateTimes) : null,
+    top: grid.scrollHeight - grid.clientHeight,
+    left: grid.scrollWidth - grid.clientWidth,
   };
+}
+
+// Deterministic so runs are comparable
+function createRandom(seed: number) {
+  let state = seed;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+}
+
+function filter(id: keyof Person, value: FilterValue) {
+  return { id, value };
+}
+
+function getViewportCells(table: PersonTable, grid: HTMLDivElement) {
+  const rows = table.getRowModel().rows;
+  const rowSize = table.getRowSize();
+  const firstRow = Math.floor(grid.scrollTop / rowSize);
+  const rowCount = Math.ceil(grid.clientHeight / rowSize);
+
+  const columns = [];
+  let left = 0;
+  for (const column of table.getVisibleLeafColumns()) {
+    if (left - grid.scrollLeft > grid.clientWidth) break;
+    left += column.getSize();
+    if (getIsDataColumn(column) && column.getCanEdit()) columns.push(column);
+  }
+
+  const cells: ViewportCell[] = [];
+  for (let index = firstRow; index < firstRow + rowCount; index++) {
+    const row = rows[index];
+    const source = rows[(index + Math.floor(rows.length / 2)) % rows.length];
+    if (!row || !source) continue;
+    for (const column of columns) {
+      cells.push({
+        rowId: row.id,
+        columnId: column.id,
+        value: row.getValue(column.id),
+        nextValue: source.getValue(column.id),
+      });
+    }
+  }
+  return cells;
+}
+
+function restoreCells(table: PersonTable, cells: ViewportCell[]) {
+  table.updateCells(
+    cells.map(({ rowId, columnId, value }) => ({ rowId, columnId, value })),
+    BENCHMARK_UPDATE,
+  );
 }
 
 interface GridSnapshot {
   cellSelection: ReturnType<PersonTable["atoms"]["cellSelection"]["get"]>;
   activeElement: Element | null;
-}
-
-function getGridSnapshot(table: PersonTable): GridSnapshot {
-  return {
-    cellSelection: table.atoms.cellSelection.get(),
-    activeElement: document.activeElement,
-  };
-}
-
-// Search and edits focus cells along the way, so the selection and focus from before the run come back
-function restoreGridSnapshot(
-  table: PersonTable,
-  grid: HTMLDivElement,
-  snapshot: GridSnapshot,
-) {
-  table.setCellSelection(snapshot.cellSelection);
-  const activeElement = document.activeElement;
-  if (
-    activeElement instanceof HTMLElement &&
-    grid.contains(activeElement) &&
-    !grid.contains(snapshot.activeElement)
-  ) {
-    activeElement.blur();
-  }
-}
-
-function resetGrid(table: PersonTable, grid: HTMLDivElement) {
-  table.setSorting([]);
-  table.setColumnFilters([]);
-  table.closeSearch();
-  table.clearSelection();
-  table.setRowHeight("short");
-  grid.scrollTop = 0;
-  grid.scrollLeft = 0;
-}
-
-function getTotals(results: BenchmarkResult[]) {
-  if (results.length === 0) return null;
-  const frames = results.reduce((sum, result) => sum + result.frames, 0);
-  const durationMs = results.reduce(
-    (sum, result) => sum + result.durationMs,
-    0,
-  );
-  const slowest = results.reduce((worst, result) =>
-    result.maxFrameMs > worst.maxFrameMs ? result : worst,
-  );
-  return {
-    fps: durationMs > 0 ? (frames * 1000) / durationMs : 0,
-    maxFrameMs: slowest.maxFrameMs,
-    slowestStep: slowest.name,
-    longFrames: results.reduce((sum, result) => sum + result.longFrames, 0),
-    longTaskMs: results.reduce((sum, result) => sum + result.longTaskMs, 0),
-  };
 }
 
 interface DataGridBenchmarkProps {
@@ -522,14 +397,14 @@ export function DataGridBenchmark({
     [onStop],
   );
 
-  const onRun = React.useCallback(async () => {
+  async function onRun() {
     const grid = dataGridRef.current;
     if (!grid || abortRef.current) return;
 
     const controller = new AbortController();
     abortRef.current = controller;
     toast.dismiss(toastIdRef.current);
-    toastIdRef.current = `benchmark-${Date.now()}`;
+    toastIdRef.current = `benchmark-${++toastCount}`;
     const runResults: BenchmarkResult[] = [];
     setResults([]);
     setRerunStep(null);
@@ -590,50 +465,44 @@ export function DataGridBenchmark({
         },
       },
     );
-  }, [table, dataGridRef, showProgress]);
+  }
 
-  const onRerunStep = React.useCallback(
-    async (name: string) => {
-      const grid = dataGridRef.current;
-      const step = BENCHMARK_STEPS.find((item) => item.name === name);
-      if (!grid || !step || abortRef.current) return;
+  async function onRerunStep(name: string) {
+    const grid = dataGridRef.current;
+    const step = BENCHMARK_STEPS.find((item) => item.name === name);
+    if (!grid || !step || abortRef.current) return;
 
-      const controller = new AbortController();
-      abortRef.current = controller;
-      toastIdRef.current = `benchmark-${Date.now()}`;
-      // The dialog would cover the grid and its paint would skew the frames
-      setIsResultsOpen(false);
-      setIsRunning(true);
-      setRerunStep(name);
-      const snapshot = getGridSnapshot(table);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    toastIdRef.current = `benchmark-${++toastCount}`;
+    // The dialog would cover the grid and its paint would skew the frames
+    setIsResultsOpen(false);
+    setIsRunning(true);
+    setRerunStep(name);
+    const snapshot = getGridSnapshot(table);
+    resetGrid(table, grid);
+    await pause(controller.signal, 5);
+
+    let result: BenchmarkResult | null = null;
+    try {
+      showProgress(`Rerunning ${name}`, "Results open again when it finishes");
+      result = await runStep(step, table, grid, controller.signal);
+    } finally {
       resetGrid(table, grid);
-      await pause(controller.signal, 5);
+      restoreGridSnapshot(table, grid, snapshot);
+      abortRef.current = null;
+      setIsRunning(false);
+    }
 
-      let result: BenchmarkResult | null = null;
-      try {
-        showProgress(
-          `Rerunning ${name}`,
-          "Results open again when it finishes",
-        );
-        result = await runStep(step, table, grid, controller.signal);
-      } finally {
-        resetGrid(table, grid);
-        restoreGridSnapshot(table, grid, snapshot);
-        abortRef.current = null;
-        setIsRunning(false);
-      }
-
-      const nextResult = controller.signal.aborted ? null : result;
-      if (nextResult) {
-        setResults((prev) =>
-          prev.map((item) => (item.name === name ? nextResult : item)),
-        );
-      }
-      toast.dismiss(toastIdRef.current);
-      setIsResultsOpen(true);
-    },
-    [table, dataGridRef, showProgress],
-  );
+    const nextResult = controller.signal.aborted ? null : result;
+    if (nextResult) {
+      setResults((prev) =>
+        prev.map((item) => (item.name === name ? nextResult : item)),
+      );
+    }
+    toast.dismiss(toastIdRef.current);
+    setIsResultsOpen(true);
+  }
 
   const totals = React.useMemo(() => getTotals(results), [results]);
 
@@ -745,8 +614,135 @@ export function DataGridBenchmark({
   );
 }
 
+async function pause(signal: AbortSignal, frames: number) {
+  for (let i = 0; i < frames && !signal.aborted; i++) await nextFrame();
+}
+
+function getGridSnapshot(table: PersonTable): GridSnapshot {
+  return {
+    cellSelection: table.atoms.cellSelection.get(),
+    activeElement: document.activeElement,
+  };
+}
+
+function resetGrid(table: PersonTable, grid: HTMLDivElement) {
+  table.setSorting([]);
+  table.setColumnFilters([]);
+  table.closeSearch();
+  table.clearSelection();
+  table.setRowHeight("short");
+  grid.scrollTop = 0;
+  grid.scrollLeft = 0;
+}
+
 function formatMs(value: number) {
   return `${value.toFixed(value < 10 ? 1 : 0)}ms`;
+}
+
+async function runStep(
+  step: BenchmarkStep,
+  table: PersonTable,
+  grid: HTMLDivElement,
+  signal: AbortSignal,
+): Promise<BenchmarkResult> {
+  const frameTimes: number[] = [];
+  const updateTimes: number[] = [];
+  let longTaskMs = 0;
+  const sampler = { running: true };
+
+  let observer: PerformanceObserver | undefined;
+  if (PerformanceObserver.supportedEntryTypes?.includes("longtask")) {
+    observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) longTaskMs += entry.duration;
+    });
+    observer.observe({ type: "longtask" });
+  }
+
+  let last = await nextFrame();
+  const start = last;
+  const sampleFrames = async () => {
+    while (sampler.running) {
+      const now = await nextFrame();
+      frameTimes.push(now - last);
+      last = now;
+    }
+  };
+  const sampling = sampleFrames();
+
+  const measure = async (update: () => void) => {
+    const updateStart = performance.now();
+    update();
+    // The second frame callback runs after the update has painted
+    await nextFrame();
+    await nextFrame();
+    updateTimes.push(performance.now() - updateStart);
+  };
+
+  try {
+    await step.run({ table, grid, signal, measure });
+    await pause(signal, 2);
+  } finally {
+    sampler.running = false;
+    await sampling;
+    observer?.disconnect();
+  }
+
+  const durationMs = last - start;
+  return {
+    name: step.name,
+    durationMs,
+    frames: frameTimes.length,
+    fps: durationMs > 0 ? (frameTimes.length * 1000) / durationMs : 0,
+    p95FrameMs: percentile(frameTimes, 0.95),
+    maxFrameMs: Math.max(0, ...frameTimes),
+    longFrames: frameTimes.filter((time) => time > LONG_FRAME_MS).length,
+    longTaskMs,
+    maxUpdateMs: updateTimes.length > 0 ? Math.max(...updateTimes) : null,
+  };
+}
+
+function percentile(values: number[], p: number) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  return (
+    sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] ?? 0
+  );
+}
+
+// Search and edits focus cells along the way, so the selection and focus from before the run come back
+function restoreGridSnapshot(
+  table: PersonTable,
+  grid: HTMLDivElement,
+  snapshot: GridSnapshot,
+) {
+  table.setCellSelection(snapshot.cellSelection);
+  const activeElement = document.activeElement;
+  if (
+    activeElement instanceof HTMLElement &&
+    grid.contains(activeElement) &&
+    !grid.contains(snapshot.activeElement)
+  ) {
+    activeElement.blur();
+  }
+}
+
+function getTotals(results: BenchmarkResult[]) {
+  if (results.length === 0) return null;
+  const frames = results.reduce((sum, result) => sum + result.frames, 0);
+  const durationMs = results.reduce(
+    (sum, result) => sum + result.durationMs,
+    0,
+  );
+  const slowest = results.reduce((worst, result) =>
+    result.maxFrameMs > worst.maxFrameMs ? result : worst,
+  );
+  return {
+    fps: durationMs > 0 ? (frames * 1000) / durationMs : 0,
+    maxFrameMs: slowest.maxFrameMs,
+    slowestStep: slowest.name,
+    longFrames: results.reduce((sum, result) => sum + result.longFrames, 0),
+    longTaskMs: results.reduce((sum, result) => sum + result.longTaskMs, 0),
+  };
 }
 
 function getFpsClassName(fps: number) {

@@ -1,12 +1,14 @@
 import type * as React from "react";
 
+import { cn } from "cn";
+
 const TAGLINE =
   "A shadcn/ui data table with sorting, filtering, and pagination.";
 const WORDMARK = "tablecn";
 
 const INSTALL_COMMAND = "pnpm dlx shadcn@latest add @diceui/data-table";
 
-export function LaunchBackdrop() {
+export function DataTableLaunchBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="launch-glow launch-glow-primary absolute top-[-30%] right-[-10%] h-[90%] w-[70%] rounded-full" />
@@ -17,65 +19,11 @@ export function LaunchBackdrop() {
   );
 }
 
-interface LaunchLogoProps {
-  size?: "lg" | "md";
-  delay?: number;
-}
-
-function LaunchLogo({ size = "lg", delay = 0 }: LaunchLogoProps) {
-  return (
-    <div
-      className={
-        size === "lg"
-          ? "flex items-center gap-8 text-white"
-          : "flex items-center gap-6 text-white"
-      }
-      role="img"
-      aria-label={WORDMARK}
-    >
-      <div
-        aria-hidden="true"
-        className={
-          size === "lg"
-            ? "grid size-26 grid-cols-2 gap-2.5"
-            : "grid size-20 grid-cols-2 gap-2"
-        }
-      >
-        {[0, 1, 2, 3].map((index) => (
-          <span
-            key={index}
-            className="launch-pop rounded-[22%] border-[0.4rem] border-white"
-            style={launchDelay(delay + index * 70)}
-          />
-        ))}
-      </div>
-      <span
-        aria-hidden="true"
-        className={
-          size === "lg"
-            ? "flex text-[9rem] leading-none font-semibold tracking-tighter"
-            : "flex text-[7rem] leading-none font-semibold tracking-tighter"
-        }
-      >
-        {WORDMARK.split("").map((letter, index) => (
-          <span
-            key={`${index}-${letter}`}
-            className="launch-letter"
-            style={launchDelay(delay + 180 + index * 35)}
-          >
-            {letter}
-          </span>
-        ))}
-      </span>
-    </div>
-  );
-}
-
-export function LaunchIntroScene() {
+export function DataTableLaunchIntroScene() {
   return (
     <div className="launch-intro absolute inset-0 flex flex-col items-center justify-center gap-14 text-center">
-      <LaunchLogo />
-      <LaunchWords
+      <DataTableLaunchLogo />
+      <DataTableLaunchWords
         text={TAGLINE}
         delay={620}
         className="block max-w-280 text-6xl leading-tight font-medium tracking-tight text-balance text-white/70"
@@ -84,38 +32,7 @@ export function LaunchIntroScene() {
   );
 }
 
-interface LaunchWordsProps {
-  text: string;
-  delay?: number;
-  stagger?: number;
-  className?: string;
-}
-
-function LaunchWords({
-  text,
-  delay = 0,
-  stagger = 55,
-  className,
-}: LaunchWordsProps) {
-  return (
-    <span className={className}>
-      <span className="sr-only">{text}</span>
-      {text.split(" ").map((word, index) => (
-        <span
-          key={`${index}-${word}`}
-          aria-hidden="true"
-          className="launch-word"
-          style={launchDelay(delay + index * stagger)}
-        >
-          {word}
-          {" "}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-interface LaunchStoryProps {
+interface DataTableLaunchStoryProps {
   eyebrow: string;
   title: string;
   description: string;
@@ -124,14 +41,14 @@ interface LaunchStoryProps {
   children?: React.ReactNode;
 }
 
-export function LaunchStory({
+export function DataTableLaunchStory({
   eyebrow,
   title,
   description,
   code,
   highlightedLines,
   children,
-}: LaunchStoryProps) {
+}: DataTableLaunchStoryProps) {
   return (
     <>
       <div className="launch-story absolute inset-y-0 left-30 flex w-130 flex-col justify-center gap-8">
@@ -140,7 +57,7 @@ export function LaunchStory({
           {eyebrow}
         </span>
         <h2 className="text-7xl leading-[1.05] font-semibold tracking-tight text-balance text-white">
-          <LaunchWords text={title} delay={60} />
+          <DataTableLaunchWords text={title} delay={60} />
         </h2>
         <p
           className="launch-rise text-[1.75rem] leading-snug text-pretty text-white/50"
@@ -175,12 +92,15 @@ export function LaunchStory({
   );
 }
 
-interface LaunchVariantsProps {
+interface DataTableLaunchVariantsProps {
   variants: string[];
   activeCount: number;
 }
 
-export function LaunchVariants({ variants, activeCount }: LaunchVariantsProps) {
+export function DataTableLaunchVariants({
+  variants,
+  activeCount,
+}: DataTableLaunchVariantsProps) {
   return (
     <div
       className="launch-rise flex flex-wrap gap-2 font-mono text-lg"
@@ -199,11 +119,13 @@ export function LaunchVariants({ variants, activeCount }: LaunchVariantsProps) {
   );
 }
 
-interface LaunchKeystrokeProps {
+interface DataTableLaunchKeystrokeProps {
   keys: string[];
 }
 
-export function LaunchKeystroke({ keys }: LaunchKeystrokeProps) {
+export function DataTableLaunchKeystroke({
+  keys,
+}: DataTableLaunchKeystrokeProps) {
   return (
     <div className="launch-keystroke absolute bottom-16 left-1/2 flex -translate-x-1/2 items-center gap-3">
       {keys.map((key, index) => (
@@ -219,10 +141,10 @@ export function LaunchKeystroke({ keys }: LaunchKeystrokeProps) {
   );
 }
 
-export function LaunchOutroScene() {
+export function DataTableLaunchOutroScene() {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-14">
-      <LaunchLogo size="md" delay={120} />
+      <DataTableLaunchLogo size="md" delay={120} />
       <div
         className="launch-rise flex items-center gap-5 rounded-2xl border border-white/10 bg-white/4 px-8 py-5 font-mono text-[1.75rem] text-white/85 shadow-[0_24px_80px_-12px_rgb(0_0_0/0.8)]"
         style={launchDelay(520)}
@@ -237,6 +159,95 @@ export function LaunchOutroScene() {
         tablecn.com
       </span>
     </div>
+  );
+}
+
+interface DataTableLaunchLogoProps {
+  size?: "lg" | "md";
+  delay?: number;
+}
+
+function DataTableLaunchLogo({
+  size = "lg",
+  delay = 0,
+}: DataTableLaunchLogoProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-center text-white",
+        size === "lg" ? "gap-8" : "gap-6",
+      )}
+      role="img"
+      aria-label={WORDMARK}
+    >
+      <div
+        aria-hidden="true"
+        className={cn(
+          "grid grid-cols-2",
+          size === "lg" ? "size-26 gap-2.5" : "size-20 gap-2",
+        )}
+      >
+        {[0, 1, 2, 3].map((index) => (
+          <span
+            key={index}
+            className="launch-pop rounded-[22%] border-[0.4rem] border-white"
+            style={launchDelay(delay + index * 70)}
+          />
+        ))}
+      </div>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex leading-none font-semibold tracking-tighter",
+          size === "lg" ? "text-[9rem]" : "text-[7rem]",
+        )}
+      >
+        {WORDMARK.split("").map((letter, index) => (
+          <span
+            key={`${index}-${letter}`}
+            className="launch-letter"
+            style={launchDelay(delay + 180 + index * 35)}
+          >
+            {letter}
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+function launchDelay(ms: number) {
+  return { "--launch-delay": `${ms}ms` } as React.CSSProperties;
+}
+
+interface DataTableLaunchWordsProps {
+  text: string;
+  delay?: number;
+  stagger?: number;
+  className?: string;
+}
+
+function DataTableLaunchWords({
+  text,
+  delay = 0,
+  stagger = 55,
+  className,
+}: DataTableLaunchWordsProps) {
+  return (
+    <span className={className}>
+      <span className="sr-only">{text}</span>
+      {text.split(" ").map((word, index) => (
+        <span
+          key={`${index}-${word}`}
+          aria-hidden="true"
+          className="launch-word"
+          style={launchDelay(delay + index * stagger)}
+        >
+          {word}
+          {" "}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -259,8 +270,4 @@ function getTokenClassName(token: string) {
   if (token.startsWith("//")) return "text-white/50";
   if (token.startsWith("<")) return "text-sky-300";
   return undefined;
-}
-
-function launchDelay(ms: number) {
-  return { "--launch-delay": `${ms}ms` } as React.CSSProperties;
 }

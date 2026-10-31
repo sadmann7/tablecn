@@ -17,38 +17,112 @@ import { Checkbox } from "@/registry/bases/base/ui/checkbox";
 
 type HitboxSize = "default" | "sm" | "lg";
 
-interface DataGridSelectHitboxProps {
-  htmlFor: string;
-  size?: HitboxSize;
+interface GetDataGridSelectColumnOptions<TData extends RowData> extends Omit<
+  Partial<ColumnDef<DataGridFeatures, TData>>,
+  "id" | "header" | "cell"
+> {
+  enableRowMarkers?: boolean;
+  readOnly?: boolean;
+  hitboxSize?: HitboxSize;
   debug?: boolean;
-  children: React.ReactNode;
 }
 
-function DataGridSelectHitbox({
-  htmlFor,
-  size,
-  debug,
-  children,
-}: DataGridSelectHitboxProps) {
-  return (
-    <div
-      className={cn(
-        "group relative -my-1.5 h-[calc(100%+0.75rem)] py-1.5",
-        size === "default" && "-ms-3 -me-2 ps-3 pe-2",
-        size === "sm" && "-ms-3 -me-1.5 ps-3 pe-1.5",
-        size === "lg" && "-mx-3 px-3",
-      )}
-    >
-      {children}
-      <label
-        htmlFor={htmlFor}
-        className={cn(
-          "absolute inset-0 cursor-pointer",
-          debug && "border border-dashed border-red-500 bg-red-500/20",
-        )}
+export function getDataGridSelectColumn<TData extends RowData>({
+  size = 40,
+  hitboxSize = "default",
+  enableHiding = false,
+  enableResizing = false,
+  enableSorting = false,
+  enableRowMarkers = false,
+  readOnly = false,
+  debug = false,
+  ...props
+}: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<
+  DataGridFeatures,
+  TData
+> {
+  return {
+    id: "select",
+    header: ({ table }) => (
+      <DataGridSelectHeader
+        table={table}
+        hitboxSize={hitboxSize}
+        readOnly={readOnly}
+        debug={debug}
       />
-    </div>
+    ),
+    cell: ({ row, column, table }) => (
+      <DataGridSelectCell
+        table={table}
+        column={column}
+        row={row}
+        hitboxSize={hitboxSize}
+        enableRowMarkers={enableRowMarkers}
+        readOnly={readOnly}
+        debug={debug}
+      />
+    ),
+    size,
+    enableHiding,
+    enableResizing,
+    enableSorting,
+    ...props,
+  };
+}
+
+interface DataGridSelectHeaderProps<TData extends RowData> extends Pick<
+  HeaderContext<DataGridFeatures, TData>,
+  "table"
+> {
+  hitboxSize?: HitboxSize;
+  readOnly?: boolean;
+  debug?: boolean;
+}
+
+function DataGridSelectHeader<TData extends RowData>({
+  table,
+  hitboxSize,
+  readOnly,
+  debug,
+}: DataGridSelectHeaderProps<TData>) {
+  const onCheckedChange = React.useCallback(
+    (value: boolean) => table.toggleAllPageRowsSelected(value),
+    [table],
   );
+
+  if (readOnly) {
+    return (
+      <div className="flex translate-y-0.5 items-center ps-1 text-sm text-muted-foreground">
+        #
+      </div>
+    );
+  }
+
+  return (
+    <Subscribe source={table.store} selector={selectSelectAllState}>
+      {({ rowSelection }) => (
+        <DataGridSelectCheckbox
+          aria-label="Select all"
+          checked={getHasKeys(rowSelection) && table.getIsAllPageRowsSelected()}
+          indeterminate={
+            getHasKeys(rowSelection) &&
+            table.getIsSomePageRowsSelected() &&
+            !table.getIsAllPageRowsSelected()
+          }
+          hitboxSize={hitboxSize}
+          debug={debug}
+          onCheckedChange={onCheckedChange}
+        />
+      )}
+    </Subscribe>
+  );
+}
+
+function selectSelectAllState(state: TableState<DataGridFeatures>) {
+  return {
+    rowSelection: state.rowSelection,
+    columnFilters: state.columnFilters,
+  };
 }
 
 interface DataGridSelectCheckboxProps extends Omit<
@@ -113,59 +187,38 @@ function DataGridSelectCheckbox({
   );
 }
 
-interface DataGridSelectHeaderProps<TData extends RowData> extends Pick<
-  HeaderContext<DataGridFeatures, TData>,
-  "table"
-> {
-  hitboxSize?: HitboxSize;
-  readOnly?: boolean;
+interface DataGridSelectHitboxProps {
+  htmlFor: string;
+  size?: HitboxSize;
   debug?: boolean;
+  children: React.ReactNode;
 }
 
-function DataGridSelectHeader<TData extends RowData>({
-  table,
-  hitboxSize,
-  readOnly,
+function DataGridSelectHitbox({
+  htmlFor,
+  size,
   debug,
-}: DataGridSelectHeaderProps<TData>) {
-  const onCheckedChange = React.useCallback(
-    (value: boolean) => table.toggleAllPageRowsSelected(value),
-    [table],
-  );
-
-  if (readOnly) {
-    return (
-      <div className="flex translate-y-0.5 items-center ps-1 text-sm text-muted-foreground">
-        #
-      </div>
-    );
-  }
-
+  children,
+}: DataGridSelectHitboxProps) {
   return (
-    <Subscribe source={table.store} selector={selectSelectAllState}>
-      {({ rowSelection }) => (
-        <DataGridSelectCheckbox
-          aria-label="Select all"
-          checked={getHasKeys(rowSelection) && table.getIsAllPageRowsSelected()}
-          indeterminate={
-            getHasKeys(rowSelection) &&
-            table.getIsSomePageRowsSelected() &&
-            !table.getIsAllPageRowsSelected()
-          }
-          hitboxSize={hitboxSize}
-          debug={debug}
-          onCheckedChange={onCheckedChange}
-        />
+    <div
+      className={cn(
+        "group relative -mt-1.75 -mb-2 h-[calc(100%+0.9375rem)] pt-1.75 pb-2",
+        size === "default" && "-ms-3 -me-2 ps-3 pe-2",
+        size === "sm" && "-ms-3 -me-1.5 ps-3 pe-1.5",
+        size === "lg" && "-mx-3 px-3",
       )}
-    </Subscribe>
+    >
+      {children}
+      <label
+        htmlFor={htmlFor}
+        className={cn(
+          "absolute inset-0 cursor-pointer",
+          debug && "border border-dashed border-red-500 bg-red-500/20",
+        )}
+      />
+    </div>
   );
-}
-
-function selectSelectAllState(state: TableState<DataGridFeatures>) {
-  return {
-    rowSelection: state.rowSelection,
-    columnFilters: state.columnFilters,
-  };
 }
 
 function getHasKeys(object: object) {
@@ -192,8 +245,6 @@ function DataGridSelectCell<TData extends RowData>({
   readOnly,
   debug,
 }: DataGridSelectCellProps<TData>) {
-  const rowNumber = enableRowMarkers ? row.getDisplayIndex() + 1 : undefined;
-
   const onToggle = React.useCallback(
     (checked: boolean, shiftKey: boolean) => {
       table.setFocusedCell(row.id, column.id);
@@ -216,76 +267,32 @@ function DataGridSelectCell<TData extends RowData>({
     [row, onToggle],
   );
 
-  if (readOnly) {
-    return (
-      <div className="flex items-center ps-1 text-xs text-muted-foreground tabular-nums">
-        {rowNumber ?? row.index + 1}
-      </div>
-    );
-  }
-
+  // `row` is stable, so selection and numbering come from a subscription
   return (
-    <DataGridSelectCheckbox
-      aria-label={rowNumber ? `Select row ${rowNumber}` : "Select row"}
-      checked={row.getIsSelected()}
-      rowNumber={rowNumber}
-      hitboxSize={hitboxSize}
-      debug={debug}
-      onCheckedChange={onCheckedChange}
-      onClick={onClick}
-    />
+    <Subscribe
+      source={table.store}
+      selector={() => ({
+        isSelected: row.getIsSelected(),
+        rowNumber: enableRowMarkers ? row.getDisplayIndex() + 1 : undefined,
+      })}
+    >
+      {({ isSelected, rowNumber }) =>
+        readOnly ? (
+          <div className="flex items-center ps-1 text-xs text-muted-foreground tabular-nums">
+            {rowNumber ?? row.index + 1}
+          </div>
+        ) : (
+          <DataGridSelectCheckbox
+            aria-label={rowNumber ? `Select row ${rowNumber}` : "Select row"}
+            checked={isSelected}
+            rowNumber={rowNumber}
+            hitboxSize={hitboxSize}
+            debug={debug}
+            onCheckedChange={onCheckedChange}
+            onClick={onClick}
+          />
+        )
+      }
+    </Subscribe>
   );
-}
-
-interface GetDataGridSelectColumnOptions<TData extends RowData> extends Omit<
-  Partial<ColumnDef<DataGridFeatures, TData>>,
-  "id" | "header" | "cell"
-> {
-  enableRowMarkers?: boolean;
-  readOnly?: boolean;
-  hitboxSize?: HitboxSize;
-  debug?: boolean;
-}
-
-export function getDataGridSelectColumn<TData extends RowData>({
-  size = 40,
-  hitboxSize = "default",
-  enableHiding = false,
-  enableResizing = false,
-  enableSorting = false,
-  enableRowMarkers = false,
-  readOnly = false,
-  debug = false,
-  ...props
-}: GetDataGridSelectColumnOptions<TData> = {}): ColumnDef<
-  DataGridFeatures,
-  TData
-> {
-  return {
-    id: "select",
-    header: ({ table }) => (
-      <DataGridSelectHeader
-        table={table}
-        hitboxSize={hitboxSize}
-        readOnly={readOnly}
-        debug={debug}
-      />
-    ),
-    cell: ({ row, column, table }) => (
-      <DataGridSelectCell
-        table={table}
-        column={column}
-        row={row}
-        hitboxSize={hitboxSize}
-        enableRowMarkers={enableRowMarkers}
-        readOnly={readOnly}
-        debug={debug}
-      />
-    ),
-    size,
-    enableHiding,
-    enableResizing,
-    enableSorting,
-    ...props,
-  };
 }

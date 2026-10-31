@@ -67,12 +67,12 @@ export function DataGridSortMenu<TData extends RowData>(
 ) {
   return (
     <Subscribe source={props.table.atoms.sorting}>
-      {(sorting) => <DataGridSortMenuImpl {...props} sorting={sorting} />}
+      {(sorting) => <DataGridSortMenuContent {...props} sorting={sorting} />}
     </Subscribe>
   );
 }
 
-function DataGridSortMenuImpl<TData extends RowData>({
+function DataGridSortMenuContent<TData extends RowData>({
   table,
   sorting,
   disabled,
@@ -84,7 +84,6 @@ function DataGridSortMenuImpl<TData extends RowData>({
   const labelId = React.useId();
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
-  const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
   const onSortingChange = table.setSorting;
 
@@ -122,12 +121,11 @@ function DataGridSortMenuImpl<TData extends RowData>({
 
   const onSortUpdate = React.useCallback(
     (sortId: string, updates: Partial<ColumnSort>) => {
-      onSortingChange((prevSorting) => {
-        if (!prevSorting) return prevSorting;
-        return prevSorting.map((sort) =>
+      onSortingChange((prevSorting) =>
+        prevSorting.map((sort) =>
           sort.id === sortId ? { ...sort, ...updates } : sort,
-        );
-      });
+        ),
+      );
     },
     [onSortingChange],
   );
@@ -269,11 +267,7 @@ function DataGridSortMenuImpl<TData extends RowData>({
             </SortableContent>
           )}
           <div className="flex w-full items-center gap-2">
-            <Button
-              ref={addButtonRef}
-              onClick={onSortAdd}
-              disabled={columns.length === 0}
-            >
+            <Button onClick={onSortAdd} disabled={columns.length === 0}>
               Add sort
             </Button>
             {sorting.length > 0 && (
@@ -376,7 +370,7 @@ function DataTableSortItem({
             />
           }
         >
-          <span className="truncate">{columnLabels.get(sort.id)}</span>
+          <span className="truncate">{label}</span>
           <IconPlaceholder
             lucide="ChevronsUpDown"
             tabler="IconSelector"

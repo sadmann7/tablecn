@@ -33,6 +33,10 @@ const fpsVariants = cva(
   },
 );
 
+function subscribe() {
+  return () => {};
+}
+
 interface FpsProps
   extends
     React.ComponentProps<"div">,
@@ -59,51 +63,43 @@ function Fps(props: FpsProps) {
     ...fpsProps
   } = props;
 
-  const [mounted, setMounted] = React.useState(false);
-  const [fps, setFps] = React.useState(0);
-  const frameCountRef = React.useRef(0);
-  const lastTimeRef = React.useRef(performance.now());
-  const animationFrameRef = React.useRef<number | null>(null);
-  const updateTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
+  const mounted = React.useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
   );
+  const [fps, setFps] = React.useState(0);
 
-  React.useLayoutEffect(() => setMounted(true), []);
-
-  const status = React.useMemo(() => {
-    if (fps < errorThreshold) return "error";
-    if (fps < warningThreshold) return "warning";
-    return "good";
-  }, [fps, errorThreshold, warningThreshold]);
+  const status =
+    fps < errorThreshold
+      ? "error"
+      : fps < warningThreshold
+        ? "warning"
+        : "good";
 
   React.useEffect(() => {
-    if (!enabled || typeof window === "undefined") return;
+    if (!enabled) return;
 
+    let frame = 0;
+    let frameCount = 0;
+    let lastTime = performance.now();
     function measureFps() {
       const now = performance.now();
-      const delta = now - lastTimeRef.current;
-      frameCountRef.current += 1;
+      const delta = now - lastTime;
+      frameCount += 1;
 
       if (delta >= updateInterval) {
-        const currentFps = Math.round((frameCountRef.current * 1000) / delta);
-        setFps(currentFps);
-        frameCountRef.current = 0;
-        lastTimeRef.current = now;
+        setFps(Math.round((frameCount * 1000) / delta));
+        frameCount = 0;
+        lastTime = now;
       }
 
-      animationFrameRef.current = requestAnimationFrame(measureFps);
+      frame = requestAnimationFrame(measureFps);
     }
 
-    animationFrameRef.current = requestAnimationFrame(measureFps);
+    frame = requestAnimationFrame(measureFps);
 
-    return () => {
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (updateTimeoutRef.current !== null) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-    };
+    return () => cancelAnimationFrame(frame);
   }, [enabled, updateInterval]);
 
   if (!enabled) return null;
@@ -111,7 +107,7 @@ function Fps(props: FpsProps) {
   const portalContainer =
     strategy === "absolute"
       ? null
-      : (portalContainerProp ?? (mounted ? globalThis.document?.body : null));
+      : (portalContainerProp ?? (mounted ? document.body : null));
 
   const Comp = (
     <div
