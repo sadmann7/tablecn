@@ -191,9 +191,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
 
   return (
     <Popover onOpenChange={onOpenChange}>
-      <PopoverTrigger
-        render={<Button variant="outline" className="border-dashed" />}
-      >
+      <PopoverTrigger render={<Button variant="outline" />}>
         {columnFilterValue ? (
           <span
             aria-hidden="true"

@@ -123,9 +123,7 @@ function DataTableDateFilterContent<TData extends RowData>({
 
   return (
     <Popover>
-      <PopoverTrigger
-        render={<Button variant="outline" className="border-dashed" />}
-      >
+      <PopoverTrigger render={<Button variant="outline" />}>
         {hasValue ? (
           <span
             aria-hidden="true"

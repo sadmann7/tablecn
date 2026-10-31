@@ -97,9 +97,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
       items={options}
       multiple={multiple}
     >
-      <FacetedTrigger
-        render={<Button variant="outline" className="border-dashed" />}
-      >
+      <FacetedTrigger render={<Button variant="outline" />}>
         {hasSelection ? (
           <span
             aria-hidden="true"

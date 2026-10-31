@@ -383,7 +383,6 @@ function DataTableFilterItem<TData extends RowData>({
       </div>
       <Button
         aria-controls={filterItemId}
-
         aria-label={`Remove ${label} filter`}
         variant="outline"
         size="icon"
