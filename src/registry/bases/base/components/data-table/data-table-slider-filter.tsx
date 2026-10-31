@@ -67,9 +67,10 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const id = React.useId();
 
   const meta = column.columnDef.meta;
-  const declaredMin = meta?.variant === "number" ? meta.min : undefined;
-  const declaredMax = meta?.variant === "number" ? meta.max : undefined;
-  const unit = meta?.unit;
+  const numberMeta = meta?.variant === "number" ? meta : undefined;
+  const declaredMin = numberMeta?.min;
+  const declaredMax = numberMeta?.max;
+  const unit = numberMeta?.unit;
 
   const [facetedRange, setFacetedRange] = React.useState(() =>
     getFacetedRange(column),

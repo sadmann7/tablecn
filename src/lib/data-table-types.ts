@@ -19,32 +19,46 @@ export interface ColumnSelectOption {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type ColumnVariant =
+export type PlainColumnVariant =
   | "text"
   | "long-text"
-  | "number"
   | "url"
   | "boolean"
-  | "select"
-  | "multi-select"
-  | "date"
   | "file";
 
-export type ColumnVariantFilter =
-  | { variant?: Exclude<ColumnVariant, "number" | "date">; filter?: never }
-  | { variant: "number" | "date"; filter?: "range" };
+export interface ColumnVariantOptions {
+  number: {
+    filter?: "range";
+    min?: number;
+    max?: number;
+    unit?: string;
+  };
+  date: {
+    filter?: "range";
+  };
+  select: {
+    options?: ColumnSelectOption[];
+  };
+  "multi-select": {
+    options?: ColumnSelectOption[];
+  };
+}
+
+export type ColumnVariant = PlainColumnVariant | keyof ColumnVariantOptions;
+
+export type ColumnVariantMeta =
+  | { variant?: PlainColumnVariant }
+  | {
+      [TVariant in keyof ColumnVariantOptions]: {
+        variant: TVariant;
+      } & ColumnVariantOptions[TVariant];
+    }[keyof ColumnVariantOptions];
 
 export type DataTableColumnMeta = {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
   placeholder?: string;
-  options?: ColumnSelectOption[];
-  unit?: string;
-} & (
-  | { variant?: Exclude<ColumnVariant, "number" | "date">; filter?: never }
-  | { variant: "number"; filter?: "range"; min?: number; max?: number }
-  | { variant: "date"; filter?: "range" }
-);
+} & ColumnVariantMeta;
 
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;
@@ -79,7 +93,7 @@ declare module "@tanstack/react-table" {
 
 export type DataTableColumnConfig = {
   isSortable?: boolean;
-} & ColumnVariantFilter;
+} & ColumnVariantMeta;
 
 export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
 
