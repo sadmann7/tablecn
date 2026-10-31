@@ -15,9 +15,9 @@ import {
 } from "lucide-react";
 
 import type { SkaterSchema } from "@/app/data-grid-multiplayer/lib/validation";
+import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { type Task, tasks } from "@/db/schema";
-import { ColumnFilterItem } from "@/lib/data-table-types";
 import { generateId } from "@/lib/id";
 
 export function generateTaskCode(takenCodes?: Set<string>): string {

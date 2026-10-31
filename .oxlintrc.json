@@ -26,6 +26,10 @@
     "pnpm-lock.yaml"
   ],
   "rules": {
+    "typescript/consistent-type-imports": [
+      "warn",
+      { "fixStyle": "inline-type-imports", "disallowTypeAnnotations": false }
+    ],
     "sort-imports": [
       "warn",
       { "ignoreCase": true, "ignoreDeclarationSort": true }

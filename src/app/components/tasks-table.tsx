@@ -33,7 +33,7 @@ import { DataTableSortMenu } from "@/registry/bases/radix/components/data-table/
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
 import {
   useDataTable,
-  UseDataTableProps,
+  type UseDataTableProps,
 } from "@/registry/bases/radix/hooks/use-data-table";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
