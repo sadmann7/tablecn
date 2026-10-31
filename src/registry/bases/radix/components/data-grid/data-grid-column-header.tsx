@@ -166,7 +166,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
   const leftPosition = isRtl ? "end" : "start";
   const rightPosition = isRtl ? "start" : "end";
 
-  const onSortingChange = (direction: SortDirection) => {
+  function onSortingChange(direction: SortDirection) {
     table.setSorting((prev) => {
       const existingSortIndex = prev.findIndex((sort) => sort.id === column.id);
       const newSort: ColumnSort = {
@@ -179,7 +179,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
       updated[existingSortIndex] = newSort;
       return updated;
     });
-  };
+  }
 
   return (
     <>

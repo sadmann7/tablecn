@@ -151,7 +151,6 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
             className="shrink-0 text-muted-foreground"
           />
         </DropdownMenuTrigger>
-        {/* Open below the header row border instead of over it */}
         <DropdownMenuContent align="start" sideOffset={1} className="w-60">
           <DataGridColumnMenuItems column={column} />
         </DropdownMenuContent>
@@ -182,7 +181,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
   const leftPosition = isRtl ? "end" : "start";
   const rightPosition = isRtl ? "start" : "end";
 
-  const onSortingChange = (direction: SortDirection) => {
+  function onSortingChange(direction: SortDirection) {
     table.setSorting((prev) => {
       const existingSortIndex = prev.findIndex((sort) => sort.id === column.id);
       const newSort: ColumnSort = {
@@ -195,7 +194,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
       updated[existingSortIndex] = newSort;
       return updated;
     });
-  };
+  }
 
   return (
     <>
