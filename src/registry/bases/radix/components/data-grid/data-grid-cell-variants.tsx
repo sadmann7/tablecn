@@ -75,6 +75,8 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 // The cell's padding on each side (px-2), so editors line up with its edge
 const CELL_PADDING = 8;
+// Editors start a border out, so they cover the cell borders instead of doubling them
+const CELL_BORDER_WIDTH = 1;
 
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -244,14 +246,15 @@ export function LongTextCell<TData extends RowData>(
         data-grid-cell-editor=""
         align="start"
         side="bottom"
+        alignOffset={-CELL_BORDER_WIDTH}
         sideOffset={getOverlapOffset(rowHeight)}
-        className="w-100 rounded-none p-0"
+        className="w-100 rounded-none p-0 ring-inset"
         onOpenAutoFocus={onOpenAutoFocus}
       >
         <Textarea
           aria-label={getColumnLabel(cell.column)}
           placeholder="Enter text..."
-          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring dark:bg-transparent"
+          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent"
           ref={textareaRef}
           value={value}
           onBlur={onBlur}
@@ -636,10 +639,11 @@ export function SelectCell<TData extends RowData>(
             data-grid-cell-editor=""
             position="popper"
             align="start"
-            alignOffset={-CELL_PADDING}
-            sideOffset={-CELL_PADDING}
+            alignOffset={-CELL_PADDING - CELL_BORDER_WIDTH}
+            sideOffset={-CELL_PADDING + CELL_BORDER_WIDTH}
+            className="rounded-none ring-inset"
             style={{
-              minWidth: `calc(var(--radix-select-trigger-width) + ${CELL_PADDING * 2}px)`,
+              minWidth: `calc(var(--radix-select-trigger-width) + ${(CELL_PADDING + CELL_BORDER_WIDTH) * 2}px)`,
             }}
             onCloseAutoFocus={onCloseAutoFocus}
           >
@@ -820,11 +824,12 @@ export function MultiSelectCell<TData extends RowData>(
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
+            alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset(rowHeight)}
-            className="w-75 rounded-none p-0"
+            className="w-75 rounded-none p-0 ring-inset"
             onOpenAutoFocus={onOpenAutoFocus}
           >
-            <Command className="**:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
+            <Command className="bg-transparent **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
               <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
                 {selectedValues.map((value) => {
                   const label = optionByValue.get(value)?.label ?? value;
@@ -976,22 +981,24 @@ export function DateCell<TData extends RowData>(
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
         <PopoverAnchor asChild>
-          <span
-            data-slot="data-grid-cell-content"
-            dir="auto"
-            data-invalid={isInvalidDate ? "" : undefined}
-            className="data-invalid:text-destructive"
-          >
-            {formatDateForDisplay(value)}
-          </span>
+          <div className="absolute inset-0" />
         </PopoverAnchor>
+        <span
+          data-slot="data-grid-cell-content"
+          dir="auto"
+          data-invalid={isInvalidDate ? "" : undefined}
+          className="data-invalid:text-destructive"
+        >
+          {formatDateForDisplay(value)}
+        </span>
         {isEditing && (
           <PopoverContent
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
-            alignOffset={-CELL_PADDING}
-            className="w-auto p-0"
+            alignOffset={-CELL_BORDER_WIDTH}
+            sideOffset={0}
+            className="w-auto rounded-none p-0 ring-inset"
           >
             <Calendar
               autoFocus
@@ -1452,8 +1459,9 @@ export function FileCell<TData extends RowData>(
             aria-label={getColumnLabel(cell.column)}
             data-grid-cell-editor=""
             align="start"
+            alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset(rowHeight)}
-            className="w-100 rounded-none p-0"
+            className="w-100 rounded-none p-0 ring-inset"
             onEscapeKeyDown={onEscapeKeyDown}
             onOpenAutoFocus={onOpenAutoFocus}
           >
@@ -1882,7 +1890,7 @@ function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
 }
 
 function getOverlapOffset(rowHeight: RowHeightValue) {
-  return 1 - getRowHeightValue(rowHeight); // bottom border - row height
+  return -getRowHeightValue(rowHeight);
 }
 
 function parseUrlText(text: string) {
