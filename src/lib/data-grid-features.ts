@@ -1,6 +1,7 @@
 import {
   assignPrototypeAPIs,
   assignTableAPIs,
+  type Cell,
   type CellData,
   cellSelectionFeature,
   Column,
@@ -504,12 +505,12 @@ const dataGridCellEditingFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridCellEditingFeature", prototype, table, {
       cell_getCanEdit: {
-        fn: (cell: { column: Parameters<typeof getCanEditColumn>[0] }) =>
+        fn: (cell: Cell<DataGridFeatures, RowData>) =>
           getCanEditColumn(cell.column),
       },
       cell_getIsEditing: {
-        fn: (cell: DataGridCellRef) => {
-          const editingCell = asDataGrid(cell.table).atoms.editingCell.get();
+        fn: (cell: Cell<DataGridFeatures, RowData>) => {
+          const editingCell = cell.table.atoms.editingCell.get();
           return (
             editingCell?.rowId === cell.row.id &&
             editingCell.columnId === cell.column.id
@@ -517,14 +518,10 @@ const dataGridCellEditingFeature: TableFeature = {
         },
       },
       cell_startEditing: {
-        fn: (
-          cell: DataGridCellRef & {
-            column: Parameters<typeof getCanEditColumn>[0];
-          },
-        ) => {
+        fn: (cell: Cell<DataGridFeatures, RowData>) => {
           if (!getCanEditColumn(cell.column)) return;
 
-          const table = asDataGrid(cell.table);
+          const { table } = cell;
           table.setFocusedCell(cell.row.id, cell.column.id);
           table.setEditingCell({
             rowId: cell.row.id,
@@ -539,7 +536,7 @@ const dataGridCellEditingFeature: TableFeature = {
 function getCanEditColumn<TData extends RowData>(
   column: Column<DataGridFeatures, TData>,
 ) {
-  const { options } = asDataGrid(column.table);
+  const { options } = column.table;
   return (
     !options.readOnly &&
     options.enableCellEditing !== false &&
@@ -559,15 +556,8 @@ const dataGridColumnOrderingFeature: TableFeature = {
   },
 };
 
-interface DataGridCellRef {
-  table: object;
-  row: { id: string };
-  column: { id: string };
-}
-
 const DEFAULT_BATCH_UPDATE_DELAY = 500;
 const DEFAULT_MAX_HISTORY = 100;
-// Cell edits this close together undo as one step, like typing
 const HISTORY_MERGE_DELAY = 300;
 
 interface IndexedRow {
@@ -689,20 +679,20 @@ const dataGridDataFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridDataFeature", prototype, table, {
       cell_setValue: {
-        fn: (cell: DataGridCellRef, value: unknown) =>
-          updateEditableCells(asDataGrid(cell.table), {
+        fn: (cell: Cell<DataGridFeatures, RowData>, value: unknown) =>
+          updateEditableCells(cell.table, {
             rowId: cell.row.id,
             columnId: cell.column.id,
             value,
           }),
       },
       cell_clearValue: {
-        fn: (cell: DataGridCellRef) => {
-          const instance = asDataGrid(cell.table);
-          updateEditableCells(instance, {
+        fn: (cell: Cell<DataGridFeatures, RowData>) => {
+          const { table } = cell;
+          updateEditableCells(table, {
             rowId: cell.row.id,
             columnId: cell.column.id,
-            value: getEmptyValueForColumn(instance, cell.column.id),
+            value: getEmptyValueForColumn(table, cell.column.id),
           });
         },
       },
@@ -812,8 +802,6 @@ function getDependentColumnIds(table: DataGridInstance) {
   return columnIds;
 }
 
-// Rows without mounted cells take their values in one go, since nothing needs to know
-// which changed until `onDataChange`
 function applyRowValues(
   table: DataGridInstance,
   store: CellUpdateStore,
@@ -850,8 +838,6 @@ function applyRowValues(
       copy = Object.assign(getRowCopy(store, rowId, current), values);
     }
 
-    // Filtering from leaf rows and grouping show copies of the core rows. Cached
-    // values reset since the copy changed, skipping caches nothing has filled
     const shownRow = shownRowsById[rowId];
     for (const target of shownRow && shownRow !== row
       ? [row, shownRow]
@@ -883,7 +869,6 @@ function getHasKeys(object: object) {
   return false;
 }
 
-// Edits made in the grid, which respect read-only grids and columns
 function updateEditableCells(
   table: DataGridInstance,
   updates: CellUpdate | Array<CellUpdate>,
@@ -898,8 +883,6 @@ function updateEditableCells(
   );
 }
 
-// Runs a change under a reason. Values still waiting report first under their own,
-// and the outermost change keeps its reason, so a paste that adds rows reports `paste`
 function runWithReason<T>(
   table: DataGridInstance,
   reason: DataChangeReason,
@@ -916,8 +899,6 @@ function runWithReason<T>(
   }
 }
 
-// Reuses the row copies the grid already shows, so rows don't rerender when they come
-// back as `data`
 function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
   if (store.commitTimer !== null) {
     clearTimeout(store.commitTimer);
@@ -927,7 +908,6 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
   if (store.pending.size === 0) return;
 
   if (!table.options.onDataChange) {
-    // The copies never leave the grid, so later updates reuse them
     store.pending.clear();
     store.recordedCells.clear();
     return;
@@ -945,7 +925,6 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
     const base = shown.base as RowValues;
     const dataRow = (data[index] ?? rowsById[rowId]?.original) as RowValues;
     const recordedColumnIds = store.recordedCells.get(rowId);
-    // When the data changed since the patch, the patched values go onto its new row
     const isSameBase = shown.base === dataRow;
     const nextRow = isSameBase ? shown.copy : { ...dataRow };
     let isRowChanged = false;
@@ -987,7 +966,6 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
   }
 }
 
-// Rows nobody shows wait in `deferred`, unless `isComplete` applies everything
 function flushCellUpdates(
   table: DataGridInstance,
   store: CellUpdateStore,
@@ -1038,14 +1016,11 @@ function notifyCells(store: CellUpdateStore) {
   }
 }
 
-// The last reported data until new `data` arrives, so quick changes build on each other
 function getCurrentData(table: DataGridInstance, store: CellUpdateStore) {
   const { data } = table.options;
   return store.reported?.from === data ? store.reported.data : data;
 }
 
-// Where a row sits in `data`. The core rows know, unless the data is one the
-// consumer hasn't passed back yet
 function getDataIndex(
   table: DataGridInstance,
   data: ReadonlyArray<RowData>,
@@ -1087,19 +1062,23 @@ function pushHistory(
 ) {
   if (!getIsUndoRedoEnabled(table)) return;
   const last = store.undoStack.at(-1);
+  const byKey = new Map(
+    last?.changes.map((change) => [
+      getCellKey(change.rowId, change.columnId),
+      change,
+    ]),
+  );
+
   if (
     last &&
     !store.isHistorySealed &&
     getIsCellsOnly(last) &&
     getIsCellsOnly(entry) &&
-    entry.timestamp - last.timestamp < HISTORY_MERGE_DELAY
+    entry.timestamp - last.timestamp < HISTORY_MERGE_DELAY &&
+    entry.changes.every((change) =>
+      byKey.has(getCellKey(change.rowId, change.columnId)),
+    )
   ) {
-    const byKey = new Map(
-      last.changes.map((change) => [
-        getCellKey(change.rowId, change.columnId),
-        change,
-      ]),
-    );
     for (const change of entry.changes) {
       const key = getCellKey(change.rowId, change.columnId);
       const existing = byKey.get(key);
@@ -1115,6 +1094,7 @@ function pushHistory(
     const maxHistory = table.options.maxHistory ?? DEFAULT_MAX_HISTORY;
     if (store.undoStack.length > maxHistory) store.undoStack.shift();
   }
+
   store.isHistorySealed = false;
   store.redoStack = [];
   setUndoRedoState(table, store);
@@ -1174,8 +1154,6 @@ function addRows(
   ).map(({ row, index: rowIndex }) => table.getRowId(row, rowIndex));
 }
 
-// Adds and removes rows in one change. Each insert's index is where the row ends up,
-// so restoring removed rows at their old indices puts them back in place
 function applyRowChanges(
   table: DataGridInstance,
   store: CellUpdateStore,
@@ -1183,7 +1161,6 @@ function applyRowChanges(
   removedRowIds: ReadonlyArray<string>,
   history = true,
 ) {
-  // Cell values still waiting settle first, so the rows build on them
   commitCellUpdates(table, store);
   const data = getCurrentData(table, store);
 
@@ -1313,8 +1290,6 @@ function undo(table: DataGridInstance) {
   return count;
 }
 
-// Without `getRowId`, rows are known by index, so data from outside the grid leaves
-// the history pointing at the wrong rows
 function getIsHistoryStale(table: DataGridInstance, store: CellUpdateStore) {
   return (
     !table.options.getRowId &&
@@ -1330,8 +1305,6 @@ function clearHistory(table: DataGridInstance) {
   setUndoRedoState(table, store);
 }
 
-// Applies a step backwards or forwards without recording it. Cells change on the rows
-// a step leaves in place, so undo restores cells before rows and redo after them
 function applyHistoryEntry(
   table: DataGridInstance,
   store: CellUpdateStore,
@@ -1350,7 +1323,6 @@ function applyHistoryEntry(
     );
   const getRowIds = (rows: IndexedRow[]) =>
     rows.map(({ row, index }) => table.getRowId(row, index));
-  // Data that changed since the step may already hold a row it brings back
   const getMissingRows = (rows: IndexedRow[]) => {
     if (!table.options.getRowId) return rows;
     const data = getCurrentData(table, store);
@@ -1430,7 +1402,6 @@ function updateCells(
     return;
   }
 
-  // Batched values still waiting apply first, so this update lands after them
   flushCellUpdates(table, store, true);
   const rows = new Map<string, RowValues>();
   mergeUpdates(updateArray, () => rows);
@@ -2122,6 +2093,8 @@ async function waitForRowCount(table: DataGridInstance, rowCount: number) {
   }
 }
 
+type SearchRow = ReturnType<DataGridInstance["getRowModel"]>["rows"][number];
+
 interface SearchResult {
   query: string;
   rows: Array<SearchRow>;
@@ -2139,7 +2112,6 @@ interface SearchTextCache {
   result: SearchResult | null;
 }
 
-type SearchRow = ReturnType<DataGridInstance["getRowModel"]>["rows"][number];
 type SearchColumns = ReturnType<DataGridInstance["getVisibleLeafColumns"]>;
 
 const dataGridSearchFeature: TableFeature = {
@@ -2244,15 +2216,15 @@ const dataGridSearchFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridSearchFeature", prototype, table, {
       cell_getIsSearchMatch: {
-        fn: (cell: DataGridCellRef) =>
-          asDataGrid(cell.table)
+        fn: (cell: Cell<DataGridFeatures, RowData>) =>
+          cell.table
             .getSearchMatchesByRowId()
             .get(cell.row.id)
             ?.has(cell.column.id) ?? false,
       },
       cell_getIsActiveSearchMatch: {
-        fn: (cell: DataGridCellRef) => {
-          const match = asDataGrid(cell.table).getActiveSearchMatch();
+        fn: (cell: Cell<DataGridFeatures, RowData>) => {
+          const match = cell.table.getActiveSearchMatch();
           return (
             match?.rowId === cell.row.id && match.columnId === cell.column.id
           );
@@ -2471,8 +2443,8 @@ const dataGridPresenceFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridPresenceFeature", prototype, table, {
       cell_getPresence: {
-        fn: (cell: DataGridCellRef) =>
-          asDataGrid(cell.table)
+        fn: (cell: Cell<DataGridFeatures, RowData>) =>
+          cell.table
             .getCellPresenceByRowId()
             .get(cell.row.id)
             ?.get(cell.column.id) ?? null,
