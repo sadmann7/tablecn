@@ -12,7 +12,7 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnFilterItem,
-  ColumnOption,
+  ColumnSelectOption,
   FilterOperator,
 } from "@/lib/data-table-types";
 
@@ -687,7 +687,7 @@ function SelectFilterValue<TData extends RowData>({
 }
 
 interface SelectedOptionsProps {
-  options: ColumnOption[];
+  options: ColumnSelectOption[];
   value: string | string[] | undefined;
   placeholder: string;
 }

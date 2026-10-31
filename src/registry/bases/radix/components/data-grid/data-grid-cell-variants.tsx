@@ -8,7 +8,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type {
-  ColumnOption,
+  ColumnSelectOption,
   DataGridCellProps,
   FileCellData,
   RowHeightValue,
@@ -528,7 +528,7 @@ export function BooleanCell<TData extends RowData>(
   );
 }
 
-const NO_OPTIONS: ColumnOption[] = [];
+const NO_OPTIONS: ColumnSelectOption[] = [];
 
 export function SelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -1721,7 +1721,7 @@ function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
 }
 
-function getOptionLabel(options: ColumnOption[], value: string) {
+function getOptionLabel(options: ColumnSelectOption[], value: string) {
   return options.find((option) => option.value === value)?.label ?? value;
 }
 

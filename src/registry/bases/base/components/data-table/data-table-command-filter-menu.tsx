@@ -10,7 +10,10 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnFilterItem, ColumnOption } from "@/lib/data-table-types";
+import type {
+  ColumnFilterItem,
+  ColumnSelectOption,
+} from "@/lib/data-table-types";
 
 import {
   coerceFilterValue,
@@ -693,7 +696,7 @@ function SelectFilterValue<TData extends RowData>({
 }
 
 interface SelectedOptionsProps {
-  options: ColumnOption[];
+  options: ColumnSelectOption[];
   value: string | string[] | undefined;
   placeholder: string;
 }

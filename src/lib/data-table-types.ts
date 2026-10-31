@@ -12,7 +12,7 @@ import type {
   JOIN_OPERATORS,
 } from "@/lib/data-table-utils";
 
-export interface ColumnOption {
+export interface ColumnSelectOption {
   label: string;
   value: string;
   count?: number;
@@ -38,7 +38,7 @@ export interface DataTableColumnMeta {
   placeholder?: string;
   variant?: ColumnVariant;
   filter?: FilterStyle;
-  options?: ColumnOption[];
+  options?: ColumnSelectOption[];
   range?: [number, number];
   unit?: string;
 }

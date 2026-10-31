@@ -29,7 +29,7 @@ export type NavigationDirection =
   | "tab"
   | "shift+tab";
 
-export interface ColumnOption {
+export interface ColumnSelectOption {
   label: string;
   value: string;
   count?: number;
@@ -49,10 +49,10 @@ export interface ColumnVariantOptions {
     control?: "checkbox" | "switch";
   };
   select: {
-    options: ColumnOption[];
+    options: ColumnSelectOption[];
   };
   "multi-select": {
-    options: ColumnOption[];
+    options: ColumnSelectOption[];
   };
   file: {
     maxFileSize?: number;
