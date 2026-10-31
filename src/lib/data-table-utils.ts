@@ -237,9 +237,9 @@ export function getFilterVariant(
   switch (config?.variant) {
     case "number":
     case "boolean":
-    case "date":
     case "select":
     case "multi-select":
+    case "date":
       return config.variant;
     default:
       return "text";

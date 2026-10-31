@@ -29,96 +29,6 @@ export type NavigationDirection =
   | "tab"
   | "shift+tab";
 
-export interface CellPosition {
-  rowId: string;
-  columnId: string;
-}
-
-export interface EditingCell extends CellPosition {
-  pendingChar?: string;
-}
-
-export interface StartEditingOptions {
-  pendingChar?: string;
-}
-
-export interface StopEditingOptions {
-  direction?: NavigationDirection;
-  moveToNextRow?: boolean;
-}
-
-export interface CellUpdate {
-  rowId: string;
-  columnId: string;
-  value: unknown;
-}
-
-export interface CellChange {
-  rowId: string;
-  columnId: string;
-  previousValue: unknown;
-  newValue: unknown;
-}
-
-export type DataChangeReason =
-  | "edit"
-  | "paste"
-  | "update-cells"
-  | "add-rows"
-  | "delete-rows"
-  | "undo"
-  | "redo";
-
-export interface DataChangeDetails<TData = unknown> {
-  reason: DataChangeReason;
-  changes: CellChange[];
-  addedRows: TData[];
-  removedRows: TData[];
-}
-
-export type CreateRowDetails =
-  | {
-      reason: "add-row-press";
-      event?:
-        | React.MouseEvent<HTMLDivElement>
-        | React.KeyboardEvent<HTMLDivElement>;
-    }
-  | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
-  | { reason: "paste"; event?: undefined };
-
-export interface AddRowsOptions {
-  afterRowId?: string;
-  beforeRowId?: string;
-}
-
-export interface UndoRedoState {
-  canUndo: boolean;
-  canRedo: boolean;
-}
-
-export interface RowUpdate {
-  rowId: string;
-  values: Record<string, unknown>;
-}
-
-export interface UpdateCellsOptions {
-  batch?: boolean;
-  history?: boolean;
-}
-
-export interface CellPresence extends CellPosition {
-  name: string;
-  color: string;
-}
-
-export interface FileCellData {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url?: string;
-}
-
 export interface ColumnOption {
   label: string;
   value: string;
@@ -126,17 +36,17 @@ export interface ColumnOption {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type PlainColumnVariant = "text" | "long-text" | "date" | "url";
+export type PlainColumnVariant = "text" | "long-text" | "url" | "date";
 
 export interface ColumnVariantOptions {
-  boolean: {
-    control?: "checkbox" | "switch";
-  };
   number: {
     min?: number;
     max?: number;
     step?: number;
     format?: Intl.NumberFormatOptions;
+  };
+  boolean: {
+    control?: "checkbox" | "switch";
   };
   select: {
     options: ColumnOption[];
@@ -167,6 +77,96 @@ export type DataGridColumnMeta = {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
   writeCell?: (element: HTMLElement, value: unknown) => void;
 } & ColumnVariantMeta;
+
+export interface FileCellData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
+
+export interface CellPosition {
+  rowId: string;
+  columnId: string;
+}
+
+export interface CellPresence extends CellPosition {
+  name: string;
+  color: string;
+}
+
+export interface EditingCell extends CellPosition {
+  pendingChar?: string;
+}
+
+export interface StartEditingOptions {
+  pendingChar?: string;
+}
+
+export interface StopEditingOptions {
+  direction?: NavigationDirection;
+  moveToNextRow?: boolean;
+}
+
+export interface CellUpdate {
+  rowId: string;
+  columnId: string;
+  value: unknown;
+}
+
+export interface RowUpdate {
+  rowId: string;
+  values: Record<string, unknown>;
+}
+
+export interface UpdateCellsOptions {
+  batch?: boolean;
+  history?: boolean;
+}
+
+export interface CellChange {
+  rowId: string;
+  columnId: string;
+  previousValue: unknown;
+  newValue: unknown;
+}
+
+export type DataChangeReason =
+  | "edit"
+  | "paste"
+  | "update-cells"
+  | "add-rows"
+  | "delete-rows"
+  | "undo"
+  | "redo";
+
+export interface DataChangeDetails<TData = unknown> {
+  reason: DataChangeReason;
+  changes: CellChange[];
+  addedRows: TData[];
+  removedRows: TData[];
+}
+
+export interface AddRowsOptions {
+  afterRowId?: string;
+  beforeRowId?: string;
+}
+
+export type CreateRowDetails =
+  | {
+      reason: "add-row-press";
+      event?:
+        | React.MouseEvent<HTMLDivElement>
+        | React.KeyboardEvent<HTMLDivElement>;
+    }
+  | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
+  | { reason: "paste"; event?: undefined };
+
+export interface UndoRedoState {
+  canUndo: boolean;
+  canRedo: boolean;
+}
 
 export interface ColumnValueReader<TData extends RowData = RowData> {
   (row: { original: TData; index: number }): unknown;

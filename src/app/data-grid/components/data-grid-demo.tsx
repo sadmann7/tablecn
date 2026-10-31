@@ -346,7 +346,6 @@ function DataGridDemoContent({
         meta: {
           label: "Active",
           variant: "boolean",
-          control: "switch",
         },
       }),
       columnHelper.accessor("website", {

@@ -12,37 +12,6 @@ import type {
   JOIN_OPERATORS,
 } from "@/lib/data-table-utils";
 
-export type ColumnVariant =
-  | "text"
-  | "long-text"
-  | "number"
-  | "boolean"
-  | "date"
-  | "url"
-  | "select"
-  | "multi-select"
-  | "file";
-
-export type FilterStyle = "range" | "date-range";
-
-export interface DataTableColumnMeta {
-  label?: string;
-  placeholder?: string;
-  variant?: ColumnVariant;
-  filter?: FilterStyle;
-  options?: ColumnOption[];
-  range?: [number, number];
-  unit?: string;
-  icon?: React.ComponentType<React.ComponentProps<"svg">>;
-}
-
-export interface DataTableQueryKeys {
-  page: string;
-  perPage: string;
-  sort: string;
-  joinOperator: string;
-}
-
 export interface ColumnOption {
   label: string;
   value: string;
@@ -50,8 +19,32 @@ export interface ColumnOption {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type FilterOperator = keyof typeof FILTER_OPERATORS;
+export type ColumnVariant =
+  | "text"
+  | "long-text"
+  | "number"
+  | "url"
+  | "boolean"
+  | "select"
+  | "multi-select"
+  | "date"
+  | "file";
+
+export type FilterStyle = "range" | "date-range";
+
+export interface DataTableColumnMeta {
+  label?: string;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
+  placeholder?: string;
+  variant?: ColumnVariant;
+  filter?: FilterStyle;
+  options?: ColumnOption[];
+  range?: [number, number];
+  unit?: string;
+}
+
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
+export type FilterOperator = keyof typeof FILTER_OPERATORS;
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
 export interface FilterOperatorOption {
@@ -105,6 +98,13 @@ export type SortableColumnId<TColumnConfigs extends DataTableColumnConfigs> = {
     : K;
 }[keyof TColumnConfigs] &
   string;
+
+export interface DataTableQueryKeys {
+  page: string;
+  perPage: string;
+  sort: string;
+  joinOperator: string;
+}
 
 export interface DataTableQuery<
   TFilterColumnId extends string = string,
