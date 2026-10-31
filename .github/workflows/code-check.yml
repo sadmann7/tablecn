@@ -33,6 +33,7 @@ jobs:
       - uses: ./.github/setup
 
       - run: pnpm lint
+      - run: pnpm check:bases
 
   typecheck:
     runs-on: ubuntu-latest
