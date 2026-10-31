@@ -82,10 +82,8 @@ function useDataGrid<TData extends RowData>({
   });
   const dataPropRef = useValueAsRef(dataProp);
   const data = pendingEdit.from === dataProp ? pendingEdit.to : dataProp;
-
   const contextDir = useDirection();
   const dir = dirProp ?? contextDir;
-
   const dataGridRef = React.useRef<HTMLDivElement>(null);
   const tableRef = React.useRef<Table<DataGridFeatures, TData>>(null);
   const rowVirtualizerRef =
@@ -99,7 +97,6 @@ function useDataGrid<TData extends RowData>({
     cell: CellPosition;
     shouldScroll: boolean;
   } | null>(null);
-
   const propsRef = useValueAsRef(props);
   const stableProps = useStableProps(props, propsRef);
 
@@ -322,9 +319,7 @@ function useDataGrid<TData extends RowData>({
 
   const onCellMouseDown = React.useCallback(
     (rowId: string, columnId: string, event: React.MouseEvent) => {
-      if (event.button === 2) {
-        return;
-      }
+      if (event.button === 2) return;
 
       event.preventDefault();
 
