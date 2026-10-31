@@ -204,11 +204,11 @@ export function LongTextCell<TData extends RowData>(
         open={isEditing}
         readOnly={readOnly}
         containerRef={containerRef}
-        onOpenChange={onOpenChange}
-        overlap
         side="bottom"
         className="w-100"
+        onOpenChange={onOpenChange}
         onOpenFocus={onOpenFocus}
+        overlap
       >
         <Textarea
           aria-label={getColumnLabel(cell.column)}
@@ -313,13 +313,13 @@ export function NumberCell<TData extends RowData>(
           aria-label={getColumnLabel(cell.column)}
           type="number"
           ref={inputRef}
-          defaultValue={value}
           min={min}
           max={max}
           step={step}
           className="w-full [appearance:textfield] border-none bg-transparent p-0 outline-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-          onBlur={onBlur}
+          defaultValue={value}
           onChange={onChange}
+          onBlur={onBlur}
         />
       ) : (
         <span
@@ -552,9 +552,9 @@ export function SelectCell<TData extends RowData>(
         <Command
           ref={commandRef}
           tabIndex={-1}
-          loop
-          defaultValue={value ?? undefined}
           className="bg-transparent p-px outline-none"
+          defaultValue={value ?? undefined}
+          loop
         >
           <CommandList>
             <CommandGroup className="p-1.5">
@@ -730,13 +730,13 @@ export function MultiSelectCell<TData extends RowData>(
           open={isEditing}
           readOnly={readOnly}
           containerRef={containerRef}
-          onOpenChange={onOpenChange}
-          overlap
           className="w-75"
           style={{
             minWidth: `calc(var(--anchor-width) + ${CELL_BORDER_WIDTH * 2}px)`,
           }}
+          onOpenChange={onOpenChange}
           onOpenFocus={onOpenFocus}
+          overlap
         >
           <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
             <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
@@ -1205,11 +1205,11 @@ export function FileCell<TData extends RowData>(
           open={isEditing}
           readOnly={readOnly}
           containerRef={containerRef}
-          onOpenChange={onOpenChange}
-          overlap
           className="w-100"
+          onOpenChange={onOpenChange}
           onOpenFocus={onOpenFocus}
           onKeyDown={onEditorKeyDown}
+          overlap
         >
           <div className="flex flex-col gap-2 p-3">
             <span id={labelId} className="sr-only">
@@ -1427,7 +1427,7 @@ function CellEditorPopover<TData extends RowData>({
   containerRef,
   onOpenChange,
   onOpenFocus,
-  overlap = false,
+  overlap,
   className,
   children,
   ...contentProps
