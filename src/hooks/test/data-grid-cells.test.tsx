@@ -465,6 +465,30 @@ describe("DataGrid cells", () => {
       expect(getCell("1", "stance").textContent).toBe("Regular");
     });
 
+    it("shows renamed options when the columns change", () => {
+      const { getCell, rerenderColumns } = renderGrid();
+      expect(getCell("2", "stance").textContent).toBe("Regular");
+
+      rerenderColumns(
+        columns.map((column) =>
+          column.id === "stance"
+            ? {
+                ...column,
+                meta: {
+                  variant: "select",
+                  options: [
+                    { label: "Goofy", value: "goofy" },
+                    { label: "Regular footed", value: "regular" },
+                  ],
+                },
+              }
+            : column,
+        ),
+      );
+
+      expect(getCell("2", "stance").textContent).toBe("Regular footed");
+    });
+
     it("opens on the current option and saves from the keyboard", () => {
       const { getCell, getValue, focus } = renderGrid();
 
@@ -1040,10 +1064,19 @@ function renderGrid({
 }: GridOptions = {}) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<Skater>> } = {};
 
-  function Harness({ rows }: { rows: Skater[] }) {
+  let currentRows = data;
+  let currentColumns = gridColumns;
+
+  function Harness({
+    rows,
+    columns: harnessColumns,
+  }: {
+    rows: Skater[];
+    columns: ColumnDef<DataGridFeatures, Skater>[];
+  }) {
     const dataGrid = useDataGrid({
       data: rows,
-      columns: gridColumns,
+      columns: harnessColumns,
       getRowId: (row) => row.id,
       ...options,
     });
@@ -1051,7 +1084,9 @@ function renderGrid({
     return <DataGrid {...dataGrid} />;
   }
 
-  const view = render(<Harness rows={data} />, { wrapper: TooltipProvider });
+  const view = render(<Harness rows={data} columns={gridColumns} />, {
+    wrapper: TooltipProvider,
+  });
   const rendered = gridRef.current?.table;
   if (!rendered) throw new Error("Grid did not render");
   const table = rendered;
@@ -1075,10 +1110,24 @@ function renderGrid({
   }
 
   function rerenderRows(rows: Skater[]) {
-    view.rerender(<Harness rows={rows} />);
+    currentRows = rows;
+    view.rerender(<Harness rows={rows} columns={currentColumns} />);
   }
 
-  return { ...view, table, getCell, getValue, focus, rerenderRows };
+  function rerenderColumns(nextColumns: ColumnDef<DataGridFeatures, Skater>[]) {
+    currentColumns = nextColumns;
+    view.rerender(<Harness rows={currentRows} columns={nextColumns} />);
+  }
+
+  return {
+    ...view,
+    table,
+    getCell,
+    getValue,
+    focus,
+    rerenderRows,
+    rerenderColumns,
+  };
 }
 
 function press(

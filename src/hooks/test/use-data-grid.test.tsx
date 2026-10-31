@@ -2640,6 +2640,57 @@ describe("useDataGrid", () => {
       ];
     }
 
+    it("matches a row's latest text once its batched updates commit", () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            enableSearch: true,
+            batchUpdateDelay: 1000,
+          }),
+        { wrapper: createWrapper() },
+      );
+      const { table } = result.current;
+      table.subscribeCell("0", "name", () => {});
+
+      act(() => {
+        table.openSearch();
+        table.updateCells(
+          { rowId: "0", columnId: "name", value: "Xavier" },
+          { batch: true },
+        );
+      });
+      act(() => {
+        table.setSearchQuery("xavier");
+      });
+      expect(table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "name" },
+      ]);
+
+      act(() => {
+        table.updateCells(
+          { rowId: "0", columnId: "name", value: "Yolanda" },
+          { batch: true },
+        );
+      });
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
+      act(() => {
+        table.setSearchQuery("yolanda");
+      });
+      expect(table.getSearchMatches()).toEqual([
+        { rowId: "0", columnId: "name" },
+      ]);
+      act(() => {
+        table.setSearchQuery("xavier");
+      });
+      expect(table.getSearchMatches()).toEqual([]);
+    });
+
     it("should focus the first match and flag matching cells", () => {
       const { result } = renderHook(
         () =>

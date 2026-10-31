@@ -900,13 +900,14 @@ function applyRowValues(
 }
 
 function getRowCopy(store: CellUpdateStore, rowId: string, current: RowValues) {
-  let shown = store.copies.get(rowId);
-  if (!shown || current !== shown.copy) {
-    shown = { base: current, copy: { ...current } };
-    store.copies.set(rowId, shown);
-  }
+  const shown = store.copies.get(rowId);
+  const copy = { ...current };
+  store.copies.set(rowId, {
+    base: shown && current === shown.copy ? shown.base : current,
+    copy,
+  });
   store.pending.add(rowId);
-  return shown.copy;
+  return copy;
 }
 
 function getHasKeys(object: object) {

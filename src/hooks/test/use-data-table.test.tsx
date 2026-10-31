@@ -110,6 +110,40 @@ describe("useDataTable", () => {
     ]);
   });
 
+  it("keeps every filter and sorting change made in one event", async () => {
+    const { result } = renderDataTable("");
+
+    act(() => {
+      result.current.table.setColumnFilters((prev) => [
+        ...prev,
+        { id: "title", value: "bug" },
+      ]);
+      result.current.table.setColumnFilters((prev) => [
+        ...prev,
+        { id: "status", value: ["done"] },
+      ]);
+      result.current.table.setSorting((prev) => [
+        ...prev,
+        { id: "title", desc: false },
+      ]);
+      result.current.table.setSorting((prev) => [
+        ...prev,
+        { id: "status", desc: true },
+      ]);
+    });
+
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+      ["status", ["done"]],
+    ]);
+    await waitFor(() =>
+      expect(result.current.table.state.sorting).toEqual([
+        { id: "title", desc: false },
+        { id: "status", desc: true },
+      ]),
+    );
+  });
+
   it("writes pagination and sorting changes to the URL", async () => {
     const { result, getLastSearch } = renderDataTable("");
 

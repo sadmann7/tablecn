@@ -29,11 +29,6 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const INVALID_RING_DELAY_MS = 500;
 
-interface Range {
-  min: number;
-  max: number;
-}
-
 type RangeValue = [number, number];
 
 interface DataTableSliderFilterProps<TData extends RowData> {
@@ -74,36 +69,16 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const defaultRange = column.columnDef.meta?.range;
   const unit = column.columnDef.meta?.unit;
 
-  const { min, max, step } = React.useMemo<Range & { step: number }>(() => {
-    let minValue = 0;
-    let maxValue = 100;
+  const [facetedRange, setFacetedRange] = React.useState(() =>
+    getFacetedRange(column),
+  );
+  const [min, max] =
+    defaultRange && getIsValidRange(defaultRange) ? defaultRange : facetedRange;
+  const step = getRangeStep(min, max);
 
-    if (defaultRange && getIsValidRange(defaultRange)) {
-      [minValue, maxValue] = defaultRange;
-    } else {
-      const values = column.getFacetedMinMaxValues();
-      if (Array.isArray(values) && values.length === 2) {
-        const [facetMinValue, facetMaxValue] = values;
-        if (
-          typeof facetMinValue === "number" &&
-          typeof facetMaxValue === "number"
-        ) {
-          minValue = facetMinValue;
-          maxValue = facetMaxValue;
-        }
-      }
-    }
-
-    const rangeSize = maxValue - minValue;
-    const step =
-      rangeSize <= 20
-        ? 1
-        : rangeSize <= 100
-          ? Math.ceil(rangeSize / 20)
-          : Math.ceil(rangeSize / 50);
-
-    return { min: minValue, max: maxValue, step };
-  }, [column, defaultRange]);
+  function onOpenChange(open: boolean) {
+    if (open) setFacetedRange(getFacetedRange(column));
+  }
 
   const bounds = parseRangeBounds(columnFilterValueProp);
   const columnFilterValue: RangeValue | undefined = bounds
@@ -203,7 +178,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
   }
 
   return (
-    <Popover>
+    <Popover onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
         <Button variant="outline">
           {columnFilterValue ? (
@@ -327,6 +302,24 @@ function DataTableSliderFilterContent<TData extends RowData>({
       </PopoverContent>
     </Popover>
   );
+}
+
+function getFacetedRange<TData extends RowData>(
+  column: Column<DataTableFeatures, TData>,
+): RangeValue {
+  const values = column.getFacetedMinMaxValues();
+  if (Array.isArray(values) && values.length === 2) {
+    const [min, max] = values;
+    if (typeof min === "number" && typeof max === "number") return [min, max];
+  }
+  return [0, 100];
+}
+
+function getRangeStep(min: number, max: number) {
+  const rangeSize = max - min;
+  if (rangeSize <= 20) return 1;
+  if (rangeSize <= 100) return Math.ceil(rangeSize / 20);
+  return Math.ceil(rangeSize / 50);
 }
 
 function getIsValidRange(value: unknown): value is RangeValue {

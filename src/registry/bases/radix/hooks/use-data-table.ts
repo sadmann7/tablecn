@@ -156,8 +156,10 @@ function useDataTable<TData extends RowData>({
     [page, perPage],
   );
 
+  const getNextPagination = useChainedUpdate(pagination);
+
   function onPaginationChange(updater: Updater<PaginationState>) {
-    const next = functionalUpdate(updater, pagination);
+    const next = getNextPagination(updater);
     void setPage(next.pageIndex + 1);
     void setPerPage(next.pageSize);
   }
@@ -201,8 +203,10 @@ function useDataTable<TData extends RowData>({
 
   const [sorting, setSorting] = useQueryState(sortKey, sortingParser);
 
+  const getNextSorting = useChainedUpdate(sorting);
+
   function onSortingChange(updater: Updater<SortingState>) {
-    void setSorting(functionalUpdate(updater, sorting));
+    void setSorting(getNextSorting(updater));
   }
 
   const joinOperatorParser = React.useMemo(
@@ -218,8 +222,10 @@ function useDataTable<TData extends RowData>({
     joinOperatorParser,
   );
 
+  const getNextJoinOperator = useChainedUpdate(joinOperator);
+
   function onJoinOperatorChange(updater: Updater<JoinOperator>) {
-    void setJoinOperator(functionalUpdate(updater, joinOperator));
+    void setJoinOperator(getNextJoinOperator(updater));
   }
 
   const filterParsers = React.useMemo(
@@ -309,8 +315,10 @@ function useDataTable<TData extends RowData>({
     debounceMs,
   );
 
+  const getNextColumnFilters = useChainedUpdate(columnFilters);
+
   function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
-    const filters = functionalUpdate(updater, columnFilters);
+    const filters = getNextColumnFilters(updater);
     setFiltersDraft({ filters, urlFiltersKey });
     debouncedWriteFilters(filters, urlFiltersKey);
   }
@@ -365,3 +373,17 @@ function selectTableState(state: TableState<DataTableFeatures>) {
 }
 
 export { useDataTable, type UseDataTableProps };
+
+function useChainedUpdate<TValue>(value: TValue) {
+  const pendingRef = React.useRef<{ base: TValue; next: TValue } | null>(null);
+
+  return (updater: Updater<TValue>) => {
+    const pending = pendingRef.current;
+    const next = functionalUpdate(
+      updater,
+      pending?.base === value ? pending.next : value,
+    );
+    pendingRef.current = { base: value, next };
+    return next;
+  };
+}

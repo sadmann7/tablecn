@@ -113,6 +113,26 @@ describe("DataTableSliderFilter", () => {
     expect(table.getColumn("hours")?.getFilterValue()).toEqual([10, 24]);
     expect((from as HTMLInputElement).value).toBe("10");
   });
+
+  it("reads the faceted range again when the popover opens", () => {
+    const facetedColumns = columnHelper.columns([
+      columnHelper.accessor("hours", {
+        id: "hours",
+        meta: { label: "Hours", variant: "number", filter: "range" },
+        enableColumnFilter: true,
+      }),
+    ]);
+    const { openFilter, rerenderData } = renderToolbar(facetedColumns);
+    const [from, to] = openFilter();
+    expect((from as HTMLInputElement).value).toBe("2");
+    expect((to as HTMLInputElement).value).toBe("20");
+
+    fireEvent.keyDown(to, { key: "Escape" });
+    rerenderData([...data, { id: "4", hours: 90 }]);
+    const [, nextTo] = openFilter();
+
+    expect((nextTo as HTMLInputElement).value).toBe("90");
+  });
 });
 
 describe("DataTableRangeFilter", () => {
@@ -181,16 +201,16 @@ describe("DataTableRangeFilter", () => {
   });
 });
 
-function renderToolbar() {
+function renderToolbar(toolbarColumns = columns) {
   const tableRef: {
     current?: ReturnType<typeof useDataTable<Task>>["table"];
   } = {};
 
-  function Harness() {
+  function Harness({ rows }: { rows: Task[] }) {
     const { table } = useDataTable<Task>({
       mode: "client",
-      data,
-      columns,
+      data: rows,
+      columns: toolbarColumns,
       getRowId: (row) => row.id,
     });
     tableRef.current = table;
@@ -202,9 +222,9 @@ function renderToolbar() {
     );
   }
 
-  render(
+  const view = render(
     <NuqsTestingAdapter hasMemory>
-      <Harness />
+      <Harness rows={data} />
     </NuqsTestingAdapter>,
   );
 
@@ -220,7 +240,15 @@ function renderToolbar() {
     return [from, to] as const;
   }
 
-  return { table, openFilter };
+  function rerenderData(rows: Task[]) {
+    view.rerender(
+      <NuqsTestingAdapter hasMemory>
+        <Harness rows={rows} />
+      </NuqsTestingAdapter>,
+    );
+  }
+
+  return { table, openFilter, rerenderData };
 }
 
 function renderRangeFilter(value: [string, string]) {

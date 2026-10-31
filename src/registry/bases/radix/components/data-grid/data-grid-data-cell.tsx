@@ -53,6 +53,9 @@ export const DataGridDataCell = React.memo(
     if (prev.cell.column.columnDef.cell !== next.cell.column.columnDef.cell) {
       return false;
     }
+    if (prev.cell.column.columnDef.meta !== next.cell.column.columnDef.meta) {
+      return false;
+    }
     // Written cells take their values straight from `updateCells`
     if (next.cell.column.columnDef.meta?.writeCell) return true;
     if (getHasCustomCell(next.cell.column)) {
