@@ -11,7 +11,6 @@ import {
   type Table,
 } from "@tanstack/react-table";
 import { cn } from "cn";
-import { composeEventHandlers } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -83,19 +82,19 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
   const columnVariant = getColumnVariant(meta?.cell?.variant);
   const ColumnIcon = meta?.icon ?? columnVariant?.icon;
 
-  const onTriggerPointerDown = React.useMemo<
-    React.PointerEventHandler<HTMLButtonElement>
-  >(
-    () =>
-      composeEventHandlers(onPointerDown, (event) => {
-        if (getIsEventOnScrollbar(event)) {
-          event.preventDefault();
-          return;
-        }
+  const onTriggerPointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      onPointerDown?.(event);
+      if (event.defaultPrevented) return;
 
-        if (event.button !== 0) return;
-        table.selectColumnCells(column.id);
-      }),
+      if (getIsEventOnScrollbar(event)) {
+        event.preventDefault();
+        return;
+      }
+
+      if (event.button !== 0) return;
+      table.selectColumnCells(column.id);
+    },
     [table, column.id, onPointerDown],
   );
 
