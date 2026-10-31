@@ -952,21 +952,201 @@ export function FileCell<TData extends RowData>(
   const labelId = React.useId();
   const descriptionId = React.useId();
 
+  const rowId = cell.row.id;
+  const columnId = cell.column.id;
+  const cellKey = getCellKey(rowId, columnId);
+  const rawValue = useCellValue(cell);
+  const cellValue = React.useMemo(
+    () => getFilesCellValue(rawValue),
+    [rawValue],
+  );
+
+  const fileCellOpts = getVariantCellOpts(cell, "file");
+  const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
+  const maxFiles = fileCellOpts?.maxFiles ?? 10;
+  const accept = fileCellOpts?.accept;
+  const multiple = fileCellOpts?.multiple ?? false;
+
   const {
-    cellValue,
-    files,
-    uploadingIds,
-    deletingIds,
-    isPending,
-    error,
-    clearError,
-    accept,
-    multiple,
-    maxFiles,
-    maxFileSize,
-    addFiles,
-    deleteFiles,
-  } = useFileCell({ cell, readOnly });
+    value: uploadingFiles,
+    setDraftValue: setUploadingFiles,
+    clearDraft: clearUploadingFiles,
+  } = useCellDraft<FileCellData[] | null>({ key: cellKey, fallback: null });
+  const [deletingIds, setDeletingIds] = React.useState<Set<string>>(new Set());
+  const {
+    value: error,
+    setDraftValue: setError,
+    clearDraft: clearError,
+  } = useCellDraft<string | null>({ key: cellValue, fallback: null });
+  const errorTimeoutRef = React.useRef<number | undefined>(undefined);
+
+  const files = React.useMemo(
+    () => (uploadingFiles ? [...cellValue, ...uploadingFiles] : cellValue),
+    [cellValue, uploadingFiles],
+  );
+  const uploadingIds = React.useMemo(
+    () => new Set(uploadingFiles?.map((file) => file.id)),
+    [uploadingFiles],
+  );
+  const isPending = uploadingFiles !== null || deletingIds.size > 0;
+
+  const acceptedTypes = React.useMemo(
+    () => (accept ? accept.split(",").map((t) => t.trim()) : null),
+    [accept],
+  );
+
+  React.useEffect(() => () => window.clearTimeout(errorTimeoutRef.current), []);
+
+  const flashError = React.useCallback(
+    (message: string, toastOptions?: ExternalToast) => {
+      setError(message);
+      toast(message, toastOptions);
+      window.clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = window.setTimeout(clearError, 2000);
+    },
+    [setError, clearError],
+  );
+
+  const addFiles = React.useCallback(
+    async (newFiles: File[]) => {
+      if (readOnly || isPending || newFiles.length === 0) return;
+      clearError();
+
+      if (maxFiles && cellValue.length + newFiles.length > maxFiles) {
+        flashError(`Maximum ${maxFiles} files allowed`);
+        return;
+      }
+
+      const accepted: { file: File; data: FileCellData }[] = [];
+      const rejected: { name: string; reason: string }[] = [];
+
+      for (const file of newFiles) {
+        const reason = validateFile(file, maxFileSize, acceptedTypes);
+        if (reason) {
+          rejected.push({ name: file.name, reason });
+          continue;
+        }
+        accepted.push({
+          file,
+          data: {
+            id: crypto.randomUUID(),
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            url: undefined,
+          },
+        });
+      }
+
+      const firstRejected = rejected[0];
+      if (firstRejected) {
+        const truncatedName =
+          firstRejected.name.length > 20
+            ? `${firstRejected.name.slice(0, 20)}...`
+            : firstRejected.name;
+
+        flashError(firstRejected.reason, {
+          description:
+            rejected.length === 1
+              ? `"${truncatedName}" has been rejected`
+              : `"${truncatedName}" and ${rejected.length - 1} more rejected`,
+        });
+      }
+
+      if (accepted.length === 0) return;
+
+      setUploadingFiles(accepted.map(({ data }) => data));
+
+      let uploadedFiles: FileCellData[];
+
+      if (cell.table.options.uploadFiles) {
+        try {
+          uploadedFiles = await cell.table.options.uploadFiles({
+            files: accepted.map(({ file }) => file),
+            rowId,
+            columnId,
+          });
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : `Failed to upload ${accepted.length} file${accepted.length !== 1 ? "s" : ""}`,
+          );
+          clearUploadingFiles();
+          return;
+        }
+      } else {
+        uploadedFiles = accepted.map(({ file, data }) => ({
+          ...data,
+          url: createFileObjectUrl(cell.table, file),
+        }));
+      }
+
+      cell.setValue([
+        ...getFilesCellValue(cell.getValue()),
+        ...uploadedFiles.filter((file) => file.url !== undefined),
+      ]);
+      clearUploadingFiles();
+    },
+    [
+      cell,
+      cellValue,
+      maxFiles,
+      maxFileSize,
+      acceptedTypes,
+      flashError,
+      rowId,
+      columnId,
+      readOnly,
+      isPending,
+      clearError,
+      setUploadingFiles,
+      clearUploadingFiles,
+    ],
+  );
+
+  const deleteFiles = React.useCallback(
+    async (fileIds: string[]) => {
+      if (readOnly || isPending) return;
+      clearError();
+
+      const filesToDelete = cellValue.filter((file) =>
+        fileIds.includes(file.id),
+      );
+      if (filesToDelete.length === 0) return;
+
+      const idsToDelete = new Set(filesToDelete.map((file) => file.id));
+      setDeletingIds(idsToDelete);
+
+      if (cell.table.options.deleteFiles) {
+        try {
+          await cell.table.options.deleteFiles({
+            fileIds: [...idsToDelete],
+            rowId,
+            columnId,
+          });
+        } catch (error) {
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : filesToDelete.length === 1
+                ? `Failed to delete ${filesToDelete[0]?.name}`
+                : "Failed to delete files",
+          );
+          setDeletingIds(new Set());
+          return;
+        }
+      }
+
+      cell.setValue(
+        getFilesCellValue(cell.getValue()).filter(
+          (file) => !idsToDelete.has(file.id),
+        ),
+      );
+      setDeletingIds(new Set());
+    },
+    [cell, cellValue, rowId, columnId, readOnly, isPending, clearError],
+  );
 
   const containerRef = React.useRef<HTMLDivElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -1659,228 +1839,6 @@ function getVariantCellOpts<
 
 function getOptionLabel(options: CellSelectOption[], value: string) {
   return options.find((option) => option.value === value)?.label ?? value;
-}
-
-interface UseFileCellOptions<TData extends RowData> {
-  cell: DataGridCellProps<TData>["cell"];
-  readOnly: boolean;
-}
-
-function useFileCell<TData extends RowData>({
-  cell,
-  readOnly,
-}: UseFileCellOptions<TData>) {
-  const rowId = cell.row.id;
-  const columnId = cell.column.id;
-  const cellKey = getCellKey(rowId, columnId);
-  const rawValue = useCellValue(cell);
-  const cellValue = React.useMemo(
-    () => getFilesCellValue(rawValue),
-    [rawValue],
-  );
-
-  const fileCellOpts = getVariantCellOpts(cell, "file");
-  const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
-  const maxFiles = fileCellOpts?.maxFiles ?? 10;
-  const accept = fileCellOpts?.accept;
-  const multiple = fileCellOpts?.multiple ?? false;
-
-  const {
-    value: uploadingFiles,
-    setDraftValue: setUploadingFiles,
-    clearDraft: clearUploadingFiles,
-  } = useCellDraft<FileCellData[] | null>({ key: cellKey, fallback: null });
-  const [deletingIds, setDeletingIds] = React.useState<Set<string>>(new Set());
-  const {
-    value: error,
-    setDraftValue: setError,
-    clearDraft: clearError,
-  } = useCellDraft<string | null>({ key: cellValue, fallback: null });
-  const errorTimeoutRef = React.useRef<number | undefined>(undefined);
-
-  const files = React.useMemo(
-    () => (uploadingFiles ? [...cellValue, ...uploadingFiles] : cellValue),
-    [cellValue, uploadingFiles],
-  );
-  const uploadingIds = React.useMemo(
-    () => new Set(uploadingFiles?.map((file) => file.id)),
-    [uploadingFiles],
-  );
-  const isPending = uploadingFiles !== null || deletingIds.size > 0;
-
-  const acceptedTypes = React.useMemo(
-    () => (accept ? accept.split(",").map((t) => t.trim()) : null),
-    [accept],
-  );
-
-  React.useEffect(() => () => window.clearTimeout(errorTimeoutRef.current), []);
-
-  const flashError = React.useCallback(
-    (message: string, toastOptions?: ExternalToast) => {
-      setError(message);
-      toast(message, toastOptions);
-      window.clearTimeout(errorTimeoutRef.current);
-      errorTimeoutRef.current = window.setTimeout(clearError, 2000);
-    },
-    [setError, clearError],
-  );
-
-  const addFiles = React.useCallback(
-    async (newFiles: File[]) => {
-      if (readOnly || isPending || newFiles.length === 0) return;
-      clearError();
-
-      if (maxFiles && cellValue.length + newFiles.length > maxFiles) {
-        flashError(`Maximum ${maxFiles} files allowed`);
-        return;
-      }
-
-      const accepted: { file: File; data: FileCellData }[] = [];
-      const rejected: { name: string; reason: string }[] = [];
-
-      for (const file of newFiles) {
-        const reason = validateFile(file, maxFileSize, acceptedTypes);
-        if (reason) {
-          rejected.push({ name: file.name, reason });
-          continue;
-        }
-        accepted.push({
-          file,
-          data: {
-            id: crypto.randomUUID(),
-            name: file.name,
-            size: file.size,
-            type: file.type,
-            url: undefined,
-          },
-        });
-      }
-
-      const firstRejected = rejected[0];
-      if (firstRejected) {
-        const truncatedName =
-          firstRejected.name.length > 20
-            ? `${firstRejected.name.slice(0, 20)}...`
-            : firstRejected.name;
-
-        flashError(firstRejected.reason, {
-          description:
-            rejected.length === 1
-              ? `"${truncatedName}" has been rejected`
-              : `"${truncatedName}" and ${rejected.length - 1} more rejected`,
-        });
-      }
-
-      if (accepted.length === 0) return;
-
-      setUploadingFiles(accepted.map(({ data }) => data));
-
-      let uploadedFiles: FileCellData[];
-
-      if (cell.table.options.uploadFiles) {
-        try {
-          uploadedFiles = await cell.table.options.uploadFiles({
-            files: accepted.map(({ file }) => file),
-            rowId,
-            columnId,
-          });
-        } catch (error) {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : `Failed to upload ${accepted.length} file${accepted.length !== 1 ? "s" : ""}`,
-          );
-          clearUploadingFiles();
-          return;
-        }
-      } else {
-        uploadedFiles = accepted.map(({ file, data }) => ({
-          ...data,
-          url: createFileObjectUrl(cell.table, file),
-        }));
-      }
-
-      cell.setValue([
-        ...getFilesCellValue(cell.getValue()),
-        ...uploadedFiles.filter((file) => file.url !== undefined),
-      ]);
-      clearUploadingFiles();
-    },
-    [
-      cell,
-      cellValue,
-      maxFiles,
-      maxFileSize,
-      acceptedTypes,
-      flashError,
-      rowId,
-      columnId,
-      readOnly,
-      isPending,
-      clearError,
-      setUploadingFiles,
-      clearUploadingFiles,
-    ],
-  );
-
-  const deleteFiles = React.useCallback(
-    async (fileIds: string[]) => {
-      if (readOnly || isPending) return;
-      clearError();
-
-      const filesToDelete = cellValue.filter((file) =>
-        fileIds.includes(file.id),
-      );
-      if (filesToDelete.length === 0) return;
-
-      const idsToDelete = new Set(filesToDelete.map((file) => file.id));
-      setDeletingIds(idsToDelete);
-
-      if (cell.table.options.deleteFiles) {
-        try {
-          await cell.table.options.deleteFiles({
-            fileIds: [...idsToDelete],
-            rowId,
-            columnId,
-          });
-        } catch (error) {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : filesToDelete.length === 1
-                ? `Failed to delete ${filesToDelete[0]?.name}`
-                : "Failed to delete files",
-          );
-          setDeletingIds(new Set());
-          return;
-        }
-      }
-
-      cell.setValue(
-        getFilesCellValue(cell.getValue()).filter(
-          (file) => !idsToDelete.has(file.id),
-        ),
-      );
-      setDeletingIds(new Set());
-    },
-    [cell, cellValue, rowId, columnId, readOnly, isPending, clearError],
-  );
-
-  return {
-    cellValue,
-    files,
-    uploadingIds,
-    deletingIds,
-    isPending,
-    error,
-    clearError,
-    accept,
-    multiple,
-    maxFiles,
-    maxFileSize,
-    addFiles,
-    deleteFiles,
-  };
 }
 
 function validateFile(
