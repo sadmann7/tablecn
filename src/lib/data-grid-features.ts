@@ -1712,9 +1712,8 @@ const dataGridClipboardFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
-    const setCutCellGrid = (
-      updater: Updater<(CellPosition | null)[][]>,
-    ) => setStateSlice(instance, "cutCellGrid", updater);
+    const setCutCellGrid = (updater: Updater<(CellPosition | null)[][]>) =>
+      setStateSlice(instance, "cutCellGrid", updater);
     const setPasteDialog = (updater: Updater<PasteDialogState>) =>
       setStateSlice(instance, "pasteDialog", updater);
 

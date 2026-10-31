@@ -34,10 +34,7 @@ export interface RowChangeHint {
   insertedIndexes: number[];
 }
 
-export const rowChangeHints = new WeakMap<
-  readonly RowData[],
-  RowChangeHint
->();
+export const rowChangeHints = new WeakMap<readonly RowData[], RowChangeHint>();
 
 type CoreRow = Row<TableFeatures, RowData>;
 
