@@ -38,6 +38,7 @@ export function DataTableRangeFilter<TData extends RowData>({
   ...props
 }: DataTableRangeFilterProps<TData>) {
   const meta = column.columnDef.meta;
+  const bounds = meta?.variant === "number" ? meta : undefined;
 
   const [startValue, endValue] = getRangeFilterValues(filter.value).map(
     getInputValue,
@@ -125,7 +126,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         aria-invalid={(showInvalid && drafts[0] !== null) || undefined}
         data-slot="data-table-range-filter-min"
         inputMode="numeric"
-        placeholder={meta?.range?.[0]?.toString() ?? "Min"}
+        placeholder={bounds?.min?.toString() ?? "Min"}
         className="w-full min-w-24"
         value={startInput}
         onChange={(event) => onDraftChange(0, event.target.value)}
@@ -144,7 +145,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         aria-invalid={(showInvalid && drafts[1] !== null) || undefined}
         data-slot="data-table-range-filter-max"
         inputMode="numeric"
-        placeholder={meta?.range?.[1]?.toString() ?? "Max"}
+        placeholder={bounds?.max?.toString() ?? "Max"}
         className="w-full min-w-24"
         value={endInput}
         onChange={(event) => onDraftChange(1, event.target.value)}

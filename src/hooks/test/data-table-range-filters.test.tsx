@@ -35,7 +35,8 @@ const columns = columnHelper.columns([
       label: "Hours",
       variant: "number",
       filter: "range",
-      range: [1, 24],
+      min: 1,
+      max: 24,
       unit: "hr",
     },
     enableColumnFilter: true,
@@ -137,19 +138,21 @@ describe("DataTableSliderFilter", () => {
 });
 
 describe("DataTableSliderFilter in server mode", () => {
-  it("warns when the column has no meta.range", () => {
+  it("warns when the column has no meta.min or meta.max", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       renderToolbar(columnsWithoutRange, { mode: "server" });
       expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('column "hours" has no `meta.range`'),
+        expect.stringContaining(
+          'column "hours" is missing `meta.min` or `meta.max`',
+        ),
       );
     } finally {
       warn.mockRestore();
     }
   });
 
-  it("stays quiet when meta.range is set", () => {
+  it("stays quiet when meta.min and meta.max are set", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       renderToolbar(columns, { mode: "server" });

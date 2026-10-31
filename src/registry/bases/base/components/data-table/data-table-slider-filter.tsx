@@ -66,14 +66,16 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const dir = useDirection();
   const id = React.useId();
 
-  const defaultRange = column.columnDef.meta?.range;
-  const unit = column.columnDef.meta?.unit;
+  const meta = column.columnDef.meta;
+  const declaredMin = meta?.variant === "number" ? meta.min : undefined;
+  const declaredMax = meta?.variant === "number" ? meta.max : undefined;
+  const unit = meta?.unit;
 
   const [facetedRange, setFacetedRange] = React.useState(() =>
     getFacetedRange(column),
   );
-  const [min, max] =
-    defaultRange && getIsValidRange(defaultRange) ? defaultRange : facetedRange;
+  const min = declaredMin ?? facetedRange[0];
+  const max = declaredMax ?? facetedRange[1];
   const step = getRangeStep(min, max);
 
   function onOpenChange(open: boolean) {
@@ -82,11 +84,12 @@ function DataTableSliderFilterContent<TData extends RowData>({
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    if (defaultRange || !column.table.options.manualFiltering) return;
+    if (!column.table.options.manualFiltering) return;
+    if (declaredMin !== undefined && declaredMax !== undefined) return;
     console.warn(
-      `DataTableSliderFilter: column "${column.id}" has no \`meta.range\`, so in server mode its bounds only cover the rows on the current page. Set \`meta.range\` to the full range of the data.`,
+      `DataTableSliderFilter: column "${column.id}" is missing \`meta.min\` or \`meta.max\`, so in server mode its bounds only cover the rows on the current page. Set both to the full range of the data.`,
     );
-  }, [column, defaultRange]);
+  }, [column, declaredMin, declaredMax]);
 
   const bounds = parseRangeBounds(columnFilterValueProp);
   const columnFilterValue: RangeValue | undefined = bounds
@@ -328,15 +331,6 @@ function getRangeStep(min: number, max: number) {
   if (rangeSize <= 20) return 1;
   if (rangeSize <= 100) return Math.ceil(rangeSize / 20);
   return Math.ceil(rangeSize / 50);
-}
-
-function getIsValidRange(value: unknown): value is RangeValue {
-  return (
-    Array.isArray(value) &&
-    value.length === 2 &&
-    typeof value[0] === "number" &&
-    typeof value[1] === "number"
-  );
 }
 
 function parseRangeBounds(

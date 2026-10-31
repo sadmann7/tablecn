@@ -39,9 +39,12 @@ export type DataTableColumnMeta = {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
   placeholder?: string;
   options?: ColumnSelectOption[];
-  range?: [number, number];
   unit?: string;
-} & ColumnVariantFilter;
+} & (
+  | { variant?: Exclude<ColumnVariant, "number" | "date">; filter?: never }
+  | { variant: "number"; filter?: "range"; min?: number; max?: number }
+  | { variant: "date"; filter?: "range" }
+);
 
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;

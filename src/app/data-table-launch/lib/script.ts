@@ -103,7 +103,7 @@ export const COLUMN_SNIPPETS = [
     label: "Est. Hours",
     variant: "number",
     filter: "range",
-    extra: "range: [1, 24],",
+    extra: "min: 1, max: 24,",
   },
   {
     columnIds: ["createdAt"],
