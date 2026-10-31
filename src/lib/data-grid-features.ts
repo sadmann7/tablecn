@@ -77,7 +77,8 @@ import {
   stringifyUnknown,
 } from "@/lib/data-grid-utils";
 
-const DEFAULT_ROW_HEIGHT: RowHeightValue = "short";
+type DataGridInstance = Table<DataGridFeatures, RowData>;
+type DataGridCellInstance = Cell<DataGridFeatures, RowData>;
 
 interface TableState_DataGridRowHeight {
   rowHeight: RowHeightValue;
@@ -409,7 +410,7 @@ declare module "@tanstack/react-table" {
   }
 }
 
-type DataGridInstance = Table<DataGridFeatures, RowData>;
+const DEFAULT_ROW_HEIGHT: RowHeightValue = "short";
 
 const dataGridRowHeightFeature: TableFeature = {
   getInitialState: (initialState) => ({
@@ -450,10 +451,6 @@ const dataGridRowHeightFeature: TableFeature = {
     });
   },
 };
-
-function asDataGrid(table: object) {
-  return table as DataGridInstance;
-}
 
 const dataGridCellEditingFeature: TableFeature = {
   getInitialState: (initialState) => ({
@@ -505,11 +502,10 @@ const dataGridCellEditingFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridCellEditingFeature", prototype, table, {
       cell_getCanEdit: {
-        fn: (cell: Cell<DataGridFeatures, RowData>) =>
-          getCanEditColumn(cell.column),
+        fn: (cell: DataGridCellInstance) => getCanEditColumn(cell.column),
       },
       cell_getIsEditing: {
-        fn: (cell: Cell<DataGridFeatures, RowData>) => {
+        fn: (cell: DataGridCellInstance) => {
           const editingCell = cell.table.atoms.editingCell.get();
           return (
             editingCell?.rowId === cell.row.id &&
@@ -518,7 +514,7 @@ const dataGridCellEditingFeature: TableFeature = {
         },
       },
       cell_startEditing: {
-        fn: (cell: Cell<DataGridFeatures, RowData>) => {
+        fn: (cell: DataGridCellInstance) => {
           if (!getCanEditColumn(cell.column)) return;
 
           const { table } = cell;
@@ -679,7 +675,7 @@ const dataGridDataFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridDataFeature", prototype, table, {
       cell_setValue: {
-        fn: (cell: Cell<DataGridFeatures, RowData>, value: unknown) =>
+        fn: (cell: DataGridCellInstance, value: unknown) =>
           updateEditableCells(cell.table, {
             rowId: cell.row.id,
             columnId: cell.column.id,
@@ -687,7 +683,7 @@ const dataGridDataFeature: TableFeature = {
           }),
       },
       cell_clearValue: {
-        fn: (cell: Cell<DataGridFeatures, RowData>) => {
+        fn: (cell: DataGridCellInstance) => {
           const { table } = cell;
           updateEditableCells(table, {
             rowId: cell.row.id,
@@ -2216,14 +2212,14 @@ const dataGridSearchFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridSearchFeature", prototype, table, {
       cell_getIsSearchMatch: {
-        fn: (cell: Cell<DataGridFeatures, RowData>) =>
+        fn: (cell: DataGridCellInstance) =>
           cell.table
             .getSearchMatchesByRowId()
             .get(cell.row.id)
             ?.has(cell.column.id) ?? false,
       },
       cell_getIsActiveSearchMatch: {
-        fn: (cell: Cell<DataGridFeatures, RowData>) => {
+        fn: (cell: DataGridCellInstance) => {
           const match = cell.table.getActiveSearchMatch();
           return (
             match?.rowId === cell.row.id && match.columnId === cell.column.id
@@ -2443,7 +2439,7 @@ const dataGridPresenceFeature: TableFeature = {
   assignCellPrototype: (prototype, table) => {
     assignPrototypeAPIs("dataGridPresenceFeature", prototype, table, {
       cell_getPresence: {
-        fn: (cell: Cell<DataGridFeatures, RowData>) =>
+        fn: (cell: DataGridCellInstance) =>
           cell.table
             .getCellPresenceByRowId()
             .get(cell.row.id)
@@ -2643,6 +2639,10 @@ function selectAllDataCells(table: DataGridInstance) {
         ]
       : [allRange],
   );
+}
+
+function asDataGrid(table: object) {
+  return table as DataGridInstance;
 }
 
 export const dataGridFeatures = tableFeatures({

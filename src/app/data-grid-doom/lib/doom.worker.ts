@@ -270,10 +270,10 @@ function startFrames(module: WorkerModule) {
   setInterval(check, 4);
 }
 
-function post(message: DoomWorkerResponse, transfer: Transferable[] = []) {
-  scope.postMessage(message, transfer);
-}
-
 scope.addEventListener("error", (event) => {
   post({ type: "error", message: event.message });
 });
+
+function post(message: DoomWorkerResponse, transfer: Transferable[] = []) {
+  scope.postMessage(message, transfer);
+}

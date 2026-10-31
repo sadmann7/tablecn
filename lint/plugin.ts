@@ -60,7 +60,7 @@ const helpersBelowFirstUse = {
     fixable: "code",
     docs: {
       description:
-        "Keeps files top-down: private functions sit below the code that first uses them, after the run of exports they serve, with the module state only they use",
+        "Keeps files top-down: private functions sit below the code that first uses them, after the run of exports they serve, with the module state only they use. Helpers several declarations share go after the last one, and types and constants stay above their first use",
     },
   },
   create(context: Context) {
@@ -106,7 +106,9 @@ const helpersBelowFirstUse = {
           context.report({
             node,
             message: !owner
-              ? `Move \`${unit.helper ?? ""}\` below its first use.`
+              ? layout.shared.has(unit)
+                ? `Move \`${unit.helper ?? ""}\` below its last use, since several declarations share it.`
+                : `Move \`${unit.helper ?? ""}\` below its first use.`
               : layout.hoisted.has(unit)
                 ? `Move \`${getUnitName(unit)}\` above \`${getUnitName(owner)}\`, its first use.`
                 : unit.isType
@@ -129,6 +131,8 @@ interface Layout {
   // type or constant declared below it
   owners: Map<Unit, Unit>;
   hoisted: Set<Unit>;
+  // Helpers several declarations use, placed after the last one
+  shared: Set<Unit>;
   // The whole file in top-down order
   order: Unit[];
 }
@@ -229,15 +233,45 @@ function getLayout(
   const hoisted = getHoisted(units, owners, references, getUser);
   for (const [unit, user] of hoisted) owners.set(unit, user);
 
+  // A helper shared by several declarations goes after the last one's section
+  const lastUsers = new Map<Unit, Unit>();
+  for (const unit of units) {
+    const users = new Set<Unit>();
+    for (const node of references.get(unit.helper ?? "") ?? []) {
+      const user = getUser(node);
+      if (user && user !== unit && !user.helper) users.add(user);
+    }
+    if (users.size < 2) continue;
+    const last = [...users].reduce((latest, user) =>
+      units.indexOf(user) > units.indexOf(latest) ? user : latest,
+    );
+    lastUsers.set(unit, last);
+  }
+
   const anchors = new Map<Unit, Unit>();
   for (const unit of units) {
     const firstUse = firstUses.get(unit);
-    const user = firstUse && getUser(firstUse);
-    if (!user || user === unit) continue;
-    anchors.set(unit, user.isExported ? getRunEnd(units, user, owners) : user);
+    const first = firstUse && getUser(firstUse);
+    if (!first || first === unit) continue;
+    const last = lastUsers.get(unit);
+    const user = last ?? first;
+    anchors.set(
+      unit,
+      user.isExported
+        ? getRunEnd(units, user, owners)
+        : last
+          ? getSectionEnd(units, user, owners, lastUsers)
+          : user,
+    );
   }
 
-  const layout = { units, anchors, owners, hoisted: new Set(hoisted.keys()) };
+  const layout = {
+    units,
+    anchors,
+    owners,
+    hoisted: new Set(hoisted.keys()),
+    shared: new Set(lastUsers.keys()),
+  };
   return { ...layout, order: getOrder(layout, firstUses) };
 }
 
@@ -421,6 +455,35 @@ function getRunEnd(units: Unit[], user: Unit, owners: Map<Unit, Unit>) {
     end = unit;
   }
   return end;
+}
+
+// The last helper or state that follows `user`, before the next declaration,
+// passing over the shared helpers that go after it
+function getSectionEnd(
+  units: Unit[],
+  user: Unit,
+  owners: Map<Unit, Unit>,
+  lastUsers: Map<Unit, Unit>,
+) {
+  let end = user;
+  for (let index = units.indexOf(user) + 1; index < units.length; index++) {
+    const unit = units[index];
+    if (!unit || unit.isExported || (!unit.helper && !owners.has(unit))) break;
+    if (lastUsers.has(unit) || getIsOwnedByShared(owners, unit, lastUsers)) {
+      continue;
+    }
+    end = unit;
+  }
+  return end;
+}
+
+function getIsOwnedByShared(
+  owners: Map<Unit, Unit>,
+  unit: Unit,
+  lastUsers: Map<Unit, Unit>,
+) {
+  const owner = owners.get(unit);
+  return owner !== undefined && lastUsers.has(owner);
 }
 
 function getIsRightAbove(

@@ -37,16 +37,6 @@ function wipeRegistryOutput(dryRun = false) {
   return entries.length;
 }
 
-function remove(target: string, dryRun: boolean, silent = false) {
-  const relative = path.relative(ROOT, target);
-  if (dryRun) {
-    console.log(`  ✓ would remove ${relative}`);
-    return;
-  }
-  rmSync(target, { recursive: true, force: true });
-  if (!silent) console.log(`  ✓ Removed ${relative}`);
-}
-
 function cleanStaleRegistryOutput(dryRun = false) {
   if (!existsSync(OUT_ROOT)) {
     console.log("📁 public/r is already empty. Nothing to clean.");
@@ -124,6 +114,16 @@ function listDirs(dir: string): string[] {
     const fullPath = path.join(dir, entry.name);
     return [fullPath, ...listDirs(fullPath)];
   });
+}
+
+function remove(target: string, dryRun: boolean, silent = false) {
+  const relative = path.relative(ROOT, target);
+  if (dryRun) {
+    console.log(`  ✓ would remove ${relative}`);
+    return;
+  }
+  rmSync(target, { recursive: true, force: true });
+  if (!silent) console.log(`  ✓ Removed ${relative}`);
 }
 
 export { cleanStaleRegistryOutput, OUT_ROOT, STYLES_ROOT, wipeRegistryOutput };

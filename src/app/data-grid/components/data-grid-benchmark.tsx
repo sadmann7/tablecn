@@ -305,10 +305,6 @@ function filter(id: keyof Person, value: FilterValue) {
   return { id, value };
 }
 
-async function pause(signal: AbortSignal, frames: number) {
-  for (let i = 0; i < frames && !signal.aborted; i++) await nextFrame();
-}
-
 function getViewportCells(table: PersonTable, grid: HTMLDivElement) {
   const rows = table.getRowModel().rows;
   const rowSize = table.getRowSize();
@@ -616,6 +612,10 @@ export function DataGridBenchmark({
       </Dialog>
     </>
   );
+}
+
+async function pause(signal: AbortSignal, frames: number) {
+  for (let i = 0; i < frames && !signal.aborted; i++) await nextFrame();
 }
 
 function getGridSnapshot(table: PersonTable): GridSnapshot {

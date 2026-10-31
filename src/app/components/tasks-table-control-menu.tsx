@@ -77,20 +77,6 @@ function TasksTableControlMenu() {
   );
 }
 
-interface ControlGroupProps {
-  label: string;
-  children: React.ReactNode;
-}
-
-function ControlGroup({ label, children }: ControlGroupProps) {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      {children}
-    </div>
-  );
-}
-
 interface ControlItemProps {
   flag: Flag;
 }
@@ -143,6 +129,20 @@ function FlagGroupSkeleton({ flags }: { flags: readonly Flag[] }) {
         </div>
       ))}
       <Skeleton className="absolute inset-0 rounded-[min(var(--radius-md),10px)]" />
+    </div>
+  );
+}
+
+interface ControlGroupProps {
+  label: string;
+  children: React.ReactNode;
+}
+
+function ControlGroup({ label, children }: ControlGroupProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {children}
     </div>
   );
 }

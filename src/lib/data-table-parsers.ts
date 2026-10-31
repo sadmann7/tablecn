@@ -117,12 +117,6 @@ const OPERATORS_BY_NAME = new Map(
   ]),
 );
 
-function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
-  return Object.keys(record).filter((key): key is TKey =>
-    Object.hasOwn(record, key),
-  );
-}
-
 const MAX_OPERATOR_PART_COUNT = 3;
 
 const LIST_OPERATORS = new Set<FilterOperator>([
@@ -315,6 +309,12 @@ export function getDataTableQuery<
     ),
     joinOperator: search.joinOperator,
   };
+}
+
+function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
+  return Object.keys(record).filter((key): key is TKey =>
+    Object.hasOwn(record, key),
+  );
 }
 
 function splitFilterOperator(param: string, variant: FilterVariant) {
