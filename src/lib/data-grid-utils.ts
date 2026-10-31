@@ -1090,15 +1090,15 @@ export function getFileIcon(
   return File;
 }
 
-function escapeAttributeValue(value: string) {
-  return value.replace(/["\\]/g, "\\$&");
-}
-
-function execInsertText(text: string) {
+export function execInsertText(text: string) {
   return (
     typeof document.execCommand === "function" &&
     document.execCommand("insertText", false, text)
   );
+}
+
+function escapeAttributeValue(value: string) {
+  return value.replace(/["\\]/g, "\\$&");
 }
 
 function dispatchInsertTextInput(element: HTMLElement, text: string) {

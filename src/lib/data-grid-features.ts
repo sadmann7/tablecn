@@ -43,11 +43,14 @@ import type {
   DataChangeReason,
   DataGridColumnMeta,
   Direction,
+  EditingCell,
   FileCellData,
   NavigationDirection,
   PasteDialogState,
   RowHeightValue,
   RowUpdate,
+  StartEditingOptions,
+  StopEditingOptions,
   UndoRedoState,
   UpdateCellsOptions,
 } from "@/lib/data-grid-types";
@@ -99,12 +102,12 @@ interface Table_DataGridRowHeight {
 }
 
 interface TableState_DataGridCellEditing {
-  editingCell: CellPosition | null;
+  editingCell: EditingCell | null;
 }
 
 interface TableOptions_DataGridCellEditing {
   enableCellEditing?: boolean;
-  onEditingCellChange?: OnChangeFn<CellPosition | null>;
+  onEditingCellChange?: OnChangeFn<EditingCell | null>;
 }
 
 interface ColumnDef_DataGridCellEditing {
@@ -121,14 +124,9 @@ interface Column_DataGridColumnOrdering {
   move: (step: number) => void;
 }
 
-interface StopEditingOptions {
-  direction?: NavigationDirection;
-  moveToNextRow?: boolean;
-}
-
 interface Table_DataGridCellEditing {
-  getEditingCell: () => CellPosition | null;
-  setEditingCell: (updater: Updater<CellPosition | null>) => void;
+  getEditingCell: () => EditingCell | null;
+  setEditingCell: (updater: Updater<EditingCell | null>) => void;
   resetEditingCell: (defaultState?: boolean) => void;
   stopEditing: (options?: StopEditingOptions) => void;
 }
@@ -140,7 +138,7 @@ interface Column_DataGridCellEditing {
 interface Cell_DataGridCellEditing {
   getCanEdit: () => boolean;
   getIsEditing: () => boolean;
-  startEditing: () => void;
+  startEditing: (options?: StartEditingOptions) => void;
 }
 
 interface TableState_DataGridData {
@@ -470,7 +468,7 @@ const dataGridCellEditingFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
-    const setEditingCell = (updater: Updater<CellPosition | null>) =>
+    const setEditingCell = (updater: Updater<EditingCell | null>) =>
       setStateSlice(instance, "editingCell", updater);
 
     assignTableAPIs("dataGridCellEditingFeature", table, {
@@ -518,15 +516,18 @@ const dataGridCellEditingFeature: TableFeature = {
         },
       },
       cell_startEditing: {
-        fn: (cell: DataGridCellInstance) => {
+        fn: (cell: DataGridCellInstance, options?: StartEditingOptions) => {
           if (!getCanEditColumn(cell.column)) return;
 
           const { table } = cell;
           table.setFocusedCell(cell.row.id, cell.column.id);
-          table.setEditingCell({
+          const editingCell: EditingCell = {
             rowId: cell.row.id,
             columnId: cell.column.id,
-          });
+          };
+          if (options?.pendingChar)
+            editingCell.pendingChar = options.pendingChar;
+          table.setEditingCell(editingCell);
         },
       },
     });

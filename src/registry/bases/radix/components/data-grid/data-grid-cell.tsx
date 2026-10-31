@@ -7,7 +7,10 @@ import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { DataGridCellProps } from "@/lib/data-grid-types";
+import type {
+  DataGridCellProps,
+  StopEditingOptions,
+} from "@/lib/data-grid-types";
 
 import {
   CELL_TINTS,
@@ -16,7 +19,11 @@ import {
 } from "@/lib/data-grid-utils";
 
 interface DataGridCellElementProps<TData extends RowData>
-  extends DataGridCellProps<TData>, React.ComponentProps<"div"> {}
+  extends DataGridCellProps<TData>, React.ComponentProps<"div"> {
+  onCommit?: (options?: StopEditingOptions) => void;
+  onCancel?: () => void;
+  commitOnEnter?: boolean;
+}
 
 export function DataGridCell<TData extends RowData>({
   cell,
@@ -35,7 +42,10 @@ export function DataGridCell<TData extends RowData>({
   grow,
   showStartBorder,
   showEndBorder,
+  onCommit,
+  onCancel,
   onKeyDown: onKeyDownProp,
+  commitOnEnter = false,
   className,
   style,
   ref,
@@ -65,7 +75,40 @@ export function DataGridCell<TData extends RowData>({
 
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const wasPrevented = event.defaultPrevented;
       onKeyDownProp?.(event);
+      if (!wasPrevented && event.defaultPrevented) return;
+
+      if (isEditing) {
+        const commit = (options?: StopEditingOptions) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (onCommit) {
+            onCommit(options);
+          } else {
+            cell.table.stopEditing(options);
+          }
+        };
+
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          if (onCancel) {
+            onCancel();
+          } else {
+            cell.table.stopEditing();
+          }
+        } else if (event.key === "Tab") {
+          commit({ direction: event.shiftKey ? "shift+tab" : "tab" });
+        } else if (event.key === "Enter") {
+          if (commitOnEnter) {
+            commit({ moveToNextRow: true });
+          } else if (event.ctrlKey || event.metaKey) {
+            commit();
+          }
+        }
+        return;
+      }
 
       if (event.defaultPrevented) return;
 
@@ -83,20 +126,27 @@ export function DataGridCell<TData extends RowData>({
         return;
       }
 
-      if (!isFocused || isEditing || readOnly) return;
+      if (!isFocused || readOnly) return;
 
-      if (
-        event.key === "F2" ||
-        event.key === "Enter" ||
-        event.key === " " ||
-        (event.key.length === 1 && !event.ctrlKey && !event.metaKey)
-      ) {
+      const isPrintable =
+        event.key.length === 1 && !event.ctrlKey && !event.metaKey;
+
+      if (event.key === "F2" || event.key === "Enter" || isPrintable) {
         event.preventDefault();
         event.stopPropagation();
-        cell.startEditing();
+        cell.startEditing(isPrintable ? { pendingChar: event.key } : undefined);
       }
     },
-    [cell, onKeyDownProp, isFocused, isEditing, readOnly],
+    [
+      cell,
+      onKeyDownProp,
+      isFocused,
+      isEditing,
+      readOnly,
+      onCommit,
+      onCancel,
+      commitOnEnter,
+    ],
   );
 
   return (
