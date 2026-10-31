@@ -135,14 +135,14 @@ export function DataGridMultiplayerDemo({
           header: "Name",
           minSize: 200,
           filterFn,
-          meta: { label: "Name", variant: "short-text" },
+          meta: { label: "Name", variant: "text" },
         }),
         columnHelper.accessor("email", {
           id: "email",
           header: "Email",
           minSize: 250,
           filterFn,
-          meta: { label: "Email", variant: "short-text" },
+          meta: { label: "Email", variant: "text" },
         }),
         columnHelper.accessor("stance", {
           id: "stance",
@@ -213,7 +213,7 @@ export function DataGridMultiplayerDemo({
           header: "Pro",
           minSize: 90,
           filterFn,
-          meta: { label: "Pro", variant: "checkbox" },
+          meta: { label: "Pro", variant: "boolean" },
         }),
         columnHelper.accessor("media", {
           id: "media",

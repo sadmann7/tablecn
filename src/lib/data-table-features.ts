@@ -43,6 +43,7 @@ import {
   dataTableFilterFn,
 } from "@/lib/data-table-filters";
 import {
+  getFilterVariant,
   getIsPlainFilter,
   getPlainFilterValue,
   normalizeColumnFilter,
@@ -134,7 +135,7 @@ const dataTableFilteringFeature: TableFeature = {
     const resolve = (filter: ColumnFilter) =>
       normalizeColumnFilter(
         filter,
-        instance.getColumn(filter.id)?.columnDef.meta?.variant ?? "text",
+        getFilterVariant(instance.getColumn(filter.id)?.columnDef.meta),
       );
 
     const setJoinOperator = (updater: Updater<JoinOperator>) =>
@@ -208,8 +209,9 @@ function getPlainFilter(
   columnId: string,
   filters: ColumnFilter[],
 ) {
-  const variant =
-    instance.getColumn(columnId)?.columnDef.meta?.variant ?? "text";
+  const variant = getFilterVariant(
+    instance.getColumn(columnId)?.columnDef.meta,
+  );
   const index = filters.findIndex(
     (filter) =>
       filter.id === columnId &&

@@ -12,11 +12,25 @@ import type {
   JOIN_OPERATORS,
 } from "@/lib/data-table-utils";
 
+export type ColumnVariant =
+  | "text"
+  | "long-text"
+  | "number"
+  | "boolean"
+  | "date"
+  | "url"
+  | "select"
+  | "multi-select"
+  | "file";
+
+export type FilterStyle = "range" | "date-range";
+
 export interface DataTableColumnMeta {
   label?: string;
   placeholder?: string;
-  variant?: FilterVariant;
-  options?: FilterOption[];
+  variant?: ColumnVariant;
+  filter?: FilterStyle;
+  options?: ColumnOption[];
   range?: [number, number];
   unit?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
@@ -29,7 +43,7 @@ export interface DataTableQueryKeys {
   joinOperator: string;
 }
 
-export interface FilterOption {
+export interface ColumnOption {
   label: string;
   value: string;
   count?: number;
@@ -68,7 +82,8 @@ declare module "@tanstack/react-table" {
 }
 
 export interface DataTableColumnConfig {
-  variant?: FilterVariant;
+  variant?: ColumnVariant;
+  filter?: FilterStyle;
   isSortable?: boolean;
 }
 
@@ -77,7 +92,7 @@ export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
 export type FilterableColumnId<TColumnConfigs extends DataTableColumnConfigs> =
   {
     [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
-      variant: FilterVariant;
+      variant: ColumnVariant;
     }
       ? K
       : never;

@@ -79,7 +79,7 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
   const label = getColumnLabel(column);
 
   const meta = column.columnDef.meta;
-  const columnVariant = getColumnVariantLabel(meta?.variant);
+  const columnVariant = getColumnVariantLabel(meta);
   const ColumnIcon = meta?.icon ?? columnVariant?.icon;
 
   const onTriggerPointerDown = React.useCallback(

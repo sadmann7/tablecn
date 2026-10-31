@@ -8,7 +8,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type {
-  CellSelectOption,
+  ColumnOption,
   DataGridCellProps,
   FileCellData,
   RowHeightValue,
@@ -66,6 +66,7 @@ import {
   PopoverContent,
 } from "@/registry/bases/radix/ui/popover";
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
+import { Switch } from "@/registry/bases/radix/ui/switch";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
@@ -425,11 +426,13 @@ export function UrlCell<TData extends RowData>(
   );
 }
 
-export function CheckboxCell<TData extends RowData>(
+export function BooleanCell<TData extends RowData>(
   props: Omit<DataGridCellProps<TData>, "isEditing">,
 ) {
   const { cell, isFocused, readOnly } = props;
   const value = getBooleanCellValue(useCellValue(cell));
+  const control =
+    getColumnVariantOptions(cell.column, "boolean")?.control ?? "checkbox";
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const onCheckedChange = React.useCallback(
@@ -466,11 +469,11 @@ export function CheckboxCell<TData extends RowData>(
     [isFocused, value, onCheckedChange, readOnly],
   );
 
-  const onCheckboxClick = React.useCallback((event: React.MouseEvent) => {
+  const onControlClick = React.useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
   }, []);
 
-  const onCheckboxMouseDown = React.useCallback(
+  const onControlMouseDown = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
       event.preventDefault();
@@ -480,7 +483,7 @@ export function CheckboxCell<TData extends RowData>(
     [cell],
   );
 
-  const onCheckboxDoubleClick = React.useCallback(
+  const onControlDoubleClick = React.useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
     },
@@ -496,22 +499,36 @@ export function CheckboxCell<TData extends RowData>(
       onKeyDown={onWrapperKeyDown}
       className="flex size-full justify-center"
     >
-      <Checkbox
-        aria-label={getColumnLabel(cell.column)}
-        tabIndex={-1}
-        checked={value}
-        onCheckedChange={onCheckedChange}
-        disabled={readOnly}
-        className="border-primary"
-        onClick={onCheckboxClick}
-        onMouseDown={onCheckboxMouseDown}
-        onDoubleClick={onCheckboxDoubleClick}
-      />
+      {control === "switch" ? (
+        <Switch
+          aria-label={getColumnLabel(cell.column)}
+          tabIndex={-1}
+          size="sm"
+          checked={value}
+          onCheckedChange={onCheckedChange}
+          onClick={onControlClick}
+          onMouseDown={onControlMouseDown}
+          onDoubleClick={onControlDoubleClick}
+          disabled={readOnly}
+        />
+      ) : (
+        <Checkbox
+          aria-label={getColumnLabel(cell.column)}
+          tabIndex={-1}
+          className="border-primary"
+          checked={value}
+          onCheckedChange={onCheckedChange}
+          onClick={onControlClick}
+          onMouseDown={onControlMouseDown}
+          onDoubleClick={onControlDoubleClick}
+          disabled={readOnly}
+        />
+      )}
     </DataGridCell>
   );
 }
 
-const NO_OPTIONS: CellSelectOption[] = [];
+const NO_OPTIONS: ColumnOption[] = [];
 
 export function SelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -1704,7 +1721,7 @@ function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
 }
 
-function getOptionLabel(options: CellSelectOption[], value: string) {
+function getOptionLabel(options: ColumnOption[], value: string) {
   return options.find((option) => option.value === value)?.label ?? value;
 }
 

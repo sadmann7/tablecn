@@ -410,6 +410,7 @@
         "button",
         "calendar",
         "checkbox",
+        "switch",
         "command",
         "dialog",
         "dropdown-menu",

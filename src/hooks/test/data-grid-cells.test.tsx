@@ -84,7 +84,7 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
     id: "name",
     accessorKey: "name",
     header: "Name",
-    meta: { variant: "short-text" },
+    meta: { variant: "text" },
   },
   {
     id: "website",
@@ -108,7 +108,7 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
     id: "isPro",
     accessorKey: "isPro",
     header: "Pro",
-    meta: { variant: "checkbox" },
+    meta: { variant: "boolean" },
   },
   {
     id: "stance",
@@ -405,7 +405,26 @@ describe("DataGrid cells", () => {
     });
   });
 
-  describe("checkbox", () => {
+  describe("boolean", () => {
+    it("renders a switch when asked and toggles it on Space", () => {
+      const { getCell, getValue, focus } = renderGrid({
+        columns: columns.map((column) =>
+          column.id === "isPro"
+            ? { ...column, meta: { variant: "boolean", control: "switch" } }
+            : column,
+        ),
+      });
+
+      const toggle = getCell("1", "isPro").querySelector('[role="switch"]');
+      expect(toggle?.getAttribute("aria-checked")).toBe("true");
+
+      focus("1", "isPro");
+      press(getCell("1", "isPro"), " ");
+
+      expect(getValue("1", "isPro")).toBe(false);
+      expect(toggle?.getAttribute("aria-checked")).toBe("false");
+    });
+
     it("toggles on Space", () => {
       const { getCell, getValue, focus } = renderGrid();
 

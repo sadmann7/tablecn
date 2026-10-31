@@ -26,6 +26,7 @@ import {
   ListIcon,
   Presentation,
   TextInitialIcon,
+  ToggleRightIcon,
 } from "lucide-react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -164,7 +165,7 @@ export function getEmptyCellValue(variant: ColumnVariant | undefined): unknown {
   if (variant === "number" || variant === "date" || variant === "select") {
     return null;
   }
-  if (variant === "checkbox") return false;
+  if (variant === "boolean") return false;
   return "";
 }
 
@@ -188,7 +189,7 @@ export function parsePastedCellValue(
       const num = Number.parseFloat(text);
       return Number.isNaN(num) ? null : { value: num };
     }
-    case "checkbox": {
+    case "boolean": {
       if (!text) return { value: false };
       const lower = text.toLowerCase();
       return VALID_BOOLEANS.has(lower)
@@ -446,12 +447,12 @@ export function getColumnVariantOptions<
     : null;
 }
 
-export function getColumnVariantLabel(variant?: ColumnVariant): {
+export function getColumnVariantLabel(meta?: DataGridColumnMeta): {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   label: string;
 } | null {
-  switch (variant) {
-    case "short-text":
+  switch (meta?.variant) {
+    case "text":
       return { label: "Short text", icon: BaselineIcon };
     case "long-text":
       return { label: "Long text", icon: TextInitialIcon };
@@ -459,8 +460,10 @@ export function getColumnVariantLabel(variant?: ColumnVariant): {
       return { label: "Number", icon: HashIcon };
     case "url":
       return { label: "URL", icon: LinkIcon };
-    case "checkbox":
-      return { label: "Checkbox", icon: CheckSquareIcon };
+    case "boolean":
+      return meta.control === "switch"
+        ? { label: "Switch", icon: ToggleRightIcon }
+        : { label: "Checkbox", icon: CheckSquareIcon };
     case "select":
       return { label: "Select", icon: ListIcon };
     case "multi-select":

@@ -118,7 +118,7 @@ const columns = columnHelper.columns([
     enableColumnFilter: true,
     meta: {
       label: "Status",
-      variant: "multiSelect",
+      variant: "multi-select",
       options: [
         { label: "Todo", value: "todo" },
         { label: "Done", value: "done" },

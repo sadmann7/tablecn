@@ -192,7 +192,7 @@ function DataGridRapidContent({
           id: "symbol",
           header: "Symbol",
           size: 120,
-          meta: { label: "Symbol", variant: "short-text" },
+          meta: { label: "Symbol", variant: "text" },
         }),
         getQuoteColumn("price", "Price", DollarSign, (value) => (
           <PriceCell value={value} />

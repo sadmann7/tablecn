@@ -119,21 +119,19 @@ export interface FileCellData {
   url?: string;
 }
 
-export interface CellSelectOption {
+export interface ColumnOption {
   label: string;
   value: string;
-  icon?: React.ComponentType<React.ComponentProps<"svg">>;
   count?: number;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type PlainColumnVariant =
-  | "short-text"
-  | "long-text"
-  | "checkbox"
-  | "date"
-  | "url";
+export type PlainColumnVariant = "text" | "long-text" | "date" | "url";
 
 export interface ColumnVariantOptions {
+  boolean: {
+    control?: "checkbox" | "switch";
+  };
   number: {
     min?: number;
     max?: number;
@@ -141,10 +139,10 @@ export interface ColumnVariantOptions {
     format?: Intl.NumberFormatOptions;
   };
   select: {
-    options: CellSelectOption[];
+    options: ColumnOption[];
   };
   "multi-select": {
-    options: CellSelectOption[];
+    options: ColumnOption[];
   };
   file: {
     maxFileSize?: number;

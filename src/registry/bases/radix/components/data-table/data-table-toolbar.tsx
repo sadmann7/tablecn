@@ -11,6 +11,7 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { getFilterVariant } from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/radix/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/radix/components/data-table/data-table-faceted-filter";
 import { DataTableSliderFilter } from "@/registry/bases/radix/components/data-table/data-table-slider-filter";
@@ -98,8 +99,9 @@ function DataTableToolbarFilter<TData extends RowData>({
 
   const title = columnMeta.label ?? column.id;
   const placeholder = columnMeta.placeholder ?? columnMeta.label;
+  const filterVariant = getFilterVariant(columnMeta);
 
-  switch (columnMeta.variant) {
+  switch (filterVariant) {
     case "text":
       return (
         <DataTableFilterInput
@@ -131,23 +133,23 @@ function DataTableToolbarFilter<TData extends RowData>({
       return <DataTableSliderFilter column={column} title={title} />;
 
     case "date":
-    case "dateRange":
+    case "date-range":
       return (
         <DataTableDateFilter
           column={column}
           title={title}
-          multiple={columnMeta.variant === "dateRange"}
+          multiple={filterVariant === "date-range"}
         />
       );
 
     case "select":
-    case "multiSelect":
+    case "multi-select":
       return (
         <DataTableFacetedFilter
           column={column}
           title={title}
           options={columnMeta.options ?? []}
-          multiple={columnMeta.variant === "multiSelect"}
+          multiple={filterVariant === "multi-select"}
         />
       );
 

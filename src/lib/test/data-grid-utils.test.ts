@@ -80,13 +80,13 @@ describe("parsePastedCellValue", () => {
   });
 
   it("parses checkbox words", () => {
-    expect(parsePastedCellValue("Yes", { variant: "checkbox" })).toEqual({
+    expect(parsePastedCellValue("Yes", { variant: "boolean" })).toEqual({
       value: true,
     });
-    expect(parsePastedCellValue("unchecked", { variant: "checkbox" })).toEqual({
+    expect(parsePastedCellValue("unchecked", { variant: "boolean" })).toEqual({
       value: false,
     });
-    expect(parsePastedCellValue("maybe", { variant: "checkbox" })).toBeNull();
+    expect(parsePastedCellValue("maybe", { variant: "boolean" })).toBeNull();
   });
 
   it("matches select options by value or label", () => {
@@ -119,7 +119,7 @@ describe("parsePastedCellValue", () => {
     expect(parsePastedCellValue('["a","b"]', undefined)).toEqual({
       value: "a, b",
     });
-    expect(parsePastedCellValue("true", { variant: "short-text" })).toEqual({
+    expect(parsePastedCellValue("true", { variant: "text" })).toEqual({
       value: "Checked",
     });
   });

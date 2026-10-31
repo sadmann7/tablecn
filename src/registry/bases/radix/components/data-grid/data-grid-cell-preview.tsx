@@ -143,8 +143,23 @@ function getPreviewContent<TData extends RowData>({
   );
 
   switch (meta?.variant) {
-    case "checkbox": {
+    case "boolean": {
       const isChecked = getBooleanCellValue(value);
+
+      if (meta.control === "switch") {
+        return {
+          className: "flex justify-center pt-2.5",
+          content: (
+            <span
+              data-checked={isChecked ? "" : undefined}
+              data-unchecked={isChecked ? undefined : ""}
+              className="group inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full border border-transparent data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80"
+            >
+              <span className="block size-3 rounded-full bg-background group-data-checked:translate-x-[calc(100%-2px)] rtl:group-data-checked:-translate-x-[calc(100%-2px)] dark:group-data-checked:bg-primary-foreground dark:group-data-unchecked:bg-foreground" />
+            </span>
+          ),
+        };
+      }
 
       return {
         className: "flex justify-center pt-2.5",

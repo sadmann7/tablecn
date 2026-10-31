@@ -233,7 +233,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Name",
-          variant: "short-text",
+          variant: "text",
         },
       }),
       columnHelper.accessor("age", {
@@ -256,7 +256,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Email",
-          variant: "short-text",
+          variant: "text",
         },
       }),
       columnHelper.accessor("feedback", {
@@ -345,7 +345,8 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Active",
-          variant: "checkbox",
+          variant: "boolean",
+          control: "switch",
         },
       }),
       columnHelper.accessor("website", {

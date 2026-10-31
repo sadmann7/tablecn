@@ -27,7 +27,7 @@ const loadSearch = createLoader(
 describe("column config", () => {
   const columnConfigs = {
     name: { variant: "text" },
-    age: { variant: "range", isSortable: false },
+    age: { variant: "number", filter: "range", isSortable: false },
     id: { isSortable: false },
     createdAt: {},
   } as const;
@@ -55,7 +55,7 @@ describe("column config", () => {
 describe("parseColumnFilter", () => {
   it("uses the variant default when the param has no operator", () => {
     expect(
-      parseColumnFilter("status", "multiSelect", "todo,done"),
+      parseColumnFilter("status", "multi-select", "todo,done"),
     ).toMatchObject({ operator: "inArray", value: ["todo", "done"] });
     expect(parseColumnFilter("title", "text", "the")).toMatchObject({
       operator: "iLike",
@@ -69,10 +69,10 @@ describe("parseColumnFilter", () => {
 
   it("reads short operator names, internal names, and any case", () => {
     expect(
-      parseColumnFilter("status", "multiSelect", "not.in.todo"),
+      parseColumnFilter("status", "multi-select", "not.in.todo"),
     ).toMatchObject({ operator: "notInArray", value: ["todo"] });
     expect(
-      parseColumnFilter("status", "multiSelect", "notInArray.todo"),
+      parseColumnFilter("status", "multi-select", "notInArray.todo"),
     ).toMatchObject({ operator: "notInArray", value: ["todo"] });
     expect(parseColumnFilter("estimatedHours", "range", "LTE.8")).toMatchObject(
       { operator: "lte", value: "8" },
@@ -97,7 +97,7 @@ describe("parseColumnFilter", () => {
       value: "in.progress",
     });
     expect(
-      parseColumnFilter("priority", "multiSelect", "bogus.xyz"),
+      parseColumnFilter("priority", "multi-select", "bogus.xyz"),
     ).toMatchObject({ operator: "inArray", value: ["bogus.xyz"] });
   });
 
@@ -109,10 +109,10 @@ describe("parseColumnFilter", () => {
       value: ["2", ""],
     });
     expect(
-      parseColumnFilter("status", "multiSelect", '"to,do",done'),
+      parseColumnFilter("status", "multi-select", '"to,do",done'),
     ).toMatchObject({ value: ["to,do", "done"] });
     expect(
-      parseColumnFilter("status", "multiSelect", '" todo "'),
+      parseColumnFilter("status", "multi-select", '" todo "'),
     ).toMatchObject({
       value: [" todo "],
     });
@@ -120,22 +120,22 @@ describe("parseColumnFilter", () => {
 
   it("stores dates as calendar days", () => {
     expect(
-      parseColumnFilter("createdAt", "dateRange", "2026-10-01,2026-10-07"),
+      parseColumnFilter("createdAt", "date-range", "2026-10-01,2026-10-07"),
     ).toMatchObject({
       operator: "isBetween",
       value: ["2026-10-01", "2026-10-07"],
     });
     expect(
-      parseColumnFilter("createdAt", "dateRange", "lte.2026-06-30"),
+      parseColumnFilter("createdAt", "date-range", "lte.2026-06-30"),
     ).toMatchObject({ operator: "lte", value: "2026-06-30" });
   });
 
   it("parses quoted quotes, empty list items, and a single between bound", () => {
     expect(
-      parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
+      parseColumnFilter("status", "multi-select", '"say ""hi""",done'),
     ).toMatchObject({ value: ['say "hi"', "done"] });
     expect(
-      parseColumnFilter("status", "multiSelect", "todo,,done"),
+      parseColumnFilter("status", "multi-select", "todo,,done"),
     ).toMatchObject({ value: ["todo", "done"] });
     expect(
       parseColumnFilter("estimatedHours", "range", "between.5"),
@@ -160,12 +160,12 @@ describe("serializeColumnFilter", () => {
   it("leaves out the default operator and writes the others", () => {
     expect(
       serializeColumnFilter(
-        parseColumnFilter("status", "multiSelect", "todo,done"),
+        parseColumnFilter("status", "multi-select", "todo,done"),
       ),
     ).toBe("todo,done");
     expect(
       serializeColumnFilter(
-        parseColumnFilter("status", "multiSelect", "not.in.todo"),
+        parseColumnFilter("status", "multi-select", "not.in.todo"),
       ),
     ).toBe("not.in.todo");
     expect(
@@ -178,7 +178,7 @@ describe("serializeColumnFilter", () => {
     ).toBe("is.empty");
     expect(
       serializeColumnFilter(
-        parseColumnFilter("status", "multiSelect", '"to,do",done'),
+        parseColumnFilter("status", "multi-select", '"to,do",done'),
       ),
     ).toBe('"to,do",done');
     expect(
@@ -188,7 +188,7 @@ describe("serializeColumnFilter", () => {
     ).toBe("ilike.eq.hello");
     expect(
       serializeColumnFilter(
-        parseColumnFilter("status", "multiSelect", '"say ""hi""",done'),
+        parseColumnFilter("status", "multi-select", '"say ""hi""",done'),
       ),
     ).toBe('"say ""hi""",done');
   });
@@ -261,7 +261,7 @@ describe("getDataTableSearchParams", () => {
 describe("getColumnFilters", () => {
   it("numbers filters per column and builds a stable key", () => {
     const title = parseColumnFilter("title", "text", "the");
-    const status = parseColumnFilter("status", "multiSelect", "todo");
+    const status = parseColumnFilter("status", "multi-select", "todo");
     const filters = getColumnFilters(["title", "status"] as const, (id) =>
       id === "title" ? [title, title] : [status],
     );
@@ -280,8 +280,8 @@ describe("sortColumnFiltersBySearch", () => {
   it("orders filters by the first time their column appears in the URL", () => {
     const filters = [
       parseColumnFilter("title", "text", "the"),
-      parseColumnFilter("status", "multiSelect", "todo"),
-      parseColumnFilter("createdAt", "dateRange", "2026-10-01,2026-10-07"),
+      parseColumnFilter("status", "multi-select", "todo"),
+      parseColumnFilter("createdAt", "date-range", "2026-10-01,2026-10-07"),
     ];
 
     expect(

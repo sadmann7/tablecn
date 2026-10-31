@@ -7,7 +7,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { FilterVariant } from "@/lib/data-table-types";
+import type { ColumnVariant } from "@/lib/data-table-types";
 
 import { dataTableFeatures } from "@/lib/data-table-features";
 import { dataTableFilterFn } from "@/lib/data-table-filters";
@@ -85,7 +85,7 @@ describe("filtered rows", () => {
         {
           id: "status",
           operator: "inArray",
-          variant: "multiSelect",
+          variant: "multi-select",
           value: ["done"],
         },
         { id: "title", operator: "eq", variant: "text", value: "Alpha" },
@@ -203,7 +203,7 @@ describe("faceted rows", () => {
         {
           id: "status",
           operator: "inArray",
-          variant: "multiSelect",
+          variant: "multi-select",
           value: ["done"],
         },
       ]);
@@ -218,7 +218,7 @@ describe("faceted rows", () => {
         {
           id: "status",
           operator: "inArray",
-          variant: "multiSelect",
+          variant: "multi-select",
           value: ["done"],
         },
       ]);
@@ -437,15 +437,15 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("title", {
     id: "weird",
-    meta: { variant: "bogus" as FilterVariant },
+    meta: { variant: "bogus" as ColumnVariant },
   }),
   columnHelper.accessor("status", {
     id: "status",
-    meta: { variant: "multiSelect" },
+    meta: { variant: "multi-select" },
   }),
   columnHelper.accessor("hours", {
     id: "hours",
-    meta: { variant: "range" },
+    meta: { variant: "number", filter: "range" },
   }),
   columnHelper.accessor("createdAt", {
     id: "createdAt",

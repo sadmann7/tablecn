@@ -15,13 +15,13 @@ import {
 
 import type {
   ColumnFilterItem,
-  FilterVariant,
+  DataTableColumnMeta,
   JoinOperator,
 } from "@/lib/data-table-types";
 
 import {
   createPlainFilter,
-  FILTER_VARIANTS,
+  getFilterVariant,
   getIsActiveFilter,
   normalizeColumnFilter,
   parseFilterDate,
@@ -38,7 +38,7 @@ export function matchesFilter(
   filter: Pick<ColumnFilterItem, "operator" | "variant" | "value">,
 ): boolean {
   const { operator, variant, value } = filter;
-  const isDate = variant === "date" || variant === "dateRange";
+  const isDate = variant === "date" || variant === "date-range";
   const isNumeric = variant === "number" || variant === "range";
 
   switch (operator) {
@@ -100,7 +100,9 @@ export function matchesFilter(
 export const dataTableFilterFn = constructFilterFn({
   filter: (dataValue, filterValue, row, columnId) => {
     const variant = getFilterVariant(
-      row.table.getColumn(columnId)?.columnDef.meta,
+      row.table.getColumn(columnId)?.columnDef.meta as
+        | DataTableColumnMeta
+        | undefined,
     );
     const item = createPlainFilter(columnId, variant, filterValue);
     return !item || matchesFilter(dataValue, item);
@@ -294,14 +296,6 @@ function getIsEmptyValue(value: unknown) {
   );
 }
 
-function getFilterVariant(meta: unknown): FilterVariant {
-  const variant =
-    typeof meta === "object" && meta && "variant" in meta
-      ? meta.variant
-      : undefined;
-  return FILTER_VARIANTS.find((item) => item === variant) ?? "text";
-}
-
 interface FilteringColumn<
   TFeatures extends TableFeatures,
   TData extends RowData,
@@ -409,7 +403,7 @@ function getFilterTest<TFeatures extends TableFeatures, TData extends RowData>(
 
   const item = normalizeColumnFilter(
     filter,
-    getFilterVariant(column.columnDef.meta),
+    getFilterVariant(column.columnDef.meta as DataTableColumnMeta | undefined),
   );
   if (!getIsActiveFilter(item)) return null;
 

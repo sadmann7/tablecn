@@ -9,6 +9,7 @@ import type {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnFilterItem,
+  DataTableColumnConfig,
   FilterOperator,
   FilterOperatorOption,
   FilterVariant,
@@ -21,10 +22,10 @@ export const FILTER_VARIANTS = [
   "number",
   "range",
   "date",
-  "dateRange",
+  "date-range",
   "boolean",
   "select",
-  "multiSelect",
+  "multi-select",
 ] as const;
 
 export const FILTER_OPERATORS = {
@@ -106,9 +107,9 @@ const BOOLEAN_OPERATORS = [
 
 const MULTI_VALUE_FILTER_VARIANTS: FilterVariant[] = [
   "select",
-  "multiSelect",
+  "multi-select",
   "range",
-  "dateRange",
+  "date-range",
 ];
 
 const FILTER_OPERATORS_BY_VARIANT: Record<
@@ -119,10 +120,10 @@ const FILTER_OPERATORS_BY_VARIANT: Record<
   number: NUMERIC_OPERATORS,
   range: NUMERIC_OPERATORS,
   date: DATE_OPERATORS,
-  dateRange: DATE_OPERATORS,
+  "date-range": DATE_OPERATORS,
   boolean: BOOLEAN_OPERATORS,
   select: SELECT_OPERATORS,
-  multiSelect: MULTI_SELECT_OPERATORS,
+  "multi-select": MULTI_SELECT_OPERATORS,
 };
 
 export function getAriaSort(
@@ -228,10 +229,27 @@ export function coerceFilterValue(
   return value;
 }
 
+export function getFilterVariant(
+  config: Pick<DataTableColumnConfig, "variant" | "filter"> | undefined,
+): FilterVariant {
+  if (config?.filter) return config.filter;
+
+  switch (config?.variant) {
+    case "number":
+    case "boolean":
+    case "date":
+    case "select":
+    case "multi-select":
+      return config.variant;
+    default:
+      return "text";
+  }
+}
+
 export function getDefaultFilter<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
 ) {
-  const variant = column.columnDef.meta?.variant ?? "text";
+  const variant = getFilterVariant(column.columnDef.meta);
 
   return {
     id: column.id,
@@ -242,7 +260,7 @@ export function getDefaultFilter<TData extends RowData>(
 }
 
 export function getSelectFilterValue(filter: ColumnFilterItem) {
-  if (filter.variant === "multiSelect") {
+  if (filter.variant === "multi-select") {
     return Array.isArray(filter.value) ? filter.value : [];
   }
 
@@ -290,7 +308,7 @@ export function formatFilterDate(date: Date) {
 }
 
 export function getIsDateVariant(variant: FilterVariant) {
-  return variant === "date" || variant === "dateRange";
+  return variant === "date" || variant === "date-range";
 }
 
 export function getFilterDates(value: ColumnFilterItem["value"]) {
@@ -333,8 +351,8 @@ export function getIsMultiValueVariant(variant: FilterVariant) {
 }
 
 export function getPlainFilterOperator(variant: FilterVariant): FilterOperator {
-  if (variant === "select" || variant === "multiSelect") return "inArray";
-  if (variant === "range" || variant === "dateRange") return "isBetween";
+  if (variant === "select" || variant === "multi-select") return "inArray";
+  if (variant === "range" || variant === "date-range") return "isBetween";
   return getDefaultFilterOperator(variant);
 }
 
@@ -407,7 +425,7 @@ export function normalizeColumnFilter(
 export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 
-  if (variant === "select" || variant === "multiSelect") {
+  if (variant === "select" || variant === "multi-select") {
     return Array.isArray(value) ? value : [value];
   }
 

@@ -5558,7 +5558,7 @@ describe("useDataGrid", () => {
           id: "trick",
           accessorKey: "trick",
           cell: () => "unused",
-          meta: { variant: "short-text" },
+          meta: { variant: "text" },
         },
       ];
       const { result } = renderHook(

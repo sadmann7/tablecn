@@ -39,6 +39,7 @@ import {
 } from "@/lib/data-table-parsers";
 import {
   getActiveFilters,
+  getFilterVariant,
   JOIN_OPERATORS,
   normalizeColumnFilter,
 } from "@/lib/data-table-utils";
@@ -173,7 +174,7 @@ function useDataTable<TData extends RowData>({
       }
       if (!column.enableColumnFilter) continue;
 
-      filterableVariants.set(column.id, column.meta?.variant ?? "text");
+      filterableVariants.set(column.id, getFilterVariant(column.meta));
     }
 
     return {

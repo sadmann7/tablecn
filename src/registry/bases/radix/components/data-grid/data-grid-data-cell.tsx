@@ -10,7 +10,7 @@ import { getHasCustomCell } from "@/lib/data-grid-utils";
 import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
 import { DataGridCellPreview } from "@/registry/bases/radix/components/data-grid/data-grid-cell-preview";
 import {
-  CheckboxCell,
+  BooleanCell,
   DateCell,
   FileCell,
   LongTextCell,
@@ -116,7 +116,7 @@ function DataGridDataCellImpl<TData extends RowData>({
   let Comp: React.ComponentType<DataGridCellProps<TData>>;
 
   switch (variant) {
-    case "short-text":
+    case "text":
       Comp = ShortTextCell;
       break;
     case "long-text":
@@ -128,8 +128,8 @@ function DataGridDataCellImpl<TData extends RowData>({
     case "url":
       Comp = UrlCell;
       break;
-    case "checkbox":
-      Comp = CheckboxCell;
+    case "boolean":
+      Comp = BooleanCell;
       break;
     case "select":
       Comp = SelectCell;

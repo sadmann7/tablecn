@@ -10,7 +10,7 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnFilterItem, FilterOption } from "@/lib/data-table-types";
+import type { ColumnFilterItem, ColumnOption } from "@/lib/data-table-types";
 
 import {
   coerceFilterValue,
@@ -19,6 +19,7 @@ import {
   getFilterDates,
   getFilterDateValue,
   getFilterOperators,
+  getFilterVariant,
   getIsEditableTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
@@ -171,7 +172,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
     table.addColumnFilter({
       ...defaults,
-      value: defaults.variant === "multiSelect" ? [value] : value,
+      value: defaults.variant === "multi-select" ? [value] : value,
       filterId: generateId({ length: 8 }),
     });
     setOpen(false);
@@ -575,11 +576,11 @@ function FilterValueInput<TData extends RowData>(
       return <BooleanFilterValue {...props} />;
 
     case "select":
-    case "multiSelect":
+    case "multi-select":
       return <SelectFilterValue {...props} />;
 
     case "date":
-    case "dateRange":
+    case "date-range":
       return <DateFilterValue {...props} />;
 
     default:
@@ -639,7 +640,7 @@ function SelectFilterValue<TData extends RowData>({
   const columnMeta = column.columnDef.meta;
   const options = columnMeta?.options ?? [];
   const value = getSelectFilterValue(filter);
-  const multiple = filter.variant === "multiSelect";
+  const multiple = filter.variant === "multi-select";
 
   return (
     <Faceted
@@ -692,7 +693,7 @@ function SelectFilterValue<TData extends RowData>({
 }
 
 interface SelectedOptionsProps {
-  options: FilterOption[];
+  options: ColumnOption[];
   value: string | string[] | undefined;
   placeholder: string;
 }
@@ -831,7 +832,7 @@ function FilterValueOptions<TData extends RowData>({
 }: FilterValueOptionsProps<TData>) {
   const columnMeta = column.columnDef.meta;
 
-  switch (columnMeta?.variant ?? "text") {
+  switch (getFilterVariant(columnMeta)) {
     case "boolean":
       return (
         <CommandGroup>
@@ -845,7 +846,7 @@ function FilterValueOptions<TData extends RowData>({
       );
 
     case "select":
-    case "multiSelect":
+    case "multi-select":
       return (
         <>
           <CommandEmpty>No options found.</CommandEmpty>
@@ -872,7 +873,7 @@ function FilterValueOptions<TData extends RowData>({
       );
 
     case "date":
-    case "dateRange":
+    case "date-range":
       return (
         <Calendar
           autoFocus
