@@ -514,6 +514,74 @@ describe("DataGrid cells", () => {
       press(grid.getCell(rowId, "media"), "Enter");
     }
 
+    it("opens on Enter", () => {
+      const grid = renderGrid();
+      openFiles(grid, "1");
+
+      expect(grid.table.getEditingCell()).toEqual({
+        rowId: "1",
+        columnId: "media",
+      });
+    });
+
+    it("doesn't open on Enter when read-only", () => {
+      const grid = renderGrid({
+        columns: columns.map((column) =>
+          column.id === "media"
+            ? { ...column, enableCellEditing: false }
+            : column,
+        ),
+      });
+      openFiles(grid, "1");
+
+      expect(grid.table.getEditingCell()).toBeNull();
+    });
+
+    it("keeps a newer error after an older one expires", () => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+      try {
+        const grid = renderGrid({
+          columns: columns.map((column) =>
+            column.id === "media"
+              ? {
+                  ...column,
+                  meta: { cell: { variant: "file", accept: "image/*" } },
+                }
+              : column,
+          ),
+        });
+        openFiles(grid, "1");
+        const reject = () =>
+          act(() => {
+            fireEvent.change(getFileInput(), {
+              target: {
+                files: [
+                  new File(["a"], "clip.pdf", { type: "application/pdf" }),
+                ],
+              },
+            });
+          });
+        const getDropzone = () => screen.getByRole("region");
+
+        reject();
+        act(() => {
+          vi.advanceTimersByTime(1500);
+        });
+        reject();
+        act(() => {
+          vi.advanceTimersByTime(1000);
+        });
+        expect(getDropzone().getAttribute("aria-invalid")).toBe("true");
+
+        act(() => {
+          vi.advanceTimersByTime(1000);
+        });
+        expect(getDropzone().getAttribute("aria-invalid")).toBe("false");
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("keeps each same-named upload with its own result", async () => {
       const uploadFiles = vi.fn(async ({ files }: { files: File[] }) =>
         files.map((file, index) => ({

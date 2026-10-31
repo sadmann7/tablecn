@@ -2,6 +2,7 @@
 
 import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { RowData } from "@tanstack/react-table";
+import type { ExternalToast } from "sonner";
 
 import { cn } from "cn";
 import * as React from "react";
@@ -69,6 +70,8 @@ const CELL_BORDER_WIDTH = 1;
 // Editors open in place, so they skip the popover's enter and exit animations
 const CELL_EDITOR_CLASS_NAME =
   "rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
+// Badges fit the cell's first text line
+const CELL_BADGE_CLASS_NAME = "mt-0.5 mb-px h-4.25 px-1.5 py-0";
 
 interface SaveOptions {
   moveToNextRow?: boolean;
@@ -102,7 +105,7 @@ export function LongTextCell<TData extends RowData>(
       : initialValue;
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-  const { pendingCharRef, onPendingCharKeyDown } = usePendingChar({
+  const { takePendingChar, onPendingCharKeyDown } = usePendingChar({
     isFocused,
     isEditing,
     readOnly,
@@ -154,11 +157,7 @@ export function LongTextCell<TData extends RowData>(
   }, [cell, readOnly, debouncedSave]);
 
   const onOpenChange = React.useCallback(
-    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
-      if (getIsCellPress(containerRef.current, eventDetails)) {
-        eventDetails.cancel();
-        return;
-      }
+    (open: boolean) => {
       if (open && !readOnly) {
         cell.startEditing();
       } else {
@@ -168,9 +167,9 @@ export function LongTextCell<TData extends RowData>(
     [cell, readOnly, onSave],
   );
 
-  const onFinalFocus = React.useCallback(
-    () => getEditorFinalFocus(containerRef.current),
-    [],
+  const { onPopoverOpenChange, onFinalFocus } = useCellEditorDismiss(
+    containerRef,
+    onOpenChange,
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -181,8 +180,7 @@ export function LongTextCell<TData extends RowData>(
     const length = textarea.value.length;
     textarea.setSelectionRange(length, length);
 
-    const pendingChar = pendingCharRef.current;
-    pendingCharRef.current = null;
+    const pendingChar = takePendingChar();
     if (pendingChar) {
       requestAnimationFrame(() => {
         const textarea = textareaRef.current;
@@ -196,7 +194,7 @@ export function LongTextCell<TData extends RowData>(
     }
 
     return false;
-  }, [pendingCharRef]);
+  }, [takePendingChar]);
 
   const onBlur = React.useCallback(() => onSave(), [onSave]);
 
@@ -233,7 +231,7 @@ export function LongTextCell<TData extends RowData>(
       ref={containerRef}
       onKeyDown={onPendingCharKeyDown}
     >
-      <Popover open={isEditing} onOpenChange={onOpenChange}>
+      <Popover open={isEditing} onOpenChange={onPopoverOpenChange}>
         <PopoverTrigger
           nativeButton={false}
           render={<div className="pointer-events-none absolute inset-0" />}
@@ -298,7 +296,7 @@ export function NumberCell<TData extends RowData>(
   const format = numberCellOpts?.format;
   const displayNumber = getNumberCellValue(value);
 
-  const save = React.useCallback(
+  const onSave = React.useCallback(
     (options?: SaveOptions) => {
       const numValue = value === "" ? null : Number(value);
       if (!readOnly && numValue !== initialValue) {
@@ -317,8 +315,8 @@ export function NumberCell<TData extends RowData>(
       cell.table.stopEditing();
       return;
     }
-    save();
-  }, [cell, save]);
+    onSave();
+  }, [cell, onSave]);
 
   const onChange = React.useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -330,7 +328,7 @@ export function NumberCell<TData extends RowData>(
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
-        onEditKeyDown(event, save, () => {
+        endEditOnKey(event, onSave, () => {
           setDraft(null);
           isCancelingRef.current = true;
           inputRef.current?.blur();
@@ -339,7 +337,7 @@ export function NumberCell<TData extends RowData>(
         onPendingCharKeyDown(event);
       }
     },
-    [isEditing, save, onPendingCharKeyDown],
+    [isEditing, onSave, onPendingCharKeyDown],
   );
 
   React.useEffect(() => {
@@ -567,15 +565,7 @@ export function SelectCell<TData extends RowData>(
   const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const commandRef = React.useRef<HTMLDivElement>(null);
-  const cellOpts = cell.column.columnDef.meta?.cell;
-  const options = React.useMemo(
-    () => (cellOpts?.variant === "select" ? cellOpts.options : []),
-    [cellOpts],
-  );
-  const optionByValue = React.useMemo(
-    () => new Map(options.map((option) => [option.value, option])),
-    [options],
-  );
+  const { options, getOptionLabel } = useCellOptions(cell, "select");
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
@@ -587,13 +577,7 @@ export function SelectCell<TData extends RowData>(
   );
 
   const onOpenChange = React.useCallback(
-    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
-      if (getIsCellPress(containerRef.current, eventDetails)) {
-        eventDetails.cancel();
-        return;
-      }
-      onEditingChange(cell, open, readOnly);
-    },
+    (open: boolean) => setCellEditing(cell, open, readOnly),
     [cell, readOnly],
   );
 
@@ -602,21 +586,19 @@ export function SelectCell<TData extends RowData>(
     return false;
   }, []);
 
-  const onFinalFocus = React.useCallback(
-    () => getEditorFinalFocus(containerRef.current),
-    [],
+  const { onPopoverOpenChange, onFinalFocus } = useCellEditorDismiss(
+    containerRef,
+    onOpenChange,
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) onPopoverKeyDown(cell, event);
+      if (isEditing) closeEditorOnKey(cell, event);
     },
     [cell, isEditing],
   );
 
-  const displayLabel = value
-    ? (optionByValue.get(value)?.label ?? value)
-    : null;
+  const displayLabel = value ? getOptionLabel(value) : null;
 
   return (
     <DataGridCell<TData>
@@ -625,7 +607,7 @@ export function SelectCell<TData extends RowData>(
       onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
       onKeyDown={onWrapperKeyDown}
     >
-      <Popover open={isEditing} onOpenChange={onOpenChange}>
+      <Popover open={isEditing} onOpenChange={onPopoverOpenChange}>
         <PopoverTrigger
           nativeButton={false}
           render={<div className="pointer-events-none absolute inset-0" />}
@@ -642,8 +624,8 @@ export function SelectCell<TData extends RowData>(
           <Command
             ref={commandRef}
             tabIndex={-1}
-            defaultValue={value ?? undefined}
             loop
+            defaultValue={value ?? undefined}
             className="bg-transparent p-px outline-none"
           >
             <CommandList>
@@ -702,15 +684,7 @@ export function MultiSelectCell<TData extends RowData>(
   const searchValue = search.cellKey === cellKey ? search.value : "";
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const cellOpts = cell.column.columnDef.meta?.cell;
-  const options = React.useMemo(
-    () => (cellOpts?.variant === "multi-select" ? cellOpts.options : []),
-    [cellOpts],
-  );
-  const optionByValue = React.useMemo(
-    () => new Map(options.map((option) => [option.value, option])),
-    [options],
-  );
+  const { options, getOptionLabel } = useCellOptions(cell, "multi-select");
 
   const onSearchValueChange = React.useCallback(
     (value: string) => setSearch({ cellKey, value }),
@@ -760,20 +734,16 @@ export function MultiSelectCell<TData extends RowData>(
   }, [cell, readOnly]);
 
   const onOpenChange = React.useCallback(
-    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
-      if (getIsCellPress(containerRef.current, eventDetails)) {
-        eventDetails.cancel();
-        return;
-      }
+    (open: boolean) => {
       if (!open) setSearch({ cellKey, value: "" });
-      onEditingChange(cell, open, readOnly);
+      setCellEditing(cell, open, readOnly);
     },
     [cell, readOnly, cellKey],
   );
 
-  const onFinalFocus = React.useCallback(
-    () => getEditorFinalFocus(containerRef.current),
-    [],
+  const { onPopoverOpenChange, onFinalFocus } = useCellEditorDismiss(
+    containerRef,
+    onOpenChange,
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -785,7 +755,7 @@ export function MultiSelectCell<TData extends RowData>(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (!isEditing) return;
       if (event.key === "Escape") setDraft(null);
-      if (onPopoverKeyDown(cell, event)) setSearch({ cellKey, value: "" });
+      if (closeEditorOnKey(cell, event)) setSearch({ cellKey, value: "" });
     },
     [cell, isEditing, cellKey],
   );
@@ -805,7 +775,7 @@ export function MultiSelectCell<TData extends RowData>(
   );
 
   const displayLabels = selectedValues
-    .map((value) => optionByValue.get(value)?.label ?? value)
+    .map((value) => getOptionLabel(value))
     .filter(Boolean);
 
   const selectedValuesSet = React.useMemo(
@@ -830,7 +800,7 @@ export function MultiSelectCell<TData extends RowData>(
       onKeyDown={onWrapperKeyDown}
     >
       {isEditing ? (
-        <Popover open={isEditing} onOpenChange={onOpenChange}>
+        <Popover open={isEditing} onOpenChange={onPopoverOpenChange}>
           <PopoverTrigger
             nativeButton={false}
             render={<div className="pointer-events-none absolute inset-0" />}
@@ -851,7 +821,7 @@ export function MultiSelectCell<TData extends RowData>(
             <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
               <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
                 {selectedValues.map((value) => {
-                  const label = optionByValue.get(value)?.label ?? value;
+                  const label = getOptionLabel(value);
 
                   return (
                     <Badge
@@ -936,7 +906,8 @@ export function MultiSelectCell<TData extends RowData>(
               key={selectedValues[index]}
               variant="secondary"
               className={cn(
-                "mt-0.5 mb-px h-4.25 max-w-full px-1.5 py-0",
+                CELL_BADGE_CLASS_NAME,
+                "max-w-full",
                 hiddenBadgeCount > 0 &&
                   index === visibleLabels.length - 1 &&
                   "max-w-[calc(100%-2.75rem)]",
@@ -947,15 +918,7 @@ export function MultiSelectCell<TData extends RowData>(
               </span>
             </Badge>
           ))}
-          {hiddenBadgeCount > 0 && (
-            <Badge
-              variant="outline"
-              dir="ltr"
-              className="mt-0.5 mb-px h-4.25 px-1.5 py-0 text-muted-foreground"
-            >
-              +{hiddenBadgeCount}
-            </Badge>
-          )}
+          {hiddenBadgeCount > 0 && <OverflowBadge count={hiddenBadgeCount} />}
         </div>
       ) : null}
     </DataGridCell>
@@ -983,24 +946,18 @@ export function DateCell<TData extends RowData>(
   );
 
   const onOpenChange = React.useCallback(
-    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
-      if (getIsCellPress(containerRef.current, eventDetails)) {
-        eventDetails.cancel();
-        return;
-      }
-      onEditingChange(cell, open, readOnly);
-    },
+    (open: boolean) => setCellEditing(cell, open, readOnly),
     [cell, readOnly],
   );
 
-  const onFinalFocus = React.useCallback(
-    () => getEditorFinalFocus(containerRef.current),
-    [],
+  const { onPopoverOpenChange, onFinalFocus } = useCellEditorDismiss(
+    containerRef,
+    onOpenChange,
   );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
-      if (isEditing) onPopoverKeyDown(cell, event);
+      if (isEditing) closeEditorOnKey(cell, event);
     },
     [cell, isEditing],
   );
@@ -1012,7 +969,7 @@ export function DateCell<TData extends RowData>(
       onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
       onKeyDown={onWrapperKeyDown}
     >
-      <Popover open={isEditing} onOpenChange={onOpenChange}>
+      <Popover open={isEditing} onOpenChange={onPopoverOpenChange}>
         <PopoverTrigger
           nativeButton={false}
           render={<div className="pointer-events-none absolute inset-0" />}
@@ -1050,7 +1007,7 @@ export function DateCell<TData extends RowData>(
 export function FileCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, width, rowHeight, isEditing, isFocused, readOnly } = props;
+  const { cell, width, rowHeight, isEditing, readOnly } = props;
   const rowId = cell.row.id;
   const columnId = cell.column.id;
   const cellKey = getCellKey(rowId, columnId);
@@ -1086,6 +1043,7 @@ export function FileCell<TData extends RowData>(
     message: string;
   } | null>(null);
   const error = errorState?.cellValue === cellValue ? errorState.message : null;
+  const errorTimeoutRef = React.useRef<number | undefined>(undefined);
 
   const isUploading = uploadingFiles !== null;
   const isDeleting = deletingFiles.size > 0;
@@ -1132,18 +1090,28 @@ export function FileCell<TData extends RowData>(
     [maxFileSize, acceptedTypes],
   );
 
+  React.useEffect(() => () => window.clearTimeout(errorTimeoutRef.current), []);
+
+  const flashError = React.useCallback(
+    (message: string, toastOptions?: ExternalToast) => {
+      setErrorState({ cellValue, message });
+      toast(message, toastOptions);
+      window.clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = window.setTimeout(
+        () => setErrorState(null),
+        2000,
+      );
+    },
+    [cellValue],
+  );
+
   const addFiles = React.useCallback(
     async (newFiles: File[]) => {
       if (readOnly || isPending) return;
       setErrorState(null);
 
       if (maxFiles && cellValue.length + newFiles.length > maxFiles) {
-        const errorMessage = `Maximum ${maxFiles} files allowed`;
-        setErrorState({ cellValue, message: errorMessage });
-        toast(errorMessage);
-        setTimeout(() => {
-          setErrorState(null);
-        }, 2000);
+        flashError(`Maximum ${maxFiles} files allowed`);
         return;
       }
 
@@ -1161,26 +1129,17 @@ export function FileCell<TData extends RowData>(
 
       const firstError = rejectedFiles[0];
       if (firstError) {
-        setErrorState({ cellValue, message: firstError.reason });
-
         const truncatedName =
           firstError.name.length > 20
             ? `${firstError.name.slice(0, 20)}...`
             : firstError.name;
 
-        if (rejectedFiles.length === 1) {
-          toast(firstError.reason, {
-            description: `"${truncatedName}" has been rejected`,
-          });
-        } else {
-          toast(firstError.reason, {
-            description: `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
-          });
-        }
-
-        setTimeout(() => {
-          setErrorState(null);
-        }, 2000);
+        flashError(firstError.reason, {
+          description:
+            rejectedFiles.length === 1
+              ? `"${truncatedName}" has been rejected`
+              : `"${truncatedName}" and ${rejectedFiles.length - 1} more rejected`,
+        });
       }
 
       if (filesToUpload.length === 0) return;
@@ -1234,6 +1193,7 @@ export function FileCell<TData extends RowData>(
       cellValue,
       maxFiles,
       validateFile,
+      flashError,
       rowId,
       columnId,
       readOnly,
@@ -1323,23 +1283,7 @@ export function FileCell<TData extends RowData>(
   const onCellDragLeave = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX;
-    const y = event.clientY;
-
-    if (
-      x <= rect.left ||
-      x >= rect.right ||
-      y <= rect.top ||
-      y >= rect.bottom
-    ) {
-      setIsDraggingOver(false);
-    }
-  }, []);
-
-  const onCellDragOver = React.useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
+    if (getIsDragLeaving(event)) setIsDraggingOver(false);
   }, []);
 
   const onCellDrop = React.useCallback(
@@ -1365,23 +1309,7 @@ export function FileCell<TData extends RowData>(
   const onDropzoneDragLeave = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX;
-    const y = event.clientY;
-
-    if (
-      x <= rect.left ||
-      x >= rect.right ||
-      y <= rect.top ||
-      y >= rect.bottom
-    ) {
-      setIsDragging(false);
-    }
-  }, []);
-
-  const onDropzoneDragOver = React.useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
+    if (getIsDragLeaving(event)) setIsDragging(false);
   }, []);
 
   const onDropzoneDrop = React.useCallback(
@@ -1420,20 +1348,16 @@ export function FileCell<TData extends RowData>(
   );
 
   const onOpenChange = React.useCallback(
-    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
-      if (getIsCellPress(containerRef.current, eventDetails)) {
-        eventDetails.cancel();
-        return;
-      }
+    (open: boolean) => {
       setErrorState(null);
-      onEditingChange(cell, open, readOnly);
+      setCellEditing(cell, open, readOnly);
     },
     [cell, readOnly],
   );
 
-  const onFinalFocus = React.useCallback(
-    () => getEditorFinalFocus(containerRef.current),
-    [],
+  const { onPopoverOpenChange, onFinalFocus } = useCellEditorDismiss(
+    containerRef,
+    onOpenChange,
   );
 
   const onEditorKeyDown = React.useCallback(
@@ -1459,13 +1383,10 @@ export function FileCell<TData extends RowData>(
           return;
         }
         if (event.key === "Escape") setErrorState(null);
-        onPopoverKeyDown(cell, event);
-      } else if (isFocused && event.key === "Enter") {
-        event.preventDefault();
-        cell.startEditing();
+        closeEditorOnKey(cell, event);
       }
     },
-    [cell, isEditing, isFocused, onDropzoneClick],
+    [cell, isEditing, onDropzoneClick],
   );
 
   const lineCount = getLineCount(rowHeight);
@@ -1487,7 +1408,7 @@ export function FileCell<TData extends RowData>(
       ref={containerRef}
       onDragEnter={onCellDragEnter}
       onDragLeave={onCellDragLeave}
-      onDragOver={onCellDragOver}
+      onDragOver={onFileDragOver}
       onDrop={onCellDrop}
       onKeyDown={onWrapperKeyDown}
       className={cn({
@@ -1495,7 +1416,7 @@ export function FileCell<TData extends RowData>(
       })}
     >
       {isEditing ? (
-        <Popover open={isEditing} onOpenChange={onOpenChange}>
+        <Popover open={isEditing} onOpenChange={onPopoverOpenChange}>
           <PopoverTrigger
             nativeButton={false}
             render={<div className="pointer-events-none absolute inset-0" />}
@@ -1530,7 +1451,7 @@ export function FileCell<TData extends RowData>(
                 onClick={onDropzoneClick}
                 onDragEnter={onDropzoneDragEnter}
                 onDragLeave={onDropzoneDragLeave}
-                onDragOver={onDropzoneDragOver}
+                onDragOver={onFileDragOver}
                 onDrop={onDropzoneDrop}
                 onKeyDown={onDropzoneKeyDown}
               >
@@ -1673,7 +1594,7 @@ export function FileCell<TData extends RowData>(
               <Badge
                 key={file.id}
                 variant="secondary"
-                className="mt-0.5 mb-px h-4.25 gap-1 px-1.5 py-0"
+                className={cn(CELL_BADGE_CLASS_NAME, "gap-1")}
               >
                 {FileIcon && <FileIcon className="size-3 shrink-0" />}
                 <span dir="auto" className="max-w-25 truncate">
@@ -1682,18 +1603,26 @@ export function FileCell<TData extends RowData>(
               </Badge>
             );
           })}
-          {hiddenFileCount > 0 && (
-            <Badge
-              variant="outline"
-              dir="ltr"
-              className="mt-0.5 mb-px h-4.25 px-1.5 py-0 text-muted-foreground"
-            >
-              +{hiddenFileCount}
-            </Badge>
-          )}
+          {hiddenFileCount > 0 && <OverflowBadge count={hiddenFileCount} />}
         </div>
       ) : null}
     </DataGridCell>
+  );
+}
+
+interface OverflowBadgeProps {
+  count: number;
+}
+
+function OverflowBadge({ count }: OverflowBadgeProps) {
+  return (
+    <Badge
+      variant="outline"
+      dir="ltr"
+      className={cn(CELL_BADGE_CLASS_NAME, "text-muted-foreground")}
+    >
+      +{count}
+    </Badge>
   );
 }
 
@@ -1721,7 +1650,7 @@ function useEditableText<TData extends RowData>({
       : initialValue;
   const textRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
-  const { pendingCharRef, onPendingCharKeyDown } = usePendingChar({
+  const { takePendingChar, onPendingCharKeyDown } = usePendingChar({
     isFocused,
     isEditing,
     readOnly,
@@ -1747,8 +1676,7 @@ function useEditableText<TData extends RowData>({
         element.textContent = value;
       }
 
-      const pendingChar = pendingCharRef.current;
-      pendingCharRef.current = null;
+      const pendingChar = takePendingChar();
       if (pendingChar) {
         replaceEditableText(element, pendingChar);
       } else if (element.textContent) {
@@ -1757,9 +1685,9 @@ function useEditableText<TData extends RowData>({
     } else if (!isEditing && wasEditing) {
       element.scrollLeft = 0;
     }
-  }, [isEditing, value, pendingCharRef]);
+  }, [isEditing, value, takePendingChar]);
 
-  const save = React.useCallback(
+  const onSave = React.useCallback(
     (options?: SaveOptions) => {
       const value = parse(textRef.current?.textContent ?? "");
       if (!readOnly && value !== parse(initialValue)) {
@@ -1771,7 +1699,7 @@ function useEditableText<TData extends RowData>({
     [cell, parse, initialValue, readOnly],
   );
 
-  const onBlur = React.useCallback(() => save(), [save]);
+  const onBlur = React.useCallback(() => onSave(), [onSave]);
 
   const onInput = React.useCallback(
     (event: React.InputEvent<HTMLDivElement>) => {
@@ -1783,7 +1711,7 @@ function useEditableText<TData extends RowData>({
   const onKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) {
-        onEditKeyDown(event, save, () => {
+        endEditOnKey(event, onSave, () => {
           setDraft(null);
           const element = textRef.current;
           if (!element) return;
@@ -1795,7 +1723,7 @@ function useEditableText<TData extends RowData>({
         onPendingCharKeyDown(event);
       }
     },
-    [isEditing, initialValue, save, onPendingCharKeyDown],
+    [isEditing, initialValue, onSave, onPendingCharKeyDown],
   );
 
   return {
@@ -1814,6 +1742,10 @@ function useEditableText<TData extends RowData>({
 
 function parsePlainText(text: string) {
   return text;
+}
+
+function parseUrlText(text: string) {
+  return text.trim() || null;
 }
 
 interface EditableTextProps extends React.ComponentProps<"div"> {
@@ -1882,27 +1814,68 @@ function usePendingChar({
     [isFocused, isEditing, readOnly],
   );
 
-  return { pendingCharRef, onPendingCharKeyDown };
+  const takePendingChar = React.useCallback(() => {
+    const pendingChar = pendingCharRef.current;
+    pendingCharRef.current = null;
+    return pendingChar;
+  }, []);
+
+  return { pendingCharRef, takePendingChar, onPendingCharKeyDown };
 }
 
-function onEditKeyDown(
+function endEditOnKey(
   event: React.KeyboardEvent,
-  save: (options: SaveOptions) => void,
-  cancel: () => void,
+  onSave: (options: SaveOptions) => void,
+  onCancel: () => void,
 ) {
   if (event.key === "Enter") {
     event.preventDefault();
-    save({ moveToNextRow: true });
+    onSave({ moveToNextRow: true });
   } else if (event.key === "Tab") {
     event.preventDefault();
-    save({ direction: getTabDirection(event) });
+    onSave({ direction: getTabDirection(event) });
   } else if (event.key === "Escape") {
     event.preventDefault();
-    cancel();
+    onCancel();
   }
 }
 
-function onEditingChange<TData extends RowData>(
+function useCellEditorDismiss(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  onOpenChange: (open: boolean) => void,
+) {
+  const onPopoverOpenChange = React.useCallback(
+    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
+      const { target } = eventDetails.event;
+      if (
+        eventDetails.reason === "outside-press" &&
+        target instanceof Node &&
+        containerRef.current?.contains(target)
+      ) {
+        eventDetails.cancel();
+        return;
+      }
+      onOpenChange(open);
+    },
+    [containerRef, onOpenChange],
+  );
+
+  const onFinalFocus = React.useCallback(() => {
+    const container = containerRef.current;
+    if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
+      return false;
+    }
+    return container;
+  }, [containerRef]);
+
+  return { onPopoverOpenChange, onFinalFocus };
+}
+
+const getOverlapOffset: PopoverPrimitive.Positioner.Props["sideOffset"] = ({
+  anchor,
+}) => -anchor.height - CELL_BORDER_WIDTH;
+
+function setCellEditing<TData extends RowData>(
   cell: DataGridCellProps<TData>["cell"],
   open: boolean,
   readOnly: boolean,
@@ -1914,30 +1887,7 @@ function onEditingChange<TData extends RowData>(
   }
 }
 
-function getIsCellPress(
-  container: HTMLElement | null,
-  eventDetails: PopoverPrimitive.Root.ChangeEventDetails,
-) {
-  const { target } = eventDetails.event;
-  return (
-    eventDetails.reason === "outside-press" &&
-    target instanceof Node &&
-    !!container?.contains(target)
-  );
-}
-
-function getEditorFinalFocus(container: HTMLElement | null) {
-  if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
-    return false;
-  }
-  return container;
-}
-
-function onEditingCellMouseDown(event: React.MouseEvent) {
-  event.preventDefault();
-}
-
-function onPopoverKeyDown<TData extends RowData>(
+function closeEditorOnKey<TData extends RowData>(
   cell: DataGridCellProps<TData>["cell"],
   event: React.KeyboardEvent,
 ) {
@@ -1954,17 +1904,50 @@ function onPopoverKeyDown<TData extends RowData>(
   return false;
 }
 
-function parseUrlText(text: string) {
-  return text.trim() || null;
+function onEditingCellMouseDown(event: React.MouseEvent) {
+  event.preventDefault();
 }
 
 function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
   return event.shiftKey ? "shift+tab" : "tab";
 }
 
-const getOverlapOffset: PopoverPrimitive.Positioner.Props["sideOffset"] = ({
-  anchor,
-}) => -anchor.height - CELL_BORDER_WIDTH;
+function useCellOptions<TData extends RowData>(
+  cell: DataGridCellProps<TData>["cell"],
+  variant: "select" | "multi-select",
+) {
+  const cellOpts = cell.column.columnDef.meta?.cell;
+  const options = React.useMemo(
+    () =>
+      cellOpts?.variant === variant && "options" in cellOpts
+        ? cellOpts.options
+        : [],
+    [cellOpts, variant],
+  );
+  const optionByValue = React.useMemo(
+    () => new Map(options.map((option) => [option.value, option])),
+    [options],
+  );
+
+  const getOptionLabel = React.useCallback(
+    (value: string) => optionByValue.get(value)?.label ?? value,
+    [optionByValue],
+  );
+
+  return { options, getOptionLabel };
+}
+
+function getIsDragLeaving(event: React.DragEvent) {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const x = event.clientX;
+  const y = event.clientY;
+  return x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom;
+}
+
+function onFileDragOver(event: React.DragEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+}
 
 function toastDangerousUrl() {
   toast.error("Invalid URL", {
