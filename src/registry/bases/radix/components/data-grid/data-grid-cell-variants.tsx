@@ -830,7 +830,7 @@ export function MultiSelectCell<TData extends RowData>(
             onOpenAutoFocus={onOpenAutoFocus}
           >
             <Command className="bg-transparent **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
-              <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-3 py-1.5">
+              <div className="-mx-1 -mt-1 flex flex-wrap items-center gap-1 border-b px-4 py-2 has-data-[slot=badge]:px-2">
                 {selectedValues.map((value) => {
                   const label = optionByValue.get(value)?.label ?? value;
 
@@ -872,7 +872,7 @@ export function MultiSelectCell<TData extends RowData>(
                   className="p-0! placeholder:text-muted-foreground"
                 />
               </div>
-              <CommandList className="max-h-full">
+              <CommandList className="-mx-1 max-h-full px-1">
                 <CommandEmpty>No options found.</CommandEmpty>
                 <CommandGroup className="max-h-75 scroll-py-1 overflow-x-hidden overflow-y-auto">
                   {options.map((option) => {
