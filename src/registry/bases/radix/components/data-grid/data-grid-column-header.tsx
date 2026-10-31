@@ -372,6 +372,27 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
     [header.column, table, minSize, maxSize],
   );
 
+  // A resize ends any edit at once, like a press anywhere else in the grid,
+  // and leaves focus where it was instead of on the handle
+  const onResizeStart = React.useCallback(
+    (
+      event:
+        | React.MouseEvent<HTMLDivElement>
+        | React.TouchEvent<HTMLDivElement>,
+    ) => {
+      if (event.type === "mousedown") event.preventDefault();
+      if (table.getEditingCell()) {
+        // Blurring first lets the editor save, as when focus moves away
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        table.stopEditing();
+      }
+      header.getResizeHandler()(event);
+    },
+    [header, table],
+  );
+
   return (
     <div
       role="separator"
@@ -388,8 +409,8 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
           : "opacity-0 hover:opacity-100",
       )}
       onDoubleClick={onDoubleClick}
-      onMouseDown={header.getResizeHandler()}
-      onTouchStart={header.getResizeHandler()}
+      onMouseDown={onResizeStart}
+      onTouchStart={onResizeStart}
     />
   );
 }

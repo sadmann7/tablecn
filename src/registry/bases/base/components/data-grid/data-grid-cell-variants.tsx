@@ -60,22 +60,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/registry/bases/base/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/registry/bases/base/ui/select";
 import { Skeleton } from "@/registry/bases/base/ui/skeleton";
 import { Textarea } from "@/registry/bases/base/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-// The cell's padding on each side (px-2), so editors line up with its edge
-const CELL_PADDING = 8;
 // Editors start a border out, so they cover the cell borders instead of doubling them
 const CELL_BORDER_WIDTH = 1;
+// Editors open in place, so they skip the popover's enter and exit animations
+const CELL_EDITOR_CLASS_NAME =
+  "rounded-none ring-inset data-open:animate-none data-closed:animate-none";
 
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -161,7 +154,11 @@ export function LongTextCell<TData extends RowData>(
   }, [cell, readOnly, debouncedSave]);
 
   const onOpenChange = React.useCallback(
-    (open: boolean) => {
+    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
+      if (getIsCellPress(containerRef.current, eventDetails)) {
+        eventDetails.cancel();
+        return;
+      }
       if (open && !readOnly) {
         cell.startEditing();
       } else {
@@ -169,6 +166,11 @@ export function LongTextCell<TData extends RowData>(
       }
     },
     [cell, readOnly, onSave],
+  );
+
+  const onFinalFocus = React.useCallback(
+    () => getEditorFinalFocus(containerRef.current),
+    [],
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -226,43 +228,43 @@ export function LongTextCell<TData extends RowData>(
   );
 
   return (
-    <Popover open={isEditing} onOpenChange={onOpenChange}>
-      <PopoverTrigger
-        nativeButton={false}
-        render={
-          <DataGridCell<TData>
-            {...props}
-            ref={containerRef}
-            onKeyDown={onPendingCharKeyDown}
-          />
-        }
-      >
-        <span data-slot="data-grid-cell-content" dir="auto">
-          {value}
-        </span>
-      </PopoverTrigger>
-      <PopoverContent
-        aria-label={getColumnLabel(cell.column)}
-        data-grid-cell-editor=""
-        align="start"
-        side="bottom"
-        alignOffset={-CELL_BORDER_WIDTH}
-        sideOffset={getOverlapOffset}
-        className="w-100 rounded-none p-0 ring-inset"
-        initialFocus={onInitialFocus}
-      >
-        <Textarea
-          aria-label={getColumnLabel(cell.column)}
-          placeholder="Enter text..."
-          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent"
-          ref={textareaRef}
-          value={value}
-          onBlur={onBlur}
-          onChange={onChange}
-          onKeyDown={onKeyDown}
+    <DataGridCell<TData>
+      {...props}
+      ref={containerRef}
+      onKeyDown={onPendingCharKeyDown}
+    >
+      <Popover open={isEditing} onOpenChange={onOpenChange}>
+        <PopoverTrigger
+          nativeButton={false}
+          render={<div className="pointer-events-none absolute inset-0" />}
         />
-      </PopoverContent>
-    </Popover>
+        <PopoverContent
+          aria-label={getColumnLabel(cell.column)}
+          data-grid-cell-editor=""
+          align="start"
+          side="bottom"
+          alignOffset={-CELL_BORDER_WIDTH}
+          sideOffset={getOverlapOffset}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-100 p-0")}
+          initialFocus={onInitialFocus}
+          finalFocus={onFinalFocus}
+        >
+          <Textarea
+            aria-label={getColumnLabel(cell.column)}
+            placeholder="Enter text..."
+            className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent"
+            ref={textareaRef}
+            value={value}
+            onBlur={onBlur}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+          />
+        </PopoverContent>
+      </Popover>
+      <span data-slot="data-grid-cell-content" dir="auto">
+        {value}
+      </span>
+    </DataGridCell>
   );
 }
 
@@ -564,6 +566,7 @@ export function SelectCell<TData extends RowData>(
   const { cell, isEditing, readOnly } = props;
   const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const commandRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = React.useMemo(
     () => (cellOpts?.variant === "select" ? cellOpts.options : []),
@@ -575,8 +578,8 @@ export function SelectCell<TData extends RowData>(
   );
 
   const onValueChange = React.useCallback(
-    (newValue: string | null) => {
-      if (newValue == null || readOnly) return;
+    (newValue: string) => {
+      if (readOnly) return;
       cell.setValue(newValue);
       cell.table.stopEditing();
     },
@@ -584,17 +587,25 @@ export function SelectCell<TData extends RowData>(
   );
 
   const onOpenChange = React.useCallback(
-    (open: boolean) => onEditingChange(cell, open, readOnly),
+    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
+      if (getIsCellPress(containerRef.current, eventDetails)) {
+        eventDetails.cancel();
+        return;
+      }
+      onEditingChange(cell, open, readOnly);
+    },
     [cell, readOnly],
   );
 
-  const onFinalFocus = React.useCallback(() => {
-    const container = containerRef.current;
-    if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
-      return false;
-    }
-    return container;
+  const onInitialFocus = React.useCallback(() => {
+    commandRef.current?.focus();
+    return false;
   }, []);
+
+  const onFinalFocus = React.useCallback(
+    () => getEditorFinalFocus(containerRef.current),
+    [],
+  );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -611,50 +622,53 @@ export function SelectCell<TData extends RowData>(
     <DataGridCell<TData>
       {...props}
       ref={containerRef}
+      onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
       onKeyDown={onWrapperKeyDown}
     >
-      {isEditing ? (
-        <Select
-          value={value ?? null}
-          onValueChange={onValueChange}
-          open={isEditing}
-          onOpenChange={onOpenChange}
+      <Popover open={isEditing} onOpenChange={onOpenChange}>
+        <PopoverTrigger
+          nativeButton={false}
+          render={<div className="pointer-events-none absolute inset-0" />}
+        />
+        <PopoverContent
+          aria-label={getColumnLabel(cell.column)}
+          data-grid-cell-editor=""
+          align="start"
+          alignOffset={-CELL_BORDER_WIDTH}
+          sideOffset={0}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-auto min-w-36 p-0")}
+          style={{
+            width: `calc(var(--anchor-width) + ${CELL_BORDER_WIDTH * 2}px)`,
+          }}
+          initialFocus={onInitialFocus}
+          finalFocus={onFinalFocus}
         >
-          <SelectTrigger className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden">
-            {displayLabel ? (
-              <Badge
-                variant="secondary"
-                className="mt-0.5 mb-px h-auto px-1.5 py-0 leading-3.75 whitespace-pre-wrap"
-              >
-                <SelectValue />
-              </Badge>
-            ) : (
-              <SelectValue />
-            )}
-          </SelectTrigger>
-          <SelectContent
-            aria-label={getColumnLabel(cell.column)}
-            data-grid-cell-editor=""
-            alignItemWithTrigger={false}
-            align="start"
-            alignOffset={-CELL_PADDING - CELL_BORDER_WIDTH}
-            sideOffset={-CELL_PADDING + CELL_BORDER_WIDTH}
-            className="rounded-none ring-inset"
-            style={{
-              minWidth: `calc(var(--anchor-width) + ${(CELL_PADDING + CELL_BORDER_WIDTH) * 2}px)`,
-            }}
-            finalFocus={onFinalFocus}
+          <Command
+            ref={commandRef}
+            tabIndex={-1}
+            defaultValue={value ?? undefined}
+            loop
+            className="bg-transparent p-px outline-none"
           >
-            <SelectGroup>
-              {options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      ) : displayLabel ? (
+            <CommandList>
+              <CommandGroup className="p-1.5">
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    keywords={[option.label]}
+                    data-checked={option.value === value}
+                    onSelect={onValueChange}
+                  >
+                    <span>{option.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {displayLabel ? (
         <Badge
           data-slot="data-grid-cell-content"
           dir="auto"
@@ -750,11 +764,20 @@ export function MultiSelectCell<TData extends RowData>(
   }, [cell, readOnly]);
 
   const onOpenChange = React.useCallback(
-    (open: boolean) => {
+    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
+      if (getIsCellPress(containerRef.current, eventDetails)) {
+        eventDetails.cancel();
+        return;
+      }
       if (!open) setSearch({ cellKey, value: "" });
       onEditingChange(cell, open, readOnly);
     },
     [cell, readOnly, cellKey],
+  );
+
+  const onFinalFocus = React.useCallback(
+    () => getEditorFinalFocus(containerRef.current),
+    [],
   );
 
   const onInitialFocus = React.useCallback(() => {
@@ -780,9 +803,6 @@ export function MultiSelectCell<TData extends RowData>(
         } else {
           queueMicrotask(() => inputRef.current?.focus());
         }
-      }
-      if (event.key === "Escape") {
-        event.stopPropagation();
       }
     },
     [searchValue, selectedValues, commitValues],
@@ -825,8 +845,12 @@ export function MultiSelectCell<TData extends RowData>(
             align="start"
             alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset}
-            className="w-75 rounded-none p-0 ring-inset"
+            className={cn(CELL_EDITOR_CLASS_NAME, "w-75 p-0")}
+            style={{
+              minWidth: `calc(var(--anchor-width) + ${CELL_BORDER_WIDTH * 2}px)`,
+            }}
             initialFocus={onInitialFocus}
+            finalFocus={onFinalFocus}
           >
             <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
               <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
@@ -963,8 +987,19 @@ export function DateCell<TData extends RowData>(
   );
 
   const onOpenChange = React.useCallback(
-    (open: boolean) => onEditingChange(cell, open, readOnly),
+    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
+      if (getIsCellPress(containerRef.current, eventDetails)) {
+        eventDetails.cancel();
+        return;
+      }
+      onEditingChange(cell, open, readOnly);
+    },
     [cell, readOnly],
+  );
+
+  const onFinalFocus = React.useCallback(
+    () => getEditorFinalFocus(containerRef.current),
+    [],
   );
 
   const onWrapperKeyDown = React.useCallback(
@@ -978,6 +1013,7 @@ export function DateCell<TData extends RowData>(
     <DataGridCell<TData>
       {...props}
       ref={containerRef}
+      onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
       onKeyDown={onWrapperKeyDown}
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
@@ -993,25 +1029,24 @@ export function DateCell<TData extends RowData>(
         >
           {formatDateForDisplay(value)}
         </span>
-        {isEditing && (
-          <PopoverContent
-            aria-label={getColumnLabel(cell.column)}
-            data-grid-cell-editor=""
-            align="start"
-            alignOffset={-CELL_BORDER_WIDTH}
-            sideOffset={0}
-            className="w-auto rounded-none p-0 ring-inset"
-          >
-            <Calendar
-              autoFocus
-              captionLayout="dropdown"
-              mode="single"
-              defaultMonth={selectedDate ?? new Date()}
-              selected={selectedDate}
-              onSelect={onDateSelect}
-            />
-          </PopoverContent>
-        )}
+        <PopoverContent
+          aria-label={getColumnLabel(cell.column)}
+          data-grid-cell-editor=""
+          align="start"
+          alignOffset={-CELL_BORDER_WIDTH}
+          sideOffset={0}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-auto p-0")}
+          finalFocus={onFinalFocus}
+        >
+          <Calendar
+            autoFocus
+            captionLayout="dropdown"
+            mode="single"
+            defaultMonth={selectedDate ?? new Date()}
+            selected={selectedDate}
+            onSelect={onDateSelect}
+          />
+        </PopoverContent>
       </Popover>
     </DataGridCell>
   );
@@ -1390,11 +1425,20 @@ export function FileCell<TData extends RowData>(
   );
 
   const onOpenChange = React.useCallback(
-    (open: boolean) => {
+    (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
+      if (getIsCellPress(containerRef.current, eventDetails)) {
+        eventDetails.cancel();
+        return;
+      }
       setErrorState(null);
       onEditingChange(cell, open, readOnly);
     },
     [cell, readOnly],
+  );
+
+  const onFinalFocus = React.useCallback(
+    () => getEditorFinalFocus(containerRef.current),
+    [],
   );
 
   const onEditorKeyDown = React.useCallback(
@@ -1467,8 +1511,9 @@ export function FileCell<TData extends RowData>(
             align="start"
             alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset}
-            className="w-100 rounded-none p-0 ring-inset"
+            className={cn(CELL_EDITOR_CLASS_NAME, "w-100 p-0")}
             initialFocus={onInitialFocus}
+            finalFocus={onFinalFocus}
             onKeyDown={onEditorKeyDown}
           >
             <div className="flex flex-col gap-2 p-3">
@@ -1872,6 +1917,32 @@ function onEditingChange<TData extends RowData>(
   } else {
     cell.table.stopEditing();
   }
+}
+
+// A press on the editing cell itself keeps its editor open
+function getIsCellPress(
+  container: HTMLElement | null,
+  eventDetails: PopoverPrimitive.Root.ChangeEventDetails,
+) {
+  const { target } = eventDetails.event;
+  return (
+    eventDetails.reason === "outside-press" &&
+    target instanceof Node &&
+    !!container?.contains(target)
+  );
+}
+
+// The cell gets focus back unless a click already moved it to another cell
+function getEditorFinalFocus(container: HTMLElement | null) {
+  if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
+    return false;
+  }
+  return container;
+}
+
+// Keeps focus in the menu when the cell under it is pressed
+function onEditingCellMouseDown(event: React.MouseEvent) {
+  event.preventDefault();
 }
 
 function onPopoverKeyDown<TData extends RowData>(

@@ -448,6 +448,25 @@ describe("DataGrid cells", () => {
       expect(getValue("1", "stance")).toBe("regular");
       expect(getCell("1", "stance").textContent).toBe("Regular");
     });
+
+    it("opens on the current option and saves from the keyboard", () => {
+      const { getCell, getValue, focus } = renderGrid();
+
+      focus("1", "stance");
+      press(getCell("1", "stance"), "Enter");
+      expect(
+        screen
+          .getByRole("option", { name: "Goofy" })
+          .getAttribute("aria-selected"),
+      ).toBe("true");
+
+      press(document.activeElement, "ArrowDown");
+      press(document.activeElement, "Enter");
+
+      expect(getValue("1", "stance")).toBe("regular");
+      expect(screen.queryByRole("option")).toBeNull();
+      expect(document.activeElement).toBe(getCell("1", "stance"));
+    });
   });
 
   describe("multi-select", () => {

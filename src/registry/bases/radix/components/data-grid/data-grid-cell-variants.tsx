@@ -61,22 +61,15 @@ import {
   PopoverAnchor,
   PopoverContent,
 } from "@/registry/bases/radix/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/registry/bases/radix/ui/select";
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 import { Textarea } from "@/registry/bases/radix/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-// The cell's padding on each side (px-2), so editors line up with its edge
-const CELL_PADDING = 8;
 // Editors start a border out, so they cover the cell borders instead of doubling them
 const CELL_BORDER_WIDTH = 1;
+// Editors open in place, so they skip the popover's enter and exit animations
+const CELL_EDITOR_CLASS_NAME =
+  "rounded-none ring-inset data-open:animate-none data-closed:animate-none";
 
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -199,6 +192,16 @@ export function LongTextCell<TData extends RowData>(
     [pendingCharRef],
   );
 
+  const onPointerDownOutside = React.useCallback(
+    (event: Event) => onCellPointerDownOutside(containerRef.current, event),
+    [],
+  );
+
+  const onCloseAutoFocus = React.useCallback(
+    (event: Event) => onEditorCloseAutoFocus(containerRef.current, event),
+    [],
+  );
+
   const onBlur = React.useCallback(() => onSave(), [onSave]);
 
   const onChange = React.useCallback(
@@ -248,8 +251,10 @@ export function LongTextCell<TData extends RowData>(
         side="bottom"
         alignOffset={-CELL_BORDER_WIDTH}
         sideOffset={getOverlapOffset(rowHeight)}
-        className="w-100 rounded-none p-0 ring-inset"
+        className={cn(CELL_EDITOR_CLASS_NAME, "w-100 p-0")}
         onOpenAutoFocus={onOpenAutoFocus}
+        onPointerDownOutside={onPointerDownOutside}
+        onCloseAutoFocus={onCloseAutoFocus}
       >
         <Textarea
           aria-label={getColumnLabel(cell.column)}
@@ -564,6 +569,7 @@ export function SelectCell<TData extends RowData>(
   const { cell, isEditing, readOnly } = props;
   const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const commandRef = React.useRef<HTMLDivElement>(null);
   const cellOpts = cell.column.columnDef.meta?.cell;
   const options = React.useMemo(
     () => (cellOpts?.variant === "select" ? cellOpts.options : []),
@@ -588,15 +594,20 @@ export function SelectCell<TData extends RowData>(
     [cell, readOnly],
   );
 
-  const onCloseAutoFocus = React.useCallback((event: Event) => {
+  const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
-    const container = containerRef.current;
-    if (
-      !container?.closest('[role="grid"]')?.contains(document.activeElement)
-    ) {
-      container?.focus();
-    }
+    commandRef.current?.focus();
   }, []);
+
+  const onPointerDownOutside = React.useCallback(
+    (event: Event) => onCellPointerDownOutside(containerRef.current, event),
+    [],
+  );
+
+  const onCloseAutoFocus = React.useCallback(
+    (event: Event) => onEditorCloseAutoFocus(containerRef.current, event),
+    [],
+  );
 
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -613,50 +624,53 @@ export function SelectCell<TData extends RowData>(
     <DataGridCell<TData>
       {...props}
       ref={containerRef}
+      onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
       onKeyDown={onWrapperKeyDown}
     >
-      {isEditing ? (
-        <Select
-          value={value ?? ""}
-          onValueChange={onValueChange}
-          open={isEditing}
-          onOpenChange={onOpenChange}
+      <Popover open={isEditing} onOpenChange={onOpenChange}>
+        <PopoverAnchor asChild>
+          <div className="absolute inset-0" />
+        </PopoverAnchor>
+        <PopoverContent
+          aria-label={getColumnLabel(cell.column)}
+          data-grid-cell-editor=""
+          align="start"
+          alignOffset={-CELL_BORDER_WIDTH}
+          sideOffset={0}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-auto min-w-36 p-0")}
+          style={{
+            width: `calc(var(--radix-popover-trigger-width) + ${CELL_BORDER_WIDTH * 2}px)`,
+          }}
+          onOpenAutoFocus={onOpenAutoFocus}
+          onPointerDownOutside={onPointerDownOutside}
+          onCloseAutoFocus={onCloseAutoFocus}
         >
-          <SelectTrigger className="size-full items-start border-none p-0 shadow-none focus-visible:ring-0 dark:bg-transparent [&_svg]:hidden">
-            {displayLabel ? (
-              <Badge
-                variant="secondary"
-                className="mt-0.5 mb-px h-auto px-1.5 py-0 leading-3.75 whitespace-pre-wrap"
-              >
-                <SelectValue />
-              </Badge>
-            ) : (
-              <SelectValue />
-            )}
-          </SelectTrigger>
-          <SelectContent
-            aria-label={getColumnLabel(cell.column)}
-            data-grid-cell-editor=""
-            position="popper"
-            align="start"
-            alignOffset={-CELL_PADDING - CELL_BORDER_WIDTH}
-            sideOffset={-CELL_PADDING + CELL_BORDER_WIDTH}
-            className="rounded-none ring-inset"
-            style={{
-              minWidth: `calc(var(--radix-select-trigger-width) + ${(CELL_PADDING + CELL_BORDER_WIDTH) * 2}px)`,
-            }}
-            onCloseAutoFocus={onCloseAutoFocus}
+          <Command
+            ref={commandRef}
+            tabIndex={-1}
+            defaultValue={value ?? undefined}
+            loop
+            className="bg-transparent p-px outline-none"
           >
-            <SelectGroup>
-              {options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      ) : displayLabel ? (
+            <CommandList>
+              <CommandGroup className="p-1.5">
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    keywords={[option.label]}
+                    data-checked={option.value === value}
+                    onSelect={onValueChange}
+                  >
+                    <span>{option.label}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {displayLabel ? (
         <Badge
           data-slot="data-grid-cell-content"
           dir="auto"
@@ -759,6 +773,16 @@ export function MultiSelectCell<TData extends RowData>(
     [cell, readOnly, cellKey],
   );
 
+  const onPointerDownOutside = React.useCallback(
+    (event: Event) => onCellPointerDownOutside(containerRef.current, event),
+    [],
+  );
+
+  const onCloseAutoFocus = React.useCallback(
+    (event: Event) => onEditorCloseAutoFocus(containerRef.current, event),
+    [],
+  );
+
   const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
     inputRef.current?.focus();
@@ -826,8 +850,13 @@ export function MultiSelectCell<TData extends RowData>(
             align="start"
             alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset(rowHeight)}
-            className="w-75 rounded-none p-0 ring-inset"
+            className={cn(CELL_EDITOR_CLASS_NAME, "w-75 p-0")}
+            style={{
+              minWidth: `calc(var(--radix-popover-trigger-width) + ${CELL_BORDER_WIDTH * 2}px)`,
+            }}
             onOpenAutoFocus={onOpenAutoFocus}
+            onPointerDownOutside={onPointerDownOutside}
+            onCloseAutoFocus={onCloseAutoFocus}
           >
             <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
               <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
@@ -968,6 +997,16 @@ export function DateCell<TData extends RowData>(
     [cell, readOnly],
   );
 
+  const onPointerDownOutside = React.useCallback(
+    (event: Event) => onCellPointerDownOutside(containerRef.current, event),
+    [],
+  );
+
+  const onCloseAutoFocus = React.useCallback(
+    (event: Event) => onEditorCloseAutoFocus(containerRef.current, event),
+    [],
+  );
+
   const onWrapperKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isEditing) onPopoverKeyDown(cell, event);
@@ -979,6 +1018,7 @@ export function DateCell<TData extends RowData>(
     <DataGridCell<TData>
       {...props}
       ref={containerRef}
+      onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
       onKeyDown={onWrapperKeyDown}
     >
       <Popover open={isEditing} onOpenChange={onOpenChange}>
@@ -993,25 +1033,25 @@ export function DateCell<TData extends RowData>(
         >
           {formatDateForDisplay(value)}
         </span>
-        {isEditing && (
-          <PopoverContent
-            aria-label={getColumnLabel(cell.column)}
-            data-grid-cell-editor=""
-            align="start"
-            alignOffset={-CELL_BORDER_WIDTH}
-            sideOffset={0}
-            className="w-auto rounded-none p-0 ring-inset"
-          >
-            <Calendar
-              autoFocus
-              captionLayout="dropdown"
-              mode="single"
-              defaultMonth={selectedDate ?? new Date()}
-              selected={selectedDate}
-              onSelect={onDateSelect}
-            />
-          </PopoverContent>
-        )}
+        <PopoverContent
+          aria-label={getColumnLabel(cell.column)}
+          data-grid-cell-editor=""
+          align="start"
+          alignOffset={-CELL_BORDER_WIDTH}
+          sideOffset={0}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-auto p-0")}
+          onPointerDownOutside={onPointerDownOutside}
+          onCloseAutoFocus={onCloseAutoFocus}
+        >
+          <Calendar
+            autoFocus
+            captionLayout="dropdown"
+            mode="single"
+            defaultMonth={selectedDate ?? new Date()}
+            selected={selectedDate}
+            onSelect={onDateSelect}
+          />
+        </PopoverContent>
       </Popover>
     </DataGridCell>
   );
@@ -1401,6 +1441,16 @@ export function FileCell<TData extends RowData>(
     event.stopPropagation();
   }, []);
 
+  const onPointerDownOutside = React.useCallback(
+    (event: Event) => onCellPointerDownOutside(containerRef.current, event),
+    [],
+  );
+
+  const onCloseAutoFocus = React.useCallback(
+    (event: Event) => onEditorCloseAutoFocus(containerRef.current, event),
+    [],
+  );
+
   const onOpenAutoFocus = React.useCallback((event: Event) => {
     event.preventDefault();
     queueMicrotask(() => {
@@ -1463,9 +1513,11 @@ export function FileCell<TData extends RowData>(
             align="start"
             alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset(rowHeight)}
-            className="w-100 rounded-none p-0 ring-inset"
+            className={cn(CELL_EDITOR_CLASS_NAME, "w-100 p-0")}
             onEscapeKeyDown={onEscapeKeyDown}
             onOpenAutoFocus={onOpenAutoFocus}
+            onPointerDownOutside={onPointerDownOutside}
+            onCloseAutoFocus={onCloseAutoFocus}
           >
             <div className="flex flex-col gap-2 p-3">
               <span id={labelId} className="sr-only">
@@ -1868,6 +1920,26 @@ function onEditingChange<TData extends RowData>(
   } else {
     cell.table.stopEditing();
   }
+}
+
+// A press on the editing cell itself keeps its editor open
+function onCellPointerDownOutside(container: HTMLElement | null, event: Event) {
+  if (event.target instanceof Node && container?.contains(event.target)) {
+    event.preventDefault();
+  }
+}
+
+// The cell gets focus back unless a click already moved it to another cell
+function onEditorCloseAutoFocus(container: HTMLElement | null, event: Event) {
+  event.preventDefault();
+  if (!container?.closest('[role="grid"]')?.contains(document.activeElement)) {
+    container?.focus();
+  }
+}
+
+// Keeps focus in the menu when the cell under it is pressed
+function onEditingCellMouseDown(event: React.MouseEvent) {
+  event.preventDefault();
 }
 
 function onPopoverKeyDown<TData extends RowData>(
