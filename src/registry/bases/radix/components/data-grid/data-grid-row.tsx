@@ -379,7 +379,7 @@ function DataGridUtilityCellImpl<TData extends RowData>({
       data-focused={isFocused ? "" : undefined}
       tabIndex={-1}
       onFocus={onFocus}
-      className={cn("h-full px-3 py-1.5 outline-none", {
+      className={cn("h-full px-3 pt-1.75 pb-2 outline-none", {
         grow,
         "border-s": showStartBorder,
         "border-e": showEndBorder,

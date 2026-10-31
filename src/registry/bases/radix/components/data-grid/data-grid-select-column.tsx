@@ -202,7 +202,7 @@ function DataGridSelectHitbox({
   return (
     <div
       className={cn(
-        "group relative -my-1.5 h-[calc(100%+0.75rem)] py-1.5",
+        "group relative -mt-1.75 -mb-2 h-[calc(100%+0.9375rem)] pt-1.75 pb-2",
         size === "default" && "-ms-3 -me-2 ps-3 pe-2",
         size === "sm" && "-ms-3 -me-1.5 ps-3 pe-1.5",
         size === "lg" && "-mx-3 px-3",

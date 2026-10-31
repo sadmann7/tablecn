@@ -626,7 +626,7 @@ export function SelectCell<TData extends RowData>(
             {displayLabel ? (
               <Badge
                 variant="secondary"
-                className="h-auto px-1.5 py-px whitespace-pre-wrap"
+                className="mt-0.5 mb-px h-auto px-1.5 py-0 leading-3.75 whitespace-pre-wrap"
               >
                 <SelectValue />
               </Badge>
@@ -661,7 +661,7 @@ export function SelectCell<TData extends RowData>(
           data-slot="data-grid-cell-content"
           dir="auto"
           variant="secondary"
-          className="h-auto px-1.5 py-px whitespace-pre-wrap"
+          className="mt-0.5 mb-px h-auto px-1.5 py-0 leading-3.75 whitespace-pre-wrap"
         >
           {displayLabel}
         </Badge>
@@ -911,13 +911,13 @@ export function MultiSelectCell<TData extends RowData>(
         </Popover>
       ) : null}
       {displayLabels.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1 overflow-hidden">
+        <div className="flex flex-wrap items-center gap-x-1 overflow-hidden">
           {visibleLabels.map((label, index) => (
             <Badge
               key={selectedValues[index]}
               variant="secondary"
               className={cn(
-                "max-w-full px-1.5 py-px",
+                "mt-0.5 mb-px h-4.25 max-w-full px-1.5 py-0",
                 hiddenBadgeCount > 0 &&
                   index === visibleLabels.length - 1 &&
                   "max-w-[calc(100%-2.75rem)]",
@@ -932,7 +932,7 @@ export function MultiSelectCell<TData extends RowData>(
             <Badge
               variant="outline"
               dir="ltr"
-              className="px-1.5 py-px text-muted-foreground"
+              className="mt-0.5 mb-px h-4.25 px-1.5 py-0 text-muted-foreground"
             >
               +{hiddenBadgeCount}
             </Badge>
@@ -1607,7 +1607,7 @@ export function FileCell<TData extends RowData>(
           <span>Drop files here</span>
         </div>
       ) : files.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1 overflow-hidden">
+        <div className="flex flex-wrap items-center gap-x-1 overflow-hidden">
           {visibleFiles.map((file) => {
             const isUploading = uploadingIds.has(file.id);
 
@@ -1615,7 +1615,7 @@ export function FileCell<TData extends RowData>(
               return (
                 <Skeleton
                   key={file.id}
-                  className="h-5 shrink-0 px-1.5"
+                  className="mt-0.5 mb-px h-4.25 shrink-0 px-1.5"
                   style={{
                     width: `${Math.min(file.name.length * 8 + 30, 100)}px`,
                   }}
@@ -1629,7 +1629,7 @@ export function FileCell<TData extends RowData>(
               <Badge
                 key={file.id}
                 variant="secondary"
-                className="gap-1 px-1.5 py-px"
+                className="mt-0.5 mb-px h-4.25 gap-1 px-1.5 py-0"
               >
                 {FileIcon && <FileIcon className="size-3 shrink-0" />}
                 <span dir="auto" className="max-w-25 truncate">
@@ -1642,7 +1642,7 @@ export function FileCell<TData extends RowData>(
             <Badge
               variant="outline"
               dir="ltr"
-              className="px-1.5 py-px text-muted-foreground"
+              className="mt-0.5 mb-px h-4.25 px-1.5 py-0 text-muted-foreground"
             >
               +{hiddenFileCount}
             </Badge>

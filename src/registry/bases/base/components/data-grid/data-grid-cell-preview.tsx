@@ -34,14 +34,14 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const BADGE_CLASS_NAME = cn(
   badgeVariants({ variant: "secondary" }),
-  "px-1.5 py-px",
+  "mt-0.5 mb-px h-4.25 px-1.5 py-0",
 );
 const OVERFLOW_BADGE_CLASS_NAME = cn(
   badgeVariants({ variant: "outline" }),
-  "px-1.5 py-px text-muted-foreground",
+  "mt-0.5 mb-px h-4.25 px-1.5 py-0 text-muted-foreground",
 );
 const BADGE_LIST_CLASS_NAME =
-  "flex flex-wrap content-start items-center gap-1 overflow-hidden";
+  "flex flex-wrap content-start items-center gap-x-1 overflow-hidden";
 
 const LINE_CLAMP_CLASS_NAMES: Record<RowHeightValue, string> = {
   short: "line-clamp-1",
@@ -102,7 +102,7 @@ export function DataGridCellPreview<TData extends RowData>({
       data-row-id={cell.row.id}
       data-column-id={columnId}
       className={cn(
-        "h-full cursor-default px-2 py-1.5 text-start text-sm",
+        "h-full cursor-default px-2 pt-1.75 pb-2 text-start text-sm",
         className,
         {
           grow,
