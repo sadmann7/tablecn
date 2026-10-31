@@ -251,7 +251,7 @@ export function LongTextCell<TData extends RowData>(
         <Textarea
           aria-label={getColumnLabel(cell.column)}
           placeholder="Enter text..."
-          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring dark:bg-transparent"
           ref={textareaRef}
           value={value}
           onBlur={onBlur}
