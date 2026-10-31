@@ -9,7 +9,8 @@ import type {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnFilterItem,
-  DataTableColumnConfig,
+  ColumnSelectOption,
+  ColumnVariantMeta,
   FilterOperator,
   FilterOperatorOption,
   FilterVariant,
@@ -230,22 +231,28 @@ export function coerceFilterValue(
 }
 
 export function getFilterVariant(
-  config: Pick<DataTableColumnConfig, "variant" | "filter"> | undefined,
+  meta: ColumnVariantMeta | undefined,
 ): FilterVariant {
-  if (config?.filter) {
-    return config.variant === "date" ? "date-range" : "range";
-  }
-
-  switch (config?.variant) {
+  switch (meta?.variant) {
     case "number":
+      return meta.filter === "range" ? "range" : "number";
+    case "date":
+      return meta.filter === "range" ? "date-range" : "date";
     case "boolean":
     case "select":
     case "multi-select":
-    case "date":
-      return config.variant;
+      return meta.variant;
     default:
       return "text";
   }
+}
+
+export function getColumnSelectOptions(
+  meta: ColumnVariantMeta | undefined,
+): ColumnSelectOption[] {
+  return meta?.variant === "select" || meta?.variant === "multi-select"
+    ? (meta.options ?? [])
+    : [];
 }
 
 export function getDefaultFilter<TData extends RowData>(

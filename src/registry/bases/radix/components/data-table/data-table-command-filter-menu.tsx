@@ -18,6 +18,7 @@ import type {
 
 import {
   coerceFilterValue,
+  getColumnSelectOptions,
   getDateFilterLabel,
   getDefaultFilter,
   getFilterDates,
@@ -634,7 +635,7 @@ function SelectFilterValue<TData extends RowData>({
   const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
   const columnMeta = column.columnDef.meta;
-  const options = columnMeta?.options ?? [];
+  const options = getColumnSelectOptions(columnMeta);
   const value = getSelectFilterValue(filter);
   const multiple = filter.variant === "multi-select";
 
@@ -843,7 +844,7 @@ function FilterValueOptions<TData extends RowData>({
         <>
           <CommandEmpty>No options found.</CommandEmpty>
           <CommandGroup>
-            {columnMeta?.options?.map((option) => (
+            {getColumnSelectOptions(columnMeta).map((option) => (
               <CommandItem
                 key={option.value}
                 value={option.value}

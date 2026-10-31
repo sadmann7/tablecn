@@ -11,7 +11,10 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getFilterVariant } from "@/lib/data-table-utils";
+import {
+  getColumnSelectOptions,
+  getFilterVariant,
+} from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/base/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/base/components/data-table/data-table-faceted-filter";
 import { DataTableSliderFilter } from "@/registry/bases/base/components/data-table/data-table-slider-filter";
@@ -125,7 +128,7 @@ function DataTableToolbarFilter<TData extends RowData>({
           type="number"
           inputMode="numeric"
           placeholder={placeholder}
-          unit={columnMeta.unit}
+          unit={columnMeta.variant === "number" ? columnMeta.unit : undefined}
           className="w-30"
         />
       );
@@ -149,7 +152,7 @@ function DataTableToolbarFilter<TData extends RowData>({
         <DataTableFacetedFilter
           column={column}
           title={title}
-          options={columnMeta.options ?? []}
+          options={getColumnSelectOptions(columnMeta)}
           multiple={filterVariant === "multi-select"}
         />
       );

@@ -14,6 +14,7 @@ import type {
 
 import {
   coerceFilterValue,
+  getColumnSelectOptions,
   getDateFilterLabel,
   getDefaultFilter,
   getFilterDates,
@@ -710,7 +711,7 @@ function SelectFilterValue<TData extends RowData>({
       onValueChange={(value) =>
         onFilterUpdate(filter.filterId, { value: value ?? "" })
       }
-      items={columnMeta?.options}
+      items={getColumnSelectOptions(columnMeta)}
       multiple={multiple}
     >
       <FacetedTrigger asChild>
@@ -737,7 +738,7 @@ function SelectFilterValue<TData extends RowData>({
         <FacetedList>
           <FacetedEmpty>No options found.</FacetedEmpty>
           <FacetedGroup>
-            {columnMeta?.options?.map((option) => (
+            {getColumnSelectOptions(columnMeta).map((option) => (
               <FacetedItem key={option.value} value={option.value}>
                 {option.icon && <option.icon />}
                 <span className="flex-1 truncate">{option.label}</span>
