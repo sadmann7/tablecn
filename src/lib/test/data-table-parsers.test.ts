@@ -142,6 +142,27 @@ describe("parseColumnFilter", () => {
     ).toMatchObject({ operator: "isBetween", value: ["5", ""] });
   });
 
+  it("drops non-numeric range bounds and swaps reversed ones", () => {
+    expect(parseColumnFilter("estimatedHours", "range", "abc")).toMatchObject({
+      operator: "isBetween",
+      value: ["", ""],
+    });
+    expect(parseColumnFilter("estimatedHours", "range", "2,abc")).toMatchObject(
+      { value: ["2", ""] },
+    );
+    expect(parseColumnFilter("estimatedHours", "range", "8,2")).toMatchObject({
+      value: ["2", "8"],
+    });
+    expect(
+      parseColumnFilter("estimatedHours", "number", "between.8,2"),
+    ).toMatchObject({ operator: "isBetween", value: ["2", "8"] });
+    expect(
+      serializeColumnFilter(
+        parseColumnFilter("estimatedHours", "range", "8,2"),
+      ),
+    ).toBe("2,8");
+  });
+
   it("drops filters without a value when parsing", () => {
     const parser = getColumnFilterParser("title", "text");
 

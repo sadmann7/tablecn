@@ -18,7 +18,9 @@ import {
   getPlainFilterId,
   getPlainFilterOperator,
   getPlainFilterValue,
+  getRangeFilterBounds,
   getSelectFilterValue,
+  getValidRangeFilterBounds,
   normalizeColumnFilter,
   parseFilterDate,
   stringifyFilterValue,
@@ -281,6 +283,36 @@ describe("plain filters", () => {
     expect(getActiveFilters([empty, { ...empty, value: "Alpha" }])).toEqual([
       { ...empty, value: "Alpha" },
     ]);
+  });
+});
+
+describe("getRangeFilterBounds", () => {
+  it("clamps bounds to the column range", () => {
+    expect(getRangeFilterBounds(["0", "100"], [1, 24])).toEqual([1, 24]);
+  });
+
+  it("swaps crossed bounds", () => {
+    expect(getRangeFilterBounds(["15", "10"], [1, 24])).toEqual([10, 15]);
+  });
+
+  it("keeps empty and non-numeric bounds open", () => {
+    expect(getRangeFilterBounds(["", "8"], [1, 24])).toEqual([undefined, 8]);
+    expect(getRangeFilterBounds(["5", "abc"], [1, 24])).toEqual([5, undefined]);
+  });
+});
+
+describe("getValidRangeFilterBounds", () => {
+  it("accepts bounds inside the column range", () => {
+    expect(getValidRangeFilterBounds(["5", ""], [1, 24])).toEqual([
+      5,
+      undefined,
+    ]);
+  });
+
+  it("rejects out-of-range, non-numeric, and crossed bounds", () => {
+    expect(getValidRangeFilterBounds(["", "100"], [1, 24])).toBeNull();
+    expect(getValidRangeFilterBounds(["abc", ""], [1, 24])).toBeNull();
+    expect(getValidRangeFilterBounds(["15", "10"], [1, 24])).toBeNull();
   });
 });
 
