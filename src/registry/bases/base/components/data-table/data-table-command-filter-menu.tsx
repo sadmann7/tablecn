@@ -555,7 +555,7 @@ function FilterValueInput<TData extends RowData>(
             column={column}
             inputId={inputId}
             onFilterUpdate={onFilterUpdate}
-            className="size-full max-w-28 gap-0 **:data-[slot='data-table-range-filter-min']:border-e-0 [&_input]:rounded-none [&_input]:px-1.5"
+            className="size-full max-w-28 gap-0 **:data-[slot='data-table-range-filter-min']:border-e-0 **:data-[slot='data-table-range-filter-separator']:sr-only [&_input]:rounded-none [&_input]:px-1.5"
           />
         );
       }

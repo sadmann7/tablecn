@@ -27,6 +27,8 @@ import { Separator } from "@/registry/bases/base/ui/separator";
 import { Slider } from "@/registry/bases/base/ui/slider";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
+const INVALID_RING_DELAY_MS = 500;
+
 interface Range {
   min: number;
   max: number;
@@ -112,6 +114,26 @@ function DataTableSliderFilterContent<TData extends RowData>({
     null,
     null,
   ]);
+  const [showInvalid, setShowInvalid] = React.useState(false);
+  const invalidTimeoutRef = React.useRef<number | undefined>(undefined);
+
+  React.useEffect(
+    () => () => window.clearTimeout(invalidTimeoutRef.current),
+    [],
+  );
+
+  function onInvalidChange(isInvalid: boolean) {
+    window.clearTimeout(invalidTimeoutRef.current);
+    if (!isInvalid) {
+      setShowInvalid(false);
+      return;
+    }
+    if (showInvalid) return;
+    invalidTimeoutRef.current = window.setTimeout(
+      () => setShowInvalid(true),
+      INVALID_RING_DELAY_MS,
+    );
+  }
 
   const formatValue = React.useCallback((value: number) => {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
@@ -145,6 +167,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
       max,
     ]);
     if (nextBounds) setRangeFilter(nextBounds);
+    onInvalidChange(!nextBounds);
   }
 
   function onDraftCommit() {
@@ -152,30 +175,32 @@ function DataTableSliderFilterContent<TData extends RowData>({
 
     setRangeFilter(getRangeFilterBounds(getInputValues(drafts), [min, max]));
     setDrafts([null, null]);
+    onInvalidChange(false);
+  }
+
+  function onInputsBlur(event: React.FocusEvent<HTMLDivElement>) {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
+    onDraftCommit();
   }
 
   function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Enter") onDraftCommit();
   }
 
-  const onSliderValueChange = React.useCallback(
-    (value: number | readonly number[]) => {
-      if (Array.isArray(value) && value.length === 2) {
-        setDrafts([null, null]);
-        setRangeFilter([value[0], value[1]]);
-      }
-    },
-    [setDrafts, setRangeFilter],
-  );
-
-  const onReset = React.useCallback(
-    (event: React.MouseEvent) => {
-      event.stopPropagation();
+  function onSliderValueChange(value: number | readonly number[]) {
+    if (Array.isArray(value) && value.length === 2) {
       setDrafts([null, null]);
-      column.setFilterValue(undefined);
-    },
-    [column, setDrafts],
-  );
+      onInvalidChange(false);
+      setRangeFilter([value[0], value[1]]);
+    }
+  }
+
+  function onReset(event: React.MouseEvent) {
+    event.stopPropagation();
+    setDrafts([null, null]);
+    onInvalidChange(false);
+    column.setFilterValue(undefined);
+  }
 
   return (
     <Popover>
@@ -228,7 +253,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
           <p className="leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             {title}
           </p>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4" onBlur={onInputsBlur}>
             <Label htmlFor={`${id}-from`} className="sr-only">
               From
             </Label>
@@ -238,6 +263,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 type="number"
                 aria-valuemin={min}
                 aria-valuemax={max}
+                aria-invalid={(showInvalid && drafts[0] !== null) || undefined}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 placeholder={min.toString()}
@@ -245,7 +271,6 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={drafts[0] ?? range[0].toString()}
                 onChange={(event) => onDraftChange(0, event.target.value)}
-                onBlur={onDraftCommit}
                 onKeyDown={onInputKeyDown}
               />
               {unit && (
@@ -263,6 +288,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 type="number"
                 aria-valuemin={min}
                 aria-valuemax={max}
+                aria-invalid={(showInvalid && drafts[1] !== null) || undefined}
                 inputMode="numeric"
                 pattern="[0-9]*"
                 placeholder={max.toString()}
@@ -270,7 +296,6 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 max={max}
                 value={drafts[1] ?? range[1].toString()}
                 onChange={(event) => onDraftChange(1, event.target.value)}
-                onBlur={onDraftCommit}
                 onKeyDown={onInputKeyDown}
               />
               {unit && (

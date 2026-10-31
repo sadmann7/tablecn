@@ -295,6 +295,10 @@ describe("getRangeFilterBounds", () => {
     expect(getRangeFilterBounds(["15", "10"], [1, 24])).toEqual([10, 15]);
   });
 
+  it("leaves bounds unclamped without a column range", () => {
+    expect(getRangeFilterBounds(["0", "100"])).toEqual([0, 100]);
+  });
+
   it("keeps empty and non-numeric bounds open", () => {
     expect(getRangeFilterBounds(["", "8"], [1, 24])).toEqual([undefined, 8]);
     expect(getRangeFilterBounds(["5", "abc"], [1, 24])).toEqual([5, undefined]);
@@ -313,6 +317,10 @@ describe("getValidRangeFilterBounds", () => {
     expect(getValidRangeFilterBounds(["", "100"], [1, 24])).toBeNull();
     expect(getValidRangeFilterBounds(["abc", ""], [1, 24])).toBeNull();
     expect(getValidRangeFilterBounds(["15", "10"], [1, 24])).toBeNull();
+  });
+
+  it("accepts any number without a column range", () => {
+    expect(getValidRangeFilterBounds(["", "100"])).toEqual([undefined, 100]);
   });
 });
 

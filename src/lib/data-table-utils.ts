@@ -348,9 +348,11 @@ export function stringifyFilterValue(value: unknown): string {
   return String(value as string | number | boolean | bigint);
 }
 
+const UNBOUNDED_RANGE: [number, number] = [-Infinity, Infinity];
+
 export function getRangeFilterBounds(
   values: [string, string],
-  [min, max]: [number, number],
+  [min, max]: [number, number] = UNBOUNDED_RANGE,
 ): [number | undefined, number | undefined] {
   const [start, end] = values.map((value) => {
     const number = Number(value);
@@ -366,7 +368,7 @@ export function getRangeFilterBounds(
 
 export function getValidRangeFilterBounds(
   values: [string, string],
-  [min, max]: [number, number],
+  [min, max]: [number, number] = UNBOUNDED_RANGE,
 ): [number | undefined, number | undefined] | null {
   const [start, end] = values.map((value) =>
     value.trim() === "" ? undefined : Number(value),

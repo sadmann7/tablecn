@@ -44,16 +44,28 @@ const columns = columnHelper.columns([
 
 describe("DataTableSliderFilter", () => {
   it("applies a valid bound while typing and holds one that crosses", () => {
-    const { table, openFilter } = renderToolbar();
-    act(() => table.getColumn("hours")?.setFilterValue([5, 24]));
-    const [, to] = openFilter();
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const { table, openFilter } = renderToolbar();
+      act(() => table.getColumn("hours")?.setFilterValue([5, 24]));
+      const [, to] = openFilter();
 
-    fireEvent.change(to, { target: { value: "1" } });
-    expect(table.getColumn("hours")?.getFilterValue()).toEqual([5, 24]);
-    expect((to as HTMLInputElement).value).toBe("1");
+      fireEvent.change(to, { target: { value: "1" } });
+      expect(table.getColumn("hours")?.getFilterValue()).toEqual([5, 24]);
+      expect((to as HTMLInputElement).value).toBe("1");
+      expect(to.getAttribute("aria-invalid")).toBeNull();
 
-    fireEvent.change(to, { target: { value: "12" } });
-    expect(table.getColumn("hours")?.getFilterValue()).toEqual([5, 12]);
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(to.getAttribute("aria-invalid")).toBe("true");
+
+      fireEvent.change(to, { target: { value: "12" } });
+      expect(table.getColumn("hours")?.getFilterValue()).toEqual([5, 12]);
+      expect(to.getAttribute("aria-invalid")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("writes both bounds when one side starts at the column range", () => {
@@ -71,9 +83,23 @@ describe("DataTableSliderFilter", () => {
     const [from] = openFilter();
 
     fireEvent.change(from, { target: { value: "" } });
-    fireEvent.blur(from);
+    fireEvent.focusOut(from);
 
     expect(table.getColumn("hours")?.getFilterValue()).toBeUndefined();
+  });
+
+  it("waits until focus leaves both inputs before swapping", () => {
+    const { table, openFilter } = renderToolbar();
+    act(() => table.getColumn("hours")?.setFilterValue([5, 10]));
+    const [from, to] = openFilter();
+
+    fireEvent.change(from, { target: { value: "15" } });
+    fireEvent.focusOut(from, { relatedTarget: to });
+    expect((from as HTMLInputElement).value).toBe("15");
+    expect(table.getColumn("hours")?.getFilterValue()).toEqual([5, 10]);
+
+    fireEvent.focusOut(to, { relatedTarget: document.body });
+    expect(table.getColumn("hours")?.getFilterValue()).toEqual([10, 15]);
   });
 
   it("clamps and swaps bounds on Enter", () => {
@@ -90,32 +116,53 @@ describe("DataTableSliderFilter", () => {
 });
 
 describe("DataTableRangeFilter", () => {
-  it("applies a valid bound while typing and clamps an invalid one on blur", () => {
+  it("applies bounds beyond the column range without clamping", () => {
     const { onFilterUpdate, inputs } = renderRangeFilter(["", ""]);
     const [, max] = inputs;
 
-    fireEvent.change(max, { target: { value: "10" } });
+    fireEvent.change(max, { target: { value: "100" } });
     expect(onFilterUpdate).toHaveBeenLastCalledWith("hours-filter", {
-      value: ["", "10"],
+      value: ["", "100"],
     });
 
-    fireEvent.change(max, { target: { value: "100" } });
-    expect(onFilterUpdate).toHaveBeenCalledTimes(1);
-
-    fireEvent.blur(max);
+    fireEvent.focusOut(max);
     expect(onFilterUpdate).toHaveBeenLastCalledWith("hours-filter", {
-      value: ["", "24"],
+      value: ["", "100"],
     });
   });
 
   it("swaps crossed bounds on Enter", () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const { onFilterUpdate, inputs } = renderRangeFilter(["", "10"]);
+      const [min] = inputs;
+
+      fireEvent.change(min, { target: { value: "15" } });
+      expect(onFilterUpdate).not.toHaveBeenCalled();
+      act(() => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(min.getAttribute("aria-invalid")).toBe("true");
+
+      fireEvent.keyDown(min, { key: "Enter" });
+      expect(min.getAttribute("aria-invalid")).toBeNull();
+      expect(onFilterUpdate).toHaveBeenCalledWith("hours-filter", {
+        value: ["10", "15"],
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("waits until focus leaves both inputs before swapping", () => {
     const { onFilterUpdate, inputs } = renderRangeFilter(["", "10"]);
-    const [min] = inputs;
+    const [min, max] = inputs;
 
     fireEvent.change(min, { target: { value: "15" } });
+    fireEvent.focusOut(min, { relatedTarget: max });
     expect(onFilterUpdate).not.toHaveBeenCalled();
 
-    fireEvent.keyDown(min, { key: "Enter" });
+    fireEvent.focusOut(max, { relatedTarget: document.body });
     expect(onFilterUpdate).toHaveBeenCalledWith("hours-filter", {
       value: ["10", "15"],
     });
@@ -126,7 +173,7 @@ describe("DataTableRangeFilter", () => {
     const [min] = inputs;
 
     fireEvent.change(min, { target: { value: "" } });
-    fireEvent.blur(min);
+    fireEvent.focusOut(min);
 
     expect(onFilterUpdate).toHaveBeenCalledWith("hours-filter", {
       value: ["", "10"],
