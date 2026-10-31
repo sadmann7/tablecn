@@ -25,6 +25,7 @@ import type { useDataGrid } from "@/registry/bases/base/hooks/use-data-grid";
 import {
   getColumnBorderVisibility,
   getColumnPinningStyle,
+  getHeaderSizeVar,
   getWindowedColumns,
 } from "@/lib/data-grid-utils";
 import { DataGridColumnHeader } from "@/registry/bases/base/components/data-grid/data-grid-column-header";
@@ -693,7 +694,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                       })}
                       style={{
                         ...getColumnPinningStyle(header.column),
-                        width: `calc(var(--header-${header.id}-size) * 1px)`,
+                        width: getHeaderSizeVar(header.id),
                       }}
                     >
                       {header.isPlaceholder ? null : header.column.columnDef

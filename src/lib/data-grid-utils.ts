@@ -611,9 +611,17 @@ export function getCellLayoutStyle({
     insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
     opacity: pinned ? 0.97 : undefined,
     position: pinned ? "sticky" : "relative",
-    width: `calc(var(--col-${columnId.replace(/[^\w-]/g, "\\$&")}-size) * 1px)`,
+    width: getColumnSizeVar(columnId),
     zIndex: pinned ? 20 : undefined,
   };
+}
+
+export function getColumnSizeVar(columnId: string) {
+  return getSizeVar("col", columnId);
+}
+
+export function getHeaderSizeVar(headerId: string) {
+  return getSizeVar("header", headerId);
 }
 
 export function getColumnFitSize({
@@ -1170,4 +1178,8 @@ export function revokeFileObjectUrls(
   for (const url of urls) {
     if (!keptUrls.has(url)) URL.revokeObjectURL(url);
   }
+}
+
+function getSizeVar(prefix: string, id: string) {
+  return `calc(var(--${prefix}-${id.replace(/[^\w-]/g, "\\$&")}-size) * 1px)`;
 }
