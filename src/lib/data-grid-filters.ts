@@ -14,10 +14,10 @@ import type {
 
 import { getColumnValueReader, stringifyUnknown } from "@/lib/data-grid-utils";
 
-export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
+export const TEXT_FILTER_OPERATORS: readonly {
   label: string;
   value: TextFilterOperator;
-}> = [
+}[] = [
   { label: "Contains", value: "contains" },
   { label: "Does not contain", value: "notContains" },
   { label: "Is", value: "equals" },
@@ -28,10 +28,10 @@ export const TEXT_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is not empty", value: "isNotEmpty" },
 ];
 
-export const NUMBER_FILTER_OPERATORS: ReadonlyArray<{
+export const NUMBER_FILTER_OPERATORS: readonly {
   label: string;
   value: NumberFilterOperator;
-}> = [
+}[] = [
   { label: "Is", value: "equals" },
   { label: "Is not", value: "notEquals" },
   { label: "Is less than", value: "lessThan" },
@@ -43,10 +43,10 @@ export const NUMBER_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is not empty", value: "isNotEmpty" },
 ];
 
-export const DATE_FILTER_OPERATORS: ReadonlyArray<{
+export const DATE_FILTER_OPERATORS: readonly {
   label: string;
   value: DateFilterOperator;
-}> = [
+}[] = [
   { label: "Is", value: "equals" },
   { label: "Is not", value: "notEquals" },
   { label: "Is before", value: "before" },
@@ -58,10 +58,10 @@ export const DATE_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is not empty", value: "isNotEmpty" },
 ];
 
-export const SELECT_FILTER_OPERATORS: ReadonlyArray<{
+export const SELECT_FILTER_OPERATORS: readonly {
   label: string;
   value: SelectFilterOperator;
-}> = [
+}[] = [
   { label: "Is", value: "is" },
   { label: "Is not", value: "isNot" },
   { label: "Has any of", value: "isAnyOf" },
@@ -70,10 +70,10 @@ export const SELECT_FILTER_OPERATORS: ReadonlyArray<{
   { label: "Is not empty", value: "isNotEmpty" },
 ];
 
-export const BOOLEAN_FILTER_OPERATORS: ReadonlyArray<{
+export const BOOLEAN_FILTER_OPERATORS: readonly {
   label: string;
   value: BooleanFilterOperator;
-}> = [
+}[] = [
   { label: "Is", value: "isTrue" },
   { label: "Is not", value: "isFalse" },
 ];
@@ -118,10 +118,10 @@ export function getDefaultOperator(variant: string): FilterOperator {
   }
 }
 
-export function getOperatorsForVariant(variant: string): ReadonlyArray<{
+export function getOperatorsForVariant(variant: string): readonly {
   label: string;
   value: FilterOperator;
-}> {
+}[] {
   switch (variant) {
     case "number":
       return NUMBER_FILTER_OPERATORS;

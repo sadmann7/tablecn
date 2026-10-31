@@ -37,7 +37,7 @@ import {
 } from "@/lib/data-grid-utils";
 import { DataGridDataCell } from "@/registry/bases/radix/components/data-grid/data-grid-data-cell";
 
-const EMPTY_CELL_SELECTION_BOUNDS: Array<CellSelectionBounds> = [];
+const EMPTY_CELL_SELECTION_BOUNDS: CellSelectionBounds[] = [];
 
 interface DataGridRowContextValue {
   stretchColumns: boolean;
@@ -53,7 +53,7 @@ interface DataGridRowProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   row: Row<DataGridFeatures, TData>;
-  leafColumns: Array<Column<DataGridFeatures, TData>>;
+  leafColumns: Column<DataGridFeatures, TData>[];
   virtualItem: VirtualItem;
   columnWindow: ColumnWindow | null;
   isScrolling: boolean;
@@ -99,7 +99,7 @@ function DataGridRowImpl<TData extends RowData>({
 }
 
 interface RowState<TData extends RowData> {
-  visibleCells: Array<Cell<DataGridFeatures, TData>>;
+  visibleCells: Cell<DataGridFeatures, TData>[];
   columnSizing: TableState<DataGridFeatures>["columnSizing"];
   rowHeight: RowHeightValue;
   focusedColumnId: string | null;

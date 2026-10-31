@@ -29,13 +29,13 @@ import { getColumnValueReader } from "@/lib/data-grid-utils";
 export const patchedRows = new WeakSet();
 
 export interface RowChangeHint {
-  from: ReadonlyArray<RowData>;
+  from: readonly RowData[];
   removedIndexes: number[];
   insertedIndexes: number[];
 }
 
 export const rowChangeHints = new WeakMap<
-  ReadonlyArray<RowData>,
+  readonly RowData[],
   RowChangeHint
 >();
 
@@ -74,7 +74,7 @@ export function createDataGridCoreRowModel<
   return (_table) => {
     const table = _table as unknown as Table<TableFeatures, RowData>;
     let previous: RowModel<TableFeatures, RowData> | null = null;
-    let previousData: ReadonlyArray<RowData> | null = null;
+    let previousData: readonly RowData[] | null = null;
     return tableMemo({
       feature: "coreRowModelsFeature",
       table: _table,
@@ -117,9 +117,9 @@ interface ResolvedSort {
 }
 
 interface SortCache {
-  rows: Array<SortedRow>;
-  sorting: Array<{ id: string; desc: boolean }>;
-  order: Array<number>;
+  rows: SortedRow[];
+  sorting: { id: string; desc: boolean }[];
+  order: number[];
   getIsTie: (a: number, b: number) => boolean;
 }
 
@@ -165,7 +165,7 @@ function getShiftedRowModel(
 ): RowModel<TableFeatures, RowData> {
   const { data } = table.options;
   const { rowsById } = previous;
-  const rows: Array<CoreRow> = Array.from({ length: data.length });
+  const rows: CoreRow[] = Array.from({ length: data.length });
   let previousIndex = 0;
   let removed = 0;
   let inserted = 0;
@@ -220,7 +220,7 @@ function getCoreRowModel(
 
   if (previous && !getSubRows && previous.rows.length === data.length) {
     const rows = previous.rows.slice();
-    const changedRows: Array<CoreRow> = [];
+    const changedRows: CoreRow[] = [];
     let isSameShape = true;
     for (let i = 0; i < data.length; i++) {
       const originalRow = data[i];
@@ -254,12 +254,12 @@ function getCoreRowModel(
   };
 
   function accessRows(
-    originalRows: ReadonlyArray<RowData>,
+    originalRows: readonly RowData[],
     depth: number,
-    previousRows: ReadonlyArray<CoreRow>,
+    previousRows: readonly CoreRow[],
     parentRow?: CoreRow,
   ) {
-    const rows: Array<CoreRow> = [];
+    const rows: CoreRow[] = [];
     for (let i = 0; i < originalRows.length; i++) {
       const originalRow = originalRows[i];
       if (originalRow === undefined) continue;
@@ -309,7 +309,7 @@ function getSortedRowModel(
     return preSortedRowModel;
   }
 
-  const resolvedSorting: Array<ResolvedSort> = [];
+  const resolvedSorting: ResolvedSort[] = [];
   for (const sort of sorting) {
     const column = table.getColumn(sort.id);
     if (!column || !column_getCanSort(column)) continue;
@@ -325,7 +325,7 @@ function getSortedRowModel(
   }
   if (!resolvedSorting.length) return preSortedRowModel;
 
-  const sortedFlatRows: Array<SortedRow> = [];
+  const sortedFlatRows: SortedRow[] = [];
 
   const isCacheable =
     preSortedRowModel.flatRows.length === preSortedRowModel.rows.length &&
@@ -367,7 +367,7 @@ function getSortedRowModel(
   if (unfiltered) {
     const sorting = resolvedSorting.map(({ id, desc }) => ({ id, desc }));
     const rowsById = preSortedRowModel.rowsById;
-    let order: Array<number>;
+    let order: number[];
 
     if (
       isFiltered &&
@@ -402,7 +402,7 @@ function getSortedRowModel(
       cache.filtered = { rows: preSortedRowModel.rows, sorting, order };
     }
 
-    const rows: Array<SortedRow> = [];
+    const rows: SortedRow[] = [];
     for (const index of order) {
       const row = unfilteredRows[index];
       if (row) rows.push(row);
@@ -410,7 +410,7 @@ function getSortedRowModel(
     return { rows, flatRows: rows.slice(), rowsById };
   }
 
-  function getRowsComparator(rows: Array<SortedRow>) {
+  function getRowsComparator(rows: SortedRow[]) {
     const rawValues = resolvedSorting.map((sort) =>
       sort.compareValues || sort.sortUndefined
         ? rows.map(getColumnValueReader(table.getColumn(sort.id)))
@@ -472,8 +472,8 @@ function getSortedRowModel(
     };
   }
 
-  function sortRows(rows: Array<SortedRow>, isTopLevel = false) {
-    let order: Array<number>;
+  function sortRows(rows: SortedRow[], isTopLevel = false) {
+    let order: number[];
     let getIsTie: (a: number, b: number) => boolean;
 
     if (
@@ -505,7 +505,7 @@ function getSortedRowModel(
       if (isFlat && !isFiltered) cache.unfiltered = sortCache;
     }
 
-    const sortedRows: Array<SortedRow> = [];
+    const sortedRows: SortedRow[] = [];
     let changed = false;
     for (const index of order) {
       const row = rows[index];
@@ -548,8 +548,8 @@ const MAX_RESORTED_SHARE = 1 / 8;
 function getUpdatedUnfilteredCache(
   table: Table<TableFeatures, RowData>,
   cache: SortCache,
-  rows: Array<SortedRow>,
-  sorting: Array<ResolvedSort>,
+  rows: SortedRow[],
+  sorting: ResolvedSort[],
 ): SortCache | null {
   if (cache.rows === rows) return cache;
   if (cache.rows.length !== rows.length) return null;
@@ -565,7 +565,7 @@ function getUpdatedUnfilteredCache(
   const readValues = columns.map(getColumnValueReader);
   const maxChanged = Math.max(1, Math.floor(rows.length * MAX_RESORTED_SHARE));
 
-  const changed: Array<number> = [];
+  const changed: number[] = [];
   for (let index = 0; index < rows.length; index++) {
     const row = rows[index];
     const previousRow = cache.rows[index];
@@ -594,7 +594,7 @@ function getUpdatedUnfilteredCache(
   const remaining = cache.order.filter((index) => !changedSet.has(index));
   changed.sort(compareWithTie);
 
-  const order: Array<number> = [];
+  const order: number[] = [];
   let from = 0;
   for (const index of changed) {
     let low = from;
@@ -621,9 +621,9 @@ function getUpdatedUnfilteredCache(
 }
 
 function getLazyRowsComparator(
-  rows: Array<SortedRow>,
-  sorting: Array<ResolvedSort>,
-  readValues: Array<(row: SortedRow) => unknown>,
+  rows: SortedRow[],
+  sorting: ResolvedSort[],
+  readValues: ((row: SortedRow) => unknown)[],
 ) {
   return (a: number, b: number) => {
     const rowA = rows[a];
@@ -675,7 +675,7 @@ function getLazyRowsComparator(
 
 function getIsSameSorting(
   previous: SortCache["sorting"],
-  sorting: Array<ResolvedSort>,
+  sorting: ResolvedSort[],
 ) {
   return (
     previous.length === sorting.length &&
@@ -688,7 +688,7 @@ function getIsSameSorting(
 
 function getIsFlippedSorting(
   previous: SortCache["sorting"],
-  sorting: Array<ResolvedSort>,
+  sorting: ResolvedSort[],
 ) {
   return (
     previous.length === sorting.length &&
@@ -700,10 +700,10 @@ function getIsFlippedSorting(
 }
 
 function getFlippedOrder(
-  order: Array<number>,
+  order: number[],
   getIsTie: (a: number, b: number) => boolean,
 ) {
-  const flipped: Array<number> = [];
+  const flipped: number[] = [];
   let groupEnd = order.length;
   for (let index = order.length - 1; index >= 0; index--) {
     const current = order[index];
@@ -720,8 +720,8 @@ function getFlippedOrder(
   return flipped;
 }
 
-function getAlphanumericSortKeys(values: Array<unknown>) {
-  const keys: Array<string> = [];
+function getAlphanumericSortKeys(values: unknown[]) {
+  const keys: string[] = [];
   for (const value of values) {
     const key = getAlphanumericSortKey(value);
     if (key === null) return null;

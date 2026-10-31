@@ -62,7 +62,7 @@ import { Toggle } from "@/registry/bases/radix/ui/toggle";
 import { DataGridPresenceAvatars } from "./data-grid-presence-avatars";
 import { DataGridShareMenu } from "./data-grid-share-menu";
 
-type SkaterRows = Array<Row<DataGridFeatures, SkaterSchema>>;
+type SkaterRows = Row<DataGridFeatures, SkaterSchema>[];
 
 const stanceOptions = SKATER_STANCES.map((stance) => ({
   label: stance.charAt(0).toUpperCase() + stance.slice(1),
@@ -362,7 +362,7 @@ export function DataGridMultiplayerDemo({
   );
 
   const cellPresence = React.useMemo(() => {
-    const presence: Array<CellPresence> = [];
+    const presence: CellPresence[] = [];
 
     for (const [userId, user] of Object.entries(users)) {
       if (userId === currentUserId) continue;

@@ -21,10 +21,10 @@ const SHORTCUT_KEY = "/";
 
 interface ShortcutGroup {
   title: string;
-  shortcuts: Array<{
+  shortcuts: {
     keys: string[];
     description: string;
-  }>;
+  }[];
 }
 
 interface DataGridKeyboardShortcutsProps {

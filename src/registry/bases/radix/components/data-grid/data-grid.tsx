@@ -226,7 +226,7 @@ function DataGridViewport<TData extends RowData>({
           : endIndex - startIndex + 1;
       const total = Math.min(count, visibleCount + overscan * 2);
       const start = Math.max(0, Math.min(startIndex - before, count - total));
-      const indexes: Array<number> = [];
+      const indexes: number[] = [];
       for (let index = start; index < start + total; index++) {
         indexes.push(index);
       }
@@ -522,7 +522,7 @@ function DataGridViewport<TData extends RowData>({
 }
 
 function getColumnsWidth<TData extends RowData>(
-  columns: Array<Column<DataGridFeatures, TData>>,
+  columns: Column<DataGridFeatures, TData>[],
 ) {
   let width = 0;
   for (const column of columns) width += column.getSize();
@@ -592,7 +592,7 @@ interface DataGridHeaderProps<TData extends RowData>
   extends
     Pick<DataGridProps<TData>, "table" | "headerRef">,
     Required<Pick<DataGridProps<TData>, "stretchColumns">> {
-  headerGroups: Array<HeaderGroup<DataGridFeatures, TData>>;
+  headerGroups: HeaderGroup<DataGridFeatures, TData>[];
   columnWindow: ColumnWindow | null;
 }
 

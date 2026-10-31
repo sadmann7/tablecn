@@ -63,7 +63,7 @@ export function createSkatersCollection(connection: RoomConnection) {
       const parsed = parseSkater({ ...serializeSkater(existing), ...changes });
       if (!parsed) return [];
       const value = { id: rowId } as Partial<SkaterSchema>;
-      for (const key of Object.keys(changes) as Array<keyof SkaterSchema>) {
+      for (const key of Object.keys(changes) as (keyof SkaterSchema)[]) {
         Object.assign(value, { [key]: parsed[key] });
       }
       return [{ type: "update", value: value as SkaterSchema }];

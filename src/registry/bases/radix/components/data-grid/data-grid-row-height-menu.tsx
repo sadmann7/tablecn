@@ -84,7 +84,7 @@ const rowHeights = [
       />
     ),
   },
-] as const satisfies ReadonlyArray<RowHeightOption>;
+] as const satisfies readonly RowHeightOption[];
 
 interface DataGridRowHeightMenuProps<
   TData extends RowData,

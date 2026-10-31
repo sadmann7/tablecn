@@ -1155,7 +1155,7 @@ export function FileCell<TData extends RowData>(
         return;
       }
 
-      const rejectedFiles: Array<{ name: string; reason: string }> = [];
+      const rejectedFiles: { name: string; reason: string }[] = [];
       const filesToUpload: File[] = [];
 
       for (const file of newFiles) {

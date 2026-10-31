@@ -356,7 +356,7 @@ export function parseCellKey(cellKey: string): CellPosition {
 }
 
 export function getRowCellSelectionKey(
-  bounds: Array<CellSelectionBounds>,
+  bounds: CellSelectionBounds[],
   rowIndex: number,
 ) {
   let key = "";
@@ -463,7 +463,7 @@ export function getColumnVariant(variant?: CellOpts["variant"]): {
   }
 }
 
-export function swapItems<T>(items: Array<T>, first: T, second: T) {
+export function swapItems<T>(items: T[], first: T, second: T) {
   return items.map((item) => {
     if (item === first) return second;
     if (item === second) return first;
@@ -504,13 +504,13 @@ type WindowedColumnEntry<T> =
 export function getWindowedColumns<T>(
   items: T[],
   columnWindow: ColumnWindow | null,
-): Array<WindowedColumnEntry<T>> {
+): WindowedColumnEntry<T>[] {
   if (!columnWindow) {
     return items.map((item, colIndex) => ({ type: "column", item, colIndex }));
   }
 
   const { startCount, centerCount, centerStart, centerEnd } = columnWindow;
-  const entries: Array<WindowedColumnEntry<T>> = [];
+  const entries: WindowedColumnEntry<T>[] = [];
 
   for (let colIndex = 0; colIndex < startCount; colIndex++) {
     const item = items[colIndex];

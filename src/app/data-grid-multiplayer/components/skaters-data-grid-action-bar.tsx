@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
-type SkaterRows<TData extends RowData> = Array<Row<DataGridFeatures, TData>>;
+type SkaterRows<TData extends RowData> = Row<DataGridFeatures, TData>[];
 
 interface SkatersDataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;

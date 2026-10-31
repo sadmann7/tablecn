@@ -27,7 +27,7 @@ export const QUOTE_FIELDS = [
   "low",
   "marketCap",
   "history",
-] as const satisfies ReadonlyArray<keyof Quote>;
+] as const satisfies readonly (keyof Quote)[];
 
 const HISTORY_LENGTH = 40;
 
@@ -36,7 +36,7 @@ interface SectorProfile {
   volatility: number;
   // How strongly the sector follows the whole market
   beta: number;
-  suffixes: ReadonlyArray<string>;
+  suffixes: readonly string[];
 }
 
 const SECTOR_PROFILES = {
@@ -271,7 +271,7 @@ export function tickMarket(
   return [...moved];
 }
 
-function pick<T>(items: ReadonlyArray<T>, random: () => number): T {
+function pick<T>(items: readonly T[], random: () => number): T {
   return items[Math.floor(random() * items.length)] as T;
 }
 

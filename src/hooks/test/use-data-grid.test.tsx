@@ -2724,7 +2724,7 @@ describe("useDataGrid", () => {
             index === 11 || index === 21 ? "match" : "",
           ]),
         ]),
-      ] as Array<Record<string, string>>;
+      ] as Record<string, string>[];
       const columns: ColumnDef<DataGridFeatures, Record<string, string>>[] =
         columnIds.map((id) => ({ id, accessorKey: id }));
 
