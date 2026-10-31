@@ -68,7 +68,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 const CELL_BORDER_WIDTH = 1;
 // Editors open in place, so they skip the popover's enter and exit animations
 const CELL_EDITOR_CLASS_NAME =
-  "rounded-none ring-inset data-open:animate-none data-closed:animate-none";
+  "rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
 
 export function ShortTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -245,7 +245,7 @@ export function LongTextCell<TData extends RowData>(
           side="bottom"
           alignOffset={-CELL_BORDER_WIDTH}
           sideOffset={getOverlapOffset}
-          className={cn(CELL_EDITOR_CLASS_NAME, "w-100 p-0")}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-100")}
           initialFocus={onInitialFocus}
           finalFocus={onFinalFocus}
         >
@@ -634,12 +634,8 @@ export function SelectCell<TData extends RowData>(
           aria-label={getColumnLabel(cell.column)}
           data-grid-cell-editor=""
           align="start"
-          alignOffset={-CELL_BORDER_WIDTH}
           sideOffset={0}
-          className={cn(CELL_EDITOR_CLASS_NAME, "w-auto min-w-36 p-0")}
-          style={{
-            width: `calc(var(--anchor-width) + ${CELL_BORDER_WIDTH * 2}px)`,
-          }}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-(--anchor-width) min-w-36")}
           initialFocus={onInitialFocus}
           finalFocus={onFinalFocus}
         >
@@ -845,7 +841,7 @@ export function MultiSelectCell<TData extends RowData>(
             align="start"
             alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset}
-            className={cn(CELL_EDITOR_CLASS_NAME, "w-75 p-0")}
+            className={cn(CELL_EDITOR_CLASS_NAME, "w-75")}
             style={{
               minWidth: `calc(var(--anchor-width) + ${CELL_BORDER_WIDTH * 2}px)`,
             }}
@@ -1033,9 +1029,8 @@ export function DateCell<TData extends RowData>(
           aria-label={getColumnLabel(cell.column)}
           data-grid-cell-editor=""
           align="start"
-          alignOffset={-CELL_BORDER_WIDTH}
           sideOffset={0}
-          className={cn(CELL_EDITOR_CLASS_NAME, "w-auto p-0")}
+          className={cn(CELL_EDITOR_CLASS_NAME, "w-auto")}
           finalFocus={onFinalFocus}
         >
           <Calendar
@@ -1511,7 +1506,7 @@ export function FileCell<TData extends RowData>(
             align="start"
             alignOffset={-CELL_BORDER_WIDTH}
             sideOffset={getOverlapOffset}
-            className={cn(CELL_EDITOR_CLASS_NAME, "w-100 p-0")}
+            className={cn(CELL_EDITOR_CLASS_NAME, "w-100")}
             initialFocus={onInitialFocus}
             finalFocus={onFinalFocus}
             onKeyDown={onEditorKeyDown}
