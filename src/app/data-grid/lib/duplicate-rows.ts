@@ -8,7 +8,7 @@ import type { Person } from "./seeds";
 
 export function duplicateRows(
   table: Table<DataGridFeatures, Person>,
-  rows: Array<Row<DataGridFeatures, Person>>,
+  rows: Row<DataGridFeatures, Person>[],
 ) {
   for (const row of rows) {
     table.addRows([{ ...row.original, id: generateId() }], {

@@ -48,6 +48,7 @@
     "typescript/no-misused-spread": "warn",
     "typescript/no-base-to-string": "warn",
     "typescript/no-duplicate-type-constituents": "warn",
+    "typescript/array-type": ["warn", { "default": "array" }],
     "no-shadow": "off",
     "no-new": "off",
     "no-underscore-dangle": "off",

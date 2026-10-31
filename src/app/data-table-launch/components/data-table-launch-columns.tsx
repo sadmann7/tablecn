@@ -1,7 +1,6 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
-
+import { createColumnHelper } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -25,13 +24,14 @@ import {
   launchStatusOptions,
 } from "../lib/data";
 
-export const launchColumns: ColumnDef<
+const columnHelper = createColumnHelper<
   DataTableFeatures,
   DataTableLaunchTask
->[] = [
-  {
+>();
+
+export const launchColumns = columnHelper.columns([
+  columnHelper.accessor("title", {
     id: "title",
-    accessorKey: "title",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Title" />
     ),
@@ -52,10 +52,9 @@ export const launchColumns: ColumnDef<
       icon: Text,
     },
     enableColumnFilter: true,
-  },
-  {
+  }),
+  columnHelper.accessor("status", {
     id: "status",
-    accessorKey: "status",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Status" />
     ),
@@ -76,10 +75,9 @@ export const launchColumns: ColumnDef<
       icon: CircleDashed,
     },
     enableColumnFilter: true,
-  },
-  {
+  }),
+  columnHelper.accessor("priority", {
     id: "priority",
-    accessorKey: "priority",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Priority" />
     ),
@@ -100,10 +98,9 @@ export const launchColumns: ColumnDef<
       icon: ArrowUpDown,
     },
     enableColumnFilter: true,
-  },
-  {
+  }),
+  columnHelper.accessor("estimatedHours", {
     id: "estimatedHours",
-    accessorKey: "estimatedHours",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Est. Hours" />
     ),
@@ -120,10 +117,9 @@ export const launchColumns: ColumnDef<
       icon: Clock,
     },
     enableColumnFilter: true,
-  },
-  {
+  }),
+  columnHelper.accessor("createdAt", {
     id: "createdAt",
-    accessorKey: "createdAt",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} label="Created At" />
     ),
@@ -134,5 +130,5 @@ export const launchColumns: ColumnDef<
       icon: CalendarIcon,
     },
     enableColumnFilter: true,
-  },
-];
+  }),
+]);

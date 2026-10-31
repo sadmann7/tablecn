@@ -51,11 +51,12 @@ export function DataGridCell<TData extends RowData>({
     const element = cellRef.current;
     const grid = element?.closest('[role="grid"]');
     const active = document.activeElement;
-    if (!element || !grid || !active || element.contains(active)) return;
+    if (!element || !grid || element.contains(active)) return;
+    const isPageFocused = !active || active === document.body;
     const activeGrid = active
-      .closest('[data-slot="data-grid-cell"]')
+      ?.closest('[data-slot="data-grid-cell"]')
       ?.closest('[role="grid"]');
-    if (active !== grid && activeGrid !== grid) return;
+    if (!isPageFocused && active !== grid && activeGrid !== grid) return;
     getCellFocusTarget(element).focus({ preventScroll: true });
   }, [isFocused, isEditing]);
 
@@ -114,7 +115,7 @@ export function DataGridCell<TData extends RowData>({
       data-selected={isSelected ? "" : undefined}
       tabIndex={isFocused && !isEditing ? 0 : -1}
       className={cn(
-        "h-full px-2 pt-1.75 pb-2 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5",
+        "h-full px-2 pt-1.75 pb-2 text-start text-sm outline-none has-data-[slot=checkbox]:pt-2.5 **:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:w-fit **:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:max-w-full **:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:wrap-anywhere",
         {
           grow,
           "border-s": showStartBorder,
@@ -131,16 +132,14 @@ export function DataGridCell<TData extends RowData>({
           [CELL_TINTS.darkActiveSearchMatch]: isActiveSearchMatch,
           [CELL_TINTS.darkSearchMatch]: isSearchMatch && !isActiveSearchMatch,
           "cursor-default": !isEditing,
-          "**:data-[slot=data-grid-cell-content]:w-fit **:data-[slot=data-grid-cell-content]:max-w-full **:data-[slot=data-grid-cell-content]:wrap-anywhere":
-            !isEditing,
-          "**:data-[slot=data-grid-cell-content]:line-clamp-1":
-            !isEditing && rowHeight === "short",
-          "**:data-[slot=data-grid-cell-content]:line-clamp-2":
-            !isEditing && rowHeight === "medium",
-          "**:data-[slot=data-grid-cell-content]:line-clamp-3":
-            !isEditing && rowHeight === "tall",
-          "**:data-[slot=data-grid-cell-content]:line-clamp-4":
-            !isEditing && rowHeight === "extra-tall",
+          "**:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:line-clamp-1":
+            rowHeight === "short",
+          "**:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:line-clamp-2":
+            rowHeight === "medium",
+          "**:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:line-clamp-3":
+            rowHeight === "tall",
+          "**:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:line-clamp-4":
+            rowHeight === "extra-tall",
         },
         className,
       )}

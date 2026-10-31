@@ -1,7 +1,6 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
-
+import { createColumnHelper } from "@tanstack/react-table";
 import { cn } from "cn";
 import {
   ArrowDown,
@@ -131,12 +130,7 @@ const CONTROLS: { label: string; keys: ControlKey[] }[] = [
   { label: "Mute", keys: [MUTE_KEYS] },
 ];
 
-interface ControlProps extends React.ComponentProps<typeof TooltipTrigger> {
-  label: string;
-  keys?: string;
-}
-
-interface DataGridDoomDemoProps extends DoomParams {}
+const columnHelper = createColumnHelper<DataGridFeatures, PixelRow>();
 
 export function DataGridDoomDemo({
   columnCount,
@@ -145,7 +139,7 @@ export function DataGridDoomDemo({
   damage,
   auto,
   grid,
-}: DataGridDoomDemoProps) {
+}: DoomParams) {
   const rowCount = Math.round((columnCount * SCREEN_HEIGHT) / SCREEN_WIDTH);
   // The grid's data stays put: frames go to the cells through `updateCells`
   const [frame] = React.useState<PixelRow[]>(() =>
@@ -190,19 +184,22 @@ export function DataGridDoomDemo({
     isFullscreen,
   });
 
-  const columns = React.useMemo<ColumnDef<DataGridFeatures, PixelRow>[]>(
+  const columns = React.useMemo(
     () =>
-      Array.from({ length: columnCount }, (_, x) => ({
-        id: `c${x}`,
-        accessorKey: `c${x}`,
-        // A function header renders as is, keeping the collapsed header row empty
-        header: () => null,
-        size: CELL_SIZE,
-        minSize: CELL_SIZE,
-        maxSize: CELL_SIZE,
-        cell: () => null,
-        meta: mode === "data" ? { writeCell: writePixel } : undefined,
-      })),
+      columnHelper.columns(
+        Array.from({ length: columnCount }, (_, x) =>
+          columnHelper.accessor(`c${x}`, {
+            id: `c${x}`,
+            // A function header renders as is, keeping the collapsed header row empty
+            header: () => null,
+            size: CELL_SIZE,
+            minSize: CELL_SIZE,
+            maxSize: CELL_SIZE,
+            cell: () => null,
+            meta: mode === "data" ? { writeCell: writePixel } : undefined,
+          }),
+        ),
+      ),
     [columnCount, mode],
   );
 
@@ -1046,6 +1043,11 @@ function getIsPageShortcut(event: KeyboardEvent) {
     !event.metaKey &&
     !event.shiftKey
   );
+}
+
+interface ControlProps extends React.ComponentProps<typeof TooltipTrigger> {
+  label: string;
+  keys?: string;
 }
 
 function ControlTooltip({ label, keys, children, ...props }: ControlProps) {

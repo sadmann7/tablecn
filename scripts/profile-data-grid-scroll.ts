@@ -261,7 +261,7 @@ async function resetScroll(page: Page) {
 function startFrameRecorder() {
   const recorder = {
     deltas: [] as number[],
-    loafs: [] as Array<{ duration: number; scriptMs: number }>,
+    loafs: [] as { duration: number; scriptMs: number }[],
     running: true,
   };
   let last = performance.now();
@@ -274,7 +274,7 @@ function startFrameRecorder() {
   const observer = new PerformanceObserver((list) => {
     for (const entry of list.getEntries()) {
       const scripts =
-        (entry as PerformanceEntry & { scripts?: Array<{ duration: number }> })
+        (entry as PerformanceEntry & { scripts?: { duration: number }[] })
           .scripts ?? [];
       recorder.loafs.push({
         duration: entry.duration,
@@ -298,7 +298,7 @@ function stopFrameRecorder() {
     window as unknown as {
       __frameRecorder: {
         deltas: number[];
-        loafs: Array<{ duration: number; scriptMs: number }>;
+        loafs: { duration: number; scriptMs: number }[];
         running: boolean;
       };
       __frameObserver: PerformanceObserver;
@@ -311,7 +311,7 @@ function stopFrameRecorder() {
 
 function summarize(
   deltas: number[],
-  loafs: Array<{ duration: number; scriptMs: number }>,
+  loafs: { duration: number; scriptMs: number }[],
   vsync: number,
 ): FrameStats {
   const at = (q: number) => percentile(deltas, q);

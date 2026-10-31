@@ -359,6 +359,6 @@ function renderTable(initialData: Skater[], { withRowId = true } = {}) {
   };
 }
 
-function getIds(rows: ReadonlyArray<{ id: string }>) {
+function getIds(rows: readonly { id: string }[]) {
   return rows.map((row) => row.id);
 }

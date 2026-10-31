@@ -2724,7 +2724,7 @@ describe("useDataGrid", () => {
             index === 11 || index === 21 ? "match" : "",
           ]),
         ]),
-      ] as Array<Record<string, string>>;
+      ] as Record<string, string>[];
       const columns: ColumnDef<DataGridFeatures, Record<string, string>>[] =
         columnIds.map((id) => ({ id, accessorKey: id }));
 
@@ -5195,6 +5195,59 @@ describe("useDataGrid", () => {
 
       expect(nameColumn?.columnDef.minSize).toBeDefined();
       expect(nameColumn?.columnDef.maxSize).toBeDefined();
+    });
+
+    it("moves a column one place at a time and stops at the edges", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+          }),
+        { wrapper: createWrapper() },
+      );
+      const getOrder = () =>
+        result.current.table.getVisibleLeafColumns().map(({ id }) => id);
+      const nameColumn = result.current.table.getColumn("name");
+
+      expect(nameColumn?.getCanMove(-1)).toBe(false);
+      expect(nameColumn?.getCanMove(1)).toBe(true);
+
+      act(() => {
+        nameColumn?.move(1);
+      });
+      expect(getOrder().slice(0, 3)).toEqual(["trick", "name", "score"]);
+
+      act(() => {
+        nameColumn?.move(-1);
+        nameColumn?.move(-1);
+      });
+      expect(getOrder().slice(0, 3)).toEqual(["name", "trick", "score"]);
+    });
+
+    it("keeps a pinned column's moves inside its pinned region", () => {
+      const { result } = renderHook(
+        () =>
+          useDataGrid({
+            data: testData,
+            columns: testColumns,
+            initialState: {
+              columnPinning: { start: ["name", "trick"], end: [] },
+            },
+          }),
+        { wrapper: createWrapper() },
+      );
+      const trickColumn = result.current.table.getColumn("trick");
+
+      expect(trickColumn?.getCanMove(1)).toBe(false);
+
+      act(() => {
+        trickColumn?.move(-1);
+      });
+      expect(result.current.table.atoms.columnPinning.get().start).toEqual([
+        "trick",
+        "name",
+      ]);
     });
   });
 

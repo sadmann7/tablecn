@@ -75,9 +75,11 @@ import {
   parseTsv,
   serializeCellValue,
   stringifyUnknown,
+  swapItems,
 } from "@/lib/data-grid-utils";
 
 type DataGridInstance = Table<DataGridFeatures, RowData>;
+type DataGridColumnInstance = Column<DataGridFeatures, RowData>;
 type DataGridCellInstance = Cell<DataGridFeatures, RowData>;
 
 interface TableState_DataGridRowHeight {
@@ -115,6 +117,8 @@ interface ColumnDef_DataGridColumnOrdering {
 
 interface Column_DataGridColumnOrdering {
   getCanOrder: () => boolean;
+  getCanMove: (step: number) => boolean;
+  move: (step: number) => void;
 }
 
 interface StopEditingOptions {
@@ -169,7 +173,7 @@ interface TableOptions_DataGridData<TData extends RowData> {
 interface Table_DataGridData<TData extends RowData> {
   getIsReadOnly: () => boolean;
   updateCells: (
-    updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+    updates: CellUpdate | RowUpdate | (CellUpdate | RowUpdate)[],
     options?: UpdateCellsOptions,
   ) => void;
   subscribeCell: (
@@ -177,7 +181,7 @@ interface Table_DataGridData<TData extends RowData> {
     columnId: string,
     listener: () => void,
   ) => () => void;
-  clearCells: (cells: Array<CellPosition>) => void;
+  clearCells: (cells: CellPosition[]) => void;
   addRows: (rows: TData[], options?: AddRowsOptions) => string[];
   deleteRows: (rowIds: string[]) => void;
   undo: () => number;
@@ -225,14 +229,14 @@ interface Table_DataGridNavigation {
 }
 
 interface TableState_DataGridClipboard {
-  cutCellGrid: Array<Array<CellPosition | null>>;
+  cutCellGrid: (CellPosition | null)[][];
   pasteDialog: PasteDialogState;
 }
 
 interface TableOptions_DataGridClipboard {
   enablePaste?: boolean;
   onClipboardNotice?: (notice: ClipboardNotice) => void;
-  onCutCellGridChange?: OnChangeFn<Array<Array<CellPosition | null>>>;
+  onCutCellGridChange?: OnChangeFn<(CellPosition | null)[][]>;
   onPasteDialogChange?: OnChangeFn<PasteDialogState>;
 }
 
@@ -241,9 +245,9 @@ interface PasteCellsOptions {
 }
 
 interface Table_DataGridClipboard {
-  getSelectedCells: () => Array<CellPosition>;
-  getCutCellGrid: () => Array<Array<CellPosition | null>>;
-  setCutCellGrid: (updater: Updater<Array<Array<CellPosition | null>>>) => void;
+  getSelectedCells: () => CellPosition[];
+  getCutCellGrid: () => (CellPosition | null)[][];
+  setCutCellGrid: (updater: Updater<(CellPosition | null)[][]>) => void;
   resetCutCellGrid: (defaultState?: boolean) => void;
   getPasteDialog: () => PasteDialogState;
   setPasteDialog: (updater: Updater<PasteDialogState>) => void;
@@ -273,7 +277,7 @@ interface Table_DataGridSearch {
   getSearchQuery: () => string;
   setSearchQuery: (query: string) => void;
   getSearchMatchIndex: () => number;
-  getSearchMatches: () => Array<CellPosition>;
+  getSearchMatches: () => CellPosition[];
   getSearchMatchesByRowId: () => Map<string, Set<string>>;
   getActiveSearchMatch: () => CellPosition | null;
   goToNextSearchMatch: () => void;
@@ -286,16 +290,16 @@ interface Cell_DataGridSearch {
 }
 
 interface TableState_DataGridPresence {
-  cellPresence: Array<CellPresence>;
+  cellPresence: CellPresence[];
 }
 
 interface TableOptions_DataGridPresence {
-  onCellPresenceChange?: OnChangeFn<Array<CellPresence>>;
+  onCellPresenceChange?: OnChangeFn<CellPresence[]>;
 }
 
 interface Table_DataGridPresence {
-  getCellPresence: () => Array<CellPresence>;
-  setCellPresence: (updater: Updater<Array<CellPresence>>) => void;
+  getCellPresence: () => CellPresence[];
+  setCellPresence: (updater: Updater<CellPresence[]>) => void;
   getCellPresenceByRowId: () => Map<string, Map<string, CellPresence>>;
 }
 
@@ -548,9 +552,53 @@ const dataGridColumnOrderingFeature: TableFeature = {
         fn: (column: { columnDef: ColumnDef_DataGridColumnOrdering }) =>
           column.columnDef.enableOrdering !== false,
       },
+      column_getCanMove: {
+        fn: (column: DataGridColumnInstance, step: number) =>
+          getMoveTarget(column, step) !== null,
+      },
+      column_move: {
+        fn: moveColumn,
+      },
     });
   },
 };
+
+function getMoveTarget(column: DataGridColumnInstance, step: number) {
+  if (!column.getCanOrder()) return null;
+  const position = column.getIsPinned() || "center";
+  const target =
+    column.table.getPinnedVisibleLeafColumns(position)[
+      column.getIndex(position) + step
+    ];
+  return target?.getCanOrder() ? target : null;
+}
+
+function moveColumn(column: DataGridColumnInstance, step: number) {
+  const target = getMoveTarget(column, step);
+  if (!target) return;
+  const { table } = column;
+  const position = column.getIsPinned();
+
+  if (position) {
+    table.setColumnPinning((prev) => ({
+      ...prev,
+      [position]: swapItems(prev[position] ?? [], column.id, target.id),
+    }));
+    return;
+  }
+
+  const leafColumnIds = table.getAllLeafColumns().map(({ id }) => id);
+  table.setColumnOrder((prev) =>
+    swapItems(
+      [
+        ...prev.filter((id) => leafColumnIds.includes(id)),
+        ...leafColumnIds.filter((id) => !prev.includes(id)),
+      ],
+      column.id,
+      target.id,
+    ),
+  );
+}
 
 const DEFAULT_BATCH_UPDATE_DELAY = 500;
 const DEFAULT_MAX_HISTORY = 100;
@@ -585,11 +633,11 @@ interface CellUpdateStore {
   copies: Map<string, { base: unknown; copy: RowValues }>;
   notify: Set<CellListeners>;
   recordedCells: Map<string, Set<string>>;
-  reported: { from: ReadonlyArray<RowData>; data: RowData[] } | null;
+  reported: { from: readonly RowData[]; data: RowData[] } | null;
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
   isHistorySealed: boolean;
-  rowIndexes: WeakMap<ReadonlyArray<RowData>, Map<string, number>>;
+  rowIndexes: WeakMap<readonly RowData[], Map<string, number>>;
   reason: DataChangeReason | null;
   isFrameScheduled: boolean;
   frameHandle: ReturnType<typeof setTimeout> | number;
@@ -617,7 +665,7 @@ const dataGridDataFeature: TableFeature = {
       },
       table_updateCells: {
         fn: (
-          updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+          updates: CellUpdate | RowUpdate | (CellUpdate | RowUpdate)[],
           options?: UpdateCellsOptions,
         ) => updateCells(instance, updates, options),
       },
@@ -626,7 +674,7 @@ const dataGridDataFeature: TableFeature = {
           subscribeCell(instance, rowId, columnId, listener),
       },
       table_clearCells: {
-        fn: (cells: Array<CellPosition>) =>
+        fn: (cells: CellPosition[]) =>
           updateEditableCells(
             instance,
             cells.map(({ rowId, columnId }) => ({
@@ -867,7 +915,7 @@ function getHasKeys(object: object) {
 
 function updateEditableCells(
   table: DataGridInstance,
-  updates: CellUpdate | Array<CellUpdate>,
+  updates: CellUpdate | CellUpdate[],
 ) {
   if (table.options.readOnly) return;
   const updateArray = Array.isArray(updates) ? updates : [updates];
@@ -1019,7 +1067,7 @@ function getCurrentData(table: DataGridInstance, store: CellUpdateStore) {
 
 function getDataIndex(
   table: DataGridInstance,
-  data: ReadonlyArray<RowData>,
+  data: readonly RowData[],
   rowId: string,
 ) {
   if (data === table.options.data) {
@@ -1127,7 +1175,7 @@ function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
 
 function addRows(
   table: DataGridInstance,
-  rows: ReadonlyArray<RowData>,
+  rows: readonly RowData[],
   { afterRowId, beforeRowId }: AddRowsOptions = {},
 ) {
   const store = getCellUpdateStore(table);
@@ -1153,8 +1201,8 @@ function addRows(
 function applyRowChanges(
   table: DataGridInstance,
   store: CellUpdateStore,
-  inserts: ReadonlyArray<RowInsert>,
-  removedRowIds: ReadonlyArray<string>,
+  inserts: readonly RowInsert[],
+  removedRowIds: readonly string[],
   history = true,
 ) {
   commitCellUpdates(table, store);
@@ -1358,7 +1406,7 @@ function applyHistoryEntry(
 
 function updateCells(
   table: DataGridInstance,
-  updates: CellUpdate | RowUpdate | Array<CellUpdate | RowUpdate>,
+  updates: CellUpdate | RowUpdate | (CellUpdate | RowUpdate)[],
   options?: UpdateCellsOptions,
 ) {
   const updateArray = Array.isArray(updates) ? updates : [updates];
@@ -1406,7 +1454,7 @@ function updateCells(
 }
 
 function mergeUpdates(
-  updates: Array<CellUpdate | RowUpdate>,
+  updates: (CellUpdate | RowUpdate)[],
   getTarget: (rowId: string) => Map<string, RowValues>,
 ) {
   for (const update of updates) {
@@ -1664,9 +1712,8 @@ const dataGridClipboardFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
-    const setCutCellGrid = (
-      updater: Updater<Array<Array<CellPosition | null>>>,
-    ) => setStateSlice(instance, "cutCellGrid", updater);
+    const setCutCellGrid = (updater: Updater<(CellPosition | null)[][]>) =>
+      setStateSlice(instance, "cutCellGrid", updater);
     const setPasteDialog = (updater: Updater<PasteDialogState>) =>
       setStateSlice(instance, "pasteDialog", updater);
 
@@ -1810,7 +1857,7 @@ function serializeCellRange(
   const variants = columns.map(
     (column) => column.columnDef.meta?.cell?.variant,
   );
-  const lines: Array<string> = [];
+  const lines: string[] = [];
   for (const row of rows) {
     let line = "";
     for (let index = 0; index < columns.length; index++) {
@@ -1852,7 +1899,7 @@ function getSelectedCells(table: DataGridInstance) {
   }
   const dataColumnIds = new Set(getDataColumnIds(table));
 
-  const cells: Array<CellPosition> = [];
+  const cells: CellPosition[] = [];
   for (const bound of bounds) {
     for (
       let rowIndex = bound.minRowIndex;
@@ -1936,9 +1983,9 @@ async function pasteCells(
 
     const rows = table.getRowModel().rows;
     const cutCellGrid = table.atoms.cutCellGrid.get();
-    const updates: Array<CellUpdate> = [];
+    const updates: CellUpdate[] = [];
     const writtenCellKeys = new Set<string>();
-    const movedSourceCells: Array<CellPosition> = [];
+    const movedSourceCells: CellPosition[] = [];
     let skippedCount = 0;
     let endRowIndex = target.rowIndex;
     let endColumnIndex = target.columnIndex;
@@ -2093,17 +2140,17 @@ type SearchRow = ReturnType<DataGridInstance["getRowModel"]>["rows"][number];
 
 interface SearchResult {
   query: string;
-  rows: Array<SearchRow>;
+  rows: SearchRow[];
   columnsKey: string;
-  rowTexts: Array<Array<string>>;
-  matchedRows: Array<number>;
-  matches: Array<CellPosition>;
+  rowTexts: string[][];
+  matchedRows: number[];
+  matches: CellPosition[];
   matchesByRowId: Map<string, Set<string>>;
 }
 
 interface SearchTextCache {
   columnsKey: string;
-  textsByRow: WeakMap<object, Array<string>>;
+  textsByRow: WeakMap<object, string[]>;
   columnSets: Map<number | string, Set<string>>;
   result: SearchResult | null;
 }
@@ -2170,7 +2217,7 @@ const dataGridSearchFeature: TableFeature = {
         fn: () => instance.atoms.searchMatchIndex.get(),
       },
       table_getSearchMatches: {
-        fn: (query: string, rows: Array<SearchRow>, columns: SearchColumns) =>
+        fn: (query: string, rows: SearchRow[], columns: SearchColumns) =>
           getSearchMatches(query, rows, columns, searchTextCache),
         memoDeps: () => [
           instance.atoms.searchQuery.get(),
@@ -2179,7 +2226,7 @@ const dataGridSearchFeature: TableFeature = {
         ],
       },
       table_getSearchMatchesByRowId: {
-        fn: (matches: Array<CellPosition>) => {
+        fn: (matches: CellPosition[]) => {
           const { result } = searchTextCache;
           if (result?.matches === matches) return result.matchesByRowId;
 
@@ -2257,7 +2304,7 @@ function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
 
 function getSearchMatches(
   query: string,
-  rows: Array<SearchRow>,
+  rows: SearchRow[],
   columns: SearchColumns,
   cache: SearchTextCache,
 ) {
@@ -2282,12 +2329,12 @@ function getSearchMatches(
     previous !== null &&
     previous.rows === rows &&
     previous.columnsKey === cache.columnsKey;
-  const rowTexts: Array<Array<string>> = hasSameRows ? previous.rowTexts : [];
+  const rowTexts: string[][] = hasSameRows ? previous.rowTexts : [];
   const useBitmask = dataColumnIds.length <= 31;
 
-  const matches: Array<CellPosition> = [];
+  const matches: CellPosition[] = [];
   const matchesByRowId = new Map<string, Set<string>>();
-  const matchedRows: Array<number> = [];
+  const matchedRows: number[] = [];
 
   for (let candidate = 0; candidate < candidateCount; candidate++) {
     const rowIndex = isNarrowing ? previous.matchedRows[candidate] : candidate;
@@ -2359,7 +2406,7 @@ function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
 
 function getRowSearchTexts(
   row: SearchRow,
-  readValues: Array<ColumnValueReader>,
+  readValues: ColumnValueReader[],
   cache: SearchTextCache,
   lowerByValue: Map<unknown, string>,
 ) {
@@ -2395,7 +2442,7 @@ function goToSearchMatch(table: DataGridInstance, step: 1 | -1) {
   table.setFocusedCell(match.rowId, match.columnId);
 }
 
-const EMPTY_CELL_PRESENCE: Array<CellPresence> = [];
+const EMPTY_CELL_PRESENCE: CellPresence[] = [];
 
 const dataGridPresenceFeature: TableFeature = {
   getInitialState: (initialState) => ({
@@ -2416,11 +2463,11 @@ const dataGridPresenceFeature: TableFeature = {
         fn: () => instance.atoms.cellPresence.get(),
       },
       table_setCellPresence: {
-        fn: (updater: Updater<Array<CellPresence>>) =>
+        fn: (updater: Updater<CellPresence[]>) =>
           setStateSlice(instance, "cellPresence", updater),
       },
       table_getCellPresenceByRowId: {
-        fn: (cellPresence: Array<CellPresence>) => {
+        fn: (cellPresence: CellPresence[]) => {
           const presenceByRowId = new Map<string, Map<string, CellPresence>>();
           for (const presence of cellPresence) {
             let presenceByColumnId = presenceByRowId.get(presence.rowId);

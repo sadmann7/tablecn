@@ -1,12 +1,8 @@
 "use client";
 
-import type { ColumnDef } from "@tanstack/react-table";
-
 import { cn } from "cn";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
-
-import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
@@ -322,10 +318,7 @@ function DataTableLaunchColumnsStory({
  * A column with a filter still in the URL stays filterable, so the table can
  * clear that param on reset before the column hides its filter again.
  */
-function getFilterableColumns(
-  columnCount: number,
-  urlFilterIds: string,
-): ColumnDef<DataTableFeatures, DataTableLaunchTask>[] {
+function getFilterableColumns(columnCount: number, urlFilterIds: string) {
   const filterableIds = new Set([
     ...COLUMN_SNIPPETS.slice(0, columnCount).flatMap(
       (snippet) => snippet.columnIds,
