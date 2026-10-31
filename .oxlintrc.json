@@ -88,7 +88,8 @@
     "unicorn/no-invalid-remove-event-listener": "warn",
     "unicorn/no-array-sort": "off",
     "unicorn/catch-error-name": ["warn", { "name": "error" }],
-    "tablecn/helpers-below-first-use": "warn"
+    "tablecn/top-down-order": "warn",
+    "tablecn/comment-style": "warn"
   },
   "overrides": [
     {
@@ -106,7 +107,8 @@
     {
       "files": ["src/registry/bases/*/ui/**"],
       "rules": {
-        "tablecn/helpers-below-first-use": "off"
+        "tablecn/top-down-order": "off",
+        "tablecn/comment-style": "off"
       }
     }
   ]

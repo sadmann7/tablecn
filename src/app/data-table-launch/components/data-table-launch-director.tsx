@@ -46,7 +46,7 @@ export function useDataTableLaunchDirector() {
   React.useEffect(() => {
     const root = document.documentElement;
     const hadDark = root.classList.contains("dark");
-    // Menus portal to document.body, outside the stage's dark class.
+    // Menus portal to document.body, outside the stage's dark class
     root.classList.add("dark");
     root.dataset.launchCamera = "";
 
@@ -171,7 +171,7 @@ function createLaunchDirector() {
     if (isHidden) cursor.style.transition = "none";
     cursor.style.translate = `${point.x}px ${point.y}px`;
     if (isHidden) {
-      // Commits the jump before transitions return, so it fades in in place.
+      // Commits the jump before transitions return, so it fades in in place
       void cursor.offsetWidth;
       cursor.style.transition = "";
     }

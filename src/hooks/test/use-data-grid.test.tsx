@@ -101,8 +101,8 @@ describe("useDataGrid", () => {
       configurable: true,
     });
 
-    // Run animation frames immediately so effects finish inside `act`.
-    // Frames requested from inside a frame are dropped so self-scheduling loops terminate.
+    // Frames run immediately so effects finish inside `act`, and ones requested
+    // from inside a frame are dropped so self-scheduling loops end
     let isRunningFrame = false;
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
       if (isRunningFrame) return 0;
@@ -2555,7 +2555,7 @@ describe("useDataGrid", () => {
 
       await act(async () => {
         result.current.table.openSearch();
-        // Allow microtask queue to flush
+        // Lets the microtask queue flush
         await Promise.resolve();
       });
 
@@ -3064,7 +3064,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Close it (even though it's already closed, this tests the callback)
+      // Already closed, but resetting still runs the callback
       act(() => {
         result.current.table.resetPasteDialog(true);
       });
@@ -3619,8 +3619,8 @@ describe("useDataGrid", () => {
     });
 
     it("should stop selection when document mouseup fires during auto-scroll", () => {
-      // Initialize the hook with the synchronous RAF from beforeEach so that
-      // all setup effects complete before we take over RAF scheduling.
+      // Mounts with the synchronous RAF from beforeEach, so every setup effect
+      // finishes before the test takes over RAF scheduling
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -3632,7 +3632,7 @@ describe("useDataGrid", () => {
 
       // Defer RAF from this point forward so that onAutoScrollStart can
       // register the document mouseup listener without tick() immediately
-      // calling onAutoScrollStop (which would remove the listener).
+      // calling onAutoScrollStop (which would remove the listener)
       const pendingRafs: FrameRequestCallback[] = [];
       vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
         pendingRafs.push(cb);
@@ -3640,13 +3640,12 @@ describe("useDataGrid", () => {
       });
       vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
 
-      // Give onAutoScrollStart a real container so it doesn't bail early.
+      // Give onAutoScrollStart a real container so it doesn't bail early
       const mockContainer = document.createElement("div");
       result.current.dataGridRef.current = mockContainer;
 
-      // Start the drag — this sets dragStartCell which triggers
-      // onAutoScrollStart, which synchronously registers the document mouseup
-      // listener before queuing the deferred RAF.
+      // Mousedown sets dragStartCell, and onAutoScrollStart registers the
+      // document mouseup listener before queuing the deferred RAF
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -3663,15 +3662,14 @@ describe("useDataGrid", () => {
 
       expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
 
-      // Simulate the user releasing the mouse outside the grid.  The
-      // document-level mouseup listener (registered by onAutoScrollStart)
-      // should clear dragStartCell.
+      // Releasing the mouse outside the grid reaches the document listener from
+      // onAutoScrollStart, which clears dragStartCell
       act(() => {
         document.dispatchEvent(new MouseEvent("mouseup"));
       });
 
       // A subsequent onCellMouseEnter must be a no-op because the drag has
-      // ended — so row 2 should never enter the selected set.
+      // ended — so row 2 should never enter the selected set
       act(() => {
         fireCellEvent(result, "onMouseOver", "2", "score");
       });

@@ -306,7 +306,7 @@ describe("filterColumns", () => {
 
   it("counts days, weeks, and months from today", () => {
     // One frozen instant, so this date and the Date inside filterColumns
-    // stay on the same day.
+    // stay on the same day
     vi.useFakeTimers({ now: new Date(2026, 5, 15, 12), toFake: ["Date"] });
 
     try {

@@ -1835,7 +1835,6 @@ function getTabDirection(event: React.KeyboardEvent): NavigationDirection {
   return event.shiftKey ? "shift+tab" : "tab";
 }
 
-// Pulls an editor up over its cell, which is the row minus its bottom border
 function getOverlapOffset(rowHeight: RowHeightValue) {
   return 1 - getRowHeightValue(rowHeight);
 }

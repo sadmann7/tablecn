@@ -38,7 +38,7 @@ export function useDataTableLaunchServer({
     if (!isEnabled) return;
 
     const latency = getLatency(request);
-    // Stands in for the network round trip, so the request shows as pending.
+    // Stands in for the network round trip, so the request shows as pending
     const timeout = window.setTimeout(() => onResolve(latency), latency);
 
     return () => window.clearTimeout(timeout);

@@ -75,7 +75,7 @@ describe("useDataTable", () => {
 
   it("lets an outside URL change replace the filters being edited", async () => {
     // Fake timers hold the debounced URL write until the outside URL change
-    // has landed, however slow the runner is.
+    // has landed, however slow the runner is
     vi.useFakeTimers();
     const { result, navigate, getLastSearch } = renderDataTable("?title=bug");
 

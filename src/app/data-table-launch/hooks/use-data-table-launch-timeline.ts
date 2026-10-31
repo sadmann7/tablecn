@@ -68,7 +68,7 @@ export function useDataTableLaunchTimeline(
 
       if (!clock.isPaused) {
         // One step per frame, so each step sees the table state and menus
-        // the previous step rendered instead of the same stale snapshot.
+        // the previous step rendered instead of the same stale snapshot
         const step = LAUNCH_STEPS[clock.stepIndex];
 
         if (clock.replayTo !== null) {
@@ -87,7 +87,7 @@ export function useDataTableLaunchTimeline(
             clock.cycle += 1;
           } else if (step && step.at <= clock.elapsed) {
             // After a hitch, catching up would fire the next steps back to
-            // back before their menus open, so the lost time is dropped.
+            // back before their menus open, so the lost time is dropped
             if (clock.elapsed - step.at > MAX_STEP_LAG_MS) {
               clock.elapsed = step.at;
             }

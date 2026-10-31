@@ -31,7 +31,7 @@ export async function createTask(input: CreateTaskSchema) {
         })
         .then(takeFirstOrThrow);
 
-      // Delete a task to keep the total number of tasks constant
+      // The oldest task makes room, so the demo keeps the same number of tasks
       await tx.delete(tasks).where(
         eq(
           tasks.id,
@@ -152,7 +152,7 @@ export async function deleteTask(input: { id: string }) {
 
       const takenCodes = await tx.select({ code: tasks.code }).from(tasks);
 
-      // Create a new task for the deleted one
+      // A fresh task takes its place, so the demo keeps the same number of tasks
       await tx.insert(tasks).values(
         generateRandomTasks(
           1,
@@ -184,7 +184,7 @@ export async function deleteTasks(input: { ids: string[] }) {
 
       const takenCodes = await tx.select({ code: tasks.code }).from(tasks);
 
-      // Create new tasks for the deleted ones
+      // Fresh tasks take their place, so the demo keeps the same number of tasks
       await tx.insert(tasks).values(
         generateRandomTasks(
           input.ids.length,

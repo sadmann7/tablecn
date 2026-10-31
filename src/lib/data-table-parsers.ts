@@ -45,7 +45,7 @@ export const getSortingStateParser = <TColumnId extends string = string>(
         .join(",");
       const parsed = parseSorting(compact);
 
-      // Ids with a comma, or a first id starting with `[`, don't round-trip.
+      // Ids with a comma, or a first id starting with `[`, don't round-trip
       return parsed && getIsSameSorting(parsed, value)
         ? compact
         : JSON.stringify(value);
@@ -171,7 +171,7 @@ export function getColumnFilterParser<TColumnId extends string>(
 ) {
   return parseAsNativeArrayOf(
     createParser<ColumnFilterItem<TColumnId>>({
-      // nuqs drops items that parse to null, so `?title=` reads as no filter.
+      // nuqs drops items that parse to null, so `?title=` reads as no filter
       parse: (param) => {
         const filter = parseColumnFilter(id, variant, param);
         return getIsActiveFilter(filter) ? filter : null;
