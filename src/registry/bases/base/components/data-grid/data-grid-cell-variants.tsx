@@ -9,8 +9,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type {
-  CellOpts,
-  CellSelectOption,
+  ColumnSelectOption,
   DataGridCellProps,
   FileCellData,
   StopEditingOptions,
@@ -28,6 +27,7 @@ import {
   getBooleanCellValue,
   getCellKey,
   getColumnLabel,
+  getColumnVariantOptions,
   getDateCellValue,
   getFileIcon,
   getFilesCellValue,
@@ -65,6 +65,7 @@ import {
   PopoverTrigger,
 } from "@/registry/bases/base/ui/popover";
 import { Skeleton } from "@/registry/bases/base/ui/skeleton";
+import { Switch } from "@/registry/bases/base/ui/switch";
 import { Textarea } from "@/registry/bases/base/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
@@ -241,11 +242,11 @@ export function NumberCell<TData extends RowData>(
   const isCancelingRef = React.useRef(false);
   const prevIsEditingRef = React.useRef(false);
 
-  const numberCellOpts = getVariantCellOpts(cell, "number");
-  const min = numberCellOpts?.min;
-  const max = numberCellOpts?.max;
-  const step = numberCellOpts?.step;
-  const format = numberCellOpts?.format;
+  const numberMeta = getColumnVariantOptions(cell.column, "number");
+  const min = numberMeta?.min;
+  const max = numberMeta?.max;
+  const step = numberMeta?.step;
+  const format = numberMeta?.format;
   const displayNumber = getNumberCellValue(value);
 
   const onSave = React.useCallback(
@@ -423,11 +424,13 @@ export function UrlCell<TData extends RowData>(
   );
 }
 
-export function CheckboxCell<TData extends RowData>(
+export function BooleanCell<TData extends RowData>(
   props: Omit<DataGridCellProps<TData>, "isEditing">,
 ) {
   const { cell, isFocused, readOnly } = props;
   const value = getBooleanCellValue(useCellValue(cell));
+  const control =
+    getColumnVariantOptions(cell.column, "boolean")?.control ?? "checkbox";
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const onCheckedChange = React.useCallback(
@@ -464,11 +467,11 @@ export function CheckboxCell<TData extends RowData>(
     [isFocused, value, onCheckedChange, readOnly],
   );
 
-  const onCheckboxClick = React.useCallback((event: React.MouseEvent) => {
+  const onControlClick = React.useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
   }, []);
 
-  const onCheckboxMouseDown = React.useCallback(
+  const onControlMouseDown = React.useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       event.preventDefault();
@@ -478,7 +481,7 @@ export function CheckboxCell<TData extends RowData>(
     [cell],
   );
 
-  const onCheckboxDoubleClick = React.useCallback(
+  const onControlDoubleClick = React.useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
     },
@@ -494,22 +497,36 @@ export function CheckboxCell<TData extends RowData>(
       onKeyDown={onWrapperKeyDown}
       className="flex size-full justify-center"
     >
-      <Checkbox
-        aria-label={getColumnLabel(cell.column)}
-        tabIndex={-1}
-        checked={value}
-        onCheckedChange={onCheckedChange}
-        disabled={readOnly}
-        className="border-primary"
-        onClick={onCheckboxClick}
-        onMouseDown={onCheckboxMouseDown}
-        onDoubleClick={onCheckboxDoubleClick}
-      />
+      {control === "switch" ? (
+        <Switch
+          aria-label={getColumnLabel(cell.column)}
+          tabIndex={-1}
+          size="sm"
+          checked={value}
+          onCheckedChange={onCheckedChange}
+          onClick={onControlClick}
+          onMouseDown={onControlMouseDown}
+          onDoubleClick={onControlDoubleClick}
+          disabled={readOnly}
+        />
+      ) : (
+        <Checkbox
+          aria-label={getColumnLabel(cell.column)}
+          tabIndex={-1}
+          className="border-primary"
+          checked={value}
+          onCheckedChange={onCheckedChange}
+          onClick={onControlClick}
+          onMouseDown={onControlMouseDown}
+          onDoubleClick={onControlDoubleClick}
+          disabled={readOnly}
+        />
+      )}
     </DataGridCell>
   );
 }
 
-const NO_OPTIONS: CellSelectOption[] = [];
+const NO_OPTIONS: ColumnSelectOption[] = [];
 
 export function SelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
@@ -518,7 +535,8 @@ export function SelectCell<TData extends RowData>(
   const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const commandRef = React.useRef<HTMLDivElement>(null);
-  const options = getVariantCellOpts(cell, "select")?.options ?? NO_OPTIONS;
+  const options =
+    getColumnVariantOptions(cell.column, "select")?.options ?? NO_OPTIONS;
 
   const onValueChange = React.useCallback(
     (newValue: string) => {
@@ -614,7 +632,7 @@ export function MultiSelectCell<TData extends RowData>(
   const containerRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
   const options =
-    getVariantCellOpts(cell, "multi-select")?.options ?? NO_OPTIONS;
+    getColumnVariantOptions(cell.column, "multi-select")?.options ?? NO_OPTIONS;
 
   const commitValues = React.useCallback(
     (newValues: string[]) => {
@@ -915,11 +933,11 @@ export function FileCell<TData extends RowData>(
     [rawValue],
   );
 
-  const fileCellOpts = getVariantCellOpts(cell, "file");
-  const maxFileSize = fileCellOpts?.maxFileSize ?? 10 * 1024 * 1024;
-  const maxFiles = fileCellOpts?.maxFiles ?? 10;
-  const accept = fileCellOpts?.accept;
-  const multiple = fileCellOpts?.multiple ?? false;
+  const fileMeta = getColumnVariantOptions(cell.column, "file");
+  const maxFileSize = fileMeta?.maxFileSize ?? 10 * 1024 * 1024;
+  const maxFiles = fileMeta?.maxFiles ?? 10;
+  const accept = fileMeta?.accept;
+  const multiple = fileMeta?.multiple ?? false;
 
   const {
     value: uploadingFiles,
@@ -1701,20 +1719,7 @@ function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
 }
 
-function getVariantCellOpts<
-  TData extends RowData,
-  TVariant extends CellOpts["variant"],
->(
-  cell: DataGridCellProps<TData>["cell"],
-  variant: TVariant,
-): Extract<CellOpts, { variant: TVariant }> | null {
-  const cellOpts = cell.column.columnDef.meta?.cell;
-  return cellOpts?.variant === variant
-    ? (cellOpts as Extract<CellOpts, { variant: TVariant }>)
-    : null;
-}
-
-function getOptionLabel(options: CellSelectOption[], value: string) {
+function getOptionLabel(options: ColumnSelectOption[], value: string) {
   return options.find((option) => option.value === value)?.label ?? value;
 }
 

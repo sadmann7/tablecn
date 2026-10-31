@@ -111,7 +111,7 @@ export function getDefaultOperator(variant: string): FilterOperator {
     case "select":
     case "multi-select":
       return "is";
-    case "checkbox":
+    case "boolean":
       return "isTrue";
     default:
       return "contains";
@@ -130,7 +130,7 @@ export function getOperatorsForVariant(variant: string): readonly {
     case "select":
     case "multi-select":
       return SELECT_FILTER_OPERATORS;
-    case "checkbox":
+    case "boolean":
       return BOOLEAN_FILTER_OPERATORS;
     default:
       return TEXT_FILTER_OPERATORS;

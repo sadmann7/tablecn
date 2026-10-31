@@ -18,10 +18,10 @@ import { DATA_MODES, DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 export const tasksColumnConfigs = {
   code: { isSortable: false },
   title: { variant: "text" },
-  status: { variant: "multiSelect" },
-  priority: { variant: "multiSelect" },
-  estimatedHours: { variant: "range" },
-  createdAt: { variant: "dateRange" },
+  status: { variant: "multi-select" },
+  priority: { variant: "multi-select" },
+  estimatedHours: { variant: "number", filter: "range" },
+  createdAt: { variant: "date", filter: "range" },
 } as const satisfies Partial<Record<keyof Task, DataTableColumnConfig>>;
 
 export const tasksDefaultSorting = [

@@ -52,7 +52,7 @@ export function filterColumns<T extends Table>({
         if (column.dataType === "boolean" && typeof filter.value === "string") {
           return eq(column, filter.value === "true");
         }
-        if (filter.variant === "date" || filter.variant === "dateRange") {
+        if (filter.variant === "date" || filter.variant === "date-range") {
           const start = getStartOfDay(filter.value);
           const end = getEndOfDay(filter.value);
           return start && end
@@ -65,7 +65,7 @@ export function filterColumns<T extends Table>({
         if (column.dataType === "boolean" && typeof filter.value === "string") {
           return ne(column, filter.value === "true");
         }
-        if (filter.variant === "date" || filter.variant === "dateRange") {
+        if (filter.variant === "date" || filter.variant === "date-range") {
           const start = getStartOfDay(filter.value);
           const end = getEndOfDay(filter.value);
           return start && end
@@ -107,7 +107,7 @@ export function filterColumns<T extends Table>({
 
       case "isBetween":
         if (
-          (filter.variant === "date" || filter.variant === "dateRange") &&
+          (filter.variant === "date" || filter.variant === "date-range") &&
           Array.isArray(filter.value) &&
           filter.value.length === 2
         ) {
@@ -146,7 +146,7 @@ export function filterColumns<T extends Table>({
 
       case "isRelativeToToday":
         if (
-          (filter.variant === "date" || filter.variant === "dateRange") &&
+          (filter.variant === "date" || filter.variant === "date-range") &&
           typeof filter.value === "string"
         ) {
           const today = new Date();

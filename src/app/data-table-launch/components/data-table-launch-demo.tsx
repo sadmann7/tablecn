@@ -295,6 +295,7 @@ function DataTableLaunchColumnsStory({
         "  meta: {",
         `    label: "${snippet.label}",`,
         `    variant: "${snippet.variant}",`,
+        ...("filter" in snippet ? [`    filter: "${snippet.filter}",`] : []),
         `    ${snippet.extra}`,
         "  },",
         "  enableColumnFilter: true,",

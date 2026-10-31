@@ -40,7 +40,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multiSelect",
+          variant: "multi-select",
           operator: "inArray",
           value: "todo",
         }),
@@ -113,7 +113,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multiSelect",
+          variant: "multi-select",
           operator: "inArray",
           value: ["todo", "done"],
         }),
@@ -123,7 +123,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multiSelect",
+          variant: "multi-select",
           operator: "notInArray",
           value: ["todo"],
         }),
@@ -150,7 +150,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "dateRange",
+          variant: "date-range",
           operator: "ne",
           value: day,
         }),
@@ -200,7 +200,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "dateRange",
+          variant: "date-range",
           operator: "lt",
           value: day,
         }),
@@ -276,7 +276,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "dateRange",
+          variant: "date-range",
           operator: "isBetween",
           value: ["2026-10-01", "2026-10-07"],
         }),
@@ -329,7 +329,7 @@ describe("filterColumns", () => {
         compile([
           columnFilter({
             id: "createdAt",
-            variant: "dateRange",
+            variant: "date-range",
             operator: "isRelativeToToday",
             value: "1 weeks",
           }),
@@ -444,7 +444,7 @@ describe("filterColumns", () => {
       }),
       columnFilter({
         id: "status",
-        variant: "multiSelect",
+        variant: "multi-select",
         operator: "inArray",
         value: ["todo"],
         filterId: "status-0",

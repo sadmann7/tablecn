@@ -1,14 +1,22 @@
 "use client";
 
 import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
-import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import {
+  getRangeFilterBounds,
+  getValidRangeFilterBounds,
+} from "@/lib/data-table-utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
-import { Input } from "@/registry/bases/radix/ui/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@/registry/bases/radix/ui/input-group";
 import { Label } from "@/registry/bases/radix/ui/label";
 import {
   Popover,
@@ -100,51 +108,73 @@ function DataTableSliderFilterContent<TData extends RowData>({
     ? [bounds[0] ?? min, bounds[1] ?? max]
     : undefined;
   const range: RangeValue = columnFilterValue ?? [min, max];
-  const [rangeStart, rangeEnd] = range;
+  const [drafts, setDrafts] = React.useState<[string | null, string | null]>([
+    null,
+    null,
+  ]);
 
   const formatValue = React.useCallback((value: number) => {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
   }, []);
 
-  const onFromInputChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const numValue = Number(event.target.value);
-      if (!Number.isNaN(numValue) && numValue >= min && numValue <= rangeEnd) {
-        column.setFilterValue([numValue, rangeEnd]);
-      }
+  const setRangeFilter = React.useCallback(
+    ([start = min, end = max]: [number | undefined, number | undefined]) => {
+      column.setFilterValue(
+        start <= min && end >= max ? undefined : [start, end],
+      );
     },
-    [column, min, rangeEnd],
+    [column, min, max],
   );
 
-  const onToInputChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      const numValue = Number(event.target.value);
-      if (
-        !Number.isNaN(numValue) &&
-        numValue <= max &&
-        numValue >= rangeStart
-      ) {
-        column.setFilterValue([rangeStart, numValue]);
-      }
-    },
-    [column, max, rangeStart],
-  );
+  function getInputValues(
+    nextDrafts: [string | null, string | null],
+  ): [string, string] {
+    return [
+      nextDrafts[0] ?? range[0].toString(),
+      nextDrafts[1] ?? range[1].toString(),
+    ];
+  }
+
+  function onDraftChange(index: 0 | 1, value: string) {
+    const nextDrafts: [string | null, string | null] =
+      index === 0 ? [value, drafts[1]] : [drafts[0], value];
+    setDrafts(nextDrafts);
+
+    const nextBounds = getValidRangeFilterBounds(getInputValues(nextDrafts), [
+      min,
+      max,
+    ]);
+    if (nextBounds) setRangeFilter(nextBounds);
+  }
+
+  function onDraftCommit() {
+    if (drafts[0] === null && drafts[1] === null) return;
+
+    setRangeFilter(getRangeFilterBounds(getInputValues(drafts), [min, max]));
+    setDrafts([null, null]);
+  }
+
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") onDraftCommit();
+  }
 
   const onSliderValueChange = React.useCallback(
     (value: RangeValue) => {
       if (Array.isArray(value) && value.length === 2) {
-        column.setFilterValue(value);
+        setDrafts([null, null]);
+        setRangeFilter([value[0], value[1]]);
       }
     },
-    [column],
+    [setDrafts, setRangeFilter],
   );
 
   const onReset = React.useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation();
+      setDrafts([null, null]);
       column.setFilterValue(undefined);
     },
-    [column],
+    [column, setDrafts],
   );
 
   return (
@@ -202,8 +232,8 @@ function DataTableSliderFilterContent<TData extends RowData>({
             <Label htmlFor={`${id}-from`} className="sr-only">
               From
             </Label>
-            <div className="relative">
-              <Input
+            <InputGroup className="w-24">
+              <InputGroupInput
                 id={`${id}-from`}
                 type="number"
                 aria-valuemin={min}
@@ -213,21 +243,22 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 placeholder={min.toString()}
                 min={min}
                 max={max}
-                value={range[0]?.toString()}
-                onChange={onFromInputChange}
-                className={cn("w-24", unit && "pe-8")}
+                value={drafts[0] ?? range[0].toString()}
+                onChange={(event) => onDraftChange(0, event.target.value)}
+                onBlur={onDraftCommit}
+                onKeyDown={onInputKeyDown}
               />
               {unit && (
-                <span className="absolute inset-e-0 top-0 bottom-0 flex items-center rounded-e-md bg-accent px-2 text-sm text-muted-foreground">
-                  {unit}
-                </span>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>{unit}</InputGroupText>
+                </InputGroupAddon>
               )}
-            </div>
+            </InputGroup>
             <Label htmlFor={`${id}-to`} className="sr-only">
               to
             </Label>
-            <div className="relative">
-              <Input
+            <InputGroup className="w-24">
+              <InputGroupInput
                 id={`${id}-to`}
                 type="number"
                 aria-valuemin={min}
@@ -237,16 +268,17 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 placeholder={max.toString()}
                 min={min}
                 max={max}
-                value={range[1]?.toString()}
-                onChange={onToInputChange}
-                className={cn("w-24", unit && "pe-8")}
+                value={drafts[1] ?? range[1].toString()}
+                onChange={(event) => onDraftChange(1, event.target.value)}
+                onBlur={onDraftCommit}
+                onKeyDown={onInputKeyDown}
               />
               {unit && (
-                <span className="absolute inset-e-0 top-0 bottom-0 flex items-center rounded-e-md bg-accent px-2 text-sm text-muted-foreground">
-                  {unit}
-                </span>
+                <InputGroupAddon align="inline-end">
+                  <InputGroupText>{unit}</InputGroupText>
+                </InputGroupAddon>
               )}
-            </div>
+            </InputGroup>
           </div>
           <Label htmlFor={`${id}-slider`} className="sr-only">
             {title} slider

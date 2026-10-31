@@ -202,7 +202,7 @@ describe("useDataTable", () => {
           id: "status",
           value: "",
           operator: "isEmpty",
-          variant: "multiSelect",
+          variant: "multi-select",
           filterId: "status-0",
         },
       ]);
@@ -263,7 +263,7 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("status", {
     id: "status",
-    meta: { variant: "multiSelect" },
+    meta: { variant: "multi-select" },
     enableColumnFilter: true,
   }),
   columnHelper.display({ id: "actions" }),

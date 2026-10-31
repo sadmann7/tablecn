@@ -12,32 +12,39 @@ import type {
   JOIN_OPERATORS,
 } from "@/lib/data-table-utils";
 
-export interface DataTableColumnMeta {
-  label?: string;
-  placeholder?: string;
-  variant?: FilterVariant;
-  options?: FilterOption[];
-  range?: [number, number];
-  unit?: string;
-  icon?: React.ComponentType<React.ComponentProps<"svg">>;
-}
-
-export interface DataTableQueryKeys {
-  page: string;
-  perPage: string;
-  sort: string;
-  joinOperator: string;
-}
-
-export interface FilterOption {
+export interface ColumnSelectOption {
   label: string;
   value: string;
   count?: number;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type FilterOperator = keyof typeof FILTER_OPERATORS;
+export type ColumnVariant =
+  | "text"
+  | "long-text"
+  | "number"
+  | "url"
+  | "boolean"
+  | "select"
+  | "multi-select"
+  | "date"
+  | "file";
+
+export type ColumnVariantFilter =
+  | { variant?: Exclude<ColumnVariant, "number" | "date">; filter?: never }
+  | { variant: "number" | "date"; filter?: "range" };
+
+export type DataTableColumnMeta = {
+  label?: string;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
+  placeholder?: string;
+  options?: ColumnSelectOption[];
+  range?: [number, number];
+  unit?: string;
+} & ColumnVariantFilter;
+
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
+export type FilterOperator = keyof typeof FILTER_OPERATORS;
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
 export interface FilterOperatorOption {
@@ -67,17 +74,16 @@ declare module "@tanstack/react-table" {
   > {}
 }
 
-export interface DataTableColumnConfig {
-  variant?: FilterVariant;
+export type DataTableColumnConfig = {
   isSortable?: boolean;
-}
+} & ColumnVariantFilter;
 
 export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
 
 export type FilterableColumnId<TColumnConfigs extends DataTableColumnConfigs> =
   {
     [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
-      variant: FilterVariant;
+      variant: ColumnVariant;
     }
       ? K
       : never;
@@ -90,6 +96,13 @@ export type SortableColumnId<TColumnConfigs extends DataTableColumnConfigs> = {
     : K;
 }[keyof TColumnConfigs] &
   string;
+
+export interface DataTableQueryKeys {
+  page: string;
+  perPage: string;
+  sort: string;
+  joinOperator: string;
+}
 
 export interface DataTableQuery<
   TFilterColumnId extends string = string,

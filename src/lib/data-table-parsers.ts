@@ -22,6 +22,7 @@ import type {
 import {
   FILTER_OPERATORS,
   getFilterOperators,
+  getFilterVariant,
   getIsActiveFilter,
   getIsValuelessOperator,
   getPlainFilterOperator,
@@ -222,8 +223,8 @@ export function getFilterableColumns<
 >(columnConfigs: TColumnConfigs) {
   const entries = getKeys<keyof TColumnConfigs & string>(columnConfigs).flatMap(
     (id) => {
-      const variant = columnConfigs[id]?.variant;
-      return variant ? [[id, variant] as const] : [];
+      const config = columnConfigs[id];
+      return config?.variant ? [[id, getFilterVariant(config)] as const] : [];
     },
   );
 

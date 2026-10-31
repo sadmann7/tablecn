@@ -8,6 +8,10 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import {
+  getRangeFilterBounds,
+  getValidRangeFilterBounds,
+} from "@/lib/data-table-utils";
 import { Input } from "@/registry/bases/radix/ui/input";
 
 interface DataTableRangeFilterProps<
@@ -42,32 +46,52 @@ export function DataTableRangeFilter<TData extends RowData>({
     return [values[0], values[1]];
   }, [column]);
 
-  const value = getRangeFilterValues(filter.value).map(getInputValue);
-
-  const onRangeValueChange = React.useCallback(
-    (value: string, isMin?: boolean) => {
-      const numValue = Number(value);
-      const currentValues = getRangeFilterValues(filter.value);
-      const otherValue = isMin ? currentValues[1] : currentValues[0];
-      // An empty bound is open, but `0` is a real bound
-      const otherNumber = Number(otherValue);
-      const otherBound =
-        otherValue === "" || Number.isNaN(otherNumber) ? null : otherNumber;
-
-      if (
-        value === "" ||
-        (!Number.isNaN(numValue) &&
-          (isMin
-            ? numValue >= min && numValue <= (otherBound ?? max)
-            : numValue <= max && numValue >= (otherBound ?? min)))
-      ) {
-        onFilterUpdate(filter.filterId, {
-          value: isMin ? [value, otherValue] : [otherValue, value],
-        });
-      }
-    },
-    [filter.filterId, filter.value, min, max, onFilterUpdate],
+  const [startValue, endValue] = getRangeFilterValues(filter.value).map(
+    getInputValue,
   );
+  const [drafts, setDrafts] = React.useState<[string | null, string | null]>([
+    null,
+    null,
+  ]);
+  const [startInput, endInput] = getInputValues(drafts);
+
+  function getInputValues(
+    nextDrafts: [string | null, string | null],
+  ): [string, string] {
+    return [nextDrafts[0] ?? startValue ?? "", nextDrafts[1] ?? endValue ?? ""];
+  }
+
+  function onBoundsUpdate([start, end]: [
+    number | undefined,
+    number | undefined,
+  ]) {
+    onFilterUpdate(filter.filterId, {
+      value: [start?.toString() ?? "", end?.toString() ?? ""],
+    });
+  }
+
+  function onDraftChange(index: 0 | 1, value: string) {
+    const nextDrafts: [string | null, string | null] =
+      index === 0 ? [value, drafts[1]] : [drafts[0], value];
+    setDrafts(nextDrafts);
+
+    const nextBounds = getValidRangeFilterBounds(getInputValues(nextDrafts), [
+      min,
+      max,
+    ]);
+    if (nextBounds) onBoundsUpdate(nextBounds);
+  }
+
+  function onDraftCommit() {
+    if (drafts[0] === null && drafts[1] === null) return;
+
+    onBoundsUpdate(getRangeFilterBounds([startInput, endInput], [min, max]));
+    setDrafts([null, null]);
+  }
+
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") onDraftCommit();
+  }
 
   return (
     <div
@@ -87,8 +111,10 @@ export function DataTableRangeFilter<TData extends RowData>({
         min={min}
         max={max}
         className="w-full min-w-24"
-        defaultValue={value[0]}
-        onChange={(event) => onRangeValueChange(event.target.value, true)}
+        value={startInput}
+        onChange={(event) => onDraftChange(0, event.target.value)}
+        onBlur={onDraftCommit}
+        onKeyDown={onInputKeyDown}
       />
       <span className="sr-only shrink-0 text-muted-foreground">to</span>
       <Input
@@ -103,8 +129,10 @@ export function DataTableRangeFilter<TData extends RowData>({
         min={min}
         max={max}
         className="w-full min-w-24"
-        defaultValue={value[1]}
-        onChange={(event) => onRangeValueChange(event.target.value)}
+        value={endInput}
+        onChange={(event) => onDraftChange(1, event.target.value)}
+        onBlur={onDraftCommit}
+        onKeyDown={onInputKeyDown}
       />
     </div>
   );
@@ -115,7 +143,6 @@ function getRangeFilterValues(value: string | string[]): [string, string] {
   return [value, ""];
 }
 
-/** Number inputs only accept plain numbers, so skip rounding and grouping. */
 function getInputValue(value: string) {
   return value === "" || Number.isNaN(Number(value)) ? "" : value;
 }

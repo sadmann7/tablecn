@@ -233,9 +233,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Name",
-          cell: {
-            variant: "short-text",
-          },
+          variant: "text",
         },
       }),
       columnHelper.accessor("age", {
@@ -245,12 +243,10 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Age",
-          cell: {
-            variant: "number",
-            min: 18,
-            max: 100,
-            step: 1,
-          },
+          variant: "number",
+          min: 18,
+          max: 100,
+          step: 1,
         },
       }),
       columnHelper.accessor("email", {
@@ -260,9 +256,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Email",
-          cell: {
-            variant: "short-text",
-          },
+          variant: "text",
         },
       }),
       columnHelper.accessor("feedback", {
@@ -272,9 +266,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Feedback",
-          cell: {
-            variant: "long-text",
-          },
+          variant: "long-text",
         },
       }),
       columnHelper.accessor("department", {
@@ -284,13 +276,11 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Department",
-          cell: {
-            variant: "select",
-            options: departments.map((dept) => ({
-              label: dept,
-              value: dept,
-            })),
-          },
+          variant: "select",
+          options: departments.map((dept) => ({
+            label: dept,
+            value: dept,
+          })),
         },
       }),
       columnHelper.accessor("status", {
@@ -300,13 +290,11 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Status",
-          cell: {
-            variant: "select",
-            options: statuses.map((status) => ({
-              label: status,
-              value: status,
-            })),
-          },
+          variant: "select",
+          options: statuses.map((status) => ({
+            label: status,
+            value: status,
+          })),
         },
       }),
       columnHelper.accessor("skills", {
@@ -316,13 +304,11 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Skills",
-          cell: {
-            variant: "multi-select",
-            options: skills.map((skill) => ({
-              label: skill,
-              value: skill,
-            })),
-          },
+          variant: "multi-select",
+          options: skills.map((skill) => ({
+            label: skill,
+            value: skill,
+          })),
         },
       }),
       columnHelper.accessor("startDate", {
@@ -332,9 +318,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Start Date",
-          cell: {
-            variant: "date",
-          },
+          variant: "date",
         },
       }),
       columnHelper.accessor("salary", {
@@ -344,15 +328,13 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Salary",
-          cell: {
-            variant: "number",
-            min: 0,
-            step: 1000,
-            format: {
-              style: "currency",
-              currency: "USD",
-              maximumFractionDigits: 0,
-            },
+          variant: "number",
+          min: 0,
+          step: 1000,
+          format: {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
           },
         },
       }),
@@ -363,9 +345,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Active",
-          cell: {
-            variant: "checkbox",
-          },
+          variant: "boolean",
         },
       }),
       columnHelper.accessor("website", {
@@ -375,9 +355,7 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Website",
-          cell: {
-            variant: "url",
-          },
+          variant: "url",
         },
       }),
       columnHelper.accessor("attachments", {
@@ -387,14 +365,12 @@ function DataGridDemoContent({
         filterFn,
         meta: {
           label: "Attachments",
-          cell: {
-            variant: "file",
-            maxFileSize: 10 * 1024 * 1024, // 10MB
-            maxFiles: 5,
-            accept:
-              "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
-            multiple: true,
-          },
+          variant: "file",
+          maxFileSize: 10 * 1024 * 1024, // 10MB
+          maxFiles: 5,
+          accept:
+            "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
+          multiple: true,
         },
       }),
       getDataGridActionsColumn<Person>({

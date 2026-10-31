@@ -9,6 +9,7 @@ import type {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnFilterItem,
+  DataTableColumnConfig,
   FilterOperator,
   FilterOperatorOption,
   FilterVariant,
@@ -21,10 +22,10 @@ export const FILTER_VARIANTS = [
   "number",
   "range",
   "date",
-  "dateRange",
+  "date-range",
   "boolean",
   "select",
-  "multiSelect",
+  "multi-select",
 ] as const;
 
 export const FILTER_OPERATORS = {
@@ -106,9 +107,9 @@ const BOOLEAN_OPERATORS = [
 
 const MULTI_VALUE_FILTER_VARIANTS: FilterVariant[] = [
   "select",
-  "multiSelect",
+  "multi-select",
   "range",
-  "dateRange",
+  "date-range",
 ];
 
 const FILTER_OPERATORS_BY_VARIANT: Record<
@@ -119,10 +120,10 @@ const FILTER_OPERATORS_BY_VARIANT: Record<
   number: NUMERIC_OPERATORS,
   range: NUMERIC_OPERATORS,
   date: DATE_OPERATORS,
-  dateRange: DATE_OPERATORS,
+  "date-range": DATE_OPERATORS,
   boolean: BOOLEAN_OPERATORS,
   select: SELECT_OPERATORS,
-  multiSelect: MULTI_SELECT_OPERATORS,
+  "multi-select": MULTI_SELECT_OPERATORS,
 };
 
 export function getAriaSort(
@@ -228,10 +229,29 @@ export function coerceFilterValue(
   return value;
 }
 
+export function getFilterVariant(
+  config: Pick<DataTableColumnConfig, "variant" | "filter"> | undefined,
+): FilterVariant {
+  if (config?.filter) {
+    return config.variant === "date" ? "date-range" : "range";
+  }
+
+  switch (config?.variant) {
+    case "number":
+    case "boolean":
+    case "select":
+    case "multi-select":
+    case "date":
+      return config.variant;
+    default:
+      return "text";
+  }
+}
+
 export function getDefaultFilter<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
 ) {
-  const variant = column.columnDef.meta?.variant ?? "text";
+  const variant = getFilterVariant(column.columnDef.meta);
 
   return {
     id: column.id,
@@ -242,7 +262,7 @@ export function getDefaultFilter<TData extends RowData>(
 }
 
 export function getSelectFilterValue(filter: ColumnFilterItem) {
-  if (filter.variant === "multiSelect") {
+  if (filter.variant === "multi-select") {
     return Array.isArray(filter.value) ? filter.value : [];
   }
 
@@ -290,7 +310,7 @@ export function formatFilterDate(date: Date) {
 }
 
 export function getIsDateVariant(variant: FilterVariant) {
-  return variant === "date" || variant === "dateRange";
+  return variant === "date" || variant === "date-range";
 }
 
 export function getFilterDates(value: ColumnFilterItem["value"]) {
@@ -328,13 +348,46 @@ export function stringifyFilterValue(value: unknown): string {
   return String(value as string | number | boolean | bigint);
 }
 
+export function getRangeFilterBounds(
+  values: [string, string],
+  [min, max]: [number, number],
+): [number | undefined, number | undefined] {
+  const [start, end] = values.map((value) => {
+    const number = Number(value);
+    return value.trim() === "" || Number.isNaN(number)
+      ? undefined
+      : Math.min(Math.max(number, min), max);
+  });
+
+  return start !== undefined && end !== undefined && start > end
+    ? [end, start]
+    : [start, end];
+}
+
+export function getValidRangeFilterBounds(
+  values: [string, string],
+  [min, max]: [number, number],
+): [number | undefined, number | undefined] | null {
+  const [start, end] = values.map((value) =>
+    value.trim() === "" ? undefined : Number(value),
+  );
+
+  for (const bound of [start, end]) {
+    if (bound === undefined) continue;
+    if (Number.isNaN(bound) || bound < min || bound > max) return null;
+  }
+  if (start !== undefined && end !== undefined && start > end) return null;
+
+  return [start, end];
+}
+
 export function getIsMultiValueVariant(variant: FilterVariant) {
   return MULTI_VALUE_FILTER_VARIANTS.includes(variant);
 }
 
 export function getPlainFilterOperator(variant: FilterVariant): FilterOperator {
-  if (variant === "select" || variant === "multiSelect") return "inArray";
-  if (variant === "range" || variant === "dateRange") return "isBetween";
+  if (variant === "select" || variant === "multi-select") return "inArray";
+  if (variant === "range" || variant === "date-range") return "isBetween";
   return getDefaultFilterOperator(variant);
 }
 
@@ -361,7 +414,11 @@ export function createPlainFilter<TColumnId extends string>(
   const stringify = getFilterValueStringifier(variant, operator);
 
   if (getIsMultiValueVariant(variant)) {
-    const values = (Array.isArray(value) ? value : [value]).map(stringify);
+    const values = normalizeFilterValues(
+      variant,
+      operator,
+      (Array.isArray(value) ? value : [value]).map(stringify),
+    );
     if (values.every((item) => item === "")) return null;
     return { id, variant, operator, value: values, filterId };
   }
@@ -386,7 +443,11 @@ export function normalizeColumnFilter(
       variant: filterVariant,
       operator: filter.operator,
       value: Array.isArray(filter.value)
-        ? filter.value.map(stringify)
+        ? normalizeFilterValues(
+            filterVariant,
+            filter.operator,
+            filter.value.map(stringify),
+          )
         : stringify(filter.value),
       filterId,
     };
@@ -407,7 +468,7 @@ export function normalizeColumnFilter(
 export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 
-  if (variant === "select" || variant === "multiSelect") {
+  if (variant === "select" || variant === "multi-select") {
     return Array.isArray(value) ? value : [value];
   }
 
@@ -443,6 +504,28 @@ export function getActiveFilters<TFilterItem extends ColumnFilterItem>(
 
 function getValidDate(date: Date) {
   return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function normalizeFilterValues(
+  variant: FilterVariant,
+  operator: FilterOperator,
+  values: string[],
+) {
+  if (
+    operator !== "isBetween" ||
+    (variant !== "number" && variant !== "range")
+  ) {
+    return values;
+  }
+
+  const [start = "", end = ""] = values.map((value) => {
+    const trimmed = value.trim();
+    return trimmed === "" || Number.isNaN(Number(trimmed)) ? "" : trimmed;
+  });
+
+  return start !== "" && end !== "" && Number(start) > Number(end)
+    ? [end, start]
+    : [start, end];
 }
 
 function getFilterValueStringifier(

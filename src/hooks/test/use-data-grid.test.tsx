@@ -64,7 +64,7 @@ const testColumns: ColumnDef<DataGridFeatures, TestData>[] = [
   {
     id: "score",
     accessorKey: "score",
-    meta: { cell: { variant: "number" } },
+    meta: { variant: "number" },
     filterFn: simpleFilterFn,
   },
 ];
@@ -5558,7 +5558,7 @@ describe("useDataGrid", () => {
           id: "trick",
           accessorKey: "trick",
           cell: () => "unused",
-          meta: { cell: { variant: "short-text" } },
+          meta: { variant: "text" },
         },
       ];
       const { result } = renderHook(

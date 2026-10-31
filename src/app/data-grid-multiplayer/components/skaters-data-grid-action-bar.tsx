@@ -11,7 +11,7 @@ import { CheckCircle2, Copy, Palette, Trash2, X } from "lucide-react";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { CellSelectOption } from "@/lib/data-grid-types";
+import type { ColumnSelectOption } from "@/lib/data-grid-types";
 
 import { ActionBarTooltipItem } from "@/components/action-bar-tooltip-item";
 import {
@@ -32,8 +32,8 @@ type SkaterRows<TData extends RowData> = Row<DataGridFeatures, TData>[];
 
 interface SkatersDataGridActionBarProps<TData extends RowData> {
   table: Table<DataGridFeatures, TData>;
-  statusOptions?: CellSelectOption[];
-  styleOptions?: CellSelectOption[];
+  statusOptions?: ColumnSelectOption[];
+  styleOptions?: ColumnSelectOption[];
   onStatusUpdate?: (value: string, rows: SkaterRows<TData>) => void;
   onStyleUpdate?: (value: string, rows: SkaterRows<TData>) => void;
   onDuplicate?: (rows: SkaterRows<TData>) => void;
