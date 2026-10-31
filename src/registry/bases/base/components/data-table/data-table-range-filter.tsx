@@ -49,7 +49,6 @@ export function DataTableRangeFilter<TData extends RowData>({
       const numValue = Number(value);
       const currentValues = getRangeFilterValues(filter.value);
       const otherValue = isMin ? currentValues[1] : currentValues[0];
-      // An empty bound is open, but `0` is a real bound
       const otherNumber = Number(otherValue);
       const otherBound =
         otherValue === "" || Number.isNaN(otherNumber) ? null : otherNumber;
@@ -115,7 +114,6 @@ function getRangeFilterValues(value: string | string[]): [string, string] {
   return [value, ""];
 }
 
-/** Number inputs only accept plain numbers, so skip rounding and grouping. */
 function getInputValue(value: string) {
   return value === "" || Number.isNaN(Number(value)) ? "" : value;
 }
