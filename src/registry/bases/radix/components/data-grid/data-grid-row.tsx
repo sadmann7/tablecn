@@ -266,7 +266,6 @@ function DataGridRowContent<TData extends RowData>({
               key={columnId}
               cell={cell}
               columnIndex={columnIndex}
-              width={cell.column.getSize()}
               isFocused={isCellFocused}
               isRowSelected={isRowSelected}
               pinned={pinned}
@@ -316,7 +315,6 @@ function useDataGridRowContext() {
 interface DataGridUtilityCellProps<TData extends RowData> {
   cell: Cell<DataGridFeatures, TData>;
   columnIndex: number;
-  width: number;
   isFocused: boolean;
   isRowSelected: boolean;
   pinned: ColumnPinningPosition;
@@ -333,7 +331,6 @@ const DataGridUtilityCell = React.memo(
 function DataGridUtilityCellImpl<TData extends RowData>({
   cell,
   columnIndex,
-  width,
   isFocused,
   isRowSelected,
   pinned,
@@ -388,7 +385,11 @@ function DataGridUtilityCellImpl<TData extends RowData>({
         [CELL_TINTS.selected]: isRowSelected,
         "ring-1 ring-ring ring-inset": isFocused,
       })}
-      style={getCellLayoutStyle({ width, pinned, pinnedOffset })}
+      style={getCellLayoutStyle({
+        columnId: cell.column.id,
+        pinned,
+        pinnedOffset,
+      })}
     >
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
     </div>

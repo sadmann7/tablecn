@@ -56,6 +56,7 @@ const EMPTY_SORTING: SortingState = [];
 interface FiltersDraft {
   filters: ColumnFiltersState;
   urlFiltersKey: string;
+  pageToReset: number | null;
 }
 
 type UseDataTableProps<TData extends RowData> = Omit<
@@ -150,19 +151,6 @@ function useDataTable<TData extends RowData>({
 
   const [page, setPage] = useQueryState(pageKey, pageParser);
   const [perPage, setPerPage] = useQueryState(perPageKey, perPageParser);
-
-  const pagination = React.useMemo<PaginationState>(
-    () => ({ pageIndex: page - 1, pageSize: perPage }),
-    [page, perPage],
-  );
-
-  const getNextPagination = useChainedUpdate(pagination);
-
-  function onPaginationChange(updater: Updater<PaginationState>) {
-    const next = getNextPagination(updater);
-    void setPage(next.pageIndex + 1);
-    void setPerPage(next.pageSize);
-  }
 
   const columnIndex = React.useMemo(() => {
     const sortableIds = new Set<string>();
@@ -278,14 +266,35 @@ function useDataTable<TData extends RowData>({
       return {
         filters: columnIndex.normalizeColumnFilters(initialFilters),
         urlFiltersKey,
+        pageToReset: null,
       };
     },
   );
 
-  const columnFilters =
-    filtersDraft?.urlFiltersKey === urlFiltersKey
-      ? filtersDraft.filters
-      : urlFilters;
+  const activeDraft =
+    filtersDraft?.urlFiltersKey === urlFiltersKey ? filtersDraft : null;
+  const columnFilters = activeDraft?.filters ?? urlFilters;
+  const pageIndex = activeDraft?.pageToReset === page ? 0 : page - 1;
+
+  const pagination = React.useMemo<PaginationState>(
+    () => ({ pageIndex, pageSize: perPage }),
+    [pageIndex, perPage],
+  );
+
+  const getNextPagination = useChainedUpdate(pagination);
+
+  function onPaginationChange(updater: Updater<PaginationState>) {
+    const next = getNextPagination(updater);
+    if (next.pageIndex !== pagination.pageIndex) {
+      if (activeDraft?.pageToReset) {
+        setFiltersDraft((prev) => prev && { ...prev, pageToReset: null });
+      }
+      void setPage(next.pageIndex + 1);
+    }
+    if (next.pageSize !== pagination.pageSize) {
+      void setPerPage(next.pageSize);
+    }
+  }
 
   const debouncedWriteFilters = useDebouncedCallback(
     (columnFilters: ColumnFiltersState, sourceUrlFiltersKey: string) => {
@@ -309,7 +318,7 @@ function useDataTable<TData extends RowData>({
       setFiltersDraft(
         (prev) => prev && { ...prev, urlFiltersKey: nextUrlFiltersKey },
       );
-      void setPage(1);
+      if (page !== 1) void setPage(1);
       void setFilterParams(Object.fromEntries(params));
     },
     debounceMs,
@@ -319,7 +328,11 @@ function useDataTable<TData extends RowData>({
 
   function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
     const filters = getNextColumnFilters(updater);
-    setFiltersDraft({ filters, urlFiltersKey });
+    setFiltersDraft({
+      filters,
+      urlFiltersKey,
+      pageToReset: !isServer && page !== 1 ? page : null,
+    });
     debouncedWriteFilters(filters, urlFiltersKey);
   }
 

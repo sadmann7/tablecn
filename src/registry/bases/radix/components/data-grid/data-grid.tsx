@@ -25,6 +25,7 @@ import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   getColumnBorderVisibility,
   getColumnPinningStyle,
+  getHeaderSizeVar,
   getWindowedColumns,
 } from "@/lib/data-grid-utils";
 import { DataGridColumnHeader } from "@/registry/bases/radix/components/data-grid/data-grid-column-header";
@@ -235,11 +236,17 @@ function DataGridViewport<TData extends RowData>({
     [rowVirtualizerRef, rowSize],
   );
 
+  const getRowKey = React.useCallback(
+    (index: number) => `${index}:${rowSize}`,
+    [rowSize],
+  );
+
   const rowVirtualizer = useVirtualizer({
     ...rowVirtualizerOptions,
     rangeExtractor: rowRangeExtractor,
     count: rows.length,
     getScrollElement: () => dataGridRef.current,
+    getItemKey: getRowKey,
     estimateSize: () => rowSize,
     scrollPaddingStart: VIEWPORT_OFFSET,
     scrollPaddingEnd: insets.start + insets.end + VIEWPORT_OFFSET,
@@ -340,10 +347,6 @@ function DataGridViewport<TData extends RowData>({
       }
     };
   }, [rowVirtualizerRef, rowVirtualizer]);
-
-  useLayoutEffect(() => {
-    rowVirtualizer.measure();
-  }, [rowVirtualizer, table.state.rowHeight]);
 
   useLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
@@ -691,7 +694,7 @@ function DataGridHeaderImpl<TData extends RowData>({
                       })}
                       style={{
                         ...getColumnPinningStyle(header.column),
-                        width: `calc(var(--header-${header.id}-size) * 1px)`,
+                        width: getHeaderSizeVar(header.id),
                       }}
                     >
                       {header.isPlaceholder ? null : header.column.columnDef

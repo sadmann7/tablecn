@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   getBooleanCellValue,
   getCellKey,
+  getColumnSizeVar,
   getDateCellValue,
   getFilesCellValue,
+  getHeaderSizeVar,
   getIsEditableTarget,
   getIsInPopover,
   getIsPointOnScrollbar,
@@ -287,6 +289,24 @@ describe("getCellKey", () => {
 
   it("returns empty ids for malformed keys", () => {
     expect(parseCellKey("0:name")).toEqual({ rowId: "", columnId: "" });
+  });
+});
+
+describe("getColumnSizeVar", () => {
+  it("reads the column and header size variables", () => {
+    expect(getColumnSizeVar("name")).toBe("calc(var(--col-name-size) * 1px)");
+    expect(getHeaderSizeVar("name")).toBe(
+      "calc(var(--header-name-size) * 1px)",
+    );
+  });
+
+  it("escapes ids that are not valid CSS names", () => {
+    expect(getColumnSizeVar("Start Date")).toBe(
+      "calc(var(--col-Start\\ Date-size) * 1px)",
+    );
+    expect(getColumnSizeVar("address.city")).toBe(
+      "calc(var(--col-address\\.city-size) * 1px)",
+    );
   });
 });
 

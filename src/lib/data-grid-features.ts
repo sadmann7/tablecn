@@ -174,6 +174,7 @@ interface Table_DataGridData<TData extends RowData> {
     updates: CellUpdate | RowUpdate | (CellUpdate | RowUpdate)[],
     options?: UpdateCellsOptions,
   ) => void;
+  commitCellUpdates: () => void;
   subscribeCell: (
     rowId: string,
     columnId: string,
@@ -468,8 +469,17 @@ const dataGridCellEditingFeature: TableFeature = {
   constructTableAPIs: (table) => {
     const instance = asDataGrid(table);
 
-    const setEditingCell = (updater: Updater<EditingCell | null>) =>
-      setStateSlice(instance, "editingCell", updater);
+    const setEditingCell = (updater: Updater<EditingCell | null>) => {
+      const previous = instance.atoms.editingCell.get();
+      const next = typeof updater === "function" ? updater(previous) : updater;
+      if (
+        previous?.rowId !== next?.rowId ||
+        previous?.columnId !== next?.columnId
+      ) {
+        sealHistory(instance);
+      }
+      setStateSlice(instance, "editingCell", next);
+    };
 
     assignTableAPIs("dataGridCellEditingFeature", table, {
       table_getEditingCell: {
@@ -620,6 +630,7 @@ interface HistoryEntry {
   addedRows: IndexedRow[];
   removedRows: IndexedRow[];
   timestamp: number;
+  editingCellKey?: string;
 }
 
 type CellListeners = Set<() => void>;
@@ -669,6 +680,9 @@ const dataGridDataFeature: TableFeature = {
           updates: CellUpdate | RowUpdate | (CellUpdate | RowUpdate)[],
           options?: UpdateCellsOptions,
         ) => updateCells(instance, updates, options),
+      },
+      table_commitCellUpdates: {
+        fn: () => commitCellUpdates(instance, getCellUpdateStore(instance)),
       },
       table_subscribeCell: {
         fn: (rowId: string, columnId: string, listener: () => void) =>
@@ -951,11 +965,16 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
     store.commitTimer = null;
   }
   flushCellUpdates(table, store, true);
-  if (store.pending.size === 0) return;
+  if (store.pending.size === 0) {
+    store.recordedCells.clear();
+    return;
+  }
 
   if (!table.options.onDataChange) {
     store.pending.clear();
+    store.copies.clear();
     store.recordedCells.clear();
+    store.lateKeys.clear();
     return;
   }
 
@@ -1008,6 +1027,7 @@ function commitCellUpdates(table: DataGridInstance, store: CellUpdateStore) {
       addedRows: [],
       removedRows: [],
       timestamp: Date.now(),
+      editingCellKey: getEditingCellKey(table, recordedChanges),
     });
   }
 }
@@ -1120,7 +1140,9 @@ function pushHistory(
     !store.isHistorySealed &&
     getIsCellsOnly(last) &&
     getIsCellsOnly(entry) &&
-    entry.timestamp - last.timestamp < HISTORY_MERGE_DELAY &&
+    (entry.timestamp - last.timestamp < HISTORY_MERGE_DELAY ||
+      (entry.editingCellKey !== undefined &&
+        entry.editingCellKey === last.editingCellKey)) &&
     entry.changes.every((change) =>
       byKey.has(getCellKey(change.rowId, change.columnId)),
     )
@@ -1133,8 +1155,11 @@ function pushHistory(
         existing ? { ...existing, newValue: change.newValue } : change,
       );
     }
-    last.changes = [...byKey.values()];
+    last.changes = [...byKey.values()].filter(
+      (change) => !Object.is(change.previousValue, change.newValue),
+    );
     last.timestamp = entry.timestamp;
+    if (last.changes.length === 0) store.undoStack.pop();
   } else {
     store.undoStack.push(entry);
     const maxHistory = table.options.maxHistory ?? DEFAULT_MAX_HISTORY;
@@ -1144,6 +1169,24 @@ function pushHistory(
   store.isHistorySealed = false;
   store.redoStack = [];
   setUndoRedoState(table, store);
+}
+
+function getEditingCellKey(table: DataGridInstance, changes: CellChange[]) {
+  const editingCell = table.atoms.editingCell.get();
+  const [change] = changes;
+  if (
+    !change ||
+    changes.length !== 1 ||
+    change.rowId !== editingCell?.rowId ||
+    change.columnId !== editingCell.columnId
+  ) {
+    return undefined;
+  }
+  return getCellKey(change.rowId, change.columnId);
+}
+
+function sealHistory(table: DataGridInstance) {
+  getCellUpdateStore(table).isHistorySealed = true;
 }
 
 function getIsUndoRedoEnabled(table: DataGridInstance) {
@@ -2143,6 +2186,7 @@ interface SearchResult {
   rows: SearchRow[];
   columnsKey: string;
   rowTexts: string[][];
+  rowKeys: (number | string)[];
   matchedRows: number[];
   matches: CellPosition[];
   matchesByRowId: Map<string, Set<string>>;
@@ -2316,6 +2360,12 @@ function getSearchMatches(
   const lowerByValue = new Map<unknown, string>();
 
   const previous = cache.result;
+  const reusable =
+    previous !== null &&
+    previous.query === lowerQuery &&
+    previous.columnsKey === cache.columnsKey
+      ? previous
+      : null;
   const isNarrowing =
     previous !== null &&
     previous.rows === rows &&
@@ -2335,12 +2385,29 @@ function getSearchMatches(
   const matches: CellPosition[] = [];
   const matchesByRowId = new Map<string, Set<string>>();
   const matchedRows: number[] = [];
+  const rowKeys: (number | string)[] = [];
 
   for (let candidate = 0; candidate < candidateCount; candidate++) {
     const rowIndex = isNarrowing ? previous.matchedRows[candidate] : candidate;
     if (rowIndex === undefined) continue;
     const row = rows[rowIndex];
     if (!row) continue;
+
+    if (reusable?.rows[rowIndex] === row && !patchedRows.has(row)) {
+      const setKey = reusable.rowKeys[rowIndex];
+      if (setKey === undefined) continue;
+      const columnSet = cache.columnSets.get(setKey);
+      if (columnSet) {
+        for (const columnId of columnSet) {
+          matches.push({ rowId: row.id, columnId });
+        }
+        matchesByRowId.set(row.id, columnSet);
+        matchedRows.push(rowIndex);
+        rowKeys[rowIndex] = setKey;
+        continue;
+      }
+    }
+
     let texts = rowTexts[rowIndex];
     if (!texts) {
       texts = getRowSearchTexts(row, readValues, cache, lowerByValue);
@@ -2375,6 +2442,7 @@ function getSearchMatches(
     }
     matchesByRowId.set(row.id, columnSet);
     matchedRows.push(rowIndex);
+    rowKeys[rowIndex] = setKey;
   }
 
   cache.result = {
@@ -2382,6 +2450,7 @@ function getSearchMatches(
     rows,
     columnsKey: cache.columnsKey,
     rowTexts,
+    rowKeys,
     matchedRows,
     matches,
     matchesByRowId,
