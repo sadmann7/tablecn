@@ -404,9 +404,9 @@ export function UrlCell<TData extends RowData>(
           className="size-full overflow-hidden"
         >
           <a
-            tabIndex={-1}
             data-focused={isFocused && !isDangerousUrl ? "" : undefined}
             data-invalid={isDangerousUrl ? "" : undefined}
+            tabIndex={-1}
             href={urlHref}
             target="_blank"
             rel="noopener noreferrer"

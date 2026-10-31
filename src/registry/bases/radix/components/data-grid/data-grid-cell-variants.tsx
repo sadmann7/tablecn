@@ -406,9 +406,9 @@ export function UrlCell<TData extends RowData>(
           className="size-full overflow-hidden"
         >
           <a
-            tabIndex={-1}
             data-focused={isFocused && !isDangerousUrl ? "" : undefined}
             data-invalid={isDangerousUrl ? "" : undefined}
+            tabIndex={-1}
             href={urlHref}
             target="_blank"
             rel="noopener noreferrer"
@@ -555,9 +555,9 @@ export function SelectCell<TData extends RowData>(
         <Command
           ref={commandRef}
           tabIndex={-1}
-          loop
           defaultValue={value ?? undefined}
           className="bg-transparent p-px outline-none"
+          loop
         >
           <CommandList>
             <CommandGroup className="p-1.5">
