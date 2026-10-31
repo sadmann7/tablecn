@@ -110,7 +110,7 @@ export const COLUMN_SNIPPETS = [
     accessorKey: "createdAt",
     label: "Created At",
     variant: "date",
-    filter: "date-range",
+    filter: "range",
     extra: "icon: CalendarIcon,",
   },
 ];

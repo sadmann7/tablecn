@@ -232,7 +232,9 @@ export function coerceFilterValue(
 export function getFilterVariant(
   config: Pick<DataTableColumnConfig, "variant" | "filter"> | undefined,
 ): FilterVariant {
-  if (config?.filter) return config.filter;
+  if (config?.filter) {
+    return config.variant === "date" ? "date-range" : "range";
+  }
 
   switch (config?.variant) {
     case "number":

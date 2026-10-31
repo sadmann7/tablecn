@@ -32,8 +32,7 @@ export type ColumnVariant =
 
 export type ColumnVariantFilter =
   | { variant?: Exclude<ColumnVariant, "number" | "date">; filter?: never }
-  | { variant: "number"; filter?: "range" }
-  | { variant: "date"; filter?: "date-range" };
+  | { variant: "number" | "date"; filter?: "range" };
 
 export type DataTableColumnMeta = {
   label?: string;

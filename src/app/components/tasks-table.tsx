@@ -123,7 +123,7 @@ export function TasksTable({
           ),
           cell: ({ row, cell }) => {
             const label = tasks.label.enumValues.find(
-              (label) => label === row.original.label,
+              (option) => option === row.original.label,
             );
 
             return (

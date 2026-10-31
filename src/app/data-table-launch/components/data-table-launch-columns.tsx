@@ -128,7 +128,7 @@ export const launchColumns = columnHelper.columns([
     meta: {
       label: "Created At",
       variant: "date",
-      filter: "date-range",
+      filter: "range",
       icon: CalendarIcon,
     },
     enableColumnFilter: true,

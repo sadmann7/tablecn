@@ -21,7 +21,7 @@ export const tasksColumnConfigs = {
   status: { variant: "multi-select" },
   priority: { variant: "multi-select" },
   estimatedHours: { variant: "number", filter: "range" },
-  createdAt: { variant: "date", filter: "date-range" },
+  createdAt: { variant: "date", filter: "range" },
 } as const satisfies Partial<Record<keyof Task, DataTableColumnConfig>>;
 
 export const tasksDefaultSorting = [
