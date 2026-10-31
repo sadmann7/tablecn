@@ -31,14 +31,14 @@ describe("matchesFilter", () => {
   });
 
   it("matches list membership when the filter value is a list", () => {
-    expect(match("todo", "inArray", "multiSelect", ["todo", "done"])).toBe(
+    expect(match("todo", "inArray", "multi-select", ["todo", "done"])).toBe(
       true,
     );
-    expect(match("canceled", "inArray", "multiSelect", ["todo"])).toBe(false);
-    expect(match("todo", "inArray", "multiSelect", "todo")).toBe(true);
-    expect(match("todo", "notInArray", "multiSelect", ["done"])).toBe(true);
-    expect(match("done", "notInArray", "multiSelect", ["done"])).toBe(false);
-    expect(match("done", "notInArray", "multiSelect", "done")).toBe(true);
+    expect(match("canceled", "inArray", "multi-select", ["todo"])).toBe(false);
+    expect(match("todo", "inArray", "multi-select", "todo")).toBe(true);
+    expect(match("todo", "notInArray", "multi-select", ["done"])).toBe(true);
+    expect(match("done", "notInArray", "multi-select", ["done"])).toBe(false);
+    expect(match("done", "notInArray", "multi-select", "done")).toBe(true);
   });
 
   it("compares numbers and rejects a value that is not numeric", () => {
@@ -62,7 +62,7 @@ describe("matchesFilter", () => {
     expect(match("nope", "isBetween", "number", ["2", "8"])).toBe(false);
     expect(match(day, "isBetween", "date", ["2026-10-03", ""])).toBe(true);
     expect(
-      match(later, "isBetween", "dateRange", ["2026-10-01", "2026-10-07"]),
+      match(later, "isBetween", "date-range", ["2026-10-01", "2026-10-07"]),
     ).toBe(false);
     expect(match(day, "isBetween", "date", ["", "2026-10-03"])).toBe(true);
     expect(match(3, "isBetween", "range", ["", "3"])).toBe(true);
@@ -133,7 +133,7 @@ describe("matchesFilter", () => {
         false,
       );
       expect(
-        match(atNoon(30), "isRelativeToToday", "dateRange", "1 months"),
+        match(atNoon(30), "isRelativeToToday", "date-range", "1 months"),
       ).toBe(true);
       expect(match(atNoon(29), "isRelativeToToday", "date", "1 months")).toBe(
         false,

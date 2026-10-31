@@ -80,32 +80,32 @@ describe("parsePastedCellValue", () => {
   });
 
   it("parses checkbox words", () => {
-    expect(parsePastedCellValue("Yes", { variant: "checkbox" })).toEqual({
+    expect(parsePastedCellValue("Yes", { variant: "boolean" })).toEqual({
       value: true,
     });
-    expect(parsePastedCellValue("unchecked", { variant: "checkbox" })).toEqual({
+    expect(parsePastedCellValue("unchecked", { variant: "boolean" })).toEqual({
       value: false,
     });
-    expect(parsePastedCellValue("maybe", { variant: "checkbox" })).toBeNull();
+    expect(parsePastedCellValue("maybe", { variant: "boolean" })).toBeNull();
   });
 
   it("matches select options by value or label", () => {
-    const cellOpts = { variant: "select" as const, options };
-    expect(parsePastedCellValue("Goofy", cellOpts)).toEqual({
+    const meta = { variant: "select" as const, options };
+    expect(parsePastedCellValue("Goofy", meta)).toEqual({
       value: "goofy",
     });
-    expect(parsePastedCellValue("switch", cellOpts)).toBeNull();
+    expect(parsePastedCellValue("switch", meta)).toBeNull();
   });
 
   it("parses multi-select from JSON or comma separated text", () => {
-    const cellOpts = { variant: "multi-select" as const, options };
-    expect(parsePastedCellValue('["goofy","nope"]', cellOpts)).toEqual({
+    const meta = { variant: "multi-select" as const, options };
+    expect(parsePastedCellValue('["goofy","nope"]', meta)).toEqual({
       value: ["goofy"],
     });
-    expect(parsePastedCellValue("Regular, Goofy", cellOpts)).toEqual({
+    expect(parsePastedCellValue("Regular, Goofy", meta)).toEqual({
       value: ["regular", "goofy"],
     });
-    expect(parsePastedCellValue("nope", cellOpts)).toBeNull();
+    expect(parsePastedCellValue("nope", meta)).toBeNull();
   });
 
   it("accepts urls and bare domains only", () => {
@@ -119,7 +119,7 @@ describe("parsePastedCellValue", () => {
     expect(parsePastedCellValue('["a","b"]', undefined)).toEqual({
       value: "a, b",
     });
-    expect(parsePastedCellValue("true", { variant: "short-text" })).toEqual({
+    expect(parsePastedCellValue("true", { variant: "text" })).toEqual({
       value: "Checked",
     });
   });

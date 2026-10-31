@@ -136,15 +136,30 @@ function getPreviewContent<TData extends RowData>({
   className?: string;
   content: React.ReactNode;
 } {
-  const cellOpts = cell.column.columnDef.meta?.cell;
+  const meta = cell.column.columnDef.meta;
   const lineClampClassName = cn(
     "w-fit max-w-full wrap-anywhere",
     LINE_CLAMP_CLASS_NAMES[rowHeight],
   );
 
-  switch (cellOpts?.variant) {
-    case "checkbox": {
+  switch (meta?.variant) {
+    case "boolean": {
       const isChecked = getBooleanCellValue(value);
+
+      if (meta.control === "switch") {
+        return {
+          className: "flex justify-center pt-2.5",
+          content: (
+            <span
+              data-checked={isChecked ? "" : undefined}
+              data-unchecked={isChecked ? undefined : ""}
+              className="group inline-flex h-[14px] w-[24px] shrink-0 items-center rounded-full border border-transparent data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80"
+            >
+              <span className="block size-3 rounded-full bg-background group-data-checked:translate-x-[calc(100%-2px)] rtl:group-data-checked:-translate-x-[calc(100%-2px)] dark:group-data-checked:bg-primary-foreground dark:group-data-unchecked:bg-foreground" />
+            </span>
+          ),
+        };
+      }
 
       return {
         className: "flex justify-center pt-2.5",
@@ -169,8 +184,8 @@ function getPreviewContent<TData extends RowData>({
     case "select": {
       const selectedValue = getOptionCellValue(value);
       const label =
-        cellOpts.options.find((option) => option.value === selectedValue)
-          ?.label ?? selectedValue;
+        meta.options.find((option) => option.value === selectedValue)?.label ??
+        selectedValue;
 
       return {
         content: label ? (
@@ -193,8 +208,7 @@ function getPreviewContent<TData extends RowData>({
 
       const labels = values.map(
         (item) =>
-          cellOpts.options.find((option) => option.value === item)?.label ??
-          item,
+          meta.options.find((option) => option.value === item)?.label ?? item,
       );
       const { visibleItems, hiddenCount } = getBadgeOverflow({
         items: labels,
@@ -309,9 +323,7 @@ function getPreviewContent<TData extends RowData>({
       return {
         content: (
           <div dir="auto" className={cn(lineClampClassName, "tabular-nums")}>
-            {number === null
-              ? ""
-              : formatNumberForDisplay(number, cellOpts.format)}
+            {number === null ? "" : formatNumberForDisplay(number, meta.format)}
           </div>
         ),
       };

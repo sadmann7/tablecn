@@ -900,13 +900,14 @@ function applyRowValues(
 }
 
 function getRowCopy(store: CellUpdateStore, rowId: string, current: RowValues) {
-  let shown = store.copies.get(rowId);
-  if (!shown || current !== shown.copy) {
-    shown = { base: current, copy: { ...current } };
-    store.copies.set(rowId, shown);
-  }
+  const shown = store.copies.get(rowId);
+  const copy = { ...current };
+  store.copies.set(rowId, {
+    base: shown && current === shown.copy ? shown.base : current,
+    copy,
+  });
   store.pending.add(rowId);
-  return shown.copy;
+  return copy;
 }
 
 function getHasKeys(object: object) {
@@ -1171,7 +1172,7 @@ function getCanEditCell(table: DataGridInstance, columnId: string) {
 
 function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
   const column = table.getAllFlatColumnsById()[columnId];
-  return getEmptyCellValue(column?.columnDef.meta?.cell?.variant);
+  return getEmptyCellValue(column?.columnDef.meta?.variant);
 }
 
 function addRows(
@@ -1822,7 +1823,7 @@ function serializeSelectedCells(
             ? quoteTsvField(
                 serializeCellValue(
                   cell.getValue(),
-                  cell.column.columnDef.meta?.cell?.variant,
+                  cell.column.columnDef.meta?.variant,
                 ),
               )
             : "";
@@ -1855,9 +1856,7 @@ function serializeCellRange(
   if (columns.length === 0 || rows.length === 0) return null;
 
   const readValues = columns.map(getColumnValueReader);
-  const variants = columns.map(
-    (column) => column.columnDef.meta?.cell?.variant,
-  );
+  const variants = columns.map((column) => column.columnDef.meta?.variant);
   const lines: string[] = [];
   for (const row of rows) {
     let line = "";
@@ -2006,7 +2005,7 @@ async function pasteCells(
 
         const column = table.getAllFlatColumnsById()[columnId];
         const parsed = column?.getCanEdit()
-          ? parsePastedCellValue(text, column.columnDef.meta?.cell)
+          ? parsePastedCellValue(text, column.columnDef.meta)
           : null;
         if (!parsed) {
           skippedCount++;

@@ -112,7 +112,7 @@ function DataGridFilterMenuContent<TData extends RowData>({
       if (!column.getCanFilter()) continue;
 
       const label = column.columnDef.meta?.label ?? column.id;
-      const variant = column.columnDef.meta?.cell?.variant ?? "short-text";
+      const variant = column.columnDef.meta?.variant ?? "text";
 
       labels.set(column.id, label);
       variants.set(column.id, variant);
@@ -133,7 +133,7 @@ function DataGridFilterMenuContent<TData extends RowData>({
     const firstColumn = columns[0];
     if (!firstColumn) return;
 
-    const variant = columnVariants.get(firstColumn.id) ?? "short-text";
+    const variant = columnVariants.get(firstColumn.id) ?? "text";
     const defaultOperator = getDefaultOperator(variant);
 
     table.setColumnFilters((prevFilters) => [
@@ -360,7 +360,7 @@ function DataGridFilterItem<TData extends RowData>({
   const [showFieldSelector, setShowFieldSelector] = React.useState(false);
   const [showOperatorSelector, setShowOperatorSelector] = React.useState(false);
 
-  const variant = columnVariants.get(filter.id) ?? "short-text";
+  const variant = columnVariants.get(filter.id) ?? "text";
   const filterValue = filter.value as FilterValue | undefined;
   const operator = filterValue?.operator ?? getDefaultOperator(variant);
 
@@ -442,7 +442,7 @@ function DataGridFilterItem<TData extends RowData>({
         onOpenChange={setShowFieldSelector}
         onValueChange={(columnId) => {
           if (!columnId) return;
-          const newVariant = columnVariants.get(columnId) ?? "short-text";
+          const newVariant = columnVariants.get(columnId) ?? "text";
           const newOperator = getDefaultOperator(newVariant);
 
           table.setColumnFilters((prevFilters) =>
@@ -626,14 +626,13 @@ function DataGridFilterInput<TData extends RowData>({
     FILTER_DEBOUNCE_MS,
   );
 
-  const cellVariant = column.columnDef.meta?.cell;
+  const meta = column.columnDef.meta;
 
   const selectOptions = React.useMemo(() => {
-    return cellVariant?.variant === "select" ||
-      cellVariant?.variant === "multi-select"
-      ? cellVariant.options
+    return meta?.variant === "select" || meta?.variant === "multi-select"
+      ? meta.options
       : [];
-  }, [cellVariant]);
+  }, [meta]);
 
   const isBetween = operator === "isBetween";
 

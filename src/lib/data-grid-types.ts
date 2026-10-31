@@ -29,9 +29,71 @@ export type NavigationDirection =
   | "tab"
   | "shift+tab";
 
+export interface ColumnSelectOption {
+  label: string;
+  value: string;
+  count?: number;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
+}
+
+export type PlainColumnVariant = "text" | "long-text" | "url" | "date";
+
+export interface ColumnVariantOptions {
+  number: {
+    min?: number;
+    max?: number;
+    step?: number;
+    format?: Intl.NumberFormatOptions;
+  };
+  boolean: {
+    control?: "checkbox" | "switch";
+  };
+  select: {
+    options: ColumnSelectOption[];
+  };
+  "multi-select": {
+    options: ColumnSelectOption[];
+  };
+  file: {
+    maxFileSize?: number;
+    maxFiles?: number;
+    accept?: string;
+    multiple?: boolean;
+  };
+}
+
+export type ColumnVariant = PlainColumnVariant | keyof ColumnVariantOptions;
+
+export type ColumnVariantMeta =
+  | { variant?: PlainColumnVariant }
+  | {
+      [TVariant in keyof ColumnVariantOptions]: {
+        variant: TVariant;
+      } & ColumnVariantOptions[TVariant];
+    }[keyof ColumnVariantOptions];
+
+export type DataGridColumnMeta = {
+  label?: string;
+  icon?: React.ComponentType<React.ComponentProps<"svg">>;
+  writeCell?: (element: HTMLElement, value: unknown) => void;
+} & ColumnVariantMeta;
+
+export interface FileCellData {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  url?: string;
+}
+
 export interface CellPosition {
   rowId: string;
   columnId: string;
+}
+
+export interface CellPresence extends CellPosition {
+  name: string;
+  color: string;
 }
 
 export interface EditingCell extends CellPosition {
@@ -51,6 +113,16 @@ export interface CellUpdate {
   rowId: string;
   columnId: string;
   value: unknown;
+}
+
+export interface RowUpdate {
+  rowId: string;
+  values: Record<string, unknown>;
+}
+
+export interface UpdateCellsOptions {
+  batch?: boolean;
+  history?: boolean;
 }
 
 export interface CellChange {
@@ -76,6 +148,11 @@ export interface DataChangeDetails<TData = unknown> {
   removedRows: TData[];
 }
 
+export interface AddRowsOptions {
+  afterRowId?: string;
+  beforeRowId?: string;
+}
+
 export type CreateRowDetails =
   | {
       reason: "add-row-press";
@@ -86,90 +163,9 @@ export type CreateRowDetails =
   | { reason: "insert-below"; event: KeyboardEvent; afterRowId: string }
   | { reason: "paste"; event?: undefined };
 
-export interface AddRowsOptions {
-  afterRowId?: string;
-  beforeRowId?: string;
-}
-
 export interface UndoRedoState {
   canUndo: boolean;
   canRedo: boolean;
-}
-
-export interface RowUpdate {
-  rowId: string;
-  values: Record<string, unknown>;
-}
-
-export interface UpdateCellsOptions {
-  batch?: boolean;
-  history?: boolean;
-}
-
-export interface CellPresence extends CellPosition {
-  name: string;
-  color: string;
-}
-
-export interface FileCellData {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  url?: string;
-}
-
-export interface CellSelectOption {
-  label: string;
-  value: string;
-  icon?: React.ComponentType<React.ComponentProps<"svg">>;
-  count?: number;
-}
-
-export type CellOpts =
-  | {
-      variant: "short-text";
-    }
-  | {
-      variant: "long-text";
-    }
-  | {
-      variant: "number";
-      min?: number;
-      max?: number;
-      step?: number;
-      format?: Intl.NumberFormatOptions;
-    }
-  | {
-      variant: "select";
-      options: CellSelectOption[];
-    }
-  | {
-      variant: "multi-select";
-      options: CellSelectOption[];
-    }
-  | {
-      variant: "checkbox";
-    }
-  | {
-      variant: "date";
-    }
-  | {
-      variant: "url";
-    }
-  | {
-      variant: "file";
-      maxFileSize?: number;
-      maxFiles?: number;
-      accept?: string;
-      multiple?: boolean;
-    };
-
-export interface DataGridColumnMeta {
-  label?: string;
-  icon?: React.ComponentType<React.ComponentProps<"svg">>;
-  cell?: CellOpts;
-  writeCell?: (element: HTMLElement, value: unknown) => void;
 }
 
 export interface ColumnValueReader<TData extends RowData = RowData> {

@@ -10,7 +10,7 @@ import { getHasCustomCell } from "@/lib/data-grid-utils";
 import { DataGridCell } from "@/registry/bases/base/components/data-grid/data-grid-cell";
 import { DataGridCellPreview } from "@/registry/bases/base/components/data-grid/data-grid-cell-preview";
 import {
-  CheckboxCell,
+  BooleanCell,
   DateCell,
   FileCell,
   LongTextCell,
@@ -51,6 +51,9 @@ export const DataGridDataCell = React.memo(
     if (prev.cell.row.id !== next.cell.row.id) return false;
     if (prev.cell.column.id !== next.cell.column.id) return false;
     if (prev.cell.column.columnDef.cell !== next.cell.column.columnDef.cell) {
+      return false;
+    }
+    if (prev.cell.column.columnDef.meta !== next.cell.column.columnDef.meta) {
       return false;
     }
     // Written cells take their values straight from `updateCells`
@@ -111,12 +114,12 @@ function DataGridDataCellImpl<TData extends RowData>({
     );
   }
 
-  const variant = cell.column.columnDef.meta?.cell?.variant ?? "text";
+  const variant = cell.column.columnDef.meta?.variant ?? "text";
 
   let Comp: React.ComponentType<DataGridCellProps<TData>>;
 
   switch (variant) {
-    case "short-text":
+    case "text":
       Comp = ShortTextCell;
       break;
     case "long-text":
@@ -128,8 +131,8 @@ function DataGridDataCellImpl<TData extends RowData>({
     case "url":
       Comp = UrlCell;
       break;
-    case "checkbox":
-      Comp = CheckboxCell;
+    case "boolean":
+      Comp = BooleanCell;
       break;
     case "select":
       Comp = SelectCell;
@@ -198,8 +201,8 @@ function DataGridCustomCellContentImpl<TData extends RowData>({
   return flexRender(cell.column.columnDef.cell, cell.getContext());
 }
 
-// Custom renderers read the stable `cell` through methods the compiler can't
-// track, so this re-renders them on each live update instead
+// Live updates patch rows in place, so the `cell` prop never changes; this
+// re-renders on each update and skips the compiler, which would cache on it
 function useUpdatedCell<TData extends RowData>(
   cell: Cell<DataGridFeatures, TData>,
 ) {

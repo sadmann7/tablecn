@@ -84,44 +84,42 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
     id: "name",
     accessorKey: "name",
     header: "Name",
-    meta: { cell: { variant: "short-text" } },
+    meta: { variant: "text" },
   },
   {
     id: "website",
     accessorKey: "website",
     header: "Website",
-    meta: { cell: { variant: "url" } },
+    meta: { variant: "url" },
   },
   {
     id: "age",
     accessorKey: "age",
     header: "Age",
-    meta: { cell: { variant: "number" } },
+    meta: { variant: "number" },
   },
   {
     id: "bio",
     accessorKey: "bio",
     header: "Bio",
-    meta: { cell: { variant: "long-text" } },
+    meta: { variant: "long-text" },
   },
   {
     id: "isPro",
     accessorKey: "isPro",
     header: "Pro",
-    meta: { cell: { variant: "checkbox" } },
+    meta: { variant: "boolean" },
   },
   {
     id: "stance",
     accessorKey: "stance",
     header: "Stance",
     meta: {
-      cell: {
-        variant: "select",
-        options: [
-          { label: "Goofy", value: "goofy" },
-          { label: "Regular", value: "regular" },
-        ],
-      },
+      variant: "select",
+      options: [
+        { label: "Goofy", value: "goofy" },
+        { label: "Regular", value: "regular" },
+      ],
     },
   },
   {
@@ -129,27 +127,25 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
     accessorKey: "tricks",
     header: "Tricks",
     meta: {
-      cell: {
-        variant: "multi-select",
-        options: [
-          { label: "900", value: "900" },
-          { label: "Kickflip", value: "kickflip" },
-          { label: "Heelflip", value: "heelflip" },
-        ],
-      },
+      variant: "multi-select",
+      options: [
+        { label: "900", value: "900" },
+        { label: "Kickflip", value: "kickflip" },
+        { label: "Heelflip", value: "heelflip" },
+      ],
     },
   },
   {
     id: "joined",
     accessorKey: "joined",
     header: "Joined",
-    meta: { cell: { variant: "date" } },
+    meta: { variant: "date" },
   },
   {
     id: "media",
     accessorKey: "media",
     header: "Media",
-    meta: { cell: { variant: "file", multiple: true } },
+    meta: { variant: "file", multiple: true },
   },
 ];
 
@@ -409,7 +405,26 @@ describe("DataGrid cells", () => {
     });
   });
 
-  describe("checkbox", () => {
+  describe("boolean", () => {
+    it("renders a switch when asked and toggles it on Space", () => {
+      const { getCell, getValue, focus } = renderGrid({
+        columns: columns.map((column) =>
+          column.id === "isPro"
+            ? { ...column, meta: { variant: "boolean", control: "switch" } }
+            : column,
+        ),
+      });
+
+      const toggle = getCell("1", "isPro").querySelector('[role="switch"]');
+      expect(toggle?.getAttribute("aria-checked")).toBe("true");
+
+      focus("1", "isPro");
+      press(getCell("1", "isPro"), " ");
+
+      expect(getValue("1", "isPro")).toBe(false);
+      expect(toggle?.getAttribute("aria-checked")).toBe("false");
+    });
+
     it("toggles on Space", () => {
       const { getCell, getValue, focus } = renderGrid();
 
@@ -448,6 +463,30 @@ describe("DataGrid cells", () => {
 
       expect(getValue("1", "stance")).toBe("regular");
       expect(getCell("1", "stance").textContent).toBe("Regular");
+    });
+
+    it("shows renamed options when the columns change", () => {
+      const { getCell, rerenderColumns } = renderGrid();
+      expect(getCell("2", "stance").textContent).toBe("Regular");
+
+      rerenderColumns(
+        columns.map((column) =>
+          column.id === "stance"
+            ? {
+                ...column,
+                meta: {
+                  variant: "select",
+                  options: [
+                    { label: "Goofy", value: "goofy" },
+                    { label: "Regular footed", value: "regular" },
+                  ],
+                },
+              }
+            : column,
+        ),
+      );
+
+      expect(getCell("2", "stance").textContent).toBe("Regular footed");
     });
 
     it("opens on the current option and saves from the keyboard", () => {
@@ -546,7 +585,7 @@ describe("DataGrid cells", () => {
             column.id === "media"
               ? {
                   ...column,
-                  meta: { cell: { variant: "file", accept: "image/*" } },
+                  meta: { variant: "file", accept: "image/*" },
                 }
               : column,
           ),
@@ -1025,10 +1064,19 @@ function renderGrid({
 }: GridOptions = {}) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<Skater>> } = {};
 
-  function Harness({ rows }: { rows: Skater[] }) {
+  let currentRows = data;
+  let currentColumns = gridColumns;
+
+  function Harness({
+    rows,
+    columns: harnessColumns,
+  }: {
+    rows: Skater[];
+    columns: ColumnDef<DataGridFeatures, Skater>[];
+  }) {
     const dataGrid = useDataGrid({
       data: rows,
-      columns: gridColumns,
+      columns: harnessColumns,
       getRowId: (row) => row.id,
       ...options,
     });
@@ -1036,7 +1084,9 @@ function renderGrid({
     return <DataGrid {...dataGrid} />;
   }
 
-  const view = render(<Harness rows={data} />, { wrapper: TooltipProvider });
+  const view = render(<Harness rows={data} columns={gridColumns} />, {
+    wrapper: TooltipProvider,
+  });
   const rendered = gridRef.current?.table;
   if (!rendered) throw new Error("Grid did not render");
   const table = rendered;
@@ -1060,10 +1110,24 @@ function renderGrid({
   }
 
   function rerenderRows(rows: Skater[]) {
-    view.rerender(<Harness rows={rows} />);
+    currentRows = rows;
+    view.rerender(<Harness rows={rows} columns={currentColumns} />);
   }
 
-  return { ...view, table, getCell, getValue, focus, rerenderRows };
+  function rerenderColumns(nextColumns: ColumnDef<DataGridFeatures, Skater>[]) {
+    currentColumns = nextColumns;
+    view.rerender(<Harness rows={currentRows} columns={nextColumns} />);
+  }
+
+  return {
+    ...view,
+    table,
+    getCell,
+    getValue,
+    focus,
+    rerenderRows,
+    rerenderColumns,
+  };
 }
 
 function press(
