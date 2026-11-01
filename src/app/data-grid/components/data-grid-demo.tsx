@@ -159,7 +159,7 @@ export function DataGridDemo() {
     <>
       <DataGridDemoContent
         key={dataset.key}
-        initialRows={dataset.rows}
+        initialData={dataset.rows}
         rowCountSelect={rowCountSelect}
       />
       {dataModeToggle}
@@ -209,15 +209,15 @@ function DataModeToggle({ value, onValueChange }: DataModeToggleProps) {
 const columnHelper = createColumnHelper<DataGridFeatures, Person>();
 
 interface DataGridDemoContentProps {
-  initialRows: Person[];
+  initialData: Person[];
   rowCountSelect: React.ReactNode;
 }
 
 function DataGridDemoContent({
-  initialRows,
+  initialData,
   rowCountSelect,
 }: DataGridDemoContentProps) {
-  const [data, setData] = React.useState<Person[]>(initialRows);
+  const [data, setData] = React.useState<Person[]>(initialData);
   const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
