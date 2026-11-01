@@ -90,7 +90,6 @@ export function DataGridDemo() {
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
   const datasetKey = `${dataMode}-${rowCount}`;
 
-  // Generating hundreds of thousands of rows takes a moment, so it runs after the skeleton has painted
   React.useEffect(() => {
     let timeout = 0;
     const frame = requestAnimationFrame(() => {
@@ -366,7 +365,7 @@ function DataGridDemoContent({
         meta: {
           label: "Attachments",
           variant: "file",
-          maxFileSize: 10 * 1024 * 1024, // 10MB
+          maxFileSize: 10 * 1024 * 1024,
           maxFiles: 5,
           accept:
             "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",
