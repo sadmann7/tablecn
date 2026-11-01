@@ -90,7 +90,6 @@ export function DataGridDemo() {
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
   const datasetKey = `${dataMode}-${rowCount}`;
 
-  // Generating hundreds of thousands of rows takes a moment, so it runs after the skeleton has painted
   React.useEffect(() => {
     let timeout = 0;
     const frame = requestAnimationFrame(() => {
@@ -159,7 +158,7 @@ export function DataGridDemo() {
     <>
       <DataGridDemoContent
         key={dataset.key}
-        initialRows={dataset.rows}
+        initialData={dataset.rows}
         rowCountSelect={rowCountSelect}
       />
       {dataModeToggle}
@@ -209,15 +208,15 @@ function DataModeToggle({ value, onValueChange }: DataModeToggleProps) {
 const columnHelper = createColumnHelper<DataGridFeatures, Person>();
 
 interface DataGridDemoContentProps {
-  initialRows: Person[];
+  initialData: Person[];
   rowCountSelect: React.ReactNode;
 }
 
 function DataGridDemoContent({
-  initialRows,
+  initialData,
   rowCountSelect,
 }: DataGridDemoContentProps) {
-  const [data, setData] = React.useState<Person[]>(initialRows);
+  const [data, setData] = React.useState<Person[]>(initialData);
   const [dir, setDir] = React.useState<Direction>("ltr");
   const windowSize = useWindowSize({ defaultHeight: 760 });
 
@@ -366,7 +365,7 @@ function DataGridDemoContent({
         meta: {
           label: "Attachments",
           variant: "file",
-          maxFileSize: 10 * 1024 * 1024, // 10MB
+          maxFileSize: 10 * 1024 * 1024,
           maxFiles: 5,
           accept:
             "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx",

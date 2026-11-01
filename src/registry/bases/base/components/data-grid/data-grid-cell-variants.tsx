@@ -69,7 +69,6 @@ import { Switch } from "@/registry/bases/base/ui/switch";
 import { Textarea } from "@/registry/bases/base/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-const CELL_BORDER_WIDTH = 1;
 const CELL_EDITOR_CLASS_NAME =
   "rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
 const CELL_BADGE_CLASS_NAME = "mt-0.5 mb-px h-4.25 px-1.5 py-0";
@@ -214,7 +213,7 @@ export function LongTextCell<TData extends RowData>(
         <Textarea
           aria-label={getColumnLabel(cell.column)}
           placeholder="Enter text..."
-          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent"
+          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 px-2 pt-1.75 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent"
           ref={textareaRef}
           value={value}
           onBlur={onBlur}
@@ -748,16 +747,13 @@ export function MultiSelectCell<TData extends RowData>(
           open={isEditing}
           readOnly={readOnly}
           containerRef={containerRef}
-          className="w-75"
-          style={{
-            minWidth: `calc(var(--anchor-width) + ${CELL_BORDER_WIDTH * 2}px)`,
-          }}
+          className="w-75 min-w-(--anchor-width)"
           onOpenChange={onOpenChange}
           onOpenFocus={onOpenFocus}
           overlap
         >
           <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
-            <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
+            <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-1.75">
               {selectedValues.map((value) => {
                 const label = getOptionLabel(options, value);
 
@@ -1423,7 +1419,7 @@ function OverflowBadge({ count }: OverflowBadgeProps) {
 
 const getOverlapOffset: PopoverPrimitive.Positioner.Props["sideOffset"] = ({
   anchor,
-}) => -anchor.height - CELL_BORDER_WIDTH;
+}) => -anchor.height;
 
 interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   React.ComponentProps<typeof PopoverContent>,
@@ -1480,7 +1476,6 @@ function CellEditorPopover<TData extends RowData>({
         aria-label={getColumnLabel(cell.column)}
         data-grid-cell-editor=""
         align="start"
-        alignOffset={overlap ? -CELL_BORDER_WIDTH : 0}
         sideOffset={overlap ? getOverlapOffset : 0}
         className={cn(CELL_EDITOR_CLASS_NAME, className)}
         initialFocus={onOpenFocus ? onInitialFocus : undefined}

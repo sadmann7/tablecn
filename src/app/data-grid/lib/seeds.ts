@@ -2,8 +2,6 @@ import { faker } from "@faker-js/faker";
 
 import type { FileCellData } from "@/lib/data-grid-types";
 
-import { generateId } from "@/lib/id";
-
 export interface Person {
   id: string;
   name?: string;
@@ -45,38 +43,49 @@ export const skills = [
   "Agile",
 ] as const;
 
-interface SeedPerson extends Person {
+interface SeedPerson {
   firstName: string;
   lastName: string;
+  website: string;
+  startDate: string;
+  skills: string[];
+  attachments: FileCellData[];
 }
 
 const POOL_SIZE = 2000;
+const FIELD_SALTS = {
+  seed: 1,
+  age: 2,
+  salary: 3,
+  department: 4,
+  status: 5,
+  isActive: 6,
+  feedback: 7,
+} as const;
+
 let pool: SeedPerson[] | null = null;
 
-// Faker is too slow for hundreds of thousands of rows, so rows mix fields from a seeded pool:
-// deterministic, fast, and strings and arrays are shared instead of copied
 export function generatePeople(count: number): Person[] {
-  const seeds = (pool ??= Array.from({ length: POOL_SIZE }, (_, i) =>
-    generatePerson(i + 1),
-  ));
-  return Array.from({ length: count }, (_, i) => {
-    const h = hash(i);
-    const base = seeds[i % POOL_SIZE];
-    const other = seeds[h % POOL_SIZE];
-    if (!base || !other) throw new Error("Seed pool is incomplete");
-    const firstName = base.firstName;
-    const lastName = other.lastName;
+  pool ??= Array.from({ length: POOL_SIZE }, (_, i) => generateSeedPerson(i));
+  const seeds = pool;
+
+  return Array.from({ length: count }, (_, index) => {
+    const base = getItem(seeds, index);
+    const other = pickItem(seeds, index, "seed");
+    const { firstName } = base;
+    const { lastName } = other;
+
     return {
-      id: `person-${i}`,
+      id: `person-${index}`,
       name: `${firstName} ${lastName}`,
-      age: 22 + (h % 44),
-      email: `${firstName}.${lastName}${i}@example.com`.toLowerCase(),
+      age: randomInt(index, "age", 22, 65),
+      email: `${firstName}.${lastName}${index}@example.com`.toLowerCase(),
       website: other.website,
-      feedback: base.feedback,
-      salary: 40000 + (h % 111) * 1000,
-      department: departments[h % departments.length],
-      status: statuses[(h >>> 4) % statuses.length],
-      isActive: (h & 1) === 1,
+      feedback: pickItem(feedbackNotes, index, "feedback"),
+      salary: randomInt(index, "salary", 40, 150) * 1000,
+      department: pickItem(departments, index, "department"),
+      status: pickItem(statuses, index, "status"),
+      isActive: randomInt(index, "isActive", 0, 1) === 1,
       startDate: other.startDate,
       skills: base.skills,
       attachments: other.attachments,
@@ -163,10 +172,7 @@ const sampleFiles = [
   { name: "Training_Video.mp4", type: "video/mp4", sizeRange: [5000, 15000] },
 ] as const;
 
-function generatePerson(id: number): SeedPerson {
-  const firstName = faker.person.firstName();
-  const lastName = faker.person.lastName();
-
+function generateSeedPerson(id: number): SeedPerson {
   const fileCount = faker.number.int({ min: 0, max: 3 });
   const selectedFiles = faker.helpers.arrayElements(sampleFiles, fileCount);
 
@@ -185,18 +191,9 @@ function generatePerson(id: number): SeedPerson {
   });
 
   return {
-    id: generateId(),
-    firstName,
-    lastName,
-    name: `${firstName} ${lastName}`,
-    age: faker.number.int({ min: 22, max: 65 }),
-    email: faker.internet.email({ firstName, lastName }).toLowerCase(),
+    firstName: faker.person.firstName(),
+    lastName: faker.person.lastName(),
     website: faker.internet.url().replace(/\/$/, ""),
-    feedback: faker.helpers.arrayElement(feedbackNotes),
-    salary: faker.number.int({ min: 40000, max: 150000 }),
-    department: faker.helpers.arrayElement(departments),
-    status: faker.helpers.arrayElement(statuses),
-    isActive: faker.datatype.boolean(),
     startDate:
       faker.date
         .between({ from: "2018-01-01", to: "2024-01-01" })
@@ -207,7 +204,33 @@ function generatePerson(id: number): SeedPerson {
   };
 }
 
-// Cheap deterministic integer hash, so large datasets vary per row without calling faker per row
+function getItem<T>(items: readonly T[], position: number): T {
+  const item = items[position % items.length];
+  if (item === undefined) throw new Error("Cannot pick from an empty list");
+  return item;
+}
+
+function pickItem<T>(
+  items: readonly T[],
+  index: number,
+  field: keyof typeof FIELD_SALTS,
+): T {
+  return getItem(items, getFieldHash(index, field));
+}
+
+function randomInt(
+  index: number,
+  field: keyof typeof FIELD_SALTS,
+  min: number,
+  max: number,
+) {
+  return min + (getFieldHash(index, field) % (max - min + 1));
+}
+
+function getFieldHash(index: number, field: keyof typeof FIELD_SALTS) {
+  return hash(hash(index) + FIELD_SALTS[field]);
+}
+
 function hash(value: number) {
   let h = Math.imul(value ^ 0x9e3779b9, 0x85ebca6b);
   h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
