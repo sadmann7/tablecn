@@ -162,7 +162,7 @@ function DataGridColumnHeaderContent<TData extends RowData, TValue>({
           header={header}
           label={label}
           isResizing={resizingColumnId === column.id}
-          isBeforePinned={getIsBeforePinned(header)}
+          isNextColumnPinned={getIsNextColumnPinned(header)}
         />
       )}
     </>
@@ -357,14 +357,14 @@ interface DataGridColumnResizerProps<
 > extends DataGridColumnHeaderProps<TData, TValue> {
   label: string;
   isResizing: boolean;
-  isBeforePinned: boolean;
+  isNextColumnPinned: boolean;
 }
 
 const DataGridColumnResizer = React.memo(
   DataGridColumnResizerImpl,
   (prev, next) =>
     prev.isResizing === next.isResizing &&
-    prev.isBeforePinned === next.isBeforePinned &&
+    prev.isNextColumnPinned === next.isNextColumnPinned &&
     prev.label === next.label,
 ) as typeof DataGridColumnResizerImpl;
 
@@ -373,7 +373,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
   header,
   label,
   isResizing,
-  isBeforePinned,
+  isNextColumnPinned,
 }: DataGridColumnResizerProps<TData, TValue>) {
   const defaultColumnDef = table.getDefaultColumnDef();
   const minSize =
@@ -444,7 +444,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
       tabIndex={-1}
       className={cn(
         "absolute top-0 h-full w-0.5 cursor-ew-resize touch-none bg-border transition-opacity select-none after:absolute after:inset-y-0 after:content-[''] hover:bg-primary focus:bg-primary focus:outline-none",
-        isBeforePinned
+        isNextColumnPinned
           ? "inset-e-0 after:-inset-s-4 after:inset-e-0"
           : "-inset-e-px after:-inset-x-2",
         isResizing ? "z-30 bg-primary" : "z-10 opacity-0 hover:opacity-100",
@@ -499,10 +499,8 @@ function getBadgeColumnContentSize<TData extends RowData, TValue>(
   return contentSize;
 }
 
-function getIsBeforePinned<TData extends RowData, TValue>(
+function getIsNextColumnPinned<TData extends RowData, TValue>(
   header: Header<DataGridFeatures, TData, TValue>,
 ) {
-  const headers = header.headerGroup?.headers ?? [];
-  const index = headers.findIndex((item) => item.id === header.id);
-  return !!headers[index + 1]?.column.getIsPinned();
+  return !!header.headerGroup?.headers[header.index + 1]?.column.getIsPinned();
 }
