@@ -216,7 +216,7 @@ export function LongTextCell<TData extends RowData>(
         <Textarea
           aria-label={getColumnLabel(cell.column)}
           placeholder="Enter text..."
-          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent"
+          className="max-h-75 min-h-37.5 resize-none overflow-y-auto rounded-none border-0 px-2 pt-1.75 shadow-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset dark:bg-transparent"
           ref={textareaRef}
           value={value}
           onBlur={onBlur}
@@ -755,16 +755,13 @@ export function MultiSelectCell<TData extends RowData>(
           readOnly={readOnly}
           rowHeight={rowHeight}
           containerRef={containerRef}
-          className="w-75"
-          style={{
-            minWidth: `calc(var(--radix-popover-trigger-width) + ${CELL_BORDER_WIDTH * 2}px)`,
-          }}
+          className="w-75 min-w-(--radix-popover-trigger-width)"
           onOpenChange={onOpenChange}
           onOpenFocus={onOpenFocus}
           overlap
         >
           <Command className="bg-transparent p-px **:data-[slot=command-input-wrapper]:min-w-16 **:data-[slot=command-input-wrapper]:flex-1 **:data-[slot=command-input-wrapper]:p-0 **:data-[slot=input-group]:h-auto! **:data-[slot=input-group]:rounded-none! **:data-[slot=input-group]:border-none **:data-[slot=input-group]:bg-transparent **:data-[slot=input-group-addon]:hidden **:data-[slot=input-group]:dark:bg-transparent">
-            <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-2">
+            <div className="flex flex-wrap items-center gap-1 border-b px-3.5 py-2 has-data-[slot=badge]:px-1.75">
               {selectedValues.map((value) => {
                 const label = getOptionLabel(options, value);
 
@@ -1484,7 +1481,6 @@ function CellEditorPopover<TData extends RowData>({
         aria-label={getColumnLabel(cell.column)}
         data-grid-cell-editor=""
         align="start"
-        alignOffset={overlap ? -CELL_BORDER_WIDTH : 0}
         sideOffset={overlap ? getOverlapOffset(rowHeight) : 0}
         className={cn(CELL_EDITOR_CLASS_NAME, className)}
         onOpenAutoFocus={onOpenFocus ? onOpenAutoFocus : undefined}
@@ -1696,7 +1692,7 @@ function useCellEditorDismiss(
 }
 
 function getOverlapOffset(rowHeight: RowHeightValue) {
-  return -getRowHeightValue(rowHeight);
+  return -getRowHeightValue(rowHeight) + CELL_BORDER_WIDTH;
 }
 
 function setCellEditing<TData extends RowData>(

@@ -1,7 +1,7 @@
 {
   "components/data-grid/data-grid-actions-column.tsx": "65e56396154c",
   "components/data-grid/data-grid-cell-preview.tsx": "identical",
-  "components/data-grid/data-grid-cell-variants.tsx": "8e3f273ab46f",
+  "components/data-grid/data-grid-cell-variants.tsx": "dad81993dd7f",
   "components/data-grid/data-grid-cell.tsx": "c220f6db3521",
   "components/data-grid/data-grid-column-header.tsx": "37846d66badd",
   "components/data-grid/data-grid-context-menu.tsx": "60acddda5b2d",
