@@ -44,7 +44,7 @@ const BADGE_LIST_CLASS_NAME =
   "flex flex-wrap content-start items-center gap-x-1 overflow-hidden";
 
 const LINE_CLAMP_CLASS_NAMES: Record<RowHeightValue, string> = {
-  short: "line-clamp-1",
+  short: "block truncate",
   medium: "line-clamp-2",
   tall: "line-clamp-3",
   "extra-tall": "line-clamp-4",
