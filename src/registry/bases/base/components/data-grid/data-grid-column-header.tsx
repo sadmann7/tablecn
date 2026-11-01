@@ -383,6 +383,13 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
     defaultColumnDef.maxSize ??
     Number.POSITIVE_INFINITY;
 
+  const onPointerDown = React.useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [],
+  );
+
   const onResizeStart = React.useCallback(
     (
       event:
@@ -442,6 +449,7 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
           : "-inset-e-px after:-inset-x-2",
         isResizing ? "z-30 bg-primary" : "z-10 opacity-0 hover:opacity-100",
       )}
+      onPointerDown={onPointerDown}
       onMouseDown={onResizeStart}
       onTouchStart={onResizeStart}
       onDoubleClick={onDoubleClick}
