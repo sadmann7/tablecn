@@ -252,7 +252,7 @@ export function NumberCell<TData extends RowData>(
   const displayNumber = getNumberCellValue(value);
   const inputMode =
     min !== undefined && min >= 0
-      ? step === undefined || Number.isInteger(step)
+      ? Number.isInteger(min) && (step === undefined || Number.isInteger(step))
         ? "numeric"
         : "decimal"
       : undefined;
