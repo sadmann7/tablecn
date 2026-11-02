@@ -80,6 +80,11 @@ function DataTablePaginationContent<TData extends RowData>({
   ...props
 }: DataTablePaginationContentProps<TData>) {
   const pageSizeLabelId = React.useId();
+  // A page size outside the options (from initialState or a hand-edited
+  // `?perPage=`) would leave the select blank, so list it too
+  const sizeOptions = pageSizeOptions.includes(pageSize)
+    ? pageSizeOptions
+    : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
   const pageCount = table.getPageCount();
   const canPreviousPage = table.getCanPreviousPage();
   const canNextPage = table.getCanNextPage();
@@ -124,7 +129,7 @@ function DataTablePaginationContent<TData extends RowData>({
             </SelectTrigger>
             <SelectContent side="top" dir={dir}>
               <SelectGroup>
-                {pageSizeOptions.map((pageSize) => (
+                {sizeOptions.map((pageSize) => (
                   <SelectItem key={pageSize} value={`${pageSize}`}>
                     {pageSize}
                   </SelectItem>

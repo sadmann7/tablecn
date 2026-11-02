@@ -94,6 +94,15 @@ describe("DataTable rendering", () => {
 
     expect(counts).toEqual({ cells: 0, headers: 0 });
   });
+
+  it("shows a page size that is not one of the options", () => {
+    const { container } = renderTable("?perPage=25");
+    const trigger = container.querySelector(
+      '[data-slot="data-table-pagination"] [data-slot="select-trigger"]',
+    );
+
+    expect(trigger?.textContent).toBe("25");
+  });
 });
 
 const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
@@ -104,7 +113,7 @@ const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
-function renderTable() {
+function renderTable(searchParams = "") {
   const cellRenders = new Map<string, number>();
   const headerRenders = new Map<string, number>();
   const tableRef: {
@@ -154,7 +163,7 @@ function renderTable() {
   }
 
   const view = render(
-    <NuqsTestingAdapter hasMemory>
+    <NuqsTestingAdapter hasMemory searchParams={searchParams}>
       <Harness />
     </NuqsTestingAdapter>,
   );
