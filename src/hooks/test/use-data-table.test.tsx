@@ -323,6 +323,29 @@ describe("useDataTable", () => {
       ).toEqual(["bug"]),
     );
   });
+
+  it("filters rows by the global filter in client mode", () => {
+    const tasks: Task[] = [
+      { id: "1", code: "T-1", title: "login bug", status: "todo" },
+      { id: "2", code: "T-2", title: "new feature", status: "done" },
+    ];
+    const { result } = renderDataTable("", {
+      mode: "client",
+      data: tasks,
+      globalFilterFn: (row, columnId, value) =>
+        String(row.getValue(columnId)).includes(String(value)),
+    });
+
+    act(() => {
+      result.current.table.setGlobalFilter("bug");
+    });
+
+    expect(
+      result.current.table
+        .getFilteredRowModel()
+        .rows.map((row) => row.original.title),
+    ).toEqual(["login bug"]);
+  });
 });
 
 const columns = columnHelper.columns([
