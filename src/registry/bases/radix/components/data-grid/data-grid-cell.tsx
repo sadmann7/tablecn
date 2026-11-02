@@ -36,7 +36,7 @@ export function DataGridCell<TData extends RowData>({
   presence,
   readOnly,
   rowHeight,
-  width: _width,
+  width,
   pinned,
   pinnedOffset,
   grow,
@@ -195,7 +195,7 @@ export function DataGridCell<TData extends RowData>({
       )}
       style={{
         ...getCellLayoutStyle({
-          columnId: cell.column.id,
+          width,
           pinned,
           pinnedOffset,
         }),

@@ -118,11 +118,7 @@ export function DataGridCellPreview<TData extends RowData>({
           [CELL_TINTS.darkSearchMatch]: isSearchMatch && !isActiveSearchMatch,
         },
       )}
-      style={getCellLayoutStyle({
-        columnId: cell.column.id,
-        pinned,
-        pinnedOffset,
-      })}
+      style={getCellLayoutStyle({ width, pinned, pinnedOffset })}
     >
       {content}
     </div>
