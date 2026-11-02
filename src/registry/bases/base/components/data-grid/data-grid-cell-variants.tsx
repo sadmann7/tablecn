@@ -70,7 +70,7 @@ import { Textarea } from "@/registry/bases/base/ui/textarea";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const CELL_EDITOR_CLASS_NAME =
-  "rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
+  "max-w-(--available-width) rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
 const CELL_BADGE_CLASS_NAME = "mt-0.5 mb-px h-4.25 px-1.5 py-0";
 
 export function ShortTextCell<TData extends RowData>(

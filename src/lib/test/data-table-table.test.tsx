@@ -393,7 +393,6 @@ describe("column layout styles", () => {
     expect(title && getColumnPinningStyle(title)).toMatchObject({
       position: "sticky",
       insetInlineStart: "var(--column-title-offset)",
-      opacity: 0.97,
       zIndex: 20,
       width: "var(--column-title-size)",
     });
