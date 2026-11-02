@@ -3,7 +3,7 @@
 import type { ServerMessage, UserPresence } from "@party/types";
 
 import { ADJECTIVES, ANIMALS, COLORS } from "@party/constants";
-import PartySocket from "partysocket";
+import { PartySocket } from "partysocket";
 import * as React from "react";
 
 import {
