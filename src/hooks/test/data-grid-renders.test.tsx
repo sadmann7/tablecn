@@ -76,13 +76,17 @@ describe("DataGrid renders", () => {
     expect(getCommits()).toBe(1);
   });
 
-  it("re-renders no data cells while a column resizes", () => {
+  it("re-renders only the resized column's cells", () => {
     const { table } = renderGrid();
 
     act(() => table.setColumnSizing({ name: 200 }));
     flushFrames();
 
-    expect(renders.cells).toBe(0);
+    expect(renders.cells).toBe(
+      document.querySelectorAll(
+        '[data-slot="data-grid-cell"][data-column-id="name"]',
+      ).length,
+    );
   });
 
   function flushFrames() {

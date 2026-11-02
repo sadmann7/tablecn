@@ -598,11 +598,11 @@ export const CELL_TINTS = {
 } as const;
 
 export function getCellLayoutStyle({
-  columnId,
+  width,
   pinned,
   pinnedOffset,
 }: {
-  columnId: string;
+  width: number;
   pinned: ColumnPinningPosition;
   pinnedOffset: number;
 }): React.CSSProperties {
@@ -611,13 +611,9 @@ export function getCellLayoutStyle({
     insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
     opacity: pinned ? 0.97 : undefined,
     position: pinned ? "sticky" : "relative",
-    width: getColumnSizeVar(columnId),
+    width,
     zIndex: pinned ? 20 : undefined,
   };
-}
-
-export function getColumnSizeVar(columnId: string) {
-  return getSizeVar("col", columnId);
 }
 
 export function getHeaderSizeVar(headerId: string) {
