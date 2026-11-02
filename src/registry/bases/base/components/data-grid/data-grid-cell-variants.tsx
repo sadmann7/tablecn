@@ -247,6 +247,12 @@ export function NumberCell<TData extends RowData>(
   const step = numberMeta?.step;
   const format = numberMeta?.format;
   const displayNumber = getNumberCellValue(value);
+  const inputMode =
+    min !== undefined && min >= 0
+      ? step === undefined || Number.isInteger(step)
+        ? "numeric"
+        : "decimal"
+      : undefined;
 
   const onSave = React.useCallback(
     (options?: StopEditingOptions) => {
@@ -312,6 +318,7 @@ export function NumberCell<TData extends RowData>(
         <input
           aria-label={getColumnLabel(cell.column)}
           type="number"
+          inputMode={inputMode}
           ref={inputRef}
           min={min}
           max={max}
@@ -794,7 +801,7 @@ export function MultiSelectCell<TData extends RowData>(
                 placeholder={
                   selectedValues.length > 0 ? undefined : "Search..."
                 }
-                className="p-0! placeholder:text-muted-foreground"
+                className="p-0! placeholder:text-muted-foreground pointer-coarse:text-base"
               />
             </div>
             <CommandList className="max-h-full">

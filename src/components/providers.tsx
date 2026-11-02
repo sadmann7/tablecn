@@ -8,6 +8,7 @@ import {
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { useState } from "react";
 
+import { ThemeColor } from "@/components/theme-color";
 import { ThemeShortcut } from "@/components/theme-shortcut";
 import { TooltipProvider } from "@/registry/bases/radix/ui/tooltip";
 
@@ -29,6 +30,7 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       <NextThemesProvider {...props}>
         <TooltipProvider delayDuration={120}>
           <NuqsAdapter>
+            <ThemeColor />
             <ThemeShortcut />
             {children}
           </NuqsAdapter>
