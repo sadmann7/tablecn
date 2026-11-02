@@ -72,10 +72,10 @@
     "react/preserve-manual-memoization": "warn",
     "react/use-memo": "warn",
     "react/static-components": "warn",
-    "nextjs/no-img-element": "off",
-    "nextjs/no-html-link-for-pages": "off",
-    "nextjs/no-assign-module-variable": "off",
-    "import/no-named-as-default": "off",
+    "nextjs/no-img-element": "warn",
+    "nextjs/no-html-link-for-pages": "warn",
+    "nextjs/no-assign-module-variable": "warn",
+    "import/no-named-as-default": "warn",
     "import/no-unassigned-import": [
       "warn",
       {
