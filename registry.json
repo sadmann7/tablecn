@@ -197,13 +197,7 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@tanstack/react-table",
-        "@dnd-kit/core",
-        "@dnd-kit/modifiers",
-        "@dnd-kit/sortable",
-        "@dnd-kit/utilities"
-      ],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-sort-menu.tsx",
@@ -261,13 +255,7 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@tanstack/react-table",
-        "@dnd-kit/core",
-        "@dnd-kit/modifiers",
-        "@dnd-kit/sortable",
-        "@dnd-kit/utilities"
-      ],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-table/data-table-filter-menu.tsx",
@@ -600,13 +588,7 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@tanstack/react-table",
-        "@dnd-kit/core",
-        "@dnd-kit/modifiers",
-        "@dnd-kit/sortable",
-        "@dnd-kit/utilities"
-      ],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-sort-menu.tsx",
@@ -751,13 +733,7 @@
         "popover",
         "select"
       ],
-      "dependencies": [
-        "@tanstack/react-table",
-        "@dnd-kit/core",
-        "@dnd-kit/modifiers",
-        "@dnd-kit/sortable",
-        "@dnd-kit/utilities"
-      ],
+      "dependencies": ["@tanstack/react-table"],
       "files": [
         {
           "path": "src/registry/bases/radix/components/data-grid/data-grid-filter-menu.tsx",

@@ -9,9 +9,9 @@
  * committed — same as shadcn's `registry:build` on deploy.
  *
  * Base resolution: registry.json points at the radix tree, and a file is swapped
- * to its base-tree counterpart when one exists. Files outside the bases (hooks,
- * lib) and primitives with no base variant stay shared, so base-agnostic code
- * lives in exactly one place.
+ * to its counterpart in the built base's tree (`src/registry/bases/<base>/`)
+ * when one exists. Files outside the bases (hooks, lib) and primitives with no
+ * base variant stay shared, so base-agnostic code lives in exactly one place.
  *
  * @see https://github.com/shadcn-ui/ui/blob/main/apps/v4/scripts/build-registry.mts
  */
@@ -37,8 +37,6 @@ const STYLE_COMBINATIONS = BASES.flatMap((base) =>
 );
 
 const ROOT = process.cwd();
-const RADIX_TREE = "src/registry/bases/radix/";
-const BASE_TREE = "src/registry/bases/base/";
 
 interface RegistryFile {
   path: string;
@@ -111,7 +109,11 @@ function buildBase(baseName: string, outDir: string) {
     readFileSync(path.join(ROOT, "registry.json"), "utf8"),
   ) as Registry;
 
-  const items = registry.items.map((item) => {
+  const baseItems = registry.items.filter((item) =>
+    getIsItemInBase(item, baseName),
+  );
+
+  const items = baseItems.map((item) => {
     const files = item.files?.map((file) => resolveFile(file, baseName));
 
     return {
@@ -132,17 +134,38 @@ function buildBase(baseName: string, outDir: string) {
 }
 
 /**
- * Repoints a file at the base tree when an override exists there.
+ * A base ships an item only when its tree has every component and hook the
+ * item uses: those import the base's primitives, so a radix fallback would mix
+ * two bases in one install. Primitives without a variant still fall back.
+ */
+function getIsItemInBase(item: RegistryItem, baseName: string) {
+  return (item.files ?? []).every((file) => {
+    const isBaseCode = ["components/", "hooks/"].some((dir) =>
+      file.path.startsWith(`${baseTree("radix")}${dir}`),
+    );
+    if (!isBaseCode) return true;
+
+    const override = file.path.replace(baseTree("radix"), baseTree(baseName));
+    return existsSync(path.join(ROOT, override));
+  });
+}
+
+/**
+ * Repoints a file at the built base's tree when an override exists there.
  * `target` is deliberately untouched so consumers get the same paths either way.
  */
 function resolveFile(file: RegistryFile, baseName: string): RegistryFile {
   if (baseName === "radix") return file;
 
-  const override = file.path.replace(RADIX_TREE, BASE_TREE);
+  const override = file.path.replace(baseTree("radix"), baseTree(baseName));
 
   return existsSync(path.join(ROOT, override))
     ? { ...file, path: override }
     : file;
+}
+
+function baseTree(baseName: string) {
+  return `src/registry/bases/${baseName}/`;
 }
 
 /**
@@ -160,18 +183,26 @@ function withImportedDependencies(
   const next = [...(dependencies ?? [])];
 
   for (const pkg of [
-    "@base-ui/react",
-    "@base-ui/utils",
     "@dnd-kit/core",
     "@dnd-kit/modifiers",
     "@dnd-kit/sortable",
     "@dnd-kit/utilities",
+    "@base-ui/react",
+    "@base-ui/utils",
     "zod",
   ] as const) {
-    if (contents.some((content) => content.includes(`"${pkg}`))) {
+    if (contents.some((content) => importsPackage(content, pkg))) {
       if (!next.includes(pkg)) next.push(pkg);
     }
   }
 
   return next.length > 0 ? next : dependencies;
+}
+
+/**
+ * A file imports a package when it names it exactly or a subpath of it; a bare
+ * prefix would make `"react-aria` match `"react-aria-components`.
+ */
+function importsPackage(content: string, pkg: string) {
+  return content.includes(`"${pkg}"`) || content.includes(`"${pkg}/`);
 }
