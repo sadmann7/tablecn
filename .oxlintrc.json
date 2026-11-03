@@ -61,7 +61,7 @@
     "react/rules-of-hooks": "warn",
     "react/react-in-jsx-scope": "off",
     "react/no-array-index-key": "off",
-    "react/no-danger": "warn",
+    "react/no-danger": "off",
     "react/no-unstable-nested-components": ["warn", { "allowAsProps": true }],
     "react/refs": "warn",
     "react/set-state-in-effect": "warn",

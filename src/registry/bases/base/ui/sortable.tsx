@@ -2,7 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import {
   type Announcements,
   closestCenter,
@@ -178,7 +178,7 @@ function Sortable<T>(props: SortableProps<T>) {
       if (event.activatorEvent.defaultPrevented) return;
 
       const { active, over } = event;
-      if (over && active.id !== over.id) {
+      if (over && active.id !== over?.id) {
         const activeIndex = value.findIndex(
           (item) => getItemValue(item) === active.id,
         );
@@ -325,7 +325,6 @@ function SortableContent(props: SortableContentProps) {
     children,
     className,
     render,
-    ref,
     ...contentProps
   } = props;
 
@@ -333,8 +332,13 @@ function SortableContent(props: SortableContentProps) {
 
   const element = useRender({
     defaultTagName: "div",
-    ref,
-    props: mergeProps<"div">({ className, children }, contentProps),
+    props: mergeProps<"div">(
+      {
+        className,
+        children,
+      },
+      contentProps,
+    ),
     render,
     state: {
       slot: "sortable-content",
@@ -410,7 +414,6 @@ function SortableItem(props: SortableItemProps) {
   const context = useSortableContext(ITEM_NAME);
   const instanceId = React.useId();
   const id = idProp ?? instanceId;
-
   const {
     attributes,
     listeners,
@@ -429,6 +432,8 @@ function SortableItem(props: SortableItemProps) {
     },
     [disabled, asHandle, setNodeRef, setActivatorNodeRef],
   );
+
+  const composedRef = useMergedRefs(ref, onNodeRefChange);
 
   const composedStyle = React.useMemo<React.CSSProperties>(() => {
     return {
@@ -455,10 +460,10 @@ function SortableItem(props: SortableItemProps) {
 
   const element = useRender({
     defaultTagName: "div",
-    ref: [ref ?? null, onNodeRefChange],
     props: mergeProps<"div">(
       {
         id,
+        ref: composedRef,
         style: composedStyle,
         className: cn(
           "focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:outline-hidden",
@@ -512,17 +517,19 @@ function SortableItemHandle(props: SortableItemHandleProps) {
     [isDisabled, setActivatorNodeRef],
   );
 
+  const composedRef = useMergedRefs(ref, onActivatorNodeRef);
+
   const handleProps = isDisabled
     ? undefined
     : { ...itemContext.attributes, ...itemContext.listeners };
 
   return useRender({
     defaultTagName: "button",
-    ref: [ref ?? null, onActivatorNodeRef],
     props: mergeProps<"button">(
       {
         type: "button",
         "aria-controls": itemContext.id,
+        ref: composedRef,
         disabled: isDisabled,
         className: cn(
           "select-none disabled:pointer-events-none disabled:opacity-50",
@@ -556,6 +563,10 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
+function subscribe() {
+  return () => {};
+}
+
 interface SortableOverlayProps extends Omit<
   React.ComponentProps<typeof DragOverlay>,
   "children"
@@ -571,11 +582,14 @@ function SortableOverlay(props: SortableOverlayProps) {
 
   const context = useSortableContext(OVERLAY_NAME);
 
-  const [mounted, setMounted] = React.useState(false);
+  const mounted = React.useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
 
-  useIsoLayoutEffect(() => setMounted(true), []);
-
-  const container = containerProp ?? (mounted ? document.body : null);
+  const container =
+    containerProp ?? (mounted ? globalThis.document?.body : null);
 
   if (!container) return null;
 
