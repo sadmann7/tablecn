@@ -911,7 +911,7 @@ export function DateCell<TData extends RowData>(
           autoFocus
           captionLayout="dropdown"
           mode="single"
-          defaultMonth={selectedDate ?? new Date()}
+          defaultMonth={selectedDate}
           selected={selectedDate}
           onSelect={onDateSelect}
         />
