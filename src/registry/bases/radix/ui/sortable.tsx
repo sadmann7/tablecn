@@ -38,7 +38,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "cn";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { useComposedRefs, useLayoutEffect } from "radix-ui/internal";
+import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
@@ -177,7 +177,7 @@ function Sortable<T>(props: SortableProps<T>) {
       if (event.activatorEvent.defaultPrevented) return;
 
       const { active, over } = event;
-      if (over && active.id !== over.id) {
+      if (over && active.id !== over?.id) {
         const activeIndex = value.findIndex(
           (item) => getItemValue(item) === active.id,
         );
@@ -409,7 +409,6 @@ function SortableItem(props: SortableItemProps) {
   const context = useSortableContext(ITEM_NAME);
   const instanceId = React.useId();
   const id = idProp ?? instanceId;
-
   const {
     attributes,
     listeners,
@@ -543,6 +542,10 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
+function subscribe() {
+  return () => {};
+}
+
 interface SortableOverlayProps extends Omit<
   React.ComponentProps<typeof DragOverlay>,
   "children"
@@ -558,11 +561,14 @@ function SortableOverlay(props: SortableOverlayProps) {
 
   const context = useSortableContext(OVERLAY_NAME);
 
-  const [mounted, setMounted] = React.useState(false);
+  const mounted = React.useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false,
+  );
 
-  useLayoutEffect(() => setMounted(true), []);
-
-  const container = containerProp ?? (mounted ? document.body : null);
+  const container =
+    containerProp ?? (mounted ? globalThis.document?.body : null);
 
   if (!container) return null;
 

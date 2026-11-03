@@ -65,7 +65,7 @@
   "ui/skeleton.tsx": "identical",
   "ui/slider.tsx": "ac63481d87e5",
   "ui/sonner.tsx": "radix-only",
-  "ui/sortable.tsx": "e5cd03fcc0f7",
+  "ui/sortable.tsx": "03e9f90f06fb",
   "ui/switch.tsx": "84f7a0b86bee",
   "ui/table.tsx": "identical",
   "ui/textarea.tsx": "identical",
