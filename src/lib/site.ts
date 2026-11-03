@@ -14,3 +14,8 @@ export const NAV_LINKS = [
   { href: "/data-grid-rapid", label: "Data Grid Rapid" },
   { href: "/data-grid-doom", label: "Data Grid DOOM" },
 ] as const;
+
+export const THEME_COLORS = {
+  light: "#ffffff",
+  dark: "#0a0a0a",
+} as const;

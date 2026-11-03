@@ -577,7 +577,6 @@ export function getColumnPinningStyle<TData extends RowData>(
       isPinned === "start" ? `${column.getStart("start")}px` : undefined,
     insetInlineEnd:
       isPinned === "end" ? `${column.getAfter("end")}px` : undefined,
-    opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     background: "var(--background)",
     width: column.getSize(),
@@ -609,7 +608,6 @@ export function getCellLayoutStyle({
   return {
     insetInlineStart: pinned === "start" ? `${pinnedOffset}px` : undefined,
     insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
-    opacity: pinned ? 0.97 : undefined,
     position: pinned ? "sticky" : "relative",
     width,
     zIndex: pinned ? 20 : undefined,

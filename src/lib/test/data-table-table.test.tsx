@@ -393,7 +393,6 @@ describe("column layout styles", () => {
     expect(title && getColumnPinningStyle(title)).toMatchObject({
       position: "sticky",
       insetInlineStart: "var(--column-title-offset)",
-      opacity: 0.97,
       zIndex: 20,
       width: "var(--column-title-size)",
     });
@@ -404,7 +403,6 @@ describe("column layout styles", () => {
     const statusColumn = table.getColumn("status");
     expect(statusColumn && getColumnPinningStyle(statusColumn)).toMatchObject({
       position: "relative",
-      opacity: 1,
       zIndex: undefined,
     });
     expect(spaced && getColumnPinningStyle(spaced).width).toBe(

@@ -72,7 +72,7 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const CELL_BORDER_WIDTH = 1;
 const CELL_EDITOR_CLASS_NAME =
-  "rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
+  "max-w-(--radix-popover-content-available-width) rounded-none p-0 ring-inset data-open:animate-none data-closed:animate-none";
 const CELL_BADGE_CLASS_NAME = "mt-0.5 mb-px h-4.25 px-1.5 py-0";
 
 export function ShortTextCell<TData extends RowData>(
@@ -250,6 +250,12 @@ export function NumberCell<TData extends RowData>(
   const step = numberMeta?.step;
   const format = numberMeta?.format;
   const displayNumber = getNumberCellValue(value);
+  const inputMode =
+    min !== undefined && min >= 0
+      ? Number.isInteger(min) && (step === undefined || Number.isInteger(step))
+        ? "numeric"
+        : "decimal"
+      : undefined;
 
   const onSave = React.useCallback(
     (options?: StopEditingOptions) => {
@@ -315,6 +321,7 @@ export function NumberCell<TData extends RowData>(
         <input
           aria-label={getColumnLabel(cell.column)}
           type="number"
+          inputMode={inputMode}
           ref={inputRef}
           min={min}
           max={max}
@@ -802,7 +809,7 @@ export function MultiSelectCell<TData extends RowData>(
                 placeholder={
                   selectedValues.length > 0 ? undefined : "Search..."
                 }
-                className="p-0! placeholder:text-muted-foreground"
+                className="p-0! placeholder:text-muted-foreground pointer-coarse:text-base"
               />
             </div>
             <CommandList className="max-h-full">
@@ -904,7 +911,7 @@ export function DateCell<TData extends RowData>(
           autoFocus
           captionLayout="dropdown"
           mode="single"
-          defaultMonth={selectedDate ?? new Date()}
+          defaultMonth={selectedDate}
           selected={selectedDate}
           onSelect={onDateSelect}
         />

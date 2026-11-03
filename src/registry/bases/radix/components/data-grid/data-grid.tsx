@@ -424,7 +424,7 @@ function DataGridViewport<TData extends RowData>({
       data-slot="data-grid"
       tabIndex={0}
       ref={dataGridRef}
-      className="relative isolate grid overflow-auto rounded-md border select-none focus:outline-none"
+      className="relative isolate grid overflow-auto overscroll-x-contain rounded-md border select-none focus:outline-none"
       style={{
         ...columnSizeVars,
         maxHeight: `${height}px`,

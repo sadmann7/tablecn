@@ -10,7 +10,12 @@ import { MAIN_CONTENT_ID, SkipNav } from "@/components/skip-nav";
 import { TailwindIndicator } from "@/components/tailwind-indicator";
 import { UploadThingSSR } from "@/components/uploadthing-ssr";
 import { fontMono, fontSans } from "@/lib/fonts";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+  THEME_COLORS,
+} from "@/lib/site";
 import { Toaster } from "@/registry/bases/radix/ui/sonner";
 import "@/styles/globals.css";
 
@@ -65,8 +70,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   colorScheme: "dark light",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "black" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.light },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.dark },
   ],
 };
 
@@ -78,7 +83,7 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
       className={cn("font-sans", fontSans.variable, fontMono.variable)}
     >
       <head />
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="min-h-svh bg-background font-sans antialiased">
         <Suspense>
           <UploadThingSSR />
         </Suspense>
@@ -90,7 +95,7 @@ export default function RootLayout({ children }: React.PropsWithChildren) {
           disableTransitionOnChange
         >
           <SkipNav />
-          <div className="relative flex min-h-screen flex-col">
+          <div className="relative flex min-h-svh flex-col">
             <SiteHeader />
             <main id={MAIN_CONTENT_ID} className="flex-1 scroll-mt-14">
               {children}
