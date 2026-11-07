@@ -36,7 +36,7 @@ export function DataGridCell<TData extends RowData>({
   presence,
   readOnly,
   rowHeight,
-  width: _width,
+  width,
   pinned,
   pinnedOffset,
   grow,
@@ -182,6 +182,7 @@ export function DataGridCell<TData extends RowData>({
           [CELL_TINTS.darkActiveSearchMatch]: isActiveSearchMatch,
           [CELL_TINTS.darkSearchMatch]: isSearchMatch && !isActiveSearchMatch,
           "cursor-default": !isEditing,
+          "pointer-coarse:text-base": isEditing,
           "**:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:block **:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:truncate":
             rowHeight === "short",
           "**:data-[slot=data-grid-cell-content]:not-[[contenteditable=true]]:line-clamp-2":
@@ -195,7 +196,7 @@ export function DataGridCell<TData extends RowData>({
       )}
       style={{
         ...getCellLayoutStyle({
-          columnId: cell.column.id,
+          width,
           pinned,
           pinnedOffset,
         }),

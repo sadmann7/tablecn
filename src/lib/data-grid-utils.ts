@@ -577,7 +577,6 @@ export function getColumnPinningStyle<TData extends RowData>(
       isPinned === "start" ? `${column.getStart("start")}px` : undefined,
     insetInlineEnd:
       isPinned === "end" ? `${column.getAfter("end")}px` : undefined,
-    opacity: isPinned ? 0.97 : 1,
     position: isPinned ? "sticky" : "relative",
     background: "var(--background)",
     width: column.getSize(),
@@ -598,26 +597,21 @@ export const CELL_TINTS = {
 } as const;
 
 export function getCellLayoutStyle({
-  columnId,
+  width,
   pinned,
   pinnedOffset,
 }: {
-  columnId: string;
+  width: number;
   pinned: ColumnPinningPosition;
   pinnedOffset: number;
 }): React.CSSProperties {
   return {
     insetInlineStart: pinned === "start" ? `${pinnedOffset}px` : undefined,
     insetInlineEnd: pinned === "end" ? `${pinnedOffset}px` : undefined,
-    opacity: pinned ? 0.97 : undefined,
     position: pinned ? "sticky" : "relative",
-    width: getColumnSizeVar(columnId),
+    width,
     zIndex: pinned ? 20 : undefined,
   };
-}
-
-export function getColumnSizeVar(columnId: string) {
-  return getSizeVar("col", columnId);
 }
 
 export function getHeaderSizeVar(headerId: string) {

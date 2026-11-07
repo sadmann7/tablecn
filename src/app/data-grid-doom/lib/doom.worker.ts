@@ -121,7 +121,7 @@ async function start(rate: number, audioPort: MessagePort) {
     });
   }
 
-  const module: WorkerModule = {
+  const engine: WorkerModule = {
     noInitialRun: true,
     locateFile: (path: string) => DOOM_BASE + path,
     print: () => {},
@@ -131,21 +131,21 @@ async function start(rate: number, audioPort: MessagePort) {
     },
     preRun: [
       () => {
-        module.FS?.createPreloadedFile(
+        engine.FS?.createPreloadedFile(
           "",
           "doom1.wad",
           `${DOOM_BASE}doom1.wad`,
           true,
           true,
         );
-        module.FS?.createPreloadedFile(
+        engine.FS?.createPreloadedFile(
           "",
           "default.cfg",
           `${DOOM_BASE}default.cfg`,
           true,
           true,
         );
-        module.FS?.createPreloadedFile(
+        engine.FS?.createPreloadedFile(
           "",
           "extra.cfg",
           `${DOOM_BASE}extra.cfg`,
@@ -156,7 +156,7 @@ async function start(rate: number, audioPort: MessagePort) {
     ],
     onRuntimeInitialized: () => {
       try {
-        module.callMain?.([
+        engine.callMain?.([
           "-iwad",
           "doom1.wad",
           "-window",
@@ -172,7 +172,7 @@ async function start(rate: number, audioPort: MessagePort) {
         return;
       }
       startAudio(audioPort);
-      startFrames(module);
+      startFrames(engine);
       post({ type: "ready" });
     },
   };
@@ -182,9 +182,9 @@ async function start(rate: number, audioPort: MessagePort) {
     (event: MessageEvent<DoomWorkerRequest>) => {
       if (event.data.type === "event") {
         const [type, data1, data2, data3] = event.data.event;
-        module._doom_post_event?.(type, data1, data2, data3);
+        engine._doom_post_event?.(type, data1, data2, data3);
       } else if (event.data.type === "pause") {
-        module._doom_set_paused?.(event.data.paused ? 1 : 0);
+        engine._doom_set_paused?.(event.data.paused ? 1 : 0);
       }
     },
   );
@@ -197,7 +197,7 @@ async function start(rate: number, audioPort: MessagePort) {
   const { default: createDoom } = (await import(
     /* turbopackIgnore: true */ /* webpackIgnore: true */ engineUrl.href
   )) as { default: (module: WorkerModule) => Promise<WorkerModule> };
-  await createDoom(module);
+  await createDoom(engine);
 }
 
 function startAudio(port: MessagePort) {
@@ -233,7 +233,7 @@ function startAudio(port: MessagePort) {
   setInterval(pump, 5);
 }
 
-function startFrames(module: WorkerModule) {
+function startFrames(engine: WorkerModule) {
   const spare: ArrayBuffer[] = [];
   scope.addEventListener(
     "message",
@@ -244,10 +244,10 @@ function startFrames(module: WorkerModule) {
   const palette32 = new Uint32Array(256);
   let lastFrame = 0;
   const check = () => {
-    const frame = module._doom_frame_count?.() ?? 0;
-    const heap = module.HEAPU8;
-    const screen = module._doom_screen?.();
-    const palette = module._doom_palette?.();
+    const frame = engine._doom_frame_count?.() ?? 0;
+    const heap = engine.HEAPU8;
+    const screen = engine._doom_screen?.();
+    const palette = engine._doom_palette?.();
     if (frame === lastFrame || !heap || !screen || !palette) return;
     lastFrame = frame;
     for (let c = 0; c < 256; c++) {
@@ -264,7 +264,7 @@ function startFrames(module: WorkerModule) {
     for (let i = 0; i < rgba32.length; i++) {
       rgba32[i] = palette32[heap[screen + i] ?? 0] ?? 0;
     }
-    const menuOrMapOpen = Boolean(module._doom_menu_or_map_open?.());
+    const menuOrMapOpen = Boolean(engine._doom_menu_or_map_open?.());
     post({ type: "frame", frame, buffer, menuOrMapOpen }, [buffer]);
   };
   setInterval(check, 4);
