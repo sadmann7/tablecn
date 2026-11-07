@@ -115,7 +115,6 @@ function DataTableLayout<TData extends RowData>({
                 .rows.filter((row) => !row.getCanSelect())
                 .map((row) => row.id)}
               disabledBehavior="selection"
-              // Escape closes popovers and menus; it should not also wipe the row selection
               escapeKeyBehavior="none"
               onSelectionChange={(selection) => {
                 if (selection === "all") {
