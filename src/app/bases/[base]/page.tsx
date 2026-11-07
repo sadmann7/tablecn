@@ -14,11 +14,12 @@ import { RadixBasesDemo } from "../components/radix-bases-demo";
 import { RadixBasesGrid } from "../components/radix-bases-grid";
 import { type Base, BASES, isBase } from "../lib/data";
 
+const isDev = process.env.NODE_ENV === "development";
+
 export const metadata: Metadata = {
   title: "Bases",
   description:
     "The same data table and data grid built on Radix UI, Base UI, and React Aria.",
-  robots: { index: false, follow: false },
 };
 
 const DEMOS: Record<
@@ -68,7 +69,7 @@ export default function BasesPage({ params }: BasesPageProps) {
 
 async function BasesContent({ params }: BasesPageProps) {
   const { base } = await params;
-  if (!isBase(base)) notFound();
+  if (!isDev || !isBase(base)) notFound();
 
   const { table: Table, grid: Grid } = DEMOS[base];
 
