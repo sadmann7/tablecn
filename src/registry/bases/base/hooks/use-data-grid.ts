@@ -1227,7 +1227,7 @@ function useDataGrid<TData extends RowData>({
     return () => {
       window.removeEventListener("keydown", onGlobalKeyDown, true);
     };
-  }, []);
+  }, [onEscapeKeyDownRef]);
 
   React.useEffect(() => {
     const autoFocus = propsRef.current.autoFocus;

@@ -14,8 +14,6 @@ import { RadixBasesDemo } from "../components/radix-bases-demo";
 import { RadixBasesGrid } from "../components/radix-bases-grid";
 import { type Base, BASES, isBase } from "../lib/data";
 
-const isDev = process.env.NODE_ENV === "development";
-
 export const metadata: Metadata = {
   title: "Bases",
   description:
@@ -66,6 +64,8 @@ export default function BasesPage({ params }: BasesPageProps) {
     </div>
   );
 }
+
+const isDev = process.env.NODE_ENV === "development";
 
 async function BasesContent({ params }: BasesPageProps) {
   const { base } = await params;
