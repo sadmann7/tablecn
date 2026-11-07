@@ -16,7 +16,6 @@ export function isBase(value: string): value is Base {
 
 const REFERENCE_DATE = new Date("2026-11-01T00:00:00.000Z");
 
-// Own instance so seeding here does not shift other demos that share the global faker
 const faker = new Faker({ locale: [en, base] });
 faker.seed(20261101);
 

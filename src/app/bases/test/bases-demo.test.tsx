@@ -13,7 +13,6 @@ import { RadixBasesGrid } from "../components/radix-bases-grid";
 const demos = [
   ["radix", RadixBasesDemo, "table"],
   ["base", BaseBasesDemo, "table"],
-  // React Aria renders the table as an interactive grid
   ["aria", AriaBasesDemo, "grid"],
 ] as const;
 
@@ -28,7 +27,6 @@ describe.each(demos)("%s bases demo", (_, Demo, tableRole) => {
       );
 
       const table = screen.getByRole(tableRole, { name: "Tasks" });
-      // Header row plus the default page of 10
       expect(within(table).getAllByRole("row")).toHaveLength(11);
       expect(screen.getByRole("button", { name: /sort/i })).toBeTruthy();
     },
@@ -41,7 +39,6 @@ describe.each([
 ] as const)("%s bases grid", (_, Grid) => {
   it("renders the grid with its toolbar", () => {
     render(
-      // The app provides this for Radix tooltips in the grid's column headers
       <TooltipProvider>
         <NuqsTestingAdapter searchParams={{ view: "grid", dir: "rtl" }}>
           <Grid />
