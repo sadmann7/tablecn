@@ -78,7 +78,10 @@ export function RadixBasesDemo() {
     <DirectionProvider dir={dir}>
       <DataTable aria-label="Tasks" table={table}>
         {filterMode === "plain" ? (
-          <DataTableToolbar table={table}>
+          <DataTableToolbar
+            table={table}
+            globalFilterPlaceholder="Search tasks..."
+          >
             <DataTableSortMenu table={table} align="end" />
           </DataTableToolbar>
         ) : (

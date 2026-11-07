@@ -346,6 +346,69 @@ describe("useDataTable", () => {
         .rows.map((row) => row.original.title),
     ).toEqual(["login bug"]);
   });
+
+  it("reads the global filter from the URL", () => {
+    const { result } = renderDataTable("?search=bug");
+
+    expect(result.current.table.state.globalFilter).toBe("bug");
+  });
+
+  it("updates the global filter right away and writes it to the URL after the debounce", async () => {
+    const { result, getLastSearch } = renderDataTable("?page=3");
+
+    act(() => result.current.table.setGlobalFilter("bug"));
+
+    expect(result.current.table.state.globalFilter).toBe("bug");
+    await waitFor(() => expect(getLastSearch()?.get("search")).toBe("bug"));
+    expect(getLastSearch()?.get("page")).toBe("1");
+    expect(result.current.table.state.globalFilter).toBe("bug");
+  });
+
+  it("removes the global filter from the URL when it is cleared", async () => {
+    const { result, getLastSearch } = renderDataTable("?search=bug");
+
+    act(() => result.current.table.setGlobalFilter(""));
+
+    await waitFor(() => expect(getLastSearch()?.has("search")).toBe(false));
+    expect(result.current.table.state.globalFilter).toBe("");
+  });
+
+  it("starts from the initialState global filter and can clear it", async () => {
+    const { result, getLastSearch } = renderDataTable("", {
+      initialState: { globalFilter: "seed" },
+    });
+
+    expect(result.current.table.state.globalFilter).toBe("seed");
+
+    act(() => result.current.table.setGlobalFilter(""));
+
+    await waitFor(() => expect(getLastSearch()?.has("search")).toBe(false));
+    expect(result.current.table.state.globalFilter).toBe("");
+  });
+
+  it("reads and writes the configured global filter query key", async () => {
+    const { result, getLastSearch } = renderDataTable("?q=bug", {
+      queryKeys: { globalFilter: "q" },
+    });
+
+    expect(result.current.table.state.globalFilter).toBe("bug");
+
+    act(() => result.current.table.setGlobalFilter("feature"));
+
+    await waitFor(() => expect(getLastSearch()?.get("q")).toBe("feature"));
+    expect(getLastSearch()?.has("search")).toBe(false);
+  });
+
+  it("leaves global filtering to the server in server mode", () => {
+    const tasks: Task[] = [
+      { id: "1", code: "T-1", title: "login bug", status: "todo" },
+      { id: "2", code: "T-2", title: "new feature", status: "done" },
+    ];
+    const { result } = renderDataTable("?search=bug", { data: tasks });
+
+    expect(result.current.table.state.globalFilter).toBe("bug");
+    expect(result.current.table.getRowModel().rows).toHaveLength(2);
+  });
 });
 
 const columns = columnHelper.columns([

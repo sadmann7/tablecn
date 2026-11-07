@@ -11,6 +11,7 @@ import {
 } from "@tanstack/react-table";
 import {
   parseAsInteger,
+  parseAsString,
   parseAsStringEnum,
   useQueryState,
   type UseQueryStateOptions,
@@ -48,6 +49,7 @@ const PAGE_KEY = "page";
 const PER_PAGE_KEY = "perPage";
 const SORT_KEY = "sort";
 const JOIN_OPERATOR_KEY = "joinOperator";
+const GLOBAL_FILTER_KEY = "search";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 const DEFAULT_PAGE_SIZE = 10;
@@ -56,6 +58,12 @@ const EMPTY_SORTING: SortingState = [];
 interface FiltersDraft {
   filters: ColumnFiltersState;
   urlFiltersKey: string;
+  pageToReset: number | null;
+}
+
+interface GlobalFilterDraft {
+  value: string;
+  urlValue: string;
   pageToReset: number | null;
 }
 
@@ -109,6 +117,7 @@ function useDataTable<TData extends RowData>({
   const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
   const sortKey = queryKeys?.sort ?? SORT_KEY;
   const joinOperatorKey = queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY;
+  const globalFilterKey = queryKeys?.globalFilter ?? GLOBAL_FILTER_KEY;
 
   const queryStateOptions = React.useMemo<
     Omit<UseQueryStateOptions<string>, "parse">
@@ -274,7 +283,39 @@ function useDataTable<TData extends RowData>({
   const activeDraft =
     filtersDraft?.urlFiltersKey === urlFiltersKey ? filtersDraft : null;
   const columnFilters = activeDraft?.filters ?? urlFilters;
-  const pageIndex = activeDraft?.pageToReset === page ? 0 : page - 1;
+
+  const globalFilterParser = React.useMemo(
+    () => parseAsString.withOptions(queryStateOptions).withDefault(""),
+    [queryStateOptions],
+  );
+
+  const [urlGlobalFilter, setUrlGlobalFilter] = useQueryState(
+    globalFilterKey,
+    globalFilterParser,
+  );
+  const [globalFilterDraft, setGlobalFilterDraft] =
+    React.useState<GlobalFilterDraft | null>(() => {
+      const initialGlobalFilter = getGlobalFilterValue(
+        initialTableState?.globalFilter,
+      );
+      if (urlGlobalFilter !== "" || initialGlobalFilter === "") return null;
+
+      return {
+        value: initialGlobalFilter,
+        urlValue: urlGlobalFilter,
+        pageToReset: null,
+      };
+    });
+
+  const activeGlobalFilterDraft =
+    globalFilterDraft?.urlValue === urlGlobalFilter ? globalFilterDraft : null;
+  const globalFilter = activeGlobalFilterDraft?.value ?? urlGlobalFilter;
+
+  const pageIndex =
+    activeDraft?.pageToReset === page ||
+    activeGlobalFilterDraft?.pageToReset === page
+      ? 0
+      : page - 1;
 
   const pagination = React.useMemo<PaginationState>(
     () => ({ pageIndex, pageSize: perPage }),
@@ -288,6 +329,9 @@ function useDataTable<TData extends RowData>({
     if (next.pageIndex !== pagination.pageIndex) {
       if (activeDraft?.pageToReset) {
         setFiltersDraft((prev) => prev && { ...prev, pageToReset: null });
+      }
+      if (activeGlobalFilterDraft?.pageToReset) {
+        setGlobalFilterDraft((prev) => prev && { ...prev, pageToReset: null });
       }
       void setPage(next.pageIndex + 1);
     }
@@ -336,6 +380,29 @@ function useDataTable<TData extends RowData>({
     debouncedWriteFilters(filters, urlFiltersKey);
   }
 
+  const debouncedWriteGlobalFilter = useDebouncedCallback(
+    (value: string, sourceUrlValue: string) => {
+      if (sourceUrlValue !== urlGlobalFilter) return;
+
+      setGlobalFilterDraft((prev) => prev && { ...prev, urlValue: value });
+      if (page !== 1) void setPage(1);
+      void setUrlGlobalFilter(value || null);
+    },
+    debounceMs,
+  );
+
+  const getNextGlobalFilter = useChainedUpdate<unknown>(globalFilter);
+
+  function onGlobalFilterChange(updater: Updater<unknown>) {
+    const value = getGlobalFilterValue(getNextGlobalFilter(updater));
+    setGlobalFilterDraft({
+      value,
+      urlValue: urlGlobalFilter,
+      pageToReset: !isServer && page !== 1 ? page : null,
+    });
+    debouncedWriteGlobalFilter(value, urlGlobalFilter);
+  }
+
   const table = useTable(
     {
       ...props,
@@ -348,11 +415,13 @@ function useDataTable<TData extends RowData>({
         sorting,
         columnFilters,
         joinOperator,
+        globalFilter,
       },
       onPaginationChange,
       onSortingChange,
       onColumnFiltersChange,
       onJoinOperatorChange,
+      onGlobalFilterChange,
       manualPagination: isServer,
       manualSorting: isServer,
       manualFiltering: isServer,
@@ -376,9 +445,16 @@ function getServerLocationSearch() {
   return "";
 }
 
+function getGlobalFilterValue(value: unknown) {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return "";
+}
+
 function selectTableState(state: TableState<DataTableFeatures>) {
   return {
     columnFilters: state.columnFilters,
+    globalFilter: state.globalFilter,
     joinOperator: state.joinOperator,
     pagination: state.pagination,
     sorting: state.sorting,

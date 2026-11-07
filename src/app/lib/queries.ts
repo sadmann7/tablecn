@@ -1,6 +1,6 @@
 "use cache";
 
-import { asc, count, desc, gt, sql } from "drizzle-orm";
+import { and, asc, count, desc, gt, ilike, or, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import "server-only";
 
@@ -23,11 +23,20 @@ export async function getTasks(
   try {
     const offset = (input.page - 1) * input.perPage;
 
-    const where = filterColumns({
-      table: tasks,
-      filters: sanitizeEnumFilters(input.filters),
-      joinOperator: input.joinOperator,
-    });
+    const search = input.globalFilter.trim();
+    const where = and(
+      filterColumns({
+        table: tasks,
+        filters: sanitizeEnumFilters(input.filters),
+        joinOperator: input.joinOperator,
+      }),
+      search
+        ? or(
+            ilike(tasks.title, `%${search}%`),
+            ilike(tasks.code, `%${search}%`),
+          )
+        : undefined,
+    );
 
     const { data, total } = await db.transaction(async (tx) => {
       const data = await tx
