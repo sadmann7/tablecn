@@ -4367,7 +4367,7 @@ describe("useDataGrid", () => {
   });
 
   describe("navigation feature", () => {
-    function renderGrid(
+    function renderDataGrid(
       props: Partial<Parameters<typeof useDataGrid<TestData>>[0]> = {},
     ) {
       return renderHook(
@@ -4382,7 +4382,7 @@ describe("useDataGrid", () => {
     }
 
     it("should move the focused cell and stop at the grid edges", () => {
-      const { result } = renderGrid();
+      const { result } = renderDataGrid();
 
       act(() => {
         result.current.table.setFocusedCell("0", "name");
@@ -4417,7 +4417,7 @@ describe("useDataGrid", () => {
     });
 
     it("should extend the selection without moving the focused cell", () => {
-      const { result } = renderGrid();
+      const { result } = renderDataGrid();
 
       act(() => {
         result.current.table.setFocusedCell("0", "name");
@@ -4436,7 +4436,7 @@ describe("useDataGrid", () => {
     });
 
     it("should stop editing when navigating", () => {
-      const { result } = renderGrid();
+      const { result } = renderDataGrid();
 
       act(() => {
         fireCellEvent(result, "onClick", "0", "name");
@@ -4451,7 +4451,7 @@ describe("useDataGrid", () => {
     });
 
     it("should reach utility columns with arrows but skip them for home, end and tab", () => {
-      const { result } = renderGrid({ columns: columnsWithSelect });
+      const { result } = renderDataGrid({ columns: columnsWithSelect });
 
       act(() => {
         result.current.table.setFocusedCell("0", "name");
@@ -4485,7 +4485,7 @@ describe("useDataGrid", () => {
     });
 
     it("should mirror horizontal arrows in RTL", () => {
-      const { result } = renderGrid({ dir: "rtl" });
+      const { result } = renderDataGrid({ dir: "rtl" });
 
       act(() => {
         result.current.table.setFocusedCell("0", "trick");
@@ -4498,7 +4498,7 @@ describe("useDataGrid", () => {
     });
 
     it("should use the page size for page up and down", () => {
-      const { result } = renderGrid();
+      const { result } = renderDataGrid();
 
       expect(
         result.current.table.getNavigationTarget(

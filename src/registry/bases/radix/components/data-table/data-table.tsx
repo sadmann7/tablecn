@@ -56,7 +56,6 @@ export function DataTable<TData extends RowData>({
   function onTableKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const nativeEvent = event.nativeEvent;
     if (event.key !== "Escape" || nativeEvent.defaultPrevented) return;
-    // Menus portal out of the table but still bubble through it in React
     if (
       !(event.target instanceof Node) ||
       !event.currentTarget.contains(event.target)

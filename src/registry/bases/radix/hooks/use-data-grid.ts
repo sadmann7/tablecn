@@ -99,8 +99,8 @@ function useDataGrid<TData extends RowData>({
     cell: CellPosition;
     shouldScroll: boolean;
   } | null>(null);
-  const propsRef = useValueAsRef(props);
   const onEscapeKeyDownRef = useValueAsRef(onEscapeKeyDown);
+  const propsRef = useValueAsRef(props);
   const stableProps = useStableProps(props, propsRef);
 
   const onDataChange = React.useCallback(

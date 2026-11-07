@@ -68,7 +68,7 @@ describe("DataGrid renders", () => {
   });
 
   it("commits a row height change once", () => {
-    const { table, getCommits } = renderGrid();
+    const { table, getCommits } = renderDataGrid();
 
     act(() => table.setRowHeight("tall"));
     flushFrames();
@@ -77,7 +77,7 @@ describe("DataGrid renders", () => {
   });
 
   it("re-renders only the resized column's cells", () => {
-    const { table } = renderGrid();
+    const { table } = renderDataGrid();
 
     act(() => table.setColumnSizing({ name: 200 }));
     flushFrames();
@@ -95,7 +95,7 @@ describe("DataGrid renders", () => {
     });
   }
 
-  function renderGrid() {
+  function renderDataGrid() {
     const gridRef: {
       current?: ReturnType<typeof useDataGrid<Trick>>["table"];
     } = {};
