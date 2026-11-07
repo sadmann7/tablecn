@@ -1150,13 +1150,13 @@ export function createFileObjectUrl<TData extends RowData>(
   return url;
 }
 
-export function revokeFileObjectUrls(
-  store: object,
+export function revokeFileObjectUrls<TData extends RowData>(
+  table: Table<DataGridFeatures, TData>,
   data: readonly RowData[] = [],
 ) {
-  const urls = objectUrlsByStore.get(store);
+  const urls = objectUrlsByStore.get(table.store);
   if (!urls) return;
-  objectUrlsByStore.delete(store);
+  objectUrlsByStore.delete(table.store);
 
   const keptUrls = new Set<string>();
   for (const row of data) {

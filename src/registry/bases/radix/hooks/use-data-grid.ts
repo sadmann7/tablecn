@@ -594,13 +594,14 @@ function useDataGrid<TData extends RowData>({
 
   const table = useTable(tableOptions, selectTableState);
 
-  const { store } = table;
   React.useEffect(
     () => () => {
-      tableRef.current?.commitCellUpdates();
-      revokeFileObjectUrls(store, dataPropRef.current);
+      const currentTable = tableRef.current;
+      if (!currentTable) return;
+      currentTable.commitCellUpdates();
+      revokeFileObjectUrls(currentTable, dataPropRef.current);
     },
-    [store, dataPropRef],
+    [dataPropRef],
   );
 
   if (tableRef.current === null) {
