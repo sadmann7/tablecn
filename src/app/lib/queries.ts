@@ -23,7 +23,7 @@ export async function getTasks(
   try {
     const offset = (input.page - 1) * input.perPage;
 
-    const search = input.globalFilter.trim();
+    const search = input.globalFilter;
     const where = and(
       filterColumns({
         table: tasks,
@@ -32,8 +32,12 @@ export async function getTasks(
       }),
       search
         ? or(
-            ilike(tasks.title, `%${search}%`),
             ilike(tasks.code, `%${search}%`),
+            ilike(tasks.title, `%${search}%`),
+            ilike(tasks.status, `%${search}%`),
+            ilike(tasks.priority, `%${search}%`),
+            ilike(tasks.label, `%${search}%`),
+            ilike(sql`${tasks.estimatedHours}::text`, `%${search}%`),
           )
         : undefined,
     );
