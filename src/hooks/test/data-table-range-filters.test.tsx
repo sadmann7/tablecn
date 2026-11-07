@@ -6,12 +6,18 @@ import { describe, expect, it, vi } from "vitest";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
+import { DataTableToolbar as AriaDataTableToolbar } from "@/registry/bases/aria/components/data-table/data-table-toolbar";
+import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
 import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 
 vi.mock("@/registry/bases/radix/ui/direction", () => ({
+  useDirection: () => "ltr",
+}));
+vi.mock("@/registry/bases/aria/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
 
@@ -134,6 +140,37 @@ describe("DataTableSliderFilter", () => {
     const [, nextTo] = openFilter();
 
     expect((nextTo as HTMLInputElement).value).toBe("90");
+  });
+});
+
+describe("DataTableSliderFilter (aria)", () => {
+  it("lets the slider reach the column max when the step does not divide the range", () => {
+    function Harness() {
+      const { table } = useAriaDataTable<Task>({
+        mode: "client",
+        data,
+        columns,
+        getRowId: (row) => row.id,
+      });
+      return (
+        <AriaDataTable aria-label="Tasks" table={table}>
+          <AriaDataTableToolbar table={table} />
+        </AriaDataTable>
+      );
+    }
+
+    render(
+      <NuqsTestingAdapter hasMemory>
+        <Harness />
+      </NuqsTestingAdapter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Hours/ }));
+    const thumbs = screen.getAllByRole("slider");
+
+    expect(thumbs.map((thumb) => (thumb as HTMLInputElement).value)).toEqual([
+      "1",
+      "24",
+    ]);
   });
 });
 

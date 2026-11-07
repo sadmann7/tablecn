@@ -1,5 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { describe, expect, it, vi } from "vitest";
 
@@ -70,6 +70,17 @@ describe("DataTableSelectHeader (aria)", () => {
     expect(getCheckboxLabel(selectAll).hasAttribute("data-indeterminate")).toBe(
       true,
     );
+  });
+
+  it("keeps the selection when Escape is pressed in the table", () => {
+    const { table } = renderTable(bases.aria);
+
+    act(() => table.getRow("0").toggleSelected(true));
+    const row = screen.getByRole("row", { name: "Task 0" });
+    act(() => row.focus());
+    fireEvent.keyDown(row, { key: "Escape" });
+
+    expect(table.getRow("0").getIsSelected()).toBe(true);
   });
 });
 

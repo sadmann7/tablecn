@@ -323,9 +323,19 @@ function getFacetedRange<TData extends RowData>(
 
 function getRangeStep(min: number, max: number) {
   const rangeSize = max - min;
-  if (rangeSize <= 20) return 1;
-  if (rangeSize <= 100) return Math.ceil(rangeSize / 20);
-  return Math.ceil(rangeSize / 50);
+  const step =
+    rangeSize <= 20
+      ? 1
+      : rangeSize <= 100
+        ? Math.ceil(rangeSize / 20)
+        : Math.ceil(rangeSize / 50);
+
+  // React Aria snaps maxValue down to a whole step from minValue, so pick a step that divides the range to keep max reachable
+  if (!Number.isInteger(rangeSize)) return step;
+  for (let divisor = step; divisor > 1; divisor--) {
+    if (rangeSize % divisor === 0) return divisor;
+  }
+  return 1;
 }
 
 function parseRangeBounds(
