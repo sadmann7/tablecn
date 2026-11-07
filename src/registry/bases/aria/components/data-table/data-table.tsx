@@ -115,6 +115,7 @@ function DataTableLayout<TData extends RowData>({
                 .rows.filter((row) => !row.getCanSelect())
                 .map((row) => row.id)}
               disabledBehavior="selection"
+              escapeKeyBehavior="none"
               onSelectionChange={(selection) => {
                 if (selection === "all") {
                   table.toggleAllPageRowsSelected(true);
