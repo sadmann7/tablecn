@@ -525,6 +525,48 @@ describe("DataGrid rendering", () => {
     expect(table.atoms.rowSelection.get()).toEqual({});
   });
 
+  it("clears cell and row selection on Escape", () => {
+    const onEscapeKeyDown = vi.fn();
+    const { container, table } = renderGrid(testColumns, { onEscapeKeyDown });
+
+    act(() => {
+      table.getRow("1").toggleSelected(true);
+    });
+    const cell = getCellWrapper(container, "1", "name");
+
+    act(() => {
+      cell?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+
+    expect(onEscapeKeyDown).toHaveBeenCalledOnce();
+    expect(table.atoms.rowSelection.get()).toEqual({});
+  });
+
+  it("keeps the selection on Escape when onEscapeKeyDown prevents the default", () => {
+    const { container, table } = renderGrid(testColumns, {
+      onEscapeKeyDown: (event) => event.preventDefault(),
+    });
+
+    act(() => {
+      table.getRow("1").toggleSelected(true);
+    });
+    const cell = getCellWrapper(container, "1", "name");
+
+    act(() => {
+      cell?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    expect(table.atoms.rowSelection.get()).toEqual({ "1": true });
+  });
+
   it("resizes the focused header column with Alt+Arrow within its bounds", () => {
     const { container, table } = renderGrid([
       { ...testColumns[0], size: 100, maxSize: 115 },
@@ -920,7 +962,12 @@ describe("DataGrid rendering", () => {
   });
 });
 
-function renderGrid(columns = testColumns) {
+function renderGrid(
+  columns = testColumns,
+  {
+    onEscapeKeyDown,
+  }: { onEscapeKeyDown?: (event: KeyboardEvent) => void } = {},
+) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
   let hookRenderCount = 0;
 
@@ -930,6 +977,7 @@ function renderGrid(columns = testColumns) {
       columns,
       getRowId: (row) => row.id,
       enableSearch: true,
+      onEscapeKeyDown,
     });
     hookRenderCount++;
     gridRef.current = dataGrid;

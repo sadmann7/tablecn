@@ -67,6 +67,7 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
 > {
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }
 
 function useDataGrid<TData extends RowData>({
@@ -74,6 +75,7 @@ function useDataGrid<TData extends RowData>({
   columns,
   overscan = OVERSCAN,
   dir: dirProp,
+  onEscapeKeyDown,
   ...props
 }: UseDataGridProps<TData>) {
   const [pendingEdit, setPendingEdit] = React.useState({
@@ -98,6 +100,7 @@ function useDataGrid<TData extends RowData>({
     shouldScroll: boolean;
   } | null>(null);
   const propsRef = useValueAsRef(props);
+  const onEscapeKeyDownRef = useValueAsRef(onEscapeKeyDown);
   const stableProps = useStableProps(props, propsRef);
 
   const onDataChange = React.useCallback(
@@ -1081,6 +1084,7 @@ function useDataGrid<TData extends RowData>({
           direction = altKey ? "pageright" : "pagedown";
           break;
         case "Escape":
+          if (event.defaultPrevented) return;
           event.preventDefault();
           if (hasCellRangeSelection || currentTable.getHasRowSelection()) {
             currentTable.clearSelection();
@@ -1209,6 +1213,9 @@ function useDataGrid<TData extends RowData>({
           tableRef.current?.getHasRowSelection();
 
         if (hasSelections) {
+          onEscapeKeyDownRef.current?.(event);
+          if (event.defaultPrevented) return;
+
           event.preventDefault();
           event.stopPropagation();
           tableRef.current?.clearSelection();
