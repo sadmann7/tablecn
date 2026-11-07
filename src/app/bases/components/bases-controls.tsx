@@ -2,7 +2,7 @@
 
 import type * as React from "react";
 
-import { ArrowLeftRight } from "lucide-react";
+import { PilcrowLeft, PilcrowRight } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryStates } from "nuqs";
@@ -14,7 +14,7 @@ import {
   ToggleGroupItem,
 } from "@/registry/bases/radix/ui/toggle-group";
 
-import { basesSearchParams } from "../hooks/use-bases-demo";
+import { BASES_VIEWS, basesSearchParams } from "../hooks/use-bases-demo";
 import { type Base, BASES } from "../lib/data";
 
 interface BasesControlsProps {
@@ -23,13 +23,44 @@ interface BasesControlsProps {
 
 export function BasesControls({ base }: BasesControlsProps) {
   const searchParams = useSearchParams();
-  const [{ filterMode, dir }, setControls] = useQueryStates(basesSearchParams, {
-    clearOnDefault: true,
-  });
+  const [{ view, filterMode, dir }, setControls] = useQueryStates(
+    basesSearchParams,
+    {
+      clearOnDefault: true,
+    },
+  );
   const query = searchParams.toString();
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <ControlGroup label="View">
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="sm"
+          spacing={0}
+          aria-label="View"
+          value={view}
+          onValueChange={(value) => {
+            const next = BASES_VIEWS.find((item) => item.value === value);
+            if (next) void setControls({ view: next.value });
+          }}
+        >
+          {BASES_VIEWS.map((item) => (
+            <ToggleGroupItem
+              key={item.value}
+              value={item.value}
+              className="px-2.5 text-xs"
+            >
+              {item.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </ControlGroup>
+      <Separator
+        orientation="vertical"
+        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
+      />
       <ControlGroup label="Base">
         <ToggleGroup
           type="single"
@@ -53,35 +84,39 @@ export function BasesControls({ base }: BasesControlsProps) {
           ))}
         </ToggleGroup>
       </ControlGroup>
-      <Separator
-        orientation="vertical"
-        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
-      />
-      <ControlGroup label="Filter">
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          size="sm"
-          spacing={0}
-          aria-label="Filter"
-          value={filterMode}
-          onValueChange={(value) => {
-            const next = FILTER_MODES.find((item) => item.value === value);
-            if (next) void setControls({ filterMode: next.value });
-          }}
-        >
-          {FILTER_MODES.map((item) => (
-            <ToggleGroupItem
-              key={item.value}
-              value={item.value}
-              className="px-2.5 text-xs"
+      {view === "table" ? (
+        <>
+          <Separator
+            orientation="vertical"
+            className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
+          />
+          <ControlGroup label="Filter">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              spacing={0}
+              aria-label="Filter"
+              value={filterMode}
+              onValueChange={(value) => {
+                const next = FILTER_MODES.find((item) => item.value === value);
+                if (next) void setControls({ filterMode: next.value });
+              }}
             >
-              <item.icon className="size-3.5" />
-              {item.label}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-      </ControlGroup>
+              {FILTER_MODES.map((item) => (
+                <ToggleGroupItem
+                  key={item.value}
+                  value={item.value}
+                  className="px-2.5 text-xs"
+                >
+                  <item.icon className="size-3.5" />
+                  {item.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </ControlGroup>
+        </>
+      ) : null}
       <Separator
         orientation="vertical"
         className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
@@ -101,11 +136,11 @@ export function BasesControls({ base }: BasesControlsProps) {
           }}
         >
           <ToggleGroupItem value="ltr" className="px-2.5 text-xs">
-            <ArrowLeftRight className="size-3.5" />
+            <PilcrowRight className="size-3.5" />
             LTR
           </ToggleGroupItem>
           <ToggleGroupItem value="rtl" className="px-2.5 text-xs">
-            <ArrowLeftRight className="size-3.5 -scale-x-100" />
+            <PilcrowLeft className="size-3.5" />
             RTL
           </ToggleGroupItem>
         </ToggleGroup>

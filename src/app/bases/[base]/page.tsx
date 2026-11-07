@@ -7,20 +7,28 @@ import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/
 
 import { AriaBasesDemo } from "../components/aria-bases-demo";
 import { BaseBasesDemo } from "../components/base-bases-demo";
+import { BaseBasesGrid } from "../components/base-bases-grid";
 import { BasesControls } from "../components/bases-controls";
+import { BasesView } from "../components/bases-view";
 import { RadixBasesDemo } from "../components/radix-bases-demo";
+import { RadixBasesGrid } from "../components/radix-bases-grid";
 import { type Base, BASES, isBase } from "../lib/data";
+
+const isDev = process.env.NODE_ENV === "development";
 
 export const metadata: Metadata = {
   title: "Bases",
   description:
-    "The same data table built on Radix UI, Base UI, and React Aria.",
+    "The same data table and data grid built on Radix UI, Base UI, and React Aria.",
 };
 
-const DEMOS: Record<Base, React.ComponentType> = {
-  radix: RadixBasesDemo,
-  base: BaseBasesDemo,
-  aria: AriaBasesDemo,
+const DEMOS: Record<
+  Base,
+  { table: React.ComponentType; grid: React.ComponentType | null }
+> = {
+  radix: { table: RadixBasesDemo, grid: RadixBasesGrid },
+  base: { table: BaseBasesDemo, grid: BaseBasesGrid },
+  aria: { table: AriaBasesDemo, grid: null },
 };
 
 interface BasesPageProps {
@@ -61,14 +69,14 @@ export default function BasesPage({ params }: BasesPageProps) {
 
 async function BasesContent({ params }: BasesPageProps) {
   const { base } = await params;
-  if (!isBase(base)) notFound();
+  if (!isDev || !isBase(base)) notFound();
 
-  const Demo = DEMOS[base];
+  const { table: Table, grid: Grid } = DEMOS[base];
 
   return (
     <>
       <BasesControls base={base} />
-      <Demo />
+      <BasesView table={<Table />} grid={Grid ? <Grid /> : null} />
     </>
   );
 }

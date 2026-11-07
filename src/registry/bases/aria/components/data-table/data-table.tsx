@@ -102,7 +102,6 @@ function DataTableLayout<TData extends RowData>({
               className="table-fixed"
               style={getColumnSizingStyle(table)}
               {...props}
-              // Rows select on press only when the table offers selection through its select column
               selectionMode={
                 "select" in table.getAllLeafColumnsById() ? "multiple" : "none"
               }
