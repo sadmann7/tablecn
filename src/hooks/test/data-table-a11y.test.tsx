@@ -5,12 +5,20 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
-import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
-import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
-import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
-import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
+import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
+import { getDataTableSelectColumn as getAriaSelectColumn } from "@/registry/bases/aria/components/data-table/data-table-select-column";
+import { DataTableSkeleton as AriaDataTableSkeleton } from "@/registry/bases/aria/components/data-table/data-table-skeleton";
+import { DataTableToolbar as AriaDataTableToolbar } from "@/registry/bases/aria/components/data-table/data-table-toolbar";
+import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
+import { DataTable as RadixDataTable } from "@/registry/bases/radix/components/data-table/data-table";
+import { getDataTableSelectColumn as getRadixSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
+import { DataTableSkeleton as RadixDataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
+import { DataTableToolbar as RadixDataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
+import { useDataTable as useRadixDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 
+vi.mock("@/registry/bases/aria/ui/direction", () => ({
+  useDirection: () => "ltr",
+}));
 vi.mock("@/registry/bases/radix/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
@@ -21,19 +29,50 @@ interface Task {
   status: string;
 }
 
-const columnHelper = createColumnHelper<DataTableFeatures, Task>();
+const bases = [
+  {
+    name: "radix",
+    DataTable: RadixDataTable,
+    DataTableSkeleton: RadixDataTableSkeleton,
+    DataTableToolbar: RadixDataTableToolbar,
+    useDataTable: useRadixDataTable,
+    getDataTableSelectColumn: getRadixSelectColumn,
+    tableRole: "table",
+    pageSizeSelect: { role: "combobox", name: "Rows per page" },
+    filterPopoverName: "Status filter",
+    exposesMenuSeparator: false,
+  },
+  {
+    name: "aria",
+    DataTable: AriaDataTable,
+    DataTableSkeleton: AriaDataTableSkeleton,
+    DataTableToolbar: AriaDataTableToolbar,
+    useDataTable: useAriaDataTable,
+    getDataTableSelectColumn: getAriaSelectColumn,
+    // React Aria's Table is an interactive grid
+    tableRole: "grid",
+    // React Aria's Select is a listbox button named by its value and label
+    pageSizeSelect: { role: "button", name: "10 Rows per page" },
+    // React Aria names a popover by its trigger
+    filterPopoverName: /^Status/,
+    // React Aria menus expose their separators
+    exposesMenuSeparator: true,
+  },
+] as const;
 
-describe("DataTable accessibility", () => {
+type Base = (typeof bases)[number];
+
+describe.each(bases)("DataTable accessibility ($name)", (ui) => {
   it("names the table element", () => {
-    const { container } = renderTable();
+    const { container } = renderTable(ui);
 
-    expect(screen.getByRole("table", { name: "Tasks" })).toBe(
+    expect(screen.getByRole(ui.tableRole, { name: "Tasks" })).toBe(
       container.querySelector("table"),
     );
   });
 
   it("marks only the primary sorted column with aria-sort", () => {
-    const { container, table } = renderTable();
+    const { container, table } = renderTable(ui);
 
     expect(getSortedHeaders(container)).toEqual([]);
 
@@ -53,10 +92,12 @@ describe("DataTable accessibility", () => {
   });
 
   it("labels the page size select and announces selection and page changes", () => {
-    const { table } = renderTable();
+    const { table } = renderTable(ui);
 
     expect(
-      screen.getByRole("combobox", { name: "Rows per page" }),
+      screen.getByRole(ui.pageSizeSelect.role, {
+        name: ui.pageSizeSelect.name,
+      }),
     ).toBeDefined();
 
     const statuses = screen.getAllByRole("status");
@@ -76,7 +117,7 @@ describe("DataTable accessibility", () => {
   });
 
   it("keeps the filter clear icon out of the trigger's focus and accessibility tree", () => {
-    const { table } = renderTable("?status=todo");
+    const { table } = renderTable(ui, "?status=todo");
 
     const trigger = screen.getByRole("button", { name: /^Status/ });
     const icon = trigger.querySelector("[aria-hidden=true]");
@@ -93,12 +134,14 @@ describe("DataTable accessibility", () => {
   });
 
   it("names the filter popover and offers a clear option inside it", () => {
-    renderTable("?status=todo");
+    renderTable(ui, "?status=todo");
 
     fireEvent.click(screen.getByRole("button", { name: /^Status/ }));
 
-    const dialog = screen.getByRole("dialog", { name: "Status filter" });
-    expect(within(dialog).queryByRole("separator")).toBeNull();
+    const dialog = screen.getByRole("dialog", { name: ui.filterPopoverName });
+    expect(within(dialog).queryByRole("separator") !== null).toBe(
+      ui.exposesMenuSeparator,
+    );
     expect(within(dialog).getByText("Clear filters")).toBeDefined();
   });
 });
@@ -109,27 +152,11 @@ const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
   status: index % 2 ? "todo" : "done",
 }));
 
-const columns = columnHelper.columns([
-  getDataTableSelectColumn<Task>(),
-  columnHelper.accessor("title", { id: "title", header: "Title" }),
-  columnHelper.accessor("status", {
-    id: "status",
-    header: "Status",
-    enableColumnFilter: true,
-    meta: {
-      label: "Status",
-      variant: "multi-select",
-      options: [
-        { label: "Todo", value: "todo" },
-        { label: "Done", value: "done" },
-      ],
-    },
-  }),
-]);
-
-function renderTable(search = "") {
+function renderTable(ui: Base, search = "") {
+  const { DataTable, DataTableToolbar, useDataTable } = ui;
+  const columns = getColumns(ui);
   const tableRef: {
-    current?: ReturnType<typeof useDataTable<Task>>["table"];
+    current?: ReturnType<typeof useRadixDataTable<Task>>["table"];
   } = {};
 
   function Harness() {
@@ -160,6 +187,28 @@ function renderTable(search = "") {
   return { ...view, table };
 }
 
+const columnHelper = createColumnHelper<DataTableFeatures, Task>();
+
+function getColumns({ getDataTableSelectColumn }: Base) {
+  return columnHelper.columns([
+    getDataTableSelectColumn<Task>(),
+    columnHelper.accessor("title", { id: "title", header: "Title" }),
+    columnHelper.accessor("status", {
+      id: "status",
+      header: "Status",
+      enableColumnFilter: true,
+      meta: {
+        label: "Status",
+        variant: "multi-select",
+        options: [
+          { label: "Todo", value: "todo" },
+          { label: "Done", value: "done" },
+        ],
+      },
+    }),
+  ]);
+}
+
 function getSortedHeaders(container: HTMLElement) {
   return Array.from(container.querySelectorAll("th[aria-sort]"), (th) => [
     th.textContent,
@@ -167,11 +216,14 @@ function getSortedHeaders(container: HTMLElement) {
   ]);
 }
 
-describe("DataTableSkeleton accessibility", () => {
-  it("announces loading and hides the placeholder table", () => {
-    render(<DataTableSkeleton columnCount={3} />);
+describe.each(bases)(
+  "DataTableSkeleton accessibility ($name)",
+  ({ DataTableSkeleton }) => {
+    it("announces loading and hides the placeholder table", () => {
+      render(<DataTableSkeleton columnCount={3} />);
 
-    expect(screen.getByRole("status").textContent).toBe("Loading table…");
-    expect(screen.queryByRole("table")).toBeNull();
-  });
-});
+      expect(screen.getByRole("status").textContent).toBe("Loading table…");
+      expect(screen.queryByRole("table")).toBeNull();
+    });
+  },
+);
