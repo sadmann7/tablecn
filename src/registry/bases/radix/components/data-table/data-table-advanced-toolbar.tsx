@@ -1,22 +1,29 @@
 "use client";
 
-import type { ReactTable, RowData } from "@tanstack/react-table";
 import type * as React from "react";
 
+import {
+  type ReactTable,
+  type RowData,
+  Subscribe,
+} from "@tanstack/react-table";
 import { cn } from "cn";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { DataTableViewOptions } from "@/registry/bases/radix/components/data-table/data-table-view-options";
+import { Input } from "@/registry/bases/radix/ui/input";
 
 interface DataTableAdvancedToolbarProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
+  globalFilterPlaceholder?: string;
 }
 
 export function DataTableAdvancedToolbar<TData extends RowData>({
   table,
+  globalFilterPlaceholder,
   children,
   className,
   ...props
@@ -30,7 +37,30 @@ export function DataTableAdvancedToolbar<TData extends RowData>({
       )}
       {...props}
     >
-      <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
+      <div className="flex flex-1 flex-wrap items-center gap-2">
+        {globalFilterPlaceholder ? (
+          <Subscribe
+            source={table.atoms.globalFilter}
+            selector={(globalFilter) =>
+              typeof globalFilter === "string" ||
+              typeof globalFilter === "number"
+                ? String(globalFilter)
+                : ""
+            }
+          >
+            {(globalFilter) => (
+              <Input
+                aria-label={globalFilterPlaceholder}
+                placeholder={globalFilterPlaceholder}
+                value={globalFilter}
+                onChange={(event) => table.setGlobalFilter(event.target.value)}
+                className="w-40 lg:w-56"
+              />
+            )}
+          </Subscribe>
+        ) : null}
+        {children}
+      </div>
       <div className="flex items-center gap-2">
         <DataTableViewOptions table={table} align="end" />
       </div>

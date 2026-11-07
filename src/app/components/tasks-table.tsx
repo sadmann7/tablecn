@@ -284,7 +284,10 @@ export function TasksTable({
         actionBar={<TasksTableActionBar table={table} />}
       >
         {enableAdvancedFilter ? (
-          <DataTableAdvancedToolbar table={table}>
+          <DataTableAdvancedToolbar
+            table={table}
+            globalFilterPlaceholder="Search tasks..."
+          >
             <DataTableSortMenu table={table} align="start" />
             {filterMode === "advanced" ? (
               <DataTableFilterMenu table={table} align="start" />
@@ -293,7 +296,10 @@ export function TasksTable({
             )}
           </DataTableAdvancedToolbar>
         ) : (
-          <DataTableToolbar table={table}>
+          <DataTableToolbar
+            table={table}
+            globalFilterPlaceholder="Search tasks..."
+          >
             <DataTableSortMenu table={table} align="end" />
           </DataTableToolbar>
         )}

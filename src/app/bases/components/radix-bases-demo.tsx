@@ -85,7 +85,10 @@ export function RadixBasesDemo() {
             <DataTableSortMenu table={table} align="end" />
           </DataTableToolbar>
         ) : (
-          <DataTableAdvancedToolbar table={table}>
+          <DataTableAdvancedToolbar
+            table={table}
+            globalFilterPlaceholder="Search tasks..."
+          >
             <DataTableSortMenu table={table} align="start" />
             {filterMode === "advanced" ? (
               <DataTableFilterMenu table={table} align="start" />

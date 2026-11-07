@@ -85,7 +85,10 @@ export function AriaBasesDemo() {
             <DataTableSortMenu table={table} placement="bottom end" />
           </DataTableToolbar>
         ) : (
-          <DataTableAdvancedToolbar table={table}>
+          <DataTableAdvancedToolbar
+            table={table}
+            globalFilterPlaceholder="Search tasks..."
+          >
             <DataTableSortMenu table={table} placement="bottom start" />
             {filterMode === "advanced" ? (
               <DataTableFilterMenu table={table} placement="bottom start" />
