@@ -38,11 +38,13 @@ interface DataTableProps<
 > extends React.ComponentProps<"div"> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   actionBar?: React.ReactNode;
+  onEscapeKeyDown?: (event: KeyboardEvent) => void;
 }
 
 export function DataTable<TData extends RowData>({
   table,
   actionBar,
+  onEscapeKeyDown,
   children,
   className,
   "aria-label": ariaLabel,
@@ -50,6 +52,30 @@ export function DataTable<TData extends RowData>({
   ...props
 }: DataTableProps<TData>) {
   const dir = useDirection();
+
+  function onTableKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    const nativeEvent = event.nativeEvent;
+    if (event.key !== "Escape" || nativeEvent.defaultPrevented) return;
+    if (
+      !(event.target instanceof Node) ||
+      !event.currentTarget.contains(event.target)
+    ) {
+      return;
+    }
+
+    const selectedRowIds = getVisibleSelectedRows(table).map((row) => row.id);
+    if (selectedRowIds.length === 0) return;
+
+    onEscapeKeyDown?.(nativeEvent);
+    if (nativeEvent.defaultPrevented) return;
+
+    event.preventDefault();
+    table.setRowSelection((prev) => {
+      const next = { ...prev };
+      for (const rowId of selectedRowIds) delete next[rowId];
+      return next;
+    });
+  }
 
   return (
     <div
@@ -59,7 +85,10 @@ export function DataTable<TData extends RowData>({
       {...props}
     >
       {children}
-      <div className="isolate overflow-hidden rounded-md border">
+      <div
+        className="isolate overflow-hidden rounded-md border"
+        onKeyDown={onTableKeyDown}
+      >
         <DataTableLayout
           table={table}
           aria-label={ariaLabel}

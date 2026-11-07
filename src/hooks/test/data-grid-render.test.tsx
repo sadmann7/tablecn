@@ -97,7 +97,7 @@ describe("DataGrid rendering", () => {
       { id: "id", accessorKey: "id", header: MemoHeader },
     ];
 
-    const { container, table } = renderGrid(columns);
+    const { container, table } = renderDataGrid(columns);
     const headerText = () =>
       Array.from(
         container.querySelectorAll('[data-slot="data-grid-header-cell"]'),
@@ -216,7 +216,7 @@ describe("DataGrid rendering", () => {
       { id: "forwardRef", accessorKey: "trick", cell: ForwardRefCell },
     ];
 
-    const { container } = renderGrid(columns);
+    const { container } = renderDataGrid(columns);
 
     expect(getCellWrapper(container, "1", "memo")?.textContent).toBe(
       "memo Tony Hawk",
@@ -274,7 +274,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("updates cells whose value comes from an accessor or another field through updateCells", () => {
-    const { container, table } = renderGrid([
+    const { container, table } = renderDataGrid([
       { id: "trick", accessorKey: "trick", header: "Trick" },
       {
         id: "label",
@@ -342,7 +342,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("moves the focus highlight between rows without re-rendering the hook", () => {
-    const { container, table, getHookRenderCount } = renderGrid();
+    const { container, table, getHookRenderCount } = renderDataGrid();
     expect(getCellWrapper(container, "1", "name")).not.toBeNull();
 
     const renderCountBefore = getHookRenderCount();
@@ -369,7 +369,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("sizes the body and scrolls without re-rendering the hook", async () => {
-    const { container, getHookRenderCount } = renderGrid();
+    const { container, getHookRenderCount } = renderDataGrid();
     const grid = container.querySelector<HTMLElement>(
       '[data-slot="data-grid"]',
     );
@@ -391,7 +391,7 @@ describe("DataGrid rendering", () => {
 
   it("only re-renders the row whose selection changed", () => {
     const rowRenderCounts = new Map<string, number>();
-    const { table } = renderGrid([
+    const { table } = renderDataGrid([
       {
         id: "select",
         header: () => null,
@@ -417,7 +417,7 @@ describe("DataGrid rendering", () => {
 
   it("outlines cells collaborators are on and only re-renders their rows", () => {
     const rowRenderCounts = new Map<string, number>();
-    const { container, table } = renderGrid([
+    const { container, table } = renderDataGrid([
       {
         id: "select",
         header: () => null,
@@ -469,7 +469,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("hides the focused cell while a column header has focus", () => {
-    const { container, table } = renderGrid();
+    const { container, table } = renderDataGrid();
 
     act(() => {
       table.getRow("1").toggleSelected(true);
@@ -504,7 +504,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("clears cell and row selection when moving up into the header", () => {
-    const { container, table } = renderGrid();
+    const { container, table } = renderDataGrid();
 
     act(() => {
       table.getRow("1").toggleSelected(true);
@@ -525,8 +525,52 @@ describe("DataGrid rendering", () => {
     expect(table.atoms.rowSelection.get()).toEqual({});
   });
 
+  it("clears cell and row selection on Escape", () => {
+    const onEscapeKeyDown = vi.fn();
+    const { container, table } = renderDataGrid(testColumns, {
+      onEscapeKeyDown,
+    });
+
+    act(() => {
+      table.getRow("1").toggleSelected(true);
+    });
+    const cell = getCellWrapper(container, "1", "name");
+
+    act(() => {
+      cell?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+
+    expect(onEscapeKeyDown).toHaveBeenCalledOnce();
+    expect(table.atoms.rowSelection.get()).toEqual({});
+  });
+
+  it("keeps the selection on Escape when onEscapeKeyDown prevents the default", () => {
+    const { container, table } = renderDataGrid(testColumns, {
+      onEscapeKeyDown: (event) => event.preventDefault(),
+    });
+
+    act(() => {
+      table.getRow("1").toggleSelected(true);
+    });
+    const cell = getCellWrapper(container, "1", "name");
+
+    act(() => {
+      cell?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+
+    expect(table.atoms.rowSelection.get()).toEqual({ "1": true });
+  });
+
   it("resizes the focused header column with Alt+Arrow within its bounds", () => {
-    const { container, table } = renderGrid([
+    const { container, table } = renderDataGrid([
       { ...testColumns[0], size: 100, maxSize: 115 },
       ...testColumns.slice(1),
     ] as ColumnDef<DataGridFeatures, TestData>[]);
@@ -547,7 +591,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("exposes each column's own size bounds on its resize handle", () => {
-    renderGrid([
+    renderDataGrid([
       { ...testColumns[0], minSize: 80, maxSize: 300 },
       ...testColumns.slice(1),
     ] as ColumnDef<DataGridFeatures, TestData>[]);
@@ -566,7 +610,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("highlights a resize handle while its column resizes", async () => {
-    renderGrid();
+    renderDataGrid();
     const resizer = screen.getByRole("separator", {
       name: "Resize Name column",
     });
@@ -582,7 +626,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("moves the focused header column with Shift+Arrow", () => {
-    const { container, table } = renderGrid([
+    const { container, table } = renderDataGrid([
       getDataGridSelectColumn(),
       ...testColumns,
     ]);
@@ -609,7 +653,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("moves past columns that opt out of cell selection", () => {
-    const { container, table } = renderGrid([
+    const { container, table } = renderDataGrid([
       testColumns[0],
       { ...testColumns[1], enableCellSelection: false },
     ] as ColumnDef<DataGridFeatures, TestData>[]);
@@ -626,7 +670,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("keeps columns that opt out of ordering in place", () => {
-    const { container, table } = renderGrid([
+    const { container, table } = renderDataGrid([
       { id: "rank", header: "Rank", enableOrdering: false },
       ...testColumns,
     ] as ColumnDef<DataGridFeatures, TestData>[]);
@@ -651,7 +695,10 @@ describe("DataGrid rendering", () => {
   });
 
   it("selects a range of rows with Shift+click on the select checkbox", () => {
-    const { table } = renderGrid([getDataGridSelectColumn(), ...testColumns]);
+    const { table } = renderDataGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
     const [firstCheckbox, , thirdCheckbox] = screen.getAllByRole("checkbox", {
       name: "Select row",
     });
@@ -673,7 +720,10 @@ describe("DataGrid rendering", () => {
   });
 
   it("keeps focus on the select cell while toggling rows", () => {
-    const { table } = renderGrid([getDataGridSelectColumn(), ...testColumns]);
+    const { table } = renderDataGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
     const secondCheckbox = screen.getAllByRole("checkbox", {
       name: "Select row",
     })[1];
@@ -693,7 +743,10 @@ describe("DataGrid rendering", () => {
   });
 
   it("keeps focus in place when selecting all rows from the header", () => {
-    const { table } = renderGrid([getDataGridSelectColumn(), ...testColumns]);
+    const { table } = renderDataGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
     const selectAll = screen.getByRole("checkbox", { name: "Select all" });
 
     act(() => {
@@ -715,7 +768,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("returns focus to the focused cell when the paste dialog closes", async () => {
-    const { container, table } = renderGrid();
+    const { container, table } = renderDataGrid();
 
     act(() => {
       table.setFocusedCell("2", "trick");
@@ -747,7 +800,7 @@ describe("DataGrid rendering", () => {
         size: 100,
       }),
     );
-    const { container } = renderGrid(wideColumns);
+    const { container } = renderDataGrid(wideColumns);
 
     const firstRowCells = container.querySelectorAll(
       '[role="row"][aria-rowindex="2"] [role="gridcell"]',
@@ -762,7 +815,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("updates rendered cells when columns are hidden or reordered", () => {
-    const { container, table } = renderGrid();
+    const { container, table } = renderDataGrid();
 
     function getRowColumnIds() {
       return Array.from(
@@ -789,7 +842,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("scrolls to a cell without moving focus or selection", () => {
-    const { table } = renderGrid();
+    const { table } = renderDataGrid();
 
     act(() => {
       table.setFocusedCell("1", "name");
@@ -805,7 +858,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("shows search and the context menu from their own subscriptions", () => {
-    const { table, getHookRenderCount } = renderGrid();
+    const { table, getHookRenderCount } = renderDataGrid();
     const renderCountBefore = getHookRenderCount();
 
     expect(screen.queryByPlaceholderText(/find/i)).toBeNull();
@@ -826,7 +879,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("opens the context menu at the focused cell from the keyboard", () => {
-    const { container, table } = renderGrid();
+    const { container, table } = renderDataGrid();
     const cell = getCellWrapper(container, "1", "name");
 
     function press(key: string, modifiers: KeyboardEventInit = {}) {
@@ -860,7 +913,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("makes the focusable cell wrapper the gridcell", () => {
-    const { container } = renderGrid();
+    const { container } = renderDataGrid();
 
     const wrapper = getCellWrapper(container, "1", "name");
     expect(wrapper?.getAttribute("role")).toBe("gridcell");
@@ -874,7 +927,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("names the cell textbox only while editing", () => {
-    const { container, table } = renderGrid();
+    const { container, table } = renderDataGrid();
 
     act(() => {
       table
@@ -891,7 +944,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("counts the header row in aria-rowcount", () => {
-    renderGrid();
+    renderDataGrid();
 
     const rows = screen.getAllByRole("row");
     expect(screen.getByRole("grid").getAttribute("aria-rowcount")).toBe("4");
@@ -899,7 +952,7 @@ describe("DataGrid rendering", () => {
   });
 
   it("sets aria-sort only on the primary sorted column", () => {
-    const { table } = renderGrid();
+    const { table } = renderDataGrid();
 
     act(() => {
       table.setSorting([
@@ -920,7 +973,12 @@ describe("DataGrid rendering", () => {
   });
 });
 
-function renderGrid(columns = testColumns) {
+function renderDataGrid(
+  columns = testColumns,
+  {
+    onEscapeKeyDown,
+  }: { onEscapeKeyDown?: (event: KeyboardEvent) => void } = {},
+) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
   let hookRenderCount = 0;
 
@@ -930,6 +988,7 @@ function renderGrid(columns = testColumns) {
       columns,
       getRowId: (row) => row.id,
       enableSearch: true,
+      onEscapeKeyDown,
     });
     hookRenderCount++;
     gridRef.current = dataGrid;

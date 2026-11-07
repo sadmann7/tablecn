@@ -183,7 +183,7 @@ describe("DataGrid cells", () => {
 
   describe("short text", () => {
     it("starts editing with the typed key", () => {
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "name");
       press(getCell("1", "name"), "Z");
@@ -197,7 +197,7 @@ describe("DataGrid cells", () => {
     });
 
     it("saves on Enter and moves to the next row", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "name");
       press(getCell("1", "name"), "Enter");
@@ -212,7 +212,7 @@ describe("DataGrid cells", () => {
     });
 
     it("saves on Tab and moves to the next column", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "name");
       press(getCell("1", "name"), "Enter");
@@ -225,7 +225,7 @@ describe("DataGrid cells", () => {
     });
 
     it("cancels on Escape", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "name");
       press(getCell("1", "name"), "Enter");
@@ -239,7 +239,7 @@ describe("DataGrid cells", () => {
     });
 
     it("saves on blur", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "name");
       press(getCell("1", "name"), "Enter");
@@ -256,7 +256,7 @@ describe("DataGrid cells", () => {
 
   describe("url", () => {
     it("trims the saved value", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("2", "website");
       press(getCell("2", "website"), "Enter");
@@ -268,7 +268,7 @@ describe("DataGrid cells", () => {
     });
 
     it("saves null when cleared", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "website");
       press(getCell("1", "website"), "Enter");
@@ -280,7 +280,7 @@ describe("DataGrid cells", () => {
     });
 
     it("cancels on Escape", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "website");
       press(getCell("1", "website"), "Enter");
@@ -295,7 +295,7 @@ describe("DataGrid cells", () => {
 
   describe("number", () => {
     it("saves a number on Enter", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "age");
       press(getCell("1", "age"), "Enter");
@@ -308,7 +308,7 @@ describe("DataGrid cells", () => {
     });
 
     it("saves null when emptied", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "age");
       press(getCell("1", "age"), "Enter");
@@ -320,7 +320,7 @@ describe("DataGrid cells", () => {
     });
 
     it("cancels on Escape", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "age");
       press(getCell("1", "age"), "Enter");
@@ -336,7 +336,7 @@ describe("DataGrid cells", () => {
 
   describe("long text", () => {
     it("saves on Cmd+Enter", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "bio");
       press(getCell("1", "bio"), "Enter");
@@ -351,7 +351,7 @@ describe("DataGrid cells", () => {
     });
 
     it("saves on Tab and moves to the next column", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "bio");
       press(getCell("1", "bio"), "Enter");
@@ -364,7 +364,7 @@ describe("DataGrid cells", () => {
     });
 
     it("restores the value from before editing on Escape", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "bio");
       press(getCell("1", "bio"), "Enter");
@@ -377,7 +377,7 @@ describe("DataGrid cells", () => {
     });
 
     it("restores the value from when editing started after the auto-save", async () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "bio");
       press(getCell("1", "bio"), "Enter");
@@ -392,7 +392,7 @@ describe("DataGrid cells", () => {
     });
 
     it("drops a pending auto-save on Escape", async () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "bio");
       press(getCell("1", "bio"), "Enter");
@@ -405,7 +405,7 @@ describe("DataGrid cells", () => {
     });
 
     it("undoes a whole editing session in one step", async () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "bio");
       press(getCell("1", "bio"), "Enter");
@@ -428,7 +428,7 @@ describe("DataGrid cells", () => {
 
   describe("boolean", () => {
     it("renders a switch when asked and toggles it on Space", () => {
-      const { getCell, getValue, focus } = renderGrid({
+      const { getCell, getValue, focus } = renderDataGrid({
         columns: columns.map((column) =>
           column.id === "isPro"
             ? { ...column, meta: { variant: "boolean", control: "switch" } }
@@ -447,7 +447,7 @@ describe("DataGrid cells", () => {
     });
 
     it("toggles on Space", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "isPro");
       press(getCell("1", "isPro"), " ");
@@ -459,7 +459,7 @@ describe("DataGrid cells", () => {
     });
 
     it("toggles on click", () => {
-      const { getCell, getValue } = renderGrid();
+      const { getCell, getValue } = renderDataGrid();
 
       act(() => {
         fireEvent.click(getCheckbox(getCell("2", "isPro")));
@@ -474,7 +474,7 @@ describe("DataGrid cells", () => {
 
   describe("select", () => {
     it("saves the chosen option", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "stance");
       press(getCell("1", "stance"), "Enter");
@@ -487,7 +487,7 @@ describe("DataGrid cells", () => {
     });
 
     it("shows renamed options when the columns change", () => {
-      const { getCell, rerenderColumns } = renderGrid();
+      const { getCell, rerenderColumns } = renderDataGrid();
       expect(getCell("2", "stance").textContent).toBe("Regular");
 
       rerenderColumns(
@@ -511,7 +511,7 @@ describe("DataGrid cells", () => {
     });
 
     it("opens on the current option and saves from the keyboard", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "stance");
       press(getCell("1", "stance"), "Enter");
@@ -532,7 +532,7 @@ describe("DataGrid cells", () => {
 
   describe("multi-select", () => {
     it("adds and removes options", async () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "tricks");
       press(getCell("1", "tricks"), "Enter");
@@ -550,7 +550,7 @@ describe("DataGrid cells", () => {
 
   describe("date", () => {
     it("saves the picked day", () => {
-      const { getCell, getValue, focus } = renderGrid();
+      const { getCell, getValue, focus } = renderDataGrid();
 
       focus("1", "joined");
       press(getCell("1", "joined"), "Enter");
@@ -570,13 +570,13 @@ describe("DataGrid cells", () => {
       return input;
     }
 
-    function openFiles(grid: ReturnType<typeof renderGrid>, rowId: string) {
+    function openFiles(grid: ReturnType<typeof renderDataGrid>, rowId: string) {
       grid.focus(rowId, "media");
       press(grid.getCell(rowId, "media"), "Enter");
     }
 
     it("opens on Enter", () => {
-      const grid = renderGrid();
+      const grid = renderDataGrid();
       openFiles(grid, "1");
 
       expect(grid.table.getEditingCell()).toEqual({
@@ -586,7 +586,7 @@ describe("DataGrid cells", () => {
     });
 
     it("doesn't open on Enter when read-only", () => {
-      const grid = renderGrid({
+      const grid = renderDataGrid({
         columns: columns.map((column) =>
           column.id === "media"
             ? { ...column, enableCellEditing: false }
@@ -601,7 +601,7 @@ describe("DataGrid cells", () => {
     it("keeps a newer error after an older one expires", () => {
       vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
       try {
-        const grid = renderGrid({
+        const grid = renderDataGrid({
           columns: columns.map((column) =>
             column.id === "media"
               ? {
@@ -653,7 +653,7 @@ describe("DataGrid cells", () => {
           url: `https://cdn.test/${index}`,
         })),
       );
-      const grid = renderGrid({ uploadFiles });
+      const grid = renderDataGrid({ uploadFiles });
       openFiles(grid, "1");
 
       await act(async () => {
@@ -691,7 +691,7 @@ describe("DataGrid cells", () => {
         },
       ];
       const deleteFiles = vi.fn();
-      const grid = renderGrid({
+      const grid = renderDataGrid({
         data: skaters.map((skater) =>
           skater.id === "1" ? { ...skater, media } : skater,
         ),
@@ -715,7 +715,7 @@ describe("DataGrid cells", () => {
       const uploadFiles = vi.fn(async () => {
         throw new Error("Upload failed");
       });
-      const grid = renderGrid({ uploadFiles });
+      const grid = renderDataGrid({ uploadFiles });
       openFiles(grid, "1");
 
       await act(async () => {
@@ -732,7 +732,7 @@ describe("DataGrid cells", () => {
 
     it("falls back to object URLs without uploadFiles", async () => {
       vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:clip");
-      const grid = renderGrid();
+      const grid = renderDataGrid();
       openFiles(grid, "1");
 
       await act(async () => {
@@ -751,7 +751,7 @@ describe("DataGrid cells", () => {
     it("keeps a deleted file's object URL so undo can restore it", async () => {
       vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:clip");
       const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL");
-      const grid = renderGrid();
+      const grid = renderDataGrid();
       openFiles(grid, "1");
 
       await act(async () => {
@@ -792,7 +792,7 @@ describe("DataGrid cells", () => {
           url: "blob:app",
         },
       ];
-      const grid = renderGrid({
+      const grid = renderDataGrid({
         data: skaters.map((skater) =>
           skater.id === "1" ? { ...skater, media } : skater,
         ),
@@ -816,7 +816,7 @@ describe("DataGrid cells", () => {
       vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:kept");
       const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL");
       let savedRows = skaters;
-      const grid = renderGrid({
+      const grid = renderDataGrid({
         onDataChange: (rows) => {
           savedRows = rows;
         },
@@ -839,7 +839,7 @@ describe("DataGrid cells", () => {
 
   describe("editing keys", () => {
     it("starts editing on F2 without a pending char", () => {
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "name");
       press(getCell("1", "name"), "F2");
@@ -852,7 +852,7 @@ describe("DataGrid cells", () => {
     });
 
     it("appends the typed key to a long text", async () => {
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "bio");
       press(getCell("1", "bio"), "Q");
@@ -867,7 +867,7 @@ describe("DataGrid cells", () => {
     });
 
     it("seeds a number with the typed digit", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "age");
       press(getCell("1", "age"), "4");
@@ -884,7 +884,7 @@ describe("DataGrid cells", () => {
     });
 
     it("saves on Shift+Tab and moves to the previous column", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "website");
       press(getCell("1", "website"), "Enter");
@@ -898,7 +898,7 @@ describe("DataGrid cells", () => {
     });
 
     it("closes a popover editor on Cmd+Enter without changing the value", () => {
-      const { getCell, getValue, focus, table } = renderGrid();
+      const { getCell, getValue, focus, table } = renderDataGrid();
 
       focus("1", "stance");
       press(getCell("1", "stance"), "Enter");
@@ -910,7 +910,7 @@ describe("DataGrid cells", () => {
     });
 
     it("closes a popover editor on Tab and moves to the next column", () => {
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "stance");
       press(getCell("1", "stance"), "Enter");
@@ -921,7 +921,7 @@ describe("DataGrid cells", () => {
     });
 
     it("closes the multi-select on Tab from its search input", () => {
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "tricks");
       press(getCell("1", "tricks"), "Enter");
@@ -932,7 +932,7 @@ describe("DataGrid cells", () => {
     });
 
     it("closes the date editor on Escape and refocuses the cell", () => {
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "joined");
       press(getCell("1", "joined"), "Enter");
@@ -944,7 +944,7 @@ describe("DataGrid cells", () => {
 
     it("lets a cell's own key handler veto editing", () => {
       const open = vi.spyOn(window, "open").mockImplementation(() => null);
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "website");
       press(getCell("1", "website"), "Enter", { metaKey: true });
@@ -958,7 +958,7 @@ describe("DataGrid cells", () => {
       const click = vi
         .spyOn(HTMLInputElement.prototype, "click")
         .mockImplementation(() => {});
-      const { getCell, focus, table } = renderGrid();
+      const { getCell, focus, table } = renderDataGrid();
 
       focus("1", "media");
       press(getCell("1", "media"), "Enter");
@@ -974,7 +974,7 @@ describe("DataGrid cells", () => {
 
   describe("live updates", () => {
     it("shows batched updates before and after the commit", async () => {
-      const { getCell, table } = renderGrid();
+      const { getCell, table } = renderDataGrid();
 
       act(() => {
         table.updateCells(
@@ -1015,7 +1015,7 @@ describe("DataGrid cells", () => {
     });
 
     it("shows direct updates", () => {
-      const { getCell, table } = renderGrid();
+      const { getCell, table } = renderDataGrid();
 
       act(() => {
         table.updateCells({ rowId: "3", columnId: "name", value: "Direct" });
@@ -1025,7 +1025,7 @@ describe("DataGrid cells", () => {
     });
 
     it("shows the new row's value when a cell is reused for another row", () => {
-      const { container, rerenderRows } = renderGrid();
+      const { container, rerenderRows } = renderDataGrid();
 
       act(() => {
         rerenderRows(skaters.slice(1));
@@ -1053,7 +1053,7 @@ describe("DataGrid cells", () => {
     }
 
     it("follows selection changes from the API", () => {
-      const { container, table } = renderGrid({ columns: selectColumns });
+      const { container, table } = renderDataGrid({ columns: selectColumns });
 
       act(() => {
         table.getCoreRowModel().rowsById["2"]?.toggleSelected(true);
@@ -1071,7 +1071,7 @@ describe("DataGrid cells", () => {
     });
 
     it("selects a row on click", () => {
-      const { container, table } = renderGrid({ columns: selectColumns });
+      const { container, table } = renderDataGrid({ columns: selectColumns });
 
       act(() => {
         fireEvent.click(getRowCheckbox(container, "3"));
@@ -1084,7 +1084,7 @@ describe("DataGrid cells", () => {
     });
 
     it("renumbers row markers after sorting", () => {
-      const { container, table } = renderGrid({ columns: selectColumns });
+      const { container, table } = renderDataGrid({ columns: selectColumns });
 
       act(() => {
         table.setSorting([{ id: "name", desc: false }]);
@@ -1102,7 +1102,7 @@ describe("DataGrid cells", () => {
   });
 });
 
-function renderGrid({
+function renderDataGrid({
   data = skaters,
   columns: gridColumns = columns,
   ...options
