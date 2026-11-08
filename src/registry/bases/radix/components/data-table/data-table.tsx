@@ -39,12 +39,14 @@ interface DataTableProps<
   table: ReactTable<DataTableFeatures, TData, unknown>;
   actionBar?: React.ReactNode;
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  stickyHeader?: boolean;
 }
 
 export function DataTable<TData extends RowData>({
   table,
   actionBar,
   onEscapeKeyDown,
+  stickyHeader = false,
   children,
   className,
   "aria-label": ariaLabel,
@@ -86,7 +88,12 @@ export function DataTable<TData extends RowData>({
     >
       {children}
       <div
-        className="isolate overflow-hidden rounded-md border"
+        className={cn(
+          "isolate rounded-md border",
+          stickyHeader
+            ? "min-h-0 scroll-pt-10 overflow-auto [&:has(thead>tr:nth-child(2))]:scroll-pt-20 [&:has(thead>tr:nth-child(3))]:scroll-pt-30 [&>[data-slot=table-container]]:overflow-visible"
+            : "overflow-hidden",
+        )}
         onKeyDown={onTableKeyDown}
       >
         <DataTableLayout
@@ -94,7 +101,7 @@ export function DataTable<TData extends RowData>({
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
         >
-          <DataTableHeader table={table} />
+          <DataTableHeader table={table} stickyHeader={stickyHeader} />
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
@@ -138,15 +145,22 @@ function DataTableLayout<TData extends RowData>({
 
 interface DataTableHeaderProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
+  stickyHeader: boolean;
 }
 
 function DataTableHeader<TData extends RowData>({
   table,
+  stickyHeader,
 }: DataTableHeaderProps<TData>) {
   return (
     <table.Subscribe selector={selectHeaderState}>
       {() => (
-        <TableHeader>
+        <TableHeader
+          className={cn(
+            stickyHeader &&
+              "sticky top-0 z-30 bg-background [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0",
+          )}
+        >
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="group/row">
               {headerGroup.headers.map((header) => (
