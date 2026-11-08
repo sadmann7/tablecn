@@ -267,6 +267,17 @@ describe("getDataTableQuery", () => {
     expect(query.joinOperator).toBe("and");
     expect(loadSearch("?joinOperator=xor").joinOperator).toBe("and");
   });
+
+  it("passes the global filter through and defaults it to empty", () => {
+    expect(
+      getDataTableQuery(loadSearch("?search=login%20bug"), tasksColumnConfigs)
+        .globalFilter,
+    ).toBe("login bug");
+    expect(
+      getDataTableQuery(loadSearch("?status=todo"), tasksColumnConfigs)
+        .globalFilter,
+    ).toBe("");
+  });
 });
 
 describe("getDataTableSearchParams", () => {

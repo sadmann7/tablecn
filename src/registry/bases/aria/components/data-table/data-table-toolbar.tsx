@@ -33,10 +33,12 @@ interface DataTableToolbarProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
+  globalFilterPlaceholder?: string;
 }
 
 export function DataTableToolbar<TData extends RowData>({
   table,
+  globalFilterPlaceholder,
   children,
   className,
   ...props
@@ -49,6 +51,7 @@ export function DataTableToolbar<TData extends RowData>({
   function onReset() {
     table.resetColumnFilters(true);
     table.resetJoinOperator(true);
+    table.resetGlobalFilter(true);
   }
 
   return (
@@ -61,12 +64,30 @@ export function DataTableToolbar<TData extends RowData>({
       {...props}
     >
       <div className="flex flex-1 flex-wrap items-center gap-2">
+        {globalFilterPlaceholder &&
+        table.options.enableGlobalFilter !== false ? (
+          <Subscribe
+            source={table.atoms.globalFilter}
+            selector={(globalFilter) => readFilterInputValue(globalFilter)}
+          >
+            {(globalFilter) => (
+              <Input
+                aria-label={globalFilterPlaceholder}
+                placeholder={globalFilterPlaceholder}
+                value={globalFilter}
+                onChange={(event) => table.setGlobalFilter(event.target.value)}
+                className="w-40 lg:w-56"
+              />
+            )}
+          </Subscribe>
+        ) : null}
         {columns.map((column) => (
           <DataTableToolbarFilter key={column.id} column={column} />
         ))}
-        <Subscribe
-          source={table.atoms.columnFilters}
-          selector={(filters) => filters.length > 0}
+        <table.Subscribe
+          selector={(state) =>
+            state.columnFilters.length > 0 || Boolean(state.globalFilter)
+          }
         >
           {(isFiltered) =>
             isFiltered && (
@@ -86,7 +107,7 @@ export function DataTableToolbar<TData extends RowData>({
               </Button>
             )
           }
-        </Subscribe>
+        </table.Subscribe>
       </div>
       <div className="flex items-center gap-2">
         {children}

@@ -33,9 +33,10 @@
     "db:introspect": "dotenv drizzle-kit introspect",
     "db:push": "dotenv drizzle-kit push",
     "db:migrate": "dotenv tsx src/db/migrate.ts",
+    "db:extensions": "dotenv tsx src/db/extensions.ts",
     "db:drop-migration": "drizzle-kit drop",
     "db:seed": "dotenv tsx src/db/seed.ts",
-    "db:setup": "pnpm db:push && pnpm db:seed",
+    "db:setup": "pnpm db:extensions && pnpm db:push && pnpm db:seed",
     "db:reset": "pnpm db:stop && rimraf docker-data && pnpm db:start && sleep 10 && pnpm db:setup",
     "db:studio": "dotenv drizzle-kit studio"
   },

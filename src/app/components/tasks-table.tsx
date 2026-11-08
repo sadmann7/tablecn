@@ -268,6 +268,7 @@ export function TasksTable({
     shallow: false,
     clearOnDefault: true,
     enableRowRangeSelection: true,
+    enableGlobalFilter: false,
   };
 
   const { table } = useDataTable(

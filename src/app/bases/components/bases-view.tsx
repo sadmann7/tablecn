@@ -4,7 +4,7 @@ import type * as React from "react";
 
 import { useQueryStates } from "nuqs";
 
-import { basesSearchParams } from "../hooks/use-bases-demo";
+import { basesSearchParams } from "../lib/search-params";
 
 interface BasesViewProps {
   table: React.ReactNode;

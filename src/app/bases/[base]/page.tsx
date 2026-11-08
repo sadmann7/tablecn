@@ -5,14 +5,14 @@ import { Suspense } from "react";
 
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
-import { AriaBasesDemo } from "../components/aria-bases-demo";
-import { BaseBasesDemo } from "../components/base-bases-demo";
-import { BaseBasesGrid } from "../components/base-bases-grid";
+import { AriaDataTableDemo } from "../components/aria-data-table-demo";
+import { BaseDataGridDemo } from "../components/base-data-grid-demo";
+import { BaseDataTableDemo } from "../components/base-data-table-demo";
 import { BasesControls } from "../components/bases-controls";
 import { BasesView } from "../components/bases-view";
-import { RadixBasesDemo } from "../components/radix-bases-demo";
-import { RadixBasesGrid } from "../components/radix-bases-grid";
-import { type Base, BASES, isBase } from "../lib/data";
+import { RadixDataGridDemo } from "../components/radix-data-grid-demo";
+import { RadixDataTableDemo } from "../components/radix-data-table-demo";
+import { type Base, BASES, getIsBase } from "../lib/data";
 
 export const metadata: Metadata = {
   title: "Bases",
@@ -24,9 +24,9 @@ const DEMOS: Record<
   Base,
   { table: React.ComponentType; grid: React.ComponentType | null }
 > = {
-  radix: { table: RadixBasesDemo, grid: RadixBasesGrid },
-  base: { table: BaseBasesDemo, grid: BaseBasesGrid },
-  aria: { table: AriaBasesDemo, grid: null },
+  radix: { table: RadixDataTableDemo, grid: RadixDataGridDemo },
+  base: { table: BaseDataTableDemo, grid: BaseDataGridDemo },
+  aria: { table: AriaDataTableDemo, grid: null },
 };
 
 interface BasesPageProps {
@@ -69,7 +69,7 @@ const isDev = process.env.NODE_ENV === "development";
 
 async function BasesContent({ params }: BasesPageProps) {
   const { base } = await params;
-  if (!isDev || !isBase(base)) notFound();
+  if (!isDev || !getIsBase(base)) notFound();
 
   const { table: Table, grid: Grid } = DEMOS[base];
 

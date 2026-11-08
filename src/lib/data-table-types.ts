@@ -119,6 +119,7 @@ export interface DataTableQueryKeys {
   perPage: string;
   sort: string;
   joinOperator: string;
+  globalFilter: string;
 }
 
 export interface DataTableQuery<
@@ -130,6 +131,7 @@ export interface DataTableQuery<
   sorting: ColumnSortItem<TSortColumnId>[];
   filters: ColumnFilterItem<TFilterColumnId>[];
   joinOperator: JoinOperator;
+  globalFilter: string;
 }
 
 export type DataTableColumnConfigsQuery<

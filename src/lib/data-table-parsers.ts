@@ -2,6 +2,7 @@ import {
   createParser,
   parseAsInteger,
   parseAsNativeArrayOf,
+  parseAsString,
   parseAsStringEnum,
 } from "nuqs/server";
 import { z } from "zod";
@@ -272,6 +273,7 @@ export function getDataTableSearchParams<
       defaultSorting,
     ),
     joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
+    search: parseAsString.withDefault(""),
     ...getFilterParsers(getFilterableColumns(columnConfigs)),
   };
 }
@@ -281,6 +283,7 @@ interface DataTableSearch<TSortColumnId extends string> {
   perPage: number;
   sort: ColumnSortItem<TSortColumnId>[];
   joinOperator: JoinOperator;
+  search: string;
 }
 
 export function getDataTableQuery<
@@ -309,6 +312,7 @@ export function getDataTableQuery<
       (id) => filtersById[id],
     ),
     joinOperator: search.joinOperator,
+    globalFilter: search.search,
   };
 }
 

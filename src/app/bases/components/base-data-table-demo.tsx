@@ -21,15 +21,15 @@ import {
   DropdownMenuSeparator,
 } from "@/registry/bases/base/ui/dropdown-menu";
 
-import { useBasesDemo } from "../hooks/use-bases-demo";
-import { getBasesColumns } from "../lib/columns";
+import { useBasesDataTable } from "../hooks/use-bases-data-table";
+import { getBasesDataTableColumns } from "../lib/data-table-columns";
 
-export function BaseBasesDemo() {
-  const { filterMode, dir, data, onCopy, onDelete } = useBasesDemo();
+export function BaseDataTableDemo() {
+  const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
 
   const columns = React.useMemo(
     () =>
-      getBasesColumns({
+      getBasesDataTableColumns({
         data,
         selectColumn: getDataTableSelectColumn<Task>(),
         actionsColumn: getDataTableActionsColumn<Task>({
@@ -78,11 +78,17 @@ export function BaseBasesDemo() {
     <DirectionProvider direction={dir}>
       <DataTable aria-label="Tasks" table={table}>
         {filterMode === "plain" ? (
-          <DataTableToolbar table={table}>
+          <DataTableToolbar
+            table={table}
+            globalFilterPlaceholder="Search tasks..."
+          >
             <DataTableSortMenu table={table} align="end" />
           </DataTableToolbar>
         ) : (
-          <DataTableAdvancedToolbar table={table}>
+          <DataTableAdvancedToolbar
+            table={table}
+            globalFilterPlaceholder="Search tasks..."
+          >
             <DataTableSortMenu table={table} align="start" />
             {filterMode === "advanced" ? (
               <DataTableFilterMenu table={table} align="start" />

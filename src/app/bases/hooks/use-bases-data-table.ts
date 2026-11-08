@@ -1,29 +1,13 @@
-import { parseAsStringEnum, parseAsStringLiteral, useQueryStates } from "nuqs";
+import { useQueryStates } from "nuqs";
 import * as React from "react";
 import { toast } from "sonner";
 
 import type { Task } from "@/db/schema";
 
-import { DIRECTIONS, FILTER_MODES } from "@/lib/flag";
-
 import { basesTasks } from "../lib/data";
+import { basesSearchParams } from "../lib/search-params";
 
-export const BASES_VIEWS = [
-  { value: "table", label: "Data Table" },
-  { value: "grid", label: "Data Grid" },
-] as const;
-
-export const basesSearchParams = {
-  view: parseAsStringLiteral(BASES_VIEWS.map((view) => view.value)).withDefault(
-    "table",
-  ),
-  filterMode: parseAsStringEnum(
-    FILTER_MODES.map((filterMode) => filterMode.value),
-  ).withDefault("plain"),
-  dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
-};
-
-export function useBasesDemo() {
+export function useBasesDataTable() {
   const [{ filterMode, dir }] = useQueryStates(basesSearchParams);
   const [data, setData] = React.useState(basesTasks);
 
