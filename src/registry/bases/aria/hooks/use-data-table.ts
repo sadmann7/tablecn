@@ -40,6 +40,7 @@ import {
 } from "@/lib/data-table-parsers";
 import {
   getActiveFilters,
+  getColumnDefId,
   getFilterVariant,
   JOIN_OPERATORS,
   normalizeColumnFilter,
@@ -167,14 +168,15 @@ function useDataTable<TData extends RowData>({
     const filterableVariants = new Map<string, FilterVariant>();
 
     for (const column of columns) {
-      if (!column.id) continue;
+      const id = getColumnDefId(column);
+      if (!id) continue;
       const hasAccessor = "accessorKey" in column || "accessorFn" in column;
       if (hasAccessor && column.enableSorting !== false) {
-        sortableIds.add(column.id);
+        sortableIds.add(id);
       }
       if (!column.enableColumnFilter) continue;
 
-      filterableVariants.set(column.id, getFilterVariant(column.meta));
+      filterableVariants.set(id, getFilterVariant(column.meta));
     }
 
     return {

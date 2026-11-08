@@ -40,6 +40,7 @@ import {
 } from "@/lib/data-table-parsers";
 import {
   getActiveFilters,
+  getColumnDefId,
   getFilterVariant,
   JOIN_OPERATORS,
   normalizeColumnFilter,
@@ -437,23 +438,6 @@ function useDataTable<TData extends RowData>({
   );
 
   return { table };
-}
-
-/**
- * The id TanStack Table derives for a column: `id`, else `accessorKey` with
- * dots replaced, else a string `header`.
- */
-function getColumnDefId(column: {
-  id?: string;
-  accessorKey?: unknown;
-  header?: unknown;
-}) {
-  if (column.id) return column.id;
-  if (typeof column.accessorKey === "string") {
-    return column.accessorKey.replaceAll(".", "_");
-  }
-  if (typeof column.accessorKey === "number") return String(column.accessorKey);
-  return typeof column.header === "string" ? column.header : undefined;
 }
 
 function subscribeToHistory(onChange: () => void) {

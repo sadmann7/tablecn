@@ -5,6 +5,7 @@ import {
   createPlainFilter,
   formatFilterDate,
   getActiveFilters,
+  getColumnDefId,
   getDateFilterLabel,
   getDefaultFilterOperator,
   getFilterDates,
@@ -350,5 +351,18 @@ describe("select filter values", () => {
     expect(
       getSelectFilterValue({ ...filter, variant: "select", value: ["todo"] }),
     ).toBeUndefined();
+  });
+});
+
+describe("getColumnDefId", () => {
+  it("derives the id the way TanStack Table does", () => {
+    expect(getColumnDefId({ id: "custom", accessorKey: "title" })).toBe(
+      "custom",
+    );
+    expect(getColumnDefId({ accessorKey: "title" })).toBe("title");
+    expect(getColumnDefId({ accessorKey: "owner.name" })).toBe("owner_name");
+    expect(getColumnDefId({ accessorKey: 1.5 })).toBe("1_5");
+    expect(getColumnDefId({ header: "Title" })).toBe("Title");
+    expect(getColumnDefId({ header: () => null })).toBeUndefined();
   });
 });
