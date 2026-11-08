@@ -124,9 +124,9 @@ function DataTablePaginationContent<TData extends RowData>({
             </SelectTrigger>
             <SelectContent side="top">
               <SelectGroup>
-                {sizeOptions.map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
+                {sizeOptions.map((size) => (
+                  <SelectItem key={size} value={`${size}`}>
+                    {size}
                   </SelectItem>
                 ))}
               </SelectGroup>
