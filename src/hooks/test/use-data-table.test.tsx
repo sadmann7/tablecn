@@ -399,6 +399,74 @@ describe("useDataTable", () => {
     expect(getLastSearch()?.has("search")).toBe(false);
   });
 
+  it("prefixes every URL key, including column filters", async () => {
+    const { result, getLastSearch } = renderDataTable(
+      "?t_page=2&t_sort=title.asc&t_title=bug&title=other&page=9",
+      { queryKeyPrefix: "t_" },
+    );
+
+    expect(result.current.table.state.pagination.pageIndex).toBe(1);
+    expect(result.current.table.state.sorting).toEqual([
+      { id: "title", desc: false },
+    ]);
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+    ]);
+
+    act(() => {
+      result.current.table.setColumnFilters([
+        { id: "status", value: ["todo"] },
+      ]);
+    });
+
+    await waitFor(() => expect(getLastSearch()?.get("t_status")).toBe("todo"));
+    expect(getLastSearch()?.get("t_page")).toBe("1");
+    expect(getLastSearch()?.has("status")).toBe(false);
+    expect(getLastSearch()?.get("title")).toBe("other");
+  });
+
+  it("keeps two prefixed tables on one page apart", async () => {
+    const { result, getLastSearch } = renderDataTables(
+      "?a_page=2&b_title=bug",
+      { queryKeyPrefix: "a_" },
+      { queryKeyPrefix: "b_" },
+    );
+
+    expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
+    expect(result.current.second.table.state.pagination.pageIndex).toBe(0);
+    expect(
+      getFilterSummary(result.current.first.table.state.columnFilters),
+    ).toEqual([]);
+    expect(
+      getFilterSummary(result.current.second.table.state.columnFilters),
+    ).toEqual([["title", "bug"]]);
+
+    act(() => result.current.second.table.setPageIndex(4));
+
+    await waitFor(() => expect(getLastSearch()?.get("b_page")).toBe("5"));
+    expect(getLastSearch()?.get("a_page")).toBe("2");
+    expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
+  });
+
+  it("throws when a column filter clashes with a built-in URL key", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    expect(() =>
+      renderDataTable("", { queryKeys: { globalFilter: "title" } }),
+    ).toThrow('both use the URL key "title"');
+    expect(() =>
+      renderDataTable("", {
+        columns: columnHelper.columns([
+          columnHelper.accessor("code", {
+            id: "page",
+            meta: { variant: "text" },
+            enableColumnFilter: true,
+          }),
+        ]),
+      }),
+    ).toThrow('column id "page" is reserved');
+  });
+
   it("ignores the URL global filter when global filtering is off", () => {
     const { result } = renderDataTable("?search=bug", {
       enableGlobalFilter: false,
@@ -461,6 +529,24 @@ describe("useDataTable", () => {
   });
 });
 
+function renderDataTable(
+  search: string,
+  props: Partial<UseDataTableProps<Task>> = {},
+) {
+  return renderHookWithUrl(search, () => useTestDataTable(props));
+}
+
+function renderDataTables(
+  search: string,
+  first: Partial<UseDataTableProps<Task>>,
+  second: Partial<UseDataTableProps<Task>>,
+) {
+  return renderHookWithUrl(search, () => ({
+    first: useTestDataTable(first),
+    second: useTestDataTable(second),
+  }));
+}
+
 const columns = columnHelper.columns([
   columnHelper.accessor("code", { id: "code", enableSorting: false }),
   columnHelper.accessor("title", {
@@ -478,10 +564,17 @@ const columns = columnHelper.columns([
 
 const data: Task[] = [];
 
-function renderDataTable(
-  search: string,
-  props: Partial<UseDataTableProps<Task>> = {},
-) {
+function useTestDataTable(props: Partial<UseDataTableProps<Task>>) {
+  return useDataTable<Task>({
+    data,
+    columns,
+    pageCount: 10,
+    debounceMs: 10,
+    ...props,
+  } as UseDataTableProps<Task>);
+}
+
+function renderHookWithUrl<TResult>(search: string, useResult: () => TResult) {
   const updates: UrlUpdateEvent[] = [];
   let currentSearch = search;
   window.history.replaceState(null, "", `/${search}`);
@@ -500,17 +593,7 @@ function renderDataTable(
     );
   }
 
-  const hook = renderHook(
-    () =>
-      useDataTable<Task>({
-        data,
-        columns,
-        pageCount: 10,
-        debounceMs: 10,
-        ...props,
-      } as UseDataTableProps<Task>),
-    { wrapper: Wrapper },
-  );
+  const hook = renderHook(useResult, { wrapper: Wrapper });
 
   function navigate(nextSearch: string) {
     currentSearch = nextSearch;

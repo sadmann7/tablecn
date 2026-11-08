@@ -28,19 +28,24 @@ export const tasksDefaultSorting = [
   { id: "createdAt", desc: true },
 ] satisfies ColumnSortItem<SortableColumnId<typeof tasksColumnConfigs>>[];
 
-export const searchParamsCache = createSearchParamsCache({
-  filterMode: parseAsStringEnum(
-    FILTER_MODES.map((filterMode) => filterMode.value),
-  ).withDefault("plain"),
-  dataMode: parseAsStringEnum(
-    DATA_MODES.map((dataMode) => dataMode.value),
-  ).withDefault("server"),
-  dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
-  ...getDataTableSearchParams({
-    columnConfigs: tasksColumnConfigs,
-    defaultSorting: tasksDefaultSorting,
-  }),
+const tasksSearchParams = getDataTableSearchParams({
+  columnConfigs: tasksColumnConfigs,
+  defaultSorting: tasksDefaultSorting,
 });
+
+export const searchParamsCache = createSearchParamsCache(
+  {
+    filterMode: parseAsStringEnum(
+      FILTER_MODES.map((filterMode) => filterMode.value),
+    ).withDefault("plain"),
+    dataMode: parseAsStringEnum(
+      DATA_MODES.map((dataMode) => dataMode.value),
+    ).withDefault("server"),
+    dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
+    ...tasksSearchParams.parsers,
+  },
+  { urlKeys: tasksSearchParams.urlKeys },
+);
 
 export const createTaskSchema = z.object({
   title: z.string(),

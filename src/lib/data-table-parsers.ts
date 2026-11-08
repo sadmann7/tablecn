@@ -13,6 +13,7 @@ import type {
   DataTableColumnConfig,
   DataTableColumnConfigs,
   DataTableColumnConfigsQuery,
+  DataTableQueryKeys,
   FilterableColumnId,
   FilterOperator,
   FilterVariant,
@@ -251,9 +252,54 @@ export function getColumnOptions(config: DataTableColumnConfig) {
   };
 }
 
+const QUERY_KEY_NAMES = {
+  page: "page",
+  perPage: "perPage",
+  sort: "sort",
+  joinOperator: "joinOperator",
+  search: "globalFilter",
+} as const satisfies Record<string, keyof DataTableQueryKeys>;
+
+type DataTableSearchKey = keyof typeof QUERY_KEY_NAMES;
+
+export interface DataTableQueryKeyOptions {
+  queryKeys?: Partial<DataTableQueryKeys>;
+  queryKeyPrefix?: string;
+}
+
+export function getUrlKeys<TColumnId extends string>(
+  filterableIds: readonly TColumnId[],
+  { queryKeys, queryKeyPrefix = "" }: DataTableQueryKeyOptions = {},
+) {
+  const urlKeys: Record<string, string> = {};
+  const namesByUrlKey = new Map<string, string>();
+
+  for (const searchKey of getKeys(QUERY_KEY_NAMES)) {
+    const name = QUERY_KEY_NAMES[searchKey];
+    const urlKey = `${queryKeyPrefix}${queryKeys?.[name] ?? searchKey}`;
+    urlKeys[searchKey] = urlKey;
+    namesByUrlKey.set(urlKey, name);
+  }
+
+  for (const id of filterableIds) {
+    assertColumnId(id);
+    const urlKey = `${queryKeyPrefix}${id}`;
+    const name = namesByUrlKey.get(urlKey);
+    if (name) {
+      throw new Error(
+        `Data table column "${id}" and the ${name} query key both use the URL key "${urlKey}".`,
+      );
+    }
+    urlKeys[id] = urlKey;
+  }
+
+  return urlKeys as Record<DataTableSearchKey, string> &
+    Record<TColumnId, string>;
+}
+
 interface DataTableSearchParamsOptions<
   TColumnConfigs extends DataTableColumnConfigs,
-> {
+> extends DataTableQueryKeyOptions {
   columnConfigs: TColumnConfigs;
   defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumnConfigs>>>[];
   defaultPerPage?: number;
@@ -265,16 +311,22 @@ export function getDataTableSearchParams<
   columnConfigs,
   defaultSorting = [],
   defaultPerPage = 10,
+  ...options
 }: DataTableSearchParamsOptions<TColumnConfigs>) {
+  const filterableColumns = getFilterableColumns(columnConfigs);
+
   return {
-    page: parseAsInteger.withDefault(1),
-    perPage: parseAsInteger.withDefault(defaultPerPage),
-    sort: getSortingStateParser(getSortableColumns(columnConfigs)).withDefault(
-      defaultSorting,
-    ),
-    joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
-    search: parseAsString.withDefault(""),
-    ...getFilterParsers(getFilterableColumns(columnConfigs)),
+    parsers: {
+      page: parseAsInteger.withDefault(1),
+      perPage: parseAsInteger.withDefault(defaultPerPage),
+      sort: getSortingStateParser(
+        getSortableColumns(columnConfigs),
+      ).withDefault(defaultSorting),
+      joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
+      search: parseAsString.withDefault(""),
+      ...getFilterParsers(filterableColumns),
+    },
+    urlKeys: getUrlKeys(getKeys(filterableColumns), options),
   };
 }
 
@@ -415,4 +467,11 @@ function getFilterParsers<TColumnId extends string>(
     TColumnId,
     ReturnType<typeof getColumnFilterParser<TColumnId>>
   >;
+}
+
+function assertColumnId(id: string) {
+  if (!Object.hasOwn(QUERY_KEY_NAMES, id)) return;
+  throw new Error(
+    `Data table column id "${id}" is reserved for the ${id} query key.`,
+  );
 }

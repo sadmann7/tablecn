@@ -21,7 +21,6 @@ import * as React from "react";
 
 import type {
   ColumnFilterItem,
-  DataTableQueryKeys,
   FilterVariant,
   JoinOperator,
 } from "@/lib/data-table-types";
@@ -32,10 +31,12 @@ import {
   dataTableFeatures,
 } from "@/lib/data-table-features";
 import {
+  type DataTableQueryKeyOptions,
   getColumnFilterParser,
   getColumnFilters,
   getColumnFiltersKey,
   getSortingStateParser,
+  getUrlKeys,
   sortColumnFiltersBySearch,
 } from "@/lib/data-table-parsers";
 import {
@@ -46,11 +47,6 @@ import {
   normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
-const PAGE_KEY = "page";
-const PER_PAGE_KEY = "perPage";
-const SORT_KEY = "sort";
-const JOIN_OPERATOR_KEY = "joinOperator";
-const GLOBAL_FILTER_KEY = "search";
 const DEBOUNCE_MS = 300;
 const THROTTLE_MS = 50;
 const DEFAULT_PAGE_SIZE = 10;
@@ -76,16 +72,16 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualFiltering"
   | "manualPagination"
   | "manualSorting"
-> & {
-  startTransition?: React.TransitionStartFunction;
-  queryKeys?: Partial<DataTableQueryKeys>;
-  history?: "push" | "replace";
-  debounceMs?: number;
-  throttleMs?: number;
-  clearOnDefault?: boolean;
-  scroll?: boolean;
-  shallow?: boolean;
-} & (
+> &
+  DataTableQueryKeyOptions & {
+    startTransition?: React.TransitionStartFunction;
+    history?: "push" | "replace";
+    debounceMs?: number;
+    throttleMs?: number;
+    clearOnDefault?: boolean;
+    scroll?: boolean;
+    shallow?: boolean;
+  } & (
     | {
         mode?: "server";
         pageCount: number;
@@ -103,6 +99,7 @@ function useDataTable<TData extends RowData>({
   initialState,
   startTransition,
   queryKeys,
+  queryKeyPrefix,
   history = "replace",
   debounceMs = DEBOUNCE_MS,
   throttleMs = THROTTLE_MS,
@@ -114,12 +111,6 @@ function useDataTable<TData extends RowData>({
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
   const shallow = isServer ? shallowProp : true;
-
-  const pageKey = queryKeys?.page ?? PAGE_KEY;
-  const perPageKey = queryKeys?.perPage ?? PER_PAGE_KEY;
-  const sortKey = queryKeys?.sort ?? SORT_KEY;
-  const joinOperatorKey = queryKeys?.joinOperator ?? JOIN_OPERATOR_KEY;
-  const globalFilterKey = queryKeys?.globalFilter ?? GLOBAL_FILTER_KEY;
 
   const queryStateOptions = React.useMemo<
     Omit<UseQueryStateOptions<string>, "parse">
@@ -160,9 +151,6 @@ function useDataTable<TData extends RowData>({
     [initialTableState, queryStateOptions],
   );
 
-  const [page, setPage] = useQueryState(pageKey, pageParser);
-  const [perPage, setPerPage] = useQueryState(perPageKey, perPageParser);
-
   const columnIndex = React.useMemo(() => {
     const sortableIds = new Set<string>();
     const filterableVariants = new Map<string, FilterVariant>();
@@ -193,6 +181,49 @@ function useDataTable<TData extends RowData>({
     };
   }, [columns]);
 
+  const pageKey = queryKeys?.page;
+  const perPageKey = queryKeys?.perPage;
+  const sortKey = queryKeys?.sort;
+  const joinOperatorKey = queryKeys?.joinOperator;
+  const globalFilterKey = queryKeys?.globalFilter;
+
+  const urlKeys = React.useMemo(() => {
+    const { page, perPage, sort, joinOperator, search, ...filterUrlKeys } =
+      getUrlKeys(columnIndex.filterableIds, {
+        queryKeys: {
+          page: pageKey,
+          perPage: perPageKey,
+          sort: sortKey,
+          joinOperator: joinOperatorKey,
+          globalFilter: globalFilterKey,
+        },
+        queryKeyPrefix,
+      });
+
+    return {
+      page,
+      perPage,
+      sort,
+      joinOperator,
+      globalFilter: search,
+      filters: filterUrlKeys,
+      idByFilterKey: new Map(
+        Object.entries(filterUrlKeys).map(([id, urlKey]) => [urlKey, id]),
+      ),
+    };
+  }, [
+    columnIndex,
+    pageKey,
+    perPageKey,
+    sortKey,
+    joinOperatorKey,
+    globalFilterKey,
+    queryKeyPrefix,
+  ]);
+
+  const [page, setPage] = useQueryState(urlKeys.page, pageParser);
+  const [perPage, setPerPage] = useQueryState(urlKeys.perPage, perPageParser);
+
   const sortingParser = React.useMemo(
     () =>
       getSortingStateParser(columnIndex.sortableIds)
@@ -201,7 +232,7 @@ function useDataTable<TData extends RowData>({
     [columnIndex, initialTableState, queryStateOptions],
   );
 
-  const [sorting, setSorting] = useQueryState(sortKey, sortingParser);
+  const [sorting, setSorting] = useQueryState(urlKeys.sort, sortingParser);
 
   const getNextSorting = useChainedUpdate(sorting);
 
@@ -218,7 +249,7 @@ function useDataTable<TData extends RowData>({
   );
 
   const [joinOperator, setJoinOperator] = useQueryState(
-    joinOperatorKey,
+    urlKeys.joinOperator,
     joinOperatorParser,
   );
 
@@ -242,7 +273,9 @@ function useDataTable<TData extends RowData>({
     [columnIndex, queryStateOptions],
   );
 
-  const [filterParams, setFilterParams] = useQueryStates(filterParsers);
+  const [filterParams, setFilterParams] = useQueryStates(filterParsers, {
+    urlKeys: urlKeys.filters,
+  });
 
   const search = React.useSyncExternalStore(
     subscribeToHistory,
@@ -250,12 +283,13 @@ function useDataTable<TData extends RowData>({
     getServerLocationSearch,
   );
 
-  const filterOrder = React.useMemo(() => {
-    const filterableIds = new Set(columnIndex.filterableIds);
-    return [...new Set(new URLSearchParams(search).keys())]
-      .filter((key) => filterableIds.has(key))
-      .join("&");
-  }, [columnIndex, search]);
+  const filterOrder = React.useMemo(
+    () =>
+      [...new Set(new URLSearchParams(search).keys())]
+        .flatMap((key) => urlKeys.idByFilterKey.get(key) ?? [])
+        .join("&"),
+    [urlKeys, search],
+  );
 
   const urlFilters = React.useMemo(
     () =>
@@ -293,7 +327,7 @@ function useDataTable<TData extends RowData>({
   );
 
   const [urlGlobalFilter, setUrlGlobalFilter] = useQueryState(
-    globalFilterKey,
+    urlKeys.globalFilter,
     globalFilterParser,
   );
   const [globalFilterDraft, setGlobalFilterDraft] =

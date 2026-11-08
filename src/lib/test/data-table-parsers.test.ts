@@ -21,7 +21,7 @@ const loadSearch = createLoader(
   getDataTableSearchParams({
     columnConfigs: tasksColumnConfigs,
     defaultSorting: tasksDefaultSorting,
-  }),
+  }).parsers,
 );
 
 describe("column config", () => {
@@ -293,12 +293,58 @@ describe("getDataTableSearchParams", () => {
         columnConfigs: tasksColumnConfigs,
         defaultPerPage: 25,
         defaultSorting: [],
-      }),
+      }).parsers,
     )("?page=2&perPage=5");
 
     expect(custom.page).toBe(2);
     expect(custom.perPage).toBe(5);
     expect(custom.sort).toEqual([]);
+  });
+
+  it("reads renamed and prefixed keys through nuqs urlKeys", () => {
+    const { parsers, urlKeys } = getDataTableSearchParams({
+      columnConfigs: tasksColumnConfigs,
+      queryKeys: { globalFilter: "q" },
+      queryKeyPrefix: "tasks_",
+    });
+
+    expect(urlKeys).toEqual({
+      page: "tasks_page",
+      perPage: "tasks_perPage",
+      sort: "tasks_sort",
+      joinOperator: "tasks_joinOperator",
+      search: "tasks_q",
+      title: "tasks_title",
+      status: "tasks_status",
+      priority: "tasks_priority",
+      estimatedHours: "tasks_estimatedHours",
+      createdAt: "tasks_createdAt",
+    });
+
+    const search = createLoader(parsers, { urlKeys })(
+      "?tasks_page=2&tasks_q=bug&tasks_status=todo&page=9&search=other",
+    );
+    const query = getDataTableQuery(search, tasksColumnConfigs);
+
+    expect(query.page).toBe(2);
+    expect(query.globalFilter).toBe("bug");
+    expect(query.filters.map((filter) => [filter.id, filter.value])).toEqual([
+      ["status", ["todo"]],
+    ]);
+  });
+
+  it("rejects a column that clashes with a built-in URL key", () => {
+    expect(() =>
+      getDataTableSearchParams({
+        columnConfigs: { title: { variant: "text" } },
+        queryKeys: { globalFilter: "title" },
+      }),
+    ).toThrow('both use the URL key "title"');
+    expect(() =>
+      getDataTableSearchParams({
+        columnConfigs: { page: { variant: "text" } },
+      }),
+    ).toThrow('column id "page" is reserved');
   });
 });
 
