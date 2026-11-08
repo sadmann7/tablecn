@@ -345,6 +345,12 @@ describe("getDataTableSearchParams", () => {
         columnConfigs: { page: { variant: "text" } },
       }),
     ).toThrow('column id "page" is reserved');
+    expect(() =>
+      getDataTableSearchParams({
+        columnConfigs: tasksColumnConfigs,
+        queryKeys: { page: "sort" },
+      }),
+    ).toThrow('page and sort query keys both use the URL key "sort"');
   });
 });
 

@@ -277,6 +277,12 @@ export function getUrlKeys<TColumnId extends string>(
   for (const searchKey of getKeys(QUERY_KEY_NAMES)) {
     const name = QUERY_KEY_NAMES[searchKey];
     const urlKey = `${queryKeyPrefix}${queryKeys?.[name] ?? searchKey}`;
+    const takenBy = namesByUrlKey.get(urlKey);
+    if (takenBy) {
+      throw new Error(
+        `Data table ${takenBy} and ${name} query keys both use the URL key "${urlKey}".`,
+      );
+    }
     urlKeys[searchKey] = urlKey;
     namesByUrlKey.set(urlKey, name);
   }
