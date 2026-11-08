@@ -1,6 +1,10 @@
 "use client";
 
-import { createColumnHelper, type Row } from "@tanstack/react-table";
+import {
+  createColumnHelper,
+  type FilterFn,
+  type Row,
+} from "@tanstack/react-table";
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -8,6 +12,7 @@ import {
   Clock,
   Text,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -55,6 +60,12 @@ import type {
 } from "../lib/queries";
 
 import { updateTask } from "../lib/actions";
+import {
+  matchesTaskSearch,
+  parseTaskSearch,
+  type TaskSearch,
+  TIME_ZONE_COOKIE,
+} from "../lib/search";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
 import { tasksColumnConfigs, tasksDefaultSorting } from "../lib/validations";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
@@ -67,6 +78,7 @@ interface TasksTableProps {
   dataMode: DataMode;
   dir: Direction;
   filterMode: FilterMode;
+  timeZone: string;
   promises: Promise<
     [
       Awaited<ReturnType<typeof getTasks>>,
@@ -79,6 +91,7 @@ interface TasksTableProps {
 }
 
 export function TasksTable({
+  timeZone,
   dataMode,
   dir,
   filterMode,
@@ -256,6 +269,27 @@ export function TasksTable({
     [countsKey],
   );
 
+  const router = useRouter();
+
+  React.useEffect(() => {
+    const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (browserTimeZone === timeZone) return;
+
+    document.cookie = `${TIME_ZONE_COOKIE}=${encodeURIComponent(browserTimeZone)}; path=/; max-age=31536000; samesite=lax`;
+    router.refresh();
+  }, [router, timeZone]);
+
+  const globalFilterFn = React.useMemo(() => {
+    const filterFn: FilterFn<DataTableFeatures, Task> = (
+      row,
+      _columnId,
+      search: TaskSearch,
+    ) => matchesTaskSearch(row.original, search, timeZone);
+    filterFn.resolveFilterValue = (value: unknown) =>
+      parseTaskSearch(typeof value === "string" ? value : "", timeZone);
+    return filterFn;
+  }, [timeZone]);
+
   const tableProps: Omit<UseDataTableProps<Task>, "mode" | "pageCount"> = {
     data,
     columns,
@@ -268,6 +302,8 @@ export function TasksTable({
     shallow: false,
     clearOnDefault: true,
     enableRowRangeSelection: true,
+    globalFilterFn,
+    getColumnCanGlobalFilter: (column) => column.id === "createdAt",
   };
 
   const { table } = useDataTable(
