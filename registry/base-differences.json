@@ -100,7 +100,7 @@
     "components/data-table/data-table-date-filter.tsx": "7e548b799cc6",
     "components/data-table/data-table-faceted-filter.tsx": "6bc55864124c",
     "components/data-table/data-table-filter-menu.tsx": "c95aaf7f6f2f",
-    "components/data-table/data-table-pagination.tsx": "1f523ea5eb92",
+    "components/data-table/data-table-pagination.tsx": "937e59c7a038",
     "components/data-table/data-table-range-filter.tsx": "identical",
     "components/data-table/data-table-select-column.tsx": "ef62544a3c09",
     "components/data-table/data-table-skeleton.tsx": "be5369a2dde9",

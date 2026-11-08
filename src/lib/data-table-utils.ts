@@ -1,5 +1,6 @@
 import type {
   Column,
+  ColumnDef,
   ColumnFilter,
   RowData,
   SortingState,
@@ -558,16 +559,15 @@ function stringifyFilterDate(value: unknown) {
   return date ? formatFilterDate(date) : "";
 }
 
-export function getColumnDefId(column: {
-  id?: string;
-  accessorKey?: PropertyKey;
-  header?: unknown;
-}) {
+export function getColumnId<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+) {
+  const accessorKey = "accessorKey" in column ? column.accessorKey : undefined;
   return (
     column.id ??
-    (column.accessorKey === undefined
+    (accessorKey === undefined
       ? undefined
-      : String(column.accessorKey).replaceAll(".", "_")) ??
+      : String(accessorKey).replaceAll(".", "_")) ??
     (typeof column.header === "string" ? column.header : undefined)
   );
 }
