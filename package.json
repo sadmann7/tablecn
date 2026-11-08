@@ -57,7 +57,6 @@
     "@uploadthing/react": "^7.3.3",
     "@upstash/ratelimit": "^2.1.0",
     "@upstash/redis": "^1.38.4",
-    "chrono-node": "^2.10.3",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",
     "cn": "^0.3.0",

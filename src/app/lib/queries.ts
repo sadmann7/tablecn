@@ -1,6 +1,6 @@
 "use cache";
 
-import { and, asc, count, desc, gt, ilike, or, sql } from "drizzle-orm";
+import { asc, count, desc, gt, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import "server-only";
 
@@ -12,12 +12,10 @@ import { tasks } from "@/db/schema";
 import type { tasksColumnConfigs } from "./validations";
 
 import { filterColumns } from "./filter-columns";
-import { parseTaskSearch } from "./search";
 import { sanitizeEnumFilters } from "./utils";
 
 export async function getTasks(
   input: DataTableColumnConfigsQuery<typeof tasksColumnConfigs>,
-  timeZone: string,
 ) {
   cacheLife({ revalidate: 1, stale: 1, expire: 60 });
   cacheTag("tasks");
@@ -25,27 +23,11 @@ export async function getTasks(
   try {
     const offset = (input.page - 1) * input.perPage;
 
-    const search = parseTaskSearch(input.globalFilter, timeZone);
-    const where = and(
-      filterColumns({
-        table: tasks,
-        filters: sanitizeEnumFilters(input.filters),
-        joinOperator: input.joinOperator,
-      }),
-      search.text
-        ? or(
-            ilike(tasks.code, `%${search.text}%`),
-            ilike(tasks.title, `%${search.text}%`),
-            ilike(tasks.status, `%${search.text}%`),
-            ilike(tasks.priority, `%${search.text}%`),
-            ilike(tasks.label, `%${search.text}%`),
-            ilike(sql`${tasks.estimatedHours}::text`, `%${search.text}%`),
-          )
-        : undefined,
-      search.dateRange
-        ? sql`(${tasks.createdAt} at time zone 'UTC' at time zone ${timeZone})::date between ${search.dateRange[0]}::date and ${search.dateRange[1]}::date`
-        : undefined,
-    );
+    const where = filterColumns({
+      table: tasks,
+      filters: sanitizeEnumFilters(input.filters),
+      joinOperator: input.joinOperator,
+    });
 
     const { data, total } = await db.transaction(async (tx) => {
       const data = await tx

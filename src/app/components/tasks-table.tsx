@@ -8,7 +8,6 @@ import {
   Clock,
   Text,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -56,7 +55,6 @@ import type {
 } from "../lib/queries";
 
 import { updateTask } from "../lib/actions";
-import { createTaskSearchFilterFn, TIME_ZONE_COOKIE } from "../lib/search";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
 import { tasksColumnConfigs, tasksDefaultSorting } from "../lib/validations";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
@@ -69,7 +67,6 @@ interface TasksTableProps {
   dataMode: DataMode;
   dir: Direction;
   filterMode: FilterMode;
-  timeZone: string;
   promises: Promise<
     [
       Awaited<ReturnType<typeof getTasks>>,
@@ -82,7 +79,6 @@ interface TasksTableProps {
 }
 
 export function TasksTable({
-  timeZone,
   dataMode,
   dir,
   filterMode,
@@ -260,21 +256,6 @@ export function TasksTable({
     [countsKey],
   );
 
-  const router = useRouter();
-
-  React.useEffect(() => {
-    const browserTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (browserTimeZone === timeZone) return;
-
-    document.cookie = `${TIME_ZONE_COOKIE}=${encodeURIComponent(browserTimeZone)}; path=/; max-age=31536000; samesite=lax`;
-    router.refresh();
-  }, [router, timeZone]);
-
-  const globalFilterFn = React.useMemo(
-    () => createTaskSearchFilterFn(timeZone),
-    [timeZone],
-  );
-
   const tableProps: Omit<UseDataTableProps<Task>, "mode" | "pageCount"> = {
     data,
     columns,
@@ -287,8 +268,7 @@ export function TasksTable({
     shallow: false,
     clearOnDefault: true,
     enableRowRangeSelection: true,
-    globalFilterFn,
-    getColumnCanGlobalFilter: (column) => column.id === "createdAt",
+    enableGlobalFilter: false,
   };
 
   const { table } = useDataTable(
@@ -305,10 +285,7 @@ export function TasksTable({
         actionBar={<TasksTableActionBar table={table} />}
       >
         {enableAdvancedFilter ? (
-          <DataTableAdvancedToolbar
-            table={table}
-            globalFilterPlaceholder="Search tasks..."
-          >
+          <DataTableAdvancedToolbar table={table}>
             <DataTableSortMenu table={table} align="start" />
             {filterMode === "advanced" ? (
               <DataTableFilterMenu table={table} align="start" />
@@ -317,10 +294,7 @@ export function TasksTable({
             )}
           </DataTableAdvancedToolbar>
         ) : (
-          <DataTableToolbar
-            table={table}
-            globalFilterPlaceholder="Search tasks..."
-          >
+          <DataTableToolbar table={table}>
             <DataTableSortMenu table={table} align="end" />
           </DataTableToolbar>
         )}

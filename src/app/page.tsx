@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { Suspense } from "react";
 
 import type { SearchParams } from "@/types";
@@ -18,7 +17,6 @@ import {
   getTasks,
   getTaskStatusCounts,
 } from "./lib/queries";
-import { getValidTimeZone, TIME_ZONE_COOKIE } from "./lib/search";
 import { searchParamsCache, tasksColumnConfigs } from "./lib/validations";
 
 interface IndexPageProps {
@@ -60,14 +58,11 @@ async function TasksTableWrapper(props: IndexPageProps) {
   const searchParams = await props.searchParams;
   const search = searchParamsCache.parse(searchParams);
   const { dataMode, dir } = search;
-  const timeZone = getValidTimeZone(
-    (await cookies()).get(TIME_ZONE_COOKIE)?.value,
-  );
 
   const tasksPromise =
     dataMode === "client"
       ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
-      : getTasks(getDataTableQuery(search, tasksColumnConfigs), timeZone);
+      : getTasks(getDataTableQuery(search, tasksColumnConfigs));
 
   const promises = Promise.all([
     tasksPromise,
@@ -82,7 +77,6 @@ async function TasksTableWrapper(props: IndexPageProps) {
       dataMode={dataMode}
       dir={dir}
       filterMode={search.filterMode}
-      timeZone={timeZone}
       promises={promises}
     />
   );

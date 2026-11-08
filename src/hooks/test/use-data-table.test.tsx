@@ -399,6 +399,14 @@ describe("useDataTable", () => {
     expect(getLastSearch()?.has("search")).toBe(false);
   });
 
+  it("ignores the URL global filter when global filtering is off", () => {
+    const { result } = renderDataTable("?search=bug", {
+      enableGlobalFilter: false,
+    });
+
+    expect(result.current.table.state.globalFilter).toBe("");
+  });
+
   it("leaves global filtering to the server in server mode", () => {
     const tasks: Task[] = [
       { id: "1", code: "T-1", title: "login bug", status: "todo" },

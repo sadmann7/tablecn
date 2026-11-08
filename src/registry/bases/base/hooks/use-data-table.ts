@@ -415,7 +415,7 @@ function useDataTable<TData extends RowData>({
         sorting,
         columnFilters,
         joinOperator,
-        globalFilter,
+        globalFilter: props.enableGlobalFilter === false ? "" : globalFilter,
       },
       onPaginationChange,
       onSortingChange,
