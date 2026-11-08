@@ -143,9 +143,6 @@ function DataTableLayout<TData extends RowData>({
   );
 }
 
-const STICKY_HEADER_CLASS_NAME =
-  "sticky top-0 z-30 bg-background [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0";
-
 interface DataTableHeaderProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   stickyHeader: boolean;
@@ -159,7 +156,10 @@ function DataTableHeader<TData extends RowData>({
     <table.Subscribe selector={selectHeaderState}>
       {() => (
         <TableHeader
-          className={stickyHeader ? STICKY_HEADER_CLASS_NAME : undefined}
+          className={cn(
+            stickyHeader &&
+              "sticky top-0 z-30 bg-background [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0",
+          )}
         >
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="group/row">

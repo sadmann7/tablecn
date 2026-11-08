@@ -283,6 +283,8 @@ export function TasksTable({
         aria-label="Tasks"
         table={table}
         actionBar={<TasksTableActionBar table={table} />}
+        stickyHeader
+        className="max-h-[calc(100svh-9rem)]"
       >
         {enableAdvancedFilter ? (
           <DataTableAdvancedToolbar table={table}>

@@ -108,7 +108,7 @@
     "components/data-table/data-table-sort-menu.tsx": "3262216e62b5",
     "components/data-table/data-table-toolbar.tsx": "d099885b9648",
     "components/data-table/data-table-view-options.tsx": "7a65a5d32ac1",
-    "components/data-table/data-table.tsx": "cbeb2984a105",
+    "components/data-table/data-table.tsx": "225d821b1c45",
     "hooks/use-data-grid.ts": "radix-only",
     "hooks/use-data-table.ts": "identical",
     "ui/action-bar.tsx": "radix-only",

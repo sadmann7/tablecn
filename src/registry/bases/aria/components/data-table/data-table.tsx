@@ -178,9 +178,6 @@ function DataTableLayout<TData extends RowData>({
   );
 }
 
-const STICKY_HEADER_CLASS_NAME =
-  "sticky top-0 z-30 bg-background [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0 hover:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] has-aria-expanded:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]";
-
 interface DataTableHeaderProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   stickyHeader: boolean;
@@ -205,7 +202,8 @@ function DataTableHeader<TData extends RowData>({
           <TableHeader
             className={cn(
               "group/row transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50",
-              stickyHeader && STICKY_HEADER_CLASS_NAME,
+              stickyHeader &&
+                "sticky top-0 z-30 bg-background hover:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] has-aria-expanded:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0",
             )}
           >
             {headers.map((header) => (
