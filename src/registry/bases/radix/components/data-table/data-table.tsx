@@ -91,7 +91,7 @@ export function DataTable<TData extends RowData>({
         className={cn(
           "isolate rounded-md border",
           stickyHeader
-            ? "min-h-0 overflow-auto [&>[data-slot=table-container]]:overflow-visible"
+            ? "min-h-0 scroll-pt-10 overflow-auto [&:has(thead>tr:nth-child(2))]:scroll-pt-20 [&:has(thead>tr:nth-child(3))]:scroll-pt-30 [&>[data-slot=table-container]]:overflow-visible"
             : "overflow-hidden",
         )}
         onKeyDown={onTableKeyDown}

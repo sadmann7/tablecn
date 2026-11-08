@@ -89,5 +89,15 @@ describe.each(bases)(
       expect(header?.classList).toContain("top-0");
       expect(scroller?.classList).toContain("overflow-auto");
     });
+
+    it("keeps focused rows clear of the sticky header", () => {
+      const scrollerSelector = '[data-slot="data-table"] > div';
+      const sticky =
+        renderTable(true).container.querySelector(scrollerSelector);
+      const plain = renderTable().container.querySelector(scrollerSelector);
+
+      expect(sticky?.classList).toContain("scroll-pt-10");
+      expect(plain?.classList).not.toContain("scroll-pt-10");
+    });
   },
 );

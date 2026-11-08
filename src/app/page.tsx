@@ -45,6 +45,7 @@ export default function IndexPage(props: IndexPageProps) {
               "6rem",
             ]}
             shrinkZero
+            className="max-h-[calc(100svh-9rem)]"
           />
         }
       >
