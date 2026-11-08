@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  createColumnHelper,
-  type FilterFn,
-  type Row,
-} from "@tanstack/react-table";
+import { createColumnHelper, type Row } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -60,12 +56,7 @@ import type {
 } from "../lib/queries";
 
 import { updateTask } from "../lib/actions";
-import {
-  matchesTaskSearch,
-  parseTaskSearch,
-  type TaskSearch,
-  TIME_ZONE_COOKIE,
-} from "../lib/search";
+import { createTaskSearchFilterFn, TIME_ZONE_COOKIE } from "../lib/search";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
 import { tasksColumnConfigs, tasksDefaultSorting } from "../lib/validations";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
@@ -279,16 +270,10 @@ export function TasksTable({
     router.refresh();
   }, [router, timeZone]);
 
-  const globalFilterFn = React.useMemo(() => {
-    const filterFn: FilterFn<DataTableFeatures, Task> = (
-      row,
-      _columnId,
-      search: TaskSearch,
-    ) => matchesTaskSearch(row.original, search, timeZone);
-    filterFn.resolveFilterValue = (value: unknown) =>
-      parseTaskSearch(typeof value === "string" ? value : "", timeZone);
-    return filterFn;
-  }, [timeZone]);
+  const globalFilterFn = React.useMemo(
+    () => createTaskSearchFilterFn(timeZone),
+    [timeZone],
+  );
 
   const tableProps: Omit<UseDataTableProps<Task>, "mode" | "pageCount"> = {
     data,

@@ -1,6 +1,9 @@
+import type { FilterFn } from "@tanstack/react-table";
+
 import * as chrono from "chrono-node";
 
 import type { Task } from "@/db/schema";
+import type { DataTableFeatures } from "@/lib/data-table-features";
 
 export const TIME_ZONE_COOKIE = "tz";
 
@@ -32,6 +35,17 @@ export function parseTaskSearch(
       getComponentsDay(result.end ?? result.start),
     ],
   };
+}
+
+export function createTaskSearchFilterFn(timeZone: string) {
+  const filterFn: FilterFn<DataTableFeatures, Task> = (
+    row,
+    _columnId,
+    search: TaskSearch,
+  ) => matchesTaskSearch(row.original, search, timeZone);
+  filterFn.resolveFilterValue = (value: unknown) =>
+    parseTaskSearch(typeof value === "string" ? value : "", timeZone);
+  return filterFn;
 }
 
 export function matchesTaskSearch(
