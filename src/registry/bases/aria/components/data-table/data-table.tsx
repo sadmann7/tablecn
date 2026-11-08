@@ -178,6 +178,9 @@ function DataTableLayout<TData extends RowData>({
   );
 }
 
+const STICKY_HEADER_CLASS_NAME =
+  "sticky top-0 z-30 bg-background [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0 hover:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] has-aria-expanded:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]";
+
 interface DataTableHeaderProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   stickyHeader: boolean;
@@ -256,9 +259,6 @@ function DataTableHeadCell<TData extends RowData>({
     </Subscribe>
   );
 }
-
-const STICKY_HEADER_CLASS_NAME =
-  "sticky top-0 z-30 bg-background [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0 hover:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] has-aria-expanded:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]";
 
 function getCellClassName(pinned: ColumnPinningPosition) {
   return pinned
