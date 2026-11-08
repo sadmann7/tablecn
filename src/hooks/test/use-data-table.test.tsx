@@ -433,6 +433,32 @@ describe("useDataTable", () => {
     expect(result.current.table.state.globalFilter).toBe("bug");
     expect(result.current.table.getRowModel().rows).toHaveLength(2);
   });
+
+  it("reads sorting and filters for columns defined by accessorKey alone", async () => {
+    const tasks: Task[] = [
+      { id: "1", code: "T-1", title: "bug b", status: "todo" },
+      { id: "2", code: "T-2", title: "bug a", status: "done" },
+      { id: "3", code: "T-3", title: "feat", status: "todo" },
+    ];
+    const keyColumns = columnHelper.columns([
+      columnHelper.accessor("title", {
+        meta: { variant: "text" },
+        enableColumnFilter: true,
+      }),
+    ]);
+
+    const { result } = renderDataTable("?sort=title.asc&title=bug", {
+      mode: "client",
+      data: tasks,
+      columns: keyColumns,
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.table.getRowModel().rows.map((row) => row.original.id),
+      ).toEqual(["2", "1"]),
+    );
+  });
 });
 
 const columns = columnHelper.columns([

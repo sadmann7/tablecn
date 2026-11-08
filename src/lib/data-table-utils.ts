@@ -557,3 +557,17 @@ function stringifyFilterDate(value: unknown) {
   const date = parseFilterDate(value);
   return date ? formatFilterDate(date) : "";
 }
+
+export function getColumnDefId(column: {
+  id?: string;
+  accessorKey?: PropertyKey;
+  header?: unknown;
+}) {
+  return (
+    column.id ??
+    (column.accessorKey === undefined
+      ? undefined
+      : String(column.accessorKey).replaceAll(".", "_")) ??
+    (typeof column.header === "string" ? column.header : undefined)
+  );
+}
