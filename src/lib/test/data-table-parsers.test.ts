@@ -333,7 +333,7 @@ describe("getDataTableSearchParams", () => {
     ]);
   });
 
-  it("rejects a column that clashes with a built-in URL key", () => {
+  it("rejects query keys that clash on a URL key", () => {
     expect(() =>
       getDataTableSearchParams({
         columnConfigs: { title: { variant: "text" } },
