@@ -76,6 +76,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualPagination"
   | "manualSorting"
 > & {
+  startTransition?: React.TransitionStartFunction;
   queryKeys?: Partial<DataTableQueryKeys>;
   history?: "push" | "replace";
   debounceMs?: number;
@@ -83,7 +84,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
   clearOnDefault?: boolean;
   scroll?: boolean;
   shallow?: boolean;
-  startTransition?: React.TransitionStartFunction;
 } & (
     | {
         mode?: "server";
@@ -100,6 +100,7 @@ function useDataTable<TData extends RowData>({
   mode = "server",
   pageCount,
   initialState,
+  startTransition,
   queryKeys,
   history = "replace",
   debounceMs = DEBOUNCE_MS,
@@ -107,7 +108,7 @@ function useDataTable<TData extends RowData>({
   clearOnDefault = false,
   scroll = false,
   shallow: shallowProp = true,
-  startTransition,
+  enableGlobalFilter = true,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
@@ -295,6 +296,7 @@ function useDataTable<TData extends RowData>({
   );
   const [globalFilterDraft, setGlobalFilterDraft] =
     React.useState<GlobalFilterDraft | null>(() => {
+      if (!enableGlobalFilter) return null;
       const initialGlobalFilter = getGlobalFilterValue(
         initialTableState?.globalFilter,
       );
@@ -309,7 +311,9 @@ function useDataTable<TData extends RowData>({
 
   const activeGlobalFilterDraft =
     globalFilterDraft?.urlValue === urlGlobalFilter ? globalFilterDraft : null;
-  const globalFilter = activeGlobalFilterDraft?.value ?? urlGlobalFilter;
+  const globalFilter = enableGlobalFilter
+    ? (activeGlobalFilterDraft?.value ?? urlGlobalFilter)
+    : "";
 
   const pageIndex =
     activeDraft?.pageToReset === page ||
@@ -394,6 +398,7 @@ function useDataTable<TData extends RowData>({
   const getNextGlobalFilter = useChainedUpdate<unknown>(globalFilter);
 
   function onGlobalFilterChange(updater: Updater<unknown>) {
+    if (!enableGlobalFilter) return;
     const value = getGlobalFilterValue(getNextGlobalFilter(updater));
     setGlobalFilterDraft({
       value,
@@ -408,6 +413,7 @@ function useDataTable<TData extends RowData>({
       ...props,
       features: dataTableFeatures,
       columns,
+      enableGlobalFilter,
       initialState: initialTableState,
       pageCount: isServer ? pageCount : undefined,
       state: {
@@ -415,7 +421,7 @@ function useDataTable<TData extends RowData>({
         sorting,
         columnFilters,
         joinOperator,
-        globalFilter: props.enableGlobalFilter === false ? "" : globalFilter,
+        globalFilter,
       },
       onPaginationChange,
       onSortingChange,

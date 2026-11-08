@@ -407,12 +407,28 @@ describe("useDataTable", () => {
     expect(result.current.table.state.globalFilter).toBe("");
   });
 
+  it("never writes the global filter when global filtering is off", async () => {
+    const { result, getLastSearch } = renderDataTable("?page=3", {
+      enableGlobalFilter: false,
+      initialState: { globalFilter: "seeded" },
+    });
+
+    act(() => result.current.table.setGlobalFilter("feature"));
+
+    expect(result.current.table.state.globalFilter).toBe("");
+    expect(result.current.table.state.pagination.pageIndex).toBe(2);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(getLastSearch()).toBeUndefined();
+  });
+
   it("leaves global filtering to the server in server mode", () => {
     const tasks: Task[] = [
       { id: "1", code: "T-1", title: "login bug", status: "todo" },
       { id: "2", code: "T-2", title: "new feature", status: "done" },
     ];
-    const { result } = renderDataTable("?search=bug", { data: tasks });
+    const { result } = renderDataTable("?search=bug", {
+      data: tasks,
+    });
 
     expect(result.current.table.state.globalFilter).toBe("bug");
     expect(result.current.table.getRowModel().rows).toHaveLength(2);

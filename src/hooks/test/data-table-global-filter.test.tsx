@@ -77,6 +77,7 @@ describe.each(bases)(
         | typeof DataTableToolbar
         | typeof DataTableAdvancedToolbar = DataTableToolbar,
       searchParams = "",
+      enableGlobalFilter?: boolean,
     ) {
       const tableRef: {
         current?: ReturnType<typeof useRadixDataTable<Task>>["table"];
@@ -88,6 +89,7 @@ describe.each(bases)(
           data,
           columns,
           getRowId: (row) => row.id,
+          enableGlobalFilter,
         });
         tableRef.current = table;
 
@@ -121,6 +123,17 @@ describe.each(bases)(
         null,
       );
     });
+
+    it.each([DataTableToolbar, DataTableAdvancedToolbar])(
+      "leaves the search input out when global filtering is off",
+      (Toolbar) => {
+        renderToolbar("Search tasks...", Toolbar, "", false);
+
+        expect(screen.queryByRole("textbox", { name: "Search tasks..." })).toBe(
+          null,
+        );
+      },
+    );
 
     it("sets the global filter from the search input", () => {
       const getTable = renderToolbar("Search tasks...");

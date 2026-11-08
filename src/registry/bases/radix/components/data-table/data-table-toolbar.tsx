@@ -64,7 +64,8 @@ export function DataTableToolbar<TData extends RowData>({
       {...props}
     >
       <div className="flex flex-1 flex-wrap items-center gap-2">
-        {globalFilterPlaceholder ? (
+        {globalFilterPlaceholder &&
+        table.options.enableGlobalFilter !== false ? (
           <Subscribe
             source={table.atoms.globalFilter}
             selector={(globalFilter) => readFilterInputValue(globalFilter)}

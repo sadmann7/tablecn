@@ -80,6 +80,9 @@ jobs:
         uses: actions/checkout@v4
       - uses: ./.github/setup
 
+      - name: Enable extensions
+        run: pnpm exec tsx src/db/extensions.ts
+
       - name: Create the database
         run: pnpm exec drizzle-kit push --force
 
