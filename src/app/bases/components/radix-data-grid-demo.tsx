@@ -20,7 +20,7 @@ import { type Person } from "../../data-grid/lib/seeds";
 import { useBasesDataGrid } from "../hooks/use-bases-data-grid";
 import { getBasesDataGridColumns } from "../lib/data-grid-columns";
 
-export function RadixDataGrid() {
+export function RadixDataGridDemo() {
   const { dir, data, setData } = useBasesDataGrid();
 
   const columns = React.useMemo(

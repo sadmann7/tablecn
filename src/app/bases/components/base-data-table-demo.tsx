@@ -24,7 +24,7 @@ import {
 import { useBasesDataTable } from "../hooks/use-bases-data-table";
 import { getBasesDataTableColumns } from "../lib/data-table-columns";
 
-export function BaseDataTable() {
+export function BaseDataTableDemo() {
   const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
 
   const columns = React.useMemo(

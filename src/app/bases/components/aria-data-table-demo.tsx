@@ -4,27 +4,27 @@ import * as React from "react";
 
 import type { Task } from "@/db/schema";
 
-import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
-import { getDataTableActionsColumn } from "@/registry/bases/radix/components/data-table/data-table-actions-column";
-import { DataTableAdvancedToolbar } from "@/registry/bases/radix/components/data-table/data-table-advanced-toolbar";
-import { DataTableColumnHeader } from "@/registry/bases/radix/components/data-table/data-table-column-header";
-import { DataTableCommandFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-command-filter-menu";
-import { DataTableFilterMenu } from "@/registry/bases/radix/components/data-table/data-table-filter-menu";
-import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
-import { DataTableSortMenu } from "@/registry/bases/radix/components/data-table/data-table-sort-menu";
-import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
-import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
-import { Badge } from "@/registry/bases/radix/ui/badge";
-import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
+import { DataTable } from "@/registry/bases/aria/components/data-table/data-table";
+import { getDataTableActionsColumn } from "@/registry/bases/aria/components/data-table/data-table-actions-column";
+import { DataTableAdvancedToolbar } from "@/registry/bases/aria/components/data-table/data-table-advanced-toolbar";
+import { DataTableColumnHeader } from "@/registry/bases/aria/components/data-table/data-table-column-header";
+import { DataTableCommandFilterMenu } from "@/registry/bases/aria/components/data-table/data-table-command-filter-menu";
+import { DataTableFilterMenu } from "@/registry/bases/aria/components/data-table/data-table-filter-menu";
+import { getDataTableSelectColumn } from "@/registry/bases/aria/components/data-table/data-table-select-column";
+import { DataTableSortMenu } from "@/registry/bases/aria/components/data-table/data-table-sort-menu";
+import { DataTableToolbar } from "@/registry/bases/aria/components/data-table/data-table-toolbar";
+import { useDataTable } from "@/registry/bases/aria/hooks/use-data-table";
+import { Badge } from "@/registry/bases/aria/ui/badge";
+import { DirectionProvider } from "@/registry/bases/aria/ui/direction";
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/registry/bases/radix/ui/dropdown-menu";
+} from "@/registry/bases/aria/ui/dropdown-menu";
 
 import { useBasesDataTable } from "../hooks/use-bases-data-table";
 import { getBasesDataTableColumns } from "../lib/data-table-columns";
 
-export function RadixDataTable() {
+export function AriaDataTableDemo() {
   const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
 
   const columns = React.useMemo(
@@ -35,13 +35,13 @@ export function RadixDataTable() {
         actionsColumn: getDataTableActionsColumn<Task>({
           actions: ({ row }) => (
             <>
-              <DropdownMenuItem onSelect={() => onCopy(row.original)}>
+              <DropdownMenuItem onAction={() => onCopy(row.original)}>
                 Copy code
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
-                onSelect={() => onDelete(row.original)}
+                onAction={() => onDelete(row.original)}
               >
                 Delete
               </DropdownMenuItem>
@@ -75,25 +75,28 @@ export function RadixDataTable() {
   });
 
   return (
-    <DirectionProvider dir={dir}>
+    <DirectionProvider direction={dir}>
       <DataTable aria-label="Tasks" table={table}>
         {filterMode === "plain" ? (
           <DataTableToolbar
             table={table}
             globalFilterPlaceholder="Search tasks..."
           >
-            <DataTableSortMenu table={table} align="end" />
+            <DataTableSortMenu table={table} placement="bottom end" />
           </DataTableToolbar>
         ) : (
           <DataTableAdvancedToolbar
             table={table}
             globalFilterPlaceholder="Search tasks..."
           >
-            <DataTableSortMenu table={table} align="start" />
+            <DataTableSortMenu table={table} placement="bottom start" />
             {filterMode === "advanced" ? (
-              <DataTableFilterMenu table={table} align="start" />
+              <DataTableFilterMenu table={table} placement="bottom start" />
             ) : (
-              <DataTableCommandFilterMenu table={table} align="start" />
+              <DataTableCommandFilterMenu
+                table={table}
+                placement="bottom start"
+              />
             )}
           </DataTableAdvancedToolbar>
         )}

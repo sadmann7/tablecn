@@ -5,13 +5,13 @@ import { Suspense } from "react";
 
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
-import { AriaDataTable } from "../components/aria-data-table";
-import { BaseDataGrid } from "../components/base-data-grid";
-import { BaseDataTable } from "../components/base-data-table";
+import { AriaDataTableDemo } from "../components/aria-data-table-demo";
+import { BaseDataGridDemo } from "../components/base-data-grid-demo";
+import { BaseDataTableDemo } from "../components/base-data-table-demo";
 import { BasesControls } from "../components/bases-controls";
 import { BasesView } from "../components/bases-view";
-import { RadixDataGrid } from "../components/radix-data-grid";
-import { RadixDataTable } from "../components/radix-data-table";
+import { RadixDataGridDemo } from "../components/radix-data-grid-demo";
+import { RadixDataTableDemo } from "../components/radix-data-table-demo";
 import { type Base, BASES, getIsBase } from "../lib/data";
 
 export const metadata: Metadata = {
@@ -24,9 +24,9 @@ const DEMOS: Record<
   Base,
   { table: React.ComponentType; grid: React.ComponentType | null }
 > = {
-  radix: { table: RadixDataTable, grid: RadixDataGrid },
-  base: { table: BaseDataTable, grid: BaseDataGrid },
-  aria: { table: AriaDataTable, grid: null },
+  radix: { table: RadixDataTableDemo, grid: RadixDataGridDemo },
+  base: { table: BaseDataTableDemo, grid: BaseDataGridDemo },
+  aria: { table: AriaDataTableDemo, grid: null },
 };
 
 interface BasesPageProps {
