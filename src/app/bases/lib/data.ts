@@ -10,7 +10,7 @@ export const BASES = [
 
 export type Base = (typeof BASES)[number]["value"];
 
-export function isBase(value: string): value is Base {
+export function getIsBase(value: string): value is Base {
   return BASES.some((base) => base.value === value);
 }
 

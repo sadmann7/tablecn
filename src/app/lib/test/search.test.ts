@@ -10,22 +10,6 @@ import {
 
 const now = new Date("2026-11-08T03:30:00Z");
 
-function createTask(overrides: Partial<Task>): Task {
-  return {
-    id: "1",
-    code: "TASK-1",
-    title: "Fix the login bug",
-    status: "todo",
-    priority: "high",
-    label: "bug",
-    estimatedHours: 4,
-    archived: false,
-    createdAt: new Date("2026-10-26T15:00:00Z"),
-    updatedAt: null,
-    ...overrides,
-  };
-}
-
 describe("parseTaskSearch", () => {
   it("keeps plain text as text", () => {
     expect(parseTaskSearch("login bug", "UTC", now)).toEqual({
@@ -103,3 +87,19 @@ describe("getValidTimeZone", () => {
     expect(getValidTimeZone("Asia/Dhaka")).toBe("Asia/Dhaka");
   });
 });
+
+function createTask(overrides: Partial<Task>): Task {
+  return {
+    id: "1",
+    code: "TASK-1",
+    title: "Fix the login bug",
+    status: "todo",
+    priority: "high",
+    label: "bug",
+    estimatedHours: 4,
+    archived: false,
+    createdAt: new Date("2026-10-26T15:00:00Z"),
+    updatedAt: null,
+    ...overrides,
+  };
+}

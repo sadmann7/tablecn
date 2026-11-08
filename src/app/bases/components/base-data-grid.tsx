@@ -4,28 +4,28 @@ import { Trash2 } from "lucide-react";
 import * as React from "react";
 
 import { generateId } from "@/lib/id";
-import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
-import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
-import { DataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
-import { DataGridKeyboardShortcuts } from "@/registry/bases/radix/components/data-grid/data-grid-keyboard-shortcuts";
-import { DataGridRowHeightMenu } from "@/registry/bases/radix/components/data-grid/data-grid-row-height-menu";
-import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
-import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
-import { DataGridViewMenu } from "@/registry/bases/radix/components/data-grid/data-grid-view-menu";
-import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
-import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
-import { DropdownMenuItem } from "@/registry/bases/radix/ui/dropdown-menu";
+import { DataGrid } from "@/registry/bases/base/components/data-grid/data-grid";
+import { getDataGridActionsColumn } from "@/registry/bases/base/components/data-grid/data-grid-actions-column";
+import { DataGridFilterMenu } from "@/registry/bases/base/components/data-grid/data-grid-filter-menu";
+import { DataGridKeyboardShortcuts } from "@/registry/bases/base/components/data-grid/data-grid-keyboard-shortcuts";
+import { DataGridRowHeightMenu } from "@/registry/bases/base/components/data-grid/data-grid-row-height-menu";
+import { getDataGridSelectColumn } from "@/registry/bases/base/components/data-grid/data-grid-select-column";
+import { DataGridSortMenu } from "@/registry/bases/base/components/data-grid/data-grid-sort-menu";
+import { DataGridViewMenu } from "@/registry/bases/base/components/data-grid/data-grid-view-menu";
+import { useDataGrid } from "@/registry/bases/base/hooks/use-data-grid";
+import { DirectionProvider } from "@/registry/bases/base/ui/direction";
+import { DropdownMenuItem } from "@/registry/bases/base/ui/dropdown-menu";
 
 import { type Person } from "../../data-grid/lib/seeds";
-import { useBasesGrid } from "../hooks/use-bases-grid";
-import { getBasesGridColumns } from "../lib/grid-columns";
+import { useBasesDataGrid } from "../hooks/use-bases-data-grid";
+import { getBasesDataGridColumns } from "../lib/data-grid-columns";
 
-export function RadixBasesGrid() {
-  const { dir, data, setData } = useBasesGrid();
+export function BaseDataGrid() {
+  const { dir, data, setData } = useBasesDataGrid();
 
   const columns = React.useMemo(
     () =>
-      getBasesGridColumns({
+      getBasesDataGridColumns({
         selectColumn: getDataGridSelectColumn<Person>({
           enableRowMarkers: true,
         }),
@@ -33,7 +33,7 @@ export function RadixBasesGrid() {
           actions: ({ row, table }) => (
             <DropdownMenuItem
               variant="destructive"
-              onSelect={() => table.deleteRows([row.id])}
+              onClick={() => table.deleteRows([row.id])}
             >
               <Trash2 />
               Delete
@@ -60,7 +60,7 @@ export function RadixBasesGrid() {
   });
 
   return (
-    <DirectionProvider dir={dir}>
+    <DirectionProvider direction={dir}>
       <div className="flex flex-col gap-2.5">
         <div
           role="toolbar"

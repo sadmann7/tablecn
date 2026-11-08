@@ -13,15 +13,15 @@ import {
 
 const columnHelper = createColumnHelper<DataGridFeatures, Person>();
 
-interface GetBasesGridColumnsOptions {
+interface GetBasesDataGridColumnsOptions {
   selectColumn: ColumnDef<DataGridFeatures, Person>;
   actionsColumn: ColumnDef<DataGridFeatures, Person>;
 }
 
-export function getBasesGridColumns({
+export function getBasesDataGridColumns({
   selectColumn,
   actionsColumn,
-}: GetBasesGridColumnsOptions) {
+}: GetBasesDataGridColumnsOptions) {
   const filterFn = getFilterFn<Person>();
 
   return columnHelper.columns([

@@ -14,8 +14,8 @@ import {
   ToggleGroupItem,
 } from "@/registry/bases/radix/ui/toggle-group";
 
-import { BASES_VIEWS, basesSearchParams } from "../hooks/use-bases-demo";
 import { type Base, BASES } from "../lib/data";
+import { BASES_VIEWS, basesSearchParams } from "../lib/search-params";
 
 interface BasesControlsProps {
   base: Base;

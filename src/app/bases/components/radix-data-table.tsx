@@ -21,15 +21,15 @@ import {
   DropdownMenuSeparator,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
-import { useBasesDemo } from "../hooks/use-bases-demo";
-import { getBasesColumns } from "../lib/columns";
+import { useBasesDataTable } from "../hooks/use-bases-data-table";
+import { getBasesDataTableColumns } from "../lib/data-table-columns";
 
-export function RadixBasesDemo() {
-  const { filterMode, dir, data, onCopy, onDelete } = useBasesDemo();
+export function RadixDataTable() {
+  const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
 
   const columns = React.useMemo(
     () =>
-      getBasesColumns({
+      getBasesDataTableColumns({
         data,
         selectColumn: getDataTableSelectColumn<Task>(),
         actionsColumn: getDataTableActionsColumn<Task>({

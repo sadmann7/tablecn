@@ -24,7 +24,7 @@ import { tasksColumnConfigs } from "../../lib/validations";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
-interface GetBasesColumnsOptions {
+interface GetBasesDataTableColumnsOptions {
   data: Task[];
   selectColumn: ColumnDef<DataTableFeatures, Task>;
   actionsColumn: ColumnDef<DataTableFeatures, Task>;
@@ -35,13 +35,13 @@ interface GetBasesColumnsOptions {
   renderBadge: (children: React.ReactNode) => React.ReactNode;
 }
 
-export function getBasesColumns({
+export function getBasesDataTableColumns({
   data,
   selectColumn,
   actionsColumn,
   renderHeader,
   renderBadge,
-}: GetBasesColumnsOptions) {
+}: GetBasesDataTableColumnsOptions) {
   return columnHelper.columns([
     selectColumn,
     columnHelper.accessor("code", {
