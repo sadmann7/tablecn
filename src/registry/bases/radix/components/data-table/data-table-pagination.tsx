@@ -79,8 +79,6 @@ function DataTablePaginationContent<TData extends RowData>({
   ...props
 }: DataTablePaginationContentProps<TData>) {
   const pageSizeLabelId = React.useId();
-  // A page size outside the options (from initialState or a hand-edited
-  // `?perPage=`) would leave the select blank, so list it too
   const sizeOptions = pageSizeOptions.includes(pageSize)
     ? pageSizeOptions
     : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
