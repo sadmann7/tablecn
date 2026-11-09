@@ -5,47 +5,31 @@ import {
 } from "nuqs/server";
 import * as z from "zod";
 
-import type {
-  ColumnSortItem,
-  DataTableColumnConfig,
-  SortableColumnId,
-} from "@/lib/data-table-types";
-
-import { type Task, tasks } from "@/db/schema";
-import { getDataTableSearchParams } from "@/lib/data-table-parsers";
+import { tasks } from "@/db/schema";
+import { defineDataTable } from "@/lib/data-table-definition";
 import { DATA_MODES, DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 
-export const tasksColumnConfigs = {
-  code: { isSortable: false },
-  title: { variant: "text" },
-  status: { variant: "multi-select" },
-  priority: { variant: "multi-select" },
-  estimatedHours: { variant: "number", filter: "range" },
-  createdAt: { variant: "date", filter: "range" },
-} as const satisfies Partial<Record<keyof Task, DataTableColumnConfig>>;
-
-export const tasksDefaultSorting = [
-  { id: "createdAt", desc: true },
-] satisfies ColumnSortItem<SortableColumnId<typeof tasksColumnConfigs>>[];
-
-const tasksSearchParams = getDataTableSearchParams({
-  columnConfigs: tasksColumnConfigs,
-  defaultSorting: tasksDefaultSorting,
+export const tasksTable = defineDataTable({
+  columns: {
+    code: { enableSorting: false },
+    title: { variant: "text" },
+    status: { variant: "multi-select" },
+    priority: { variant: "multi-select" },
+    estimatedHours: { variant: "number", filter: "range" },
+    createdAt: { variant: "date", filter: "range" },
+  },
+  defaultSorting: [{ id: "createdAt", desc: true }],
 });
 
-export const searchParamsCache = createSearchParamsCache(
-  {
-    filterMode: parseAsStringEnum(
-      FILTER_MODES.map((filterMode) => filterMode.value),
-    ).withDefault("plain"),
-    dataMode: parseAsStringEnum(
-      DATA_MODES.map((dataMode) => dataMode.value),
-    ).withDefault("server"),
-    dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
-    ...tasksSearchParams.parsers,
-  },
-  { urlKeys: tasksSearchParams.urlKeys },
-);
+export const searchParamsCache = createSearchParamsCache({
+  filterMode: parseAsStringEnum(
+    FILTER_MODES.map((filterMode) => filterMode.value),
+  ).withDefault("plain"),
+  dataMode: parseAsStringEnum(
+    DATA_MODES.map((dataMode) => dataMode.value),
+  ).withDefault("server"),
+  dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
+});
 
 export const createTaskSchema = z.object({
   title: z.string(),

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { defineDataTable } from "@/lib/data-table-definition";
 import {
   useDataTable,
   type UseDataTableProps,
@@ -226,30 +227,6 @@ describe("useDataTable", () => {
     expect(result.current.table.state.pagination.pageSize).toBe(25);
   });
 
-  it("reads and writes the configured query keys", async () => {
-    const { result, getLastSearch } = renderDataTable(
-      "?p=2&s=title.asc&join=or",
-      {
-        queryKeys: {
-          page: "p",
-          perPage: "size",
-          sort: "s",
-          joinOperator: "join",
-        },
-      },
-    );
-
-    expect(result.current.table.state.pagination.pageIndex).toBe(1);
-    expect(result.current.table.state.sorting).toEqual([
-      { id: "title", desc: false },
-    ]);
-    expect(result.current.table.getJoinOperator()).toBe("or");
-
-    act(() => result.current.table.setPageIndex(3));
-    await waitFor(() => expect(getLastSearch()?.get("p")).toBe("4"));
-    expect(getLastSearch()?.has("page")).toBe(false);
-  });
-
   it("writes every filter on a column, including one with no value", async () => {
     const { result, getLastSearch } = renderDataTable("");
 
@@ -386,29 +363,17 @@ describe("useDataTable", () => {
     expect(result.current.table.state.globalFilter).toBe("");
   });
 
-  it("reads and writes the configured global filter query key", async () => {
-    const { result, getLastSearch } = renderDataTable("?q=bug", {
-      queryKeys: { globalFilter: "q" },
-    });
-
-    expect(result.current.table.state.globalFilter).toBe("bug");
-
-    act(() => result.current.table.setGlobalFilter("feature"));
-
-    await waitFor(() => expect(getLastSearch()?.get("q")).toBe("feature"));
-    expect(getLastSearch()?.has("search")).toBe(false);
-  });
-
-  it("prefixes every URL key, including column filters", async () => {
+  it("namespaces every URL key with the id, including column filters", async () => {
     const { result, getLastSearch } = renderDataTable(
-      "?t_page=2&t_sort=title.asc&t_title=bug&title=other&page=9",
-      { queryKeyPrefix: "t_" },
+      "?t.page=2&t.sort=title.asc&t.title=bug&t.search=x&title=other&page=9",
+      { id: "t" },
     );
 
     expect(result.current.table.state.pagination.pageIndex).toBe(1);
     expect(result.current.table.state.sorting).toEqual([
       { id: "title", desc: false },
     ]);
+    expect(result.current.table.state.globalFilter).toBe("x");
     expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
       ["title", "bug"],
     ]);
@@ -419,17 +384,17 @@ describe("useDataTable", () => {
       ]);
     });
 
-    await waitFor(() => expect(getLastSearch()?.get("t_status")).toBe("todo"));
-    expect(getLastSearch()?.get("t_page")).toBe("1");
+    await waitFor(() => expect(getLastSearch()?.get("t.status")).toBe("todo"));
+    expect(getLastSearch()?.get("t.page")).toBe("1");
     expect(getLastSearch()?.has("status")).toBe(false);
     expect(getLastSearch()?.get("title")).toBe("other");
   });
 
-  it("keeps two prefixed tables on one page apart", async () => {
+  it("keeps two tables with different ids on one page apart", async () => {
     const { result, getLastSearch } = renderDataTables(
-      "?a_page=2&b_title=bug",
-      { queryKeyPrefix: "a_" },
-      { queryKeyPrefix: "b_" },
+      "?a.page=2&b.title=bug",
+      { id: "a" },
+      { definition: defineDataTable({ id: "b", columns: tableColumns }) },
     );
 
     expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
@@ -443,17 +408,69 @@ describe("useDataTable", () => {
 
     act(() => result.current.second.table.setPageIndex(4));
 
-    await waitFor(() => expect(getLastSearch()?.get("b_page")).toBe("5"));
-    expect(getLastSearch()?.get("a_page")).toBe("2");
+    await waitFor(() => expect(getLastSearch()?.get("b.page")).toBe("5"));
+    expect(getLastSearch()?.get("a.page")).toBe("2");
     expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
   });
 
-  it("throws when a column filter clashes with a built-in URL key", () => {
+  it("applies the definition to the columns", async () => {
+    const definition = defineDataTable({
+      columns: {
+        code: { variant: "text" },
+        title: { enableSorting: false },
+      },
+    });
+    const { result, getLastSearch } = renderDataTable("?code=T-1&status=todo", {
+      definition,
+    });
+    const { table } = result.current;
+
+    expect(table.getColumn("code")?.getCanFilter()).toBe(true);
+    expect(table.getColumn("code")?.getCanSort()).toBe(true);
+    expect(table.getColumn("code")?.columnDef.meta?.variant).toBe("text");
+    expect(table.getColumn("title")?.getCanFilter()).toBe(false);
+    expect(table.getColumn("title")?.getCanSort()).toBe(false);
+    expect(table.getColumn("status")?.getCanFilter()).toBe(false);
+    expect(table.getColumn("status")?.getCanSort()).toBe(false);
+    expect(getFilterSummary(table.state.columnFilters)).toEqual([
+      ["code", "T-1"],
+    ]);
+
+    act(() => table.setSorting([{ id: "code", desc: true }]));
+
+    await waitFor(() => expect(getLastSearch()?.get("sort")).toBe("code.desc"));
+  });
+
+  it("uses the definition's defaults over initialState", () => {
+    const definition = defineDataTable({
+      columns: tableColumns,
+      defaultSorting: [{ id: "title", desc: true }],
+      defaultPageSize: 25,
+    });
+    const { result } = renderDataTable("", {
+      definition,
+      initialState: {
+        // @ts-expect-error the definition owns the default sorting
+        sorting: [{ id: "status", desc: false }],
+        pagination: { pageIndex: 0, pageSize: 50 },
+      },
+    });
+
+    expect(result.current.table.state.sorting).toEqual([
+      { id: "title", desc: true },
+    ]);
+    expect(result.current.table.state.pagination.pageSize).toBe(25);
+
+    act(() => result.current.table.resetSorting());
+
+    expect(result.current.table.state.sorting).toEqual([
+      { id: "title", desc: true },
+    ]);
+  });
+
+  it("throws when a filterable column uses a built-in key", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
 
-    expect(() =>
-      renderDataTable("", { queryKeys: { globalFilter: "title" } }),
-    ).toThrow('both use the URL key "title"');
     expect(() =>
       renderDataTable("", {
         columns: columnHelper.columns([
@@ -546,6 +563,12 @@ function renderDataTables(
     second: useTestDataTable(second),
   }));
 }
+
+const tableColumns = {
+  code: { enableSorting: false },
+  title: { variant: "text" },
+  status: { variant: "multi-select" },
+} as const;
 
 const columns = columnHelper.columns([
   columnHelper.accessor("code", { id: "code", enableSorting: false }),

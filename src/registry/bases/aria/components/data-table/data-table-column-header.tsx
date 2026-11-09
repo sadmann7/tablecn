@@ -31,13 +31,13 @@ interface DataTableColumnHeaderProps<
   TValue,
 > extends Omit<React.ComponentProps<typeof ButtonPrimitive>, "className"> {
   column: Column<DataTableFeatures, TData, TValue>;
-  label: string;
+  label?: string;
   className?: string;
 }
 
 export function DataTableColumnHeader<TData extends RowData, TValue>({
   column,
-  label,
+  label = column.columnDef.meta?.label ?? column.id,
   className,
   ...props
 }: DataTableColumnHeaderProps<TData, TValue>) {
@@ -69,6 +69,7 @@ interface DataTableColumnHeaderMenuProps<
   TData extends RowData,
   TValue,
 > extends DataTableColumnHeaderProps<TData, TValue> {
+  label: string;
   sortDirection: SortDirection | "none";
 }
 

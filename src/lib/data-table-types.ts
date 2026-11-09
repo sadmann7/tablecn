@@ -54,11 +54,14 @@ export type ColumnVariantMeta =
       } & ColumnVariantOptions[TVariant];
     }[keyof ColumnVariantOptions];
 
-export type DataTableColumnMeta = {
+export interface DataTableColumnDisplayMeta {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
   placeholder?: string;
-} & ColumnVariantMeta;
+}
+
+export type DataTableColumnMeta = DataTableColumnDisplayMeta &
+  ColumnVariantMeta;
 
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;
@@ -92,7 +95,7 @@ declare module "@tanstack/react-table" {
 }
 
 export type DataTableColumnConfig = {
-  isSortable?: boolean;
+  enableSorting?: boolean;
 } & ColumnVariantMeta;
 
 export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
@@ -108,19 +111,13 @@ export type FilterableColumnId<TColumnConfigs extends DataTableColumnConfigs> =
     string;
 
 export type SortableColumnId<TColumnConfigs extends DataTableColumnConfigs> = {
-  [K in keyof TColumnConfigs]: TColumnConfigs[K] extends { isSortable: false }
+  [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
+    enableSorting: false;
+  }
     ? never
     : K;
 }[keyof TColumnConfigs] &
   string;
-
-export interface DataTableQueryKeys {
-  page: string;
-  perPage: string;
-  sort: string;
-  joinOperator: string;
-  globalFilter: string;
-}
 
 export interface DataTableQuery<
   TFilterColumnId extends string = string,
@@ -133,13 +130,6 @@ export interface DataTableQuery<
   joinOperator: JoinOperator;
   globalFilter: string;
 }
-
-export type DataTableColumnConfigsQuery<
-  TColumnConfigs extends DataTableColumnConfigs,
-> = DataTableQuery<
-  FilterableColumnId<TColumnConfigs>,
-  SortableColumnId<TColumnConfigs>
->;
 
 export interface DataTableRowAction<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;

@@ -1,6 +1,7 @@
 "use client";
 
-import { createColumnHelper, type Row } from "@tanstack/react-table";
+import type { Row } from "@tanstack/react-table";
+
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -12,14 +13,11 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type {
-  DataTableQueryKeys,
-  DataTableRowAction,
-} from "@/lib/data-table-types";
+import type { DataTableRowAction } from "@/lib/data-table-types";
 import type { DataMode, Direction, FilterMode } from "@/lib/flag";
 
 import { type Task, tasks } from "@/db/schema";
-import { getColumnOptions } from "@/lib/data-table-parsers";
+import { createDataTableColumnHelper } from "@/lib/data-table-column-helper";
 import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
@@ -31,10 +29,7 @@ import { DataTableFilterMenu } from "@/registry/bases/radix/components/data-tabl
 import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
 import { DataTableSortMenu } from "@/registry/bases/radix/components/data-table/data-table-sort-menu";
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
-import {
-  useDataTable,
-  type UseDataTableProps,
-} from "@/registry/bases/radix/hooks/use-data-table";
+import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 import { Badge } from "@/registry/bases/radix/ui/badge";
 import { DirectionProvider } from "@/registry/bases/radix/ui/direction";
 import {
@@ -56,12 +51,12 @@ import type {
 
 import { updateTask } from "../lib/actions";
 import { getPriorityIcon, getStatusIcon } from "../lib/utils";
-import { tasksColumnConfigs, tasksDefaultSorting } from "../lib/validations";
+import { tasksTable } from "../lib/validations";
 import { DeleteTasksDialog } from "./delete-tasks-dialog";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { UpdateTaskSheet } from "./update-task-sheet";
 
-const columnHelper = createColumnHelper<DataTableFeatures, Task>();
+const columnHelper = createDataTableColumnHelper<Task>()(tasksTable);
 
 interface TasksTableProps {
   dataMode: DataMode;
@@ -75,7 +70,6 @@ interface TasksTableProps {
       Awaited<ReturnType<typeof getEstimatedHoursRange>>,
     ]
   >;
-  queryKeys?: Partial<DataTableQueryKeys>;
 }
 
 export function TasksTable({
@@ -83,7 +77,6 @@ export function TasksTable({
   dir,
   filterMode,
   promises,
-  queryKeys,
 }: TasksTableProps) {
   const enableAdvancedFilter = filterMode !== "plain";
 
@@ -108,19 +101,13 @@ export function TasksTable({
       columnHelper.columns([
         getDataTableSelectColumn<Task>(),
         columnHelper.accessor("code", {
-          id: "code",
-          header: ({ column }) => (
-            <DataTableColumnHeader column={column} label="Task" />
-          ),
+          header: ({ column }) => <DataTableColumnHeader column={column} />,
           cell: ({ cell }) => <div>{cell.getValue()}</div>,
-          ...getColumnOptions(tasksColumnConfigs.code),
+          meta: { label: "Task" },
           enableHiding: false,
         }),
         columnHelper.accessor("title", {
-          id: "title",
-          header: ({ column }) => (
-            <DataTableColumnHeader column={column} label="Title" />
-          ),
+          header: ({ column }) => <DataTableColumnHeader column={column} />,
           cell: ({ row, cell }) => {
             const label = tasks.label.enumValues.find(
               (option) => option === row.original.label,
@@ -138,17 +125,12 @@ export function TasksTable({
           meta: {
             label: "Title",
             placeholder: "Search titles...",
-            variant: tasksColumnConfigs.title.variant,
             icon: Text,
           },
-          ...getColumnOptions(tasksColumnConfigs.title),
           size: 500,
         }),
         columnHelper.accessor("status", {
-          id: "status",
-          header: ({ column }) => (
-            <DataTableColumnHeader column={column} label="Status" />
-          ),
+          header: ({ column }) => <DataTableColumnHeader column={column} />,
           cell: ({ cell }) => {
             const status = tasks.status.enumValues.find(
               (status) => status === cell.getValue(),
@@ -167,7 +149,6 @@ export function TasksTable({
           },
           meta: {
             label: "Status",
-            variant: tasksColumnConfigs.status.variant,
             options: tasks.status.enumValues.map((status) => ({
               label: status.charAt(0).toUpperCase() + status.slice(1),
               value: status,
@@ -176,13 +157,9 @@ export function TasksTable({
             })),
             icon: CircleDashed,
           },
-          ...getColumnOptions(tasksColumnConfigs.status),
         }),
         columnHelper.accessor("priority", {
-          id: "priority",
-          header: ({ column }) => (
-            <DataTableColumnHeader column={column} label="Priority" />
-          ),
+          header: ({ column }) => <DataTableColumnHeader column={column} />,
           cell: ({ cell }) => {
             const priority = tasks.priority.enumValues.find(
               (priority) => priority === cell.getValue(),
@@ -201,7 +178,6 @@ export function TasksTable({
           },
           meta: {
             label: "Priority",
-            variant: tasksColumnConfigs.priority.variant,
             options: tasks.priority.enumValues.map((priority) => ({
               label: priority.charAt(0).toUpperCase() + priority.slice(1),
               value: priority,
@@ -210,40 +186,27 @@ export function TasksTable({
             })),
             icon: ArrowUpDown,
           },
-          ...getColumnOptions(tasksColumnConfigs.priority),
         }),
         columnHelper.accessor("estimatedHours", {
-          id: "estimatedHours",
-          header: ({ column }) => (
-            <DataTableColumnHeader column={column} label="Est. Hours" />
-          ),
+          header: ({ column }) => <DataTableColumnHeader column={column} />,
           cell: ({ cell }) => (
             <div className="w-20 text-right">{cell.getValue()}</div>
           ),
           meta: {
             label: "Est. Hours",
-            variant: tasksColumnConfigs.estimatedHours.variant,
-            filter: tasksColumnConfigs.estimatedHours.filter,
             min: estimatedHoursRange.min,
             max: estimatedHoursRange.max,
             unit: "hr",
             icon: Clock,
           },
-          ...getColumnOptions(tasksColumnConfigs.estimatedHours),
         }),
         columnHelper.accessor("createdAt", {
-          id: "createdAt",
-          header: ({ column }) => (
-            <DataTableColumnHeader column={column} label="Created At" />
-          ),
+          header: ({ column }) => <DataTableColumnHeader column={column} />,
           cell: ({ cell }) => formatDate(cell.getValue()),
           meta: {
             label: "Created At",
-            variant: tasksColumnConfigs.createdAt.variant,
-            filter: tasksColumnConfigs.createdAt.filter,
             icon: CalendarIcon,
           },
-          ...getColumnOptions(tasksColumnConfigs.createdAt),
         }),
         getDataTableActionsColumn<Task>({
           actions: ({ row }) => (
@@ -256,26 +219,20 @@ export function TasksTable({
     [countsKey],
   );
 
-  const tableProps: Omit<UseDataTableProps<Task>, "mode" | "pageCount"> = {
+  const { table } = useDataTable({
+    definition: tasksTable,
     data,
     columns,
     initialState: {
-      sorting: tasksDefaultSorting,
       columnPinning: { start: ["select"], end: ["actions"] },
     },
-    queryKeys,
     getRowId: (originalRow) => originalRow.id,
     shallow: false,
     clearOnDefault: true,
     enableRowRangeSelection: true,
     enableGlobalFilter: false,
-  };
-
-  const { table } = useDataTable(
-    dataMode === "client"
-      ? { ...tableProps, mode: "client" }
-      : { ...tableProps, pageCount },
-  );
+    ...(dataMode === "client" ? { mode: "client" as const } : { pageCount }),
+  });
 
   return (
     <DirectionProvider dir={dir}>

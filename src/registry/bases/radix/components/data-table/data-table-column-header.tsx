@@ -25,12 +25,12 @@ interface DataTableColumnHeaderProps<
   TValue,
 > extends React.ComponentProps<typeof DropdownMenuTrigger> {
   column: Column<DataTableFeatures, TData, TValue>;
-  label: string;
+  label?: string;
 }
 
 export function DataTableColumnHeader<TData extends RowData, TValue>({
   column,
-  label,
+  label = column.columnDef.meta?.label ?? column.id,
   className,
   ...props
 }: DataTableColumnHeaderProps<TData, TValue>) {
@@ -64,6 +64,7 @@ interface DataTableColumnHeaderMenuProps<
   TData extends RowData,
   TValue,
 > extends DataTableColumnHeaderProps<TData, TValue> {
+  label: string;
   isVisible: boolean;
   sortDirection: SortDirection | "none";
 }

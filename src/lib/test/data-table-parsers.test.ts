@@ -1,14 +1,10 @@
-import { createLoader } from "nuqs/server";
 import { describe, expect, it } from "vitest";
 
-import { tasksColumnConfigs, tasksDefaultSorting } from "@/app/lib/validations";
+import { tasksTable } from "@/app/lib/validations";
 import {
   getColumnFilterParser,
   getColumnFilters,
   getColumnFiltersKey,
-  getColumnOptions,
-  getDataTableQuery,
-  getDataTableSearchParams,
   getFilterableColumns,
   getSortableColumns,
   getSortingStateParser,
@@ -17,18 +13,11 @@ import {
   sortColumnFiltersBySearch,
 } from "@/lib/data-table-parsers";
 
-const loadSearch = createLoader(
-  getDataTableSearchParams({
-    columnConfigs: tasksColumnConfigs,
-    defaultSorting: tasksDefaultSorting,
-  }).parsers,
-);
-
 describe("column config", () => {
   const columnConfigs = {
     name: { variant: "text" },
-    age: { variant: "number", filter: "range", isSortable: false },
-    id: { isSortable: false },
+    age: { variant: "number", filter: "range", enableSorting: false },
+    id: { enableSorting: false },
     createdAt: {},
   } as const;
 
@@ -38,17 +27,6 @@ describe("column config", () => {
       age: "range",
     });
     expect(getSortableColumns(columnConfigs)).toEqual(["name", "createdAt"]);
-  });
-
-  it("maps a column config to TanStack column options", () => {
-    expect(getColumnOptions(columnConfigs.age)).toEqual({
-      enableColumnFilter: true,
-      enableSorting: false,
-    });
-    expect(getColumnOptions(columnConfigs.createdAt)).toEqual({
-      enableColumnFilter: false,
-      enableSorting: true,
-    });
   });
 });
 
@@ -238,122 +216,6 @@ describe("serializeColumnFilter", () => {
   });
 });
 
-describe("getDataTableQuery", () => {
-  it("joins per-column params in column order and drops empty filters", () => {
-    const search = loadSearch(
-      "?status=not.in.todo&estimatedHours=gte.2&estimatedHours=LTE.8&title=ilike.the&createdAt=2026-01-01,2026-12-31&priority=bogus.xyz&joinOperator=or&title=",
-    );
-    const query = getDataTableQuery(search, tasksColumnConfigs);
-
-    expect(query.joinOperator).toBe("or");
-    expect(
-      query.filters.map((filter) => [filter.id, filter.operator, filter.value]),
-    ).toEqual([
-      ["title", "iLike", "the"],
-      ["status", "notInArray", ["todo"]],
-      ["priority", "inArray", ["bogus.xyz"]],
-      ["estimatedHours", "gte", "2"],
-      ["estimatedHours", "lte", "8"],
-      ["createdAt", "isBetween", ["2026-01-01", "2026-12-31"]],
-    ]);
-  });
-
-  it("defaults the join operator to and", () => {
-    const query = getDataTableQuery(
-      loadSearch("?status=todo"),
-      tasksColumnConfigs,
-    );
-
-    expect(query.joinOperator).toBe("and");
-    expect(loadSearch("?joinOperator=xor").joinOperator).toBe("and");
-  });
-
-  it("passes the global filter through and defaults it to empty", () => {
-    expect(
-      getDataTableQuery(loadSearch("?search=login%20bug"), tasksColumnConfigs)
-        .globalFilter,
-    ).toBe("login bug");
-    expect(
-      getDataTableQuery(loadSearch("?status=todo"), tasksColumnConfigs)
-        .globalFilter,
-    ).toBe("");
-  });
-});
-
-describe("getDataTableSearchParams", () => {
-  it("defaults page, page size, and sorting", () => {
-    const search = loadSearch("?page=no");
-
-    expect(search.page).toBe(1);
-    expect(search.perPage).toBe(10);
-    expect(search.sort).toEqual(tasksDefaultSorting);
-
-    const custom = createLoader(
-      getDataTableSearchParams({
-        columnConfigs: tasksColumnConfigs,
-        defaultPerPage: 25,
-        defaultSorting: [],
-      }).parsers,
-    )("?page=2&perPage=5");
-
-    expect(custom.page).toBe(2);
-    expect(custom.perPage).toBe(5);
-    expect(custom.sort).toEqual([]);
-  });
-
-  it("reads renamed and prefixed keys through nuqs urlKeys", () => {
-    const { parsers, urlKeys } = getDataTableSearchParams({
-      columnConfigs: tasksColumnConfigs,
-      queryKeys: { globalFilter: "q" },
-      queryKeyPrefix: "tasks_",
-    });
-
-    expect(urlKeys).toEqual({
-      page: "tasks_page",
-      perPage: "tasks_perPage",
-      sort: "tasks_sort",
-      joinOperator: "tasks_joinOperator",
-      search: "tasks_q",
-      title: "tasks_title",
-      status: "tasks_status",
-      priority: "tasks_priority",
-      estimatedHours: "tasks_estimatedHours",
-      createdAt: "tasks_createdAt",
-    });
-
-    const search = createLoader(parsers, { urlKeys })(
-      "?tasks_page=2&tasks_q=bug&tasks_status=todo&page=9&search=other",
-    );
-    const query = getDataTableQuery(search, tasksColumnConfigs);
-
-    expect(query.page).toBe(2);
-    expect(query.globalFilter).toBe("bug");
-    expect(query.filters.map((filter) => [filter.id, filter.value])).toEqual([
-      ["status", ["todo"]],
-    ]);
-  });
-
-  it("rejects query keys that clash on a URL key", () => {
-    expect(() =>
-      getDataTableSearchParams({
-        columnConfigs: { title: { variant: "text" } },
-        queryKeys: { globalFilter: "title" },
-      }),
-    ).toThrow('both use the URL key "title"');
-    expect(() =>
-      getDataTableSearchParams({
-        columnConfigs: { page: { variant: "text" } },
-      }),
-    ).toThrow('column id "page" is reserved');
-    expect(() =>
-      getDataTableSearchParams({
-        columnConfigs: tasksColumnConfigs,
-        queryKeys: { page: "sort" },
-      }),
-    ).toThrow('page and sort query keys both use the URL key "sort"');
-  });
-});
-
 describe("getColumnFilters", () => {
   it("numbers filters per column and builds a stable key", () => {
     const title = parseColumnFilter("title", "text", "the");
@@ -396,7 +258,7 @@ describe("sortColumnFiltersBySearch", () => {
 });
 
 describe("getSortingStateParser", () => {
-  const parser = getSortingStateParser(getSortableColumns(tasksColumnConfigs));
+  const parser = getSortingStateParser(getSortableColumns(tasksTable.columns));
 
   it("reads the compact form and rejects unknown columns", () => {
     expect(parser.parse("createdAt.desc,title.asc")).toEqual([

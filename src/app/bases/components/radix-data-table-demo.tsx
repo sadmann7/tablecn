@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
 } from "@/registry/bases/radix/ui/dropdown-menu";
 
+import { tasksTable } from "../../lib/validations";
 import { useBasesDataTable } from "../hooks/use-bases-data-table";
 import { getBasesDataTableColumns } from "../lib/data-table-columns";
 
@@ -49,9 +50,7 @@ export function RadixDataTableDemo() {
           ),
           getAriaLabel: (row) => `Open actions for ${row.original.code}`,
         }),
-        renderHeader: (column, label) => (
-          <DataTableColumnHeader column={column} label={label} />
-        ),
+        renderHeader: (column) => <DataTableColumnHeader column={column} />,
         renderBadge: (children) => (
           <Badge variant="outline" className="py-1 [&>svg]:size-3.5">
             {children}
@@ -65,8 +64,8 @@ export function RadixDataTableDemo() {
     mode: "client",
     data,
     columns,
+    definition: tasksTable,
     initialState: {
-      sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { start: ["select"], end: ["actions"] },
     },
     getRowId: (row) => row.id,

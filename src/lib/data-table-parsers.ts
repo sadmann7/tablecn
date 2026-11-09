@@ -1,23 +1,13 @@
-import {
-  createParser,
-  parseAsInteger,
-  parseAsNativeArrayOf,
-  parseAsString,
-  parseAsStringEnum,
-} from "nuqs/server";
+import { createParser, parseAsNativeArrayOf } from "nuqs/server";
 import { z } from "zod";
 
 import type {
   ColumnFilterItem,
   ColumnSortItem,
-  DataTableColumnConfig,
   DataTableColumnConfigs,
-  DataTableColumnConfigsQuery,
-  DataTableQueryKeys,
   FilterableColumnId,
   FilterOperator,
   FilterVariant,
-  JoinOperator,
   SortableColumnId,
 } from "@/lib/data-table-types";
 
@@ -28,7 +18,6 @@ import {
   getIsActiveFilter,
   getIsValuelessOperator,
   getPlainFilterOperator,
-  JOIN_OPERATORS,
   normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
@@ -241,140 +230,11 @@ export function getSortableColumns<
 >(columnConfigs: TColumnConfigs) {
   return getKeys<keyof TColumnConfigs & string>(columnConfigs).filter(
     (id): id is SortableColumnId<TColumnConfigs> =>
-      columnConfigs[id]?.isSortable !== false,
+      columnConfigs[id]?.enableSorting !== false,
   );
 }
 
-export function getColumnOptions(config: DataTableColumnConfig) {
-  return {
-    enableColumnFilter: config.variant !== undefined,
-    enableSorting: config.isSortable !== false,
-  };
-}
-
-const QUERY_KEY_NAMES = {
-  page: "page",
-  perPage: "perPage",
-  sort: "sort",
-  joinOperator: "joinOperator",
-  search: "globalFilter",
-} as const satisfies Record<string, keyof DataTableQueryKeys>;
-
-type DataTableSearchKey = keyof typeof QUERY_KEY_NAMES;
-
-export interface DataTableQueryKeyOptions {
-  queryKeys?: Partial<DataTableQueryKeys>;
-  queryKeyPrefix?: string;
-}
-
-export function getUrlKeys<TColumnId extends string>(
-  filterableIds: readonly TColumnId[],
-  { queryKeys, queryKeyPrefix = "" }: DataTableQueryKeyOptions = {},
-) {
-  const urlKeys: Record<string, string> = {};
-  const namesByUrlKey = new Map<string, string>();
-
-  for (const searchKey of getKeys(QUERY_KEY_NAMES)) {
-    const name = QUERY_KEY_NAMES[searchKey];
-    const urlKey = `${queryKeyPrefix}${queryKeys?.[name] ?? searchKey}`;
-    const takenBy = namesByUrlKey.get(urlKey);
-    if (takenBy) {
-      throw new Error(
-        `Data table ${takenBy} and ${name} query keys both use the URL key "${urlKey}".`,
-      );
-    }
-    urlKeys[searchKey] = urlKey;
-    namesByUrlKey.set(urlKey, name);
-  }
-
-  for (const id of filterableIds) {
-    assertColumnId(id);
-    const urlKey = `${queryKeyPrefix}${id}`;
-    const name = namesByUrlKey.get(urlKey);
-    if (name) {
-      throw new Error(
-        `Data table column "${id}" and the ${name} query key both use the URL key "${urlKey}".`,
-      );
-    }
-    urlKeys[id] = urlKey;
-  }
-
-  return urlKeys as Record<DataTableSearchKey, string> &
-    Record<TColumnId, string>;
-}
-
-interface DataTableSearchParamsOptions<
-  TColumnConfigs extends DataTableColumnConfigs,
-> extends DataTableQueryKeyOptions {
-  columnConfigs: TColumnConfigs;
-  defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumnConfigs>>>[];
-  defaultPerPage?: number;
-}
-
-export function getDataTableSearchParams<
-  TColumnConfigs extends DataTableColumnConfigs,
->({
-  columnConfigs,
-  defaultSorting = [],
-  defaultPerPage = 10,
-  ...options
-}: DataTableSearchParamsOptions<TColumnConfigs>) {
-  const filterableColumns = getFilterableColumns(columnConfigs);
-
-  return {
-    parsers: {
-      page: parseAsInteger.withDefault(1),
-      perPage: parseAsInteger.withDefault(defaultPerPage),
-      sort: getSortingStateParser(
-        getSortableColumns(columnConfigs),
-      ).withDefault(defaultSorting),
-      joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault("and"),
-      search: parseAsString.withDefault(""),
-      ...getFilterParsers(filterableColumns),
-    },
-    urlKeys: getUrlKeys(getKeys(filterableColumns), options),
-  };
-}
-
-interface DataTableSearch<TSortColumnId extends string> {
-  page: number;
-  perPage: number;
-  sort: ColumnSortItem<TSortColumnId>[];
-  joinOperator: JoinOperator;
-  search: string;
-}
-
-export function getDataTableQuery<
-  TColumnConfigs extends DataTableColumnConfigs,
->(
-  search: NoInfer<
-    DataTableSearch<SortableColumnId<TColumnConfigs>> &
-      Record<
-        FilterableColumnId<TColumnConfigs>,
-        ColumnFilterItem<FilterableColumnId<TColumnConfigs>>[]
-      >
-  >,
-  columnConfigs: TColumnConfigs,
-): DataTableColumnConfigsQuery<TColumnConfigs> {
-  const filtersById: Record<
-    FilterableColumnId<TColumnConfigs>,
-    ColumnFilterItem<FilterableColumnId<TColumnConfigs>>[]
-  > = search;
-
-  return {
-    page: search.page,
-    perPage: search.perPage,
-    sorting: search.sort,
-    filters: getColumnFilters(
-      getKeys(getFilterableColumns(columnConfigs)),
-      (id) => filtersById[id],
-    ),
-    joinOperator: search.joinOperator,
-    globalFilter: search.search,
-  };
-}
-
-function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
+export function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
   return Object.keys(record).filter((key): key is TKey =>
     Object.hasOwn(record, key),
   );
@@ -460,24 +320,5 @@ function getIsSameFilter(a: ColumnFilterItem, b: ColumnFilterItem) {
   return (
     a.value.length === otherValue.length &&
     a.value.every((item, index) => item === otherValue[index])
-  );
-}
-
-function getFilterParsers<TColumnId extends string>(
-  columns: Record<TColumnId, FilterVariant>,
-) {
-  const parsers = getKeys(columns).map(
-    (id) => [id, getColumnFilterParser(id, columns[id])] as const,
-  );
-  return Object.fromEntries(parsers) as Record<
-    TColumnId,
-    ReturnType<typeof getColumnFilterParser<TColumnId>>
-  >;
-}
-
-function assertColumnId(id: string) {
-  if (!Object.hasOwn(QUERY_KEY_NAMES, id)) return;
-  throw new Error(
-    `Data table column id "${id}" is reserved for the ${id} query key.`,
   );
 }

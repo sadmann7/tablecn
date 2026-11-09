@@ -102,6 +102,14 @@
           "type": "registry:lib"
         },
         {
+          "path": "src/lib/data-table-definition.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-column-helper.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "src/lib/data-table-types.ts",
           "type": "registry:lib"
         },

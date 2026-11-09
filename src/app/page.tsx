@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 
-import { getDataTableQuery } from "@/lib/data-table-parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
 import { TasksTable } from "./components/tasks-table";
@@ -15,7 +14,7 @@ import {
   getTasks,
   getTaskStatusCounts,
 } from "./lib/queries";
-import { searchParamsCache, tasksColumnConfigs } from "./lib/validations";
+import { searchParamsCache, tasksTable } from "./lib/validations";
 
 export default function IndexPage(props: PageProps<"/">) {
   return (
@@ -51,13 +50,12 @@ export default function IndexPage(props: PageProps<"/">) {
 
 async function TasksTableWrapper(props: PageProps<"/">) {
   const searchParams = await props.searchParams;
-  const search = searchParamsCache.parse(searchParams);
-  const { dataMode, dir } = search;
+  const { dataMode, dir, filterMode } = searchParamsCache.parse(searchParams);
 
   const tasksPromise =
     dataMode === "client"
       ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
-      : getTasks(getDataTableQuery(search, tasksColumnConfigs));
+      : getTasks(tasksTable.parse(searchParams));
 
   const promises = Promise.all([
     tasksPromise,
@@ -71,7 +69,7 @@ async function TasksTableWrapper(props: PageProps<"/">) {
       key={dataMode}
       dataMode={dataMode}
       dir={dir}
-      filterMode={search.filterMode}
+      filterMode={filterMode}
       promises={promises}
     />
   );

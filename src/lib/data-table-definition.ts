@@ -1,0 +1,206 @@
+import {
+  createLoader,
+  type LoaderInput,
+  parseAsInteger,
+  parseAsString,
+  parseAsStringEnum,
+} from "nuqs/server";
+
+import type {
+  ColumnFilterItem,
+  ColumnSortItem,
+  ColumnVariantOptions,
+  DataTableColumnConfig,
+  DataTableColumnConfigs,
+  DataTableColumnDisplayMeta,
+  DataTableQuery,
+  FilterableColumnId,
+  FilterVariant,
+  JoinOperator,
+  SortableColumnId,
+} from "@/lib/data-table-types";
+
+import {
+  getColumnFilterParser,
+  getColumnFilters,
+  getFilterableColumns,
+  getKeys,
+  getSortableColumns,
+  getSortingStateParser,
+} from "@/lib/data-table-parsers";
+import { JOIN_OPERATORS } from "@/lib/data-table-utils";
+
+const DEFAULT_PAGE_SIZE = 10;
+
+const DATA_TABLE_KEYS = [
+  "page",
+  "perPage",
+  "sort",
+  "joinOperator",
+  "search",
+] as const;
+
+type DataTableKey = (typeof DATA_TABLE_KEYS)[number];
+
+type ReservedColumnConfigs = Partial<
+  Record<DataTableKey, { variant?: undefined }>
+>;
+
+export type ColumnDisplayMeta<TConfig> = DataTableColumnDisplayMeta &
+  (TConfig extends {
+    variant: infer TVariant extends keyof ColumnVariantOptions;
+  }
+    ? Partial<ColumnVariantOptions[TVariant]>
+    : unknown);
+
+interface DataTableDefinitionOptions<TColumns extends DataTableColumnConfigs> {
+  id?: string;
+  columns: TColumns & ReservedColumnConfigs;
+  defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumns>>>[];
+  defaultPageSize?: number;
+}
+
+export interface DataTableDefinition<
+  TColumns extends DataTableColumnConfigs = DataTableColumnConfigs,
+> {
+  readonly id: string | undefined;
+  readonly columns: TColumns;
+  readonly defaultSorting: ColumnSortItem<SortableColumnId<TColumns>>[];
+  readonly defaultPageSize: number;
+  readonly parsers: ReturnType<
+    typeof getDataTableStateParsers<SortableColumnId<TColumns>>
+  > &
+    ReturnType<typeof getDataTableFilterParsers<FilterableColumnId<TColumns>>>;
+  readonly urlKeys: Record<DataTableKey, string> &
+    Record<FilterableColumnId<TColumns>, string>;
+  parse(
+    search: LoaderInput,
+  ): InferDataTableQuery<DataTableDefinition<TColumns>>;
+}
+
+export type InferDataTableQuery<TDefinition> =
+  TDefinition extends DataTableDefinition<infer TColumns>
+    ? DataTableQuery<FilterableColumnId<TColumns>, SortableColumnId<TColumns>>
+    : never;
+
+export function defineDataTable<const TColumns extends DataTableColumnConfigs>({
+  id,
+  columns: columnsProp,
+  defaultSorting = [],
+  defaultPageSize = DEFAULT_PAGE_SIZE,
+}: DataTableDefinitionOptions<TColumns>): DataTableDefinition<TColumns> {
+  const columns: TColumns = columnsProp;
+  const filterableColumns = getFilterableColumns(columns);
+  const filterableIds = getKeys(filterableColumns);
+  const stateParsers = getDataTableStateParsers({
+    sortableIds: getSortableColumns(columns),
+    defaultSorting,
+    defaultPageSize,
+  });
+  const filterParsers = getDataTableFilterParsers(filterableColumns);
+  const urlKeys = getDataTableUrlKeys(filterableIds, id);
+  const loadState = createLoader(stateParsers, { urlKeys });
+  const loadFilters = createLoader(filterParsers, { urlKeys });
+
+  return Object.freeze({
+    id,
+    columns,
+    defaultSorting,
+    defaultPageSize,
+    parsers: { ...stateParsers, ...filterParsers },
+    urlKeys,
+    parse(search: LoaderInput) {
+      const state = loadState(search);
+      const filters = loadFilters(search) as Record<
+        FilterableColumnId<TColumns>,
+        ColumnFilterItem<FilterableColumnId<TColumns>>[]
+      >;
+
+      return {
+        page: state.page,
+        perPage: state.perPage,
+        sorting: state.sort,
+        filters: getColumnFilters(
+          filterableIds,
+          (columnId) => filters[columnId],
+        ),
+        joinOperator: state.joinOperator,
+        globalFilter: state.search,
+      };
+    },
+  });
+}
+
+export function getColumnConfigOptions(config: DataTableColumnConfig = {}) {
+  const { enableSorting, ...meta } = config;
+
+  return {
+    meta,
+    enableColumnFilter: config.variant !== undefined,
+    enableSorting: enableSorting !== false,
+  };
+}
+
+export function getDataTableUrlKeys<TColumnId extends string>(
+  filterableIds: readonly TColumnId[],
+  id?: string,
+) {
+  if (id === "") {
+    throw new Error("Data table id must not be empty.");
+  }
+  for (const columnId of filterableIds) {
+    if (!getIsDataTableKey(columnId)) continue;
+    throw new Error(
+      `Data table column id "${columnId}" is reserved for the ${columnId} query key. Rename the column or turn off its filter.`,
+    );
+  }
+
+  const prefix = id === undefined ? "" : `${id}.`;
+  const keys: readonly (DataTableKey | TColumnId)[] = [
+    ...DATA_TABLE_KEYS,
+    ...filterableIds,
+  ];
+
+  return Object.fromEntries(
+    keys.map((key) => [key, `${prefix}${key}`]),
+  ) as Record<DataTableKey, string> & Record<TColumnId, string>;
+}
+
+interface DataTableStateParsersOptions<TSortColumnId extends string> {
+  sortableIds: readonly TSortColumnId[] | Set<TSortColumnId>;
+  defaultSorting?: ColumnSortItem<TSortColumnId>[];
+  defaultPageSize?: number;
+  defaultJoinOperator?: JoinOperator;
+}
+
+export function getDataTableStateParsers<TSortColumnId extends string>({
+  sortableIds,
+  defaultSorting = [],
+  defaultPageSize = DEFAULT_PAGE_SIZE,
+  defaultJoinOperator = "and",
+}: DataTableStateParsersOptions<TSortColumnId>) {
+  return {
+    page: parseAsInteger.withDefault(1),
+    perPage: parseAsInteger.withDefault(defaultPageSize),
+    sort: getSortingStateParser(sortableIds).withDefault(defaultSorting),
+    joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault(
+      defaultJoinOperator,
+    ),
+    search: parseAsString.withDefault(""),
+  } satisfies Record<DataTableKey, unknown>;
+}
+
+export function getDataTableFilterParsers<TColumnId extends string>(
+  filterableColumns: Record<TColumnId, FilterVariant>,
+) {
+  return Object.fromEntries(
+    getKeys(filterableColumns).map((columnId) => [
+      columnId,
+      getColumnFilterParser(columnId, filterableColumns[columnId]),
+    ]),
+  ) as Record<TColumnId, ReturnType<typeof getColumnFilterParser<TColumnId>>>;
+}
+
+function getIsDataTableKey(key: string): key is DataTableKey {
+  return DATA_TABLE_KEYS.some((dataTableKey) => dataTableKey === key);
+}
