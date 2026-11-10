@@ -9,14 +9,14 @@ import {
   type Updater,
   useTable,
 } from "@tanstack/react-table";
-import { debounce, useQueryStates } from "nuqs";
+import {
+  debounce,
+  type Options as QueryStateOptions,
+  useQueryStates,
+} from "nuqs";
 import * as React from "react";
 
-import type {
-  ColumnFilterItem,
-  DataTableColumnConfigs,
-  JoinOperator,
-} from "@/lib/data-table-types";
+import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import {
   applyColumnConfig,
@@ -42,15 +42,6 @@ interface FiltersDraft {
   urlFiltersKey: string;
 }
 
-interface UrlStateOptions {
-  history?: "push" | "replace";
-  debounceMs?: number;
-  clearOnDefault?: boolean;
-  scroll?: boolean;
-  shallow?: boolean;
-  startTransition?: React.TransitionStartFunction;
-}
-
 type InitialTableState = Partial<TableState<DataTableFeatures>>;
 
 type UseDataTableProps<TData extends RowData> = Omit<
@@ -70,8 +61,11 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualPagination"
   | "manualSorting"
 > &
-  UrlStateOptions & {
-    id?: string;
+  Pick<
+    QueryStateOptions,
+    "history" | "scroll" | "shallow" | "clearOnDefault" | "startTransition"
+  > & {
+    debounceMs?: number;
     config?: Omit<DataTableConfig, "parse">;
     initialState?: Omit<
       InitialTableState,
@@ -93,7 +87,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
   );
 
 function useDataTable<TData extends RowData>({
-  id,
   config: configProp,
   columns,
   mode = "server",
@@ -108,17 +101,12 @@ function useDataTable<TData extends RowData>({
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
-  const columnConfigsKey = configProp
-    ? ""
-    : JSON.stringify(getColumnConfigs(columns));
+  const columnConfigs = getColumnConfigs(columns);
+  const columnConfigsKey = JSON.stringify(columnConfigs);
   const config = React.useMemo(
-    () =>
-      configProp ??
-      createDataTableConfig({
-        id,
-        columns: JSON.parse(columnConfigsKey) as DataTableColumnConfigs,
-      }),
-    [configProp, id, columnConfigsKey],
+    () => configProp ?? createDataTableConfig({ columns: columnConfigs }),
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- `columnConfigsKey` rebuilds the config only when the column configs change by value
+    [configProp, columnConfigsKey],
   );
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
@@ -143,14 +131,6 @@ function useDataTable<TData extends RowData>({
         : columns,
     [columns, configProp],
   );
-
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === "production") return;
-    if (!configProp || id === undefined || id === configProp.id) return;
-    console.warn(
-      `useDataTable: the \`id\` "${id}" is ignored because the config sets the URL keys. Set the id in createDataTableConfig instead.`,
-    );
-  }, [configProp, id]);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === "production" || !configProp) return;

@@ -330,20 +330,6 @@ describe("useDataTable", () => {
     await waitFor(() => expect(getLastSearch()?.has("title")).toBe(false));
   });
 
-  it("warns when an id conflicts with the config's", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    renderDataTable("", { id: "tasks" });
-    renderDataTable("", {
-      id: "t",
-      config: createDataTableConfig({ id: "t", columns: tableColumns }),
-    });
-
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn.mock.calls[0]?.[0]).toContain('"tasks"');
-    warn.mockRestore();
-  });
-
   it("warns about config keys with no matching column", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -568,35 +554,6 @@ describe("useDataTable", () => {
     await waitFor(() => expect(getLastSearch()?.get("b.page")).toBe("5"));
     expect(getLastSearch()?.get("a.page")).toBe("2");
     expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
-  });
-
-  it("keeps two client tables without a config apart by id", async () => {
-    const clientTable = {
-      mode: "client",
-      config: undefined,
-      pageCount: undefined,
-    } as const;
-    const { result, getLastSearch } = renderDataTables(
-      "?a.title=bug&b.page=2",
-      { ...clientTable, id: "a" },
-      { ...clientTable, id: "b" },
-    );
-
-    expect(
-      getFilterSummary(result.current.first.table.state.columnFilters),
-    ).toEqual([["title", "bug"]]);
-    expect(
-      getFilterSummary(result.current.second.table.state.columnFilters),
-    ).toEqual([]);
-
-    act(() =>
-      result.current.second.table.setColumnFilters([
-        { id: "title", value: "other" },
-      ]),
-    );
-
-    await waitFor(() => expect(getLastSearch()?.get("b.title")).toBe("other"));
-    expect(getLastSearch()?.get("a.title")).toBe("bug");
   });
 
   it("reuses one config under different ids", async () => {
