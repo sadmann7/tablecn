@@ -296,6 +296,21 @@ describe("useDataTable", () => {
     await waitFor(() => expect(getLastSearch()?.get("t.page")).toBe("2"));
   });
 
+  it("takes config options inline on a server table", () => {
+    const { result } = renderDataTable("?title=bug&sort=title.asc&page=2", {
+      config: { defaultPageSize: 25 },
+      pageCount: 3,
+    });
+    const { table } = result.current;
+
+    expect(getFilterSummary(table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+    ]);
+    expect(table.state.sorting).toEqual([{ id: "title", desc: false }]);
+    expect(table.state.pagination).toEqual({ pageIndex: 1, pageSize: 25 });
+    expect(table.options.manualFiltering).toBe(true);
+  });
+
   it("merges inline column configs over the column defs", () => {
     const { result } = renderDataTable("?status=todo&title=bug", {
       mode: "client",

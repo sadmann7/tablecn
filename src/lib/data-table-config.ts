@@ -183,8 +183,8 @@ export function createDataTableConfig<
 }
 
 export function getIsDataTableConfig(
-  config: Omit<DataTableConfig, "parse"> | DataTableConfigInput | undefined,
-): config is Omit<DataTableConfig, "parse"> {
+  config: DataTableConfigInput | undefined,
+): config is DataTableConfigInput & Omit<DataTableConfig, "parse"> {
   return config !== undefined && "stateParsers" in config;
 }
 

@@ -21,7 +21,6 @@ import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 import {
   applyColumnConfig,
   createConfigFromInputKey,
-  type DataTableConfig,
   type DataTableConfigInput,
   getConfigInputKey,
   getIsDataTableConfig,
@@ -46,8 +45,6 @@ interface FiltersDraft {
 
 type InitialTableState = Partial<TableState<DataTableFeatures>>;
 
-type DataTableConfigProp = Omit<DataTableConfig, "parse">;
-
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
   | "state"
@@ -70,6 +67,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
     "history" | "scroll" | "shallow" | "clearOnDefault" | "startTransition"
   > & {
     debounceMs?: number;
+    config?: DataTableConfigInput;
     initialState?: Omit<
       InitialTableState,
       | "columnFilters"
@@ -82,12 +80,10 @@ type UseDataTableProps<TData extends RowData> = Omit<
     | {
         mode?: "server";
         pageCount: number;
-        config: DataTableConfigProp;
       }
     | {
         mode: "client";
         pageCount?: never;
-        config?: DataTableConfigProp | DataTableConfigInput;
       }
   );
 
