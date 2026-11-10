@@ -1,5 +1,7 @@
+import type { Table } from "@tanstack/react-table";
+
 import { createColumnHelper } from "@tanstack/react-table";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { describe, expect, it, vi } from "vitest";
 
@@ -29,6 +31,7 @@ vi.mock("@/registry/bases/aria/ui/direction", () => ({
 interface Task {
   id: string;
   title: string;
+  status: string;
   done: boolean;
 }
 
@@ -38,35 +41,59 @@ const bases = [
   ["aria", AriaDataTable, AriaDataTableCommandFilterMenu, useAriaDataTable],
 ] as const;
 
-describe.each(bases)(
-  "DataTableCommandFilterMenu (%s)",
-  (_, DataTable, DataTableCommandFilterMenu, useDataTable) => {
-    function Table({ filters }: { filters: ColumnFilterItem[] }) {
-      const { table } = useDataTable<Task>({
-        mode: "client",
-        data,
-        columns,
-        getRowId: (row) => row.id,
-        initialState: { columnFilters: filters },
-      });
+type Base = (typeof bases)[number];
 
-      return (
-        <DataTable aria-label="Tasks" table={table}>
-          <DataTableCommandFilterMenu table={table} />
-        </DataTable>
-      );
-    }
+const titleFilter: ColumnFilterItem = {
+  id: "title",
+  value: "bug",
+  operator: "iLike",
+  variant: "text",
+  filterId: "title-0",
+};
 
-    function renderFilters(filters: ColumnFilterItem[]) {
-      render(
-        <NuqsTestingAdapter hasMemory>
-          <Table filters={filters} />
-        </NuqsTestingAdapter>,
+const statusFilter: ColumnFilterItem = {
+  id: "status",
+  value: ["todo"],
+  operator: "inArray",
+  variant: "multi-select",
+  filterId: "status-0",
+};
+
+describe.each(bases.map((base) => ({ name: base[0], base })))(
+  "DataTableCommandFilterMenu ($name)",
+  ({ base }) => {
+    it("renders one chip per filter", () => {
+      renderCommandMenu(base, [titleFilter, statusFilter]);
+
+      expect(
+        screen.getAllByRole("button", { name: /^Remove .+ filter$/ }),
+      ).toHaveLength(2);
+    });
+
+    it("removes a chip with its remove button", () => {
+      const { table } = renderCommandMenu(base, [titleFilter, statusFilter]);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Remove Title filter" }),
       );
-    }
+
+      expect(table.getColumnFilterItems().map((filter) => filter.id)).toEqual([
+        "status",
+      ]);
+    });
+
+    it("resets all chips", () => {
+      const { table } = renderCommandMenu(base, [titleFilter, statusFilter]);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reset all filters" }),
+      );
+
+      expect(table.getColumnFilterItems()).toEqual([]);
+    });
 
     it("shows an empty boolean filter as empty", () => {
-      renderFilters([getBooleanFilter("")]);
+      renderCommandMenu(base, [getBooleanFilter("")]);
       const trigger = screen.getByLabelText("Done boolean filter");
 
       expect(trigger.textContent).toContain("Select value");
@@ -74,7 +101,7 @@ describe.each(bases)(
     });
 
     it("shows the chosen boolean value", () => {
-      renderFilters([getBooleanFilter("true")]);
+      renderCommandMenu(base, [getBooleanFilter("true")]);
 
       expect(
         screen.getByLabelText("Done boolean filter").textContent,
@@ -82,7 +109,7 @@ describe.each(bases)(
     });
 
     it("shows the operator label", () => {
-      renderFilters([getTextFilter("bug")]);
+      renderCommandMenu(base, [titleFilter]);
 
       expect(
         screen.getByLabelText("Title filter operator").textContent,
@@ -91,25 +118,70 @@ describe.each(bases)(
   },
 );
 
-const data: Task[] = [
-  { id: "1", title: "Write docs", done: true },
-  { id: "2", title: "Fix bug", done: false },
-];
+describe("radix command filter menu", () => {
+  const radix = bases[0];
 
-const columnHelper = createColumnHelper<DataTableFeatures, Task>();
+  it("adds a text filter from the palette", () => {
+    const { table } = renderCommandMenu(radix);
+    openPalette();
 
-const columns = columnHelper.columns([
-  columnHelper.accessor("title", {
-    id: "title",
-    meta: { label: "Title", variant: "text" },
-    enableColumnFilter: true,
-  }),
-  columnHelper.accessor("done", {
-    id: "done",
-    meta: { label: "Done", variant: "boolean" },
-    enableColumnFilter: true,
-  }),
-]);
+    fireEvent.click(screen.getByRole("option", { name: "Title" }));
+    fireEvent.change(getPaletteInput(), { target: { value: "bug" } });
+    fireEvent.click(screen.getByRole("option", { name: /bug/ }));
+
+    expect(table.getColumnFilterItems()).toMatchObject([
+      { id: "title", operator: "iLike", value: "bug" },
+    ]);
+  });
+
+  it("adds a boolean filter from the palette", () => {
+    const { table } = renderCommandMenu(radix);
+    openPalette();
+
+    fireEvent.click(screen.getByRole("option", { name: "Done" }));
+    fireEvent.click(screen.getByRole("option", { name: "True" }));
+
+    expect(table.getColumnFilterItems()).toMatchObject([
+      { id: "done", operator: "eq", value: "true" },
+    ]);
+  });
+
+  it("goes back to the field list with Backspace in the empty search", () => {
+    renderCommandMenu(radix);
+    openPalette();
+
+    fireEvent.click(screen.getByRole("option", { name: "Title" }));
+    fireEvent.keyDown(getPaletteInput(), { key: "Backspace" });
+
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Title", "Status", "Done"]);
+  });
+
+  it("removes a focused chip with Backspace", () => {
+    const { table } = renderCommandMenu(radix, [titleFilter, statusFilter]);
+
+    fireEvent.keyDown(screen.getAllByRole("listitem")[0] as HTMLElement, {
+      key: "Backspace",
+    });
+
+    expect(table.getColumnFilterItems().map((filter) => filter.id)).toEqual([
+      "status",
+    ]);
+  });
+});
+
+function openPalette() {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open filter command menu" }),
+  );
+}
+
+function getPaletteInput() {
+  const input = document.querySelector("[cmdk-input]");
+  if (!input) throw new Error("Missing palette input");
+  return input;
+}
 
 function getBooleanFilter(value: string): ColumnFilterItem {
   return {
@@ -121,12 +193,72 @@ function getBooleanFilter(value: string): ColumnFilterItem {
   };
 }
 
-function getTextFilter(value: string): ColumnFilterItem {
-  return {
+const columnHelper = createColumnHelper<DataTableFeatures, Task>();
+
+const columns = columnHelper.columns([
+  columnHelper.accessor("title", {
     id: "title",
-    value,
-    operator: "iLike",
-    variant: "text",
-    filterId: "title-0",
+    meta: { label: "Title", variant: "text" },
+    enableColumnFilter: true,
+  }),
+  columnHelper.accessor("status", {
+    id: "status",
+    meta: {
+      label: "Status",
+      variant: "multi-select",
+      options: [
+        { label: "Todo", value: "todo" },
+        { label: "Done", value: "done" },
+      ],
+    },
+    enableColumnFilter: true,
+  }),
+  columnHelper.accessor("done", {
+    id: "done",
+    meta: { label: "Done", variant: "boolean" },
+    enableColumnFilter: true,
+  }),
+]);
+
+const data: Task[] = [
+  { id: "1", title: "Write docs", status: "todo", done: true },
+  { id: "2", title: "Fix bug", status: "done", done: false },
+  { id: "3", title: "Ship it", status: "todo", done: false },
+];
+
+function renderCommandMenu(
+  [, DataTable, DataTableCommandFilterMenu, useDataTable]: Base,
+  filters: ColumnFilterItem[] = [],
+) {
+  const tableRef: { current?: Table<DataTableFeatures, Task> } = {};
+
+  function Harness() {
+    const { table } = useDataTable<Task>({
+      mode: "client",
+      data,
+      columns,
+      getRowId: (row) => row.id,
+      initialState: { columnFilters: filters },
+    });
+    tableRef.current = table;
+
+    return (
+      <DataTable aria-label="Tasks" table={table}>
+        <DataTableCommandFilterMenu table={table} />
+      </DataTable>
+    );
+  }
+
+  render(
+    <NuqsTestingAdapter hasMemory>
+      <Harness />
+    </NuqsTestingAdapter>,
+  );
+
+  return {
+    get table() {
+      if (!tableRef.current) throw new Error("Missing table");
+      return tableRef.current;
+    },
   };
 }
