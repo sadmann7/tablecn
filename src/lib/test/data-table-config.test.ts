@@ -67,8 +67,8 @@ describe("createDataTableConfig", () => {
       columns: {
         hours: {
           variant: "number",
-          // @ts-expect-error the range is its own variant
-          filter: "range",
+          // @ts-expect-error the widget follows from the variant
+          filter: "slider",
         },
         // @ts-expect-error label belongs on the column meta
         title: { variant: "text", label: "Title" },
@@ -80,13 +80,13 @@ describe("createDataTableConfig", () => {
     const table = createDataTableConfig({
       columns: {
         name: { variant: "text" },
-        age: { variant: "range", enableSorting: false },
+        age: { variant: "number", enableSorting: false },
         id: { enableSorting: false },
         createdAt: {},
       },
     });
 
-    expect(table.filterVariants).toEqual({ name: "text", age: "range" });
+    expect(table.filterVariants).toEqual({ name: "text", age: "number" });
     expect(
       table.parse("?sort=name.asc,createdAt.desc").sorting.map(({ id }) => id),
     ).toEqual(["name", "createdAt"]);

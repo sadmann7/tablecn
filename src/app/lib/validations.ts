@@ -14,10 +14,10 @@ import { DATA_MODES, DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 export const tasksTableConfig = createDataTableConfig({
   columns: {
     title: { variant: "text" },
-    status: { variant: "multi-select" },
-    priority: { variant: "multi-select" },
-    estimatedHours: { variant: "range" },
-    createdAt: { variant: "date-range" },
+    status: { variant: "select" },
+    priority: { variant: "select" },
+    estimatedHours: { variant: "number" },
+    createdAt: { variant: "date" },
   } satisfies DataTableColumnConfigs<Task>,
   defaultSorting: [{ id: "createdAt", desc: true }],
   enableGlobalFilter: false,

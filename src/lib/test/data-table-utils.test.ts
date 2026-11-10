@@ -12,9 +12,7 @@ import {
   getFilterDateValue,
   getFilterOperators,
   getIsActiveFilter,
-  getIsDateVariant,
   getIsEditableTarget,
-  getIsMultiValueVariant,
   getIsPlainFilter,
   getPlainFilterId,
   getPlainFilterOperator,
@@ -32,7 +30,14 @@ describe("filter operators", () => {
     expect(getFilterOperators("text").map((item) => item.value)).toContain(
       "iLike",
     );
-    expect(getFilterOperators("multi-select")[0]?.value).toBe("inArray");
+    expect(getFilterOperators("select").map((item) => item.value)).toEqual([
+      "inArray",
+      "notInArray",
+      "eq",
+      "ne",
+      "isEmpty",
+      "isNotEmpty",
+    ]);
     expect(getDefaultFilterOperator("text")).toBe("iLike");
     expect(getDefaultFilterOperator("number")).toBe("eq");
     expect(getDefaultFilterOperator("boolean")).toBe("eq");
@@ -40,16 +45,15 @@ describe("filter operators", () => {
   });
 
   it("uses the plain operator a toolbar filter writes", () => {
-    expect(getPlainFilterOperator("select")).toBe("inArray");
-    expect(getPlainFilterOperator("multi-select")).toBe("inArray");
-    expect(getPlainFilterOperator("range")).toBe("isBetween");
-    expect(getPlainFilterOperator("date-range")).toBe("isBetween");
-    expect(getPlainFilterOperator("text")).toBe("iLike");
-    expect(getPlainFilterOperator("number")).toBe("eq");
-    expect(getIsMultiValueVariant("range")).toBe(true);
-    expect(getIsMultiValueVariant("text")).toBe(false);
-    expect(getIsDateVariant("date-range")).toBe(true);
-    expect(getIsDateVariant("number")).toBe(false);
+    expect(getPlainFilterOperator("select", false)).toBe("inArray");
+    expect(getPlainFilterOperator("select", true)).toBe("inArray");
+    expect(getPlainFilterOperator("number", true)).toBe("isBetween");
+    expect(getPlainFilterOperator("date", true)).toBe("isBetween");
+    expect(getPlainFilterOperator("text", false)).toBe("iLike");
+    expect(getPlainFilterOperator("text", true)).toBe("iLike");
+    expect(getPlainFilterOperator("number", false)).toBe("eq");
+    expect(getPlainFilterOperator("date", false)).toBe("eq");
+    expect(getPlainFilterOperator("boolean", true)).toBe("eq");
   });
 });
 
@@ -119,7 +123,7 @@ describe("filter dates", () => {
     const between = {
       id: "createdAt",
       filterId: "createdAt-0",
-      variant: "date-range" as const,
+      variant: "date" as const,
       operator: "isBetween" as const,
       value: ["2026-10-03", "2026-10-07"],
     };
@@ -150,7 +154,7 @@ describe("plain filters", () => {
     expect(createPlainFilter("title", "text", undefined)).toBeNull();
     expect(createPlainFilter("title", "text", "")).toBeNull();
     expect(createPlainFilter("title", "text", ["Alpha"])).toBeNull();
-    expect(createPlainFilter("status", "multi-select", ["", ""])).toBeNull();
+    expect(createPlainFilter("status", "select", ["", ""])).toBeNull();
     expect(createPlainFilter("title", "text", "Alpha")).toEqual({
       id: "title",
       variant: "text",
@@ -158,7 +162,7 @@ describe("plain filters", () => {
       value: "Alpha",
       filterId: "title-filter",
     });
-    expect(createPlainFilter("status", "multi-select", "todo")).toMatchObject({
+    expect(createPlainFilter("status", "select", "todo")).toMatchObject({
       operator: "inArray",
       value: ["todo"],
       filterId: "status-filter",
@@ -166,6 +170,24 @@ describe("plain filters", () => {
     expect(
       createPlainFilter("createdAt", "date", new Date(2026, 9, 3, 9).getTime()),
     ).toMatchObject({ operator: "eq", value: "2026-10-03" });
+  });
+
+  it("maps a one-item boolean list to a scalar eq filter", () => {
+    expect(createPlainFilter("done", "boolean", ["true"])).toMatchObject({
+      operator: "eq",
+      value: "true",
+    });
+    expect(createPlainFilter("done", "boolean", ["true", "false"])).toBeNull();
+    expect(createPlainFilter("done", "boolean", [])).toBeNull();
+    expect(
+      getPlainFilterValue({
+        id: "done",
+        variant: "boolean",
+        operator: "eq",
+        value: "false",
+        filterId: "x",
+      }),
+    ).toEqual(["false"]);
   });
 
   it("normalizes a stored filter into a column filter item", () => {
@@ -190,7 +212,7 @@ describe("plain filters", () => {
       normalizeColumnFilter({ id: "title", value: "" }, "text"),
     ).toMatchObject({ operator: "iLike", value: "", filterId: "title-filter" });
     expect(
-      normalizeColumnFilter({ id: "status", value: undefined }, "multi-select"),
+      normalizeColumnFilter({ id: "status", value: undefined }, "select"),
     ).toMatchObject({ operator: "inArray", value: [] });
   });
 
@@ -203,7 +225,7 @@ describe("plain filters", () => {
     expect(
       getPlainFilterValue({
         ...base,
-        variant: "multi-select",
+        variant: "select",
         value: ["todo"],
       }),
     ).toEqual(["todo"]);
@@ -214,7 +236,7 @@ describe("plain filters", () => {
       getPlainFilterValue({
         ...base,
         id: "hours",
-        variant: "range",
+        variant: "number",
         operator: "isBetween",
         value: ["2", ""],
       }),
@@ -232,7 +254,7 @@ describe("plain filters", () => {
       getPlainFilterValue({
         id: "createdAt",
         filterId: "createdAt-0",
-        variant: "date-range",
+        variant: "date",
         operator: "isBetween",
         value: ["2026-10-03", "nope"],
       }),
@@ -264,8 +286,17 @@ describe("plain filters", () => {
       getIsPlainFilter({
         id: "status",
         filterId: "status-0",
-        variant: "multi-select",
+        variant: "select",
         operator: "inArray",
+        value: "todo",
+      }),
+    ).toBe(true);
+    expect(
+      getIsPlainFilter({
+        id: "status",
+        filterId: "status-0",
+        variant: "select",
+        operator: "eq",
         value: "todo",
       }),
     ).toBe(false);
@@ -326,30 +357,28 @@ describe("getValidRangeFilterBounds", () => {
 });
 
 describe("select filter values", () => {
-  it("returns a list for multi-select and a string for select", () => {
+  it("returns a list for inArray and notInArray and a string otherwise", () => {
     const filter = {
       id: "status",
       filterId: "status-0",
-      operator: "eq" as const,
+      variant: "select" as const,
+      operator: "inArray" as const,
       value: "todo",
     };
+    expect(getSelectFilterValue(filter)).toEqual([]);
+    expect(getSelectFilterValue({ ...filter, value: ["todo"] })).toEqual([
+      "todo",
+    ]);
     expect(
       getSelectFilterValue({
         ...filter,
-        variant: "multi-select",
-        value: "todo",
-      }),
-    ).toEqual([]);
-    expect(
-      getSelectFilterValue({
-        ...filter,
-        variant: "multi-select",
+        operator: "notInArray",
         value: ["todo"],
       }),
     ).toEqual(["todo"]);
-    expect(getSelectFilterValue({ ...filter, variant: "select" })).toBe("todo");
+    expect(getSelectFilterValue({ ...filter, operator: "eq" })).toBe("todo");
     expect(
-      getSelectFilterValue({ ...filter, variant: "select", value: ["todo"] }),
+      getSelectFilterValue({ ...filter, operator: "eq", value: ["todo"] }),
     ).toBeUndefined();
   });
 });

@@ -39,8 +39,8 @@ export function matchesFilter(
   filter: Pick<ColumnFilterItem, "operator" | "variant" | "value">,
 ): boolean {
   const { operator, variant, value } = filter;
-  const isDate = variant === "date" || variant === "date-range";
-  const isNumeric = variant === "number" || variant === "range";
+  const isDate = variant === "date";
+  const isNumeric = variant === "number";
 
   switch (operator) {
     case "iLike":

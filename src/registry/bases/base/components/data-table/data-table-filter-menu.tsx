@@ -645,7 +645,6 @@ function FilterValueInput<TData extends RowData>(
   switch (filter.variant) {
     case "text":
     case "number":
-    case "range":
       if (filter.operator === "isBetween") {
         return (
           <DataTableRangeFilter
@@ -677,11 +676,9 @@ function FilterValueInput<TData extends RowData>(
       return <BooleanFilterValue {...props} />;
 
     case "select":
-    case "multi-select":
       return <SelectFilterValue {...props} />;
 
     case "date":
-    case "date-range":
       return <DateFilterValue {...props} />;
 
     default:
@@ -740,7 +737,8 @@ function SelectFilterValue<TData extends RowData>({
   const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
   const columnMeta = column.columnDef.meta;
-  const multiple = filter.variant === "multi-select";
+  const multiple =
+    filter.operator === "inArray" || filter.operator === "notInArray";
 
   return (
     <Faceted

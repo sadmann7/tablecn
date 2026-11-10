@@ -30,6 +30,11 @@ import {
 } from "@/registry/bases/base/ui/input-group";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
+const BOOLEAN_OPTIONS = [
+  { label: "True", value: "true" },
+  { label: "False", value: "false" },
+];
+
 interface DataTableToolbarProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
@@ -142,39 +147,46 @@ function DataTableToolbarFilter<TData extends RowData>({
         />
       );
 
-    case "number":
+    case "number": {
+      const numberOptions = getColumnNumberOptions(columnMeta);
+      if (
+        typeof numberOptions?.min === "number" &&
+        typeof numberOptions.max === "number"
+      ) {
+        return <DataTableSliderFilter column={column} title={title} />;
+      }
+
       return (
         <DataTableFilterInput
           column={column}
           type="number"
           inputMode="numeric"
           placeholder={placeholder}
-          unit={getColumnNumberOptions(columnMeta)?.unit}
+          unit={numberOptions?.unit}
           className="w-30"
         />
       );
-
-    case "range":
-      return <DataTableSliderFilter column={column} title={title} />;
+    }
 
     case "date":
-    case "date-range":
-      return (
-        <DataTableDateFilter
-          column={column}
-          title={title}
-          multiple={filterVariant === "date-range"}
-        />
-      );
+      return <DataTableDateFilter column={column} title={title} multiple />;
 
     case "select":
-    case "multi-select":
       return (
         <DataTableFacetedFilter
           column={column}
           title={title}
           options={getColumnSelectOptions(columnMeta)}
-          multiple={filterVariant === "multi-select"}
+          multiple={columnMeta.multiple ?? true}
+        />
+      );
+
+    case "boolean":
+      return (
+        <DataTableFacetedFilter
+          column={column}
+          title={title}
+          options={BOOLEAN_OPTIONS}
         />
       );
 

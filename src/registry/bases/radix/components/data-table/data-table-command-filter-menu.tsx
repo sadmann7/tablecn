@@ -186,7 +186,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
     table.addColumnFilter({
       ...defaults,
-      value: defaults.variant === "multi-select" ? [value] : value,
+      value: defaults.operator === "inArray" ? [value] : value,
       filterId: generateId({ length: 8 }),
     });
     setOpen(false);
@@ -553,7 +553,6 @@ function FilterValueInput<TData extends RowData>(
   switch (filter.variant) {
     case "text":
     case "number":
-    case "range":
       if (filter.operator === "isBetween") {
         return (
           <DataTableRangeFilter
@@ -585,11 +584,9 @@ function FilterValueInput<TData extends RowData>(
       return <BooleanFilterValue {...props} />;
 
     case "select":
-    case "multi-select":
       return <SelectFilterValue {...props} />;
 
     case "date":
-    case "date-range":
       return <DateFilterValue {...props} />;
 
     default:
@@ -649,7 +646,8 @@ function SelectFilterValue<TData extends RowData>({
   const columnMeta = column.columnDef.meta;
   const options = getColumnSelectOptions(columnMeta);
   const value = getSelectFilterValue(filter);
-  const multiple = filter.variant === "multi-select";
+  const multiple =
+    filter.operator === "inArray" || filter.operator === "notInArray";
 
   return (
     <Faceted
@@ -854,7 +852,6 @@ function FilterValueOptions<TData extends RowData>({
       );
 
     case "select":
-    case "multi-select":
       return (
         <>
           <CommandEmpty>No options found.</CommandEmpty>
@@ -881,7 +878,6 @@ function FilterValueOptions<TData extends RowData>({
       );
 
     case "date":
-    case "date-range":
       return (
         <Calendar
           autoFocus

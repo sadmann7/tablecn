@@ -18,12 +18,9 @@ type TaskColumnId = keyof Task;
 const COLUMN_BY_VARIANT = {
   text: "title",
   number: "estimatedHours",
-  range: "estimatedHours",
   date: "createdAt",
-  "date-range": "createdAt",
   boolean: "archived",
   select: "status",
-  "multi-select": "status",
 } satisfies Record<FilterVariant, TaskColumnId>;
 
 describe("filterColumns", () => {
@@ -76,7 +73,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multi-select",
+          variant: "select",
           operator: "inArray",
           value: "todo",
         }),
@@ -159,7 +156,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multi-select",
+          variant: "select",
           operator: "inArray",
           value: ["todo", "done"],
         }),
@@ -169,7 +166,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multi-select",
+          variant: "select",
           operator: "notInArray",
           value: ["todo"],
         }),
@@ -196,7 +193,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "date-range",
+          variant: "date",
           operator: "ne",
           value: day,
         }),
@@ -246,7 +243,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "date-range",
+          variant: "date",
           operator: "lt",
           value: day,
         }),
@@ -272,7 +269,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: ["2", "8"],
         }),
@@ -292,7 +289,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: ["2", ""],
         }),
@@ -302,7 +299,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: ["", ""],
         }),
@@ -312,7 +309,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: "2",
         }),
@@ -322,7 +319,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "date-range",
+          variant: "date",
           operator: "isBetween",
           value: ["2026-10-01", "2026-10-07"],
         }),
@@ -395,7 +392,7 @@ describe("filterColumns", () => {
       }),
       columnFilter({
         id: "status",
-        variant: "multi-select",
+        variant: "select",
         operator: "inArray",
         value: ["todo"],
         filterId: "status-0",
@@ -445,7 +442,7 @@ function getSampleValue(
 ): string | string[] {
   if (operator === "isEmpty" || operator === "isNotEmpty") return "";
   if (operator === "inArray" || operator === "notInArray") return ["todo"];
-  const isDate = variant === "date" || variant === "date-range";
+  const isDate = variant === "date";
   if (operator === "isBetween") {
     return isDate ? ["2026-10-01", "2026-10-07"] : ["1", "5"];
   }

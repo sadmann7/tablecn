@@ -226,6 +226,9 @@ function getIsDateRange(value: DateSelection): value is DateRange {
 
 function formatDateRange(range: DateRange) {
   if (range.from && range.to) {
+    if (range.from.toDateString() === range.to.toDateString()) {
+      return formatDate(range.from);
+    }
     return `${formatDate(range.from)} - ${formatDate(range.to)}`;
   }
   return formatDate(range.from ?? range.to);

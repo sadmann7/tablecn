@@ -23,12 +23,9 @@ import { formatDate } from "@/lib/format";
 export const FILTER_VARIANTS = [
   "text",
   "number",
-  "range",
   "date",
-  "date-range",
   "boolean",
   "select",
-  "multi-select",
 ] as const;
 
 export const FILTER_OPERATORS = {
@@ -90,15 +87,10 @@ const DATE_OPERATORS = [
 ] satisfies FilterOperatorOption[];
 
 const SELECT_OPERATORS = [
-  { label: "Is", value: "eq" },
-  { label: "Is not", value: "ne" },
-  { label: "Is empty", value: "isEmpty" },
-  { label: "Is not empty", value: "isNotEmpty" },
-] satisfies FilterOperatorOption[];
-
-const MULTI_SELECT_OPERATORS = [
   { label: "Has any of", value: "inArray" },
   { label: "Has none of", value: "notInArray" },
+  { label: "Is", value: "eq" },
+  { label: "Is not", value: "ne" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ] satisfies FilterOperatorOption[];
@@ -114,20 +106,10 @@ const FILTER_OPERATORS_BY_VARIANT: Record<
 > = {
   text: TEXT_OPERATORS,
   number: NUMERIC_OPERATORS,
-  range: NUMERIC_OPERATORS,
   date: DATE_OPERATORS,
-  "date-range": DATE_OPERATORS,
   boolean: BOOLEAN_OPERATORS,
   select: SELECT_OPERATORS,
-  "multi-select": MULTI_SELECT_OPERATORS,
 };
-
-const MULTI_VALUE_FILTER_VARIANTS: FilterVariant[] = [
-  "select",
-  "multi-select",
-  "range",
-  "date-range",
-];
 
 const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -158,17 +140,13 @@ export function getFilterVariant(
 export function getColumnNumberOptions(
   meta: DataTableColumnMeta | undefined,
 ): ColumnNumberOptions | undefined {
-  return meta?.variant === "number" || meta?.variant === "range"
-    ? meta
-    : undefined;
+  return meta?.variant === "number" ? meta : undefined;
 }
 
 export function getColumnSelectOptions(
   meta: DataTableColumnMeta | undefined,
 ): ColumnSelectOption[] {
-  return meta?.variant === "select" || meta?.variant === "multi-select"
-    ? (meta.options ?? [])
-    : [];
+  return meta?.variant === "select" ? (meta.options ?? []) : [];
 }
 
 export function getDefaultFilter<TData extends RowData>(
@@ -194,22 +172,19 @@ export function getDefaultFilterOperator(filterVariant: FilterVariant) {
   return operators[0]?.value ?? (filterVariant === "text" ? "iLike" : "eq");
 }
 
-export function getPlainFilterOperator(variant: FilterVariant): FilterOperator {
-  if (variant === "select" || variant === "multi-select") return "inArray";
-  if (variant === "range" || variant === "date-range") return "isBetween";
-  return getDefaultFilterOperator(variant);
+export function getPlainFilterOperator(
+  variant: FilterVariant,
+  isList: boolean,
+): FilterOperator {
+  if (variant === "select") return "inArray";
+  if (isList && (variant === "number" || variant === "date")) {
+    return "isBetween";
+  }
+  return variant === "text" ? "iLike" : "eq";
 }
 
 export function getIsValuelessOperator(operator: FilterOperator) {
   return operator === "isEmpty" || operator === "isNotEmpty";
-}
-
-export function getIsDateVariant(variant: FilterVariant) {
-  return variant === "date" || variant === "date-range";
-}
-
-export function getIsMultiValueVariant(variant: FilterVariant) {
-  return MULTI_VALUE_FILTER_VARIANTS.includes(variant);
 }
 
 export function coerceFilterValue(
@@ -233,7 +208,7 @@ export function coerceFilterValue(
 }
 
 export function getSelectFilterValue(filter: ColumnFilterItem) {
-  if (filter.variant === "multi-select") {
+  if (filter.operator === "inArray" || filter.operator === "notInArray") {
     return Array.isArray(filter.value) ? filter.value : [];
   }
 
@@ -254,8 +229,8 @@ export function getPlainFilterId(columnId: string) {
 
 export function getIsPlainFilter(filter: ColumnFilterItem) {
   return (
-    filter.operator === getPlainFilterOperator(filter.variant) &&
-    Array.isArray(filter.value) === getIsMultiValueVariant(filter.variant)
+    filter.operator ===
+    getPlainFilterOperator(filter.variant, Array.isArray(filter.value))
   );
 }
 
@@ -266,11 +241,16 @@ export function createPlainFilter<TColumnId extends string>(
 ): ColumnFilterItem<TColumnId> | null {
   if (value === undefined || value === null || value === "") return null;
 
-  const operator = getPlainFilterOperator(variant);
+  if (variant === "boolean" && Array.isArray(value)) {
+    if (value.length !== 1) return null;
+    return createPlainFilter(id, variant, value[0]);
+  }
+
+  const operator = getPlainFilterOperator(variant, Array.isArray(value));
   const filterId = getPlainFilterId(id);
   const stringify = getFilterValueStringifier(variant);
 
-  if (getIsMultiValueVariant(variant)) {
+  if (operator === "inArray" || operator === "isBetween") {
     const values = normalizeFilterValues(
       variant,
       operator,
@@ -316,8 +296,8 @@ export function normalizeColumnFilter(
   return {
     id: filter.id,
     variant,
-    operator: getPlainFilterOperator(variant),
-    value: getIsMultiValueVariant(variant) ? [] : "",
+    operator: getPlainFilterOperator(variant, false),
+    value: variant === "select" ? [] : "",
     filterId,
   };
 }
@@ -325,21 +305,23 @@ export function normalizeColumnFilter(
 export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   const { variant, value } = filter;
 
-  if (variant === "select" || variant === "multi-select") {
+  if (variant === "select") {
     return Array.isArray(value) ? value : [value];
   }
 
-  if (variant === "range") {
+  if (variant === "number") {
     return Array.isArray(value)
       ? value.map((item) => (item === "" ? undefined : Number(item)))
       : value;
   }
 
-  if (getIsDateVariant(variant)) {
+  if (variant === "date") {
     return Array.isArray(value)
       ? value.map((item) => parseFilterDate(item)?.getTime())
       : parseFilterDate(value)?.getTime();
   }
+
+  if (variant === "boolean") return [value];
 
   return value;
 }
@@ -384,12 +366,10 @@ export function getIsValidFilterValue(filter: ColumnFilterItem) {
 
   switch (filter.variant) {
     case "number":
-    case "range":
       return values.every(
         (value) => value.trim() === "" || Number.isFinite(Number(value)),
       );
     case "date":
-    case "date-range":
       return values.every(
         (value) => value === "" || parseFilterDate(value) !== undefined,
       );
@@ -591,7 +571,7 @@ function normalizeFilterValues(
 ) {
   if (operator !== "isBetween") return values;
 
-  if (getIsDateVariant(variant)) {
+  if (variant === "date") {
     const [start = "", end = ""] = values;
     const startTime = parseFilterDate(start)?.getTime();
     const endTime = parseFilterDate(end)?.getTime();
@@ -602,7 +582,7 @@ function normalizeFilterValues(
       : [start, end];
   }
 
-  if (variant !== "number" && variant !== "range") return values;
+  if (variant !== "number") return values;
 
   const [start = "", end = ""] = values.map((value) => {
     const trimmed = value.trim();
@@ -615,7 +595,7 @@ function normalizeFilterValues(
 }
 
 function getFilterValueStringifier(variant: FilterVariant) {
-  return getIsDateVariant(variant) ? stringifyFilterDate : stringifyFilterValue;
+  return variant === "date" ? stringifyFilterDate : stringifyFilterValue;
 }
 
 function stringifyFilterDate(value: unknown) {

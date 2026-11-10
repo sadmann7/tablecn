@@ -21,7 +21,7 @@ import {
 import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import { isEmpty } from "@/db/utils";
-import { getIsDateVariant, parseFilterDate } from "@/lib/data-table-utils";
+import { parseFilterDate } from "@/lib/data-table-utils";
 
 export function filterColumns<T extends Table>({
   table,
@@ -52,7 +52,7 @@ export function filterColumns<T extends Table>({
         if (column.dataType === "boolean" && typeof filter.value === "string") {
           return eq(column, filter.value === "true");
         }
-        if (filter.variant === "date" || filter.variant === "date-range") {
+        if (filter.variant === "date") {
           const start = getStartOfDay(filter.value);
           const end = getEndOfDay(filter.value);
           return start && end
@@ -65,7 +65,7 @@ export function filterColumns<T extends Table>({
         if (column.dataType === "boolean" && typeof filter.value === "string") {
           return ne(column, filter.value === "true");
         }
-        if (filter.variant === "date" || filter.variant === "date-range") {
+        if (filter.variant === "date") {
           const start = getStartOfDay(filter.value);
           const end = getEndOfDay(filter.value);
           return start && end
@@ -91,13 +91,10 @@ export function filterColumns<T extends Table>({
       case "gt":
       case "gte": {
         const compare = { lt, lte, gt, gte }[filter.operator];
-        if (filter.variant === "number" || filter.variant === "range") {
+        if (filter.variant === "number") {
           return compare(column, filter.value);
         }
-        if (
-          !getIsDateVariant(filter.variant) ||
-          typeof filter.value !== "string"
-        ) {
+        if (filter.variant !== "date" || typeof filter.value !== "string") {
           return undefined;
         }
         // `lte` and `gte` include the whole day, `lt` and `gt` exclude it.
@@ -110,7 +107,7 @@ export function filterColumns<T extends Table>({
 
       case "isBetween":
         if (
-          (filter.variant === "date" || filter.variant === "date-range") &&
+          filter.variant === "date" &&
           Array.isArray(filter.value) &&
           filter.value.length === 2
         ) {
@@ -123,7 +120,7 @@ export function filterColumns<T extends Table>({
         }
 
         if (
-          (filter.variant === "number" || filter.variant === "range") &&
+          filter.variant === "number" &&
           Array.isArray(filter.value) &&
           filter.value.length === 2
         ) {

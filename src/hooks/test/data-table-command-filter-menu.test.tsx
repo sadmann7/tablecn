@@ -56,7 +56,7 @@ const statusFilter: ColumnFilterItem = {
   id: "status",
   value: ["todo"],
   operator: "inArray",
-  variant: "multi-select",
+  variant: "select",
   filterId: "status-0",
 };
 
@@ -107,7 +107,7 @@ describe.each(bases.map((base) => ({ name: base[0], base })))(
           id: "status",
           value: [],
           operator: "inArray",
-          variant: "multi-select",
+          variant: "select",
           filterId: "status-0",
         },
       ]);
@@ -222,7 +222,7 @@ const columns = columnHelper.columns([
     id: "status",
     meta: {
       label: "Status",
-      variant: "multi-select",
+      variant: "select",
       placeholder: "Pick a status",
       options: [
         { label: "Todo", value: "todo" },
@@ -247,7 +247,7 @@ const data: Task[] = [
 const config = createDataTableConfig({
   columns: {
     title: { variant: "text" },
-    status: { variant: "multi-select" },
+    status: { variant: "select" },
     done: { variant: "boolean" },
   },
 });

@@ -22,7 +22,7 @@ describe("matchesFilter", () => {
     expect(match(false, "ne", "boolean", "false")).toBe(false);
 
     expect(match(2, "eq", "number", "2")).toBe(true);
-    expect(match("2", "ne", "range", "3")).toBe(true);
+    expect(match("2", "ne", "number", "3")).toBe(true);
     expect(match("", "eq", "number", "")).toBe(false);
 
     expect(match("todo", "eq", "select", "todo")).toBe(true);
@@ -31,20 +31,18 @@ describe("matchesFilter", () => {
   });
 
   it("matches list membership when the filter value is a list", () => {
-    expect(match("todo", "inArray", "multi-select", ["todo", "done"])).toBe(
-      true,
-    );
-    expect(match("canceled", "inArray", "multi-select", ["todo"])).toBe(false);
-    expect(match("todo", "inArray", "multi-select", "todo")).toBe(true);
-    expect(match("todo", "notInArray", "multi-select", ["done"])).toBe(true);
-    expect(match("done", "notInArray", "multi-select", ["done"])).toBe(false);
-    expect(match("done", "notInArray", "multi-select", "done")).toBe(true);
+    expect(match("todo", "inArray", "select", ["todo", "done"])).toBe(true);
+    expect(match("canceled", "inArray", "select", ["todo"])).toBe(false);
+    expect(match("todo", "inArray", "select", "todo")).toBe(true);
+    expect(match("todo", "notInArray", "select", ["done"])).toBe(true);
+    expect(match("done", "notInArray", "select", ["done"])).toBe(false);
+    expect(match("done", "notInArray", "select", "done")).toBe(true);
   });
 
   it("compares numbers and rejects a value that is not numeric", () => {
     expect(match(2, "lt", "number", "3")).toBe(true);
     expect(match(3, "lt", "number", "3")).toBe(false);
-    expect(match(3, "lte", "range", "3")).toBe(true);
+    expect(match(3, "lte", "number", "3")).toBe(true);
     expect(match(4, "gt", "number", "3")).toBe(true);
     expect(match(3, "gte", "number", "3")).toBe(true);
     expect(match("nope", "gt", "number", "3")).toBe(false);
@@ -55,20 +53,20 @@ describe("matchesFilter", () => {
     const day = new Date(2026, 9, 3, 12).getTime();
     const later = new Date(2026, 9, 8, 12).getTime();
 
-    expect(match(2, "isBetween", "range", "2")).toBe(true);
-    expect(match(2, "isBetween", "range", ["", ""])).toBe(true);
-    expect(match(4, "isBetween", "range", ["2", "8"])).toBe(true);
-    expect(match(1, "isBetween", "range", ["2", "8"])).toBe(false);
+    expect(match(2, "isBetween", "number", "2")).toBe(true);
+    expect(match(2, "isBetween", "number", ["", ""])).toBe(true);
+    expect(match(4, "isBetween", "number", ["2", "8"])).toBe(true);
+    expect(match(1, "isBetween", "number", ["2", "8"])).toBe(false);
     expect(match("nope", "isBetween", "number", ["2", "8"])).toBe(false);
     expect(match(day, "isBetween", "date", ["2026-10-03", ""])).toBe(true);
     expect(
-      match(later, "isBetween", "date-range", ["2026-10-01", "2026-10-07"]),
+      match(later, "isBetween", "date", ["2026-10-01", "2026-10-07"]),
     ).toBe(false);
     expect(match(day, "isBetween", "date", ["", "2026-10-03"])).toBe(true);
-    expect(match(3, "isBetween", "range", ["", "3"])).toBe(true);
-    expect(match(4, "isBetween", "range", ["", "3"])).toBe(false);
-    expect(match(2, "isBetween", "range", ["2", ""])).toBe(true);
-    expect(match(1, "isBetween", "range", ["2", ""])).toBe(false);
+    expect(match(3, "isBetween", "number", ["", "3"])).toBe(true);
+    expect(match(4, "isBetween", "number", ["", "3"])).toBe(false);
+    expect(match(2, "isBetween", "number", ["2", ""])).toBe(true);
+    expect(match(1, "isBetween", "number", ["2", ""])).toBe(false);
   });
 
   it("treats a calendar date as the local day", () => {

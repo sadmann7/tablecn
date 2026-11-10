@@ -109,7 +109,10 @@ export function serializeColumnFilter(filter: ColumnFilterItem) {
     ? joinListValue(filter.value)
     : filter.value;
 
-  if (filter.operator === getPlainFilterOperator(filter.variant)) {
+  if (
+    filter.operator ===
+    getPlainFilterOperator(filter.variant, Array.isArray(filter.value))
+  ) {
     const implicit = parseColumnFilter(filter.id, filter.variant, rawValue);
     if (getIsSameFilter(implicit, filter)) return rawValue;
   }
@@ -212,16 +215,18 @@ function splitFilterOperator(param: string, variant: FilterVariant) {
     return { operator, rawValue: parts.slice(count).join(".") };
   }
 
-  return { operator: getPlainFilterOperator(variant), rawValue: param };
+  return {
+    operator: getPlainFilterOperator(variant, param.includes(",")),
+    rawValue: param,
+  };
 }
 
 function getIsVariantOperator(
   variant: FilterVariant,
   operator: FilterOperator,
 ) {
-  return (
-    operator === getPlainFilterOperator(variant) ||
-    getFilterOperators(variant).some((option) => option.value === operator)
+  return getFilterOperators(variant).some(
+    (option) => option.value === operator,
   );
 }
 

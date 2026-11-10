@@ -32,6 +32,7 @@ export interface DataTableColumnMeta extends ColumnNumberOptions {
   placeholder?: string;
   variant?: FilterVariant;
   options?: ColumnSelectOption[];
+  multiple?: boolean;
 }
 
 export interface DataTableColumnConfig {

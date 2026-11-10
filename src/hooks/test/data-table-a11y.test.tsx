@@ -154,7 +154,7 @@ const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
 }));
 
 const config = createDataTableConfig({
-  columns: { title: {}, status: { variant: "multi-select" } },
+  columns: { title: {}, status: { variant: "select" } },
 });
 
 function renderTable(ui: Base, search = "") {
@@ -205,7 +205,7 @@ function getColumns({ getDataTableSelectColumn }: Base) {
       enableColumnFilter: true,
       meta: {
         label: "Status",
-        variant: "multi-select",
+        variant: "select",
         options: [
           { label: "Todo", value: "todo" },
           { label: "Done", value: "done" },

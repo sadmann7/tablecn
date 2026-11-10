@@ -8,14 +8,14 @@ describe("sanitizeEnumFilters", () => {
       sanitizeEnumFilters([
         {
           id: "status",
-          variant: "multi-select",
+          variant: "select",
           operator: "isEmpty",
           value: "",
           filterId: "status-0",
         },
         {
           id: "priority",
-          variant: "multi-select",
+          variant: "select",
           operator: "inArray",
           value: ["high", "bogus"],
           filterId: "priority-0",

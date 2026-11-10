@@ -405,7 +405,7 @@ describe("useDataTable", () => {
           id: "status",
           value: "",
           operator: "isEmpty",
-          variant: "multi-select",
+          variant: "select",
           filterId: "status-0",
         },
       ]);
@@ -839,7 +839,7 @@ function renderDataTables(
 const tableColumns = {
   code: { enableSorting: false },
   title: { variant: "text" },
-  status: { variant: "multi-select" },
+  status: { variant: "select" },
 } as const;
 
 const config = createDataTableConfig({ columns: tableColumns });
@@ -858,7 +858,7 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("status", {
     id: "status",
-    meta: { variant: "multi-select" },
+    meta: { variant: "select" },
     enableColumnFilter: true,
   }),
   columnHelper.display({ id: "actions" }),

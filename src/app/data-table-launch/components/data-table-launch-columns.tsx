@@ -70,7 +70,7 @@ export const launchColumns = columnHelper.columns([
     },
     meta: {
       label: "Status",
-      variant: "multi-select",
+      variant: "select",
       options: launchStatusOptions,
       icon: CircleDashed,
     },
@@ -93,7 +93,7 @@ export const launchColumns = columnHelper.columns([
     },
     meta: {
       label: "Priority",
-      variant: "multi-select",
+      variant: "select",
       options: launchPriorityOptions,
       icon: ArrowUpDown,
     },
@@ -111,7 +111,7 @@ export const launchColumns = columnHelper.columns([
     ),
     meta: {
       label: "Est. Hours",
-      variant: "range",
+      variant: "number",
       min: launchHoursRange[0],
       max: launchHoursRange[1],
       unit: "hr",
@@ -127,7 +127,7 @@ export const launchColumns = columnHelper.columns([
     cell: ({ row }) => formatDate(row.original.createdAt, { timeZone: "UTC" }),
     meta: {
       label: "Created At",
-      variant: "date-range",
+      variant: "date",
       icon: CalendarIcon,
     },
     enableColumnFilter: true,

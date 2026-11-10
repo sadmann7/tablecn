@@ -56,7 +56,7 @@ const statusFilter: ColumnFilterItem = {
   id: "status",
   value: ["todo"],
   operator: "inArray",
-  variant: "multi-select",
+  variant: "select",
   filterId: "status-0",
 };
 
@@ -227,7 +227,7 @@ const columns = columnHelper.columns([
     id: "status",
     meta: {
       label: "Status",
-      variant: "multi-select",
+      variant: "select",
       options: [
         { label: "Todo", value: "todo" },
         { label: "Done", value: "done" },
@@ -251,7 +251,7 @@ const data: Task[] = [
 const config = createDataTableConfig({
   columns: {
     title: { variant: "text" },
-    status: { variant: "multi-select" },
+    status: { variant: "select" },
     done: { variant: "boolean" },
   },
 });

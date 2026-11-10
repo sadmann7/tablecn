@@ -85,7 +85,7 @@ describe("filtered rows", () => {
         {
           id: "status",
           operator: "inArray",
-          variant: "multi-select",
+          variant: "select",
           value: ["done"],
         },
         { id: "title", operator: "eq", variant: "text", value: "Alpha" },
@@ -203,7 +203,7 @@ describe("faceted rows", () => {
         {
           id: "status",
           operator: "inArray",
-          variant: "multi-select",
+          variant: "select",
           value: ["done"],
         },
       ]);
@@ -218,7 +218,7 @@ describe("faceted rows", () => {
         {
           id: "status",
           operator: "inArray",
-          variant: "multi-select",
+          variant: "select",
           value: ["done"],
         },
       ]);
@@ -439,11 +439,11 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("status", {
     id: "status",
-    meta: { variant: "multi-select" },
+    meta: { variant: "select" },
   }),
   columnHelper.accessor("hours", {
     id: "hours",
-    meta: { variant: "range" },
+    meta: { variant: "number" },
   }),
   columnHelper.accessor("createdAt", {
     id: "createdAt",

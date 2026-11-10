@@ -83,7 +83,7 @@ function DataTableDateFilterContent<TData extends RowData>({
       if (multiple && !("getTime" in date)) {
         const from = date.from?.getTime();
         const to = date.to?.getTime();
-        column.setFilterValue(from || to ? [from, to] : undefined);
+        column.setFilterValue(from || to ? [from, to ?? from] : undefined);
       } else if (!multiple && "getTime" in date) {
         column.setFilterValue(date.getTime());
       }
@@ -220,6 +220,9 @@ function getIsDateRange(value: DateSelection): value is DateRange {
 
 function formatDateRange(range: DateRange) {
   if (range.from && range.to) {
+    if (range.from.toDateString() === range.to.toDateString()) {
+      return formatDate(range.from);
+    }
     return `${formatDate(range.from)} - ${formatDate(range.to)}`;
   }
   return formatDate(range.from ?? range.to);
