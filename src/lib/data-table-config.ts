@@ -216,6 +216,16 @@ export function getColumnConfigs<TData extends RowData>(
   return configs;
 }
 
+export function getColumnConfigsKey<TData extends RowData>(
+  columns: readonly ColumnDef<DataTableFeatures, TData>[],
+) {
+  return JSON.stringify(getColumnConfigs(columns));
+}
+
+export function parseColumnConfigsKey(key: string): DataTableColumnConfigs {
+  return JSON.parse(key);
+}
+
 export function getUnmatchedConfigIds<TData extends RowData>(
   configs: DataTableColumnConfigs,
   columns: readonly ColumnDef<DataTableFeatures, TData>[],

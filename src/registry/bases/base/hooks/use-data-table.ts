@@ -22,8 +22,9 @@ import {
   applyColumnConfig,
   createDataTableConfig,
   type DataTableConfig,
-  getColumnConfigs,
+  getColumnConfigsKey,
   getUnmatchedConfigIds,
+  parseColumnConfigsKey,
 } from "@/lib/data-table-config";
 import {
   type DataTableFeatures,
@@ -101,11 +102,13 @@ function useDataTable<TData extends RowData>({
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
-  const columnConfigs = getColumnConfigs(columns);
-  const columnConfigsKey = JSON.stringify(columnConfigs);
+  const columnConfigsKey = configProp ? "" : getColumnConfigsKey(columns);
   const config = React.useMemo(
-    () => configProp ?? createDataTableConfig({ columns: columnConfigs }),
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- `columnConfigsKey` rebuilds the config only when the column configs change by value
+    () =>
+      configProp ??
+      createDataTableConfig({
+        columns: parseColumnConfigsKey(columnConfigsKey),
+      }),
     [configProp, columnConfigsKey],
   );
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
