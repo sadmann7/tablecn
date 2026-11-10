@@ -105,6 +105,28 @@ describe.each(bases.map((base) => ({ name: base[0], base })))(
       expect(table.getColumnFilterItems()).toEqual([]);
     });
 
+    it("resets the join operator to the config default", () => {
+      const orConfig = createDataTableConfig({
+        columns: {
+          title: { variant: "text" },
+          status: { variant: "select" },
+          done: { variant: "boolean" },
+        },
+        defaultJoinOperator: "or",
+      });
+      const { table } = renderFilterMenu(
+        base,
+        [titleFilter, statusFilter],
+        orConfig,
+      );
+      act(() => table.setJoinOperator("and"));
+      openMenu();
+
+      fireEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+
+      expect(table.getJoinOperator()).toBe("or");
+    });
+
     it("shows an empty boolean filter as empty", () => {
       renderFilterMenu(base, [getBooleanFilter("")]);
       openMenu();
@@ -259,12 +281,13 @@ const config = createDataTableConfig({
 function renderFilterMenu(
   [, DataTable, DataTableFilterMenu, useDataTable]: Base,
   filters: ColumnFilterItem[] = [],
+  tableConfig: typeof config = config,
 ) {
   const tableRef: { current?: Table<DataTableFeatures, Task> } = {};
 
   function Harness() {
     const { table } = useDataTable<Task>({
-      config,
+      config: tableConfig,
       mode: "client",
       data,
       columns,

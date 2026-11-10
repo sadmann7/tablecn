@@ -203,7 +203,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
   function onFiltersReset() {
     table.resetColumnFilters(true);
-    table.resetJoinOperator(true);
+    table.resetJoinOperator();
   }
 
   function onTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {

@@ -13,9 +13,9 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
   getColumnNumberOptions,
-  getColumnNumberRange,
   getColumnSelectOptions,
   getFilterVariant,
+  getIsNumberRangeColumn,
 } from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/radix/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/radix/components/data-table/data-table-faceted-filter";
@@ -57,7 +57,7 @@ export function DataTableToolbar<TData extends RowData>({
 
   function onReset() {
     table.resetColumnFilters(true);
-    table.resetJoinOperator(true);
+    table.resetJoinOperator();
     table.resetGlobalFilter(true);
   }
 
@@ -149,7 +149,7 @@ function DataTableToolbarFilter<TData extends RowData>({
       );
 
     case "number": {
-      if (getColumnNumberRange(column)) {
+      if (getIsNumberRangeColumn(column)) {
         return <DataTableSliderFilter column={column} title={title} />;
       }
 

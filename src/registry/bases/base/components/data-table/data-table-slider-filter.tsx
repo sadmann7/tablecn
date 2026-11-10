@@ -320,7 +320,9 @@ function getFacetedRange<TData extends RowData>(
   const values = column.getFacetedMinMaxValues();
   if (Array.isArray(values) && values.length === 2) {
     const [min, max] = values;
-    if (typeof min === "number" && typeof max === "number") return [min, max];
+    if (typeof min === "number" && typeof max === "number") {
+      return min === max ? [min, min + 1] : [min, max];
+    }
   }
   return [0, 100];
 }

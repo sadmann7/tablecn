@@ -211,13 +211,15 @@ describe.each([
   function Harness({
     toolbarColumns,
     mode,
+    rows,
   }: {
     toolbarColumns: typeof columns;
     mode: "client" | "server";
+    rows: Task[];
   }) {
     const { table } = useTable<Task>({
       config,
-      data,
+      data: rows,
       columns: toolbarColumns,
       getRowId: (row) => row.id,
       ...(mode === "server" ? { pageCount: 1 } : { mode: "client" }),
@@ -232,10 +234,11 @@ describe.each([
   function renderHarness(
     toolbarColumns: typeof columns,
     mode: "client" | "server" = "client",
+    rows: Task[] = data,
   ) {
     render(
       <NuqsTestingAdapter hasMemory>
-        <Harness toolbarColumns={toolbarColumns} mode={mode} />
+        <Harness toolbarColumns={toolbarColumns} mode={mode} rows={rows} />
       </NuqsTestingAdapter>,
     );
   }
@@ -245,6 +248,25 @@ describe.each([
 
     expect(screen.getByRole("button", { name: /^Hours/ })).toBeTruthy();
     expect(screen.queryByRole("spinbutton")).toBeNull();
+  });
+
+  it("keeps the slider in client mode when no rows are left", () => {
+    renderHarness(columnsWithoutRange, "client", []);
+
+    expect(screen.getByRole("button", { name: /^Hours/ })).toBeTruthy();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+  });
+
+  it("widens the slider range when every row has the same value", () => {
+    renderHarness(columnsWithoutRange, "client", [
+      { id: "1", hours: 5 },
+      { id: "2", hours: 5 },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: /^Hours/ }));
+
+    const [from, to] = document.querySelectorAll("input[type=number]");
+    expect(from?.getAttribute("min")).toBe("5");
+    expect(to?.getAttribute("max")).toBe("6");
   });
 
   it("renders a number input in server mode without meta.min and meta.max", () => {

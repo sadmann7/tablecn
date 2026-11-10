@@ -143,16 +143,14 @@ export function getColumnNumberOptions(
   return meta?.variant === "number" ? meta : undefined;
 }
 
-export function getColumnNumberRange<TData extends RowData>(
+export function getIsNumberRangeColumn<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
-): [number, number] | undefined {
+) {
   const options = getColumnNumberOptions(column.columnDef.meta);
   if (typeof options?.min === "number" && typeof options.max === "number") {
-    return [options.min, options.max];
+    return true;
   }
-  if (column.table.options.manualFiltering) return undefined;
-
-  return column.getFacetedMinMaxValues();
+  return !column.table.options.manualFiltering;
 }
 
 export function getColumnSelectOptions(
