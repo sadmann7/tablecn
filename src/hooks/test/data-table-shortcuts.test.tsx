@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { DataTableSortMenu as AriaDataTableSortMenu } from "@/registry/bases/aria/components/data-table/data-table-sort-menu";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
@@ -39,9 +40,15 @@ const bases = [
 describe.each(bases)(
   "menu shortcuts with two tables (%s)",
   (_, DataTable, DataTableSortMenu, useDataTable) => {
-    function Table({ id, label }: { id: string; label: string }) {
+    function Table({
+      config,
+      label,
+    }: {
+      config: typeof firstConfig;
+      label: string;
+    }) {
       const { table } = useDataTable<Task>({
-        id,
+        config,
         mode: "client",
         data,
         columns,
@@ -58,8 +65,8 @@ describe.each(bases)(
     function renderTables() {
       return render(
         <NuqsTestingAdapter hasMemory>
-          <Table id="first" label="First" />
-          <Table id="second" label="Second" />
+          <Table config={firstConfig} label="First" />
+          <Table config={secondConfig} label="Second" />
         </NuqsTestingAdapter>,
       );
     }
@@ -96,6 +103,15 @@ const data: Task[] = Array.from({ length: 3 }, (_, index) => ({
   id: String(index),
   title: `Task ${index}`,
 }));
+
+const firstConfig = createDataTableConfig({
+  id: "first",
+  columns: { title: {} },
+});
+const secondConfig = createDataTableConfig({
+  id: "second",
+  columns: { title: {} },
+});
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 

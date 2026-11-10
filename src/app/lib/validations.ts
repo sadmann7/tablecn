@@ -39,6 +39,7 @@ export const createTaskSchema = z.object({
   priority: z.enum(tasks.priority.enumValues),
   estimatedHours: z.number().optional(),
 });
+export type CreateTaskSchema = z.infer<typeof createTaskSchema>;
 
 export const updateTaskSchema = z.object({
   title: z.string().optional(),
@@ -47,6 +48,4 @@ export const updateTaskSchema = z.object({
   priority: z.enum(tasks.priority.enumValues).optional(),
   estimatedHours: z.number().optional(),
 });
-
-export type CreateTaskSchema = z.infer<typeof createTaskSchema>;
 export type UpdateTaskSchema = z.infer<typeof updateTaskSchema>;

@@ -85,7 +85,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
   (
     | {
         config: Omit<DataTableConfig, "parse">;
-        id?: never;
         enableGlobalFilter?: never;
         pageSizeOptions?: never;
         initialState?: Omit<
@@ -99,7 +98,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
       }
     | {
         config?: never;
-        id?: string;
         initialState?: InitialTableState;
       }
   ) &
@@ -120,7 +118,6 @@ function useDataTable<TData extends RowData>({
   pageCount,
   initialState: initialStateProp,
   config: configProp,
-  id,
   startTransition,
   history = "replace",
   debounceMs = DEBOUNCE_MS,
@@ -141,7 +138,6 @@ function useDataTable<TData extends RowData>({
     () =>
       configProp ??
       createDataTableConfig({
-        id,
         columns: getColumnConfigs(columns),
         defaultSorting: initialState?.sorting,
         defaultPageSize: initialState?.pagination?.pageSize,
@@ -151,15 +147,20 @@ function useDataTable<TData extends RowData>({
       }),
     [
       configProp,
-      id,
       columns,
       initialState,
       pageSizeOptionsProp,
       enableGlobalFilterProp,
     ],
   );
-  const { enableGlobalFilter, filterVariants, pageSizeOptions, urlKeys } =
+  const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
+
+  const queryParsers = React.useMemo(() => {
+    const { page, perPage, sort, joinOperator, search, ...filters } =
+      config.parsers;
+    return { state: { page, perPage, sort, joinOperator, search }, filters };
+  }, [config]);
 
   const [initialTableState] = React.useState<InitialTableState>(() => ({
     ...initialState,
@@ -196,9 +197,9 @@ function useDataTable<TData extends RowData>({
   const [
     { page, perPage, sort: sorting, joinOperator, search: urlGlobalFilter },
     setQueryState,
-  ] = useQueryStates(config.parsers, queryStateOptions);
+  ] = useQueryStates(queryParsers.state, queryStateOptions);
   const [filterParams, setFilterParams] = useQueryStates(
-    config.filterParsers,
+    queryParsers.filters,
     queryStateOptions,
   );
 
@@ -243,7 +244,7 @@ function useDataTable<TData extends RowData>({
   const urlFilters = React.useMemo(
     () =>
       sortColumnFiltersBySearch(
-        getColumnFilters(filterableIds, (id) => filterParams[id] ?? []),
+        getColumnFilters(filterableIds, filterParams),
         filterOrder,
       ),
     [filterableIds, filterParams, filterOrder],

@@ -117,16 +117,19 @@ export function serializeColumnFilter(filter: ColumnFilterItem) {
   return `${name}.${rawValue}`;
 }
 
-export function getColumnFilters<TColumnId extends string>(
-  columnIds: readonly TColumnId[],
-  getFilters: (id: TColumnId) => ColumnFilterItem<TColumnId>[],
-) {
-  return columnIds.flatMap((id) =>
-    getFilters(id).map((filter, index) => ({
+export function getColumnFilters(
+  columnIds: readonly string[],
+  values: Partial<Record<string, unknown>>,
+): ColumnFilterItem[] {
+  return columnIds.flatMap((id) => {
+    const filters: unknown = values[id];
+    if (!Array.isArray(filters)) return [];
+
+    return filters.map((filter: ColumnFilterItem, index) => ({
       ...filter,
       filterId: `${id}-${index}`,
-    })),
-  );
+    }));
+  });
 }
 
 export function sortColumnFiltersBySearch<TFilter extends ColumnFilterItem>(

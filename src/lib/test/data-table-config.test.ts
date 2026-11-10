@@ -226,6 +226,11 @@ describe("parse", () => {
     expectTypeOf<Query["sorting"][number]["id"]>().toEqualTypeOf<
       "title" | "status" | "priority" | "estimatedHours" | "createdAt"
     >();
+    expectTypeOf<keyof typeof tasksTableConfig.filterVariants>().toEqualTypeOf<
+      "title" | "status" | "priority" | "estimatedHours" | "createdAt"
+    >();
+    expectTypeOf(tasksTableConfig.urlKeys).toHaveProperty("estimatedHours");
+    expectTypeOf(tasksTableConfig.parsers).toHaveProperty("createdAt");
   });
 });
 

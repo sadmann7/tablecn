@@ -200,9 +200,10 @@ describe("getColumnFilters", () => {
   it("numbers filters per column and builds a stable key", () => {
     const title = parseColumnFilter("title", "text", "the");
     const status = parseColumnFilter("status", "multi-select", "todo");
-    const filters = getColumnFilters(["title", "status"] as const, (id) =>
-      id === "title" ? [title, title] : [status],
-    );
+    const filters = getColumnFilters(["title", "status"], {
+      title: [title, title],
+      status: [status],
+    });
 
     expect(filters.map((filter) => filter.filterId)).toEqual([
       "title-0",

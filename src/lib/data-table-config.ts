@@ -49,18 +49,34 @@ const DATA_TABLE_KEYS = [
 
 type DataTableKey = (typeof DATA_TABLE_KEYS)[number];
 
-type ReservedColumnConfigs = Partial<
-  Record<DataTableKey, { variant?: undefined }>
->;
+type ReservedColumnConfigs<TColumns> = {
+  [K in keyof TColumns as K extends DataTableKey ? K : never]: {
+    variant?: undefined;
+  };
+};
 
 type ConfigQuery<TColumns extends DataTableColumnConfigs> = DataTableQuery<
   FilterableColumnId<TColumns>,
   SortableColumnId<TColumns>
 >;
 
+type ColumnFilterParser<TColumnId extends string> = ReturnType<
+  typeof getColumnFilterParser<TColumnId>
+>;
+
+type ConfigParsers<TColumns extends DataTableColumnConfigs> = ReturnType<
+  typeof getStateParsers
+> &
+  (string extends keyof TColumns
+    ? unknown
+    : Record<
+        FilterableColumnId<TColumns>,
+        ColumnFilterParser<FilterableColumnId<TColumns>>
+      >);
+
 interface DataTableConfigOptions<TColumns extends DataTableColumnConfigs> {
   id?: string;
-  columns: TColumns & ReservedColumnConfigs;
+  columns: TColumns & ReservedColumnConfigs<TColumns>;
   defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumns>>>[];
   defaultPageSize?: number;
   pageSizeOptions?: readonly number[];
@@ -78,13 +94,9 @@ export interface DataTableConfig<
   readonly pageSizeOptions: readonly number[];
   readonly defaultJoinOperator: JoinOperator;
   readonly enableGlobalFilter: boolean;
-  readonly filterVariants: Record<string, FilterVariant>;
-  readonly parsers: ReturnType<typeof getStateParsers>;
-  readonly filterParsers: Record<
-    string,
-    ReturnType<typeof getColumnFilterParser>
-  >;
-  readonly urlKeys: Record<string, string>;
+  readonly filterVariants: Record<FilterableColumnId<TColumns>, FilterVariant>;
+  readonly parsers: ConfigParsers<TColumns>;
+  readonly urlKeys: Record<DataTableKey | FilterableColumnId<TColumns>, string>;
   parse(search: LoaderInput): ConfigQuery<TColumns>;
 }
 
@@ -131,7 +143,7 @@ export function createDataTableConfig<
     );
   }
 
-  const parsers = getStateParsers({
+  const stateParsers = getStateParsers({
     sortableIds: Object.keys(columns).filter(
       (columnId) => columns[columnId]?.enableSorting !== false,
     ),
@@ -155,8 +167,8 @@ export function createDataTableConfig<
     ]),
   );
 
-  const loadState = createLoader(parsers, { urlKeys });
-  const loadFilters = createLoader(filterParsers, { urlKeys });
+  const parsers = { ...stateParsers, ...filterParsers };
+  const load = createLoader(parsers, { urlKeys });
 
   return Object.freeze({
     id,
@@ -168,26 +180,19 @@ export function createDataTableConfig<
     enableGlobalFilter,
     filterVariants,
     parsers,
-    filterParsers,
     urlKeys,
     parse(search: LoaderInput) {
-      const state = loadState(search);
-      const filters = loadFilters(search);
-      const query: DataTableQuery = {
-        page: state.page,
-        perPage: state.perPage,
-        sorting: state.sort,
-        filters: getColumnFilters(
-          filterableIds,
-          (columnId) => filters[columnId] ?? [],
-        ),
-        joinOperator: state.joinOperator,
-        globalFilter: enableGlobalFilter ? state.search : "",
+      const values = load(search);
+      return {
+        page: values.page,
+        perPage: values.perPage,
+        sorting: values.sort,
+        filters: getColumnFilters(filterableIds, values),
+        joinOperator: values.joinOperator,
+        globalFilter: enableGlobalFilter ? values.search : "",
       };
-
-      return query as ConfigQuery<TColumns>;
     },
-  });
+  }) as DataTableConfig<TColumns>;
 }
 
 export function createDataTableColumnHelper<

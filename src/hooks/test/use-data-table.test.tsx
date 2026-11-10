@@ -276,6 +276,16 @@ describe("useDataTable", () => {
     });
   });
 
+  it("keeps the same filters when only the page changes", async () => {
+    const { result, getLastSearch } = renderDataTable("?title=bug");
+    const filters = result.current.table.state.columnFilters;
+
+    act(() => result.current.table.setPageIndex(2));
+
+    await waitFor(() => expect(getLastSearch()?.get("page")).toBe("3"));
+    expect(result.current.table.state.columnFilters).toBe(filters);
+  });
+
   it("writes only the pagination keys that changed", async () => {
     const { result, getLastSearch } = renderDataTable("");
 
@@ -451,7 +461,7 @@ describe("useDataTable", () => {
   it("namespaces every URL key with the id, including column filters", async () => {
     const { result, getLastSearch } = renderDataTable(
       "?t.page=2&t.sort=title.asc&t.title=bug&t.search=x&title=other&page=9",
-      { id: "t" },
+      { config: createDataTableConfig({ id: "t", columns: tableColumns }) },
     );
 
     expect(result.current.table.state.pagination.pageIndex).toBe(1);
@@ -478,7 +488,7 @@ describe("useDataTable", () => {
   it("keeps two tables with different ids on one page apart", async () => {
     const { result, getLastSearch } = renderDataTables(
       "?a.page=2&b.title=bug",
-      { id: "a" },
+      { config: createDataTableConfig({ id: "a", columns: tableColumns }) },
       { config: createDataTableConfig({ id: "b", columns: tableColumns }) },
     );
 

@@ -81,7 +81,9 @@ type KeysWhere<TRecord, TValue> = {
   string;
 
 export type FilterableColumnId<TColumns extends DataTableColumnConfigs> =
-  KeysWhere<TColumns, { variant: ColumnVariant }>;
+  string extends keyof TColumns
+    ? string
+    : KeysWhere<TColumns, { variant: ColumnVariant }>;
 
 export type SortableColumnId<TColumns extends DataTableColumnConfigs> = Exclude<
   keyof TColumns & string,

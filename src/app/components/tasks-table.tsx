@@ -232,7 +232,7 @@ export function TasksTable({
     getRowId: (originalRow) => originalRow.id,
     shallow: false,
     enableRowRangeSelection: true,
-    ...(dataMode === "client" ? { mode: "client" as const } : { pageCount }),
+    ...(dataMode === "client" ? { mode: "client" } : { pageCount }),
   });
 
   return (
