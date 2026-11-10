@@ -1,16 +1,17 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { tasksTable } from "@/app/lib/validations";
+import { tasksTableConfig } from "@/app/lib/validations";
 import {
-  defineDataTable,
-  getColumnConfigOptions,
-  getDataTableUrlKeys,
+  createDataTableColumnHelper,
+  createDataTableConfig,
   type InferDataTableQuery,
-} from "@/lib/data-table-definition";
+} from "@/lib/data-table-config";
 
-describe("defineDataTable", () => {
+describe("createDataTableConfig", () => {
   it("applies defaults and keeps plain URL keys without an id", () => {
-    const table = defineDataTable({ columns: { title: { variant: "text" } } });
+    const table = createDataTableConfig({
+      columns: { title: { variant: "text" } },
+    });
 
     expect(table.id).toBeUndefined();
     expect(table.defaultSorting).toEqual([]);
@@ -27,7 +28,7 @@ describe("defineDataTable", () => {
   });
 
   it("namespaces every URL key with the id", () => {
-    const table = defineDataTable({
+    const table = createDataTableConfig({
       id: "tasks",
       columns: { title: { variant: "text" }, code: { enableSorting: false } },
     });
@@ -44,29 +45,50 @@ describe("defineDataTable", () => {
 
   it("rejects a filterable column named after a built-in key", () => {
     expect(() =>
-      defineDataTable({
+      createDataTableConfig({
         // @ts-expect-error a filterable column can't use a built-in key
         columns: { search: { variant: "text" } },
       }),
     ).toThrow('column id "search" is reserved');
   });
 
+  it("filters columns with a variant and sorts unless opted out", () => {
+    const table = createDataTableConfig({
+      columns: {
+        name: { variant: "text" },
+        age: { variant: "number", filter: "range", enableSorting: false },
+        id: { enableSorting: false },
+        createdAt: {},
+      },
+    });
+
+    expect(table.filterVariants).toEqual({ name: "text", age: "range" });
+    expect(
+      table.parse("?sort=name.asc,createdAt.desc").sorting.map(({ id }) => id),
+    ).toEqual(["name", "createdAt"]);
+    expect(table.parse("?sort=age.asc").sorting).toEqual([]);
+    expect(table.parse("?sort=id.asc").sorting).toEqual([]);
+  });
+
   it("allows a built-in key for a column without a filter", () => {
     expect(() =>
-      defineDataTable({ columns: { page: { enableSorting: false } } }),
+      createDataTableConfig({ columns: { page: { enableSorting: false } } }),
     ).not.toThrow();
   });
 
   it("rejects an empty id", () => {
     expect(() =>
-      defineDataTable({ id: "", columns: { title: { variant: "text" } } }),
+      createDataTableConfig({
+        id: "",
+        columns: { title: { variant: "text" } },
+      }),
     ).toThrow("must not be empty");
   });
 });
 
 describe("parse", () => {
   it("returns the defaults for an empty URL", () => {
-    expect(tasksTable.parse("?page=no")).toEqual({
+    expect(tasksTableConfig.parse("?page=no")).toEqual({
       page: 1,
       perPage: 10,
       sorting: [{ id: "createdAt", desc: true }],
@@ -77,7 +99,7 @@ describe("parse", () => {
   });
 
   it("joins per-column params in column order and drops empty filters", () => {
-    const query = tasksTable.parse(
+    const query = tasksTableConfig.parse(
       "?status=not.in.todo&estimatedHours=gte.2&estimatedHours=LTE.8&title=ilike.the&createdAt=2026-01-01,2026-12-31&priority=bogus.xyz&joinOperator=or&title=",
     );
 
@@ -95,19 +117,21 @@ describe("parse", () => {
   });
 
   it("falls back to and for an unknown join operator", () => {
-    expect(tasksTable.parse("?joinOperator=xor").joinOperator).toBe("and");
+    expect(tasksTableConfig.parse("?joinOperator=xor").joinOperator).toBe(
+      "and",
+    );
   });
 
   it("passes the global filter through when it is on", () => {
-    const table = defineDataTable({ columns: tasksTable.columns });
+    const table = createDataTableConfig({ columns: tasksTableConfig.columns });
 
     expect(table.parse("?search=login%20bug").globalFilter).toBe("login bug");
-    expect(tasksTable.parse("?search=login%20bug").globalFilter).toBe("");
+    expect(tasksTableConfig.parse("?search=login%20bug").globalFilter).toBe("");
   });
 
   it("reads custom defaults and a record of search params", () => {
-    const table = defineDataTable({
-      columns: tasksTable.columns,
+    const table = createDataTableConfig({
+      columns: tasksTableConfig.columns,
       defaultPageSize: 25,
     });
 
@@ -119,8 +143,14 @@ describe("parse", () => {
   });
 
   it("reads only the keys of its own id", () => {
-    const first = defineDataTable({ id: "a", columns: tasksTable.columns });
-    const second = defineDataTable({ id: "b", columns: tasksTable.columns });
+    const first = createDataTableConfig({
+      id: "a",
+      columns: tasksTableConfig.columns,
+    });
+    const second = createDataTableConfig({
+      id: "b",
+      columns: tasksTableConfig.columns,
+    });
     const search = "?a.page=2&a.status=todo&b.search=bug&page=9&status=done";
 
     expect(first.parse(search)).toMatchObject({
@@ -135,23 +165,32 @@ describe("parse", () => {
     });
   });
 
-  it("reads one definition under different ids", () => {
+  it("reuses one config under different ids", () => {
     const search = "?open.page=2&open.status=todo&closed.page=3&page=9";
+    const openTable = createDataTableConfig({
+      ...tasksTableConfig,
+      id: "open",
+    });
+    const closedTable = createDataTableConfig({
+      ...tasksTableConfig,
+      id: "closed",
+    });
 
-    expect(tasksTable.parse(search, { id: "open" })).toMatchObject({
+    expect(openTable.parse(search)).toMatchObject({
       page: 2,
       filters: [expect.objectContaining({ id: "status", value: ["todo"] })],
     });
-    expect(tasksTable.parse(search, { id: "closed" })).toMatchObject({
+    expect(closedTable.parse(search)).toMatchObject({
       page: 3,
+      sorting: tasksTableConfig.defaultSorting,
+      globalFilter: "",
       filters: [],
     });
-    expect(tasksTable.parse(search)).toMatchObject({ page: 9 });
-    expect(() => tasksTable.parse(search, { id: "" })).toThrow();
+    expect(tasksTableConfig.parse(search)).toMatchObject({ page: 9 });
   });
 
   it("ignores out-of-range pages and page sizes", () => {
-    const table = defineDataTable({ columns: tasksTable.columns });
+    const table = createDataTableConfig({ columns: tasksTableConfig.columns });
 
     for (const search of ["?page=0", "?page=-3", "?page=abc"]) {
       expect(table.parse(search).page).toBe(1);
@@ -162,9 +201,9 @@ describe("parse", () => {
     expect(table.parse("?perPage=25").perPage).toBe(25);
   });
 
-  it("uses the definition's join operator and global filter settings", () => {
-    const table = defineDataTable({
-      columns: tasksTable.columns,
+  it("uses the config's join operator and global filter settings", () => {
+    const table = createDataTableConfig({
+      columns: tasksTableConfig.columns,
       defaultJoinOperator: "or",
       enableGlobalFilter: false,
       pageSizeOptions: [5, 15],
@@ -179,7 +218,7 @@ describe("parse", () => {
   });
 
   it("types filters and sorting by column id", () => {
-    type Query = InferDataTableQuery<typeof tasksTable>;
+    type Query = InferDataTableQuery<typeof tasksTableConfig>;
 
     expectTypeOf<Query["filters"][number]["id"]>().toEqualTypeOf<
       "title" | "status" | "priority" | "estimatedHours" | "createdAt"
@@ -190,25 +229,67 @@ describe("parse", () => {
   });
 });
 
-describe("getColumnConfigOptions", () => {
-  it("maps a column config to TanStack column options", () => {
-    expect(getColumnConfigOptions(tasksTable.columns.code)).toEqual({
-      meta: {},
-      enableColumnFilter: false,
-      enableSorting: false,
-    });
-    expect(getColumnConfigOptions(tasksTable.columns.createdAt)).toEqual({
-      meta: { variant: "date", filter: "range" },
-      enableColumnFilter: true,
-      enableSorting: true,
-    });
-  });
+interface Task {
+  id: string;
+  code: string;
+  status: "todo" | "done";
+  estimatedHours: number;
+}
+
+const columnHelperConfig = createDataTableConfig({
+  columns: {
+    code: { enableSorting: false },
+    status: { variant: "multi-select" },
+    estimatedHours: { variant: "number", filter: "range" },
+  },
 });
 
-describe("getDataTableUrlKeys", () => {
-  it("rejects a filterable column named after a built-in key", () => {
-    expect(() => getDataTableUrlKeys(["page"])).toThrow(
-      'column id "page" is reserved',
-    );
+const columnHelper = createDataTableColumnHelper<
+  Task,
+  typeof columnHelperConfig
+>();
+
+describe("createDataTableColumnHelper", () => {
+  it("names the column once", () => {
+    expect(
+      columnHelper.accessor("estimatedHours", {
+        header: "Hours",
+        meta: { label: "Est. Hours", unit: "hr", max: 24 },
+      }),
+    ).toEqual({
+      id: "estimatedHours",
+      accessorKey: "estimatedHours",
+      header: "Hours",
+      meta: { label: "Est. Hours", unit: "hr", max: 24 },
+    });
+  });
+
+  it("types the cell value and the meta by column", () => {
+    columnHelper.accessor("status", {
+      cell: ({ cell }) => {
+        expectTypeOf(cell.getValue()).toEqualTypeOf<"todo" | "done">();
+        return null;
+      },
+      meta: { options: [{ label: "Todo", value: "todo" }] },
+    });
+    columnHelper.accessor("code", {
+      // @ts-expect-error options only exist on select columns
+      meta: { options: [] },
+    });
+    // @ts-expect-error the config has no id column
+    columnHelper.accessor("id", {});
+    columnHelper.accessor("status", {
+      // @ts-expect-error the config owns the sorting flag
+      enableSorting: false,
+    });
+  });
+
+  it("keeps the rest of the TanStack column helper", () => {
+    const columns = columnHelper.columns([
+      columnHelper.accessor("code", {}),
+      columnHelper.display({ id: "actions" }),
+    ]);
+
+    expect(columns.map((column) => column.id)).toEqual(["code", "actions"]);
   });
 });

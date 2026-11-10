@@ -6,10 +6,10 @@ import {
 import * as z from "zod";
 
 import { tasks } from "@/db/schema";
-import { defineDataTable } from "@/lib/data-table-definition";
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DATA_MODES, DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 
-export const tasksTable = defineDataTable({
+export const tasksTableConfig = createDataTableConfig({
   columns: {
     code: { enableSorting: false },
     title: { variant: "text" },

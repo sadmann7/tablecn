@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { defineDataTable } from "@/lib/data-table-definition";
+import { createDataTableConfig } from "@/lib/data-table-config";
 import {
   useDataTable,
   type UseDataTableProps,
@@ -263,11 +263,16 @@ describe("useDataTable", () => {
       onSortingChange: () => {},
     });
     renderDataTable("", {
-      definition: defineDataTable({ columns: tableColumns }),
+      config: createDataTableConfig({ columns: tableColumns }),
       initialState: {
-        // @ts-expect-error filters come from the URL when a definition is set
+        // @ts-expect-error filters come from the URL when a config is set
         columnFilters: [{ id: "title", value: "seed" }],
       },
+    });
+    renderDataTable("", {
+      config: createDataTableConfig({ columns: tableColumns }),
+      // @ts-expect-error the config owns the id
+      id: "tasks",
     });
   });
 
@@ -474,7 +479,7 @@ describe("useDataTable", () => {
     const { result, getLastSearch } = renderDataTables(
       "?a.page=2&b.title=bug",
       { id: "a" },
-      { definition: defineDataTable({ id: "b", columns: tableColumns }) },
+      { config: createDataTableConfig({ id: "b", columns: tableColumns }) },
     );
 
     expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
@@ -493,12 +498,12 @@ describe("useDataTable", () => {
     expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
   });
 
-  it("mounts one definition twice under different ids", async () => {
-    const definition = defineDataTable({ columns: tableColumns });
+  it("reuses one config under different ids", async () => {
+    const config = createDataTableConfig({ columns: tableColumns });
     const { result, getLastSearch } = renderDataTables(
       "?open.title=bug&closed.page=3",
-      { definition, id: "open" },
-      { definition, id: "closed" },
+      { config: createDataTableConfig({ ...config, id: "open" }) },
+      { config: createDataTableConfig({ ...config, id: "closed" }) },
     );
 
     expect(
@@ -572,15 +577,15 @@ describe("useDataTable", () => {
     ]);
   });
 
-  it("applies the definition to the columns", async () => {
-    const definition = defineDataTable({
+  it("applies the config to the columns", async () => {
+    const config = createDataTableConfig({
       columns: {
         code: { variant: "text" },
         title: { enableSorting: false },
       },
     });
     const { result, getLastSearch } = renderDataTable("?code=T-1&status=todo", {
-      definition,
+      config,
     });
     const { table } = result.current;
 
@@ -600,16 +605,16 @@ describe("useDataTable", () => {
     await waitFor(() => expect(getLastSearch()?.get("sort")).toBe("code.desc"));
   });
 
-  it("uses the definition's defaults over initialState", () => {
-    const definition = defineDataTable({
+  it("uses the config's defaults over initialState", () => {
+    const config = createDataTableConfig({
       columns: tableColumns,
       defaultSorting: [{ id: "title", desc: true }],
       defaultPageSize: 25,
     });
     const { result } = renderDataTable("", {
-      definition,
+      config,
       initialState: {
-        // @ts-expect-error the definition owns the default sorting
+        // @ts-expect-error the config owns the default sorting
         sorting: [{ id: "status", desc: false }],
         pagination: { pageIndex: 0, pageSize: 50 },
       },
@@ -627,14 +632,14 @@ describe("useDataTable", () => {
     ]);
   });
 
-  it("takes the join operator, global filter and page sizes from the definition", () => {
-    const definition = defineDataTable({
+  it("takes the join operator, global filter and page sizes from the config", () => {
+    const config = createDataTableConfig({
       columns: tableColumns,
       defaultJoinOperator: "or",
       enableGlobalFilter: false,
       pageSizeOptions: [5, 15],
     });
-    const { result } = renderDataTable("?search=bug", { definition });
+    const { result } = renderDataTable("?search=bug", { config });
     const { table } = result.current;
 
     expect(table.getJoinOperator()).toBe("or");

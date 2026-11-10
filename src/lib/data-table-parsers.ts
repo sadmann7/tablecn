@@ -4,17 +4,13 @@ import { z } from "zod";
 import type {
   ColumnFilterItem,
   ColumnSortItem,
-  DataTableColumnConfigs,
-  FilterableColumnId,
   FilterOperator,
   FilterVariant,
-  SortableColumnId,
 } from "@/lib/data-table-types";
 
 import {
   FILTER_OPERATORS,
   getFilterOperators,
-  getFilterVariant,
   getIsActiveFilter,
   getIsValidFilterValue,
   getIsValuelessOperator,
@@ -212,32 +208,7 @@ export function getColumnFiltersKey(filters: ColumnFilterItem[]) {
     .join("&");
 }
 
-export function getFilterableColumns<
-  TColumnConfigs extends DataTableColumnConfigs,
->(columnConfigs: TColumnConfigs) {
-  const entries = getKeys<keyof TColumnConfigs & string>(columnConfigs).flatMap(
-    (id) => {
-      const config = columnConfigs[id];
-      return config?.variant ? [[id, getFilterVariant(config)] as const] : [];
-    },
-  );
-
-  return Object.fromEntries(entries) as Record<
-    FilterableColumnId<TColumnConfigs>,
-    FilterVariant
-  >;
-}
-
-export function getSortableColumns<
-  TColumnConfigs extends DataTableColumnConfigs,
->(columnConfigs: TColumnConfigs) {
-  return getKeys<keyof TColumnConfigs & string>(columnConfigs).filter(
-    (id): id is SortableColumnId<TColumnConfigs> =>
-      columnConfigs[id]?.enableSorting !== false,
-  );
-}
-
-export function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
+function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
   return Object.keys(record).filter((key): key is TKey =>
     Object.hasOwn(record, key),
   );

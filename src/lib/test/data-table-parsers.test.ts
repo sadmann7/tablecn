@@ -1,34 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { tasksTable } from "@/app/lib/validations";
 import {
   getColumnFilterParser,
   getColumnFilters,
   getColumnFiltersKey,
-  getFilterableColumns,
-  getSortableColumns,
   getSortingStateParser,
   parseColumnFilter,
   serializeColumnFilter,
   sortColumnFiltersBySearch,
 } from "@/lib/data-table-parsers";
-
-describe("column config", () => {
-  const columnConfigs = {
-    name: { variant: "text" },
-    age: { variant: "number", filter: "range", enableSorting: false },
-    id: { enableSorting: false },
-    createdAt: {},
-  } as const;
-
-  it("filters columns with a variant and sorts unless opted out", () => {
-    expect(getFilterableColumns(columnConfigs)).toEqual({
-      name: "text",
-      age: "range",
-    });
-    expect(getSortableColumns(columnConfigs)).toEqual(["name", "createdAt"]);
-  });
-});
 
 describe("parseColumnFilter", () => {
   it("uses the variant default when the param has no operator", () => {
@@ -258,7 +238,7 @@ describe("sortColumnFiltersBySearch", () => {
 });
 
 describe("getSortingStateParser", () => {
-  const parser = getSortingStateParser(getSortableColumns(tasksTable.columns));
+  const parser = getSortingStateParser(["title", "createdAt"]);
 
   it("reads the compact form and rejects unknown columns", () => {
     expect(parser.parse("createdAt.desc,title.asc")).toEqual([

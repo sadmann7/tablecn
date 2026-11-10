@@ -12,13 +12,17 @@ import {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
-import { createDataTableColumnHelper } from "@/lib/data-table-column-helper";
+import { createDataTableColumnHelper } from "@/lib/data-table-config";
 import { formatDate } from "@/lib/format";
 
-import { getPriorityIcon, getStatusIcon } from "../../lib/utils";
-import { basesTasksTable } from "./table";
+import type { basesTasksTableConfig } from "./table";
 
-const columnHelper = createDataTableColumnHelper<Task>()(basesTasksTable);
+import { getPriorityIcon, getStatusIcon } from "../../lib/utils";
+
+const columnHelper = createDataTableColumnHelper<
+  Task,
+  typeof basesTasksTableConfig
+>();
 
 interface GetBasesDataTableColumnsOptions {
   data: Task[];

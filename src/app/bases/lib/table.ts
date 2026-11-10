@@ -1,8 +1,8 @@
-import { defineDataTable } from "@/lib/data-table-definition";
+import { createDataTableConfig } from "@/lib/data-table-config";
 
-import { tasksTable } from "../../lib/validations";
+import { tasksTableConfig } from "../../lib/validations";
 
-export const basesTasksTable = defineDataTable({
-  columns: tasksTable.columns,
-  defaultSorting: tasksTable.defaultSorting,
+export const basesTasksTableConfig = createDataTableConfig({
+  columns: tasksTableConfig.columns,
+  defaultSorting: tasksTableConfig.defaultSorting,
 });

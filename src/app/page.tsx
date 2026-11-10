@@ -14,7 +14,7 @@ import {
   getTasks,
   getTaskStatusCounts,
 } from "./lib/queries";
-import { searchParamsCache, tasksTable } from "./lib/validations";
+import { searchParamsCache, tasksTableConfig } from "./lib/validations";
 
 export default function IndexPage(props: PageProps<"/">) {
   return (
@@ -55,7 +55,7 @@ async function TasksTableWrapper(props: PageProps<"/">) {
   const tasksPromise =
     dataMode === "client"
       ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
-      : getTasks(tasksTable.parse(searchParams));
+      : getTasks(tasksTableConfig.parse(searchParams));
 
   const promises = Promise.all([
     tasksPromise,

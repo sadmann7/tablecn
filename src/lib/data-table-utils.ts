@@ -139,6 +139,19 @@ export function getAriaSort(
   return sort.desc ? "descending" : "ascending";
 }
 
+export function getColumnId<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+) {
+  const accessorKey = "accessorKey" in column ? column.accessorKey : undefined;
+  return (
+    column.id ??
+    (accessorKey === undefined
+      ? undefined
+      : String(accessorKey).replaceAll(".", "_")) ??
+    (typeof column.header === "string" ? column.header : undefined)
+  );
+}
+
 export function getVisibleSelectedRows<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,
 ) {
@@ -613,17 +626,4 @@ function getFilterValueStringifier(
 function stringifyFilterDate(value: unknown) {
   const date = parseFilterDate(value);
   return date ? formatFilterDate(date) : "";
-}
-
-export function getColumnId<TData extends RowData>(
-  column: ColumnDef<DataTableFeatures, TData>,
-) {
-  const accessorKey = "accessorKey" in column ? column.accessorKey : undefined;
-  return (
-    column.id ??
-    (accessorKey === undefined
-      ? undefined
-      : String(accessorKey).replaceAll(".", "_")) ??
-    (typeof column.header === "string" ? column.header : undefined)
-  );
 }

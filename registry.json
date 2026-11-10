@@ -102,11 +102,7 @@
           "type": "registry:lib"
         },
         {
-          "path": "src/lib/data-table-definition.ts",
-          "type": "registry:lib"
-        },
-        {
-          "path": "src/lib/data-table-column-helper.ts",
+          "path": "src/lib/data-table-config.ts",
           "type": "registry:lib"
         },
         {
@@ -127,7 +123,7 @@
       "name": "data-table-select-column",
       "type": "registry:component",
       "title": "Data Table Select Column",
-      "description": "A reusable select column definition for the data table with checkbox selection",
+      "description": "A reusable select column config for the data table with checkbox selection",
       "registryDependencies": ["checkbox"],
       "dependencies": ["@tanstack/react-table"],
       "files": [
@@ -162,7 +158,7 @@
       "name": "data-table-actions-column",
       "type": "registry:component",
       "title": "Data Table Actions Column",
-      "description": "A reusable actions column definition for the data table with a per-row actions menu",
+      "description": "A reusable actions column config for the data table with a per-row actions menu",
       "registryDependencies": ["button", "dropdown-menu"],
       "dependencies": ["@tanstack/react-table"],
       "files": [
@@ -526,7 +522,7 @@
       "name": "data-grid-select-column",
       "type": "registry:component",
       "title": "Data Grid Select Column",
-      "description": "A reusable select column definition for the data grid with checkbox selection and shift-click support",
+      "description": "A reusable select column config for the data grid with checkbox selection and shift-click support",
       "registryDependencies": ["checkbox"],
       "dependencies": ["@tanstack/react-table"],
       "files": [
@@ -557,7 +553,7 @@
       "name": "data-grid-actions-column",
       "type": "registry:component",
       "title": "Data Grid Actions Column",
-      "description": "A reusable actions column definition for the data grid with a per-row actions menu",
+      "description": "A reusable actions column config for the data grid with a per-row actions menu",
       "registryDependencies": ["button", "dropdown-menu"],
       "dependencies": ["@tanstack/react-table"],
       "files": [

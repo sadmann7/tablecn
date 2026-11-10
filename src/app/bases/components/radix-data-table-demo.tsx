@@ -23,7 +23,7 @@ import {
 
 import { useBasesDataTable } from "../hooks/use-bases-data-table";
 import { getBasesDataTableColumns } from "../lib/data-table-columns";
-import { basesTasksTable } from "../lib/table";
+import { basesTasksTableConfig } from "../lib/table";
 
 export function RadixDataTableDemo() {
   const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
@@ -64,7 +64,7 @@ export function RadixDataTableDemo() {
     mode: "client",
     data,
     columns,
-    definition: basesTasksTable,
+    config: basesTasksTableConfig,
     initialState: {
       columnPinning: { start: ["select"], end: ["actions"] },
     },
