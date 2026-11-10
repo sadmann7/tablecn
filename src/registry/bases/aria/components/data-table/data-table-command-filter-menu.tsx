@@ -638,7 +638,12 @@ function BooleanFilterValue<TData extends RowData>({
       aria-label={`${column.columnDef.meta?.label ?? column.id} boolean filter`}
       isOpen={open}
       onOpenChange={onOpenChange}
-      value={typeof filter.value === "string" ? filter.value : "true"}
+      placeholder="Select value"
+      value={
+        typeof filter.value === "string" && filter.value !== ""
+          ? filter.value
+          : null
+      }
       onChange={(value) => {
         if (value == null) return;
         onFilterUpdate(filter.filterId, { value: String(value) });

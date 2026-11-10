@@ -611,7 +611,11 @@ function BooleanFilterValue<TData extends RowData>({
     <Select
       open={open}
       onOpenChange={onOpenChange}
-      value={typeof filter.value === "string" ? filter.value : "true"}
+      value={
+        typeof filter.value === "string" && filter.value !== ""
+          ? filter.value
+          : undefined
+      }
       onValueChange={(value) => onFilterUpdate(filter.filterId, { value })}
     >
       <SelectTrigger
@@ -620,7 +624,7 @@ function BooleanFilterValue<TData extends RowData>({
         aria-label={`${column.columnDef.meta?.label ?? column.id} boolean filter`}
         className="rounded-none bg-transparent px-1.5 py-0.5 [&_svg]:hidden"
       >
-        <SelectValue />
+        <SelectValue placeholder="Select value" />
       </SelectTrigger>
       <SelectContent id={listboxId}>
         <SelectGroup>

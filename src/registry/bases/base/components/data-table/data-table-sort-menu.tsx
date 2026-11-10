@@ -412,6 +412,7 @@ function DataTableSortItem({
         open={showDirectionSelector}
         onOpenChange={setShowDirectionSelector}
         value={sort.desc ? "desc" : "asc"}
+        items={SORT_ORDERS}
         onValueChange={(value) => {
           if (value == null) return;
           onSortUpdate(sort.id, { desc: value === "desc" });

@@ -65,6 +65,10 @@ import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 const FILTER_SHORTCUT_KEY = "f";
 const REMOVE_FILTER_SHORTCUTS = ["backspace", "delete"];
+const BOOLEAN_OPTIONS = [
+  { label: "True", value: "true" },
+  { label: "False", value: "false" },
+];
 
 type FilterUpdate = Partial<Omit<ColumnFilterItem, "filterId">>;
 type FilterSelector = "field" | "operator" | "value";
@@ -576,6 +580,7 @@ function FilterOperatorSelector({
       open={open}
       onOpenChange={onOpenChange}
       value={filter.operator}
+      items={getFilterOperators(filter.variant)}
       onValueChange={(operator) => {
         if (operator == null) return;
         onFilterUpdate(filter.filterId, {
@@ -700,6 +705,7 @@ function BooleanFilterValue<TData extends RowData>({
       open={open}
       onOpenChange={onOpenChange}
       value={typeof filter.value === "string" ? filter.value : null}
+      items={BOOLEAN_OPTIONS}
       onValueChange={(value) => {
         if (value == null) return;
         onFilterUpdate(filter.filterId, { value });

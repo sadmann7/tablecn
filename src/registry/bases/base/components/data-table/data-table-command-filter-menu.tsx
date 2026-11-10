@@ -81,6 +81,10 @@ interface CommandQuery {
 }
 
 const EMPTY_QUERY: CommandQuery = { columnId: null, search: "" };
+const BOOLEAN_OPTIONS = [
+  { label: "True", value: "true" },
+  { label: "False", value: "false" },
+];
 
 interface DataTableCommandFilterMenuProps<
   TData extends RowData,
@@ -494,6 +498,7 @@ function FilterOperatorSelector({
       open={open}
       onOpenChange={onOpenChange}
       value={filter.operator}
+      items={getFilterOperators(filter.variant)}
       onValueChange={(operator) => {
         if (operator == null) return;
         onFilterUpdate(filter.filterId, {
@@ -615,7 +620,12 @@ function BooleanFilterValue<TData extends RowData>({
     <Select
       open={open}
       onOpenChange={onOpenChange}
-      value={typeof filter.value === "string" ? filter.value : "true"}
+      value={
+        typeof filter.value === "string" && filter.value !== ""
+          ? filter.value
+          : null
+      }
+      items={BOOLEAN_OPTIONS}
       onValueChange={(value) => {
         if (value == null) return;
         onFilterUpdate(filter.filterId, { value });
@@ -627,7 +637,7 @@ function BooleanFilterValue<TData extends RowData>({
         aria-label={`${column.columnDef.meta?.label ?? column.id} boolean filter`}
         className="rounded-none bg-transparent px-1.5 py-0.5 [&_svg]:hidden"
       >
-        <SelectValue />
+        <SelectValue placeholder="Select value" />
       </SelectTrigger>
       <SelectContent dir={dir} id={listboxId}>
         <SelectGroup>
