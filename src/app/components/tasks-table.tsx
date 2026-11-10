@@ -230,7 +230,6 @@ export function TasksTable({
     shallow: false,
     clearOnDefault: true,
     enableRowRangeSelection: true,
-    enableGlobalFilter: false,
     ...(dataMode === "client" ? { mode: "client" as const } : { pageCount }),
   });
 

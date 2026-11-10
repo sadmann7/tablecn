@@ -1,5 +1,6 @@
 import {
   createLoader,
+  createParser,
   type LoaderInput,
   parseAsInteger,
   parseAsString,
@@ -28,7 +29,10 @@ import {
   getSortableColumns,
   getSortingStateParser,
 } from "@/lib/data-table-parsers";
-import { JOIN_OPERATORS } from "@/lib/data-table-utils";
+import {
+  DEFAULT_PAGE_SIZE_OPTIONS,
+  JOIN_OPERATORS,
+} from "@/lib/data-table-utils";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -58,6 +62,9 @@ interface DataTableDefinitionOptions<TColumns extends DataTableColumnConfigs> {
   columns: TColumns & ReservedColumnConfigs;
   defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumns>>>[];
   defaultPageSize?: number;
+  pageSizeOptions?: readonly number[];
+  defaultJoinOperator?: JoinOperator;
+  enableGlobalFilter?: boolean;
 }
 
 export interface DataTableDefinition<
@@ -67,6 +74,9 @@ export interface DataTableDefinition<
   readonly columns: TColumns;
   readonly defaultSorting: ColumnSortItem<SortableColumnId<TColumns>>[];
   readonly defaultPageSize: number;
+  readonly pageSizeOptions: readonly number[];
+  readonly defaultJoinOperator: JoinOperator;
+  readonly enableGlobalFilter: boolean;
   readonly parsers: ReturnType<
     typeof getDataTableStateParsers<SortableColumnId<TColumns>>
   > &
@@ -89,6 +99,9 @@ export function defineDataTable<const TColumns extends DataTableColumnConfigs>({
   columns: columnsProp,
   defaultSorting = [],
   defaultPageSize = DEFAULT_PAGE_SIZE,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
+  defaultJoinOperator = "and",
+  enableGlobalFilter = true,
 }: DataTableDefinitionOptions<TColumns>): DataTableDefinition<TColumns> {
   const columns: TColumns = columnsProp;
   const filterableColumns = getFilterableColumns(columns);
@@ -97,6 +110,8 @@ export function defineDataTable<const TColumns extends DataTableColumnConfigs>({
     sortableIds: getSortableColumns(columns),
     defaultSorting,
     defaultPageSize,
+    pageSizeOptions,
+    defaultJoinOperator,
   });
   const filterParsers = getDataTableFilterParsers(filterableColumns);
   const urlKeys = getDataTableUrlKeys(filterableIds, id);
@@ -114,6 +129,9 @@ export function defineDataTable<const TColumns extends DataTableColumnConfigs>({
     columns,
     defaultSorting,
     defaultPageSize,
+    pageSizeOptions,
+    defaultJoinOperator,
+    enableGlobalFilter,
     parsers: { ...stateParsers, ...filterParsers },
     urlKeys,
     parse(search: LoaderInput, options?: { id?: string }) {
@@ -136,7 +154,7 @@ export function defineDataTable<const TColumns extends DataTableColumnConfigs>({
           (columnId) => filters[columnId],
         ),
         joinOperator: state.joinOperator,
-        globalFilter: state.search,
+        globalFilter: enableGlobalFilter ? state.search : "",
       };
     },
   });
@@ -181,6 +199,7 @@ interface DataTableStateParsersOptions<TSortColumnId extends string> {
   sortableIds: readonly TSortColumnId[] | Set<TSortColumnId>;
   defaultSorting?: ColumnSortItem<TSortColumnId>[];
   defaultPageSize?: number;
+  pageSizeOptions?: readonly number[];
   defaultJoinOperator?: JoinOperator;
 }
 
@@ -188,11 +207,14 @@ export function getDataTableStateParsers<TSortColumnId extends string>({
   sortableIds,
   defaultSorting = [],
   defaultPageSize = DEFAULT_PAGE_SIZE,
+  pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   defaultJoinOperator = "and",
 }: DataTableStateParsersOptions<TSortColumnId>) {
+  const maxPageSize = Math.max(defaultPageSize, ...pageSizeOptions);
+
   return {
-    page: parseAsInteger.withDefault(1),
-    perPage: parseAsInteger.withDefault(defaultPageSize),
+    page: getIntegerParser(1).withDefault(1),
+    perPage: getIntegerParser(1, maxPageSize).withDefault(defaultPageSize),
     sort: getSortingStateParser(sortableIds).withDefault(defaultSorting),
     joinOperator: parseAsStringEnum([...JOIN_OPERATORS]).withDefault(
       defaultJoinOperator,
@@ -210,6 +232,16 @@ export function getDataTableFilterParsers<TColumnId extends string>(
       getColumnFilterParser(columnId, filterableColumns[columnId]),
     ]),
   ) as Record<TColumnId, ReturnType<typeof getColumnFilterParser<TColumnId>>>;
+}
+
+function getIntegerParser(min: number, max = Number.POSITIVE_INFINITY) {
+  return createParser({
+    parse: (value) => {
+      const number = parseAsInteger.parse(value);
+      return number !== null && number >= min && number <= max ? number : null;
+    },
+    serialize: String,
+  });
 }
 
 function getIsDataTableKey(key: string): key is DataTableKey {

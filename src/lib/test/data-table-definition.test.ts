@@ -98,10 +98,11 @@ describe("parse", () => {
     expect(tasksTable.parse("?joinOperator=xor").joinOperator).toBe("and");
   });
 
-  it("passes the global filter through", () => {
-    expect(tasksTable.parse("?search=login%20bug").globalFilter).toBe(
-      "login bug",
-    );
+  it("passes the global filter through when it is on", () => {
+    const table = defineDataTable({ columns: tasksTable.columns });
+
+    expect(table.parse("?search=login%20bug").globalFilter).toBe("login bug");
+    expect(tasksTable.parse("?search=login%20bug").globalFilter).toBe("");
   });
 
   it("reads custom defaults and a record of search params", () => {
@@ -147,6 +148,34 @@ describe("parse", () => {
     });
     expect(tasksTable.parse(search)).toMatchObject({ page: 9 });
     expect(() => tasksTable.parse(search, { id: "" })).toThrow();
+  });
+
+  it("ignores out-of-range pages and page sizes", () => {
+    const table = defineDataTable({ columns: tasksTable.columns });
+
+    for (const search of ["?page=0", "?page=-3", "?page=abc"]) {
+      expect(table.parse(search).page).toBe(1);
+    }
+    for (const search of ["?perPage=0", "?perPage=-5", "?perPage=1000000"]) {
+      expect(table.parse(search).perPage).toBe(10);
+    }
+    expect(table.parse("?perPage=25").perPage).toBe(25);
+  });
+
+  it("uses the definition's join operator and global filter settings", () => {
+    const table = defineDataTable({
+      columns: tasksTable.columns,
+      defaultJoinOperator: "or",
+      enableGlobalFilter: false,
+      pageSizeOptions: [5, 15],
+    });
+
+    expect(table.parse("?search=bug")).toMatchObject({
+      joinOperator: "or",
+      globalFilter: "",
+    });
+    expect(table.parse("?perPage=15").perPage).toBe(15);
+    expect(table.parse("?perPage=20").perPage).toBe(10);
   });
 
   it("types filters and sorting by column id", () => {

@@ -25,6 +25,7 @@ import {
   getFilterOperators,
   getFilterVariant,
   getIsEditableTarget,
+  getIsTableShortcutTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
 } from "@/lib/data-table-utils";
@@ -130,6 +131,13 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (disabled) return;
+      if (
+        !open &&
+        !getIsTableShortcutTarget(triggerRef.current, event.target)
+      ) {
+        return;
+      }
       if (getIsEditableTarget(event.target)) return;
       if (
         event.key.toLowerCase() !== FILTER_SHORTCUT_KEY ||
@@ -145,10 +153,10 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [disabled, open]);
 
   const columns = React.useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanFilter()),
+    () => table.getAllLeafColumns().filter((column) => column.getCanFilter()),
     [table],
   );
 

@@ -41,7 +41,7 @@ export function DataTableViewOptions<TData extends RowData>({
   const columns = React.useMemo(
     () =>
       table
-        .getAllColumns()
+        .getAllLeafColumns()
         .filter(
           (column) => column.accessorFn !== undefined && column.getCanHide(),
         ),

@@ -49,6 +49,8 @@ export const FILTER_OPERATORS = {
 
 export const JOIN_OPERATORS = ["and", "or"] as const;
 
+export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
+
 export const SORT_ORDERS = [
   { label: "Asc", value: "asc" },
   { label: "Desc", value: "desc" },
@@ -204,6 +206,22 @@ export function getIsEditableTarget(target: EventTarget | null) {
     target instanceof HTMLTextAreaElement ||
     target instanceof HTMLSelectElement
   );
+}
+
+const DATA_TABLE_SELECTOR = '[data-slot="data-table"]';
+
+export function getIsTableShortcutTarget(
+  element: Element | null,
+  target: EventTarget | null,
+) {
+  const root = element?.closest(DATA_TABLE_SELECTOR);
+  if (!root) return true;
+
+  const targetRoot =
+    target instanceof Element ? target.closest(DATA_TABLE_SELECTOR) : null;
+  if (targetRoot) return targetRoot === root;
+
+  return document.querySelector(DATA_TABLE_SELECTOR) === root;
 }
 
 export function getIsValuelessOperator(operator: FilterOperator) {

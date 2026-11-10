@@ -19,6 +19,7 @@ export const tasksTable = defineDataTable({
     createdAt: { variant: "date", filter: "range" },
   },
   defaultSorting: [{ id: "createdAt", desc: true }],
+  enableGlobalFilter: false,
 });
 
 export const searchParamsCache = createSearchParamsCache({

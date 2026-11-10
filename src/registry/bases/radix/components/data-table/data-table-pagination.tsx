@@ -7,7 +7,10 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getVisibleSelectedRows } from "@/lib/data-table-utils";
+import {
+  DEFAULT_PAGE_SIZE_OPTIONS,
+  getVisibleSelectedRows,
+} from "@/lib/data-table-utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Select,
@@ -23,12 +26,12 @@ interface DataTablePaginationProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
-  pageSizeOptions?: number[];
+  pageSizeOptions?: readonly number[];
 }
 
 export function DataTablePagination<TData extends RowData>({
   table,
-  pageSizeOptions = [10, 20, 30, 40, 50],
+  pageSizeOptions = table.options.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS,
   className,
   ...props
 }: DataTablePaginationProps<TData>) {
@@ -65,7 +68,7 @@ interface DataTablePaginationContentProps<
   pageSize: number;
   selectedRowCount: number;
   visibleSelectedRowCount: number;
-  pageSizeOptions: number[];
+  pageSizeOptions: readonly number[];
 }
 
 function DataTablePaginationContent<TData extends RowData>({

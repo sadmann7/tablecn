@@ -56,6 +56,7 @@ interface TableState_DataTableFiltering {
 
 interface TableOptions_DataTableFiltering {
   onJoinOperatorChange?: OnChangeFn<JoinOperator>;
+  pageSizeOptions?: readonly number[];
 }
 
 interface Table_DataTableFiltering {

@@ -12,7 +12,7 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { SORT_ORDERS } from "@/lib/data-table-utils";
+import { getIsTableShortcutTarget, SORT_ORDERS } from "@/lib/data-table-utils";
 import { Badge } from "@/registry/bases/base/ui/badge";
 import { Button } from "@/registry/bases/base/ui/button";
 import { useDirection } from "@/registry/bases/base/ui/direction";
@@ -83,6 +83,7 @@ function DataTableSortMenuContent<TData extends RowData>({
   const labelId = React.useId();
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   const onSortingChange = table.setSorting;
 
@@ -91,7 +92,7 @@ function DataTableSortMenuContent<TData extends RowData>({
     const sortingIds = new Set(sorting.map((s) => s.id));
     const availableColumns: { id: string; label: string }[] = [];
 
-    for (const column of table.getAllColumns()) {
+    for (const column of table.getAllLeafColumns()) {
       if (!column.getCanSort()) continue;
 
       const label = column.columnDef.meta?.label ?? column.id;
@@ -145,6 +146,13 @@ function DataTableSortMenuContent<TData extends RowData>({
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (disabled) return;
+      if (
+        !open &&
+        !getIsTableShortcutTarget(triggerRef.current, event.target)
+      ) {
+        return;
+      }
       if (
         event.target instanceof HTMLInputElement ||
         event.target instanceof HTMLTextAreaElement ||
@@ -166,7 +174,7 @@ function DataTableSortMenuContent<TData extends RowData>({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [disabled, open]);
 
   const onTriggerKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -192,6 +200,7 @@ function DataTableSortMenuContent<TData extends RowData>({
           render={
             <Button
               variant="outline"
+              ref={triggerRef}
               onKeyDown={onTriggerKeyDown}
               disabled={disabled}
             />

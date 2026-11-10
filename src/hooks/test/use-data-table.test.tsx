@@ -445,6 +445,53 @@ describe("useDataTable", () => {
     ).toEqual([["title", "bug"]]);
   });
 
+  it("reads and writes columns nested in a group", async () => {
+    const groupedColumns = columnHelper.columns([
+      columnHelper.group({
+        id: "details",
+        header: "Details",
+        columns: columnHelper.columns([
+          columnHelper.accessor("title", {
+            id: "title",
+            meta: { variant: "text" },
+            enableColumnFilter: true,
+          }),
+          columnHelper.accessor("status", { id: "status" }),
+        ]),
+      }),
+    ]);
+    const { result, getLastSearch } = renderDataTable(
+      "?title=bug&sort=status.desc",
+      { columns: groupedColumns },
+    );
+
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+    ]);
+    expect(result.current.table.state.sorting).toEqual([
+      { id: "status", desc: true },
+    ]);
+
+    act(() =>
+      result.current.table.setColumnFilters([{ id: "title", value: "fix" }]),
+    );
+
+    await waitFor(() => expect(getLastSearch()?.get("title")).toBe("fix"));
+  });
+
+  it("treats a filterable column without a variant as text", () => {
+    const plainColumns = columnHelper.columns([
+      columnHelper.accessor("title", { id: "title", enableColumnFilter: true }),
+    ]);
+    const { result } = renderDataTable("?title=bug", { columns: plainColumns });
+    const { table } = result.current;
+
+    expect(table.getColumn("title")?.columnDef.meta?.variant).toBe("text");
+    expect(getFilterSummary(table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+    ]);
+  });
+
   it("applies the definition to the columns", async () => {
     const definition = defineDataTable({
       columns: {
@@ -498,6 +545,25 @@ describe("useDataTable", () => {
     expect(result.current.table.state.sorting).toEqual([
       { id: "title", desc: true },
     ]);
+  });
+
+  it("takes the join operator, global filter and page sizes from the definition", () => {
+    const definition = defineDataTable({
+      columns: tableColumns,
+      defaultJoinOperator: "or",
+      enableGlobalFilter: false,
+      pageSizeOptions: [5, 15],
+    });
+    const { result } = renderDataTable("?search=bug", { definition });
+    const { table } = result.current;
+
+    expect(table.getJoinOperator()).toBe("or");
+    expect(table.state.globalFilter).toBe("");
+    expect(table.options.pageSizeOptions).toEqual([5, 15]);
+
+    act(() => table.resetJoinOperator());
+
+    expect(result.current.table.getJoinOperator()).toBe("or");
   });
 
   it("throws when a filterable column uses a built-in key", () => {

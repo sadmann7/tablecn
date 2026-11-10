@@ -21,9 +21,9 @@ import {
   DropdownMenuSeparator,
 } from "@/registry/bases/aria/ui/dropdown-menu";
 
-import { tasksTable } from "../../lib/validations";
 import { useBasesDataTable } from "../hooks/use-bases-data-table";
 import { getBasesDataTableColumns } from "../lib/data-table-columns";
+import { basesTasksTable } from "../lib/table";
 
 export function AriaDataTableDemo() {
   const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
@@ -64,7 +64,7 @@ export function AriaDataTableDemo() {
     mode: "client",
     data,
     columns,
-    definition: tasksTable,
+    definition: basesTasksTable,
     initialState: {
       columnPinning: { start: ["select"], end: ["actions"] },
     },

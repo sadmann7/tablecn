@@ -16,6 +16,7 @@ import * as React from "react";
 import type { DataTableDefinition } from "@/lib/data-table-definition";
 import type {
   ColumnFilterItem,
+  DataTableColumnConfig,
   DataTableColumnConfigs,
   FilterVariant,
   JoinOperator,
@@ -40,9 +41,9 @@ import {
   sortColumnFiltersBySearch,
 } from "@/lib/data-table-parsers";
 import {
+  DEFAULT_PAGE_SIZE_OPTIONS,
   getActiveFilters,
   getColumnId,
-  getFilterVariant,
   normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
@@ -84,14 +85,26 @@ type UseDataTableProps<TData extends RowData> = Omit<
 > &
   UrlStateOptions & {
     startTransition?: React.TransitionStartFunction;
+    pageSizeOptions?: readonly number[];
   } & (
     | {
         definition: Pick<
           DataTableDefinition,
-          "id" | "columns" | "defaultSorting" | "defaultPageSize"
+          | "id"
+          | "columns"
+          | "defaultSorting"
+          | "defaultPageSize"
+          | "pageSizeOptions"
+          | "defaultJoinOperator"
+          | "enableGlobalFilter"
         >;
         id?: string;
-        initialState?: Omit<InitialTableState, "sorting" | "pagination">;
+        enableGlobalFilter?: never;
+        pageSizeOptions?: never;
+        initialState?: Omit<
+          InitialTableState,
+          "sorting" | "pagination" | "joinOperator"
+        >;
       }
     | {
         definition?: never;
@@ -124,44 +137,47 @@ function useDataTable<TData extends RowData>({
   clearOnDefault = false,
   scroll = false,
   shallow: shallowProp = true,
-  enableGlobalFilter = true,
+  enableGlobalFilter: enableGlobalFilterProp = true,
+  pageSizeOptions: pageSizeOptionsProp,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
 
-  const [initialTableState] = React.useState<InitialTableState | undefined>(
-    () =>
-      definition
-        ? {
-            ...initialState,
-            sorting: definition.defaultSorting,
-            pagination: {
-              pageIndex: 0,
-              pageSize: definition.defaultPageSize,
-            },
-          }
-        : initialState,
-  );
+  const [initialTableState] = React.useState<InitialTableState>(() => {
+    const state: InitialTableState = { ...initialState };
+    if (!definition) return state;
 
-  const tableColumns = React.useMemo(
-    () =>
-      definition
-        ? columns.map((column) => getDefinedColumn(column, definition.columns))
-        : columns,
+    return {
+      ...state,
+      sorting: definition.defaultSorting,
+      pagination: { pageIndex: 0, pageSize: definition.defaultPageSize },
+      joinOperator: definition.defaultJoinOperator,
+    };
+  });
+
+  const enableGlobalFilter =
+    definition?.enableGlobalFilter ?? enableGlobalFilterProp;
+  const pageSizeOptions =
+    definition?.pageSizeOptions ??
+    pageSizeOptionsProp ??
+    DEFAULT_PAGE_SIZE_OPTIONS;
+
+  const columnConfigs = React.useMemo(
+    () => definition?.columns ?? getColumnConfigs(columns),
     [columns, definition],
   );
 
+  const tableColumns = React.useMemo(
+    () => columns.map((column) => getDefinedColumn(column, columnConfigs)),
+    [columns, columnConfigs],
+  );
+
   const columnIndex = React.useMemo(() => {
-    const variantById: Record<string, FilterVariant> = definition
-      ? getFilterableColumns(definition.columns)
-      : getFilterableVariants(columns);
+    const variantById: Record<string, FilterVariant> =
+      getFilterableColumns(columnConfigs);
 
     return {
-      sortableIds: new Set(
-        definition
-          ? getSortableColumns(definition.columns)
-          : getSortableIds(columns),
-      ),
+      sortableIds: new Set<string>(getSortableColumns(columnConfigs)),
       filterableIds: Object.keys(variantById),
       variantById,
       normalizeColumnFilters: (filters: ColumnFiltersState) =>
@@ -169,7 +185,7 @@ function useDataTable<TData extends RowData>({
           normalizeColumnFilter(filter, variantById[filter.id] ?? "text"),
         ),
     };
-  }, [columns, definition]);
+  }, [columnConfigs]);
 
   const {
     page,
@@ -189,6 +205,7 @@ function useDataTable<TData extends RowData>({
     id,
     columnIndex,
     defaultPageSize: initialTableState?.pagination?.pageSize,
+    pageSizeOptions,
     defaultSorting: initialTableState?.sorting,
     defaultJoinOperator: initialTableState?.joinOperator,
     startTransition,
@@ -362,6 +379,7 @@ function useDataTable<TData extends RowData>({
       features: dataTableFeatures,
       columns: tableColumns,
       enableGlobalFilter,
+      pageSizeOptions,
       initialState: initialTableState,
       pageCount: isServer ? pageCount : undefined,
       state: {
@@ -396,6 +414,7 @@ interface UseUrlTableStateOptions extends Required<UrlStateOptions> {
   id: string | undefined;
   columnIndex: ColumnIndex;
   defaultPageSize: number | undefined;
+  pageSizeOptions: readonly number[];
   defaultSorting: SortingState | undefined;
   defaultJoinOperator: JoinOperator | undefined;
   startTransition: React.TransitionStartFunction | undefined;
@@ -405,6 +424,7 @@ function useUrlTableState({
   id,
   columnIndex,
   defaultPageSize,
+  pageSizeOptions,
   defaultSorting,
   defaultJoinOperator,
   startTransition,
@@ -460,6 +480,7 @@ function useUrlTableState({
       sortableIds: columnIndex.sortableIds,
       defaultSorting,
       defaultPageSize,
+      pageSizeOptions,
       defaultJoinOperator,
     });
 
@@ -482,6 +503,7 @@ function useUrlTableState({
     columnIndex,
     defaultSorting,
     defaultPageSize,
+    pageSizeOptions,
     defaultJoinOperator,
     queryStateOptions,
   ]);
@@ -536,6 +558,13 @@ function getDefinedColumn<TData extends RowData>(
   column: ColumnDef<DataTableFeatures, TData>,
   configs: DataTableColumnConfigs,
 ): ColumnDef<DataTableFeatures, TData> {
+  if (getIsGroupColumn(column)) {
+    return {
+      ...column,
+      columns: column.columns.map((child) => getDefinedColumn(child, configs)),
+    };
+  }
+
   const columnId = getColumnId(column);
   if (columnId === undefined || !Object.hasOwn(configs, columnId)) {
     return { ...column, enableColumnFilter: false, enableSorting: false };
@@ -545,30 +574,54 @@ function getDefinedColumn<TData extends RowData>(
   return { ...column, ...options, meta: { ...column.meta, ...meta } };
 }
 
-function getFilterableVariants<TData extends RowData>(
+function getColumnConfigs<TData extends RowData>(
   columns: readonly ColumnDef<DataTableFeatures, TData>[],
 ) {
-  const variantById: Record<string, FilterVariant> = {};
+  const configs: DataTableColumnConfigs = {};
 
-  for (const column of columns) {
+  for (const column of getLeafColumns(columns)) {
     const columnId = getColumnId(column);
-    if (!columnId || !column.enableColumnFilter) continue;
-    variantById[columnId] = getFilterVariant(column.meta);
+    if (!columnId) continue;
+    configs[columnId] = getColumnConfig(column);
   }
 
-  return variantById;
+  return configs;
 }
 
-function getSortableIds<TData extends RowData>(
+function getLeafColumns<TData extends RowData>(
   columns: readonly ColumnDef<DataTableFeatures, TData>[],
-) {
-  return columns.flatMap((column) => {
-    const columnId = getColumnId(column);
-    const hasAccessor = "accessorKey" in column || "accessorFn" in column;
-    return columnId && hasAccessor && column.enableSorting !== false
-      ? [columnId]
-      : [];
-  });
+): ColumnDef<DataTableFeatures, TData>[] {
+  return columns.flatMap((column) =>
+    getIsGroupColumn(column) ? getLeafColumns(column.columns) : [column],
+  );
+}
+
+function getIsGroupColumn<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+): column is ColumnDef<DataTableFeatures, TData> & {
+  columns: ColumnDef<DataTableFeatures, TData>[];
+} {
+  return "columns" in column && Array.isArray(column.columns);
+}
+
+function getColumnConfig<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+): DataTableColumnConfig {
+  const hasAccessor = "accessorKey" in column || "accessorFn" in column;
+  const enableSorting = hasAccessor && column.enableSorting !== false;
+  if (!column.enableColumnFilter) return { enableSorting };
+
+  const meta = column.meta;
+  switch (meta?.variant) {
+    case "number":
+    case "date":
+      return { enableSorting, variant: meta.variant, filter: meta.filter };
+    case "select":
+    case "multi-select":
+      return { enableSorting, variant: meta.variant };
+    default:
+      return { enableSorting, variant: meta?.variant ?? "text" };
+  }
 }
 
 function subscribeToHistory(onChange: () => void) {

@@ -44,7 +44,7 @@ export function DataTableToolbar<TData extends RowData>({
   ...props
 }: DataTableToolbarProps<TData>) {
   const columns = React.useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanFilter()),
+    () => table.getAllLeafColumns().filter((column) => column.getCanFilter()),
     [table],
   );
 

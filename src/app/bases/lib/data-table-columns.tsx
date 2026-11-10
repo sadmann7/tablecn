@@ -16,9 +16,9 @@ import { createDataTableColumnHelper } from "@/lib/data-table-column-helper";
 import { formatDate } from "@/lib/format";
 
 import { getPriorityIcon, getStatusIcon } from "../../lib/utils";
-import { tasksTable } from "../../lib/validations";
+import { basesTasksTable } from "./table";
 
-const columnHelper = createDataTableColumnHelper<Task>()(tasksTable);
+const columnHelper = createDataTableColumnHelper<Task>()(basesTasksTable);
 
 interface GetBasesDataTableColumnsOptions {
   data: Task[];
