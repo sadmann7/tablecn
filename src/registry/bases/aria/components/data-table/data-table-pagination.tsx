@@ -27,12 +27,10 @@ interface DataTablePaginationProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
-  pageSizeOptions?: readonly number[];
 }
 
 export function DataTablePagination<TData extends RowData>({
   table,
-  pageSizeOptions = table.options.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS,
   className,
   ...props
 }: DataTablePaginationProps<TData>) {
@@ -52,7 +50,9 @@ export function DataTablePagination<TData extends RowData>({
           pageSize={pageSize}
           selectedRowCount={selectedRowCount}
           visibleSelectedRowCount={visibleSelectedRowCount}
-          pageSizeOptions={pageSizeOptions}
+          pageSizeOptions={
+            table.options.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS
+          }
           className={className}
           {...props}
         />
