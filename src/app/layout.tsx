@@ -75,7 +75,7 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: React.PropsWithChildren) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"

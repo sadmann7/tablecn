@@ -29,15 +29,11 @@ const DEMOS: Record<
   aria: { table: AriaDataTableDemo, grid: null },
 };
 
-interface BasesPageProps {
-  params: Promise<{ base: string }>;
-}
-
 export function generateStaticParams() {
   return BASES.map((base) => ({ base: base.value }));
 }
 
-export default function BasesPage({ params }: BasesPageProps) {
+export default function BasesPage(props: PageProps<"/bases/[base]">) {
   return (
     <div className="container flex flex-col gap-4 py-4">
       <h1 className="sr-only">Bases</h1>
@@ -59,7 +55,7 @@ export default function BasesPage({ params }: BasesPageProps) {
           />
         }
       >
-        <BasesContent params={params} />
+        <BasesContent {...props} />
       </Suspense>
     </div>
   );
@@ -67,7 +63,7 @@ export default function BasesPage({ params }: BasesPageProps) {
 
 const isDev = process.env.NODE_ENV === "development";
 
-async function BasesContent({ params }: BasesPageProps) {
+async function BasesContent({ params }: PageProps<"/bases/[base]">) {
   const { base } = await params;
   if (!isDev || !getIsBase(base)) notFound();
 
