@@ -211,12 +211,27 @@ describe.each(bases)(
         });
 
         const [item] = getTable().getColumnFilterItems();
-        expect(item).toMatchObject({ id: "dueAt", operator: "isBetween" });
-        expect(Array.isArray(item?.value) && item.value[0]).toBeTruthy();
-        expect(Array.isArray(item?.value) && item.value[0]).toBe(
-          Array.isArray(item?.value) && item.value[1],
-        );
+        expect(item).toMatchObject({ id: "dueAt", operator: "eq" });
+        expect(item?.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
       },
     );
+
+    it("shows a single day stored as one date", () => {
+      const getTable = renderToolbar();
+      const day = new Date(2026, 9, 3).getTime();
+
+      act(() => getTable().getColumn("dueAt")?.setFilterValue(day));
+
+      expect(
+        screen.getByRole("button", { name: /^Due/ }).textContent,
+      ).toContain("October 3, 2026");
+      expect(getTable().getColumnFilterItems()).toEqual([
+        expect.objectContaining({
+          id: "dueAt",
+          operator: "eq",
+          value: "2026-10-03",
+        }),
+      ]);
+    });
   },
 );

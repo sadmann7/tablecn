@@ -81,9 +81,15 @@ function DataTableDateFilterContent<TData extends RowData>({
       }
 
       if (multiple && !("getTime" in date)) {
-        const from = date.from?.getTime();
-        const to = date.to?.getTime();
-        column.setFilterValue(from || to ? [from, to ?? from] : undefined);
+        const from = date.from ?? date.to;
+        const to = date.to ?? date.from;
+        if (!from || !to) {
+          column.setFilterValue(undefined);
+        } else if (from.toDateString() === to.toDateString()) {
+          column.setFilterValue(from.getTime());
+        } else {
+          column.setFilterValue([from.getTime(), to.getTime()]);
+        }
       } else if (!multiple && "getTime" in date) {
         column.setFilterValue(date.getTime());
       }

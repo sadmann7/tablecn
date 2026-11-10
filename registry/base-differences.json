@@ -97,7 +97,7 @@
     "components/data-table/data-table-advanced-toolbar.tsx": "ea21655ad104",
     "components/data-table/data-table-column-header.tsx": "c46aa8b8cda9",
     "components/data-table/data-table-command-filter-menu.tsx": "c618a9b392f3",
-    "components/data-table/data-table-date-filter.tsx": "bdf57026f8da",
+    "components/data-table/data-table-date-filter.tsx": "7e548b799cc6",
     "components/data-table/data-table-faceted-filter.tsx": "6bc55864124c",
     "components/data-table/data-table-filter-menu.tsx": "0dd3cef7feef",
     "components/data-table/data-table-pagination.tsx": "937e59c7a038",
