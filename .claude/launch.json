@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "dev:multiplayer",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev:multiplayer"],
+      "port": 3000
+    }
+  ]
+}
