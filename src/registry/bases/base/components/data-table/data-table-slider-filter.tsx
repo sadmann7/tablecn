@@ -6,6 +6,7 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
+  getColumnNumberOptions,
   getRangeFilterBounds,
   getValidRangeFilterBounds,
 } from "@/lib/data-table-utils";
@@ -66,8 +67,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const dir = useDirection();
   const id = React.useId();
 
-  const meta = column.columnDef.meta;
-  const numberMeta = meta?.variant === "number" ? meta : undefined;
+  const numberMeta = getColumnNumberOptions(column.columnDef.meta);
   const declaredMin = numberMeta?.min;
   const declaredMax = numberMeta?.max;
   const unit = numberMeta?.unit;

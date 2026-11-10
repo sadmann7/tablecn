@@ -1,13 +1,14 @@
 import type { Table } from "@tanstack/react-table";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { DataTableCommandFilterMenu as AriaDataTableCommandFilterMenu } from "@/registry/bases/aria/components/data-table/data-table-command-filter-menu";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
@@ -226,6 +227,14 @@ const data: Task[] = [
   { id: "3", title: "Ship it", status: "todo", done: false },
 ];
 
+const config = createDataTableConfig({
+  columns: {
+    title: { variant: "text" },
+    status: { variant: "multi-select" },
+    done: { variant: "boolean" },
+  },
+});
+
 function renderCommandMenu(
   [, DataTable, DataTableCommandFilterMenu, useDataTable]: Base,
   filters: ColumnFilterItem[] = [],
@@ -234,11 +243,11 @@ function renderCommandMenu(
 
   function Harness() {
     const { table } = useDataTable<Task>({
+      config,
       mode: "client",
       data,
       columns,
       getRowId: (row) => row.id,
-      initialState: { columnFilters: filters },
     });
     tableRef.current = table;
 
@@ -254,6 +263,9 @@ function renderCommandMenu(
       <Harness />
     </NuqsTestingAdapter>,
   );
+  if (filters.length > 0) {
+    act(() => tableRef.current?.setColumnFilters(filters));
+  }
 
   return {
     get table() {

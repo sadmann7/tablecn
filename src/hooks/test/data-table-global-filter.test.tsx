@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { DataTableAdvancedToolbar as AriaDataTableAdvancedToolbar } from "@/registry/bases/aria/components/data-table/data-table-advanced-toolbar";
 import { DataTableToolbar as AriaDataTableToolbar } from "@/registry/bases/aria/components/data-table/data-table-toolbar";
@@ -43,6 +44,13 @@ const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 const columns = columnHelper.columns([
   columnHelper.accessor("title", { id: "title", header: "Title" }),
 ]);
+
+const config = createDataTableConfig({ columns: { title: {} } });
+
+const configWithoutSearch = createDataTableConfig({
+  columns: { title: {} },
+  enableGlobalFilter: false,
+});
 
 const bases = [
   [
@@ -89,7 +97,7 @@ describe.each(bases)(
           data,
           columns,
           getRowId: (row) => row.id,
-          enableGlobalFilter,
+          config: enableGlobalFilter === false ? configWithoutSearch : config,
         });
         tableRef.current = table;
 

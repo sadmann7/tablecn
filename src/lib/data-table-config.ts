@@ -58,6 +58,13 @@ type ReservedColumnConfigs<TColumns> = {
   };
 };
 
+type KnownColumnConfigs<TColumns> = {
+  [K in keyof TColumns]: Record<
+    Exclude<keyof TColumns[K], keyof DataTableColumnConfig>,
+    never
+  >;
+};
+
 type ConfigQuery<TColumns extends DataTableColumnConfigs> = DataTableQuery<
   FilterableColumnId<TColumns>,
   SortableColumnId<TColumns>
@@ -79,7 +86,9 @@ type ConfigParsers<TColumns extends DataTableColumnConfigs> = ReturnType<
 
 interface DataTableConfigOptions<TColumns extends DataTableColumnConfigs> {
   id?: string;
-  columns: TColumns & ReservedColumnConfigs<TColumns>;
+  columns: TColumns &
+    ReservedColumnConfigs<TColumns> &
+    KnownColumnConfigs<TColumns>;
   defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumns>>>[];
   defaultPageSize?: number;
   pageSizeOptions?: readonly number[];
@@ -110,7 +119,7 @@ export type InferDataTableQuery<
 type ColumnVariantDisplayOptions<TColumnConfig> = TColumnConfig extends {
   variant: infer TVariant extends keyof ColumnVariantOptions;
 }
-  ? Omit<ColumnVariantOptions[TVariant], "filter">
+  ? ColumnVariantOptions[TVariant]
   : unknown;
 
 type ConfiguredColumnDef<TData extends RowData, TValue, TColumnConfig> = Omit<
@@ -172,9 +181,11 @@ export function createDataTableConfig<
   const parsers = { ...stateParsers, ...filterParsers };
   const load = createLoader(parsers, { urlKeys });
 
+  const configColumns: TColumns = columns;
+
   return Object.freeze({
     id,
-    columns,
+    columns: configColumns,
     defaultSorting,
     defaultPageSize,
     pageSizeOptions,
@@ -205,9 +216,15 @@ export function createDataTableColumnHelper<
 
   return {
     ...columnHelper,
-    accessor<TId extends keyof TConfig["columns"] & keyof TData & string>(
+    accessor<TId extends keyof TData & string>(
       id: TId,
-      column: ConfiguredColumnDef<TData, TData[TId], TConfig["columns"][TId]>,
+      column: ConfiguredColumnDef<
+        TData,
+        TData[TId],
+        TId extends keyof TConfig["columns"]
+          ? TConfig["columns"][TId]
+          : undefined
+      >,
     ): AccessorKeyColumnDef<DataTableFeatures, TData, TData[TId]> {
       return { ...column, id, accessorKey: id };
     },
@@ -257,10 +274,20 @@ export function getColumnConfigs<TData extends RowData>(
   return configs;
 }
 
+export function getUnmatchedConfigIds<TData extends RowData>(
+  configs: DataTableColumnConfigs,
+  columns: readonly ColumnDef<DataTableFeatures, TData>[],
+) {
+  const columnIds = new Set(
+    getLeafColumns(columns).map((column) => getColumnId(column)),
+  );
+  return Object.keys(configs).filter((columnId) => !columnIds.has(columnId));
+}
+
 function getFilterVariants(columns: DataTableColumnConfigs) {
   return Object.fromEntries(
     Object.entries(columns).flatMap(([columnId, config]) =>
-      config.variant ? [[columnId, getFilterVariant(config)] as const] : [],
+      config.variant ? [[columnId, config.variant] as const] : [],
     ),
   );
 }
@@ -315,14 +342,6 @@ function getLeafColumns<TData extends RowData>(
   );
 }
 
-function getIsGroupColumn<TData extends RowData>(
-  column: ColumnDef<DataTableFeatures, TData>,
-): column is ColumnDef<DataTableFeatures, TData> & {
-  columns: ColumnDef<DataTableFeatures, TData>[];
-} {
-  return "columns" in column && Array.isArray(column.columns);
-}
-
 function getColumnConfig<TData extends RowData>(
   column: ColumnDef<DataTableFeatures, TData>,
 ): DataTableColumnConfig {
@@ -330,15 +349,13 @@ function getColumnConfig<TData extends RowData>(
   const enableSorting = hasAccessor && column.enableSorting !== false;
   if (!column.enableColumnFilter) return { enableSorting };
 
-  const meta = column.meta;
-  switch (meta?.variant) {
-    case "number":
-    case "date":
-      return { enableSorting, variant: meta.variant, filter: meta.filter };
-    case "select":
-    case "multi-select":
-      return { enableSorting, variant: meta.variant };
-    default:
-      return { enableSorting, variant: meta?.variant ?? "text" };
-  }
+  return { enableSorting, variant: getFilterVariant(column.meta) };
+}
+
+function getIsGroupColumn<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+): column is ColumnDef<DataTableFeatures, TData> & {
+  columns: ColumnDef<DataTableFeatures, TData>[];
+} {
+  return "columns" in column && Array.isArray(column.columns);
 }

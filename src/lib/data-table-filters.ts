@@ -19,11 +19,13 @@ import type {
 } from "@/lib/data-table-types";
 
 import {
+  asFilterItems,
   createPlainFilter,
   getActiveFiltersKey,
   getFilterVariant,
   getIsActiveFilter,
-  normalizeColumnFilter,
+  getIsPlainFilter,
+  getPlainFilterValue,
   parseFilterDate,
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
@@ -362,19 +364,7 @@ function getFilteringKey<
   TFeatures extends TableFeatures,
   TData extends RowData,
 >(instance: FilteringInstance<TFeatures, TData>) {
-  const filters: ColumnFilterItem[] = [];
-  for (const filter of instance.atoms.columnFilters?.get() ?? []) {
-    const column = instance.getColumn(filter.id);
-    if (!column) continue;
-    filters.push(
-      normalizeColumnFilter(
-        filter,
-        getFilterVariant(
-          column.columnDef.meta as DataTableColumnMeta | undefined,
-        ),
-      ),
-    );
-  }
+  const filters = asFilterItems(instance.atoms.columnFilters?.get() ?? []);
 
   return JSON.stringify([
     getActiveFiltersKey(filters),
@@ -397,7 +387,9 @@ function getFilteredRowModel<
   const joinOperator = instance.atoms.joinOperator?.get() ?? "and";
   const testsByColumn = new Map<string, RowTest<TFeatures, TData>[]>();
 
-  for (const filter of instance.atoms.columnFilters?.get() ?? []) {
+  for (const filter of asFilterItems(
+    instance.atoms.columnFilters?.get() ?? [],
+  )) {
     const column = instance.getColumn(filter.id);
     const test = column ? getFilterTest(column, filter) : null;
     if (!test) continue;
@@ -439,22 +431,23 @@ function getFilteredRowModel<
 
 function getFilterTest<TFeatures extends TableFeatures, TData extends RowData>(
   column: FilteringColumn<TFeatures, TData>,
-  filter: ColumnFilter,
+  filter: ColumnFilterItem,
 ): RowTest<TFeatures, TData> | null {
   const filterFn = column.getFilterFn?.();
 
-  if (!filter.operator && filterFn && !Object.is(filterFn, dataTableFilterFn)) {
-    const value = filterFn.resolveFilterValue?.(filter.value) ?? filter.value;
+  if (
+    getIsPlainFilter(filter) &&
+    filterFn &&
+    !Object.is(filterFn, dataTableFilterFn)
+  ) {
+    const plainValue = getPlainFilterValue(filter);
+    const value = filterFn.resolveFilterValue?.(plainValue) ?? plainValue;
     return (row) => filterFn(row, column.id, value);
   }
 
-  const item = normalizeColumnFilter(
-    filter,
-    getFilterVariant(column.columnDef.meta as DataTableColumnMeta | undefined),
-  );
-  if (!getIsActiveFilter(item)) return null;
+  if (!getIsActiveFilter(filter)) return null;
 
-  return (row) => matchesFilter(row.getValue(column.id), item);
+  return (row) => matchesFilter(row.getValue(column.id), filter);
 }
 
 function getGlobalFilterTests<

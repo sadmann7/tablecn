@@ -12,6 +12,7 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
+  getColumnNumberOptions,
   getColumnSelectOptions,
   getFilterVariant,
 } from "@/lib/data-table-utils";
@@ -148,7 +149,7 @@ function DataTableToolbarFilter<TData extends RowData>({
           type="number"
           inputMode="numeric"
           placeholder={placeholder}
-          unit={columnMeta.variant === "number" ? columnMeta.unit : undefined}
+          unit={getColumnNumberOptions(columnMeta)?.unit}
           className="w-30"
         />
       );

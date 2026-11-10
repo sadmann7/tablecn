@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { getDataTableSelectColumn as getAriaSelectColumn } from "@/registry/bases/aria/components/data-table/data-table-select-column";
 import { DataTableSkeleton as AriaDataTableSkeleton } from "@/registry/bases/aria/components/data-table/data-table-skeleton";
@@ -152,6 +153,10 @@ const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
   status: index % 2 ? "todo" : "done",
 }));
 
+const config = createDataTableConfig({
+  columns: { title: {}, status: { variant: "multi-select" } },
+});
+
 function renderTable(ui: Base, search = "") {
   const { DataTable, DataTableToolbar, useDataTable } = ui;
   const columns = getColumns(ui);
@@ -161,6 +166,7 @@ function renderTable(ui: Base, search = "") {
 
   function Harness() {
     const { table } = useDataTable<Task>({
+      config,
       mode: "client",
       data,
       columns,

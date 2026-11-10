@@ -7,7 +7,7 @@ import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
-import type { ColumnVariant } from "@/lib/data-table-types";
+import type { FilterVariant } from "@/lib/data-table-types";
 
 import { dataTableFeatures } from "@/lib/data-table-features";
 import { dataTableFilterFn } from "@/lib/data-table-filters";
@@ -101,7 +101,7 @@ describe("filtered rows", () => {
     ).toMatchObject({ status: false, title: true });
   });
 
-  it("uses a column filter function until the filter has an operator", () => {
+  it("uses a column filter function for plain filters only", () => {
     const { result } = renderTaskTable();
     const table = result.current;
     const row = table.getRowModel().rows[0];
@@ -116,10 +116,10 @@ describe("filtered rows", () => {
 
     act(() => {
       table.setColumnFilters([
-        { id: "exact", operator: "iLike", variant: "text", value: "alp" },
+        { id: "exact", operator: "notILike", variant: "text", value: "alp" },
       ]);
     });
-    expect(rowIds(table)).toEqual(["alpha"]);
+    expect(rowIds(table)).toEqual(["beta", "gamma"]);
 
     act(() => {
       table.setColumnFilters([
@@ -435,7 +435,7 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("title", {
     id: "weird",
-    meta: { variant: "bogus" as ColumnVariant },
+    meta: { variant: "bogus" as FilterVariant },
   }),
   columnHelper.accessor("status", {
     id: "status",
@@ -443,7 +443,7 @@ const columns = columnHelper.columns([
   }),
   columnHelper.accessor("hours", {
     id: "hours",
-    meta: { variant: "number", filter: "range" },
+    meta: { variant: "range" },
   }),
   columnHelper.accessor("createdAt", {
     id: "createdAt",

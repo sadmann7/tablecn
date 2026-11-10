@@ -132,22 +132,6 @@ export function getColumnFilters(
   });
 }
 
-export function sortColumnFiltersBySearch<TFilter extends ColumnFilterItem>(
-  filters: TFilter[],
-  search: string | URLSearchParams,
-) {
-  const positions = new Map<string, number>();
-  for (const key of new URLSearchParams(search).keys()) {
-    if (!positions.has(key)) positions.set(key, positions.size);
-  }
-
-  return [...filters].sort(
-    (a, b) =>
-      (positions.get(a.id) ?? Number.POSITIVE_INFINITY) -
-      (positions.get(b.id) ?? Number.POSITIVE_INFINITY),
-  );
-}
-
 export function getColumnFiltersKey(filters: ColumnFilterItem[]) {
   return filters
     .map((filter) => `${filter.id}=${serializeColumnFilter(filter)}`)

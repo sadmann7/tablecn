@@ -27,26 +27,12 @@ afterEach(() => {
 });
 
 describe("useDataTable", () => {
-  it("reads filters from the URL in URL order", async () => {
+  it("reads filters from the URL in column order", () => {
     const { result } = renderDataTable("?status=todo,done&title=bug");
 
-    await waitFor(() =>
-      expect(
-        getFilterSummary(result.current.table.state.columnFilters),
-      ).toEqual([
-        ["status", ["todo", "done"]],
-        ["title", "bug"],
-      ]),
-    );
-  });
-
-  it("starts from initialState filters when the URL has none", () => {
-    const { result } = renderDataTable("", {
-      initialState: { columnFilters: [{ id: "title", value: "seed" }] },
-    });
-
     expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
-      ["title", "seed"],
+      ["title", "bug"],
+      ["status", ["todo", "done"]],
     ]);
   });
 
@@ -74,36 +60,12 @@ describe("useDataTable", () => {
     ]);
   });
 
-  it("lets an outside URL change replace the filters being edited", async () => {
-    // Fake timers hold the debounced URL write until the outside URL change
-    // has landed, however slow the runner is.
-    vi.useFakeTimers();
-    const { result, navigate, getLastSearch } = renderDataTable("?title=bug");
-
-    act(() => {
-      result.current.table.setColumnFilters([
-        { id: "title", value: "zzz" },
-        { id: "status", value: [] },
-      ]);
-    });
-    expect(result.current.table.state.columnFilters).toHaveLength(2);
-
-    act(() => navigate("?status=done"));
-    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
-      ["status", ["done"]],
-    ]);
-
-    await act(() => vi.runAllTimersAsync());
-
-    expect(getLastSearch()?.get("title")).not.toBe("zzz");
-    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
-      ["status", ["done"]],
-    ]);
-  });
-
   it("only reads sorting for sortable columns", () => {
     const { result } = renderDataTable("?sort=code.asc", {
-      initialState: { sorting: [{ id: "title", desc: true }] },
+      config: createDataTableConfig({
+        columns: tableColumns,
+        defaultSorting: [{ id: "title", desc: true }],
+      }),
     });
 
     expect(result.current.table.state.sorting).toEqual([
@@ -269,11 +231,54 @@ describe("useDataTable", () => {
         columnFilters: [{ id: "title", value: "seed" }],
       },
     });
-    renderDataTable("", {
-      config: createDataTableConfig({ columns: tableColumns }),
-      // @ts-expect-error the config owns the id
-      id: "tasks",
+  });
+
+  it("reads a server table's state from the columns when it has no config", () => {
+    const { result } = renderDataTable("?title=bug&sort=title.asc&page=2", {
+      config: undefined,
+      pageCount: 3,
     });
+
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+    ]);
+    expect(result.current.table.state.sorting).toEqual([
+      { id: "title", desc: false },
+    ]);
+    expect(result.current.table.state.pagination.pageIndex).toBe(1);
+    expect(result.current.table.options.manualFiltering).toBe(true);
+  });
+
+  it("reads filters and sorting from the columns when a client table has no config", () => {
+    const { result } = renderDataTable("?title=bug&code=x&sort=title.desc", {
+      mode: "client",
+      config: undefined,
+      pageCount: undefined,
+    });
+
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+    ]);
+    expect(result.current.table.state.sorting).toEqual([
+      { id: "title", desc: true },
+    ]);
+    expect(result.current.table.getColumn("code")?.getCanSort()).toBe(false);
+  });
+
+  it("keeps a client table's derived config when columns are recreated inline", () => {
+    const { result, rerender } = renderHookWithUrl("?title=bug", () =>
+      useTestDataTable({
+        mode: "client",
+        config: undefined,
+        pageCount: undefined,
+        columns: [...columns],
+      }),
+    );
+    const filters = result.current.table.state.columnFilters;
+
+    rerender();
+
+    expect(result.current.table.state.columnFilters).toBe(filters);
   });
 
   it("keeps the same filters when only the page changes", async () => {
@@ -286,20 +291,72 @@ describe("useDataTable", () => {
     expect(result.current.table.state.columnFilters).toBe(filters);
   });
 
-  it("keeps its built-in config when inline options are recreated", () => {
+  it("keeps the same filters when columns are recreated inline", () => {
     const { result, rerender } = renderHookWithUrl("?title=bug", () =>
-      useTestDataTable({
-        mode: "client",
-        data,
-        columns: [...columns],
-        pageSizeOptions: [10, 20],
-      }),
+      useTestDataTable({ mode: "client", data, columns: [...columns] }),
     );
     const filters = result.current.table.state.columnFilters;
 
     rerender();
 
     expect(result.current.table.state.columnFilters).toBe(filters);
+  });
+
+  it("debounces filter writes only when they reach the server", async () => {
+    const { result, getLastSearch } = renderDataTable("", {
+      shallow: false,
+      debounceMs: 10_000,
+    });
+
+    act(() =>
+      result.current.table.setColumnFilters([{ id: "title", value: "bug" }]),
+    );
+
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(getLastSearch()).toBeUndefined();
+  });
+
+  it("writes a cleared filter right away", async () => {
+    const { result, getLastSearch } = renderDataTable("?title=bug", {
+      shallow: false,
+      debounceMs: 10_000,
+    });
+
+    act(() => result.current.table.setColumnFilters([]));
+
+    await waitFor(() => expect(getLastSearch()?.has("title")).toBe(false));
+  });
+
+  it("warns when an id conflicts with the config's", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    renderDataTable("", { id: "tasks" });
+    renderDataTable("", {
+      id: "t",
+      config: createDataTableConfig({ id: "t", columns: tableColumns }),
+    });
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('"tasks"');
+    warn.mockRestore();
+  });
+
+  it("warns about config keys with no matching column", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    renderDataTable("", {
+      config: createDataTableConfig({
+        columns: { ...tableColumns, titel: { variant: "text" } },
+      }),
+    });
+    renderDataTable("");
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain('"titel"');
+    warn.mockRestore();
   });
 
   it("writes only the pagination keys that changed", async () => {
@@ -328,9 +385,12 @@ describe("useDataTable", () => {
     expect(result.current.table.getJoinOperator()).toBe("or");
   });
 
-  it("uses the initial page size when the URL does not set one", () => {
+  it("uses the config's page size when the URL does not set one", () => {
     const { result } = renderDataTable("", {
-      initialState: { pagination: { pageIndex: 0, pageSize: 25 } },
+      config: createDataTableConfig({
+        columns: tableColumns,
+        defaultPageSize: 25,
+      }),
     });
 
     expect(result.current.table.state.pagination.pageSize).toBe(25);
@@ -460,20 +520,6 @@ describe("useDataTable", () => {
     expect(getLastSearch()?.has("search") ?? false).toBe(false);
   });
 
-  it("starts from the initialState global filter and can clear it", async () => {
-    const { result, getLastSearch } = renderDataTable("", {
-      initialState: { globalFilter: "seed" },
-    });
-
-    expect(result.current.table.state.globalFilter).toBe("seed");
-
-    act(() => result.current.table.setGlobalFilter(""));
-
-    expect(result.current.table.state.globalFilter).toBe("");
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    expect(getLastSearch()?.has("search") ?? false).toBe(false);
-  });
-
   it("namespaces every URL key with the id, including column filters", async () => {
     const { result, getLastSearch } = renderDataTable(
       "?t.page=2&t.sort=title.asc&t.title=bug&t.search=x&title=other&page=9",
@@ -522,6 +568,35 @@ describe("useDataTable", () => {
     await waitFor(() => expect(getLastSearch()?.get("b.page")).toBe("5"));
     expect(getLastSearch()?.get("a.page")).toBe("2");
     expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
+  });
+
+  it("keeps two client tables without a config apart by id", async () => {
+    const clientTable = {
+      mode: "client",
+      config: undefined,
+      pageCount: undefined,
+    } as const;
+    const { result, getLastSearch } = renderDataTables(
+      "?a.title=bug&b.page=2",
+      { ...clientTable, id: "a" },
+      { ...clientTable, id: "b" },
+    );
+
+    expect(
+      getFilterSummary(result.current.first.table.state.columnFilters),
+    ).toEqual([["title", "bug"]]);
+    expect(
+      getFilterSummary(result.current.second.table.state.columnFilters),
+    ).toEqual([]);
+
+    act(() =>
+      result.current.second.table.setColumnFilters([
+        { id: "title", value: "other" },
+      ]),
+    );
+
+    await waitFor(() => expect(getLastSearch()?.get("b.title")).toBe("other"));
+    expect(getLastSearch()?.get("a.title")).toBe("bug");
   });
 
   it("reuses one config under different ids", async () => {
@@ -677,25 +752,9 @@ describe("useDataTable", () => {
     expect(result.current.table.getJoinOperator()).toBe("or");
   });
 
-  it("throws when a filterable column uses a built-in key", () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-
-    expect(() =>
-      renderDataTable("", {
-        columns: columnHelper.columns([
-          columnHelper.accessor("code", {
-            id: "page",
-            meta: { variant: "text" },
-            enableColumnFilter: true,
-          }),
-        ]),
-      }),
-    ).toThrow('column id "page" is reserved');
-  });
-
   it("ignores the URL global filter when global filtering is off", () => {
     const { result } = renderDataTable("?search=bug", {
-      enableGlobalFilter: false,
+      config: configWithoutSearch,
     });
 
     expect(result.current.table.state.globalFilter).toBe("");
@@ -703,8 +762,7 @@ describe("useDataTable", () => {
 
   it("never writes the global filter when global filtering is off", async () => {
     const { result, getLastSearch } = renderDataTable("?page=3", {
-      enableGlobalFilter: false,
-      initialState: { globalFilter: "seeded" },
+      config: configWithoutSearch,
     });
 
     act(() => result.current.table.setGlobalFilter("feature"));
@@ -779,6 +837,13 @@ const tableColumns = {
   status: { variant: "multi-select" },
 } as const;
 
+const config = createDataTableConfig({ columns: tableColumns });
+
+const configWithoutSearch = createDataTableConfig({
+  columns: tableColumns,
+  enableGlobalFilter: false,
+});
+
 const columns = columnHelper.columns([
   columnHelper.accessor("code", { id: "code", enableSorting: false }),
   columnHelper.accessor("title", {
@@ -798,6 +863,7 @@ const data: Task[] = [];
 
 function useTestDataTable(props: Partial<UseDataTableProps<Task>>) {
   return useDataTable<Task>({
+    config,
     data,
     columns,
     pageCount: 10,

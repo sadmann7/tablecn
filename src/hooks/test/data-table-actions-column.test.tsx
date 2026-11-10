@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { getDataTableActionsColumn as getAriaActionsColumn } from "@/registry/bases/aria/components/data-table/data-table-actions-column";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
@@ -37,6 +38,8 @@ const data: Task[] = Array.from({ length: 3 }, (_, index) => ({
   id: String(index),
   title: `Task ${index}`,
 }));
+
+const config = createDataTableConfig({ columns: { title: {} } });
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
@@ -94,6 +97,7 @@ describe.each(bases)(
 
       function Harness() {
         const { table } = useDataTable({
+          config,
           mode: "client",
           data,
           columns,

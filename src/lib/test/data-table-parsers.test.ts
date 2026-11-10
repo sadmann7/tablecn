@@ -7,7 +7,6 @@ import {
   getSortingStateParser,
   parseColumnFilter,
   serializeColumnFilter,
-  sortColumnFiltersBySearch,
 } from "@/lib/data-table-parsers";
 
 describe("parseColumnFilter", () => {
@@ -212,29 +211,6 @@ describe("getColumnFilters", () => {
     ]);
     expect(getColumnFiltersKey([status, title])).toBe("status=todo&title=the");
     expect(getColumnFiltersKey([])).toBe("");
-  });
-});
-
-describe("sortColumnFiltersBySearch", () => {
-  it("orders filters by the first time their column appears in the URL", () => {
-    const filters = [
-      parseColumnFilter("title", "text", "the"),
-      parseColumnFilter("status", "multi-select", "todo"),
-      parseColumnFilter("createdAt", "date-range", "2026-10-01,2026-10-07"),
-    ];
-
-    expect(
-      sortColumnFiltersBySearch(
-        filters,
-        "?createdAt=2026-10-01,2026-10-07&status=todo&title=the",
-      ).map((filter) => filter.id),
-    ).toEqual(["createdAt", "status", "title"]);
-    expect(
-      sortColumnFiltersBySearch(
-        filters,
-        new URLSearchParams("status=todo"),
-      ).map((filter) => filter.id),
-    ).toEqual(["status", "title", "createdAt"]);
   });
 });
 

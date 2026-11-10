@@ -5,19 +5,20 @@ import {
 } from "nuqs/server";
 import * as z from "zod";
 
-import { tasks } from "@/db/schema";
+import type { DataTableColumnConfigs } from "@/lib/data-table-types";
+
+import { type Task, tasks } from "@/db/schema";
 import { createDataTableConfig } from "@/lib/data-table-config";
 import { DATA_MODES, DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 
 export const tasksTableConfig = createDataTableConfig({
   columns: {
-    code: { enableSorting: false },
     title: { variant: "text" },
     status: { variant: "multi-select" },
     priority: { variant: "multi-select" },
-    estimatedHours: { variant: "number", filter: "range" },
-    createdAt: { variant: "date", filter: "range" },
-  },
+    estimatedHours: { variant: "range" },
+    createdAt: { variant: "date-range" },
+  } satisfies DataTableColumnConfigs<Task>,
   defaultSorting: [{ id: "createdAt", desc: true }],
   enableGlobalFilter: false,
 });

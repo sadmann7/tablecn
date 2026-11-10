@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { DataTableToolbar as AriaDataTableToolbar } from "@/registry/bases/aria/components/data-table/data-table-toolbar";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
@@ -32,6 +33,10 @@ const data: Task[] = [
   { id: "3", hours: 20 },
 ];
 
+const config = createDataTableConfig({
+  columns: { hours: { variant: "range" } },
+});
+
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
 const columns = columnHelper.columns([
@@ -39,8 +44,7 @@ const columns = columnHelper.columns([
     id: "hours",
     meta: {
       label: "Hours",
-      variant: "number",
-      filter: "range",
+      variant: "range",
       min: 1,
       max: 24,
       unit: "hr",
@@ -52,7 +56,7 @@ const columns = columnHelper.columns([
 const columnsWithoutRange = columnHelper.columns([
   columnHelper.accessor("hours", {
     id: "hours",
-    meta: { label: "Hours", variant: "number", filter: "range" },
+    meta: { label: "Hours", variant: "range" },
     enableColumnFilter: true,
   }),
 ]);
@@ -147,6 +151,7 @@ describe("DataTableSliderFilter (aria)", () => {
   it("lets the slider reach the column max when the step does not divide the range", () => {
     function Harness() {
       const { table } = useAriaDataTable<Task>({
+        config,
         mode: "client",
         data,
         columns,
@@ -278,6 +283,7 @@ function renderToolbar(
     const { table } = useDataTable<Task>(
       mode === "server"
         ? {
+            config,
             data: rows,
             columns: toolbarColumns,
             pageCount: 1,
@@ -285,6 +291,7 @@ function renderToolbar(
           }
         : {
             mode: "client",
+            config,
             data: rows,
             columns: toolbarColumns,
             getRowId: (row) => row.id,
@@ -340,6 +347,7 @@ function renderRangeFilter(value: [string, string]) {
 
   function Harness() {
     const { table } = useDataTable<Task>({
+      config,
       mode: "client",
       data,
       columns,

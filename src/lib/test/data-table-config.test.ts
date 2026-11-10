@@ -1,13 +1,22 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
+import type { DataTableColumnConfigs } from "@/lib/data-table-types";
+
 import { tasksTableConfig } from "@/app/lib/validations";
 import {
   applyColumnConfig,
   createDataTableColumnHelper,
   createDataTableConfig,
-  getColumnConfigs,
+  getUnmatchedConfigIds,
   type InferDataTableQuery,
 } from "@/lib/data-table-config";
+
+interface Task {
+  id: string;
+  code: string;
+  status: "todo" | "done";
+  estimatedHours: number;
+}
 
 describe("createDataTableConfig", () => {
   it("applies defaults and keeps plain URL keys without an id", () => {
@@ -54,11 +63,25 @@ describe("createDataTableConfig", () => {
     ).toThrow('column id "search" is reserved');
   });
 
+  it("rejects unknown column config keys", () => {
+    createDataTableConfig({
+      columns: {
+        hours: {
+          variant: "number",
+          // @ts-expect-error the range is its own variant
+          filter: "range",
+        },
+        // @ts-expect-error label belongs on the column meta
+        title: { variant: "text", label: "Title" },
+      },
+    });
+  });
+
   it("filters columns with a variant and sorts unless opted out", () => {
     const table = createDataTableConfig({
       columns: {
         name: { variant: "text" },
-        age: { variant: "number", filter: "range", enableSorting: false },
+        age: { variant: "range", enableSorting: false },
         id: { enableSorting: false },
         createdAt: {},
       },
@@ -219,6 +242,17 @@ describe("parse", () => {
     expect(table.parse("?perPage=20").perPage).toBe(10);
   });
 
+  it("checks column keys against the row type", () => {
+    createDataTableConfig({
+      // @ts-expect-error the typo widens the variant, so the config rejects it too
+      columns: {
+        code: { variant: "text" },
+        // @ts-expect-error the row has no titel field
+        titel: { variant: "text" },
+      } satisfies DataTableColumnConfigs<Task>,
+    });
+  });
+
   it("types filters and sorting by column id", () => {
     type Query = InferDataTableQuery<typeof tasksTableConfig>;
 
@@ -236,18 +270,10 @@ describe("parse", () => {
   });
 });
 
-interface Task {
-  id: string;
-  code: string;
-  status: "todo" | "done";
-  estimatedHours: number;
-}
-
 const columnHelperConfig = createDataTableConfig({
   columns: {
-    code: { enableSorting: false },
     status: { variant: "multi-select" },
-    estimatedHours: { variant: "number", filter: "range" },
+    estimatedHours: { variant: "range" },
   },
 });
 
@@ -284,11 +310,16 @@ describe("createDataTableColumnHelper", () => {
       meta: { options: [] },
     });
     columnHelper.accessor("estimatedHours", {
-      // @ts-expect-error the config owns the range filter
-      meta: { filter: "range" },
+      // @ts-expect-error the config owns the variant
+      meta: { variant: "number" },
     });
-    // @ts-expect-error the config has no id column
-    columnHelper.accessor("id", {});
+    columnHelper.accessor("id", { meta: { label: "Id" } });
+    columnHelper.accessor("id", {
+      // @ts-expect-error columns outside the config take no variant
+      meta: { variant: "text" },
+    });
+    // @ts-expect-error the row has no missing field
+    columnHelper.accessor("missing", {});
     columnHelper.accessor("status", {
       // @ts-expect-error the config owns the sorting flag
       enableSorting: false,
@@ -302,41 +333,6 @@ describe("createDataTableColumnHelper", () => {
     ]);
 
     expect(columns.map((column) => column.id)).toEqual(["code", "actions"]);
-  });
-});
-
-describe("getColumnConfigs", () => {
-  it("reads leaf columns, filters, and sorting from the definitions", () => {
-    expect(
-      getColumnConfigs<Task>([
-        {
-          id: "details",
-          columns: [
-            {
-              id: "code",
-              accessorKey: "code",
-              enableColumnFilter: true,
-            },
-            {
-              id: "estimatedHours",
-              accessorKey: "estimatedHours",
-              enableColumnFilter: true,
-              enableSorting: false,
-              meta: { variant: "number", filter: "range" },
-            },
-          ],
-        },
-        { id: "actions" },
-      ]),
-    ).toEqual({
-      code: { enableSorting: true, variant: "text" },
-      estimatedHours: {
-        enableSorting: false,
-        variant: "number",
-        filter: "range",
-      },
-      actions: { enableSorting: false },
-    });
   });
 });
 
@@ -371,5 +367,19 @@ describe("applyColumnConfig", () => {
     ).toMatchObject({
       columns: [{ enableColumnFilter: false, enableSorting: false }],
     });
+  });
+});
+
+describe("getUnmatchedConfigIds", () => {
+  it("returns config ids with no leaf column, including inside groups", () => {
+    expect(
+      getUnmatchedConfigIds<Task>(
+        { code: {}, status: { variant: "select" }, titel: { variant: "text" } },
+        [
+          { id: "details", columns: [{ id: "code", accessorKey: "code" }] },
+          { id: "status", accessorKey: "status" },
+        ],
+      ),
+    ).toEqual(["titel"]);
   });
 });

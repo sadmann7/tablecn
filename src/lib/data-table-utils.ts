@@ -10,6 +10,7 @@ import type {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnFilterItem,
+  ColumnNumberOptions,
   ColumnSelectOption,
   ColumnVariantMeta,
   FilterOperator,
@@ -154,18 +155,16 @@ export function getColumnId<TData extends RowData>(
 export function getFilterVariant(
   meta: ColumnVariantMeta | undefined,
 ): FilterVariant {
-  switch (meta?.variant) {
-    case "number":
-      return meta.filter === "range" ? "range" : "number";
-    case "date":
-      return meta.filter === "range" ? "date-range" : "date";
-    case "boolean":
-    case "select":
-    case "multi-select":
-      return meta.variant;
-    default:
-      return "text";
-  }
+  const variant = meta?.variant;
+  return FILTER_VARIANTS.find((item) => item === variant) ?? "text";
+}
+
+export function getColumnNumberOptions(
+  meta: ColumnVariantMeta | undefined,
+): ColumnNumberOptions | undefined {
+  return meta?.variant === "number" || meta?.variant === "range"
+    ? meta
+    : undefined;
 }
 
 export function getColumnSelectOptions(
@@ -347,6 +346,14 @@ export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   }
 
   return value;
+}
+
+/**
+ * The data table feature's `setColumnFilters` turns every filter into a `ColumnFilterItem` on the way
+ * in, so the state only ever holds items.
+ */
+export function asFilterItems(filters: ColumnFilter[]) {
+  return filters as ColumnFilterItem[];
 }
 
 export function getIsActiveFilter(filter: ColumnFilterItem) {

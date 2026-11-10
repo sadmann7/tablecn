@@ -116,7 +116,9 @@ test("a calendar date range and an open number bound show on the toolbar", async
   }
 });
 
-test("filters loaded from the URL keep the param order", async ({ page }) => {
+test("filters loaded from the URL follow the column order", async ({
+  page,
+}) => {
   await page.goto(
     "/?filterMode=advanced&createdAt=2026-09-01,2026-10-31&estimatedHours=gte.2&status=not.in.todo&title=the",
   );
@@ -124,7 +126,7 @@ test("filters loaded from the URL keep the param order", async ({ page }) => {
 
   await expect
     .poll(() => filterColumns(page))
-    .toEqual(["Created At", "Est. Hours", "Status", "Title"]);
+    .toEqual(["Title", "Status", "Est. Hours", "Created At"]);
 });
 
 test("an edit writes params in filter order, in the short form", async ({

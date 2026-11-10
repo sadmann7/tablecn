@@ -86,10 +86,6 @@
           "target": "src/hooks/use-data-table.ts"
         },
         {
-          "path": "src/hooks/use-debounced-callback.ts",
-          "type": "registry:hook"
-        },
-        {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },

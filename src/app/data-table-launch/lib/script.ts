@@ -101,19 +101,17 @@ export const COLUMN_SNIPPETS = [
     columnIds: ["estimatedHours"],
     accessorKey: "estimatedHours",
     label: "Est. Hours",
-    variant: "number",
-    filter: "range",
+    variant: "range",
     extra: "min: 1, max: 24,",
   },
   {
     columnIds: ["createdAt"],
     accessorKey: "createdAt",
     label: "Created At",
-    variant: "date",
-    filter: "range",
+    variant: "date-range",
     extra: "icon: CalendarIcon,",
   },
-];
+] as const;
 
 const FILTER_CODE = [
   "<DataTableToolbar />           // plain",
@@ -145,13 +143,14 @@ const SCRIPT: DataTableLaunchSceneScript[] = [
         "Paging, sorting, and filters go through the URL to your database.",
       code: [
         "const { table } = useDataTable({",
+        "  config,",
         "  data,",
         "  columns,",
         '  mode: "server",',
         "  pageCount,",
         "});",
       ],
-      highlightedLines: [3, 4],
+      highlightedLines: [4, 5],
     },
     steps: [
       ...urlSteps(700, "?status=todo"),
@@ -169,12 +168,13 @@ const SCRIPT: DataTableLaunchSceneScript[] = [
         "Pass every row once. Sorting, filtering, and paging run locally.",
       code: [
         "const { table } = useDataTable({",
+        "  config,",
         "  data,",
         "  columns,",
         '  mode: "client",',
         "});",
       ],
-      highlightedLines: [3],
+      highlightedLines: [4],
     },
     steps: [
       {

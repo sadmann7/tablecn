@@ -9,7 +9,7 @@ import {
   type Updater,
   useTable,
 } from "@tanstack/react-table";
-import { useQueryStates } from "nuqs";
+import { debounce, useQueryStates } from "nuqs";
 import * as React from "react";
 
 import type {
@@ -18,12 +18,12 @@ import type {
   JoinOperator,
 } from "@/lib/data-table-types";
 
-import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
   applyColumnConfig,
   createDataTableConfig,
   type DataTableConfig,
   getColumnConfigs,
+  getUnmatchedConfigIds,
 } from "@/lib/data-table-config";
 import {
   type DataTableFeatures,
@@ -32,32 +32,14 @@ import {
 import {
   getColumnFilters,
   getColumnFiltersKey,
-  sortColumnFiltersBySearch,
 } from "@/lib/data-table-parsers";
-import {
-  getActiveFilters,
-  getActiveFiltersKey,
-  normalizeColumnFilter,
-} from "@/lib/data-table-utils";
+import { asFilterItems, getActiveFilters } from "@/lib/data-table-utils";
 
 const DEBOUNCE_MS = 300;
 
 interface FiltersDraft {
   filters: ColumnFiltersState;
   urlFiltersKey: string;
-  pageToReset: number | null;
-}
-
-interface GlobalFilterDraft {
-  value: string;
-  urlValue: string;
-  pageToReset: number | null;
-}
-
-interface BuiltInConfigOptions {
-  columns: DataTableColumnConfigs;
-  pageSizeOptions?: number[];
-  enableGlobalFilter?: boolean;
 }
 
 interface UrlStateOptions {
@@ -82,31 +64,24 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "pageCount"
   | "features"
   | "initialState"
+  | "enableGlobalFilter"
+  | "pageSizeOptions"
   | "manualFiltering"
   | "manualPagination"
   | "manualSorting"
 > &
-  UrlStateOptions &
-  (
-    | {
-        config: Omit<DataTableConfig, "parse">;
-        enableGlobalFilter?: never;
-        pageSizeOptions?: never;
-        initialState?: Omit<
-          InitialTableState,
-          | "sorting"
-          | "pagination"
-          | "joinOperator"
-          | "columnFilters"
-          | "globalFilter"
-        >;
-      }
-    | {
-        config?: never;
-        initialState?: InitialTableState;
-      }
-  ) &
-  (
+  UrlStateOptions & {
+    id?: string;
+    config?: Omit<DataTableConfig, "parse">;
+    initialState?: Omit<
+      InitialTableState,
+      | "columnFilters"
+      | "globalFilter"
+      | "sorting"
+      | "pagination"
+      | "joinOperator"
+    >;
+  } & (
     | {
         mode?: "server";
         pageCount: number;
@@ -118,46 +93,33 @@ type UseDataTableProps<TData extends RowData> = Omit<
   );
 
 function useDataTable<TData extends RowData>({
+  id,
+  config: configProp,
   columns,
   mode = "server",
   pageCount,
-  initialState: initialStateProp,
-  config: configProp,
+  initialState,
   startTransition,
   history = "replace",
   debounceMs = DEBOUNCE_MS,
   clearOnDefault,
   scroll = false,
   shallow = true,
-  enableGlobalFilter: enableGlobalFilterProp,
-  pageSizeOptions: pageSizeOptionsProp,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
-
-  const [initialState] = React.useState<InitialTableState | undefined>(
-    initialStateProp,
-  );
-
-  const configKey = configProp
+  const columnConfigsKey = configProp
     ? ""
-    : JSON.stringify({
-        columns: getColumnConfigs(columns),
-        pageSizeOptions: pageSizeOptionsProp,
-        enableGlobalFilter: enableGlobalFilterProp,
-      });
-
-  const config = React.useMemo(() => {
-    if (configProp) return configProp;
-    const options = JSON.parse(configKey) as BuiltInConfigOptions;
-
-    return createDataTableConfig({
-      ...options,
-      defaultSorting: initialState?.sorting,
-      defaultPageSize: initialState?.pagination?.pageSize,
-      defaultJoinOperator: initialState?.joinOperator,
-    });
-  }, [configProp, configKey, initialState]);
+    : JSON.stringify(getColumnConfigs(columns));
+  const config = React.useMemo(
+    () =>
+      configProp ??
+      createDataTableConfig({
+        id,
+        columns: JSON.parse(columnConfigsKey) as DataTableColumnConfigs,
+      }),
+    [configProp, id, columnConfigsKey],
+  );
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
 
@@ -175,20 +137,34 @@ function useDataTable<TData extends RowData>({
   }));
 
   const tableColumns = React.useMemo(
-    () => columns.map((column) => applyColumnConfig(column, config.columns)),
-    [columns, config],
+    () =>
+      configProp
+        ? columns.map((column) => applyColumnConfig(column, configProp.columns))
+        : columns,
+    [columns, configProp],
   );
+
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    if (!configProp || id === undefined || id === configProp.id) return;
+    console.warn(
+      `useDataTable: the \`id\` "${id}" is ignored because the config sets the URL keys. Set the id in createDataTableConfig instead.`,
+    );
+  }, [configProp, id]);
+
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "production" || !configProp) return;
+    const unmatchedIds = getUnmatchedConfigIds(configProp.columns, columns);
+    if (unmatchedIds.length === 0) return;
+    console.warn(
+      `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(", ")}. Rename the config key or add the column.`,
+    );
+  }, [configProp, columns]);
 
   const filterableIds = React.useMemo(
     () => Object.keys(filterVariants),
     [filterVariants],
   );
-
-  function normalizeColumnFilters(filters: ColumnFiltersState) {
-    return filters.map((filter) =>
-      normalizeColumnFilter(filter, filterVariants[filter.id] ?? "text"),
-    );
-  }
 
   const queryStateOptions = {
     urlKeys,
@@ -198,9 +174,16 @@ function useDataTable<TData extends RowData>({
     clearOnDefault,
     startTransition,
   };
+  const shouldDebounce = isServer && !shallow;
+
+  function getUrlUpdateOptions(isClearing: boolean) {
+    return shouldDebounce && !isClearing
+      ? { limitUrlUpdates: debounce(debounceMs) }
+      : undefined;
+  }
 
   const [
-    { page, perPage, sort: sorting, joinOperator, search: urlGlobalFilter },
+    { page, perPage, sort: sorting, joinOperator, search },
     setQueryState,
   ] = useQueryStates(queryParsers.state, queryStateOptions);
   const [filterParams, setFilterParams] = useQueryStates(
@@ -208,101 +191,9 @@ function useDataTable<TData extends RowData>({
     queryStateOptions,
   );
 
-  function resetPage() {
-    if (page !== 1) void setQueryState({ page: 1 });
-  }
-
-  const locationSearch = React.useSyncExternalStore(
-    subscribeToHistory,
-    getLocationSearch,
-    getServerLocationSearch,
-  );
-
-  const filterOrder = React.useMemo(() => {
-    const idByUrlKey = new Map(
-      filterableIds.map((columnId) => [urlKeys[columnId], columnId]),
-    );
-
-    return [...new Set(new URLSearchParams(locationSearch).keys())]
-      .flatMap((key) => idByUrlKey.get(key) ?? [])
-      .join("&");
-  }, [filterableIds, urlKeys, locationSearch]);
-
-  const getNextSorting = useChainedUpdate(sorting);
-
-  function onSortingChange(updater: Updater<SortingState>) {
-    const next = getNextSorting(updater);
-    if (JSON.stringify(next) === JSON.stringify(sorting)) return;
-    resetPage();
-    void setQueryState({ sort: next });
-  }
-
-  const getNextJoinOperator = useChainedUpdate(joinOperator);
-
-  function onJoinOperatorChange(updater: Updater<JoinOperator>) {
-    const next = getNextJoinOperator(updater);
-    if (next === joinOperator) return;
-    resetPage();
-    void setQueryState({ joinOperator: next });
-  }
-
-  const urlFilters = React.useMemo(
-    () =>
-      sortColumnFiltersBySearch(
-        getColumnFilters(filterableIds, filterParams),
-        filterOrder,
-      ),
-    [filterableIds, filterParams, filterOrder],
-  );
-  const urlFiltersKey = getColumnFiltersKey(urlFilters);
-
-  const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(
-    () => {
-      const initialFilters = initialTableState?.columnFilters;
-      if (urlFilters.length > 0 || !initialFilters?.length) return null;
-
-      return {
-        filters: normalizeColumnFilters(initialFilters),
-        urlFiltersKey,
-        pageToReset: null,
-      };
-    },
-  );
-
-  const activeDraft =
-    filtersDraft?.urlFiltersKey === urlFiltersKey ? filtersDraft : null;
-  const columnFilters = activeDraft?.filters ?? urlFilters;
-
-  const [globalFilterDraft, setGlobalFilterDraft] =
-    React.useState<GlobalFilterDraft | null>(() => {
-      if (!enableGlobalFilter) return null;
-      const initialGlobalFilter = getGlobalFilterValue(
-        initialTableState?.globalFilter,
-      );
-      if (urlGlobalFilter !== "" || initialGlobalFilter === "") return null;
-
-      return {
-        value: initialGlobalFilter,
-        urlValue: urlGlobalFilter,
-        pageToReset: null,
-      };
-    });
-
-  const activeGlobalFilterDraft =
-    globalFilterDraft?.urlValue === urlGlobalFilter ? globalFilterDraft : null;
-  const globalFilter = enableGlobalFilter
-    ? (activeGlobalFilterDraft?.value ?? urlGlobalFilter)
-    : "";
-
-  const pageIndex =
-    activeDraft?.pageToReset === page ||
-    activeGlobalFilterDraft?.pageToReset === page
-      ? 0
-      : page - 1;
-
   const pagination = React.useMemo<PaginationState>(
-    () => ({ pageIndex, pageSize: perPage }),
-    [pageIndex, perPage],
+    () => ({ pageIndex: page - 1, pageSize: perPage }),
+    [page, perPage],
   );
 
   const getNextPagination = useChainedUpdate(pagination);
@@ -310,12 +201,6 @@ function useDataTable<TData extends RowData>({
   function onPaginationChange(updater: Updater<PaginationState>) {
     const next = getNextPagination(updater);
     if (next.pageIndex !== pagination.pageIndex) {
-      if (activeDraft?.pageToReset) {
-        setFiltersDraft((prev) => prev && { ...prev, pageToReset: null });
-      }
-      if (activeGlobalFilterDraft?.pageToReset) {
-        setGlobalFilterDraft((prev) => prev && { ...prev, pageToReset: null });
-      }
       void setQueryState({ page: next.pageIndex + 1 });
     }
     if (next.pageSize !== pagination.pageSize) {
@@ -323,76 +208,72 @@ function useDataTable<TData extends RowData>({
     }
   }
 
-  const debouncedWriteFilters = useDebouncedCallback(
-    (columnFilters: ColumnFiltersState, sourceUrlFiltersKey: string) => {
-      if (sourceUrlFiltersKey !== urlFiltersKey) return;
+  const getNextSorting = useChainedUpdate(sorting);
 
-      const filters = getActiveFilters(
-        normalizeColumnFilters(columnFilters),
-      ).filter((filter) => Object.hasOwn(filterVariants, filter.id));
-      const params = new Map<string, ColumnFilterItem[] | null>();
-
-      for (const filter of filters) {
-        const group = params.get(filter.id);
-        if (group) group.push(filter);
-        else params.set(filter.id, [filter]);
-      }
-      for (const id of filterableIds) {
-        if (!params.has(id)) params.set(id, null);
-      }
-
-      const nextUrlFiltersKey = getColumnFiltersKey(filters);
-      if (nextUrlFiltersKey === urlFiltersKey) return;
-
-      setFiltersDraft(
-        (prev) => prev && { ...prev, urlFiltersKey: nextUrlFiltersKey },
-      );
-      resetPage();
-      void setFilterParams(Object.fromEntries(params));
-    },
-    debounceMs,
-  );
-
-  const getNextColumnFilters = useChainedUpdate(columnFilters);
-
-  function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
-    const filters = getNextColumnFilters(updater);
-    const hasChanged =
-      getActiveFiltersKey(normalizeColumnFilters(filters)) !==
-      getActiveFiltersKey(urlFilters);
-    setFiltersDraft({
-      filters,
-      urlFiltersKey,
-      pageToReset: hasChanged && !isServer && page !== 1 ? page : null,
-    });
-    debouncedWriteFilters(filters, urlFiltersKey);
+  function onSortingChange(updater: Updater<SortingState>) {
+    const next = getNextSorting(updater);
+    if (JSON.stringify(next) === JSON.stringify(sorting)) return;
+    void setQueryState({ sort: next, page: null });
   }
 
-  const debouncedWriteGlobalFilter = useDebouncedCallback(
-    (value: string, sourceUrlValue: string) => {
-      if (sourceUrlValue !== urlGlobalFilter || value === urlGlobalFilter) {
-        return;
-      }
+  const getNextJoinOperator = useChainedUpdate(joinOperator);
 
-      setGlobalFilterDraft((prev) => prev && { ...prev, urlValue: value });
-      resetPage();
-      void setQueryState({ search: value || null });
-    },
-    debounceMs,
-  );
+  function onJoinOperatorChange(updater: Updater<JoinOperator>) {
+    const next = getNextJoinOperator(updater);
+    if (next === joinOperator) return;
+    void setQueryState({ joinOperator: next, page: null });
+  }
 
+  const globalFilter = enableGlobalFilter ? search : "";
   const getNextGlobalFilter = useChainedUpdate<unknown>(globalFilter);
 
   function onGlobalFilterChange(updater: Updater<unknown>) {
     if (!enableGlobalFilter) return;
     const value = getGlobalFilterValue(getNextGlobalFilter(updater));
-    setGlobalFilterDraft({
-      value,
-      urlValue: urlGlobalFilter,
-      pageToReset:
-        value !== urlGlobalFilter && !isServer && page !== 1 ? page : null,
-    });
-    debouncedWriteGlobalFilter(value, urlGlobalFilter);
+    if (value === search) return;
+    void setQueryState(
+      { search: value, page: null },
+      getUrlUpdateOptions(value === ""),
+    );
+  }
+
+  const urlFilters = React.useMemo(
+    () => getColumnFilters(filterableIds, filterParams),
+    [filterableIds, filterParams],
+  );
+  const urlFiltersKey = getColumnFiltersKey(urlFilters);
+
+  const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(
+    null,
+  );
+  const columnFilters =
+    filtersDraft?.urlFiltersKey === urlFiltersKey
+      ? filtersDraft.filters
+      : urlFilters;
+
+  const getNextColumnFilters = useChainedUpdate(columnFilters);
+
+  function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
+    const filters = getNextColumnFilters(updater);
+    const activeFilters = getActiveFilters(asFilterItems(filters)).filter(
+      (filter) => Object.hasOwn(filterVariants, filter.id),
+    );
+    const nextUrlFiltersKey = getColumnFiltersKey(activeFilters);
+
+    setFiltersDraft({ filters, urlFiltersKey: nextUrlFiltersKey });
+    if (nextUrlFiltersKey === urlFiltersKey) return;
+
+    const params: Record<string, ColumnFilterItem[] | null> = {};
+    for (const id of filterableIds) params[id] = null;
+    for (const filter of activeFilters) {
+      params[filter.id] = [...(params[filter.id] ?? []), filter];
+    }
+
+    const options = getUrlUpdateOptions(
+      activeFilters.length < urlFilters.length,
+    );
+    void setFilterParams(params, options);
+    void setQueryState({ page: null }, options);
   }
 
   const table = useTable(
@@ -424,19 +305,6 @@ function useDataTable<TData extends RowData>({
   );
 
   return { table };
-}
-
-function subscribeToHistory(onChange: () => void) {
-  window.addEventListener("popstate", onChange);
-  return () => window.removeEventListener("popstate", onChange);
-}
-
-function getLocationSearch() {
-  return window.location.search;
-}
-
-function getServerLocationSearch() {
-  return "";
 }
 
 function getGlobalFilterValue(value: unknown) {

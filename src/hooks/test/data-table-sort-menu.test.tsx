@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { DataTableSortMenu as AriaDataTableSortMenu } from "@/registry/bases/aria/components/data-table/data-table-sort-menu";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
@@ -39,13 +40,13 @@ const bases = [
 describe.each(bases)(
   "DataTableSortMenu (%s)",
   (_, DataTable, DataTableSortMenu, useDataTable) => {
-    function Table({ desc }: { desc: boolean }) {
+    function Table() {
       const { table } = useDataTable<Task>({
+        config,
         mode: "client",
         data,
         columns,
         getRowId: (row) => row.id,
-        initialState: { sorting: [{ id: "title", desc }] },
       });
 
       return (
@@ -60,8 +61,11 @@ describe.each(bases)(
       [true, "Desc"],
     ])("shows the direction label when desc is %s", (desc, label) => {
       render(
-        <NuqsTestingAdapter hasMemory>
-          <Table desc={desc} />
+        <NuqsTestingAdapter
+          hasMemory
+          searchParams={`?sort=title.${desc ? "desc" : "asc"}`}
+        >
+          <Table />
         </NuqsTestingAdapter>,
       );
       fireEvent.click(screen.getByRole("button", { name: /sort/i }));
@@ -77,6 +81,8 @@ const data: Task[] = [
   { id: "1", title: "Write docs" },
   { id: "2", title: "Fix bug" },
 ];
+
+const config = createDataTableConfig({ columns: { title: {} } });
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 

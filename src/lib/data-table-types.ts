@@ -19,23 +19,15 @@ export interface ColumnSelectOption {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type PlainColumnVariant =
-  | "text"
-  | "long-text"
-  | "url"
-  | "boolean"
-  | "file";
+export interface ColumnNumberOptions {
+  min?: number;
+  max?: number;
+  unit?: string;
+}
 
 export interface ColumnVariantOptions {
-  number: {
-    filter?: "range";
-    min?: number;
-    max?: number;
-    unit?: string;
-  };
-  date: {
-    filter?: "range";
-  };
+  number: ColumnNumberOptions;
+  range: ColumnNumberOptions;
   select: {
     options?: ColumnSelectOption[];
   };
@@ -44,16 +36,14 @@ export interface ColumnVariantOptions {
   };
 }
 
-export type ColumnVariant = PlainColumnVariant | keyof ColumnVariantOptions;
-
 type VariantMeta<TVariant extends keyof ColumnVariantOptions> = {
   variant: TVariant;
 } & ColumnVariantOptions[TVariant];
 
 export type ColumnVariantMeta =
-  | { variant?: PlainColumnVariant }
+  | { variant?: Exclude<FilterVariant, keyof ColumnVariantOptions> }
   | VariantMeta<"number">
-  | VariantMeta<"date">
+  | VariantMeta<"range">
   | VariantMeta<"select">
   | VariantMeta<"multi-select">;
 
@@ -66,14 +56,14 @@ export interface DataTableColumnDisplayMeta {
 export type DataTableColumnMeta = DataTableColumnDisplayMeta &
   ColumnVariantMeta;
 
-export type DataTableColumnConfig = {
+export interface DataTableColumnConfig {
   enableSorting?: boolean;
-} & (
-  | { variant?: PlainColumnVariant | "select" | "multi-select" }
-  | { variant: "number" | "date"; filter?: "range" }
-);
+  variant?: FilterVariant;
+}
 
-export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
+export type DataTableColumnConfigs<TData = never> = [TData] extends [never]
+  ? Record<string, DataTableColumnConfig>
+  : { [K in keyof TData & string]?: DataTableColumnConfig };
 
 type KeysWhere<TRecord, TValue> = {
   [K in keyof TRecord]: TRecord[K] extends TValue ? K : never;
@@ -83,7 +73,7 @@ type KeysWhere<TRecord, TValue> = {
 export type FilterableColumnId<TColumns extends DataTableColumnConfigs> =
   string extends keyof TColumns
     ? string
-    : KeysWhere<TColumns, { variant: ColumnVariant }>;
+    : KeysWhere<TColumns, { variant: FilterVariant }>;
 
 export type SortableColumnId<TColumns extends DataTableColumnConfigs> = Exclude<
   keyof TColumns & string,

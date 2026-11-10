@@ -111,8 +111,7 @@ export const launchColumns = columnHelper.columns([
     ),
     meta: {
       label: "Est. Hours",
-      variant: "number",
-      filter: "range",
+      variant: "range",
       min: launchHoursRange[0],
       max: launchHoursRange[1],
       unit: "hr",
@@ -128,8 +127,7 @@ export const launchColumns = columnHelper.columns([
     cell: ({ row }) => formatDate(row.original.createdAt, { timeZone: "UTC" }),
     meta: {
       label: "Created At",
-      variant: "date",
-      filter: "range",
+      variant: "date-range",
       icon: CalendarIcon,
     },
     enableColumnFilter: true,

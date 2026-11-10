@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { getDataTableSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
 import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
@@ -102,6 +103,8 @@ const data: Task[] = Array.from({ length: 30 }, (_, index) => ({
   status: index % 2 ? "todo" : "done",
 }));
 
+const config = createDataTableConfig({ columns: { title: {}, status: {} } });
+
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
 function renderTable() {
@@ -143,6 +146,7 @@ function renderTable() {
 
   function Harness() {
     const { table } = useDataTable<Task>({
+      config,
       mode: "client",
       data,
       columns,
