@@ -122,14 +122,13 @@ export function createDataTableConfig<
   const TColumns extends DataTableColumnConfigs,
 >({
   id,
-  columns: columnsProp,
+  columns,
   defaultSorting = [],
   defaultPageSize = DEFAULT_PAGE_SIZE,
   pageSizeOptions = DEFAULT_PAGE_SIZE_OPTIONS,
   defaultJoinOperator = "and",
   enableGlobalFilter = true,
 }: DataTableConfigOptions<TColumns>): DataTableConfig<TColumns> {
-  const columns: TColumns = columnsProp;
   const filterVariants = getFilterVariants(columns);
   const filterableIds = Object.keys(filterVariants);
 
