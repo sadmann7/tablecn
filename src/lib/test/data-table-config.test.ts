@@ -2,8 +2,10 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { tasksTableConfig } from "@/app/lib/validations";
 import {
+  applyColumnConfig,
   createDataTableColumnHelper,
   createDataTableConfig,
+  getColumnConfigs,
   type InferDataTableQuery,
 } from "@/lib/data-table-config";
 
@@ -300,5 +302,74 @@ describe("createDataTableColumnHelper", () => {
     ]);
 
     expect(columns.map((column) => column.id)).toEqual(["code", "actions"]);
+  });
+});
+
+describe("getColumnConfigs", () => {
+  it("reads leaf columns, filters, and sorting from the definitions", () => {
+    expect(
+      getColumnConfigs<Task>([
+        {
+          id: "details",
+          columns: [
+            {
+              id: "code",
+              accessorKey: "code",
+              enableColumnFilter: true,
+            },
+            {
+              id: "estimatedHours",
+              accessorKey: "estimatedHours",
+              enableColumnFilter: true,
+              enableSorting: false,
+              meta: { variant: "number", filter: "range" },
+            },
+          ],
+        },
+        { id: "actions" },
+      ]),
+    ).toEqual({
+      code: { enableSorting: true, variant: "text" },
+      estimatedHours: {
+        enableSorting: false,
+        variant: "number",
+        filter: "range",
+      },
+      actions: { enableSorting: false },
+    });
+  });
+});
+
+describe("applyColumnConfig", () => {
+  it("lets the config decide filtering, sorting, and the variant", () => {
+    expect(
+      applyColumnConfig<Task>(
+        {
+          id: "code",
+          accessorKey: "code",
+          enableSorting: true,
+          meta: { label: "Code" },
+        },
+        { code: { enableSorting: false, variant: "text" } },
+      ),
+    ).toMatchObject({
+      enableColumnFilter: true,
+      enableSorting: false,
+      meta: { label: "Code", variant: "text" },
+    });
+  });
+
+  it("turns off filtering and sorting for columns outside the config", () => {
+    expect(
+      applyColumnConfig<Task>(
+        {
+          id: "details",
+          columns: [{ id: "code", accessorKey: "code", enableSorting: true }],
+        },
+        {},
+      ),
+    ).toMatchObject({
+      columns: [{ enableColumnFilter: false, enableSorting: false }],
+    });
   });
 });

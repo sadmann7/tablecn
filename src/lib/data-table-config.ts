@@ -1,5 +1,6 @@
 import {
   type AccessorKeyColumnDef,
+  type ColumnDef,
   createColumnHelper,
   type IdentifiedColumnDef,
   type RowData,
@@ -17,6 +18,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnSortItem,
   ColumnVariantOptions,
+  DataTableColumnConfig,
   DataTableColumnConfigs,
   DataTableColumnDisplayMeta,
   DataTableQuery,
@@ -33,6 +35,7 @@ import {
 } from "@/lib/data-table-parsers";
 import {
   DEFAULT_PAGE_SIZE_OPTIONS,
+  getColumnId,
   getFilterVariant,
   JOIN_OPERATORS,
 } from "@/lib/data-table-utils";
@@ -211,6 +214,49 @@ export function createDataTableColumnHelper<
   };
 }
 
+export function applyColumnConfig<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+  configs: DataTableColumnConfigs,
+): ColumnDef<DataTableFeatures, TData> {
+  if (getIsGroupColumn(column)) {
+    return {
+      ...column,
+      columns: column.columns.map((child) => applyColumnConfig(child, configs)),
+    };
+  }
+
+  const columnId = getColumnId(column);
+  const config =
+    columnId !== undefined && Object.hasOwn(configs, columnId)
+      ? configs[columnId]
+      : undefined;
+  if (!config) {
+    return { ...column, enableColumnFilter: false, enableSorting: false };
+  }
+  const { enableSorting, ...meta } = config;
+
+  return {
+    ...column,
+    enableColumnFilter: config.variant !== undefined,
+    enableSorting: enableSorting !== false,
+    meta: { ...column.meta, ...meta },
+  };
+}
+
+export function getColumnConfigs<TData extends RowData>(
+  columns: readonly ColumnDef<DataTableFeatures, TData>[],
+) {
+  const configs: DataTableColumnConfigs = {};
+
+  for (const column of getLeafColumns(columns)) {
+    const columnId = getColumnId(column);
+    if (!columnId) continue;
+    configs[columnId] = getColumnConfig(column);
+  }
+
+  return configs;
+}
+
 function getFilterVariants(columns: DataTableColumnConfigs) {
   return Object.fromEntries(
     Object.entries(columns).flatMap(([columnId, config]) =>
@@ -259,4 +305,40 @@ function getIntegerParser(min: number, max = Number.POSITIVE_INFINITY) {
 
 function getIsDataTableKey(key: string): key is DataTableKey {
   return DATA_TABLE_KEYS.some((dataTableKey) => dataTableKey === key);
+}
+
+function getLeafColumns<TData extends RowData>(
+  columns: readonly ColumnDef<DataTableFeatures, TData>[],
+): ColumnDef<DataTableFeatures, TData>[] {
+  return columns.flatMap((column) =>
+    getIsGroupColumn(column) ? getLeafColumns(column.columns) : [column],
+  );
+}
+
+function getIsGroupColumn<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+): column is ColumnDef<DataTableFeatures, TData> & {
+  columns: ColumnDef<DataTableFeatures, TData>[];
+} {
+  return "columns" in column && Array.isArray(column.columns);
+}
+
+function getColumnConfig<TData extends RowData>(
+  column: ColumnDef<DataTableFeatures, TData>,
+): DataTableColumnConfig {
+  const hasAccessor = "accessorKey" in column || "accessorFn" in column;
+  const enableSorting = hasAccessor && column.enableSorting !== false;
+  if (!column.enableColumnFilter) return { enableSorting };
+
+  const meta = column.meta;
+  switch (meta?.variant) {
+    case "number":
+    case "date":
+      return { enableSorting, variant: meta.variant, filter: meta.filter };
+    case "select":
+    case "multi-select":
+      return { enableSorting, variant: meta.variant };
+    default:
+      return { enableSorting, variant: meta?.variant ?? "text" };
+  }
 }

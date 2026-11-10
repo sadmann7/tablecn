@@ -286,6 +286,22 @@ describe("useDataTable", () => {
     expect(result.current.table.state.columnFilters).toBe(filters);
   });
 
+  it("keeps its built-in config when inline options are recreated", () => {
+    const { result, rerender } = renderHookWithUrl("?title=bug", () =>
+      useTestDataTable({
+        mode: "client",
+        data,
+        columns: [...columns],
+        pageSizeOptions: [10, 20],
+      }),
+    );
+    const filters = result.current.table.state.columnFilters;
+
+    rerender();
+
+    expect(result.current.table.state.columnFilters).toBe(filters);
+  });
+
   it("writes only the pagination keys that changed", async () => {
     const { result, getLastSearch } = renderDataTable("");
 

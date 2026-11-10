@@ -1,5 +1,4 @@
 import {
-  type ColumnDef,
   type ColumnFiltersState,
   functionalUpdate,
   type PaginationState,
@@ -15,15 +14,16 @@ import * as React from "react";
 
 import type {
   ColumnFilterItem,
-  DataTableColumnConfig,
   DataTableColumnConfigs,
   JoinOperator,
 } from "@/lib/data-table-types";
 
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
 import {
+  applyColumnConfig,
   createDataTableConfig,
   type DataTableConfig,
+  getColumnConfigs,
 } from "@/lib/data-table-config";
 import {
   type DataTableFeatures,
@@ -37,7 +37,6 @@ import {
 import {
   getActiveFilters,
   getActiveFiltersKey,
-  getColumnId,
   normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
@@ -53,6 +52,12 @@ interface GlobalFilterDraft {
   value: string;
   urlValue: string;
   pageToReset: number | null;
+}
+
+interface BuiltInConfigOptions {
+  columns: DataTableColumnConfigs;
+  pageSizeOptions?: number[];
+  enableGlobalFilter?: boolean;
 }
 
 interface UrlStateOptions {
@@ -134,25 +139,25 @@ function useDataTable<TData extends RowData>({
     initialStateProp,
   );
 
-  const config = React.useMemo(
-    () =>
-      configProp ??
-      createDataTableConfig({
+  const configKey = configProp
+    ? ""
+    : JSON.stringify({
         columns: getColumnConfigs(columns),
-        defaultSorting: initialState?.sorting,
-        defaultPageSize: initialState?.pagination?.pageSize,
-        defaultJoinOperator: initialState?.joinOperator,
         pageSizeOptions: pageSizeOptionsProp,
         enableGlobalFilter: enableGlobalFilterProp,
-      }),
-    [
-      configProp,
-      columns,
-      initialState,
-      pageSizeOptionsProp,
-      enableGlobalFilterProp,
-    ],
-  );
+      });
+
+  const config = React.useMemo(() => {
+    if (configProp) return configProp;
+    const options = JSON.parse(configKey) as BuiltInConfigOptions;
+
+    return createDataTableConfig({
+      ...options,
+      defaultSorting: initialState?.sorting,
+      defaultPageSize: initialState?.pagination?.pageSize,
+      defaultJoinOperator: initialState?.joinOperator,
+    });
+  }, [configProp, configKey, initialState]);
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
 
@@ -170,7 +175,7 @@ function useDataTable<TData extends RowData>({
   }));
 
   const tableColumns = React.useMemo(
-    () => columns.map((column) => getDefinedColumn(column, config.columns)),
+    () => columns.map((column) => applyColumnConfig(column, config.columns)),
     [columns, config],
   );
 
@@ -419,85 +424,6 @@ function useDataTable<TData extends RowData>({
   );
 
   return { table };
-}
-
-function getDefinedColumn<TData extends RowData>(
-  column: ColumnDef<DataTableFeatures, TData>,
-  configs: DataTableColumnConfigs,
-): ColumnDef<DataTableFeatures, TData> {
-  if (getIsGroupColumn(column)) {
-    return {
-      ...column,
-      columns: column.columns.map((child) => getDefinedColumn(child, configs)),
-    };
-  }
-
-  const columnId = getColumnId(column);
-  const config =
-    columnId !== undefined && Object.hasOwn(configs, columnId)
-      ? configs[columnId]
-      : undefined;
-  if (!config) {
-    return { ...column, enableColumnFilter: false, enableSorting: false };
-  }
-  const { enableSorting, ...meta } = config;
-
-  return {
-    ...column,
-    enableColumnFilter: config.variant !== undefined,
-    enableSorting: enableSorting !== false,
-    meta: { ...column.meta, ...meta },
-  };
-}
-
-function getColumnConfigs<TData extends RowData>(
-  columns: readonly ColumnDef<DataTableFeatures, TData>[],
-) {
-  const configs: DataTableColumnConfigs = {};
-
-  for (const column of getLeafColumns(columns)) {
-    const columnId = getColumnId(column);
-    if (!columnId) continue;
-    configs[columnId] = getColumnConfig(column);
-  }
-
-  return configs;
-}
-
-function getLeafColumns<TData extends RowData>(
-  columns: readonly ColumnDef<DataTableFeatures, TData>[],
-): ColumnDef<DataTableFeatures, TData>[] {
-  return columns.flatMap((column) =>
-    getIsGroupColumn(column) ? getLeafColumns(column.columns) : [column],
-  );
-}
-
-function getIsGroupColumn<TData extends RowData>(
-  column: ColumnDef<DataTableFeatures, TData>,
-): column is ColumnDef<DataTableFeatures, TData> & {
-  columns: ColumnDef<DataTableFeatures, TData>[];
-} {
-  return "columns" in column && Array.isArray(column.columns);
-}
-
-function getColumnConfig<TData extends RowData>(
-  column: ColumnDef<DataTableFeatures, TData>,
-): DataTableColumnConfig {
-  const hasAccessor = "accessorKey" in column || "accessorFn" in column;
-  const enableSorting = hasAccessor && column.enableSorting !== false;
-  if (!column.enableColumnFilter) return { enableSorting };
-
-  const meta = column.meta;
-  switch (meta?.variant) {
-    case "number":
-    case "date":
-      return { enableSorting, variant: meta.variant, filter: meta.filter };
-    case "select":
-    case "multi-select":
-      return { enableSorting, variant: meta.variant };
-    default:
-      return { enableSorting, variant: meta?.variant ?? "text" };
-  }
 }
 
 function subscribeToHistory(onChange: () => void) {
