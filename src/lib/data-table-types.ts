@@ -46,13 +46,16 @@ export interface ColumnVariantOptions {
 
 export type ColumnVariant = PlainColumnVariant | keyof ColumnVariantOptions;
 
+type VariantMeta<TVariant extends keyof ColumnVariantOptions> = {
+  variant: TVariant;
+} & ColumnVariantOptions[TVariant];
+
 export type ColumnVariantMeta =
   | { variant?: PlainColumnVariant }
-  | {
-      [TVariant in keyof ColumnVariantOptions]: {
-        variant: TVariant;
-      } & ColumnVariantOptions[TVariant];
-    }[keyof ColumnVariantOptions];
+  | VariantMeta<"number">
+  | VariantMeta<"date">
+  | VariantMeta<"select">
+  | VariantMeta<"multi-select">;
 
 export interface DataTableColumnDisplayMeta {
   label?: string;
@@ -62,6 +65,28 @@ export interface DataTableColumnDisplayMeta {
 
 export type DataTableColumnMeta = DataTableColumnDisplayMeta &
   ColumnVariantMeta;
+
+export type DataTableColumnConfig = {
+  enableSorting?: boolean;
+} & (
+  | { variant?: PlainColumnVariant | "select" | "multi-select" }
+  | { variant: "number" | "date"; filter?: "range" }
+);
+
+export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
+
+type KeysWhere<TRecord, TValue> = {
+  [K in keyof TRecord]: TRecord[K] extends TValue ? K : never;
+}[keyof TRecord] &
+  string;
+
+export type FilterableColumnId<TColumns extends DataTableColumnConfigs> =
+  KeysWhere<TColumns, { variant: ColumnVariant }>;
+
+export type SortableColumnId<TColumns extends DataTableColumnConfigs> = Exclude<
+  keyof TColumns & string,
+  KeysWhere<TColumns, { enableSorting: false }>
+>;
 
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;
@@ -94,34 +119,9 @@ declare module "@tanstack/react-table" {
   > {}
 }
 
-export type DataTableColumnConfig = {
-  enableSorting?: boolean;
-} & ColumnVariantMeta;
-
-export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
-
-export type FilterableColumnId<TColumnConfigs extends DataTableColumnConfigs> =
-  {
-    [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
-      variant: ColumnVariant;
-    }
-      ? K
-      : never;
-  }[keyof TColumnConfigs] &
-    string;
-
-export type SortableColumnId<TColumnConfigs extends DataTableColumnConfigs> = {
-  [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
-    enableSorting: false;
-  }
-    ? never
-    : K;
-}[keyof TColumnConfigs] &
-  string;
-
 export interface DataTableQuery<
   TFilterColumnId extends string = string,
-  TSortColumnId extends string = TFilterColumnId,
+  TSortColumnId extends string = string,
 > {
   page: number;
   perPage: number;

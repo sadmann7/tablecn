@@ -53,6 +53,11 @@ type ReservedColumnConfigs = Partial<
   Record<DataTableKey, { variant?: undefined }>
 >;
 
+type ConfigQuery<TColumns extends DataTableColumnConfigs> = DataTableQuery<
+  FilterableColumnId<TColumns>,
+  SortableColumnId<TColumns>
+>;
+
 interface DataTableConfigOptions<TColumns extends DataTableColumnConfigs> {
   id?: string;
   columns: TColumns & ReservedColumnConfigs;
@@ -80,15 +85,26 @@ export interface DataTableConfig<
     ReturnType<typeof getColumnFilterParser>
   >;
   readonly urlKeys: Record<string, string>;
-  parse(
-    search: LoaderInput,
-  ): DataTableQuery<FilterableColumnId<TColumns>, SortableColumnId<TColumns>>;
+  parse(search: LoaderInput): ConfigQuery<TColumns>;
 }
 
-export type InferDataTableQuery<TTableConfig> =
-  TTableConfig extends DataTableConfig<infer TColumns>
-    ? DataTableQuery<FilterableColumnId<TColumns>, SortableColumnId<TColumns>>
-    : never;
+export type InferDataTableQuery<
+  TConfig extends { parse: (search: never) => unknown },
+> = ReturnType<TConfig["parse"]>;
+
+type ColumnVariantDisplayOptions<TColumnConfig> = TColumnConfig extends {
+  variant: infer TVariant extends keyof ColumnVariantOptions;
+}
+  ? Omit<ColumnVariantOptions[TVariant], "filter">
+  : unknown;
+
+type ConfiguredColumnDef<TData extends RowData, TValue, TColumnConfig> = Omit<
+  IdentifiedColumnDef<DataTableFeatures, TData, TValue>,
+  "id" | "meta" | "enableColumnFilter" | "enableSorting"
+> & {
+  meta?: DataTableColumnDisplayMeta &
+    ColumnVariantDisplayOptions<TColumnConfig>;
+};
 
 export function createDataTableConfig<
   const TColumns extends DataTableColumnConfigs,
@@ -169,39 +185,22 @@ export function createDataTableConfig<
         globalFilter: enableGlobalFilter ? state.search : "",
       };
 
-      return query as DataTableQuery<
-        FilterableColumnId<TColumns>,
-        SortableColumnId<TColumns>
-      >;
+      return query as ConfigQuery<TColumns>;
     },
   });
 }
 
-type DefinedColumnMeta<TConfig> = DataTableColumnDisplayMeta &
-  (TConfig extends {
-    variant: infer TVariant extends keyof ColumnVariantOptions;
-  }
-    ? Partial<ColumnVariantOptions[TVariant]>
-    : unknown);
-
-type DefinedColumnDef<TData extends RowData, TValue, TConfig> = Omit<
-  IdentifiedColumnDef<DataTableFeatures, TData, TValue>,
-  "id" | "meta" | "enableColumnFilter" | "enableSorting"
-> & {
-  meta?: DefinedColumnMeta<TConfig>;
-};
-
 export function createDataTableColumnHelper<
   TData extends RowData,
-  TTableConfig extends Pick<DataTableConfig, "columns">,
+  TConfig extends Pick<DataTableConfig, "columns">,
 >() {
   const columnHelper = createColumnHelper<DataTableFeatures, TData>();
 
   return {
     ...columnHelper,
-    accessor<TId extends keyof TTableConfig["columns"] & keyof TData & string>(
+    accessor<TId extends keyof TConfig["columns"] & keyof TData & string>(
       id: TId,
-      column: DefinedColumnDef<TData, TData[TId], TTableConfig["columns"][TId]>,
+      column: ConfiguredColumnDef<TData, TData[TId], TConfig["columns"][TId]>,
     ): AccessorKeyColumnDef<DataTableFeatures, TData, TData[TId]> {
       return { ...column, id, accessorKey: id };
     },

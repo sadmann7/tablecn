@@ -276,6 +276,10 @@ describe("createDataTableColumnHelper", () => {
       // @ts-expect-error options only exist on select columns
       meta: { options: [] },
     });
+    columnHelper.accessor("estimatedHours", {
+      // @ts-expect-error the config owns the range filter
+      meta: { filter: "range" },
+    });
     // @ts-expect-error the config has no id column
     columnHelper.accessor("id", {});
     columnHelper.accessor("status", {
