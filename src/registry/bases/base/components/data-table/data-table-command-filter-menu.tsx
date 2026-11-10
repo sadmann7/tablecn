@@ -689,13 +689,15 @@ function SelectFilterValue<TData extends RowData>({
         <SelectedOptions
           options={options}
           value={value}
-          placeholder={`Select option${multiple ? "s" : ""}...`}
+          placeholder={
+            columnMeta?.placeholder ?? `Select option${multiple ? "s" : ""}...`
+          }
         />
       </FacetedTrigger>
       <FacetedContent dir={dir} id={listboxId} className="w-48">
         <FacetedInput
           aria-label={`Search ${columnMeta?.label ?? column.id} options`}
-          placeholder="Search options..."
+          placeholder={columnMeta?.placeholder ?? "Search options..."}
         />
         <FacetedList>
           <FacetedEmpty>No options found.</FacetedEmpty>

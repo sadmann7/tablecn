@@ -101,6 +101,22 @@ describe.each(bases.map((base) => ({ name: base[0], base })))(
       expect(trigger.textContent).not.toContain("True");
     });
 
+    it("shows the column placeholder in an empty select filter", () => {
+      renderCommandMenu(base, [
+        {
+          id: "status",
+          value: [],
+          operator: "inArray",
+          variant: "multi-select",
+          filterId: "status-0",
+        },
+      ]);
+
+      expect(
+        screen.getByLabelText("Status filter values").textContent,
+      ).toContain("Pick a status");
+    });
+
     it("shows the chosen boolean value", () => {
       renderCommandMenu(base, [getBooleanFilter("true")]);
 
@@ -207,6 +223,7 @@ const columns = columnHelper.columns([
     meta: {
       label: "Status",
       variant: "multi-select",
+      placeholder: "Pick a status",
       options: [
         { label: "Todo", value: "todo" },
         { label: "Done", value: "done" },
