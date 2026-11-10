@@ -45,7 +45,6 @@ export const FILTER_OPERATORS = {
   gt: "gt",
   gte: "gte",
   isBetween: "between",
-  isRelativeToToday: "rel",
 } as const;
 
 export const JOIN_OPERATORS = ["and", "or"] as const;
@@ -86,7 +85,6 @@ const DATE_OPERATORS = [
   { label: "Is on or before", value: "lte" },
   { label: "Is on or after", value: "gte" },
   { label: "Is between", value: "isBetween" },
-  { label: "Is relative to today", value: "isRelativeToToday" },
   { label: "Is empty", value: "isEmpty" },
   { label: "Is not empty", value: "isNotEmpty" },
 ] satisfies FilterOperatorOption[];
@@ -132,8 +130,6 @@ const MULTI_VALUE_FILTER_VARIANTS: FilterVariant[] = [
 ];
 
 const CALENDAR_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-
-const RELATIVE_DATE_PATTERN = /^-?\d+ (days|weeks|months)$/;
 
 const UNBOUNDED_RANGE: [number, number] = [-Infinity, Infinity];
 
@@ -272,7 +268,7 @@ export function createPlainFilter<TColumnId extends string>(
 
   const operator = getPlainFilterOperator(variant);
   const filterId = getPlainFilterId(id);
-  const stringify = getFilterValueStringifier(variant, operator);
+  const stringify = getFilterValueStringifier(variant);
 
   if (getIsMultiValueVariant(variant)) {
     const values = normalizeFilterValues(
@@ -297,7 +293,7 @@ export function normalizeColumnFilter(
 
   if (filter.operator) {
     const filterVariant = filter.variant ?? variant;
-    const stringify = getFilterValueStringifier(filterVariant, filter.operator);
+    const stringify = getFilterValueStringifier(filterVariant);
 
     return {
       id: filter.id,
@@ -394,9 +390,6 @@ export function getIsValidFilterValue(filter: ColumnFilterItem) {
       );
     case "date":
     case "date-range":
-      if (filter.operator === "isRelativeToToday") {
-        return values.every((value) => RELATIVE_DATE_PATTERN.test(value));
-      }
       return values.every(
         (value) => value === "" || parseFilterDate(value) !== undefined,
       );
@@ -621,13 +614,8 @@ function normalizeFilterValues(
     : [start, end];
 }
 
-function getFilterValueStringifier(
-  variant: FilterVariant,
-  operator: FilterOperator,
-) {
-  return getIsDateVariant(variant) && operator !== "isRelativeToToday"
-    ? stringifyFilterDate
-    : stringifyFilterValue;
+function getFilterValueStringifier(variant: FilterVariant) {
+  return getIsDateVariant(variant) ? stringifyFilterDate : stringifyFilterValue;
 }
 
 function stringifyFilterDate(value: unknown) {

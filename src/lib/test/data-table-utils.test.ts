@@ -173,13 +173,13 @@ describe("plain filters", () => {
       normalizeColumnFilter(
         {
           id: "createdAt",
-          operator: "isRelativeToToday",
-          value: "1 days",
+          operator: "gt",
+          value: "2026-10-03",
           filterId: "createdAt-0",
         },
         "date",
       ),
-    ).toMatchObject({ operator: "isRelativeToToday", value: "1 days" });
+    ).toMatchObject({ operator: "gt", value: "2026-10-03" });
     expect(
       normalizeColumnFilter(
         { id: "createdAt", operator: "eq", value: new Date(2026, 9, 3) },

@@ -141,6 +141,12 @@ describe("parse", () => {
     ]);
   });
 
+  it("drops a relative date filter from an old URL", () => {
+    expect(tasksTableConfig.parse("?createdAt=rel.1%20days").filters).toEqual(
+      [],
+    );
+  });
+
   it("falls back to and for an unknown join operator", () => {
     expect(tasksTableConfig.parse("?joinOperator=xor").joinOperator).toBe(
       "and",

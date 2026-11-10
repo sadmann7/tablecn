@@ -1,4 +1,4 @@
-import { addDays, endOfDay, startOfDay } from "date-fns";
+import { endOfDay, startOfDay } from "date-fns";
 import {
   and,
   type AnyColumn,
@@ -141,45 +141,6 @@ export function filterColumns<T extends Table>({
             firstValue !== null ? gte(column, firstValue) : undefined,
             secondValue !== null ? lte(column, secondValue) : undefined,
           );
-        }
-        return undefined;
-
-      case "isRelativeToToday":
-        if (
-          (filter.variant === "date" || filter.variant === "date-range") &&
-          typeof filter.value === "string"
-        ) {
-          const today = new Date();
-          const [amount, unit] = filter.value.split(" ");
-          let startDate: Date;
-          let endDate: Date;
-
-          if (!amount || !unit) return undefined;
-
-          switch (unit) {
-            case "days":
-              startDate = startOfDay(
-                addDays(today, Number.parseInt(amount, 10)),
-              );
-              endDate = endOfDay(startDate);
-              break;
-            case "weeks":
-              startDate = startOfDay(
-                addDays(today, Number.parseInt(amount, 10) * 7),
-              );
-              endDate = endOfDay(addDays(startDate, 6));
-              break;
-            case "months":
-              startDate = startOfDay(
-                addDays(today, Number.parseInt(amount, 10) * 30),
-              );
-              endDate = endOfDay(addDays(startDate, 29));
-              break;
-            default:
-              return undefined;
-          }
-
-          return and(gte(column, startDate), lte(column, endDate));
         }
         return undefined;
 

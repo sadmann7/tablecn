@@ -30,7 +30,6 @@ import {
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const GLOBAL_FILTER_ID = "__global__";
 
 const filterResultsByRow = new WeakMap<object, Record<string, boolean>>();
@@ -84,9 +83,6 @@ export function matchesFilter(
 
     case "isBetween":
       return getIsBetween(cellValue, value, isDate);
-
-    case "isRelativeToToday":
-      return getIsRelativeToToday(cellValue, value);
 
     case "isEmpty":
       return getIsEmptyValue(cellValue);
@@ -276,39 +272,6 @@ function getIsBetween(cellValue: unknown, value: unknown, isDate: boolean) {
   const end = hasEnd ? parseNumber(rawEnd) : null;
 
   return (start === null || cell >= start) && (end === null || cell <= end);
-}
-
-function getIsRelativeToToday(cellValue: unknown, value: unknown) {
-  if (typeof value !== "string") return true;
-
-  const [amountRaw, unit] = value.split(" ");
-  const amount = Number.parseInt(amountRaw ?? "", 10);
-  if (Number.isNaN(amount) || !unit) return true;
-
-  const today = Date.now();
-  let start: number;
-  let end: number;
-
-  switch (unit) {
-    case "days":
-      start = startOfDay(today + amount * DAY_MS);
-      end = endOfDay(start);
-      break;
-    case "weeks":
-      start = startOfDay(today + amount * 7 * DAY_MS);
-      end = endOfDay(start + 6 * DAY_MS);
-      break;
-    case "months":
-      start = startOfDay(today + amount * 30 * DAY_MS);
-      end = endOfDay(start + 29 * DAY_MS);
-      break;
-    default:
-      return true;
-  }
-
-  const cell = parseTime(cellValue);
-  if (Number.isNaN(cell)) return false;
-  return cell >= start && cell <= end;
 }
 
 function getIsEmptyValue(value: unknown) {
