@@ -69,7 +69,6 @@ export function BaseDataTableDemo() {
       columnPinning: { start: ["select"], end: ["actions"] },
     },
     getRowId: (row) => row.id,
-    clearOnDefault: true,
     enableRowRangeSelection: true,
   });
 

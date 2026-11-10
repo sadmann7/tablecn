@@ -228,7 +228,6 @@ export function TasksTable({
     },
     getRowId: (originalRow) => originalRow.id,
     shallow: false,
-    clearOnDefault: true,
     enableRowRangeSelection: true,
     ...(dataMode === "client" ? { mode: "client" as const } : { pageCount }),
   });

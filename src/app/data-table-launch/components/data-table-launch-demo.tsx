@@ -97,7 +97,6 @@ export function DataTableLaunchDemo() {
       pagination: INITIAL_PAGINATION,
     },
     getRowId: (row: DataTableLaunchTask) => row.id,
-    clearOnDefault: true,
   };
   const { table } = useDataTable(
     isServerMode

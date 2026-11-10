@@ -18,6 +18,7 @@ import type { SkaterSchema } from "@/app/data-grid-multiplayer/lib/validation";
 import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import { type Task, tasks } from "@/db/schema";
+import { getIsValuelessOperator } from "@/lib/data-table-utils";
 import { generateId } from "@/lib/id";
 
 export function generateTaskCode(takenCodes?: Set<string>): string {
@@ -103,6 +104,8 @@ export function sanitizeEnumFilters<TColumnId extends string>(
   filters: ColumnFilterItem<TColumnId>[],
 ) {
   return filters.flatMap((filter) => {
+    if (getIsValuelessOperator(filter.operator)) return [filter];
+
     const allowed: readonly string[] | undefined =
       ENUM_COLUMNS[filter.id as keyof typeof ENUM_COLUMNS];
     if (!allowed) return [filter];

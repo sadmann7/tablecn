@@ -16,6 +16,7 @@ import {
   getFilterOperators,
   getFilterVariant,
   getIsActiveFilter,
+  getIsValidFilterValue,
   getIsValuelessOperator,
   getPlainFilterOperator,
   normalizeColumnFilter,
@@ -166,7 +167,9 @@ export function getColumnFilterParser<TColumnId extends string>(
       // nuqs drops items that parse to null, so `?title=` reads as no filter.
       parse: (param) => {
         const filter = parseColumnFilter(id, variant, param);
-        return getIsActiveFilter(filter) ? filter : null;
+        return getIsActiveFilter(filter) && getIsValidFilterValue(filter)
+          ? filter
+          : null;
       },
       serialize: serializeColumnFilter,
       eq: (a, b) => serializeColumnFilter(a) === serializeColumnFilter(b),

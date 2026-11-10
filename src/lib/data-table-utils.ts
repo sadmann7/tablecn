@@ -523,6 +523,44 @@ export function getIsActiveFilter(filter: ColumnFilterItem) {
   );
 }
 
+export function getActiveFiltersKey(filters: ColumnFilterItem[]) {
+  return JSON.stringify(
+    getActiveFilters(filters)
+      .map((filter) =>
+        JSON.stringify([filter.id, filter.operator, filter.value]),
+      )
+      .sort(),
+  );
+}
+
+const RELATIVE_DATE_PATTERN = /^-?\d+ (days|weeks|months)$/;
+
+export function getIsValidFilterValue(filter: ColumnFilterItem) {
+  if (getIsValuelessOperator(filter.operator)) return true;
+
+  const values = Array.isArray(filter.value) ? filter.value : [filter.value];
+
+  switch (filter.variant) {
+    case "number":
+    case "range":
+      return values.every(
+        (value) => value.trim() === "" || Number.isFinite(Number(value)),
+      );
+    case "date":
+    case "date-range":
+      if (filter.operator === "isRelativeToToday") {
+        return values.every((value) => RELATIVE_DATE_PATTERN.test(value));
+      }
+      return values.every(
+        (value) => value === "" || parseFilterDate(value) !== undefined,
+      );
+    case "boolean":
+      return values.every((value) => value === "true" || value === "false");
+    default:
+      return true;
+  }
+}
+
 export function getActiveFilters<TFilterItem extends ColumnFilterItem>(
   filters: TFilterItem[],
 ): TFilterItem[] {

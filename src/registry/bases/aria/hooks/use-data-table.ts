@@ -43,12 +43,12 @@ import {
 import {
   DEFAULT_PAGE_SIZE_OPTIONS,
   getActiveFilters,
+  getActiveFiltersKey,
   getColumnId,
   normalizeColumnFilter,
 } from "@/lib/data-table-utils";
 
 const DEBOUNCE_MS = 300;
-const THROTTLE_MS = 50;
 
 interface FiltersDraft {
   filters: ColumnFiltersState;
@@ -65,7 +65,6 @@ interface GlobalFilterDraft {
 interface UrlStateOptions {
   history?: "push" | "replace";
   debounceMs?: number;
-  throttleMs?: number;
   clearOnDefault?: boolean;
   scroll?: boolean;
   shallow?: boolean;
@@ -76,6 +75,11 @@ type InitialTableState = Partial<TableState<DataTableFeatures>>;
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
   | "state"
+  | "onPaginationChange"
+  | "onSortingChange"
+  | "onColumnFiltersChange"
+  | "onGlobalFilterChange"
+  | "onJoinOperatorChange"
   | "pageCount"
   | "features"
   | "initialState"
@@ -103,7 +107,11 @@ type UseDataTableProps<TData extends RowData> = Omit<
         pageSizeOptions?: never;
         initialState?: Omit<
           InitialTableState,
-          "sorting" | "pagination" | "joinOperator"
+          | "sorting"
+          | "pagination"
+          | "joinOperator"
+          | "columnFilters"
+          | "globalFilter"
         >;
       }
     | {
@@ -133,8 +141,7 @@ function useDataTable<TData extends RowData>({
   startTransition,
   history = "replace",
   debounceMs = DEBOUNCE_MS,
-  throttleMs = THROTTLE_MS,
-  clearOnDefault = false,
+  clearOnDefault,
   scroll = false,
   shallow: shallowProp = true,
   enableGlobalFilter: enableGlobalFilterProp = true,
@@ -187,46 +194,107 @@ function useDataTable<TData extends RowData>({
     };
   }, [columnConfigs]);
 
-  const {
-    page,
-    setPage,
-    perPage,
-    setPerPage,
-    sorting,
-    setSorting,
-    joinOperator,
-    setJoinOperator,
-    filterParams,
-    setFilterParams,
-    filterOrder,
-    globalFilter: urlGlobalFilter,
-    setGlobalFilter: setUrlGlobalFilter,
-  } = useUrlTableState({
-    id,
-    columnIndex,
-    defaultPageSize: initialTableState?.pagination?.pageSize,
-    pageSizeOptions,
-    defaultSorting: initialTableState?.sorting,
-    defaultJoinOperator: initialTableState?.joinOperator,
-    startTransition,
-    history,
-    debounceMs,
-    throttleMs,
-    clearOnDefault,
-    scroll,
-    shallow: isServer ? shallowProp : true,
+  const queryStateOptions = React.useMemo<
+    Omit<UseQueryStateOptions<string>, "parse">
+  >(
+    () => ({
+      history,
+      scroll,
+      shallow: isServer ? shallowProp : true,
+      clearOnDefault,
+      startTransition,
+    }),
+    [history, scroll, isServer, shallowProp, clearOnDefault, startTransition],
+  );
+
+  const urlKeys = React.useMemo(() => {
+    const { page, perPage, sort, joinOperator, search, ...filters } =
+      getDataTableUrlKeys(columnIndex.filterableIds, id);
+
+    return {
+      page,
+      perPage,
+      sort,
+      joinOperator,
+      search,
+      filters,
+      idByFilterKey: new Map(
+        Object.entries(filters).map(([columnId, urlKey]) => [urlKey, columnId]),
+      ),
+    };
+  }, [columnIndex, id]);
+
+  const parsers = React.useMemo(() => {
+    const state = getDataTableStateParsers({
+      sortableIds: columnIndex.sortableIds,
+      defaultSorting: initialTableState?.sorting,
+      defaultPageSize: initialTableState?.pagination?.pageSize,
+      pageSizeOptions,
+      defaultJoinOperator: initialTableState?.joinOperator,
+    });
+
+    return {
+      page: state.page.withOptions(queryStateOptions),
+      perPage: state.perPage.withOptions(queryStateOptions),
+      sort: state.sort.withOptions(queryStateOptions),
+      joinOperator: state.joinOperator.withOptions(queryStateOptions),
+      search: state.search.withOptions(queryStateOptions),
+      filters: Object.fromEntries(
+        Object.entries(getDataTableFilterParsers(columnIndex.variantById)).map(
+          ([columnId, parser]) => [
+            columnId,
+            parser.withOptions(queryStateOptions),
+          ],
+        ),
+      ),
+    };
+  }, [columnIndex, initialTableState, pageSizeOptions, queryStateOptions]);
+
+  const [page, setPage] = useQueryState(urlKeys.page, parsers.page);
+  const [perPage, setPerPage] = useQueryState(urlKeys.perPage, parsers.perPage);
+  const [sorting, setSorting] = useQueryState(urlKeys.sort, parsers.sort);
+  const [joinOperator, setJoinOperator] = useQueryState(
+    urlKeys.joinOperator,
+    parsers.joinOperator,
+  );
+  const [urlGlobalFilter, setUrlGlobalFilter] = useQueryState(
+    urlKeys.search,
+    parsers.search,
+  );
+  const [filterParams, setFilterParams] = useQueryStates(parsers.filters, {
+    urlKeys: urlKeys.filters,
   });
+
+  const locationSearch = React.useSyncExternalStore(
+    subscribeToHistory,
+    getLocationSearch,
+    getServerLocationSearch,
+  );
+
+  const filterOrder = React.useMemo(
+    () =>
+      [...new Set(new URLSearchParams(locationSearch).keys())]
+        .flatMap((key) => urlKeys.idByFilterKey.get(key) ?? [])
+        .join("&"),
+    [urlKeys, locationSearch],
+  );
 
   const getNextSorting = useChainedUpdate(sorting);
 
   function onSortingChange(updater: Updater<SortingState>) {
-    void setSorting(getNextSorting(updater));
+    const next = getNextSorting(updater);
+    if (JSON.stringify(next) === JSON.stringify(sorting)) return;
+    if (page !== 1) void setPage(1);
+    void setSorting(next);
   }
 
   const getNextJoinOperator = useChainedUpdate(joinOperator);
 
   function onJoinOperatorChange(updater: Updater<JoinOperator>) {
-    void setJoinOperator(getNextJoinOperator(updater));
+    const next = getNextJoinOperator(updater);
+    if (next === joinOperator) return;
+    if (page !== 1) void setPage(1);
+    void setJoinOperator(next);
   }
 
   const urlFilters = React.useMemo(
@@ -328,6 +396,8 @@ function useDataTable<TData extends RowData>({
       }
 
       const nextUrlFiltersKey = getColumnFiltersKey(filters);
+      if (nextUrlFiltersKey === urlFiltersKey) return;
+
       setFiltersDraft(
         (prev) => prev && { ...prev, urlFiltersKey: nextUrlFiltersKey },
       );
@@ -341,17 +411,22 @@ function useDataTable<TData extends RowData>({
 
   function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
     const filters = getNextColumnFilters(updater);
+    const hasChanged =
+      getActiveFiltersKey(columnIndex.normalizeColumnFilters(filters)) !==
+      getActiveFiltersKey(urlFilters);
     setFiltersDraft({
       filters,
       urlFiltersKey,
-      pageToReset: !isServer && page !== 1 ? page : null,
+      pageToReset: hasChanged && !isServer && page !== 1 ? page : null,
     });
     debouncedWriteFilters(filters, urlFiltersKey);
   }
 
   const debouncedWriteGlobalFilter = useDebouncedCallback(
     (value: string, sourceUrlValue: string) => {
-      if (sourceUrlValue !== urlGlobalFilter) return;
+      if (sourceUrlValue !== urlGlobalFilter || value === urlGlobalFilter) {
+        return;
+      }
 
       setGlobalFilterDraft((prev) => prev && { ...prev, urlValue: value });
       if (page !== 1) void setPage(1);
@@ -368,7 +443,8 @@ function useDataTable<TData extends RowData>({
     setGlobalFilterDraft({
       value,
       urlValue: urlGlobalFilter,
-      pageToReset: !isServer && page !== 1 ? page : null,
+      pageToReset:
+        value !== urlGlobalFilter && !isServer && page !== 1 ? page : null,
     });
     debouncedWriteGlobalFilter(value, urlGlobalFilter);
   }
@@ -402,156 +478,6 @@ function useDataTable<TData extends RowData>({
   );
 
   return { table };
-}
-
-interface ColumnIndex {
-  sortableIds: Set<string>;
-  filterableIds: string[];
-  variantById: Record<string, FilterVariant>;
-}
-
-interface UseUrlTableStateOptions extends Required<UrlStateOptions> {
-  id: string | undefined;
-  columnIndex: ColumnIndex;
-  defaultPageSize: number | undefined;
-  pageSizeOptions: readonly number[];
-  defaultSorting: SortingState | undefined;
-  defaultJoinOperator: JoinOperator | undefined;
-  startTransition: React.TransitionStartFunction | undefined;
-}
-
-function useUrlTableState({
-  id,
-  columnIndex,
-  defaultPageSize,
-  pageSizeOptions,
-  defaultSorting,
-  defaultJoinOperator,
-  startTransition,
-  history,
-  debounceMs,
-  throttleMs,
-  clearOnDefault,
-  scroll,
-  shallow,
-}: UseUrlTableStateOptions) {
-  const queryStateOptions = React.useMemo<
-    Omit<UseQueryStateOptions<string>, "parse">
-  >(
-    () => ({
-      history,
-      scroll,
-      shallow,
-      throttleMs,
-      debounceMs,
-      clearOnDefault,
-      startTransition,
-    }),
-    [
-      history,
-      scroll,
-      shallow,
-      throttleMs,
-      debounceMs,
-      clearOnDefault,
-      startTransition,
-    ],
-  );
-
-  const urlKeys = React.useMemo(() => {
-    const { page, perPage, sort, joinOperator, search, ...filters } =
-      getDataTableUrlKeys(columnIndex.filterableIds, id);
-
-    return {
-      page,
-      perPage,
-      sort,
-      joinOperator,
-      search,
-      filters,
-      idByFilterKey: new Map(
-        Object.entries(filters).map(([columnId, urlKey]) => [urlKey, columnId]),
-      ),
-    };
-  }, [columnIndex, id]);
-
-  const parsers = React.useMemo(() => {
-    const state = getDataTableStateParsers({
-      sortableIds: columnIndex.sortableIds,
-      defaultSorting,
-      defaultPageSize,
-      pageSizeOptions,
-      defaultJoinOperator,
-    });
-
-    return {
-      page: state.page.withOptions(queryStateOptions),
-      perPage: state.perPage.withOptions(queryStateOptions),
-      sort: state.sort.withOptions(queryStateOptions),
-      joinOperator: state.joinOperator.withOptions(queryStateOptions),
-      search: state.search.withOptions(queryStateOptions),
-      filters: Object.fromEntries(
-        Object.entries(getDataTableFilterParsers(columnIndex.variantById)).map(
-          ([columnId, parser]) => [
-            columnId,
-            parser.withOptions(queryStateOptions),
-          ],
-        ),
-      ),
-    };
-  }, [
-    columnIndex,
-    defaultSorting,
-    defaultPageSize,
-    pageSizeOptions,
-    defaultJoinOperator,
-    queryStateOptions,
-  ]);
-
-  const [page, setPage] = useQueryState(urlKeys.page, parsers.page);
-  const [perPage, setPerPage] = useQueryState(urlKeys.perPage, parsers.perPage);
-  const [sorting, setSorting] = useQueryState(urlKeys.sort, parsers.sort);
-  const [joinOperator, setJoinOperator] = useQueryState(
-    urlKeys.joinOperator,
-    parsers.joinOperator,
-  );
-  const [globalFilter, setGlobalFilter] = useQueryState(
-    urlKeys.search,
-    parsers.search,
-  );
-  const [filterParams, setFilterParams] = useQueryStates(parsers.filters, {
-    urlKeys: urlKeys.filters,
-  });
-
-  const search = React.useSyncExternalStore(
-    subscribeToHistory,
-    getLocationSearch,
-    getServerLocationSearch,
-  );
-
-  const filterOrder = React.useMemo(
-    () =>
-      [...new Set(new URLSearchParams(search).keys())]
-        .flatMap((key) => urlKeys.idByFilterKey.get(key) ?? [])
-        .join("&"),
-    [urlKeys, search],
-  );
-
-  return {
-    page,
-    setPage,
-    perPage,
-    setPerPage,
-    sorting,
-    setSorting,
-    joinOperator,
-    setJoinOperator,
-    filterParams,
-    setFilterParams,
-    filterOrder,
-    globalFilter,
-    setGlobalFilter,
-  };
 }
 
 function getDefinedColumn<TData extends RowData>(

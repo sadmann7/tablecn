@@ -7,7 +7,6 @@ import {
   type Row,
   type RowData,
   type RowModel,
-  skipFirstRun,
   type Table,
   type TableFeatures,
   tableMemo,
@@ -21,6 +20,7 @@ import type {
 
 import {
   createPlainFilter,
+  getActiveFiltersKey,
   getFilterVariant,
   getIsActiveFilter,
   normalizeColumnFilter,
@@ -116,6 +116,14 @@ export function createDataTableFilteredRowModel<
 >() {
   return (table: Table<TFeatures, TData>) => {
     const instance = asFilteringTable(table);
+    let previous:
+      | {
+          rows: RowModel<TFeatures, TData>;
+          key: string;
+          result: RowModel<TFeatures, TData>;
+        }
+      | undefined;
+    let shouldResetPageIndex = false;
 
     return tableMemo({
       feature: "dataTableFilteringFeature",
@@ -127,8 +135,22 @@ export function createDataTableFilteredRowModel<
         instance.atoms.joinOperator?.get(),
         instance.atoms.globalFilter?.get(),
       ],
-      fn: () => getFilteredRowModel(table.getPreFilteredRowModel(), instance),
-      onAfterUpdate: skipFirstRun(() => instance.autoResetPageIndex?.()),
+      fn: () => {
+        const rows = table.getPreFilteredRowModel();
+        const key = getFilteringKey(instance);
+        if (previous && previous.rows === rows && previous.key === key) {
+          return previous.result;
+        }
+
+        shouldResetPageIndex = previous !== undefined;
+        previous = { rows, key, result: getFilteredRowModel(rows, instance) };
+        return previous.result;
+      },
+      onAfterUpdate: () => {
+        if (!shouldResetPageIndex) return;
+        shouldResetPageIndex = false;
+        instance.autoResetPageIndex?.();
+      },
     });
   };
 }
@@ -334,6 +356,31 @@ function asFilteringTable<
   TData extends RowData,
 >(table: Table<TFeatures, TData>) {
   return table as FilteringInstance<TFeatures, TData>;
+}
+
+function getFilteringKey<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(instance: FilteringInstance<TFeatures, TData>) {
+  const filters: ColumnFilterItem[] = [];
+  for (const filter of instance.atoms.columnFilters?.get() ?? []) {
+    const column = instance.getColumn(filter.id);
+    if (!column) continue;
+    filters.push(
+      normalizeColumnFilter(
+        filter,
+        getFilterVariant(
+          column.columnDef.meta as DataTableColumnMeta | undefined,
+        ),
+      ),
+    );
+  }
+
+  return JSON.stringify([
+    getActiveFiltersKey(filters),
+    instance.atoms.joinOperator?.get() ?? "and",
+    stringifyFilterValue(instance.atoms.globalFilter?.get()),
+  ]);
 }
 
 type RowTest<TFeatures extends TableFeatures, TData extends RowData> = (

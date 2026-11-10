@@ -67,7 +67,7 @@ describe("useDataTable", () => {
 
     await waitFor(() => expect(getLastSearch()?.get("title")).toBe("bug"));
     expect(getLastSearch()?.has("status")).toBe(false);
-    expect(getLastSearch()?.get("page")).toBe("1");
+    expect(getLastSearch()?.has("page")).toBe(false);
     expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
       ["title", "bug"],
       ["status", []],
@@ -189,8 +189,86 @@ describe("useDataTable", () => {
     await act(() => vi.runAllTimersAsync());
 
     expect(updates).toHaveLength(1);
-    expect(getLastSearch()?.toString()).toBe("page=1&title=bug");
+    expect(getLastSearch()?.toString()).toBe("title=bug");
     expect(result.current.table.state.pagination.pageIndex).toBe(0);
+  });
+
+  it("goes back to page 1 with a sorting or join change, in one URL update", async () => {
+    vi.useFakeTimers();
+    const { result, updates, getLastSearch } = renderDataTable("?page=3");
+
+    act(() => result.current.table.setSorting([{ id: "title", desc: true }]));
+    await act(() => vi.runAllTimersAsync());
+
+    expect(updates).toHaveLength(1);
+    expect(getLastSearch()?.toString()).toBe("sort=title.desc");
+
+    act(() => result.current.table.setPageIndex(2));
+    await act(() => vi.runAllTimersAsync());
+    act(() => result.current.table.setJoinOperator("or"));
+    await act(() => vi.runAllTimersAsync());
+
+    expect(updates).toHaveLength(3);
+    expect(getLastSearch()?.toString()).toBe("sort=title.desc&joinOperator=or");
+  });
+
+  it("writes nothing for a sorting or filter change with the same result", async () => {
+    vi.useFakeTimers();
+    const { result, updates } = renderDataTable("?page=3&title=bug");
+
+    act(() =>
+      result.current.table.setSorting(result.current.table.state.sorting),
+    );
+    act(() =>
+      result.current.table.setColumnFilters((filters) => [
+        ...filters,
+        { id: "status", value: [] },
+      ]),
+    );
+    await act(() => vi.runAllTimersAsync());
+
+    expect(updates).toHaveLength(0);
+    expect(result.current.table.state.pagination.pageIndex).toBe(2);
+  });
+
+  it("keeps the page when columns are re-created with the same content", async () => {
+    const tasks: Task[] = Array.from({ length: 30 }, (_, index) => ({
+      id: String(index),
+      code: `T-${index}`,
+      title: "bug",
+      status: "todo",
+    }));
+    const { result, rerender, updates } = renderHookWithUrl(
+      "?page=2&title=bug",
+      () =>
+        useTestDataTable({
+          mode: "client",
+          data: tasks,
+          columns: [...columns],
+        }),
+    );
+
+    result.current.table.getRowModel();
+    rerender();
+    result.current.table.getRowModel();
+    await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
+
+    expect(result.current.table.state.pagination.pageIndex).toBe(1);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("rejects handlers and seeds the hook owns", () => {
+    renderDataTable("", {
+      // @ts-expect-error the hook owns the sorting state
+      onSortingChange: () => {},
+    });
+    renderDataTable("", {
+      definition: defineDataTable({ columns: tableColumns }),
+      initialState: {
+        // @ts-expect-error filters come from the URL when a definition is set
+        columnFilters: [{ id: "title", value: "seed" }],
+      },
+    });
   });
 
   it("writes only the pagination keys that changed", async () => {
@@ -337,7 +415,7 @@ describe("useDataTable", () => {
 
     expect(result.current.table.state.globalFilter).toBe("bug");
     await waitFor(() => expect(getLastSearch()?.get("search")).toBe("bug"));
-    expect(getLastSearch()?.get("page")).toBe("1");
+    expect(getLastSearch()?.has("page")).toBe(false);
     expect(result.current.table.state.globalFilter).toBe("bug");
   });
 
@@ -346,8 +424,9 @@ describe("useDataTable", () => {
 
     act(() => result.current.table.setGlobalFilter(""));
 
-    await waitFor(() => expect(getLastSearch()?.has("search")).toBe(false));
     expect(result.current.table.state.globalFilter).toBe("");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(getLastSearch()?.has("search") ?? false).toBe(false);
   });
 
   it("starts from the initialState global filter and can clear it", async () => {
@@ -359,8 +438,9 @@ describe("useDataTable", () => {
 
     act(() => result.current.table.setGlobalFilter(""));
 
-    await waitFor(() => expect(getLastSearch()?.has("search")).toBe(false));
     expect(result.current.table.state.globalFilter).toBe("");
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(getLastSearch()?.has("search") ?? false).toBe(false);
   });
 
   it("namespaces every URL key with the id, including column filters", async () => {
@@ -385,7 +465,7 @@ describe("useDataTable", () => {
     });
 
     await waitFor(() => expect(getLastSearch()?.get("t.status")).toBe("todo"));
-    expect(getLastSearch()?.get("t.page")).toBe("1");
+    expect(getLastSearch()?.has("t.page")).toBe(false);
     expect(getLastSearch()?.has("status")).toBe(false);
     expect(getLastSearch()?.get("title")).toBe("other");
   });
