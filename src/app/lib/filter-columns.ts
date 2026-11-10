@@ -21,7 +21,7 @@ import {
 import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import { isEmpty } from "@/db/utils";
-import { parseFilterDate } from "@/lib/data-table-utils";
+import { getIsDateVariant, parseFilterDate } from "@/lib/data-table-utils";
 
 export function filterColumns<T extends Table>({
   table,
@@ -40,12 +40,12 @@ export function filterColumns<T extends Table>({
     switch (filter.operator) {
       case "iLike":
         return filter.variant === "text" && typeof filter.value === "string"
-          ? ilike(column, `%${filter.value}%`)
+          ? ilike(column, `%${escapeLike(filter.value)}%`)
           : undefined;
 
       case "notILike":
         return filter.variant === "text" && typeof filter.value === "string"
-          ? notIlike(column, `%${filter.value}%`)
+          ? notIlike(column, `%${escapeLike(filter.value)}%`)
           : undefined;
 
       case "eq":
@@ -94,7 +94,10 @@ export function filterColumns<T extends Table>({
         if (filter.variant === "number" || filter.variant === "range") {
           return compare(column, filter.value);
         }
-        if (filter.variant !== "date" || typeof filter.value !== "string") {
+        if (
+          !getIsDateVariant(filter.variant) ||
+          typeof filter.value !== "string"
+        ) {
           return undefined;
         }
         // `lte` and `gte` include the whole day, `lt` and `gt` exclude it.
@@ -177,4 +180,8 @@ function getStartOfDay(value: unknown) {
 function getEndOfDay(value: unknown) {
   const date = parseFilterDate(value);
   return date ? endOfDay(date) : undefined;
+}
+
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

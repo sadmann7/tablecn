@@ -2,14 +2,50 @@ import { endOfDay, startOfDay } from "date-fns";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
-import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
+import type {
+  ColumnFilterItem,
+  FilterOperator,
+  FilterVariant,
+  JoinOperator,
+} from "@/lib/data-table-types";
 
 import { filterColumns, getColumn } from "@/app/lib/filter-columns";
 import { type Task, tasks } from "@/db/schema";
+import { FILTER_VARIANTS, getFilterOperators } from "@/lib/data-table-utils";
 
 type TaskColumnId = keyof Task;
 
+const COLUMN_BY_VARIANT = {
+  text: "title",
+  number: "estimatedHours",
+  range: "estimatedHours",
+  date: "createdAt",
+  "date-range": "createdAt",
+  boolean: "archived",
+  select: "status",
+  "multi-select": "status",
+} satisfies Record<FilterVariant, TaskColumnId>;
+
 describe("filterColumns", () => {
+  it("compiles every operator the filter menus offer", () => {
+    const missing = FILTER_VARIANTS.flatMap((variant) =>
+      getFilterOperators(variant).flatMap(({ value: operator }) =>
+        compile([
+          columnFilter({
+            id: COLUMN_BY_VARIANT[variant],
+            variant,
+            operator,
+            value: getSampleValue(variant, operator),
+          }),
+        ])
+          ? []
+          : [`${variant} ${operator}`],
+      ),
+    );
+
+    expect(missing).toEqual([]);
+  });
+
   it("returns the column from the table", () => {
     expect(getColumn(tasks, "title")).toBe(tasks.title);
   });
@@ -59,6 +95,16 @@ describe("filterColumns", () => {
         }),
       ])?.params,
     ).toEqual(["%the%"]);
+    expect(
+      compile([
+        columnFilter({
+          id: "title",
+          variant: "text",
+          operator: "iLike",
+          value: "50%_\\",
+        }),
+      ])?.params,
+    ).toEqual(["%50\\%\\_\\\\%"]);
     expect(
       compile([
         columnFilter({
@@ -204,8 +250,8 @@ describe("filterColumns", () => {
           operator: "lt",
           value: day,
         }),
-      ]),
-    ).toBeUndefined();
+      ])?.params,
+    ).toEqual([start.toISOString()]);
     expect(
       compile([
         columnFilter({
@@ -391,4 +437,21 @@ function columnFilter(
   },
 ): ColumnFilterItem<TaskColumnId> {
   return { filterId: `${filter.id}-0`, ...filter };
+}
+
+function getSampleValue(
+  variant: FilterVariant,
+  operator: FilterOperator,
+): string | string[] {
+  if (operator === "isEmpty" || operator === "isNotEmpty") return "";
+  if (operator === "inArray" || operator === "notInArray") return ["todo"];
+  const isDate = variant === "date" || variant === "date-range";
+  if (operator === "isBetween") {
+    return isDate ? ["2026-10-01", "2026-10-07"] : ["1", "5"];
+  }
+  if (isDate) return "2026-10-03";
+  if (variant === "boolean") return "true";
+  if (variant === "select") return "todo";
+  if (variant === "text") return "the";
+  return "2";
 }
