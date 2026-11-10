@@ -33,6 +33,7 @@ import {
 import {
   getColumnFilters,
   getColumnFiltersKey,
+  sortColumnFiltersByIds,
 } from "@/lib/data-table-parsers";
 import { asFilterItems, getActiveFilters } from "@/lib/data-table-utils";
 
@@ -220,9 +221,27 @@ function useDataTable<TData extends RowData>({
     );
   }
 
+  const locationSearch = React.useSyncExternalStore(
+    subscribeToHistory,
+    getLocationSearch,
+    getServerLocationSearch,
+  );
+
+  const filterOrderKey = React.useMemo(() => {
+    const idsByUrlKey = new Map(filterableIds.map((id) => [urlKeys[id], id]));
+    const urlKeyOrder = new Set(new URLSearchParams(locationSearch).keys());
+    return JSON.stringify(
+      [...urlKeyOrder].flatMap((key) => idsByUrlKey.get(key) ?? []),
+    );
+  }, [filterableIds, urlKeys, locationSearch]);
+
   const urlFilters = React.useMemo(
-    () => getColumnFilters(filterableIds, filterParams),
-    [filterableIds, filterParams],
+    () =>
+      sortColumnFiltersByIds(
+        getColumnFilters(filterableIds, filterParams),
+        JSON.parse(filterOrderKey),
+      ),
+    [filterableIds, filterParams, filterOrderKey],
   );
   const urlFiltersKey = getColumnFiltersKey(urlFilters);
 
@@ -244,13 +263,18 @@ function useDataTable<TData extends RowData>({
     const nextUrlFiltersKey = getColumnFiltersKey(activeFilters);
 
     setFiltersDraft({ filters, urlFiltersKey: nextUrlFiltersKey });
-    if (nextUrlFiltersKey === urlFiltersKey) return;
+    if (
+      nextUrlFiltersKey === urlFiltersKey &&
+      getFilterColumnOrder(activeFilters) === getFilterColumnOrder(urlFilters)
+    ) {
+      return;
+    }
 
     const params: Record<string, ColumnFilterItem[] | null> = {};
-    for (const id of filterableIds) params[id] = null;
     for (const filter of activeFilters) {
       params[filter.id] = [...(params[filter.id] ?? []), filter];
     }
+    for (const id of filterableIds) params[id] ??= null;
 
     const options = getUrlUpdateOptions(
       activeFilters.length < urlFilters.length,
@@ -288,6 +312,23 @@ function useDataTable<TData extends RowData>({
   );
 
   return { table };
+}
+
+function subscribeToHistory(onChange: () => void) {
+  window.addEventListener("popstate", onChange);
+  return () => window.removeEventListener("popstate", onChange);
+}
+
+function getLocationSearch() {
+  return window.location.search;
+}
+
+function getServerLocationSearch() {
+  return "";
+}
+
+function getFilterColumnOrder(filters: ColumnFilterItem[]) {
+  return JSON.stringify([...new Set(filters.map((filter) => filter.id))]);
 }
 
 function getGlobalFilterValue(value: unknown) {

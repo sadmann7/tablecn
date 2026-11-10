@@ -27,12 +27,58 @@ afterEach(() => {
 });
 
 describe("useDataTable", () => {
-  it("reads filters from the URL in column order", () => {
+  it("reads filters from the URL in URL order", () => {
     const { result } = renderDataTable("?status=todo,done&title=bug");
 
     expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["status", ["todo", "done"]],
+      ["title", "bug"],
+    ]);
+  });
+
+  it("writes new filters to the URL in the order they were added", async () => {
+    const { result, getLastSearch } = renderDataTable("");
+
+    act(() =>
+      result.current.table.setColumnFilters([
+        { id: "status", value: ["todo"] },
+        { id: "title", value: "bug" },
+      ]),
+    );
+
+    await waitFor(() =>
+      expect([...(getLastSearch()?.keys() ?? [])]).toEqual(["status", "title"]),
+    );
+  });
+
+  it("writes reordered filters to the URL", async () => {
+    const { result, getLastSearch } = renderDataTable(
+      "?status=todo,done&title=bug",
+    );
+
+    act(() =>
+      result.current.table.setColumnFilters((filters) =>
+        [...filters].reverse(),
+      ),
+    );
+
+    await waitFor(() =>
+      expect([...(getLastSearch()?.keys() ?? [])]).toEqual(["title", "status"]),
+    );
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
       ["title", "bug"],
       ["status", ["todo", "done"]],
+    ]);
+  });
+
+  it("reads filters in URL order under an id", () => {
+    const { result } = renderDataTable("?t.status=todo&page=2&t.title=bug", {
+      config: createDataTableConfig({ id: "t", columns: tableColumns }),
+    });
+
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["status", ["todo"]],
+      ["title", "bug"],
     ]);
   });
 
@@ -330,8 +376,8 @@ describe("useDataTable", () => {
     expect(table.getColumn("code")?.getCanFilter()).toBe(true);
     expect(table.getColumn("title")?.getCanSort()).toBe(true);
     expect(getFilterSummary(table.state.columnFilters)).toEqual([
-      ["title", "bug"],
       ["status", ["todo"]],
+      ["title", "bug"],
     ]);
   });
 

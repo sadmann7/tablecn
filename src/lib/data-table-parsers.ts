@@ -135,6 +135,19 @@ export function getColumnFilters<TColumnId extends string>(
   });
 }
 
+export function sortColumnFiltersByIds<TFilter extends ColumnFilterItem>(
+  filters: TFilter[],
+  columnIds: readonly string[],
+) {
+  const positions = new Map(columnIds.map((id, index) => [id, index]));
+
+  return [...filters].sort(
+    (a, b) =>
+      (positions.get(a.id) ?? Number.POSITIVE_INFINITY) -
+      (positions.get(b.id) ?? Number.POSITIVE_INFINITY),
+  );
+}
+
 export function getColumnFiltersKey(filters: ColumnFilterItem[]) {
   return filters
     .map((filter) => `${filter.id}=${serializeColumnFilter(filter)}`)
