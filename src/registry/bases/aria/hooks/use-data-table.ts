@@ -111,12 +111,6 @@ function useDataTable<TData extends RowData>({
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
 
-  const queryParsers = React.useMemo(() => {
-    const { page, perPage, sort, joinOperator, search, ...filters } =
-      config.parsers;
-    return { state: { page, perPage, sort, joinOperator, search }, filters };
-  }, [config]);
-
   const [initialTableState] = React.useState<InitialTableState>(() => ({
     ...initialState,
     sorting: config.defaultSorting,
@@ -165,9 +159,9 @@ function useDataTable<TData extends RowData>({
   const [
     { page, perPage, sort: sorting, joinOperator, search },
     setQueryState,
-  ] = useQueryStates(queryParsers.state, queryStateOptions);
+  ] = useQueryStates(config.stateParsers, queryStateOptions);
   const [filterParams, setFilterParams] = useQueryStates(
-    queryParsers.filters,
+    config.filterParsers,
     queryStateOptions,
   );
 

@@ -117,15 +117,15 @@ export function serializeColumnFilter(filter: ColumnFilterItem) {
   return `${name}.${rawValue}`;
 }
 
-export function getColumnFilters(
-  columnIds: readonly string[],
+export function getColumnFilters<TColumnId extends string>(
+  columnIds: readonly TColumnId[],
   values: Partial<Record<string, unknown>>,
-): ColumnFilterItem[] {
+): ColumnFilterItem<TColumnId>[] {
   return columnIds.flatMap((id) => {
     const filters: unknown = values[id];
     if (!Array.isArray(filters)) return [];
 
-    return filters.map((filter: ColumnFilterItem, index) => ({
+    return filters.map((filter: ColumnFilterItem<TColumnId>, index) => ({
       ...filter,
       filterId: `${id}-${index}`,
     }));

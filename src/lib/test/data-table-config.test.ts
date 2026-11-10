@@ -266,7 +266,6 @@ describe("parse", () => {
       "title" | "status" | "priority" | "estimatedHours" | "createdAt"
     >();
     expectTypeOf(tasksTableConfig.urlKeys).toHaveProperty("estimatedHours");
-    expectTypeOf(tasksTableConfig.parsers).toHaveProperty("createdAt");
   });
 });
 

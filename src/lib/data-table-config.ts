@@ -74,16 +74,6 @@ type ColumnFilterParser<TColumnId extends string> = ReturnType<
   typeof getColumnFilterParser<TColumnId>
 >;
 
-type ConfigParsers<TColumns extends DataTableColumnConfigs> = ReturnType<
-  typeof getStateParsers
-> &
-  (string extends keyof TColumns
-    ? unknown
-    : Record<
-        FilterableColumnId<TColumns>,
-        ColumnFilterParser<FilterableColumnId<TColumns>>
-      >);
-
 interface DataTableConfigOptions<TColumns extends DataTableColumnConfigs> {
   id?: string;
   columns: TColumns &
@@ -107,7 +97,8 @@ export interface DataTableConfig<
   readonly defaultJoinOperator: JoinOperator;
   readonly enableGlobalFilter: boolean;
   readonly filterVariants: Record<FilterableColumnId<TColumns>, FilterVariant>;
-  readonly parsers: ConfigParsers<TColumns>;
+  readonly stateParsers: ReturnType<typeof getStateParsers>;
+  readonly filterParsers: Record<string, ColumnFilterParser<string>>;
   readonly urlKeys: Record<DataTableKey | FilterableColumnId<TColumns>, string>;
   parse(search: LoaderInput): ConfigQuery<TColumns>;
 }
@@ -141,12 +132,12 @@ export function createDataTableConfig<
   defaultJoinOperator = "and",
   enableGlobalFilter = true,
 }: DataTableConfigOptions<TColumns>): DataTableConfig<TColumns> {
-  const filterVariants = getFilterVariants(columns);
-  const filterableIds = Object.keys(filterVariants);
-
   if (id === "") {
     throw new Error("Data table id must not be empty.");
   }
+
+  const filterVariants = getFilterVariants<TColumns>(columns);
+  const filterableIds = getKeys(filterVariants);
   const reservedId = filterableIds.find(getIsDataTableKey);
   if (reservedId !== undefined) {
     throw new Error(
@@ -154,58 +145,54 @@ export function createDataTableConfig<
     );
   }
 
+  const sortableIds = getSortableIds<TColumns>(columns);
   const stateParsers = getStateParsers({
-    sortableIds: Object.keys(columns).filter(
-      (columnId) => columns[columnId]?.enableSorting !== false,
-    ),
+    sortableIds,
     defaultSorting,
     defaultPageSize,
     pageSizeOptions,
     defaultJoinOperator,
   });
-  const filterParsers = Object.fromEntries(
-    Object.entries(filterVariants).map(([columnId, variant]) => [
-      columnId,
-      getColumnFilterParser(columnId, variant),
-    ]),
+  const filterParsers: Record<string, ColumnFilterParser<string>> = fromKeys(
+    filterableIds,
+    (columnId) =>
+      getColumnFilterParser<string>(columnId, filterVariants[columnId]),
   );
 
   const prefix = id === undefined ? "" : `${id}.`;
-  const urlKeys = Object.fromEntries(
-    [...DATA_TABLE_KEYS, ...filterableIds].map((key) => [
-      key,
-      `${prefix}${key}`,
-    ]),
+  const urlKeys = fromKeys(
+    [...DATA_TABLE_KEYS, ...filterableIds],
+    (key) => `${prefix}${key}`,
   );
 
-  const parsers = { ...stateParsers, ...filterParsers };
-  const load = createLoader(parsers, { urlKeys });
-
-  const configColumns: TColumns = columns;
+  const load = createLoader({ ...stateParsers, ...filterParsers }, { urlKeys });
 
   return Object.freeze({
     id,
-    columns: configColumns,
+    columns,
     defaultSorting,
     defaultPageSize,
     pageSizeOptions,
     defaultJoinOperator,
     enableGlobalFilter,
     filterVariants,
-    parsers,
+    stateParsers,
+    filterParsers,
     urlKeys,
     parse(search: LoaderInput) {
       const values = load(search);
       return {
         page: values.page,
         perPage: values.perPage,
-        sorting: values.sort,
+        sorting: values.sort.flatMap(({ id, desc }) =>
+          getIsOneOf(sortableIds, id) ? [{ id, desc }] : [],
+        ),
         filters: getColumnFilters(filterableIds, values),
         joinOperator: values.joinOperator,
         globalFilter: enableGlobalFilter ? values.search : "",
       };
     },
-  }) as DataTableConfig<TColumns>;
+  });
 }
 
 export function createDataTableColumnHelper<
@@ -284,12 +271,38 @@ export function getUnmatchedConfigIds<TData extends RowData>(
   return Object.keys(configs).filter((columnId) => !columnIds.has(columnId));
 }
 
-function getFilterVariants(columns: DataTableColumnConfigs) {
-  return Object.fromEntries(
-    Object.entries(columns).flatMap(([columnId, config]) =>
-      config.variant ? [[columnId, config.variant] as const] : [],
-    ),
-  );
+function getFilterVariants<TColumns extends DataTableColumnConfigs>(
+  columns: TColumns,
+) {
+  const variants: Record<string, FilterVariant> = {};
+
+  for (const [columnId, config] of Object.entries(columns)) {
+    if (config.variant) variants[columnId] = config.variant;
+  }
+
+  return variants as Record<FilterableColumnId<TColumns>, FilterVariant>;
+}
+
+function getSortableIds<TColumns extends DataTableColumnConfigs>(
+  columns: TColumns,
+) {
+  return Object.keys(columns).filter(
+    (columnId) => columns[columnId]?.enableSorting !== false,
+  ) as SortableColumnId<TColumns>[];
+}
+
+function getKeys<TKey extends string>(record: Record<TKey, unknown>) {
+  return Object.keys(record) as TKey[];
+}
+
+function fromKeys<TKey extends string, TValue>(
+  keys: readonly TKey[],
+  getValue: (key: TKey) => TValue,
+) {
+  return Object.fromEntries(keys.map((key) => [key, getValue(key)])) as Record<
+    TKey,
+    TValue
+  >;
 }
 
 interface StateParsersOptions {
@@ -331,7 +344,14 @@ function getIntegerParser(min: number, max = Number.POSITIVE_INFINITY) {
 }
 
 function getIsDataTableKey(key: string): key is DataTableKey {
-  return DATA_TABLE_KEYS.some((dataTableKey) => dataTableKey === key);
+  return getIsOneOf(DATA_TABLE_KEYS, key);
+}
+
+function getIsOneOf<TValue extends string>(
+  values: readonly TValue[],
+  value: string,
+): value is TValue {
+  return values.some((item) => item === value);
 }
 
 function getLeafColumns<TData extends RowData>(
