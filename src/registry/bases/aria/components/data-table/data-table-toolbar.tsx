@@ -13,6 +13,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
   getColumnNumberOptions,
+  getColumnNumberRange,
   getColumnSelectOptions,
   getFilterVariant,
 } from "@/lib/data-table-utils";
@@ -148,11 +149,7 @@ function DataTableToolbarFilter<TData extends RowData>({
       );
 
     case "number": {
-      const numberOptions = getColumnNumberOptions(columnMeta);
-      if (
-        typeof numberOptions?.min === "number" &&
-        typeof numberOptions.max === "number"
-      ) {
+      if (getColumnNumberRange(column)) {
         return <DataTableSliderFilter column={column} title={title} />;
       }
 
@@ -162,7 +159,7 @@ function DataTableToolbarFilter<TData extends RowData>({
           type="number"
           inputMode="numeric"
           placeholder={placeholder}
-          unit={numberOptions?.unit}
+          unit={getColumnNumberOptions(columnMeta)?.unit}
           className="w-30"
         />
       );

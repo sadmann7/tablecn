@@ -208,13 +208,19 @@ describe.each([
     useTable: useAriaDataTable,
   },
 ])("number column toolbar ($base)", ({ Table, Toolbar, useTable }) => {
-  function Harness({ toolbarColumns }: { toolbarColumns: typeof columns }) {
+  function Harness({
+    toolbarColumns,
+    mode,
+  }: {
+    toolbarColumns: typeof columns;
+    mode: "client" | "server";
+  }) {
     const { table } = useTable<Task>({
       config,
-      mode: "client",
       data,
       columns: toolbarColumns,
       getRowId: (row) => row.id,
+      ...(mode === "server" ? { pageCount: 1 } : { mode: "client" }),
     });
     return (
       <Table aria-label="Tasks" table={table}>
@@ -223,23 +229,33 @@ describe.each([
     );
   }
 
-  function renderHarness(toolbarColumns: typeof columns) {
+  function renderHarness(
+    toolbarColumns: typeof columns,
+    mode: "client" | "server" = "client",
+  ) {
     render(
       <NuqsTestingAdapter hasMemory>
-        <Harness toolbarColumns={toolbarColumns} />
+        <Harness toolbarColumns={toolbarColumns} mode={mode} />
       </NuqsTestingAdapter>,
     );
   }
 
-  it("renders a number input and no slider without meta.min and meta.max", () => {
+  it("uses the faceted range for the slider in client mode", () => {
     renderHarness(columnsWithoutRange);
+
+    expect(screen.getByRole("button", { name: /^Hours/ })).toBeTruthy();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+  });
+
+  it("renders a number input in server mode without meta.min and meta.max", () => {
+    renderHarness(columnsWithoutRange, "server");
 
     expect(screen.getByRole("spinbutton")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Hours/ })).toBeNull();
   });
 
   it("renders the slider when meta.min and meta.max are set", () => {
-    renderHarness(columns);
+    renderHarness(columns, "server");
 
     expect(screen.getByRole("button", { name: /^Hours/ })).toBeTruthy();
     expect(screen.queryByRole("spinbutton")).toBeNull();
