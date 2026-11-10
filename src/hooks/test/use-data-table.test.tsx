@@ -233,22 +233,6 @@ describe("useDataTable", () => {
     });
   });
 
-  it("reads a server table's state from the columns when it has no config", () => {
-    const { result } = renderDataTable("?title=bug&sort=title.asc&page=2", {
-      config: undefined,
-      pageCount: 3,
-    });
-
-    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
-      ["title", "bug"],
-    ]);
-    expect(result.current.table.state.sorting).toEqual([
-      { id: "title", desc: false },
-    ]);
-    expect(result.current.table.state.pagination.pageIndex).toBe(1);
-    expect(result.current.table.options.manualFiltering).toBe(true);
-  });
-
   it("reads filters and sorting from the columns when a client table has no config", () => {
     const { result } = renderDataTable("?title=bug&code=x&sort=title.desc", {
       mode: "client",
@@ -279,6 +263,61 @@ describe("useDataTable", () => {
     rerender();
 
     expect(result.current.table.state.columnFilters).toBe(filters);
+  });
+
+  it("takes config options inline on a client table", async () => {
+    const { result, rerender, getLastSearch } = renderHookWithUrl(
+      "?t.title=bug&title=other",
+      () =>
+        useTestDataTable({
+          mode: "client",
+          pageCount: undefined,
+          config: {
+            id: "t",
+            defaultSorting: [{ id: "title", desc: true }],
+            defaultPageSize: 25,
+          },
+        }),
+    );
+    const filters = result.current.table.state.columnFilters;
+
+    expect(getFilterSummary(filters)).toEqual([["title", "bug"]]);
+    expect(result.current.table.state.sorting).toEqual([
+      { id: "title", desc: true },
+    ]);
+    expect(result.current.table.state.pagination.pageSize).toBe(25);
+
+    rerender();
+
+    expect(result.current.table.state.columnFilters).toBe(filters);
+
+    act(() => result.current.table.setPageIndex(1));
+
+    await waitFor(() => expect(getLastSearch()?.get("t.page")).toBe("2"));
+  });
+
+  it("merges inline column configs over the column defs", () => {
+    const { result } = renderDataTable("?status=todo&title=bug", {
+      mode: "client",
+      pageCount: undefined,
+      config: {
+        columns: {
+          status: { enableSorting: false },
+          code: { variant: "text" },
+        },
+      },
+    });
+    const { table } = result.current;
+
+    expect(table.getColumn("status")?.getCanSort()).toBe(false);
+    expect(table.getColumn("status")?.getCanFilter()).toBe(true);
+    expect(table.getColumn("status")?.columnDef.meta?.variant).toBe("select");
+    expect(table.getColumn("code")?.getCanFilter()).toBe(true);
+    expect(table.getColumn("title")?.getCanSort()).toBe(true);
+    expect(getFilterSummary(table.state.columnFilters)).toEqual([
+      ["title", "bug"],
+      ["status", ["todo"]],
+    ]);
   });
 
   it("keeps the same filters when only the page changes", async () => {

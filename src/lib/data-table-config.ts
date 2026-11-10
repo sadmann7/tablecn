@@ -66,7 +66,9 @@ type ColumnFilterParser<TColumnId extends string> = ReturnType<
   typeof getColumnFilterParser<TColumnId>
 >;
 
-interface DataTableConfigOptions<TColumns extends DataTableColumnConfigs> {
+export interface DataTableConfigOptions<
+  TColumns extends DataTableColumnConfigs,
+> {
   id?: string;
   columns: TColumns &
     ReservedColumnConfigs<TColumns> &
@@ -94,6 +96,13 @@ export interface DataTableConfig<
   readonly urlKeys: Record<DataTableKey | FilterableColumnId<TColumns>, string>;
   parse(search: LoaderInput): ConfigQuery<TColumns>;
 }
+
+export type DataTableConfigInput = Omit<
+  DataTableConfigOptions<DataTableColumnConfigs>,
+  "columns"
+> & {
+  columns?: DataTableColumnConfigs;
+};
 
 export type InferDataTableQuery<
   TConfig extends { parse: (search: never) => unknown },
@@ -173,14 +182,23 @@ export function createDataTableConfig<
   });
 }
 
+export function getIsDataTableConfig(
+  config: Omit<DataTableConfig, "parse"> | DataTableConfigInput | undefined,
+): config is Omit<DataTableConfig, "parse"> {
+  return config !== undefined && "stateParsers" in config;
+}
+
 export function applyColumnConfig<TData extends RowData>(
   column: ColumnDef<DataTableFeatures, TData>,
   configs: DataTableColumnConfigs,
+  isPartial = false,
 ): ColumnDef<DataTableFeatures, TData> {
   if (getIsGroupColumn(column)) {
     return {
       ...column,
-      columns: column.columns.map((child) => applyColumnConfig(child, configs)),
+      columns: column.columns.map((child) =>
+        applyColumnConfig(child, configs, isPartial),
+      ),
     };
   }
 
@@ -190,7 +208,9 @@ export function applyColumnConfig<TData extends RowData>(
       ? configs[columnId]
       : undefined;
   if (!config) {
-    return { ...column, enableColumnFilter: false, enableSorting: false };
+    return isPartial
+      ? column
+      : { ...column, enableColumnFilter: false, enableSorting: false };
   }
   const { enableSorting, ...meta } = config;
 
@@ -216,14 +236,40 @@ export function getColumnConfigs<TData extends RowData>(
   return configs;
 }
 
-export function getColumnConfigsKey<TData extends RowData>(
+export function getConfigInputKey<TData extends RowData>(
   columns: readonly ColumnDef<DataTableFeatures, TData>[],
+  input: DataTableConfigInput = {},
 ) {
-  return JSON.stringify(getColumnConfigs(columns));
+  const configs = getColumnConfigs(columns);
+  const inputColumns = input.columns ?? {};
+
+  for (const [columnId, config] of Object.entries(inputColumns)) {
+    configs[columnId] = { ...configs[columnId], ...config };
+  }
+
+  return JSON.stringify({
+    ...input,
+    columns: configs,
+    inputColumnIds: Object.keys(inputColumns),
+  });
 }
 
-export function parseColumnConfigsKey(key: string): DataTableColumnConfigs {
-  return JSON.parse(key);
+export function createConfigFromInputKey(key: string) {
+  const {
+    inputColumnIds,
+    ...options
+  }: DataTableConfigOptions<DataTableColumnConfigs> & {
+    inputColumnIds: string[];
+  } = JSON.parse(key);
+  const config = createDataTableConfig(options);
+
+  return {
+    config,
+    columnConfigs: fromKeys(
+      inputColumnIds,
+      (columnId) => config.columns[columnId] ?? {},
+    ),
+  };
 }
 
 export function getUnmatchedConfigIds<TData extends RowData>(

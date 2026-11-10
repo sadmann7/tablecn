@@ -20,11 +20,12 @@ import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import {
   applyColumnConfig,
-  createDataTableConfig,
+  createConfigFromInputKey,
   type DataTableConfig,
-  getColumnConfigsKey,
+  type DataTableConfigInput,
+  getConfigInputKey,
+  getIsDataTableConfig,
   getUnmatchedConfigIds,
-  parseColumnConfigsKey,
 } from "@/lib/data-table-config";
 import {
   type DataTableFeatures,
@@ -44,6 +45,8 @@ interface FiltersDraft {
 }
 
 type InitialTableState = Partial<TableState<DataTableFeatures>>;
+
+type DataTableConfigProp = Omit<DataTableConfig, "parse">;
 
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
@@ -67,7 +70,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
     "history" | "scroll" | "shallow" | "clearOnDefault" | "startTransition"
   > & {
     debounceMs?: number;
-    config?: Omit<DataTableConfig, "parse">;
     initialState?: Omit<
       InitialTableState,
       | "columnFilters"
@@ -80,10 +82,12 @@ type UseDataTableProps<TData extends RowData> = Omit<
     | {
         mode?: "server";
         pageCount: number;
+        config: DataTableConfigProp;
       }
     | {
         mode: "client";
         pageCount?: never;
+        config?: DataTableConfigProp | DataTableConfigInput;
       }
   );
 
@@ -102,14 +106,17 @@ function useDataTable<TData extends RowData>({
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
-  const columnConfigsKey = configProp ? "" : getColumnConfigsKey(columns);
-  const config = React.useMemo(
+  const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
+  const configInput = getIsDataTableConfig(configProp) ? undefined : configProp;
+  const configInputKey = builtConfig
+    ? ""
+    : getConfigInputKey(columns, configInput);
+  const { config, columnConfigs } = React.useMemo(
     () =>
-      configProp ??
-      createDataTableConfig({
-        columns: parseColumnConfigsKey(columnConfigsKey),
-      }),
-    [configProp, columnConfigsKey],
+      builtConfig
+        ? { config: builtConfig, columnConfigs: builtConfig.columns }
+        : createConfigFromInputKey(configInputKey),
+    [builtConfig, configInputKey],
   );
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
@@ -121,22 +128,25 @@ function useDataTable<TData extends RowData>({
     joinOperator: config.defaultJoinOperator,
   }));
 
+  const isPartialConfig = !builtConfig;
   const tableColumns = React.useMemo(
     () =>
-      configProp
-        ? columns.map((column) => applyColumnConfig(column, configProp.columns))
-        : columns,
-    [columns, configProp],
+      isPartialConfig && Object.keys(columnConfigs).length === 0
+        ? columns
+        : columns.map((column) =>
+            applyColumnConfig(column, columnConfigs, isPartialConfig),
+          ),
+    [columns, columnConfigs, isPartialConfig],
   );
 
   React.useEffect(() => {
-    if (process.env.NODE_ENV === "production" || !configProp) return;
-    const unmatchedIds = getUnmatchedConfigIds(configProp.columns, columns);
+    if (process.env.NODE_ENV === "production") return;
+    const unmatchedIds = getUnmatchedConfigIds(columnConfigs, columns);
     if (unmatchedIds.length === 0) return;
     console.warn(
       `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(", ")}. Rename the config key or add the column.`,
     );
-  }, [configProp, columns]);
+  }, [columnConfigs, columns]);
 
   const filterableIds = React.useMemo(
     () => Object.keys(filterVariants),
