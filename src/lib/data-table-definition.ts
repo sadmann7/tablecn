@@ -75,6 +75,7 @@ export interface DataTableDefinition<
     Record<FilterableColumnId<TColumns>, string>;
   parse(
     search: LoaderInput,
+    options?: { id?: string },
   ): InferDataTableQuery<DataTableDefinition<TColumns>>;
 }
 
@@ -99,8 +100,14 @@ export function defineDataTable<const TColumns extends DataTableColumnConfigs>({
   });
   const filterParsers = getDataTableFilterParsers(filterableColumns);
   const urlKeys = getDataTableUrlKeys(filterableIds, id);
-  const loadState = createLoader(stateParsers, { urlKeys });
-  const loadFilters = createLoader(filterParsers, { urlKeys });
+  const loaders = getLoaders(urlKeys);
+
+  function getLoaders(tableUrlKeys: typeof urlKeys) {
+    return {
+      loadState: createLoader(stateParsers, { urlKeys: tableUrlKeys }),
+      loadFilters: createLoader(filterParsers, { urlKeys: tableUrlKeys }),
+    };
+  }
 
   return Object.freeze({
     id,
@@ -109,7 +116,11 @@ export function defineDataTable<const TColumns extends DataTableColumnConfigs>({
     defaultPageSize,
     parsers: { ...stateParsers, ...filterParsers },
     urlKeys,
-    parse(search: LoaderInput) {
+    parse(search: LoaderInput, options?: { id?: string }) {
+      const { loadState, loadFilters } =
+        options?.id === undefined
+          ? loaders
+          : getLoaders(getDataTableUrlKeys(filterableIds, options.id));
       const state = loadState(search);
       const filters = loadFilters(search) as Record<
         FilterableColumnId<TColumns>,

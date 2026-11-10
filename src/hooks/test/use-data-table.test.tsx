@@ -413,6 +413,38 @@ describe("useDataTable", () => {
     expect(result.current.first.table.state.pagination.pageIndex).toBe(1);
   });
 
+  it("mounts one definition twice under different ids", async () => {
+    const definition = defineDataTable({ columns: tableColumns });
+    const { result, getLastSearch } = renderDataTables(
+      "?open.title=bug&closed.page=3",
+      { definition, id: "open" },
+      { definition, id: "closed" },
+    );
+
+    expect(
+      getFilterSummary(result.current.first.table.state.columnFilters),
+    ).toEqual([["title", "bug"]]);
+    expect(result.current.first.table.state.pagination.pageIndex).toBe(0);
+    expect(
+      getFilterSummary(result.current.second.table.state.columnFilters),
+    ).toEqual([]);
+    expect(result.current.second.table.state.pagination.pageIndex).toBe(2);
+
+    act(() =>
+      result.current.second.table.setColumnFilters([
+        { id: "title", value: "old" },
+      ]),
+    );
+
+    await waitFor(() =>
+      expect(getLastSearch()?.get("closed.title")).toBe("old"),
+    );
+    expect(getLastSearch()?.get("open.title")).toBe("bug");
+    expect(
+      getFilterSummary(result.current.first.table.state.columnFilters),
+    ).toEqual([["title", "bug"]]);
+  });
+
   it("applies the definition to the columns", async () => {
     const definition = defineDataTable({
       columns: {

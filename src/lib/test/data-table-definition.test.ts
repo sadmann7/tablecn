@@ -134,6 +134,21 @@ describe("parse", () => {
     });
   });
 
+  it("reads one definition under different ids", () => {
+    const search = "?open.page=2&open.status=todo&closed.page=3&page=9";
+
+    expect(tasksTable.parse(search, { id: "open" })).toMatchObject({
+      page: 2,
+      filters: [expect.objectContaining({ id: "status", value: ["todo"] })],
+    });
+    expect(tasksTable.parse(search, { id: "closed" })).toMatchObject({
+      page: 3,
+      filters: [],
+    });
+    expect(tasksTable.parse(search)).toMatchObject({ page: 9 });
+    expect(() => tasksTable.parse(search, { id: "" })).toThrow();
+  });
+
   it("types filters and sorting by column id", () => {
     type Query = InferDataTableQuery<typeof tasksTable>;
 

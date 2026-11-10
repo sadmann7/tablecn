@@ -90,7 +90,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
           DataTableDefinition,
           "id" | "columns" | "defaultSorting" | "defaultPageSize"
         >;
-        id?: never;
+        id?: string;
         initialState?: Omit<InitialTableState, "sorting" | "pagination">;
       }
     | {
