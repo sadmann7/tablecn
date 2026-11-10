@@ -38,6 +38,8 @@ jobs:
   typecheck:
     runs-on: ubuntu-latest
     name: Typecheck
+    env:
+      SKIP_ENV_VALIDATION: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4

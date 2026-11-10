@@ -1,7 +1,5 @@
 import { Suspense } from "react";
 
-import type { SearchParams } from "@/types";
-
 import { getDataTableQuery } from "@/lib/data-table-parsers";
 import { DataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
 
@@ -19,11 +17,7 @@ import {
 } from "./lib/queries";
 import { searchParamsCache, tasksColumnConfigs } from "./lib/validations";
 
-interface IndexPageProps {
-  searchParams: Promise<SearchParams>;
-}
-
-export default function IndexPage(props: IndexPageProps) {
+export default function IndexPage(props: PageProps<"/">) {
   return (
     <div className="container flex flex-col gap-4 py-4">
       <h1 className="sr-only">Data Table</h1>
@@ -55,7 +49,7 @@ export default function IndexPage(props: IndexPageProps) {
   );
 }
 
-async function TasksTableWrapper(props: IndexPageProps) {
+async function TasksTableWrapper(props: PageProps<"/">) {
   const searchParams = await props.searchParams;
   const search = searchParamsCache.parse(searchParams);
   const { dataMode, dir } = search;
