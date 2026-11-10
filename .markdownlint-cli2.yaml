@@ -1,2 +1,2 @@
 ignores:
-  - "AGENTS.md"
+  - "plans/**"
