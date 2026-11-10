@@ -1,7 +1,6 @@
 "use client";
 
-import type { Row } from "@tanstack/react-table";
-
+import { createColumnHelper, type Row } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -17,7 +16,6 @@ import type { DataTableRowAction } from "@/lib/data-table-types";
 import type { DataMode, Direction, FilterMode } from "@/lib/flag";
 
 import { type Task, tasks } from "@/db/schema";
-import { createDataTableColumnHelper } from "@/lib/data-table-config";
 import { getErrorMessage } from "@/lib/error";
 import { formatDate } from "@/lib/format";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
@@ -56,10 +54,7 @@ import { DeleteTasksDialog } from "./delete-tasks-dialog";
 import { TasksTableActionBar } from "./tasks-table-action-bar";
 import { UpdateTaskSheet } from "./update-task-sheet";
 
-const columnHelper = createDataTableColumnHelper<
-  Task,
-  typeof tasksTableConfig
->();
+const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
 interface TasksTableProps {
   dataMode: DataMode;

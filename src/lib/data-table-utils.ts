@@ -12,7 +12,7 @@ import type {
   ColumnFilterItem,
   ColumnNumberOptions,
   ColumnSelectOption,
-  ColumnVariantMeta,
+  DataTableColumnMeta,
   FilterOperator,
   FilterOperatorOption,
   FilterVariant,
@@ -149,14 +149,14 @@ export function getColumnId<TData extends RowData>(
 }
 
 export function getFilterVariant(
-  meta: ColumnVariantMeta | undefined,
+  meta: DataTableColumnMeta | undefined,
 ): FilterVariant {
   const variant = meta?.variant;
   return FILTER_VARIANTS.find((item) => item === variant) ?? "text";
 }
 
 export function getColumnNumberOptions(
-  meta: ColumnVariantMeta | undefined,
+  meta: DataTableColumnMeta | undefined,
 ): ColumnNumberOptions | undefined {
   return meta?.variant === "number" || meta?.variant === "range"
     ? meta
@@ -164,7 +164,7 @@ export function getColumnNumberOptions(
 }
 
 export function getColumnSelectOptions(
-  meta: ColumnVariantMeta | undefined,
+  meta: DataTableColumnMeta | undefined,
 ): ColumnSelectOption[] {
   return meta?.variant === "select" || meta?.variant === "multi-select"
     ? (meta.options ?? [])

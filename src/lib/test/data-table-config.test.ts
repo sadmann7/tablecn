@@ -5,7 +5,6 @@ import type { DataTableColumnConfigs } from "@/lib/data-table-types";
 import { tasksTableConfig } from "@/app/lib/validations";
 import {
   applyColumnConfig,
-  createDataTableColumnHelper,
   createDataTableConfig,
   getUnmatchedConfigIds,
   type InferDataTableQuery,
@@ -275,69 +274,30 @@ describe("parse", () => {
   });
 });
 
-const columnHelperConfig = createDataTableConfig({
-  columns: {
-    status: { variant: "multi-select" },
-    estimatedHours: { variant: "range" },
-  },
-});
+interface Owned {
+  id: string;
+  code: string;
+  owner: { name: string; email: string };
+}
 
-const columnHelper = createDataTableColumnHelper<
-  Task,
-  typeof columnHelperConfig
->();
+describe("DataTableColumnConfigs", () => {
+  it("configures nested and computed columns by column id", () => {
+    const nested = {
+      owner_name: { variant: "text" },
+    } satisfies DataTableColumnConfigs<Owned>;
+    const dotted = {
+      // @ts-expect-error nested columns are configured by their derived id
+      "owner.name": {},
+    } satisfies DataTableColumnConfigs<Owned>;
+    const computed = {
+      codeLength: {},
+    } satisfies DataTableColumnConfigs<Owned, "codeLength">;
+    const unlisted = {
+      // @ts-expect-error computed ids must be listed
+      codeLength: {},
+    } satisfies DataTableColumnConfigs<Owned>;
 
-describe("createDataTableColumnHelper", () => {
-  it("names the column once", () => {
-    expect(
-      columnHelper.accessor("estimatedHours", {
-        header: "Hours",
-        meta: { label: "Est. Hours", unit: "hr", max: 24 },
-      }),
-    ).toEqual({
-      id: "estimatedHours",
-      accessorKey: "estimatedHours",
-      header: "Hours",
-      meta: { label: "Est. Hours", unit: "hr", max: 24 },
-    });
-  });
-
-  it("types the cell value and the meta by column", () => {
-    columnHelper.accessor("status", {
-      cell: ({ cell }) => {
-        expectTypeOf(cell.getValue()).toEqualTypeOf<"todo" | "done">();
-        return null;
-      },
-      meta: { options: [{ label: "Todo", value: "todo" }] },
-    });
-    columnHelper.accessor("code", {
-      // @ts-expect-error options only exist on select columns
-      meta: { options: [] },
-    });
-    columnHelper.accessor("estimatedHours", {
-      // @ts-expect-error the config owns the variant
-      meta: { variant: "number" },
-    });
-    columnHelper.accessor("id", { meta: { label: "Id" } });
-    columnHelper.accessor("id", {
-      // @ts-expect-error columns outside the config take no variant
-      meta: { variant: "text" },
-    });
-    // @ts-expect-error the row has no missing field
-    columnHelper.accessor("missing", {});
-    columnHelper.accessor("status", {
-      // @ts-expect-error the config owns the sorting flag
-      enableSorting: false,
-    });
-  });
-
-  it("keeps the rest of the TanStack column helper", () => {
-    const columns = columnHelper.columns([
-      columnHelper.accessor("code", {}),
-      columnHelper.display({ id: "actions" }),
-    ]);
-
-    expect(columns.map((column) => column.id)).toEqual(["code", "actions"]);
+    expect([nested, dotted, computed, unlisted]).toHaveLength(4);
   });
 });
 

@@ -1,6 +1,10 @@
-import type { Column, ColumnDef } from "@tanstack/react-table";
 import type * as React from "react";
 
+import {
+  type Column,
+  type ColumnDef,
+  createColumnHelper,
+} from "@tanstack/react-table";
 import {
   ArrowUpDown,
   CalendarIcon,
@@ -12,17 +16,11 @@ import {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import { type Task, tasks } from "@/db/schema";
-import { createDataTableColumnHelper } from "@/lib/data-table-config";
 import { formatDate } from "@/lib/format";
-
-import type { basesTasksTableConfig } from "./table";
 
 import { getPriorityIcon, getStatusIcon } from "../../lib/utils";
 
-const columnHelper = createDataTableColumnHelper<
-  Task,
-  typeof basesTasksTableConfig
->();
+const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
 interface GetBasesDataTableColumnsOptions {
   data: Task[];

@@ -506,6 +506,54 @@ describe("useDataTable", () => {
     expect(getLastSearch()?.has("search") ?? false).toBe(false);
   });
 
+  it("filters a nested accessor column through the URL", async () => {
+    interface Owned {
+      id: string;
+      owner: { name: string };
+    }
+    const ownedConfig = createDataTableConfig({
+      columns: { owner_name: { variant: "text" } },
+    });
+    const ownedHelper = createColumnHelper<DataTableFeatures, Owned>();
+    const ownedData: Owned[] = [
+      { id: "1", owner: { name: "ann" } },
+      { id: "2", owner: { name: "bo" } },
+    ];
+    const ownedColumns = ownedHelper.columns([
+      ownedHelper.accessor("owner.name", { header: "Owner" }),
+    ]);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const { result, getLastSearch } = renderHookWithUrl("?owner_name=ann", () =>
+      useDataTable<Owned>({
+        config: ownedConfig,
+        data: ownedData,
+        columns: ownedColumns,
+        mode: "client",
+        getRowId: (row) => row.id,
+      }),
+    );
+
+    expect(getFilterSummary(result.current.table.state.columnFilters)).toEqual([
+      ["owner_name", "ann"],
+    ]);
+    expect(
+      result.current.table.getRowModel().rows.map((row) => row.id),
+    ).toEqual(["1"]);
+
+    act(() => {
+      result.current.table.setColumnFilters([
+        { id: "owner_name", value: "bo" },
+      ]);
+    });
+
+    await waitFor(() => expect(getLastSearch()?.get("owner_name")).toBe("bo"));
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining("no matching column"),
+    );
+    warn.mockRestore();
+  });
+
   it("namespaces every URL key with the id, including column filters", async () => {
     const { result, getLastSearch } = renderDataTable(
       "?t.page=2&t.sort=title.asc&t.title=bug&t.search=x&title=other&page=9",

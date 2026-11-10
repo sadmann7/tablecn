@@ -1,10 +1,4 @@
-import {
-  type AccessorKeyColumnDef,
-  type ColumnDef,
-  createColumnHelper,
-  type IdentifiedColumnDef,
-  type RowData,
-} from "@tanstack/react-table";
+import { type ColumnDef, type RowData } from "@tanstack/react-table";
 import {
   createLoader,
   createParser,
@@ -17,10 +11,8 @@ import {
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnSortItem,
-  ColumnVariantOptions,
   DataTableColumnConfig,
   DataTableColumnConfigs,
-  DataTableColumnDisplayMeta,
   DataTableQuery,
   FilterableColumnId,
   FilterVariant,
@@ -107,20 +99,6 @@ export type InferDataTableQuery<
   TConfig extends { parse: (search: never) => unknown },
 > = ReturnType<TConfig["parse"]>;
 
-type ColumnVariantDisplayOptions<TColumnConfig> = TColumnConfig extends {
-  variant: infer TVariant extends keyof ColumnVariantOptions;
-}
-  ? ColumnVariantOptions[TVariant]
-  : unknown;
-
-type ConfiguredColumnDef<TData extends RowData, TValue, TColumnConfig> = Omit<
-  IdentifiedColumnDef<DataTableFeatures, TData, TValue>,
-  "id" | "meta" | "enableColumnFilter" | "enableSorting"
-> & {
-  meta?: DataTableColumnDisplayMeta &
-    ColumnVariantDisplayOptions<TColumnConfig>;
-};
-
 export function createDataTableConfig<
   const TColumns extends DataTableColumnConfigs,
 >({
@@ -193,29 +171,6 @@ export function createDataTableConfig<
       };
     },
   });
-}
-
-export function createDataTableColumnHelper<
-  TData extends RowData,
-  TConfig extends Pick<DataTableConfig, "columns">,
->() {
-  const columnHelper = createColumnHelper<DataTableFeatures, TData>();
-
-  return {
-    ...columnHelper,
-    accessor<TId extends keyof TData & string>(
-      id: TId,
-      column: ConfiguredColumnDef<
-        TData,
-        TData[TId],
-        TId extends keyof TConfig["columns"]
-          ? TConfig["columns"][TId]
-          : undefined
-      >,
-    ): AccessorKeyColumnDef<DataTableFeatures, TData, TData[TId]> {
-      return { ...column, id, accessorKey: id };
-    },
-  };
 }
 
 export function applyColumnConfig<TData extends RowData>(

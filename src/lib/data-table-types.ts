@@ -1,6 +1,7 @@
 import type {
   ColumnFilter,
   ColumnSort,
+  DeepKeys,
   Row,
   RowData,
 } from "@tanstack/react-table";
@@ -25,45 +26,34 @@ export interface ColumnNumberOptions {
   unit?: string;
 }
 
-export interface ColumnVariantOptions {
-  number: ColumnNumberOptions;
-  range: ColumnNumberOptions;
-  select: {
-    options?: ColumnSelectOption[];
-  };
-  "multi-select": {
-    options?: ColumnSelectOption[];
-  };
-}
-
-type VariantMeta<TVariant extends keyof ColumnVariantOptions> = {
-  variant: TVariant;
-} & ColumnVariantOptions[TVariant];
-
-export type ColumnVariantMeta =
-  | { variant?: Exclude<FilterVariant, keyof ColumnVariantOptions> }
-  | VariantMeta<"number">
-  | VariantMeta<"range">
-  | VariantMeta<"select">
-  | VariantMeta<"multi-select">;
-
-export interface DataTableColumnDisplayMeta {
+export interface DataTableColumnMeta extends ColumnNumberOptions {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
   placeholder?: string;
+  variant?: FilterVariant;
+  options?: ColumnSelectOption[];
 }
-
-export type DataTableColumnMeta = DataTableColumnDisplayMeta &
-  ColumnVariantMeta;
 
 export interface DataTableColumnConfig {
   enableSorting?: boolean;
   variant?: FilterVariant;
 }
 
-export type DataTableColumnConfigs<TData = never> = [TData] extends [never]
+export type DataTableColumnPathId<TPath extends string> =
+  TPath extends `${infer THead}.${infer TTail}`
+    ? `${THead}_${DataTableColumnPathId<TTail>}`
+    : TPath;
+
+export type DataTableColumnId<TData> = DataTableColumnPathId<
+  DeepKeys<TData> & string
+>;
+
+export type DataTableColumnConfigs<
+  TData = never,
+  TComputedId extends string = never,
+> = [TData] extends [never]
   ? Record<string, DataTableColumnConfig>
-  : { [K in keyof TData & string]?: DataTableColumnConfig };
+  : { [K in DataTableColumnId<TData> | TComputedId]?: DataTableColumnConfig };
 
 type KeysWhere<TRecord, TValue> = {
   [K in keyof TRecord]: TRecord[K] extends TValue ? K : never;
