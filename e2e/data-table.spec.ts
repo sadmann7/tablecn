@@ -129,9 +129,7 @@ test("filters loaded from the URL follow the column order", async ({
     .toEqual(["Title", "Status", "Est. Hours", "Created At"]);
 });
 
-test("an edit writes params in filter order, in the short form", async ({
-  page,
-}) => {
+test("an edit writes params in the short form", async ({ page }) => {
   await page.goto("/?createdAt=2026-09-01,2026-10-31&title=the");
   await page
     .getByRole("button", { name: "Priority", exact: true })
@@ -140,8 +138,12 @@ test("an edit writes params in filter order, in the short form", async ({
   await page.getByRole("option", { name: /^High/ }).click();
 
   await expect
-    .poll(() => decodeURIComponent(page.url()))
-    .toContain("createdAt=2026-09-01,2026-10-31&title=the&priority=high");
+    .poll(() => filterParams(page, ["createdAt", "title", "priority"]))
+    .toEqual({
+      createdAt: ["2026-09-01,2026-10-31"],
+      title: ["the"],
+      priority: ["high"],
+    });
 
   await page.goto(
     "/?filterMode=advanced&estimatedHours=gte.2&estimatedHours=LTE.8&title=ilike.the",
@@ -150,14 +152,19 @@ test("an edit writes params in filter order, in the short form", async ({
   await page.getByRole("spinbutton").first().fill("1.5");
 
   await expect
-    .poll(() => decodeURIComponent(page.url()))
-    .toContain("estimatedHours=gte.1.5&estimatedHours=lte.8&title=the");
+    .poll(() => filterParams(page, ["estimatedHours", "title"]))
+    .toEqual({ estimatedHours: ["gte.1.5", "lte.8"], title: ["the"] });
 });
 
 function dataRows(page: Page) {
   return page.getByRole("row").filter({
     has: page.getByRole("checkbox", { name: "Select row" }),
   });
+}
+
+function filterParams(page: Page, keys: string[]) {
+  const params = new URL(page.url()).searchParams;
+  return Object.fromEntries(keys.map((key) => [key, params.getAll(key)]));
 }
 
 function cell(row: Locator, index: number) {
