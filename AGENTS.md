@@ -32,4 +32,4 @@ Default to no comment. Write one only for a constraint, an external quirk, or an
 - A `TODO:` links the issue that tracks it. No bare `#123`.
 - No section dividers, commented-out code, or test step labels.
 
-`tablecn/comment-style` in `lint/comment-style.ts` enforces the mechanical parts, and `.claude/hooks/lint-comments.ts` runs it on every file Claude edits.
+`tablecn/comment-style` in `lint/comment-style.ts` enforces the mechanical parts.
