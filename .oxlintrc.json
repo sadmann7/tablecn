@@ -95,7 +95,7 @@
     "unicorn/catch-error-name": ["warn", { "name": "error" }],
     "tablecn/top-down-order": "warn",
     "tablecn/comment-style": "error",
-    "tablecn/no-low-value-comments": "warn"
+    "tablecn/no-low-value-comments": "error"
   },
   "overrides": [
     {
