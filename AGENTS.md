@@ -28,7 +28,7 @@ Default to no comment. Write one only for a constraint, an external quirk, or an
 
 - Full sentences ending with a full stop, including notes after code on the same line.
 - No required verb form, and no "we" or "our".
-- JSDoc on exported props, options and functions: one sentence, no types, no empty `@param` or `@returns`.
+- JSDoc only on the public API (props, options, hooks and functions users import): one sentence, no types, no empty `@param` or `@returns`. Components and parts get none, and neither do internal helpers, even ones another file imports.
 - A `TODO:` links the issue that tracks it. No bare `#123`.
 - No section dividers, commented-out code, or test step labels.
 

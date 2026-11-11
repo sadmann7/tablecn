@@ -18,7 +18,7 @@ tablecn ships copy-paste components through a shadcn registry. A bug here lands 
 - **Server and data.** Filters and sorts build SQL through Drizzle. Look for user input reaching raw SQL and for filters that silently drop rows.
 - **Multiplayer.** `party/types.ts` is shared by the client and the room server. Message changes need both sides updated.
 - **Fixes.** A bug fix names the cause and fixes it, not the symptom.
-- **Comments.** A comment that restates the code, narrates steps, or explains the fix, which belongs in the PR. Lint only checks the form; the rules are under Comments in `AGENTS.md`.
+- **Comments.** A comment that restates the code, narrates steps, or explains the fix, which belongs in the PR. JSDoc outside the public API: on a component, a part, or an internal helper. Lint only checks the form; the rules are under Comments in `AGENTS.md`.
 
 ## Skip
 
