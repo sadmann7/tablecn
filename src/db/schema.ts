@@ -4,7 +4,7 @@ import { boolean, index, real, timestamp, varchar } from "drizzle-orm/pg-core";
 import { pgTable } from "@/db/utils";
 import { generateId } from "@/lib/id";
 
-// For data-table
+// For data-table.
 export const tasks = pgTable(
   "tasks",
   {

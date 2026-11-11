@@ -26,8 +26,8 @@ export const env = createEnv({
   },
 
   /**
-   * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
-   * middlewares) or client-side so we need to destruct manually.
+   * `process.env` can't be destructured in Next.js edge runtimes or on the
+   * client, so each key is listed.
    */
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,

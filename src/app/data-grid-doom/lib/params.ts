@@ -9,7 +9,7 @@ export function getResolutionLabel(columnCount: number) {
   return `${columnCount}×${rowCount}${columnCount === NATIVE_RESOLUTION ? " (native)" : ""}`;
 }
 
-// res=40|64|80|106|128|160|192|320 (columns, 16:10), mode=data|dom|gradient, source=doom|plasma, damage (plasma only), auto=1 to expose measurements, grid=1 to start with the grid shown
+// res=40|64|80|106|128|160|192|320 (columns, 16:10), mode=data|dom|gradient, source=doom|plasma, damage (plasma only), auto=1 to expose measurements, grid=1 to start with the grid shown.
 export function getDoomParams(params: Pick<URLSearchParams, "get">) {
   const res = Number(params.get("res") ?? DEFAULT_RESOLUTION);
   const columnCount = (RESOLUTIONS as readonly number[]).includes(res)
@@ -35,7 +35,7 @@ export function getDoomParams(params: Pick<URLSearchParams, "get">) {
 
 export type DoomParams = ReturnType<typeof getDoomParams>;
 
-// The share of rows the plasma benchmark changes each frame, from just over 0 to all of them
+// The share of rows the plasma benchmark changes each frame, from just over 0 to all of them.
 function getDamage(value: string | null) {
   const damage = Number(value ?? 1);
   return Number.isFinite(damage) && damage > 0 ? Math.min(damage, 1) : 1;

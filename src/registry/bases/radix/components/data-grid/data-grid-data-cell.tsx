@@ -30,7 +30,7 @@ interface DataGridDataCellProps<
 export const DataGridDataCell = React.memo(
   DataGridDataCellImpl,
   (prev, next) => {
-    // Only the end of a scroll matters, when previews switch to full cells
+    // Only the end of a scroll matters, when previews switch to full cells.
     if (prev.isScrolling && !next.isScrolling) return false;
     if (prev.columnIndex !== next.columnIndex) return false;
     if (prev.isFocused !== next.isFocused) return false;
@@ -56,7 +56,7 @@ export const DataGridDataCell = React.memo(
     if (prev.cell.column.columnDef.meta !== next.cell.column.columnDef.meta) {
       return false;
     }
-    // Written cells take their values straight from `updateCells`
+    // Written cells take their values straight from `updateCells`.
     if (next.cell.column.columnDef.meta?.writeCell) return true;
     if (getHasCustomCell(next.cell.column)) {
       return prev.cell.row.original === next.cell.row.original;
@@ -202,7 +202,7 @@ function DataGridCustomCellContentImpl<TData extends RowData>({
 }
 
 // Live updates patch rows in place, so the `cell` prop never changes; this
-// re-renders on each update and skips the compiler, which would cache on it
+// re-renders on each update and skips the compiler, which would cache on it.
 function useUpdatedCell<TData extends RowData>(
   cell: Cell<DataGridFeatures, TData>,
 ) {

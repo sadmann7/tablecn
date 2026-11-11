@@ -74,7 +74,7 @@ describe("DataTable rendering", () => {
       measure(() => table.getColumn("status")?.toggleVisibility(true)).cells,
     ).toBe(10);
 
-    // Pinning doesn't change a cell's content, so the compiler may skip its renderer
+    // Pinning doesn't change a cell's content, so the compiler may skip its renderer.
     expect(
       measure(() => table.getColumn("title")?.pin("start")).cells,
     ).toBeLessThanOrEqual(10);

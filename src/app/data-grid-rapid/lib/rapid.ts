@@ -32,9 +32,9 @@ export const QUOTE_FIELDS = [
 const HISTORY_LENGTH = 40;
 
 interface SectorProfile {
-  // Yearly volatility of a large company in the sector
+  // Yearly volatility of a large company in the sector.
   volatility: number;
-  // How strongly the sector follows the whole market
+  // How strongly the sector follows the whole market.
   beta: number;
   suffixes: readonly string[];
 }
@@ -119,10 +119,10 @@ const NAME_PREFIXES = [
   "Zenith",
 ] as const;
 
-// Each tick is a short stretch of a sped up trading day
+// Each tick is a short stretch of a sped up trading day.
 const STEP_SCALE = 0.0025;
 
-// A seeded generator, so the server and the browser build the same market
+// A seeded generator, so the server and the browser build the same market.
 export function createRandom(seed: number) {
   let state = seed >>> 0;
   return () => {
@@ -136,20 +136,20 @@ export function createRandom(seed: number) {
 
 interface QuoteModel {
   sector: Sector;
-  // Yearly volatility, higher for smaller companies
+  // Yearly volatility, higher for smaller companies.
   volatility: number;
   beta: number;
   shares: number;
-  // The bid-ask spread as a share of the price, wider for smaller companies
+  // The bid-ask spread as a share of the price, wider for smaller companies.
   spread: number;
-  // How often the quote trades compared with the others
+  // How often the quote trades compared with the others.
   activity: number;
 }
 
 export interface Market {
   quotes: Quote[];
   models: QuoteModel[];
-  // Running totals of `activity`, to pick busy quotes more often
+  // Running totals of `activity`, to pick busy quotes more often.
   activityTotals: Float64Array;
 }
 
@@ -167,7 +167,7 @@ export function createMarket(count: number, seed = 1): Market {
     const prefix = pick(NAME_PREFIXES, random);
     const suffix = pick(profile.suffixes, random);
 
-    // Prices and company sizes are log-normal: most are mid-sized, a few are huge
+    // Prices and company sizes are log-normal: most are mid-sized, a few are huge.
     const previousClose = Math.min(
       2500,
       Math.max(1, roundPrice(Math.exp(Math.log(45) + getNormal(random) * 0.9))),
@@ -186,7 +186,7 @@ export function createMarket(count: number, seed = 1): Market {
       spread: 0.0002 + smallness * 0.002,
       activity: Math.max(0.05, size - 8),
     };
-    // A stretch of trading before the feed starts, so ranges and trends aren't flat
+    // A stretch of trading before the feed starts, so ranges and trends aren't flat.
     const history = [open];
     for (let step = 1; step < HISTORY_LENGTH; step++) {
       const last = history[step - 1] ?? open;
@@ -221,7 +221,7 @@ export function createMarket(count: number, seed = 1): Market {
 }
 
 // Every quote follows one market move and its sector's, plus its own noise, so
-// sectors move together
+// sectors move together.
 export function tickMarket(
   market: Market,
   share: number,
@@ -248,7 +248,7 @@ export function tickMarket(
       getNormal(random) * 0.8;
     const step = shock * model.volatility * STEP_SCALE;
     const price = Math.max(0.01, roundPrice(quote.price * Math.exp(step)));
-    // Big moves bring in more trading, in round lots
+    // Big moves bring in more trading, in round lots.
     const lots = Math.ceil(
       Math.exp(getNormal(random)) * (1 + Math.abs(shock) * 2),
     );

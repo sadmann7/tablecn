@@ -429,7 +429,7 @@ function useDataGrid<TData extends RowData>({
       const focusedCell = getFocusedCell();
       const isUtilityCellFocused =
         focusedCell !== null && !getIsDataColumnId(focusedCell.columnId);
-      // The focused cell stays the active range so selecting rows elsewhere doesn't move focus and scroll to them
+      // The focused cell stays the active range so selecting rows elsewhere doesn't move focus and scroll to them.
       if (focusedCell) {
         ranges.push({
           anchorRowId: focusedCell.rowId,
@@ -471,7 +471,7 @@ function useDataGrid<TData extends RowData>({
       if (!container || !(target instanceof Element)) return null;
       if (!container.contains(target)) return null;
 
-      // Utility cells manage their own pointer and focus events
+      // Utility cells manage their own pointer and focus events.
       const cellElement = target.closest<HTMLElement>(
         '[data-slot="data-grid-cell"]:not([data-utility])',
       );
@@ -785,7 +785,7 @@ function useDataGrid<TData extends RowData>({
         case "ArrowUp":
           break;
         case "ArrowDown": {
-          // Stops the menu trigger from opening its menu
+          // Stops the menu trigger from opening its menu.
           event.stopPropagation();
           const firstRowId = getRowIdAtDisplayIndex(0);
           if (!firstRowId) break;
@@ -1181,7 +1181,7 @@ function useDataGrid<TData extends RowData>({
 
       const isInDataGrid = dataGridElement.contains(target);
 
-      // Works from anywhere but text fields, editors and another grid, like an app's undo
+      // Works from anywhere but text fields, editors and another grid, like an app's undo.
       const undoRedoKey = key.toLowerCase();
       if (
         currentTable &&

@@ -102,7 +102,7 @@ describe("useDataGrid", () => {
     });
 
     // Frames run immediately so effects finish inside `act`, and ones requested
-    // from inside a frame are dropped so self-scheduling loops end
+    // from inside a frame are dropped so self-scheduling loops end.
     let isRunningFrame = false;
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
       if (isRunningFrame) return 0;
@@ -1245,7 +1245,7 @@ describe("useDataGrid", () => {
         result.current.setData([testData[2] as TestData]);
       });
       expect(result.current.table.getCanUndo()).toBe(false);
-      // Rendering the grid reads the rows, which resets the stored state just after
+      // Rendering the grid reads the rows, which resets the stored state just after.
       await act(async () => {
         result.current.table.getRowModel();
       });
@@ -1286,7 +1286,7 @@ describe("useDataGrid", () => {
         });
       });
 
-      // A refetch brings the deleted row back and drops the edited one
+      // A refetch brings the deleted row back and drops the edited one.
       act(() => {
         result.current.setData(testData.slice(0, 2).map((row) => ({ ...row })));
       });
@@ -2020,7 +2020,7 @@ describe("useDataGrid", () => {
         );
       });
 
-      // This suite runs animation frames immediately, so cells hear right away
+      // This suite runs animation frames immediately, so cells hear right away.
       expect(table.getRow("0").getValue("name")).toBe("One");
       expect(onNameChange).toHaveBeenCalledTimes(1);
       expect(onDataChange).not.toHaveBeenCalled();
@@ -2320,7 +2320,7 @@ describe("useDataGrid", () => {
         });
       });
 
-      // onDataChange should be called with ALL rows (not just filtered)
+      // onDataChange should be called with ALL rows (not just filtered).
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
 
@@ -2442,7 +2442,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // The returned onRowAdd checks readOnly internally
+      // The returned onRowAdd checks readOnly internally.
       expect(result.current.onRowAdd).toBeDefined();
     });
 
@@ -2579,7 +2579,7 @@ describe("useDataGrid", () => {
 
       await act(async () => {
         result.current.table.openSearch();
-        // Lets the microtask queue flush
+        // Lets the microtask queue flush.
         await Promise.resolve();
       });
 
@@ -2841,7 +2841,7 @@ describe("useDataGrid", () => {
         return result.current.table.getSearchMatches();
       }
 
-      // Every row and column checked directly, without any earlier query to narrow from
+      // Every row and column checked directly, without any earlier query to narrow from.
       function getExpected(query: string) {
         return testData.flatMap((row, index) =>
           (["name", "trick", "score"] as const)
@@ -2856,7 +2856,7 @@ describe("useDataGrid", () => {
         expect(search(query)).toEqual(getExpected(query));
       }
 
-      // Rows matching the same columns share one set, so unchanged rows keep the same reference
+      // Rows matching the same columns share one set, so unchanged rows keep the same reference.
       search("o");
       const matchesByRowId = result.current.table.getSearchMatchesByRowId();
       expect(matchesByRowId.get("0")).toEqual(new Set(["name"]));
@@ -3217,7 +3217,7 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Already closed, but resetting still runs the callback
+      // Already closed, but resetting still runs the callback.
       act(() => {
         result.current.table.resetPasteDialog(true);
       });
@@ -3773,7 +3773,7 @@ describe("useDataGrid", () => {
 
     it("should stop selection when document mouseup fires during auto-scroll", () => {
       // Mounts with the synchronous RAF from beforeEach, so every setup effect
-      // finishes before the test takes over RAF scheduling
+      // finishes before the test takes over RAF scheduling.
       const { result } = renderHook(
         () =>
           useDataGrid({
@@ -3785,7 +3785,7 @@ describe("useDataGrid", () => {
 
       // Defer RAF from this point forward so that onAutoScrollStart can
       // register the document mouseup listener without tick() immediately
-      // calling onAutoScrollStop (which would remove the listener)
+      // calling onAutoScrollStop (which would remove the listener).
       const pendingRafs: FrameRequestCallback[] = [];
       vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
         pendingRafs.push(cb);
@@ -3793,12 +3793,12 @@ describe("useDataGrid", () => {
       });
       vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
 
-      // Give onAutoScrollStart a real container so it doesn't bail early
+      // Give onAutoScrollStart a real container so it doesn't bail early.
       const mockContainer = document.createElement("div");
       result.current.dataGridRef.current = mockContainer;
 
       // Mousedown sets dragStartCell, and onAutoScrollStart registers the
-      // document mouseup listener before queuing the deferred RAF
+      // document mouseup listener before queuing the deferred RAF.
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -3816,13 +3816,13 @@ describe("useDataGrid", () => {
       expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
 
       // Releasing the mouse outside the grid reaches the document listener from
-      // onAutoScrollStart, which clears dragStartCell
+      // onAutoScrollStart, which clears dragStartCell.
       act(() => {
         document.dispatchEvent(new MouseEvent("mouseup"));
       });
 
       // A subsequent onCellMouseEnter must be a no-op because the drag has
-      // ended — so row 2 should never enter the selected set
+      // ended — so row 2 should never enter the selected set.
       act(() => {
         fireCellEvent(result, "onMouseOver", "2", "score");
       });
@@ -4625,7 +4625,7 @@ describe("useDataGrid", () => {
         return result.current.table.getRowModel().rows.map((row) => row.id);
       }
 
-      // Natural, case-insensitive order with ties kept in data order
+      // Natural, case-insensitive order with ties kept in data order.
       expect(getSortedIds([{ id: "label", desc: false }])).toEqual([
         "c",
         "b",
@@ -4719,7 +4719,7 @@ describe("useDataGrid", () => {
         const ids = result.current.table
           .getRowModel()
           .rows.map((row) => row.id);
-        // Descending flips the comparison but keeps ties in data order
+        // Descending flips the comparison but keeps ties in data order.
         expect(ids).toEqual(
           desc
             ? [...data]
@@ -4739,7 +4739,7 @@ describe("useDataGrid", () => {
         );
       }
 
-      // Without the out-of-range values every label takes the precomputed key path
+      // Without the out-of-range values every label takes the precomputed key path.
       const latinData = data.filter(
         (row) => !row.label.includes("ë") && row.label.length < 16,
       );
@@ -4810,7 +4810,7 @@ describe("useDataGrid", () => {
           { id: "group", desc: true },
           { id: "score", desc: false },
         ],
-        // Flipping only one of the sorts needs a full sort
+        // Flipping only one of the sorts needs a full sort.
         [
           { id: "group", desc: true },
           { id: "score", desc: true },
@@ -4820,7 +4820,7 @@ describe("useDataGrid", () => {
         expect(getIds(sorting)).toEqual(getFreshIds(data, sorting));
       }
 
-      // New data must not reuse the order computed for the old rows
+      // New data must not reuse the order computed for the old rows.
       const edited = data.map((row) =>
         row.id === "0" ? { ...row, group: "z" } : row,
       );

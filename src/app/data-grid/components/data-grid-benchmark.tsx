@@ -196,7 +196,7 @@ const BENCHMARK_STEPS: BenchmarkStep[] = [
     name: "Search",
     run: async ({ table, signal, measure }) => {
       table.openSearch();
-      // Give the search index time to warm up, like a user moving to the input
+      // Give the search index time to warm up, like a user moving to the input.
       await pause(signal, 30);
       for (const query of ["j", "jo", "joh", "john", "jo", "ma", "mar", ""]) {
         if (signal.aborted) break;
@@ -269,7 +269,7 @@ const BENCHMARK_STEPS: BenchmarkStep[] = [
 async function animate(
   signal: AbortSignal,
   durationMs: number,
-  // Returning `true` ends the animation early
+  // Returning `true` ends the animation early.
   onFrame: (progress: number, frame: number) => boolean | void,
 ) {
   const start = performance.now();
@@ -292,7 +292,7 @@ function getMaxScroll(grid: HTMLDivElement) {
   };
 }
 
-// Deterministic so runs are comparable
+// Deterministic so runs are comparable.
 function createRandom(seed: number) {
   let state = seed;
   return () => {
@@ -362,7 +362,7 @@ export function DataGridBenchmark({
   const [isResultsOpen, setIsResultsOpen] = React.useState(false);
   const [rerunStep, setRerunStep] = React.useState<string | null>(null);
   const abortRef = React.useRef<AbortController | null>(null);
-  // Sonner ignores updates to a dismissed toast, so every run gets its own toast id
+  // Sonner ignores updates to a dismissed toast, so every run gets its own toast id.
   const toastIdRef = React.useRef("");
 
   React.useEffect(
@@ -379,7 +379,7 @@ export function DataGridBenchmark({
 
   const showProgress = React.useCallback(
     (title: string, description: string) => {
-      // One toast updated in place keeps the grid visible while the run drives it
+      // One toast updated in place keeps the grid visible while the run drives it.
       toast.loading(title, {
         id: toastIdRef.current,
         description,
@@ -387,7 +387,7 @@ export function DataGridBenchmark({
         action: {
           label: "Stop",
           onClick: (event) => {
-            // The summary replaces this toast, which sonner ignores once it is dismissed
+            // The summary replaces this toast, which sonner ignores once it is dismissed.
             event.preventDefault();
             onStop();
           },
@@ -475,7 +475,7 @@ export function DataGridBenchmark({
     const controller = new AbortController();
     abortRef.current = controller;
     toastIdRef.current = `benchmark-${++toastCount}`;
-    // The dialog would cover the grid and its paint would skew the frames
+    // The dialog would cover the grid and its paint would skew the frames.
     setIsResultsOpen(false);
     setIsRunning(true);
     setRerunStep(name);
@@ -528,10 +528,10 @@ export function DataGridBenchmark({
               edits {table.getCoreRowModel().rows.length.toLocaleString()} rows.
             </DialogDescription>
           </DialogHeader>
-          {/* The table container's own overflow would capture the sticky header, so the scroll area scrolls both ways */}
+          {/* The table container's own overflow would capture the sticky header, so the scroll area scrolls both ways. */}
           <ScrollArea className="rounded-md border *:data-[slot=scroll-area-viewport]:max-h-[min(60vh,32rem)] **:data-[slot=table-container]:overflow-visible">
             <Table className="text-xs tabular-nums">
-              {/* Collapsed table borders scroll with the body, so the sticky header draws its divider as a shadow */}
+              {/* Collapsed table borders scroll with the body, so the sticky header draws its divider as a shadow. */}
               <TableHeader className="sticky top-0 z-10 bg-background [&_tr]:border-b-0">
                 <TableRow className="hover:bg-transparent [&>th]:h-8 [&>th]:px-2 [&>th]:text-end [&>th]:font-normal [&>th]:text-muted-foreground [&>th]:shadow-[inset_0_-1px_0_var(--color-border)]">
                   <TableHead className="text-start!">Step</TableHead>
@@ -672,7 +672,7 @@ async function runStep(
   const measure = async (update: () => void) => {
     const updateStart = performance.now();
     update();
-    // The second frame callback runs after the update has painted
+    // The second frame callback runs after the update has painted.
     await nextFrame();
     await nextFrame();
     updateTimes.push(performance.now() - updateStart);
@@ -709,7 +709,7 @@ function percentile(values: number[], p: number) {
   );
 }
 
-// Search and edits focus cells along the way, so the selection and focus from before the run come back
+// Search and edits focus cells along the way, so the selection and focus from before the run come back.
 function restoreGridSnapshot(
   table: PersonTable,
   grid: HTMLDivElement,

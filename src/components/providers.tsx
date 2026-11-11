@@ -18,8 +18,8 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000, // 1 minute
-            gcTime: 5 * 60 * 1000, // 5 minutes
+            staleTime: 60 * 1000, // 1 minute.
+            gcTime: 5 * 60 * 1000, // 5 minutes.
           },
         },
       }),

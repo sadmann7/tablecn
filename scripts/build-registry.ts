@@ -2,7 +2,7 @@
  * Builds the registry once per base, then fans each build out to every
  * `{base}-{style}` id that shadcn publishes.
  *
- * Styles are purely CSS for our components, so the JSON for a given base is
+ * Styles are purely CSS for these components, so the JSON for a given base is
  * byte-identical across styles. The per-style copies exist so the `{style}`
  * placeholder in a consumer's registry URL resolves for every official style id
  * instead of 404ing. They are written to `public/r` at build time and are not

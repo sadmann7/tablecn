@@ -51,6 +51,6 @@ export function exportTableToCSV<TData extends RowData>(
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  // Revoking in the same tick can cancel the download in some browsers
+  // Revoking in the same tick can cancel the download in some browsers.
   setTimeout(() => URL.revokeObjectURL(url));
 }

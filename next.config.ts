@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Already doing typechecking as separate task in CI
+  // Already doing typechecking as separate task in CI.
   typescript: { ignoreBuildErrors: true },
   experimental: {
     optimizePackageImports: [

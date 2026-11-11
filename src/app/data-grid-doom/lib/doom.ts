@@ -1,7 +1,7 @@
 import type { DoomWorkerRequest, DoomWorkerResponse } from "./doom.worker";
 
 // Chocolate Doom built from cloudflare/doom-wasm (see /public/doom), with sound and music.
-// It runs in a Web Worker (doom.worker.ts): the page gets frames and plays its audio
+// It runs in a Web Worker (doom.worker.ts): the page gets frames and plays its audio.
 export const SCREEN_WIDTH = 320;
 export const SCREEN_HEIGHT = 200;
 
@@ -24,17 +24,17 @@ const DOOM_KEY_CODES: Record<string, number> = {
 };
 
 // The modern ports' WASD scheme on top of DOOM's own. Keyed by physical key, so it
-// stays put on non-QWERTY layouts
+// stays put on non-QWERTY layouts.
 export const EXTRA_KEY_CODES: Record<string, number> = {
-  KeyW: 173, // Forward, like the up arrow
-  KeyS: 175, // Back, like the down arrow
-  KeyA: 44, // Strafe left, DOOM's ","
-  KeyD: 46, // Strafe right, DOOM's "."
-  KeyE: 32, // Use, like Space
-  KeyF: 157, // Fire, like Ctrl: easier to reach than Ctrl on a Mac keyboard
+  KeyW: 173, // Forward, like the up arrow.
+  KeyS: 175, // Back, like the down arrow.
+  KeyA: 44, // Strafe left, DOOM's ",".
+  KeyD: 46, // Strafe right, DOOM's ".".
+  KeyE: 32, // Use, like Space.
+  KeyF: 157, // Fire, like Ctrl: easier to reach than Ctrl on a Mac keyboard.
 };
 
-// Remapped letters would break DOOM's cheat matcher, so the page spots cheats and replays them
+// Remapped letters would break DOOM's cheat matcher, so the page spots cheats and replays them.
 export const CHEAT_PATTERN =
   /id(?:dqd|kfa|fa|spispopd|clip|choppers|dt|mypos|behold[vsiral]?|clev\d\d)$/u;
 const CHEATS = [
@@ -50,7 +50,7 @@ const CHEATS = [
   "idclev",
 ];
 
-// Whether the letters typed so far, ending in the latest one, start or spell a cheat
+// Whether the letters typed so far, ending in the latest one, start or spell a cheat.
 export function getIsTypingCheat(typed: string) {
   const start = typed.lastIndexOf("id");
   if (start === -1) return false;
@@ -77,7 +77,7 @@ export interface DoomEngine {
 // Plays the samples the worker engine streams to it, on the audio thread. Reports
 // what it has taken from the queue so the worker stays a few buffers ahead. Silence
 // played while the queue is empty doesn't count, or the worker would queue extra
-// samples to cover it and the audio would fall behind the game
+// samples to cover it and the audio would fall behind the game.
 const AUDIO_WORKLET = `
 class DoomAudio extends AudioWorkletProcessor {
   constructor() {
@@ -123,23 +123,23 @@ registerProcessor("doom-audio", DoomAudio);
 const MIN_PRESS_MS = (2 * 1000) / 35;
 
 let enginePromise: Promise<DoomEngine> | null = null;
-// Removes the current instance's worker and audio so a fresh one can start
+// Removes the current instance's worker and audio so a fresh one can start.
 let engineCleanup: (() => void) | null = null;
 
-// One engine at a time, started on first use
+// One engine at a time, started on first use.
 export function loadDoom(): Promise<DoomEngine> {
   enginePromise ??= startEngine();
   return enginePromise;
 }
 
-// A trapped engine can't run again: a fresh worker starts from scratch
+// A trapped engine can't run again: a fresh worker starts from scratch.
 export function resetDoom() {
   engineCleanup?.();
   engineCleanup = null;
   enginePromise = null;
 }
 
-// DOOM takes printable keys as lowercase ASCII and function keys from its own range
+// DOOM takes printable keys as lowercase ASCII and function keys from its own range.
 export function getDoomKeyCode(event: KeyboardEvent) {
   const named = DOOM_KEY_CODES[event.key];
   if (named !== undefined) return named;
@@ -151,7 +151,7 @@ export function getDoomKeyCode(event: KeyboardEvent) {
   return null;
 }
 
-// Keyboard Lock API, Chromium only
+// Keyboard Lock API, Chromium only.
 export function getKeyboard() {
   return (
     navigator as Navigator & {
@@ -185,7 +185,7 @@ function startEngine(): Promise<DoomEngine> {
     const audioContext = new AudioContext();
     const gainNode = audioContext.createGain();
     gainNode.connect(audioContext.destination);
-    // Browsers start audio suspended until a user gesture
+    // Browsers start audio suspended until a user gesture.
     const resumeAudio = () => {
       void audioContext.resume();
     };
@@ -209,7 +209,7 @@ function startEngine(): Promise<DoomEngine> {
       (event: MessageEvent<DoomWorkerResponse>) => {
         const message = event.data;
         if (message.type === "frame") {
-          // The previous frame's buffer goes back for reuse
+          // The previous frame's buffer goes back for reuse.
           if (pixels) {
             const request: DoomWorkerRequest = {
               type: "recycle",
@@ -247,13 +247,13 @@ function startEngine(): Promise<DoomEngine> {
         if (engineDead) throw new Error("The DOOM engine crashed");
       },
       // DOOM event types: 0 key down, 1 key up, 2 mouse. Printable keys also carry
-      // the typed character, which menus like the save-name prompt read
+      // the typed character, which menus like the save-name prompt read.
       key: (pressed, keyCode) => {
         const typed = keyCode >= 32 && keyCode < 127 ? keyCode : 0;
         postEvent([pressed ? 0 : 1, keyCode, keyCode, typed]);
       },
       // DOOM reads the buttons once per tic, so a quick click whose press and release
-      // land in the same tic never fires: hold the press for at least two tics
+      // land in the same tic never fires: hold the press for at least two tics.
       mouse: (buttons) => {
         const pressed = buttons & 1;
         if (pressed) {
@@ -298,7 +298,7 @@ function startEngine(): Promise<DoomEngine> {
         outputChannelCount: [2],
       });
       node.connect(gainNode);
-      // The worklet and the worker talk directly, without the main thread
+      // The worklet and the worker talk directly, without the main thread.
       const channel = new MessageChannel();
       node.port.postMessage(channel.port1, [channel.port1]);
       const request: DoomWorkerRequest = {

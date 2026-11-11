@@ -2,12 +2,12 @@
 
 // Runs the engine off the main thread: DOOM's simulation, sound mixing and music
 // synthesis happen here, so the page's painting can't delay them. Frames go to the
-// page as RGBA buffers, and audio streams straight to an AudioWorklet on the page
+// page as RGBA buffers, and audio streams straight to an AudioWorklet on the page.
 
 const DOOM_BASE = "/doom/";
 const SCREEN_WIDTH = 320;
 const SCREEN_HEIGHT = 200;
-// Samples kept queued ahead of playback
+// Samples kept queued ahead of playback.
 const AUDIO_AHEAD_BUFFERS = 3;
 
 interface WorkerModule {
@@ -58,7 +58,7 @@ const scope = self as DedicatedWorkerGlobalScope & {
 
 // SDL's emscripten audio driver only needs an AudioContext with a script processor.
 // This one has no output of its own: the worker runs the processor's callback when
-// the page's worklet needs more samples, and hands the samples over
+// the page's worklet needs more samples, and hands the samples over.
 interface ScriptProcessorStandIn {
   bufferSize: number;
   channels: number;
@@ -114,7 +114,7 @@ async function start(rate: number, audioPort: MessagePort) {
   sampleRate = rate;
   scope.AudioContext = WorkerAudioContext;
   // Without it SDL hooks gesture listeners on `document`, which workers lack.
-  // The page resumes its own audio on the first gesture
+  // The page resumes its own audio on the first gesture.
   if (!("userActivation" in navigator)) {
     Object.defineProperty(navigator, "userActivation", {
       value: { hasBeenActive: true, isActive: true },
@@ -189,7 +189,7 @@ async function start(rate: number, audioPort: MessagePort) {
     },
   );
 
-  // Imports the engine, an ES module exporting its factory, as served rather than bundled
+  // Imports the engine, an ES module exporting its factory, as served rather than bundled.
   const engineUrl = new URL(
     `${DOOM_BASE}websockets-doom.js`,
     self.location.origin,

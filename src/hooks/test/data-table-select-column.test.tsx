@@ -45,7 +45,7 @@ describe("DataTableSelectHeader (base)", () => {
   });
 });
 
-// React Aria renders a native input, so state lives in its properties and on the wrapping label
+// React Aria renders a native input, so state lives in its properties and on the wrapping label.
 describe("DataTableSelectHeader (aria)", () => {
   it("is checked and not indeterminate when every row is selected", () => {
     const { table, selectAll } = renderTable(bases.aria);

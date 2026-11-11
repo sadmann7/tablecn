@@ -166,7 +166,7 @@ function SkatersDataGridActionBarImpl<TData extends RowData>({
   );
 }
 
-// Checked rows, or the rows a cell range covers
+// Checked rows, or the rows a cell range covers.
 function getTargetRows<TData extends RowData>(
   table: Table<DataGridFeatures, TData>,
 ) {

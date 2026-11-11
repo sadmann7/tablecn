@@ -2,7 +2,7 @@ import type * as React from "react";
 
 import { Skeleton } from "@/registry/bases/radix/ui/skeleton";
 
-// Widths of the toolbar's default triggers, so nothing shifts when the grid mounts
+// Widths of the toolbar's default triggers, so nothing shifts when the grid mounts.
 const TOOLBAR_ITEMS = [
   { id: "benchmark", className: "w-[119px]" },
   { id: "direction", className: "w-[65px]" },
@@ -38,7 +38,7 @@ export function DataGridDemoSkeleton({
           ))}
         </div>
       </div>
-      {/* Matches the grid's height, which follows the window height */}
+      {/* Matches the grid's height, which follows the window height. */}
       <Skeleton className="h-[max(400px,calc(100dvh-150px))] w-full" />
     </div>
   );

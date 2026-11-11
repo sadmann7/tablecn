@@ -1,6 +1,6 @@
 import type { SkaterSchema } from "./validation";
 
-// Orders are fractional, so a row inserted below another sits halfway to the next one
+// Orders are fractional, so a row inserted below another sits halfway to the next one.
 export function getInsertOrder(skaters: SkaterSchema[], afterRowId?: string) {
   const maxOrder = skaters.reduce(
     (max, skater) => Math.max(max, skater.order),

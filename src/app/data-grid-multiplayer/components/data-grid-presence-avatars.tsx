@@ -35,7 +35,7 @@ export function DataGridPresenceAvatars({
 }: DataGridPresenceAvatarsProps) {
   const [isListOpen, setIsListOpen] = React.useState(false);
 
-  // You first, then everyone else by name so the order doesn't jump around as people move
+  // You first, then everyone else by name so the order doesn't jump around as people move.
   const userList = React.useMemo(
     () =>
       Object.entries(users).sort(([aId, a], [bId, b]) => {

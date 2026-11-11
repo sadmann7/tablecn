@@ -201,7 +201,7 @@ export class SkaterRoom extends Server<Env> {
   onClose(connection: PresenceConnection) {
     const userId = this.getUserId(connection);
     const users = this.getUsers(connection.id);
-    // The user stays while any of their tabs is still connected
+    // The user stays while any of their tabs is still connected.
     if (users[userId]) return;
 
     const leaveMsg: ServerMessage = { type: "user-leave", userId };

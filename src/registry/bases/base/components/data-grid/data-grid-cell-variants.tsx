@@ -267,7 +267,7 @@ export function NumberCell<TData extends RowData>(
   );
 
   const onBlur = React.useCallback(() => {
-    // Escape blurs too, and the typed value hasn't been cleared by then
+    // Escape blurs too, and the typed value hasn't been cleared by then.
     if (isCancelingRef.current) {
       isCancelingRef.current = false;
       cell.table.stopEditing();
@@ -1570,7 +1570,7 @@ function useEditableText<TData extends RowData>({
     clearDraft();
     const element = textRef.current;
     if (!element) return;
-    // Blurring saves the DOM text, so the typed text is undone first
+    // Blurring saves the DOM text, so the typed text is undone first.
     element.textContent = initialValue;
     element.blur();
   }, [initialValue, clearDraft]);

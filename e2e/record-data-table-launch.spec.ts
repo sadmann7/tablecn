@@ -179,7 +179,7 @@ function concatList(frames: CapturedFrame[]) {
 
   for (const [index, frame] of frames.entries()) {
     const next = frames[index + 1];
-    // Dropped frames hold for their real duration instead of being skipped
+    // Dropped frames hold for their real duration instead of being skipped.
     const duration = next
       ? Math.max(0.001, next.timestamp - frame.timestamp)
       : 1 / 30;
