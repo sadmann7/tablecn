@@ -18,10 +18,11 @@ tablecn ships copy-paste components through a shadcn registry. A bug here lands 
 - **Server and data.** Filters and sorts build SQL through Drizzle. Look for user input reaching raw SQL and for filters that silently drop rows.
 - **Multiplayer.** `party/types.ts` is shared by the client and the room server. Message changes need both sides updated.
 - **Fixes.** A bug fix names the cause and fixes it, not the symptom.
+- **Comments.** A comment that restates the code, narrates steps, or explains the fix, which belongs in the PR. Lint only checks the form; the rules are under Comments in `AGENTS.md`.
 
 ## Skip
 
-- Formatting, import order, and comment style. `oxfmt` and the rules in `lint/` enforce them.
+- Formatting, import order, and comment punctuation. `oxfmt` and the rules in `lint/` enforce them.
 - `pnpm-lock.yaml`, `drizzle/` migrations, `public/r`, `recordings/`, `test-results/`.
 
 ## Format

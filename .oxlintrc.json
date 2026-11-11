@@ -94,7 +94,8 @@
     "unicorn/no-array-sort": "off",
     "unicorn/catch-error-name": ["warn", { "name": "error" }],
     "tablecn/top-down-order": "warn",
-    "tablecn/comment-style": "warn"
+    "tablecn/comment-style": "error",
+    "tablecn/no-low-value-comments": "warn"
   },
   "overrides": [
     {
@@ -113,7 +114,8 @@
       "files": ["src/registry/bases/*/ui/**"],
       "rules": {
         "tablecn/top-down-order": "off",
-        "tablecn/comment-style": "off"
+        "tablecn/comment-style": "off",
+        "tablecn/no-low-value-comments": "off"
       }
     }
   ]
