@@ -45,7 +45,8 @@ const CODE =
 const FILLER =
   /^(Note|NOTE|Important|IMPORTANT|Basically|Simply|Just|Here we|Now we|This (function|helper|component|hook|method|file)|Helper (to|for|function))\b/;
 const FIRST_PERSON = /\b(we|we're|we'll|our|us|let's|Let's|I|I'm)\b/;
-const INDENTED_CODE = /^\s*\*\s{3,}\S/;
+const INDENTED_CODE = /^(\s*\*)?\s{3,}\S/;
+const LIST_ITEM = /^([-*+]|\d+\.)\s/;
 const END_PUNCTUATION = /([.?!:]|\.\.\.|https?:\/\/\S+|```)$/;
 const DECLARATION =
   /^\s*(?:export\s+)?(?:default\s+)?(?:declare\s+)?(?:async\s+)?(?:static\s+)?(?:readonly\s+)?(?:(?:const|let|var|function\*?|class|interface|type|enum)\s+)?([A-Za-z_$][\w$]*)\s*[?!]?\s*[:=(<{]/;
@@ -176,9 +177,12 @@ function checkGroup(context: Context, { comments, lines }: Group) {
   if (lines.some((line) => EMPTY_JSDOC_TAG.test(line))) {
     report("Drop the JSDoc tag that has no description.");
   }
-  const isFileHeader =
-    !isLine && !context.sourceCode.text.slice(0, first.range[0]).trim();
-  if (lines.length > MAX_LINES && !isFileHeader && !LICENSE.test(text)) {
+  const isFileHeader = !context.sourceCode.text.slice(0, first.range[0]).trim();
+  if (
+    getProseLineCount(comments) > MAX_LINES &&
+    !isFileHeader &&
+    !LICENSE.test(text)
+  ) {
     report(
       `Cut this to ${MAX_LINES} lines or fewer: keep the constraint, drop the background.`,
     );
@@ -199,11 +203,32 @@ function checkGroup(context: Context, { comments, lines }: Group) {
   }
 }
 
+function getProseLineCount(comments: Comment[]) {
+  let count = 0;
+  let inFence = false;
+  const raws = comments.flatMap((comment) => comment.value.split("\n"));
+  for (const raw of raws) {
+    const line = stripLine(raw);
+    if (!line || INDENTED_CODE.test(raw)) continue;
+    if (line.startsWith("@")) break;
+    if (line.startsWith("```")) {
+      inFence = !inFence;
+    } else if (!inFence && !LIST_ITEM.test(line)) {
+      count++;
+    }
+  }
+  return count;
+}
+
 function getSentenceEnd(comment: Comment) {
   const start = comment.range[0] + 2;
   if (comment.type === "Line") {
     const content = comment.value.trimEnd();
-    return !content.trim() || END_PUNCTUATION.test(content.trim())
+    const line = content.trim();
+    return !line ||
+      INDENTED_CODE.test(content) ||
+      END_PUNCTUATION.test(line) ||
+      LIST_ITEM.test(line)
       ? undefined
       : start + content.length;
   }
@@ -214,7 +239,10 @@ function getSentenceEnd(comment: Comment) {
     const line = stripLine(raw);
     if (line.startsWith("@")) break;
     if (line) {
-      isSentence = !INDENTED_CODE.test(raw) && !END_PUNCTUATION.test(line);
+      isSentence =
+        !INDENTED_CODE.test(raw) &&
+        !LIST_ITEM.test(line) &&
+        !END_PUNCTUATION.test(line);
       end = start + offset + raw.trimEnd().length;
     }
     offset += raw.length + 1;
