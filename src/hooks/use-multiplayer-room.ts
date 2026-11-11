@@ -198,7 +198,7 @@ function getOrCreateIdentity(): Identity {
     const value = localStorage.getItem(STORAGE_KEY);
     if (value) stored = JSON.parse(value) as Partial<Identity>;
   } catch {
-    // Fails silently if localStorage is not available
+    // Fails silently if localStorage is not available.
   }
 
   if (stored?.clientId && stored.name && stored.color) {

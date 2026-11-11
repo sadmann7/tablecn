@@ -267,7 +267,7 @@ function DataGridSelectCell<TData extends RowData>({
     [row, onToggle],
   );
 
-  // `row` is stable, so selection and numbering come from a subscription
+  // `row` is stable, so selection and numbering come from a subscription.
   return (
     <Subscribe
       source={table.store}

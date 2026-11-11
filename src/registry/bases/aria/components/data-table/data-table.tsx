@@ -158,7 +158,7 @@ function DataTableLayout<TData extends RowData>({
                 }
 
                 const selectedIds = new Set([...selection].map(String));
-                // Toggles only the changed rows so TanStack's row selection options apply
+                // Toggles only the changed rows so TanStack's row selection options apply.
                 const changedRows = table
                   .getRowModel()
                   .rows.filter(
@@ -190,10 +190,10 @@ function DataTableHeader<TData extends RowData>({
   return (
     <table.Subscribe selector={selectHeaderState}>
       {() => {
-        // Rows render leaf cells only, so render only the bottom (leaf) header row
+        // Rows render leaf cells only, so render only the bottom (leaf) header row.
         const headerGroups = table.getHeaderGroups();
         const headers = headerGroups[headerGroups.length - 1]?.headers ?? [];
-        // The first data column names the row, display columns like select do not
+        // The first data column names the row, display columns like select do not.
         const rowHeaderId = (
           headers.find((header) => header.column.accessorFn) ?? headers[0]
         )?.id;
@@ -243,7 +243,7 @@ function DataTableHeadCell<TData extends RowData>({
           isRowHeader={isRowHeader}
           className={getCellClassName(pinned)}
           style={getColumnPinningStyle(header.column, pinned)}
-          // React Aria's Column drops aria-sort unless it owns sorting; it renders a th when not virtualized
+          // React Aria's Column drops aria-sort unless it owns sorting; it renders a th when not virtualized.
           render={(props) => (
             <th
               {...(props as React.ComponentProps<"th">)}
@@ -373,12 +373,12 @@ function selectHeaderState(state: TableState<DataTableFeatures>) {
   };
 }
 
-// React Aria's row typeahead needs text, and cells render through FlexRender
+// React Aria's row typeahead needs text, and cells render through FlexRender.
 function getRowTextValue<TData extends RowData>(
   row: Row<DataTableFeatures, TData>,
 ) {
   const cells = row.getVisibleCells();
-  // Same cell the header marks as row header
+  // Same cell the header marks as row header.
   const rowHeaderCell =
     cells.find((cell) => cell.column.accessorFn) ?? cells[0];
   return stringifyFilterValue(rowHeaderCell?.getValue());

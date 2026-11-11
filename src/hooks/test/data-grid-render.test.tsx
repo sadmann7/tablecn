@@ -48,7 +48,7 @@ const testColumns: ColumnDef<DataGridFeatures, TestData>[] = [
 
 describe("DataGrid rendering", () => {
   beforeEach(() => {
-    // The virtualizer only renders rows once its scroll element has a size
+    // The virtualizer only renders rows once its scroll element has a size.
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       x: 0,
       y: 0,

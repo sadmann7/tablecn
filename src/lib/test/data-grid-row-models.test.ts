@@ -82,7 +82,7 @@ describe("createDataGridCoreRowModel", () => {
     const [r0, , r2, , r4] = grid.table.getCoreRowModel().rows;
 
     const inserted: Skater = { id: "new", name: "Leticia Bufoni" };
-    // Removes r1 and r3, and inserts `new` at index 2
+    // Removes r1 and r3, and inserts `new` at index 2.
     const next = [data[0], data[2], inserted, data[4]] as Skater[];
     rowChangeHints.set(next, {
       from: data,
@@ -116,7 +116,7 @@ describe("createDataGridCoreRowModel", () => {
     grid.setData(next);
     const { rows } = grid.table.getCoreRowModel();
 
-    // Index-based IDs follow the new positions
+    // Index-based IDs follow the new positions.
     expect(getIds(rows)).toEqual(["0", "1"]);
     expect(rows[1]?.original).toBe(data[2]);
   });
@@ -128,7 +128,7 @@ describe("createDataGridCoreRowModel", () => {
     const patched = before[0];
     if (!patched) throw new Error("Missing row");
 
-    // Swaps in a copy in place, like `updateCells` does
+    // Swaps in a copy in place, like `updateCells` does.
     const copy = { ...patched.original, name: "Tony Hawk" };
     patched.original = copy;
     patchedRows.add(patched);
@@ -187,7 +187,7 @@ describe("createDataGridFilteredRowModel", () => {
 
 describe("createDataGridSortedRowModel", () => {
   it("sorts like TanStack's sorted row model", () => {
-    // Mixed case and numbers, so names sort alphanumerically
+    // Mixed case and numbers, so names sort alphanumerically.
     const data: Skater[] = [
       { id: "a", name: "Skater10", score: 2 },
       { id: "b", name: "skater2" },
@@ -259,7 +259,7 @@ describe("createDataGridSortedRowModel", () => {
 
     for (let round = 0; round < 100; round++) {
       // Most rounds change a few rows, which the cache moves, and some change many,
-      // which sort again from scratch
+      // which sort again from scratch.
       const edits = random() < 0.8 ? 1 + Math.floor(random() * 5) : 60;
       data = data.slice();
       for (let i = 0; i < edits; i++) {
@@ -300,7 +300,7 @@ const stockFeatures = tableFeatures({
   sortFns,
 });
 
-// TanStack's own row models, to check ours against
+// TanStack's own row models, to check ours against.
 function renderStockTable(initialData: Skater[]) {
   const { result, rerender } = renderHook(
     ({ data }: { data: Skater[] }) =>
@@ -320,7 +320,7 @@ function renderStockTable(initialData: Skater[]) {
   };
 }
 
-// The same seeded generator the demos use, so runs repeat
+// The same seeded generator the demos use, so runs repeat.
 function createRandom(seed: number) {
   let state = seed >>> 0;
   return () => {

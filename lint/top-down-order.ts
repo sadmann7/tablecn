@@ -131,17 +131,17 @@ export const topDownOrder = {
 interface Layout {
   units: Unit[];
   // Where each helper must come after: its first user, or the end of the run of
-  // exports that user is in
+  // exports that user is in.
   anchors: Map<Unit, Unit>;
   // The helper that alone uses a unit of module state, or the first user of a
-  // type or constant declared below it
+  // type or constant declared below it.
   owners: Map<Unit, Unit>;
   hoisted: Set<Unit>;
-  // Helpers several declarations use, placed after the last one
+  // Helpers several declarations use, placed after the last one.
   shared: Set<Unit>;
-  // Memo wrappers, which sit right above the component they wrap
+  // Memo wrappers, which sit right above the component they wrap.
   wrappers: Set<Unit>;
-  // The whole file in top-down order
+  // The whole file in top-down order.
   order: Unit[];
 }
 
@@ -162,7 +162,7 @@ function getLayout(
   const getUser = (node: Node) => unitOf.get(getTopLevelStatement(node));
 
   // A memo wrapper sits right above the component it wraps, and the component
-  // counts as used wherever the wrapper is
+  // counts as used wherever the wrapper is.
   const wrappers = new Map<Unit, Unit>();
   const wrapperNames = new Map<string, string>();
   for (const unit of units) {
@@ -195,7 +195,7 @@ function getLayout(
     if (first) firstUses.set(unit, first);
   }
 
-  // Helpers that run while the module loads keep their state above them
+  // Helpers that run while the module loads keep their state above them.
   const eager = new Set<Unit>();
   const queue: Unit[] = [];
   for (const [name, unit] of helperUnits) {
@@ -232,7 +232,7 @@ function getLayout(
   }
   for (const [wrapper, impl] of wrappers) owners.set(wrapper, impl);
   // A props type that drifted away from its component goes back above it, or
-  // above the memo wrapping it
+  // above the memo wrapping it.
   const declarers = new Map<string, Unit>();
   for (const unit of units) {
     for (const name of getDeclaredNames(unit)) declarers.set(name, unit);
@@ -254,18 +254,18 @@ function getLayout(
       return !user || !candidates.includes(user);
     });
     if (isShared || candidates.length === 0) continue;
-    // Either spot reads fine, so the one it already sits above wins
+    // Either spot reads fine, so the one it already sits above wins.
     const next = units[units.indexOf(unit) + 1];
     const owner = candidates.find((item) => item === next) ?? candidates[0];
     if (owner && owner !== unit) owners.set(unit, owner);
   }
 
   // A type or constant declared below its first use moves above it. A use from
-  // another moving declaration counts from where that one lands
+  // another moving declaration counts from where that one lands.
   const hoisted = getHoisted(units, owners, references, getUser);
   for (const [unit, user] of hoisted) owners.set(unit, user);
 
-  // A helper shared by several declarations goes after the last one's section
+  // A helper shared by several declarations goes after the last one's section.
   const lastUsers = new Map<Unit, Unit>();
   for (const unit of units) {
     const users = new Set<Unit>();
@@ -354,7 +354,7 @@ function getHoisted(
   return hoisted;
 }
 
-// A constant can't move above declarations its own value reads
+// A constant can't move above declarations its own value reads.
 function getIsReadingBetween(units: Unit[], unit: Unit, target: Unit) {
   if (unit.isType) return false;
   const statement = unit.statements[0];
@@ -388,7 +388,7 @@ function collectIdentifiers(node: Node, names: Set<string>) {
 }
 
 // Moves only what breaks the order, and then whatever that move strands, so a
-// fix leaves the rest of the file as it was
+// fix leaves the rest of the file as it was.
 function getOrder(rules: Rules, firstUses: Map<Unit, Node>) {
   const movable = new Set<Unit>();
   let order = rules.units;
@@ -462,7 +462,7 @@ function getPlacedOrder(
     for (const unit of units) {
       if (!movable.has(unit)) place(unit);
     }
-    // Helpers that only use each other stay where they are
+    // Helpers that only use each other stay where they are.
     const stranded = units.filter((unit) => !placed.has(unit));
     if (stranded.length === 0) break;
     for (const unit of stranded) {
@@ -474,12 +474,12 @@ function getPlacedOrder(
 }
 
 // The last export in the run of exports and types that starts at `user`,
-// passing over the helpers and state that will move out of it
+// passing over the helpers and state that will move out of it.
 function getRunEnd(units: Unit[], user: Unit, owners: Map<Unit, Unit>) {
   let end = user;
   for (let index = units.indexOf(user) + 1; index < units.length; index++) {
     const unit = units[index];
-    // The `export { … }` list closes the file, so helpers stay above it
+    // The `export { … }` list closes the file, so helpers stay above it.
     if (!unit || getIsExportList(unit)) break;
     if (unit.helper || owners.has(unit) || unit.isType) {
       if (unit.isExported) end = unit;
@@ -492,7 +492,7 @@ function getRunEnd(units: Unit[], user: Unit, owners: Map<Unit, Unit>) {
 }
 
 // The last helper or state that follows `user`, before the next declaration,
-// passing over the shared helpers that go after it
+// passing over the shared helpers that go after it.
 function getSectionEnd(
   units: Unit[],
   user: Unit,
@@ -537,7 +537,7 @@ function getIsRightAbove(
   return false;
 }
 
-// Types and constants can sit between state and its helper
+// Types and constants can sit between state and its helper.
 function getIsDeclaration(unit: Unit) {
   const statement = unit.statements[0];
   return (
@@ -548,7 +548,7 @@ function getIsDeclaration(unit: Unit) {
   );
 }
 
-// Through a chain, like a type above the constant it types
+// Through a chain, like a type above the constant it types.
 function getIsOwnedBy(owners: Map<Unit, Unit>, unit: Unit, owner: Unit) {
   const seen = new Set<Unit>();
   for (let next = owners.get(unit); next; next = owners.get(next)) {
@@ -559,7 +559,7 @@ function getIsOwnedBy(owners: Map<Unit, Unit>, unit: Unit, owner: Unit) {
   return false;
 }
 
-// Rebuilds the file in its top-down order, so one fix settles the whole file
+// Rebuilds the file in its top-down order, so one fix settles the whole file.
 function getReorderFix(context: Context, layout: Layout): Fix {
   const { text } = context.sourceCode;
   const { units, order } = layout;
@@ -580,7 +580,7 @@ function getReorderFix(context: Context, layout: Layout): Fix {
   return { range: [first.start, last.end], text: rebuilt };
 }
 
-// Pairs each helper with its comments and a props interface right above it
+// Pairs each helper with its comments and a props interface right above it.
 function getUnits(context: Context, helpers: Map<string, Node>) {
   const { text, ast } = context.sourceCode;
   const { body } = ast;
@@ -610,7 +610,7 @@ function getUnits(context: Context, helpers: Map<string, Node>) {
       end,
       separator: text.slice(previousEnd, start),
       statements,
-      // Including what an `export { … }` list names further down
+      // Including what an `export { … }` list names further down.
       isExported:
         statement.type.startsWith("Export") ||
         getStatementNames(statement).some((name) => exported.has(name)),
@@ -628,7 +628,7 @@ function getUnitName(unit: Unit) {
   return unit.helper ?? getDeclaredNames(unit)[0] ?? getDeclaredTypeName(unit);
 }
 
-// Types and SCREAMING_CASE constants that aren't exported
+// Types and SCREAMING_CASE constants that aren't exported.
 function getHoistedNames(statement: Node) {
   if (TYPE_TYPES.has(statement.type)) {
     const name = statement.id?.name;
@@ -644,7 +644,7 @@ function getHoistedNames(statement: Node) {
   return names;
 }
 
-// `Impl` in `const X = React.memo(Impl)`, through any `as` cast
+// `Impl` in `const X = React.memo(Impl)`, through any `as` cast.
 function getWrappedName(statement: Node) {
   const declarations = statement.declarations ?? [];
   if (statement.type !== "VariableDeclaration" || declarations.length !== 1) {
@@ -733,7 +733,7 @@ function getHelperName(statement: Node | undefined) {
   return typeof name === "string" ? name : undefined;
 }
 
-// Module state is a declaration that isn't a SCREAMING_CASE constant
+// Module state is a declaration that isn't a SCREAMING_CASE constant.
 function getStateNames(statement: Node) {
   if (statement.type !== "VariableDeclaration") return undefined;
   const names: string[] = [];
@@ -797,13 +797,13 @@ function getTopLevelStatement(node: Node) {
   return current;
 }
 
-// A comment on the statement's last line belongs to it
+// A comment on the statement's last line belongs to it.
 function getTrailingEnd(text: string, end: number) {
   const match = /^[ \t]*(\/\/[^\n]*|\/\*[^\n]*?\*\/)/.exec(text.slice(end));
   return match ? end + match[0].length : end;
 }
 
-// Comments on their own lines above a statement belong to it
+// Comments on their own lines above a statement belong to it.
 function getLeadingStart(
   context: Context,
   statement: Node,

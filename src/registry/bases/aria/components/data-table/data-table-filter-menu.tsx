@@ -137,7 +137,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
       }
 
       event.preventDefault();
-      // React Aria returns focus on close to where it was on open, so start from the trigger
+      // React Aria returns focus on close to where it was on open, so start from the trigger.
       triggerRef.current?.focus();
       setOpen((open) => !open);
     }

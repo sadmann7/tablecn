@@ -315,7 +315,7 @@ export function DataGridMultiplayerDemo({
         }));
       }
 
-      // Simulated uploads are blob URLs, so other people in the room can't open them
+      // Simulated uploads are blob URLs, so other people in the room can't open them.
       await new Promise((resolve) => setTimeout(resolve, 800));
 
       return files.map((file) => ({
@@ -333,10 +333,10 @@ export function DataGridMultiplayerDemo({
     UseDataGridProps<SkaterSchema>["deleteFiles"]
   > = React.useCallback(
     async ({ fileIds, rowId }) => {
-      // Simulated uploads only exist in the browser
+      // Simulated uploads only exist in the browser.
       if (!isUploadConfigured) return;
 
-      // Duplicated rows share their files, so keep any file another row still uses
+      // Duplicated rows share their files, so keep any file another row still uses.
       const sharedIds = new Set(
         collection.toArray.flatMap((skater) =>
           skater.id === rowId
@@ -570,7 +570,7 @@ export function DataGridMultiplayerDemo({
   );
 }
 
-// Each copy lands between its row and the next one, so it shows up right below the original
+// Each copy lands between its row and the next one, so it shows up right below the original.
 function duplicateSkaters(
   table: Table<DataGridFeatures, SkaterSchema>,
   rows: SkaterRows,
@@ -595,7 +595,7 @@ function duplicateSkaters(
   }
 }
 
-// The server doesn't echo your own cell back, so your presence takes it from the grid
+// The server doesn't echo your own cell back, so your presence takes it from the grid.
 function getPresenceUsers(
   users: Record<string, UserPresence>,
   currentUserId: string,

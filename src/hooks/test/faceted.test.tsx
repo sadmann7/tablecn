@@ -13,7 +13,7 @@ type FacetedModule =
 
 type ItemRole = "option" | "menuitemradio";
 
-// React Aria renders a single-select list as a menu of radio items
+// React Aria renders a single-select list as a menu of radio items.
 describe.each([
   ["radix", RadixFaceted, "option"],
   ["base", BaseFaceted, "option"],
@@ -87,7 +87,7 @@ function getActiveChecked(itemRole: ItemRole) {
   const item = screen.getByRole(itemRole, { name: "Active" });
   const checked = item.getAttribute("aria-checked");
   act(() => {
-    // React Aria leaves focus on body here, so dispatch from the item
+    // React Aria leaves focus on body here, so dispatch from the item.
     fireEvent.keyDown(item, { key: "Escape" });
   });
   return checked;

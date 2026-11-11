@@ -5,13 +5,13 @@ import { getRootFontScale } from "@/lib/data-grid-utils";
 const MAX_CACHED_BADGE_WIDTHS = 1000;
 const badgeWidthCache = new Map<string, number>();
 
-const DEFAULT_CONTAINER_PADDING = 16; // px-2 on both sides
-const DEFAULT_BADGE_GAP = 4; // gap-1 = 4px
-const DEFAULT_OVERFLOW_BADGE_WIDTH = 40; // Approx. "+N" badge width
-const BADGE_CHROME_WIDTH = 12 + 2; // px-1.5 + 1px border, each side
-const BADGE_ICON_GAP = 4; // gap-1 between icon and text
-const BADGE_FONT_SIZE = 12; // text-xs
-const BADGE_FONT_WEIGHT = 500; // font-medium
+const DEFAULT_CONTAINER_PADDING = 16; // px-2 on both sides.
+const DEFAULT_BADGE_GAP = 4; // gap-1 = 4px.
+const DEFAULT_OVERFLOW_BADGE_WIDTH = 40; // Approx. "+N" badge width.
+const BADGE_CHROME_WIDTH = 12 + 2; // px-1.5 + 1px border, each side.
+const BADGE_ICON_GAP = 4; // gap-1 between icon and text.
+const BADGE_FONT_SIZE = 12; // text-xs.
+const BADGE_FONT_WEIGHT = 500; // font-medium.
 
 interface GetBadgeListWidthProps<T> {
   items: T[];

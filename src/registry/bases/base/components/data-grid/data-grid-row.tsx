@@ -77,7 +77,7 @@ function DataGridRowImpl<TData extends RowData>({
   virtualItem,
   ...props
 }: DataGridRowProps<TData>) {
-  // Re-renders on `leafColumns` changes so the selector re-reads the row's cells
+  // Re-renders on `leafColumns` changes so the selector re-reads the row's cells.
   "use no memo";
   const table = row.table;
   const rowIndex = virtualItem.index;
@@ -342,7 +342,7 @@ function DataGridUtilityCellImpl<TData extends RowData>({
   showStartBorder,
   showEndBorder,
 }: DataGridUtilityCellProps<TData>) {
-  // Utility renderers read row state, like selection, through the stable `cell`
+  // Utility renderers read row state, like selection, through the stable `cell`.
   "use no memo";
   const onFocus = React.useCallback(() => {
     const { table, row, column } = cell;

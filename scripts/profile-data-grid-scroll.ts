@@ -52,7 +52,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
-    // Scrollbar drag from top to bottom, driven by scrollTop so it does not depend on overlay scrollbars
+    // Scrollbar drag from top to bottom, driven by scrollTop so it does not depend on overlay scrollbars.
     name: "scrollbar-drag",
     run: (page) =>
       page.evaluate(
@@ -138,7 +138,7 @@ async function main() {
     await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpuThrottle });
   }
 
-  // tsx keeps function names via an `__name` helper that page.evaluate does not serialize
+  // tsx keeps function names via an `__name` helper that page.evaluate does not serialize.
   await page.addInitScript("globalThis.__name = (fn) => fn");
   await page.goto(`${BASE_URL}${PAGE_PATH}`);
   if (process.env.EXTRA_CSS) {
@@ -158,7 +158,7 @@ async function main() {
   const box = await grid.boundingBox();
   if (!box) throw new Error("Grid has no bounding box");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  // Let data generation and the first paint settle
+  // Let data generation and the first paint settle.
   await page.waitForTimeout(2000);
 
   const vsync = await page.evaluate(measureVsync);
@@ -168,11 +168,11 @@ async function main() {
   for (const scenario of scenarios) {
     if (only && scenario.name !== only) continue;
 
-    // Frame stats come from an untraced run, since tracing adds overhead to every frame
+    // Frame stats come from an untraced run, since tracing adds overhead to every frame.
     await resetScroll(page);
     await page.evaluate(startFrameRecorder);
     await scenario.run(page);
-    // Let the deferred preview upgrade land inside the measurement
+    // Let the deferred preview upgrade land inside the measurement.
     await page.waitForTimeout(300);
     const { deltas, loafs } = await page.evaluate(stopFrameRecorder);
     const stats = summarize(deltas, loafs, vsync);
@@ -230,7 +230,7 @@ function stripStyleRules(pattern: string) {
     try {
       strip(sheet.cssRules, sheet);
     } catch {
-      // Cross-origin sheets are not readable
+      // Cross-origin sheets are not readable.
     }
   }
   return count;
@@ -285,7 +285,7 @@ function startFrameRecorder() {
   try {
     observer.observe({ type: "long-animation-frame", buffered: false });
   } catch {
-    // Long animation frames are Chromium only
+    // Long animation frames are Chromium only.
   }
   Object.assign(window, {
     __frameRecorder: recorder,
@@ -305,7 +305,7 @@ function stopFrameRecorder() {
     };
   recorder.running = false;
   observer.disconnect();
-  // The first delta spans the gap before recording started
+  // The first delta spans the gap before recording started.
   return { deltas: recorder.deltas.slice(1), loafs: recorder.loafs };
 }
 
@@ -329,7 +329,7 @@ function summarize(
     ),
     longAnimationFrames: loafs.length,
     loafScriptMs: loafs.reduce((sum, loaf) => sum + loaf.scriptMs, 0),
-    // Filled in from the traced run
+    // Filled in from the traced run.
     mainThreadMs: 0,
   };
 }
@@ -354,7 +354,7 @@ async function recordTrace(
     traceConfig: { includedCategories: TRACE_CATEGORIES },
     transferMode: "ReportEvents",
   });
-  // Starting the CPU profiler stalls the page, so keep that out of the scenario
+  // Starting the CPU profiler stalls the page, so keep that out of the scenario.
   await page.waitForTimeout(500);
   await run();
   const complete = new Promise<void>((resolve) =>
@@ -389,7 +389,7 @@ function getMainThreadBusyMs(events: TraceEvent[]) {
       (busyByThread.get(thread) ?? 0) + event.dur / 1000,
     );
   }
-  // Other renderers (extensions, about:blank) barely run, so the busiest one is the page
+  // Other renderers (extensions, about:blank) barely run, so the busiest one is the page.
   return Math.max(0, ...busyByThread.values());
 }
 

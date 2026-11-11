@@ -49,13 +49,13 @@ const bases = [
     DataTableToolbar: AriaDataTableToolbar,
     useDataTable: useAriaDataTable,
     getDataTableSelectColumn: getAriaSelectColumn,
-    // React Aria's Table is an interactive grid
+    // React Aria's Table is an interactive grid.
     tableRole: "grid",
-    // React Aria's Select is a listbox button named by its value and label
+    // React Aria's Select is a listbox button named by its value and label.
     pageSizeSelect: { role: "button", name: "10 Rows per page" },
-    // React Aria names a popover by its trigger
+    // React Aria names a popover by its trigger.
     filterPopoverName: /^Status/,
-    // React Aria menus expose their separators
+    // React Aria menus expose their separators.
     exposesMenuSeparator: true,
   },
 ] as const;
