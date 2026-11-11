@@ -56,3 +56,6 @@ yarn-error.log*
 
 # agent plans, kept out of harness-specific folders
 /plans/
+
+# local notes
+/notes/
