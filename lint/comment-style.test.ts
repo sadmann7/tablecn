@@ -21,6 +21,11 @@ ruleTester.run("comment-style", commentStyle, {
     "/**\n * One.\n * Two.\n * Three.\n * Four.\n */\nconst a = 1;",
     "/**\n * Prints the registry.\n *\n *   pnpm print:registry   print every item\n */\nconst a = 1;",
     "/**\n * Builds the registry.\n * One.\n * Two.\n * Three.\n * Four.\n */\nconst a = 1;",
+    '/**\n * The size.\n *\n * ```tsx\n * <A size="sm" />\n * <A size="lg" />\n * ```\n *\n * @default "sm"\n */\nconst a = 1;',
+    "/**\n * The side to open on.\n * - `top`: Above the anchor\n * - `right`: Right of the anchor\n * - `bottom`: Below the anchor\n * - `left`: Left of the anchor\n */\nconst a = 1;",
+    "// Matches either form:\n// - KEY=VALUE\nconst a = 1;",
+    "// Builds the registry.\n// One.\n// Two.\n// Three.\n//\n//   node scripts/build.ts\nconst a = 1;",
+    "const a = 1;\n/**\n * Shoots a slide.\n * Start the harness first.\n *\n *   pnpm shoot --slide 0\n *   pnpm shoot --slide 1\n *   pnpm shoot --slide 2\n *   pnpm shoot --slide 3\n */\nconst b = 2;",
   ],
   invalid: [
     {
@@ -82,7 +87,7 @@ ruleTester.run("comment-style", commentStyle, {
       errors: ["Drop the JSDoc tag that has no description."],
     },
     {
-      code: "// One.\n// Two.\n// Three.\n// Four.\n// Five.\nconst a = 1;",
+      code: "const a = 1;\n// One.\n// Two.\n// Three.\n// Four.\n// Five.\nconst b = 2;",
       errors: [
         "Cut this to 4 lines or fewer: keep the constraint, drop the background.",
       ],
