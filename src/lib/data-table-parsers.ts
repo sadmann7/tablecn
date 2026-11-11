@@ -49,7 +49,7 @@ export function getSortingStateParser<TColumnId extends string = string>(
         .join(",");
       const parsed = parseSorting(compact);
 
-      // Ids with a comma, or a first id starting with `[`, don't round-trip
+      // Ids with a comma, or a first id starting with `[`, don't round-trip.
       return parsed && getIsSameSorting(parsed, value)
         ? compact
         : JSON.stringify(value);
