@@ -1,3 +1,4 @@
 ignores:
   - "AGENTS.md"
   - "plans/**"
+  - "notes/**"
