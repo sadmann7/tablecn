@@ -32,12 +32,12 @@ export function DataTableAdvancedToolbar<TData extends RowData>({
     <div
       data-slot="data-table-advanced-toolbar"
       className={cn(
-        "flex w-full items-start justify-between gap-2 p-1",
+        "flex w-full flex-wrap items-start justify-between gap-2 p-1",
         className,
       )}
       {...props}
     >
-      <div className="flex flex-1 flex-wrap items-center gap-2">
+      <div className="flex min-w-[min(100%,24rem)] flex-1 flex-wrap items-center gap-2">
         {globalFilterPlaceholder &&
         table.options.enableGlobalFilter !== false ? (
           <Subscribe
@@ -55,14 +55,14 @@ export function DataTableAdvancedToolbar<TData extends RowData>({
                 placeholder={globalFilterPlaceholder}
                 value={globalFilter}
                 onChange={(event) => table.setGlobalFilter(event.target.value)}
-                className="w-40 lg:w-56"
+                className="w-40 text-ellipsis lg:w-56"
               />
             )}
           </Subscribe>
         ) : null}
         {children}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="ms-auto flex items-center gap-2">
         <DataTableViewOptions table={table} placement="bottom end" />
       </div>
     </div>

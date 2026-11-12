@@ -302,13 +302,13 @@ function FacetedValue({
           ) : (
             selected.map((selectedItem) => (
               <FacetedBadge key={selectedItem.value}>
-                <span className="truncate">{selectedItem.label}</span>
+                <bdi className="truncate">{selectedItem.label}</bdi>
               </FacetedBadge>
             ))
           )}
         </FacetedBadgeList>
       ) : (
-        <span className="truncate">{item ? item.label : placeholder}</span>
+        <bdi className="truncate">{item ? item.label : placeholder}</bdi>
       )}
       <IconPlaceholder
         lucide="ChevronDown"

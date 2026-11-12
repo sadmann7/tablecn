@@ -120,7 +120,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
             remixicon="RiAddCircleLine"
           />
         )}
-        <span className="truncate">{title}</span>
+        <bdi className="truncate">{title}</bdi>
         {hasSelection && (
           <>
             <Separator
@@ -141,7 +141,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
                         className="max-w-40"
                         title={item.label}
                       >
-                        <span className="truncate">{item.label}</span>
+                        <bdi className="truncate">{item.label}</bdi>
                       </FacetedBadge>
                     ))
                   )}
@@ -167,9 +167,9 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
                 textValue={option.label}
               >
                 {option.icon && <option.icon />}
-                <span className="flex-1 truncate" title={option.label}>
+                <bdi className="flex-1 truncate" title={option.label}>
                   {option.label}
-                </span>
+                </bdi>
                 <FacetedItemIndicator>
                   {option.count?.toLocaleString()}
                 </FacetedItemIndicator>

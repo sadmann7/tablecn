@@ -95,9 +95,9 @@ export function DataTableViewOptions<TData extends RowData>({
                     value={column.id}
                     onSelect={() => column.toggleVisibility()}
                   >
-                    <span className="truncate">
+                    <bdi className="truncate">
                       {column.columnDef.meta?.label ?? column.id}
-                    </span>
+                    </bdi>
                     <FacetedItemIndicator />
                   </FacetedItem>
                 ))}

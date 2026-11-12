@@ -347,9 +347,9 @@ function DataTableSortItem({
           variant="outline"
           className="w-44 min-w-0 shrink"
         >
-          <span className="truncate" title={label}>
+          <bdi className="truncate" title={label}>
             {label}
-          </span>
+          </bdi>
           <IconPlaceholder
             lucide="ChevronsUpDown"
             tabler="IconSelector"
@@ -376,7 +376,7 @@ function DataTableSortItem({
                   value={column.id}
                   keywords={[column.label]}
                 >
-                  <span className="truncate">{column.label}</span>
+                  <bdi className="truncate">{column.label}</bdi>
                   <FacetedItemIndicator />
                 </FacetedItem>
               ))}

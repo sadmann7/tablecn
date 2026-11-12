@@ -253,7 +253,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
               render={
                 <div
                   role="list"
-                  className="grid max-h-75 grid-cols-[minmax(4.5rem,auto)_auto_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1 max-sm:grid-cols-[minmax(4.5rem,auto)_minmax(0,1fr)_auto_auto]"
+                  className="grid max-h-75 grid-cols-[minmax(4.5rem,auto)_auto_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1 max-md:max-h-[60svh] max-md:grid-cols-[minmax(4.5rem,auto)_minmax(0,1fr)_auto_auto] max-md:gap-y-4"
                 />
               }
             >
@@ -358,7 +358,7 @@ function DataTableFilterItem<TData extends RowData>({
         <div
           role="listitem"
           tabIndex={-1}
-          className="col-span-full grid grid-cols-subgrid items-center"
+          className="col-span-full grid grid-cols-subgrid items-center gap-y-2"
           onKeyDown={onItemKeyDown}
         />
       }
@@ -386,7 +386,7 @@ function DataTableFilterItem<TData extends RowData>({
         onFilterUpdate={onFilterUpdate}
         {...getSelectorProps("operator")}
       />
-      <div className="w-full min-w-0 max-sm:col-span-3 max-sm:col-start-2 max-sm:row-start-3">
+      <div className="w-full min-w-0 max-md:col-span-3 max-md:col-start-2 max-md:row-start-3">
         <FilterValueInput
           filter={filter}
           column={column}
@@ -400,7 +400,7 @@ function DataTableFilterItem<TData extends RowData>({
         aria-label={`Remove ${label} filter`}
         variant="outline"
         size="icon"
-        className="max-sm:col-start-3 max-sm:row-start-1"
+        className="max-md:col-start-3 max-md:row-start-1"
         onClick={() => onFilterRemove(filter.filterId)}
       >
         <IconPlaceholder
@@ -417,7 +417,7 @@ function DataTableFilterItem<TData extends RowData>({
           <Button
             variant="outline"
             size="icon"
-            className="max-sm:col-start-4 max-sm:row-start-1"
+            className="max-md:col-start-4 max-md:row-start-1"
           />
         }
       >
@@ -532,13 +532,13 @@ function FilterFieldSelector<TData extends RowData>({
           <Button
             aria-controls={listboxId}
             variant="outline"
-            className="w-full max-w-48 min-w-32 max-sm:min-w-0"
+            className="w-full max-w-48 min-w-32 max-md:min-w-0"
           />
         }
       >
-        <span className="truncate" title={column.columnDef.meta?.label}>
+        <bdi className="truncate" title={column.columnDef.meta?.label}>
           {column.columnDef.meta?.label ?? "Select field"}
-        </span>
+        </bdi>
         <IconPlaceholder
           lucide="ChevronsUpDown"
           tabler="IconSelector"
@@ -559,9 +559,9 @@ function FilterFieldSelector<TData extends RowData>({
           <FacetedGroup>
             {columns.map((column) => (
               <FacetedItem key={column.id} value={column.id}>
-                <span className="truncate">
+                <bdi className="truncate">
                   {column.columnDef.meta?.label ?? column.id}
-                </span>
+                </bdi>
                 <FacetedItemIndicator />
               </FacetedItem>
             ))}
@@ -603,7 +603,7 @@ function FilterOperatorSelector({
       <SelectTrigger
         aria-controls={listboxId}
         aria-label={`${label} filter operator`}
-        className="w-32 lowercase max-sm:col-start-2 max-sm:row-start-2 max-sm:w-full"
+        className="w-32 lowercase max-md:col-span-3 max-md:col-start-2 max-md:row-start-2 max-md:w-full"
       >
         <div className="truncate">
           <SelectValue placeholder={filter.operator} />
@@ -790,7 +790,7 @@ function SelectFilterValue<TData extends RowData>({
             {getColumnSelectOptions(columnMeta).map((option) => (
               <FacetedItem key={option.value} value={option.value}>
                 {option.icon && <option.icon />}
-                <span className="flex-1 truncate">{option.label}</span>
+                <bdi className="flex-1 truncate">{option.label}</bdi>
                 <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
               </FacetedItem>
             ))}
@@ -837,9 +837,9 @@ function DateFilterValue<TData extends RowData>({
           phosphor="CalendarIcon"
           remixicon="RiCalendarLine"
         />
-        <span className="truncate">
+        <bdi className="truncate">
           {getDateFilterLabel(filter) ?? "Pick a date"}
-        </span>
+        </bdi>
       </PopoverTrigger>
       <PopoverContent
         dir={dir}

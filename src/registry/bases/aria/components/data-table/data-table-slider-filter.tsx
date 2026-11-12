@@ -216,7 +216,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
             remixicon="RiAddCircleLine"
           />
         )}
-        <span className="truncate">{title}</span>
+        <bdi className="truncate">{title}</bdi>
         {columnFilterValue ? (
           <>
             <Separator
