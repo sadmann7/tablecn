@@ -56,7 +56,6 @@ describe("createDataTableConfig", () => {
   it("rejects a filterable column named after a built-in key", () => {
     expect(() =>
       createDataTableConfig({
-        // @ts-expect-error a filterable column can't use a built-in key
         columns: { search: { variant: "text" } },
       }),
     ).toThrow('column id "search" is reserved');

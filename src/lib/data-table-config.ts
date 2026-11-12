@@ -44,12 +44,6 @@ const DATA_TABLE_KEYS = [
 
 type DataTableKey = (typeof DATA_TABLE_KEYS)[number];
 
-type ReservedColumnConfigs<TColumns> = {
-  [K in keyof TColumns as K extends DataTableKey ? K : never]: {
-    variant?: undefined;
-  };
-};
-
 type KnownColumnConfigs<TColumns> = {
   [K in keyof TColumns]: Record<
     Exclude<keyof TColumns[K], keyof DataTableColumnConfig>,
@@ -70,9 +64,7 @@ export interface DataTableConfigOptions<
   TColumns extends DataTableColumnConfigs,
 > {
   id?: string;
-  columns: TColumns &
-    ReservedColumnConfigs<TColumns> &
-    KnownColumnConfigs<TColumns>;
+  columns: TColumns & KnownColumnConfigs<TColumns>;
   defaultSorting?: ColumnSortItem<NoInfer<SortableColumnId<TColumns>>>[];
   defaultPageSize?: number;
   pageSizeOptions?: readonly number[];
