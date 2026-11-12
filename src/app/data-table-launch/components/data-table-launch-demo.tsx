@@ -297,7 +297,7 @@ function DataTableLaunchColumnsStory({
         "  },",
         "});",
       ]}
-      highlightedLines={columnCount > 0 ? [3, 4] : []}
+      highlightedLines={columnCount > 0 ? [2, 3] : []}
     >
       <DataTableLaunchVariants
         variants={[...new Set(COLUMN_SNIPPETS.map((item) => item.variant))]}

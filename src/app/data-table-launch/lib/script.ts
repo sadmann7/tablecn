@@ -79,37 +79,27 @@ export const COLUMN_SNIPPETS = [
   {
     columnIds: ["title"],
     accessorKey: "title",
-    label: "Title",
     variant: "text",
-    extra: 'placeholder: "Search titles...",',
   },
   {
     columnIds: ["status"],
     accessorKey: "status",
-    label: "Status",
     variant: "select",
-    extra: "options: statuses,",
   },
   {
     columnIds: ["priority"],
     accessorKey: "priority",
-    label: "Priority",
     variant: "select",
-    extra: "options: priorities,",
   },
   {
     columnIds: ["estimatedHours"],
     accessorKey: "estimatedHours",
-    label: "Est. Hours",
     variant: "number",
-    extra: "min: 1, max: 24,",
   },
   {
     columnIds: ["createdAt"],
     accessorKey: "createdAt",
-    label: "Created At",
     variant: "date",
-    extra: "icon: CalendarIcon,",
   },
 ] as const;
 
