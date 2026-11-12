@@ -114,7 +114,7 @@ function DataTableDateFilterContent<TData extends RowData>({
 
   const label = (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="truncate">{title}</span>
+      <bdi className="truncate">{title}</bdi>
       {hasValue && (
         <>
           <Separator

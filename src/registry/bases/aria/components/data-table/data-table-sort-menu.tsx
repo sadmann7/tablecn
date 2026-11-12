@@ -342,8 +342,14 @@ function DataTableSortItem({
           onSortUpdate(sort.id, { id: columnId });
         }}
       >
-        <FacetedTrigger id={fieldTriggerId} variant="outline" className="w-44">
-          <span className="truncate">{label}</span>
+        <FacetedTrigger
+          id={fieldTriggerId}
+          variant="outline"
+          className="w-44 min-w-0 shrink"
+        >
+          <bdi className="truncate" title={label}>
+            {label}
+          </bdi>
           <IconPlaceholder
             lucide="ChevronsUpDown"
             tabler="IconSelector"
@@ -353,7 +359,10 @@ function DataTableSortItem({
             className="opacity-50"
           />
         </FacetedTrigger>
-        <FacetedContent dir={dir} className="w-(--trigger-width)">
+        <FacetedContent
+          dir={dir}
+          className="w-auto max-w-80 min-w-(--trigger-width)"
+        >
           <FacetedInput placeholder="Search fields..." />
           <FacetedList
             renderEmptyState={() => (
@@ -367,7 +376,7 @@ function DataTableSortItem({
                   value={column.id}
                   keywords={[column.label]}
                 >
-                  <span className="truncate">{column.label}</span>
+                  <bdi className="truncate">{column.label}</bdi>
                   <FacetedItemIndicator />
                 </FacetedItem>
               ))}
@@ -385,7 +394,7 @@ function DataTableSortItem({
           onSortUpdate(sort.id, { desc: value === "desc" });
         }}
       >
-        <SelectTrigger className="w-24">
+        <SelectTrigger className="w-24 shrink-0">
           <SelectValue />
         </SelectTrigger>
         <SelectContent dir={dir} className="min-w-(--trigger-width)">

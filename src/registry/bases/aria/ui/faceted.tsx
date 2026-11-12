@@ -294,19 +294,21 @@ function FacetedValue({
       )}
     >
       {multiple && values.length > 0 ? (
-        <FacetedBadgeList>
+        <FacetedBadgeList className="min-w-0 flex-nowrap">
           {values.length > 2 ? (
-            <FacetedBadge>{values.length} selected</FacetedBadge>
+            <FacetedBadge>
+              <bdi>{values.length} selected</bdi>
+            </FacetedBadge>
           ) : (
             selected.map((selectedItem) => (
               <FacetedBadge key={selectedItem.value}>
-                <span className="truncate">{selectedItem.label}</span>
+                <bdi className="truncate">{selectedItem.label}</bdi>
               </FacetedBadge>
             ))
           )}
         </FacetedBadgeList>
       ) : (
-        <span className="truncate">{item ? item.label : placeholder}</span>
+        <bdi className="truncate">{item ? item.label : placeholder}</bdi>
       )}
       <IconPlaceholder
         lucide="ChevronDown"

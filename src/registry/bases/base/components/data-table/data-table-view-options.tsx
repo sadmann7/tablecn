@@ -63,7 +63,7 @@ export function DataTableViewOptions<TData extends RowData>({
               <Button
                 aria-label="View columns"
                 variant="outline"
-                className="ms-auto hidden lg:flex"
+                className="ms-auto"
                 disabled={disabled}
               />
             }
@@ -95,9 +95,9 @@ export function DataTableViewOptions<TData extends RowData>({
                     value={column.id}
                     onSelect={() => column.toggleVisibility()}
                   >
-                    <span className="truncate">
+                    <bdi className="truncate">
                       {column.columnDef.meta?.label ?? column.id}
-                    </span>
+                    </bdi>
                     <FacetedItemIndicator />
                   </FacetedItem>
                 ))}

@@ -128,7 +128,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         data-slot="data-table-range-filter-min"
         inputMode="numeric"
         placeholder={bounds?.min?.toString() ?? "Min"}
-        className="w-full min-w-24"
+        className="w-full min-w-20"
         value={startInput}
         onChange={(event) => onDraftChange(0, event.target.value)}
         onKeyDown={onInputKeyDown}
@@ -147,7 +147,7 @@ export function DataTableRangeFilter<TData extends RowData>({
         data-slot="data-table-range-filter-max"
         inputMode="numeric"
         placeholder={bounds?.max?.toString() ?? "Max"}
-        className="w-full min-w-24"
+        className="w-full min-w-20"
         value={endInput}
         onChange={(event) => onDraftChange(1, event.target.value)}
         onKeyDown={onInputKeyDown}
