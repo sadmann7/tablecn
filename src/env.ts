@@ -2,10 +2,6 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 export const env = createEnv({
-  /**
-   * Specify your server-side environment variables schema here. This way you can ensure the app
-   * isn't built with invalid env vars.
-   */
   server: {
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -16,19 +12,13 @@ export const env = createEnv({
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   },
 
-  /**
-   * Specify your client-side environment variables schema here. This way you can ensure the app
-   * isn't built with invalid env vars. To expose them to the client, prefix them with
-   * `NEXT_PUBLIC_`.
-   */
+  // Next.js only exposes variables prefixed with `NEXT_PUBLIC_` to the client.
   client: {
     NEXT_PUBLIC_PARTYKIT_HOST: z.string().optional(),
   },
 
-  /**
-   * `process.env` can't be destructured in Next.js edge runtimes or on the
-   * client, so each key is listed.
-   */
+  // `process.env` can't be destructured in Next.js edge runtimes or on the
+  // client, so each key is listed.
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
@@ -37,14 +27,7 @@ export const env = createEnv({
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_PARTYKIT_HOST: process.env.NEXT_PUBLIC_PARTYKIT_HOST,
   },
-  /**
-   * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
-   * useful for Docker builds.
-   */
+  // Set `SKIP_ENV_VALIDATION` to build or run without validation, as in Docker builds.
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
-  /**
-   * Makes it so that empty strings are treated as undefined.
-   * `SOME_VAR: z.string()` and `SOME_VAR=''` will throw an error.
-   */
   emptyStringAsUndefined: true,
 });

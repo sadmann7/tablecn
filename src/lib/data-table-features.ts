@@ -197,10 +197,8 @@ const dataTableFilteringFeature: TableFeature = {
   },
 };
 
-/**
- * Feature hooks get a `Table` generic over any features. This feature is only
- * registered in `dataTableFeatures`, so its hooks can use that table's types.
- */
+// Feature hooks get a `Table` generic over any features. This feature is only
+// registered in `dataTableFeatures`, so its hooks can use that table's types.
 function asDataTable(table: object) {
   return table as DataTableInstance;
 }
@@ -249,11 +247,8 @@ function setPlainFilter(
   });
 }
 
-/**
- * TanStack's `autoRemove` rules for plain filters. Filters with an
- * `operator` are only removed by an `undefined` value, so empty drafts in the
- * filter list survive a column `filterFn` whose `autoRemove` would drop them.
- */
+// Filters with an `operator` are only removed by an `undefined` value, so empty
+// drafts survive a column `filterFn` whose `autoRemove` would drop them.
 function getShouldRemoveFilter(
   filter: ColumnFilter,
   instance: DataTableInstance,

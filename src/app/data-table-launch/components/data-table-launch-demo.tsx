@@ -315,10 +315,8 @@ function DataTableLaunchColumnsStory({
   );
 }
 
-/**
- * A column with a filter still in the URL stays filterable, so the table can
- * clear that param on reset before the column hides its filter again.
- */
+// A column with a filter still in the URL stays filterable, so the table can
+// clear that param on reset before the column hides its filter again.
 function getFilterableColumns(columnCount: number, urlFilterIds: string) {
   const filterableIds = new Set([
     ...COLUMN_SNIPPETS.slice(0, columnCount).flatMap(

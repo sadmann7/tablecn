@@ -36,7 +36,6 @@ function parseArgs(): TableName[] {
 
   if (args.length === 0) return ALL_TABLES;
 
-  // Support both space-separated and comma-separated.
   const tables = args
     .flatMap((arg) => arg.split(","))
     .map((t) => t.trim())

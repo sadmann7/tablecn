@@ -1,8 +1,3 @@
-/**
- * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
- * for Docker builds.
- */
-
 import type { NextConfig } from "next";
 
 import { DEFAULT_STYLE_ID } from "@/lib/constants";
@@ -38,7 +33,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Already doing typechecking as separate task in CI.
+  // CI typechecks as a separate task.
   typescript: { ignoreBuildErrors: true },
   experimental: {
     optimizePackageImports: [

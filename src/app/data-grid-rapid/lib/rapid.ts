@@ -34,7 +34,6 @@ const HISTORY_LENGTH = 40;
 interface SectorProfile {
   // Yearly volatility of a large company in the sector.
   volatility: number;
-  // How strongly the sector follows the whole market.
   beta: number;
   suffixes: readonly string[];
 }
@@ -136,11 +135,11 @@ export function createRandom(seed: number) {
 
 interface QuoteModel {
   sector: Sector;
-  // Yearly volatility, higher for smaller companies.
+  // Yearly.
   volatility: number;
   beta: number;
   shares: number;
-  // The bid-ask spread as a share of the price, wider for smaller companies.
+  // The bid-ask spread as a share of the price.
   spread: number;
   // How often the quote trades compared with the others.
   activity: number;
@@ -248,7 +247,6 @@ export function tickMarket(
       getNormal(random) * 0.8;
     const step = shock * model.volatility * STEP_SCALE;
     const price = Math.max(0.01, roundPrice(quote.price * Math.exp(step)));
-    // Big moves bring in more trading, in round lots.
     const lots = Math.ceil(
       Math.exp(getNormal(random)) * (1 + Math.abs(shock) * 2),
     );

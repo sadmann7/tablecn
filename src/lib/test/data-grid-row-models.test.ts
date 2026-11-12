@@ -82,7 +82,6 @@ describe("createDataGridCoreRowModel", () => {
     const [r0, , r2, , r4] = grid.table.getCoreRowModel().rows;
 
     const inserted: Skater = { id: "new", name: "Leticia Bufoni" };
-    // Removes r1 and r3, and inserts `new` at index 2.
     const next = [data[0], data[2], inserted, data[4]] as Skater[];
     rowChangeHints.set(next, {
       from: data,
@@ -300,7 +299,6 @@ const stockFeatures = tableFeatures({
   sortFns,
 });
 
-// TanStack's own row models, to check ours against.
 function renderStockTable(initialData: Skater[]) {
   const { result, rerender } = renderHook(
     ({ data }: { data: Skater[] }) =>
@@ -320,7 +318,6 @@ function renderStockTable(initialData: Skater[]) {
   };
 }
 
-// The same seeded generator the demos use, so runs repeat.
 function createRandom(seed: number) {
   let state = seed >>> 0;
   return () => {
