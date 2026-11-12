@@ -294,9 +294,11 @@ function FacetedValue({
       )}
     >
       {multiple && values.length > 0 ? (
-        <FacetedBadgeList>
+        <FacetedBadgeList className="min-w-0 flex-nowrap">
           {values.length > 2 ? (
-            <FacetedBadge>{values.length} selected</FacetedBadge>
+            <FacetedBadge>
+              <bdi>{values.length} selected</bdi>
+            </FacetedBadge>
           ) : (
             selected.map((selectedItem) => (
               <FacetedBadge key={selectedItem.value}>

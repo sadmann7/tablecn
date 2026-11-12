@@ -63,7 +63,7 @@ export function DataTableViewOptions<TData extends RowData>({
               <Button
                 aria-label="View columns"
                 variant="outline"
-                className="ms-auto hidden lg:flex"
+                className="ms-auto"
                 disabled={disabled}
               />
             }

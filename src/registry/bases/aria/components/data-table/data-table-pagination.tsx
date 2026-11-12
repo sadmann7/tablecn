@@ -104,9 +104,10 @@ function DataTablePaginationContent<TData extends RowData>({
         role="status"
         className="flex-1 text-sm whitespace-nowrap text-muted-foreground"
       >
-        {selectedRowCount} {selectedRowCount === 1 ? "row" : "rows"} selected
+        {selectedRowCount.toLocaleString()}{" "}
+        {selectedRowCount === 1 ? "row" : "rows"} selected
         {selectedRowCount > visibleSelectedRowCount
-          ? ` (${selectedRowCount - visibleSelectedRowCount} not shown)`
+          ? ` (${(selectedRowCount - visibleSelectedRowCount).toLocaleString()} not shown)`
           : ""}
         .
       </div>

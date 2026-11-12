@@ -36,7 +36,11 @@ export function DataTableColumnHeader<TData extends RowData, TValue>({
   ...props
 }: DataTableColumnHeaderProps<TData, TValue>) {
   if (!column.getCanSort() && !column.getCanHide()) {
-    return <div className={cn(className)}>{label}</div>;
+    return (
+      <div title={label} className={cn("truncate", className)}>
+        {label}
+      </div>
+    );
   }
 
   return (
@@ -93,12 +97,13 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "-ms-1.5 flex h-8 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent rtl:flex-row-reverse [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+          "-ms-1.5 flex h-8 max-w-full min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 hover:bg-accent focus:ring-1 focus:ring-ring focus:outline-none data-[state=open]:bg-accent rtl:flex-row-reverse [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
           className,
         )}
+        title={label}
         {...props}
       >
-        {label}
+        <bdi className="truncate">{label}</bdi>
         {column.getCanSort() &&
           (sortDirection === "desc" ? (
             <IconPlaceholder

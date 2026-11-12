@@ -253,7 +253,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
               render={
                 <div
                   role="list"
-                  className="grid max-h-75 grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1"
+                  className="grid max-h-75 grid-cols-[minmax(4.5rem,auto)_auto_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1 max-sm:grid-cols-[minmax(4.5rem,auto)_minmax(0,1fr)_auto_auto]"
                 />
               }
             >
@@ -386,7 +386,7 @@ function DataTableFilterItem<TData extends RowData>({
         onFilterUpdate={onFilterUpdate}
         {...getSelectorProps("operator")}
       />
-      <div className="w-full min-w-0">
+      <div className="w-full min-w-0 max-sm:col-span-3 max-sm:col-start-2 max-sm:row-start-3">
         <FilterValueInput
           filter={filter}
           column={column}
@@ -400,6 +400,7 @@ function DataTableFilterItem<TData extends RowData>({
         aria-label={`Remove ${label} filter`}
         variant="outline"
         size="icon"
+        className="max-sm:col-start-3 max-sm:row-start-1"
         onClick={() => onFilterRemove(filter.filterId)}
       >
         <IconPlaceholder
@@ -412,7 +413,13 @@ function DataTableFilterItem<TData extends RowData>({
       </Button>
       <SortableItemHandle
         aria-label={`Reorder ${label} filter`}
-        render={<Button variant="outline" size="icon" />}
+        render={
+          <Button
+            variant="outline"
+            size="icon"
+            className="max-sm:col-start-4 max-sm:row-start-1"
+          />
+        }
       >
         <IconPlaceholder
           lucide="GripVertical"
@@ -525,11 +532,11 @@ function FilterFieldSelector<TData extends RowData>({
           <Button
             aria-controls={listboxId}
             variant="outline"
-            className="w-32"
+            className="w-full max-w-48 min-w-32 max-sm:min-w-0"
           />
         }
       >
-        <span className="truncate">
+        <span className="truncate" title={column.columnDef.meta?.label}>
           {column.columnDef.meta?.label ?? "Select field"}
         </span>
         <IconPlaceholder
@@ -541,7 +548,11 @@ function FilterFieldSelector<TData extends RowData>({
           className="opacity-50"
         />
       </FacetedTrigger>
-      <FacetedContent dir={dir} id={listboxId} className="w-40">
+      <FacetedContent
+        dir={dir}
+        id={listboxId}
+        className="w-auto max-w-80 min-w-40"
+      >
         <FacetedInput placeholder="Search fields..." />
         <FacetedList>
           <FacetedEmpty>No fields found.</FacetedEmpty>
@@ -592,7 +603,7 @@ function FilterOperatorSelector({
       <SelectTrigger
         aria-controls={listboxId}
         aria-label={`${label} filter operator`}
-        className="w-32 lowercase"
+        className="w-32 lowercase max-sm:col-start-2 max-sm:row-start-2 max-sm:w-full"
       >
         <div className="truncate">
           <SelectValue placeholder={filter.operator} />

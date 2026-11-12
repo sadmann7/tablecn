@@ -362,7 +362,8 @@ function DataTableSortItem({
               id={fieldTriggerId}
               aria-controls={fieldListboxId}
               variant="outline"
-              className="w-44"
+              title={label}
+              className="w-44 min-w-0 shrink"
             >
               <span className="truncate">{label}</span>
               <IconPlaceholder
@@ -378,7 +379,7 @@ function DataTableSortItem({
           <FacetedContent
             dir={dir}
             id={fieldListboxId}
-            className="w-(--radix-popover-trigger-width)"
+            className="w-auto max-w-80 min-w-(--radix-popover-trigger-width)"
           >
             <FacetedInput placeholder="Search fields..." />
             <FacetedList>
@@ -409,7 +410,7 @@ function DataTableSortItem({
           <SelectTrigger
             aria-controls={directionListboxId}
             aria-label={`${label} sort direction`}
-            className="w-24"
+            className="w-24 shrink-0"
           >
             <SelectValue />
           </SelectTrigger>

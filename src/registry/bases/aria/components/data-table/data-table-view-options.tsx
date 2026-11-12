@@ -60,7 +60,7 @@ export function DataTableViewOptions<TData extends RowData>({
           <FacetedTrigger
             aria-label="View columns"
             variant="outline"
-            className="ms-auto hidden lg:flex"
+            className="ms-auto"
             isDisabled={disabled}
           >
             <IconPlaceholder
