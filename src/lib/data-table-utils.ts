@@ -336,10 +336,8 @@ export function getPlainFilterValue(filter: ColumnFilterItem): unknown {
   return value;
 }
 
-/**
- * The data table feature's `setColumnFilters` turns every filter into a `ColumnFilterItem` on the way
- * in, so the state only ever holds items.
- */
+// The feature's `setColumnFilters` turns every filter into a
+// `ColumnFilterItem` on the way in, so the state only holds items.
 export function asFilterItems(filters: ColumnFilter[]) {
   return filters as ColumnFilterItem[];
 }
