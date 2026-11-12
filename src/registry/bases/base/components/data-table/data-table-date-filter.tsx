@@ -113,15 +113,15 @@ function DataTableDateFilterContent<TData extends RowData>({
     : formatDate(selectedDates[0]);
 
   const label = (
-    <span className="flex items-center gap-2">
-      <span>{title}</span>
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="truncate">{title}</span>
       {hasValue && (
         <>
           <Separator
             orientation="vertical"
             className="mx-0.5 data-vertical:h-4 data-vertical:self-center"
           />
-          <span>{dateText}</span>
+          <bdi className="truncate">{dateText}</bdi>
         </>
       )}
     </span>
@@ -129,7 +129,9 @@ function DataTableDateFilterContent<TData extends RowData>({
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" />}>
+      <PopoverTrigger
+        render={<Button variant="outline" className="max-w-full shrink" />}
+      >
         {hasValue ? (
           <span
             aria-hidden="true"
