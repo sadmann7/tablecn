@@ -16,6 +16,7 @@ env:
 jobs:
   format:
     runs-on: ubuntu-latest
+    name: Format
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
