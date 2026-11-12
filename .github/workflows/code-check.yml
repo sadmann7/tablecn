@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - uses: ./.github/setup
 
       - name: Check formatting
@@ -29,7 +29,7 @@ jobs:
     name: Lint
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - uses: ./.github/setup
 
       - run: pnpm lint
@@ -42,7 +42,7 @@ jobs:
       SKIP_ENV_VALIDATION: true
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - uses: ./.github/setup
 
       - run: pnpm typecheck
@@ -52,7 +52,7 @@ jobs:
     name: Test
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - uses: ./.github/setup
 
       - run: pnpm test
@@ -79,7 +79,7 @@ jobs:
       DATABASE_URL: postgresql://tablecn:securepassword@localhost:5432/tablecn
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - uses: ./.github/setup
 
       - name: Enable extensions
