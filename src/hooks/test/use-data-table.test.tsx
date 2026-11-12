@@ -57,9 +57,10 @@ describe("useDataTable", () => {
     );
 
     act(() =>
-      result.current.table.setColumnFilters((filters) =>
-        [...filters].reverse(),
-      ),
+      result.current.table.setColumnFilters((filters) => [
+        ...filters.filter((filter) => filter.id === "title"),
+        ...filters.filter((filter) => filter.id !== "title"),
+      ]),
     );
 
     await waitFor(() =>
