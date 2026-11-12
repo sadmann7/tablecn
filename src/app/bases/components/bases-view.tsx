@@ -1,8 +1,7 @@
 "use client";
 
-import type * as React from "react";
-
 import { useQueryStates } from "nuqs";
+import * as React from "react";
 
 import { basesSearchParams } from "../lib/search-params";
 
@@ -12,9 +11,11 @@ interface BasesViewProps {
 }
 
 export function BasesView({ table, grid }: BasesViewProps) {
-  const [{ view }] = useQueryStates(basesSearchParams);
+  const [{ view, data }] = useQueryStates(basesSearchParams);
 
-  if (view === "table") return table;
+  if (view === "table") {
+    return <React.Fragment key={data ?? "demo"}>{table}</React.Fragment>;
+  }
 
   return (
     grid ?? (

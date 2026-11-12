@@ -18,12 +18,15 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import { type Task, tasks } from "@/db/schema";
 import { formatDate } from "@/lib/format";
 
+import type { BasesColumnCopy } from "./fixtures";
+
 import { getPriorityIcon, getStatusIcon } from "../../lib/utils";
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
 interface GetBasesDataTableColumnsOptions {
   data: Task[];
+  copy: BasesColumnCopy;
   selectColumn: ColumnDef<DataTableFeatures, Task>;
   actionsColumn: ColumnDef<DataTableFeatures, Task>;
   renderHeader: <TValue>(
@@ -34,6 +37,7 @@ interface GetBasesDataTableColumnsOptions {
 
 export function getBasesDataTableColumns({
   data,
+  copy,
   selectColumn,
   actionsColumn,
   renderHeader,
@@ -44,7 +48,7 @@ export function getBasesDataTableColumns({
     columnHelper.accessor("code", {
       header: ({ column }) => renderHeader(column),
       cell: ({ cell }) => <div>{cell.getValue()}</div>,
-      meta: { label: "Task" },
+      meta: { label: copy.labels.code },
       enableHiding: false,
     }),
     columnHelper.accessor("title", {
@@ -58,8 +62,8 @@ export function getBasesDataTableColumns({
         </div>
       ),
       meta: {
-        label: "Title",
-        placeholder: "Search titles...",
+        label: copy.labels.title,
+        placeholder: copy.titlePlaceholder,
         icon: Text,
       },
       size: 500,
@@ -78,9 +82,9 @@ export function getBasesDataTableColumns({
         );
       },
       meta: {
-        label: "Status",
+        label: copy.labels.status,
         options: tasks.status.enumValues.map((status) => ({
-          label: status.charAt(0).toUpperCase() + status.slice(1),
+          label: copy.statusLabels[status],
           value: status,
           count: data.filter((task) => task.status === status).length,
           icon: getStatusIcon(status),
@@ -102,9 +106,9 @@ export function getBasesDataTableColumns({
         );
       },
       meta: {
-        label: "Priority",
+        label: copy.labels.priority,
         options: tasks.priority.enumValues.map((priority) => ({
-          label: priority.charAt(0).toUpperCase() + priority.slice(1),
+          label: copy.priorityLabels[priority],
           value: priority,
           count: data.filter((task) => task.priority === priority).length,
           icon: getPriorityIcon(priority),
@@ -118,10 +122,8 @@ export function getBasesDataTableColumns({
         <div className="w-20 text-right">{cell.getValue()}</div>
       ),
       meta: {
-        label: "Est. Hours",
-        min: 1,
-        max: 24,
-        unit: "hr",
+        label: copy.labels.estimatedHours,
+        ...copy.hours,
         icon: Clock,
       },
     }),
@@ -129,7 +131,7 @@ export function getBasesDataTableColumns({
       header: ({ column }) => renderHeader(column),
       cell: ({ cell }) => formatDate(cell.getValue()),
       meta: {
-        label: "Created At",
+        label: copy.labels.createdAt,
         icon: CalendarIcon,
       },
     }),
