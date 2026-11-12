@@ -273,7 +273,7 @@ function DataGridFilterMenuContent<TData extends RowData>({
             <SortableContent asChild>
               <div
                 role="list"
-                className="grid max-h-100 grid-cols-[minmax(4.5rem,auto)_8rem_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1"
+                className="grid max-h-100 grid-cols-[minmax(4.5rem,auto)_auto_8rem_minmax(10rem,max-content)_auto_auto] gap-x-2 gap-y-2 overflow-y-auto p-1 max-md:max-h-[60svh] max-md:grid-cols-[minmax(4.5rem,auto)_minmax(0,1fr)_auto_auto] max-md:gap-y-4"
               >
                 {columnFilters.map((filter, index) => (
                   <DataGridFilterItem
@@ -420,7 +420,7 @@ function DataGridFilterItem<TData extends RowData>({
       <div
         role="listitem"
         tabIndex={-1}
-        className="col-span-full grid grid-cols-subgrid items-center"
+        className="col-span-full grid grid-cols-subgrid items-center gap-y-2"
         onKeyDown={onItemKeyDown}
       >
         <div className="min-w-18 text-center">
@@ -457,9 +457,10 @@ function DataGridFilterItem<TData extends RowData>({
               aria-controls={fieldListboxId}
               dir={dir}
               variant="outline"
-              className="w-32"
+              title={label}
+              className="w-full max-w-48 min-w-32 max-md:min-w-0"
             >
-              <span className="truncate">{label}</span>
+              <bdi className="truncate">{label}</bdi>
               <IconPlaceholder
                 lucide="ChevronsUpDown"
                 tabler="IconSelector"
@@ -470,7 +471,11 @@ function DataGridFilterItem<TData extends RowData>({
               />
             </Button>
           </FacetedTrigger>
-          <FacetedContent id={fieldListboxId} dir={dir} className="w-40">
+          <FacetedContent
+            id={fieldListboxId}
+            dir={dir}
+            className="w-auto max-w-80 min-w-40"
+          >
             <FacetedInput placeholder="Search fields..." />
             <FacetedList>
               <FacetedEmpty>No fields found.</FacetedEmpty>
@@ -481,7 +486,7 @@ function DataGridFilterItem<TData extends RowData>({
                     value={column.id}
                     keywords={[column.label]}
                   >
-                    <span className="truncate">{column.label}</span>
+                    <bdi className="truncate">{column.label}</bdi>
                     <FacetedItemIndicator />
                   </FacetedItem>
                 ))}
@@ -501,7 +506,7 @@ function DataGridFilterItem<TData extends RowData>({
           <SelectTrigger
             aria-controls={operatorListboxId}
             aria-label={`${label} filter operator`}
-            className="w-32 lowercase"
+            className="w-32 lowercase max-md:col-span-3 max-md:col-start-2 max-md:row-start-2 max-md:w-full"
           >
             <div className="truncate">
               <SelectValue />
@@ -521,7 +526,7 @@ function DataGridFilterItem<TData extends RowData>({
             </SelectGroup>
           </SelectContent>
         </Select>
-        <div className="w-full min-w-0">
+        <div className="w-full min-w-0 max-md:col-span-3 max-md:col-start-2 max-md:row-start-3">
           {needsValue && column ? (
             <DataGridFilterInput
               key={filter.id}
@@ -550,6 +555,7 @@ function DataGridFilterItem<TData extends RowData>({
           aria-label={`Remove ${label} filter`}
           variant="outline"
           size="icon"
+          className="max-md:col-start-3 max-md:row-start-1"
           onClick={() => onFilterRemove(filter.id)}
         >
           <IconPlaceholder
@@ -561,7 +567,11 @@ function DataGridFilterItem<TData extends RowData>({
           />
         </Button>
         <SortableItemHandle aria-label={`Reorder ${label} filter`} asChild>
-          <Button variant="outline" size="icon">
+          <Button
+            variant="outline"
+            size="icon"
+            className="max-md:col-start-4 max-md:row-start-1"
+          >
             <IconPlaceholder
               lucide="GripVertical"
               tabler="IconGripVertical"
@@ -632,7 +642,7 @@ function DataGridFilterInput<TData extends RowData>({
   if (variant === "number") {
     if (isBetween) {
       return (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Input
             id={inputId}
             type="number"
@@ -645,7 +655,7 @@ function DataGridFilterInput<TData extends RowData>({
               setLocalValue(newValue);
               debouncedOnChange(newValue);
             }}
-            className="w-full flex-1"
+            className="w-full min-w-26 flex-1"
           />
           <Input
             id={`${inputId}-end`}
@@ -659,7 +669,7 @@ function DataGridFilterInput<TData extends RowData>({
               setLocalEndValue(newValue);
               debouncedOnEndValueChange(newValue);
             }}
-            className="w-full flex-1"
+            className="w-full min-w-26 flex-1"
           />
         </div>
       );
@@ -727,7 +737,7 @@ function DataGridFilterInput<TData extends RowData>({
                 phosphor="CalendarIcon"
                 remixicon="RiCalendarLine"
               />
-              <span className="truncate">{displayValue}</span>
+              <bdi className="truncate">{displayValue}</bdi>
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -863,7 +873,7 @@ function DataGridFilterInput<TData extends RowData>({
                     keywords={[option.label]}
                   >
                     {option.icon && <option.icon />}
-                    <span className="truncate">{option.label}</span>
+                    <bdi className="truncate">{option.label}</bdi>
                     <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
                   </FacetedItem>
                 ))}
@@ -905,7 +915,7 @@ function DataGridFilterInput<TData extends RowData>({
                   keywords={[option.label]}
                 >
                   {option.icon && <option.icon />}
-                  <span className="truncate">{option.label}</span>
+                  <bdi className="truncate">{option.label}</bdi>
                   <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
                 </FacetedItem>
               ))}
@@ -918,12 +928,12 @@ function DataGridFilterInput<TData extends RowData>({
 
   if (isBetween) {
     return (
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Input
           id={inputId}
           type="text"
           placeholder="Start"
-          className="w-full flex-1"
+          className="w-full min-w-26 flex-1"
           value={localValue ?? ""}
           onChange={(event) => {
             const value = event.target.value;
@@ -936,7 +946,7 @@ function DataGridFilterInput<TData extends RowData>({
           id={`${inputId}-end`}
           type="text"
           placeholder="End"
-          className="w-full flex-1"
+          className="w-full min-w-26 flex-1"
           value={localEndValue ?? ""}
           onChange={(event) => {
             const value = event.target.value;

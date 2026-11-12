@@ -21,11 +21,13 @@ import { useBasesDataGrid } from "../hooks/use-bases-data-grid";
 import { getBasesDataGridColumns } from "../lib/data-grid-columns";
 
 export function BaseDataGridDemo() {
-  const { dir, data, setData } = useBasesDataGrid();
+  const { dir, data, setData, labels, columnFilters, sorting } =
+    useBasesDataGrid();
 
   const columns = React.useMemo(
     () =>
       getBasesDataGridColumns({
+        labels,
         selectColumn: getDataGridSelectColumn<Person>({
           enableRowMarkers: true,
         }),
@@ -41,7 +43,7 @@ export function BaseDataGridDemo() {
           ),
         }),
       }),
-    [],
+    [labels],
   );
 
   const { table, ...dataGridProps } = useDataGrid({
@@ -52,6 +54,8 @@ export function BaseDataGridDemo() {
     createRow: () => ({ id: generateId() }),
     initialState: {
       columnPinning: { start: ["select"], end: ["actions"] },
+      columnFilters,
+      sorting,
     },
     dir,
     enableRowDeletion: true,

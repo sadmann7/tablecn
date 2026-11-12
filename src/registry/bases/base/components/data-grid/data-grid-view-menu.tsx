@@ -67,7 +67,7 @@ export function DataGridViewMenu<TData extends RowData>({
                 role="combobox"
                 dir={dir}
                 variant="outline"
-                className="ms-auto hidden lg:flex"
+                className="ms-auto"
                 disabled={disabled}
               />
             }
@@ -99,9 +99,9 @@ export function DataGridViewMenu<TData extends RowData>({
                     keywords={[column.columnDef.meta?.label ?? column.id]}
                     onSelect={() => column.toggleVisibility()}
                   >
-                    <span className="truncate">
+                    <bdi className="truncate">
                       {column.columnDef.meta?.label ?? column.id}
-                    </span>
+                    </bdi>
                     <FacetedItemIndicator />
                   </FacetedItem>
                 ))}
