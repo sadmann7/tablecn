@@ -17,11 +17,13 @@ export function BasesView({ table, grid }: BasesViewProps) {
     return <React.Fragment key={data ?? "demo"}>{table}</React.Fragment>;
   }
 
-  return (
-    grid ?? (
+  if (!grid) {
+    return (
       <div className="flex h-[560px] items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">
         The data grid is not available on this base yet.
       </div>
-    )
-  );
+    );
+  }
+
+  return <React.Fragment key={data ?? "demo"}>{grid}</React.Fragment>;
 }
