@@ -104,15 +104,11 @@ function useDataTable<TData extends RowData>({
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
   const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
-  const configInput = getIsDataTableConfig(configProp) ? undefined : configProp;
   const configInputKey = builtConfig
     ? ""
-    : getConfigInputKey(columns, configInput);
-  const { config, columnConfigs } = React.useMemo(
-    () =>
-      builtConfig
-        ? { config: builtConfig, columnConfigs: builtConfig.columns }
-        : createConfigFromInputKey(configInputKey),
+    : getConfigInputKey(columns, configProp);
+  const config = React.useMemo(
+    () => builtConfig ?? createConfigFromInputKey(configInputKey),
     [builtConfig, configInputKey],
   );
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
@@ -125,25 +121,33 @@ function useDataTable<TData extends RowData>({
     joinOperator: config.defaultJoinOperator,
   }));
 
-  const isPartialConfig = !builtConfig;
   const tableColumns = React.useMemo(
     () =>
-      isPartialConfig && Object.keys(columnConfigs).length === 0
-        ? columns
-        : columns.map((column) =>
-            applyColumnConfig(column, columnConfigs, isPartialConfig),
-          ),
-    [columns, columnConfigs, isPartialConfig],
+      builtConfig
+        ? columns.map((column) =>
+            applyColumnConfig(column, builtConfig.columns),
+          )
+        : columns,
+    [columns, builtConfig],
   );
+
+  const hasInlineColumns =
+    configProp !== undefined && !builtConfig && "columns" in configProp;
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
-    const unmatchedIds = getUnmatchedConfigIds(columnConfigs, columns);
+    if (hasInlineColumns) {
+      console.warn(
+        "useDataTable: an inline config ignores `columns`. Pass the config through createDataTableConfig, or set the filter and sorting on the column defs.",
+      );
+    }
+    if (!builtConfig) return;
+    const unmatchedIds = getUnmatchedConfigIds(builtConfig.columns, columns);
     if (unmatchedIds.length === 0) return;
     console.warn(
       `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(", ")}. Rename the config key or add the column.`,
     );
-  }, [columnConfigs, columns]);
+  }, [hasInlineColumns, builtConfig, columns]);
 
   const filterableIds = React.useMemo(
     () => Object.keys(filterVariants),

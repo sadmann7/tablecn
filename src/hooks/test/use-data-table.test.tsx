@@ -357,11 +357,13 @@ describe("useDataTable", () => {
     expect(table.options.manualFiltering).toBe(true);
   });
 
-  it("merges inline column configs over the column defs", () => {
-    const { result } = renderDataTable("?status=todo&title=bug", {
+  it("ignores columns on an inline config and warns", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { result } = renderDataTable("?status=todo&code=x", {
       mode: "client",
       pageCount: undefined,
       config: {
+        // @ts-expect-error columns only come through createDataTableConfig
         columns: {
           status: { enableSorting: false },
           code: { variant: "text" },
@@ -370,15 +372,15 @@ describe("useDataTable", () => {
     });
     const { table } = result.current;
 
-    expect(table.getColumn("status")?.getCanSort()).toBe(false);
-    expect(table.getColumn("status")?.getCanFilter()).toBe(true);
-    expect(table.getColumn("status")?.columnDef.meta?.variant).toBe("select");
-    expect(table.getColumn("code")?.getCanFilter()).toBe(true);
-    expect(table.getColumn("title")?.getCanSort()).toBe(true);
+    expect(table.getColumn("status")?.getCanSort()).toBe(true);
+    expect(table.getColumn("code")?.getCanFilter()).toBe(false);
     expect(getFilterSummary(table.state.columnFilters)).toEqual([
       ["status", ["todo"]],
-      ["title", "bug"],
     ]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("an inline config ignores `columns`"),
+    );
+    warn.mockRestore();
   });
 
   it("keeps the same filters when only the page changes", async () => {
