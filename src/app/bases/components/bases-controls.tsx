@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryStates } from "nuqs";
 
+import { DataModeToggle } from "@/components/data-mode-toggle";
 import { FILTER_MODES } from "@/lib/flag";
 import { Separator } from "@/registry/bases/radix/ui/separator";
 import {
@@ -23,7 +24,7 @@ interface BasesControlsProps {
 
 export function BasesControls({ base }: BasesControlsProps) {
   const searchParams = useSearchParams();
-  const [{ view, filterMode, dir }, setControls] = useQueryStates(
+  const [{ view, filterMode, dir, data }, setControls] = useQueryStates(
     basesSearchParams,
     {
       clearOnDefault: true,
@@ -145,6 +146,12 @@ export function BasesControls({ base }: BasesControlsProps) {
           </ToggleGroupItem>
         </ToggleGroup>
       </ControlGroup>
+      {data ? (
+        <DataModeToggle
+          value={data}
+          onValueChange={(value) => void setControls({ data: value })}
+        />
+      ) : null}
     </div>
   );
 }

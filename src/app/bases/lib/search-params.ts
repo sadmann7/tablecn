@@ -1,5 +1,6 @@
 import { parseAsStringEnum, parseAsStringLiteral } from "nuqs";
 
+import { demoDataModeParser } from "@/components/data-mode-toggle";
 import { DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 
 export const BASES_VIEWS = [
@@ -15,4 +16,5 @@ export const basesSearchParams = {
     FILTER_MODES.map((filterMode) => filterMode.value),
   ).withDefault("plain"),
   dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
+  data: demoDataModeParser,
 };

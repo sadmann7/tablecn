@@ -26,12 +26,13 @@ import { getBasesDataTableColumns } from "../lib/data-table-columns";
 import { basesTasksTableConfig } from "../lib/table";
 
 export function BaseDataTableDemo() {
-  const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
+  const { filterMode, dir, data, copy, onCopy, onDelete } = useBasesDataTable();
 
   const columns = React.useMemo(
     () =>
       getBasesDataTableColumns({
         data,
+        copy,
         selectColumn: getDataTableSelectColumn<Task>(),
         actionsColumn: getDataTableActionsColumn<Task>({
           actions: ({ row }) => (
@@ -57,7 +58,7 @@ export function BaseDataTableDemo() {
           </Badge>
         ),
       }),
-    [data, onCopy, onDelete],
+    [data, copy, onCopy, onDelete],
   );
 
   const { table } = useDataTable({

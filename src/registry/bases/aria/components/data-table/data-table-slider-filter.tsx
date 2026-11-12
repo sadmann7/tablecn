@@ -14,9 +14,7 @@ import { Button } from "@/registry/bases/aria/ui/button";
 import { useDirection } from "@/registry/bases/aria/ui/direction";
 import {
   InputGroup,
-  InputGroupAddon,
   InputGroupInput,
-  InputGroupText,
 } from "@/registry/bases/aria/ui/input-group";
 import { Label } from "@/registry/bases/aria/ui/label";
 import { Popover, PopoverTrigger } from "@/registry/bases/aria/ui/popover";
@@ -71,8 +69,11 @@ function DataTableSliderFilterContent<TData extends RowData>({
   const [facetedRange, setFacetedRange] = React.useState(() =>
     getFacetedRange(column),
   );
-  const min = declaredMin ?? facetedRange[0];
-  const max = declaredMax ?? facetedRange[1];
+  const min = declaredMin ?? facetedRange?.[0] ?? 0;
+  const max = declaredMax ?? facetedRange?.[1] ?? 100;
+  const hasNoValues =
+    (declaredMin === undefined || declaredMax === undefined) &&
+    getFacetedRange(column) === null;
   const step = getRangeStep(min, max);
 
   function onOpenChange(open: boolean) {
@@ -187,7 +188,11 @@ function DataTableSliderFilterContent<TData extends RowData>({
 
   return (
     <PopoverTrigger onOpenChange={onOpenChange}>
-      <Button variant="outline">
+      <Button
+        variant="outline"
+        className="max-w-full shrink"
+        isDisabled={hasNoValues && !columnFilterValue}
+      >
         {columnFilterValue ? (
           <span
             aria-hidden="true"
@@ -211,16 +216,18 @@ function DataTableSliderFilterContent<TData extends RowData>({
             remixicon="RiAddCircleLine"
           />
         )}
-        <span>{title}</span>
+        <span className="truncate">{title}</span>
         {columnFilterValue ? (
           <>
             <Separator
               orientation="vertical"
               className="mx-0.5 data-vertical:h-4 data-vertical:self-center"
             />
-            {formatValue(columnFilterValue[0])} -{" "}
-            {formatValue(columnFilterValue[1])}
-            {unit ? ` ${unit}` : ""}
+            <bdi className="truncate">
+              {formatValue(columnFilterValue[0])} -{" "}
+              {formatValue(columnFilterValue[1])}
+              {unit ? ` ${unit}` : ""}
+            </bdi>
           </>
         ) : null}
       </Button>
@@ -232,6 +239,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
         <div className="flex flex-col gap-3">
           <p className="leading-none font-medium peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
             {title}
+            {unit ? ` (${unit})` : ""}
           </p>
           <div className="flex items-center gap-4" onBlur={onInputsBlur}>
             <Label htmlFor={`${id}-from`} className="sr-only">
@@ -253,11 +261,6 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 onChange={(event) => onDraftChange(0, event.target.value)}
                 onKeyDown={onInputKeyDown}
               />
-              {unit && (
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>{unit}</InputGroupText>
-                </InputGroupAddon>
-              )}
             </InputGroup>
             <Label htmlFor={`${id}-to`} className="sr-only">
               to
@@ -278,11 +281,6 @@ function DataTableSliderFilterContent<TData extends RowData>({
                 onChange={(event) => onDraftChange(1, event.target.value)}
                 onKeyDown={onInputKeyDown}
               />
-              {unit && (
-                <InputGroupAddon align="inline-end">
-                  <InputGroupText>{unit}</InputGroupText>
-                </InputGroupAddon>
-              )}
             </InputGroup>
           </div>
           <Label htmlFor={`${id}-slider`} className="sr-only">
@@ -312,7 +310,7 @@ function DataTableSliderFilterContent<TData extends RowData>({
 
 function getFacetedRange<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
-): RangeValue {
+): RangeValue | null {
   const values = column.getFacetedMinMaxValues();
   if (Array.isArray(values) && values.length === 2) {
     const [min, max] = values;
@@ -320,17 +318,13 @@ function getFacetedRange<TData extends RowData>(
       return min === max ? [min, min + 1] : [min, max];
     }
   }
-  return [0, 100];
+  return null;
 }
 
 function getRangeStep(min: number, max: number) {
   const rangeSize = max - min;
   const step =
-    rangeSize <= 20
-      ? 1
-      : rangeSize <= 100
-        ? Math.ceil(rangeSize / 20)
-        : Math.ceil(rangeSize / 50);
+    rangeSize <= 100 ? 1 : 10 ** Math.floor(Math.log10(rangeSize / 100));
 
   if (!Number.isInteger(rangeSize)) return step;
   for (let divisor = step; divisor > 1; divisor--) {

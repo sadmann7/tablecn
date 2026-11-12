@@ -97,7 +97,9 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
       items={options}
       multiple={multiple}
     >
-      <FacetedTrigger render={<Button variant="outline" />}>
+      <FacetedTrigger
+        render={<Button variant="outline" className="max-w-full shrink" />}
+      >
         {hasSelection ? (
           <span
             aria-hidden="true"
@@ -121,7 +123,7 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
             remixicon="RiAddCircleLine"
           />
         )}
-        {title}
+        <span className="truncate">{title}</span>
         {hasSelection && (
           <>
             <Separator
@@ -130,12 +132,18 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
             />
             <FacetedValue>
               {(selected) => (
-                <FacetedBadgeList>
+                <FacetedBadgeList className="min-w-0 flex-nowrap">
                   {selected.length > 2 ? (
-                    <FacetedBadge>{selected.length} selected</FacetedBadge>
+                    <FacetedBadge>
+                      <bdi>{selected.length} selected</bdi>
+                    </FacetedBadge>
                   ) : (
                     selected.map((item) => (
-                      <FacetedBadge key={item.value}>
+                      <FacetedBadge
+                        key={item.value}
+                        className="max-w-40"
+                        title={item.label}
+                      >
                         <span className="truncate">{item.label}</span>
                       </FacetedBadge>
                     ))
@@ -146,7 +154,11 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
           </>
         )}
       </FacetedTrigger>
-      <FacetedContent aria-label={`${title} filter`} dir={dir} className="w-50">
+      <FacetedContent
+        aria-label={`${title} filter`}
+        dir={dir}
+        className="w-auto max-w-80 min-w-50"
+      >
         <FacetedInput placeholder={title} />
         <FacetedList className="max-h-full">
           <FacetedEmpty>No results found.</FacetedEmpty>
@@ -154,8 +166,12 @@ function DataTableFacetedFilterContent<TData extends RowData, TValue>({
             {options.map((option) => (
               <FacetedItem key={option.value} value={option.value}>
                 {option.icon && <option.icon />}
-                <span className="flex-1 truncate">{option.label}</span>
-                <FacetedItemIndicator>{option.count}</FacetedItemIndicator>
+                <span className="flex-1 truncate" title={option.label}>
+                  {option.label}
+                </span>
+                <FacetedItemIndicator>
+                  {option.count?.toLocaleString()}
+                </FacetedItemIndicator>
               </FacetedItem>
             ))}
           </FacetedGroup>
