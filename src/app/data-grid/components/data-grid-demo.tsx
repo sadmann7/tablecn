@@ -1,7 +1,6 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { cn } from "cn";
 import { Copy, Languages, Rows2, Rows3, Rows4, Trash2 } from "lucide-react";
 import { parseAsStringEnum, useQueryState } from "nuqs";
 import * as React from "react";
@@ -9,6 +8,11 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { Direction } from "@/lib/data-grid-types";
 
+import {
+  DataModeToggle,
+  type DemoDataMode,
+  demoDataModeParser,
+} from "@/components/data-mode-toggle";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { getFilterFn } from "@/lib/data-grid-filters";
 import { generateId } from "@/lib/id";
@@ -60,15 +64,6 @@ const rowCounts = [
 
 type RowCount = (typeof rowCounts)[number]["value"];
 
-const dataModes = [
-  { value: "demo", label: "Demo data" },
-  { value: "worst", label: "Worst case" },
-  { value: "empty", label: "Empty" },
-  { value: "one", label: "One" },
-] as const;
-
-type DataMode = (typeof dataModes)[number]["value"];
-
 const isDev = process.env.NODE_ENV === "development";
 
 interface Dataset {
@@ -83,10 +78,7 @@ export function DataGridDemo() {
       .withDefault("100k")
       .withOptions({ clearOnDefault: true }),
   );
-  const [dataMode, setDataMode] = useQueryState(
-    "data",
-    parseAsStringEnum<DataMode>(dataModes.map((mode) => mode.value)),
-  );
+  const [dataMode, setDataMode] = useQueryState("data", demoDataModeParser);
   const [dataset, setDataset] = React.useState<Dataset | null>(null);
   const datasetKey = `${dataMode}-${rowCount}`;
 
@@ -166,7 +158,7 @@ export function DataGridDemo() {
   );
 }
 
-function getRows(dataMode: DataMode, rowCount: RowCount) {
+function getRows(dataMode: DemoDataMode, rowCount: RowCount) {
   if (!isDev || dataMode === "demo") {
     return generatePeople(getRowCountOption(rowCount).count);
   }
@@ -177,32 +169,6 @@ function getRows(dataMode: DataMode, rowCount: RowCount) {
 
 function getRowCountOption(value: RowCount) {
   return rowCounts.find((option) => option.value === value) ?? rowCounts[1];
-}
-
-interface DataModeToggleProps {
-  value: DataMode;
-  onValueChange: (value: DataMode) => void;
-}
-
-function DataModeToggle({ value, onValueChange }: DataModeToggleProps) {
-  return (
-    <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 gap-0.5 rounded-full border border-input bg-background p-0.5 font-sans text-xs shadow-sm">
-      {dataModes.map((mode) => (
-        <button
-          key={mode.value}
-          type="button"
-          aria-pressed={mode.value === value}
-          className={cn(
-            "rounded-full px-3 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-            mode.value === value && "bg-muted text-foreground",
-          )}
-          onClick={() => onValueChange(mode.value)}
-        >
-          {mode.label}
-        </button>
-      ))}
-    </div>
-  );
 }
 
 const columnHelper = createColumnHelper<DataGridFeatures, Person>();
