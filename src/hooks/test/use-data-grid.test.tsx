@@ -1286,7 +1286,6 @@ describe("useDataGrid", () => {
         });
       });
 
-      // A refetch brings the deleted row back and drops the edited one.
       act(() => {
         result.current.setData(testData.slice(0, 2).map((row) => ({ ...row })));
       });
@@ -2320,7 +2319,6 @@ describe("useDataGrid", () => {
         });
       });
 
-      // onDataChange should be called with ALL rows (not just filtered).
       expect(onDataChange).toHaveBeenCalledTimes(1);
       const updatedData = onDataChange.mock.calls[0]?.[0] as TestData[];
 
@@ -2442,7 +2440,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // The returned onRowAdd checks readOnly internally.
       expect(result.current.onRowAdd).toBeDefined();
     });
 
@@ -2579,7 +2576,6 @@ describe("useDataGrid", () => {
 
       await act(async () => {
         result.current.table.openSearch();
-        // Lets the microtask queue flush.
         await Promise.resolve();
       });
 
@@ -2841,7 +2837,6 @@ describe("useDataGrid", () => {
         return result.current.table.getSearchMatches();
       }
 
-      // Every row and column checked directly, without any earlier query to narrow from.
       function getExpected(query: string) {
         return testData.flatMap((row, index) =>
           (["name", "trick", "score"] as const)
@@ -3217,7 +3212,6 @@ describe("useDataGrid", () => {
         { wrapper: createWrapper() },
       );
 
-      // Already closed, but resetting still runs the callback.
       act(() => {
         result.current.table.resetPasteDialog(true);
       });
@@ -3797,8 +3791,6 @@ describe("useDataGrid", () => {
       const mockContainer = document.createElement("div");
       result.current.dataGridRef.current = mockContainer;
 
-      // Mousedown sets dragStartCell, and onAutoScrollStart registers the
-      // document mouseup listener before queuing the deferred RAF.
       act(() => {
         fireCellEvent(result, "onMouseDown", "0", "name", {
           button: 0,
@@ -3815,14 +3807,10 @@ describe("useDataGrid", () => {
 
       expect(result.current.table.getIsCellSelected("0", "name")).toBe(true);
 
-      // Releasing the mouse outside the grid reaches the document listener from
-      // onAutoScrollStart, which clears dragStartCell.
       act(() => {
         document.dispatchEvent(new MouseEvent("mouseup"));
       });
 
-      // A subsequent onCellMouseEnter must be a no-op because the drag has
-      // ended — so row 2 should never enter the selected set.
       act(() => {
         fireCellEvent(result, "onMouseOver", "2", "score");
       });
@@ -4810,7 +4798,6 @@ describe("useDataGrid", () => {
           { id: "group", desc: true },
           { id: "score", desc: false },
         ],
-        // Flipping only one of the sorts needs a full sort.
         [
           { id: "group", desc: true },
           { id: "score", desc: true },
@@ -4820,7 +4807,6 @@ describe("useDataGrid", () => {
         expect(getIds(sorting)).toEqual(getFreshIds(data, sorting));
       }
 
-      // New data must not reuse the order computed for the old rows.
       const edited = data.map((row) =>
         row.id === "0" ? { ...row, group: "z" } : row,
       );

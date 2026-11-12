@@ -165,7 +165,6 @@ function PeopleDataGridActionBarImpl({ table }: PeopleDataGridActionBarProps) {
   );
 }
 
-// Checked rows, or the rows a cell range covers.
 function getTargetRows(table: Table<DataGridFeatures, Person>) {
   if (table.getHasRowSelection()) return table.getSelectedRowModel().rows;
 

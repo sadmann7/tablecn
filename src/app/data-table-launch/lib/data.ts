@@ -182,7 +182,7 @@ function createLaunchTasks(count: number): DataTableLaunchTask[] {
   }));
 }
 
-/** Seeded so the server and client render the same rows. */
+// Seeded so the server and client render the same rows.
 function createRandom(seed: number) {
   let state = seed;
 

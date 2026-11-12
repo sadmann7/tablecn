@@ -7,7 +7,6 @@
 const DOOM_BASE = "/doom/";
 const SCREEN_WIDTH = 320;
 const SCREEN_HEIGHT = 200;
-// Samples kept queued ahead of playback.
 const AUDIO_AHEAD_BUFFERS = 3;
 
 interface WorkerModule {

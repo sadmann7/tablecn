@@ -12,10 +12,8 @@ export function getCommandTrigger() {
   );
 }
 
-/**
- * The join control's id also ends in `-operator-listbox`, and it is the
- * first control on every row after the first.
- */
+// The join control's id also ends in `-operator-listbox`, and it is the
+// first control on every row after the first.
 export function getFilterOperatorTrigger(columnLabel: string) {
   return getFilterValueTrigger(columnLabel)
     ?.closest("[role=listitem]")
@@ -38,7 +36,7 @@ export function getFilterValueTrigger(label: string) {
   );
 }
 
-/** Faceted items carry no value attribute, so they are matched by label. */
+// Faceted items carry no value attribute.
 export function getFacetedOption(label: string) {
   return Array.from(
     document.querySelectorAll<HTMLElement>("[data-slot=faceted-item]"),
@@ -49,13 +47,13 @@ export function getFacetedOption(label: string) {
   );
 }
 
-/** Clicks a popover trigger only when closed, since a click also closes it. */
+// A click on an open trigger closes it.
 export function openPopover(trigger: HTMLElement | null | undefined) {
   if (trigger?.getAttribute("aria-expanded") === "true") return;
   trigger?.click();
 }
 
-/** Escape would close the filter menu instead if the list is not open. */
+// Escape would close the filter menu instead if the list is not open.
 export function closeFacetedList() {
   if (!document.querySelector("[data-slot=faceted-content]")) return;
   pressEscape();
@@ -73,11 +71,8 @@ export function getToolbarFilter(label: string) {
   );
 }
 
-/**
- * Swaps the query string the way an address bar edit would, without a reload.
- * nuqs reads its own last writes over the URL until a popstate clears them,
- * and Next ignores a popstate without state.
- */
+// nuqs reads its own last writes over the URL until a popstate clears them,
+// and Next ignores a popstate without state.
 export function replaceUrl(search: string) {
   window.dispatchEvent(new PopStateEvent("popstate", { state: null }));
   history.replaceState(null, "", `${location.pathname}${search}`);
@@ -101,10 +96,8 @@ export function pressEscape() {
   document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
 }
 
-/**
- * Escape only reaches the topmost layer, and a layer stays mounted through its
- * exit animation, so this keeps pressing once per frame until all are gone.
- */
+// Escape only reaches the topmost layer, and a layer stays mounted through its
+// exit animation, so this presses once per frame until all are gone.
 export function closeAllMenus(attempts = 60) {
   if (!getIsPopoverOpen() || attempts === 0) return;
 

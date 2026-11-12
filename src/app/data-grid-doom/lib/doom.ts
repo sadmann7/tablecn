@@ -50,7 +50,6 @@ const CHEATS = [
   "idclev",
 ];
 
-// Whether the letters typed so far, ending in the latest one, start or spell a cheat.
 export function getIsTypingCheat(typed: string) {
   const start = typed.lastIndexOf("id");
   if (start === -1) return false;
@@ -65,12 +64,12 @@ export interface DoomEngine {
   frame: () => number;
   step: () => void;
   key: (pressed: boolean, keyCode: number) => void;
-  /** Mouse button bits; 1 fires. */
+  // Button bits, where 1 fires.
   mouse: (buttons: number) => void;
   setMuted: (muted: boolean) => void;
-  /** Pauses or resumes a level; does nothing outside one. */
+  // Does nothing outside a level.
   setPaused: (paused: boolean) => void;
-  /** Whether DOOM's menu or automap is open, where DOOM reads letter keys itself. */
+  // DOOM reads letter keys itself while its menu or automap is open.
   isMenuOrMapOpen: () => boolean;
 }
 
@@ -123,10 +122,8 @@ registerProcessor("doom-audio", DoomAudio);
 const MIN_PRESS_MS = (2 * 1000) / 35;
 
 let enginePromise: Promise<DoomEngine> | null = null;
-// Removes the current instance's worker and audio so a fresh one can start.
 let engineCleanup: (() => void) | null = null;
 
-// One engine at a time, started on first use.
 export function loadDoom(): Promise<DoomEngine> {
   enginePromise ??= startEngine();
   return enginePromise;
@@ -209,7 +206,6 @@ function startEngine(): Promise<DoomEngine> {
       (event: MessageEvent<DoomWorkerResponse>) => {
         const message = event.data;
         if (message.type === "frame") {
-          // The previous frame's buffer goes back for reuse.
           if (pixels) {
             const request: DoomWorkerRequest = {
               type: "recycle",

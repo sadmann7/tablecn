@@ -4,11 +4,9 @@ const STAGE_WIDTH = 1920;
 const STAGE_HEIGHT = 1080;
 const BASE_FONT_SIZE = 16;
 
-/**
- * Scales the root font size instead of transforming the stage. Everything is
- * sized in rem, so popovers that portal to the body scale with the table and
- * measure the real viewport.
- */
+// Scales the root font size instead of transforming the stage. Everything is
+// sized in rem, so popovers that portal to the body scale with the table and
+// measure the real viewport.
 export function useStageScale() {
   const scale = React.useSyncExternalStore(
     subscribeToResize,

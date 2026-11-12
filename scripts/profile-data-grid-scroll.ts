@@ -52,7 +52,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
-    // Scrollbar drag from top to bottom, driven by scrollTop so it does not depend on overlay scrollbars.
+    // Driven by scrollTop so it does not depend on overlay scrollbars.
     name: "scrollbar-drag",
     run: (page) =>
       page.evaluate(
@@ -367,7 +367,7 @@ async function recordTrace(
   return getMainThreadBusyMs(events as TraceEvent[]);
 }
 
-/** Total duration of top-level tasks on the page's main thread, which shows headroom even when fps is capped. */
+// Main thread task time shows headroom even when fps is capped.
 function getMainThreadBusyMs(events: TraceEvent[]) {
   const mainThreads = new Set(
     events

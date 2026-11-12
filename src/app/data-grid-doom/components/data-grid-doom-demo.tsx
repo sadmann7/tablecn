@@ -418,7 +418,6 @@ export function DataGridDoomDemo({
       (_, x) => `${((x * 100) / columnCount).toFixed(2)}%`,
     );
     const current = new Int32Array(columnCount * rowCount).fill(-1);
-    // Changed cells only, so direct writes skip the rest.
     const dirty = new Uint8Array(columnCount * rowCount);
     const deltas: number[] = [];
     let last = 0;

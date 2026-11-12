@@ -139,9 +139,7 @@ interface Layout {
   hoisted: Set<Unit>;
   // Helpers several declarations use, placed after the last one.
   shared: Set<Unit>;
-  // Memo wrappers, which sit right above the component they wrap.
   wrappers: Set<Unit>;
-  // The whole file in top-down order.
   order: Unit[];
 }
 
@@ -265,7 +263,6 @@ function getLayout(
   const hoisted = getHoisted(units, owners, references, getUser);
   for (const [unit, user] of hoisted) owners.set(unit, user);
 
-  // A helper shared by several declarations goes after the last one's section.
   const lastUsers = new Map<Unit, Unit>();
   for (const unit of units) {
     const users = new Set<Unit>();
@@ -548,7 +545,6 @@ function getIsDeclaration(unit: Unit) {
   );
 }
 
-// Through a chain, like a type above the constant it types.
 function getIsOwnedBy(owners: Map<Unit, Unit>, unit: Unit, owner: Unit) {
   const seen = new Set<Unit>();
   for (let next = owners.get(unit); next; next = owners.get(next)) {
@@ -610,7 +606,6 @@ function getUnits(context: Context, helpers: Map<string, Node>) {
       end,
       separator: text.slice(previousEnd, start),
       statements,
-      // Including what an `export { … }` list names further down.
       isExported:
         statement.type.startsWith("Export") ||
         getStatementNames(statement).some((name) => exported.has(name)),
@@ -628,7 +623,6 @@ function getUnitName(unit: Unit) {
   return unit.helper ?? getDeclaredNames(unit)[0] ?? getDeclaredTypeName(unit);
 }
 
-// Types and SCREAMING_CASE constants that aren't exported.
 function getHoistedNames(statement: Node) {
   if (TYPE_TYPES.has(statement.type)) {
     const name = statement.id?.name;
@@ -733,7 +727,6 @@ function getHelperName(statement: Node | undefined) {
   return typeof name === "string" ? name : undefined;
 }
 
-// Module state is a declaration that isn't a SCREAMING_CASE constant.
 function getStateNames(statement: Node) {
   if (statement.type !== "VariableDeclaration") return undefined;
   const names: string[] = [];

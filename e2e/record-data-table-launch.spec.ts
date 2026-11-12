@@ -59,11 +59,8 @@ test("record one launch loop", async ({ page }) => {
   console.log(`Wrote ${OUTPUT}`);
 });
 
-/**
- * Playwright's built-in video is a low-bitrate VP8 screencast. Re-encoding it
- * cannot recover the backdrop gradients and grain, so this stores PNG frames
- * and encodes once.
- */
+// Playwright's built-in video is a low-bitrate VP8 screencast that loses the
+// backdrop gradients and grain, so this stores PNG frames and encodes once.
 async function startCapture(page: Page) {
   await rm(FRAMES, { recursive: true, force: true });
   await mkdir(FRAMES, { recursive: true });

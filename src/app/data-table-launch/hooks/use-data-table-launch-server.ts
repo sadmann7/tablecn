@@ -45,7 +45,7 @@ export function useDataTableLaunchServer({
   }, [request, isEnabled]);
 }
 
-/** Deterministic per request, so every recorded loop looks the same. */
+// Deterministic per request, so every recorded loop looks the same.
 function getLatency(request: string) {
   let hash = 0;
   for (const char of request) hash = (hash + char.charCodeAt(0)) % 997;

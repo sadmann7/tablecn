@@ -133,11 +133,8 @@ function buildBase(baseName: string, outDir: string) {
   );
 }
 
-/**
- * A base ships an item only when its tree has every component and hook the
- * item uses: those import the base's primitives, so a radix fallback would mix
- * two bases in one install. Primitives without a variant still fall back.
- */
+// Components and hooks import their base's primitives, so a radix fallback for
+// one would mix two bases in one install. Primitives still fall back.
 function getIsItemInBase(item: RegistryItem, baseName: string) {
   return (item.files ?? []).every((file) => {
     const isBaseCode = ["components/", "hooks/"].some((dir) =>
@@ -150,10 +147,7 @@ function getIsItemInBase(item: RegistryItem, baseName: string) {
   });
 }
 
-/**
- * Repoints a file at the built base's tree when an override exists there.
- * `target` is deliberately untouched so consumers get the same paths either way.
- */
+// `target` stays untouched so consumers get the same paths in every base.
 function resolveFile(file: RegistryFile, baseName: string): RegistryFile {
   if (baseName === "radix") return file;
 
@@ -168,11 +162,8 @@ function baseTree(baseName: string) {
   return `src/registry/bases/${baseName}/`;
 }
 
-/**
- * Base UI and React Aria are peers of their base trees, not of registry.json, so
- * each dependency is added per item based on what its resolved files actually
- * import.
- */
+// Base UI and React Aria are peers of their base trees, not of registry.json, so
+// each item gets the dependencies its resolved files import.
 function withImportedDependencies(
   dependencies: string[] | undefined,
   files: RegistryFile[] | undefined,
@@ -203,10 +194,7 @@ function withImportedDependencies(
   return next.length > 0 ? next : dependencies;
 }
 
-/**
- * A file imports a package when it names it exactly or a subpath of it; a bare
- * prefix would make `"react-aria` match `"react-aria-components`.
- */
+// A bare prefix would make `"react-aria` match `"react-aria-components`.
 function importsPackage(content: string, pkg: string) {
   return content.includes(`"${pkg}"`) || content.includes(`"${pkg}/`);
 }

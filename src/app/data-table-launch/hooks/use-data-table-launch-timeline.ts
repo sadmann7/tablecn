@@ -127,11 +127,8 @@ export function useDataTableLaunchTimeline(
     dispatch({ type: "pause", isPaused: clock.isPaused });
   }, []);
 
-  /**
-   * Replays the loop from the start up to the scene, so every earlier step
-   * runs and the table lands in the state that scene expects. The clock holds
-   * at the scene start until the replay finishes.
-   */
+  // Replays every earlier step so the table lands in the state the scene
+  // expects. The clock holds at the scene start until the replay finishes.
   const onSeek = React.useCallback((sceneIndex: number) => {
     const clock = clockRef.current;
     clock.elapsed = SCENES[sceneIndex]?.start ?? 0;

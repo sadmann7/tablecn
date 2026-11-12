@@ -1,7 +1,4 @@
-/**
- * Shared types between PartyKit server and Next.js client.
- * No React/Next.js deps; safe for Cloudflare Workers environment.
- */
+// Shared with the Cloudflare Worker, so this file must not import React or Next.js.
 
 export interface UserPresence {
   name: string;

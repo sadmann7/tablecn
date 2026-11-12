@@ -8,7 +8,7 @@ const CURSOR_HOVER_DELAY = 260;
 
 interface DataTableLaunchFocusOptions {
   scale?: number;
-  /** Shifts the focus point from the target's center, in rem. */
+  // From the target's center, in rem.
   offsetX?: number;
   offsetY?: number;
 }
