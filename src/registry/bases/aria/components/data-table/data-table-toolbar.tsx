@@ -12,8 +12,10 @@ import * as React from "react";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
 import {
+  getColumnNumberOptions,
   getColumnSelectOptions,
   getFilterVariant,
+  getIsNumberRangeColumn,
 } from "@/lib/data-table-utils";
 import { DataTableDateFilter } from "@/registry/bases/aria/components/data-table/data-table-date-filter";
 import { DataTableFacetedFilter } from "@/registry/bases/aria/components/data-table/data-table-faceted-filter";
@@ -28,6 +30,11 @@ import {
   InputGroupText,
 } from "@/registry/bases/aria/ui/input-group";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
+
+const BOOLEAN_OPTIONS = [
+  { label: "True", value: "true" },
+  { label: "False", value: "false" },
+];
 
 interface DataTableToolbarProps<
   TData extends RowData,
@@ -44,13 +51,13 @@ export function DataTableToolbar<TData extends RowData>({
   ...props
 }: DataTableToolbarProps<TData>) {
   const columns = React.useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanFilter()),
+    () => table.getAllLeafColumns().filter((column) => column.getCanFilter()),
     [table],
   );
 
   function onReset() {
     table.resetColumnFilters(true);
-    table.resetJoinOperator(true);
+    table.resetJoinOperator();
     table.resetGlobalFilter(true);
   }
 
@@ -141,39 +148,42 @@ function DataTableToolbarFilter<TData extends RowData>({
         />
       );
 
-    case "number":
+    case "number": {
+      if (getIsNumberRangeColumn(column)) {
+        return <DataTableSliderFilter column={column} title={title} />;
+      }
+
       return (
         <DataTableFilterInput
           column={column}
           type="number"
           inputMode="numeric"
           placeholder={placeholder}
-          unit={columnMeta.variant === "number" ? columnMeta.unit : undefined}
+          unit={getColumnNumberOptions(columnMeta)?.unit}
           className="w-30"
         />
       );
-
-    case "range":
-      return <DataTableSliderFilter column={column} title={title} />;
+    }
 
     case "date":
-    case "date-range":
-      return (
-        <DataTableDateFilter
-          column={column}
-          title={title}
-          multiple={filterVariant === "date-range"}
-        />
-      );
+      return <DataTableDateFilter column={column} title={title} multiple />;
 
     case "select":
-    case "multi-select":
       return (
         <DataTableFacetedFilter
           column={column}
           title={title}
           options={getColumnSelectOptions(columnMeta)}
-          multiple={filterVariant === "multi-select"}
+          multiple={columnMeta.multiple ?? true}
+        />
+      );
+
+    case "boolean":
+      return (
+        <DataTableFacetedFilter
+          column={column}
+          title={title}
+          options={BOOLEAN_OPTIONS}
         />
       );
 

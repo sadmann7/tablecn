@@ -9,6 +9,7 @@ import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ColumnFilterItem } from "@/lib/data-table-types";
 
 import {
+  getColumnNumberOptions,
   getRangeFilterBounds,
   getValidRangeFilterBounds,
 } from "@/lib/data-table-utils";
@@ -38,7 +39,7 @@ export function DataTableRangeFilter<TData extends RowData>({
   ...props
 }: DataTableRangeFilterProps<TData>) {
   const meta = column.columnDef.meta;
-  const bounds = meta?.variant === "number" ? meta : undefined;
+  const bounds = getColumnNumberOptions(meta);
 
   const [startValue, endValue] = getRangeFilterValues(filter.value).map(
     getInputValue,

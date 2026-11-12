@@ -115,7 +115,8 @@
       "rules": {
         "tablecn/top-down-order": "off",
         "tablecn/comment-style": "off",
-        "tablecn/no-low-value-comments": "off"
+        "tablecn/no-low-value-comments": "off",
+        "nextjs/no-img-element": "off"
       }
     }
   ]

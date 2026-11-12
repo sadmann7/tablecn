@@ -44,6 +44,7 @@ import {
   dataTableFilterFn,
 } from "@/lib/data-table-filters";
 import {
+  asFilterItems,
   getFilterVariant,
   getIsPlainFilter,
   getPlainFilterValue,
@@ -56,6 +57,7 @@ interface TableState_DataTableFiltering {
 
 interface TableOptions_DataTableFiltering {
   onJoinOperatorChange?: OnChangeFn<JoinOperator>;
+  pageSizeOptions?: readonly number[];
 }
 
 interface Table_DataTableFiltering {
@@ -119,9 +121,8 @@ const dataTableFilteringFeature: TableFeature = {
       column_getFilterValue: {
         fn: (column: { id: string }) =>
           getPlainFilter(
-            instance,
             column.id,
-            instance.atoms.columnFilters.get(),
+            asFilterItems(instance.atoms.columnFilters.get()),
           ).value,
         memoDeps: () => [instance.atoms.columnFilters.get()],
       },
@@ -133,11 +134,6 @@ const dataTableFilteringFeature: TableFeature = {
   },
   constructTableAPIs: (table) => {
     const instance = asDataTable(table);
-    const resolve = (filter: ColumnFilter) =>
-      normalizeColumnFilter(
-        filter,
-        getFilterVariant(instance.getColumn(filter.id)?.columnDef.meta),
-      );
 
     const setJoinOperator = (updater: Updater<JoinOperator>) =>
       instance.options.onJoinOperatorChange?.((old) =>
@@ -148,13 +144,20 @@ const dataTableFilteringFeature: TableFeature = {
       table_setColumnFilters: {
         fn: (updater: Updater<ColumnFilter[]>) =>
           setStateSlice(table, "columnFilters", (old: ColumnFilter[]) =>
-            functionalUpdate(updater, old).filter(
-              (filter) => !getShouldRemoveFilter(filter, instance),
-            ),
+            functionalUpdate(updater, old)
+              .filter((filter) => !getShouldRemoveFilter(filter, instance))
+              .map((filter) =>
+                normalizeColumnFilter(
+                  filter,
+                  getFilterVariant(
+                    instance.getColumn(filter.id)?.columnDef.meta,
+                  ),
+                ),
+              ),
           ),
       },
       table_getColumnFilterItems: {
-        fn: () => instance.atoms.columnFilters.get().map(resolve),
+        fn: () => asFilterItems(instance.atoms.columnFilters.get()),
         memoDeps: () => [instance.atoms.columnFilters.get()],
       },
       table_addColumnFilter: {
@@ -167,18 +170,15 @@ const dataTableFilteringFeature: TableFeature = {
           updates: Partial<Omit<ColumnFilterItem, "filterId">>,
         ) =>
           instance.setColumnFilters((old) =>
-            old.map((filter) => {
-              const item = resolve(filter);
-              return item.filterId === filterId
-                ? { ...item, ...updates }
-                : filter;
-            }),
+            old.map((filter) =>
+              filter.filterId === filterId ? { ...filter, ...updates } : filter,
+            ),
           ),
       },
       table_removeColumnFilter: {
         fn: (filterId: string) =>
           instance.setColumnFilters((old) =>
-            old.filter((filter) => resolve(filter).filterId !== filterId),
+            old.filter((filter) => filter.filterId !== filterId),
           ),
       },
       table_getJoinOperator: {
@@ -203,23 +203,12 @@ function asDataTable(table: object) {
   return table as DataTableInstance;
 }
 
-function getPlainFilter(
-  instance: DataTableInstance,
-  columnId: string,
-  filters: ColumnFilter[],
-) {
-  const variant = getFilterVariant(
-    instance.getColumn(columnId)?.columnDef.meta,
-  );
+function getPlainFilter(columnId: string, filters: ColumnFilterItem[]) {
   const index = filters.findIndex(
-    (filter) =>
-      filter.id === columnId &&
-      getIsPlainFilter(normalizeColumnFilter(filter, variant)),
+    (filter) => filter.id === columnId && getIsPlainFilter(filter),
   );
   const filter = filters[index];
-  const value = filter
-    ? getPlainFilterValue(normalizeColumnFilter(filter, variant))
-    : undefined;
+  const value = filter ? getPlainFilterValue(filter) : undefined;
 
   return { index, filter, value };
 }
@@ -234,7 +223,7 @@ function setPlainFilter(
       index,
       filter: previous,
       value: previousValue,
-    } = getPlainFilter(instance, columnId, old);
+    } = getPlainFilter(columnId, asFilterItems(old));
     const value = functionalUpdate(updater, previousValue);
     const next: ColumnFilter = previous?.filterId
       ? { id: columnId, value, filterId: previous.filterId }

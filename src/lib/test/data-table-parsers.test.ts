@@ -1,82 +1,41 @@
-import { createLoader } from "nuqs/server";
 import { describe, expect, it } from "vitest";
 
-import { tasksColumnConfigs, tasksDefaultSorting } from "@/app/lib/validations";
 import {
   getColumnFilterParser,
   getColumnFilters,
   getColumnFiltersKey,
-  getColumnOptions,
-  getDataTableQuery,
-  getDataTableSearchParams,
-  getFilterableColumns,
-  getSortableColumns,
   getSortingStateParser,
   parseColumnFilter,
   serializeColumnFilter,
-  sortColumnFiltersBySearch,
 } from "@/lib/data-table-parsers";
-
-const loadSearch = createLoader(
-  getDataTableSearchParams({
-    columnConfigs: tasksColumnConfigs,
-    defaultSorting: tasksDefaultSorting,
-  }),
-);
-
-describe("column config", () => {
-  const columnConfigs = {
-    name: { variant: "text" },
-    age: { variant: "number", filter: "range", isSortable: false },
-    id: { isSortable: false },
-    createdAt: {},
-  } as const;
-
-  it("filters columns with a variant and sorts unless opted out", () => {
-    expect(getFilterableColumns(columnConfigs)).toEqual({
-      name: "text",
-      age: "range",
-    });
-    expect(getSortableColumns(columnConfigs)).toEqual(["name", "createdAt"]);
-  });
-
-  it("maps a column config to TanStack column options", () => {
-    expect(getColumnOptions(columnConfigs.age)).toEqual({
-      enableColumnFilter: true,
-      enableSorting: false,
-    });
-    expect(getColumnOptions(columnConfigs.createdAt)).toEqual({
-      enableColumnFilter: false,
-      enableSorting: true,
-    });
-  });
-});
 
 describe("parseColumnFilter", () => {
   it("uses the variant default when the param has no operator", () => {
-    expect(
-      parseColumnFilter("status", "multi-select", "todo,done"),
-    ).toMatchObject({ operator: "inArray", value: ["todo", "done"] });
+    expect(parseColumnFilter("status", "select", "todo,done")).toMatchObject({
+      operator: "inArray",
+      value: ["todo", "done"],
+    });
     expect(parseColumnFilter("title", "text", "the")).toMatchObject({
       operator: "iLike",
       value: "the",
     });
-    expect(parseColumnFilter("estimatedHours", "range", "2,8")).toMatchObject({
+    expect(parseColumnFilter("estimatedHours", "number", "2,8")).toMatchObject({
       operator: "isBetween",
       value: ["2", "8"],
     });
   });
 
   it("reads short operator names, internal names, and any case", () => {
+    expect(parseColumnFilter("status", "select", "not.in.todo")).toMatchObject({
+      operator: "notInArray",
+      value: ["todo"],
+    });
     expect(
-      parseColumnFilter("status", "multi-select", "not.in.todo"),
+      parseColumnFilter("status", "select", "notInArray.todo"),
     ).toMatchObject({ operator: "notInArray", value: ["todo"] });
     expect(
-      parseColumnFilter("status", "multi-select", "notInArray.todo"),
-    ).toMatchObject({ operator: "notInArray", value: ["todo"] });
-    expect(parseColumnFilter("estimatedHours", "range", "LTE.8")).toMatchObject(
-      { operator: "lte", value: "8" },
-    );
+      parseColumnFilter("estimatedHours", "number", "LTE.8"),
+    ).toMatchObject({ operator: "lte", value: "8" });
     expect(parseColumnFilter("title", "text", "is.empty")).toMatchObject({
       operator: "isEmpty",
       value: "",
@@ -96,61 +55,60 @@ describe("parseColumnFilter", () => {
       operator: "iLike",
       value: "in.progress",
     });
-    expect(
-      parseColumnFilter("priority", "multi-select", "bogus.xyz"),
-    ).toMatchObject({ operator: "inArray", value: ["bogus.xyz"] });
+    expect(parseColumnFilter("priority", "select", "bogus.xyz")).toMatchObject({
+      operator: "inArray",
+      value: ["bogus.xyz"],
+    });
   });
 
   it("keeps open bounds and quotes items that contain commas", () => {
-    expect(parseColumnFilter("estimatedHours", "range", ",3")).toMatchObject({
+    expect(parseColumnFilter("estimatedHours", "number", ",3")).toMatchObject({
       value: ["", "3"],
     });
-    expect(parseColumnFilter("estimatedHours", "range", "2,")).toMatchObject({
+    expect(parseColumnFilter("estimatedHours", "number", "2,")).toMatchObject({
       value: ["2", ""],
     });
-    expect(
-      parseColumnFilter("status", "multi-select", '"to,do",done'),
-    ).toMatchObject({ value: ["to,do", "done"] });
-    expect(
-      parseColumnFilter("status", "multi-select", '" todo "'),
-    ).toMatchObject({
+    expect(parseColumnFilter("status", "select", '"to,do",done')).toMatchObject(
+      { value: ["to,do", "done"] },
+    );
+    expect(parseColumnFilter("status", "select", '" todo "')).toMatchObject({
       value: [" todo "],
     });
   });
 
   it("stores dates as calendar days", () => {
     expect(
-      parseColumnFilter("createdAt", "date-range", "2026-10-01,2026-10-07"),
+      parseColumnFilter("createdAt", "date", "2026-10-01,2026-10-07"),
     ).toMatchObject({
       operator: "isBetween",
       value: ["2026-10-01", "2026-10-07"],
     });
     expect(
-      parseColumnFilter("createdAt", "date-range", "lte.2026-06-30"),
+      parseColumnFilter("createdAt", "date", "lte.2026-06-30"),
     ).toMatchObject({ operator: "lte", value: "2026-06-30" });
   });
 
   it("parses quoted quotes, empty list items, and a single between bound", () => {
     expect(
-      parseColumnFilter("status", "multi-select", '"say ""hi""",done'),
+      parseColumnFilter("status", "select", '"say ""hi""",done'),
     ).toMatchObject({ value: ['say "hi"', "done"] });
+    expect(parseColumnFilter("status", "select", "todo,,done")).toMatchObject({
+      value: ["todo", "done"],
+    });
     expect(
-      parseColumnFilter("status", "multi-select", "todo,,done"),
-    ).toMatchObject({ value: ["todo", "done"] });
-    expect(
-      parseColumnFilter("estimatedHours", "range", "between.5"),
+      parseColumnFilter("estimatedHours", "number", "between.5"),
     ).toMatchObject({ operator: "isBetween", value: ["5", ""] });
   });
 
   it("drops non-numeric range bounds and swaps reversed ones", () => {
-    expect(parseColumnFilter("estimatedHours", "range", "abc")).toMatchObject({
-      operator: "isBetween",
-      value: ["", ""],
+    expect(parseColumnFilter("estimatedHours", "number", "abc")).toMatchObject({
+      operator: "eq",
+      value: "abc",
     });
-    expect(parseColumnFilter("estimatedHours", "range", "2,abc")).toMatchObject(
-      { value: ["2", ""] },
-    );
-    expect(parseColumnFilter("estimatedHours", "range", "8,2")).toMatchObject({
+    expect(
+      parseColumnFilter("estimatedHours", "number", "2,abc"),
+    ).toMatchObject({ value: ["2", ""] });
+    expect(parseColumnFilter("estimatedHours", "number", "8,2")).toMatchObject({
       value: ["2", "8"],
     });
     expect(
@@ -158,14 +116,39 @@ describe("parseColumnFilter", () => {
     ).toMatchObject({ operator: "isBetween", value: ["2", "8"] });
     expect(
       serializeColumnFilter(
-        parseColumnFilter("estimatedHours", "range", "8,2"),
+        parseColumnFilter("estimatedHours", "number", "8,2"),
       ),
     ).toBe("2,8");
   });
 
+  it("reads a comma as between for numbers and dates", () => {
+    expect(parseColumnFilter("estimatedHours", "number", "1,5")).toMatchObject({
+      operator: "isBetween",
+      value: ["1", "5"],
+    });
+    expect(parseColumnFilter("estimatedHours", "number", "5")).toMatchObject({
+      operator: "eq",
+      value: "5",
+    });
+    expect(
+      parseColumnFilter("createdAt", "date", "2026-01-01,2026-12-31"),
+    ).toMatchObject({
+      operator: "isBetween",
+      value: ["2026-01-01", "2026-12-31"],
+    });
+    expect(parseColumnFilter("createdAt", "date", "2026-01-01")).toMatchObject({
+      operator: "eq",
+      value: "2026-01-01",
+    });
+    expect(parseColumnFilter("title", "text", "a,b")).toMatchObject({
+      operator: "iLike",
+      value: "a,b",
+    });
+  });
+
   it("swaps a reversed date range", () => {
     expect(
-      parseColumnFilter("createdAt", "date-range", "2026-10-07,2026-10-01"),
+      parseColumnFilter("createdAt", "date", "2026-10-07,2026-10-01"),
     ).toMatchObject({ value: ["2026-10-01", "2026-10-07"] });
     expect(
       parseColumnFilter("createdAt", "date", "between.2026-10-07,2026-10-01"),
@@ -192,18 +175,16 @@ describe("parseColumnFilter", () => {
 describe("serializeColumnFilter", () => {
   it("leaves out the default operator and writes the others", () => {
     expect(
-      serializeColumnFilter(
-        parseColumnFilter("status", "multi-select", "todo,done"),
-      ),
+      serializeColumnFilter(parseColumnFilter("status", "select", "todo,done")),
     ).toBe("todo,done");
     expect(
       serializeColumnFilter(
-        parseColumnFilter("status", "multi-select", "not.in.todo"),
+        parseColumnFilter("status", "select", "not.in.todo"),
       ),
     ).toBe("not.in.todo");
     expect(
       serializeColumnFilter(
-        parseColumnFilter("estimatedHours", "range", "gte.1.5"),
+        parseColumnFilter("estimatedHours", "number", "gte.1.5"),
       ),
     ).toBe("gte.1.5");
     expect(
@@ -211,7 +192,7 @@ describe("serializeColumnFilter", () => {
     ).toBe("is.empty");
     expect(
       serializeColumnFilter(
-        parseColumnFilter("status", "multi-select", '"to,do",done'),
+        parseColumnFilter("status", "select", '"to,do",done'),
       ),
     ).toBe('"to,do",done');
     expect(
@@ -221,94 +202,61 @@ describe("serializeColumnFilter", () => {
     ).toBe("ilike.eq.hello");
     expect(
       serializeColumnFilter(
-        parseColumnFilter("status", "multi-select", '"say ""hi""",done'),
+        parseColumnFilter("status", "select", '"say ""hi""",done'),
       ),
     ).toBe('"say ""hi""",done');
   });
 
+  it("writes the shorthand back", () => {
+    expect(
+      serializeColumnFilter({
+        id: "estimatedHours",
+        filterId: "estimatedHours-0",
+        variant: "number",
+        operator: "isBetween",
+        value: ["1", "5"],
+      }),
+    ).toBe("1,5");
+    expect(
+      serializeColumnFilter({
+        id: "estimatedHours",
+        filterId: "estimatedHours-0",
+        variant: "number",
+        operator: "eq",
+        value: "5",
+      }),
+    ).toBe("5");
+    expect(
+      serializeColumnFilter({
+        id: "status",
+        filterId: "status-0",
+        variant: "select",
+        operator: "inArray",
+        value: ["todo", "done"],
+      }),
+    ).toBe("todo,done");
+  });
+
   it("serializes a column parser as one param per filter", () => {
-    const parser = getColumnFilterParser("estimatedHours", "range");
+    const parser = getColumnFilterParser("estimatedHours", "number");
 
     expect(
       parser.serialize([
-        parseColumnFilter("estimatedHours", "range", "gte.2"),
-        parseColumnFilter("estimatedHours", "range", "lte.8"),
+        parseColumnFilter("estimatedHours", "number", "gte.2"),
+        parseColumnFilter("estimatedHours", "number", "lte.8"),
       ]),
     ).toEqual(["gte.2", "lte.8"]);
-  });
-});
-
-describe("getDataTableQuery", () => {
-  it("joins per-column params in column order and drops empty filters", () => {
-    const search = loadSearch(
-      "?status=not.in.todo&estimatedHours=gte.2&estimatedHours=LTE.8&title=ilike.the&createdAt=2026-01-01,2026-12-31&priority=bogus.xyz&joinOperator=or&title=",
-    );
-    const query = getDataTableQuery(search, tasksColumnConfigs);
-
-    expect(query.joinOperator).toBe("or");
-    expect(
-      query.filters.map((filter) => [filter.id, filter.operator, filter.value]),
-    ).toEqual([
-      ["title", "iLike", "the"],
-      ["status", "notInArray", ["todo"]],
-      ["priority", "inArray", ["bogus.xyz"]],
-      ["estimatedHours", "gte", "2"],
-      ["estimatedHours", "lte", "8"],
-      ["createdAt", "isBetween", ["2026-01-01", "2026-12-31"]],
-    ]);
-  });
-
-  it("defaults the join operator to and", () => {
-    const query = getDataTableQuery(
-      loadSearch("?status=todo"),
-      tasksColumnConfigs,
-    );
-
-    expect(query.joinOperator).toBe("and");
-    expect(loadSearch("?joinOperator=xor").joinOperator).toBe("and");
-  });
-
-  it("passes the global filter through and defaults it to empty", () => {
-    expect(
-      getDataTableQuery(loadSearch("?search=login%20bug"), tasksColumnConfigs)
-        .globalFilter,
-    ).toBe("login bug");
-    expect(
-      getDataTableQuery(loadSearch("?status=todo"), tasksColumnConfigs)
-        .globalFilter,
-    ).toBe("");
-  });
-});
-
-describe("getDataTableSearchParams", () => {
-  it("defaults page, page size, and sorting", () => {
-    const search = loadSearch("?page=no");
-
-    expect(search.page).toBe(1);
-    expect(search.perPage).toBe(10);
-    expect(search.sort).toEqual(tasksDefaultSorting);
-
-    const custom = createLoader(
-      getDataTableSearchParams({
-        columnConfigs: tasksColumnConfigs,
-        defaultPerPage: 25,
-        defaultSorting: [],
-      }),
-    )("?page=2&perPage=5");
-
-    expect(custom.page).toBe(2);
-    expect(custom.perPage).toBe(5);
-    expect(custom.sort).toEqual([]);
   });
 });
 
 describe("getColumnFilters", () => {
   it("numbers filters per column and builds a stable key", () => {
     const title = parseColumnFilter("title", "text", "the");
-    const status = parseColumnFilter("status", "multi-select", "todo");
-    const filters = getColumnFilters(["title", "status"] as const, (id) =>
-      id === "title" ? [title, title] : [status],
-    );
+    const status = parseColumnFilter("status", "select", "todo");
+    const filters = getColumnFilters(["title", "status"], {
+      title: [title, title],
+      status: [status],
+    });
 
     expect(filters.map((filter) => filter.filterId)).toEqual([
       "title-0",
@@ -320,31 +268,8 @@ describe("getColumnFilters", () => {
   });
 });
 
-describe("sortColumnFiltersBySearch", () => {
-  it("orders filters by the first time their column appears in the URL", () => {
-    const filters = [
-      parseColumnFilter("title", "text", "the"),
-      parseColumnFilter("status", "multi-select", "todo"),
-      parseColumnFilter("createdAt", "date-range", "2026-10-01,2026-10-07"),
-    ];
-
-    expect(
-      sortColumnFiltersBySearch(
-        filters,
-        "?createdAt=2026-10-01,2026-10-07&status=todo&title=the",
-      ).map((filter) => filter.id),
-    ).toEqual(["createdAt", "status", "title"]);
-    expect(
-      sortColumnFiltersBySearch(
-        filters,
-        new URLSearchParams("status=todo"),
-      ).map((filter) => filter.id),
-    ).toEqual(["status", "title", "createdAt"]);
-  });
-});
-
 describe("getSortingStateParser", () => {
-  const parser = getSortingStateParser(getSortableColumns(tasksColumnConfigs));
+  const parser = getSortingStateParser(["title", "createdAt"]);
 
   it("reads the compact form and rejects unknown columns", () => {
     expect(parser.parse("createdAt.desc,title.asc")).toEqual([

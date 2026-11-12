@@ -1,15 +1,48 @@
-import { addDays, endOfDay, startOfDay } from "date-fns";
+import { endOfDay, startOfDay } from "date-fns";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
+import type {
+  ColumnFilterItem,
+  FilterOperator,
+  FilterVariant,
+  JoinOperator,
+} from "@/lib/data-table-types";
 
 import { filterColumns, getColumn } from "@/app/lib/filter-columns";
 import { type Task, tasks } from "@/db/schema";
+import { FILTER_VARIANTS, getFilterOperators } from "@/lib/data-table-utils";
 
 type TaskColumnId = keyof Task;
 
+const COLUMN_BY_VARIANT = {
+  text: "title",
+  number: "estimatedHours",
+  date: "createdAt",
+  boolean: "archived",
+  select: "status",
+} satisfies Record<FilterVariant, TaskColumnId>;
+
 describe("filterColumns", () => {
+  it("compiles every operator the filter menus offer", () => {
+    const missing = FILTER_VARIANTS.flatMap((variant) =>
+      getFilterOperators(variant).flatMap(({ value: operator }) =>
+        compile([
+          columnFilter({
+            id: COLUMN_BY_VARIANT[variant],
+            variant,
+            operator,
+            value: getSampleValue(variant, operator),
+          }),
+        ])
+          ? []
+          : [`${variant} ${operator}`],
+      ),
+    );
+
+    expect(missing).toEqual([]);
+  });
+
   it("returns the column from the table", () => {
     expect(getColumn(tasks, "title")).toBe(tasks.title);
   });
@@ -40,7 +73,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multi-select",
+          variant: "select",
           operator: "inArray",
           value: "todo",
         }),
@@ -59,6 +92,16 @@ describe("filterColumns", () => {
         }),
       ])?.params,
     ).toEqual(["%the%"]);
+    expect(
+      compile([
+        columnFilter({
+          id: "title",
+          variant: "text",
+          operator: "iLike",
+          value: "50%_\\",
+        }),
+      ])?.params,
+    ).toEqual(["%50\\%\\_\\\\%"]);
     expect(
       compile([
         columnFilter({
@@ -113,7 +156,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multi-select",
+          variant: "select",
           operator: "inArray",
           value: ["todo", "done"],
         }),
@@ -123,7 +166,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "status",
-          variant: "multi-select",
+          variant: "select",
           operator: "notInArray",
           value: ["todo"],
         }),
@@ -150,7 +193,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "date-range",
+          variant: "date",
           operator: "ne",
           value: day,
         }),
@@ -200,12 +243,12 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "date-range",
+          variant: "date",
           operator: "lt",
           value: day,
         }),
-      ]),
-    ).toBeUndefined();
+      ])?.params,
+    ).toEqual([start.toISOString()]);
     expect(
       compile([
         columnFilter({
@@ -226,7 +269,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: ["2", "8"],
         }),
@@ -246,7 +289,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: ["2", ""],
         }),
@@ -256,7 +299,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: ["", ""],
         }),
@@ -266,7 +309,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "estimatedHours",
-          variant: "range",
+          variant: "number",
           operator: "isBetween",
           value: "2",
         }),
@@ -276,7 +319,7 @@ describe("filterColumns", () => {
       compile([
         columnFilter({
           id: "createdAt",
-          variant: "date-range",
+          variant: "date",
           operator: "isBetween",
           value: ["2026-10-01", "2026-10-07"],
         }),
@@ -302,101 +345,6 @@ describe("filterColumns", () => {
         }),
       ]),
     ).toBeUndefined();
-  });
-
-  it("counts days, weeks, and months from today", () => {
-    // One frozen instant, so this date and the Date inside filterColumns
-    // stay on the same day.
-    vi.useFakeTimers({ now: new Date(2026, 5, 15, 12), toFake: ["Date"] });
-
-    try {
-      const today = new Date();
-
-      const tomorrow = startOfDay(addDays(today, 1));
-      expect(
-        compile([
-          columnFilter({
-            id: "createdAt",
-            variant: "date",
-            operator: "isRelativeToToday",
-            value: "1 days",
-          }),
-        ])?.params,
-      ).toEqual([tomorrow.toISOString(), endOfDay(tomorrow).toISOString()]);
-
-      const nextWeek = startOfDay(addDays(today, 7));
-      expect(
-        compile([
-          columnFilter({
-            id: "createdAt",
-            variant: "date-range",
-            operator: "isRelativeToToday",
-            value: "1 weeks",
-          }),
-        ])?.params,
-      ).toEqual([
-        nextWeek.toISOString(),
-        endOfDay(addDays(nextWeek, 6)).toISOString(),
-      ]);
-
-      const nextMonth = startOfDay(addDays(today, 30));
-      expect(
-        compile([
-          columnFilter({
-            id: "createdAt",
-            variant: "date",
-            operator: "isRelativeToToday",
-            value: "1 months",
-          }),
-        ])?.params,
-      ).toEqual([
-        nextMonth.toISOString(),
-        endOfDay(addDays(nextMonth, 29)).toISOString(),
-      ]);
-
-      expect(
-        compile([
-          columnFilter({
-            id: "createdAt",
-            variant: "date",
-            operator: "isRelativeToToday",
-            value: "1",
-          }),
-        ]),
-      ).toBeUndefined();
-      expect(
-        compile([
-          columnFilter({
-            id: "createdAt",
-            variant: "date",
-            operator: "isRelativeToToday",
-            value: "1 years",
-          }),
-        ]),
-      ).toBeUndefined();
-      expect(
-        compile([
-          columnFilter({
-            id: "createdAt",
-            variant: "number",
-            operator: "isRelativeToToday",
-            value: "1 days",
-          }),
-        ]),
-      ).toBeUndefined();
-      expect(
-        compile([
-          columnFilter({
-            id: "estimatedHours",
-            variant: "number",
-            operator: "isRelativeToToday",
-            value: ["1 days"],
-          }),
-        ]),
-      ).toBeUndefined();
-    } finally {
-      vi.useRealTimers();
-    }
   });
 
   it("matches empty and non-empty values", () => {
@@ -444,7 +392,7 @@ describe("filterColumns", () => {
       }),
       columnFilter({
         id: "status",
-        variant: "multi-select",
+        variant: "select",
         operator: "inArray",
         value: ["todo"],
         filterId: "status-0",
@@ -486,4 +434,21 @@ function columnFilter(
   },
 ): ColumnFilterItem<TaskColumnId> {
   return { filterId: `${filter.id}-0`, ...filter };
+}
+
+function getSampleValue(
+  variant: FilterVariant,
+  operator: FilterOperator,
+): string | string[] {
+  if (operator === "isEmpty" || operator === "isNotEmpty") return "";
+  if (operator === "inArray" || operator === "notInArray") return ["todo"];
+  const isDate = variant === "date";
+  if (operator === "isBetween") {
+    return isDate ? ["2026-10-01", "2026-10-07"] : ["1", "5"];
+  }
+  if (isDate) return "2026-10-03";
+  if (variant === "boolean") return "true";
+  if (variant === "select") return "todo";
+  if (variant === "text") return "the";
+  return "2";
 }

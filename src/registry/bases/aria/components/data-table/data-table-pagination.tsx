@@ -7,7 +7,10 @@ import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
-import { getVisibleSelectedRows } from "@/lib/data-table-utils";
+import {
+  DEFAULT_PAGE_SIZE_OPTIONS,
+  getVisibleSelectedRows,
+} from "@/lib/data-table-utils";
 import { Button } from "@/registry/bases/aria/ui/button";
 import { useDirection } from "@/registry/bases/aria/ui/direction";
 import {
@@ -24,12 +27,10 @@ interface DataTablePaginationProps<
   TData extends RowData,
 > extends React.ComponentProps<"div"> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
-  pageSizeOptions?: number[];
 }
 
 export function DataTablePagination<TData extends RowData>({
   table,
-  pageSizeOptions = [10, 20, 30, 40, 50],
   className,
   ...props
 }: DataTablePaginationProps<TData>) {
@@ -49,7 +50,9 @@ export function DataTablePagination<TData extends RowData>({
           pageSize={pageSize}
           selectedRowCount={selectedRowCount}
           visibleSelectedRowCount={visibleSelectedRowCount}
-          pageSizeOptions={pageSizeOptions}
+          pageSizeOptions={
+            table.options.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS
+          }
           className={className}
           {...props}
         />
@@ -66,7 +69,7 @@ interface DataTablePaginationContentProps<
   pageSize: number;
   selectedRowCount: number;
   visibleSelectedRowCount: number;
-  pageSizeOptions: number[];
+  pageSizeOptions: readonly number[];
 }
 
 function DataTablePaginationContent<TData extends RowData>({

@@ -4,6 +4,9 @@ import { cn } from "cn";
 import { useSearchParams } from "next/navigation";
 import * as React from "react";
 
+import type { DataTableColumnConfigs } from "@/lib/data-table-types";
+
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 
@@ -86,18 +89,14 @@ export function DataTableLaunchDemo() {
       column.id && searchParams.has(column.id) ? [column.id] : [],
     )
     .join(",");
-  const columns = React.useMemo(
-    () => getFilterableColumns(demo.columnCount, urlFilterIds),
+  const config = React.useMemo(
+    () => getLaunchConfig(demo.columnCount, urlFilterIds),
     [demo.columnCount, urlFilterIds],
   );
   const tableProps = {
-    columns,
-    initialState: {
-      sorting: INITIAL_SORTING,
-      pagination: INITIAL_PAGINATION,
-    },
+    config,
+    columns: launchColumns,
     getRowId: (row: DataTableLaunchTask) => row.id,
-    clearOnDefault: true,
   };
   const { table } = useDataTable(
     isServerMode
@@ -288,20 +287,17 @@ function DataTableLaunchColumnsStory({
     <DataTableLaunchStory
       eyebrow="Columns"
       title="Define columns. Get filters."
-      description="Set a variant in the column meta and the toolbar renders the matching filter."
+      description="Set a variant in the table config and the toolbar renders the matching filter."
       code={[
-        "{",
-        `  accessorKey: "${snippet.accessorKey}",`,
-        "  meta: {",
-        `    label: "${snippet.label}",`,
-        `    variant: "${snippet.variant}",`,
-        ...("filter" in snippet ? [`    filter: "${snippet.filter}",`] : []),
-        `    ${snippet.extra}`,
+        "createDataTableConfig({",
+        "  columns: {",
+        `    ${snippet.accessorKey}: {`,
+        `      variant: "${snippet.variant}",`,
+        "    },",
         "  },",
-        "  enableColumnFilter: true,",
-        "},",
+        "});",
       ]}
-      highlightedLines={columnCount > 0 ? [4, 5] : []}
+      highlightedLines={columnCount > 0 ? [2, 3] : []}
     >
       <DataTableLaunchVariants
         variants={[...new Set(COLUMN_SNIPPETS.map((item) => item.variant))]}
@@ -317,16 +313,24 @@ function DataTableLaunchColumnsStory({
 
 // A column with a filter still in the URL stays filterable, so the table can
 // clear that param on reset before the column hides its filter again.
-function getFilterableColumns(columnCount: number, urlFilterIds: string) {
+function getLaunchConfig(columnCount: number, urlFilterIds: string) {
   const filterableIds = new Set([
     ...COLUMN_SNIPPETS.slice(0, columnCount).flatMap(
       (snippet) => snippet.columnIds,
     ),
     ...urlFilterIds.split(",").filter(Boolean),
   ]);
+  const columns: DataTableColumnConfigs = {};
 
-  return launchColumns.map((column) => ({
-    ...column,
-    enableColumnFilter: column.id ? filterableIds.has(column.id) : false,
-  }));
+  for (const snippet of COLUMN_SNIPPETS) {
+    columns[snippet.accessorKey] = filterableIds.has(snippet.accessorKey)
+      ? { variant: snippet.variant }
+      : {};
+  }
+
+  return createDataTableConfig({
+    columns,
+    defaultSorting: INITIAL_SORTING,
+    defaultPageSize: INITIAL_PAGINATION.pageSize,
+  });
 }

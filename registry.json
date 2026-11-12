@@ -86,10 +86,6 @@
           "target": "src/hooks/use-data-table.ts"
         },
         {
-          "path": "src/hooks/use-debounced-callback.ts",
-          "type": "registry:hook"
-        },
-        {
           "path": "src/lib/data-table-utils.ts",
           "type": "registry:lib"
         },
@@ -99,6 +95,10 @@
         },
         {
           "path": "src/lib/data-table-parsers.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-table-config.ts",
           "type": "registry:lib"
         },
         {

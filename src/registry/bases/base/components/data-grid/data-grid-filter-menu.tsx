@@ -504,6 +504,7 @@ function DataGridFilterItem<TData extends RowData>({
         open={showOperatorSelector}
         onOpenChange={setShowOperatorSelector}
         value={operator}
+        items={operators}
         onValueChange={(value) => {
           if (value == null) return;
           onOperatorChange(value);

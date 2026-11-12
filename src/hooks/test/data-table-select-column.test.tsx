@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { getDataTableSelectColumn as getAriaSelectColumn } from "@/registry/bases/aria/components/data-table/data-table-select-column";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
@@ -26,7 +27,7 @@ interface Task {
 
 describe("DataTableSelectHeader (base)", () => {
   it("is checked and not indeterminate when every row is selected", () => {
-    const { table, selectAll } = renderTable(bases.base);
+    const { table, selectAll } = renderDataTable(bases.base);
 
     act(() => table.toggleAllPageRowsSelected(true));
 
@@ -36,7 +37,7 @@ describe("DataTableSelectHeader (base)", () => {
   });
 
   it("is indeterminate when some rows are selected", () => {
-    const { table, selectAll } = renderTable(bases.base);
+    const { table, selectAll } = renderDataTable(bases.base);
 
     act(() => table.getRow("0").toggleSelected(true));
 
@@ -48,7 +49,7 @@ describe("DataTableSelectHeader (base)", () => {
 // React Aria renders a native input, so state lives in its properties and on the wrapping label.
 describe("DataTableSelectHeader (aria)", () => {
   it("is checked and not indeterminate when every row is selected", () => {
-    const { table, selectAll } = renderTable(bases.aria);
+    const { table, selectAll } = renderDataTable(bases.aria);
 
     act(() => table.toggleAllPageRowsSelected(true));
 
@@ -61,7 +62,7 @@ describe("DataTableSelectHeader (aria)", () => {
   });
 
   it("is indeterminate when some rows are selected", () => {
-    const { table, selectAll } = renderTable(bases.aria);
+    const { table, selectAll } = renderDataTable(bases.aria);
 
     act(() => table.getRow("0").toggleSelected(true));
 
@@ -91,9 +92,11 @@ const data: Task[] = Array.from({ length: 5 }, (_, index) => ({
   title: `Task ${index}`,
 }));
 
+const config = createDataTableConfig({ columns: { title: {} } });
+
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
-function renderTable({
+function renderDataTable({
   DataTable,
   useDataTable,
   getDataTableSelectColumn,
@@ -108,6 +111,7 @@ function renderTable({
 
   function Harness() {
     const { table } = useDataTable<Task>({
+      config,
       mode: "client",
       data,
       columns,

@@ -21,6 +21,7 @@ import {
   getFilterDateValue,
   getFilterOperators,
   getIsEditableTarget,
+  getIsTableShortcutTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
   JOIN_OPERATORS,
@@ -121,10 +122,18 @@ function DataTableFilterMenuContent<TData extends RowData>({
   const labelId = React.useId();
   const descriptionId = React.useId();
   const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const addButtonRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (disabled) return;
+      if (
+        !open &&
+        !getIsTableShortcutTarget(triggerRef.current, event.target)
+      ) {
+        return;
+      }
       if (getIsEditableTarget(event.target)) return;
       if (
         event.key.toLowerCase() !== FILTER_SHORTCUT_KEY ||
@@ -140,10 +149,10 @@ function DataTableFilterMenuContent<TData extends RowData>({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [disabled, open]);
 
   const columns = React.useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanFilter()),
+    () => table.getAllLeafColumns().filter((column) => column.getCanFilter()),
     [table],
   );
 
@@ -170,7 +179,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
 
   function onFiltersReset() {
     table.resetColumnFilters(true);
-    table.resetJoinOperator(true);
+    table.resetJoinOperator();
   }
 
   function onTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
@@ -191,6 +200,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
+            ref={triggerRef}
             onKeyDown={onTriggerKeyDown}
             disabled={disabled}
           >
@@ -611,7 +621,6 @@ function FilterValueInput<TData extends RowData>(
   switch (filter.variant) {
     case "text":
     case "number":
-    case "range":
       if (filter.operator === "isBetween") {
         return (
           <DataTableRangeFilter
@@ -643,11 +652,9 @@ function FilterValueInput<TData extends RowData>(
       return <BooleanFilterValue {...props} />;
 
     case "select":
-    case "multi-select":
       return <SelectFilterValue {...props} />;
 
     case "date":
-    case "date-range":
       return <DateFilterValue {...props} />;
 
     default:
@@ -701,7 +708,8 @@ function SelectFilterValue<TData extends RowData>({
   const dir = useDirection();
   const listboxId = `${inputId}-listbox`;
   const columnMeta = column.columnDef.meta;
-  const multiple = filter.variant === "multi-select";
+  const multiple =
+    filter.operator === "inArray" || filter.operator === "notInArray";
 
   return (
     <Faceted

@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
 import { DataTable as BaseDataTable } from "@/registry/bases/base/components/data-table/data-table";
@@ -32,6 +33,8 @@ const data: Task[] = Array.from({ length: 3 }, (_, index) => ({
   id: String(index),
   title: `Task ${index}`,
 }));
+
+const config = createDataTableConfig({ columns: { title: {} } });
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
@@ -62,6 +65,7 @@ describe.each(bases)("DataTable Escape (%s)", (_, DataTable, useDataTable) => {
 
     function Harness() {
       const { table } = useDataTable<Task>({
+        config,
         mode: "client",
         data,
         columns,

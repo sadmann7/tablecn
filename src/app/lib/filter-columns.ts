@@ -1,4 +1,4 @@
-import { addDays, endOfDay, startOfDay } from "date-fns";
+import { endOfDay, startOfDay } from "date-fns";
 import {
   and,
   type AnyColumn,
@@ -40,19 +40,19 @@ export function filterColumns<T extends Table>({
     switch (filter.operator) {
       case "iLike":
         return filter.variant === "text" && typeof filter.value === "string"
-          ? ilike(column, `%${filter.value}%`)
+          ? ilike(column, `%${escapeLike(filter.value)}%`)
           : undefined;
 
       case "notILike":
         return filter.variant === "text" && typeof filter.value === "string"
-          ? notIlike(column, `%${filter.value}%`)
+          ? notIlike(column, `%${escapeLike(filter.value)}%`)
           : undefined;
 
       case "eq":
         if (column.dataType === "boolean" && typeof filter.value === "string") {
           return eq(column, filter.value === "true");
         }
-        if (filter.variant === "date" || filter.variant === "date-range") {
+        if (filter.variant === "date") {
           const start = getStartOfDay(filter.value);
           const end = getEndOfDay(filter.value);
           return start && end
@@ -65,7 +65,7 @@ export function filterColumns<T extends Table>({
         if (column.dataType === "boolean" && typeof filter.value === "string") {
           return ne(column, filter.value === "true");
         }
-        if (filter.variant === "date" || filter.variant === "date-range") {
+        if (filter.variant === "date") {
           const start = getStartOfDay(filter.value);
           const end = getEndOfDay(filter.value);
           return start && end
@@ -91,7 +91,7 @@ export function filterColumns<T extends Table>({
       case "gt":
       case "gte": {
         const compare = { lt, lte, gt, gte }[filter.operator];
-        if (filter.variant === "number" || filter.variant === "range") {
+        if (filter.variant === "number") {
           return compare(column, filter.value);
         }
         if (filter.variant !== "date" || typeof filter.value !== "string") {
@@ -107,7 +107,7 @@ export function filterColumns<T extends Table>({
 
       case "isBetween":
         if (
-          (filter.variant === "date" || filter.variant === "date-range") &&
+          filter.variant === "date" &&
           Array.isArray(filter.value) &&
           filter.value.length === 2
         ) {
@@ -120,7 +120,7 @@ export function filterColumns<T extends Table>({
         }
 
         if (
-          (filter.variant === "number" || filter.variant === "range") &&
+          filter.variant === "number" &&
           Array.isArray(filter.value) &&
           filter.value.length === 2
         ) {
@@ -141,45 +141,6 @@ export function filterColumns<T extends Table>({
             firstValue !== null ? gte(column, firstValue) : undefined,
             secondValue !== null ? lte(column, secondValue) : undefined,
           );
-        }
-        return undefined;
-
-      case "isRelativeToToday":
-        if (
-          (filter.variant === "date" || filter.variant === "date-range") &&
-          typeof filter.value === "string"
-        ) {
-          const today = new Date();
-          const [amount, unit] = filter.value.split(" ");
-          let startDate: Date;
-          let endDate: Date;
-
-          if (!amount || !unit) return undefined;
-
-          switch (unit) {
-            case "days":
-              startDate = startOfDay(
-                addDays(today, Number.parseInt(amount, 10)),
-              );
-              endDate = endOfDay(startDate);
-              break;
-            case "weeks":
-              startDate = startOfDay(
-                addDays(today, Number.parseInt(amount, 10) * 7),
-              );
-              endDate = endOfDay(addDays(startDate, 6));
-              break;
-            case "months":
-              startDate = startOfDay(
-                addDays(today, Number.parseInt(amount, 10) * 30),
-              );
-              endDate = endOfDay(addDays(startDate, 29));
-              break;
-            default:
-              return undefined;
-          }
-
-          return and(gte(column, startDate), lte(column, endDate));
         }
         return undefined;
 
@@ -216,4 +177,8 @@ function getStartOfDay(value: unknown) {
 function getEndOfDay(value: unknown) {
   const date = parseFilterDate(value);
   return date ? endOfDay(date) : undefined;
+}
+
+function escapeLike(value: string) {
+  return value.replace(/[\\%_]/g, "\\$&");
 }

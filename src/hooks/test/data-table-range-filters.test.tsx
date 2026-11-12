@@ -6,15 +6,23 @@ import { describe, expect, it, vi } from "vitest";
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { ColumnFilterItem } from "@/lib/data-table-types";
 
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DataTable as AriaDataTable } from "@/registry/bases/aria/components/data-table/data-table";
 import { DataTableToolbar as AriaDataTableToolbar } from "@/registry/bases/aria/components/data-table/data-table-toolbar";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
+import { DataTable as BaseDataTable } from "@/registry/bases/base/components/data-table/data-table";
+import { DataTableToolbar as BaseDataTableToolbar } from "@/registry/bases/base/components/data-table/data-table-toolbar";
+import { useDataTable as useBaseDataTable } from "@/registry/bases/base/hooks/use-data-table";
 import { DataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { DataTableRangeFilter } from "@/registry/bases/radix/components/data-table/data-table-range-filter";
+import { DataTableSliderFilter } from "@/registry/bases/radix/components/data-table/data-table-slider-filter";
 import { DataTableToolbar } from "@/registry/bases/radix/components/data-table/data-table-toolbar";
 import { useDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 
 vi.mock("@/registry/bases/radix/ui/direction", () => ({
+  useDirection: () => "ltr",
+}));
+vi.mock("@/registry/bases/base/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
 vi.mock("@/registry/bases/aria/ui/direction", () => ({
@@ -32,6 +40,10 @@ const data: Task[] = [
   { id: "3", hours: 20 },
 ];
 
+const config = createDataTableConfig({
+  columns: { hours: { variant: "number" } },
+});
+
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
 
 const columns = columnHelper.columns([
@@ -40,7 +52,6 @@ const columns = columnHelper.columns([
     meta: {
       label: "Hours",
       variant: "number",
-      filter: "range",
       min: 1,
       max: 24,
       unit: "hr",
@@ -52,7 +63,7 @@ const columns = columnHelper.columns([
 const columnsWithoutRange = columnHelper.columns([
   columnHelper.accessor("hours", {
     id: "hours",
-    meta: { label: "Hours", variant: "number", filter: "range" },
+    meta: { label: "Hours", variant: "number" },
     enableColumnFilter: true,
   }),
 ]);
@@ -130,7 +141,9 @@ describe("DataTableSliderFilter", () => {
   });
 
   it("reads the faceted range again when the popover opens", () => {
-    const { openFilter, rerenderData } = renderToolbar(columnsWithoutRange);
+    const { openFilter, rerenderData } = renderToolbar(columnsWithoutRange, {
+      slider: true,
+    });
     const [from, to] = openFilter();
     expect((from as HTMLInputElement).value).toBe("2");
     expect((to as HTMLInputElement).value).toBe("20");
@@ -147,6 +160,7 @@ describe("DataTableSliderFilter (aria)", () => {
   it("lets the slider reach the column max when the step does not divide the range", () => {
     function Harness() {
       const { table } = useAriaDataTable<Task>({
+        config,
         mode: "client",
         data,
         columns,
@@ -174,11 +188,107 @@ describe("DataTableSliderFilter (aria)", () => {
   });
 });
 
+describe.each([
+  {
+    base: "radix",
+    Table: DataTable,
+    Toolbar: DataTableToolbar,
+    useTable: useDataTable,
+  },
+  {
+    base: "base",
+    Table: BaseDataTable,
+    Toolbar: BaseDataTableToolbar,
+    useTable: useBaseDataTable,
+  },
+  {
+    base: "aria",
+    Table: AriaDataTable,
+    Toolbar: AriaDataTableToolbar,
+    useTable: useAriaDataTable,
+  },
+])("number column toolbar ($base)", ({ Table, Toolbar, useTable }) => {
+  function Harness({
+    toolbarColumns,
+    mode,
+    rows,
+  }: {
+    toolbarColumns: typeof columns;
+    mode: "client" | "server";
+    rows: Task[];
+  }) {
+    const { table } = useTable<Task>({
+      config,
+      data: rows,
+      columns: toolbarColumns,
+      getRowId: (row) => row.id,
+      ...(mode === "server" ? { pageCount: 1 } : { mode: "client" }),
+    });
+    return (
+      <Table aria-label="Tasks" table={table}>
+        <Toolbar table={table} />
+      </Table>
+    );
+  }
+
+  function renderHarness(
+    toolbarColumns: typeof columns,
+    mode: "client" | "server" = "client",
+    rows: Task[] = data,
+  ) {
+    render(
+      <NuqsTestingAdapter hasMemory>
+        <Harness toolbarColumns={toolbarColumns} mode={mode} rows={rows} />
+      </NuqsTestingAdapter>,
+    );
+  }
+
+  it("uses the faceted range for the slider in client mode", () => {
+    renderHarness(columnsWithoutRange);
+
+    expect(screen.getByRole("button", { name: /^Hours/ })).toBeTruthy();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+  });
+
+  it("keeps the slider in client mode when no rows are left", () => {
+    renderHarness(columnsWithoutRange, "client", []);
+
+    expect(screen.getByRole("button", { name: /^Hours/ })).toBeTruthy();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+  });
+
+  it("widens the slider range when every row has the same value", () => {
+    renderHarness(columnsWithoutRange, "client", [
+      { id: "1", hours: 5 },
+      { id: "2", hours: 5 },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: /^Hours/ }));
+
+    const [from, to] = document.querySelectorAll("input[type=number]");
+    expect(from?.getAttribute("min")).toBe("5");
+    expect(to?.getAttribute("max")).toBe("6");
+  });
+
+  it("renders a number input in server mode without meta.min and meta.max", () => {
+    renderHarness(columnsWithoutRange, "server");
+
+    expect(screen.getByRole("spinbutton")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Hours/ })).toBeNull();
+  });
+
+  it("renders the slider when meta.min and meta.max are set", () => {
+    renderHarness(columns, "server");
+
+    expect(screen.getByRole("button", { name: /^Hours/ })).toBeTruthy();
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+  });
+});
+
 describe("DataTableSliderFilter in server mode", () => {
   it("warns when the column has no meta.min or meta.max", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      renderToolbar(columnsWithoutRange, { mode: "server" });
+      renderToolbar(columnsWithoutRange, { mode: "server", slider: true });
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining(
           'column "hours" is missing `meta.min` or `meta.max`',
@@ -268,7 +378,10 @@ describe("DataTableRangeFilter", () => {
 
 function renderToolbar(
   toolbarColumns = columns,
-  { mode = "client" }: { mode?: "client" | "server" } = {},
+  {
+    mode = "client",
+    slider = false,
+  }: { mode?: "client" | "server"; slider?: boolean } = {},
 ) {
   const tableRef: {
     current?: ReturnType<typeof useDataTable<Task>>["table"];
@@ -278,6 +391,7 @@ function renderToolbar(
     const { table } = useDataTable<Task>(
       mode === "server"
         ? {
+            config,
             data: rows,
             columns: toolbarColumns,
             pageCount: 1,
@@ -285,6 +399,7 @@ function renderToolbar(
           }
         : {
             mode: "client",
+            config,
             data: rows,
             columns: toolbarColumns,
             getRowId: (row) => row.id,
@@ -294,7 +409,11 @@ function renderToolbar(
 
     return (
       <DataTable aria-label="Tasks" table={table}>
-        <DataTableToolbar table={table} />
+        {slider ? (
+          <SliderOnly table={table} />
+        ) : (
+          <DataTableToolbar table={table} />
+        )}
       </DataTable>
     );
   }
@@ -332,7 +451,7 @@ function renderRangeFilter(value: [string, string]) {
   const onFilterUpdate = vi.fn();
   const filter: ColumnFilterItem = {
     id: "hours",
-    variant: "range",
+    variant: "number",
     operator: "isBetween",
     value,
     filterId: "hours-filter",
@@ -340,6 +459,7 @@ function renderRangeFilter(value: [string, string]) {
 
   function Harness() {
     const { table } = useDataTable<Task>({
+      config,
       mode: "client",
       data,
       columns,
@@ -367,4 +487,15 @@ function renderRangeFilter(value: [string, string]) {
   if (!min || !max) throw new Error("Range inputs did not render");
 
   return { onFilterUpdate, inputs: [min, max] as const };
+}
+
+function SliderOnly({
+  table,
+}: {
+  table: ReturnType<typeof useDataTable<Task>>["table"];
+}) {
+  const column = table.getColumn("hours");
+  return column ? (
+    <DataTableSliderFilter column={column} title="Hours" />
+  ) : null;
 }

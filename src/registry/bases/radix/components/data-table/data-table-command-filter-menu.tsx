@@ -26,6 +26,7 @@ import {
   getFilterOperators,
   getFilterVariant,
   getIsEditableTarget,
+  getIsTableShortcutTarget,
   getIsValuelessOperator,
   getSelectFilterValue,
 } from "@/lib/data-table-utils";
@@ -132,6 +133,13 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
   React.useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      if (disabled) return;
+      if (
+        !open &&
+        !getIsTableShortcutTarget(triggerRef.current, event.target)
+      ) {
+        return;
+      }
       if (getIsEditableTarget(event.target)) return;
       if (
         event.key.toLowerCase() !== FILTER_SHORTCUT_KEY ||
@@ -147,10 +155,10 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [disabled, open]);
 
   const columns = React.useMemo(
-    () => table.getAllColumns().filter((column) => column.getCanFilter()),
+    () => table.getAllLeafColumns().filter((column) => column.getCanFilter()),
     [table],
   );
 
@@ -178,7 +186,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
     table.addColumnFilter({
       ...defaults,
-      value: defaults.variant === "multi-select" ? [value] : value,
+      value: defaults.operator === "inArray" ? [value] : value,
       filterId: generateId({ length: 8 }),
     });
     setOpen(false);
@@ -195,7 +203,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
 
   function onFiltersReset() {
     table.resetColumnFilters(true);
-    table.resetJoinOperator(true);
+    table.resetJoinOperator();
   }
 
   function onTriggerKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
@@ -545,7 +553,6 @@ function FilterValueInput<TData extends RowData>(
   switch (filter.variant) {
     case "text":
     case "number":
-    case "range":
       if (filter.operator === "isBetween") {
         return (
           <DataTableRangeFilter
@@ -577,11 +584,9 @@ function FilterValueInput<TData extends RowData>(
       return <BooleanFilterValue {...props} />;
 
     case "select":
-    case "multi-select":
       return <SelectFilterValue {...props} />;
 
     case "date":
-    case "date-range":
       return <DateFilterValue {...props} />;
 
     default:
@@ -603,7 +608,11 @@ function BooleanFilterValue<TData extends RowData>({
     <Select
       open={open}
       onOpenChange={onOpenChange}
-      value={typeof filter.value === "string" ? filter.value : "true"}
+      value={
+        typeof filter.value === "string" && filter.value !== ""
+          ? filter.value
+          : undefined
+      }
       onValueChange={(value) => onFilterUpdate(filter.filterId, { value })}
     >
       <SelectTrigger
@@ -612,7 +621,7 @@ function BooleanFilterValue<TData extends RowData>({
         aria-label={`${column.columnDef.meta?.label ?? column.id} boolean filter`}
         className="rounded-none bg-transparent px-1.5 py-0.5 [&_svg]:hidden"
       >
-        <SelectValue />
+        <SelectValue placeholder="Select value" />
       </SelectTrigger>
       <SelectContent id={listboxId}>
         <SelectGroup>
@@ -637,7 +646,8 @@ function SelectFilterValue<TData extends RowData>({
   const columnMeta = column.columnDef.meta;
   const options = getColumnSelectOptions(columnMeta);
   const value = getSelectFilterValue(filter);
-  const multiple = filter.variant === "multi-select";
+  const multiple =
+    filter.operator === "inArray" || filter.operator === "notInArray";
 
   return (
     <Faceted
@@ -661,14 +671,17 @@ function SelectFilterValue<TData extends RowData>({
           <SelectedOptions
             options={options}
             value={value}
-            placeholder={`Select option${multiple ? "s" : ""}...`}
+            placeholder={
+              columnMeta?.placeholder ??
+              `Select option${multiple ? "s" : ""}...`
+            }
           />
         </Button>
       </FacetedTrigger>
       <FacetedContent dir={dir} id={listboxId} className="w-48">
         <FacetedInput
           aria-label={`Search ${columnMeta?.label ?? column.id} options`}
-          placeholder="Search options..."
+          placeholder={columnMeta?.placeholder ?? "Search options..."}
         />
         <FacetedList>
           <FacetedEmpty>No options found.</FacetedEmpty>
@@ -839,7 +852,6 @@ function FilterValueOptions<TData extends RowData>({
       );
 
     case "select":
-    case "multi-select":
       return (
         <>
           <CommandEmpty>No options found.</CommandEmpty>
@@ -866,7 +878,6 @@ function FilterValueOptions<TData extends RowData>({
       );
 
     case "date":
-    case "date-range":
       return (
         <Calendar
           autoFocus

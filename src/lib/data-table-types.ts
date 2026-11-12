@@ -1,6 +1,7 @@
 import type {
   ColumnFilter,
   ColumnSort,
+  DeepKeys,
   Row,
   RowData,
 } from "@tanstack/react-table";
@@ -19,46 +20,56 @@ export interface ColumnSelectOption {
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
 }
 
-export type PlainColumnVariant =
-  | "text"
-  | "long-text"
-  | "url"
-  | "boolean"
-  | "file";
-
-export interface ColumnVariantOptions {
-  number: {
-    filter?: "range";
-    min?: number;
-    max?: number;
-    unit?: string;
-  };
-  date: {
-    filter?: "range";
-  };
-  select: {
-    options?: ColumnSelectOption[];
-  };
-  "multi-select": {
-    options?: ColumnSelectOption[];
-  };
+export interface ColumnNumberOptions {
+  min?: number;
+  max?: number;
+  unit?: string;
 }
 
-export type ColumnVariant = PlainColumnVariant | keyof ColumnVariantOptions;
-
-export type ColumnVariantMeta =
-  | { variant?: PlainColumnVariant }
-  | {
-      [TVariant in keyof ColumnVariantOptions]: {
-        variant: TVariant;
-      } & ColumnVariantOptions[TVariant];
-    }[keyof ColumnVariantOptions];
-
-export type DataTableColumnMeta = {
+export interface DataTableColumnMeta extends ColumnNumberOptions {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
   placeholder?: string;
-} & ColumnVariantMeta;
+  variant?: FilterVariant;
+  options?: ColumnSelectOption[];
+  multiple?: boolean;
+}
+
+export interface DataTableColumnConfig {
+  enableSorting?: boolean;
+  variant?: FilterVariant;
+}
+
+export type DataTableColumnPathId<TPath extends string> =
+  TPath extends `${infer THead}.${infer TTail}`
+    ? `${THead}_${DataTableColumnPathId<TTail>}`
+    : TPath;
+
+export type DataTableColumnId<TData> = DataTableColumnPathId<
+  DeepKeys<TData> & string
+>;
+
+export type DataTableColumnConfigs<
+  TData = never,
+  TComputedId extends string = never,
+> = [TData] extends [never]
+  ? Record<string, DataTableColumnConfig>
+  : { [K in DataTableColumnId<TData> | TComputedId]?: DataTableColumnConfig };
+
+type KeysWhere<TRecord, TValue> = {
+  [K in keyof TRecord]: TRecord[K] extends TValue ? K : never;
+}[keyof TRecord] &
+  string;
+
+export type FilterableColumnId<TColumns extends DataTableColumnConfigs> =
+  string extends keyof TColumns
+    ? string
+    : KeysWhere<TColumns, { variant: FilterVariant }>;
+
+export type SortableColumnId<TColumns extends DataTableColumnConfigs> = Exclude<
+  keyof TColumns & string,
+  KeysWhere<TColumns, { enableSorting: false }>
+>;
 
 export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;
@@ -91,40 +102,9 @@ declare module "@tanstack/react-table" {
   > {}
 }
 
-export type DataTableColumnConfig = {
-  isSortable?: boolean;
-} & ColumnVariantMeta;
-
-export type DataTableColumnConfigs = Record<string, DataTableColumnConfig>;
-
-export type FilterableColumnId<TColumnConfigs extends DataTableColumnConfigs> =
-  {
-    [K in keyof TColumnConfigs]: TColumnConfigs[K] extends {
-      variant: ColumnVariant;
-    }
-      ? K
-      : never;
-  }[keyof TColumnConfigs] &
-    string;
-
-export type SortableColumnId<TColumnConfigs extends DataTableColumnConfigs> = {
-  [K in keyof TColumnConfigs]: TColumnConfigs[K] extends { isSortable: false }
-    ? never
-    : K;
-}[keyof TColumnConfigs] &
-  string;
-
-export interface DataTableQueryKeys {
-  page: string;
-  perPage: string;
-  sort: string;
-  joinOperator: string;
-  globalFilter: string;
-}
-
 export interface DataTableQuery<
   TFilterColumnId extends string = string,
-  TSortColumnId extends string = TFilterColumnId,
+  TSortColumnId extends string = string,
 > {
   page: number;
   perPage: number;
@@ -133,13 +113,6 @@ export interface DataTableQuery<
   joinOperator: JoinOperator;
   globalFilter: string;
 }
-
-export type DataTableColumnConfigsQuery<
-  TColumnConfigs extends DataTableColumnConfigs,
-> = DataTableQuery<
-  FilterableColumnId<TColumnConfigs>,
-  SortableColumnId<TColumnConfigs>
->;
 
 export interface DataTableRowAction<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;

@@ -23,6 +23,7 @@ import {
 
 import { useBasesDataTable } from "../hooks/use-bases-data-table";
 import { getBasesDataTableColumns } from "../lib/data-table-columns";
+import { basesTasksTableConfig } from "../lib/table";
 
 export function AriaDataTableDemo() {
   const { filterMode, dir, data, onCopy, onDelete } = useBasesDataTable();
@@ -49,9 +50,7 @@ export function AriaDataTableDemo() {
           ),
           getAriaLabel: (row) => `Open actions for ${row.original.code}`,
         }),
-        renderHeader: (column, label) => (
-          <DataTableColumnHeader column={column} label={label} />
-        ),
+        renderHeader: (column) => <DataTableColumnHeader column={column} />,
         renderBadge: (children) => (
           <Badge variant="outline" className="py-1 [&>svg]:size-3.5">
             {children}
@@ -65,12 +64,11 @@ export function AriaDataTableDemo() {
     mode: "client",
     data,
     columns,
+    config: basesTasksTableConfig,
     initialState: {
-      sorting: [{ id: "createdAt", desc: true }],
       columnPinning: { start: ["select"], end: ["actions"] },
     },
     getRowId: (row) => row.id,
-    clearOnDefault: true,
     enableRowRangeSelection: true,
   });
 

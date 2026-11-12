@@ -4,18 +4,18 @@ import { asc, count, desc, gt, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import "server-only";
 
-import type { DataTableColumnConfigsQuery } from "@/lib/data-table-types";
+import type { InferDataTableQuery } from "@/lib/data-table-config";
 
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
 
-import type { tasksColumnConfigs } from "./validations";
+import type { tasksTableConfig } from "./validations";
 
 import { filterColumns } from "./filter-columns";
 import { sanitizeEnumFilters } from "./utils";
 
 export async function getTasks(
-  input: DataTableColumnConfigsQuery<typeof tasksColumnConfigs>,
+  input: InferDataTableQuery<typeof tasksTableConfig>,
 ) {
   cacheLife({ revalidate: 1, stale: 1, expire: 60 });
   cacheTag("tasks");

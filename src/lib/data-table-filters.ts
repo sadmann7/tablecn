@@ -7,7 +7,6 @@ import {
   type Row,
   type RowData,
   type RowModel,
-  skipFirstRun,
   type Table,
   type TableFeatures,
   tableMemo,
@@ -20,15 +19,17 @@ import type {
 } from "@/lib/data-table-types";
 
 import {
+  asFilterItems,
   createPlainFilter,
+  getActiveFiltersKey,
   getFilterVariant,
   getIsActiveFilter,
-  normalizeColumnFilter,
+  getIsPlainFilter,
+  getPlainFilterValue,
   parseFilterDate,
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const GLOBAL_FILTER_ID = "__global__";
 
 const filterResultsByRow = new WeakMap<object, Record<string, boolean>>();
@@ -38,8 +39,8 @@ export function matchesFilter(
   filter: Pick<ColumnFilterItem, "operator" | "variant" | "value">,
 ): boolean {
   const { operator, variant, value } = filter;
-  const isDate = variant === "date" || variant === "date-range";
-  const isNumeric = variant === "number" || variant === "range";
+  const isDate = variant === "date";
+  const isNumeric = variant === "number";
 
   switch (operator) {
     case "iLike":
@@ -83,9 +84,6 @@ export function matchesFilter(
     case "isBetween":
       return getIsBetween(cellValue, value, isDate);
 
-    case "isRelativeToToday":
-      return getIsRelativeToToday(cellValue, value);
-
     case "isEmpty":
       return getIsEmptyValue(cellValue);
 
@@ -116,6 +114,14 @@ export function createDataTableFilteredRowModel<
 >() {
   return (table: Table<TFeatures, TData>) => {
     const instance = asFilteringTable(table);
+    let previous:
+      | {
+          rows: RowModel<TFeatures, TData>;
+          key: string;
+          result: RowModel<TFeatures, TData>;
+        }
+      | undefined;
+    let shouldResetPageIndex = false;
 
     return tableMemo({
       feature: "dataTableFilteringFeature",
@@ -127,8 +133,22 @@ export function createDataTableFilteredRowModel<
         instance.atoms.joinOperator?.get(),
         instance.atoms.globalFilter?.get(),
       ],
-      fn: () => getFilteredRowModel(table.getPreFilteredRowModel(), instance),
-      onAfterUpdate: skipFirstRun(() => instance.autoResetPageIndex?.()),
+      fn: () => {
+        const rows = table.getPreFilteredRowModel();
+        const key = getFilteringKey(instance);
+        if (previous && previous.rows === rows && previous.key === key) {
+          return previous.result;
+        }
+
+        shouldResetPageIndex = previous !== undefined;
+        previous = { rows, key, result: getFilteredRowModel(rows, instance) };
+        return previous.result;
+      },
+      onAfterUpdate: () => {
+        if (!shouldResetPageIndex) return;
+        shouldResetPageIndex = false;
+        instance.autoResetPageIndex?.();
+      },
     });
   };
 }
@@ -254,39 +274,6 @@ function getIsBetween(cellValue: unknown, value: unknown, isDate: boolean) {
   return (start === null || cell >= start) && (end === null || cell <= end);
 }
 
-function getIsRelativeToToday(cellValue: unknown, value: unknown) {
-  if (typeof value !== "string") return true;
-
-  const [amountRaw, unit] = value.split(" ");
-  const amount = Number.parseInt(amountRaw ?? "", 10);
-  if (Number.isNaN(amount) || !unit) return true;
-
-  const today = Date.now();
-  let start: number;
-  let end: number;
-
-  switch (unit) {
-    case "days":
-      start = startOfDay(today + amount * DAY_MS);
-      end = endOfDay(start);
-      break;
-    case "weeks":
-      start = startOfDay(today + amount * 7 * DAY_MS);
-      end = endOfDay(start + 6 * DAY_MS);
-      break;
-    case "months":
-      start = startOfDay(today + amount * 30 * DAY_MS);
-      end = endOfDay(start + 29 * DAY_MS);
-      break;
-    default:
-      return true;
-  }
-
-  const cell = parseTime(cellValue);
-  if (Number.isNaN(cell)) return false;
-  return cell >= start && cell <= end;
-}
-
 function getIsEmptyValue(value: unknown) {
   return (
     value === null ||
@@ -336,6 +323,19 @@ function asFilteringTable<
   return table as FilteringInstance<TFeatures, TData>;
 }
 
+function getFilteringKey<
+  TFeatures extends TableFeatures,
+  TData extends RowData,
+>(instance: FilteringInstance<TFeatures, TData>) {
+  const filters = asFilterItems(instance.atoms.columnFilters?.get() ?? []);
+
+  return JSON.stringify([
+    getActiveFiltersKey(filters),
+    instance.atoms.joinOperator?.get() ?? "and",
+    stringifyFilterValue(instance.atoms.globalFilter?.get()),
+  ]);
+}
+
 type RowTest<TFeatures extends TableFeatures, TData extends RowData> = (
   row: Row<TFeatures, TData>,
 ) => boolean;
@@ -350,7 +350,9 @@ function getFilteredRowModel<
   const joinOperator = instance.atoms.joinOperator?.get() ?? "and";
   const testsByColumn = new Map<string, RowTest<TFeatures, TData>[]>();
 
-  for (const filter of instance.atoms.columnFilters?.get() ?? []) {
+  for (const filter of asFilterItems(
+    instance.atoms.columnFilters?.get() ?? [],
+  )) {
     const column = instance.getColumn(filter.id);
     const test = column ? getFilterTest(column, filter) : null;
     if (!test) continue;
@@ -392,22 +394,23 @@ function getFilteredRowModel<
 
 function getFilterTest<TFeatures extends TableFeatures, TData extends RowData>(
   column: FilteringColumn<TFeatures, TData>,
-  filter: ColumnFilter,
+  filter: ColumnFilterItem,
 ): RowTest<TFeatures, TData> | null {
   const filterFn = column.getFilterFn?.();
 
-  if (!filter.operator && filterFn && !Object.is(filterFn, dataTableFilterFn)) {
-    const value = filterFn.resolveFilterValue?.(filter.value) ?? filter.value;
+  if (
+    getIsPlainFilter(filter) &&
+    filterFn &&
+    !Object.is(filterFn, dataTableFilterFn)
+  ) {
+    const plainValue = getPlainFilterValue(filter);
+    const value = filterFn.resolveFilterValue?.(plainValue) ?? plainValue;
     return (row) => filterFn(row, column.id, value);
   }
 
-  const item = normalizeColumnFilter(
-    filter,
-    getFilterVariant(column.columnDef.meta as DataTableColumnMeta | undefined),
-  );
-  if (!getIsActiveFilter(item)) return null;
+  if (!getIsActiveFilter(filter)) return null;
 
-  return (row) => matchesFilter(row.getValue(column.id), item);
+  return (row) => matchesFilter(row.getValue(column.id), filter);
 }
 
 function getGlobalFilterTests<

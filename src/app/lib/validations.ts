@@ -5,28 +5,23 @@ import {
 } from "nuqs/server";
 import * as z from "zod";
 
-import type {
-  ColumnSortItem,
-  DataTableColumnConfig,
-  SortableColumnId,
-} from "@/lib/data-table-types";
+import type { DataTableColumnConfigs } from "@/lib/data-table-types";
 
 import { type Task, tasks } from "@/db/schema";
-import { getDataTableSearchParams } from "@/lib/data-table-parsers";
+import { createDataTableConfig } from "@/lib/data-table-config";
 import { DATA_MODES, DIRECTIONS, FILTER_MODES } from "@/lib/flag";
 
-export const tasksColumnConfigs = {
-  code: { isSortable: false },
-  title: { variant: "text" },
-  status: { variant: "multi-select" },
-  priority: { variant: "multi-select" },
-  estimatedHours: { variant: "number", filter: "range" },
-  createdAt: { variant: "date", filter: "range" },
-} as const satisfies Partial<Record<keyof Task, DataTableColumnConfig>>;
-
-export const tasksDefaultSorting = [
-  { id: "createdAt", desc: true },
-] satisfies ColumnSortItem<SortableColumnId<typeof tasksColumnConfigs>>[];
+export const tasksTableConfig = createDataTableConfig({
+  columns: {
+    title: { variant: "text" },
+    status: { variant: "select" },
+    priority: { variant: "select" },
+    estimatedHours: { variant: "number" },
+    createdAt: { variant: "date" },
+  } satisfies DataTableColumnConfigs<Task>,
+  defaultSorting: [{ id: "createdAt", desc: true }],
+  enableGlobalFilter: false,
+});
 
 export const searchParamsCache = createSearchParamsCache({
   filterMode: parseAsStringEnum(
@@ -36,10 +31,6 @@ export const searchParamsCache = createSearchParamsCache({
     DATA_MODES.map((dataMode) => dataMode.value),
   ).withDefault("server"),
   dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
-  ...getDataTableSearchParams({
-    columnConfigs: tasksColumnConfigs,
-    defaultSorting: tasksDefaultSorting,
-  }),
 });
 
 export const createTaskSchema = z.object({
@@ -49,6 +40,7 @@ export const createTaskSchema = z.object({
   priority: z.enum(tasks.priority.enumValues),
   estimatedHours: z.number().optional(),
 });
+export type CreateTaskSchema = z.infer<typeof createTaskSchema>;
 
 export const updateTaskSchema = z.object({
   title: z.string().optional(),
@@ -57,6 +49,4 @@ export const updateTaskSchema = z.object({
   priority: z.enum(tasks.priority.enumValues).optional(),
   estimatedHours: z.number().optional(),
 });
-
-export type CreateTaskSchema = z.infer<typeof createTaskSchema>;
 export type UpdateTaskSchema = z.infer<typeof updateTaskSchema>;
