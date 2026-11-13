@@ -73,11 +73,11 @@ import {
   getLineCount,
   getRowDisplayIndex,
   getRowHeightValue,
+  getSearchText,
   getTabTargetCell,
   parsePastedCellValue,
   parseTsv,
   serializeCellValue,
-  stringifyUnknown,
   swapItems,
 } from "@/lib/data-grid-utils";
 
@@ -2488,7 +2488,7 @@ function getRowSearchTexts(
     const value = readValue(row);
     let text = lowerByValue.get(value);
     if (text === undefined) {
-      text = stringifyUnknown(value).toLowerCase();
+      text = getSearchText(value).toLowerCase();
       lowerByValue.set(value, text);
     }
     return text;
