@@ -75,6 +75,7 @@ export type ColumnVariantMeta =
 export type DataGridColumnMeta = {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
+  /** Renders the column's cells with the built-in cell props, reading the value with `useCellValue` since live updates patch rows in place. */
   // oxlint-disable-next-line typescript/no-explicit-any -- meta isn't generic over the row, and a cell typed for its own row must still fit
   cellComponent?: React.ComponentType<DataGridCellProps<any>>;
   /** Parses pasted text into the cell's value, or returns `undefined` to skip the cell. */
