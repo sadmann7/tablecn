@@ -407,29 +407,11 @@ describe("useDataTable", () => {
       index === 0 ? { ...row, status: "done" } : row,
     );
     await act(async () => rerender());
+    rows = rows.slice(1);
+    await act(async () => rerender());
 
     expect(result.current.table.state.pagination.pageIndex).toBe(2);
     expect(updates).toHaveLength(0);
-  });
-
-  it("moves to the last client page with rows when the rows shrink", async () => {
-    let rows = createTasks(30);
-    const { result, rerender, getLastSearch, updates } = renderHookWithUrl(
-      "?page=3",
-      () => useClientTable(rows, "push"),
-    );
-
-    rows = rows.slice(0, 15);
-    await act(async () => rerender());
-
-    await waitFor(() => expect(getLastSearch()?.get("page")).toBe("2"));
-    expect(updates.at(-1)?.options.history).toBe("replace");
-    expect(result.current.table.state.pagination.pageIndex).toBe(1);
-
-    rows = [];
-    await act(async () => rerender());
-
-    expect(result.current.table.state.pagination.pageIndex).toBe(1);
   });
 
   it("keeps the same filters when columns are recreated inline", () => {
@@ -1018,8 +1000,8 @@ function useTestDataTable(props: Partial<UseDataTableProps<Task>>) {
   } as UseDataTableProps<Task>);
 }
 
-function useClientTable(rows: Task[], history?: "push" | "replace") {
-  const value = useTestDataTable({ mode: "client", data: rows, history });
+function useClientTable(rows: Task[]) {
+  const value = useTestDataTable({ mode: "client", data: rows });
   value.table.getRowModel();
   return value;
 }

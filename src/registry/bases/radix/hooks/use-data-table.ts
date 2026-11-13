@@ -317,13 +317,6 @@ function useDataTable<TData extends RowData>({
     selectTableState,
   );
 
-  const lastPage = isServer ? 0 : table.getPageCount();
-
-  React.useEffect(() => {
-    if (lastPage > 0 && page > lastPage)
-      void setQueryState({ page: lastPage }, { history: "replace" });
-  }, [lastPage, page, setQueryState]);
-
   return { table };
 }
 
