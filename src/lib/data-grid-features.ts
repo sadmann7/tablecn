@@ -73,11 +73,11 @@ import {
   getLineCount,
   getRowDisplayIndex,
   getRowHeightValue,
+  getSearchText,
   getTabTargetCell,
   parsePastedCellValue,
   parseTsv,
   serializeCellValue,
-  stringifyUnknown,
   swapItems,
 } from "@/lib/data-grid-utils";
 
@@ -1215,7 +1215,7 @@ function getCanEditCell(table: DataGridInstance, columnId: string) {
 
 function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
   const column = table.getAllFlatColumnsById()[columnId];
-  return getEmptyCellValue(column?.columnDef.meta?.variant);
+  return getEmptyCellValue(column?.columnDef.meta);
 }
 
 function addRows(
@@ -2488,7 +2488,7 @@ function getRowSearchTexts(
     const value = readValue(row);
     let text = lowerByValue.get(value);
     if (text === undefined) {
-      text = stringifyUnknown(value).toLowerCase();
+      text = getSearchText(value).toLowerCase();
       lowerByValue.set(value, text);
     }
     return text;

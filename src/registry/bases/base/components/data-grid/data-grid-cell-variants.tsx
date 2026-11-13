@@ -1408,22 +1408,6 @@ export function FileCell<TData extends RowData>(
   );
 }
 
-interface OverflowBadgeProps {
-  count: number;
-}
-
-function OverflowBadge({ count }: OverflowBadgeProps) {
-  return (
-    <Badge
-      variant="outline"
-      dir="ltr"
-      className={cn(CELL_BADGE_CLASS_NAME, "text-muted-foreground")}
-    >
-      +{count}
-    </Badge>
-  );
-}
-
 const getOverlapOffset: PopoverPrimitive.Positioner.Props["sideOffset"] = ({
   anchor,
 }) => -anchor.height;
@@ -1441,7 +1425,7 @@ interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   overlap?: boolean;
 }
 
-function CellEditorPopover<TData extends RowData>({
+export function CellEditorPopover<TData extends RowData>({
   cell,
   open,
   readOnly,
@@ -1490,6 +1474,22 @@ function CellEditorPopover<TData extends RowData>({
         {...props}
       />
     </Popover>
+  );
+}
+
+interface OverflowBadgeProps {
+  count: number;
+}
+
+function OverflowBadge({ count }: OverflowBadgeProps) {
+  return (
+    <Badge
+      variant="outline"
+      dir="ltr"
+      className={cn(CELL_BADGE_CLASS_NAME, "text-muted-foreground")}
+    >
+      +{count}
+    </Badge>
   );
 }
 

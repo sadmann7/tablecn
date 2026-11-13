@@ -56,9 +56,10 @@ export const DataGridDataCell = React.memo(
     if (prev.cell.column.columnDef.meta !== next.cell.column.columnDef.meta) {
       return false;
     }
+    const meta = next.cell.column.columnDef.meta;
     // Written cells take their values straight from `updateCells`.
-    if (next.cell.column.columnDef.meta?.writeCell) return true;
-    if (getHasCustomCell(next.cell.column)) {
+    if (!meta?.cellComponent && meta?.writeCell) return true;
+    if (meta?.cellComponent || getHasCustomCell(next.cell.column)) {
       return prev.cell.row.original === next.cell.row.original;
     }
     return prev.cell.getValue() === next.cell.getValue();
@@ -70,7 +71,11 @@ function DataGridDataCellImpl<TData extends RowData>({
   ...props
 }: DataGridDataCellProps<TData>) {
   const { cell } = props;
-  const writeCell = cell.column.columnDef.meta?.writeCell;
+  const meta = cell.column.columnDef.meta;
+  const writeCell = meta?.writeCell;
+  const CellComponent = meta?.cellComponent as
+    | React.ComponentType<DataGridCellProps<TData>>
+    | undefined;
   const hasCustomCell = getHasCustomCell(cell.column);
 
   const rowId = cell.row.id;
@@ -81,6 +86,10 @@ function DataGridDataCellImpl<TData extends RowData>({
     if (isScrolling && !isPreview) setIsPreview(true);
   }
   if (isPreview && !isScrolling) setIsPreview(false);
+
+  if (CellComponent) {
+    return <CellComponent key={rowId} {...props} />;
+  }
 
   if (writeCell) {
     return <DataGridWrittenCell key={rowId} {...props} writeCell={writeCell} />;

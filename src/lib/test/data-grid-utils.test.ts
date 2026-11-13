@@ -4,6 +4,7 @@ import {
   getBooleanCellValue,
   getCellKey,
   getDateCellValue,
+  getEmptyCellValue,
   getFilesCellValue,
   getHeaderSizeVar,
   getIsEditableTarget,
@@ -12,6 +13,7 @@ import {
   getNumberCellValue,
   getOptionCellValue,
   getOptionsCellValue,
+  getSearchText,
   getTabTargetCell,
   getWindowedColumns,
   insertTextAtSelection,
@@ -130,6 +132,43 @@ describe("parsePastedCellValue", () => {
     expect(
       parsePastedCellValue(text, { variant: "multi-select", options }),
     ).toEqual({ value: ["goofy", "regular"] });
+  });
+
+  it("uses the column's parseValue over its variant", () => {
+    const meta = {
+      variant: "number" as const,
+      parseValue: (text: string) => (text === "skip" ? undefined : text.length),
+    };
+    expect(parsePastedCellValue("abc", meta)).toEqual({ value: 3 });
+    expect(parsePastedCellValue("skip", meta)).toBeNull();
+  });
+
+  it("skips a cell component without a variant or parseValue", () => {
+    const meta = { cellComponent: () => null };
+    expect(parsePastedCellValue('["a"]', meta)).toBeNull();
+    expect(parsePastedCellValue("42", { ...meta, variant: "number" })).toEqual({
+      value: 42,
+    });
+  });
+});
+
+describe("getEmptyCellValue", () => {
+  it("uses the variant's empty value", () => {
+    expect(getEmptyCellValue(undefined)).toBe("");
+    expect(getEmptyCellValue({ variant: "boolean" })).toBe(false);
+    expect(getEmptyCellValue({ variant: "file" })).toEqual([]);
+  });
+
+  it("prefers the column's emptyValue", () => {
+    expect(getEmptyCellValue({ variant: "number", emptyValue: 0 })).toBe(0);
+    expect(getEmptyCellValue({ emptyValue: null })).toBeNull();
+  });
+
+  it("clears a cell component without a variant to null", () => {
+    expect(getEmptyCellValue({ cellComponent: () => null })).toBeNull();
+    expect(
+      getEmptyCellValue({ cellComponent: () => null, emptyValue: [] }),
+    ).toEqual([]);
   });
 });
 
@@ -668,5 +707,34 @@ describe("replaceEditableText", () => {
     expect(selection?.isCollapsed).toBe(true);
     expect(selection?.focusOffset).toBe(1);
     expect(inputData).toBe("a");
+  });
+});
+
+describe("getSearchText", () => {
+  it("skips values it has already visited", () => {
+    const node: { name: string; parent?: unknown } = { name: "root" };
+    node.parent = node;
+    expect(getSearchText(node)).toBe("root ");
+  });
+
+  it("searches an object used in two places both times", () => {
+    const contact = { name: "Ada" };
+    expect(getSearchText([contact, contact])).toBe("Ada Ada");
+  });
+
+  it("searches the values of objects and arrays, not their keys", () => {
+    const contact = { name: "Ada Lovelace", phone: "(555) 010-1815" };
+    expect(getSearchText(contact)).toBe("Ada Lovelace (555) 010-1815");
+    expect(getSearchText([contact, "tag"])).toBe(
+      "Ada Lovelace (555) 010-1815 tag",
+    );
+  });
+
+  it("stringifies other values", () => {
+    expect(getSearchText(42)).toBe("42");
+    expect(getSearchText(null)).toBe("");
+    expect(getSearchText(new Date("2026-01-02T00:00:00Z"))).toBe(
+      "2026-01-02T00:00:00.000Z",
+    );
   });
 });

@@ -11,7 +11,6 @@ import type {
   ColumnSelectOption,
   DataGridCellProps,
   FileCellData,
-  RowHeightValue,
   StopEditingOptions,
 } from "@/lib/data-grid-types";
 
@@ -35,7 +34,6 @@ import {
   getNumberCellValue,
   getOptionCellValue,
   getOptionsCellValue,
-  getRowHeightValue,
   getTextCellValue,
   getUrlHref,
   insertTextAtSelection,
@@ -95,7 +93,7 @@ export function ShortTextCell<TData extends RowData>(
 export function LongTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, readOnly } = props;
+  const { cell, isEditing, readOnly } = props;
   const initialValue = getTextCellValue(useCellValue(cell));
   const { value, setDraftValue, clearDraft } = useCellDraft({
     key: initialValue,
@@ -205,7 +203,6 @@ export function LongTextCell<TData extends RowData>(
         cell={cell}
         open={isEditing}
         readOnly={readOnly}
-        rowHeight={rowHeight}
         containerRef={containerRef}
         side="bottom"
         className="w-100"
@@ -540,7 +537,7 @@ const NO_OPTIONS: ColumnSelectOption[] = [];
 export function SelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, readOnly } = props;
+  const { cell, isEditing, readOnly } = props;
   const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const commandRef = React.useRef<HTMLDivElement>(null);
@@ -572,7 +569,6 @@ export function SelectCell<TData extends RowData>(
         cell={cell}
         open={isEditing}
         readOnly={readOnly}
-        rowHeight={rowHeight}
         containerRef={containerRef}
         className="w-(--radix-popover-trigger-width) min-w-36"
         onOpenFocus={onOpenFocus}
@@ -760,7 +756,6 @@ export function MultiSelectCell<TData extends RowData>(
           cell={cell}
           open={isEditing}
           readOnly={readOnly}
-          rowHeight={rowHeight}
           containerRef={containerRef}
           className="w-75 min-w-(--radix-popover-trigger-width)"
           onOpenChange={onOpenChange}
@@ -876,7 +871,7 @@ export function MultiSelectCell<TData extends RowData>(
 export function DateCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, readOnly } = props;
+  const { cell, isEditing, readOnly } = props;
   const value = getDateCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const isInvalidDate = value !== "" && !parseLocalDate(value);
@@ -903,7 +898,6 @@ export function DateCell<TData extends RowData>(
         cell={cell}
         open={isEditing}
         readOnly={readOnly}
-        rowHeight={rowHeight}
         containerRef={containerRef}
         className="w-auto"
       >
@@ -1231,7 +1225,6 @@ export function FileCell<TData extends RowData>(
           cell={cell}
           open={isEditing}
           readOnly={readOnly}
-          rowHeight={rowHeight}
           containerRef={containerRef}
           className="w-100"
           onOpenChange={onOpenChange}
@@ -1415,22 +1408,6 @@ export function FileCell<TData extends RowData>(
   );
 }
 
-interface OverflowBadgeProps {
-  count: number;
-}
-
-function OverflowBadge({ count }: OverflowBadgeProps) {
-  return (
-    <Badge
-      variant="outline"
-      dir="ltr"
-      className={cn(CELL_BADGE_CLASS_NAME, "text-muted-foreground")}
-    >
-      +{count}
-    </Badge>
-  );
-}
-
 interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   React.ComponentProps<typeof PopoverContent>,
   "align" | "alignOffset" | "sideOffset"
@@ -1438,18 +1415,16 @@ interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   cell: DataGridCellProps<TData>["cell"];
   open: boolean;
   readOnly: boolean;
-  rowHeight: RowHeightValue;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onOpenChange?: (open: boolean) => void;
   onOpenFocus?: () => void;
   overlap?: boolean;
 }
 
-function CellEditorPopover<TData extends RowData>({
+export function CellEditorPopover<TData extends RowData>({
   cell,
   open,
   readOnly,
-  rowHeight,
   containerRef,
   onOpenChange,
   onOpenFocus,
@@ -1488,7 +1463,7 @@ function CellEditorPopover<TData extends RowData>({
         aria-label={getColumnLabel(cell.column)}
         data-grid-cell-editor=""
         align="start"
-        sideOffset={overlap ? getOverlapOffset(rowHeight) : 0}
+        sideOffset={overlap ? getOverlapOffset(cell) : 0}
         className={cn(CELL_EDITOR_CLASS_NAME, className)}
         onOpenAutoFocus={onOpenFocus ? onOpenAutoFocus : undefined}
         onPointerDownOutside={onPointerDownOutside}
@@ -1496,6 +1471,22 @@ function CellEditorPopover<TData extends RowData>({
         {...props}
       />
     </Popover>
+  );
+}
+
+interface OverflowBadgeProps {
+  count: number;
+}
+
+function OverflowBadge({ count }: OverflowBadgeProps) {
+  return (
+    <Badge
+      variant="outline"
+      dir="ltr"
+      className={cn(CELL_BADGE_CLASS_NAME, "text-muted-foreground")}
+    >
+      +{count}
+    </Badge>
   );
 }
 
@@ -1698,8 +1689,10 @@ function useCellEditorDismiss(
   return { onPointerDownOutside, onCloseAutoFocus };
 }
 
-function getOverlapOffset(rowHeight: RowHeightValue) {
-  return -getRowHeightValue(rowHeight) + CELL_BORDER_WIDTH;
+function getOverlapOffset<TData extends RowData>(
+  cell: DataGridCellProps<TData>["cell"],
+) {
+  return -cell.table.getRowSize() + CELL_BORDER_WIDTH;
 }
 
 function setCellEditing<TData extends RowData>(

@@ -2,6 +2,11 @@ import { faker } from "@faker-js/faker";
 
 import type { FileCellData } from "@/lib/data-grid-types";
 
+export interface Contact {
+  name: string;
+  phone: string;
+}
+
 export interface Person {
   id: string;
   name?: string;
@@ -15,6 +20,7 @@ export interface Person {
   skills?: string[];
   isActive?: boolean;
   startDate?: string;
+  contact?: Contact | null;
   attachments?: FileCellData[];
 }
 
@@ -61,6 +67,8 @@ const FIELD_SALTS = {
   status: 5,
   isActive: 6,
   feedback: 7,
+  contact: 8,
+  phone: 9,
 } as const;
 
 let pool: SeedPerson[] | null = null;
@@ -74,6 +82,11 @@ export function generatePeople(count: number): Person[] {
     const other = pickItem(seeds, index, "seed");
     const { firstName } = base;
     const { lastName } = other;
+    const contact = pickItem(seeds, index, "contact");
+    const phone = String(randomInt(index, "phone", 0, 9_999_999)).padStart(
+      7,
+      "0",
+    );
 
     return {
       id: `person-${index}`,
@@ -87,6 +100,10 @@ export function generatePeople(count: number): Person[] {
       status: pickItem(statuses, index, "status"),
       isActive: randomInt(index, "isActive", 0, 1) === 1,
       startDate: other.startDate,
+      contact: {
+        name: `${contact.firstName} ${contact.lastName}`,
+        phone: `(555) ${phone.slice(0, 3)}-${phone.slice(3)}`,
+      },
       skills: base.skills,
       attachments: other.attachments,
     };
