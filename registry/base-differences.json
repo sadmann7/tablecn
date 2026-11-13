@@ -2,7 +2,7 @@
   "base": {
     "components/data-grid/data-grid-actions-column.tsx": "65e56396154c",
     "components/data-grid/data-grid-cell-preview.tsx": "identical",
-    "components/data-grid/data-grid-cell-variants.tsx": "bc08edc9ad39",
+    "components/data-grid/data-grid-cell-variants.tsx": "2536401b4208",
     "components/data-grid/data-grid-cell.tsx": "c220f6db3521",
     "components/data-grid/data-grid-column-header.tsx": "37846d66badd",
     "components/data-grid/data-grid-context-menu.tsx": "60acddda5b2d",

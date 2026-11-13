@@ -1,12 +1,19 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import * as React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { FileCellData } from "@/lib/data-grid-types";
+import type { DataGridCellProps, FileCellData } from "@/lib/data-grid-types";
 
+import { getOptionsCellValue } from "@/lib/data-grid-utils";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
+import {
+  DataGridCell,
+  useCellValue,
+} from "@/registry/bases/radix/components/data-grid/data-grid-cell";
+import { CellEditorPopover } from "@/registry/bases/radix/components/data-grid/data-grid-cell-variants";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
 import {
   useDataGrid,
@@ -972,6 +979,57 @@ describe("DataGrid cells", () => {
     });
   });
 
+  describe("cell component", () => {
+    const trickListColumns: ColumnDef<DataGridFeatures, Skater>[] = [
+      ...columns.filter((column) => column.id !== "tricks"),
+      {
+        id: "tricks",
+        accessorKey: "tricks",
+        header: "Tricks",
+        meta: { cellComponent: TrickListCell, emptyValue: [] },
+      },
+    ];
+
+    it("opens its editor on Enter and saves through setValue", () => {
+      const { getCell, getValue, focus } = renderDataGrid({
+        columns: trickListColumns,
+      });
+
+      focus("1", "tricks");
+      press(getCell("1", "tricks"), "Enter");
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Add kickflip" }));
+      });
+
+      expect(getValue("1", "tricks")).toEqual(["900", "kickflip"]);
+      expect(getCell("1", "tricks").textContent).toBe("900, kickflip");
+    });
+
+    it("closes its editor on Escape and refocuses the cell", () => {
+      const { getCell, focus, table } = renderDataGrid({
+        columns: trickListColumns,
+      });
+
+      focus("1", "tricks");
+      press(getCell("1", "tricks"), "Enter");
+      press(document.activeElement, "Escape");
+
+      expect(table.getEditingCell()).toBeNull();
+      expect(screen.queryByRole("button", { name: "Add kickflip" })).toBeNull();
+      expect(document.activeElement).toBe(getCell("1", "tricks"));
+    });
+
+    it("clears to the column's empty value", () => {
+      const { getValue, table } = renderDataGrid({ columns: trickListColumns });
+
+      act(() => {
+        table.clearCells([{ rowId: "1", columnId: "tricks" }]);
+      });
+
+      expect(getValue("1", "tricks")).toEqual([]);
+    });
+  });
+
   describe("live updates", () => {
     it("shows batched updates before and after the commit", async () => {
       const { getCell, table } = renderDataGrid();
@@ -1101,6 +1159,31 @@ describe("DataGrid cells", () => {
     });
   });
 });
+
+function TrickListCell(props: DataGridCellProps<Skater>) {
+  const { cell, isEditing, readOnly } = props;
+  const tricks = getOptionsCellValue(useCellValue(cell));
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  return (
+    <DataGridCell {...props} ref={containerRef}>
+      <CellEditorPopover
+        cell={cell}
+        open={isEditing}
+        readOnly={readOnly}
+        containerRef={containerRef}
+      >
+        <button
+          type="button"
+          onClick={() => cell.setValue([...tricks, "kickflip"])}
+        >
+          Add kickflip
+        </button>
+      </CellEditorPopover>
+      <span data-slot="data-grid-cell-content">{tricks.join(", ")}</span>
+    </DataGridCell>
+  );
+}
 
 function renderDataGrid({
   data = skaters,

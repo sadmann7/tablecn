@@ -1215,7 +1215,7 @@ function getCanEditCell(table: DataGridInstance, columnId: string) {
 
 function getEmptyValueForColumn(table: DataGridInstance, columnId: string) {
   const column = table.getAllFlatColumnsById()[columnId];
-  return getEmptyCellValue(column?.columnDef.meta?.variant);
+  return getEmptyCellValue(column?.columnDef.meta);
 }
 
 function addRows(
