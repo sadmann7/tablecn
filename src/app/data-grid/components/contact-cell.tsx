@@ -19,14 +19,38 @@ export function ContactCell(props: DataGridCellProps<Person>) {
   const { cell, isEditing, readOnly } = props;
   const contact = getContact(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const draftRef = React.useRef<Contact | null | undefined>(undefined);
+  const isCancelingRef = React.useRef(false);
 
   const onSave = React.useCallback(
     (newContact: Contact | null) => {
+      draftRef.current = undefined;
       cell.setValue(newContact);
       cell.table.stopEditing();
     },
     [cell],
   );
+
+  const onDraftChange = React.useCallback((draft: Contact | null) => {
+    draftRef.current = draft;
+  }, []);
+
+  const onOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (open) return;
+      const draft = draftRef.current;
+      const isCanceling = isCancelingRef.current;
+      draftRef.current = undefined;
+      isCancelingRef.current = false;
+      if (draft !== undefined && !isCanceling) cell.setValue(draft);
+      cell.table.stopEditing();
+    },
+    [cell],
+  );
+
+  const onEscapeKeyDown = React.useCallback(() => {
+    isCancelingRef.current = true;
+  }, []);
 
   return (
     <DataGridCell
@@ -40,9 +64,15 @@ export function ContactCell(props: DataGridCellProps<Person>) {
         readOnly={readOnly}
         containerRef={containerRef}
         className="w-72"
+        onOpenChange={onOpenChange}
+        onEscapeKeyDown={onEscapeKeyDown}
         onKeyDown={onEditorKeyDown}
       >
-        <ContactForm contact={contact} onSave={onSave} />
+        <ContactForm
+          contact={contact}
+          onSave={onSave}
+          onDraftChange={onDraftChange}
+        />
       </CellEditorPopover>
       {contact ? (
         <span data-slot="data-grid-cell-content" dir="auto">
@@ -75,9 +105,10 @@ export function sortContacts(
 interface ContactFormProps {
   contact: Contact | null;
   onSave: (contact: Contact | null) => void;
+  onDraftChange: (contact: Contact | null) => void;
 }
 
-function ContactForm({ contact, onSave }: ContactFormProps) {
+function ContactForm({ contact, onSave, onDraftChange }: ContactFormProps) {
   const id = React.useId();
   const [name, setName] = React.useState(contact?.name ?? "");
   const [phone, setPhone] = React.useState(contact?.phone ?? "");
@@ -85,21 +116,32 @@ function ContactForm({ contact, onSave }: ContactFormProps) {
   const onSubmit = React.useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      const newContact = { name: name.trim(), phone: phone.trim() };
-      onSave(newContact.name || newContact.phone ? newContact : null);
+      onSave(getDraftContact(name, phone));
     },
     [name, phone, onSave],
+  );
+
+  const onNameChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setName(event.target.value);
+      onDraftChange(getDraftContact(event.target.value, phone));
+    },
+    [phone, onDraftChange],
+  );
+
+  const onPhoneChange = React.useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setPhone(event.target.value);
+      onDraftChange(getDraftContact(name, event.target.value));
+    },
+    [name, onDraftChange],
   );
 
   return (
     <form className="flex flex-col gap-3 p-3" onSubmit={onSubmit}>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${id}-name`}>Name</Label>
-        <Input
-          id={`${id}-name`}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-        />
+        <Input id={`${id}-name`} value={name} onChange={onNameChange} />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${id}-phone`}>Phone</Label>
@@ -107,7 +149,7 @@ function ContactForm({ contact, onSave }: ContactFormProps) {
           id={`${id}-phone`}
           type="tel"
           value={phone}
-          onChange={(event) => setPhone(event.target.value)}
+          onChange={onPhoneChange}
         />
       </div>
       <Button type="submit" size="sm" className="self-end">
@@ -115,6 +157,11 @@ function ContactForm({ contact, onSave }: ContactFormProps) {
       </Button>
     </form>
   );
+}
+
+function getDraftContact(name: string, phone: string): Contact | null {
+  const contact = { name: name.trim(), phone: phone.trim() };
+  return contact.name || contact.phone ? contact : null;
 }
 
 function getContact(value: unknown): Contact | null {
