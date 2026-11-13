@@ -2,7 +2,6 @@
 
 import {
   type Column,
-  type ColumnSort,
   type Header,
   type ReactTable,
   type RowData,
@@ -174,18 +173,10 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
   const rightPosition = isRtl ? "start" : "end";
 
   function onSortingChange(direction: SortDirection) {
-    table.setSorting((prev) => {
-      const existingSortIndex = prev.findIndex((sort) => sort.id === column.id);
-      const newSort: ColumnSort = {
-        id: column.id,
-        desc: direction === "desc",
-      };
-
-      if (existingSortIndex === -1) return [...prev, newSort];
-      const updated = [...prev];
-      updated[existingSortIndex] = newSort;
-      return updated;
-    });
+    table.setSorting((prev) => [
+      { id: column.id, desc: direction === "desc" },
+      ...prev.filter((sort) => sort.id !== column.id),
+    ]);
   }
 
   return (

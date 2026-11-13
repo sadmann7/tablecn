@@ -1,5 +1,5 @@
 import { createColumnHelper, useTable } from "@tanstack/react-table";
-import { render, renderHook, screen } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -25,10 +25,49 @@ const columns = columnHelper.columns([
 const data: Task[] = [];
 
 describe.each([
-  ["radix", RadixDataTableColumnHeader],
-  ["base", BaseDataTableColumnHeader],
-  ["aria", AriaDataTableColumnHeader],
-])("%s DataTableColumnHeader", (_base, DataTableColumnHeader) => {
+  [
+    "radix",
+    RadixDataTableColumnHeader,
+    (trigger: HTMLElement) => fireEvent.keyDown(trigger, { key: "Enter" }),
+  ],
+  [
+    "base",
+    BaseDataTableColumnHeader,
+    (trigger: HTMLElement) => fireEvent.click(trigger),
+  ],
+  [
+    "aria",
+    AriaDataTableColumnHeader,
+    (trigger: HTMLElement) => fireEvent.click(trigger),
+  ],
+])("%s DataTableColumnHeader", (_base, DataTableColumnHeader, openMenu) => {
+  it("puts the column first and keeps the other sorts", () => {
+    const { result } = renderHook(() =>
+      useTable({
+        features: dataTableFeatures,
+        columns,
+        data,
+        initialState: {
+          sorting: [
+            { id: "createdAt", desc: true },
+            { id: "code", desc: true },
+          ],
+        },
+      }),
+    );
+    const code = result.current.getColumn("code");
+    if (!code) throw new Error("Missing column");
+
+    render(<DataTableColumnHeader column={code} />);
+    openMenu(screen.getByRole("button", { name: "Task" }));
+    fireEvent.click(screen.getByText("Asc"));
+
+    expect(result.current.store.state.sorting).toEqual([
+      { id: "code", desc: false },
+      { id: "createdAt", desc: true },
+    ]);
+  });
+
   it("labels the header from the column meta, then the column id", () => {
     const { result } = renderHook(() =>
       useTable({ features: dataTableFeatures, columns, data }),

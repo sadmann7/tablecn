@@ -1,16 +1,19 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 
+import { DataGridColumnHeader as BaseDataGridColumnHeader } from "@/registry/bases/base/components/data-grid/data-grid-column-header";
 import { DataGridFilterMenu as BaseDataGridFilterMenu } from "@/registry/bases/base/components/data-grid/data-grid-filter-menu";
 import { DataGridSortMenu as BaseDataGridSortMenu } from "@/registry/bases/base/components/data-grid/data-grid-sort-menu";
 import { useDataGrid as useBaseDataGrid } from "@/registry/bases/base/hooks/use-data-grid";
+import { DataGridColumnHeader as RadixDataGridColumnHeader } from "@/registry/bases/radix/components/data-grid/data-grid-column-header";
 import { DataGridFilterMenu as RadixDataGridFilterMenu } from "@/registry/bases/radix/components/data-grid/data-grid-filter-menu";
 import { DataGridSortMenu as RadixDataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";
 import { useDataGrid as useRadixDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
+import { TooltipProvider } from "@/registry/bases/radix/ui/tooltip";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -31,13 +34,34 @@ interface Skater {
 }
 
 const bases = [
-  ["radix", RadixDataGridFilterMenu, RadixDataGridSortMenu, useRadixDataGrid],
-  ["base", BaseDataGridFilterMenu, BaseDataGridSortMenu, useBaseDataGrid],
+  [
+    "radix",
+    RadixDataGridFilterMenu,
+    RadixDataGridSortMenu,
+    RadixDataGridColumnHeader,
+    useRadixDataGrid,
+    (trigger: HTMLElement) => fireEvent.keyDown(trigger, { key: "Enter" }),
+  ],
+  [
+    "base",
+    BaseDataGridFilterMenu,
+    BaseDataGridSortMenu,
+    BaseDataGridColumnHeader,
+    useBaseDataGrid,
+    (trigger: HTMLElement) => fireEvent.click(trigger),
+  ],
 ] as const;
 
 describe.each(bases)(
   "data grid menus (%s)",
-  (_, DataGridFilterMenu, DataGridSortMenu, useDataGrid) => {
+  (
+    _,
+    DataGridFilterMenu,
+    DataGridSortMenu,
+    DataGridColumnHeader,
+    useDataGrid,
+    openMenu,
+  ) => {
     it("shows the filter operator label", () => {
       function Grid() {
         const { table } = useDataGrid({
@@ -62,6 +86,45 @@ describe.each(bases)(
       expect(
         screen.getByLabelText("Name filter operator").textContent,
       ).toContain("Does not contain");
+    });
+
+    it("puts the column first when its header sort is chosen", () => {
+      const { result } = renderHook(() =>
+        useDataGrid({
+          data,
+          columns: [
+            ...columns,
+            {
+              id: "id",
+              accessorKey: "id",
+              header: "ID",
+              meta: { label: "ID", variant: "text" },
+            },
+          ],
+          initialState: {
+            sorting: [
+              { id: "name", desc: true },
+              { id: "id", desc: true },
+            ],
+          },
+        }),
+      );
+      const { table } = result.current;
+      const header = table
+        .getHeaderGroups()[0]
+        ?.headers.find((item) => item.column.id === "id");
+      if (!header) throw new Error("Missing header");
+
+      render(<DataGridColumnHeader table={table} header={header} />, {
+        wrapper: TooltipProvider,
+      });
+      openMenu(screen.getByRole("button", { name: "ID" }));
+      fireEvent.click(screen.getByText("Sort ascending"));
+
+      expect(result.current.table.store.state.sorting).toEqual([
+        { id: "id", desc: false },
+        { id: "name", desc: true },
+      ]);
     });
 
     it.each([

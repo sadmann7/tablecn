@@ -87,7 +87,10 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
       return;
     }
 
-    column.toggleSorting(direction === "desc", true);
+    column.table.setSorting((prev) => [
+      { id: column.id, desc: direction === "desc" },
+      ...prev.filter((sort) => sort.id !== column.id),
+    ]);
   }
 
   return (

@@ -90,7 +90,10 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
     if (keys === "all") return;
     const [direction] = keys;
     if (direction === "asc" || direction === "desc") {
-      column.toggleSorting(direction === "desc", true);
+      column.table.setSorting((prev) => [
+        { id: column.id, desc: direction === "desc" },
+        ...prev.filter((sort) => sort.id !== column.id),
+      ]);
       return;
     }
 
