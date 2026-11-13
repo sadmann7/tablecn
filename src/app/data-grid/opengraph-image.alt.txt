@@ -1,1 +1,1 @@
-tablecn Data Grid: spreadsheet-like data grid for shadcn/ui, with an edited cell and a selected range
+tablecn Data Grid: spreadsheet-like data grid for shadcn/ui, with a range of cells selected
