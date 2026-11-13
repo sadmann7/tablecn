@@ -61,6 +61,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "pageSizeOptions"
   | "manualFiltering"
   | "manualPagination"
+  | "autoResetPageIndex"
   | "manualSorting"
 > &
   Pick<
@@ -309,11 +310,19 @@ function useDataTable<TData extends RowData>({
       onJoinOperatorChange,
       onGlobalFilterChange,
       manualPagination: isServer,
+      autoResetPageIndex: false,
       manualSorting: isServer,
       manualFiltering: isServer,
     },
     selectTableState,
   );
+
+  const lastPage = isServer ? 0 : table.getPageCount();
+
+  React.useEffect(() => {
+    if (lastPage > 0 && page > lastPage)
+      void setQueryState({ page: lastPage }, { history: "replace" });
+  }, [lastPage, page, setQueryState]);
 
   return { table };
 }

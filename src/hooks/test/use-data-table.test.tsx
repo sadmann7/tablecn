@@ -394,6 +394,44 @@ describe("useDataTable", () => {
     expect(result.current.table.state.columnFilters).toBe(filters);
   });
 
+  it("keeps the client page when the rows change", async () => {
+    let rows = createTasks(30);
+    const { result, rerender, updates } = renderHookWithUrl("?page=3", () =>
+      useClientTable(rows),
+    );
+    expect(result.current.table.state.pagination.pageIndex).toBe(2);
+
+    rows = [...rows];
+    await act(async () => rerender());
+    rows = rows.map((row, index) =>
+      index === 0 ? { ...row, status: "done" } : row,
+    );
+    await act(async () => rerender());
+
+    expect(result.current.table.state.pagination.pageIndex).toBe(2);
+    expect(updates).toHaveLength(0);
+  });
+
+  it("moves to the last client page with rows when the rows shrink", async () => {
+    let rows = createTasks(30);
+    const { result, rerender, getLastSearch, updates } = renderHookWithUrl(
+      "?page=3",
+      () => useClientTable(rows, "push"),
+    );
+
+    rows = rows.slice(0, 15);
+    await act(async () => rerender());
+
+    await waitFor(() => expect(getLastSearch()?.get("page")).toBe("2"));
+    expect(updates.at(-1)?.options.history).toBe("replace");
+    expect(result.current.table.state.pagination.pageIndex).toBe(1);
+
+    rows = [];
+    await act(async () => rerender());
+
+    expect(result.current.table.state.pagination.pageIndex).toBe(1);
+  });
+
   it("keeps the same filters when columns are recreated inline", () => {
     const { result, rerender } = renderHookWithUrl("?title=bug", () =>
       useTestDataTable({ mode: "client", data, columns: [...columns] }),
@@ -978,6 +1016,21 @@ function useTestDataTable(props: Partial<UseDataTableProps<Task>>) {
     debounceMs: 10,
     ...props,
   } as UseDataTableProps<Task>);
+}
+
+function useClientTable(rows: Task[], history?: "push" | "replace") {
+  const value = useTestDataTable({ mode: "client", data: rows, history });
+  value.table.getRowModel();
+  return value;
+}
+
+function createTasks(count: number): Task[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: String(index),
+    code: `TASK-${index}`,
+    title: `Task ${index}`,
+    status: "todo",
+  }));
 }
 
 function renderHookWithUrl<TResult>(search: string, useResult: () => TResult) {
