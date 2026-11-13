@@ -81,13 +81,16 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   sortDirection,
   ...props
 }: DataTableColumnHeaderMenuProps<TData, TValue>) {
-  function onSortDirectionChange(direction: SortDirection, multi: boolean) {
+  function onSortDirectionChange(direction: SortDirection) {
     if (sortDirection === direction) {
       column.clearSorting();
       return;
     }
 
-    column.toggleSorting(direction === "desc", multi);
+    column.table.setSorting((prev) => [
+      { id: column.id, desc: direction === "desc" },
+      ...prev.filter((sort) => sort.id !== column.id),
+    ]);
   }
 
   return (
@@ -137,7 +140,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "asc"}
-              onClick={(event) => onSortDirectionChange("asc", event.shiftKey)}
+              onClick={() => onSortDirectionChange("asc")}
             >
               <IconPlaceholder
                 lucide="ChevronUp"
@@ -151,7 +154,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "desc"}
-              onClick={(event) => onSortDirectionChange("desc", event.shiftKey)}
+              onClick={() => onSortDirectionChange("desc")}
             >
               <IconPlaceholder
                 lucide="ChevronDown"

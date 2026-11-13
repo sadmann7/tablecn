@@ -7,6 +7,7 @@ import {
   type Header,
   type ReactTable,
   type RowData,
+  type SortDirection,
   Subscribe,
   type Table,
 } from "@tanstack/react-table";
@@ -186,6 +187,13 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
   const leftPosition = isRtl ? "end" : "start";
   const rightPosition = isRtl ? "start" : "end";
 
+  function onSortingChange(direction: SortDirection) {
+    table.setSorting((prev) => [
+      { id: column.id, desc: direction === "desc" },
+      ...prev.filter((sort) => sort.id !== column.id),
+    ]);
+  }
+
   return (
     <>
       {canSort && (
@@ -193,7 +201,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
           <DropdownMenuCheckboxItem
             className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
             checked={sortDirection === "asc"}
-            onClick={(event) => column.toggleSorting(false, event.shiftKey)}
+            onClick={() => onSortingChange("asc")}
           >
             <IconPlaceholder
               lucide="ChevronUpIcon"
@@ -207,7 +215,7 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
           <DropdownMenuCheckboxItem
             className="relative ltr:pr-8 ltr:pl-2 rtl:pr-2 rtl:pl-8 [&_svg]:text-muted-foreground [&>span:first-child]:ltr:right-2 [&>span:first-child]:ltr:left-auto [&>span:first-child]:rtl:right-auto [&>span:first-child]:rtl:left-2"
             checked={sortDirection === "desc"}
-            onClick={(event) => column.toggleSorting(true, event.shiftKey)}
+            onClick={() => onSortingChange("desc")}
           >
             <IconPlaceholder
               lucide="ChevronDownIcon"
