@@ -52,6 +52,7 @@ import {
   statuses,
 } from "../lib/seeds";
 import { worstCasePeople } from "../lib/worst-case";
+import { ContactCell, parseContact, sortContacts } from "./contact-cell";
 import { DataGridBenchmark } from "./data-grid-benchmark";
 import { DataGridDemoSkeleton } from "./data-grid-demo-skeleton";
 import { PeopleDataGridActionBar } from "./people-data-grid-action-bar";
@@ -222,6 +223,18 @@ function DataGridDemoContent({
         meta: {
           label: "Email",
           variant: "text",
+        },
+      }),
+      columnHelper.accessor("contact", {
+        id: "contact",
+        header: "Emergency Contact",
+        minSize: 240,
+        enableColumnFilter: false,
+        sortFn: sortContacts,
+        meta: {
+          label: "Emergency Contact",
+          cellComponent: ContactCell,
+          parseValue: parseContact,
         },
       }),
       columnHelper.accessor("feedback", {
