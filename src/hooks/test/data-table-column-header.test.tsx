@@ -41,7 +41,26 @@ describe.each([
     (trigger: HTMLElement) => fireEvent.click(trigger),
   ],
 ])("%s DataTableColumnHeader", (_base, DataTableColumnHeader, openMenu) => {
-  it("puts the column first and keeps the other sorts", () => {
+  it.each([
+    [
+      "puts the column first when its sort is chosen",
+      {},
+      [
+        { id: "code", desc: false },
+        { id: "createdAt", desc: true },
+      ],
+    ],
+    [
+      "replaces the sort when multi sort is off",
+      { enableMultiSort: false },
+      [{ id: "code", desc: false }],
+    ],
+    [
+      "keeps the sort within the max sort count",
+      { maxMultiSortColCount: 1 },
+      [{ id: "code", desc: false }],
+    ],
+  ])("%s", (_name, options, expected) => {
     const { result } = renderHook(() =>
       useTable({
         features: dataTableFeatures,
@@ -53,6 +72,7 @@ describe.each([
             { id: "code", desc: true },
           ],
         },
+        ...options,
       }),
     );
     const code = result.current.getColumn("code");
@@ -62,10 +82,7 @@ describe.each([
     openMenu(screen.getByRole("button", { name: "Task" }));
     fireEvent.click(screen.getByText("Asc"));
 
-    expect(result.current.store.state.sorting).toEqual([
-      { id: "code", desc: false },
-      { id: "createdAt", desc: true },
-    ]);
+    expect(result.current.store.state.sorting).toEqual(expected);
   });
 
   it("labels the header from the column meta, then the column id", () => {
