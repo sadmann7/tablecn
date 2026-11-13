@@ -87,6 +87,14 @@ export function stringifyUnknown(value: unknown): string {
   }
 }
 
+export function getSearchText(value: unknown): string {
+  if (Array.isArray(value)) return value.map(getSearchText).join(" ");
+  if (value && typeof value === "object" && !(value instanceof Date)) {
+    return Object.values(value).map(getSearchText).join(" ");
+  }
+  return stringifyUnknown(value);
+}
+
 export function getIsFileCellData(item: unknown): item is FileCellData {
   return (
     !!item &&

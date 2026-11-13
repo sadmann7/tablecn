@@ -13,6 +13,7 @@ import {
   getNumberCellValue,
   getOptionCellValue,
   getOptionsCellValue,
+  getSearchText,
   getTabTargetCell,
   getWindowedColumns,
   insertTextAtSelection,
@@ -706,5 +707,23 @@ describe("replaceEditableText", () => {
     expect(selection?.isCollapsed).toBe(true);
     expect(selection?.focusOffset).toBe(1);
     expect(inputData).toBe("a");
+  });
+});
+
+describe("getSearchText", () => {
+  it("searches the values of objects and arrays, not their keys", () => {
+    const contact = { name: "Ada Lovelace", phone: "(555) 010-1815" };
+    expect(getSearchText(contact)).toBe("Ada Lovelace (555) 010-1815");
+    expect(getSearchText([contact, "tag"])).toBe(
+      "Ada Lovelace (555) 010-1815 tag",
+    );
+  });
+
+  it("stringifies other values", () => {
+    expect(getSearchText(42)).toBe("42");
+    expect(getSearchText(null)).toBe("");
+    expect(getSearchText(new Date("2026-01-02T00:00:00Z"))).toBe(
+      "2026-01-02T00:00:00.000Z",
+    );
   });
 });
