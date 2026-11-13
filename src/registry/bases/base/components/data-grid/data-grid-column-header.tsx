@@ -4,7 +4,6 @@ import type { BaseUIEvent } from "@base-ui/react/types";
 
 import {
   type Column,
-  type ColumnSort,
   type Header,
   type ReactTable,
   type RowData,
@@ -190,16 +189,12 @@ function DataGridColumnMenuItems<TData extends RowData, TValue>({
 
   function onSortingChange(direction: SortDirection) {
     table.setSorting((prev) => {
-      const existingSortIndex = prev.findIndex((sort) => sort.id === column.id);
-      const newSort: ColumnSort = {
-        id: column.id,
-        desc: direction === "desc",
-      };
-
-      if (existingSortIndex === -1) return [...prev, newSort];
-      const updated = [...prev];
-      updated[existingSortIndex] = newSort;
-      return updated;
+      const sort = { id: column.id, desc: direction === "desc" };
+      if (!column.getCanMultiSort()) return [sort];
+      return [sort, ...prev.filter((item) => item.id !== column.id)].slice(
+        0,
+        table.options.maxMultiSortColCount,
+      );
     });
   }
 
