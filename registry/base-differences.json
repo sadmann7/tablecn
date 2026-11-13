@@ -95,7 +95,7 @@
     "components/data-grid/data-grid.tsx": "radix-only",
     "components/data-table/data-table-actions-column.tsx": "1f3385ecde0d",
     "components/data-table/data-table-advanced-toolbar.tsx": "ea21655ad104",
-    "components/data-table/data-table-column-header.tsx": "f8d2f3d52ca9",
+    "components/data-table/data-table-column-header.tsx": "ee92feaf6083",
     "components/data-table/data-table-command-filter-menu.tsx": "cb09164a454e",
     "components/data-table/data-table-date-filter.tsx": "89d7d57e6596",
     "components/data-table/data-table-faceted-filter.tsx": "a33b01c48f02",

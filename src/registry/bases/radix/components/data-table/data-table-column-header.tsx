@@ -87,10 +87,14 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
       return;
     }
 
-    column.table.setSorting((prev) => [
-      { id: column.id, desc: direction === "desc" },
-      ...prev.filter((sort) => sort.id !== column.id),
-    ]);
+    column.table.setSorting((prev) => {
+      const sort = { id: column.id, desc: direction === "desc" };
+      if (!column.getCanMultiSort()) return [sort];
+      return [sort, ...prev.filter((item) => item.id !== column.id)].slice(
+        0,
+        column.table.options.maxMultiSortColCount,
+      );
+    });
   }
 
   return (
