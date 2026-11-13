@@ -1,0 +1,1 @@
+tablecn Rapid: live data at 60 ticks a second, with flashing prices and sparklines

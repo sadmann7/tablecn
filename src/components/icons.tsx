@@ -1,6 +1,20 @@
 export type IconProps = React.HTMLAttributes<SVGElement>;
 
 export const Icons = {
+  logo: (props: IconProps) => (
+    <svg viewBox="0 0 128 128" {...props}>
+      <rect width="128" height="128" rx="28" fill="currentColor" />
+      <g className="fill-background">
+        <rect x="24" y="24" width="80" height="20" rx="5" />
+        <rect x="53" y="51" width="51" height="23" rx="5" />
+        <g fillOpacity="0.3">
+          <rect x="24" y="51" width="22" height="23" rx="5" />
+          <rect x="24" y="81" width="22" height="23" rx="5" />
+          <rect x="53" y="81" width="51" height="23" rx="5" />
+        </g>
+      </g>
+    </svg>
+  ),
   gitHub: (props: IconProps) => (
     <svg viewBox="0 0 438.549 438.549" {...props}>
       <path

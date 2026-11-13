@@ -1,4 +1,4 @@
-import { LayoutGrid, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import Link from "next/link";
 
 import { ActiveLink } from "@/components/active-link";
@@ -6,7 +6,7 @@ import { Icons } from "@/components/icons";
 import { DocsLink } from "@/components/layouts/docs-link";
 import { MobileNav } from "@/components/layouts/mobile-nav";
 import { ModeToggle } from "@/components/layouts/mode-toggle";
-import { GITHUB_URL, NAV_LINKS } from "@/lib/site";
+import { GITHUB_URL, NAV_LINKS, SITE_NAME } from "@/lib/site";
 import { Button } from "@/registry/bases/radix/ui/button";
 import {
   Sheet,
@@ -41,11 +41,15 @@ export function SiteHeader() {
             <MobileNav />
           </SheetContent>
         </Sheet>
-        <Button variant="ghost" size="icon" className="size-8" asChild>
-          <Link aria-label="Home" href="/">
-            <LayoutGrid />
-          </Link>
-        </Button>
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 rounded-md px-1.5 py-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 lg:me-2"
+        >
+          <Icons.logo className="size-5" />
+          <span className="sr-only font-semibold lg:not-sr-only">
+            {SITE_NAME}
+          </span>
+        </Link>
         <nav className="hidden w-full items-center text-sm md:flex">
           {NAV_LINKS.map((navLink) => (
             <ActiveLink key={navLink.href} href={navLink.href}>
