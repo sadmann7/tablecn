@@ -1,7 +1,5 @@
 "use client";
 
-import type * as React from "react";
-
 import {
   type Column,
   type RowData,
@@ -10,6 +8,7 @@ import {
   Subscribe,
 } from "@tanstack/react-table";
 import { cn } from "cn";
+import * as React from "react";
 import {
   Button as ButtonPrimitive,
   type Selection,
@@ -85,19 +84,13 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   ...props
 }: DataTableColumnHeaderMenuProps<TData, TValue>) {
   const dir = useDirection();
+  const isMultiSortRef = React.useRef(false);
 
   function onSortDirectionChange(keys: Selection) {
     if (keys === "all") return;
     const [direction] = keys;
     if (direction === "asc" || direction === "desc") {
-      column.table.setSorting((prev) => {
-        const sort = { id: column.id, desc: direction === "desc" };
-        if (!column.getCanMultiSort()) return [sort];
-        return [sort, ...prev.filter((item) => item.id !== column.id)].slice(
-          0,
-          column.table.options.maxMultiSortColCount,
-        );
-      });
+      column.toggleSorting(direction === "desc", isMultiSortRef.current);
       return;
     }
 
@@ -156,6 +149,9 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
           >
             <DropdownMenuItem
               id="asc"
+              onPressStart={(event) => {
+                isMultiSortRef.current = event.shiftKey;
+              }}
               textValue="Asc"
               shouldCloseOnSelect={false}
               className="[&_svg]:text-muted-foreground"
@@ -171,6 +167,9 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             </DropdownMenuItem>
             <DropdownMenuItem
               id="desc"
+              onPressStart={(event) => {
+                isMultiSortRef.current = event.shiftKey;
+              }}
               textValue="Desc"
               shouldCloseOnSelect={false}
               className="[&_svg]:text-muted-foreground"

@@ -88,7 +88,16 @@ describe.each(bases)(
       ).toContain("Does not contain");
     });
 
-    it("puts the column first when its header sort is chosen", () => {
+    it.each([
+      [false, [{ id: "id", desc: false }]],
+      [
+        true,
+        [
+          { id: "name", desc: true },
+          { id: "id", desc: false },
+        ],
+      ],
+    ])("sorts from the header when shift is %s", (shiftKey, expected) => {
       const { result } = renderHook(() =>
         useDataGrid({
           data,
@@ -101,12 +110,7 @@ describe.each(bases)(
               meta: { label: "ID", variant: "text" },
             },
           ],
-          initialState: {
-            sorting: [
-              { id: "name", desc: true },
-              { id: "id", desc: true },
-            ],
-          },
+          initialState: { sorting: [{ id: "name", desc: true }] },
         }),
       );
       const { table } = result.current;
@@ -119,12 +123,9 @@ describe.each(bases)(
         wrapper: TooltipProvider,
       });
       openMenu(screen.getByRole("button", { name: "ID" }));
-      fireEvent.click(screen.getByText("Sort ascending"));
+      fireEvent.click(screen.getByText("Sort ascending"), { shiftKey });
 
-      expect(result.current.table.store.state.sorting).toEqual([
-        { id: "id", desc: false },
-        { id: "name", desc: true },
-      ]);
+      expect(result.current.table.store.state.sorting).toEqual(expected);
     });
 
     it.each([

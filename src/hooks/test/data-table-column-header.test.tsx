@@ -43,35 +43,33 @@ describe.each([
 ])("%s DataTableColumnHeader", (_base, DataTableColumnHeader, openMenu) => {
   it.each([
     [
-      "puts the column first when its sort is chosen",
+      "replaces the sort with the chosen column",
+      false,
+      {},
+      [{ id: "code", desc: false }],
+    ],
+    [
+      "adds the chosen column after the sort with shift",
+      true,
       {},
       [
-        { id: "code", desc: false },
         { id: "createdAt", desc: true },
+        { id: "code", desc: false },
       ],
     ],
     [
-      "replaces the sort when multi sort is off",
+      "replaces the sort with shift when multi sort is off",
+      true,
       { enableMultiSort: false },
       [{ id: "code", desc: false }],
     ],
-    [
-      "keeps the sort within the max sort count",
-      { maxMultiSortColCount: 1 },
-      [{ id: "code", desc: false }],
-    ],
-  ])("%s", (_name, options, expected) => {
+  ])("%s", (_name, shiftKey, options, expected) => {
     const { result } = renderHook(() =>
       useTable({
         features: dataTableFeatures,
         columns,
         data,
-        initialState: {
-          sorting: [
-            { id: "createdAt", desc: true },
-            { id: "code", desc: true },
-          ],
-        },
+        initialState: { sorting: [{ id: "createdAt", desc: true }] },
         ...options,
       }),
     );
@@ -80,7 +78,7 @@ describe.each([
 
     render(<DataTableColumnHeader column={code} />);
     openMenu(screen.getByRole("button", { name: "Task" }));
-    fireEvent.click(screen.getByText("Asc"));
+    fireEvent.click(screen.getByText("Asc"), { shiftKey });
 
     expect(result.current.store.state.sorting).toEqual(expected);
   });

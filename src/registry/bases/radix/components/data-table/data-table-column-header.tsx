@@ -81,20 +81,13 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
   sortDirection,
   ...props
 }: DataTableColumnHeaderMenuProps<TData, TValue>) {
-  function onSortDirectionChange(direction: SortDirection) {
+  function onSortDirectionChange(direction: SortDirection, multi: boolean) {
     if (sortDirection === direction) {
       column.clearSorting();
       return;
     }
 
-    column.table.setSorting((prev) => {
-      const sort = { id: column.id, desc: direction === "desc" };
-      if (!column.getCanMultiSort()) return [sort];
-      return [sort, ...prev.filter((item) => item.id !== column.id)].slice(
-        0,
-        column.table.options.maxMultiSortColCount,
-      );
-    });
+    column.toggleSorting(direction === "desc", multi);
   }
 
   return (
@@ -144,7 +137,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "asc"}
-              onClick={() => onSortDirectionChange("asc")}
+              onClick={(event) => onSortDirectionChange("asc", event.shiftKey)}
             >
               <IconPlaceholder
                 lucide="ChevronUp"
@@ -158,7 +151,7 @@ function DataTableColumnHeaderMenu<TData extends RowData, TValue>({
             <DropdownMenuCheckboxItem
               className="[&_svg]:text-muted-foreground"
               checked={sortDirection === "desc"}
-              onClick={() => onSortDirectionChange("desc")}
+              onClick={(event) => onSortDirectionChange("desc", event.shiftKey)}
             >
               <IconPlaceholder
                 lucide="ChevronDown"
