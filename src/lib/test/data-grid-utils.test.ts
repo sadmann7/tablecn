@@ -711,6 +711,17 @@ describe("replaceEditableText", () => {
 });
 
 describe("getSearchText", () => {
+  it("skips values it has already visited", () => {
+    const node: { name: string; parent?: unknown } = { name: "root" };
+    node.parent = node;
+    expect(getSearchText(node)).toBe("root ");
+  });
+
+  it("searches an object used in two places both times", () => {
+    const contact = { name: "Ada" };
+    expect(getSearchText([contact, contact])).toBe("Ada Ada");
+  });
+
   it("searches the values of objects and arrays, not their keys", () => {
     const contact = { name: "Ada Lovelace", phone: "(555) 010-1815" };
     expect(getSearchText(contact)).toBe("Ada Lovelace (555) 010-1815");
