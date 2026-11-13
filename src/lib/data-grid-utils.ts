@@ -87,12 +87,20 @@ export function stringifyUnknown(value: unknown): string {
   }
 }
 
-export function getSearchText(value: unknown): string {
-  if (Array.isArray(value)) return value.map(getSearchText).join(" ");
-  if (value && typeof value === "object" && !(value instanceof Date)) {
-    return Object.values(value).map(getSearchText).join(" ");
+export function getSearchText(
+  value: unknown,
+  ancestors?: WeakSet<object>,
+): string {
+  if (!value || typeof value !== "object" || value instanceof Date) {
+    return stringifyUnknown(value);
   }
-  return stringifyUnknown(value);
+  ancestors ??= new WeakSet();
+  if (ancestors.has(value)) return "";
+  ancestors.add(value);
+  const items = Array.isArray(value) ? value : Object.values(value);
+  const text = items.map((item) => getSearchText(item, ancestors)).join(" ");
+  ancestors.delete(value);
+  return text;
 }
 
 export function getIsFileCellData(item: unknown): item is FileCellData {
