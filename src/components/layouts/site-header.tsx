@@ -41,11 +41,13 @@ export function SiteHeader() {
             <MobileNav />
           </SheetContent>
         </Sheet>
-        <Button variant="ghost" size="icon" className="size-8" asChild>
-          <Link aria-label="Home" href="/">
-            <Icons.logo className="size-5" />
-          </Link>
-        </Button>
+        <Link
+          href="/"
+          className="flex shrink-0 items-center gap-2 rounded-md px-1.5 py-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 lg:me-2"
+        >
+          <Icons.logo className="size-5" />
+          <span className="sr-only font-semibold lg:not-sr-only">tablecn</span>
+        </Link>
         <nav className="hidden w-full items-center text-sm md:flex">
           {NAV_LINKS.map((navLink) => (
             <ActiveLink key={navLink.href} href={navLink.href}>
