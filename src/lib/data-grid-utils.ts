@@ -160,7 +160,12 @@ export function getFilesCellValue(value: unknown): FileCellData[] {
   return Array.isArray(value) ? value.filter(getIsFileCellData) : [];
 }
 
-export function getEmptyCellValue(variant: ColumnVariant | undefined): unknown {
+export function getEmptyCellValue(
+  meta: DataGridColumnMeta | undefined,
+): unknown {
+  if (meta?.emptyValue !== undefined) return meta.emptyValue;
+  if (meta?.cellComponent && !meta.variant) return null;
+  const variant = meta?.variant;
   if (variant === "multi-select" || variant === "file") return [];
   if (variant === "number" || variant === "date" || variant === "select") {
     return null;
@@ -183,6 +188,12 @@ export function parsePastedCellValue(
   text: string,
   meta: DataGridColumnMeta | undefined,
 ): { value: unknown } | null {
+  if (meta?.parseValue) {
+    const value = meta.parseValue(text);
+    return value === undefined ? null : { value };
+  }
+  if (meta?.cellComponent && !meta.variant) return null;
+
   switch (meta?.variant) {
     case "number": {
       if (!text) return { value: null };
@@ -406,7 +417,12 @@ export function getHasCustomCell<TData extends RowData>(
 ) {
   const { cell, meta } = column.columnDef;
 
-  return !meta?.variant && cell !== undefined && cell !== renderDefaultCell;
+  return (
+    !meta?.variant &&
+    !meta?.cellComponent &&
+    cell !== undefined &&
+    cell !== renderDefaultCell
+  );
 }
 
 export function getIsDataColumn<TData extends RowData>(

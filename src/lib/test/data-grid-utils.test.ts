@@ -4,6 +4,7 @@ import {
   getBooleanCellValue,
   getCellKey,
   getDateCellValue,
+  getEmptyCellValue,
   getFilesCellValue,
   getHeaderSizeVar,
   getIsEditableTarget,
@@ -130,6 +131,43 @@ describe("parsePastedCellValue", () => {
     expect(
       parsePastedCellValue(text, { variant: "multi-select", options }),
     ).toEqual({ value: ["goofy", "regular"] });
+  });
+
+  it("uses the column's parseValue over its variant", () => {
+    const meta = {
+      variant: "number" as const,
+      parseValue: (text: string) => (text === "skip" ? undefined : text.length),
+    };
+    expect(parsePastedCellValue("abc", meta)).toEqual({ value: 3 });
+    expect(parsePastedCellValue("skip", meta)).toBeNull();
+  });
+
+  it("skips a cell component without a variant or parseValue", () => {
+    const meta = { cellComponent: () => null };
+    expect(parsePastedCellValue('["a"]', meta)).toBeNull();
+    expect(parsePastedCellValue("42", { ...meta, variant: "number" })).toEqual({
+      value: 42,
+    });
+  });
+});
+
+describe("getEmptyCellValue", () => {
+  it("uses the variant's empty value", () => {
+    expect(getEmptyCellValue(undefined)).toBe("");
+    expect(getEmptyCellValue({ variant: "boolean" })).toBe(false);
+    expect(getEmptyCellValue({ variant: "file" })).toEqual([]);
+  });
+
+  it("prefers the column's emptyValue", () => {
+    expect(getEmptyCellValue({ variant: "number", emptyValue: 0 })).toBe(0);
+    expect(getEmptyCellValue({ emptyValue: null })).toBeNull();
+  });
+
+  it("clears a cell component without a variant to null", () => {
+    expect(getEmptyCellValue({ cellComponent: () => null })).toBeNull();
+    expect(
+      getEmptyCellValue({ cellComponent: () => null, emptyValue: [] }),
+    ).toEqual([]);
   });
 });
 
