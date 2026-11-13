@@ -61,6 +61,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "pageSizeOptions"
   | "manualFiltering"
   | "manualPagination"
+  | "autoResetPageIndex"
   | "manualSorting"
 > &
   Pick<
@@ -309,6 +310,7 @@ function useDataTable<TData extends RowData>({
       onJoinOperatorChange,
       onGlobalFilterChange,
       manualPagination: isServer,
+      autoResetPageIndex: false,
       manualSorting: isServer,
       manualFiltering: isServer,
     },
