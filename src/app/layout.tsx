@@ -59,11 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: SITE_NAME,
     description: SITE_DESCRIPTION,
-    images: [`${SITE_URL}/og.jpg`],
     creator: "@sadmann17",
-  },
-  icons: {
-    icon: "/icon.png",
   },
 };
 

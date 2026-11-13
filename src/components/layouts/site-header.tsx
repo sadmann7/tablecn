@@ -1,4 +1,4 @@
-import { LayoutGrid, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import Link from "next/link";
 
 import { ActiveLink } from "@/components/active-link";
@@ -43,7 +43,7 @@ export function SiteHeader() {
         </Sheet>
         <Button variant="ghost" size="icon" className="size-8" asChild>
           <Link aria-label="Home" href="/">
-            <LayoutGrid />
+            <Icons.logo className="size-5" />
           </Link>
         </Button>
         <nav className="hidden w-full items-center text-sm md:flex">
