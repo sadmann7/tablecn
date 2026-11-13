@@ -25,10 +25,10 @@ export function ContactCell(props: DataGridCellProps<Person>) {
   const onSave = React.useCallback(
     (newContact: Contact | null) => {
       draftRef.current = undefined;
-      cell.setValue(newContact);
+      if (!getIsSameContact(newContact, contact)) cell.setValue(newContact);
       cell.table.stopEditing();
     },
-    [cell],
+    [cell, contact],
   );
 
   const onDraftChange = React.useCallback((draft: Contact | null) => {
@@ -42,10 +42,16 @@ export function ContactCell(props: DataGridCellProps<Person>) {
       const isCanceling = isCancelingRef.current;
       draftRef.current = undefined;
       isCancelingRef.current = false;
-      if (draft !== undefined && !isCanceling) cell.setValue(draft);
+      if (
+        draft !== undefined &&
+        !isCanceling &&
+        !getIsSameContact(draft, contact)
+      ) {
+        cell.setValue(draft);
+      }
       cell.table.stopEditing();
     },
-    [cell],
+    [cell, contact],
   );
 
   const onEscapeKeyDown = React.useCallback(() => {
@@ -162,6 +168,10 @@ function ContactForm({ contact, onSave, onDraftChange }: ContactFormProps) {
 function getDraftContact(name: string, phone: string): Contact | null {
   const contact = { name: name.trim(), phone: phone.trim() };
   return contact.name || contact.phone ? contact : null;
+}
+
+function getIsSameContact(a: Contact | null, b: Contact | null) {
+  return a?.name === b?.name && a?.phone === b?.phone;
 }
 
 function getContact(value: unknown): Contact | null {
