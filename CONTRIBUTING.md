@@ -97,7 +97,7 @@ pnpm dev:multiplayer
 
 ### Commit your changes
 
-When commiting your changes, use the following format:
+When committing your changes, use the following format:
 
 ```text
 <type>(<scope>): <description>
@@ -113,6 +113,7 @@ When commiting your changes, use the following format:
 - `test` : adding or updating tests
 - `docs` : documentation changes only
 - `chore` : build process, dependency updates, tooling
+- `ci` : continuous integration changes
 
 **Scope:**
 Scope your commit to the part of the codebase that is affected, for example `data-table`, `data-grid`, `multiplayer`, `ui`, or `deps`.
@@ -126,7 +127,7 @@ git commit -m "feat(data-grid): add real-time collaboration"
 
 ### Create a pull request
 
-When you're finished pushing your changes, open a pull request.
+When you're finished pushing your changes, open a pull request. Its title uses the same format, since pull requests are squash-merged.
 
 ### Issues
 
