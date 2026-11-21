@@ -1,7 +1,3 @@
-# This template is heavily inspired by the acme-corp and shadcn-ui/ui repositories.
-# See: https://github.com/juliusmarminge/acme-corp/blob/main/.github/ISSUE_TEMPLATE/bug_report.yml
-# See: https://github.com/shadcn-ui/ui/blob/main/.github/ISSUE_TEMPLATE/feature_request.yml
-
 name: Bug report
 description: Create a bug report to help us improve
 title: "[bug]: "
