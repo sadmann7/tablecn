@@ -36,8 +36,6 @@
   },
   "tailwindCSS.classFunctions": ["cn", "cva", "clsx", "twMerge"],
   "css.lint.unknownAtRules": "ignore",
-  "js/ts.tsdk.path": "node_modules/typescript/lib",
-  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
