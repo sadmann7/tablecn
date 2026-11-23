@@ -44,13 +44,13 @@ export const FILTER_MODES = [
     label: "Advanced",
     value: "advanced",
     icon: FileSpreadsheetIcon,
-    description: "Filter rows with an Airtable like filter builder.",
+    description: "Filter rows with an Airtable-like filter builder.",
   },
   {
     label: "Command",
     value: "command",
     icon: CommandIcon,
-    description: "Filter rows with a Linear like command palette.",
+    description: "Filter rows with a Linear-like command palette.",
   },
 ] as const satisfies readonly Flag[];
 
