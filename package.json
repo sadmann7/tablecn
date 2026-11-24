@@ -11,6 +11,7 @@
     "deploy:multiplayer": "wrangler deploy",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:a11y": "playwright test --project=a11y",
     "table:record": "playwright test -c playwright.record.config.ts",
     "profile:scroll": "tsx --tsconfig ./tsconfig.scripts.json scripts/profile-data-grid-scroll.ts",
     "dev:docker": "pnpm db:start && pnpm dev",
@@ -85,6 +86,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@babel/core": "^8.0.9",
     "@cloudflare/workers-types": "^5.20261009.1",
     "@faker-js/faker": "^10.6.0",
