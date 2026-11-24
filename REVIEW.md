@@ -7,6 +7,7 @@ tablecn ships copy-paste components through a shadcn registry. A bug here lands 
 - `pnpm check` runs lint, format, typecheck, and `check:bases`.
 - `pnpm test` for unit tests.
 - `pnpm test:e2e` when the data table's interaction changes. It needs the database from `pnpm db:start`.
+- `pnpm test:a11y` when a data table or data grid under `src/registry/bases` changes. It runs axe and keyboard checks on every base and needs no database.
 - `pnpm build:registry` when a file under `src/registry` is added, renamed, or changes its imports.
 
 ## What to look for
