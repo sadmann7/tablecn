@@ -99,4 +99,9 @@ jobs:
         run: pnpm exec next build
 
       - name: Test
-        run: pnpm test:e2e
+        run: pnpm test:e2e --project=chromium
+
+      - name: Test accessibility
+        run: pnpm test:a11y
+        env:
+          E2E_DEV_SERVER: true
