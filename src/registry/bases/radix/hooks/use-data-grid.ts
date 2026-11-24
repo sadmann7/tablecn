@@ -255,7 +255,6 @@ function useDataGrid<TData extends RowData>({
   }, []);
 
   const blurCell = React.useCallback(() => {
-    lastFocusedCellRef.current = getFocusedCell() ?? lastFocusedCellRef.current;
     if (
       tableRef.current?.getEditingCell() &&
       document.activeElement instanceof HTMLElement
@@ -265,7 +264,7 @@ function useDataGrid<TData extends RowData>({
 
     tableRef.current?.resetCellSelection(true);
     tableRef.current?.setEditingCell(null);
-  }, [getFocusedCell]);
+  }, []);
 
   const getFirstVisibleRowIndex = React.useCallback(() => {
     const container = dataGridRef.current;
@@ -754,7 +753,7 @@ function useDataGrid<TData extends RowData>({
 
   const focusEntryCell = React.useCallback(() => {
     const currentTable = tableRef.current;
-    if (!currentTable) return;
+    if (!currentTable) return false;
 
     const lastFocusedCell = lastFocusedCellRef.current;
     if (
@@ -763,15 +762,15 @@ function useDataGrid<TData extends RowData>({
       getColumnIds().includes(lastFocusedCell.columnId)
     ) {
       focusCell(lastFocusedCell.rowId, lastFocusedCell.columnId);
-      return;
+      return true;
     }
 
     const firstColumnId = getNavigableColumnIds()[0];
     const firstVisibleRowId =
       currentTable.getRowModel().rows[getFirstVisibleRowIndex()]?.id;
-    if (firstColumnId && firstVisibleRowId) {
-      focusCell(firstVisibleRowId, firstColumnId);
-    }
+    if (!firstColumnId || !firstVisibleRowId) return false;
+    focusCell(firstVisibleRowId, firstColumnId);
+    return true;
   }, [getColumnIds, getNavigableColumnIds, getFirstVisibleRowIndex, focusCell]);
 
   const onColumnHeaderKeyDown = React.useCallback(
@@ -970,10 +969,11 @@ function useDataGrid<TData extends RowData>({
           event.target === dataGridRef.current &&
           !altKey &&
           !shiftKey &&
-          GRID_ENTRY_KEYS.has(key)
+          !isCtrlPressed &&
+          GRID_ENTRY_KEYS.has(key) &&
+          focusEntryCell()
         ) {
           event.preventDefault();
-          focusEntryCell();
         }
         return;
       }
@@ -1452,6 +1452,7 @@ function useDataGrid<TData extends RowData>({
     const subscription = table.atoms.cellSelection.subscribe(() => {
       const ranges = table.atoms.cellSelection.get();
       const focusedCell = getFocusedCellPosition(ranges);
+      if (focusedCell) lastFocusedCellRef.current = focusedCell;
       const edgeCell = getSelectionEdgePosition(ranges);
       const focusKey = focusedCell
         ? getCellKey(focusedCell.rowId, focusedCell.columnId)
