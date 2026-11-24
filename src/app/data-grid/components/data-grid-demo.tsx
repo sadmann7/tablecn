@@ -447,6 +447,7 @@ function DataGridDemoContent({
           {...dataGridProps}
           table={table}
           height={height}
+          aria-label="People"
           actionBar={<PeopleDataGridActionBar table={table} />}
         />
       </div>

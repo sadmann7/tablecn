@@ -36,6 +36,8 @@ export interface RowChangeHint {
 
 export const rowChangeHints = new WeakMap<readonly RowData[], RowChangeHint>();
 
+export const coreRowModelVersions = new WeakMap<object, number>();
+
 type CoreRow = Row<TableFeatures, RowData>;
 
 export function createDataGridFilteredRowModel<
@@ -79,6 +81,10 @@ export function createDataGridCoreRowModel<
       memoDeps: () => [table.options.data],
       fn: () => {
         const { data } = table.options;
+        coreRowModelVersions.set(
+          table,
+          (coreRowModelVersions.get(table) ?? 0) + 1,
+        );
         const hint = rowChangeHints.get(data);
         previous =
           previous &&
