@@ -92,7 +92,10 @@ for (const base of GRID_BASES) {
 
     test("keeps the focused cell as the only tab stop", async ({ page }) => {
       const grid = page.getByRole("grid");
-      await tabUntilFocused(page, grid.locator("[role=gridcell]:focus"));
+      await tabUntilFocused(
+        page,
+        grid.locator("[data-slot=data-grid-body] [role=gridcell]:focus"),
+      );
 
       const extraTabStops = await grid.evaluate((element) =>
         Array.from(
@@ -119,7 +122,10 @@ for (const base of GRID_BASES) {
 
     test("moves the focused cell with the arrow keys", async ({ page }) => {
       const grid = page.getByRole("grid");
-      await tabUntilFocused(page, grid.locator("[role=gridcell]:focus"));
+      await tabUntilFocused(
+        page,
+        grid.locator("[data-slot=data-grid-body] [role=gridcell]:focus"),
+      );
 
       const start = await focusedCellPosition(page);
       expect(start.row).toBeGreaterThan(0);
@@ -147,7 +153,10 @@ for (const base of GRID_BASES) {
     test("sorts from the header menu with the keyboard", async ({ page }) => {
       const grid = page.getByRole("grid");
       const header = grid.getByRole("columnheader", { name: "Name" });
-      await tabUntilFocused(page, grid.locator("[role=gridcell]:focus"));
+      await tabUntilFocused(
+        page,
+        grid.locator("[data-slot=data-grid-body] [role=gridcell]:focus"),
+      );
 
       await page.keyboard.press("ArrowUp");
       await expect(header.getByRole("button")).toBeFocused();
