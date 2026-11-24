@@ -222,12 +222,13 @@ function DataGridViewport<TData extends RowData>({
           : direction === "backward"
             ? overscan * 2 - Math.ceil(overscan / 3)
             : overscan;
-      const viewportHeight = rowVirtualizerRef.current?.scrollRect?.height ?? 0;
-      const visibleCount =
-        viewportHeight > 0
-          ? Math.ceil(viewportHeight / rowSize) + 1
-          : endIndex - startIndex + 1;
-      const total = Math.min(count, visibleCount + overscan * 2);
+      const total = getRowWindowSize({
+        viewportHeight: rowVirtualizerRef.current?.scrollRect?.height ?? 0,
+        rowSize,
+        overscan,
+        count,
+        fallbackVisibleCount: endIndex - startIndex + 1,
+      });
       let start = Math.max(0, Math.min(startIndex - before, count - total));
       const focusedRowId = table.getFocusedCell()?.row.id;
       const focusedRowIndex =
@@ -249,7 +250,8 @@ function DataGridViewport<TData extends RowData>({
       }
       return indexes;
     },
-    [table, rowVirtualizerRef, rowSize],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- a new row order moves the focused row, so `rows` re-runs the extractor
+    [table, rowVirtualizerRef, rowSize, rows],
   );
 
   const getRowKey = React.useCallback(
@@ -412,7 +414,12 @@ function DataGridViewport<TData extends RowData>({
   );
 
   const virtualRows = rowVirtualizer.getVirtualItems();
-  const rowSlots = getRowSlots(virtualRows);
+  const rowSlots = getRowSlots(virtualRows, {
+    viewportHeight: rowVirtualizer.scrollRect?.height ?? 0,
+    rowSize,
+    overscan: rowVirtualizer.options.overscan,
+    count: rows.length,
+  });
 
   const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -556,20 +563,50 @@ interface RowSlots {
   pinnedIndex: number | null;
 }
 
-function getRowSlots(items: VirtualItem[]): RowSlots {
+function getRowWindowSize({
+  viewportHeight,
+  rowSize,
+  overscan,
+  count,
+  fallbackVisibleCount,
+}: {
+  viewportHeight: number;
+  rowSize: number;
+  overscan: number;
+  count: number;
+  fallbackVisibleCount: number;
+}) {
+  const visibleCount =
+    viewportHeight > 0
+      ? Math.ceil(viewportHeight / rowSize) + 1
+      : fallbackVisibleCount;
+  return Math.min(count, visibleCount + overscan * 2);
+}
+
+// Keys come from the full window size, so a scroll jump that shrinks the window keeps every key.
+function getRowSlots(
+  items: VirtualItem[],
+  windowOptions: Omit<
+    Parameters<typeof getRowWindowSize>[0],
+    "fallbackVisibleCount"
+  >,
+): RowSlots {
   const first = items[0];
   const second = items[1];
   const last = items.at(-1);
-  if (!first || !second || !last) {
-    return { count: items.length, pinnedIndex: null };
-  }
-  if (last.index - first.index + 1 === items.length) {
-    return { count: items.length, pinnedIndex: null };
-  }
-  return {
-    count: items.length - 1,
-    pinnedIndex: second.index - first.index > 1 ? first.index : last.index,
-  };
+  const pinnedIndex =
+    first && second && last && last.index - first.index + 1 !== items.length
+      ? second.index - first.index > 1
+        ? first.index
+        : last.index
+      : null;
+  const windowLength = pinnedIndex === null ? items.length : items.length - 1;
+  const count = Math.max(
+    windowLength,
+    getRowWindowSize({ ...windowOptions, fallbackVisibleCount: windowLength }),
+    1,
+  );
+  return { count, pinnedIndex };
 }
 
 // The pinned row keeps its slot, and the window row that shares it takes a spare one.
