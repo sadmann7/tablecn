@@ -388,14 +388,28 @@ function DataGridViewport<TData extends RowData>({
     [leafColumns, readOnly, enableCellEditing],
   );
 
+  const headerRowCount = headerGroups.length;
+  const isRowSelectionEnabled =
+    table.options.enableRowSelection !== false &&
+    leafColumns.some((column) => column.id === "select");
+
   const rowContext = React.useMemo(
     () => ({
       stretchColumns,
       adjustLayout,
       readOnlyColumnIds,
       rowMapRef,
+      headerRowCount,
+      isRowSelectionEnabled,
     }),
-    [stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef],
+    [
+      stretchColumns,
+      adjustLayout,
+      readOnlyColumnIds,
+      rowMapRef,
+      headerRowCount,
+      isRowSelectionEnabled,
+    ],
   );
 
   const onRowAddRef = useValueAsRef(onRowAddProp);
@@ -432,7 +446,7 @@ function DataGridViewport<TData extends RowData>({
       aria-label={ariaLabel || (ariaLabelledBy ? undefined : "Data grid")}
       aria-labelledby={ariaLabelledBy || undefined}
       aria-describedby={ariaDescribedBy}
-      aria-rowcount={rows.length + 1 + (hasFooter ? 1 : 0)}
+      aria-rowcount={rows.length + headerRowCount + (hasFooter ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
       data-slot="data-grid"
@@ -503,7 +517,7 @@ function DataGridViewport<TData extends RowData>({
         >
           <div
             role="row"
-            aria-rowindex={rows.length + 2}
+            aria-rowindex={headerRowCount + rows.length + 1}
             data-slot="data-grid-add-row"
             tabIndex={-1}
             className="flex w-full"
