@@ -993,6 +993,90 @@ describe("DataGrid rendering", () => {
     );
   });
 
+  it("keeps the focused row mounted and focused when it scrolls out of view", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    const manyRows = Array.from({ length: 200 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${index + 1}`,
+      trick: "Kickflip",
+    }));
+    const { container, table } = renderDataGrid(testColumns, {
+      data: manyRows,
+    });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    await scrollTo(50);
+    act(() => {
+      table.setFocusedCell("55", "name");
+      getCellWrapper(container, "55", "name")?.focus();
+    });
+    const focusedCell = getCellWrapper(container, "55", "name");
+    expect(document.activeElement).toBe(focusedCell);
+
+    for (let rowCount = 51; rowCount <= 90; rowCount++) {
+      await scrollTo(rowCount);
+    }
+    await scrollTo(150);
+
+    expect(getCellWrapper(container, "160", "name")).not.toBeNull();
+    expect(getCellWrapper(container, "55", "name")).toBe(focusedCell);
+    expect(document.activeElement).toBe(focusedCell);
+    expect(
+      consoleError.mock.calls.some((args) =>
+        String(args[0]).includes("same key"),
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the focused row through a scroll jump and a re-sort", async () => {
+    const manyRows = Array.from({ length: 400 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${String(index + 1).padStart(3, "0")}`,
+      trick: "Kickflip",
+    }));
+    const { container, table } = renderDataGrid(testColumns, {
+      data: manyRows,
+    });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    await scrollTo(50);
+    act(() => {
+      table.setFocusedCell("55", "name");
+      getCellWrapper(container, "55", "name")?.focus();
+    });
+    const focusedCell = getCellWrapper(container, "55", "name");
+
+    for (const rowCount of [150, 250, 251, 252]) {
+      await scrollTo(rowCount);
+      expect(getCellWrapper(container, "55", "name")).toBe(focusedCell);
+    }
+    expect(document.activeElement).toBe(focusedCell);
+
+    act(() => {
+      table.setSorting([{ id: "name", desc: true }]);
+    });
+    expect(getCellWrapper(container, "55", "name")).not.toBeNull();
+    expect(
+      container
+        .querySelector('[data-slot="data-grid-row"][aria-rowindex="57"]')
+        ?.querySelector('[data-column-id="name"]')?.textContent,
+    ).not.toBe("Skater 055");
+  });
+
   it("only mounts the columns inside the horizontal viewport", () => {
     const wideColumns = Array.from(
       { length: 30 },
@@ -1221,10 +1305,12 @@ function renderDataGrid(
   columns = testColumns,
   {
     onEscapeKeyDown,
+    data = testData,
     initialState,
     gridProps,
   }: {
     onEscapeKeyDown?: (event: KeyboardEvent) => void;
+    data?: TestData[];
     initialState?: UseDataGridProps<TestData>["initialState"];
     gridProps?: Pick<
       React.ComponentProps<"div">,
@@ -1237,7 +1323,7 @@ function renderDataGrid(
 
   function Harness() {
     const dataGrid = useDataGrid({
-      data: testData,
+      data,
       columns,
       getRowId: (row) => row.id,
       enableSearch: true,
