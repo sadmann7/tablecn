@@ -8,7 +8,8 @@ import {
   type Table,
 } from "@tanstack/react-table";
 import { act, render, renderHook } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -2186,6 +2187,53 @@ describe("useDataGrid", () => {
       );
       expect(result.current.table.getRow("0").getValue("name")).toBe(
         "Tony Hawk",
+      );
+    });
+
+    it("keeps an edit made in a transition when a sync render lands first", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const [, setTick] = useState(0);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setTick };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        startTransition(() => {
+          result.current.table.updateCells({
+            rowId: "0",
+            columnId: "name",
+            value: "First",
+          });
+        });
+        flushSync(() => {
+          result.current.setTick((tick) => tick + 1);
+        });
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Second",
+        });
+      });
+
+      expect(onDataChange).toHaveBeenLastCalledWith(
+        [
+          { ...testData[0], name: "First" },
+          { ...testData[1], name: "Second" },
+          testData[2],
+        ],
+        expect.anything(),
       );
     });
 
