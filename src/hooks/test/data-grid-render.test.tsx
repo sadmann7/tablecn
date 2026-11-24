@@ -16,7 +16,10 @@ import { insertTextAtSelection } from "@/lib/data-grid-utils";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
-import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
+import {
+  useDataGrid,
+  type UseDataGridProps,
+} from "@/registry/bases/radix/hooks/use-data-grid";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -593,6 +596,159 @@ describe("DataGrid rendering", () => {
     expect(table.atoms.rowSelection.get()).toEqual({});
   });
 
+  it("moves from the focused grid back into the last focused cell", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      table.setFocusedCell("2", "trick");
+      getCellWrapper(container, "2", "trick")?.focus();
+    });
+    act(() => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(document.activeElement).toBe(grid);
+    expect(table.getFocusedCell()).toBeUndefined();
+
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowDown",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("2_trick");
+    expect(document.activeElement).toBe(
+      getCellWrapper(container, "2", "trick"),
+    );
+  });
+
+  it("moves from the focused grid back to the cell left through a column header", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+    const press = (target: Element | null, key: string) =>
+      act(() => {
+        target?.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      });
+
+    act(() => {
+      table.setFocusedCell("2", "trick");
+      getCellWrapper(container, "2", "trick")?.focus();
+    });
+    press(document.activeElement, "Escape");
+    press(grid, "ArrowDown");
+    expect(table.getFocusedCell()?.id).toBe("2_trick");
+
+    act(() => {
+      table.setFocusedCell("1", "name");
+      getCellWrapper(container, "1", "name")?.focus();
+    });
+    press(document.activeElement, "ArrowUp");
+    expect(document.activeElement).toBe(getHeaderTrigger(container, "name"));
+    press(document.activeElement, "Escape");
+    expect(document.activeElement).toBe(grid);
+
+    press(grid, "ArrowDown");
+    expect(table.getFocusedCell()?.id).toBe("1_name");
+    expect(document.activeElement).toBe(getCellWrapper(container, "1", "name"));
+  });
+
+  it("moves from the focused grid back to a cell focused through initial state", () => {
+    const { table } = renderDataGrid(testColumns, {
+      initialState: {
+        cellSelection: [
+          {
+            anchorRowId: "3",
+            anchorColumnId: "trick",
+            focusRowId: "3",
+            focusColumnId: "trick",
+          },
+        ],
+      },
+    });
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      table.resetCellSelection(true);
+      grid.focus();
+    });
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowDown",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("3_trick");
+  });
+
+  it("leaves modified keys on the focused grid alone", () => {
+    const { table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+    const event = new KeyboardEvent("keydown", {
+      key: "Home",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    act(() => {
+      grid.focus();
+      grid.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
+    expect(table.getFocusedCell()).toBeUndefined();
+  });
+
+  it("moves from the focused grid into the first cell without a previous cell", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      grid.focus();
+    });
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Home",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("1_name");
+    expect(document.activeElement).toBe(getCellWrapper(container, "1", "name"));
+  });
+
+  it("leaves Tab on the focused grid to the browser", () => {
+    const { table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+    const event = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+
+    act(() => {
+      grid.focus();
+      grid.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
+    expect(table.getFocusedCell()).toBeUndefined();
+  });
+
   it("keeps the selection on Escape when onEscapeKeyDown prevents the default", () => {
     const { container, table } = renderDataGrid(testColumns, {
       onEscapeKeyDown: (event) => event.preventDefault(),
@@ -1065,9 +1221,11 @@ function renderDataGrid(
   columns = testColumns,
   {
     onEscapeKeyDown,
+    initialState,
     gridProps,
   }: {
     onEscapeKeyDown?: (event: KeyboardEvent) => void;
+    initialState?: UseDataGridProps<TestData>["initialState"];
     gridProps?: Pick<
       React.ComponentProps<"div">,
       "aria-label" | "aria-labelledby" | "aria-describedby"
@@ -1084,6 +1242,7 @@ function renderDataGrid(
       getRowId: (row) => row.id,
       enableSearch: true,
       onEscapeKeyDown,
+      initialState,
     });
     hookRenderCount++;
     gridRef.current = dataGrid;
