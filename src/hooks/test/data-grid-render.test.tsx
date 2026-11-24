@@ -341,6 +341,29 @@ describe("DataGrid rendering", () => {
     expect(screen.getByRole("textbox")).toHaveProperty("value", "900x");
   });
 
+  it("names the grid from aria-label or aria-labelledby", () => {
+    const { unmount } = renderDataGrid(testColumns, {
+      gridProps: { "aria-label": "Skaters" },
+    });
+    expect(screen.getByRole("grid", { name: "Skaters" })).toBeDefined();
+    expect(
+      document.querySelector('[data-slot="data-grid-wrapper"][aria-label]'),
+    ).toBeNull();
+    unmount();
+
+    render(<h2 id="grid-title">Pros</h2>);
+    renderDataGrid(testColumns, {
+      gridProps: { "aria-labelledby": "grid-title" },
+    });
+    const grid = screen.getByRole("grid", { name: "Pros" });
+    expect(grid.getAttribute("aria-label")).toBeNull();
+  });
+
+  it("falls back to a generic grid name without a label", () => {
+    renderDataGrid();
+    expect(screen.getByRole("grid", { name: "Data grid" })).toBeDefined();
+  });
+
   it("moves the focus highlight between rows without re-rendering the hook", () => {
     const { container, table, getHookRenderCount } = renderDataGrid();
     expect(getCellWrapper(container, "1", "name")).not.toBeNull();
@@ -977,7 +1000,14 @@ function renderDataGrid(
   columns = testColumns,
   {
     onEscapeKeyDown,
-  }: { onEscapeKeyDown?: (event: KeyboardEvent) => void } = {},
+    gridProps,
+  }: {
+    onEscapeKeyDown?: (event: KeyboardEvent) => void;
+    gridProps?: Pick<
+      React.ComponentProps<"div">,
+      "aria-label" | "aria-labelledby"
+    >;
+  } = {},
 ) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
   let hookRenderCount = 0;
@@ -992,7 +1022,7 @@ function renderDataGrid(
     });
     hookRenderCount++;
     gridRef.current = dataGrid;
-    return <DataGrid {...dataGrid} />;
+    return <DataGrid {...dataGrid} {...gridProps} />;
   }
 
   const view = render(<Harness />);
