@@ -78,12 +78,13 @@ function useDataGrid<TData extends RowData>({
   onEscapeKeyDown,
   ...props
 }: UseDataGridProps<TData>) {
-  const [pendingEdit, setPendingEdit] = React.useState({
-    from: dataProp,
-    to: dataProp,
-  });
+  const [pendingEdit, setPendingEdit] = React.useState<{
+    from: readonly TData[];
+    to: TData[];
+  } | null>(null);
+  if (pendingEdit && pendingEdit.from !== dataProp) setPendingEdit(null);
   const dataPropRef = useValueAsRef(dataProp);
-  const data = pendingEdit.from === dataProp ? pendingEdit.to : dataProp;
+  const data = pendingEdit?.from === dataProp ? pendingEdit.to : dataProp;
   const contextDir = useDirection();
   const dir = dirProp ?? contextDir;
   const dataGridRef = React.useRef<HTMLDivElement>(null);

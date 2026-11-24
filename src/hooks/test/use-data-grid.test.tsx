@@ -2137,6 +2137,101 @@ describe("useDataGrid", () => {
       ).toEqual(["2", "1", "0"]);
     });
 
+    it("shows the restored data after a failed optimistic edit", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setData };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Will fail",
+        });
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Will fail",
+      );
+
+      act(() => {
+        result.current.setData(testData);
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Tony Hawk",
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Next edit",
+        });
+      });
+      expect(onDataChange).toHaveBeenLastCalledWith(
+        [testData[0], { ...testData[1], name: "Next edit" }, testData[2]],
+        expect.anything(),
+      );
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Tony Hawk",
+      );
+    });
+
+    it("drops undo history that a rollback made stale", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setData };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Will fail",
+        });
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Will fail",
+      );
+      act(() => {
+        result.current.setData(testData);
+      });
+      onDataChange.mockClear();
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(onDataChange).not.toHaveBeenCalled();
+      expect(result.current.table.getCanUndo()).toBe(false);
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Tony Hawk",
+      );
+    });
+
     it("starts over from a new data prop without onDataChange", () => {
       const { result, rerender } = renderHook(
         ({ data }) => useDataGrid({ data, columns: testColumns }),

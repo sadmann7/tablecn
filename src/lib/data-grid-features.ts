@@ -645,7 +645,7 @@ interface CellUpdateStore {
   copies: Map<string, { base: unknown; copy: RowValues }>;
   notify: Set<CellListeners>;
   recordedCells: Map<string, Set<string>>;
-  reported: { from: readonly RowData[]; data: RowData[] } | null;
+  reported: { options: object; data: RowData[] } | null;
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
   isHistorySealed: boolean;
@@ -1083,8 +1083,10 @@ function notifyCells(store: CellUpdateStore) {
 }
 
 function getCurrentData(table: DataGridInstance, store: CellUpdateStore) {
-  const { data } = table.options;
-  return store.reported?.from === data ? store.reported.data : data;
+  const { options } = table;
+  return store.reported?.options === options
+    ? store.reported.data
+    : options.data;
 }
 
 function getDataIndex(
@@ -1114,7 +1116,7 @@ function reportDataChange(
   nextData: RowData[],
   details: Omit<DataChangeDetails<RowData>, "reason">,
 ) {
-  store.reported = { from: table.options.data, data: nextData };
+  store.reported = { options: table.options, data: nextData };
   table.options.onDataChange?.(nextData, {
     reason: store.reason ?? "update-cells",
     ...details,
