@@ -50,14 +50,18 @@ const bases = [
 describe.each(bases)(
   "DataTablePagination (%s)",
   (_, DataTable, useDataTable) => {
-    function renderTable(searchParams: string) {
+    function renderTable(
+      searchParams: string,
+      rows = data,
+      mode: "client" | "server" = "client",
+    ) {
       function Harness() {
         const { table } = useDataTable<Task>({
           config,
-          mode: "client",
-          data,
+          data: rows,
           columns,
           getRowId: (row) => row.id,
+          ...(mode === "server" ? { pageCount: 0 } : { mode: "client" }),
         });
 
         return <DataTable aria-label="Tasks" table={table} />;
@@ -103,5 +107,16 @@ describe.each(bases)(
           .getAttribute("aria-selected"),
       ).toBe("true");
     });
+
+    it.each(["client", "server"] as const)(
+      "counts one page when no rows match in %s mode",
+      (mode) => {
+        renderTable("", [], mode);
+
+        expect(
+          screen.getByText("Page 1 of 1", { selector: '[role="status"]' }),
+        ).toBeTruthy();
+      },
+    );
   },
 );
