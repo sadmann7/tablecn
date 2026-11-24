@@ -469,7 +469,10 @@ describe("DataGrid rendering", () => {
   });
 
   it("hides the focused cell while a column header has focus", () => {
-    const { container, table } = renderDataGrid();
+    const { container, table } = renderDataGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
 
     act(() => {
       table.getRow("1").toggleSelected(true);
@@ -941,6 +944,47 @@ describe("DataGrid rendering", () => {
         .getByRole("textbox", { name: "Name" })
         .closest('[data-slot="data-grid-cell"]'),
     ).toBe(getCellWrapper(container, "1", "name"));
+  });
+
+  it("marks rows as selectable only with a select column", () => {
+    const { unmount } = renderDataGrid();
+    expect(screen.getByRole("grid").getAttribute("aria-multiselectable")).toBe(
+      "true",
+    );
+    expect(
+      document.querySelectorAll('[data-slot="data-grid-row"][aria-selected]'),
+    ).toHaveLength(0);
+    unmount();
+
+    const { table } = renderDataGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
+    act(() => {
+      table.getRow("2").toggleSelected(true);
+    });
+    expect(
+      [...document.querySelectorAll('[data-slot="data-grid-row"]')].map((row) =>
+        row.getAttribute("aria-selected"),
+      ),
+    ).toEqual(["false", "true", "false"]);
+  });
+
+  it("indexes rows after every header row", () => {
+    renderDataGrid([
+      {
+        id: "skater",
+        header: "Skater",
+        columns: testColumns,
+      },
+    ]);
+
+    expect(screen.getByRole("grid").getAttribute("aria-rowcount")).toBe("5");
+    expect(
+      screen
+        .getAllByRole("row")
+        .map((row) => row.getAttribute("aria-rowindex")),
+    ).toEqual(["1", "2", "3", "4", "5"]);
   });
 
   it("counts the header row in aria-rowcount", () => {
