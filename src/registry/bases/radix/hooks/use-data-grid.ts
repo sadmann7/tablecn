@@ -1448,6 +1448,9 @@ function useDataGrid<TData extends RowData>({
   React.useEffect(() => {
     let prevFocusKey: string | null = null;
     let prevEdgeKey: string | null = null;
+    lastFocusedCellRef.current =
+      getFocusedCellPosition(table.atoms.cellSelection.get()) ??
+      lastFocusedCellRef.current;
 
     const subscription = table.atoms.cellSelection.subscribe(() => {
       const ranges = table.atoms.cellSelection.get();

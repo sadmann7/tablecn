@@ -16,7 +16,10 @@ import { insertTextAtSelection } from "@/lib/data-grid-utils";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
-import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
+import {
+  useDataGrid,
+  type UseDataGridProps,
+} from "@/registry/bases/radix/hooks/use-data-grid";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -613,6 +616,37 @@ describe("DataGrid rendering", () => {
     expect(document.activeElement).toBe(getCellWrapper(container, "1", "name"));
   });
 
+  it("moves from the focused grid back to a cell focused through initial state", () => {
+    const { table } = renderDataGrid(testColumns, {
+      initialState: {
+        cellSelection: [
+          {
+            anchorRowId: "3",
+            anchorColumnId: "trick",
+            focusRowId: "3",
+            focusColumnId: "trick",
+          },
+        ],
+      },
+    });
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      table.resetCellSelection(true);
+      grid.focus();
+    });
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowDown",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("3_trick");
+  });
+
   it("leaves modified keys on the focused grid alone", () => {
     const { table } = renderDataGrid();
     const grid = screen.getByRole("grid");
@@ -1099,7 +1133,11 @@ function renderDataGrid(
   columns = testColumns,
   {
     onEscapeKeyDown,
-  }: { onEscapeKeyDown?: (event: KeyboardEvent) => void } = {},
+    initialState,
+  }: {
+    onEscapeKeyDown?: (event: KeyboardEvent) => void;
+    initialState?: UseDataGridProps<TestData>["initialState"];
+  } = {},
 ) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
   let hookRenderCount = 0;
@@ -1111,6 +1149,7 @@ function renderDataGrid(
       getRowId: (row) => row.id,
       enableSearch: true,
       onEscapeKeyDown,
+      initialState,
     });
     hookRenderCount++;
     gridRef.current = dataGrid;
