@@ -69,6 +69,9 @@ export function DataGrid<TData extends RowData>({
   actionBar,
   onRowAdd,
   className,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: DataGridProps<TData>) {
   return (
@@ -97,6 +100,9 @@ export function DataGrid<TData extends RowData>({
         height={height}
         stretchColumns={stretchColumns}
         onRowAdd={onRowAdd}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
       />
       {actionBar ? (
         <DataGridActionBar table={table} actionBar={actionBar} />
@@ -132,6 +138,9 @@ type DataGridViewportProps<TData extends RowData> = Pick<
   | "dir"
   | "adjustLayout"
   | "onRowAdd"
+  | "aria-label"
+  | "aria-labelledby"
+  | "aria-describedby"
 > &
   Required<Pick<DataGridProps<TData>, "height" | "stretchColumns">>;
 
@@ -151,6 +160,9 @@ function DataGridViewport<TData extends RowData>({
   height,
   stretchColumns,
   onRowAdd: onRowAddProp,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
 }: DataGridViewportProps<TData>) {
   const rows = table.getRowModel().rows;
   const rowSize = table.getRowSize();
@@ -376,14 +388,28 @@ function DataGridViewport<TData extends RowData>({
     [leafColumns, readOnly, enableCellEditing],
   );
 
+  const headerRowCount = headerGroups.length;
+  const isRowSelectionEnabled =
+    table.options.enableRowSelection !== false &&
+    leafColumns.some((column) => column.id === "select");
+
   const rowContext = React.useMemo(
     () => ({
       stretchColumns,
       adjustLayout,
       readOnlyColumnIds,
       rowMapRef,
+      headerRowCount,
+      isRowSelectionEnabled,
     }),
-    [stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef],
+    [
+      stretchColumns,
+      adjustLayout,
+      readOnlyColumnIds,
+      rowMapRef,
+      headerRowCount,
+      isRowSelectionEnabled,
+    ],
   );
 
   const onRowAddRef = useValueAsRef(onRowAddProp);
@@ -417,8 +443,10 @@ function DataGridViewport<TData extends RowData>({
   return (
     <div
       role="grid"
-      aria-label="Data grid"
-      aria-rowcount={rows.length + 1 + (hasFooter ? 1 : 0)}
+      aria-label={ariaLabel || (ariaLabelledBy ? undefined : "Data grid")}
+      aria-labelledby={ariaLabelledBy || undefined}
+      aria-describedby={ariaDescribedBy}
+      aria-rowcount={rows.length + headerRowCount + (hasFooter ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
       data-slot="data-grid"
@@ -489,7 +517,7 @@ function DataGridViewport<TData extends RowData>({
         >
           <div
             role="row"
-            aria-rowindex={rows.length + 2}
+            aria-rowindex={headerRowCount + rows.length + 1}
             data-slot="data-grid-add-row"
             tabIndex={-1}
             className="flex w-full"

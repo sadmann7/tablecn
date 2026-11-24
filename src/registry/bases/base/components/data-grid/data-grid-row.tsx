@@ -44,6 +44,8 @@ interface DataGridRowContextValue {
   adjustLayout: boolean;
   readOnlyColumnIds: Set<string>;
   rowMapRef: React.RefObject<Map<number, HTMLDivElement>>;
+  headerRowCount: number;
+  isRowSelectionEnabled: boolean;
 }
 
 export const DataGridRowContext =
@@ -174,8 +176,14 @@ function DataGridRowContent<TData extends RowData>({
   style,
   ...props
 }: DataGridRowContentProps<TData>) {
-  const { stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef } =
-    useDataGridRowContext();
+  const {
+    stretchColumns,
+    adjustLayout,
+    readOnlyColumnIds,
+    rowMapRef,
+    headerRowCount,
+    isRowSelectionEnabled,
+  } = useDataGridRowContext();
   const virtualRowIndex = virtualItem.index;
   const {
     visibleCells,
@@ -205,8 +213,8 @@ function DataGridRowContent<TData extends RowData>({
   return (
     <div
       role="row"
-      aria-rowindex={virtualRowIndex + 2}
-      aria-selected={isRowSelected}
+      aria-rowindex={headerRowCount + virtualRowIndex + 1}
+      aria-selected={isRowSelectionEnabled ? isRowSelected : undefined}
       data-index={virtualRowIndex}
       data-slot="data-grid-row"
       tabIndex={-1}
