@@ -1477,7 +1477,9 @@ function CellEditorPopover<TData extends RowData>({
     <Popover open={open} onOpenChange={onPopoverOpenChange}>
       <PopoverTrigger
         nativeButton={false}
-        render={<div className="pointer-events-none absolute inset-0" />}
+        render={({ ref }) => (
+          <div ref={ref} className="pointer-events-none absolute inset-0" />
+        )}
       />
       <PopoverContent
         aria-label={getColumnLabel(cell.column)}

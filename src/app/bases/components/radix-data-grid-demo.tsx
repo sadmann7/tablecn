@@ -83,7 +83,12 @@ export function RadixDataGridDemo() {
           enableRowCreation
           enableRowDeletion
         />
-        <DataGrid {...dataGridProps} table={table} height={560} />
+        <DataGrid
+          {...dataGridProps}
+          table={table}
+          height={560}
+          aria-label="People"
+        />
       </div>
     </DirectionProvider>
   );

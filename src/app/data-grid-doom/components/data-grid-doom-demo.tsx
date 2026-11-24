@@ -898,7 +898,12 @@ export function DataGridDoomDemo({
             }
           >
             {shouldShowGrid && (
-              <DataGrid {...dataGridProps} table={table} height={gridHeight} />
+              <DataGrid
+                {...dataGridProps}
+                table={table}
+                height={gridHeight}
+                aria-label="DOOM frame"
+              />
             )}
           </div>
           {source === "doom" && !isPlaying && (
