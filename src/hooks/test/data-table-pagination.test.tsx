@@ -50,12 +50,12 @@ const bases = [
 describe.each(bases)(
   "DataTablePagination (%s)",
   (_, DataTable, useDataTable) => {
-    function renderTable(searchParams: string) {
+    function renderTable(searchParams: string, rows = data) {
       function Harness() {
         const { table } = useDataTable<Task>({
           config,
           mode: "client",
-          data,
+          data: rows,
           columns,
           getRowId: (row) => row.id,
         });
@@ -102,6 +102,14 @@ describe.each(bases)(
           .getByRole("option", { name: "25" })
           .getAttribute("aria-selected"),
       ).toBe("true");
+    });
+
+    it("counts one page when no rows match", () => {
+      renderTable("", []);
+
+      expect(
+        screen.getByText("Page 1 of 1", { selector: '[role="status"]' }),
+      ).toBeTruthy();
     });
   },
 );
