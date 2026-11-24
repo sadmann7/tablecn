@@ -85,7 +85,7 @@ function DataTablePaginationContent<TData extends RowData>({
   const sizeOptions = pageSizeOptions.includes(pageSize)
     ? pageSizeOptions
     : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
-  const pageCount = table.getPageCount();
+  const pageCount = Math.max(table.getPageCount(), 1);
   const canPreviousPage = table.getCanPreviousPage();
   const canNextPage = table.getCanNextPage();
 
