@@ -87,14 +87,10 @@ for (const base of GRID_BASES) {
     });
 
     test("has no axe violations", async ({ page }, testInfo) => {
-      // The Base UI cell popovers render unnamed role=button triggers until sadman/base-grid-popover-tab-stops merges.
-      test.fail(base === "base");
       await expectNoAxeViolations(page, testInfo);
     });
 
     test("keeps the focused cell as the only tab stop", async ({ page }) => {
-      // The Base UI cell popovers put a tab stop in every popover cell until sadman/base-grid-popover-tab-stops merges.
-      test.fail(base === "base");
       const grid = page.getByRole("grid");
       await tabUntilFocused(page, grid.locator("[role=gridcell]:focus"));
 
