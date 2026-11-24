@@ -790,6 +790,48 @@ describe("DataGrid rendering", () => {
     );
   });
 
+  it("keeps the focused row mounted and focused when it scrolls out of view", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    const manyRows = Array.from({ length: 200 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${index + 1}`,
+      trick: "Kickflip",
+    }));
+    const { container, table } = renderDataGrid(testColumns, {
+      data: manyRows,
+    });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    await scrollTo(50);
+    act(() => {
+      table.setFocusedCell("55", "name");
+      getCellWrapper(container, "55", "name")?.focus();
+    });
+    const focusedCell = getCellWrapper(container, "55", "name");
+    expect(document.activeElement).toBe(focusedCell);
+
+    for (let rowCount = 51; rowCount <= 90; rowCount++) {
+      await scrollTo(rowCount);
+    }
+    await scrollTo(150);
+
+    expect(getCellWrapper(container, "160", "name")).not.toBeNull();
+    expect(getCellWrapper(container, "55", "name")).toBe(focusedCell);
+    expect(document.activeElement).toBe(focusedCell);
+    expect(
+      consoleError.mock.calls.some((args) =>
+        String(args[0]).includes("same key"),
+      ),
+    ).toBe(false);
+  });
+
   it("only mounts the columns inside the horizontal viewport", () => {
     const wideColumns = Array.from(
       { length: 30 },
@@ -977,14 +1019,18 @@ function renderDataGrid(
   columns = testColumns,
   {
     onEscapeKeyDown,
-  }: { onEscapeKeyDown?: (event: KeyboardEvent) => void } = {},
+    data = testData,
+  }: {
+    onEscapeKeyDown?: (event: KeyboardEvent) => void;
+    data?: TestData[];
+  } = {},
 ) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
   let hookRenderCount = 0;
 
   function Harness() {
     const dataGrid = useDataGrid({
-      data: testData,
+      data,
       columns,
       getRowId: (row) => row.id,
       enableSearch: true,
