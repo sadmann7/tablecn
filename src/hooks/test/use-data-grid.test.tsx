@@ -2190,6 +2190,48 @@ describe("useDataGrid", () => {
       );
     });
 
+    it("builds the next edit on the restored data without reading rows in between", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setData };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Will fail",
+        });
+      });
+      act(() => {
+        result.current.setData(testData);
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Next edit",
+        });
+      });
+
+      expect(onDataChange).toHaveBeenLastCalledWith(
+        [testData[0], { ...testData[1], name: "Next edit" }, testData[2]],
+        expect.anything(),
+      );
+    });
+
     it("keeps an edit made in a transition when a sync render lands first", () => {
       const onDataChange = vi.fn();
       const { result } = renderHook(

@@ -594,6 +594,8 @@ function useDataGrid<TData extends RowData>({
   ]);
 
   const table = useTable(tableOptions, selectTableState);
+  // Building rows for each new `data` lets the data feature tell a rollback from a pending edit.
+  table.getCoreRowModel();
 
   React.useEffect(
     () => () => {
