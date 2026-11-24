@@ -60,6 +60,14 @@ const AUTO_SCROLL_MAX_SPEED = 40;
 const AUTO_SCROLL_SELECTION_THROTTLE_MS = 32;
 const UTILITY_COLUMN_IDS = new Set(["select", "actions"]);
 const SEARCH_SHORTCUT_KEY = "f";
+const GRID_ENTRY_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "Home",
+  "End",
+]);
 
 interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
@@ -95,6 +103,7 @@ function useDataGrid<TData extends RowData>({
   const headerRef = React.useRef<HTMLDivElement>(null);
   const rowMapRef = React.useRef<Map<number, HTMLDivElement>>(new Map());
   const footerRef = React.useRef<HTMLDivElement>(null);
+  const lastFocusedCellRef = React.useRef<CellPosition | null>(null);
   const pendingFocusRef = React.useRef<{
     cell: CellPosition;
     shouldScroll: boolean;
@@ -246,6 +255,7 @@ function useDataGrid<TData extends RowData>({
   }, []);
 
   const blurCell = React.useCallback(() => {
+    lastFocusedCellRef.current = getFocusedCell() ?? lastFocusedCellRef.current;
     if (
       tableRef.current?.getEditingCell() &&
       document.activeElement instanceof HTMLElement
@@ -255,6 +265,26 @@ function useDataGrid<TData extends RowData>({
 
     tableRef.current?.resetCellSelection(true);
     tableRef.current?.setEditingCell(null);
+  }, [getFocusedCell]);
+
+  const getFirstVisibleRowIndex = React.useCallback(() => {
+    const container = dataGridRef.current;
+    if (!container) return 0;
+
+    const viewportTop =
+      container.getBoundingClientRect().top +
+      (headerRef.current?.getBoundingClientRect().height ?? 0);
+
+    let firstRowIndex: number | null = null;
+    for (const [rowIndex, rowElement] of rowMapRef.current) {
+      if (
+        rowElement.getBoundingClientRect().top >= viewportTop - 1 &&
+        (firstRowIndex === null || rowIndex < firstRowIndex)
+      ) {
+        firstRowIndex = rowIndex;
+      }
+    }
+    return firstRowIndex ?? 0;
   }, []);
 
   const onCellClick = React.useCallback(
@@ -722,6 +752,28 @@ function useDataGrid<TData extends RowData>({
     [getColumnHeaderTrigger],
   );
 
+  const focusEntryCell = React.useCallback(() => {
+    const currentTable = tableRef.current;
+    if (!currentTable) return;
+
+    const lastFocusedCell = lastFocusedCellRef.current;
+    if (
+      lastFocusedCell &&
+      currentTable.getRowModel().rowsById[lastFocusedCell.rowId] &&
+      getColumnIds().includes(lastFocusedCell.columnId)
+    ) {
+      focusCell(lastFocusedCell.rowId, lastFocusedCell.columnId);
+      return;
+    }
+
+    const firstColumnId = getNavigableColumnIds()[0];
+    const firstVisibleRowId =
+      currentTable.getRowModel().rows[getFirstVisibleRowIndex()]?.id;
+    if (firstColumnId && firstVisibleRowId) {
+      focusCell(firstVisibleRowId, firstColumnId);
+    }
+  }, [getColumnIds, getNavigableColumnIds, getFirstVisibleRowIndex, focusCell]);
+
   const onColumnHeaderKeyDown = React.useCallback(
     (event: KeyboardEvent, columnId: string) => {
       const { key, shiftKey, ctrlKey, metaKey, altKey } = event;
@@ -913,7 +965,18 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      if (!focusedCell) return;
+      if (!focusedCell) {
+        if (
+          event.target === dataGridRef.current &&
+          !altKey &&
+          !shiftKey &&
+          GRID_ENTRY_KEYS.has(key)
+        ) {
+          event.preventDefault();
+          focusEntryCell();
+        }
+        return;
+      }
 
       if (
         !headerColumnId &&
@@ -1126,6 +1189,7 @@ function useDataGrid<TData extends RowData>({
       focusColumnHeader,
       onColumnHeaderKeyDown,
       skipDataGridTabStop,
+      focusEntryCell,
     ],
   );
 
@@ -1282,26 +1346,6 @@ function useDataGrid<TData extends RowData>({
       isPointerFocus = false;
     }
 
-    function getFirstVisibleRowIndex() {
-      const currentContainer = dataGridRef.current;
-      if (!currentContainer) return 0;
-
-      const viewportTop =
-        currentContainer.getBoundingClientRect().top +
-        (headerRef.current?.getBoundingClientRect().height ?? 0);
-
-      let firstRowIndex: number | null = null;
-      for (const [rowIndex, rowElement] of rowMapRef.current) {
-        if (
-          rowElement.getBoundingClientRect().top >= viewportTop - 1 &&
-          (firstRowIndex === null || rowIndex < firstRowIndex)
-        ) {
-          firstRowIndex = rowIndex;
-        }
-      }
-      return firstRowIndex ?? 0;
-    }
-
     function onFocus(event: FocusEvent) {
       const wasPointerFocus = isPointerFocus;
       isPointerFocus = false;
@@ -1346,7 +1390,13 @@ function useDataGrid<TData extends RowData>({
       container.removeEventListener("pointerup", onPointerUp);
       container.removeEventListener("focus", onFocus);
     };
-  }, [getNavigableColumnIds, focusCell, focusCellElement, getFocusedCell]);
+  }, [
+    getNavigableColumnIds,
+    focusCell,
+    focusCellElement,
+    getFocusedCell,
+    getFirstVisibleRowIndex,
+  ]);
 
   React.useEffect(() => {
     function onFocusIn(event: FocusEvent) {

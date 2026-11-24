@@ -546,6 +546,74 @@ describe("DataGrid rendering", () => {
     expect(table.atoms.rowSelection.get()).toEqual({});
   });
 
+  it("moves from the focused grid back into the last focused cell", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      table.setFocusedCell("2", "trick");
+      getCellWrapper(container, "2", "trick")?.focus();
+    });
+    act(() => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(document.activeElement).toBe(grid);
+    expect(table.getFocusedCell()).toBeUndefined();
+
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowDown",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("2_trick");
+    expect(document.activeElement).toBe(
+      getCellWrapper(container, "2", "trick"),
+    );
+  });
+
+  it("moves from the focused grid into the first cell without a previous cell", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      grid.focus();
+    });
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Home",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("1_name");
+    expect(document.activeElement).toBe(getCellWrapper(container, "1", "name"));
+  });
+
+  it("leaves Tab on the focused grid to the browser", () => {
+    const { table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+    const event = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+
+    act(() => {
+      grid.focus();
+      grid.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
+    expect(table.getFocusedCell()).toBeUndefined();
+  });
+
   it("keeps the selection on Escape when onEscapeKeyDown prevents the default", () => {
     const { container, table } = renderDataGrid(testColumns, {
       onEscapeKeyDown: (event) => event.preventDefault(),
