@@ -360,8 +360,29 @@ describe("DataGrid rendering", () => {
   });
 
   it("falls back to a generic grid name without a label", () => {
-    renderDataGrid();
+    const { unmount } = renderDataGrid();
     expect(screen.getByRole("grid", { name: "Data grid" })).toBeDefined();
+    unmount();
+
+    renderDataGrid(testColumns, {
+      gridProps: { "aria-label": "", "aria-labelledby": "" },
+    });
+    expect(screen.getByRole("grid", { name: "Data grid" })).toBeDefined();
+  });
+
+  it("describes the grid from aria-describedby", () => {
+    render(<p id="grid-hint">Press Enter to edit.</p>);
+    renderDataGrid(testColumns, {
+      gridProps: { "aria-describedby": "grid-hint" },
+    });
+    expect(
+      screen.getByRole("grid", { description: "Press Enter to edit." }),
+    ).toBeDefined();
+    expect(
+      document.querySelector(
+        '[data-slot="data-grid-wrapper"][aria-describedby]',
+      ),
+    ).toBeNull();
   });
 
   it("moves the focus highlight between rows without re-rendering the hook", () => {
@@ -1005,7 +1026,7 @@ function renderDataGrid(
     onEscapeKeyDown?: (event: KeyboardEvent) => void;
     gridProps?: Pick<
       React.ComponentProps<"div">,
-      "aria-label" | "aria-labelledby"
+      "aria-label" | "aria-labelledby" | "aria-describedby"
     >;
   } = {},
 ) {

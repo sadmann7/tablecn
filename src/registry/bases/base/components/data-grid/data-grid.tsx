@@ -71,6 +71,7 @@ export function DataGrid<TData extends RowData>({
   className,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: DataGridProps<TData>) {
   return (
@@ -101,6 +102,7 @@ export function DataGrid<TData extends RowData>({
         onRowAdd={onRowAdd}
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
       />
       {actionBar ? (
         <DataGridActionBar table={table} actionBar={actionBar} />
@@ -138,6 +140,7 @@ type DataGridViewportProps<TData extends RowData> = Pick<
   | "onRowAdd"
   | "aria-label"
   | "aria-labelledby"
+  | "aria-describedby"
 > &
   Required<Pick<DataGridProps<TData>, "height" | "stretchColumns">>;
 
@@ -159,6 +162,7 @@ function DataGridViewport<TData extends RowData>({
   onRowAdd: onRowAddProp,
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
 }: DataGridViewportProps<TData>) {
   const rows = table.getRowModel().rows;
   const rowSize = table.getRowSize();
@@ -425,10 +429,9 @@ function DataGridViewport<TData extends RowData>({
   return (
     <div
       role="grid"
-      aria-label={
-        ariaLabel ?? (ariaLabelledBy === undefined ? "Data grid" : undefined)
-      }
-      aria-labelledby={ariaLabelledBy}
+      aria-label={ariaLabel || (ariaLabelledBy ? undefined : "Data grid")}
+      aria-labelledby={ariaLabelledBy || undefined}
+      aria-describedby={ariaDescribedBy}
       aria-rowcount={rows.length + 1 + (hasFooter ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
