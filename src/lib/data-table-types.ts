@@ -116,6 +116,27 @@ export interface DataTableQuery<
   globalFilter: string;
 }
 
+export interface DataQuery<
+  TFilterColumnId extends string = string,
+  TSortColumnId extends string = string,
+> {
+  sorting: ColumnSortItem<TSortColumnId>[];
+  filters: ColumnFilterItem<TFilterColumnId>[];
+  joinOperator: JoinOperator;
+  search: string;
+  page: { index: number; size: number };
+}
+
+export interface DataResult<TData> {
+  rows: TData[];
+  rowCount: number;
+}
+
+export type DataFetcher<TData> = (
+  query: DataQuery,
+  context: { signal: AbortSignal },
+) => Promise<DataResult<TData>>;
+
 export interface DataTableRowAction<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;
   variant: "update" | "delete";

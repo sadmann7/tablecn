@@ -16,7 +16,12 @@ import {
 } from "nuqs";
 import * as React from "react";
 
-import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
+import type {
+  ColumnFilterItem,
+  DataQuery,
+  DataResult,
+  JoinOperator,
+} from "@/lib/data-table-types";
 
 import {
   announce,
@@ -48,6 +53,7 @@ import {
 } from "@/lib/data-table-utils";
 
 const DEBOUNCE_MS = 300;
+const EMPTY_ROWS: never[] = [];
 
 interface FiltersDraft {
   filters: ColumnFiltersState;
@@ -59,6 +65,8 @@ type InitialTableState = Partial<TableState<DataTableFeatures>>;
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
   | "state"
+  | "data"
+  | "rowCount"
   | "onPaginationChange"
   | "onSortingChange"
   | "onColumnFiltersChange"
@@ -93,11 +101,25 @@ type UseDataTableProps<TData extends RowData> = Omit<
   } & (
     | {
         mode?: "server";
+        data: TableOptions<DataTableFeatures, TData>["data"];
         pageCount: number;
+        rowCount?: number;
+        result?: never;
       }
     | {
         mode: "client";
+        data: TableOptions<DataTableFeatures, TData>["data"];
         pageCount?: never;
+        rowCount?: number;
+        result?: never;
+      }
+    | {
+        mode?: "server";
+        /** The rows and total row count for the current `query`, fetched outside the table, in place of `data` and `pageCount`. */
+        result: DataResult<TData> | undefined;
+        data?: never;
+        pageCount?: never;
+        rowCount?: never;
       }
   );
 
@@ -105,7 +127,10 @@ function useDataTable<TData extends RowData>({
   config: configProp,
   columns,
   mode = "server",
+  data,
+  result,
   pageCount,
+  rowCount,
   initialState,
   startTransition,
   history = "replace",
@@ -120,6 +145,8 @@ function useDataTable<TData extends RowData>({
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
+  const isResult = data === undefined;
+  const rows = data ?? result?.rows ?? EMPTY_ROWS;
   const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
   const configInputKey = builtConfig
     ? ""
@@ -151,8 +178,15 @@ function useDataTable<TData extends RowData>({
   const hasInlineColumns =
     configProp !== undefined && !builtConfig && "columns" in configProp;
 
+  const hasDataAndResult = data !== undefined && result !== undefined;
+
   React.useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
+    if (hasDataAndResult) {
+      console.warn(
+        "useDataTable: pass either `data` or `result`, not both. The table shows `data` and ignores `result`.",
+      );
+    }
     if (hasInlineColumns) {
       console.warn(
         "useDataTable: an inline config ignores `columns`. Pass the config through createDataTableConfig, or set the filter and sorting on the column defs.",
@@ -164,7 +198,7 @@ function useDataTable<TData extends RowData>({
     console.warn(
       `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(", ")}. Rename the config key or add the column.`,
     );
-  }, [hasInlineColumns, builtConfig, columns]);
+  }, [hasDataAndResult, hasInlineColumns, builtConfig, columns]);
 
   const filterableIds = React.useMemo(
     () => Object.keys(filterVariants),
@@ -307,12 +341,14 @@ function useDataTable<TData extends RowData>({
   const table = useTable(
     {
       ...props,
+      data: rows,
       features: dataTableFeatures,
       columns: tableColumns,
       enableGlobalFilter,
       pageSizeOptions,
       initialState: initialTableState,
-      pageCount: isServer ? pageCount : undefined,
+      pageCount: isServer && !isResult ? pageCount : undefined,
+      rowCount: isResult ? result?.rowCount : rowCount,
       state: {
         pagination,
         sorting,
@@ -368,18 +404,18 @@ function useDataTable<TData extends RowData>({
   const resultsRef = React.useRef({
     key: resultsKey,
     isPending: false,
-    data: props.data,
+    data: rows,
     status,
   });
 
   React.useEffect(() => {
     const prev = resultsRef.current;
     const isPending = prev.isPending || prev.key !== resultsKey;
-    const hasNewData = prev.data !== props.data;
+    const hasNewData = prev.data !== rows;
     resultsRef.current = {
       key: resultsKey,
       isPending,
-      data: props.data,
+      data: rows,
       status,
     };
 
@@ -405,9 +441,18 @@ function useDataTable<TData extends RowData>({
     const formatResults =
       messagesRef.current?.results ?? defaultDataTableMessages.results;
     announce(formatResults({ rowCount, pageCount }));
-  }, [resultsKey, props.data, status, error, isServer, table]);
+  }, [resultsKey, rows, status, error, isServer, table]);
 
-  return { table };
+  const queryKey = JSON.stringify({
+    sorting,
+    filters: urlFilters,
+    joinOperator,
+    search: globalFilter,
+    page: { index: pagination.pageIndex, size: pagination.pageSize },
+  } satisfies DataQuery);
+  const query = React.useMemo<DataQuery>(() => JSON.parse(queryKey), [queryKey]);
+
+  return { table, query };
 }
 
 function subscribeToHistory(onChange: () => void) {

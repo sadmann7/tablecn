@@ -86,8 +86,10 @@ function DataTablePaginationContent<TData extends RowData>({
     ? pageSizeOptions
     : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
   const pageCount = Math.max(table.getPageCount(), 1);
-  const canPreviousPage = table.getCanPreviousPage();
-  const canNextPage = table.getCanNextPage();
+  const status = table.options.status ?? "idle";
+  const isDisabled = status === "loading" || status === "error";
+  const canPreviousPage = !isDisabled && table.getCanPreviousPage();
+  const canNextPage = !isDisabled && table.getCanNextPage();
 
   return (
     <div
@@ -119,6 +121,7 @@ function DataTablePaginationContent<TData extends RowData>({
           </p>
           <Select
             value={`${pageSize}`}
+            disabled={isDisabled}
             onValueChange={(value) => {
               table.setPageSize(Number(value));
             }}
