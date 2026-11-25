@@ -24,7 +24,7 @@ export const basesSearchParams = {
   ).withDefault("plain"),
   dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
   data: demoDataModeParser,
-  status: parseAsStringLiteral(
+  dataStatus: parseAsStringLiteral(
     BASES_STATUSES.map((status) => status.value),
   ).withDefault("idle"),
 };

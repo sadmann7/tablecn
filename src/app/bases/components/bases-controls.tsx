@@ -28,12 +28,10 @@ interface BasesControlsProps {
 
 export function BasesControls({ base }: BasesControlsProps) {
   const searchParams = useSearchParams();
-  const [{ view, filterMode, dir, data, status }, setControls] = useQueryStates(
-    basesSearchParams,
-    {
+  const [{ view, filterMode, dir, data, dataStatus }, setControls] =
+    useQueryStates(basesSearchParams, {
       clearOnDefault: true,
-    },
-  );
+    });
   const query = searchParams.toString();
 
   return (
@@ -131,12 +129,12 @@ export function BasesControls({ base }: BasesControlsProps) {
               size="sm"
               spacing={0}
               aria-label="Status"
-              value={status}
+              value={dataStatus}
               onValueChange={(value) => {
                 const next = BASES_STATUSES.find(
                   (item) => item.value === value,
                 );
-                if (next) void setControls({ status: next.value });
+                if (next) void setControls({ dataStatus: next.value });
               }}
             >
               {BASES_STATUSES.map((item) => (

@@ -10,7 +10,7 @@ import { basesSearchParams } from "../lib/search-params";
 const RETRY_DELAY_MS = 1000;
 
 export function useBasesDataTable() {
-  const [{ filterMode, dir, data: dataMode, status }, setControls] =
+  const [{ filterMode, dir, data: dataMode, dataStatus }, setControls] =
     useQueryStates(basesSearchParams, { clearOnDefault: true });
   const [{ rows, copy }] = React.useState(() =>
     getBasesFixture(dataMode ?? "demo"),
@@ -28,8 +28,8 @@ export function useBasesDataTable() {
   }, []);
 
   const onRetry = React.useCallback(() => {
-    void setControls({ status: "loading" });
-    setTimeout(() => void setControls({ status: "idle" }), RETRY_DELAY_MS);
+    void setControls({ dataStatus: "loading" });
+    setTimeout(() => void setControls({ dataStatus: "idle" }), RETRY_DELAY_MS);
   }, [setControls]);
 
   return {
@@ -37,7 +37,7 @@ export function useBasesDataTable() {
     dir,
     data,
     copy,
-    status,
+    status: dataStatus,
     error: "The tasks service didn't respond.",
     onRetry,
     onCopy,
