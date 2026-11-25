@@ -113,6 +113,57 @@ for (const base of TABLE_BASES) {
   });
 }
 
+test.describe("data table with TanStack Query", () => {
+  const rows = Array.from({ length: 10 }, (_, index) => ({
+    id: `task-${index}`,
+    code: `TASK-${1000 + index}`,
+    title: `Task ${index}`,
+    status: "todo",
+    priority: "low",
+    label: "bug",
+    estimatedHours: index,
+    archived: false,
+    createdAt: "2026-11-01T00:00:00.000Z",
+    updatedAt: "2026-11-01T00:00:00.000Z",
+  }));
+
+  test("has no axe violations with rows", async ({ page }, testInfo) => {
+    await page.route("**/api/tasks**", (route) =>
+      route.fulfill({ json: { rows, rowCount: 42 } }),
+    );
+    await page.goto("/data-table-query");
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expect(page.getByText("Page 1 of 5")).toBeVisible();
+
+    await expectNoAxeViolations(page, testInfo);
+  });
+
+  test("disables paging while the request fails, then retries", async ({
+    page,
+  }, testInfo) => {
+    let isFailing = true;
+    await page.route("**/api/tasks**", (route) =>
+      isFailing
+        ? route.fulfill({ status: 500, body: "" })
+        : route.fulfill({ json: { rows, rowCount: 42 } }),
+    );
+    await page.goto("/data-table-query");
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.getByRole("button", { name: "Go to next page" }),
+    ).toBeDisabled();
+    await expectNoAxeViolations(page, testInfo);
+
+    isFailing = false;
+    await retry.click();
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expect(
+      page.getByRole("button", { name: "Go to next page" }),
+    ).toBeEnabled();
+  });
+});
+
 for (const base of GRID_BASES) {
   test.describe(`${base} data grid`, () => {
     test.beforeEach(async ({ page }) => {
