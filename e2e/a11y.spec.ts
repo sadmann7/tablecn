@@ -77,6 +77,42 @@ for (const base of TABLE_BASES) {
   });
 }
 
+const TABLE_STATES = [
+  { name: "loading", search: "dataStatus=loading" },
+  { name: "refreshing", search: "dataStatus=refreshing" },
+  { name: "error", search: "dataStatus=error" },
+  { name: "empty", search: "search=zzzz" },
+] as const;
+
+for (const base of TABLE_BASES) {
+  test.describe(`${base} data table states`, () => {
+    for (const state of TABLE_STATES) {
+      test(`has no axe violations while ${state.name}`, async ({
+        page,
+      }, testInfo) => {
+        await page.goto(`/bases/${base}?view=table&${state.search}`, {
+          waitUntil: "networkidle",
+        });
+        await expect(page.locator("table tbody tr").first()).toBeVisible();
+
+        await expectNoAxeViolations(page, testInfo);
+      });
+    }
+
+    test("retries from the error state", async ({ page }) => {
+      await page.goto(`/bases/${base}?view=table&dataStatus=error`, {
+        waitUntil: "networkidle",
+      });
+      const table = page.locator("table");
+
+      await page.getByRole("button", { name: "Retry" }).click();
+      await expect(table).toHaveAttribute("aria-busy", "true");
+      await expect(table).not.toHaveAttribute("aria-busy");
+      await expect(page.locator("tbody tr")).toHaveCount(10);
+    });
+  });
+}
+
 for (const base of GRID_BASES) {
   test.describe(`${base} data grid`, () => {
     test.beforeEach(async ({ page }) => {

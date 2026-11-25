@@ -296,7 +296,7 @@ function DataTableBody<TData extends RowData>({
   return (
     <TableBody
       data-status={status === "refreshing" ? status : undefined}
-      className="transition-opacity data-[status=refreshing]:opacity-50"
+      className="transition-colors data-[status=refreshing]:**:text-muted-foreground"
       renderEmptyState={() =>
         status === "error" ? (
           <div className="flex flex-col items-center justify-center gap-2 whitespace-normal">
@@ -369,6 +369,7 @@ function DataTableSkeletonBody<TData extends RowData>({
                     style={getColumnPinningStyle(column, pinned)}
                   >
                     <Skeleton className="h-6 w-full" />
+                    <span className="sr-only">Loading</span>
                   </TableCell>
                 );
               })}

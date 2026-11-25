@@ -277,7 +277,7 @@ function DataTableBody<TData extends RowData>({
   return (
     <TableBody
       data-status={status === "refreshing" ? status : undefined}
-      className="transition-opacity data-[status=refreshing]:opacity-50"
+      className="transition-colors data-[status=refreshing]:**:text-muted-foreground"
     >
       {rows.map((row) => (
         <DataTableRow key={row.id} row={row} />
