@@ -9,14 +9,17 @@ export const GITHUB_URL = "https://github.com/sadmann7/tablecn";
 
 export const NAV_LINKS = [
   { href: "/", label: "Data Table" },
-  { href: "/data-table-query", label: "Data Table Query" },
-  { href: "/data-table-fetcher", label: "Data Table Fetcher" },
-  { href: "/data-table-controlled", label: "Data Table Controlled" },
-  { href: "/data-table-cursor", label: "Data Table Cursor" },
   { href: "/data-grid", label: "Data Grid" },
   { href: "/data-grid-multiplayer", label: "Data Grid Multiplayer" },
   { href: "/data-grid-rapid", label: "Data Grid Rapid" },
   { href: "/data-grid-doom", label: "Data Grid DOOM" },
+] as const;
+
+export const DATA_TABLE_EXAMPLES = [
+  { href: "/data-table-query", label: "TanStack Query" },
+  { href: "/data-table-fetcher", label: "Fetcher" },
+  { href: "/data-table-controlled", label: "Controlled" },
+  { href: "/data-table-cursor", label: "Load more" },
 ] as const;
 
 export const THEME_COLORS = {

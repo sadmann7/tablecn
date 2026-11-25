@@ -17,6 +17,8 @@ import {
   TooltipTrigger,
 } from "@/registry/bases/radix/ui/tooltip";
 
+import { DataTableExamples } from "./data-table-examples";
+
 function TasksTableControlMenu() {
   const [dataMode, setDataMode] = useQueryState(
     "dataMode",
@@ -73,6 +75,11 @@ function TasksTableControlMenu() {
           ))}
         </ToggleGroup>
       </ControlGroup>
+      <Separator
+        orientation="vertical"
+        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
+      />
+      <DataTableExamples />
     </div>
   );
 }
@@ -90,6 +97,11 @@ function TasksTableControlMenuSkeleton() {
       <ControlGroup label="Filter">
         <FlagGroupSkeleton flags={FILTER_MODES} />
       </ControlGroup>
+      <Separator
+        orientation="vertical"
+        className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
+      />
+      <DataTableExamples />
     </div>
   );
 }
