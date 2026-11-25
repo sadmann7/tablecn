@@ -17,7 +17,7 @@
     "components/data-grid/data-grid-skeleton.tsx": "identical",
     "components/data-grid/data-grid-sort-menu.tsx": "a2fe7c3fbcd0",
     "components/data-grid/data-grid-view-menu.tsx": "5c953462c1b8",
-    "components/data-grid/data-grid.tsx": "a25f032d51c9",
+    "components/data-grid/data-grid.tsx": "16b1925e42e4",
     "components/data-table/data-table-actions-column.tsx": "b601f8d6a3f7",
     "components/data-table/data-table-advanced-toolbar.tsx": "identical",
     "components/data-table/data-table-column-header.tsx": "5c357cc4bd04",

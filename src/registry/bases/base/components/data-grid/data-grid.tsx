@@ -223,6 +223,7 @@ function DataGridViewport<TData extends RowData>({
   }, [dataGridRef, headerRef, footerRef, insetsKey]);
 
   const isScrollJumpingRef = React.useRef(false);
+  const [jumpEndCount, setJumpEndCount] = React.useState(0);
 
   const rowRangeExtractor = React.useCallback(
     ({ startIndex, endIndex, overscan: overscanProp, count }: Range) => {
@@ -262,8 +263,8 @@ function DataGridViewport<TData extends RowData>({
       }
       return indexes;
     },
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- a new row order moves the focused row, so `rows` re-runs the extractor
-    [table, rowVirtualizerRef, rowSize, rows],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- a new row order moves the focused row and a finished jump restores overscan, so `rows` and `jumpEndCount` re-run the extractor
+    [table, rowVirtualizerRef, rowSize, rows, jumpEndCount],
   );
 
   const getRowKey = React.useCallback(
@@ -336,6 +337,12 @@ function DataGridViewport<TData extends RowData>({
           ? SCROLL_JUMP_EXIT_ROWS_PER_COMMIT
           : rowVirtualizer.options.overscan * 2);
   const deferredIsScrolling = React.useDeferredValue(isScrolling);
+
+  useIsoLayoutEffect(() => {
+    if (isScrollJumpingRef.current && !isScrollJumping) {
+      setJumpEndCount((count) => count + 1);
+    }
+  }, [isScrollJumping]);
 
   useIsoLayoutEffect(() => {
     committedScrollRef.current = {
@@ -440,7 +447,10 @@ function DataGridViewport<TData extends RowData>({
   );
 
   const virtualRows = rowVirtualizer.getVirtualItems();
+  const focusedRowId = table.getFocusedCell()?.row.id;
   const rowSlots = getRowSlots(virtualRows, {
+    focusedRowIndex:
+      focusedRowId === undefined ? -1 : getRowDisplayIndex(table, focusedRowId),
     viewportHeight: rowVirtualizer.scrollRect?.height ?? 0,
     rowSize,
     overscan: rowVirtualizer.options.overscan,
@@ -587,8 +597,9 @@ function getColumnsWidth<TData extends RowData>(
 }
 
 interface RowSlots {
-  count: number;
-  pinnedIndex: number | null;
+  windowLength: number;
+  spareKey: number;
+  anchorIndex: number | null;
 }
 
 function getRowWindowSize({
@@ -611,10 +622,15 @@ function getRowWindowSize({
   return Math.min(count, visibleCount + overscan * 2);
 }
 
-// Keys come from the full window size, so a scroll jump that shrinks the window keeps every key.
+// Window rows are keyed by the current window length, so a scroll jump that shrinks
+// the window still reuses every row. The focused row keeps a key from the full window
+// size, so it stays mounted while the window shrinks around it or it gets pinned.
 function getRowSlots(
   items: VirtualItem[],
-  windowOptions: Omit<
+  {
+    focusedRowIndex,
+    ...windowOptions
+  }: { focusedRowIndex: number } & Omit<
     Parameters<typeof getRowWindowSize>[0],
     "fallbackVisibleCount"
   >,
@@ -628,25 +644,34 @@ function getRowSlots(
         ? first.index
         : last.index
       : null;
-  const windowLength = pinnedIndex === null ? items.length : items.length - 1;
-  const count = Math.max(
-    windowLength,
-    getRowWindowSize({ ...windowOptions, fallbackVisibleCount: windowLength }),
+  const windowLength = Math.max(
+    pinnedIndex === null ? items.length : items.length - 1,
     1,
   );
-  return { count, pinnedIndex };
+  const spareKey = Math.max(
+    windowLength,
+    getRowWindowSize({ ...windowOptions, fallbackVisibleCount: windowLength }),
+  );
+  const isFocusedRowMounted =
+    focusedRowIndex !== -1 &&
+    items.some((item) => item.index === focusedRowIndex);
+  return {
+    windowLength,
+    spareKey,
+    anchorIndex: pinnedIndex ?? (isFocusedRowMounted ? focusedRowIndex : null),
+  };
 }
 
-// The pinned row keeps its slot, and the window row that shares it takes a spare one.
-function getRowSlotKey(index: number, { count, pinnedIndex }: RowSlots) {
-  if (
-    pinnedIndex !== null &&
-    index !== pinnedIndex &&
-    index % count === pinnedIndex % count
-  ) {
-    return count;
-  }
-  return index % count;
+// The window row that shares the anchor's key takes the spare one.
+function getRowSlotKey(
+  index: number,
+  { windowLength, spareKey, anchorIndex }: RowSlots,
+) {
+  if (anchorIndex === null) return index % windowLength;
+  const anchorKey = anchorIndex % spareKey;
+  if (index === anchorIndex) return anchorKey;
+  const key = index % windowLength;
+  return key === anchorKey ? spareKey : key;
 }
 
 function getColumnWindowKey(params: {
