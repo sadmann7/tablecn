@@ -284,20 +284,28 @@ function DataTableRowImpl<TData extends RowData>({
         isSelected: state.rowSelection[row.id] === true,
       })}
     >
-      {({ isSelected }) => (
-        <TableRow
-          data-state={isSelected ? "selected" : undefined}
-          className="group/row"
-        >
-          {row.getVisibleCells().map((cell) => (
-            <DataTableCell
-              key={cell.id}
-              cell={cell}
-              pinned={cell.column.getIsPinned()}
-            />
-          ))}
-        </TableRow>
-      )}
+      {({ isSelected }) => {
+        const cells = row.getVisibleCells();
+        const rowHeaderId = (
+          cells.find((cell) => cell.column.accessorFn) ?? cells[0]
+        )?.id;
+
+        return (
+          <TableRow
+            data-state={isSelected ? "selected" : undefined}
+            className="group/row"
+          >
+            {cells.map((cell) => (
+              <DataTableCell
+                key={cell.id}
+                cell={cell}
+                pinned={cell.column.getIsPinned()}
+                isRowHeader={cell.id === rowHeaderId}
+              />
+            ))}
+          </TableRow>
+        );
+      }}
     </Subscribe>
   );
 }
@@ -305,6 +313,7 @@ function DataTableRowImpl<TData extends RowData>({
 interface DataTableCellProps<TData extends RowData> {
   cell: Cell<DataTableFeatures, TData>;
   pinned: ColumnPinningPosition;
+  isRowHeader: boolean;
 }
 
 const DataTableCell = React.memo(DataTableCellImpl) as typeof DataTableCellImpl;
@@ -312,7 +321,24 @@ const DataTableCell = React.memo(DataTableCellImpl) as typeof DataTableCellImpl;
 function DataTableCellImpl<TData extends RowData>({
   cell,
   pinned,
+  isRowHeader,
 }: DataTableCellProps<TData>) {
+  if (isRowHeader) {
+    return (
+      <th
+        data-slot="table-cell"
+        scope="row"
+        className={cn(
+          "p-2 text-start align-middle font-normal whitespace-nowrap [&:has([role=checkbox])]:pe-0",
+          getCellClassName(pinned),
+        )}
+        style={getColumnPinningStyle(cell.column, pinned)}
+      >
+        <FlexRender cell={cell} />
+      </th>
+    );
+  }
+
   return (
     <TableCell
       className={getCellClassName(pinned)}

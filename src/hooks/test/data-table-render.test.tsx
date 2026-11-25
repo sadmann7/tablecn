@@ -69,7 +69,7 @@ describe("DataTable rendering", () => {
     expect(
       measure(() => table.getColumn("status")?.toggleVisibility(false)).cells,
     ).toBe(0);
-    expect(container.querySelectorAll("tbody td")).toHaveLength(20);
+    expect(container.querySelectorAll("tbody td, tbody th")).toHaveLength(20);
 
     expect(
       measure(() => table.getColumn("status")?.toggleVisibility(true)).cells,
@@ -79,9 +79,9 @@ describe("DataTable rendering", () => {
     expect(
       measure(() => table.getColumn("title")?.pin("start")).cells,
     ).toBeLessThanOrEqual(10);
-    const titleCells = [...container.querySelectorAll("tbody td")].filter(
-      (cell) => cell.textContent?.startsWith("Task "),
-    );
+    const titleCells = [
+      ...container.querySelectorAll("tbody td, tbody th"),
+    ].filter((cell) => cell.textContent?.startsWith("Task "));
     expect(titleCells).toHaveLength(10);
     for (const cell of titleCells) {
       expect((cell as HTMLElement).style.position).toBe("sticky");
