@@ -223,6 +223,7 @@ function DataGridViewport<TData extends RowData>({
   }, [dataGridRef, headerRef, footerRef, insetsKey]);
 
   const isScrollJumpingRef = React.useRef(false);
+  const [jumpEndCount, setJumpEndCount] = React.useState(0);
 
   const rowRangeExtractor = React.useCallback(
     ({ startIndex, endIndex, overscan: overscanProp, count }: Range) => {
@@ -262,8 +263,8 @@ function DataGridViewport<TData extends RowData>({
       }
       return indexes;
     },
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- a new row order moves the focused row, so `rows` re-runs the extractor
-    [table, rowVirtualizerRef, rowSize, rows],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- a new row order moves the focused row and a finished jump restores overscan, so `rows` and `jumpEndCount` re-run the extractor
+    [table, rowVirtualizerRef, rowSize, rows, jumpEndCount],
   );
 
   const getRowKey = React.useCallback(
@@ -336,6 +337,12 @@ function DataGridViewport<TData extends RowData>({
           ? SCROLL_JUMP_EXIT_ROWS_PER_COMMIT
           : rowVirtualizer.options.overscan * 2);
   const deferredIsScrolling = React.useDeferredValue(isScrolling);
+
+  useLayoutEffect(() => {
+    if (isScrollJumpingRef.current && !isScrollJumping) {
+      setJumpEndCount((count) => count + 1);
+    }
+  }, [isScrollJumping]);
 
   useLayoutEffect(() => {
     committedScrollRef.current = {

@@ -1103,6 +1103,38 @@ describe("DataGrid rendering", () => {
     }
   });
 
+  it("keeps a row focused after a scroll jump mounted on the next scroll", async () => {
+    const manyRows = Array.from({ length: 2000 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${index + 1}`,
+      trick: "Kickflip",
+    }));
+    const { container, table } = renderDataGrid(testColumns, {
+      data: manyRows,
+    });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    for (const rowCount of [100, 200, 300, 1000]) await scrollTo(rowCount);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
+    act(() => {
+      table.setFocusedCell("1009", "name");
+      getCellWrapper(container, "1009", "name")?.focus();
+    });
+    const focusedCell = getCellWrapper(container, "1009", "name");
+    expect(document.activeElement).toBe(focusedCell);
+
+    await scrollTo(1001);
+    expect(getCellWrapper(container, "1009", "name")).toBe(focusedCell);
+    expect(document.activeElement).toBe(focusedCell);
+  });
+
   it("only mounts the columns inside the horizontal viewport", () => {
     const wideColumns = Array.from(
       { length: 30 },
