@@ -201,6 +201,72 @@ test.describe("data table with a fetcher", () => {
   });
 });
 
+test.describe("data tables with a controlled query", () => {
+  test("has no axe violations with two tables", async ({ page }, testInfo) => {
+    await page.route("**/api/tasks**", (route) =>
+      route.fulfill({ json: { rows: QUERY_DEMO_ROWS, rowCount: 42 } }),
+    );
+    await page.goto("/data-table-controlled");
+    await expect(page.locator("table")).toHaveCount(2);
+    await expect(page.getByText("Page 1 of 5")).toHaveCount(2);
+
+    await expectNoAxeViolations(page, testInfo);
+  });
+});
+
+test.describe("data table with Load more", () => {
+  test("has no axe violations before and after loading more", async ({
+    page,
+  }, testInfo) => {
+    let isFailing = false;
+    await page.route("**/api/tasks**", (route) => {
+      if (isFailing) return route.fulfill({ status: 500, body: "" });
+      const cursor = new URL(route.request().url()).searchParams.get("cursor");
+      const offset = cursor ? Number(cursor) : 0;
+      return route.fulfill({
+        json: {
+          rows: QUERY_DEMO_ROWS.map((row, index) => ({
+            ...row,
+            id: `task-${offset + index}`,
+            code: `TASK-${1000 + offset + index}`,
+          })),
+          rowCount: 30,
+          nextCursor: offset + 10 < 30 ? String(offset + 10) : null,
+        },
+      });
+    });
+    await page.goto("/data-table-cursor");
+    const table = page.locator("table");
+    const loadMore = page.getByRole("button", { name: "Load more" });
+    await expect(loadMore).toBeVisible();
+    await expect(table).toHaveAttribute("aria-rowcount", "31");
+    await expect(page.locator("[data-slot=data-table-pagination]")).toHaveCount(
+      0,
+    );
+    await expectNoAxeViolations(page, testInfo);
+
+    await loadMore.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("tbody tr[aria-rowindex]")).toHaveCount(20);
+    await expect(page.locator("tbody tr[aria-rowindex='12']")).toBeFocused();
+    await expectNoAxeViolations(page, testInfo);
+
+    isFailing = true;
+    await loadMore.click();
+    const retry = page.getByRole("button", { name: "Retry" });
+    await expect(retry).toBeFocused();
+    await expectNoAxeViolations(page, testInfo);
+
+    isFailing = false;
+    await page.keyboard.press("Enter");
+    await expect(page.locator("tbody tr[aria-rowindex]")).toHaveCount(30);
+    await expect(page.getByRole("button", { name: "Load more" })).toHaveCount(
+      0,
+    );
+    await expect(table).toHaveAttribute("aria-rowcount", "31");
+  });
+});
+
 for (const base of GRID_BASES) {
   test.describe(`${base} data grid`, () => {
     test.beforeEach(async ({ page }) => {
