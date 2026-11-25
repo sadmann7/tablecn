@@ -11,8 +11,8 @@ import { tasks } from "@/db/schema";
 
 import type { tasksTableConfig } from "./validations";
 
-import { encodeTasksCursor, type TasksCursor } from "./tasks-cursor";
 import { filterColumns } from "./filter-columns";
+import { encodeTasksCursor, type TasksCursor } from "./tasks-cursor";
 import { sanitizeEnumFilters } from "./utils";
 
 export async function getTasks(
