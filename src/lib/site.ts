@@ -9,6 +9,7 @@ export const GITHUB_URL = "https://github.com/sadmann7/tablecn";
 
 export const NAV_LINKS = [
   { href: "/", label: "Data Table" },
+  { href: "/data-table-query", label: "Data Table Query" },
   { href: "/data-grid", label: "Data Grid" },
   { href: "/data-grid-multiplayer", label: "Data Grid Multiplayer" },
   { href: "/data-grid-rapid", label: "Data Grid Rapid" },
