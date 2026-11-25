@@ -201,18 +201,21 @@ describe.each(bases)("DataTable status ($name)", (ui) => {
     );
   });
 
-  it("disables the page buttons while loading or failed", () => {
+  it("disables the page buttons and hides the page count while loading or failed", () => {
     const { rerender } = renderTable(ui, { status: "loading" });
     const nextButton = screen.getByRole("button", {
       name: "Go to next page",
     });
     expect(nextButton).toHaveProperty("disabled", true);
+    expect(screen.getByText(/^Page \d/).textContent).toBe("Page 1");
 
     rerender({ status: "error", error: "Network down" });
     expect(nextButton).toHaveProperty("disabled", true);
+    expect(screen.getByText(/^Page \d/).textContent).toBe("Page 1");
 
     rerender({ status: "refreshing" });
     expect(nextButton).toHaveProperty("disabled", false);
+    expect(screen.getByText(/^Page \d/).textContent).toBe("Page 1 of 3");
 
     rerender({ status: "idle" });
     expect(nextButton).toHaveProperty("disabled", false);

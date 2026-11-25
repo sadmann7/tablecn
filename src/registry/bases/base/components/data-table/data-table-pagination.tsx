@@ -147,7 +147,8 @@ function DataTablePaginationContent<TData extends RowData>({
           role="status"
           className="flex items-center justify-center text-sm font-medium"
         >
-          Page {pageIndex + 1} of {pageCount}
+          Page {pageIndex + 1}
+          {isDisabled ? null : ` of ${pageCount}`}
         </div>
         <div className="flex items-center gap-2">
           <Button
