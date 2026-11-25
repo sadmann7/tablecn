@@ -79,7 +79,7 @@ export function TasksTable({
   const enableAdvancedFilter = filterMode !== "plain";
 
   const [
-    { data, pageCount },
+    { data, pageCount, rowCount },
     statusCounts,
     priorityCounts,
     estimatedHoursRange,
@@ -227,7 +227,7 @@ export function TasksTable({
     getRowId: (originalRow) => originalRow.id,
     shallow: false,
     enableRowRangeSelection: true,
-    ...(dataMode === "client" ? { mode: "client" } : { pageCount }),
+    ...(dataMode === "client" ? { mode: "client" } : { pageCount, rowCount }),
   });
 
   return (

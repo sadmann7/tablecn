@@ -61,9 +61,9 @@ export async function getTasks(
     });
 
     const pageCount = Math.ceil(total / input.perPage);
-    return { data, pageCount };
+    return { data, pageCount, rowCount: total };
   } catch {
-    return { data: [], pageCount: 0 };
+    return { data: [], pageCount: 0, rowCount: 0 };
   }
 }
 
