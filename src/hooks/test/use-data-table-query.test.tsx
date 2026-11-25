@@ -11,6 +11,7 @@ import { createDataTableConfig } from "@/lib/data-table-config";
 import {
   useDataTable,
   type UseDataTableProps,
+  useDataTableQuery,
 } from "@/registry/bases/radix/hooks/use-data-table";
 
 interface Task {
@@ -20,19 +21,6 @@ interface Task {
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
-
-const columns = columnHelper.columns([
-  columnHelper.accessor("title", {
-    id: "title",
-    meta: { variant: "text" },
-    enableColumnFilter: true,
-  }),
-  columnHelper.accessor("status", {
-    id: "status",
-    meta: { variant: "select" },
-    enableColumnFilter: true,
-  }),
-]);
 
 const config = createDataTableConfig({
   columns: {
@@ -78,9 +66,9 @@ describe("useDataTable query", () => {
 
     rerender();
     act(() => {
-      result.current.table.setColumnFilters((filters) => [
-        ...filters.map((filter) => ({ ...filter })),
-      ]);
+      result.current.table.setColumnFilters((filters) =>
+        filters.map((filter) => ({ ...filter })),
+      );
     });
 
     expect(result.current.query).toBe(first);
@@ -118,6 +106,40 @@ describe("useDataTable query", () => {
     const { result: parsed } = renderTable(serialized, { result: undefined });
 
     expect(parsed.current.query).toEqual(result.current.query);
+  });
+});
+
+describe("useDataTableQuery", () => {
+  it("matches the query of the table that renders the result", async () => {
+    vi.useFakeTimers();
+    const { result } = renderHookWithUrl(
+      "?page=2&sort=title.desc&title=bug",
+      () => {
+        const standalone = useDataTableQuery({ config });
+        return { standalone, ...useTable({ result: getResult(100) }) };
+      },
+    );
+
+    expect(result.current.standalone).toEqual(result.current.query);
+    expect(result.current.standalone.page.index).toBe(1);
+
+    act(() => result.current.table.setJoinOperator("or"));
+    await act(() => vi.runAllTimersAsync());
+
+    expect(result.current.standalone).toEqual(result.current.query);
+    expect(result.current.standalone.joinOperator).toBe("or");
+    expect(result.current.standalone.page.index).toBe(0);
+  });
+
+  it("keeps the same query object across renders", () => {
+    const { result, rerender } = renderHookWithUrl("?title=bug", () =>
+      useDataTableQuery({ config }),
+    );
+    const first = result.current;
+
+    rerender();
+
+    expect(result.current).toBe(first);
   });
 });
 
@@ -296,6 +318,19 @@ function getResult(rowCount: number, titles = ["a"]): DataResult<Task> {
     rowCount,
   };
 }
+
+const columns = columnHelper.columns([
+  columnHelper.accessor("title", {
+    id: "title",
+    meta: { variant: "text" },
+    enableColumnFilter: true,
+  }),
+  columnHelper.accessor("status", {
+    id: "status",
+    meta: { variant: "select" },
+    enableColumnFilter: true,
+  }),
+]);
 
 function useTable(props: Partial<UseDataTableProps<Task>>) {
   return useDataTable<Task>({

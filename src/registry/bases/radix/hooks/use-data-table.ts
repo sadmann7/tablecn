@@ -32,6 +32,7 @@ import {
 import {
   applyColumnConfig,
   createConfigFromInputKey,
+  type DataTableConfig,
   type DataTableConfigInput,
   getConfigInputKey,
   getIsDataTableConfig,
@@ -147,14 +148,7 @@ function useDataTable<TData extends RowData>({
   const isServer = mode === "server";
   const isResult = data === undefined;
   const rows = data ?? result?.rows ?? EMPTY_ROWS;
-  const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
-  const configInputKey = builtConfig
-    ? ""
-    : getConfigInputKey(columns, configProp);
-  const config = React.useMemo(
-    () => builtConfig ?? createConfigFromInputKey(configInputKey),
-    [builtConfig, configInputKey],
-  );
+  const { config, builtConfig } = useConfig(configProp, columns);
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
 
@@ -199,11 +193,6 @@ function useDataTable<TData extends RowData>({
       `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(", ")}. Rename the config key or add the column.`,
     );
   }, [hasDataAndResult, hasInlineColumns, builtConfig, columns]);
-
-  const filterableIds = React.useMemo(
-    () => Object.keys(filterVariants),
-    [filterVariants],
-  );
 
   const queryStateOptions = {
     urlKeys,
@@ -276,28 +265,7 @@ function useDataTable<TData extends RowData>({
     );
   }
 
-  const locationSearch = React.useSyncExternalStore(
-    subscribeToHistory,
-    getLocationSearch,
-    getServerLocationSearch,
-  );
-
-  const filterOrderKey = React.useMemo(() => {
-    const idsByUrlKey = new Map(filterableIds.map((id) => [urlKeys[id], id]));
-    const urlKeyOrder = new Set(new URLSearchParams(locationSearch).keys());
-    return JSON.stringify(
-      [...urlKeyOrder].flatMap((key) => idsByUrlKey.get(key) ?? []),
-    );
-  }, [filterableIds, urlKeys, locationSearch]);
-
-  const urlFilters = React.useMemo(
-    () =>
-      sortColumnFiltersByIds(
-        getColumnFilters(filterableIds, filterParams),
-        JSON.parse(filterOrderKey),
-      ),
-    [filterableIds, filterParams, filterOrderKey],
-  );
+  const { filterableIds, urlFilters } = useUrlFilters(config, filterParams);
   const urlFiltersKey = getColumnFiltersKey(urlFilters);
 
   const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(
@@ -443,19 +411,105 @@ function useDataTable<TData extends RowData>({
     announce(formatResults({ rowCount, pageCount }));
   }, [resultsKey, rows, status, error, isServer, table]);
 
-  const queryKey = JSON.stringify({
+  const query = useStableQuery({
     sorting,
     filters: urlFilters,
     joinOperator,
     search: globalFilter,
     page: { index: pagination.pageIndex, size: pagination.pageSize },
-  } satisfies DataQuery);
-  const query = React.useMemo<DataQuery>(
-    () => JSON.parse(queryKey),
-    [queryKey],
-  );
+  });
 
   return { table, query };
+}
+
+interface UseDataTableQueryProps<TData extends RowData> {
+  config?: DataTableConfigInput;
+  columns?: TableOptions<DataTableFeatures, TData>["columns"];
+}
+
+/** Reads the current `DataQuery` from the URL, so it can be fetched before the table is created with its `result`. */
+function useDataTableQuery<TData extends RowData>({
+  config: configProp,
+  columns = [],
+}: UseDataTableQueryProps<TData>): DataQuery {
+  const { config } = useConfig(configProp, columns);
+  const queryStateOptions = { urlKeys: config.urlKeys };
+  const [{ page, perPage, sort, joinOperator, search }] = useQueryStates(
+    config.stateParsers,
+    queryStateOptions,
+  );
+  const [filterParams] = useQueryStates(
+    config.filterParsers,
+    queryStateOptions,
+  );
+  const { urlFilters } = useUrlFilters(config, filterParams);
+
+  return useStableQuery({
+    sorting: sort,
+    filters: urlFilters,
+    joinOperator,
+    search: config.enableGlobalFilter ? search : "",
+    page: { index: page - 1, size: perPage },
+  });
+}
+
+function useConfig<TData extends RowData>(
+  configProp: DataTableConfigInput | undefined,
+  columns: TableOptions<DataTableFeatures, TData>["columns"],
+) {
+  const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
+  const configInputKey = builtConfig
+    ? ""
+    : getConfigInputKey(columns, configProp);
+  const config = React.useMemo(
+    () => builtConfig ?? createConfigFromInputKey(configInputKey),
+    [builtConfig, configInputKey],
+  );
+
+  return { config, builtConfig };
+}
+
+function useUrlFilters(
+  {
+    filterVariants,
+    urlKeys,
+  }: Pick<DataTableConfig, "filterVariants" | "urlKeys">,
+  filterParams: Partial<Record<string, unknown>>,
+) {
+  const filterableIds = React.useMemo(
+    () => Object.keys(filterVariants),
+    [filterVariants],
+  );
+
+  const locationSearch = React.useSyncExternalStore(
+    subscribeToHistory,
+    getLocationSearch,
+    getServerLocationSearch,
+  );
+
+  const filterOrderKey = React.useMemo(() => {
+    const idsByUrlKey = new Map(filterableIds.map((id) => [urlKeys[id], id]));
+    const urlKeyOrder = new Set(new URLSearchParams(locationSearch).keys());
+    return JSON.stringify(
+      [...urlKeyOrder].flatMap((key) => idsByUrlKey.get(key) ?? []),
+    );
+  }, [filterableIds, urlKeys, locationSearch]);
+
+  const urlFilters = React.useMemo(
+    () =>
+      sortColumnFiltersByIds(
+        getColumnFilters(filterableIds, filterParams),
+        JSON.parse(filterOrderKey),
+      ),
+    [filterableIds, filterParams, filterOrderKey],
+  );
+
+  return { filterableIds, urlFilters };
+}
+
+function useStableQuery(query: DataQuery) {
+  const queryKey = JSON.stringify(query);
+  return React.useMemo<DataQuery>(() => JSON.parse(queryKey), [queryKey]);
 }
 
 function subscribeToHistory(onChange: () => void) {
@@ -505,4 +559,9 @@ function useChainedUpdate<TValue>(value: TValue) {
   };
 }
 
-export { useDataTable, type UseDataTableProps };
+export {
+  useDataTable,
+  type UseDataTableProps,
+  useDataTableQuery,
+  type UseDataTableQueryProps,
+};
