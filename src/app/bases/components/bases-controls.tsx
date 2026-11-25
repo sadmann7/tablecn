@@ -16,7 +16,11 @@ import {
 } from "@/registry/bases/radix/ui/toggle-group";
 
 import { type Base, BASES } from "../lib/data";
-import { BASES_VIEWS, basesSearchParams } from "../lib/search-params";
+import {
+  BASES_STATUSES,
+  BASES_VIEWS,
+  basesSearchParams,
+} from "../lib/search-params";
 
 interface BasesControlsProps {
   base: Base;
@@ -24,7 +28,7 @@ interface BasesControlsProps {
 
 export function BasesControls({ base }: BasesControlsProps) {
   const searchParams = useSearchParams();
-  const [{ view, filterMode, dir, data }, setControls] = useQueryStates(
+  const [{ view, filterMode, dir, data, status }, setControls] = useQueryStates(
     basesSearchParams,
     {
       clearOnDefault: true,
@@ -111,6 +115,36 @@ export function BasesControls({ base }: BasesControlsProps) {
                   className="px-2.5 text-xs"
                 >
                   <item.icon className="size-3.5" />
+                  {item.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+          </ControlGroup>
+          <Separator
+            orientation="vertical"
+            className="max-sm:hidden data-vertical:h-4 data-vertical:self-center"
+          />
+          <ControlGroup label="Status">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              spacing={0}
+              aria-label="Status"
+              value={status}
+              onValueChange={(value) => {
+                const next = BASES_STATUSES.find(
+                  (item) => item.value === value,
+                );
+                if (next) void setControls({ status: next.value });
+              }}
+            >
+              {BASES_STATUSES.map((item) => (
+                <ToggleGroupItem
+                  key={item.value}
+                  value={item.value}
+                  className="px-2.5 text-xs"
+                >
                   {item.label}
                 </ToggleGroupItem>
               ))}

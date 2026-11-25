@@ -7,9 +7,11 @@ import type { Task } from "@/db/schema";
 import { getBasesFixture } from "../lib/fixtures";
 import { basesSearchParams } from "../lib/search-params";
 
+const RETRY_DELAY_MS = 1000;
+
 export function useBasesDataTable() {
-  const [{ filterMode, dir, data: dataMode }] =
-    useQueryStates(basesSearchParams);
+  const [{ filterMode, dir, data: dataMode, status }, setControls] =
+    useQueryStates(basesSearchParams, { clearOnDefault: true });
   const [{ rows, copy }] = React.useState(() =>
     getBasesFixture(dataMode ?? "demo"),
   );
@@ -25,5 +27,20 @@ export function useBasesDataTable() {
     toast.success(`Deleted ${task.code}`);
   }, []);
 
-  return { filterMode, dir, data, copy, onCopy, onDelete };
+  const onRetry = React.useCallback(() => {
+    void setControls({ status: "loading" });
+    setTimeout(() => void setControls({ status: "idle" }), RETRY_DELAY_MS);
+  }, [setControls]);
+
+  return {
+    filterMode,
+    dir,
+    data,
+    copy,
+    status,
+    error: "The tasks service didn't respond.",
+    onRetry,
+    onCopy,
+    onDelete,
+  };
 }

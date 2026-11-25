@@ -26,7 +26,17 @@ import { getBasesDataTableColumns } from "../lib/data-table-columns";
 import { basesTasksTableConfig } from "../lib/table";
 
 export function BaseDataTableDemo() {
-  const { filterMode, dir, data, copy, onCopy, onDelete } = useBasesDataTable();
+  const {
+    filterMode,
+    dir,
+    data,
+    copy,
+    status,
+    error,
+    onRetry,
+    onCopy,
+    onDelete,
+  } = useBasesDataTable();
 
   const columns = React.useMemo(
     () =>
@@ -71,6 +81,9 @@ export function BaseDataTableDemo() {
     },
     getRowId: (row) => row.id,
     enableRowRangeSelection: true,
+    status,
+    error,
+    onRetry,
   });
 
   return (
