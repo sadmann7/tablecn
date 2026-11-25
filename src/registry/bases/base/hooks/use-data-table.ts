@@ -19,6 +19,12 @@ import * as React from "react";
 import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
 import {
+  announce,
+  type DataTableMessages,
+  defaultDataTableMessages,
+  getSortingKey,
+} from "@/lib/data-grid-announcer";
+import {
   applyColumnConfig,
   createConfigFromInputKey,
   type DataTableConfigInput,
@@ -70,6 +76,8 @@ type UseDataTableProps<TData extends RowData> = Omit<
   > & {
     debounceMs?: number;
     config?: DataTableConfigInput;
+    /** Overrides the screen reader announcements for sorting and result counts. */
+    messages?: Partial<DataTableMessages>;
     initialState?: Omit<
       InitialTableState,
       | "columnFilters"
@@ -101,6 +109,7 @@ function useDataTable<TData extends RowData>({
   clearOnDefault,
   scroll = false,
   shallow = true,
+  messages,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
@@ -316,6 +325,58 @@ function useDataTable<TData extends RowData>({
     },
     selectTableState,
   );
+
+  const messagesRef = React.useRef(messages);
+  React.useEffect(() => {
+    messagesRef.current = messages;
+  });
+
+  const sortingKey = getSortingKey(sorting);
+  const sortingKeyRef = React.useRef(sortingKey);
+
+  React.useEffect(() => {
+    if (sortingKeyRef.current === sortingKey) return;
+    sortingKeyRef.current = sortingKey;
+
+    const sorted =
+      messagesRef.current?.sorted ?? defaultDataTableMessages.sorted;
+    announce(
+      sorted(
+        sorting.map(({ id, desc }) => ({
+          label: table.getColumn(id)?.columnDef.meta?.label ?? id,
+          desc,
+        })),
+      ),
+    );
+  }, [sorting, sortingKey, table]);
+
+  const resultsKey = JSON.stringify([
+    urlFiltersKey,
+    globalFilter,
+    joinOperator,
+  ]);
+  const resultsRef = React.useRef({
+    key: resultsKey,
+    isPending: false,
+    data: props.data,
+  });
+
+  React.useEffect(() => {
+    const prev = resultsRef.current;
+    const isPending = prev.isPending || prev.key !== resultsKey;
+    const hasNewData = prev.data !== props.data;
+    resultsRef.current = { key: resultsKey, isPending, data: props.data };
+    if (!isPending || (isServer && !hasNewData)) return;
+    resultsRef.current.isPending = false;
+
+    const pageCount = table.getPageCount();
+    const rowCount =
+      table.options.rowCount ??
+      (!isServer || pageCount <= 1 ? table.getRowCount() : null);
+    const formatResults =
+      messagesRef.current?.results ?? defaultDataTableMessages.results;
+    announce(formatResults({ rowCount, pageCount }));
+  }, [resultsKey, props.data, isServer, table]);
 
   return { table };
 }

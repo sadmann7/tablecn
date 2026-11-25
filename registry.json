@@ -106,6 +106,10 @@
           "type": "registry:lib"
         },
         {
+          "path": "src/lib/data-grid-announcer.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "src/lib/data-table-features.ts",
           "type": "registry:lib"
         },
@@ -502,6 +506,10 @@
         },
         {
           "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-announcer.ts",
           "type": "registry:lib"
         },
         {
