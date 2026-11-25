@@ -18,8 +18,10 @@ import * as React from "react";
 
 import type {
   ColumnFilterItem,
+  DataFetcher,
   DataQuery,
   DataResult,
+  DataStatus,
   JoinOperator,
 } from "@/lib/data-table-types";
 
@@ -63,6 +65,23 @@ interface FiltersDraft {
 
 type InitialTableState = Partial<TableState<DataTableFeatures>>;
 
+type StatusProps<TData extends RowData> = Pick<
+  TableOptions<DataTableFeatures, TData>,
+  "status" | "error" | "onRetry"
+>;
+
+interface FetchRequest {
+  query: DataQuery;
+  attempt: number;
+}
+
+interface FetchState<TData> {
+  request: FetchRequest | null;
+  result: DataResult<TData> | undefined;
+  status: DataStatus;
+  error: unknown;
+}
+
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
   | "state"
@@ -82,6 +101,9 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualPagination"
   | "autoResetPageIndex"
   | "manualSorting"
+  | "status"
+  | "error"
+  | "onRetry"
 > &
   Pick<
     QueryStateOptions,
@@ -100,27 +122,42 @@ type UseDataTableProps<TData extends RowData> = Omit<
       | "joinOperator"
     >;
   } & (
-    | {
+    | (StatusProps<TData> & {
         mode?: "server";
         data: TableOptions<DataTableFeatures, TData>["data"];
         pageCount: number;
         rowCount?: number;
         result?: never;
-      }
-    | {
+        fetcher?: never;
+      })
+    | (StatusProps<TData> & {
         mode: "client";
         data: TableOptions<DataTableFeatures, TData>["data"];
         pageCount?: never;
         rowCount?: number;
         result?: never;
-      }
-    | {
+        fetcher?: never;
+      })
+    | (StatusProps<TData> & {
         mode?: "server";
         /** The rows and total row count for the current `query`, fetched outside the table, in place of `data` and `pageCount`. */
         result: DataResult<TData> | undefined;
         data?: never;
         pageCount?: never;
         rowCount?: never;
+        fetcher?: never;
+      })
+    | {
+        mode?: "server";
+        /** Fetches the rows for each `query`, so the table owns the loading, refreshing and error states. */
+        fetcher: DataFetcher<TData>;
+        data?: never;
+        result?: never;
+        pageCount?: never;
+        rowCount?: never;
+        status?: never;
+        error?: never;
+        onRetry?: never;
       }
   );
 
@@ -129,7 +166,8 @@ function useDataTable<TData extends RowData>({
   columns,
   mode = "server",
   data,
-  result,
+  result: resultProp,
+  fetcher,
   pageCount,
   rowCount,
   initialState,
@@ -140,14 +178,13 @@ function useDataTable<TData extends RowData>({
   scroll = false,
   shallow = true,
   messages,
-  status = "idle",
-  error,
-  onRetry,
+  status: statusProp = "idle",
+  error: errorProp,
+  onRetry: onRetryProp,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
   const isResult = data === undefined;
-  const rows = data ?? result?.rows ?? EMPTY_ROWS;
   const { config, builtConfig } = useConfig(configProp, columns);
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
@@ -172,13 +209,20 @@ function useDataTable<TData extends RowData>({
   const hasInlineColumns =
     configProp !== undefined && !builtConfig && "columns" in configProp;
 
-  const hasDataAndResult = data !== undefined && result !== undefined;
+  const hasDataAndResult = data !== undefined && resultProp !== undefined;
+  const hasFetcherAndRows =
+    fetcher !== undefined && (data !== undefined || resultProp !== undefined);
 
   React.useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
     if (hasDataAndResult) {
       console.warn(
         "useDataTable: pass either `data` or `result`, not both. The table shows `data` and ignores `result`.",
+      );
+    }
+    if (hasFetcherAndRows) {
+      console.warn(
+        "useDataTable: pass either `fetcher` or `data` and `result`, not both. The table shows `data` or `result` and doesn't fetch.",
       );
     }
     if (hasInlineColumns) {
@@ -192,7 +236,13 @@ function useDataTable<TData extends RowData>({
     console.warn(
       `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(", ")}. Rename the config key or add the column.`,
     );
-  }, [hasDataAndResult, hasInlineColumns, builtConfig, columns]);
+  }, [
+    hasDataAndResult,
+    hasFetcherAndRows,
+    hasInlineColumns,
+    builtConfig,
+    columns,
+  ]);
 
   const queryStateOptions = {
     urlKeys,
@@ -306,6 +356,24 @@ function useDataTable<TData extends RowData>({
     void setQueryState({ page: null }, options);
   }
 
+  const query = useStableQuery({
+    sorting,
+    filters: urlFilters,
+    joinOperator,
+    search: globalFilter,
+    page: { index: pagination.pageIndex, size: pagination.pageSize },
+  });
+
+  const fetched = useFetcher(
+    data === undefined && resultProp === undefined ? fetcher : undefined,
+    query,
+  );
+  const result = fetched ? fetched.result : resultProp;
+  const status = fetched ? fetched.status : statusProp;
+  const error = fetched ? fetched.error : errorProp;
+  const onRetry = fetched ? fetched.refetch : onRetryProp;
+  const rows = data ?? result?.rows ?? EMPTY_ROWS;
+
   const table = useTable(
     {
       ...props,
@@ -411,15 +479,7 @@ function useDataTable<TData extends RowData>({
     announce(formatResults({ rowCount, pageCount }));
   }, [resultsKey, rows, status, error, isServer, table]);
 
-  const query = useStableQuery({
-    sorting,
-    filters: urlFilters,
-    joinOperator,
-    search: globalFilter,
-    page: { index: pagination.pageIndex, size: pagination.pageSize },
-  });
-
-  return { table, query };
+  return { table, query, status, error, refetch: onRetry ?? noop };
 }
 
 interface UseDataTableQueryProps<TData extends RowData> {
@@ -451,6 +511,72 @@ function useDataTableQuery<TData extends RowData>({
     search: config.enableGlobalFilter ? search : "",
     page: { index: page - 1, size: perPage },
   });
+}
+
+function useFetcher<TData>(
+  fetcher: DataFetcher<TData> | undefined,
+  query: DataQuery,
+) {
+  const [attempt, setAttempt] = React.useState(0);
+  const [state, setState] = React.useState<FetchState<TData>>({
+    request: null,
+    result: undefined,
+    status: "loading",
+    error: undefined,
+  });
+  const fetcherRef = React.useRef(fetcher);
+  const requestIdRef = React.useRef(0);
+  const isEnabled = fetcher !== undefined;
+
+  React.useEffect(() => {
+    fetcherRef.current = fetcher;
+  });
+
+  React.useEffect(() => {
+    const fetchRows = fetcherRef.current;
+    if (!isEnabled || !fetchRows) return;
+
+    const request = { query, attempt };
+    const requestId = ++requestIdRef.current;
+    const controller = new AbortController();
+
+    function getIsCurrent() {
+      return !controller.signal.aborted && requestId === requestIdRef.current;
+    }
+
+    fetchRows(query, { signal: controller.signal }).then(
+      (result) => {
+        if (!getIsCurrent()) return;
+        setState({ request, result, status: "idle", error: undefined });
+      },
+      (error: unknown) => {
+        if (!getIsCurrent()) return;
+        setState({ request, result: undefined, status: "error", error });
+      },
+    );
+
+    return () => controller.abort();
+  }, [isEnabled, query, attempt]);
+
+  const refetch = React.useCallback(() => {
+    setAttempt((current) => current + 1);
+  }, []);
+
+  if (!isEnabled) return null;
+
+  const isSettled =
+    state.request?.query === query && state.request.attempt === attempt;
+
+  return {
+    result: state.result,
+    status: isSettled
+      ? state.status
+      : state.result
+        ? ("refreshing" as const)
+        : ("loading" as const),
+    error: isSettled ? state.error : undefined,
+    refetch,
+  };
 }
 
 function useConfig<TData extends RowData>(
@@ -511,6 +637,8 @@ function useStableQuery(query: DataQuery) {
   const queryKey = JSON.stringify(query);
   return React.useMemo<DataQuery>(() => JSON.parse(queryKey), [queryKey]);
 }
+
+function noop() {}
 
 function subscribeToHistory(onChange: () => void) {
   window.addEventListener("popstate", onChange);
