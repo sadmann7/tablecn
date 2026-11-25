@@ -113,54 +113,91 @@ for (const base of TABLE_BASES) {
   });
 }
 
-test.describe("data table with TanStack Query", () => {
-  const rows = Array.from({ length: 10 }, (_, index) => ({
-    id: `task-${index}`,
-    code: `TASK-${1000 + index}`,
-    title: `Task ${index}`,
-    status: "todo",
-    priority: "low",
-    label: "bug",
-    estimatedHours: index,
-    archived: false,
-    createdAt: "2026-11-01T00:00:00.000Z",
-    updatedAt: "2026-11-01T00:00:00.000Z",
-  }));
+const QUERY_DEMO_ROWS = Array.from({ length: 10 }, (_, index) => ({
+  id: `task-${index}`,
+  code: `TASK-${1000 + index}`,
+  title: `Task ${index}`,
+  status: "todo",
+  priority: "low",
+  label: "bug",
+  estimatedHours: index,
+  archived: false,
+  createdAt: "2026-11-01T00:00:00.000Z",
+  updatedAt: "2026-11-01T00:00:00.000Z",
+}));
 
-  test("has no axe violations with rows", async ({ page }, testInfo) => {
-    await page.route("**/api/tasks**", (route) =>
-      route.fulfill({ json: { rows, rowCount: 42 } }),
-    );
-    await page.goto("/data-table-query");
-    await expect(page.locator("tbody tr")).toHaveCount(10);
-    await expect(page.getByText("Page 1 of 5")).toBeVisible();
+const QUERY_DEMOS = [
+  { name: "TanStack Query", path: "/data-table-query" },
+  { name: "a fetcher", path: "/data-table-fetcher" },
+] as const;
 
-    await expectNoAxeViolations(page, testInfo);
+for (const demo of QUERY_DEMOS) {
+  test.describe(`data table with ${demo.name}`, () => {
+    test("has no axe violations with rows", async ({ page }, testInfo) => {
+      await page.route("**/api/tasks**", (route) =>
+        route.fulfill({ json: { rows: QUERY_DEMO_ROWS, rowCount: 42 } }),
+      );
+      await page.goto(demo.path);
+      await expect(page.locator("tbody tr")).toHaveCount(10);
+      await expect(page.getByText("Page 1 of 5")).toBeVisible();
+
+      await expectNoAxeViolations(page, testInfo);
+    });
+
+    test("disables paging while the request fails, then retries", async ({
+      page,
+    }, testInfo) => {
+      let isFailing = true;
+      await page.route("**/api/tasks**", (route) =>
+        isFailing
+          ? route.fulfill({ status: 500, body: "" })
+          : route.fulfill({ json: { rows: QUERY_DEMO_ROWS, rowCount: 42 } }),
+      );
+      await page.goto(demo.path);
+      const retry = page.getByRole("button", { name: "Retry" });
+      await expect(retry).toBeVisible({ timeout: 15_000 });
+      await expect(
+        page.getByRole("button", { name: "Go to next page" }),
+      ).toBeDisabled();
+      await expectNoAxeViolations(page, testInfo);
+
+      isFailing = false;
+      await retry.click();
+      await expect(page.locator("tbody tr")).toHaveCount(10);
+      await expect(
+        page.getByRole("button", { name: "Go to next page" }),
+      ).toBeEnabled();
+    });
   });
+}
 
-  test("disables paging while the request fails, then retries", async ({
+test.describe("data table with a fetcher", () => {
+  test("keeps the rows readable while refreshing", async ({
     page,
   }, testInfo) => {
-    let isFailing = true;
-    await page.route("**/api/tasks**", (route) =>
-      isFailing
-        ? route.fulfill({ status: 500, body: "" })
-        : route.fulfill({ json: { rows, rowCount: 42 } }),
-    );
-    await page.goto("/data-table-query");
-    const retry = page.getByRole("button", { name: "Retry" });
-    await expect(retry).toBeVisible({ timeout: 15_000 });
+    let release = () => {};
+    await page.route("**/api/tasks**", async (route) => {
+      if (new URL(route.request().url()).searchParams.has("page")) {
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      }
+      await route.fulfill({ json: { rows: QUERY_DEMO_ROWS, rowCount: 42 } });
+    });
+    await page.goto("/data-table-fetcher");
+    await expect(page.locator("tbody tr")).toHaveCount(10);
+
+    await page.getByRole("button", { name: "Go to next page" }).click();
+    const table = page.locator("table");
+    await expect(table).toHaveAttribute("aria-busy", "true");
     await expect(
-      page.getByRole("button", { name: "Go to next page" }),
+      page.getByRole("button", { name: "Refreshing..." }),
     ).toBeDisabled();
     await expectNoAxeViolations(page, testInfo);
 
-    isFailing = false;
-    await retry.click();
-    await expect(page.locator("tbody tr")).toHaveCount(10);
-    await expect(
-      page.getByRole("button", { name: "Go to next page" }),
-    ).toBeEnabled();
+    release();
+    await expect(table).not.toHaveAttribute("aria-busy");
+    await expect(page.getByRole("button", { name: "Refresh" })).toBeEnabled();
   });
 });
 
