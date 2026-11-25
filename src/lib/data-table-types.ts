@@ -75,6 +75,8 @@ export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
+export type DataStatus = "idle" | "loading" | "refreshing" | "error";
+
 export interface FilterOperatorOption {
   label: string;
   value: FilterOperator;

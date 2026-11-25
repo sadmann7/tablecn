@@ -34,6 +34,7 @@ import {
 
 import type {
   ColumnFilterItem,
+  DataStatus,
   DataTableColumnMeta,
   JoinOperator,
 } from "@/lib/data-table-types";
@@ -73,9 +74,19 @@ interface Table_DataTableFiltering {
   resetJoinOperator: (defaultState?: boolean) => void;
 }
 
+interface TableOptions_DataTableStatus {
+  /** Whether the rows are loading for the first time, refreshing, or failed to load. */
+  status?: DataStatus;
+  /** The reason the rows failed to load, shown while `status` is `"error"`. */
+  error?: unknown;
+  /** Runs when the Retry button of the error state is pressed. */
+  onRetry?: () => void;
+}
+
 declare module "@tanstack/react-table" {
   interface Plugins {
     dataTableFilteringFeature: TableFeature;
+    dataTableStatusFeature: TableFeature;
   }
 
   interface TableState_FeatureMap {
@@ -87,6 +98,7 @@ declare module "@tanstack/react-table" {
     in out TData extends RowData,
   > {
     dataTableFilteringFeature: TableOptions_DataTableFiltering;
+    dataTableStatusFeature: TableOptions_DataTableStatus;
   }
 
   interface Table_FeatureMap<
@@ -197,6 +209,13 @@ const dataTableFilteringFeature: TableFeature = {
   },
 };
 
+const dataTableStatusFeature: TableFeature = {
+  getDefaultTableOptions: () => {
+    const options: TableOptions_DataTableStatus = { status: "idle" };
+    return options;
+  },
+};
+
 // Feature hooks get a `Table` generic over any features. This feature is only
 // registered in `dataTableFeatures`, so its hooks can use that table's types.
 function asDataTable(table: object) {
@@ -267,6 +286,7 @@ export const dataTableFeatures = tableFeatures({
   rowSelectionFeature,
   rowSortingFeature,
   dataTableFilteringFeature,
+  dataTableStatusFeature,
   filteredRowModel: createDataTableFilteredRowModel(),
   facetedRowModel: createDataTableFacetedRowModel(),
   facetedUniqueValues: createFacetedUniqueValues(),

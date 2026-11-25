@@ -47,6 +47,7 @@ export interface DataGridMessages {
 export interface DataTableMessages {
   sorted: (sorting: SortDescription[]) => string;
   results: (change: ResultsChange) => string;
+  failed: (message: string | null) => string;
 }
 
 const ANNOUNCE_DELAY = 150;
@@ -104,6 +105,8 @@ export const defaultDataTableMessages: DataTableMessages = {
     if (rowCount === null) return `${pluralize(pageCount, "page")} of results`;
     return pluralize(rowCount, "result");
   },
+  failed: (message) =>
+    message ? `Failed to load results: ${message}` : "Failed to load results",
 };
 
 export function getRowSelectionMessage(

@@ -41,7 +41,11 @@ import {
   getColumnFiltersKey,
   sortColumnFiltersByIds,
 } from "@/lib/data-table-parsers";
-import { asFilterItems, getActiveFilters } from "@/lib/data-table-utils";
+import {
+  asFilterItems,
+  getActiveFilters,
+  getStatusErrorMessage,
+} from "@/lib/data-table-utils";
 
 const DEBOUNCE_MS = 300;
 
@@ -76,7 +80,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
   > & {
     debounceMs?: number;
     config?: DataTableConfigInput;
-    /** Overrides the screen reader announcements for sorting and result counts. */
+    /** Overrides the screen reader announcements for sorting, result counts and load failures. */
     messages?: Partial<DataTableMessages>;
     initialState?: Omit<
       InitialTableState,
@@ -110,6 +114,9 @@ function useDataTable<TData extends RowData>({
   scroll = false,
   shallow = true,
   messages,
+  status = "idle",
+  error,
+  onRetry,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
@@ -322,6 +329,9 @@ function useDataTable<TData extends RowData>({
       autoResetPageIndex: false,
       manualSorting: isServer,
       manualFiltering: isServer,
+      status,
+      error,
+      onRetry,
     },
     selectTableState,
   );
@@ -359,14 +369,33 @@ function useDataTable<TData extends RowData>({
     key: resultsKey,
     isPending: false,
     data: props.data,
+    status,
   });
 
   React.useEffect(() => {
     const prev = resultsRef.current;
     const isPending = prev.isPending || prev.key !== resultsKey;
     const hasNewData = prev.data !== props.data;
-    resultsRef.current = { key: resultsKey, isPending, data: props.data };
-    if (!isPending || (isServer && !hasNewData)) return;
+    resultsRef.current = {
+      key: resultsKey,
+      isPending,
+      data: props.data,
+      status,
+    };
+
+    if (status === "error") {
+      if (prev.status === "error") return;
+      const formatFailed =
+        messagesRef.current?.failed ?? defaultDataTableMessages.failed;
+      announce(formatFailed(getStatusErrorMessage(error)), {
+        assertiveness: "assertive",
+      });
+      return;
+    }
+    if (status !== "idle") return;
+
+    const hasSettled = prev.status !== "idle";
+    if (!hasSettled && (!isPending || (isServer && !hasNewData))) return;
     resultsRef.current.isPending = false;
 
     const pageCount = table.getPageCount();
@@ -376,7 +405,7 @@ function useDataTable<TData extends RowData>({
     const formatResults =
       messagesRef.current?.results ?? defaultDataTableMessages.results;
     announce(formatResults({ rowCount, pageCount }));
-  }, [resultsKey, props.data, isServer, table]);
+  }, [resultsKey, props.data, status, error, isServer, table]);
 
   return { table };
 }

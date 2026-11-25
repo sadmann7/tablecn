@@ -48,6 +48,8 @@ export const JOIN_OPERATORS = ["and", "or"] as const;
 
 export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
 
+const MAX_SKELETON_ROWS = 10;
+
 export const SORT_ORDERS = [
   { label: "Asc", value: "asc" },
   { label: "Desc", value: "desc" },
@@ -533,6 +535,16 @@ export function getColumnSizingStyle<TData extends RowData>(
   }
 
   return style;
+}
+
+export function getStatusErrorMessage(error: unknown) {
+  if (typeof error === "string") return error.trim() || null;
+  if (error instanceof Error) return error.message.trim() || null;
+  return null;
+}
+
+export function getSkeletonRowCount(pageSize: number) {
+  return Math.max(1, Math.min(pageSize, MAX_SKELETON_ROWS));
 }
 
 export function getIsEditableTarget(target: EventTarget | null) {

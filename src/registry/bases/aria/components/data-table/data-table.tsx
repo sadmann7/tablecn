@@ -20,11 +20,15 @@ import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
+  getSkeletonRowCount,
+  getStatusErrorMessage,
   getVisibleSelectedRows,
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/aria/components/data-table/data-table-pagination";
+import { Button } from "@/registry/bases/aria/ui/button";
 import { useDirection } from "@/registry/bases/aria/ui/direction";
+import { Skeleton } from "@/registry/bases/aria/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -55,6 +59,7 @@ export function DataTable<TData extends RowData>({
   ...props
 }: DataTableProps<TData>) {
   const dir = useDirection();
+  const status = table.options.status ?? "idle";
 
   function onTableKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const nativeEvent = event.nativeEvent;
@@ -90,17 +95,21 @@ export function DataTable<TData extends RowData>({
       {children}
       <div
         className={cn(
-          "isolate rounded-md border",
+          "relative isolate rounded-md border",
           stickyHeader
             ? "min-h-0 scroll-pt-10 overflow-auto [&:has(thead>tr:nth-child(2))]:scroll-pt-20 [&:has(thead>tr:nth-child(3))]:scroll-pt-30 [&>[data-slot=table-container]]:overflow-visible"
             : "overflow-hidden",
         )}
         onKeyDown={onTableKeyDown}
       >
+        {status === "refreshing" ? <DataTableProgress /> : null}
         <DataTableLayout
           table={table}
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
+          aria-busy={
+            status === "loading" || status === "refreshing" || undefined
+          }
         >
           <DataTableHeader table={table} stickyHeader={stickyHeader} />
           <DataTableBody table={table} />
@@ -118,7 +127,7 @@ export function DataTable<TData extends RowData>({
 
 interface DataTableLayoutProps<TData extends RowData> extends Pick<
   React.ComponentProps<"table">,
-  "aria-label" | "aria-labelledby"
+  "aria-label" | "aria-labelledby" | "aria-busy"
 > {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   children: React.ReactNode;
@@ -127,6 +136,7 @@ interface DataTableLayoutProps<TData extends RowData> extends Pick<
 function DataTableLayout<TData extends RowData>({
   table,
   children,
+  "aria-busy": ariaBusy,
   ...props
 }: DataTableLayoutProps<TData>) {
   return (
@@ -138,6 +148,13 @@ function DataTableLayout<TData extends RowData>({
               className="table-fixed"
               style={getColumnSizingStyle(table)}
               {...props}
+              // React Aria's Table drops aria-busy; it renders a table when not virtualized.
+              render={(tableProps) => (
+                <table
+                  {...(tableProps as React.ComponentProps<"table">)}
+                  aria-busy={ariaBusy}
+                />
+              )}
               selectionMode={
                 "select" in table.getAllLeafColumnsById() ? "multiple" : "none"
               }
@@ -271,14 +288,109 @@ interface DataTableBodyProps<TData extends RowData> {
 function DataTableBody<TData extends RowData>({
   table,
 }: DataTableBodyProps<TData>) {
+  const status = table.options.status ?? "idle";
   const rows = table.getRowModel().rows;
 
+  if (status === "loading") return <DataTableSkeletonBody table={table} />;
+
   return (
-    <TableBody renderEmptyState={() => "No results."}>
-      {rows.map((row) => (
-        <DataTableRow key={row.id} row={row} />
-      ))}
+    <TableBody
+      data-status={status === "refreshing" ? status : undefined}
+      className="transition-opacity data-[status=refreshing]:opacity-50"
+      renderEmptyState={() =>
+        status === "error" ? (
+          <div className="flex flex-col items-center justify-center gap-2 whitespace-normal">
+            <span>
+              {getStatusErrorMessage(table.options.error) ??
+                "Failed to load results."}
+            </span>
+            {table.options.onRetry ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={table.options.onRetry}
+              >
+                Retry
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 whitespace-normal">
+            <span>No results.</span>
+            <table.Subscribe selector={selectIsFiltered}>
+              {(isFiltered) =>
+                isFiltered ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={() => {
+                      table.resetColumnFilters(true);
+                      table.resetJoinOperator();
+                      table.resetGlobalFilter(true);
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                ) : null
+              }
+            </table.Subscribe>
+          </div>
+        )
+      }
+    >
+      {status === "error"
+        ? null
+        : rows.map((row) => <DataTableRow key={row.id} row={row} />)}
     </TableBody>
+  );
+}
+
+function DataTableSkeletonBody<TData extends RowData>({
+  table,
+}: DataTableBodyProps<TData>) {
+  return (
+    <table.Subscribe selector={selectSkeletonState}>
+      {({ pageSize }) => (
+        <TableBody>
+          {Array.from({ length: getSkeletonRowCount(pageSize) }, (_, index) => (
+            <TableRow
+              key={index}
+              id={`skeleton-${index}`}
+              textValue="Loading"
+              isDisabled
+              className="hover:bg-transparent"
+            >
+              {table.getVisibleLeafColumns().map((column) => {
+                const pinned = column.getIsPinned();
+                return (
+                  <TableCell
+                    key={column.id}
+                    className={getCellClassName(pinned)}
+                    style={getColumnPinningStyle(column, pinned)}
+                  >
+                    <Skeleton className="h-6 w-full" />
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableBody>
+      )}
+    </table.Subscribe>
+  );
+}
+
+function DataTableProgress() {
+  return (
+    <div
+      aria-hidden="true"
+      data-slot="data-table-progress"
+      className="pointer-events-none sticky top-0 z-40 h-0"
+    >
+      <div className="relative h-0.5 overflow-hidden bg-primary/20">
+        <div className="absolute inset-y-0 -start-1/3 w-1/3 animate-out bg-primary duration-1000 ease-in-out repeat-infinite slide-out-to-end-[400%] motion-reduce:start-0 motion-reduce:w-full motion-reduce:animate-none motion-reduce:opacity-60" />
+      </div>
+    </div>
   );
 }
 
@@ -361,6 +473,19 @@ function selectLayoutState(state: TableState<DataTableFeatures>) {
     columnOrder: state.columnOrder,
     columnPinning: state.columnPinning,
     columnSizing: state.columnSizing,
+    columnVisibility: state.columnVisibility,
+  };
+}
+
+function selectIsFiltered(state: TableState<DataTableFeatures>) {
+  return state.columnFilters.length > 0 || Boolean(state.globalFilter);
+}
+
+function selectSkeletonState(state: TableState<DataTableFeatures>) {
+  return {
+    pageSize: state.pagination.pageSize,
+    columnOrder: state.columnOrder,
+    columnPinning: state.columnPinning,
     columnVisibility: state.columnVisibility,
   };
 }
