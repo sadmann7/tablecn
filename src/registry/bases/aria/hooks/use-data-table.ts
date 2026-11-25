@@ -544,7 +544,9 @@ function useFetcher<TData>(
       return !controller.signal.aborted && requestId === requestIdRef.current;
     }
 
-    fetchRows(query, { signal: controller.signal }).then(
+    new Promise<DataResult<TData>>((resolve) => {
+      resolve(fetchRows(query, { signal: controller.signal }));
+    }).then(
       (result) => {
         if (!getIsCurrent()) return;
         setState({ request, result, status: "idle", error: undefined });

@@ -178,6 +178,19 @@ describe("useDataTable fetcher", () => {
     expect(result.current.table.getRowModel().rows).toEqual([]);
   });
 
+  it("shows an error when the fetcher throws before returning a promise", async () => {
+    const failure = new Error("Bad query");
+    const fetcher: DataFetcher<Task> = () => {
+      throw failure;
+    };
+    const { result } = renderTable("", { fetcher });
+
+    await act(async () => {});
+
+    expect(result.current.status).toBe("error");
+    expect(result.current.error).toBe(failure);
+  });
+
   it("retries the last query from the table's Retry", async () => {
     const { requests, fetcher } = createFetcher();
     const { result } = renderTable("?page=3", { fetcher });
