@@ -11,6 +11,7 @@ export const NAV_LINKS = [
   { href: "/", label: "Data Table" },
   { href: "/data-table-query", label: "Data Table Query" },
   { href: "/data-table-fetcher", label: "Data Table Fetcher" },
+  { href: "/data-table-controlled", label: "Data Table Controlled" },
   { href: "/data-grid", label: "Data Grid" },
   { href: "/data-grid-multiplayer", label: "Data Grid Multiplayer" },
   { href: "/data-grid-rapid", label: "Data Grid Rapid" },

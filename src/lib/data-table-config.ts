@@ -89,6 +89,7 @@ export interface DataTableConfig<
   readonly stateParsers: ReturnType<typeof getStateParsers>;
   readonly filterParsers: Record<string, ColumnFilterParser<string>>;
   readonly urlKeys: Record<DataTableKey | FilterableColumnId<TColumns>, string>;
+  readonly defaultQuery: DataQuery;
   parse(search: LoaderInput): ConfigQuery<TColumns>;
   serialize(query: DataQuery): string;
 }
@@ -164,6 +165,13 @@ export function createDataTableConfig<
     stateParsers,
     filterParsers,
     urlKeys,
+    defaultQuery: {
+      sorting: defaultSorting,
+      filters: [],
+      joinOperator: defaultJoinOperator,
+      search: "",
+      page: { index: 0, size: defaultPageSize },
+    },
     parse(search: LoaderInput) {
       const values = load(search);
       return {

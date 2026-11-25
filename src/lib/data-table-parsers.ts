@@ -135,6 +135,32 @@ export function getColumnFilters<TColumnId extends string>(
   });
 }
 
+export function normalizeColumnFilters(
+  filters: ColumnFilterItem[],
+  filterVariants: Partial<Record<string, FilterVariant>>,
+): ColumnFilterItem[] {
+  const ids = [...new Set(filters.map((filter) => filter.id))];
+
+  return ids.flatMap((id) => {
+    const variant = filterVariants[id];
+    if (!variant) return [];
+
+    return filters
+      .filter((filter) => filter.id === id)
+      .map((filter) =>
+        parseColumnFilter(
+          id,
+          variant,
+          serializeColumnFilter({ ...filter, variant }),
+        ),
+      )
+      .filter(
+        (filter) => getIsActiveFilter(filter) && getIsValidFilterValue(filter),
+      )
+      .map((filter, index) => ({ ...filter, filterId: `${id}-${index}` }));
+  });
+}
+
 export function sortColumnFiltersByIds<TFilter extends ColumnFilterItem>(
   filters: TFilter[],
   columnIds: readonly string[],

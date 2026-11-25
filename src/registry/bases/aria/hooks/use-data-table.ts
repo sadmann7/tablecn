@@ -47,6 +47,7 @@ import {
 import {
   getColumnFilters,
   getColumnFiltersKey,
+  normalizeColumnFilters,
   sortColumnFiltersByIds,
 } from "@/lib/data-table-parsers";
 import {
@@ -60,7 +61,32 @@ const EMPTY_ROWS: never[] = [];
 
 interface FiltersDraft {
   filters: ColumnFiltersState;
-  urlFiltersKey: string;
+  filtersKey: string;
+}
+
+type QueryPatch = Partial<Omit<DataQuery, "page">> & {
+  page?: Partial<DataQuery["page"]>;
+};
+
+interface QueryUpdateOptions {
+  resetsPage?: boolean;
+  isDebounced?: boolean;
+  isClearing?: boolean;
+}
+
+interface QueryStore {
+  query: DataQuery;
+  setQuery: (patch: QueryPatch, options?: QueryUpdateOptions) => void;
+}
+
+interface QueryStoreOptions {
+  config: Omit<DataTableConfig, "parse">;
+  query: DataQuery | undefined;
+  onQueryChange: ((query: DataQuery) => void) | undefined;
+  urlOptions: Partial<QueryStateOptions> & {
+    urlKeys: DataTableConfig["urlKeys"];
+  };
+  debounceMs: number | undefined;
 }
 
 type InitialTableState = Partial<TableState<DataTableFeatures>>;
@@ -113,6 +139,10 @@ type UseDataTableProps<TData extends RowData> = Omit<
     config?: DataTableConfigInput;
     /** Overrides the screen reader announcements for sorting, result counts and load failures. */
     messages?: Partial<DataTableMessages>;
+    /** The sorting, filters, join operator, search and page, held by the app instead of the URL, so the table needs no nuqs adapter. */
+    query?: DataQuery;
+    /** Runs with the next query when the table changes a controlled `query`. */
+    onQueryChange?: (query: DataQuery) => void;
     initialState?: Omit<
       InitialTableState,
       | "columnFilters"
@@ -178,6 +208,8 @@ function useDataTable<TData extends RowData>({
   scroll = false,
   shallow = true,
   messages,
+  query: queryProp,
+  onQueryChange,
   status: statusProp = "idle",
   error: errorProp,
   onRetry: onRetryProp,
@@ -244,46 +276,54 @@ function useDataTable<TData extends RowData>({
     columns,
   ]);
 
-  const queryStateOptions = {
-    urlKeys,
-    history,
-    scroll,
-    shallow: isServer ? shallow : true,
-    clearOnDefault,
-    startTransition,
-  };
-  const shouldDebounce = isServer && !shallow;
+  const [isControlled] = React.useState(queryProp !== undefined);
+  const hasSwitchedControl = isControlled !== (queryProp !== undefined);
 
-  function getUrlUpdateOptions(isClearing: boolean) {
-    return shouldDebounce && !isClearing
-      ? { limitUrlUpdates: debounce(debounceMs) }
-      : undefined;
-  }
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === "production" || !hasSwitchedControl) return;
+    console.warn(
+      "useDataTable: `query` switched between set and unset. The table keeps the mode it mounted with, so pass `query` on every render or never.",
+    );
+  }, [hasSwitchedControl]);
 
-  const [
-    { page, perPage, sort: sorting, joinOperator, search },
-    setQueryState,
-  ] = useQueryStates(config.stateParsers, queryStateOptions);
-  const [filterParams, setFilterParams] = useQueryStates(
-    config.filterParsers,
-    queryStateOptions,
-  );
+  const { query, setQuery } = useQueryStore(isControlled, {
+    config,
+    query: queryProp,
+    onQueryChange,
+    urlOptions: {
+      urlKeys,
+      history,
+      scroll,
+      shallow: isServer ? shallow : true,
+      clearOnDefault,
+      startTransition,
+    },
+    debounceMs: isServer && !shallow ? debounceMs : undefined,
+  });
+  const { sorting, joinOperator } = query;
 
   const pagination = React.useMemo<PaginationState>(
-    () => ({ pageIndex: page - 1, pageSize: perPage }),
-    [page, perPage],
+    () => ({ pageIndex: query.page.index, pageSize: query.page.size }),
+    [query.page],
   );
 
   const getNextPagination = useChainedUpdate(pagination);
 
   function onPaginationChange(updater: Updater<PaginationState>) {
     const next = getNextPagination(updater);
-    if (next.pageIndex !== pagination.pageIndex) {
-      void setQueryState({ page: next.pageIndex + 1 });
+    if (
+      next.pageIndex === pagination.pageIndex &&
+      next.pageSize === pagination.pageSize
+    ) {
+      return;
     }
-    if (next.pageSize !== pagination.pageSize) {
-      void setQueryState({ perPage: next.pageSize });
-    }
+    setQuery({
+      page: {
+        index:
+          next.pageIndex === pagination.pageIndex ? undefined : next.pageIndex,
+        size: next.pageSize === pagination.pageSize ? undefined : next.pageSize,
+      },
+    });
   }
 
   const getNextSorting = useChainedUpdate(sorting);
@@ -291,7 +331,7 @@ function useDataTable<TData extends RowData>({
   function onSortingChange(updater: Updater<SortingState>) {
     const next = getNextSorting(updater);
     if (JSON.stringify(next) === JSON.stringify(sorting)) return;
-    void setQueryState({ sort: next, page: null });
+    setQuery({ sorting: next }, { resetsPage: true });
   }
 
   const getNextJoinOperator = useChainedUpdate(joinOperator);
@@ -299,32 +339,32 @@ function useDataTable<TData extends RowData>({
   function onJoinOperatorChange(updater: Updater<JoinOperator>) {
     const next = getNextJoinOperator(updater);
     if (next === joinOperator) return;
-    void setQueryState({ joinOperator: next, page: null });
+    setQuery({ joinOperator: next }, { resetsPage: true });
   }
 
-  const globalFilter = enableGlobalFilter ? search : "";
+  const globalFilter = enableGlobalFilter ? query.search : "";
   const getNextGlobalFilter = useChainedUpdate<unknown>(globalFilter);
 
   function onGlobalFilterChange(updater: Updater<unknown>) {
     if (!enableGlobalFilter) return;
     const value = getGlobalFilterValue(getNextGlobalFilter(updater));
-    if (value === search) return;
-    void setQueryState(
-      { search: value, page: null },
-      getUrlUpdateOptions(value === ""),
+    if (value === query.search) return;
+    setQuery(
+      { search: value },
+      { resetsPage: true, isDebounced: true, isClearing: value === "" },
     );
   }
 
-  const { filterableIds, urlFilters } = useUrlFilters(config, filterParams);
-  const urlFiltersKey = getColumnFiltersKey(urlFilters);
+  const queryFilters = query.filters;
+  const filtersKey = getColumnFiltersKey(queryFilters);
 
   const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(
     null,
   );
   const columnFilters =
-    filtersDraft?.urlFiltersKey === urlFiltersKey
+    filtersDraft?.filtersKey === filtersKey
       ? filtersDraft.filters
-      : urlFilters;
+      : queryFilters;
 
   const getNextColumnFilters = useChainedUpdate(columnFilters);
 
@@ -333,36 +373,25 @@ function useDataTable<TData extends RowData>({
     const activeFilters = getActiveFilters(asFilterItems(filters)).filter(
       (filter) => Object.hasOwn(filterVariants, filter.id),
     );
-    const nextUrlFiltersKey = getColumnFiltersKey(activeFilters);
+    const nextFiltersKey = getColumnFiltersKey(activeFilters);
 
-    setFiltersDraft({ filters, urlFiltersKey: nextUrlFiltersKey });
+    setFiltersDraft({ filters, filtersKey: nextFiltersKey });
     if (
-      nextUrlFiltersKey === urlFiltersKey &&
-      getFilterColumnOrder(activeFilters) === getFilterColumnOrder(urlFilters)
+      nextFiltersKey === filtersKey &&
+      getFilterColumnOrder(activeFilters) === getFilterColumnOrder(queryFilters)
     ) {
       return;
     }
 
-    const params: Record<string, ColumnFilterItem[] | null> = {};
-    for (const filter of activeFilters) {
-      params[filter.id] = [...(params[filter.id] ?? []), filter];
-    }
-    for (const id of filterableIds) params[id] ??= null;
-
-    const options = getUrlUpdateOptions(
-      activeFilters.length < urlFilters.length,
+    setQuery(
+      { filters: activeFilters },
+      {
+        resetsPage: true,
+        isDebounced: true,
+        isClearing: activeFilters.length < queryFilters.length,
+      },
     );
-    void setFilterParams(params, options);
-    void setQueryState({ page: null }, options);
   }
-
-  const query = useStableQuery({
-    sorting,
-    filters: urlFilters,
-    joinOperator,
-    search: globalFilter,
-    page: { index: pagination.pageIndex, size: pagination.pageSize },
-  });
 
   const fetched = useFetcher(
     data === undefined && resultProp === undefined ? fetcher : undefined,
@@ -432,11 +461,7 @@ function useDataTable<TData extends RowData>({
     );
   }, [sorting, sortingKey, table]);
 
-  const resultsKey = JSON.stringify([
-    urlFiltersKey,
-    globalFilter,
-    joinOperator,
-  ]);
+  const resultsKey = JSON.stringify([filtersKey, globalFilter, joinOperator]);
   const resultsRef = React.useRef({
     key: resultsKey,
     isPending: false,
@@ -493,24 +518,111 @@ function useDataTableQuery<TData extends RowData>({
   columns = [],
 }: UseDataTableQueryProps<TData>): DataQuery {
   const { config } = useConfig(configProp, columns);
-  const queryStateOptions = { urlKeys: config.urlKeys };
-  const [{ page, perPage, sort, joinOperator, search }] = useQueryStates(
-    config.stateParsers,
-    queryStateOptions,
-  );
-  const [filterParams] = useQueryStates(
-    config.filterParsers,
-    queryStateOptions,
-  );
-  const { urlFilters } = useUrlFilters(config, filterParams);
+  const { query } = useUrlQueryStore({
+    config,
+    query: undefined,
+    onQueryChange: undefined,
+    urlOptions: { urlKeys: config.urlKeys },
+    debounceMs: undefined,
+  });
+  return query;
+}
 
-  return useStableQuery({
+function useQueryStore(
+  isControlled: boolean,
+  options: QueryStoreOptions,
+): QueryStore {
+  // oxlint-disable-next-line react/rules-of-hooks -- `isControlled` is fixed at mount, so the same hooks run on every render.
+  return (isControlled ? useControlledQueryStore : useUrlQueryStore)(options);
+}
+
+function useControlledQueryStore({
+  query: queryProp,
+  onQueryChange,
+  config,
+}: QueryStoreOptions): QueryStore {
+  const query = useStableQuery(queryProp ?? config.defaultQuery);
+  const pendingRef = React.useRef<{ base: DataQuery; next: DataQuery } | null>(
+    null,
+  );
+
+  function setQuery(patch: QueryPatch, options: QueryUpdateOptions = {}) {
+    const pending = pendingRef.current;
+    const base = pending?.base === query ? pending.next : query;
+    const next = mergeQuery(
+      base,
+      patch.filters
+        ? {
+            ...patch,
+            filters: normalizeColumnFilters(
+              patch.filters,
+              config.filterVariants,
+            ),
+          }
+        : patch,
+      options,
+    );
+    pendingRef.current = { base: query, next };
+    onQueryChange?.(next);
+  }
+
+  return { query, setQuery };
+}
+
+function useUrlQueryStore({
+  config,
+  urlOptions,
+  debounceMs,
+}: QueryStoreOptions): QueryStore {
+  const [{ page, perPage, sort, joinOperator, search }, setQueryState] =
+    useQueryStates(config.stateParsers, urlOptions);
+  const [filterParams, setFilterParams] = useQueryStates(
+    config.filterParsers,
+    urlOptions,
+  );
+  const { filterableIds, urlFilters } = useUrlFilters(config, filterParams);
+
+  const query = useStableQuery({
     sorting: sort,
     filters: urlFilters,
     joinOperator,
     search: config.enableGlobalFilter ? search : "",
     page: { index: page - 1, size: perPage },
   });
+
+  function setQuery(patch: QueryPatch, options: QueryUpdateOptions = {}) {
+    const updateOptions =
+      options.isDebounced && debounceMs !== undefined && !options.isClearing
+        ? { limitUrlUpdates: debounce(debounceMs) }
+        : undefined;
+
+    if (patch.filters) {
+      const params: Record<string, ColumnFilterItem[] | null> = {};
+      for (const filter of patch.filters) {
+        params[filter.id] = [...(params[filter.id] ?? []), filter];
+      }
+      for (const id of filterableIds) params[id] ??= null;
+      void setFilterParams(params, updateOptions);
+    }
+
+    const pageIndex = patch.page?.index;
+    void setQueryState(
+      {
+        sort: patch.sorting,
+        joinOperator: patch.joinOperator,
+        search: patch.search,
+        page: options.resetsPage
+          ? null
+          : pageIndex === undefined
+            ? undefined
+            : pageIndex + 1,
+        perPage: patch.page?.size,
+      },
+      updateOptions,
+    );
+  }
+
+  return { query, setQuery };
 }
 
 function useFetcher<TData>(
@@ -635,9 +747,39 @@ function useUrlFilters(
   return { filterableIds, urlFilters };
 }
 
-function useStableQuery(query: DataQuery) {
-  const queryKey = JSON.stringify(query);
-  return React.useMemo<DataQuery>(() => JSON.parse(queryKey), [queryKey]);
+function useStableQuery({
+  joinOperator,
+  search,
+  ...query
+}: DataQuery): DataQuery {
+  const sorting = useStableValue(query.sorting);
+  const filters = useStableValue(query.filters);
+  const page = useStableValue(query.page);
+  return React.useMemo(
+    () => ({ sorting, filters, joinOperator, search, page }),
+    [sorting, filters, joinOperator, search, page],
+  );
+}
+
+function useStableValue<TValue>(value: TValue): TValue {
+  const key = JSON.stringify(value);
+  return React.useMemo(() => JSON.parse(key), [key]);
+}
+
+function mergeQuery(
+  query: DataQuery,
+  patch: QueryPatch,
+  { resetsPage }: QueryUpdateOptions,
+): DataQuery {
+  const { page, ...rest } = patch;
+  return {
+    ...query,
+    ...rest,
+    page: {
+      index: resetsPage ? 0 : (page?.index ?? query.page.index),
+      size: page?.size ?? query.page.size,
+    },
+  };
 }
 
 function noop() {}
