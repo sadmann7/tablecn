@@ -12,6 +12,7 @@ import type {
   ColumnFilterItem,
   ColumnNumberOptions,
   ColumnSelectOption,
+  DataLoadMore,
   DataTableColumnMeta,
   FilterOperator,
   FilterOperatorOption,
@@ -541,6 +542,19 @@ export function getStatusErrorMessage(error: unknown) {
   if (typeof error === "string") return error.trim() || null;
   if (error instanceof Error) return error.message.trim() || null;
   return null;
+}
+
+export function getLoadMoreRowCount<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+  loadMore: DataLoadMore,
+  headerRowCount: number,
+) {
+  if (table.options.status === "loading") return -1;
+  if (!loadMore.hasMore) {
+    return headerRowCount + table.getRowModel().rows.length;
+  }
+  const { rowCount } = table.options;
+  return rowCount === undefined ? -1 : headerRowCount + rowCount;
 }
 
 export function getSkeletonRowCount(pageSize: number) {

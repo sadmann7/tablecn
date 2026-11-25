@@ -19,6 +19,7 @@ import * as React from "react";
 import type {
   ColumnFilterItem,
   DataFetcher,
+  DataLoadMoreStatus,
   DataQuery,
   DataResult,
   DataStatus,
@@ -101,6 +102,16 @@ interface FetchRequest {
   attempt: number;
 }
 
+interface LoadMoreState {
+  request: FetchRequest;
+  status: Exclude<DataLoadMoreStatus, "idle">;
+  error: unknown;
+}
+
+interface LoadMoreRequest {
+  controller: AbortController;
+}
+
 interface FetchState<TData> {
   request: FetchRequest | null;
   result: DataResult<TData> | undefined;
@@ -159,6 +170,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
         rowCount?: number;
         result?: never;
         fetcher?: never;
+        pagination?: never;
       })
     | (StatusProps<TData> & {
         mode: "client";
@@ -167,6 +179,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
         rowCount?: number;
         result?: never;
         fetcher?: never;
+        pagination?: never;
       })
     | (StatusProps<TData> & {
         mode?: "server";
@@ -176,11 +189,14 @@ type UseDataTableProps<TData extends RowData> = Omit<
         pageCount?: never;
         rowCount?: never;
         fetcher?: never;
+        pagination?: never;
       })
     | {
         mode?: "server";
         /** Fetches the rows for each `query`, so the table owns the loading, refreshing and error states. */
         fetcher: DataFetcher<TData>;
+        /** Pages by `page` with a pager, or by `cursor` with a Load more row that appends each page. */
+        pagination?: "offset" | "cursor";
         data?: never;
         result?: never;
         pageCount?: never;
@@ -198,6 +214,7 @@ function useDataTable<TData extends RowData>({
   data,
   result: resultProp,
   fetcher,
+  pagination: paginationMode = "offset",
   pageCount,
   rowCount,
   initialState,
@@ -286,7 +303,7 @@ function useDataTable<TData extends RowData>({
     );
   }, [hasSwitchedControl]);
 
-  const { query, setQuery } = useQueryStore(isControlled, {
+  const { query: storedQuery, setQuery } = useQueryStore(isControlled, {
     config,
     query: queryProp,
     onQueryChange,
@@ -300,6 +317,12 @@ function useDataTable<TData extends RowData>({
     },
     debounceMs: isServer && !shallow ? debounceMs : undefined,
   });
+  const isCursor = paginationMode === "cursor" && fetcher !== undefined;
+  const query = useStableQuery(
+    isCursor
+      ? { ...storedQuery, page: { index: 0, size: storedQuery.page.size } }
+      : storedQuery,
+  );
   const { sorting, joinOperator } = query;
 
   const pagination = React.useMemo<PaginationState>(
@@ -393,9 +416,16 @@ function useDataTable<TData extends RowData>({
     );
   }
 
+  const messagesRef = React.useRef(messages);
+  React.useEffect(() => {
+    messagesRef.current = messages;
+  });
+
   const fetched = useFetcher(
     data === undefined && resultProp === undefined ? fetcher : undefined,
     query,
+    isCursor,
+    messagesRef,
   );
   const result = fetched ? fetched.result : resultProp;
   const status = fetched ? fetched.status : statusProp;
@@ -433,14 +463,10 @@ function useDataTable<TData extends RowData>({
       status,
       error,
       onRetry,
+      loadMore: fetched?.loadMore,
     },
     selectTableState,
   );
-
-  const messagesRef = React.useRef(messages);
-  React.useEffect(() => {
-    messagesRef.current = messages;
-  });
 
   const sortingKey = getSortingKey(sorting);
   const sortingKeyRef = React.useRef(sortingKey);
@@ -504,7 +530,14 @@ function useDataTable<TData extends RowData>({
     announce(formatResults({ rowCount, pageCount }));
   }, [resultsKey, rows, status, error, isServer, table]);
 
-  return { table, query, status, error, refetch: onRetry ?? noop };
+  return {
+    table,
+    query,
+    status,
+    error,
+    refetch: onRetry ?? noop,
+    loadMore: fetched?.loadMore,
+  };
 }
 
 interface UseDataTableQueryProps<TData extends RowData> {
@@ -628,6 +661,8 @@ function useUrlQueryStore({
 function useFetcher<TData>(
   fetcher: DataFetcher<TData> | undefined,
   query: DataQuery,
+  isCursor: boolean,
+  messagesRef: React.RefObject<Partial<DataTableMessages> | undefined>,
 ) {
   const [attempt, setAttempt] = React.useState(0);
   const [state, setState] = React.useState<FetchState<TData>>({
@@ -636,8 +671,10 @@ function useFetcher<TData>(
     status: "loading",
     error: undefined,
   });
+  const [more, setMore] = React.useState<LoadMoreState | null>(null);
   const fetcherRef = React.useRef(fetcher);
   const requestIdRef = React.useRef(0);
+  const moreRequestRef = React.useRef<LoadMoreRequest | null>(null);
   const isEnabled = fetcher !== undefined;
 
   React.useEffect(() => {
@@ -669,7 +706,11 @@ function useFetcher<TData>(
       },
     );
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      moreRequestRef.current?.controller.abort();
+      moreRequestRef.current = null;
+    };
   }, [isEnabled, query, attempt]);
 
   const refetch = React.useCallback(() => {
@@ -680,6 +721,73 @@ function useFetcher<TData>(
 
   const isSettled =
     state.request?.query === query && state.request.attempt === attempt;
+  const moreStatus: DataLoadMoreStatus =
+    isSettled && more?.request === state.request ? more.status : "idle";
+  const nextCursor = isSettled ? state.result?.nextCursor : undefined;
+
+  function loadMore() {
+    const fetchRows = fetcherRef.current;
+    const { request, result } = state;
+    if (!fetchRows || !request || !result || !nextCursor) return;
+    if (moreRequestRef.current) return;
+
+    const controller = new AbortController();
+    const moreRequest = { controller };
+    moreRequestRef.current = moreRequest;
+    setMore({ request, status: "loading", error: undefined });
+
+    function getIsCurrent() {
+      return (
+        !controller.signal.aborted && moreRequestRef.current === moreRequest
+      );
+    }
+
+    new Promise<DataResult<TData>>((resolve) => {
+      resolve(
+        fetchRows(
+          { ...request.query, cursor: nextCursor },
+          { signal: controller.signal },
+        ),
+      );
+    }).then(
+      (page) => {
+        if (!getIsCurrent()) return;
+        moreRequestRef.current = null;
+        const rows = [...result.rows, ...page.rows];
+        const rowCount = page.rowCount ?? result.rowCount;
+        setState({
+          request,
+          result: { rows, rowCount, nextCursor: page.nextCursor ?? null },
+          status: "idle",
+          error: undefined,
+        });
+        setMore(null);
+
+        const loadedMore =
+          messagesRef.current?.loadedMore ??
+          defaultDataTableMessages.loadedMore;
+        announce(
+          loadedMore({
+            count: page.rows.length,
+            loadedCount: rows.length,
+            rowCount: rowCount ?? null,
+          }),
+        );
+      },
+      (error: unknown) => {
+        if (!getIsCurrent()) return;
+        moreRequestRef.current = null;
+        setMore({ request, status: "error", error });
+
+        const loadMoreFailed =
+          messagesRef.current?.loadMoreFailed ??
+          defaultDataTableMessages.loadMoreFailed;
+        announce(loadMoreFailed(getStatusErrorMessage(error)), {
+          assertiveness: "assertive",
+        });
+      },
+    );
+  }
 
   return {
     result: state.result,
@@ -690,6 +798,14 @@ function useFetcher<TData>(
         : ("loading" as const),
     error: isSettled ? state.error : undefined,
     refetch,
+    loadMore: isCursor
+      ? {
+          hasMore: Boolean(nextCursor),
+          status: moreStatus,
+          error: moreStatus === "error" ? more?.error : undefined,
+          onLoadMore: loadMore,
+        }
+      : undefined,
   };
 }
 

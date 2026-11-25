@@ -125,11 +125,29 @@ export interface DataQuery<
   joinOperator: JoinOperator;
   search: string;
   page: { index: number; size: number };
+  /** The `nextCursor` of the last page, set only while loading more rows in cursor pagination. */
+  cursor?: string;
 }
 
 export interface DataResult<TData> {
   rows: TData[];
-  rowCount: number;
+  /** The total row count, when the source knows it. */
+  rowCount?: number;
+  /** The cursor for the next page in cursor pagination, or `null` on the last page. */
+  nextCursor?: string | null;
+}
+
+export type DataLoadMoreStatus = "idle" | "loading" | "error";
+
+export interface DataLoadMore {
+  /** Whether the source has rows after the loaded ones. */
+  hasMore: boolean;
+  /** Whether the next page is loading or failed to load. */
+  status: DataLoadMoreStatus;
+  /** The reason the next page failed to load. */
+  error?: unknown;
+  /** Loads the next page, or retries the one that failed. */
+  onLoadMore: () => void;
 }
 
 export type DataFetcher<TData> = (

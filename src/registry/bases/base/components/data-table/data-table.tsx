@@ -15,11 +15,13 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
+import type { DataLoadMore } from "@/lib/data-table-types";
 
 import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
+  getLoadMoreRowCount,
   getSkeletonRowCount,
   getStatusErrorMessage,
   getVisibleSelectedRows,
@@ -36,6 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/registry/bases/base/ui/table";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
 interface DataTableProps<
   TData extends RowData,
@@ -59,6 +62,8 @@ export function DataTable<TData extends RowData>({
 }: DataTableProps<TData>) {
   const dir = useDirection();
   const status = table.options.status ?? "idle";
+  const loadMore = table.options.loadMore;
+  const headerRowCount = table.getHeaderGroups().length;
 
   function onTableKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const nativeEvent = event.nativeEvent;
@@ -109,13 +114,22 @@ export function DataTable<TData extends RowData>({
           aria-busy={
             status === "loading" || status === "refreshing" || undefined
           }
+          aria-rowcount={
+            loadMore
+              ? getLoadMoreRowCount(table, loadMore, headerRowCount)
+              : undefined
+          }
         >
-          <DataTableHeader table={table} stickyHeader={stickyHeader} />
+          <DataTableHeader
+            table={table}
+            stickyHeader={stickyHeader}
+            hasRowIndex={loadMore !== undefined}
+          />
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
       <div className="flex flex-col gap-2.5">
-        <DataTablePagination table={table} />
+        {loadMore ? null : <DataTablePagination table={table} />}
         {actionBar ? (
           <DataTableActionBar table={table} actionBar={actionBar} />
         ) : null}
@@ -126,7 +140,7 @@ export function DataTable<TData extends RowData>({
 
 interface DataTableLayoutProps<TData extends RowData> extends Pick<
   React.ComponentProps<"table">,
-  "aria-label" | "aria-labelledby" | "aria-busy"
+  "aria-label" | "aria-labelledby" | "aria-busy" | "aria-rowcount"
 > {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   children: React.ReactNode;
@@ -155,11 +169,13 @@ function DataTableLayout<TData extends RowData>({
 interface DataTableHeaderProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   stickyHeader: boolean;
+  hasRowIndex: boolean;
 }
 
 function DataTableHeader<TData extends RowData>({
   table,
   stickyHeader,
+  hasRowIndex,
 }: DataTableHeaderProps<TData>) {
   return (
     <table.Subscribe selector={selectHeaderState}>
@@ -170,8 +186,12 @@ function DataTableHeader<TData extends RowData>({
               "sticky top-0 z-30 bg-background [&_th]:shadow-[inset_0_-1px_0_var(--border)] [&_tr]:border-b-0",
           )}
         >
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="group/row">
+          {table.getHeaderGroups().map((headerGroup, index) => (
+            <TableRow
+              key={headerGroup.id}
+              aria-rowindex={hasRowIndex ? index + 1 : undefined}
+              className="group/row"
+            >
               {headerGroup.headers.map((header) => (
                 <DataTableHeadCell
                   key={header.id}
@@ -274,6 +294,13 @@ function DataTableBody<TData extends RowData>({
     );
   }
 
+  const loadMore = table.options.loadMore;
+  if (loadMore) {
+    return (
+      <DataTableCursorBody table={table} rows={rows} loadMore={loadMore} />
+    );
+  }
+
   return (
     <TableBody
       data-status={status === "refreshing" ? status : undefined}
@@ -283,6 +310,136 @@ function DataTableBody<TData extends RowData>({
         <DataTableRow key={row.id} row={row} />
       ))}
     </TableBody>
+  );
+}
+
+interface DataTableCursorBodyProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+  rows: Row<DataTableFeatures, TData>[];
+  loadMore: DataLoadMore;
+}
+
+interface PendingFocus {
+  index: number;
+  firstRowId: string | undefined;
+}
+
+function DataTableCursorBody<TData extends RowData>({
+  table,
+  rows,
+  loadMore,
+}: DataTableCursorBodyProps<TData>) {
+  const status = table.options.status ?? "idle";
+  const headerRowCount = table.getHeaderGroups().length;
+  const [pendingFocus, setPendingFocus] = React.useState<PendingFocus | null>(
+    null,
+  );
+  const focusRowId =
+    pendingFocus &&
+    rows[0]?.id === pendingFocus.firstRowId &&
+    rows.length > pendingFocus.index
+      ? rows[pendingFocus.index]?.id
+      : undefined;
+
+  function onLoadMore() {
+    if (loadMore.status === "loading") return;
+    setPendingFocus({ index: rows.length, firstRowId: rows[0]?.id });
+    loadMore.onLoadMore();
+  }
+
+  return (
+    <TableBody
+      data-status={status === "refreshing" ? status : undefined}
+      className="transition-colors data-[status=refreshing]:**:text-muted-foreground"
+    >
+      {rows.map((row, index) => (
+        <DataTableRow
+          key={row.id}
+          row={row}
+          rowIndex={headerRowCount + index + 1}
+          isFocusTarget={row.id === focusRowId}
+        />
+      ))}
+      {loadMore.hasMore ? (
+        <DataTableLoadMoreRow
+          table={table}
+          loadMore={loadMore}
+          loadedCount={rows.length}
+          onLoadMore={onLoadMore}
+        />
+      ) : null}
+    </TableBody>
+  );
+}
+
+interface DataTableLoadMoreRowProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+  loadMore: DataLoadMore;
+  loadedCount: number;
+  onLoadMore: () => void;
+}
+
+function DataTableLoadMoreRow<TData extends RowData>({
+  table,
+  loadMore,
+  loadedCount,
+  onLoadMore,
+}: DataTableLoadMoreRowProps<TData>) {
+  const rowCount = table.options.rowCount;
+  const isLoading = loadMore.status === "loading";
+
+  return (
+    <Subscribe source={table.atoms.columnVisibility}>
+      {() => (
+        <TableRow
+          data-slot="data-table-load-more"
+          className="hover:bg-transparent"
+        >
+          <TableCell
+            colSpan={table.getVisibleLeafColumns().length || 1}
+            className="h-14 text-center"
+          >
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 whitespace-normal">
+              {loadMore.status === "error" ? (
+                <span>
+                  {getStatusErrorMessage(loadMore.error) ??
+                    "Failed to load more rows."}
+                </span>
+              ) : (
+                <span className="text-muted-foreground">
+                  {rowCount === undefined
+                    ? `${loadedCount.toLocaleString()} loaded`
+                    : `${loadedCount.toLocaleString()} of ${rowCount.toLocaleString()}`}
+                </span>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                aria-disabled={isLoading || undefined}
+                className="aria-disabled:cursor-progress"
+                onClick={onLoadMore}
+              >
+                {isLoading ? (
+                  <IconPlaceholder
+                    lucide="Loader2Icon"
+                    tabler="IconLoader"
+                    hugeicons="Loading03Icon"
+                    phosphor="SpinnerIcon"
+                    remixicon="RiLoaderLine"
+                    className="motion-safe:animate-spin"
+                  />
+                ) : null}
+                {isLoading
+                  ? "Loading more..."
+                  : loadMore.status === "error"
+                    ? "Retry"
+                    : "Load more"}
+              </Button>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </Subscribe>
   );
 }
 
@@ -376,13 +533,29 @@ function DataTableActionBar<TData extends RowData>({
 
 interface DataTableRowProps<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;
+  rowIndex?: number;
+  isFocusTarget?: boolean;
 }
 
 const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
 function DataTableRowImpl<TData extends RowData>({
   row,
+  rowIndex,
+  isFocusTarget = false,
 }: DataTableRowProps<TData>) {
+  const rowRef = React.useRef<HTMLTableRowElement>(null);
+
+  React.useEffect(() => {
+    const element = rowRef.current;
+    if (!isFocusTarget || !element) return;
+    const active = document.activeElement;
+    if (active !== document.body && !element.parentElement?.contains(active)) {
+      return;
+    }
+    element.focus();
+  }, [isFocusTarget]);
+
   return (
     <Subscribe
       source={row.table.store}
@@ -395,8 +568,15 @@ function DataTableRowImpl<TData extends RowData>({
     >
       {({ isSelected }) => (
         <TableRow
+          ref={rowRef}
           data-state={isSelected ? "selected" : undefined}
-          className="group/row"
+          aria-rowindex={rowIndex}
+          tabIndex={rowIndex === undefined ? undefined : -1}
+          className={cn(
+            "group/row",
+            rowIndex !== undefined &&
+              "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+          )}
         >
           {row.getVisibleCells().map((cell) => (
             <DataTableCell

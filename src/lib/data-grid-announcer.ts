@@ -35,6 +35,12 @@ export interface ResultsChange {
   pageCount: number;
 }
 
+export interface LoadedMoreChange {
+  count: number;
+  loadedCount: number;
+  rowCount: number | null;
+}
+
 export interface DataGridMessages {
   sorted: (sorting: SortDescription[]) => string;
   rowSelected: (rowNumber: number) => string;
@@ -48,6 +54,8 @@ export interface DataTableMessages {
   sorted: (sorting: SortDescription[]) => string;
   results: (change: ResultsChange) => string;
   failed: (message: string | null) => string;
+  loadedMore: (change: LoadedMoreChange) => string;
+  loadMoreFailed: (message: string | null) => string;
 }
 
 const ANNOUNCE_DELAY = 150;
@@ -107,6 +115,16 @@ export const defaultDataTableMessages: DataTableMessages = {
   },
   failed: (message) =>
     message ? `Failed to load results: ${message}` : "Failed to load results",
+  loadedMore: ({ count, loadedCount, rowCount }) =>
+    `Loaded ${pluralize(count, "more row")}, ${
+      rowCount === null
+        ? `${loadedCount.toLocaleString()} loaded`
+        : `${loadedCount.toLocaleString()} of ${rowCount.toLocaleString()}`
+    }`,
+  loadMoreFailed: (message) =>
+    message
+      ? `Failed to load more rows: ${message}`
+      : "Failed to load more rows",
 };
 
 export function getRowSelectionMessage(

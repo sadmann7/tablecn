@@ -34,6 +34,7 @@ import {
 
 import type {
   ColumnFilterItem,
+  DataLoadMore,
   DataStatus,
   DataTableColumnMeta,
   JoinOperator,
@@ -81,6 +82,8 @@ interface TableOptions_DataTableStatus {
   error?: unknown;
   /** Runs when the Retry button of the error state is pressed. */
   onRetry?: () => void;
+  /** Turns on cursor pagination: a Load more row replaces the pager. */
+  loadMore?: DataLoadMore;
 }
 
 declare module "@tanstack/react-table" {
