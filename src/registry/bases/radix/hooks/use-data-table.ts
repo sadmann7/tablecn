@@ -450,7 +450,10 @@ function useDataTable<TData extends RowData>({
     search: globalFilter,
     page: { index: pagination.pageIndex, size: pagination.pageSize },
   } satisfies DataQuery);
-  const query = React.useMemo<DataQuery>(() => JSON.parse(queryKey), [queryKey]);
+  const query = React.useMemo<DataQuery>(
+    () => JSON.parse(queryKey),
+    [queryKey],
+  );
 
   return { table, query };
 }

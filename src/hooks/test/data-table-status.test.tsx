@@ -200,6 +200,23 @@ describe.each(bases)("DataTable status ($name)", (ui) => {
       "Failed to load results: Network down",
     );
   });
+
+  it("disables the page buttons while loading or failed", () => {
+    const { rerender } = renderTable(ui, { status: "loading" });
+    const nextButton = screen.getByRole("button", {
+      name: "Go to next page",
+    });
+    expect(nextButton).toHaveProperty("disabled", true);
+
+    rerender({ status: "error", error: "Network down" });
+    expect(nextButton).toHaveProperty("disabled", true);
+
+    rerender({ status: "refreshing" });
+    expect(nextButton).toHaveProperty("disabled", false);
+
+    rerender({ status: "idle" });
+    expect(nextButton).toHaveProperty("disabled", false);
+  });
 });
 
 describe("useDataTable status", () => {
