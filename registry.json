@@ -116,6 +116,10 @@
         {
           "path": "src/lib/data-table-filters.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },

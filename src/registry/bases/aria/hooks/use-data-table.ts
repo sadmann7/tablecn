@@ -26,6 +26,7 @@ import type {
   JoinOperator,
 } from "@/lib/data-table-types";
 
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
   announce,
   type DataTableMessages,
@@ -113,11 +114,29 @@ interface LoadMoreRequest {
 }
 
 interface FetchState<TData> {
+  attempt: number;
   request: FetchRequest | null;
   result: DataResult<TData> | undefined;
   status: DataStatus;
   error: unknown;
+  more: LoadMoreState | null;
 }
+
+type FetchAction<TData> =
+  | { type: "retry" }
+  | { type: "settle"; request: FetchRequest; result: DataResult<TData> }
+  | { type: "fail"; request: FetchRequest; error: unknown }
+  | { type: "loadMoreStart"; request: FetchRequest }
+  | { type: "loadMoreFail"; request: FetchRequest; error: unknown };
+
+const INITIAL_FETCH_STATE: FetchState<never> = {
+  attempt: 0,
+  request: null,
+  result: undefined,
+  status: "loading",
+  error: undefined,
+  more: null,
+};
 
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
@@ -417,7 +436,7 @@ function useDataTable<TData extends RowData>({
   }
 
   const messagesRef = React.useRef(messages);
-  React.useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     messagesRef.current = messages;
   });
 
@@ -664,21 +683,22 @@ function useFetcher<TData>(
   isCursor: boolean,
   messagesRef: React.RefObject<Partial<DataTableMessages> | undefined>,
 ) {
-  const [attempt, setAttempt] = React.useState(0);
-  const [state, setState] = React.useState<FetchState<TData>>({
-    request: null,
-    result: undefined,
-    status: "loading",
-    error: undefined,
-  });
-  const [more, setMore] = React.useState<LoadMoreState | null>(null);
+  const [state, dispatch] = React.useReducer(
+    fetchReducer<TData>,
+    INITIAL_FETCH_STATE,
+  );
   const fetcherRef = React.useRef(fetcher);
+  const queryRef = React.useRef(query);
+  const stateRef = React.useRef(state);
   const requestIdRef = React.useRef(0);
   const moreRequestRef = React.useRef<LoadMoreRequest | null>(null);
   const isEnabled = fetcher !== undefined;
+  const { attempt } = state;
 
-  React.useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     fetcherRef.current = fetcher;
+    queryRef.current = query;
+    stateRef.current = state;
   });
 
   React.useEffect(() => {
@@ -697,12 +717,10 @@ function useFetcher<TData>(
       resolve(fetchRows(query, { signal: controller.signal }));
     }).then(
       (result) => {
-        if (!getIsCurrent()) return;
-        setState({ request, result, status: "idle", error: undefined });
+        if (getIsCurrent()) dispatch({ type: "settle", request, result });
       },
       (error: unknown) => {
-        if (!getIsCurrent()) return;
-        setState({ request, result: undefined, status: "error", error });
+        if (getIsCurrent()) dispatch({ type: "fail", request, error });
       },
     );
 
@@ -713,28 +731,21 @@ function useFetcher<TData>(
     };
   }, [isEnabled, query, attempt]);
 
-  const refetch = React.useCallback(() => {
-    setAttempt((current) => current + 1);
-  }, []);
+  const refetch = React.useCallback(() => dispatch({ type: "retry" }), []);
 
-  if (!isEnabled) return null;
-
-  const isSettled =
-    state.request?.query === query && state.request.attempt === attempt;
-  const moreStatus: DataLoadMoreStatus =
-    isSettled && more?.request === state.request ? more.status : "idle";
-  const nextCursor = isSettled ? state.result?.nextCursor : undefined;
-
-  function loadMore() {
+  const loadMore = React.useCallback(() => {
     const fetchRows = fetcherRef.current;
-    const { request, result } = state;
+    const { request, result } = stateRef.current;
+    const nextCursor = getIsSettled(stateRef.current, queryRef.current)
+      ? result?.nextCursor
+      : undefined;
     if (!fetchRows || !request || !result || !nextCursor) return;
     if (moreRequestRef.current) return;
 
     const controller = new AbortController();
     const moreRequest = { controller };
     moreRequestRef.current = moreRequest;
-    setMore({ request, status: "loading", error: undefined });
+    dispatch({ type: "loadMoreStart", request });
 
     function getIsCurrent() {
       return (
@@ -755,13 +766,11 @@ function useFetcher<TData>(
         moreRequestRef.current = null;
         const rows = [...result.rows, ...page.rows];
         const rowCount = page.rowCount ?? result.rowCount;
-        setState({
+        dispatch({
+          type: "settle",
           request,
           result: { rows, rowCount, nextCursor: page.nextCursor ?? null },
-          status: "idle",
-          error: undefined,
         });
-        setMore(null);
 
         const loadedMore =
           messagesRef.current?.loadedMore ??
@@ -777,7 +786,7 @@ function useFetcher<TData>(
       (error: unknown) => {
         if (!getIsCurrent()) return;
         moreRequestRef.current = null;
-        setMore({ request, status: "error", error });
+        dispatch({ type: "loadMoreFail", request, error });
 
         const loadMoreFailed =
           messagesRef.current?.loadMoreFailed ??
@@ -787,7 +796,30 @@ function useFetcher<TData>(
         });
       },
     );
-  }
+  }, [messagesRef]);
+
+  const isSettled = getIsSettled(state, query);
+  const moreStatus: DataLoadMoreStatus =
+    isSettled && state.more?.request === state.request
+      ? state.more.status
+      : "idle";
+  const moreError = moreStatus === "error" ? state.more?.error : undefined;
+  const hasMore = Boolean(isSettled && state.result?.nextCursor);
+
+  const loadMoreState = React.useMemo(
+    () =>
+      isCursor
+        ? {
+            hasMore,
+            status: moreStatus,
+            error: moreError,
+            onLoadMore: loadMore,
+          }
+        : undefined,
+    [isCursor, hasMore, moreStatus, moreError, loadMore],
+  );
+
+  if (!isEnabled) return null;
 
   return {
     result: state.result,
@@ -798,15 +830,52 @@ function useFetcher<TData>(
         : ("loading" as const),
     error: isSettled ? state.error : undefined,
     refetch,
-    loadMore: isCursor
-      ? {
-          hasMore: Boolean(nextCursor),
-          status: moreStatus,
-          error: moreStatus === "error" ? more?.error : undefined,
-          onLoadMore: loadMore,
-        }
-      : undefined,
+    loadMore: loadMoreState,
   };
+}
+
+function fetchReducer<TData>(
+  state: FetchState<TData>,
+  action: FetchAction<TData>,
+): FetchState<TData> {
+  switch (action.type) {
+    case "retry":
+      return { ...state, attempt: state.attempt + 1 };
+    case "settle":
+      return {
+        ...state,
+        request: action.request,
+        result: action.result,
+        status: "idle",
+        error: undefined,
+        more: null,
+      };
+    case "fail":
+      return {
+        ...state,
+        request: action.request,
+        result: undefined,
+        status: "error",
+        error: action.error,
+        more: null,
+      };
+    case "loadMoreStart":
+      return {
+        ...state,
+        more: { request: action.request, status: "loading", error: undefined },
+      };
+    case "loadMoreFail":
+      return {
+        ...state,
+        more: { request: action.request, status: "error", error: action.error },
+      };
+  }
+}
+
+function getIsSettled<TData>(state: FetchState<TData>, query: DataQuery) {
+  return (
+    state.request?.query === query && state.request.attempt === state.attempt
+  );
 }
 
 function useConfig<TData extends RowData>(
