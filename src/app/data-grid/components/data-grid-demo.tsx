@@ -52,7 +52,13 @@ import {
   statuses,
 } from "../lib/seeds";
 import { worstCasePeople } from "../lib/worst-case";
-import { ContactCell, parseContact, sortContacts } from "./contact-cell";
+import {
+  ContactEditor,
+  ContactSummary,
+  formatContact,
+  parseContact,
+  sortContacts,
+} from "./contact-editor";
 import { DataGridBenchmark } from "./data-grid-benchmark";
 import { DataGridDemoSkeleton } from "./data-grid-demo-skeleton";
 import { PeopleDataGridActionBar } from "./people-data-grid-action-bar";
@@ -231,10 +237,13 @@ function DataGridDemoContent({
         minSize: 240,
         enableColumnFilter: false,
         sortFn: sortContacts,
+        cell: ({ getValue }) => <ContactSummary contact={getValue()} />,
         meta: {
           label: "Emergency Contact",
-          cellComponent: ContactCell,
+          editor: ContactEditor,
           parseValue: parseContact,
+          formatValue: formatContact,
+          emptyValue: null,
         },
       }),
       columnHelper.accessor("feedback", {

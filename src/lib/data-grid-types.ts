@@ -75,14 +75,19 @@ export type ColumnVariantMeta =
 export type DataGridColumnMeta = {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
-  // oxlint-disable-next-line typescript/no-explicit-any -- meta isn't generic over the row, and a cell typed for its own row must still fit
-  cellComponent?: React.ComponentType<DataGridCellProps<any>>;
-  /** Parses pasted text into the cell's value, or returns `undefined` to skip the cell. */
+  editor?: React.ComponentType<CellEditorProps>;
   parseValue?: (text: string) => unknown;
-  /** The value a cleared cell gets, `null` by default for a `cellComponent` without a variant. */
+  formatValue?: (value: unknown) => string;
   emptyValue?: unknown;
   writeCell?: (element: HTMLElement, value: unknown) => void;
 } & ColumnVariantMeta;
+
+export interface CellEditorProps {
+  value: unknown;
+  onValueChange: (value: unknown) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}
 
 export interface FileCellData {
   id: string;

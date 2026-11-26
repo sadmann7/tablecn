@@ -6,12 +6,16 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
-import { getHasCustomCell } from "@/lib/data-grid-utils";
+import {
+  getHasCustomCell,
+  getHasCustomCellContent,
+} from "@/lib/data-grid-utils";
 import { DataGridCell } from "@/registry/bases/radix/components/data-grid/data-grid-cell";
 import { DataGridCellPreview } from "@/registry/bases/radix/components/data-grid/data-grid-cell-preview";
 import {
   BooleanCell,
   DateCell,
+  EditorCell,
   FileCell,
   LongTextCell,
   MultiSelectCell,
@@ -58,8 +62,8 @@ export const DataGridDataCell = React.memo(
     }
     const meta = next.cell.column.columnDef.meta;
     // Written cells take their values straight from `updateCells`.
-    if (!meta?.cellComponent && meta?.writeCell) return true;
-    if (meta?.cellComponent || getHasCustomCell(next.cell.column)) {
+    if (!meta?.editor && meta?.writeCell) return true;
+    if (meta?.editor || getHasCustomCell(next.cell.column)) {
       return prev.cell.row.original === next.cell.row.original;
     }
     return prev.cell.getValue() === next.cell.getValue();
@@ -73,9 +77,6 @@ function DataGridDataCellImpl<TData extends RowData>({
   const { cell } = props;
   const meta = cell.column.columnDef.meta;
   const writeCell = meta?.writeCell;
-  const CellComponent = meta?.cellComponent as
-    | React.ComponentType<DataGridCellProps<TData>>
-    | undefined;
   const hasCustomCell = getHasCustomCell(cell.column);
 
   const rowId = cell.row.id;
@@ -87,8 +88,14 @@ function DataGridDataCellImpl<TData extends RowData>({
   }
   if (isPreview && !isScrolling) setIsPreview(false);
 
-  if (CellComponent) {
-    return <CellComponent key={rowId} {...props} />;
+  if (meta?.editor) {
+    return (
+      <EditorCell key={rowId} {...props}>
+        {getHasCustomCellContent(cell.column) ? (
+          <DataGridCustomCellContent cell={cell} />
+        ) : null}
+      </EditorCell>
+    );
   }
 
   if (writeCell) {

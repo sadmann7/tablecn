@@ -36,7 +36,6 @@ import type {
   CellPresence,
   CellUpdate,
   ClipboardNotice,
-  ColumnValueReader,
   ContextMenuState,
   CreateRowDetails,
   DataChangeDetails,
@@ -70,15 +69,16 @@ import {
   getFocusedCellPosition,
   getHasCellRangeSelection,
   getHasCustomCell,
+  getHasCustomCellContent,
   getIsDataColumn,
   getLineCount,
   getRowDisplayIndex,
   getRowHeightValue,
-  getSearchText,
   getTabTargetCell,
   parsePastedCellValue,
   parseTsv,
   serializeCellValue,
+  stringifyUnknown,
   swapItems,
 } from "@/lib/data-grid-utils";
 
@@ -857,7 +857,7 @@ function getDependentColumnIds(table: DataGridInstance) {
     columnIds = [];
     for (const column of columns) {
       const { accessorKey } = column.columnDef as { accessorKey?: unknown };
-      if (accessorKey !== column.id || getHasCustomCell(column)) {
+      if (accessorKey !== column.id || getHasCustomCellContent(column)) {
         columnIds.push(column.id);
       }
     }
@@ -1878,10 +1878,7 @@ function serializeSelectedCells(
           const cell = cellsByColumnId[columnId];
           return cell
             ? quoteTsvField(
-                serializeCellValue(
-                  cell.getValue(),
-                  cell.column.columnDef.meta?.variant,
-                ),
+                serializeCellValue(cell.getValue(), cell.column.columnDef.meta),
               )
             : "";
         })
@@ -1913,14 +1910,14 @@ function serializeCellRange(
   if (columns.length === 0 || rows.length === 0) return null;
 
   const readValues = columns.map(getColumnValueReader);
-  const variants = columns.map((column) => column.columnDef.meta?.variant);
+  const metas = columns.map((column) => column.columnDef.meta);
   const lines: string[] = [];
   for (const row of rows) {
     let line = "";
     for (let index = 0; index < columns.length; index++) {
       if (index > 0) line += "\t";
       line += quoteTsvField(
-        serializeCellValue(readValues[index]?.(row), variants[index]),
+        serializeCellValue(readValues[index]?.(row), metas[index]),
       );
     }
     lines.push(line);
@@ -2341,7 +2338,7 @@ function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
   const rows = table.getRowModel().rows;
   const columns = table.getVisibleLeafColumns();
   getSearchColumnIds(columns, cache);
-  const readValues = columns.filter(getIsDataColumn).map(getColumnValueReader);
+  const readers = columns.filter(getIsDataColumn).map(getSearchTextReader);
   const columnsKey = cache.columnsKey;
   const lowerByValue = new Map<unknown, string>();
   let index = 0;
@@ -2352,7 +2349,7 @@ function warmSearchTextCache(table: DataGridInstance, cache: SearchTextCache) {
     }
     while (index < rows.length && deadline.timeRemaining() > 1) {
       const row = rows[index++];
-      if (row) getRowSearchTexts(row, readValues, cache, lowerByValue);
+      if (row) getRowSearchTexts(row, readers, cache, lowerByValue);
     }
     if (index < rows.length) requestIdleCallback(onIdle);
   }
@@ -2370,7 +2367,7 @@ function getSearchMatches(
   if (!lowerQuery) return [];
 
   const dataColumnIds = getSearchColumnIds(columns, cache);
-  const readValues = columns.filter(getIsDataColumn).map(getColumnValueReader);
+  const readers = columns.filter(getIsDataColumn).map(getSearchTextReader);
   const lowerByValue = new Map<unknown, string>();
 
   const previous = cache.result;
@@ -2424,7 +2421,7 @@ function getSearchMatches(
 
     let texts = rowTexts[rowIndex];
     if (!texts) {
-      texts = getRowSearchTexts(row, readValues, cache, lowerByValue);
+      texts = getRowSearchTexts(row, readers, cache, lowerByValue);
       rowTexts[rowIndex] = texts;
     }
 
@@ -2487,9 +2484,16 @@ function getSearchColumnIds(columns: SearchColumns, cache: SearchTextCache) {
   return dataColumnIds;
 }
 
+function getSearchTextReader(column: SearchColumns[number]) {
+  return {
+    readValue: getColumnValueReader(column),
+    formatValue: column.columnDef.meta?.formatValue,
+  };
+}
+
 function getRowSearchTexts(
   row: SearchRow,
-  readValues: ColumnValueReader[],
+  readers: ReturnType<typeof getSearchTextReader>[],
   cache: SearchTextCache,
   lowerByValue: Map<unknown, string>,
 ) {
@@ -2498,11 +2502,12 @@ function getRowSearchTexts(
   let texts = isCacheable ? cache.textsByRow.get(original) : undefined;
   if (texts) return texts;
 
-  texts = readValues.map((readValue) => {
+  texts = readers.map(({ readValue, formatValue }) => {
     const value = readValue(row);
+    if (formatValue) return formatValue(value).toLowerCase();
     let text = lowerByValue.get(value);
     if (text === undefined) {
-      text = getSearchText(value).toLowerCase();
+      text = stringifyUnknown(value).toLowerCase();
       lowerByValue.set(value, text);
     }
     return text;

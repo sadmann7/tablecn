@@ -40,6 +40,7 @@ import {
   moveCaretToEnd,
   parseLocalDate,
   replaceEditableText,
+  serializeCellValue,
 } from "@/lib/data-grid-utils";
 import {
   DataGridCell,
@@ -1408,6 +1409,99 @@ export function FileCell<TData extends RowData>(
   );
 }
 
+interface EditorCellProps<
+  TData extends RowData,
+> extends DataGridCellProps<TData> {
+  children?: React.ReactNode;
+}
+
+export function EditorCell<TData extends RowData>({
+  children,
+  ...props
+}: EditorCellProps<TData>) {
+  const { cell, isEditing, readOnly } = props;
+  const meta = cell.column.columnDef.meta;
+  const Editor = meta?.editor;
+  const value = useCellValue(cell);
+  const {
+    value: draftValue,
+    setDraftValue,
+    clearDraft,
+  } = useCellDraft<unknown>({
+    key: value,
+    fallback: value,
+    enabled: isEditing,
+  });
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const onCommit = React.useCallback(() => {
+    if (!cell.getIsEditing()) return;
+    if (!readOnly && !Object.is(draftValue, value)) {
+      cell.setValue(draftValue);
+    }
+    clearDraft();
+    cell.table.stopEditing();
+  }, [cell, readOnly, draftValue, value, clearDraft]);
+
+  const onCancel = React.useCallback(() => {
+    clearDraft();
+    cell.table.stopEditing();
+  }, [cell, clearDraft]);
+
+  const onOpenChange = React.useCallback(
+    (open: boolean) => {
+      if (open) {
+        setCellEditing(cell, open, readOnly);
+      } else {
+        onCommit();
+      }
+    },
+    [cell, readOnly, onCommit],
+  );
+
+  const onEscapeKeyDown = React.useCallback(
+    (event: KeyboardEvent) => {
+      event.preventDefault();
+      onCancel();
+    },
+    [onCancel],
+  );
+
+  return (
+    <DataGridCell<TData>
+      {...props}
+      ref={containerRef}
+      onCancel={onCancel}
+      onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
+    >
+      {Editor ? (
+        <CellEditorPopover
+          cell={cell}
+          open={isEditing}
+          readOnly={readOnly}
+          containerRef={containerRef}
+          className="min-w-(--radix-popover-trigger-width)"
+          onOpenChange={onOpenChange}
+          onEscapeKeyDown={onEscapeKeyDown}
+          onKeyDown={onCellEditorKeyDown}
+        >
+          <Editor
+            value={draftValue}
+            onValueChange={setDraftValue}
+            onCommit={onCommit}
+            onCancel={onCancel}
+          />
+        </CellEditorPopover>
+      ) : null}
+      {children ?? (
+        <span data-slot="data-grid-cell-content" dir="auto">
+          {serializeCellValue(value, meta)}
+        </span>
+      )}
+    </DataGridCell>
+  );
+}
+
 interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   React.ComponentProps<typeof PopoverContent>,
   "align" | "alignOffset" | "sideOffset"
@@ -1421,7 +1515,7 @@ interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   overlap?: boolean;
 }
 
-export function CellEditorPopover<TData extends RowData>({
+function CellEditorPopover<TData extends RowData>({
   cell,
   open,
   readOnly,
@@ -1715,6 +1809,10 @@ function getPendingChar<TData extends RowData>(
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
+}
+
+function onCellEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+  if (event.key === "Tab" || event.key === "Enter") event.stopPropagation();
 }
 
 function getOptionLabel(options: ColumnSelectOption[], value: string) {

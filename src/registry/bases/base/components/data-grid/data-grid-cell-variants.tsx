@@ -41,6 +41,7 @@ import {
   moveCaretToEnd,
   parseLocalDate,
   replaceEditableText,
+  serializeCellValue,
 } from "@/lib/data-grid-utils";
 import {
   DataGridCell,
@@ -1408,6 +1409,92 @@ export function FileCell<TData extends RowData>(
   );
 }
 
+interface EditorCellProps<
+  TData extends RowData,
+> extends DataGridCellProps<TData> {
+  children?: React.ReactNode;
+}
+
+export function EditorCell<TData extends RowData>({
+  children,
+  ...props
+}: EditorCellProps<TData>) {
+  const { cell, isEditing, readOnly } = props;
+  const meta = cell.column.columnDef.meta;
+  const Editor = meta?.editor;
+  const value = useCellValue(cell);
+  const {
+    value: draftValue,
+    setDraftValue,
+    clearDraft,
+  } = useCellDraft<unknown>({
+    key: value,
+    fallback: value,
+    enabled: isEditing,
+  });
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const onCommit = React.useCallback(() => {
+    if (!cell.getIsEditing()) return;
+    if (!readOnly && !Object.is(draftValue, value)) {
+      cell.setValue(draftValue);
+    }
+    clearDraft();
+    cell.table.stopEditing();
+  }, [cell, readOnly, draftValue, value, clearDraft]);
+
+  const onCancel = React.useCallback(() => {
+    clearDraft();
+    cell.table.stopEditing();
+  }, [cell, clearDraft]);
+
+  const onOpenChange = React.useCallback(
+    (open: boolean, reason: PopoverPrimitive.Root.ChangeEventReason) => {
+      if (open) {
+        setCellEditing(cell, open, readOnly);
+      } else if (reason === "escape-key") {
+        onCancel();
+      } else {
+        onCommit();
+      }
+    },
+    [cell, readOnly, onCommit, onCancel],
+  );
+
+  return (
+    <DataGridCell<TData>
+      {...props}
+      ref={containerRef}
+      onCancel={onCancel}
+      onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
+    >
+      {Editor ? (
+        <CellEditorPopover
+          cell={cell}
+          open={isEditing}
+          readOnly={readOnly}
+          containerRef={containerRef}
+          className="min-w-(--anchor-width)"
+          onOpenChange={onOpenChange}
+          onKeyDown={onCellEditorKeyDown}
+        >
+          <Editor
+            value={draftValue}
+            onValueChange={setDraftValue}
+            onCommit={onCommit}
+            onCancel={onCancel}
+          />
+        </CellEditorPopover>
+      ) : null}
+      {children ?? (
+        <span data-slot="data-grid-cell-content" dir="auto">
+          {serializeCellValue(value, meta)}
+        </span>
+      )}
+    </DataGridCell>
+  );
+}
+
 const getOverlapOffset: PopoverPrimitive.Positioner.Props["sideOffset"] = ({
   anchor,
 }) => -anchor.height;
@@ -1420,12 +1507,15 @@ interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   open: boolean;
   readOnly: boolean;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  onOpenChange?: (open: boolean) => void;
+  onOpenChange?: (
+    open: boolean,
+    reason: PopoverPrimitive.Root.ChangeEventReason,
+  ) => void;
   onOpenFocus?: () => void;
   overlap?: boolean;
 }
 
-export function CellEditorPopover<TData extends RowData>({
+function CellEditorPopover<TData extends RowData>({
   cell,
   open,
   readOnly,
@@ -1437,9 +1527,9 @@ export function CellEditorPopover<TData extends RowData>({
   ...props
 }: CellEditorPopoverProps<TData>) {
   const onEditorOpenChange = React.useCallback(
-    (nextOpen: boolean) => {
+    (nextOpen: boolean, reason: PopoverPrimitive.Root.ChangeEventReason) => {
       if (onOpenChange) {
-        onOpenChange(nextOpen);
+        onOpenChange(nextOpen, reason);
       } else {
         setCellEditing(cell, nextOpen, readOnly);
       }
@@ -1667,7 +1757,10 @@ function useCellDraft<TValue>({
 
 interface UseCellEditorDismissOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (
+    open: boolean,
+    reason: PopoverPrimitive.Root.ChangeEventReason,
+  ) => void;
 }
 
 function useCellEditorDismiss({
@@ -1685,7 +1778,7 @@ function useCellEditorDismiss({
         eventDetails.cancel();
         return;
       }
-      onOpenChange(open);
+      onOpenChange(open, eventDetails.reason);
     },
     [containerRef, onOpenChange],
   );
@@ -1721,6 +1814,10 @@ function getPendingChar<TData extends RowData>(
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
   event.preventDefault();
+}
+
+function onCellEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+  if (event.key === "Tab" || event.key === "Enter") event.stopPropagation();
 }
 
 function getOptionLabel(options: ColumnSelectOption[], value: string) {
