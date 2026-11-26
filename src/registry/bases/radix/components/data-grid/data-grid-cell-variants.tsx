@@ -1432,32 +1432,35 @@ export function EditorCell<TData extends RowData>({
     fallback: value,
     enabled: isEditing,
   });
+  const draftRef = React.useRef<{ value: unknown } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
-  const onCommit = React.useCallback(() => {
-    if (!cell.getIsEditing()) return;
-    if (!readOnly && !Object.is(draftValue, value)) {
-      cell.setValue(draftValue);
+  React.useEffect(() => {
+    const draft = draftRef.current;
+    if (isEditing || !draft) return;
+    draftRef.current = null;
+    if (!readOnly && !Object.is(draft.value, cell.getValue())) {
+      cell.setValue(draft.value);
     }
-    clearDraft();
+  }, [cell, isEditing, readOnly]);
+
+  const onValueChange = React.useCallback(
+    (newValue: unknown) => {
+      draftRef.current = { value: newValue };
+      setDraftValue(newValue);
+    },
+    [setDraftValue],
+  );
+
+  const onCommit = React.useCallback(() => {
     cell.table.stopEditing();
-  }, [cell, readOnly, draftValue, value, clearDraft]);
+  }, [cell]);
 
   const onCancel = React.useCallback(() => {
+    draftRef.current = null;
     clearDraft();
     cell.table.stopEditing();
   }, [cell, clearDraft]);
-
-  const onOpenChange = React.useCallback(
-    (open: boolean) => {
-      if (open) {
-        setCellEditing(cell, open, readOnly);
-      } else {
-        onCommit();
-      }
-    },
-    [cell, readOnly, onCommit],
-  );
 
   const onEscapeKeyDown = React.useCallback(
     (event: KeyboardEvent) => {
@@ -1481,13 +1484,12 @@ export function EditorCell<TData extends RowData>({
           readOnly={readOnly}
           containerRef={containerRef}
           className="min-w-(--radix-popover-trigger-width)"
-          onOpenChange={onOpenChange}
           onEscapeKeyDown={onEscapeKeyDown}
           onKeyDown={onCellEditorKeyDown}
         >
           <Editor
             value={draftValue}
-            onValueChange={setDraftValue}
+            onValueChange={onValueChange}
             onCommit={onCommit}
             onCancel={onCancel}
           />

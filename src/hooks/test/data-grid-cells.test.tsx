@@ -1109,6 +1109,24 @@ describe("DataGrid cells", () => {
       expect(getCell("1", "sponsor").textContent).toBe("Element");
     });
 
+    it("saves the draft when the grid ends editing", () => {
+      const { getCell, getValue, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      changeInput(getSponsorInput("phone"), "555-0142");
+      act(() => {
+        table.stopEditing();
+      });
+
+      expect(getValue("1", "sponsor")).toEqual({
+        name: "Birdhouse",
+        phone: "555-0142",
+      });
+    });
+
     it("keeps editing when clicking the editing cell", () => {
       const { getCell, focus, table } = renderDataGrid({
         columns: sponsorColumns,
