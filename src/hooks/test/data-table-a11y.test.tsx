@@ -92,6 +92,19 @@ describe.each(bases)("DataTable accessibility ($name)", (ui) => {
     expect(getSortedHeaders(container)).toEqual([]);
   });
 
+  it("names each row by its first data column, skipping the select column", () => {
+    const { table } = renderTable(ui);
+
+    expect(getRowHeaderTexts().slice(0, 2)).toEqual(["Task 00", "Task 01"]);
+    expect(screen.getAllByRole("rowheader")).toHaveLength(10);
+
+    act(() => table.setColumnPinning({ start: ["status"], end: [] }));
+    expect(getRowHeaderTexts().slice(0, 2)).toEqual(["done", "todo"]);
+
+    act(() => table.setColumnVisibility({ status: false, title: false }));
+    expect(screen.queryAllByRole("rowheader")).toHaveLength(10);
+  });
+
   it("labels the page size select and announces selection and page changes", () => {
     const { table } = renderTable(ui);
 
@@ -213,6 +226,10 @@ function getColumns({ getDataTableSelectColumn }: Base) {
       },
     }),
   ]);
+}
+
+function getRowHeaderTexts() {
+  return screen.getAllByRole("rowheader").map((cell) => cell.textContent);
 }
 
 function getSortedHeaders(container: HTMLElement) {
