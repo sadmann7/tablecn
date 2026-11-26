@@ -121,10 +121,10 @@ function DataTablePaginationContent<TData extends RowData>({
           </p>
           <Select
             value={`${pageSize}`}
-            disabled={isDisabled}
             onValueChange={(value) => {
               table.setPageSize(Number(value));
             }}
+            disabled={isDisabled}
           >
             <SelectTrigger aria-labelledby={pageSizeLabelId} className="w-18">
               <SelectValue placeholder={pageSize} />
