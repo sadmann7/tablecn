@@ -1073,6 +1073,27 @@ describe("DataGrid cells", () => {
       expect(table.getFocusedCell()?.column.id).toBe("sponsor");
     });
 
+    it("lets a click inside the editor move focus between its fields", () => {
+      const { getCell, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      Object.defineProperty(document, "elementsFromPoint", {
+        value: () => [getSponsorInput("phone")],
+        configurable: true,
+      });
+
+      try {
+        expect(fireEvent.mouseDown(getCell("1", "sponsor"))).toBe(false);
+        expect(fireEvent.mouseDown(getSponsorInput("phone"))).toBe(true);
+        expect(table.getEditingCell()?.columnId).toBe("sponsor");
+      } finally {
+        Reflect.deleteProperty(document, "elementsFromPoint");
+      }
+    });
+
     it("discards the draft on Escape and refocuses the cell", () => {
       const onDataChange = vi.fn();
       const { getCell, getValue, focus, table } = renderDataGrid({

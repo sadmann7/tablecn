@@ -1801,7 +1801,12 @@ function getPendingChar<TData extends RowData>(
 }
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
-  event.preventDefault();
+  if (
+    event.target instanceof Node &&
+    event.currentTarget.contains(event.target)
+  ) {
+    event.preventDefault();
+  }
 }
 
 function onCellEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
