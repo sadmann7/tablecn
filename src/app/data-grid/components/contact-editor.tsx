@@ -4,6 +4,7 @@ import * as React from "react";
 
 import type { CellEditorProps } from "@/lib/data-grid-types";
 
+import { insertTextAtSelection } from "@/lib/data-grid-utils";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { Input } from "@/registry/bases/radix/ui/input";
 import { Label } from "@/registry/bases/radix/ui/label";
@@ -12,13 +13,24 @@ import type { Contact, Person } from "../lib/seeds";
 
 export function ContactEditor({
   value,
+  pendingChar,
   onValueChange,
   onCommit,
 }: CellEditorProps) {
   const id = React.useId();
+  const nameInputRef = React.useRef<HTMLInputElement>(null);
   const contact = getContact(value);
   const name = contact?.name ?? "";
   const phone = contact?.phone ?? "";
+
+  React.useEffect(() => {
+    if (!pendingChar) return;
+    const frame = requestAnimationFrame(() => {
+      const input = nameInputRef.current;
+      if (input) insertTextAtSelection(input, pendingChar);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [pendingChar]);
 
   const onSubmit = React.useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -46,7 +58,12 @@ export function ContactEditor({
     <form className="flex flex-col gap-3 p-3" onSubmit={onSubmit}>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${id}-name`}>Name</Label>
-        <Input id={`${id}-name`} value={name} onChange={onNameChange} />
+        <Input
+          ref={nameInputRef}
+          id={`${id}-name`}
+          value={name}
+          onChange={onNameChange}
+        />
       </div>
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`${id}-phone`}>Phone</Label>

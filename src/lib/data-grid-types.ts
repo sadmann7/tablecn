@@ -84,6 +84,7 @@ export type DataGridColumnMeta = {
 
 export interface CellEditorProps {
   value: unknown;
+  pendingChar: string | null;
   onValueChange: (value: unknown) => void;
   onCommit: () => void;
   onCancel: () => void;

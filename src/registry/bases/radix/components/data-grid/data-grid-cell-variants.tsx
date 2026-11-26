@@ -1480,6 +1480,7 @@ export function EditorCell<TData extends RowData>({
         >
           <Editor
             value={draftValue}
+            pendingChar={isEditing ? getPendingChar(cell) : null}
             onValueChange={onValueChange}
             onCommit={onCommit}
             onCancel={onCancel}

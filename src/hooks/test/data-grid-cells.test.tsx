@@ -1094,6 +1094,31 @@ describe("DataGrid cells", () => {
       }
     });
 
+    it("passes the typed character to the editor", () => {
+      const editor = vi.fn((_props: CellEditorProps) => null);
+      const { getCell, focus } = renderDataGrid({
+        columns: sponsorColumns.map((column) =>
+          column.id === "sponsor"
+            ? { ...column, meta: { ...column.meta, editor } }
+            : column,
+        ),
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "k");
+      expect(editor).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pendingChar: "k" }),
+        undefined,
+      );
+
+      press(document.activeElement, "Escape");
+      press(getCell("1", "sponsor"), "Enter");
+      expect(editor).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pendingChar: null }),
+        undefined,
+      );
+    });
+
     it("discards the draft on Escape and refocuses the cell", () => {
       const onDataChange = vi.fn();
       const { getCell, getValue, focus, table } = renderDataGrid({
