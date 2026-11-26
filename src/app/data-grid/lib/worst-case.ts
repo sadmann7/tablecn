@@ -29,6 +29,10 @@ export const worstCasePeople: Person[] = [
     ],
     isActive: true,
     startDate: "2025-12-31T23:30:00-08:00",
+    contact: {
+      name: "Maximilian Alexander von Hohenberg-Schwarzenfels",
+      phone: "+48 (12) 345-67-89 ext. 12345 (after 6pm CET only)",
+    },
     attachments: [
       {
         id: "worst-1-file-0",

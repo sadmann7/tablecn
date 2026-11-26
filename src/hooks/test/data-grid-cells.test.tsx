@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
-import type { FileCellData } from "@/lib/data-grid-types";
+import type { CellEditorProps, FileCellData } from "@/lib/data-grid-types";
 
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
@@ -27,6 +27,11 @@ vi.mock("@/registry/bases/radix/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
 
+interface Sponsor {
+  name: string;
+  phone: string;
+}
+
 interface Skater {
   id: string;
   name: string;
@@ -38,7 +43,10 @@ interface Skater {
   tricks: string[];
   joined: string | null;
   media: FileCellData[];
+  sponsor?: Sponsor | null;
 }
+
+const birdhouse: Sponsor = { name: "Birdhouse", phone: "555-0100" };
 
 const skaters: Skater[] = [
   {
@@ -52,6 +60,7 @@ const skaters: Skater[] = [
     tricks: ["900"],
     joined: "2024-01-15",
     media: [],
+    sponsor: birdhouse,
   },
   {
     id: "2",
@@ -149,10 +158,30 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
   },
 ];
 
+const sponsorColumns: ColumnDef<DataGridFeatures, Skater>[] = [
+  ...columns,
+  {
+    id: "sponsor",
+    accessorKey: "sponsor",
+    header: "Sponsor",
+    cell: ({ getValue }) => (
+      <span data-slot="data-grid-cell-content">
+        {getSponsor(getValue())?.name}
+      </span>
+    ),
+    meta: {
+      editor: SponsorEditor,
+      formatValue: formatSponsor,
+      parseValue: parseSponsor,
+      emptyValue: null,
+    },
+  },
+];
+
 type GridOptions = Partial<
   Pick<
     UseDataGridProps<Skater>,
-    "uploadFiles" | "deleteFiles" | "getRowId" | "onDataChange"
+    "uploadFiles" | "deleteFiles" | "getRowId" | "onDataChange" | "enableSearch"
   >
 > & {
   data?: Skater[];
@@ -972,6 +1001,385 @@ describe("DataGrid cells", () => {
     });
   });
 
+  describe("editor", () => {
+    let clipboard: {
+      writeText: ReturnType<typeof vi.fn>;
+      readText: ReturnType<typeof vi.fn>;
+    };
+
+    beforeEach(() => {
+      clipboard = {
+        writeText: vi.fn().mockResolvedValue(undefined),
+        readText: vi.fn().mockResolvedValue(""),
+      };
+      Object.defineProperty(navigator, "clipboard", {
+        value: clipboard,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it("opens on Enter, F2 and a double click", () => {
+      const { getCell, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      expect(table.getEditingCell()?.columnId).toBe("sponsor");
+      expect(document.activeElement).toBe(getSponsorInput("name"));
+      press(document.activeElement, "Escape");
+      expect(table.getEditingCell()).toBeNull();
+
+      press(getCell("1", "sponsor"), "F2");
+      expect(table.getEditingCell()?.columnId).toBe("sponsor");
+      press(document.activeElement, "Escape");
+
+      act(() => {
+        fireEvent.doubleClick(getCell("2", "sponsor"));
+      });
+      expect(table.getEditingCell()).toEqual({
+        rowId: "2",
+        columnId: "sponsor",
+      });
+    });
+
+    it("shows the value with the column's cell, or else formatValue", () => {
+      const { getCell } = renderDataGrid({ columns: sponsorColumns });
+      expect(getCell("1", "sponsor").textContent).toBe("Birdhouse");
+
+      const { getCell: getPlainCell } = renderDataGrid({
+        columns: sponsorColumns.map((column) =>
+          column.id === "sponsor" ? { ...column, cell: undefined } : column,
+        ),
+      });
+      expect(getPlainCell("1", "sponsor").textContent).toBe(
+        "Birdhouse, 555-0100",
+      );
+    });
+
+    it("keeps Tab and Enter inside the editor", () => {
+      const { getCell, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      press(getSponsorInput("name"), "Tab");
+      press(getSponsorInput("phone"), "Tab", { shiftKey: true });
+      press(getSponsorInput("name"), "Enter", { metaKey: true });
+
+      expect(table.getEditingCell()?.columnId).toBe("sponsor");
+      expect(table.getFocusedCell()?.column.id).toBe("sponsor");
+    });
+
+    it("lets a click inside the editor move focus between its fields", () => {
+      const { getCell, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      Object.defineProperty(document, "elementsFromPoint", {
+        value: () => [getSponsorInput("phone")],
+        configurable: true,
+      });
+
+      try {
+        expect(fireEvent.mouseDown(getCell("1", "sponsor"))).toBe(false);
+        expect(fireEvent.mouseDown(getSponsorInput("phone"))).toBe(true);
+        expect(table.getEditingCell()?.columnId).toBe("sponsor");
+      } finally {
+        Reflect.deleteProperty(document, "elementsFromPoint");
+      }
+    });
+
+    it("passes the typed character to the editor", () => {
+      const editor = vi.fn((_props: CellEditorProps) => null);
+      const { getCell, focus } = renderDataGrid({
+        columns: sponsorColumns.map((column) =>
+          column.id === "sponsor"
+            ? { ...column, meta: { ...column.meta, editor } }
+            : column,
+        ),
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "k");
+      expect(editor).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pendingChar: "k" }),
+        undefined,
+      );
+
+      press(document.activeElement, "Escape");
+      press(getCell("1", "sponsor"), "Enter");
+      expect(editor).toHaveBeenLastCalledWith(
+        expect.objectContaining({ pendingChar: null }),
+        undefined,
+      );
+    });
+
+    it("discards the draft on Escape and refocuses the cell", () => {
+      const onDataChange = vi.fn();
+      const { getCell, getValue, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+        onDataChange,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      changeInput(getSponsorInput("name"), "Typo");
+      press(getSponsorInput("name"), "Escape");
+
+      expect(getValue("1", "sponsor")).toEqual(birdhouse);
+      expect(onDataChange).not.toHaveBeenCalled();
+      expect(table.getEditingCell()).toBeNull();
+      expect(document.activeElement).toBe(getCell("1", "sponsor"));
+    });
+
+    it("saves the draft when clicking outside", async () => {
+      const { getCell, getValue, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      changeInput(getSponsorInput("name"), "Element");
+      await pressOutside();
+
+      expect(getValue("1", "sponsor")).toEqual({
+        name: "Element",
+        phone: "555-0100",
+      });
+      expect(table.getEditingCell()).toBeNull();
+      expect(getCell("1", "sponsor").textContent).toBe("Element");
+    });
+
+    it("saves the draft when the grid ends editing", () => {
+      const { getCell, getValue, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      changeInput(getSponsorInput("phone"), "555-0142");
+      act(() => {
+        table.stopEditing();
+      });
+
+      expect(getValue("1", "sponsor")).toEqual({
+        name: "Birdhouse",
+        phone: "555-0142",
+      });
+    });
+
+    it("saves the draft when its column is hidden while editing", () => {
+      const { getCell, getValue, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      changeInput(getSponsorInput("phone"), "555-0142");
+      act(() => {
+        table.setColumnVisibility({ sponsor: false });
+      });
+
+      expect(table.getEditingCell()).toBeNull();
+      expect(getValue("1", "sponsor")).toEqual({
+        name: "Birdhouse",
+        phone: "555-0142",
+      });
+    });
+
+    it("keeps editing when clicking the editing cell", () => {
+      const { getCell, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      const mouseDown = new MouseEvent("mousedown", {
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => {
+        fireEvent.pointerDown(getCell("1", "sponsor"));
+        getCell("1", "sponsor").dispatchEvent(mouseDown);
+      });
+
+      expect(mouseDown.defaultPrevented).toBe(true);
+      expect(table.getEditingCell()?.columnId).toBe("sponsor");
+    });
+
+    it("saves on onCommit and discards on onCancel", () => {
+      const onDataChange = vi.fn();
+      const { getCell, getValue, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+        onDataChange,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      changeInput(getSponsorInput("phone"), "555-0199");
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      });
+      expect(getValue("1", "sponsor")).toEqual(birdhouse);
+      expect(table.getEditingCell()).toBeNull();
+
+      press(getCell("1", "sponsor"), "Enter");
+      changeInput(getSponsorInput("phone"), "555-0199");
+      act(() => {
+        fireEvent.submit(getSponsorInput("phone"));
+      });
+
+      expect(getValue("1", "sponsor")).toEqual({
+        name: "Birdhouse",
+        phone: "555-0199",
+      });
+      expect(onDataChange).toHaveBeenCalledTimes(1);
+      expect(table.getEditingCell()).toBeNull();
+      expect(document.activeElement).toBe(getCell("1", "sponsor"));
+
+      act(() => {
+        table.undo();
+      });
+      expect(getValue("1", "sponsor")).toEqual(birdhouse);
+    });
+
+    it("doesn't save when the draft is unchanged", async () => {
+      const onDataChange = vi.fn();
+      const { getCell, focus } = renderDataGrid({
+        columns: sponsorColumns,
+        onDataChange,
+      });
+
+      focus("1", "sponsor");
+      press(getCell("1", "sponsor"), "Enter");
+      await pressOutside();
+
+      expect(onDataChange).not.toHaveBeenCalled();
+    });
+
+    it("leaves a select's Tab alone", () => {
+      const { getCell, getValue, focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("1", "stance");
+      press(getCell("1", "stance"), "Enter");
+      press(document.activeElement, "Tab");
+
+      expect(getValue("1", "stance")).toBe("goofy");
+      expect(table.getEditingCell()).toBeNull();
+      expect(table.getFocusedCell()?.column.id).toBe("tricks");
+    });
+
+    it("copies and searches with formatValue", async () => {
+      const { focus, table } = renderDataGrid({
+        columns: sponsorColumns,
+        enableSearch: true,
+      });
+
+      focus("1", "sponsor");
+      await act(async () => {
+        await table.copySelectedCells();
+      });
+      expect(clipboard.writeText).toHaveBeenCalledWith("Birdhouse, 555-0100");
+
+      act(() => {
+        table.setSearchQuery("house, 555");
+      });
+      expect(table.getSearchMatches()).toEqual([
+        { rowId: "1", columnId: "sponsor" },
+      ]);
+
+      act(() => {
+        table.setSearchQuery("name");
+      });
+      expect(table.getSearchMatches()).toEqual([]);
+    });
+
+    it("pastes with parseValue and skips what it can't parse", async () => {
+      const { focus, getValue, table } = renderDataGrid({
+        columns: sponsorColumns,
+      });
+
+      focus("2", "sponsor");
+      clipboard.readText.mockResolvedValue("Element, 555-0142");
+      await act(async () => {
+        await table.pasteCells();
+      });
+      expect(getValue("2", "sponsor")).toEqual({
+        name: "Element",
+        phone: "555-0142",
+      });
+
+      clipboard.readText.mockResolvedValue("no phone");
+      await act(async () => {
+        await table.pasteCells();
+      });
+      expect(getValue("2", "sponsor")).toEqual({
+        name: "Element",
+        phone: "555-0142",
+      });
+    });
+
+    it("skips pasting into an editor column without parseValue", async () => {
+      const { focus, getValue, table } = renderDataGrid({
+        columns: sponsorColumns.map((column) =>
+          column.id === "sponsor"
+            ? { ...column, meta: { editor: SponsorEditor } }
+            : column,
+        ),
+      });
+
+      focus("1", "sponsor");
+      clipboard.readText.mockResolvedValue('{"name":"Element","phone":"1"}');
+      await act(async () => {
+        await table.pasteCells();
+      });
+
+      expect(getValue("1", "sponsor")).toEqual(birdhouse);
+    });
+
+    it("clears to the column's empty value", () => {
+      const { getValue, table } = renderDataGrid({
+        columns: sponsorColumns.map((column) =>
+          column.id === "sponsor"
+            ? {
+                ...column,
+                meta: { ...column.meta, emptyValue: { name: "", phone: "" } },
+              }
+            : column,
+        ),
+      });
+
+      act(() => {
+        table.clearCells([{ rowId: "1", columnId: "sponsor" }]);
+      });
+
+      expect(getValue("1", "sponsor")).toEqual({ name: "", phone: "" });
+    });
+
+    it("clears an editor column without emptyValue to null", () => {
+      const { getValue, table } = renderDataGrid({
+        columns: sponsorColumns.map((column) =>
+          column.id === "sponsor"
+            ? { ...column, meta: { editor: SponsorEditor } }
+            : column,
+        ),
+      });
+
+      act(() => {
+        table.clearCells([{ rowId: "1", columnId: "sponsor" }]);
+      });
+
+      expect(getValue("1", "sponsor")).toBeNull();
+    });
+  });
+
   describe("live updates", () => {
     it("shows batched updates before and after the commit", async () => {
       const { getCell, table } = renderDataGrid();
@@ -1101,6 +1509,45 @@ describe("DataGrid cells", () => {
     });
   });
 });
+
+function getSponsor(value: unknown): Sponsor | null {
+  if (!value || typeof value !== "object") return null;
+  const { name, phone } = value as Record<string, unknown>;
+  return typeof name === "string" && typeof phone === "string"
+    ? { name, phone }
+    : null;
+}
+
+function formatSponsor(value: unknown) {
+  const sponsor = getSponsor(value);
+  return sponsor ? `${sponsor.name}, ${sponsor.phone}` : "";
+}
+
+function parseSponsor(text: string) {
+  if (!text) return null;
+  const [name, phone] = text.split(", ");
+  return name && phone ? { name, phone } : undefined;
+}
+
+function getSponsorInput(field: "name" | "phone") {
+  return screen.getByRole("textbox", { name: `Sponsor ${field}` });
+}
+
+async function pressOutside() {
+  await wait(0);
+  act(() => {
+    fireEvent.pointerDown(document.body);
+    fireEvent.pointerUp(document.body);
+    fireEvent.click(document.body);
+  });
+  await wait(0);
+}
+
+function changeInput(input: HTMLElement, value: string) {
+  act(() => {
+    fireEvent.change(input, { target: { value } });
+  });
+}
 
 function renderDataGrid({
   data = skaters,
@@ -1232,4 +1679,41 @@ async function waitFrames(count = 2) {
         new Promise((resolve) => requestAnimationFrame(() => resolve(null))),
     );
   }
+}
+
+function SponsorEditor({
+  value,
+  onValueChange,
+  onCommit,
+  onCancel,
+}: CellEditorProps) {
+  const sponsor = getSponsor(value) ?? { name: "", phone: "" };
+
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onCommit();
+      }}
+    >
+      <input
+        aria-label="Sponsor name"
+        value={sponsor.name}
+        onChange={(event) =>
+          onValueChange({ ...sponsor, name: event.target.value })
+        }
+      />
+      <input
+        aria-label="Sponsor phone"
+        value={sponsor.phone}
+        onChange={(event) =>
+          onValueChange({ ...sponsor, phone: event.target.value })
+        }
+      />
+      <button type="submit">Save</button>
+      <button type="button" onClick={onCancel}>
+        Cancel
+      </button>
+    </form>
+  );
 }

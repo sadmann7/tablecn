@@ -4,6 +4,7 @@ import {
   getBooleanCellValue,
   getCellKey,
   getDateCellValue,
+  getEmptyCellValue,
   getFilesCellValue,
   getHeaderSizeVar,
   getIsEditableTarget,
@@ -126,10 +127,76 @@ describe("parsePastedCellValue", () => {
   });
 
   it("round-trips serialized multi-select values", () => {
-    const text = serializeCellValue(["goofy", "regular"], "multi-select");
+    const text = serializeCellValue(["goofy", "regular"], {
+      variant: "multi-select",
+      options,
+    });
     expect(
       parsePastedCellValue(text, { variant: "multi-select", options }),
     ).toEqual({ value: ["goofy", "regular"] });
+  });
+
+  it("uses the column's parseValue over its variant", () => {
+    const meta = {
+      variant: "number" as const,
+      parseValue: (text: string) => (text === "skip" ? undefined : text.length),
+    };
+    expect(parsePastedCellValue("abc", meta)).toEqual({ value: 3 });
+    expect(parsePastedCellValue("skip", meta)).toBeNull();
+  });
+
+  it("skips an editor column without a variant or parseValue", () => {
+    const meta = { editor: () => null };
+    expect(parsePastedCellValue('["a"]', meta)).toBeNull();
+    expect(parsePastedCellValue("42", { ...meta, variant: "number" })).toEqual({
+      value: 42,
+    });
+  });
+});
+
+describe("getEmptyCellValue", () => {
+  it("uses the variant's empty value", () => {
+    expect(getEmptyCellValue(undefined)).toBe("");
+    expect(getEmptyCellValue({ variant: "boolean" })).toBe(false);
+    expect(getEmptyCellValue({ variant: "file" })).toEqual([]);
+  });
+
+  it("prefers the column's emptyValue", () => {
+    expect(getEmptyCellValue({ variant: "number", emptyValue: 0 })).toBe(0);
+    expect(getEmptyCellValue({ emptyValue: null })).toBeNull();
+  });
+
+  it("clears an editor column without a variant to null", () => {
+    expect(getEmptyCellValue({ editor: () => null })).toBeNull();
+    expect(getEmptyCellValue({ editor: () => null, emptyValue: [] })).toEqual(
+      [],
+    );
+  });
+});
+
+describe("serializeCellValue", () => {
+  const options = [
+    { label: "Goofy", value: "goofy" },
+    { label: "Regular", value: "regular" },
+  ];
+
+  it("uses the column's formatValue over its variant", () => {
+    const formatValue = (value: unknown) =>
+      Array.isArray(value) ? value.join(" + ") : "";
+    expect(
+      serializeCellValue(["goofy", "regular"], {
+        variant: "multi-select",
+        options,
+        formatValue,
+      }),
+    ).toBe("goofy + regular");
+  });
+
+  it("writes an opaque value as JSON", () => {
+    expect(serializeCellValue({ name: "Ada" }, { editor: () => null })).toBe(
+      '{"name":"Ada"}',
+    );
+    expect(serializeCellValue(null, { editor: () => null })).toBe("");
   });
 });
 

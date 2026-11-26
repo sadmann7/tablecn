@@ -11,7 +11,6 @@ import type {
   ColumnSelectOption,
   DataGridCellProps,
   FileCellData,
-  RowHeightValue,
   StopEditingOptions,
 } from "@/lib/data-grid-types";
 
@@ -35,13 +34,13 @@ import {
   getNumberCellValue,
   getOptionCellValue,
   getOptionsCellValue,
-  getRowHeightValue,
   getTextCellValue,
   getUrlHref,
   insertTextAtSelection,
   moveCaretToEnd,
   parseLocalDate,
   replaceEditableText,
+  serializeCellValue,
 } from "@/lib/data-grid-utils";
 import {
   DataGridCell,
@@ -95,7 +94,7 @@ export function ShortTextCell<TData extends RowData>(
 export function LongTextCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, readOnly } = props;
+  const { cell, isEditing, readOnly } = props;
   const initialValue = getTextCellValue(useCellValue(cell));
   const { value, setDraftValue, clearDraft } = useCellDraft({
     key: initialValue,
@@ -205,7 +204,6 @@ export function LongTextCell<TData extends RowData>(
         cell={cell}
         open={isEditing}
         readOnly={readOnly}
-        rowHeight={rowHeight}
         containerRef={containerRef}
         side="bottom"
         className="w-100"
@@ -540,7 +538,7 @@ const NO_OPTIONS: ColumnSelectOption[] = [];
 export function SelectCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, readOnly } = props;
+  const { cell, isEditing, readOnly } = props;
   const value = getOptionCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const commandRef = React.useRef<HTMLDivElement>(null);
@@ -572,7 +570,6 @@ export function SelectCell<TData extends RowData>(
         cell={cell}
         open={isEditing}
         readOnly={readOnly}
-        rowHeight={rowHeight}
         containerRef={containerRef}
         className="w-(--radix-popover-trigger-width) min-w-36"
         onOpenFocus={onOpenFocus}
@@ -760,7 +757,6 @@ export function MultiSelectCell<TData extends RowData>(
           cell={cell}
           open={isEditing}
           readOnly={readOnly}
-          rowHeight={rowHeight}
           containerRef={containerRef}
           className="w-75 min-w-(--radix-popover-trigger-width)"
           onOpenChange={onOpenChange}
@@ -876,7 +872,7 @@ export function MultiSelectCell<TData extends RowData>(
 export function DateCell<TData extends RowData>(
   props: DataGridCellProps<TData>,
 ) {
-  const { cell, rowHeight, isEditing, readOnly } = props;
+  const { cell, isEditing, readOnly } = props;
   const value = getDateCellValue(useCellValue(cell));
   const containerRef = React.useRef<HTMLDivElement>(null);
   const isInvalidDate = value !== "" && !parseLocalDate(value);
@@ -903,7 +899,6 @@ export function DateCell<TData extends RowData>(
         cell={cell}
         open={isEditing}
         readOnly={readOnly}
-        rowHeight={rowHeight}
         containerRef={containerRef}
         className="w-auto"
       >
@@ -1231,7 +1226,6 @@ export function FileCell<TData extends RowData>(
           cell={cell}
           open={isEditing}
           readOnly={readOnly}
-          rowHeight={rowHeight}
           containerRef={containerRef}
           className="w-100"
           onOpenChange={onOpenChange}
@@ -1415,19 +1409,90 @@ export function FileCell<TData extends RowData>(
   );
 }
 
-interface OverflowBadgeProps {
-  count: number;
+interface EditorCellProps<
+  TData extends RowData,
+> extends DataGridCellProps<TData> {
+  children?: React.ReactNode;
 }
 
-function OverflowBadge({ count }: OverflowBadgeProps) {
+export function EditorCell<TData extends RowData>({
+  children,
+  ...props
+}: EditorCellProps<TData>) {
+  const { cell, isEditing, readOnly } = props;
+  const meta = cell.column.columnDef.meta;
+  const Editor = meta?.editor;
+  const value = useCellValue(cell);
+  const pendingDraft = isEditing ? cell.table.getEditingDraft() : null;
+  const {
+    value: draftValue,
+    setDraftValue,
+    clearDraft,
+  } = useCellDraft<unknown>({
+    key: value,
+    fallback: pendingDraft ? pendingDraft.value : value,
+    enabled: isEditing,
+  });
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const onValueChange = React.useCallback(
+    (newValue: unknown) => {
+      cell.table.setEditingDraft(newValue);
+      setDraftValue(newValue);
+    },
+    [cell, setDraftValue],
+  );
+
+  const onCommit = React.useCallback(() => {
+    cell.table.stopEditing();
+  }, [cell]);
+
+  const onCancel = React.useCallback(() => {
+    cell.table.discardEditingDraft();
+    clearDraft();
+    cell.table.stopEditing();
+  }, [cell, clearDraft]);
+
+  const onEscapeKeyDown = React.useCallback(
+    (event: KeyboardEvent) => {
+      event.preventDefault();
+      onCancel();
+    },
+    [onCancel],
+  );
+
   return (
-    <Badge
-      variant="outline"
-      dir="ltr"
-      className={cn(CELL_BADGE_CLASS_NAME, "text-muted-foreground")}
+    <DataGridCell<TData>
+      {...props}
+      ref={containerRef}
+      onCancel={onCancel}
+      onMouseDown={isEditing ? onEditingCellMouseDown : undefined}
     >
-      +{count}
-    </Badge>
+      {Editor ? (
+        <CellEditorPopover
+          cell={cell}
+          open={isEditing}
+          readOnly={readOnly}
+          containerRef={containerRef}
+          className="min-w-(--radix-popover-trigger-width)"
+          onEscapeKeyDown={onEscapeKeyDown}
+          onKeyDown={onCellEditorKeyDown}
+        >
+          <Editor
+            value={draftValue}
+            pendingChar={isEditing ? getPendingChar(cell) : null}
+            onValueChange={onValueChange}
+            onCommit={onCommit}
+            onCancel={onCancel}
+          />
+        </CellEditorPopover>
+      ) : null}
+      {children ?? (
+        <span data-slot="data-grid-cell-content" dir="auto">
+          {serializeCellValue(value, meta)}
+        </span>
+      )}
+    </DataGridCell>
   );
 }
 
@@ -1438,7 +1503,6 @@ interface CellEditorPopoverProps<TData extends RowData> extends Omit<
   cell: DataGridCellProps<TData>["cell"];
   open: boolean;
   readOnly: boolean;
-  rowHeight: RowHeightValue;
   containerRef: React.RefObject<HTMLDivElement | null>;
   onOpenChange?: (open: boolean) => void;
   onOpenFocus?: () => void;
@@ -1449,7 +1513,6 @@ function CellEditorPopover<TData extends RowData>({
   cell,
   open,
   readOnly,
-  rowHeight,
   containerRef,
   onOpenChange,
   onOpenFocus,
@@ -1488,7 +1551,7 @@ function CellEditorPopover<TData extends RowData>({
         aria-label={getColumnLabel(cell.column)}
         data-grid-cell-editor=""
         align="start"
-        sideOffset={overlap ? getOverlapOffset(rowHeight) : 0}
+        sideOffset={overlap ? getOverlapOffset(cell) : 0}
         className={cn(CELL_EDITOR_CLASS_NAME, className)}
         onOpenAutoFocus={onOpenFocus ? onOpenAutoFocus : undefined}
         onPointerDownOutside={onPointerDownOutside}
@@ -1496,6 +1559,22 @@ function CellEditorPopover<TData extends RowData>({
         {...props}
       />
     </Popover>
+  );
+}
+
+interface OverflowBadgeProps {
+  count: number;
+}
+
+function OverflowBadge({ count }: OverflowBadgeProps) {
+  return (
+    <Badge
+      variant="outline"
+      dir="ltr"
+      className={cn(CELL_BADGE_CLASS_NAME, "text-muted-foreground")}
+    >
+      +{count}
+    </Badge>
   );
 }
 
@@ -1698,8 +1777,10 @@ function useCellEditorDismiss(
   return { onPointerDownOutside, onCloseAutoFocus };
 }
 
-function getOverlapOffset(rowHeight: RowHeightValue) {
-  return -getRowHeightValue(rowHeight) + CELL_BORDER_WIDTH;
+function getOverlapOffset<TData extends RowData>(
+  cell: DataGridCellProps<TData>["cell"],
+) {
+  return -cell.table.getRowSize() + CELL_BORDER_WIDTH;
 }
 
 function setCellEditing<TData extends RowData>(
@@ -1721,7 +1802,16 @@ function getPendingChar<TData extends RowData>(
 }
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
-  event.preventDefault();
+  if (
+    event.target instanceof Node &&
+    event.currentTarget.contains(event.target)
+  ) {
+    event.preventDefault();
+  }
+}
+
+function onCellEditorKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+  if (event.key === "Tab" || event.key === "Enter") event.stopPropagation();
 }
 
 function getOptionLabel(options: ColumnSelectOption[], value: string) {

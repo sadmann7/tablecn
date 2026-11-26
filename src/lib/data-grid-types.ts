@@ -75,8 +75,20 @@ export type ColumnVariantMeta =
 export type DataGridColumnMeta = {
   label?: string;
   icon?: React.ComponentType<React.ComponentProps<"svg">>;
+  editor?: React.ComponentType<CellEditorProps>;
+  parseValue?: (text: string) => unknown;
+  formatValue?: (value: unknown) => string;
+  emptyValue?: unknown;
   writeCell?: (element: HTMLElement, value: unknown) => void;
 } & ColumnVariantMeta;
+
+export interface CellEditorProps {
+  value: unknown;
+  pendingChar: string | null;
+  onValueChange: (value: unknown) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}
 
 export interface FileCellData {
   id: string;
