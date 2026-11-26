@@ -374,6 +374,7 @@ function DataGridRapidContent({
         table={table}
         height={height}
         stretchColumns
+        aria-label="Market quotes"
       />
     </div>
   );

@@ -11,6 +11,7 @@ import {
   defaultRangeExtractor,
   type Range,
   useVirtualizer,
+  type VirtualItem,
   type Virtualizer,
 } from "@tanstack/react-virtual";
 import { cn } from "cn";
@@ -26,6 +27,7 @@ import {
   getColumnBorderVisibility,
   getColumnPinningStyle,
   getHeaderSizeVar,
+  getRowDisplayIndex,
   getWindowedColumns,
 } from "@/lib/data-grid-utils";
 import { DataGridColumnHeader } from "@/registry/bases/radix/components/data-grid/data-grid-column-header";
@@ -69,6 +71,9 @@ export function DataGrid<TData extends RowData>({
   actionBar,
   onRowAdd,
   className,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: DataGridProps<TData>) {
   return (
@@ -97,6 +102,9 @@ export function DataGrid<TData extends RowData>({
         height={height}
         stretchColumns={stretchColumns}
         onRowAdd={onRowAdd}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-describedby={ariaDescribedBy}
       />
       {actionBar ? (
         <DataGridActionBar table={table} actionBar={actionBar} />
@@ -132,6 +140,9 @@ type DataGridViewportProps<TData extends RowData> = Pick<
   | "dir"
   | "adjustLayout"
   | "onRowAdd"
+  | "aria-label"
+  | "aria-labelledby"
+  | "aria-describedby"
 > &
   Required<Pick<DataGridProps<TData>, "height" | "stretchColumns">>;
 
@@ -151,6 +162,9 @@ function DataGridViewport<TData extends RowData>({
   height,
   stretchColumns,
   onRowAdd: onRowAddProp,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
 }: DataGridViewportProps<TData>) {
   const rows = table.getRowModel().rows;
   const rowSize = table.getRowSize();
@@ -209,6 +223,7 @@ function DataGridViewport<TData extends RowData>({
   }, [dataGridRef, headerRef, footerRef, insetsKey]);
 
   const isScrollJumpingRef = React.useRef(false);
+  const [jumpEndCount, setJumpEndCount] = React.useState(0);
 
   const rowRangeExtractor = React.useCallback(
     ({ startIndex, endIndex, overscan: overscanProp, count }: Range) => {
@@ -220,20 +235,36 @@ function DataGridViewport<TData extends RowData>({
           : direction === "backward"
             ? overscan * 2 - Math.ceil(overscan / 3)
             : overscan;
-      const viewportHeight = rowVirtualizerRef.current?.scrollRect?.height ?? 0;
-      const visibleCount =
-        viewportHeight > 0
-          ? Math.ceil(viewportHeight / rowSize) + 1
-          : endIndex - startIndex + 1;
-      const total = Math.min(count, visibleCount + overscan * 2);
-      const start = Math.max(0, Math.min(startIndex - before, count - total));
+      const total = getRowWindowSize({
+        viewportHeight: rowVirtualizerRef.current?.scrollRect?.height ?? 0,
+        rowSize,
+        overscan,
+        count,
+        fallbackVisibleCount: endIndex - startIndex + 1,
+      });
+      let start = Math.max(0, Math.min(startIndex - before, count - total));
+      const focusedRowId = table.getFocusedCell()?.row.id;
+      const focusedRowIndex =
+        focusedRowId === undefined
+          ? -1
+          : getRowDisplayIndex(table, focusedRowId);
+      // Row keys assume a contiguous window, so an adjacent focused row shifts it.
+      if (focusedRowIndex !== -1 && focusedRowIndex === start - 1) start--;
+      else if (focusedRowIndex === start + total) start++;
       const indexes: number[] = [];
+      if (focusedRowIndex !== -1 && focusedRowIndex < start) {
+        indexes.push(focusedRowIndex);
+      }
       for (let index = start; index < start + total; index++) {
         indexes.push(index);
       }
+      if (focusedRowIndex >= start + total && focusedRowIndex < count) {
+        indexes.push(focusedRowIndex);
+      }
       return indexes;
     },
-    [rowVirtualizerRef, rowSize],
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- a new row order moves the focused row and a finished jump restores overscan, so `rows` and `jumpEndCount` re-run the extractor
+    [table, rowVirtualizerRef, rowSize, rows, jumpEndCount],
   );
 
   const getRowKey = React.useCallback(
@@ -308,6 +339,12 @@ function DataGridViewport<TData extends RowData>({
   const deferredIsScrolling = React.useDeferredValue(isScrolling);
 
   useLayoutEffect(() => {
+    if (isScrollJumpingRef.current && !isScrollJumping) {
+      setJumpEndCount((count) => count + 1);
+    }
+  }, [isScrollJumping]);
+
+  useLayoutEffect(() => {
     committedScrollRef.current = {
       offset: scrollOffset,
       isJumping: isScrollJumping,
@@ -376,14 +413,28 @@ function DataGridViewport<TData extends RowData>({
     [leafColumns, readOnly, enableCellEditing],
   );
 
+  const headerRowCount = headerGroups.length;
+  const isRowSelectionEnabled =
+    table.options.enableRowSelection !== false &&
+    leafColumns.some((column) => column.id === "select");
+
   const rowContext = React.useMemo(
     () => ({
       stretchColumns,
       adjustLayout,
       readOnlyColumnIds,
       rowMapRef,
+      headerRowCount,
+      isRowSelectionEnabled,
     }),
-    [stretchColumns, adjustLayout, readOnlyColumnIds, rowMapRef],
+    [
+      stretchColumns,
+      adjustLayout,
+      readOnlyColumnIds,
+      rowMapRef,
+      headerRowCount,
+      isRowSelectionEnabled,
+    ],
   );
 
   const onRowAddRef = useValueAsRef(onRowAddProp);
@@ -394,6 +445,17 @@ function DataGridViewport<TData extends RowData>({
     },
     [onRowAddRef],
   );
+
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const focusedRowId = table.getFocusedCell()?.row.id;
+  const rowSlots = getRowSlots(virtualRows, {
+    focusedRowIndex:
+      focusedRowId === undefined ? -1 : getRowDisplayIndex(table, focusedRowId),
+    viewportHeight: rowVirtualizer.scrollRect?.height ?? 0,
+    rowSize,
+    overscan: rowVirtualizer.options.overscan,
+    count: rows.length,
+  });
 
   const onDataGridContextMenu = React.useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -417,8 +479,10 @@ function DataGridViewport<TData extends RowData>({
   return (
     <div
       role="grid"
-      aria-label="Data grid"
-      aria-rowcount={rows.length + 1 + (hasFooter ? 1 : 0)}
+      aria-label={ariaLabel || (ariaLabelledBy ? undefined : "Data grid")}
+      aria-labelledby={ariaLabelledBy || undefined}
+      aria-describedby={ariaDescribedBy}
+      aria-rowcount={rows.length + headerRowCount + (hasFooter ? 1 : 0)}
       aria-colcount={visibleColumnCount}
       aria-multiselectable="true"
       data-slot="data-grid"
@@ -462,13 +526,13 @@ function DataGridViewport<TData extends RowData>({
           }
         >
           <DataGridRowContext value={rowContext}>
-            {rowVirtualizer.getVirtualItems().map((virtualItem, _, items) => {
+            {virtualRows.map((virtualItem) => {
               const row = rows[virtualItem.index];
               if (!row) return null;
 
               return (
                 <DataGridRow
-                  key={virtualItem.index % items.length}
+                  key={getRowSlotKey(virtualItem.index, rowSlots)}
                   row={row}
                   leafColumns={leafColumns}
                   virtualItem={virtualItem}
@@ -489,7 +553,7 @@ function DataGridViewport<TData extends RowData>({
         >
           <div
             role="row"
-            aria-rowindex={rows.length + 2}
+            aria-rowindex={headerRowCount + rows.length + 1}
             data-slot="data-grid-add-row"
             tabIndex={-1}
             className="flex w-full"
@@ -530,6 +594,84 @@ function getColumnsWidth<TData extends RowData>(
   let width = 0;
   for (const column of columns) width += column.getSize();
   return width;
+}
+
+interface RowSlots {
+  windowLength: number;
+  spareKey: number;
+  anchorIndex: number | null;
+}
+
+function getRowWindowSize({
+  viewportHeight,
+  rowSize,
+  overscan,
+  count,
+  fallbackVisibleCount,
+}: {
+  viewportHeight: number;
+  rowSize: number;
+  overscan: number;
+  count: number;
+  fallbackVisibleCount: number;
+}) {
+  const visibleCount =
+    viewportHeight > 0
+      ? Math.ceil(viewportHeight / rowSize) + 1
+      : fallbackVisibleCount;
+  return Math.min(count, visibleCount + overscan * 2);
+}
+
+// Window rows are keyed by the current window length, so a scroll jump that shrinks
+// the window still reuses every row. The focused row keeps a key from the full window
+// size, so it stays mounted while the window shrinks around it or it gets pinned.
+function getRowSlots(
+  items: VirtualItem[],
+  {
+    focusedRowIndex,
+    ...windowOptions
+  }: { focusedRowIndex: number } & Omit<
+    Parameters<typeof getRowWindowSize>[0],
+    "fallbackVisibleCount"
+  >,
+): RowSlots {
+  const first = items[0];
+  const second = items[1];
+  const last = items.at(-1);
+  const pinnedIndex =
+    first && second && last && last.index - first.index + 1 !== items.length
+      ? second.index - first.index > 1
+        ? first.index
+        : last.index
+      : null;
+  const windowLength = Math.max(
+    pinnedIndex === null ? items.length : items.length - 1,
+    1,
+  );
+  const spareKey = Math.max(
+    windowLength,
+    getRowWindowSize({ ...windowOptions, fallbackVisibleCount: windowLength }),
+  );
+  const isFocusedRowMounted =
+    focusedRowIndex !== -1 &&
+    items.some((item) => item.index === focusedRowIndex);
+  return {
+    windowLength,
+    spareKey,
+    anchorIndex: pinnedIndex ?? (isFocusedRowMounted ? focusedRowIndex : null),
+  };
+}
+
+// The window row that shares the anchor's key takes the spare one.
+function getRowSlotKey(
+  index: number,
+  { windowLength, spareKey, anchorIndex }: RowSlots,
+) {
+  if (anchorIndex === null) return index % windowLength;
+  const anchorKey = anchorIndex % spareKey;
+  if (index === anchorIndex) return anchorKey;
+  const key = index % windowLength;
+  return key === anchorKey ? spareKey : key;
 }
 
 function getColumnWindowKey(params: {

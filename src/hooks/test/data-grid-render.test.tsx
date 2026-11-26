@@ -16,7 +16,10 @@ import { insertTextAtSelection } from "@/lib/data-grid-utils";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { getDataGridActionsColumn } from "@/registry/bases/radix/components/data-grid/data-grid-actions-column";
 import { getDataGridSelectColumn } from "@/registry/bases/radix/components/data-grid/data-grid-select-column";
-import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
+import {
+  useDataGrid,
+  type UseDataGridProps,
+} from "@/registry/bases/radix/hooks/use-data-grid";
 
 vi.mock("sonner", () => ({
   toast: {
@@ -341,6 +344,50 @@ describe("DataGrid rendering", () => {
     expect(screen.getByRole("textbox")).toHaveProperty("value", "900x");
   });
 
+  it("names the grid from aria-label or aria-labelledby", () => {
+    const { unmount } = renderDataGrid(testColumns, {
+      gridProps: { "aria-label": "Skaters" },
+    });
+    expect(screen.getByRole("grid", { name: "Skaters" })).toBeDefined();
+    expect(
+      document.querySelector('[data-slot="data-grid-wrapper"][aria-label]'),
+    ).toBeNull();
+    unmount();
+
+    render(<h2 id="grid-title">Pros</h2>);
+    renderDataGrid(testColumns, {
+      gridProps: { "aria-labelledby": "grid-title" },
+    });
+    const grid = screen.getByRole("grid", { name: "Pros" });
+    expect(grid.getAttribute("aria-label")).toBeNull();
+  });
+
+  it("falls back to a generic grid name without a label", () => {
+    const { unmount } = renderDataGrid();
+    expect(screen.getByRole("grid", { name: "Data grid" })).toBeDefined();
+    unmount();
+
+    renderDataGrid(testColumns, {
+      gridProps: { "aria-label": "", "aria-labelledby": "" },
+    });
+    expect(screen.getByRole("grid", { name: "Data grid" })).toBeDefined();
+  });
+
+  it("describes the grid from aria-describedby", () => {
+    render(<p id="grid-hint">Press Enter to edit.</p>);
+    renderDataGrid(testColumns, {
+      gridProps: { "aria-describedby": "grid-hint" },
+    });
+    expect(
+      screen.getByRole("grid", { description: "Press Enter to edit." }),
+    ).toBeDefined();
+    expect(
+      document.querySelector(
+        '[data-slot="data-grid-wrapper"][aria-describedby]',
+      ),
+    ).toBeNull();
+  });
+
   it("moves the focus highlight between rows without re-rendering the hook", () => {
     const { container, table, getHookRenderCount } = renderDataGrid();
     expect(getCellWrapper(container, "1", "name")).not.toBeNull();
@@ -469,7 +516,10 @@ describe("DataGrid rendering", () => {
   });
 
   it("hides the focused cell while a column header has focus", () => {
-    const { container, table } = renderDataGrid();
+    const { container, table } = renderDataGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
 
     act(() => {
       table.getRow("1").toggleSelected(true);
@@ -544,6 +594,159 @@ describe("DataGrid rendering", () => {
 
     expect(onEscapeKeyDown).toHaveBeenCalledOnce();
     expect(table.atoms.rowSelection.get()).toEqual({});
+  });
+
+  it("moves from the focused grid back into the last focused cell", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      table.setFocusedCell("2", "trick");
+      getCellWrapper(container, "2", "trick")?.focus();
+    });
+    act(() => {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    });
+    expect(document.activeElement).toBe(grid);
+    expect(table.getFocusedCell()).toBeUndefined();
+
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowDown",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("2_trick");
+    expect(document.activeElement).toBe(
+      getCellWrapper(container, "2", "trick"),
+    );
+  });
+
+  it("moves from the focused grid back to the cell left through a column header", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+    const press = (target: Element | null, key: string) =>
+      act(() => {
+        target?.dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      });
+
+    act(() => {
+      table.setFocusedCell("2", "trick");
+      getCellWrapper(container, "2", "trick")?.focus();
+    });
+    press(document.activeElement, "Escape");
+    press(grid, "ArrowDown");
+    expect(table.getFocusedCell()?.id).toBe("2_trick");
+
+    act(() => {
+      table.setFocusedCell("1", "name");
+      getCellWrapper(container, "1", "name")?.focus();
+    });
+    press(document.activeElement, "ArrowUp");
+    expect(document.activeElement).toBe(getHeaderTrigger(container, "name"));
+    press(document.activeElement, "Escape");
+    expect(document.activeElement).toBe(grid);
+
+    press(grid, "ArrowDown");
+    expect(table.getFocusedCell()?.id).toBe("1_name");
+    expect(document.activeElement).toBe(getCellWrapper(container, "1", "name"));
+  });
+
+  it("moves from the focused grid back to a cell focused through initial state", () => {
+    const { table } = renderDataGrid(testColumns, {
+      initialState: {
+        cellSelection: [
+          {
+            anchorRowId: "3",
+            anchorColumnId: "trick",
+            focusRowId: "3",
+            focusColumnId: "trick",
+          },
+        ],
+      },
+    });
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      table.resetCellSelection(true);
+      grid.focus();
+    });
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "ArrowDown",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("3_trick");
+  });
+
+  it("leaves modified keys on the focused grid alone", () => {
+    const { table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+    const event = new KeyboardEvent("keydown", {
+      key: "Home",
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+
+    act(() => {
+      grid.focus();
+      grid.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
+    expect(table.getFocusedCell()).toBeUndefined();
+  });
+
+  it("moves from the focused grid into the first cell without a previous cell", () => {
+    const { container, table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+
+    act(() => {
+      grid.focus();
+    });
+    act(() => {
+      grid.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Home",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    });
+    expect(table.getFocusedCell()?.id).toBe("1_name");
+    expect(document.activeElement).toBe(getCellWrapper(container, "1", "name"));
+  });
+
+  it("leaves Tab on the focused grid to the browser", () => {
+    const { table } = renderDataGrid();
+    const grid = screen.getByRole("grid");
+    const event = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+
+    act(() => {
+      grid.focus();
+      grid.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
+    expect(table.getFocusedCell()).toBeUndefined();
   });
 
   it("keeps the selection on Escape when onEscapeKeyDown prevents the default", () => {
@@ -790,6 +993,148 @@ describe("DataGrid rendering", () => {
     );
   });
 
+  it("keeps the focused row mounted and focused when it scrolls out of view", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    const manyRows = Array.from({ length: 200 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${index + 1}`,
+      trick: "Kickflip",
+    }));
+    const { container, table } = renderDataGrid(testColumns, {
+      data: manyRows,
+    });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    await scrollTo(50);
+    act(() => {
+      table.setFocusedCell("55", "name");
+      getCellWrapper(container, "55", "name")?.focus();
+    });
+    const focusedCell = getCellWrapper(container, "55", "name");
+    expect(document.activeElement).toBe(focusedCell);
+
+    for (let rowCount = 51; rowCount <= 90; rowCount++) {
+      await scrollTo(rowCount);
+    }
+    await scrollTo(150);
+
+    expect(getCellWrapper(container, "160", "name")).not.toBeNull();
+    expect(getCellWrapper(container, "55", "name")).toBe(focusedCell);
+    expect(document.activeElement).toBe(focusedCell);
+    expect(
+      consoleError.mock.calls.some((args) =>
+        String(args[0]).includes("same key"),
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the focused row through a scroll jump and a re-sort", async () => {
+    const manyRows = Array.from({ length: 400 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${String(index + 1).padStart(3, "0")}`,
+      trick: "Kickflip",
+    }));
+    const { container, table } = renderDataGrid(testColumns, {
+      data: manyRows,
+    });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    await scrollTo(50);
+    act(() => {
+      table.setFocusedCell("55", "name");
+      getCellWrapper(container, "55", "name")?.focus();
+    });
+    const focusedCell = getCellWrapper(container, "55", "name");
+
+    for (const rowCount of [150, 250, 251, 252]) {
+      await scrollTo(rowCount);
+      expect(getCellWrapper(container, "55", "name")).toBe(focusedCell);
+    }
+    expect(document.activeElement).toBe(focusedCell);
+
+    act(() => {
+      table.setSorting([{ id: "name", desc: true }]);
+    });
+    expect(getCellWrapper(container, "55", "name")).not.toBeNull();
+    expect(
+      container
+        .querySelector('[data-slot="data-grid-row"][aria-rowindex="57"]')
+        ?.querySelector('[data-column-id="name"]')?.textContent,
+    ).not.toBe("Skater 055");
+  });
+
+  it("reuses every row through a run of scroll jumps", async () => {
+    const manyRows = Array.from({ length: 2000 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${index + 1}`,
+      trick: "Kickflip",
+    }));
+    const { container } = renderDataGrid(testColumns, { data: manyRows });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    const getRowNodes = () =>
+      Array.from(container.querySelectorAll('[data-slot="data-grid-row"]'));
+    await scrollTo(100);
+    const seen = new Set(getRowNodes());
+    for (let rowCount = 200; rowCount <= 1800; rowCount += 100) {
+      await scrollTo(rowCount);
+      for (const row of getRowNodes()) expect(seen).toContain(row);
+    }
+  });
+
+  it("keeps a row focused after a scroll jump mounted on the next scroll", async () => {
+    const manyRows = Array.from({ length: 2000 }, (_, index) => ({
+      id: String(index + 1),
+      name: `Skater ${index + 1}`,
+      trick: "Kickflip",
+    }));
+    const { container, table } = renderDataGrid(testColumns, {
+      data: manyRows,
+    });
+    const grid = screen.getByRole("grid");
+
+    async function scrollTo(rowCount: number) {
+      await act(async () => {
+        grid.scrollTop = 36 * rowCount;
+        grid.dispatchEvent(new Event("scroll"));
+      });
+    }
+
+    for (const rowCount of [100, 200, 300, 1000]) await scrollTo(rowCount);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
+    act(() => {
+      table.setFocusedCell("1009", "name");
+      getCellWrapper(container, "1009", "name")?.focus();
+    });
+    const focusedCell = getCellWrapper(container, "1009", "name");
+    expect(document.activeElement).toBe(focusedCell);
+
+    await scrollTo(1001);
+    expect(getCellWrapper(container, "1009", "name")).toBe(focusedCell);
+    expect(document.activeElement).toBe(focusedCell);
+  });
+
   it("only mounts the columns inside the horizontal viewport", () => {
     const wideColumns = Array.from(
       { length: 30 },
@@ -943,6 +1288,47 @@ describe("DataGrid rendering", () => {
     ).toBe(getCellWrapper(container, "1", "name"));
   });
 
+  it("marks rows as selectable only with a select column", () => {
+    const { unmount } = renderDataGrid();
+    expect(screen.getByRole("grid").getAttribute("aria-multiselectable")).toBe(
+      "true",
+    );
+    expect(
+      document.querySelectorAll('[data-slot="data-grid-row"][aria-selected]'),
+    ).toHaveLength(0);
+    unmount();
+
+    const { table } = renderDataGrid([
+      getDataGridSelectColumn(),
+      ...testColumns,
+    ]);
+    act(() => {
+      table.getRow("2").toggleSelected(true);
+    });
+    expect(
+      [...document.querySelectorAll('[data-slot="data-grid-row"]')].map((row) =>
+        row.getAttribute("aria-selected"),
+      ),
+    ).toEqual(["false", "true", "false"]);
+  });
+
+  it("indexes rows after every header row", () => {
+    renderDataGrid([
+      {
+        id: "skater",
+        header: "Skater",
+        columns: testColumns,
+      },
+    ]);
+
+    expect(screen.getByRole("grid").getAttribute("aria-rowcount")).toBe("5");
+    expect(
+      screen
+        .getAllByRole("row")
+        .map((row) => row.getAttribute("aria-rowindex")),
+    ).toEqual(["1", "2", "3", "4", "5"]);
+  });
+
   it("counts the header row in aria-rowcount", () => {
     renderDataGrid();
 
@@ -977,22 +1363,34 @@ function renderDataGrid(
   columns = testColumns,
   {
     onEscapeKeyDown,
-  }: { onEscapeKeyDown?: (event: KeyboardEvent) => void } = {},
+    data = testData,
+    initialState,
+    gridProps,
+  }: {
+    onEscapeKeyDown?: (event: KeyboardEvent) => void;
+    data?: TestData[];
+    initialState?: UseDataGridProps<TestData>["initialState"];
+    gridProps?: Pick<
+      React.ComponentProps<"div">,
+      "aria-label" | "aria-labelledby" | "aria-describedby"
+    >;
+  } = {},
 ) {
   const gridRef: { current?: ReturnType<typeof useDataGrid<TestData>> } = {};
   let hookRenderCount = 0;
 
   function Harness() {
     const dataGrid = useDataGrid({
-      data: testData,
+      data,
       columns,
       getRowId: (row) => row.id,
       enableSearch: true,
       onEscapeKeyDown,
+      initialState,
     });
     hookRenderCount++;
     gridRef.current = dataGrid;
-    return <DataGrid {...dataGrid} />;
+    return <DataGrid {...dataGrid} {...gridProps} />;
   }
 
   const view = render(<Harness />);

@@ -180,10 +180,21 @@ function useDataTable<TData extends RowData>({
     queryStateOptions,
   );
 
+  const lastPage =
+    isServer && pageCount !== undefined && pageCount >= 0
+      ? Math.max(pageCount, 1)
+      : Number.POSITIVE_INFINITY;
+  const shownPage = Math.min(page, lastPage);
+
   const pagination = React.useMemo<PaginationState>(
-    () => ({ pageIndex: page - 1, pageSize: perPage }),
-    [page, perPage],
+    () => ({ pageIndex: shownPage - 1, pageSize: perPage }),
+    [shownPage, perPage],
   );
+
+  React.useEffect(() => {
+    if (page === shownPage) return;
+    void setQueryState({ page: shownPage });
+  }, [page, shownPage, setQueryState]);
 
   const getNextPagination = useChainedUpdate(pagination);
 

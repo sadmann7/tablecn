@@ -555,7 +555,12 @@ export function DataGridMultiplayerDemo({
             <AlertDescription>Retrying in the background.</AlertDescription>
           </Alert>
         )}
-        <DataGrid {...dataGridProps} table={table} height={height} />
+        <DataGrid
+          {...dataGridProps}
+          table={table}
+          height={height}
+          aria-label="Skaters"
+        />
         <SkatersDataGridActionBar
           table={table}
           statusOptions={statusOptions}

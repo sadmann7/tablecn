@@ -8,7 +8,8 @@ import {
   type Table,
 } from "@tanstack/react-table";
 import { act, render, renderHook } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -2135,6 +2136,190 @@ describe("useDataGrid", () => {
       expect(
         result.current.table.getRowModel().rows.map((row) => row.id),
       ).toEqual(["2", "1", "0"]);
+    });
+
+    it("shows the restored data after a failed optimistic edit", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setData };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Will fail",
+        });
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Will fail",
+      );
+
+      act(() => {
+        result.current.setData(testData);
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Tony Hawk",
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Next edit",
+        });
+      });
+      expect(onDataChange).toHaveBeenLastCalledWith(
+        [testData[0], { ...testData[1], name: "Next edit" }, testData[2]],
+        expect.anything(),
+      );
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Tony Hawk",
+      );
+    });
+
+    it("builds the next edit on the restored data without reading rows in between", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setData };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Will fail",
+        });
+      });
+      act(() => {
+        result.current.setData(testData);
+      });
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Next edit",
+        });
+      });
+
+      expect(onDataChange).toHaveBeenLastCalledWith(
+        [testData[0], { ...testData[1], name: "Next edit" }, testData[2]],
+        expect.anything(),
+      );
+    });
+
+    it("keeps an edit made in a transition when a sync render lands first", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const [, setTick] = useState(0);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setTick };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        startTransition(() => {
+          result.current.table.updateCells({
+            rowId: "0",
+            columnId: "name",
+            value: "First",
+          });
+        });
+        flushSync(() => {
+          result.current.setTick((tick) => tick + 1);
+        });
+        result.current.table.updateCells({
+          rowId: "1",
+          columnId: "name",
+          value: "Second",
+        });
+      });
+
+      expect(onDataChange).toHaveBeenLastCalledWith(
+        [
+          { ...testData[0], name: "First" },
+          { ...testData[1], name: "Second" },
+          testData[2],
+        ],
+        expect.anything(),
+      );
+    });
+
+    it("drops undo history that a rollback made stale", () => {
+      const onDataChange = vi.fn();
+      const { result } = renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          const grid = useDataGrid({
+            data,
+            onDataChange: (nextData, details) => {
+              onDataChange(nextData, details);
+              setData(nextData);
+            },
+            columns: testColumns,
+          });
+          return { ...grid, setData };
+        },
+        { wrapper: createWrapper() },
+      );
+
+      act(() => {
+        result.current.table.updateCells({
+          rowId: "0",
+          columnId: "name",
+          value: "Will fail",
+        });
+      });
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Will fail",
+      );
+      act(() => {
+        result.current.setData(testData);
+      });
+      onDataChange.mockClear();
+
+      act(() => {
+        result.current.table.undo();
+      });
+      expect(onDataChange).not.toHaveBeenCalled();
+      expect(result.current.table.getCanUndo()).toBe(false);
+      expect(result.current.table.getRow("0").getValue("name")).toBe(
+        "Tony Hawk",
+      );
     });
 
     it("starts over from a new data prop without onDataChange", () => {

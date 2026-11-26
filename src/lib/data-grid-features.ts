@@ -56,6 +56,7 @@ import type {
 } from "@/lib/data-grid-types";
 
 import {
+  coreRowModelVersions,
   createDataGridCoreRowModel,
   createDataGridFilteredRowModel,
   createDataGridSortedRowModel,
@@ -645,7 +646,11 @@ interface CellUpdateStore {
   copies: Map<string, { base: unknown; copy: RowValues }>;
   notify: Set<CellListeners>;
   recordedCells: Map<string, Set<string>>;
-  reported: { from: readonly RowData[]; data: RowData[] } | null;
+  reported: {
+    from: readonly RowData[];
+    data: RowData[];
+    coreRowModelVersion: number | undefined;
+  } | null;
   undoStack: HistoryEntry[];
   redoStack: HistoryEntry[];
   isHistorySealed: boolean;
@@ -1083,8 +1088,12 @@ function notifyCells(store: CellUpdateStore) {
 }
 
 function getCurrentData(table: DataGridInstance, store: CellUpdateStore) {
+  const { reported } = store;
   const { data } = table.options;
-  return store.reported?.from === data ? store.reported.data : data;
+  return reported?.from === data &&
+    reported.coreRowModelVersion === coreRowModelVersions.get(table)
+    ? reported.data
+    : data;
 }
 
 function getDataIndex(
@@ -1114,7 +1123,12 @@ function reportDataChange(
   nextData: RowData[],
   details: Omit<DataChangeDetails<RowData>, "reason">,
 ) {
-  store.reported = { from: table.options.data, data: nextData };
+  table.getCoreRowModel();
+  store.reported = {
+    from: table.options.data,
+    data: nextData,
+    coreRowModelVersion: coreRowModelVersions.get(table),
+  };
   table.options.onDataChange?.(nextData, {
     reason: store.reason ?? "update-cells",
     ...details,
