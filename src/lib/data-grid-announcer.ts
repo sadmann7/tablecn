@@ -63,9 +63,6 @@ const CLEAR_DELAY = 5000;
 
 let announcer: Announcer | null = null;
 
-/**
- * Reads a message to screen readers, keeping only the last of a quick burst.
- */
 export function announce(
   message: string,
   { assertiveness = "polite", delay = ANNOUNCE_DELAY }: AnnounceOptions = {},
@@ -80,9 +77,6 @@ export function announce(
   region.timer = setTimeout(() => flush(current, region), delay);
 }
 
-/**
- * Removes the live regions and drops pending messages.
- */
 export function destroyAnnouncer() {
   if (!announcer) return;
   for (const region of Object.values(announcer.regions)) {

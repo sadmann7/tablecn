@@ -84,7 +84,6 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
-  /** Overrides the screen reader announcements for sorting, selection and edits. */
   messages?: Partial<DataGridMessages>;
 }
 

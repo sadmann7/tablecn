@@ -167,11 +167,8 @@ type UseDataTableProps<TData extends RowData> = Omit<
   > & {
     debounceMs?: number;
     config?: DataTableConfigInput;
-    /** Overrides the screen reader announcements for sorting, result counts and load failures. */
     messages?: Partial<DataTableMessages>;
-    /** The sorting, filters, join operator, search and page, held by the app instead of the URL, so the table needs no nuqs adapter. */
     query?: DataQuery;
-    /** Runs with the next query when the table changes a controlled `query`. */
     onQueryChange?: (query: DataQuery) => void;
     initialState?: Omit<
       InitialTableState,
@@ -202,7 +199,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
       })
     | (StatusProps<TData> & {
         mode?: "server";
-        /** The rows and total row count for the current `query`, fetched outside the table, in place of `data` and `pageCount`. */
         result: DataResult<TData> | undefined;
         data?: never;
         pageCount?: never;
@@ -212,9 +208,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
       })
     | {
         mode?: "server";
-        /** Fetches the rows for each `query`, so the table owns the loading, refreshing and error states. */
         fetcher: DataFetcher<TData>;
-        /** Pages by `page` with a pager, or by `cursor` with a Load more row that appends each page. */
         pagination?: "offset" | "cursor";
         data?: never;
         result?: never;
@@ -580,7 +574,6 @@ interface UseDataTableQueryProps<TData extends RowData> {
   columns?: TableOptions<DataTableFeatures, TData>["columns"];
 }
 
-/** Reads the current `DataQuery` from the URL, so it can be fetched before the table is created with its `result`. */
 function useDataTableQuery<TData extends RowData>({
   config: configProp,
   columns = [],

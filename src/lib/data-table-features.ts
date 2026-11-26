@@ -76,13 +76,9 @@ interface Table_DataTableFiltering {
 }
 
 interface TableOptions_DataTableStatus {
-  /** Whether the rows are loading for the first time, refreshing, or failed to load. */
   status?: DataStatus;
-  /** The reason the rows failed to load, shown while `status` is `"error"`. */
   error?: unknown;
-  /** Runs when the Retry button of the error state is pressed. */
   onRetry?: () => void;
-  /** Turns on cursor pagination: a Load more row replaces the pager. */
   loadMore?: DataLoadMore;
 }
 

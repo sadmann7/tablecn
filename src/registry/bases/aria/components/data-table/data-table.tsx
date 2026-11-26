@@ -156,7 +156,6 @@ function DataTableLayout<TData extends RowData>({
               className="table-fixed"
               style={getColumnSizingStyle(table)}
               {...props}
-              // React Aria's Table drops aria-busy; it renders a table when not virtualized.
               render={(tableProps) => (
                 <table
                   {...(tableProps as React.ComponentProps<"table">)}
@@ -608,7 +607,6 @@ function DataTableRowImpl<TData extends RowData>({
             rowIndex !== undefined &&
               "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
           )}
-          // React Aria's Row sets aria-rowindex only when virtualized; it renders a tr otherwise.
           render={(rowProps) => {
             const props = rowProps as React.ComponentProps<"tr">;
             return (
