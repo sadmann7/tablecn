@@ -130,6 +130,9 @@ interface Table_DataGridCellEditing {
   setEditingCell: (updater: Updater<EditingCell | null>) => void;
   resetEditingCell: (defaultState?: boolean) => void;
   stopEditing: (options?: StopEditingOptions) => void;
+  getEditingDraft: () => { value: unknown } | null;
+  setEditingDraft: (value: unknown) => void;
+  discardEditingDraft: () => void;
 }
 
 interface Column_DataGridCellEditing {
@@ -456,6 +459,12 @@ const dataGridRowHeightFeature: TableFeature = {
   },
 };
 
+interface EditingDraft extends CellPosition {
+  value: unknown;
+}
+
+const editingDrafts = new WeakMap<object, EditingDraft>();
+
 const dataGridCellEditingFeature: TableFeature = {
   getInitialState: (initialState) => ({
     editingCell: null,
@@ -477,6 +486,7 @@ const dataGridCellEditingFeature: TableFeature = {
         previous?.rowId !== next?.rowId ||
         previous?.columnId !== next?.columnId
       ) {
+        commitEditingDraft(instance);
         sealHistory(instance);
       }
       setStateSlice(instance, "editingCell", next);
@@ -503,6 +513,15 @@ const dataGridCellEditingFeature: TableFeature = {
             ? "down"
             : options?.direction;
           if (direction) instance.navigate(direction);
+        },
+      },
+      table_getEditingDraft: { fn: () => getEditingDraft(instance) },
+      table_setEditingDraft: {
+        fn: (value: unknown) => setEditingDraft(instance, value),
+      },
+      table_discardEditingDraft: {
+        fn: () => {
+          editingDrafts.delete(instance);
         },
       },
     });
@@ -555,6 +574,42 @@ function getCanEditColumn<TData extends RowData>(
     column.columnDef.enableCellEditing !== false &&
     !getHasCustomCell(column)
   );
+}
+
+function getEditingDraft(table: DataGridInstance) {
+  const draft = editingDrafts.get(table);
+  const editingCell = table.atoms.editingCell.get();
+  if (
+    !draft ||
+    draft.rowId !== editingCell?.rowId ||
+    draft.columnId !== editingCell.columnId
+  ) {
+    return null;
+  }
+  return { value: draft.value };
+}
+
+function setEditingDraft(table: DataGridInstance, value: unknown) {
+  const editingCell = table.atoms.editingCell.get();
+  if (!editingCell) return;
+  editingDrafts.set(table, {
+    rowId: editingCell.rowId,
+    columnId: editingCell.columnId,
+    value,
+  });
+}
+
+function commitEditingDraft(table: DataGridInstance) {
+  const draft = editingDrafts.get(table);
+  if (!draft) return;
+  editingDrafts.delete(table);
+  const row = table.getCoreRowModel().rowsById[draft.rowId];
+  if (!row || Object.is(row.getValue(draft.columnId), draft.value)) return;
+  updateEditableCells(table, {
+    rowId: draft.rowId,
+    columnId: draft.columnId,
+    value: draft.value,
+  });
 }
 
 const dataGridColumnOrderingFeature: TableFeature = {

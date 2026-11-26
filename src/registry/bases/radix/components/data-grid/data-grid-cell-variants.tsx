@@ -1423,33 +1423,24 @@ export function EditorCell<TData extends RowData>({
   const meta = cell.column.columnDef.meta;
   const Editor = meta?.editor;
   const value = useCellValue(cell);
+  const pendingDraft = isEditing ? cell.table.getEditingDraft() : null;
   const {
     value: draftValue,
     setDraftValue,
     clearDraft,
   } = useCellDraft<unknown>({
     key: value,
-    fallback: value,
+    fallback: pendingDraft ? pendingDraft.value : value,
     enabled: isEditing,
   });
-  const draftRef = React.useRef<{ value: unknown } | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
-
-  React.useEffect(() => {
-    const draft = draftRef.current;
-    if (isEditing || !draft) return;
-    draftRef.current = null;
-    if (!readOnly && !Object.is(draft.value, cell.getValue())) {
-      cell.setValue(draft.value);
-    }
-  }, [cell, isEditing, readOnly]);
 
   const onValueChange = React.useCallback(
     (newValue: unknown) => {
-      draftRef.current = { value: newValue };
+      cell.table.setEditingDraft(newValue);
       setDraftValue(newValue);
     },
-    [setDraftValue],
+    [cell, setDraftValue],
   );
 
   const onCommit = React.useCallback(() => {
@@ -1457,7 +1448,7 @@ export function EditorCell<TData extends RowData>({
   }, [cell]);
 
   const onCancel = React.useCallback(() => {
-    draftRef.current = null;
+    cell.table.discardEditingDraft();
     clearDraft();
     cell.table.stopEditing();
   }, [cell, clearDraft]);
