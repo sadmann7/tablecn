@@ -85,7 +85,7 @@ test("joinOperator=or is the join shown between filters", async ({ page }) => {
   await expect(rows.first()).toBeVisible();
   const statuses = await rows.evaluateAll((elements) =>
     elements.map(
-      (row) => row.querySelectorAll("td")[3]?.textContent?.trim() ?? "",
+      (row) => row.querySelectorAll("td, th")[3]?.textContent?.trim() ?? "",
     ),
   );
   expect(statuses.some((status) => status !== "todo")).toBe(true);
@@ -159,7 +159,7 @@ function dataRows(page: Page) {
 }
 
 function cell(row: Locator, index: number) {
-  return row.getByRole("cell").nth(index);
+  return row.locator("td, th").nth(index);
 }
 
 async function filterColumns(page: Page) {
