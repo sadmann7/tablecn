@@ -153,14 +153,28 @@ describe("useDataTable controlled query", () => {
   it("keeps the first visible row when only the page size changes", () => {
     const { result, onQueryChange } = renderControlled({
       ...config.defaultQuery,
-      page: { index: 10, size: 10 },
+      page: { index: 4, size: 10 },
     });
 
-    act(() => result.current.table.setPageSize(50));
+    act(() => result.current.table.setPageSize(20));
 
     expect(onQueryChange.mock.lastCall?.[0].page).toEqual({
       index: 2,
-      size: 50,
+      size: 20,
+    });
+  });
+
+  it("moves a page past the last page to the last page", () => {
+    const { result, onQueryChange } = renderControlled({
+      ...config.defaultQuery,
+      page: { index: 10, size: 10 },
+    });
+
+    expect(result.current.table.state.pagination.pageIndex).toBe(4);
+    expect(onQueryChange).toHaveBeenCalledOnce();
+    expect(onQueryChange.mock.lastCall?.[0].page).toEqual({
+      index: 4,
+      size: 10,
     });
   });
 

@@ -344,10 +344,26 @@ function useDataTable<TData extends RowData>({
   );
   const { sorting, joinOperator } = query;
 
+  const lastPageIndex =
+    isServer && pageCount !== undefined && pageCount >= 0
+      ? Math.max(pageCount, 1) - 1
+      : Number.POSITIVE_INFINITY;
+  const pageIndex = Math.min(query.page.index, lastPageIndex);
+
   const pagination = React.useMemo<PaginationState>(
-    () => ({ pageIndex: query.page.index, pageSize: query.page.size }),
-    [query.page],
+    () => ({ pageIndex, pageSize: query.page.size }),
+    [pageIndex, query.page.size],
   );
+
+  const setQueryRef = React.useRef(setQuery);
+  useIsomorphicLayoutEffect(() => {
+    setQueryRef.current = setQuery;
+  });
+
+  React.useEffect(() => {
+    if (query.page.index === pageIndex) return;
+    setQueryRef.current({ page: { index: pageIndex } });
+  }, [query.page.index, pageIndex]);
 
   const getNextPagination = useChainedUpdate(pagination);
 

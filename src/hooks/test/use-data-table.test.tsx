@@ -177,6 +177,39 @@ describe("useDataTable", () => {
     expect(getLastSearch()?.get("joinOperator")).toBe("or");
   });
 
+  it("moves a page past the server's last page to the last page", async () => {
+    const { result, getLastSearch } = renderDataTable("?page=999", {
+      pageCount: 4,
+    });
+
+    expect(result.current.table.state.pagination.pageIndex).toBe(3);
+    await waitFor(() => expect(getLastSearch()?.get("page")).toBe("4"));
+  });
+
+  it("moves a page to page 1 when the server has no rows", async () => {
+    const { result, updates } = renderDataTable("?page=999", {
+      pageCount: 0,
+    });
+
+    expect(result.current.table.state.pagination.pageIndex).toBe(0);
+    await waitFor(() => expect(updates).toHaveLength(1));
+    expect(updates[0]?.searchParams.has("page")).toBe(false);
+  });
+
+  it("keeps the page when the server's page count is unknown or the table is client-side", async () => {
+    const unknown = renderDataTable("?page=999", { pageCount: -1 });
+    const client = renderDataTable("?page=999", {
+      mode: "client",
+      pageCount: undefined,
+    });
+
+    expect(unknown.result.current.table.state.pagination.pageIndex).toBe(998);
+    expect(client.result.current.table.state.pagination.pageIndex).toBe(998);
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(unknown.updates).toHaveLength(0);
+    expect(client.updates).toHaveLength(0);
+  });
+
   it("resets the page with the filter and writes both in one URL update", async () => {
     vi.useFakeTimers();
     const tasks: Task[] = Array.from({ length: 30 }, (_, index) => ({
