@@ -7,7 +7,7 @@ import {
   type SortingState,
   type Table,
 } from "@tanstack/react-table";
-import { act, render, renderHook } from "@testing-library/react";
+import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { startTransition, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -6011,6 +6011,137 @@ describe("useDataGrid", () => {
       expect(mockClipboard.writeText).toHaveBeenCalledWith(
         "Rodney Mullen\nTony Hawk",
       );
+    });
+  });
+
+  describe("announcements", () => {
+    function getAnnouncement() {
+      return (
+        document.querySelector('[data-live-announcer="polite"]')?.textContent ??
+        ""
+      );
+    }
+
+    function renderAnnouncedGrid(
+      options: Partial<UseDataGridProps<TestData>> = {},
+    ) {
+      return renderHook(
+        () => {
+          const [data, setData] = useState(testData);
+          return useDataGrid({
+            data,
+            onDataChange: setData,
+            columns: [
+              {
+                id: "name",
+                accessorKey: "name",
+                header: "Name",
+                meta: { label: "Skater" },
+              },
+              { id: "trick", accessorKey: "trick", header: "Trick" },
+              { id: "score", accessorKey: "score" },
+            ],
+            getRowId: (row) => row.id,
+            ...options,
+          });
+        },
+        { wrapper: createWrapper() },
+      );
+    }
+
+    it("stays quiet on mount", async () => {
+      renderAnnouncedGrid({
+        initialState: {
+          sorting: [{ id: "name", desc: false }],
+          rowSelection: { "1": true },
+        },
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(document.querySelector("[data-live-announcer]")).toBeNull();
+    });
+
+    it("announces sort changes", async () => {
+      const { result } = renderAnnouncedGrid();
+
+      act(() => {
+        result.current.table.setSorting([{ id: "name", desc: false }]);
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toBe("Sorted by Skater, ascending"),
+      );
+
+      act(() => {
+        result.current.table.setSorting([
+          { id: "trick", desc: true },
+          { id: "score", desc: false },
+        ]);
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain(
+          "Sorted by Trick, descending, then by score, ascending",
+        ),
+      );
+
+      act(() => {
+        result.current.table.resetSorting(true);
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("Sorting cleared"),
+      );
+    });
+
+    it("announces one row, then the count, then all rows", async () => {
+      const { result } = renderAnnouncedGrid();
+
+      act(() => {
+        result.current.table.getRow("2").toggleSelected(true);
+      });
+      await waitFor(() => expect(getAnnouncement()).toBe("Row 2 selected"));
+
+      act(() => {
+        result.current.table.getRow("2").toggleSelected(false);
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("Row 2 deselected"),
+      );
+
+      act(() => {
+        result.current.table.setRowSelection({ "1": true, "3": true });
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("2 rows selected"),
+      );
+
+      act(() => {
+        result.current.table.toggleAllRowsSelected(true);
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("All rows selected"),
+      );
+    });
+
+    it("announces finished edits", async () => {
+      const { result } = renderAnnouncedGrid();
+
+      act(() => {
+        result.current.table
+          .getRow("1")
+          .getAllCellsByColumnId()
+          .name?.setValue("Birdman");
+      });
+      await waitFor(() => expect(getAnnouncement()).toBe("Skater updated"));
+    });
+
+    it("uses overridden messages", async () => {
+      const { result } = renderAnnouncedGrid({
+        messages: { sorted: () => "Ordenado" },
+      });
+
+      act(() => {
+        result.current.table.setSorting([{ id: "name", desc: true }]);
+      });
+      await waitFor(() => expect(getAnnouncement()).toBe("Ordenado"));
     });
   });
 });

@@ -27,6 +27,13 @@ import type {
 } from "@/lib/data-grid-types";
 
 import {
+  announce,
+  type DataGridMessages,
+  defaultDataGridMessages,
+  getRowSelectionMessage,
+  getSortingKey,
+} from "@/lib/data-grid-announcer";
+import {
   type DataGridFeatures,
   dataGridFeatures,
 } from "@/lib/data-grid-features";
@@ -34,6 +41,7 @@ import {
   getCellElement,
   getCellFocusTarget,
   getCellKey,
+  getColumnLabel,
   getFocusedCellPosition,
   getHasCellRangeSelection,
   getIsDataColumn,
@@ -76,6 +84,7 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  messages?: Partial<DataGridMessages>;
 }
 
 function useDataGrid<TData extends RowData>({
@@ -84,6 +93,7 @@ function useDataGrid<TData extends RowData>({
   overscan = OVERSCAN,
   dir: dirProp,
   onEscapeKeyDown,
+  messages,
   ...props
 }: UseDataGridProps<TData>) {
   const [pendingEdit, setPendingEdit] = React.useState<{
@@ -110,6 +120,10 @@ function useDataGrid<TData extends RowData>({
     shouldScroll: boolean;
   } | null>(null);
   const onEscapeKeyDownRef = useValueAsRef(onEscapeKeyDown);
+  const messagesRef = useValueAsRef({
+    ...defaultDataGridMessages,
+    ...messages,
+  });
   const propsRef = useValueAsRef(props);
   const stableProps = useStableProps(props, propsRef);
 
@@ -117,8 +131,22 @@ function useDataGrid<TData extends RowData>({
     (nextData: TData[], details: DataChangeDetails<TData>) => {
       setPendingEdit({ from: dataPropRef.current, to: nextData });
       propsRef.current.onDataChange?.(nextData, details);
+
+      const { reason, changes } = details;
+      if (reason !== "edit" || changes.length === 0) return;
+      const columnId = changes[0]?.columnId;
+      const column =
+        columnId && changes.every((change) => change.columnId === columnId)
+          ? tableRef.current?.getColumn(columnId)
+          : undefined;
+      announce(
+        messagesRef.current.cellsEdited(
+          changes.length,
+          column ? getColumnLabel(column) : null,
+        ),
+      );
     },
-    [dataPropRef, propsRef],
+    [dataPropRef, propsRef, messagesRef],
   );
 
   const getRowIdAtDisplayIndex = React.useCallback(
@@ -1529,6 +1557,77 @@ function useDataGrid<TData extends RowData>({
 
   const { pasteDialog: pasteDialogAtom, cellSelection: cellSelectionAtom } =
     table.atoms;
+  const { sorting: sortingAtom, rowSelection: rowSelectionAtom } = table.atoms;
+
+  React.useEffect(() => {
+    let prevSortingKey = getSortingKey(sortingAtom.get());
+
+    const subscription = sortingAtom.subscribe(() => {
+      const sorting = sortingAtom.get();
+      const sortingKey = getSortingKey(sorting);
+      if (sortingKey === prevSortingKey) return;
+      prevSortingKey = sortingKey;
+
+      const currentTable = tableRef.current;
+      if (!currentTable) return;
+      announce(
+        messagesRef.current.sorted(
+          sorting.map(({ id, desc }) => {
+            const column = currentTable.getColumn(id);
+            return { label: column ? getColumnLabel(column) : id, desc };
+          }),
+        ),
+      );
+    });
+
+    return () => subscription.unsubscribe();
+  }, [sortingAtom, messagesRef]);
+
+  React.useEffect(() => {
+    let prevRowSelection = rowSelectionAtom.get();
+
+    const subscription = rowSelectionAtom.subscribe(() => {
+      const rowSelection = rowSelectionAtom.get();
+      const prev = prevRowSelection;
+      prevRowSelection = rowSelection;
+
+      const currentTable = tableRef.current;
+      if (!currentTable || rowSelection === prev) return;
+
+      let selectedCount = 0;
+      let changedCount = 0;
+      let changedRowId: string | null = null;
+      for (const rowId in rowSelection) {
+        if (rowSelection[rowId]) selectedCount++;
+        if (!!rowSelection[rowId] !== !!prev[rowId]) {
+          changedCount++;
+          changedRowId = rowId;
+        }
+      }
+      for (const rowId in prev) {
+        if (prev[rowId] && !(rowId in rowSelection)) {
+          changedCount++;
+          changedRowId = rowId;
+        }
+      }
+
+      const displayIndex =
+        changedRowId === null
+          ? -1
+          : getRowDisplayIndex(currentTable, changedRowId);
+      const message = getRowSelectionMessage(messagesRef.current, {
+        selectedCount,
+        isAllSelected: currentTable.getIsAllRowsSelected(),
+        changedCount,
+        changedRowNumber: displayIndex === -1 ? null : displayIndex + 1,
+        isChangedRowSelected:
+          changedRowId !== null && !!rowSelection[changedRowId],
+      });
+      if (message) announce(message);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [rowSelectionAtom, messagesRef]);
 
   React.useEffect(() => {
     let prevPasteDialogOpen = pasteDialogAtom.get().open;

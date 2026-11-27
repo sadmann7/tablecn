@@ -18,6 +18,13 @@ import * as React from "react";
 
 import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
 
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
+import {
+  announce,
+  type DataTableMessages,
+  defaultDataTableMessages,
+  getSortingKey,
+} from "@/lib/data-grid-announcer";
 import {
   applyColumnConfig,
   createConfigFromInputKey,
@@ -70,6 +77,7 @@ type UseDataTableProps<TData extends RowData> = Omit<
   > & {
     debounceMs?: number;
     config?: DataTableConfigInput;
+    messages?: Partial<DataTableMessages>;
     initialState?: Omit<
       InitialTableState,
       | "columnFilters"
@@ -93,6 +101,7 @@ function useDataTable<TData extends RowData>({
   config: configProp,
   columns,
   mode = "server",
+  data,
   pageCount,
   initialState,
   startTransition,
@@ -101,6 +110,7 @@ function useDataTable<TData extends RowData>({
   clearOnDefault,
   scroll = false,
   shallow = true,
+  messages,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
@@ -299,9 +309,15 @@ function useDataTable<TData extends RowData>({
     void setQueryState({ page: null }, options);
   }
 
+  const messagesRef = React.useRef(messages);
+  useIsomorphicLayoutEffect(() => {
+    messagesRef.current = messages;
+  });
+
   const table = useTable(
     {
       ...props,
+      data,
       features: dataTableFeatures,
       columns: tableColumns,
       enableGlobalFilter,
@@ -327,6 +343,54 @@ function useDataTable<TData extends RowData>({
     },
     selectTableState,
   );
+
+  const sortingKey = getSortingKey(sorting);
+  const sortingKeyRef = React.useRef(sortingKey);
+
+  React.useEffect(() => {
+    if (sortingKeyRef.current === sortingKey) return;
+    sortingKeyRef.current = sortingKey;
+
+    const sorted =
+      messagesRef.current?.sorted ?? defaultDataTableMessages.sorted;
+    announce(
+      sorted(
+        sorting.map(({ id, desc }) => ({
+          label: table.getColumn(id)?.columnDef.meta?.label ?? id,
+          desc,
+        })),
+      ),
+    );
+  }, [sorting, sortingKey, table]);
+
+  const resultsKey = JSON.stringify([
+    urlFiltersKey,
+    globalFilter,
+    joinOperator,
+  ]);
+  const resultsRef = React.useRef({
+    key: resultsKey,
+    isPending: false,
+    data,
+  });
+
+  React.useEffect(() => {
+    const prev = resultsRef.current;
+    const isPending = prev.isPending || prev.key !== resultsKey;
+    const hasNewData = prev.data !== data;
+    resultsRef.current = { key: resultsKey, isPending, data };
+
+    if (!isPending || (isServer && !hasNewData)) return;
+    resultsRef.current.isPending = false;
+
+    const pageCount = table.getPageCount();
+    const rowCount =
+      table.options.rowCount ??
+      (!isServer || pageCount <= 1 ? table.getRowCount() : null);
+    const formatResults =
+      messagesRef.current?.results ?? defaultDataTableMessages.results;
+    announce(formatResults({ rowCount, pageCount }));
+  }, [resultsKey, data, isServer, table]);
 
   return { table };
 }

@@ -1,5 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { useQueryState } from "nuqs";
 import { NuqsTestingAdapter, type UrlUpdateEvent } from "nuqs/adapters/testing";
 import * as React from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -971,6 +972,124 @@ describe("useDataTable", () => {
         result.current.table.getRowModel().rows.map((row) => row.original.id),
       ).toEqual(["2", "1"]),
     );
+  });
+
+  describe("announcements", () => {
+    function getAnnouncement() {
+      return (
+        document.querySelector('[data-live-announcer="polite"]')?.textContent ??
+        ""
+      );
+    }
+
+    const labeledColumns = columnHelper.columns([
+      columnHelper.accessor("title", {
+        id: "title",
+        meta: { label: "Title", variant: "text" },
+        enableColumnFilter: true,
+      }),
+      columnHelper.accessor("status", {
+        id: "status",
+        meta: { label: "Status", variant: "select" },
+        enableColumnFilter: true,
+      }),
+    ]);
+
+    it("stays quiet on mount", async () => {
+      renderDataTable("?sort=title.asc&title=bug", { columns: labeledColumns });
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(document.querySelector("[data-live-announcer]")).toBeNull();
+    });
+
+    it("announces sort changes", async () => {
+      const { result } = renderDataTable("", { columns: labeledColumns });
+
+      act(() => {
+        result.current.table.setSorting([{ id: "title", desc: true }]);
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toBe("Sorted by Title, descending"),
+      );
+
+      act(() => {
+        result.current.table.setSorting([]);
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("Sorting cleared"),
+      );
+    });
+
+    it("announces the result count after a client filter", async () => {
+      const tasks = createTasks(30).map((task, index) => ({
+        ...task,
+        title: index < 12 ? `bug ${index}` : task.title,
+      }));
+      const { result } = renderDataTable("", {
+        mode: "client",
+        data: tasks,
+        columns: labeledColumns,
+      });
+
+      act(() => {
+        result.current.table.setColumnFilters([{ id: "title", value: "bug" }]);
+      });
+
+      await waitFor(() => expect(getAnnouncement()).toBe("12 results"));
+    });
+
+    it("waits for server data before announcing the result count", async () => {
+      let rows = createTasks(10);
+      let pageCount = 3;
+      const { result, rerender } = renderHookWithUrl("", () =>
+        useTestDataTable({ data: rows, pageCount, columns: labeledColumns }),
+      );
+
+      act(() => {
+        result.current.table.setGlobalFilter("bug");
+      });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(getAnnouncement()).toBe("");
+
+      rows = createTasks(4);
+      pageCount = 1;
+      await act(async () => rerender());
+
+      await waitFor(() => expect(getAnnouncement()).toBe("4 results"));
+    });
+
+    it("announces server data that arrives with the new URL", async () => {
+      const allRows = createTasks(10);
+      const doneRows = createTasks(7);
+      const { result } = renderHookWithUrl("", () => {
+        const [status] = useQueryState("status");
+        return useTestDataTable({
+          data: status ? doneRows : allRows,
+          pageCount: status ? 1 : 3,
+          columns: labeledColumns,
+        });
+      });
+
+      act(() => {
+        result.current.table.setColumnFilters([
+          { id: "status", value: ["done"] },
+        ]);
+      });
+
+      await waitFor(() => expect(getAnnouncement()).toBe("7 results"));
+    });
+
+    it("uses overridden messages", async () => {
+      const { result } = renderDataTable("", {
+        columns: labeledColumns,
+        messages: { sorted: () => "Ordenado" },
+      });
+
+      act(() => {
+        result.current.table.setSorting([{ id: "status", desc: false }]);
+      });
+      await waitFor(() => expect(getAnnouncement()).toBe("Ordenado"));
+    });
   });
 });
 

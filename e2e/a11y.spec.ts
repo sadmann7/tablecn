@@ -34,7 +34,9 @@ for (const base of TABLE_BASES) {
       await expectNoAxeViolations(page, testInfo);
     });
 
-    test("sorts from the header menu with the keyboard", async ({ page }) => {
+    test("sorts from the header menu with the keyboard", async ({
+      page,
+    }, testInfo) => {
       const header = page.getByRole("columnheader", { name: "Title" });
 
       if (base === "aria") {
@@ -56,6 +58,8 @@ for (const base of TABLE_BASES) {
 
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
+      await expect(announcer(page)).toHaveText("Sorted by Title, ascending");
+      await expectNoAxeViolations(page, testInfo);
     });
 
     test("announces the selection count", async ({ page }) => {
@@ -150,7 +154,9 @@ for (const base of GRID_BASES) {
       await expect.poll(() => focusedCellPosition(page)).toEqual(start);
     });
 
-    test("sorts from the header menu with the keyboard", async ({ page }) => {
+    test("sorts from the header menu with the keyboard", async ({
+      page,
+    }, testInfo) => {
       const grid = page.getByRole("grid");
       const header = grid.getByRole("columnheader", { name: "Name" });
       await tabUntilFocused(
@@ -168,6 +174,8 @@ for (const base of GRID_BASES) {
 
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
+      await expect(announcer(page)).toHaveText("Sorted by Name, ascending");
+      await expectNoAxeViolations(page, testInfo);
     });
   });
 }
@@ -197,6 +205,10 @@ async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
       nodes: violation.nodes.length,
     })),
   ).toEqual([]);
+}
+
+function announcer(page: Page) {
+  return page.locator("[data-live-announcer=polite]");
 }
 
 function sortedHeaders(page: Page) {
