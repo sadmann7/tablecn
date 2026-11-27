@@ -33,7 +33,6 @@ import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type {
   CellPosition,
   ColumnValueReader,
-  ColumnVariant,
   ColumnVariantOptions,
   ColumnWindow,
   DataGridColumnMeta,
@@ -160,7 +159,12 @@ export function getFilesCellValue(value: unknown): FileCellData[] {
   return Array.isArray(value) ? value.filter(getIsFileCellData) : [];
 }
 
-export function getEmptyCellValue(variant: ColumnVariant | undefined): unknown {
+export function getEmptyCellValue(
+  meta: DataGridColumnMeta | undefined,
+): unknown {
+  if (meta?.emptyValue !== undefined) return meta.emptyValue;
+  if (meta?.editor && !meta.variant) return null;
+  const variant = meta?.variant;
   if (variant === "multi-select" || variant === "file") return [];
   if (variant === "number" || variant === "date" || variant === "select") {
     return null;
@@ -171,8 +175,10 @@ export function getEmptyCellValue(variant: ColumnVariant | undefined): unknown {
 
 export function serializeCellValue(
   value: unknown,
-  variant: ColumnVariant | undefined,
+  meta: DataGridColumnMeta | undefined,
 ): string {
+  if (meta?.formatValue) return meta.formatValue(value);
+  const variant = meta?.variant;
   if (variant === "file" || variant === "multi-select") {
     return value ? JSON.stringify(value) : "";
   }
@@ -183,6 +189,12 @@ export function parsePastedCellValue(
   text: string,
   meta: DataGridColumnMeta | undefined,
 ): { value: unknown } | null {
+  if (meta?.parseValue) {
+    const value = meta.parseValue(text);
+    return value === undefined ? null : { value };
+  }
+  if (meta?.editor && !meta.variant) return null;
+
   switch (meta?.variant) {
     case "number": {
       if (!text) return { value: null };
@@ -401,12 +413,22 @@ export function renderDefaultCell(context: { renderValue: () => unknown }) {
   return getTextCellValue(context.renderValue());
 }
 
-export function getHasCustomCell<TData extends RowData>(
+export function getHasCustomCellContent<TData extends RowData>(
   column: Column<DataGridFeatures, TData>,
 ) {
   const { cell, meta } = column.columnDef;
 
-  return !meta?.variant && cell !== undefined && cell !== renderDefaultCell;
+  return (
+    (!meta?.variant || !!meta.editor) &&
+    cell !== undefined &&
+    cell !== renderDefaultCell
+  );
+}
+
+export function getHasCustomCell<TData extends RowData>(
+  column: Column<DataGridFeatures, TData>,
+) {
+  return !column.columnDef.meta?.editor && getHasCustomCellContent(column);
 }
 
 export function getIsDataColumn<TData extends RowData>(

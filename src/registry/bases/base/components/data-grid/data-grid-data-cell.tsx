@@ -6,12 +6,16 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { DataGridCellProps } from "@/lib/data-grid-types";
 
-import { getHasCustomCell } from "@/lib/data-grid-utils";
+import {
+  getHasCustomCell,
+  getHasCustomCellContent,
+} from "@/lib/data-grid-utils";
 import { DataGridCell } from "@/registry/bases/base/components/data-grid/data-grid-cell";
 import { DataGridCellPreview } from "@/registry/bases/base/components/data-grid/data-grid-cell-preview";
 import {
   BooleanCell,
   DateCell,
+  EditorCell,
   FileCell,
   LongTextCell,
   MultiSelectCell,
@@ -56,9 +60,10 @@ export const DataGridDataCell = React.memo(
     if (prev.cell.column.columnDef.meta !== next.cell.column.columnDef.meta) {
       return false;
     }
+    const meta = next.cell.column.columnDef.meta;
     // Written cells take their values straight from `updateCells`.
-    if (next.cell.column.columnDef.meta?.writeCell) return true;
-    if (getHasCustomCell(next.cell.column)) {
+    if (!meta?.editor && meta?.writeCell) return true;
+    if (meta?.editor || getHasCustomCell(next.cell.column)) {
       return prev.cell.row.original === next.cell.row.original;
     }
     return prev.cell.getValue() === next.cell.getValue();
@@ -70,7 +75,8 @@ function DataGridDataCellImpl<TData extends RowData>({
   ...props
 }: DataGridDataCellProps<TData>) {
   const { cell } = props;
-  const writeCell = cell.column.columnDef.meta?.writeCell;
+  const meta = cell.column.columnDef.meta;
+  const writeCell = meta?.writeCell;
   const hasCustomCell = getHasCustomCell(cell.column);
 
   const rowId = cell.row.id;
@@ -81,6 +87,16 @@ function DataGridDataCellImpl<TData extends RowData>({
     if (isScrolling && !isPreview) setIsPreview(true);
   }
   if (isPreview && !isScrolling) setIsPreview(false);
+
+  if (meta?.editor) {
+    return (
+      <EditorCell key={rowId} {...props}>
+        {getHasCustomCellContent(cell.column) ? (
+          <DataGridCustomCellContent cell={cell} />
+        ) : null}
+      </EditorCell>
+    );
+  }
 
   if (writeCell) {
     return <DataGridWrittenCell key={rowId} {...props} writeCell={writeCell} />;
