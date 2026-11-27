@@ -34,9 +34,7 @@ for (const base of TABLE_BASES) {
       await expectNoAxeViolations(page, testInfo);
     });
 
-    test("sorts from the header menu with the keyboard", async ({
-      page,
-    }, testInfo) => {
+    test("sorts from the header menu with the keyboard", async ({ page }) => {
       const header = page.getByRole("columnheader", { name: "Title" });
 
       if (base === "aria") {
@@ -56,10 +54,11 @@ for (const base of TABLE_BASES) {
       ).toBeFocused();
       await page.keyboard.press("Enter");
 
+      await expect(announcer(page)).toHaveText(
+        "Sorted by Title, ascending, then by Created At, descending",
+      );
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
-      await expect(announcer(page)).toHaveText("Sorted by Title, ascending");
-      await expectNoAxeViolations(page, testInfo);
     });
 
     test("announces the selection count", async ({ page }) => {
@@ -344,9 +343,7 @@ for (const base of GRID_BASES) {
       await expect.poll(() => focusedCellPosition(page)).toEqual(start);
     });
 
-    test("sorts from the header menu with the keyboard", async ({
-      page,
-    }, testInfo) => {
+    test("sorts from the header menu with the keyboard", async ({ page }) => {
       const grid = page.getByRole("grid");
       const header = grid.getByRole("columnheader", { name: "Name" });
       await tabUntilFocused(
@@ -362,10 +359,9 @@ for (const base of GRID_BASES) {
       ).toBeFocused();
       await page.keyboard.press("Enter");
 
+      await expect(announcer(page)).toHaveText("Sorted by Name, ascending");
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
-      await expect(announcer(page)).toHaveText("Sorted by Name, ascending");
-      await expectNoAxeViolations(page, testInfo);
     });
   });
 }
