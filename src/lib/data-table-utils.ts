@@ -496,6 +496,33 @@ export function getVisibleSelectedRows<TData extends RowData>(
   return table.getRowModel().rows.filter((row) => row.getIsSelected());
 }
 
+export function getResultCountText<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+) {
+  const status = table.options.status ?? "idle";
+  if (status === "loading" || status === "error") return "";
+
+  if (table.options.loadMore) {
+    const loadedCount = table.getRowModel().rows.length;
+    const totalCount = table.options.rowCount;
+    if (loadedCount === 0) return "No results";
+    if (totalCount === undefined) {
+      return `${pluralize(loadedCount, "result")} loaded`;
+    }
+    return `${loadedCount.toLocaleString()} of ${pluralize(totalCount, "result")} loaded`;
+  }
+
+  const pageCount = table.getPageCount();
+  const rowCount =
+    table.options.rowCount ??
+    (!table.options.manualPagination || pageCount <= 1
+      ? table.getRowCount()
+      : null);
+  if (rowCount === 0 || pageCount === 0) return "No results";
+  if (rowCount === null) return `${pluralize(pageCount, "page")} of results`;
+  return pluralize(rowCount, "result");
+}
+
 export function getColumnPinningStyle<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
   isPinned = column.getIsPinned(),
@@ -635,4 +662,8 @@ function getFilterValueStringifier(variant: FilterVariant) {
 function stringifyFilterDate(value: unknown) {
   const date = parseFilterDate(value);
   return date ? formatFilterDate(date) : "";
+}
+
+function pluralize(count: number, noun: string) {
+  return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
 }

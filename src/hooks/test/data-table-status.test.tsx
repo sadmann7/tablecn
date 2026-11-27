@@ -166,39 +166,29 @@ describe.each(bases)("DataTable status ($name)", (ui) => {
     expect(screen.getByText("Task 1")).toBeDefined();
   });
 
-  it("announces the result count when loading finishes", async () => {
+  it("reads the result count once loading finishes", () => {
     const { rerender } = renderTable(ui, { status: "loading" });
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(getAnnouncement("polite")).toBe("");
+    expect(getResultCount()).toBe("");
 
     rerender({ status: "idle", data: tasks.slice(0, 7) });
-    await waitFor(() => expect(getAnnouncement("polite")).toBe("7 results"));
+    expect(getResultCount()).toBe("7 results");
   });
 
-  it("announces the result count when refreshing finishes", async () => {
+  it("keeps the result count while refreshing", () => {
     const { rerender } = renderTable(ui, { status: "refreshing" });
+    expect(getResultCount()).toBe("25 results");
 
     rerender({ status: "idle" });
-    await waitFor(() => expect(getAnnouncement("polite")).toBe("25 results"));
+    expect(getResultCount()).toBe("25 results");
   });
 
-  it("announces a failure once, assertively", async () => {
-    const { rerender } = renderTable(ui, { status: "loading" });
+  it("alerts a failure and clears the result count", () => {
+    const { rerender } = renderTable(ui, { status: "idle" });
+    expect(screen.queryByRole("alert")).toBeNull();
 
     rerender({ status: "error", error: "Network down" });
-    await waitFor(() =>
-      expect(getAnnouncement("assertive")).toBe(
-        "Failed to load results: Network down",
-      ),
-    );
-    expect(getAnnouncement("polite")).toBe("");
-
-    rerender({ status: "error", error: "Still down" });
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(getAnnouncement("assertive")).toBe(
-      "Failed to load results: Network down",
-    );
+    expect(screen.getByRole("alert").textContent).toBe("Network down");
+    expect(getResultCount()).toBe("");
   });
 
   it("disables the page buttons and hides the page count while loading or failed", () => {
@@ -245,35 +235,6 @@ describe("useDataTable status", () => {
 
     expect(statusRef.current).toBe("idle");
   });
-
-  it("uses an overridden failure message", async () => {
-    function Harness({ status }: { status: DataStatus }) {
-      const { table } = useRadixDataTable<Task>({
-        config,
-        mode: "client",
-        data: tasks,
-        columns,
-        status,
-        messages: { failed: () => "No se pudo cargar" },
-      });
-      return <RadixDataTable table={table} />;
-    }
-
-    const view = render(
-      <NuqsTestingAdapter>
-        <Harness status="loading" />
-      </NuqsTestingAdapter>,
-    );
-    view.rerender(
-      <NuqsTestingAdapter>
-        <Harness status="error" />
-      </NuqsTestingAdapter>,
-    );
-
-    await waitFor(() =>
-      expect(getAnnouncement("assertive")).toBe("No se pudo cargar"),
-    );
-  });
 });
 
 function renderTable(ui: Base, props: HarnessProps = {}, search = "") {
@@ -317,9 +278,9 @@ function getBodyRows(container: HTMLElement) {
   return getTable(container).querySelectorAll("tbody tr");
 }
 
-function getAnnouncement(assertiveness: "polite" | "assertive") {
+function getResultCount() {
   return (
-    document.querySelector(`[data-live-announcer="${assertiveness}"]`)
-      ?.textContent ?? ""
+    document.querySelector('[data-slot="data-table"] > [role="status"]')
+      ?.textContent ?? null
   );
 }

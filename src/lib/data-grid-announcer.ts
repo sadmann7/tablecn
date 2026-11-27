@@ -30,17 +30,6 @@ export interface RowSelectionChange {
   isChangedRowSelected: boolean;
 }
 
-export interface ResultsChange {
-  rowCount: number | null;
-  pageCount: number;
-}
-
-export interface LoadedMoreChange {
-  count: number;
-  loadedCount: number;
-  rowCount: number | null;
-}
-
 export interface DataGridMessages {
   sorted: (sorting: SortDescription[]) => string;
   rowSelected: (rowNumber: number) => string;
@@ -48,14 +37,6 @@ export interface DataGridMessages {
   rowsSelected: (count: number) => string;
   allRowsSelected: (count: number) => string;
   cellsEdited: (count: number, columnLabel: string | null) => string;
-}
-
-export interface DataTableMessages {
-  sorted: (sorting: SortDescription[]) => string;
-  results: (change: ResultsChange) => string;
-  failed: (message: string | null) => string;
-  loadedMore: (change: LoadedMoreChange) => string;
-  loadMoreFailed: (message: string | null) => string;
 }
 
 const ANNOUNCE_DELAY = 150;
@@ -98,27 +79,6 @@ export const defaultDataGridMessages: DataGridMessages = {
     count === 1 && columnLabel
       ? `${columnLabel} updated`
       : `${pluralize(count, "cell")} updated`,
-};
-
-export const defaultDataTableMessages: DataTableMessages = {
-  sorted: getSortedMessage,
-  results: ({ rowCount, pageCount }) => {
-    if (rowCount === 0 || pageCount === 0) return "No results";
-    if (rowCount === null) return `${pluralize(pageCount, "page")} of results`;
-    return pluralize(rowCount, "result");
-  },
-  failed: (message) =>
-    message ? `Failed to load results: ${message}` : "Failed to load results",
-  loadedMore: ({ count, loadedCount, rowCount }) =>
-    `Loaded ${pluralize(count, "more row")}, ${
-      rowCount === null
-        ? `${loadedCount.toLocaleString()} loaded`
-        : `${loadedCount.toLocaleString()} of ${rowCount.toLocaleString()}`
-    }`,
-  loadMoreFailed: (message) =>
-    message
-      ? `Failed to load more rows: ${message}`
-      : "Failed to load more rows",
 };
 
 export function getRowSelectionMessage(

@@ -28,12 +28,6 @@ import type {
 
 import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
-  announce,
-  type DataTableMessages,
-  defaultDataTableMessages,
-  getSortingKey,
-} from "@/lib/data-grid-announcer";
-import {
   applyColumnConfig,
   createConfigFromInputKey,
   type DataTableConfig,
@@ -52,11 +46,7 @@ import {
   normalizeColumnFilters,
   sortColumnFiltersByIds,
 } from "@/lib/data-table-parsers";
-import {
-  asFilterItems,
-  getActiveFilters,
-  getStatusErrorMessage,
-} from "@/lib/data-table-utils";
+import { asFilterItems, getActiveFilters } from "@/lib/data-table-utils";
 
 const DEBOUNCE_MS = 300;
 const EMPTY_ROWS: never[] = [];
@@ -167,7 +157,6 @@ type UseDataTableProps<TData extends RowData> = Omit<
   > & {
     debounceMs?: number;
     config?: DataTableConfigInput;
-    messages?: Partial<DataTableMessages>;
     query?: DataQuery;
     onQueryChange?: (query: DataQuery) => void;
     initialState?: Omit<
@@ -237,7 +226,6 @@ function useDataTable<TData extends RowData>({
   clearOnDefault,
   scroll = false,
   shallow = true,
-  messages,
   query: queryProp,
   onQueryChange,
   status: statusProp = "idle",
@@ -445,16 +433,10 @@ function useDataTable<TData extends RowData>({
     );
   }
 
-  const messagesRef = React.useRef(messages);
-  useIsomorphicLayoutEffect(() => {
-    messagesRef.current = messages;
-  });
-
   const fetched = useFetcher(
     data === undefined && resultProp === undefined ? fetcher : undefined,
     query,
     isCursor,
-    messagesRef,
   );
   const result = fetched ? fetched.result : resultProp;
   const status = fetched ? fetched.status : statusProp;
@@ -496,68 +478,6 @@ function useDataTable<TData extends RowData>({
     },
     selectTableState,
   );
-
-  const sortingKey = getSortingKey(sorting);
-  const sortingKeyRef = React.useRef(sortingKey);
-
-  React.useEffect(() => {
-    if (sortingKeyRef.current === sortingKey) return;
-    sortingKeyRef.current = sortingKey;
-
-    const sorted =
-      messagesRef.current?.sorted ?? defaultDataTableMessages.sorted;
-    announce(
-      sorted(
-        sorting.map(({ id, desc }) => ({
-          label: table.getColumn(id)?.columnDef.meta?.label ?? id,
-          desc,
-        })),
-      ),
-    );
-  }, [sorting, sortingKey, table]);
-
-  const resultsKey = JSON.stringify([filtersKey, globalFilter, joinOperator]);
-  const resultsRef = React.useRef({
-    key: resultsKey,
-    isPending: false,
-    data: rows,
-    status,
-  });
-
-  React.useEffect(() => {
-    const prev = resultsRef.current;
-    const isPending = prev.isPending || prev.key !== resultsKey;
-    const hasNewData = prev.data !== rows;
-    resultsRef.current = {
-      key: resultsKey,
-      isPending,
-      data: rows,
-      status,
-    };
-
-    if (status === "error") {
-      if (prev.status === "error") return;
-      const formatFailed =
-        messagesRef.current?.failed ?? defaultDataTableMessages.failed;
-      announce(formatFailed(getStatusErrorMessage(error)), {
-        assertiveness: "assertive",
-      });
-      return;
-    }
-    if (status !== "idle") return;
-
-    const hasSettled = prev.status !== "idle";
-    if (!hasSettled && (!isPending || (isServer && !hasNewData))) return;
-    resultsRef.current.isPending = false;
-
-    const pageCount = table.getPageCount();
-    const rowCount =
-      table.options.rowCount ??
-      (!isServer || pageCount <= 1 ? table.getRowCount() : null);
-    const formatResults =
-      messagesRef.current?.results ?? defaultDataTableMessages.results;
-    announce(formatResults({ rowCount, pageCount }));
-  }, [resultsKey, rows, status, error, isServer, table]);
 
   return {
     table,
@@ -690,7 +610,6 @@ function useFetcher<TData>(
   fetcher: DataFetcher<TData> | undefined,
   query: DataQuery,
   isCursor: boolean,
-  messagesRef: React.RefObject<Partial<DataTableMessages> | undefined>,
 ) {
   const [state, dispatch] = React.useReducer(
     fetchReducer<TData>,
@@ -780,32 +699,14 @@ function useFetcher<TData>(
           request,
           result: { rows, rowCount, nextCursor: page.nextCursor ?? null },
         });
-
-        const loadedMore =
-          messagesRef.current?.loadedMore ??
-          defaultDataTableMessages.loadedMore;
-        announce(
-          loadedMore({
-            count: page.rows.length,
-            loadedCount: rows.length,
-            rowCount: rowCount ?? null,
-          }),
-        );
       },
       (error: unknown) => {
         if (!getIsCurrent()) return;
         moreRequestRef.current = null;
         dispatch({ type: "loadMoreFail", request, error });
-
-        const loadMoreFailed =
-          messagesRef.current?.loadMoreFailed ??
-          defaultDataTableMessages.loadMoreFailed;
-        announce(loadMoreFailed(getStatusErrorMessage(error)), {
-          assertiveness: "assertive",
-        });
       },
     );
-  }, [messagesRef]);
+  }, []);
 
   const isSettled = getIsSettled(state, query);
   const moreStatus: DataLoadMoreStatus =

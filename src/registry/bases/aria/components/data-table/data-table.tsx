@@ -22,6 +22,7 @@ import {
   getColumnPinningStyle,
   getColumnSizingStyle,
   getLoadMoreRowCount,
+  getResultCountText,
   getSkeletonRowCount,
   getStatusErrorMessage,
   getVisibleSelectedRows,
@@ -122,6 +123,7 @@ export function DataTable<TData extends RowData>({
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
+      <DataTableResultCount table={table} />
       <div className="flex flex-col gap-2.5">
         {loadMore ? null : <DataTablePagination table={table} />}
         {actionBar ? (
@@ -315,7 +317,7 @@ function DataTableBody<TData extends RowData>({
       renderEmptyState={() =>
         status === "error" ? (
           <div className="flex flex-col items-center justify-center gap-2 whitespace-normal">
-            <span>
+            <span role="alert">
               {getStatusErrorMessage(table.options.error) ??
                 "Failed to load results."}
             </span>
@@ -457,7 +459,7 @@ function DataTableLoadMoreRow<TData extends RowData>({
           onClick={stopPropagation}
         >
           {loadMore.status === "error" ? (
-            <span>
+            <span role="alert">
               {getStatusErrorMessage(loadMore.error) ??
                 "Failed to load more rows."}
             </span>
@@ -528,6 +530,24 @@ function DataTableSkeletonBody<TData extends RowData>({
             </TableRow>
           ))}
         </TableBody>
+      )}
+    </table.Subscribe>
+  );
+}
+
+interface DataTableResultCountProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+}
+
+function DataTableResultCount<TData extends RowData>({
+  table,
+}: DataTableResultCountProps<TData>) {
+  return (
+    <table.Subscribe selector={() => getResultCountText(table)}>
+      {(resultCountText) => (
+        <div role="status" className="sr-only">
+          {resultCountText}
+        </div>
       )}
     </table.Subscribe>
   );

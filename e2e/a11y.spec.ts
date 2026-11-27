@@ -54,11 +54,17 @@ for (const base of TABLE_BASES) {
       ).toBeFocused();
       await page.keyboard.press("Enter");
 
-      await expect(announcer(page)).toHaveText(
-        "Sorted by Title, ascending, then by Created At, descending",
-      );
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
+    });
+
+    test("announces the result count after a search", async ({ page }) => {
+      const status = page.getByRole("status").filter({ hasText: /results?$/ });
+      await expect(status).toHaveText(/^[\d,]+ results?$/);
+
+      await page.getByPlaceholder("Search tasks...").fill("zzzz");
+
+      await expect(status).toHaveText("No results");
     });
 
     test("announces the selection count", async ({ page }) => {
@@ -107,6 +113,7 @@ for (const base of TABLE_BASES) {
         waitUntil: "networkidle",
       });
       const table = page.locator("table");
+      await expect(table.getByRole("alert")).toBeVisible();
 
       await page.getByRole("button", { name: "Retry" }).click();
       await expect(table).toHaveAttribute("aria-busy", "true");
@@ -252,12 +259,14 @@ test.describe("data table with Load more", () => {
     await page.keyboard.press("Enter");
     await expect(page.locator("tbody tr[aria-rowindex]")).toHaveCount(20);
     await expect(page.locator("tbody tr[aria-rowindex='12']")).toBeFocused();
+    await expect(resultCount(page)).toHaveText("20 of 30 results loaded");
     await expectNoAxeViolations(page, testInfo);
 
     isFailing = true;
     await loadMore.click();
     const retry = page.getByRole("button", { name: "Retry" });
     await expect(retry).toBeFocused();
+    await expect(table.getByRole("alert")).toBeVisible();
     await expectNoAxeViolations(page, testInfo);
 
     isFailing = false;
@@ -377,6 +386,14 @@ function focusedCellPosition(page: Page) {
   });
 }
 
+function resultCount(page: Page) {
+  return page.locator("[data-slot=data-table] > [role=status]");
+}
+
+function announcer(page: Page) {
+  return page.locator("[data-live-announcer=polite]");
+}
+
 async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
   const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
   await testInfo.attach("axe-violations", {
@@ -391,10 +408,6 @@ async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
       nodes: violation.nodes.length,
     })),
   ).toEqual([]);
-}
-
-function announcer(page: Page) {
-  return page.locator("[data-live-announcer=polite]");
 }
 
 function sortedHeaders(page: Page) {

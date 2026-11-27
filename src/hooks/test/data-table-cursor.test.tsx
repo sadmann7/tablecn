@@ -125,20 +125,20 @@ describe.each(bases)("DataTable cursor pagination ($name)", (ui) => {
     expect(requests).toHaveLength(2);
   });
 
-  it("moves focus to the first new row and announces the load", async () => {
+  it("moves focus to the first new row and reads the loaded count", async () => {
     vi.useFakeTimers();
     const { container, requests } = renderTable(ui);
     await act(async () => requests[0]?.resolve(getPage(["a", "b"], "c1", 6)));
 
     screen.getByRole("button", { name: "Load more" }).focus();
     clickLoadMore();
+    expect(getResultCount()).toBe("2 of 6 results loaded");
     await act(async () => requests[1]?.resolve(getPage(["c", "d"], "c2", 6)));
-    await act(() => vi.advanceTimersByTimeAsync(200));
 
     const rows = getTable(container).querySelectorAll("tbody tr");
     expect(document.activeElement).toBe(rows[2]);
     expect(rows[2]?.getAttribute("aria-rowindex")).toBe("4");
-    expect(getAnnouncement("polite")).toBe("Loaded 2 more rows, 4 of 6");
+    expect(getResultCount()).toBe("4 of 6 results loaded");
   });
 
   it("keeps focus on the button and offers Retry when loading more fails", async () => {
@@ -150,15 +150,12 @@ describe.each(bases)("DataTable cursor pagination ($name)", (ui) => {
     button.focus();
     clickLoadMore();
     await act(async () => requests[1]?.reject(new Error("Network down")));
-    await act(() => vi.advanceTimersByTimeAsync(200));
 
-    expect(screen.getByText("Network down")).toBeDefined();
+    expect(screen.getByRole("alert").textContent).toBe("Network down");
     const retry = screen.getByRole("button", { name: "Retry" });
     expect(retry).toBe(button);
     expect(document.activeElement).toBe(retry);
-    expect(getAnnouncement("assertive")).toBe(
-      "Failed to load more rows: Network down",
-    );
+    expect(getResultCount()).toBe("2 of 6 results loaded");
     expect(getTitles(container)).toEqual(["a", "b"]);
 
     fireEvent.click(retry);
@@ -294,9 +291,9 @@ function getRowIndexes(container: HTMLElement) {
   ].map((row) => row.getAttribute("aria-rowindex"));
 }
 
-function getAnnouncement(assertiveness: "polite" | "assertive") {
+function getResultCount() {
   return (
-    document.querySelector(`[data-live-announcer="${assertiveness}"]`)
-      ?.textContent ?? ""
+    document.querySelector('[data-slot="data-table"] > [role="status"]')
+      ?.textContent ?? null
   );
 }
