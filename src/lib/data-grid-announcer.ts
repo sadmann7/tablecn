@@ -30,11 +30,6 @@ export interface RowSelectionChange {
   isChangedRowSelected: boolean;
 }
 
-export interface ResultsChange {
-  rowCount: number | null;
-  pageCount: number;
-}
-
 export interface DataGridMessages {
   sorted: (sorting: SortDescription[]) => string;
   rowSelected: (rowNumber: number) => string;
@@ -42,11 +37,6 @@ export interface DataGridMessages {
   rowsSelected: (count: number) => string;
   allRowsSelected: (count: number) => string;
   cellsEdited: (count: number, columnLabel: string | null) => string;
-}
-
-export interface DataTableMessages {
-  sorted: (sorting: SortDescription[]) => string;
-  results: (change: ResultsChange) => string;
 }
 
 const ANNOUNCE_DELAY = 150;
@@ -89,15 +79,6 @@ export const defaultDataGridMessages: DataGridMessages = {
     count === 1 && columnLabel
       ? `${columnLabel} updated`
       : `${pluralize(count, "cell")} updated`,
-};
-
-export const defaultDataTableMessages: DataTableMessages = {
-  sorted: getSortedMessage,
-  results: ({ rowCount, pageCount }) => {
-    if (rowCount === 0 || pageCount === 0) return "No results";
-    if (rowCount === null) return `${pluralize(pageCount, "page")} of results`;
-    return pluralize(rowCount, "result");
-  },
 };
 
 export function getRowSelectionMessage(

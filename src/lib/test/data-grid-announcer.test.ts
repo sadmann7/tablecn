@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   announce,
   defaultDataGridMessages,
-  defaultDataTableMessages,
   destroyAnnouncer,
   getRowSelectionMessage,
 } from "@/lib/data-grid-announcer";
@@ -82,9 +81,9 @@ describe("sort messages", () => {
     expect(
       defaultDataGridMessages.sorted([{ label: "Name", desc: false }]),
     ).toBe("Sorted by Name, ascending");
-    expect(
-      defaultDataTableMessages.sorted([{ label: "Age", desc: true }]),
-    ).toBe("Sorted by Age, descending");
+    expect(defaultDataGridMessages.sorted([{ label: "Age", desc: true }])).toBe(
+      "Sorted by Age, descending",
+    );
   });
 
   it("lists every sorted column in order", () => {
@@ -190,26 +189,6 @@ describe("getRowSelectionMessage", () => {
         base,
       ),
     ).toBe("Fila 3 seleccionada");
-  });
-});
-
-describe("result messages", () => {
-  it("counts the results", () => {
-    expect(
-      defaultDataTableMessages.results({ rowCount: 12, pageCount: 2 }),
-    ).toBe("12 results");
-    expect(
-      defaultDataTableMessages.results({ rowCount: 1, pageCount: 1 }),
-    ).toBe("1 result");
-    expect(
-      defaultDataTableMessages.results({ rowCount: 0, pageCount: 0 }),
-    ).toBe("No results");
-  });
-
-  it("falls back to the page count when the total is unknown", () => {
-    expect(
-      defaultDataTableMessages.results({ rowCount: null, pageCount: 4 }),
-    ).toBe("4 pages of results");
   });
 });
 

@@ -116,6 +116,7 @@ describe.each(bases)("DataTable accessibility ($name)", (ui) => {
 
     const statuses = screen.getAllByRole("status");
     expect(statuses.map((status) => status.textContent)).toEqual([
+      "30 results",
       "0 rows selected.",
       "Page 1 of 3",
     ]);
@@ -125,9 +126,37 @@ describe.each(bases)("DataTable accessibility ($name)", (ui) => {
       table.nextPage();
     });
     expect(statuses.map((status) => status.textContent)).toEqual([
+      "30 results",
       "10 rows selected (10 not shown).",
       "Page 2 of 3",
     ]);
+  });
+
+  it("reads the result count after a client filter", () => {
+    const { table } = renderTable(ui);
+
+    expect(getResultCount()).toBe("30 results");
+
+    act(() => table.setColumnFilters([{ id: "status", value: ["done"] }]));
+    expect(getResultCount()).toBe("15 results");
+
+    act(() => table.setColumnFilters([{ id: "status", value: ["archived"] }]));
+    expect(getResultCount()).toBe("No results");
+  });
+
+  it("reads the server result count once new data arrives", () => {
+    const { table, rerender } = renderServerTable(ui, data.slice(0, 10), 3);
+
+    expect(getResultCount()).toBe("3 pages of results");
+
+    act(() => table.setColumnFilters([{ id: "status", value: ["done"] }]));
+    expect(getResultCount()).toBe("3 pages of results");
+
+    rerender(data.slice(0, 1), 1);
+    expect(getResultCount()).toBe("1 result");
+
+    rerender([], 0);
+    expect(getResultCount()).toBe("No results");
   });
 
   it("keeps the filter clear icon out of the trigger's focus and accessibility tree", () => {
@@ -204,6 +233,52 @@ function renderTable(ui: Base, search = "") {
   if (!table) throw new Error("Table did not render");
 
   return { ...view, table };
+}
+
+function renderServerTable(ui: Base, rows: Task[], pageCount: number) {
+  const { DataTable, useDataTable } = ui;
+  const columns = getColumns(ui);
+  const tableRef: {
+    current?: ReturnType<typeof useRadixDataTable<Task>>["table"];
+  } = {};
+
+  function Harness(props: { rows: Task[]; pageCount: number }) {
+    const { table } = useDataTable<Task>({
+      config,
+      data: props.rows,
+      pageCount: props.pageCount,
+      columns,
+      getRowId: (row) => row.id,
+    });
+    tableRef.current = table;
+
+    return <DataTable aria-label="Tasks" table={table} />;
+  }
+
+  function renderHarness(nextRows: Task[], nextPageCount: number) {
+    return (
+      <NuqsTestingAdapter hasMemory>
+        <Harness rows={nextRows} pageCount={nextPageCount} />
+      </NuqsTestingAdapter>
+    );
+  }
+
+  const view = render(renderHarness(rows, pageCount));
+
+  const table = tableRef.current;
+  if (!table) throw new Error("Table did not render");
+
+  return {
+    table,
+    rerender: (nextRows: Task[], nextPageCount: number) =>
+      view.rerender(renderHarness(nextRows, nextPageCount)),
+  };
+}
+
+function getResultCount() {
+  return screen
+    .getAllByRole("status")
+    .find((status) => /results?$/.test(status.textContent ?? ""))?.textContent;
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();

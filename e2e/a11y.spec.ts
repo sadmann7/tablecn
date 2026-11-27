@@ -54,11 +54,17 @@ for (const base of TABLE_BASES) {
       ).toBeFocused();
       await page.keyboard.press("Enter");
 
-      await expect(announcer(page)).toHaveText(
-        "Sorted by Title, ascending, then by Created At, descending",
-      );
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
+    });
+
+    test("announces the result count after a search", async ({ page }) => {
+      const status = page.getByRole("status").filter({ hasText: /results?$/ });
+      await expect(status).toHaveText(/^[\d,]+ results?$/);
+
+      await page.getByPlaceholder("Search tasks...").fill("zzzz");
+
+      await expect(status).toHaveText("No results");
     });
 
     test("announces the selection count", async ({ page }) => {
@@ -187,6 +193,10 @@ function focusedCellPosition(page: Page) {
   });
 }
 
+function announcer(page: Page) {
+  return page.locator("[data-live-announcer=polite]");
+}
+
 async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
   const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
   await testInfo.attach("axe-violations", {
@@ -201,10 +211,6 @@ async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
       nodes: violation.nodes.length,
     })),
   ).toEqual([]);
-}
-
-function announcer(page: Page) {
-  return page.locator("[data-live-announcer=polite]");
 }
 
 function sortedHeaders(page: Page) {

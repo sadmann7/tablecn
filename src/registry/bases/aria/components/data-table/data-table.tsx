@@ -20,6 +20,7 @@ import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
+  getResultCountText,
   getVisibleSelectedRows,
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
@@ -106,6 +107,7 @@ export function DataTable<TData extends RowData>({
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
+      <DataTableResultCount table={table} />
       <div className="flex flex-col gap-2.5">
         <DataTablePagination table={table} />
         {actionBar ? (
@@ -279,6 +281,24 @@ function DataTableBody<TData extends RowData>({
         <DataTableRow key={row.id} row={row} />
       ))}
     </TableBody>
+  );
+}
+
+interface DataTableResultCountProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+}
+
+function DataTableResultCount<TData extends RowData>({
+  table,
+}: DataTableResultCountProps<TData>) {
+  return (
+    <table.Subscribe selector={() => getResultCountText(table)}>
+      {(resultCountText) => (
+        <div role="status" className="sr-only">
+          {resultCountText}
+        </div>
+      )}
+    </table.Subscribe>
   );
 }
 

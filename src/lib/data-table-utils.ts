@@ -493,6 +493,20 @@ export function getVisibleSelectedRows<TData extends RowData>(
   return table.getRowModel().rows.filter((row) => row.getIsSelected());
 }
 
+export function getResultCountText<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+) {
+  const pageCount = table.getPageCount();
+  const rowCount =
+    table.options.rowCount ??
+    (!table.options.manualPagination || pageCount <= 1
+      ? table.getRowCount()
+      : null);
+  if (rowCount === 0 || pageCount === 0) return "No results";
+  if (rowCount === null) return `${pluralize(pageCount, "page")} of results`;
+  return pluralize(rowCount, "result");
+}
+
 export function getColumnPinningStyle<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
   isPinned = column.getIsPinned(),
@@ -609,4 +623,8 @@ function getFilterValueStringifier(variant: FilterVariant) {
 function stringifyFilterDate(value: unknown) {
   const date = parseFilterDate(value);
   return date ? formatFilterDate(date) : "";
+}
+
+function pluralize(count: number, noun: string) {
+  return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
 }
