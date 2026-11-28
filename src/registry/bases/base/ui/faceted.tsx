@@ -38,6 +38,8 @@ interface FacetedStoreState {
   value: string | string[] | undefined;
   items: FacetedOption[];
   multiple: boolean;
+  label: string | undefined;
+  announcement: string;
 }
 
 interface FacetedController {
@@ -144,15 +146,23 @@ function createFacetedStore(state: FacetedStoreState): FacetedStore {
       }
       if (hasChanged) store.notify();
     },
-    setOpen: (open) => store.controller.setOpen(open),
+    setOpen: (open) => {
+      state.announcement = "";
+      store.controller.setOpen(open);
+    },
     selectItem: (selectedValue) => {
       if (state.multiple) {
         const selected = Array.isArray(state.value) ? state.value : [];
+        const isRemoving = selected.includes(selectedValue);
         commitValue(
-          selected.includes(selectedValue)
+          isRemoving
             ? selected.filter((item) => item !== selectedValue)
             : [...selected, selectedValue],
         );
+        const itemLabel =
+          getLabels(state.items).get(selectedValue) ?? selectedValue;
+        state.announcement = `${itemLabel} ${isRemoving ? "not selected" : "selected"}`;
+        store.notify();
         return;
       }
 
@@ -212,7 +222,13 @@ function Faceted<Multiple extends boolean = false>({
   const open = openProp ?? internalOpen;
 
   const [store] = React.useState(() =>
-    createFacetedStore({ value: value ?? defaultValue, items, multiple }),
+    createFacetedStore({
+      value: value ?? defaultValue,
+      items,
+      multiple,
+      label: undefined,
+      announcement: "",
+    }),
   );
 
   useIsoLayoutEffect(() => {
@@ -385,8 +401,16 @@ function FacetedContent({
   loop,
   ...props
 }: FacetedContentProps) {
+  const store = useFacetedStore("FacetedContent");
+  const label = useFacetedStoreSelector(store, (state) => state.label);
+  const announcement = useFacetedStoreSelector(
+    store,
+    (state) => state.announcement,
+  );
+
   return (
     <PopoverContent
+      aria-label={label}
       data-slot="faceted-content"
       align="start"
       className={cn(
@@ -400,10 +424,14 @@ function FacetedContent({
         shouldFilter={shouldFilter}
         filter={filter}
         loop={loop}
+        label={label}
         className="p-0.5"
       >
         {children}
       </Command>
+      <span aria-live="polite" className="sr-only">
+        {announcement}
+      </span>
     </PopoverContent>
   );
 }
@@ -420,6 +448,8 @@ function FacetedInput({
   ref,
   ...props
 }: FacetedInputProps) {
+  const store = useFacetedStore("FacetedInput");
+  const label = props["aria-label"] ?? props.placeholder;
   const inputRef = React.useRef<HTMLInputElement>(null);
   const composedRef = useMergedRefs(ref, inputRef);
 
@@ -428,15 +458,18 @@ function FacetedInput({
     const root = input?.closest("[cmdk-root]");
     if (!input || !root) return;
 
-    // cmdk's own aria-activedescendant lags behind the highlighted item.
+    // cmdk's own aria-activedescendant lags behind and targets the item wrapper.
     const onSync = () => {
-      const id = root.querySelector("[cmdk-item][aria-selected='true']")?.id;
-      if (!id) {
-        input.removeAttribute("aria-activedescendant");
-        return;
-      }
-      if (input.getAttribute("aria-activedescendant") !== id) {
-        input.setAttribute("aria-activedescendant", id);
+      const id = root.querySelector(
+        "[cmdk-item][aria-selected='true'] > [role='option']",
+      )?.id;
+      for (const element of [input, root.querySelector("[cmdk-list]")]) {
+        if (!element) continue;
+        if (!id) {
+          element.removeAttribute("aria-activedescendant");
+        } else if (element.getAttribute("aria-activedescendant") !== id) {
+          element.setAttribute("aria-activedescendant", id);
+        }
       }
     };
 
@@ -449,6 +482,11 @@ function FacetedInput({
     });
     return () => observer.disconnect();
   }, []);
+
+  useIsoLayoutEffect(() => {
+    store.sync({ label });
+    return () => store.sync({ label: undefined });
+  }, [store, label]);
 
   if (variant === "line") {
     return (
@@ -488,8 +526,22 @@ function FacetedInput({
   );
 }
 
-function FacetedList({ ...props }: React.ComponentProps<typeof CommandList>) {
-  return <CommandList data-slot="faceted-list" {...props} />;
+function FacetedList({
+  label: labelProp,
+  ...props
+}: React.ComponentProps<typeof CommandList>) {
+  const store = useFacetedStore("FacetedList");
+  const label = useFacetedStoreSelector(store, (state) => state.label);
+  const multiple = useFacetedStoreSelector(store, (state) => state.multiple);
+
+  return (
+    <CommandList
+      data-slot="faceted-list"
+      aria-multiselectable={multiple || undefined}
+      label={labelProp ?? label}
+      {...props}
+    />
+  );
 }
 
 function FacetedEmpty({ ...props }: React.ComponentProps<typeof CommandEmpty>) {
@@ -516,15 +568,27 @@ function FacetedGroup({ ...props }: React.ComponentProps<typeof CommandGroup>) {
   return <CommandGroup data-slot="faceted-group" {...props} />;
 }
 
+interface FacetedCommandItemProps extends React.ComponentProps<
+  typeof CommandPrimitive.Item
+> {
+  selected?: boolean;
+}
+
 function FacetedCommandItem({
+  selected,
+  disabled,
   className,
+  children,
   onPointerDownCapture,
   onMouseDown,
   onSelect,
   ...props
-}: React.ComponentProps<typeof CommandPrimitive.Item>) {
+}: FacetedCommandItemProps) {
+  const optionId = React.useId();
+
   return (
     <CommandPrimitive.Item
+      disabled={disabled}
       className={cn(
         "group/command-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
         className,
@@ -549,7 +613,21 @@ function FacetedCommandItem({
       )}
       onSelect={onSelect}
       {...props}
-    />
+      asChild
+    >
+      {/* cmdk marks the highlighted item with aria-selected, so the option is an inner element. */}
+      <div role="none" aria-disabled={disabled || undefined}>
+        <div
+          role="option"
+          id={optionId}
+          aria-selected={selected}
+          aria-disabled={disabled || undefined}
+          className="contents group-data-selected/command-item:*:[svg]:text-foreground"
+        >
+          {children}
+        </div>
+      </div>
+    </CommandPrimitive.Item>
   );
 }
 
@@ -569,7 +647,7 @@ function FacetedItem({ value, onSelect, ...props }: FacetedItemProps) {
     <FacetedCommandItem
       data-slot="faceted-item"
       data-checked={isSelected || undefined}
-      aria-checked={isSelected}
+      selected={isSelected}
       onSelect={() => {
         if (onSelect) {
           onSelect(value);
@@ -598,6 +676,7 @@ function FacetedItemIndicator({
     >
       {children != null && (
         <span className="font-mono text-xs group-data-checked/command-item:invisible">
+          <span className="sr-only">, </span>
           {children}
         </span>
       )}
