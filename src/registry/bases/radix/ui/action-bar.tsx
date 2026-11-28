@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsHydrated } from "@base-ui/utils/hydration";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
@@ -30,10 +31,6 @@ interface DivProps extends React.ComponentProps<"div"> {
 type RootElement = React.ComponentRef<typeof ActionBar>;
 type ItemElement = React.ComponentRef<typeof ActionBarItem>;
 type CloseElement = React.ComponentRef<typeof ActionBarClose>;
-
-function subscribe() {
-  return () => {};
-}
 
 function focusFirst(
   candidates: React.RefObject<HTMLElement | null>[],
@@ -146,11 +143,7 @@ function ActionBar(props: ActionBarProps) {
     ...rootProps
   } = props;
 
-  const mounted = React.useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false,
-  );
+  const mounted = useIsHydrated();
 
   const rootRef = React.useRef<RootElement>(null);
   const composedRef = useMergedRefs(ref, rootRef);
