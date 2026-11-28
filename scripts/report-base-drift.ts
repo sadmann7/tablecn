@@ -4,7 +4,7 @@
  * Every file the registry ships from `src/registry/bases/radix` is compared
  * with its copy in each other base. Differences every base is expected to have
  * are left out first: imports, `"use client"`, indentation, lines of only
- * brackets, `asChild` against `render`, and the CSS variables and data
+ * brackets or a closing tag, `asChild` against `render`, and the CSS variables and data
  * attributes of the primitive each base wraps. What's left is listed per component, as differing lines.
  *
  * It only reports and never fails, unlike `check:bases`.
@@ -29,7 +29,7 @@ const OTHER_BASES = BASES.map((base) => base.name).filter(
 
 const COMPOSITION_LINE =
   /\basChild\b|\bSlot\b|\buseRender\b|\bmergeProps\b|\brender(\?)?\s*[=:,})]|^\s*render,?$/;
-const PUNCTUATION_LINE = /^[\s{}()[\]<>/;,]*$/;
+const PUNCTUATION_LINE = /^[\s{}()[\]<>/;,]*$|^<\/[\w.]+>$/;
 const PRIMITIVE_TOKENS: [RegExp, string][] = [
   [/--radix-[\w-]+/g, "--<primitive-var>"],
   [
@@ -38,6 +38,7 @@ const PRIMITIVE_TOKENS: [RegExp, string][] = [
   ],
   [/data-\[state=(\w+)\]/g, "data-<$1>"],
   [/data-\[(\w+)\]/g, "data-<$1>"],
+  [/data-popup-open\b/g, "data-<open>"],
   [/data-(open|closed|checked|unchecked|disabled|highlighted)\b/g, "data-<$1>"],
 ];
 
