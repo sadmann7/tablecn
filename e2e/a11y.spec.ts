@@ -269,6 +269,24 @@ for (const base of GRID_BASES) {
       await expectSpokenOnce(page, "3 cells pasted, 2 rows added");
     });
 
+    test("speaks each search match count once", async ({ page }) => {
+      await page.getByRole("gridcell").nth(1).click();
+      await page.keyboard.press("ControlOrMeta+f");
+      const search = page.getByRole("textbox", { name: "Find in table" });
+      await startScreenReader(page);
+
+      await search.fill("ab");
+      await expect
+        .poll(() => readSpokenPhrases(page))
+        .toContain("polite: 1 of 44");
+      await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
+      expect(
+        (await readSpokenPhrases(page)).filter(
+          (phrase) => phrase === "polite: 1 of 44",
+        ),
+      ).toHaveLength(1);
+    });
+
     test("exposes row selection on the row, cells and checkboxes", async ({
       page,
     }) => {
@@ -322,7 +340,7 @@ function announcer(page: Page) {
 // decides whether a toast is exposed as well.
 async function expectSpokenOnce(page: Page, message: string) {
   await expect
-    .poll(() => readAnnouncements(page))
+    .poll(() => readSpokenPhrases(page))
     .toContain(`polite: ${message}`);
   await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
   const cdp = await page.context().newCDPSession(page);
@@ -343,20 +361,20 @@ function writeClipboard(page: Page, text: string) {
   return page.evaluate((value) => navigator.clipboard.writeText(value), text);
 }
 
-function readAnnouncements(page: Page) {
-  return page.evaluate(async () => {
-    const { screenReader } = window as unknown as ScreenReaderWindow;
-    const phrases = await screenReader.spokenPhraseLog();
-    return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
-  });
-}
-
 function clearSpokenPhraseLog(page: Page) {
   return page.evaluate(() =>
     (
       window as unknown as ScreenReaderWindow
     ).screenReader.clearSpokenPhraseLog(),
   );
+}
+
+function readSpokenPhrases(page: Page) {
+  return page.evaluate(async () => {
+    const { screenReader } = window as unknown as ScreenReaderWindow;
+    const phrases = await screenReader.spokenPhraseLog();
+    return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
+  });
 }
 
 async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
@@ -387,9 +405,9 @@ async function startScreenReader(page: Page) {
 }
 
 async function expectSpokenAnnouncements(page: Page, expected: string[]) {
-  await expect.poll(() => readAnnouncements(page)).toEqual(expected);
+  await expect.poll(() => readSpokenPhrases(page)).toEqual(expected);
   await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
-  expect(await readAnnouncements(page)).toEqual(expected);
+  expect(await readSpokenPhrases(page)).toEqual(expected);
   await clearSpokenPhraseLog(page);
 }
 
