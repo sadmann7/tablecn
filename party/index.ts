@@ -26,8 +26,8 @@ import {
 } from "./constants";
 import { createSeedRows } from "./seeds";
 
-const RESET_DELAY = 10 * 60 * 1000;
-const PERSIST_DELAY = 500;
+const RESET_DELAY_MS = 10 * 60 * 1000;
+const PERSIST_DELAY_MS = 500;
 const ROWS_KEY = "skaters";
 
 interface Env {
@@ -67,7 +67,7 @@ export class SkaterRoom extends Server<Env> {
         .catch((error) =>
           console.error("[party] Failed to persist rows:", error),
         );
-    }, PERSIST_DELAY);
+    }, PERSIST_DELAY_MS);
   }
 
   private getUserId(connection: PresenceConnection) {
@@ -208,7 +208,7 @@ export class SkaterRoom extends Server<Env> {
     this.broadcast(JSON.stringify(leaveMsg), [connection.id]);
 
     if (Object.keys(users).length === 0) {
-      void this.ctx.storage.setAlarm(Date.now() + RESET_DELAY);
+      void this.ctx.storage.setAlarm(Date.now() + RESET_DELAY_MS);
     }
   }
 
