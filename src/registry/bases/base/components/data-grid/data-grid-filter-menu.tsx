@@ -1,5 +1,7 @@
 "use client";
 
+import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
+
 import {
   type Column,
   type ColumnFilter,
@@ -210,14 +212,41 @@ function DataGridFilterMenuContent<TData extends RowData>({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const isDraggingRef = React.useRef(false);
+
+  function onOpenChange(
+    open: boolean,
+    eventDetails: PopoverPrimitive.Root.ChangeEventDetails,
+  ) {
+    if (
+      !open &&
+      eventDetails.reason === "escape-key" &&
+      isDraggingRef.current
+    ) {
+      eventDetails.cancel();
+      eventDetails.allowPropagation();
+      return;
+    }
+    setOpen(open);
+  }
+
   return (
     <Sortable
       value={columnFilters}
       onValueChange={table.setColumnFilters}
       getItemValue={(item) => item.id}
       getItemLabel={(item) => columnLabels.get(item.id) ?? item.id}
+      onDragStart={() => {
+        isDraggingRef.current = true;
+      }}
+      onDragEnd={() => {
+        isDraggingRef.current = false;
+      }}
+      onDragCancel={() => {
+        isDraggingRef.current = false;
+      }}
     >
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger
           render={
             <Button

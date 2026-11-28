@@ -115,7 +115,6 @@ type SortableProps<T> = DndContextProps &
     strategy?: SortableContextProps["strategy"];
     orientation?: "vertical" | "horizontal" | "mixed";
     flatCursor?: boolean;
-    /** Returns the name screen readers announce for an item while it's dragged, falling back to its id. */
     getItemLabel?: (item: T) => string;
   };
 
