@@ -493,8 +493,9 @@ export function getVisibleSelectedRows<TData extends RowData>(
   return table.getRowModel().rows.filter((row) => row.getIsSelected());
 }
 
-export function getResultCountText<TData extends RowData>(
+export function getResultStatusText<TData extends RowData>(
   table: Table<DataTableFeatures, TData>,
+  pageIndex: number,
 ) {
   const pageCount = table.getPageCount();
   const rowCount =
@@ -503,8 +504,10 @@ export function getResultCountText<TData extends RowData>(
       ? table.getRowCount()
       : null);
   if (rowCount === 0 || pageCount === 0) return "No results";
-  if (rowCount === null) return `${pluralize(pageCount, "page")} of results`;
-  return pluralize(rowCount, "result");
+  const page = `${(pageIndex + 1).toLocaleString()} of ${pageCount.toLocaleString()}`;
+  if (rowCount === null) return `Page ${page}`;
+  if (pageCount <= 1) return pluralize(rowCount, "result");
+  return `${pluralize(rowCount, "result")}, page ${page}`;
 }
 
 export function getColumnPinningStyle<TData extends RowData>(

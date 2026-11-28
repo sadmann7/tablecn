@@ -20,7 +20,7 @@ import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
-  getResultCountText,
+  getResultStatusText,
   getVisibleSelectedRows,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/radix/components/data-table/data-table-pagination";
@@ -33,6 +33,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/registry/bases/radix/ui/table";
+
+const RESULT_STATUS_DELAY = 500;
 
 interface DataTableProps<
   TData extends RowData,
@@ -106,7 +108,7 @@ export function DataTable<TData extends RowData>({
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
-      <DataTableResultCount table={table} />
+      <DataTableResultStatus table={table} />
       <div className="flex flex-col gap-2.5">
         <DataTablePagination table={table} />
         {actionBar ? (
@@ -251,21 +253,40 @@ function DataTableBody<TData extends RowData>({
   );
 }
 
-interface DataTableResultCountProps<TData extends RowData> {
+interface DataTableResultStatusProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
 }
 
-function DataTableResultCount<TData extends RowData>({
+function DataTableResultStatus<TData extends RowData>({
   table,
-}: DataTableResultCountProps<TData>) {
+}: DataTableResultStatusProps<TData>) {
   return (
-    <table.Subscribe selector={() => getResultCountText(table)}>
-      {(resultCountText) => (
-        <div role="status" className="sr-only">
-          {resultCountText}
-        </div>
-      )}
+    <table.Subscribe
+      selector={(state) =>
+        getResultStatusText(table, state.pagination.pageIndex)
+      }
+    >
+      {(text) => <DataTableResultStatusText text={text} />}
     </table.Subscribe>
+  );
+}
+
+interface DataTableResultStatusTextProps {
+  text: string;
+}
+
+function DataTableResultStatusText({ text }: DataTableResultStatusTextProps) {
+  const [settledText, setSettledText] = React.useState(text);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setSettledText(text), RESULT_STATUS_DELAY);
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  return (
+    <div role="status" className="sr-only">
+      {settledText}
+    </div>
   );
 }
 
