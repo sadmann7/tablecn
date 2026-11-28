@@ -667,9 +667,9 @@ function moveColumn(column: DataGridColumnInstance, step: number) {
   );
 }
 
-const DEFAULT_BATCH_UPDATE_DELAY = 500;
+const DEFAULT_BATCH_UPDATE_DELAY_MS = 500;
 const DEFAULT_MAX_HISTORY = 100;
-const HISTORY_MERGE_DELAY = 300;
+const HISTORY_MERGE_DELAY_MS = 300;
 
 interface IndexedRow {
   row: RowData;
@@ -1209,7 +1209,7 @@ function pushHistory(
     !store.isHistorySealed &&
     getIsCellsOnly(last) &&
     getIsCellsOnly(entry) &&
-    (entry.timestamp - last.timestamp < HISTORY_MERGE_DELAY ||
+    (entry.timestamp - last.timestamp < HISTORY_MERGE_DELAY_MS ||
       (entry.editingCellKey !== undefined &&
         entry.editingCellKey === last.editingCellKey)) &&
     entry.changes.every((change) =>
@@ -1555,7 +1555,7 @@ function updateCells(
     }
     store.commitTimer ??= setTimeout(
       () => commitCellUpdates(table, store),
-      table.options.batchUpdateDelay ?? DEFAULT_BATCH_UPDATE_DELAY,
+      table.options.batchUpdateDelay ?? DEFAULT_BATCH_UPDATE_DELAY_MS,
     );
     return;
   }

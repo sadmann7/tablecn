@@ -4,7 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 
 const DEFAULT_ZOOM = 1.6;
-const CURSOR_HOVER_DELAY = 260;
+const CURSOR_HOVER_DELAY_MS = 260;
 
 interface DataTableLaunchFocusOptions {
   scale?: number;
@@ -180,7 +180,7 @@ function createLaunchDirector() {
     window.clearTimeout(hoverTimeout);
     hoverTimeout = window.setTimeout(
       () => hover(target),
-      isHidden ? 0 : CURSOR_HOVER_DELAY,
+      isHidden ? 0 : CURSOR_HOVER_DELAY_MS,
     );
   }
 

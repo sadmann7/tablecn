@@ -493,6 +493,30 @@ export function getVisibleSelectedRows<TData extends RowData>(
   return table.getRowModel().rows.filter((row) => row.getIsSelected());
 }
 
+export function getResultStatusText<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+  pageIndex: number,
+) {
+  const pageCount = table.getPageCount();
+  const pageNumber = formatCount(pageIndex + 1);
+  const rowCount =
+    table.options.rowCount ??
+    (!table.options.manualPagination || (pageCount >= 0 && pageCount <= 1)
+      ? table.getRowCount()
+      : null);
+  if (rowCount === 0 || pageCount === 0) return "No results";
+  if (pageCount < 0) {
+    if (rowCount !== null) {
+      return `${pluralize(rowCount, "result")}, page ${pageNumber}`;
+    }
+    return table.getRowCount() === 0 ? "No results" : `Page ${pageNumber}`;
+  }
+  const page = `${pageNumber} of ${formatCount(pageCount)}`;
+  if (rowCount === null) return `Page ${page}`;
+  if (pageCount <= 1) return pluralize(rowCount, "result");
+  return `${pluralize(rowCount, "result")}, page ${page}`;
+}
+
 export function getColumnPinningStyle<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
   isPinned = column.getIsPinned(),
@@ -609,4 +633,12 @@ function getFilterValueStringifier(variant: FilterVariant) {
 function stringifyFilterDate(value: unknown) {
   const date = parseFilterDate(value);
   return date ? formatFilterDate(date) : "";
+}
+
+function pluralize(count: number, noun: string) {
+  return `${formatCount(count)} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+function formatCount(count: number) {
+  return count.toLocaleString("en-US");
 }

@@ -1,3 +1,5 @@
+import type { virtual } from "@guidepup/virtual-screen-reader";
+
 import { AxeBuilder } from "@axe-core/playwright";
 import {
   expect,
@@ -6,6 +8,20 @@ import {
   test,
   type TestInfo,
 } from "@playwright/test";
+import fs from "node:fs";
+import path from "node:path";
+
+type ScreenReaderWindow = Window & { screenReader: typeof virtual };
+
+const SCREEN_READER_SOURCE = fs.readFileSync(
+  path.join(
+    process.cwd(),
+    "node_modules/@guidepup/virtual-screen-reader/lib/esm/index.browser.js",
+  ),
+  "utf8",
+);
+
+const ANNOUNCEMENT_SETTLE_MS = 1000;
 
 const TABLE_BASES = ["radix", "base", "aria"] as const;
 const GRID_BASES = ["radix", "base"] as const;
@@ -56,6 +72,38 @@ for (const base of TABLE_BASES) {
 
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
+    });
+
+    test("stays silent while the page loads", async ({ page }) => {
+      await page.goto(`/bases/${base}?view=table`, { waitUntil: "commit" });
+      await page.waitForFunction(() => document.body.childElementCount > 0);
+      await startScreenReader(page);
+
+      await expect(page.locator("table tbody tr").first()).toBeVisible();
+      await page.waitForLoadState("networkidle");
+
+      await expectSpokenAnnouncements(page, []);
+    });
+
+    test("speaks one result count after typing a search", async ({ page }) => {
+      await startScreenReader(page);
+      const search = page.getByPlaceholder("Search tasks...");
+
+      await search.pressSequentially("pixel", { delay: 150 });
+      await expectSpokenAnnouncements(page, ["polite: 7 results"]);
+
+      await search.fill("zzzz");
+      await expectSpokenAnnouncements(page, ["polite: No results"]);
+    });
+
+    test("speaks the page after moving to the next page", async ({ page }) => {
+      await startScreenReader(page);
+
+      await page.getByRole("button", { name: "Go to next page" }).click();
+
+      await expectSpokenAnnouncements(page, [
+        "polite: 100 results, page 2 of 10",
+      ]);
     });
 
     test("announces the selection count", async ({ page }) => {
@@ -166,8 +214,62 @@ for (const base of GRID_BASES) {
       ).toBeFocused();
       await page.keyboard.press("Enter");
 
+      await expect(announcer(page)).toHaveText("Sorted by Name, ascending");
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
+    });
+
+    test("speaks each sort and selection change once", async ({ page }) => {
+      const grid = page.getByRole("grid");
+      await startScreenReader(page);
+
+      await grid
+        .getByRole("columnheader", { name: "Name" })
+        .getByRole("button")
+        .click();
+      await page
+        .getByRole("menuitemcheckbox", { name: "Sort ascending" })
+        .click();
+      await expectSpokenAnnouncements(page, [
+        "polite: Sorted by Name, ascending",
+      ]);
+
+      await grid
+        .getByRole("gridcell", { name: "Select row 1", exact: true })
+        .click();
+      await expectSpokenAnnouncements(page, ["polite: Row 1 selected"]);
+    });
+
+    test("exposes row selection on the row, cells and checkboxes", async ({
+      page,
+    }) => {
+      const grid = page.getByRole("grid");
+      const headerRow = grid.getByRole("row").first();
+      const firstRow = grid.getByRole("row").nth(1);
+
+      await expect(firstRow).toMatchAriaSnapshot(`
+        - row [selected=false]:
+          - gridcell "Select row 1":
+            - checkbox "Select row 1" [checked=false]
+          - gridcell [selected=false]
+      `);
+
+      await grid
+        .getByRole("gridcell", { name: "Select row 1", exact: true })
+        .click();
+
+      await expect(announcer(page)).toHaveText("Row 1 selected");
+      await expect(firstRow).toMatchAriaSnapshot(`
+        - row [selected]:
+          - gridcell "Select row 1":
+            - checkbox "Select row 1" [checked]
+          - gridcell [selected]
+      `);
+      await expect(headerRow).toMatchAriaSnapshot(`
+        - row:
+          - columnheader "Select all":
+            - checkbox "Select all" [checked=mixed]
+      `);
     });
   });
 }
@@ -181,6 +283,10 @@ function focusedCellPosition(page: Page) {
       col: Number(cell?.getAttribute("aria-colindex")),
     };
   });
+}
+
+function announcer(page: Page) {
+  return page.locator("[data-live-announcer=polite]");
 }
 
 async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
@@ -197,6 +303,36 @@ async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
       nodes: violation.nodes.length,
     })),
   ).toEqual([]);
+}
+
+async function startScreenReader(page: Page) {
+  await page.evaluate(async (source) => {
+    const url = URL.createObjectURL(
+      new Blob([source], { type: "text/javascript" }),
+    );
+    const { virtual: screenReader } = await import(url);
+    await screenReader.start({ container: document.body });
+    (window as unknown as ScreenReaderWindow).screenReader = screenReader;
+  }, SCREEN_READER_SOURCE);
+}
+
+async function expectSpokenAnnouncements(page: Page, expected: string[]) {
+  const readAnnouncements = () =>
+    page.evaluate(async () => {
+      const { screenReader } = window as unknown as ScreenReaderWindow;
+      const phrases = await screenReader.spokenPhraseLog();
+      return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
+    });
+
+  await expect.poll(readAnnouncements).toEqual(expected);
+  await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
+  expect(await readAnnouncements()).toEqual(expected);
+
+  await page.evaluate(() =>
+    (
+      window as unknown as ScreenReaderWindow
+    ).screenReader.clearSpokenPhraseLog(),
+  );
 }
 
 function sortedHeaders(page: Page) {

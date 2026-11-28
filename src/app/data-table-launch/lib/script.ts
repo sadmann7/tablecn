@@ -72,7 +72,7 @@ interface DataTableLaunchSceneScript {
 }
 
 export const FILTER_SHORTCUT_KEYS = ["⌘", "⇧", "F"];
-const TYPING_INTERVAL = 150;
+const TYPING_INTERVAL_MS = 150;
 const PRESS_MS = 140;
 
 export const COLUMN_SNIPPETS = [
@@ -350,7 +350,7 @@ export interface DataTableLaunchScene extends DataTableLaunchSceneScript {
 
 export const SCENES = getTimedScenes(SCRIPT);
 
-export const LAUNCH_DURATION = SCRIPT.reduce(
+export const LAUNCH_DURATION_MS = SCRIPT.reduce(
   (total, scene) => total + scene.duration,
   0,
 );
@@ -441,7 +441,7 @@ function typeSteps(
   createRun: (value: string) => DataTableLaunchStepRun,
 ): DataTableLaunchStep[] {
   return values.map((value, index) => ({
-    at: at + index * TYPING_INTERVAL,
+    at: at + index * TYPING_INTERVAL_MS,
     run: createRun(value),
   }));
 }

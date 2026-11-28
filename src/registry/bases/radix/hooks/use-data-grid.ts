@@ -27,6 +27,14 @@ import type {
 
 import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
+  announce,
+  type DataGridMessages,
+  defaultDataGridMessages,
+  getIsSameCellValue,
+  getRowSelectionMessage,
+  getSortingKey,
+} from "@/lib/data-grid-announcer";
+import {
   type DataGridFeatures,
   dataGridFeatures,
 } from "@/lib/data-grid-features";
@@ -34,6 +42,7 @@ import {
   getCellElement,
   getCellFocusTarget,
   getCellKey,
+  getColumnLabel,
   getFocusedCellPosition,
   getHasCellRangeSelection,
   getIsDataColumn,
@@ -69,6 +78,13 @@ const GRID_ENTRY_KEYS = new Set([
   "End",
 ]);
 
+interface EditSession {
+  rowId: string;
+  columnId: string;
+  previousValue?: { value: unknown };
+  newValue?: unknown;
+}
+
 interface UseDataGridProps<TData extends RowData> extends Omit<
   TableOptions<DataGridFeatures, TData>,
   "features"
@@ -76,6 +92,7 @@ interface UseDataGridProps<TData extends RowData> extends Omit<
   overscan?: number;
   autoFocus?: boolean | Partial<CellPosition>;
   onEscapeKeyDown?: (event: KeyboardEvent) => void;
+  messages?: Partial<DataGridMessages>;
 }
 
 function useDataGrid<TData extends RowData>({
@@ -84,6 +101,7 @@ function useDataGrid<TData extends RowData>({
   overscan = OVERSCAN,
   dir: dirProp,
   onEscapeKeyDown,
+  messages,
   ...props
 }: UseDataGridProps<TData>) {
   const [pendingEdit, setPendingEdit] = React.useState<{
@@ -110,6 +128,11 @@ function useDataGrid<TData extends RowData>({
     shouldScroll: boolean;
   } | null>(null);
   const onEscapeKeyDownRef = useValueAsRef(onEscapeKeyDown);
+  const messagesRef = useValueAsRef({
+    ...defaultDataGridMessages,
+    ...messages,
+  });
+  const editSessionRef = React.useRef<EditSession | null>(null);
   const propsRef = useValueAsRef(props);
   const stableProps = useStableProps(props, propsRef);
 
@@ -117,8 +140,38 @@ function useDataGrid<TData extends RowData>({
     (nextData: TData[], details: DataChangeDetails<TData>) => {
       setPendingEdit({ from: dataPropRef.current, to: nextData });
       propsRef.current.onDataChange?.(nextData, details);
+
+      const { reason, changes } = details;
+      const firstChange = changes[0];
+      const lastChange = changes.at(-1);
+      if (reason !== "edit" || !firstChange || !lastChange) return;
+
+      const editSession = editSessionRef.current;
+      if (
+        editSession &&
+        changes.every(
+          (change) =>
+            change.rowId === editSession.rowId &&
+            change.columnId === editSession.columnId,
+        )
+      ) {
+        editSession.previousValue ??= { value: firstChange.previousValue };
+        editSession.newValue = lastChange.newValue;
+        return;
+      }
+
+      const columnId = firstChange.columnId;
+      const column = changes.every((change) => change.columnId === columnId)
+        ? tableRef.current?.getColumn(columnId)
+        : undefined;
+      announce(
+        messagesRef.current.cellsEdited(
+          changes.length,
+          column ? getColumnLabel(column) : null,
+        ),
+      );
     },
-    [dataPropRef, propsRef],
+    [dataPropRef, propsRef, messagesRef],
   );
 
   const getRowIdAtDisplayIndex = React.useCallback(
@@ -1529,6 +1582,123 @@ function useDataGrid<TData extends RowData>({
 
   const { pasteDialog: pasteDialogAtom, cellSelection: cellSelectionAtom } =
     table.atoms;
+  const {
+    sorting: sortingAtom,
+    rowSelection: rowSelectionAtom,
+    editingCell: editingCellAtom,
+  } = table.atoms;
+
+  React.useEffect(() => {
+    function onEditingCellChange() {
+      const editingCell = editingCellAtom.get();
+      const editSession = editSessionRef.current;
+      if (
+        editSession?.rowId === editingCell?.rowId &&
+        editSession?.columnId === editingCell?.columnId
+      ) {
+        return;
+      }
+
+      const editingColumn = editingCell
+        ? tableRef.current?.getColumn(editingCell.columnId)
+        : undefined;
+      editSessionRef.current =
+        editingCell && editingColumn?.columnDef.meta?.variant !== "boolean"
+          ? { rowId: editingCell.rowId, columnId: editingCell.columnId }
+          : null;
+      if (
+        !editSession?.previousValue ||
+        getIsSameCellValue(
+          editSession.previousValue.value,
+          editSession.newValue,
+        )
+      ) {
+        return;
+      }
+
+      const column = tableRef.current?.getColumn(editSession.columnId);
+      announce(
+        messagesRef.current.cellsEdited(
+          1,
+          column ? getColumnLabel(column) : null,
+        ),
+      );
+    }
+
+    onEditingCellChange();
+    const subscription = editingCellAtom.subscribe(onEditingCellChange);
+    return () => subscription.unsubscribe();
+  }, [editingCellAtom, messagesRef]);
+
+  React.useEffect(() => {
+    let prevSortingKey = getSortingKey(sortingAtom.get());
+
+    const subscription = sortingAtom.subscribe(() => {
+      const sorting = sortingAtom.get();
+      const sortingKey = getSortingKey(sorting);
+      if (sortingKey === prevSortingKey) return;
+      prevSortingKey = sortingKey;
+
+      const currentTable = tableRef.current;
+      if (!currentTable) return;
+      announce(
+        messagesRef.current.sorted(
+          sorting.map(({ id, desc }) => {
+            const column = currentTable.getColumn(id);
+            return { label: column ? getColumnLabel(column) : id, desc };
+          }),
+        ),
+      );
+    });
+
+    return () => subscription.unsubscribe();
+  }, [sortingAtom, messagesRef]);
+
+  React.useEffect(() => {
+    let prevRowSelection = rowSelectionAtom.get();
+
+    const subscription = rowSelectionAtom.subscribe(() => {
+      const rowSelection = rowSelectionAtom.get();
+      const prev = prevRowSelection;
+      prevRowSelection = rowSelection;
+
+      const currentTable = tableRef.current;
+      if (!currentTable || rowSelection === prev) return;
+
+      let selectedCount = 0;
+      let changedCount = 0;
+      let changedRowId: string | null = null;
+      for (const rowId in rowSelection) {
+        if (rowSelection[rowId]) selectedCount++;
+        if (!!rowSelection[rowId] !== !!prev[rowId]) {
+          changedCount++;
+          changedRowId = rowId;
+        }
+      }
+      for (const rowId in prev) {
+        if (prev[rowId] && !(rowId in rowSelection)) {
+          changedCount++;
+          changedRowId = rowId;
+        }
+      }
+
+      const displayIndex =
+        changedRowId === null
+          ? -1
+          : getRowDisplayIndex(currentTable, changedRowId);
+      const message = getRowSelectionMessage(messagesRef.current, {
+        selectedCount,
+        isAllSelected: currentTable.getIsAllRowsSelected(),
+        changedCount,
+        changedRowNumber: displayIndex === -1 ? null : displayIndex + 1,
+        isChangedRowSelected:
+          changedRowId !== null && !!rowSelection[changedRowId],
+      });
+      if (message) announce(message);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [rowSelectionAtom, messagesRef]);
 
   React.useEffect(() => {
     let prevPasteDialogOpen = pasteDialogAtom.get().open;

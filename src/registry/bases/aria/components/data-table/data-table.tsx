@@ -20,6 +20,7 @@ import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
+  getResultStatusText,
   getVisibleSelectedRows,
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
@@ -33,6 +34,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/registry/bases/aria/ui/table";
+
+const RESULT_STATUS_DELAY_MS = 500;
 
 interface DataTableProps<
   TData extends RowData,
@@ -106,6 +109,7 @@ export function DataTable<TData extends RowData>({
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
+      <DataTableResultStatus table={table} />
       <div className="flex flex-col gap-2.5">
         <DataTablePagination table={table} />
         {actionBar ? (
@@ -279,6 +283,46 @@ function DataTableBody<TData extends RowData>({
         <DataTableRow key={row.id} row={row} />
       ))}
     </TableBody>
+  );
+}
+
+interface DataTableResultStatusProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+}
+
+function DataTableResultStatus<TData extends RowData>({
+  table,
+}: DataTableResultStatusProps<TData>) {
+  return (
+    <table.Subscribe
+      selector={(state) =>
+        getResultStatusText(table, state.pagination.pageIndex)
+      }
+    >
+      {(text) => <DataTableResultStatusText text={text} />}
+    </table.Subscribe>
+  );
+}
+
+interface DataTableResultStatusTextProps {
+  text: string;
+}
+
+function DataTableResultStatusText({ text }: DataTableResultStatusTextProps) {
+  const [settledText, setSettledText] = React.useState(text);
+
+  React.useEffect(() => {
+    const timer = setTimeout(
+      () => setSettledText(text),
+      RESULT_STATUS_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  return (
+    <div role="status" className="sr-only">
+      {settledText}
+    </div>
   );
 }
 

@@ -505,6 +505,10 @@
           "type": "registry:lib"
         },
         {
+          "path": "src/lib/data-grid-announcer.ts",
+          "type": "registry:lib"
+        },
+        {
           "path": "src/lib/data-grid-features.ts",
           "type": "registry:lib"
         },
