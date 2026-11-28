@@ -1,5 +1,6 @@
 "use client";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import * as React from "react";
 
 import { Button } from "@/registry/bases/radix/ui/button";
@@ -397,10 +398,7 @@ function DataGridKeyboardShortcutsImpl({
       }
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
+    return addEventListener(window, "keydown", onKeyDown);
   }, []);
 
   return (

@@ -3,6 +3,7 @@
 import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { Column, ReactTable, RowData } from "@tanstack/react-table";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -148,8 +149,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
       setOpen((open) => !open);
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return addEventListener(window, "keydown", onKeyDown);
   }, [disabled, open]);
 
   const columns = React.useMemo(

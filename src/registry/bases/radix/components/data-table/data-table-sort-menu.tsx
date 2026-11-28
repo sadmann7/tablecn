@@ -1,5 +1,6 @@
 "use client";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import {
   type ColumnSort,
   type ReactTable,
@@ -173,8 +174,7 @@ function DataTableSortMenuContent<TData extends RowData>({
       }
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return addEventListener(window, "keydown", onKeyDown);
   }, [disabled, open]);
 
   const onTriggerKeyDown = React.useCallback(

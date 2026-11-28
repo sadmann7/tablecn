@@ -2,6 +2,7 @@
 
 import type { Column, RowData } from "@tanstack/react-table";
 
+import { contains } from "@base-ui/utils/shadowDom";
 import { useTimeout } from "@base-ui/utils/useTimeout";
 import { cn } from "cn";
 import * as React from "react";
@@ -98,7 +99,11 @@ export function DataTableRangeFilter<TData extends RowData>({
 
   function onContainerBlur(event: React.FocusEvent<HTMLDivElement>) {
     onBlur?.(event);
-    if (event.currentTarget.contains(event.relatedTarget)) return;
+    if (
+      event.relatedTarget instanceof Element &&
+      contains(event.currentTarget, event.relatedTarget)
+    )
+      return;
     onDraftCommit();
   }
 

@@ -2,6 +2,8 @@
 
 import type { Cell, RowData } from "@tanstack/react-table";
 
+import { ownerDocument } from "@base-ui/utils/owner";
+import { activeElement, contains } from "@base-ui/utils/shadowDom";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { cn } from "cn";
@@ -61,9 +63,10 @@ export function DataGridCell<TData extends RowData>({
     if (!isFocused || isEditing) return;
     const element = cellRef.current;
     const grid = element?.closest('[role="grid"]');
-    const active = document.activeElement;
-    if (!element || !grid || element.contains(active)) return;
-    const isPageFocused = !active || active === document.body;
+    const doc = ownerDocument(element ?? null);
+    const active = activeElement(doc);
+    if (!element || !grid || contains(element, active)) return;
+    const isPageFocused = !active || active === doc.body;
     const activeGrid = active
       ?.closest('[data-slot="data-grid-cell"]')
       ?.closest('[role="grid"]');

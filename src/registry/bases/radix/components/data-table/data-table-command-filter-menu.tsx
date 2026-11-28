@@ -1,5 +1,6 @@
 "use client";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import {
   type Column,
   type ReactTable,
@@ -153,8 +154,7 @@ function DataTableCommandFilterMenuContent<TData extends RowData>({
       setOpen((open) => !open);
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return addEventListener(window, "keydown", onKeyDown);
   }, [disabled, open]);
 
   const columns = React.useMemo(

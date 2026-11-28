@@ -1,6 +1,9 @@
 "use client";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import { useIsHydrated } from "@base-ui/utils/hydration";
+import { ownerDocument } from "@base-ui/utils/owner";
+import { activeElement } from "@base-ui/utils/shadowDom";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
@@ -36,13 +39,14 @@ function focusFirst(
   candidates: React.RefObject<HTMLElement | null>[],
   preventScroll = false,
 ) {
-  const PREVIOUSLY_FOCUSED_ELEMENT = document.activeElement;
+  const doc = ownerDocument(candidates[0]?.current ?? null);
+  const PREVIOUSLY_FOCUSED_ELEMENT = activeElement(doc);
   for (const candidateRef of candidates) {
     const candidate = candidateRef.current;
     if (!candidate) continue;
     if (candidate === PREVIOUSLY_FOCUSED_ELEMENT) return;
     candidate.focus({ preventScroll });
-    if (document.activeElement !== PREVIOUSLY_FOCUSED_ELEMENT) return;
+    if (activeElement(doc) !== PREVIOUSLY_FOCUSED_ELEMENT) return;
   }
 }
 
@@ -158,7 +162,7 @@ function ActionBar(props: ActionBarProps) {
   React.useEffect(() => {
     if (!open) return;
 
-    const ownerDocument = rootRef.current?.ownerDocument ?? document;
+    const doc = ownerDocument(rootRef.current);
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -169,8 +173,7 @@ function ActionBar(props: ActionBarProps) {
       }
     }
 
-    ownerDocument.addEventListener("keydown", onKeyDown);
-    return () => ownerDocument.removeEventListener("keydown", onKeyDown);
+    return addEventListener(doc, "keydown", onKeyDown);
   }, [open, propsRef]);
 
   const contextValue = React.useMemo<ActionBarContextValue>(

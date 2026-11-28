@@ -4,6 +4,8 @@ import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { RowData } from "@tanstack/react-table";
 import type { ExternalToast } from "sonner";
 
+import { ownerDocument } from "@base-ui/utils/owner";
+import { activeElement, contains, getTarget } from "@base-ui/utils/shadowDom";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useTimeout } from "@base-ui/utils/useTimeout";
 import { cn } from "cn";
@@ -174,7 +176,7 @@ export function LongTextCell<TData extends RowData>(
     if (pendingChar) {
       requestAnimationFrame(() => {
         const textarea = textareaRef.current;
-        if (textarea && document.activeElement === textarea) {
+        if (textarea && activeElement(ownerDocument(textarea)) === textarea) {
           insertTextAtSelection(textarea, pendingChar);
           textarea.scrollTop = textarea.scrollHeight;
         }
@@ -1772,11 +1774,11 @@ function useCellEditorDismiss({
 }: UseCellEditorDismissOptions) {
   const onPopoverOpenChange = React.useCallback(
     (open: boolean, eventDetails: PopoverPrimitive.Root.ChangeEventDetails) => {
-      const { target } = eventDetails.event;
+      const target = getTarget(eventDetails.event);
       if (
         eventDetails.reason === "outside-press" &&
-        target instanceof Node &&
-        containerRef.current?.contains(target)
+        target instanceof Element &&
+        contains(containerRef.current, target)
       ) {
         eventDetails.cancel();
         return;
@@ -1788,7 +1790,12 @@ function useCellEditorDismiss({
 
   const onFinalFocus = React.useCallback(() => {
     const container = containerRef.current;
-    if (container?.closest('[role="grid"]')?.contains(document.activeElement)) {
+    if (
+      contains(
+        container?.closest('[role="grid"]'),
+        activeElement(ownerDocument(container)),
+      )
+    ) {
       return false;
     }
     return container;
@@ -1817,8 +1824,8 @@ function getPendingChar<TData extends RowData>(
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
   if (
-    event.target instanceof Node &&
-    event.currentTarget.contains(event.target)
+    event.target instanceof Element &&
+    contains(event.currentTarget, event.target)
   ) {
     event.preventDefault();
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { contains } from "@base-ui/utils/shadowDom";
 import { useTimeout } from "@base-ui/utils/useTimeout";
 import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import * as React from "react";
@@ -160,7 +161,11 @@ function DataTableSliderFilterContent<TData extends RowData>({
   }
 
   function onInputsBlur(event: React.FocusEvent<HTMLDivElement>) {
-    if (event.currentTarget.contains(event.relatedTarget)) return;
+    if (
+      event.relatedTarget instanceof Element &&
+      contains(event.currentTarget, event.relatedTarget)
+    )
+      return;
     onDraftCommit();
   }
 

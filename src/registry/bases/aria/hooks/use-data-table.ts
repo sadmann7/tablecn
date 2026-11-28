@@ -1,3 +1,4 @@
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import {
   type ColumnFiltersState,
   functionalUpdate,
@@ -332,8 +333,7 @@ function useDataTable<TData extends RowData>({
 }
 
 function subscribeToHistory(onChange: () => void) {
-  window.addEventListener("popstate", onChange);
-  return () => window.removeEventListener("popstate", onChange);
+  return addEventListener(window, "popstate", onChange);
 }
 
 function getLocationSearch() {
