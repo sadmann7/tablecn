@@ -90,6 +90,7 @@
     "@babel/core": "^8.0.9",
     "@cloudflare/workers-types": "^5.20261009.1",
     "@faker-js/faker": "^10.6.0",
+    "@guidepup/virtual-screen-reader": "^0.33.0",
     "@playwright/test": "^1.63.0",
     "@rolldown/plugin-babel": "^0.3.0",
     "@tailwindcss/postcss": "^4.3.3",
