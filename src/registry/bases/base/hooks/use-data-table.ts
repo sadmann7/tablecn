@@ -48,7 +48,7 @@ import {
 } from "@/lib/data-table-parsers";
 import { asFilterItems, getActiveFilters } from "@/lib/data-table-utils";
 
-const DEBOUNCE_MS = 300;
+const URL_UPDATE_DEBOUNCE_MS = 300;
 const EMPTY_ROWS: never[] = [];
 
 interface FiltersDraft {
@@ -222,7 +222,7 @@ function useDataTable<TData extends RowData>({
   initialState,
   startTransition,
   history = "replace",
-  debounceMs = DEBOUNCE_MS,
+  debounceMs = URL_UPDATE_DEBOUNCE_MS,
   clearOnDefault,
   scroll = false,
   shallow = true,
