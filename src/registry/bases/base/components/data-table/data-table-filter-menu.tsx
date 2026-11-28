@@ -195,6 +195,10 @@ function DataTableFilterMenuContent<TData extends RowData>({
       value={filters}
       onValueChange={(value) => table.setColumnFilters(value)}
       getItemValue={(item) => item.filterId}
+      getItemLabel={(item) =>
+        columns.find((column) => column.id === item.id)?.columnDef.meta
+          ?.label ?? item.id
+      }
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger

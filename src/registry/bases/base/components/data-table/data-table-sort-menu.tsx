@@ -194,6 +194,7 @@ function DataTableSortMenuContent<TData extends RowData>({
       value={sorting}
       onValueChange={onSortingChange}
       getItemValue={(item) => item.id}
+      getItemLabel={(item) => columnLabels.get(item.id) ?? item.id}
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
