@@ -41,7 +41,7 @@ import {
 } from "@/registry/bases/base/ui/table";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
 
-const RESULT_STATUS_DELAY = 500;
+const RESULT_STATUS_DELAY_MS = 500;
 
 interface DataTableProps<
   TData extends RowData,
@@ -545,7 +545,10 @@ function DataTableResultStatusText({ text }: DataTableResultStatusTextProps) {
   const [settledText, setSettledText] = React.useState(text);
 
   React.useEffect(() => {
-    const timer = setTimeout(() => setSettledText(text), RESULT_STATUS_DELAY);
+    const timer = setTimeout(
+      () => setSettledText(text),
+      RESULT_STATUS_DELAY_MS,
+    );
     return () => clearTimeout(timer);
   }, [text]);
 
