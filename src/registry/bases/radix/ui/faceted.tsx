@@ -8,7 +8,6 @@ import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
 import { Slot } from "radix-ui";
-import { composeEventHandlers } from "radix-ui/internal";
 import * as React from "react";
 
 import {
@@ -576,22 +575,23 @@ function FacetedCommandItem({
         "group/command-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-selected:bg-muted data-selected:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-selected:*:[svg]:text-foreground",
         className,
       )}
-      onPointerDownCapture={composeEventHandlers(
-        onPointerDownCapture,
-        (event) => {
-          // A focusable item steals the input on pointerdown.
-          event.preventDefault();
-          if (event.pointerType === "touch") return;
-          event.currentTarget
-            .closest("[cmdk-root]")
-            ?.querySelector<HTMLInputElement>("[cmdk-input]")
-            ?.focus();
-        },
-      )}
-      onMouseDown={composeEventHandlers(onMouseDown, (event) => {
+      onPointerDownCapture={(event) => {
+        onPointerDownCapture?.(event);
+        if (event.defaultPrevented) return;
+        // A focusable item steals the input on pointerdown.
+        event.preventDefault();
+        if (event.pointerType === "touch") return;
+        event.currentTarget
+          .closest("[cmdk-root]")
+          ?.querySelector<HTMLInputElement>("[cmdk-input]")
+          ?.focus();
+      }}
+      onMouseDown={(event) => {
+        onMouseDown?.(event);
+        if (event.defaultPrevented) return;
         // iOS Safari can emit a synthetic mousedown without a pointerdown.
         event.preventDefault();
-      })}
+      }}
       {...props}
       asChild
     >
