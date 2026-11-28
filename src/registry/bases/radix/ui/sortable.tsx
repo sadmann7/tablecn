@@ -1,5 +1,7 @@
 "use client";
 
+import { useIsHydrated } from "@base-ui/utils/hydration";
+import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import {
   type Active,
   type Announcements,
@@ -40,7 +42,6 @@ import {
 import { CSS, isKeyboardEvent } from "@dnd-kit/utilities";
 import { cn } from "cn";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
@@ -434,7 +435,7 @@ function SortableItem(props: SortableItemProps) {
     [disabled, asHandle, setNodeRef, setActivatorNodeRef],
   );
 
-  const composedRef = useComposedRefs(ref, onNodeRefChange);
+  const composedRef = useMergedRefs(ref, onNodeRefChange);
 
   const composedStyle = React.useMemo<React.CSSProperties>(() => {
     return {
@@ -509,7 +510,7 @@ function SortableItemHandle(props: SortableItemHandleProps) {
     [isDisabled, setActivatorNodeRef],
   );
 
-  const composedRef = useComposedRefs(ref, onActivatorNodeRef);
+  const composedRef = useMergedRefs(ref, onActivatorNodeRef);
 
   const HandlePrimitive = asChild ? SlotPrimitive.Slot : "button";
 
@@ -548,10 +549,6 @@ const dropAnimation: DropAnimation = {
   }),
 };
 
-function subscribe() {
-  return () => {};
-}
-
 interface SortableOverlayProps extends Omit<
   React.ComponentProps<typeof DragOverlay>,
   "children"
@@ -567,11 +564,7 @@ function SortableOverlay(props: SortableOverlayProps) {
 
   const context = useSortableContext(OVERLAY_NAME);
 
-  const mounted = React.useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false,
-  );
+  const mounted = useIsHydrated();
 
   const container =
     containerProp ?? (mounted ? globalThis.document?.body : null);

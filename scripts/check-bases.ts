@@ -174,7 +174,7 @@ function readNormalized(base: string, file: string) {
     .split("\n");
 }
 
-function getChangedLines(from: string[], to: string[]) {
+export function getChangedLines(from: string[], to: string[]) {
   let start = 0;
   while (
     start < from.length &&

@@ -7,6 +7,8 @@ import type {
   Table,
 } from "@tanstack/react-table";
 
+import { clamp } from "@base-ui/utils/clamp";
+
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
   ColumnFilterItem,
@@ -453,7 +455,7 @@ export function getRangeFilterBounds(
     const number = Number(value);
     return value.trim() === "" || Number.isNaN(number)
       ? undefined
-      : Math.min(Math.max(number, min), max);
+      : clamp(number, min, max);
   });
 
   return start !== undefined && end !== undefined && start > end

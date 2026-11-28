@@ -3,6 +3,7 @@
 import type { Column, ReactTable, RowData } from "@tanstack/react-table";
 import type { KeyboardEvent as KeyboardEventPrimitive } from "react-aria-components";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import {
   fromDateToLocal,
   getLocalTimeZone,
@@ -150,8 +151,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
       setOpen((open) => !open);
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return addEventListener(window, "keydown", onKeyDown);
   }, [disabled, open]);
 
   const columns = React.useMemo(

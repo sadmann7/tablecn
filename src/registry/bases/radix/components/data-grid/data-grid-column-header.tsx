@@ -1,5 +1,7 @@
 "use client";
 
+import { ownerDocument } from "@base-ui/utils/owner";
+import { activeElement } from "@base-ui/utils/shadowDom";
 import {
   type Column,
   type Header,
@@ -378,9 +380,8 @@ function DataGridColumnResizerImpl<TData extends RowData, TValue>({
     ) => {
       if (event.type === "mousedown") event.preventDefault();
       if (table.getEditingCell()) {
-        if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
+        const element = activeElement(ownerDocument(event.currentTarget));
+        if (element instanceof HTMLElement) element.blur();
         table.stopEditing();
       }
       header.getResizeHandler()(event);

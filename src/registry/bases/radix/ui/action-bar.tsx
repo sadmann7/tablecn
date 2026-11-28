@@ -1,12 +1,17 @@
 "use client";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
+import { useIsHydrated } from "@base-ui/utils/hydration";
+import { ownerDocument } from "@base-ui/utils/owner";
+import { activeElement } from "@base-ui/utils/shadowDom";
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import { cn } from "cn";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { useComposedRefs, useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
 
@@ -30,21 +35,18 @@ type RootElement = React.ComponentRef<typeof ActionBar>;
 type ItemElement = React.ComponentRef<typeof ActionBarItem>;
 type CloseElement = React.ComponentRef<typeof ActionBarClose>;
 
-function subscribe() {
-  return () => {};
-}
-
 function focusFirst(
   candidates: React.RefObject<HTMLElement | null>[],
   preventScroll = false,
 ) {
-  const PREVIOUSLY_FOCUSED_ELEMENT = document.activeElement;
+  const doc = ownerDocument(candidates[0]?.current ?? null);
+  const PREVIOUSLY_FOCUSED_ELEMENT = activeElement(doc);
   for (const candidateRef of candidates) {
     const candidate = candidateRef.current;
     if (!candidate) continue;
     if (candidate === PREVIOUSLY_FOCUSED_ELEMENT) return;
     candidate.focus({ preventScroll });
-    if (document.activeElement !== PREVIOUSLY_FOCUSED_ELEMENT) return;
+    if (activeElement(doc) !== PREVIOUSLY_FOCUSED_ELEMENT) return;
   }
 }
 
@@ -145,14 +147,10 @@ function ActionBar(props: ActionBarProps) {
     ...rootProps
   } = props;
 
-  const mounted = React.useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false,
-  );
+  const mounted = useIsHydrated();
 
   const rootRef = React.useRef<RootElement>(null);
-  const composedRef = useComposedRefs(ref, rootRef);
+  const composedRef = useMergedRefs(ref, rootRef);
 
   const propsRef = useValueAsRef({
     onEscapeKeyDown,
@@ -164,7 +162,7 @@ function ActionBar(props: ActionBarProps) {
   React.useEffect(() => {
     if (!open) return;
 
-    const ownerDocument = rootRef.current?.ownerDocument ?? document;
+    const doc = ownerDocument(rootRef.current);
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
@@ -175,8 +173,7 @@ function ActionBar(props: ActionBarProps) {
       }
     }
 
-    ownerDocument.addEventListener("keydown", onKeyDown);
-    return () => ownerDocument.removeEventListener("keydown", onKeyDown);
+    return addEventListener(doc, "keydown", onKeyDown);
   }, [open, propsRef]);
 
   const contextValue = React.useMemo<ActionBarContextValue>(
@@ -269,7 +266,7 @@ function ActionBarGroup(props: DivProps) {
   const [focusableItemCount, setFocusableItemCount] = React.useState(0);
 
   const groupRef = React.useRef<HTMLDivElement>(null);
-  const composedRef = useComposedRefs(ref, groupRef);
+  const composedRef = useMergedRefs(ref, groupRef);
   const isClickFocusRef = React.useRef(false);
   const itemsRef = React.useRef<Map<string, ItemData>>(new Map());
 
@@ -439,7 +436,7 @@ function ActionBarItem(props: ActionBarItemProps) {
   } = props;
 
   const itemRef = React.useRef<ItemElement>(null);
-  const composedRef = useComposedRefs(ref, itemRef);
+  const composedRef = useMergedRefs(ref, itemRef);
   const isMouseClickRef = React.useRef(false);
 
   const { onOpenChange, dir, orientation, loop } =
@@ -449,7 +446,7 @@ function ActionBarItem(props: ActionBarItemProps) {
   const itemId = React.useId();
   const isTabStop = focusContext.tabStopId === itemId;
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     focusContext.onItemRegister({
       id: itemId,
       ref: itemRef,

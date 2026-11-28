@@ -1,5 +1,6 @@
 "use client";
 
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import { createColumnHelper } from "@tanstack/react-table";
 import { cn } from "cn";
 import {
@@ -21,7 +22,6 @@ import { toast } from "sonner";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { RowUpdate } from "@/lib/data-grid-types";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 import { Button } from "@/registry/bases/radix/ui/button";

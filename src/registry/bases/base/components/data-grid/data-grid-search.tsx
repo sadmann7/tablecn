@@ -2,6 +2,7 @@
 
 import type { ReactTable, RowData } from "@tanstack/react-table";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -94,8 +95,7 @@ function DataGridSearchContentImpl<TData extends RowData>({
       }
     }
 
-    document.addEventListener("keydown", onEscape);
-    return () => document.removeEventListener("keydown", onEscape);
+    return addEventListener(document, "keydown", onEscape);
   }, [searchOpen, table]);
 
   const debouncedSearch = useDebouncedCallback((query: string) => {

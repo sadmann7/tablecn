@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsHydrated } from "@base-ui/utils/hydration";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import * as React from "react";
@@ -33,10 +34,6 @@ const fpsVariants = cva(
   },
 );
 
-function subscribe() {
-  return () => {};
-}
-
 interface FpsProps
   extends
     React.ComponentProps<"div">,
@@ -63,11 +60,7 @@ function Fps(props: FpsProps) {
     ...fpsProps
   } = props;
 
-  const mounted = React.useSyncExternalStore(
-    subscribe,
-    () => true,
-    () => false,
-  );
+  const mounted = useIsHydrated();
   const [fps, setFps] = React.useState(0);
 
   const status =

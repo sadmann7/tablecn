@@ -1,3 +1,4 @@
+import { clamp } from "@base-ui/utils/clamp";
 import {
   assignPrototypeAPIs,
   assignTableAPIs,
@@ -1772,9 +1773,8 @@ function getNavigationTarget(
           ? HORIZONTAL_PAGE_SIZE
           : -HORIZONTAL_PAGE_SIZE;
       nextColumnId =
-        dataColumnIds[
-          Math.min(dataColumnIds.length - 1, Math.max(0, columnIndex + step))
-        ] ?? from.columnId;
+        dataColumnIds[clamp(columnIndex + step, 0, dataColumnIds.length - 1)] ??
+        from.columnId;
       break;
     }
     case "tab":

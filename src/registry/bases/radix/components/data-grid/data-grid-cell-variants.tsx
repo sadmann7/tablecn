@@ -3,6 +3,10 @@
 import type { RowData } from "@tanstack/react-table";
 import type { ExternalToast } from "sonner";
 
+import { ownerDocument } from "@base-ui/utils/owner";
+import { activeElement, contains, getTarget } from "@base-ui/utils/shadowDom";
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useTimeout } from "@base-ui/utils/useTimeout";
 import { cn } from "cn";
 import * as React from "react";
 import { toast } from "sonner";
@@ -172,7 +176,7 @@ export function LongTextCell<TData extends RowData>(
     if (pendingChar) {
       requestAnimationFrame(() => {
         const textarea = textareaRef.current;
-        if (textarea && document.activeElement === textarea) {
+        if (textarea && activeElement(ownerDocument(textarea)) === textarea) {
           insertTextAtSelection(textarea, pendingChar);
           textarea.scrollTop = textarea.scrollHeight;
         }
@@ -479,7 +483,7 @@ export function BooleanCell<TData extends RowData>(
   }, []);
 
   const onControlMouseDown = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       event.preventDefault();
       cell.table.setFocusedCell(cell.row.id, cell.column.id);
@@ -489,7 +493,7 @@ export function BooleanCell<TData extends RowData>(
   );
 
   const onControlDoubleClick = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
     },
     [],
@@ -957,7 +961,7 @@ export function FileCell<TData extends RowData>(
     setDraftValue: setError,
     clearDraft: clearError,
   } = useCellDraft<string | null>({ key: cellValue, fallback: null });
-  const errorTimeoutRef = React.useRef<number | undefined>(undefined);
+  const errorTimeout = useTimeout();
 
   const files = React.useMemo(
     () => (uploadingFiles ? [...cellValue, ...uploadingFiles] : cellValue),
@@ -974,16 +978,13 @@ export function FileCell<TData extends RowData>(
     [accept],
   );
 
-  React.useEffect(() => () => window.clearTimeout(errorTimeoutRef.current), []);
-
   const flashError = React.useCallback(
     (message: string, toastOptions?: ExternalToast) => {
       setError(message);
       toast(message, toastOptions);
-      window.clearTimeout(errorTimeoutRef.current);
-      errorTimeoutRef.current = window.setTimeout(clearError, 2000);
+      errorTimeout.start(2000, clearError);
     },
-    [setError, clearError],
+    [setError, clearError, errorTimeout],
   );
 
   const addFiles = React.useCallback(
@@ -1599,7 +1600,7 @@ function useEditableText<TData extends RowData>({
   const textRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const element = textRef.current;
     if (!isEditing && element && element.textContent !== initialValue) {
       element.textContent = initialValue;
@@ -1754,7 +1755,8 @@ function useCellEditorDismiss(
   const onPointerDownOutside = React.useCallback(
     (event: Event) => {
       const container = containerRef.current;
-      if (event.target instanceof Node && container?.contains(event.target)) {
+      const target = getTarget(event);
+      if (target instanceof Element && contains(container, target)) {
         event.preventDefault();
       }
     },
@@ -1766,7 +1768,10 @@ function useCellEditorDismiss(
       event.preventDefault();
       const container = containerRef.current;
       if (
-        !container?.closest('[role="grid"]')?.contains(document.activeElement)
+        !contains(
+          container?.closest('[role="grid"]'),
+          activeElement(ownerDocument(container)),
+        )
       ) {
         container?.focus();
       }
@@ -1803,8 +1808,8 @@ function getPendingChar<TData extends RowData>(
 
 function onEditingCellMouseDown(event: React.MouseEvent) {
   if (
-    event.target instanceof Node &&
-    event.currentTarget.contains(event.target)
+    event.target instanceof Element &&
+    contains(event.currentTarget, event.target)
   ) {
     event.preventDefault();
   }

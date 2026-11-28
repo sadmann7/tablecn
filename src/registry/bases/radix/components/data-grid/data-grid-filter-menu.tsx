@@ -1,5 +1,6 @@
 "use client";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
 import {
   type Column,
   type ColumnFilter,
@@ -206,8 +207,7 @@ function DataGridFilterMenuContent<TData extends RowData>({
       }
     }
 
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return addEventListener(window, "keydown", onKeyDown);
   }, []);
 
   const isDraggingRef = React.useRef(false);

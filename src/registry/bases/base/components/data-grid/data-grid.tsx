@@ -1,5 +1,6 @@
 "use client";
 
+import { clamp } from "@base-ui/utils/clamp";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import {
@@ -242,7 +243,7 @@ function DataGridViewport<TData extends RowData>({
         count,
         fallbackVisibleCount: endIndex - startIndex + 1,
       });
-      let start = Math.max(0, Math.min(startIndex - before, count - total));
+      let start = clamp(startIndex - before, 0, count - total);
       const focusedRowId = table.getFocusedCell()?.row.id;
       const focusedRowIndex =
         focusedRowId === undefined

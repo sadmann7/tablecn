@@ -1,5 +1,15 @@
 import type { Virtualizer, VirtualizerOptions } from "@tanstack/react-virtual";
 
+import { addEventListener } from "@base-ui/utils/addEventListener";
+import { clamp } from "@base-ui/utils/clamp";
+import { EMPTY_ARRAY } from "@base-ui/utils/empty";
+import { useIsHydrated } from "@base-ui/utils/hydration";
+import { mergeCleanups } from "@base-ui/utils/mergeCleanups";
+import { ownerDocument, ownerWindow } from "@base-ui/utils/owner";
+import { platform } from "@base-ui/utils/platform";
+import { activeElement, contains, getTarget } from "@base-ui/utils/shadowDom";
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import {
   type CellSelectionState,
   type ColumnDef,
@@ -25,7 +35,6 @@ import type {
   NavigationDirection,
 } from "@/lib/data-grid-types";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   type DataGridFeatures,
   dataGridFeatures,
@@ -128,7 +137,8 @@ function useDataGrid<TData extends RowData>({
   );
 
   const getCellSelection = React.useCallback(
-    (): CellSelectionState => tableRef.current?.atoms.cellSelection.get() ?? [],
+    (): CellSelectionState =>
+      tableRef.current?.atoms.cellSelection.get() ?? EMPTY_ARRAY,
     [],
   );
 
@@ -197,7 +207,7 @@ function useDataGrid<TData extends RowData>({
 
       pendingFocusRef.current = { cell, shouldScroll };
       const container = dataGridRef.current;
-      if (container && document.activeElement !== container) {
+      if (container && activeElement(ownerDocument(container)) !== container) {
         container.focus({ preventScroll: true });
       }
     },
@@ -256,11 +266,9 @@ function useDataGrid<TData extends RowData>({
   }, []);
 
   const blurCell = React.useCallback(() => {
-    if (
-      tableRef.current?.getEditingCell() &&
-      document.activeElement instanceof HTMLElement
-    ) {
-      document.activeElement.blur();
+    const element = activeElement(ownerDocument(dataGridRef.current));
+    if (tableRef.current?.getEditingCell() && element instanceof HTMLElement) {
+      element.blur();
     }
 
     tableRef.current?.resetCellSelection(true);
@@ -659,11 +667,7 @@ function useDataGrid<TData extends RowData>({
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- the table is stable, so its columns and sizing state invalidate the sizes
   }, [tableColumns, table.state.columnResizing, table.state.columnSizing]);
 
-  const isFirefox = React.useSyncExternalStore(
-    React.useCallback(() => () => {}, []),
-    React.useCallback(() => navigator.userAgent.includes("Firefox"), []),
-    React.useCallback(() => false, []),
-  );
+  const isFirefox = useIsHydrated() && platform.engine.gecko;
 
   const adjustLayout = React.useMemo(() => {
     const columnPinning = table.state.columnPinning;
@@ -809,10 +813,7 @@ function useDataGrid<TData extends RowData>({
           column.columnDef.maxSize ??
           defaultColumnDef.maxSize ??
           Number.POSITIVE_INFINITY;
-        const size = Math.min(
-          Math.max(column.getSize() + delta, minSize),
-          maxSize,
-        );
+        const size = clamp(column.getSize() + delta, minSize, maxSize);
         currentTable.setColumnSizing((prev) => ({ ...prev, [columnId]: size }));
       }
 
@@ -1200,10 +1201,7 @@ function useDataGrid<TData extends RowData>({
     const dataGridElement = dataGridRef.current;
     if (!dataGridElement) return;
 
-    dataGridElement.addEventListener("keydown", onDataGridKeyDown);
-    return () => {
-      dataGridElement.removeEventListener("keydown", onDataGridKeyDown);
-    };
+    return addEventListener(dataGridElement, "keydown", onDataGridKeyDown);
   }, [onDataGridKeyDown]);
 
   React.useEffect(() => {
@@ -1211,7 +1209,7 @@ function useDataGrid<TData extends RowData>({
       const dataGridElement = dataGridRef.current;
       if (!dataGridElement) return;
 
-      const target = event.target;
+      const target = getTarget(event);
       if (!(target instanceof HTMLElement)) return;
 
       const { key, ctrlKey, metaKey, shiftKey } = event;
@@ -1226,7 +1224,7 @@ function useDataGrid<TData extends RowData>({
       ) {
         const isInInput =
           target.tagName === "INPUT" || target.tagName === "TEXTAREA";
-        const isInDataGrid = dataGridElement.contains(target);
+        const isInDataGrid = contains(dataGridElement, target);
         const isInSearchInput = target.closest('[role="search"]') !== null;
 
         if (isInDataGrid || isInSearchInput || !isInInput) {
@@ -1246,7 +1244,7 @@ function useDataGrid<TData extends RowData>({
         }
       }
 
-      const isInDataGrid = dataGridElement.contains(target);
+      const isInDataGrid = contains(dataGridElement, target);
 
       // Works from anywhere but text fields, editors and another grid, like an app's undo.
       const undoRedoKey = key.toLowerCase();
@@ -1291,10 +1289,12 @@ function useDataGrid<TData extends RowData>({
       }
     }
 
-    window.addEventListener("keydown", onGlobalKeyDown, true);
-    return () => {
-      window.removeEventListener("keydown", onGlobalKeyDown, true);
-    };
+    return addEventListener(
+      ownerWindow(dataGridRef.current),
+      "keydown",
+      onGlobalKeyDown,
+      true,
+    );
   }, [onEscapeKeyDownRef]);
 
   React.useEffect(() => {
@@ -1358,8 +1358,8 @@ function useDataGrid<TData extends RowData>({
       const relatedTarget = event.relatedTarget;
       if (
         !currentContainer ||
-        !(relatedTarget instanceof Node) ||
-        currentContainer.contains(relatedTarget)
+        !(relatedTarget instanceof Element) ||
+        contains(currentContainer, relatedTarget)
       ) {
         return;
       }
@@ -1384,15 +1384,11 @@ function useDataGrid<TData extends RowData>({
       focusCell(firstVisibleRowId, firstColumnId);
     }
 
-    container.addEventListener("pointerdown", onPointerDown);
-    container.addEventListener("pointerup", onPointerUp);
-    container.addEventListener("focus", onFocus);
-
-    return () => {
-      container.removeEventListener("pointerdown", onPointerDown);
-      container.removeEventListener("pointerup", onPointerUp);
-      container.removeEventListener("focus", onFocus);
-    };
+    return mergeCleanups(
+      addEventListener(container, "pointerdown", onPointerDown),
+      addEventListener(container, "pointerup", onPointerUp),
+      addEventListener(container, "focus", onFocus),
+    );
   }, [
     getNavigableColumnIds,
     focusCell,
@@ -1403,9 +1399,9 @@ function useDataGrid<TData extends RowData>({
 
   React.useEffect(() => {
     function onFocusIn(event: FocusEvent) {
-      const target = event.target;
+      const target = getTarget(event);
       if (!(target instanceof Element)) return;
-      if (!dataGridRef.current?.contains(target)) return;
+      if (!contains(dataGridRef.current, target)) return;
 
       const columnId =
         target.closest<HTMLElement>('[data-slot="data-grid-header-cell"]')
@@ -1414,10 +1410,11 @@ function useDataGrid<TData extends RowData>({
       tableRef.current?.setFocusedHeaderColumnId(columnId);
     }
 
-    document.addEventListener("focusin", onFocusIn);
-    return () => {
-      document.removeEventListener("focusin", onFocusIn);
-    };
+    return addEventListener(
+      ownerDocument(dataGridRef.current),
+      "focusin",
+      onFocusIn,
+    );
   }, []);
 
   React.useEffect(() => {
@@ -1432,20 +1429,19 @@ function useDataGrid<TData extends RowData>({
       cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         const focusedCell = getFocusedCell();
-        if (!focusedCell || !document.hasFocus()) return;
-        if (document.activeElement && document.activeElement !== document.body)
-          return;
+        const doc = ownerDocument(container);
+        if (!focusedCell || !doc.hasFocus()) return;
+        const element = activeElement(doc);
+        if (element && element !== doc.body) return;
 
         focusCellElement(focusedCell, false);
       });
     }
 
-    container.addEventListener("focusout", onFocusOut);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      container.removeEventListener("focusout", onFocusOut);
-    };
+    return mergeCleanups(
+      addEventListener(container, "focusout", onFocusOut),
+      () => cancelAnimationFrame(rafId),
+    );
   }, [getFocusedCell, focusCellElement]);
 
   React.useEffect(() => {
@@ -1476,7 +1472,10 @@ function useDataGrid<TData extends RowData>({
           revealCell(focusedCell, { shouldFocus: false, shouldScroll: true });
         } else if (
           table.getFocusedHeaderColumnId() === null &&
-          dataGridRef.current?.contains(document.activeElement)
+          contains(
+            dataGridRef.current,
+            activeElement(ownerDocument(dataGridRef.current)),
+          )
         ) {
           focusCellElement(focusedCell);
         }
@@ -1553,7 +1552,7 @@ function useDataGrid<TData extends RowData>({
     };
   }, [pasteDialogAtom, cellSelectionAtom, focusCellElement]);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const pending = pendingFocusRef.current;
     if (!pending) return;
 
@@ -1563,7 +1562,10 @@ function useDataGrid<TData extends RowData>({
       focusedCell.rowId !== pending.cell.rowId ||
       focusedCell.columnId !== pending.cell.columnId ||
       !!tableRef.current?.getEditingCell() ||
-      !dataGridRef.current?.contains(document.activeElement);
+      !contains(
+        dataGridRef.current,
+        activeElement(ownerDocument(dataGridRef.current)),
+      );
 
     if (
       isStale ||
@@ -1582,11 +1584,13 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
+      const container = dataGridRef.current;
+      const target = getTarget(event);
       if (
-        dataGridRef.current &&
-        !dataGridRef.current.contains(event.target as Node)
+        container &&
+        !(target instanceof Element && contains(container, target))
       ) {
-        const elements = document.elementsFromPoint(
+        const elements = ownerDocument(container).elementsFromPoint(
           event.clientX,
           event.clientY,
         );
@@ -1605,10 +1609,11 @@ function useDataGrid<TData extends RowData>({
       }
     }
 
-    document.addEventListener("mousedown", onOutsideClick);
-    return () => {
-      document.removeEventListener("mousedown", onOutsideClick);
-    };
+    return addEventListener(
+      ownerDocument(dataGridRef.current),
+      "mousedown",
+      onOutsideClick,
+    );
   }, [blurCell]);
 
   React.useEffect(() => {
@@ -1744,10 +1749,9 @@ function useDataGrid<TData extends RowData>({
       }
 
       const rows = tbl.getRowModel().rows;
-      const clampedY = Math.max(dataTop, Math.min(mouseY, dataBottom));
+      const clampedY = clamp(mouseY, dataTop, dataBottom);
       const absY = container.scrollTop + (clampedY - dataTop);
-      const rowId =
-        rows[Math.max(0, Math.min(Math.floor(absY / rh), rows.length - 1))]?.id;
+      const rowId = rows[clamp(Math.floor(absY / rh), 0, rows.length - 1)]?.id;
 
       if (!rowId) {
         rafId = requestAnimationFrame(tick);
@@ -1762,7 +1766,7 @@ function useDataGrid<TData extends RowData>({
       let columnId: string | undefined;
 
       if (dx !== 0) {
-        const clampedX = Math.max(rect.left, Math.min(mouseX, rect.right));
+        const clampedX = clamp(mouseX, rect.left, rect.right);
         const relX = clampedX - rect.left;
 
         const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;

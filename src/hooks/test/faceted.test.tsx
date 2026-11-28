@@ -6,7 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import * as AriaFaceted from "@/registry/bases/aria/ui/faceted";
 import * as BaseFaceted from "@/registry/bases/base/ui/faceted";
@@ -37,6 +37,56 @@ describe.each([
       expect(screen.getByRole("button").textContent).toContain("Pick a status");
       expect(getActiveChecked(itemRole)).toBe("false");
     }
+  });
+
+  it("keeps showing a controlled value the parent rejects", () => {
+    const onValueChange = vi.fn();
+    render(
+      <SingleSelect ui={ui} value="active" onValueChange={onValueChange} />,
+    );
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button"));
+    });
+    act(() => {
+      fireEvent.click(screen.getByRole(itemRole, { name: "Inactive" }));
+    });
+
+    expect(onValueChange).toHaveBeenCalledWith("inactive");
+    expect(screen.getByRole("button").textContent).toContain("Active");
+    expect(getActiveChecked(itemRole)).toBe("true");
+  });
+
+  it("stays open when the parent keeps a controlled open state", () => {
+    const onOpenChange = vi.fn();
+    render(<OpenSelect ui={ui} onOpenChange={onOpenChange} />);
+
+    act(() => {
+      fireEvent.keyDown(screen.getByRole(itemRole, { name: "Active" }), {
+        key: "Escape",
+      });
+    });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.getByRole(itemRole, { name: "Active" })).toBeTruthy();
+  });
+
+  it("follows a new controlled value without calling onValueChange", () => {
+    const onValueChange = vi.fn();
+    const { rerender } = render(
+      <SingleSelect ui={ui} value="active" onValueChange={onValueChange} />,
+    );
+
+    rerender(
+      <SingleSelect ui={ui} value="inactive" onValueChange={onValueChange} />,
+    );
+    expect(screen.getByRole("button").textContent).toContain("Inactive");
+
+    rerender(
+      <SingleSelect ui={ui} value={undefined} onValueChange={onValueChange} />,
+    );
+    expect(screen.getByRole("button").textContent).toContain("Pick a status");
+    expect(onValueChange).not.toHaveBeenCalled();
   });
 });
 
@@ -125,7 +175,14 @@ const items = [
   { label: "Inactive", value: "inactive" },
 ];
 
-function SingleSelect({ ui }: { ui: FacetedModule }) {
+function SingleSelect({
+  ui,
+  ...props
+}: {
+  ui: FacetedModule;
+  value?: string;
+  onValueChange?: (value: string | undefined) => void;
+}) {
   const {
     Faceted,
     FacetedContent,
@@ -136,9 +193,51 @@ function SingleSelect({ ui }: { ui: FacetedModule }) {
     FacetedValue,
   } = ui;
   const [value, setValue] = React.useState<string | undefined>();
+  const isControlled = "value" in props;
 
   return (
-    <Faceted value={value} onValueChange={setValue} items={items}>
+    <Faceted
+      value={isControlled ? props.value : value}
+      onValueChange={isControlled ? props.onValueChange : setValue}
+      items={items}
+    >
+      <FacetedTrigger>
+        <FacetedValue placeholder="Pick a status" />
+      </FacetedTrigger>
+      <FacetedContent>
+        <FacetedList>
+          <FacetedGroup>
+            {items.map((item) => (
+              <FacetedItem key={item.value} value={item.value}>
+                {item.label}
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
+  );
+}
+
+function OpenSelect({
+  ui,
+  onOpenChange,
+}: {
+  ui: FacetedModule;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const {
+    Faceted,
+    FacetedContent,
+    FacetedGroup,
+    FacetedItem,
+    FacetedList,
+    FacetedTrigger,
+    FacetedValue,
+  } = ui;
+
+  return (
+    <Faceted open onOpenChange={onOpenChange} items={items}>
       <FacetedTrigger>
         <FacetedValue placeholder="Pick a status" />
       </FacetedTrigger>

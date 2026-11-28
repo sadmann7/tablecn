@@ -1,9 +1,9 @@
 "use client";
 
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import { useTheme } from "next-themes";
 import * as React from "react";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { getIsEditableTarget } from "@/lib/utils";
 
 export function ThemeShortcut() {

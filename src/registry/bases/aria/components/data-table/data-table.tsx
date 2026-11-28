@@ -1,5 +1,6 @@
 "use client";
 
+import { contains } from "@base-ui/utils/shadowDom";
 import {
   type Cell,
   type ColumnPinningPosition,
@@ -60,8 +61,8 @@ export function DataTable<TData extends RowData>({
     const nativeEvent = event.nativeEvent;
     if (event.key !== "Escape" || nativeEvent.defaultPrevented) return;
     if (
-      !(event.target instanceof Node) ||
-      !event.currentTarget.contains(event.target)
+      !(event.target instanceof Element) ||
+      !contains(event.currentTarget, event.target)
     ) {
       return;
     }
