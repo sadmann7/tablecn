@@ -39,14 +39,14 @@ export interface DataGridMessages {
   cellsEdited: (count: number, columnLabel: string | null) => string;
 }
 
-const ANNOUNCE_DELAY = 150;
-const CLEAR_DELAY = 5000;
+const ANNOUNCE_DELAY_MS = 150;
+const CLEAR_DELAY_MS = 5000;
 
 let announcer: Announcer | null = null;
 
 export function announce(
   message: string,
-  { assertiveness = "polite", delay = ANNOUNCE_DELAY }: AnnounceOptions = {},
+  { assertiveness = "polite", delay = ANNOUNCE_DELAY_MS }: AnnounceOptions = {},
 ) {
   if (!message) return;
   const current = getAnnouncer();
@@ -163,7 +163,7 @@ function flush(current: Announcer, region: LiveRegion) {
   const clearTimer = setTimeout(() => {
     current.clearTimers.delete(clearTimer);
     node.remove();
-  }, CLEAR_DELAY);
+  }, CLEAR_DELAY_MS);
   current.clearTimers.add(clearTimer);
 }
 
