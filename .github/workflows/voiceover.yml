@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: "0 4 * * *"
   workflow_dispatch:
+  push:
+    branches: ["sadman/voiceover-ci"]
   pull_request:
     paths:
       - ".github/workflows/voiceover.yml"
