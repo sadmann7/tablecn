@@ -158,7 +158,7 @@ function getPairs(base: string): Pair[] {
   });
 }
 
-function listFiles(dir: string, prefix = ""): string[] {
+export function listFiles(dir: string, prefix = ""): string[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap((name) => {
     const relativePath = prefix ? `${prefix}/${name}` : name;
@@ -174,7 +174,7 @@ function readNormalized(base: string, file: string) {
     .split("\n");
 }
 
-function getChangedLines(from: string[], to: string[]) {
+export function getChangedLines(from: string[], to: string[]) {
   let start = 0;
   while (
     start < from.length &&

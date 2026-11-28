@@ -24,6 +24,7 @@
     "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p party",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm check:bases",
     "check:bases": "tsx --tsconfig ./tsconfig.scripts.json scripts/check-bases.ts",
+    "report:bases": "tsx --tsconfig ./tsconfig.scripts.json scripts/report-base-drift.ts",
     "sync:bases": "tsx --tsconfig ./tsconfig.scripts.json scripts/check-bases.ts --sync",
     "shadcn": "pnpm dlx shadcn@latest",
     "build:registry": "tsx --tsconfig ./tsconfig.scripts.json scripts/build-registry.ts",

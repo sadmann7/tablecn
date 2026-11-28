@@ -35,6 +35,9 @@ jobs:
 
       - run: pnpm lint
       - run: pnpm check:bases
+      - name: Report base drift
+        if: ${{ !cancelled() }}
+        run: pnpm report:bases
 
   typecheck:
     runs-on: ubuntu-latest
