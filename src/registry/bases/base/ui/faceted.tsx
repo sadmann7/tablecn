@@ -2,7 +2,7 @@
 
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
-import { EMPTY_ARRAY } from "@base-ui/utils/empty";
+import { EMPTY_ARRAY, NOOP } from "@base-ui/utils/empty";
 import { ReactStore, useStore } from "@base-ui/utils/store";
 import { useControlled } from "@base-ui/utils/useControlled";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
@@ -117,8 +117,8 @@ function createFacetedStore(state: FacetedState) {
     state,
     {
       isValueControlled: false,
-      onValueChange: () => {},
-      onOpenChange: () => {},
+      onValueChange: NOOP,
+      onOpenChange: NOOP,
     },
     facetedSelectors,
   );

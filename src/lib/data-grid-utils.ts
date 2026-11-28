@@ -8,6 +8,7 @@ import type {
 } from "@tanstack/react-table";
 import type * as React from "react";
 
+import { clamp } from "@base-ui/utils/clamp";
 import {
   BaselineIcon,
   CalendarIcon,
@@ -705,7 +706,7 @@ export function getColumnFitSize({
   }
   measurer.remove();
 
-  return Math.min(maxSize, Math.max(minSize, Math.ceil(contentSize)));
+  return clamp(Math.ceil(contentSize), minSize, maxSize);
 }
 
 export function getRowDisplayIndex<TData extends RowData>(

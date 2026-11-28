@@ -1,5 +1,6 @@
 "use client";
 
+import { clamp } from "@base-ui/utils/clamp";
 import * as React from "react";
 import { createPortal } from "react-dom";
 
@@ -252,10 +253,6 @@ function hover(target: Element | null | undefined) {
   };
   target.dispatchEvent(new PointerEvent("pointerover", init));
   target.dispatchEvent(new PointerEvent("pointermove", init));
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
 }
 
 function subscribeToNothing() {

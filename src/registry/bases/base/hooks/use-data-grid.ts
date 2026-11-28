@@ -1,5 +1,7 @@
 import type { Virtualizer, VirtualizerOptions } from "@tanstack/react-virtual";
 
+import { clamp } from "@base-ui/utils/clamp";
+import { EMPTY_ARRAY } from "@base-ui/utils/empty";
 import { useIsHydrated } from "@base-ui/utils/hydration";
 import { platform } from "@base-ui/utils/platform";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
@@ -131,7 +133,8 @@ function useDataGrid<TData extends RowData>({
   );
 
   const getCellSelection = React.useCallback(
-    (): CellSelectionState => tableRef.current?.atoms.cellSelection.get() ?? [],
+    (): CellSelectionState =>
+      tableRef.current?.atoms.cellSelection.get() ?? EMPTY_ARRAY,
     [],
   );
 
@@ -808,10 +811,7 @@ function useDataGrid<TData extends RowData>({
           column.columnDef.maxSize ??
           defaultColumnDef.maxSize ??
           Number.POSITIVE_INFINITY;
-        const size = Math.min(
-          Math.max(column.getSize() + delta, minSize),
-          maxSize,
-        );
+        const size = clamp(column.getSize() + delta, minSize, maxSize);
         currentTable.setColumnSizing((prev) => ({ ...prev, [columnId]: size }));
       }
 
@@ -1743,10 +1743,9 @@ function useDataGrid<TData extends RowData>({
       }
 
       const rows = tbl.getRowModel().rows;
-      const clampedY = Math.max(dataTop, Math.min(mouseY, dataBottom));
+      const clampedY = clamp(mouseY, dataTop, dataBottom);
       const absY = container.scrollTop + (clampedY - dataTop);
-      const rowId =
-        rows[Math.max(0, Math.min(Math.floor(absY / rh), rows.length - 1))]?.id;
+      const rowId = rows[clamp(Math.floor(absY / rh), 0, rows.length - 1)]?.id;
 
       if (!rowId) {
         rafId = requestAnimationFrame(tick);
@@ -1761,7 +1760,7 @@ function useDataGrid<TData extends RowData>({
       let columnId: string | undefined;
 
       if (dx !== 0) {
-        const clampedX = Math.max(rect.left, Math.min(mouseX, rect.right));
+        const clampedX = clamp(mouseX, rect.left, rect.right);
         const relX = clampedX - rect.left;
 
         const leftZoneWidth = isActuallyRtl ? cachedRpw : cachedLpw;
