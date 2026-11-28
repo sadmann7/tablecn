@@ -287,6 +287,34 @@ for (const base of GRID_BASES) {
       ).toHaveLength(1);
     });
 
+    test("speaks an edit, its undo and its redo", async ({ page }) => {
+      const nameCell = page
+        .getByRole("grid")
+        .getByRole("row")
+        .nth(1)
+        .getByRole("gridcell")
+        .nth(1);
+      const toast = page.locator("[data-sonner-toast]").first();
+      await nameCell.click();
+      await startScreenReader(page);
+
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("ControlOrMeta+a");
+      await page.keyboard.type("Edited");
+      await page.keyboard.press("Enter");
+      await expectSpokenAnnouncements(page, ["polite: Name updated"]);
+
+      await page.keyboard.press("ControlOrMeta+z");
+      await expectSpokenOnce(page, "Undo: Name updated");
+      await expect(toast).toHaveText("Action undone");
+      await expectHiddenFromTree(page, "Action undone");
+
+      await page.keyboard.press("ControlOrMeta+Shift+z");
+      await expectSpokenOnce(page, "Redo: Name updated");
+      await expect(toast).toHaveText("Action redone");
+      await expectHiddenFromTree(page, "Action redone");
+    });
+
     test("exposes row selection on the row, cells and checkboxes", async ({
       page,
     }) => {
@@ -361,20 +389,21 @@ function writeClipboard(page: Page, text: string) {
   return page.evaluate((value) => navigator.clipboard.writeText(value), text);
 }
 
+async function expectHiddenFromTree(page: Page, text: string) {
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+  expect(
+    nodes.filter((node) => !node.ignored && node.name?.value?.includes(text)),
+  ).toEqual([]);
+  await cdp.detach();
+}
+
 function clearSpokenPhraseLog(page: Page) {
   return page.evaluate(() =>
     (
       window as unknown as ScreenReaderWindow
     ).screenReader.clearSpokenPhraseLog(),
   );
-}
-
-function readSpokenPhrases(page: Page) {
-  return page.evaluate(async () => {
-    const { screenReader } = window as unknown as ScreenReaderWindow;
-    const phrases = await screenReader.spokenPhraseLog();
-    return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
-  });
 }
 
 async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
@@ -404,11 +433,24 @@ async function startScreenReader(page: Page) {
   }, SCREEN_READER_SOURCE);
 }
 
+function readSpokenPhrases(page: Page) {
+  return page.evaluate(async () => {
+    const { screenReader } = window as unknown as ScreenReaderWindow;
+    const phrases = await screenReader.spokenPhraseLog();
+    return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
+  });
+}
+
 async function expectSpokenAnnouncements(page: Page, expected: string[]) {
   await expect.poll(() => readSpokenPhrases(page)).toEqual(expected);
   await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
   expect(await readSpokenPhrases(page)).toEqual(expected);
-  await clearSpokenPhraseLog(page);
+
+  await page.evaluate(() =>
+    (
+      window as unknown as ScreenReaderWindow
+    ).screenReader.clearSpokenPhraseLog(),
+  );
 }
 
 function sortedHeaders(page: Page) {

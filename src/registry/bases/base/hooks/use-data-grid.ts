@@ -30,6 +30,7 @@ import {
   announce,
   type DataGridMessages,
   defaultDataGridMessages,
+  getHistoryMessage,
   getIsSameCellValue,
   getRowSelectionMessage,
   getSortingKey,
@@ -144,6 +145,32 @@ function useDataGrid<TData extends RowData>({
       const { reason, changes } = details;
       const firstChange = changes[0];
       const lastChange = changes.at(-1);
+      const getChangedColumnLabel = () => {
+        if (!firstChange) return null;
+        const { columnId } = firstChange;
+        const column = changes.every((change) => change.columnId === columnId)
+          ? tableRef.current?.getColumn(columnId)
+          : undefined;
+        return column ? getColumnLabel(column) : null;
+      };
+
+      if (reason === "undo" || reason === "redo") {
+        const message = getHistoryMessage(messagesRef.current, reason, {
+          cellCount: changes.length,
+          columnLabel: getChangedColumnLabel(),
+          addedRowCount: (reason === "undo"
+            ? details.removedRows
+            : details.addedRows
+          ).length,
+          removedRowCount: (reason === "undo"
+            ? details.addedRows
+            : details.removedRows
+          ).length,
+        });
+        if (message) announce(message);
+        return;
+      }
+
       if (reason !== "edit" || !firstChange || !lastChange) return;
 
       const editSession = editSessionRef.current;
@@ -160,14 +187,10 @@ function useDataGrid<TData extends RowData>({
         return;
       }
 
-      const columnId = firstChange.columnId;
-      const column = changes.every((change) => change.columnId === columnId)
-        ? tableRef.current?.getColumn(columnId)
-        : undefined;
       announce(
         messagesRef.current.cellsEdited(
           changes.length,
-          column ? getColumnLabel(column) : null,
+          getChangedColumnLabel(),
         ),
       );
     },
@@ -1324,9 +1347,7 @@ function useDataGrid<TData extends RowData>({
         if (count === 0) {
           toast.info(isRedo ? "No actions to redo" : "No actions to undo");
         } else {
-          toast.success(
-            `${count} action${count === 1 ? "" : "s"} ${isRedo ? "redone" : "undone"}`,
-          );
+          toastSilently("success", isRedo ? "Action redone" : "Action undone");
         }
         return;
       }
