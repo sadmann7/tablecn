@@ -1341,6 +1341,8 @@ function useDataGrid<TData extends RowData>({
         const count = isRedo ? currentTable.redo() : currentTable.undo();
         if (count === 0) {
           toast.info(isRedo ? "No actions to redo" : "No actions to undo");
+        } else {
+          toastSilently("success", isRedo ? "Action redone" : "Action undone");
         }
         return;
       }
@@ -2186,6 +2188,11 @@ function selectTableState(state: TableState<DataGridFeatures>) {
 function toastClipboardNotice({ variant, message }: ClipboardNotice) {
   if (variant === "error") toast.error(message);
   else toast.success(message);
+}
+
+// Sonner's toaster is a live region, and the grid announces this change itself.
+function toastSilently(type: "success" | "info" | "error", message: string) {
+  toast[type](React.createElement("span", { "aria-hidden": true }, message));
 }
 
 export { useDataGrid, type UseDataGridProps };

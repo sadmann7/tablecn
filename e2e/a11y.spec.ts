@@ -265,6 +265,7 @@ for (const base of GRID_BASES) {
         .nth(1)
         .getByRole("gridcell")
         .nth(1);
+      const toast = page.locator("[data-sonner-toast]").first();
       await nameCell.click();
       await startScreenReader(page);
 
@@ -275,10 +276,14 @@ for (const base of GRID_BASES) {
       await expectSpokenAnnouncements(page, ["polite: Name updated"]);
 
       await page.keyboard.press("ControlOrMeta+z");
-      await expectSpokenAnnouncements(page, ["polite: Undo: Name updated"]);
+      await expectSpokenOnce(page, "Undo: Name updated");
+      await expect(toast).toHaveText("Action undone");
+      await expectHiddenFromTree(page, "Action undone");
 
       await page.keyboard.press("ControlOrMeta+Shift+z");
-      await expectSpokenAnnouncements(page, ["polite: Redo: Name updated"]);
+      await expectSpokenOnce(page, "Redo: Name updated");
+      await expect(toast).toHaveText("Action redone");
+      await expectHiddenFromTree(page, "Action redone");
     });
 
     test("exposes row selection on the row, cells and checkboxes", async ({
@@ -328,6 +333,44 @@ function focusedCellPosition(page: Page) {
 
 function announcer(page: Page) {
   return page.locator("[data-live-announcer=polite]");
+}
+
+// The virtual reader reads aria-hidden text in live regions, so Chromium's tree
+// decides whether a toast is exposed as well.
+async function expectSpokenOnce(page: Page, message: string) {
+  await expect
+    .poll(() => readSpokenPhrases(page))
+    .toContain(`polite: ${message}`);
+  await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+  expect(
+    nodes.filter(
+      (node) =>
+        !node.ignored &&
+        node.role?.value === "StaticText" &&
+        node.name?.value === message,
+    ),
+  ).toHaveLength(1);
+  await cdp.detach();
+  await clearSpokenPhraseLog(page);
+}
+
+async function expectHiddenFromTree(page: Page, text: string) {
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+  expect(
+    nodes.filter((node) => !node.ignored && node.name?.value?.includes(text)),
+  ).toEqual([]);
+  await cdp.detach();
+}
+
+function clearSpokenPhraseLog(page: Page) {
+  return page.evaluate(() =>
+    (
+      window as unknown as ScreenReaderWindow
+    ).screenReader.clearSpokenPhraseLog(),
+  );
 }
 
 async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
