@@ -1,21 +1,17 @@
-import {
-  voiceOverTest as test,
-  type VoiceOverPlaywright,
-} from "@guidepup/playwright";
+import { voiceOverTest as test } from "@guidepup/playwright";
 import { expect, type Page } from "@playwright/test";
+import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
+import { promisify } from "node:util";
 
-test.use({ voiceOverStartOptions: { capture: true } });
+const QUIET_MS = 2500;
+const MAX_LISTEN_MS = 15_000;
 
-test.afterEach(async ({ voiceOver }, testInfo) => {
-  const log = await voiceOver.spokenPhraseLog();
-  const file = testInfo.outputPath("spoken-phrase-log.json");
-  await fs.writeFile(file, JSON.stringify(log, null, 2));
-  await testInfo.attach("spoken-phrase-log", {
-    path: file,
-    contentType: "application/json",
-  });
-});
+const LAST_PHRASE_SCRIPT = `tell application "VoiceOver"
+with transaction
+return content of last phrase
+end transaction
+end tell`;
 
 test.describe("data table", () => {
   test.beforeEach(async ({ page, voiceOver }) => {
@@ -26,11 +22,8 @@ test.describe("data table", () => {
     await voiceOver.navigateToWebContent();
   });
 
-  test("speaks one result count after typing a search", async ({
-    page,
-    voiceOver,
-  }) => {
-    const spoken = await listen(voiceOver, "search", () =>
+  test("speaks one result count after typing a search", async ({ page }) => {
+    const spoken = await listen("search", () =>
       page
         .getByPlaceholder("Search tasks...")
         .pressSequentially("pixel", { delay: 150 }),
@@ -40,19 +33,16 @@ test.describe("data table", () => {
     expect(spoken).not.toMatch(/\b(?!7 )\d+ results?\b/);
   });
 
-  test("speaks the page after moving to the next page", async ({
-    page,
-    voiceOver,
-  }) => {
-    const spoken = await listen(voiceOver, "next page", () =>
+  test("speaks the page after moving to the next page", async ({ page }) => {
+    const spoken = await listen("next page", () =>
       page.getByRole("button", { name: "Go to next page" }).click(),
     );
 
     expectSpokenOnce(spoken, "100 results, page 2 of 10");
   });
 
-  test("speaks the selection count once", async ({ page, voiceOver }) => {
-    const spoken = await listen(voiceOver, "select row", () =>
+  test("speaks the selection count once", async ({ page }) => {
+    const spoken = await listen("select row", () =>
       page.locator("tbody [role=checkbox]").first().click(),
     );
 
@@ -69,22 +59,19 @@ test.describe("data grid", () => {
     await voiceOver.navigateToWebContent();
   });
 
-  test("speaks a sort and a row selection once each", async ({
-    page,
-    voiceOver,
-  }) => {
+  test("speaks a sort and a row selection once each", async ({ page }) => {
     const grid = page.getByRole("grid");
     await grid
       .getByRole("columnheader", { name: "Name" })
       .getByRole("button")
       .click();
 
-    const sorted = await listen(voiceOver, "sort", () =>
+    const sorted = await listen("sort", () =>
       page.getByRole("menuitemcheckbox", { name: "Sort ascending" }).click(),
     );
     expectSpokenOnce(sorted, "Sorted by Name, ascending");
 
-    const selected = await listen(voiceOver, "select row", () =>
+    const selected = await listen("select row", () =>
       grid.getByRole("gridcell", { name: "Select row 1", exact: true }).click(),
     );
     expectSpokenOnce(selected, "Row 1 selected");
@@ -92,11 +79,10 @@ test.describe("data grid", () => {
 
   test("speaks an edit, its undo and its redo without the toast", async ({
     page,
-    voiceOver,
   }) => {
-    await bodyCell(page, 2, 2).click();
+    await listen("focus cell", () => bodyCell(page, 2, 2).click());
 
-    const edited = await listen(voiceOver, "edit", async () => {
+    const edited = await listen("edit", async () => {
       await page.keyboard.press("Enter");
       await page.keyboard.press("ControlOrMeta+a");
       await page.keyboard.type("Edited");
@@ -104,56 +90,49 @@ test.describe("data grid", () => {
     });
     expectSpokenOnce(edited, "Name updated");
 
-    const undone = await listen(voiceOver, "undo", () =>
-      page.keyboard.press("ControlOrMeta+z"),
-    );
+    const undone = await listen("undo", async () => {
+      await page.keyboard.press("ControlOrMeta+z");
+      await expect(toast(page)).toHaveText("Action undone");
+    });
     expectSpokenOnce(undone, "Undo: Name updated");
     expect(undone).not.toContain("Action undone");
-    await expect(toast(page)).toHaveText("Action undone");
 
-    const redone = await listen(voiceOver, "redo", () =>
-      page.keyboard.press("ControlOrMeta+Shift+z"),
-    );
+    const redone = await listen("redo", async () => {
+      await page.keyboard.press("ControlOrMeta+Shift+z");
+      await expect(toast(page)).toHaveText("Action redone");
+    });
     expectSpokenOnce(redone, "Redo: Name updated");
     expect(redone).not.toContain("Action redone");
-    await expect(toast(page)).toHaveText("Action redone");
   });
 
-  test("speaks a paste once without the toast", async ({
-    page,
-    context,
-    voiceOver,
-  }) => {
+  test("speaks a paste once without the toast", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    await bodyCell(page, 2, 2).click();
+    await listen("focus cell", () => bodyCell(page, 2, 2).click());
     await page.evaluate(() =>
       navigator.clipboard.writeText("Ada Lovelace\t36\nGrace Hopper\t85"),
     );
 
-    const pasted = await listen(voiceOver, "paste", () =>
-      page.keyboard.press("ControlOrMeta+v"),
-    );
+    const pasted = await listen("paste", async () => {
+      await page.keyboard.press("ControlOrMeta+v");
+      await expect(toast(page)).toHaveText("4 cells pasted");
+    });
     expectSpokenOnce(pasted, "4 cells pasted");
-    await expect(toast(page)).toHaveText("4 cells pasted");
   });
 
-  test("speaks the row and column when moving between cells", async ({
-    page,
-    voiceOver,
-  }) => {
-    await bodyCell(page, 2, 2).click();
+  test("speaks the cell when moving between cells", async ({ page }) => {
+    await listen("focus cell", () => bodyCell(page, 2, 2).click());
 
-    const down = await listen(voiceOver, "arrow down", () =>
+    const down = await listen("arrow down", () =>
       page.keyboard.press("ArrowDown"),
     );
-    const downText = await bodyCell(page, 3, 2).innerText();
-    expect(down).toContain(downText.trim());
+    await expect(bodyCell(page, 3, 2)).toBeFocused();
+    expect(down).toContain(await cellText(page, 3, 2));
 
-    const right = await listen(voiceOver, "arrow right", () =>
+    const right = await listen("arrow right", () =>
       page.keyboard.press("ArrowRight"),
     );
-    const rightText = await bodyCell(page, 3, 3).innerText();
-    expect(right).toContain(rightText.trim());
+    await expect(bodyCell(page, 3, 3)).toBeFocused();
+    expect(right).toContain(await cellText(page, 3, 3));
   });
 });
 
@@ -163,18 +142,66 @@ function bodyCell(page: Page, row: number, col: number) {
   );
 }
 
+async function cellText(page: Page, row: number, col: number) {
+  return (await bodyCell(page, row, col).innerText()).trim();
+}
+
 function toast(page: Page) {
   return page.locator("[data-sonner-toast]").first();
 }
 
-async function listen(
-  voiceOver: VoiceOverPlaywright,
-  label: string,
-  action: () => Promise<unknown>,
-) {
-  const { spokenPhrase } = await voiceOver.capture(action, { capture: true });
-  console.log(`[voiceover] ${label}: ${JSON.stringify(spokenPhrase)}`);
-  return spokenPhrase;
+// Guidepup polls after each action and sleeps while a long phrase is spoken,
+// so it misses a short announcement that VoiceOver speaks right after focus moves.
+async function listen(label: string, action: () => Promise<unknown>) {
+  const phrases: string[] = [];
+  let last = await readLastPhrase();
+  const acting = new AbortController();
+  let lastChange = Date.now();
+  const startedAt = Date.now();
+
+  const polling = (async () => {
+    while (
+      (!acting.signal.aborted || Date.now() - lastChange < QUIET_MS) &&
+      Date.now() - startedAt < MAX_LISTEN_MS
+    ) {
+      const phrase = await readLastPhrase();
+      if (phrase && phrase !== last) {
+        phrases.push(phrase);
+        last = phrase;
+        lastChange = Date.now();
+      }
+    }
+  })();
+
+  try {
+    await action();
+  } finally {
+    acting.abort();
+    lastChange = Date.now();
+    await polling;
+  }
+
+  const file = test.info().outputPath("spoken-phrase-log.jsonl");
+  await fs.appendFile(file, `${JSON.stringify({ label, phrases })}\n`);
+  console.log(`[voiceover] ${label}: ${JSON.stringify(phrases)}`);
+  return phrases.join(" | ");
+}
+
+const execFileAsync = promisify(execFile);
+
+async function readLastPhrase() {
+  try {
+    const { stdout } = await execFileAsync("osascript", [
+      "-e",
+      LAST_PHRASE_SCRIPT,
+    ]);
+    return stdout
+      .trim()
+      .replace(/^missing value$/, "")
+      .replace(/\s\s+/g, " ");
+  } catch {
+    return "";
+  }
 }
 
 function expectSpokenOnce(spoken: string, message: string) {
