@@ -2072,6 +2072,7 @@ async function pasteCells(
     if (target.rowIndex === -1 || target.columnIndex === -1) return;
 
     const rowCount = table.getRowModel().rows.length;
+    let addedRowCount = 0;
     const rowsNeeded = target.rowIndex + target.values.length - rowCount;
 
     if (rowsNeeded > 0 && createRow) {
@@ -2086,7 +2087,8 @@ async function pasteCells(
           if (row) newRows.push(row);
         }
         runWithReason(table, "paste", () => table.addRows(newRows));
-        await waitForRowCount(table, rowCount + newRows.length);
+        addedRowCount = newRows.length;
+        await waitForRowCount(table, rowCount + addedRowCount);
       }
     }
 
@@ -2164,6 +2166,7 @@ async function pasteCells(
           skippedCount > 0
             ? `${pluralizeCells(updates.length)} pasted, ${skippedCount} skipped`
             : `${pluralizeCells(updates.length)} pasted`,
+        paste: { cellCount: updates.length, addedRowCount, skippedCount },
       });
     } else if (skippedCount > 0) {
       notify?.({

@@ -1,5 +1,7 @@
 import type { SortingState } from "@tanstack/react-table";
 
+import type { PasteResult } from "@/lib/data-grid-types";
+
 type Assertiveness = "polite" | "assertive";
 
 export interface AnnounceOptions {
@@ -39,6 +41,7 @@ export interface DataGridMessages {
   rowsSelected: (count: number) => string;
   allRowsSelected: (count: number) => string;
   cellsEdited: (count: number, columnLabel: string | null) => string;
+  cellsPasted: (result: PasteResult) => string;
 }
 
 const ANNOUNCE_DELAY_MS = 150;
@@ -81,6 +84,14 @@ export const defaultDataGridMessages: DataGridMessages = {
     count === 1 && columnLabel
       ? `${columnLabel} updated`
       : `${pluralize(count, "cell")} updated`,
+  cellsPasted: ({ cellCount, addedRowCount, skippedCount }) =>
+    [
+      `${pluralize(cellCount, "cell")} pasted`,
+      skippedCount > 0 ? `${skippedCount.toLocaleString()} skipped` : "",
+      addedRowCount > 0 ? `${pluralize(addedRowCount, "row")} added` : "",
+    ]
+      .filter(Boolean)
+      .join(", "),
 };
 
 export function getRowSelectionMessage(

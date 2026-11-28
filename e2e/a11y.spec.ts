@@ -240,6 +240,35 @@ for (const base of GRID_BASES) {
       await expectSpokenAnnouncements(page, ["polite: Row 1 selected"]);
     });
 
+    test("speaks each paste once, with what it skipped and added", async ({
+      page,
+      context,
+    }) => {
+      await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+      const grid = page.getByRole("grid");
+      const toast = page.locator("[data-sonner-toast]").first();
+      await startScreenReader(page);
+
+      await grid
+        .locator("[role=row][aria-rowindex='2'] [role=gridcell]")
+        .nth(1)
+        .click();
+      await writeClipboard(page, "Ada Lovelace\t36\nGrace Hopper\t85");
+      await page.keyboard.press("ControlOrMeta+v");
+      await expectSpokenOnce(page, "4 cells pasted");
+      await expect(toast).toHaveText("4 cells pasted");
+
+      await writeClipboard(page, "Ada Lovelace\tnot a number");
+      await page.keyboard.press("ControlOrMeta+v");
+      await expectSpokenOnce(page, "1 cell pasted, 1 skipped");
+
+      await page.keyboard.press("ControlOrMeta+ArrowDown");
+      await writeClipboard(page, "Ada Lovelace\nGrace Hopper\nAlan Turing");
+      await page.keyboard.press("ControlOrMeta+v");
+      await page.getByRole("button", { name: "Continue" }).click();
+      await expectSpokenOnce(page, "3 cells pasted, 2 rows added");
+    });
+
     test("exposes row selection on the row, cells and checkboxes", async ({
       page,
     }) => {
@@ -289,6 +318,47 @@ function announcer(page: Page) {
   return page.locator("[data-live-announcer=polite]");
 }
 
+// The virtual reader reads aria-hidden text in live regions, so Chromium's tree
+// decides whether a toast is exposed as well.
+async function expectSpokenOnce(page: Page, message: string) {
+  await expect
+    .poll(() => readAnnouncements(page))
+    .toContain(`polite: ${message}`);
+  await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = await cdp.send("Accessibility.getFullAXTree");
+  expect(
+    nodes.filter(
+      (node) =>
+        !node.ignored &&
+        node.role?.value === "StaticText" &&
+        node.name?.value === message,
+    ),
+  ).toHaveLength(1);
+  await cdp.detach();
+  await clearSpokenPhraseLog(page);
+}
+
+function writeClipboard(page: Page, text: string) {
+  return page.evaluate((value) => navigator.clipboard.writeText(value), text);
+}
+
+function readAnnouncements(page: Page) {
+  return page.evaluate(async () => {
+    const { screenReader } = window as unknown as ScreenReaderWindow;
+    const phrases = await screenReader.spokenPhraseLog();
+    return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
+  });
+}
+
+function clearSpokenPhraseLog(page: Page) {
+  return page.evaluate(() =>
+    (
+      window as unknown as ScreenReaderWindow
+    ).screenReader.clearSpokenPhraseLog(),
+  );
+}
+
 async function expectNoAxeViolations(page: Page, testInfo: TestInfo) {
   const results = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
   await testInfo.attach("axe-violations", {
@@ -317,22 +387,10 @@ async function startScreenReader(page: Page) {
 }
 
 async function expectSpokenAnnouncements(page: Page, expected: string[]) {
-  const readAnnouncements = () =>
-    page.evaluate(async () => {
-      const { screenReader } = window as unknown as ScreenReaderWindow;
-      const phrases = await screenReader.spokenPhraseLog();
-      return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
-    });
-
-  await expect.poll(readAnnouncements).toEqual(expected);
+  await expect.poll(() => readAnnouncements(page)).toEqual(expected);
   await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
-  expect(await readAnnouncements()).toEqual(expected);
-
-  await page.evaluate(() =>
-    (
-      window as unknown as ScreenReaderWindow
-    ).screenReader.clearSpokenPhraseLog(),
-  );
+  expect(await readAnnouncements(page)).toEqual(expected);
+  await clearSpokenPhraseLog(page);
 }
 
 function sortedHeaders(page: Page) {

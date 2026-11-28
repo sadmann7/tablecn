@@ -100,6 +100,28 @@ describe("sort messages", () => {
   });
 });
 
+describe("paste messages", () => {
+  it("counts the pasted cells", () => {
+    expect(
+      defaultDataGridMessages.cellsPasted({
+        cellCount: 1,
+        addedRowCount: 0,
+        skippedCount: 0,
+      }),
+    ).toBe("1 cell pasted");
+  });
+
+  it("adds the skipped cells and added rows", () => {
+    expect(
+      defaultDataGridMessages.cellsPasted({
+        cellCount: 10,
+        addedRowCount: 2,
+        skippedCount: 1,
+      }),
+    ).toBe("10 cells pasted, 1 skipped, 2 rows added");
+  });
+});
+
 describe("getRowSelectionMessage", () => {
   const base = {
     selectedCount: 1,

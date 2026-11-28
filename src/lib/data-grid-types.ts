@@ -217,9 +217,16 @@ export interface DataGridCellProps<TData extends RowData> {
   showEndBorder: boolean;
 }
 
+export interface PasteResult {
+  cellCount: number;
+  addedRowCount: number;
+  skippedCount: number;
+}
+
 export interface ClipboardNotice {
   variant: "success" | "error";
   message: string;
+  paste?: PasteResult;
 }
 
 export interface ContextMenuState {
