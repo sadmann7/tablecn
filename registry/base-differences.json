@@ -141,7 +141,7 @@
     "ui/skeleton.tsx": "identical",
     "ui/slider.tsx": "8c741cdf4712",
     "ui/sonner.tsx": "radix-only",
-    "ui/sortable.tsx": "b832df30a856",
+    "ui/sortable.tsx": "a20ff87f28e3",
     "ui/switch.tsx": "d86c8b04f813",
     "ui/table.tsx": "10170eaaaa4b",
     "ui/textarea.tsx": "a379a9df1796",
