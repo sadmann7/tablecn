@@ -1,3 +1,4 @@
+import { virtual } from "@guidepup/virtual-screen-reader";
 import { createColumnHelper } from "@tanstack/react-table";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
@@ -11,6 +12,11 @@ import { getDataTableSelectColumn as getAriaSelectColumn } from "@/registry/base
 import { DataTableSkeleton as AriaDataTableSkeleton } from "@/registry/bases/aria/components/data-table/data-table-skeleton";
 import { DataTableToolbar as AriaDataTableToolbar } from "@/registry/bases/aria/components/data-table/data-table-toolbar";
 import { useDataTable as useAriaDataTable } from "@/registry/bases/aria/hooks/use-data-table";
+import { DataTable as BaseDataTable } from "@/registry/bases/base/components/data-table/data-table";
+import { getDataTableSelectColumn as getBaseSelectColumn } from "@/registry/bases/base/components/data-table/data-table-select-column";
+import { DataTableSkeleton as BaseDataTableSkeleton } from "@/registry/bases/base/components/data-table/data-table-skeleton";
+import { DataTableToolbar as BaseDataTableToolbar } from "@/registry/bases/base/components/data-table/data-table-toolbar";
+import { useDataTable as useBaseDataTable } from "@/registry/bases/base/hooks/use-data-table";
 import { DataTable as RadixDataTable } from "@/registry/bases/radix/components/data-table/data-table";
 import { getDataTableSelectColumn as getRadixSelectColumn } from "@/registry/bases/radix/components/data-table/data-table-select-column";
 import { DataTableSkeleton as RadixDataTableSkeleton } from "@/registry/bases/radix/components/data-table/data-table-skeleton";
@@ -18,6 +24,9 @@ import { DataTableToolbar as RadixDataTableToolbar } from "@/registry/bases/radi
 import { useDataTable as useRadixDataTable } from "@/registry/bases/radix/hooks/use-data-table";
 
 vi.mock("@/registry/bases/aria/ui/direction", () => ({
+  useDirection: () => "ltr",
+}));
+vi.mock("@/registry/bases/base/ui/direction", () => ({
   useDirection: () => "ltr",
 }));
 vi.mock("@/registry/bases/radix/ui/direction", () => ({
@@ -44,6 +53,18 @@ const bases = [
     exposesMenuSeparator: false,
   },
   {
+    name: "base",
+    DataTable: BaseDataTable,
+    DataTableSkeleton: BaseDataTableSkeleton,
+    DataTableToolbar: BaseDataTableToolbar,
+    useDataTable: useBaseDataTable,
+    getDataTableSelectColumn: getBaseSelectColumn,
+    tableRole: "table",
+    pageSizeSelect: { role: "combobox", name: "Rows per page" },
+    filterPopoverName: "Status filter",
+    exposesMenuSeparator: false,
+  },
+  {
     name: "aria",
     DataTable: AriaDataTable,
     DataTableSkeleton: AriaDataTableSkeleton,
@@ -64,8 +85,9 @@ const bases = [
 type Base = (typeof bases)[number];
 
 describe.each(bases)("DataTable accessibility ($name)", (ui) => {
-  afterEach(() => {
+  afterEach(async () => {
     vi.useRealTimers();
+    await virtual.stop();
   });
 
   it("names the table element", () => {
@@ -133,6 +155,26 @@ describe.each(bases)("DataTable accessibility ($name)", (ui) => {
     expect(statuses.map((status) => status.textContent)).toEqual([
       "30 results, page 2 of 3",
       "10 rows selected (10 not shown).",
+    ]);
+  });
+
+  it("reads the selection count once when the first row is checked", async () => {
+    renderTable(ui);
+    await virtual.start({ container: document.body });
+    await virtual.clearSpokenPhraseLog();
+
+    const [firstRowCheckbox] = screen.getAllByRole("checkbox", {
+      name: /^Select row/,
+    });
+    if (!firstRowCheckbox) throw new Error("No row checkbox rendered");
+    fireEvent.click(firstRowCheckbox);
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    const log = await virtual.spokenPhraseLog();
+    expect(log.filter((phrase) => phrase.startsWith("polite: "))).toEqual([
+      "polite: 1 row selected.",
     ]);
   });
 

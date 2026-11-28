@@ -91,6 +91,15 @@ function DataTablePaginationContent<TData extends RowData>({
   const canNextPage = table.getCanNextPage();
   const dir = useDirection();
 
+  const hiddenSelectedRowCount = selectedRowCount - visibleSelectedRowCount;
+  const selectionStatus = `${selectedRowCount.toLocaleString()} ${
+    selectedRowCount === 1 ? "row" : "rows"
+  } selected${
+    hiddenSelectedRowCount > 0
+      ? ` (${hiddenSelectedRowCount.toLocaleString()} not shown)`
+      : ""
+  }.`;
+
   return (
     <div
       data-slot="data-table-pagination"
@@ -104,12 +113,7 @@ function DataTablePaginationContent<TData extends RowData>({
         role="status"
         className="flex-1 text-sm whitespace-nowrap text-muted-foreground"
       >
-        {selectedRowCount.toLocaleString()}{" "}
-        {selectedRowCount === 1 ? "row" : "rows"} selected
-        {selectedRowCount > visibleSelectedRowCount
-          ? ` (${(selectedRowCount - visibleSelectedRowCount).toLocaleString()} not shown)`
-          : ""}
-        .
+        {selectionStatus}
       </div>
       <div className="flex flex-col-reverse items-center gap-4 sm:flex-row sm:gap-6 lg:gap-8">
         <div className="flex items-center gap-2">
