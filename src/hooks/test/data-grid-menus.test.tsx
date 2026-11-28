@@ -1,6 +1,12 @@
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { fireEvent, render, renderHook, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+} from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -148,6 +154,51 @@ describe.each(bases)(
         screen.getByLabelText("Name sort direction").textContent,
       ).toContain(label);
     });
+
+    it.each([
+      ["sort", "Reorder Name sort"],
+      ["filter", "Reorder Name filter"],
+    ])(
+      "keeps the %s menu open when Escape cancels a drag",
+      async (menu, handleLabel) => {
+        function Grid() {
+          const { table } = useDataGrid({
+            data,
+            columns,
+            initialState: {
+              sorting: [{ id: "name", desc: false }],
+              columnFilters: [
+                { id: "name", value: { operator: "contains", value: "Tony" } },
+              ],
+            },
+          });
+
+          return menu === "sort" ? (
+            <DataGridSortMenu table={table} />
+          ) : (
+            <DataGridFilterMenu table={table} />
+          );
+        }
+
+        render(<Grid />);
+        fireEvent.click(
+          screen.getByRole("button", { name: new RegExp(menu, "i") }),
+        );
+
+        const handle = screen.getByLabelText(handleLabel);
+        handle.focus();
+        await pressKey(handle, " ", "Space");
+        expect(handle.hasAttribute("data-dragging")).toBe(true);
+
+        await pressKey(handle, "Escape");
+        expect(
+          screen.getByLabelText(handleLabel).hasAttribute("data-dragging"),
+        ).toBe(false);
+
+        await pressKey(screen.getByLabelText(handleLabel), "Escape");
+        expect(screen.queryByLabelText(handleLabel)).toBeNull();
+      },
+    );
   },
 );
 
@@ -164,3 +215,10 @@ const columns: ColumnDef<DataGridFeatures, Skater>[] = [
     meta: { label: "Name", variant: "text" },
   },
 ];
+
+async function pressKey(element: Element, key: string, code = key) {
+  await act(async () => {
+    fireEvent.keyDown(element, { key, code });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}

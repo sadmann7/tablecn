@@ -1,5 +1,5 @@
 import { createColumnHelper } from "@tanstack/react-table";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
 import { describe, expect, it, vi } from "vitest";
 
@@ -74,6 +74,24 @@ describe.each(bases)(
         screen.getByLabelText("Title sort direction").textContent,
       ).toContain(label);
     });
+
+    it("keeps the menu open when Escape cancels a drag", async () => {
+      render(
+        <NuqsTestingAdapter hasMemory searchParams="?sort=title.asc">
+          <Table />
+        </NuqsTestingAdapter>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /sort/i }));
+
+      const handle = screen.getByLabelText("Reorder Title sort");
+      handle.focus();
+      await pressKey(handle, "Enter");
+      await pressKey(handle, "Escape");
+      expect(screen.queryByLabelText("Reorder Title sort")).not.toBeNull();
+
+      await pressKey(screen.getByLabelText("Reorder Title sort"), "Escape");
+      expect(screen.queryByLabelText("Reorder Title sort")).toBeNull();
+    });
   },
 );
 
@@ -93,3 +111,11 @@ const columns = columnHelper.columns([
     enableSorting: true,
   }),
 ]);
+
+async function pressKey(element: Element, key: string) {
+  await act(async () => {
+    fireEvent.keyDown(element, { key, code: key });
+    fireEvent.keyUp(element, { key, code: key });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
