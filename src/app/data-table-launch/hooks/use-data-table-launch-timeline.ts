@@ -5,7 +5,7 @@ import { getIsEditableTarget } from "@/lib/data-table-utils";
 import {
   type DataTableLaunchStep,
   getSceneIndex,
-  LAUNCH_DURATION,
+  LAUNCH_DURATION_MS,
   LAUNCH_STEPS,
   SCENES,
 } from "../lib/script";
@@ -81,7 +81,7 @@ export function useDataTableLaunchTimeline(
         } else {
           clock.elapsed += delta;
 
-          if (clock.elapsed >= LAUNCH_DURATION) {
+          if (clock.elapsed >= LAUNCH_DURATION_MS) {
             clock.elapsed = 0;
             clock.stepIndex = 0;
             clock.cycle += 1;
@@ -105,7 +105,7 @@ export function useDataTableLaunchTimeline(
 
       progressRef.current?.style.setProperty(
         "--launch-progress",
-        String(clock.elapsed / LAUNCH_DURATION),
+        String(clock.elapsed / LAUNCH_DURATION_MS),
       );
       frame = requestAnimationFrame(onFrame);
     }

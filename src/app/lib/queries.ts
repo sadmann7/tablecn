@@ -1,6 +1,6 @@
 "use cache";
 
-import { asc, count, desc, gt, sql } from "drizzle-orm";
+import { and, asc, count, desc, gt, sql } from "drizzle-orm";
 import { cacheLife, cacheTag } from "next/cache";
 import "server-only";
 
@@ -12,6 +12,7 @@ import { tasks } from "@/db/schema";
 import type { tasksTableConfig } from "./validations";
 
 import { filterColumns } from "./filter-columns";
+import { encodeTasksCursor, type TasksCursor } from "./tasks-cursor";
 import { sanitizeEnumFilters } from "./utils";
 
 export async function getTasks(
@@ -61,10 +62,60 @@ export async function getTasks(
     });
 
     const pageCount = Math.ceil(total / input.perPage);
-    return { data, pageCount };
+    return { data, pageCount, rowCount: total };
   } catch {
-    return { data: [], pageCount: 0 };
+    return { data: [], pageCount: 0, rowCount: 0 };
   }
+}
+
+export async function getTasksAfter(
+  input: InferDataTableQuery<typeof tasksTableConfig>,
+  cursor: TasksCursor | null,
+) {
+  cacheLife({ revalidate: 1, stale: 1, expire: 60 });
+  cacheTag("tasks");
+
+  const isDesc = input.sorting[0]?.desc ?? true;
+  const order = isDesc ? desc : asc;
+  const where = filterColumns({
+    table: tasks,
+    filters: sanitizeEnumFilters(input.filters),
+    joinOperator: input.joinOperator,
+  });
+  const after = cursor
+    ? isDesc
+      ? sql`(${tasks.createdAt}, ${tasks.id}) < (${cursor.createdAt}::timestamp, ${cursor.id})`
+      : sql`(${tasks.createdAt}, ${tasks.id}) > (${cursor.createdAt}::timestamp, ${cursor.id})`
+    : undefined;
+
+  const { rows, total } = await db.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        task: tasks,
+        createdAtKey: sql<string>`${tasks.createdAt}::text`,
+      })
+      .from(tasks)
+      .where(and(where, after))
+      .orderBy(order(tasks.createdAt), order(tasks.id))
+      .limit(input.perPage + 1);
+
+    const total = await tx
+      .select({ count: count() })
+      .from(tasks)
+      .where(where)
+      .then((res) => res[0]?.count ?? 0);
+
+    return { rows, total };
+  });
+
+  const page = rows.slice(0, input.perPage);
+  const last = page.at(-1);
+  const nextCursor =
+    rows.length > input.perPage && last
+      ? encodeTasksCursor({ createdAt: last.createdAtKey, id: last.task.id })
+      : null;
+
+  return { data: page.map((row) => row.task), rowCount: total, nextCursor };
 }
 
 export async function getRecentTasks() {

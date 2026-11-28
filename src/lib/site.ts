@@ -15,6 +15,13 @@ export const NAV_LINKS = [
   { href: "/data-grid-doom", label: "Data Grid DOOM" },
 ] as const;
 
+export const DATA_TABLE_EXAMPLES = [
+  { href: "/data-table-query", label: "TanStack Query" },
+  { href: "/data-table-fetcher", label: "Fetcher" },
+  { href: "/data-table-controlled", label: "Controlled" },
+  { href: "/data-table-cursor", label: "Load more" },
+] as const;
+
 export const THEME_COLORS = {
   light: "#ffffff",
   dark: "#0a0a0a",

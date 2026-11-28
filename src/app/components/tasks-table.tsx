@@ -79,7 +79,7 @@ export function TasksTable({
   const enableAdvancedFilter = filterMode !== "plain";
 
   const [
-    { data, pageCount },
+    { data, pageCount, rowCount },
     statusCounts,
     priorityCounts,
     estimatedHoursRange,
@@ -87,6 +87,7 @@ export function TasksTable({
 
   const [rowAction, setRowAction] =
     React.useState<DataTableRowAction<Task> | null>(null);
+  const [isPending, startTransition] = React.useTransition();
 
   const countsKey = JSON.stringify([
     statusCounts,
@@ -226,8 +227,10 @@ export function TasksTable({
     },
     getRowId: (originalRow) => originalRow.id,
     shallow: false,
+    startTransition,
+    status: isPending ? "refreshing" : "idle",
     enableRowRangeSelection: true,
-    ...(dataMode === "client" ? { mode: "client" } : { pageCount }),
+    ...(dataMode === "client" ? { mode: "client" } : { pageCount, rowCount }),
   });
 
   return (

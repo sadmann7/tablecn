@@ -54,7 +54,11 @@ async function TasksTableWrapper(props: PageProps<"/">) {
 
   const tasksPromise =
     dataMode === "client"
-      ? getRecentTasks().then((data) => ({ data, pageCount: 0 }))
+      ? getRecentTasks().then((data) => ({
+          data,
+          pageCount: 0,
+          rowCount: data.length,
+        }))
       : getTasks(tasksTableConfig.parse(searchParams));
 
   const promises = Promise.all([

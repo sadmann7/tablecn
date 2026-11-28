@@ -15,16 +15,23 @@ import { cn } from "cn";
 import * as React from "react";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
+import type { DataLoadMore } from "@/lib/data-table-types";
 
 import {
   getAriaSort,
   getColumnPinningStyle,
   getColumnSizingStyle,
+  getLoadMoreRowCount,
+  getResultStatusText,
+  getSkeletonRowCount,
+  getStatusErrorMessage,
   getVisibleSelectedRows,
   stringifyFilterValue,
 } from "@/lib/data-table-utils";
 import { DataTablePagination } from "@/registry/bases/aria/components/data-table/data-table-pagination";
+import { Button } from "@/registry/bases/aria/ui/button";
 import { useDirection } from "@/registry/bases/aria/ui/direction";
+import { Skeleton } from "@/registry/bases/aria/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -33,6 +40,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/registry/bases/aria/ui/table";
+import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
+
+const RESULT_STATUS_DELAY_MS = 500;
 
 interface DataTableProps<
   TData extends RowData,
@@ -55,6 +65,8 @@ export function DataTable<TData extends RowData>({
   ...props
 }: DataTableProps<TData>) {
   const dir = useDirection();
+  const status = table.options.status ?? "idle";
+  const loadMore = table.options.loadMore;
 
   function onTableKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const nativeEvent = event.nativeEvent;
@@ -90,24 +102,32 @@ export function DataTable<TData extends RowData>({
       {children}
       <div
         className={cn(
-          "isolate rounded-md border",
+          "relative isolate rounded-md border",
           stickyHeader
             ? "min-h-0 scroll-pt-10 overflow-auto [&:has(thead>tr:nth-child(2))]:scroll-pt-20 [&:has(thead>tr:nth-child(3))]:scroll-pt-30 [&>[data-slot=table-container]]:overflow-visible"
             : "overflow-hidden",
         )}
         onKeyDown={onTableKeyDown}
       >
+        {status === "refreshing" ? <DataTableProgress /> : null}
         <DataTableLayout
           table={table}
           aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
+          aria-busy={
+            status === "loading" || status === "refreshing" || undefined
+          }
+          aria-rowcount={
+            loadMore ? getLoadMoreRowCount(table, loadMore, 1) : undefined
+          }
         >
           <DataTableHeader table={table} stickyHeader={stickyHeader} />
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
+      <DataTableResultStatus table={table} />
       <div className="flex flex-col gap-2.5">
-        <DataTablePagination table={table} />
+        {loadMore ? null : <DataTablePagination table={table} />}
         {actionBar ? (
           <DataTableActionBar table={table} actionBar={actionBar} />
         ) : null}
@@ -118,7 +138,7 @@ export function DataTable<TData extends RowData>({
 
 interface DataTableLayoutProps<TData extends RowData> extends Pick<
   React.ComponentProps<"table">,
-  "aria-label" | "aria-labelledby"
+  "aria-label" | "aria-labelledby" | "aria-busy" | "aria-rowcount"
 > {
   table: ReactTable<DataTableFeatures, TData, unknown>;
   children: React.ReactNode;
@@ -127,6 +147,8 @@ interface DataTableLayoutProps<TData extends RowData> extends Pick<
 function DataTableLayout<TData extends RowData>({
   table,
   children,
+  "aria-busy": ariaBusy,
+  "aria-rowcount": ariaRowCount,
   ...props
 }: DataTableLayoutProps<TData>) {
   return (
@@ -138,6 +160,13 @@ function DataTableLayout<TData extends RowData>({
               className="table-fixed"
               style={getColumnSizingStyle(table)}
               {...props}
+              render={(tableProps) => (
+                <table
+                  {...(tableProps as React.ComponentProps<"table">)}
+                  aria-busy={ariaBusy}
+                  aria-rowcount={ariaRowCount}
+                />
+              )}
               selectionMode={
                 "select" in table.getAllLeafColumnsById() ? "multiple" : "none"
               }
@@ -271,14 +300,294 @@ interface DataTableBodyProps<TData extends RowData> {
 function DataTableBody<TData extends RowData>({
   table,
 }: DataTableBodyProps<TData>) {
+  const status = table.options.status ?? "idle";
   const rows = table.getRowModel().rows;
 
+  if (status === "loading") return <DataTableSkeletonBody table={table} />;
+
+  const loadMore = table.options.loadMore;
+  if (loadMore && status !== "error" && rows.length > 0) {
+    return (
+      <DataTableCursorBody table={table} rows={rows} loadMore={loadMore} />
+    );
+  }
+
   return (
-    <TableBody renderEmptyState={() => "No results."}>
-      {rows.map((row) => (
-        <DataTableRow key={row.id} row={row} />
-      ))}
+    <TableBody
+      data-status={status === "refreshing" ? status : undefined}
+      className="transition-colors data-[status=refreshing]:**:text-muted-foreground"
+      renderEmptyState={() =>
+        status === "error" ? (
+          <div className="flex flex-col items-center justify-center gap-2 whitespace-normal">
+            <span role="alert">
+              {getStatusErrorMessage(table.options.error) ??
+                "Failed to load results."}
+            </span>
+            {table.options.onRetry ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onPress={table.options.onRetry}
+              >
+                Retry
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 whitespace-normal">
+            <span>No results.</span>
+            <table.Subscribe selector={selectIsFiltered}>
+              {(isFiltered) =>
+                isFiltered ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onPress={() => {
+                      table.resetColumnFilters(true);
+                      table.resetJoinOperator();
+                      table.resetGlobalFilter(true);
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                ) : null
+              }
+            </table.Subscribe>
+          </div>
+        )
+      }
+    >
+      {status === "error"
+        ? null
+        : rows.map((row) => <DataTableRow key={row.id} row={row} />)}
     </TableBody>
+  );
+}
+
+interface DataTableCursorBodyProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+  rows: Row<DataTableFeatures, TData>[];
+  loadMore: DataLoadMore;
+}
+
+interface PendingFocus {
+  index: number;
+  firstRowId: string | undefined;
+}
+
+function DataTableCursorBody<TData extends RowData>({
+  table,
+  rows,
+  loadMore,
+}: DataTableCursorBodyProps<TData>) {
+  const status = table.options.status ?? "idle";
+  const [pendingFocus, setPendingFocus] = React.useState<PendingFocus | null>(
+    null,
+  );
+  const focusRowId =
+    pendingFocus &&
+    rows[0]?.id === pendingFocus.firstRowId &&
+    rows.length > pendingFocus.index
+      ? rows[pendingFocus.index]?.id
+      : undefined;
+
+  function onLoadMore() {
+    if (loadMore.status === "loading") return;
+    setPendingFocus({ index: rows.length, firstRowId: rows[0]?.id });
+    loadMore.onLoadMore();
+  }
+
+  return (
+    <TableBody
+      data-status={status === "refreshing" ? status : undefined}
+      className="transition-colors data-[status=refreshing]:**:text-muted-foreground"
+    >
+      {rows.map((row, index) => (
+        <DataTableRow
+          key={row.id}
+          row={row}
+          rowIndex={index + 2}
+          isFocusTarget={row.id === focusRowId}
+        />
+      ))}
+      {loadMore.hasMore ? (
+        <DataTableLoadMoreRow
+          table={table}
+          loadMore={loadMore}
+          loadedCount={rows.length}
+          onLoadMore={onLoadMore}
+        />
+      ) : null}
+    </TableBody>
+  );
+}
+
+interface DataTableLoadMoreRowProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+  loadMore: DataLoadMore;
+  loadedCount: number;
+  onLoadMore: () => void;
+}
+
+function DataTableLoadMoreRow<TData extends RowData>({
+  table,
+  loadMore,
+  loadedCount,
+  onLoadMore,
+}: DataTableLoadMoreRowProps<TData>) {
+  const rowCount = table.options.rowCount;
+  const isLoading = loadMore.status === "loading";
+
+  return (
+    <TableRow
+      id="data-table-load-more"
+      textValue="Load more"
+      isDisabled
+      data-slot="data-table-load-more"
+      className="hover:bg-transparent"
+    >
+      <TableCell
+        colSpan={table.getVisibleLeafColumns().length || 1}
+        className="h-14 text-center"
+      >
+        <div
+          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 whitespace-normal"
+          onFocus={stopPropagation}
+          onKeyDown={stopPropagation}
+          onKeyUp={stopPropagation}
+          onPointerDown={stopPropagation}
+          onPointerUp={stopPropagation}
+          onMouseDown={stopPropagation}
+          onClick={stopPropagation}
+        >
+          {loadMore.status === "error" ? (
+            <span role="alert">
+              {getStatusErrorMessage(loadMore.error) ??
+                "Failed to load more rows."}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">
+              {rowCount === undefined
+                ? `${loadedCount.toLocaleString()} loaded`
+                : `${loadedCount.toLocaleString()} of ${rowCount.toLocaleString()}`}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            aria-disabled={isLoading || undefined}
+            className="aria-disabled:cursor-progress"
+            onPress={onLoadMore}
+          >
+            {isLoading ? (
+              <IconPlaceholder
+                lucide="Loader2Icon"
+                tabler="IconLoader"
+                hugeicons="Loading03Icon"
+                phosphor="SpinnerIcon"
+                remixicon="RiLoaderLine"
+                className="motion-safe:animate-spin"
+              />
+            ) : null}
+            {isLoading
+              ? "Loading more..."
+              : loadMore.status === "error"
+                ? "Retry"
+                : "Load more"}
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function DataTableSkeletonBody<TData extends RowData>({
+  table,
+}: DataTableBodyProps<TData>) {
+  return (
+    <table.Subscribe selector={selectSkeletonState}>
+      {({ pageSize }) => (
+        <TableBody>
+          {Array.from({ length: getSkeletonRowCount(pageSize) }, (_, index) => (
+            <TableRow
+              key={index}
+              id={`skeleton-${index}`}
+              textValue="Loading"
+              isDisabled
+              className="hover:bg-transparent"
+            >
+              {table.getVisibleLeafColumns().map((column) => {
+                const pinned = column.getIsPinned();
+                return (
+                  <TableCell
+                    key={column.id}
+                    className={getCellClassName(pinned)}
+                    style={getColumnPinningStyle(column, pinned)}
+                  >
+                    <Skeleton className="h-6 w-full" />
+                    <span className="sr-only">Loading</span>
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          ))}
+        </TableBody>
+      )}
+    </table.Subscribe>
+  );
+}
+
+interface DataTableResultStatusProps<TData extends RowData> {
+  table: ReactTable<DataTableFeatures, TData, unknown>;
+}
+
+function DataTableResultStatus<TData extends RowData>({
+  table,
+}: DataTableResultStatusProps<TData>) {
+  return (
+    <table.Subscribe
+      selector={(state) =>
+        getResultStatusText(table, state.pagination.pageIndex)
+      }
+    >
+      {(text) => <DataTableResultStatusText text={text} />}
+    </table.Subscribe>
+  );
+}
+
+function DataTableProgress() {
+  return (
+    <div
+      aria-hidden="true"
+      data-slot="data-table-progress"
+      className="pointer-events-none sticky top-0 z-40 h-0"
+    >
+      <div className="relative h-0.5 overflow-hidden bg-primary/20">
+        <div className="absolute inset-y-0 -start-1/3 w-1/3 animate-out bg-primary duration-1000 ease-in-out repeat-infinite slide-out-to-end-[400%] motion-reduce:start-0 motion-reduce:w-full motion-reduce:animate-none motion-reduce:opacity-60" />
+      </div>
+    </div>
+  );
+}
+
+interface DataTableResultStatusTextProps {
+  text: string;
+}
+
+function DataTableResultStatusText({ text }: DataTableResultStatusTextProps) {
+  const [settledText, setSettledText] = React.useState(text);
+
+  React.useEffect(() => {
+    const timer = setTimeout(
+      () => setSettledText(text),
+      RESULT_STATUS_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  return (
+    <div role="status" className="sr-only">
+      {settledText}
+    </div>
   );
 }
 
@@ -300,13 +609,30 @@ function DataTableActionBar<TData extends RowData>({
 
 interface DataTableRowProps<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;
+  rowIndex?: number;
+  isFocusTarget?: boolean;
 }
 
 const DataTableRow = React.memo(DataTableRowImpl) as typeof DataTableRowImpl;
 
 function DataTableRowImpl<TData extends RowData>({
   row,
+  rowIndex,
+  isFocusTarget = false,
 }: DataTableRowProps<TData>) {
+  const [element, setElement] = React.useState<HTMLTableRowElement | null>(
+    null,
+  );
+
+  React.useEffect(() => {
+    if (!isFocusTarget || !element) return;
+    const active = document.activeElement;
+    if (active !== document.body && !element.parentElement?.contains(active)) {
+      return;
+    }
+    element.focus();
+  }, [isFocusTarget, element]);
+
   return (
     <Subscribe
       source={row.table.store}
@@ -320,7 +646,21 @@ function DataTableRowImpl<TData extends RowData>({
         <TableRow
           id={row.id}
           textValue={getRowTextValue(row)}
-          className="group/row"
+          className={cn(
+            "group/row",
+            rowIndex !== undefined &&
+              "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+          )}
+          render={(rowProps) => {
+            const props = rowProps as React.ComponentProps<"tr">;
+            return (
+              <tr
+                {...props}
+                ref={mergeRefs(props.ref, setElement)}
+                aria-rowindex={rowIndex ?? props["aria-rowindex"]}
+              />
+            );
+          }}
         >
           {row.getVisibleCells().map((cell) => (
             <DataTableCell
@@ -356,11 +696,39 @@ function DataTableCellImpl<TData extends RowData>({
   );
 }
 
+function mergeRefs<TElement>(
+  ...refs: (React.Ref<TElement> | undefined)[]
+): React.RefCallback<TElement> {
+  return (node) => {
+    for (const ref of refs) {
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    }
+  };
+}
+
+function stopPropagation(event: React.SyntheticEvent) {
+  event.stopPropagation();
+}
+
 function selectLayoutState(state: TableState<DataTableFeatures>) {
   return {
     columnOrder: state.columnOrder,
     columnPinning: state.columnPinning,
     columnSizing: state.columnSizing,
+    columnVisibility: state.columnVisibility,
+  };
+}
+
+function selectIsFiltered(state: TableState<DataTableFeatures>) {
+  return state.columnFilters.length > 0 || Boolean(state.globalFilter);
+}
+
+function selectSkeletonState(state: TableState<DataTableFeatures>) {
+  return {
+    pageSize: state.pagination.pageSize,
+    columnOrder: state.columnOrder,
+    columnPinning: state.columnPinning,
     columnVisibility: state.columnVisibility,
   };
 }

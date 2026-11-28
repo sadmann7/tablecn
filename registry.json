@@ -112,6 +112,10 @@
         {
           "path": "src/lib/data-table-filters.ts",
           "type": "registry:lib"
+        },
+        {
+          "path": "src/hooks/use-isomorphic-layout-effect.ts",
+          "type": "registry:hook"
         }
       ]
     },
@@ -502,6 +506,10 @@
         },
         {
           "path": "src/lib/data-grid-types.ts",
+          "type": "registry:lib"
+        },
+        {
+          "path": "src/lib/data-grid-announcer.ts",
           "type": "registry:lib"
         },
         {

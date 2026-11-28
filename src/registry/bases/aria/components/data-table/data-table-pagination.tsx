@@ -87,8 +87,10 @@ function DataTablePaginationContent<TData extends RowData>({
     ? pageSizeOptions
     : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
   const pageCount = Math.max(table.getPageCount(), 1);
-  const canPreviousPage = table.getCanPreviousPage();
-  const canNextPage = table.getCanNextPage();
+  const status = table.options.status ?? "idle";
+  const isDisabled = status === "loading" || status === "error";
+  const canPreviousPage = !isDisabled && table.getCanPreviousPage();
+  const canNextPage = !isDisabled && table.getCanNextPage();
   const dir = useDirection();
 
   return (
@@ -126,6 +128,7 @@ function DataTablePaginationContent<TData extends RowData>({
               if (value == null) return;
               table.setPageSize(Number(value));
             }}
+            isDisabled={isDisabled}
             placeholder={`${pageSize}`}
           >
             <SelectTrigger className="w-18">
@@ -142,11 +145,9 @@ function DataTablePaginationContent<TData extends RowData>({
             </SelectContent>
           </Select>
         </div>
-        <div
-          role="status"
-          className="flex items-center justify-center text-sm font-medium"
-        >
-          Page {pageIndex + 1} of {pageCount}
+        <div className="flex items-center justify-center text-sm font-medium">
+          Page {pageIndex + 1}
+          {isDisabled ? null : ` of ${pageCount}`}
         </div>
         <div className="flex items-center gap-2">
           <Button

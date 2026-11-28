@@ -8,6 +8,13 @@ export const BASES_VIEWS = [
   { value: "grid", label: "Data Grid" },
 ] as const;
 
+export const BASES_STATUSES = [
+  { value: "idle", label: "Idle" },
+  { value: "loading", label: "Loading" },
+  { value: "refreshing", label: "Refreshing" },
+  { value: "error", label: "Error" },
+] as const;
+
 export const basesSearchParams = {
   view: parseAsStringLiteral(BASES_VIEWS.map((view) => view.value)).withDefault(
     "table",
@@ -17,4 +24,7 @@ export const basesSearchParams = {
   ).withDefault("plain"),
   dir: parseAsStringLiteral(DIRECTIONS).withDefault("ltr"),
   data: demoDataModeParser,
+  dataStatus: parseAsStringLiteral(
+    BASES_STATUSES.map((status) => status.value),
+  ).withDefault("idle"),
 };

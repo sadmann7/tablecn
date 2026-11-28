@@ -75,6 +75,8 @@ export type FilterVariant = (typeof FILTER_VARIANTS)[number];
 export type FilterOperator = keyof typeof FILTER_OPERATORS;
 export type JoinOperator = (typeof JOIN_OPERATORS)[number];
 
+export type DataStatus = "idle" | "loading" | "refreshing" | "error";
+
 export interface FilterOperatorOption {
   label: string;
   value: FilterOperator;
@@ -113,6 +115,38 @@ export interface DataTableQuery<
   joinOperator: JoinOperator;
   globalFilter: string;
 }
+
+export interface DataQuery<
+  TFilterColumnId extends string = string,
+  TSortColumnId extends string = string,
+> {
+  sorting: ColumnSortItem<TSortColumnId>[];
+  filters: ColumnFilterItem<TFilterColumnId>[];
+  joinOperator: JoinOperator;
+  search: string;
+  page: { index: number; size: number };
+  cursor?: string;
+}
+
+export interface DataResult<TData> {
+  rows: TData[];
+  rowCount?: number;
+  nextCursor?: string | null;
+}
+
+export type DataLoadMoreStatus = "idle" | "loading" | "error";
+
+export interface DataLoadMore {
+  hasMore: boolean;
+  status: DataLoadMoreStatus;
+  error?: unknown;
+  onLoadMore: () => void;
+}
+
+export type DataFetcher<TData> = (
+  query: DataQuery,
+  context: { signal: AbortSignal },
+) => Promise<DataResult<TData>>;
 
 export interface DataTableRowAction<TData extends RowData> {
   row: Row<DataTableFeatures, TData>;

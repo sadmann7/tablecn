@@ -16,11 +16,21 @@ import {
 } from "nuqs";
 import * as React from "react";
 
-import type { ColumnFilterItem, JoinOperator } from "@/lib/data-table-types";
+import type {
+  ColumnFilterItem,
+  DataFetcher,
+  DataLoadMoreStatus,
+  DataQuery,
+  DataResult,
+  DataStatus,
+  JoinOperator,
+} from "@/lib/data-table-types";
 
+import { useIsomorphicLayoutEffect } from "@/hooks/use-isomorphic-layout-effect";
 import {
   applyColumnConfig,
   createConfigFromInputKey,
+  type DataTableConfig,
   type DataTableConfigInput,
   getConfigInputKey,
   getIsDataTableConfig,
@@ -33,22 +43,96 @@ import {
 import {
   getColumnFilters,
   getColumnFiltersKey,
+  normalizeColumnFilters,
   sortColumnFiltersByIds,
 } from "@/lib/data-table-parsers";
 import { asFilterItems, getActiveFilters } from "@/lib/data-table-utils";
 
-const DEBOUNCE_MS = 300;
+const URL_UPDATE_DEBOUNCE_MS = 300;
+const EMPTY_ROWS: never[] = [];
 
 interface FiltersDraft {
   filters: ColumnFiltersState;
-  urlFiltersKey: string;
+  filtersKey: string;
+}
+
+type QueryPatch = Partial<Omit<DataQuery, "page">> & {
+  page?: Partial<DataQuery["page"]>;
+};
+
+interface QueryUpdateOptions {
+  resetsPage?: boolean;
+  isDebounced?: boolean;
+  isClearing?: boolean;
+}
+
+interface QueryStore {
+  query: DataQuery;
+  setQuery: (patch: QueryPatch, options?: QueryUpdateOptions) => void;
+}
+
+interface QueryStoreOptions {
+  config: Omit<DataTableConfig, "parse">;
+  query: DataQuery | undefined;
+  onQueryChange: ((query: DataQuery) => void) | undefined;
+  urlOptions: Partial<QueryStateOptions> & {
+    urlKeys: DataTableConfig["urlKeys"];
+  };
+  debounceMs: number | undefined;
 }
 
 type InitialTableState = Partial<TableState<DataTableFeatures>>;
 
+type StatusProps<TData extends RowData> = Pick<
+  TableOptions<DataTableFeatures, TData>,
+  "status" | "error" | "onRetry"
+>;
+
+interface FetchRequest {
+  query: DataQuery;
+  attempt: number;
+}
+
+interface LoadMoreState {
+  request: FetchRequest;
+  status: Exclude<DataLoadMoreStatus, "idle">;
+  error: unknown;
+}
+
+interface LoadMoreRequest {
+  controller: AbortController;
+}
+
+interface FetchState<TData> {
+  attempt: number;
+  request: FetchRequest | null;
+  result: DataResult<TData> | undefined;
+  status: DataStatus;
+  error: unknown;
+  more: LoadMoreState | null;
+}
+
+type FetchAction<TData> =
+  | { type: "retry" }
+  | { type: "settle"; request: FetchRequest; result: DataResult<TData> }
+  | { type: "fail"; request: FetchRequest; error: unknown }
+  | { type: "loadMoreStart"; request: FetchRequest }
+  | { type: "loadMoreFail"; request: FetchRequest; error: unknown };
+
+const INITIAL_FETCH_STATE: FetchState<never> = {
+  attempt: 0,
+  request: null,
+  result: undefined,
+  status: "loading",
+  error: undefined,
+  more: null,
+};
+
 type UseDataTableProps<TData extends RowData> = Omit<
   TableOptions<DataTableFeatures, TData>,
   | "state"
+  | "data"
+  | "rowCount"
   | "onPaginationChange"
   | "onSortingChange"
   | "onColumnFiltersChange"
@@ -63,6 +147,9 @@ type UseDataTableProps<TData extends RowData> = Omit<
   | "manualPagination"
   | "autoResetPageIndex"
   | "manualSorting"
+  | "status"
+  | "error"
+  | "onRetry"
 > &
   Pick<
     QueryStateOptions,
@@ -70,6 +157,8 @@ type UseDataTableProps<TData extends RowData> = Omit<
   > & {
     debounceMs?: number;
     config?: DataTableConfigInput;
+    query?: DataQuery;
+    onQueryChange?: (query: DataQuery) => void;
     initialState?: Omit<
       InitialTableState,
       | "columnFilters"
@@ -79,13 +168,44 @@ type UseDataTableProps<TData extends RowData> = Omit<
       | "joinOperator"
     >;
   } & (
+    | (StatusProps<TData> & {
+        mode?: "server";
+        data: TableOptions<DataTableFeatures, TData>["data"];
+        pageCount: number;
+        rowCount?: number;
+        result?: never;
+        fetcher?: never;
+        pagination?: never;
+      })
+    | (StatusProps<TData> & {
+        mode: "client";
+        data: TableOptions<DataTableFeatures, TData>["data"];
+        pageCount?: never;
+        rowCount?: number;
+        result?: never;
+        fetcher?: never;
+        pagination?: never;
+      })
+    | (StatusProps<TData> & {
+        mode?: "server";
+        result: DataResult<TData> | undefined;
+        data?: never;
+        pageCount?: never;
+        rowCount?: never;
+        fetcher?: never;
+        pagination?: never;
+      })
     | {
         mode?: "server";
-        pageCount: number;
-      }
-    | {
-        mode: "client";
+        fetcher: DataFetcher<TData>;
+        pagination?: "offset" | "cursor";
+        data?: never;
+        result?: never;
         pageCount?: never;
+        rowCount?: never;
+        status?: never;
+        error?: never;
+        onRetry?: never;
       }
   );
 
@@ -93,25 +213,29 @@ function useDataTable<TData extends RowData>({
   config: configProp,
   columns,
   mode = "server",
+  data,
+  result: resultProp,
+  fetcher,
+  pagination: paginationMode = "offset",
   pageCount,
+  rowCount,
   initialState,
   startTransition,
   history = "replace",
-  debounceMs = DEBOUNCE_MS,
+  debounceMs = URL_UPDATE_DEBOUNCE_MS,
   clearOnDefault,
   scroll = false,
   shallow = true,
+  query: queryProp,
+  onQueryChange,
+  status: statusProp = "idle",
+  error: errorProp,
+  onRetry: onRetryProp,
   ...props
 }: UseDataTableProps<TData>) {
   const isServer = mode === "server";
-  const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
-  const configInputKey = builtConfig
-    ? ""
-    : getConfigInputKey(columns, configProp);
-  const config = React.useMemo(
-    () => builtConfig ?? createConfigFromInputKey(configInputKey),
-    [builtConfig, configInputKey],
-  );
+  const isResult = data === undefined;
+  const { config, builtConfig } = useConfig(configProp, columns);
   const { enableGlobalFilter, pageSizeOptions, filterVariants, urlKeys } =
     config;
 
@@ -135,8 +259,22 @@ function useDataTable<TData extends RowData>({
   const hasInlineColumns =
     configProp !== undefined && !builtConfig && "columns" in configProp;
 
+  const hasDataAndResult = data !== undefined && resultProp !== undefined;
+  const hasFetcherAndRows =
+    fetcher !== undefined && (data !== undefined || resultProp !== undefined);
+
   React.useEffect(() => {
     if (process.env.NODE_ENV === "production") return;
+    if (hasDataAndResult) {
+      console.warn(
+        "useDataTable: pass either `data` or `result`, not both. The table shows `data` and ignores `result`.",
+      );
+    }
+    if (hasFetcherAndRows) {
+      console.warn(
+        "useDataTable: pass either `fetcher` or `data` and `result`, not both. The table shows `data` or `result` and doesn't fetch.",
+      );
+    }
     if (hasInlineColumns) {
       console.warn(
         "useDataTable: an inline config ignores `columns`. Pass the config through createDataTableConfig, or set the filter and sorting on the column defs.",
@@ -148,64 +286,84 @@ function useDataTable<TData extends RowData>({
     console.warn(
       `useDataTable: the config has no matching column for ${unmatchedIds.map((columnId) => `"${columnId}"`).join(", ")}. Rename the config key or add the column.`,
     );
-  }, [hasInlineColumns, builtConfig, columns]);
+  }, [
+    hasDataAndResult,
+    hasFetcherAndRows,
+    hasInlineColumns,
+    builtConfig,
+    columns,
+  ]);
 
-  const filterableIds = React.useMemo(
-    () => Object.keys(filterVariants),
-    [filterVariants],
-  );
-
-  const queryStateOptions = {
-    urlKeys,
-    history,
-    scroll,
-    shallow: isServer ? shallow : true,
-    clearOnDefault,
-    startTransition,
-  };
-  const shouldDebounce = isServer && !shallow;
-
-  function getUrlUpdateOptions(isClearing: boolean) {
-    return shouldDebounce && !isClearing
-      ? { limitUrlUpdates: debounce(debounceMs) }
-      : undefined;
-  }
-
-  const [
-    { page, perPage, sort: sorting, joinOperator, search },
-    setQueryState,
-  ] = useQueryStates(config.stateParsers, queryStateOptions);
-  const [filterParams, setFilterParams] = useQueryStates(
-    config.filterParsers,
-    queryStateOptions,
-  );
-
-  const lastPage =
-    isServer && pageCount !== undefined && pageCount >= 0
-      ? Math.max(pageCount, 1)
-      : Number.POSITIVE_INFINITY;
-  const shownPage = Math.min(page, lastPage);
-
-  const pagination = React.useMemo<PaginationState>(
-    () => ({ pageIndex: shownPage - 1, pageSize: perPage }),
-    [shownPage, perPage],
-  );
+  const [isControlled] = React.useState(queryProp !== undefined);
+  const hasSwitchedControl = isControlled !== (queryProp !== undefined);
 
   React.useEffect(() => {
-    if (page === shownPage) return;
-    void setQueryState({ page: shownPage });
-  }, [page, shownPage, setQueryState]);
+    if (process.env.NODE_ENV === "production" || !hasSwitchedControl) return;
+    console.warn(
+      "useDataTable: `query` switched between set and unset. The table keeps the mode it mounted with, so pass `query` on every render or never.",
+    );
+  }, [hasSwitchedControl]);
+
+  const { query: storedQuery, setQuery } = useQueryStore(isControlled, {
+    config,
+    query: queryProp,
+    onQueryChange,
+    urlOptions: {
+      urlKeys,
+      history,
+      scroll,
+      shallow: isServer ? shallow : true,
+      clearOnDefault,
+      startTransition,
+    },
+    debounceMs: isServer && !shallow ? debounceMs : undefined,
+  });
+  const isCursor = paginationMode === "cursor" && fetcher !== undefined;
+  const query = useStableQuery(
+    isCursor
+      ? { ...storedQuery, page: { index: 0, size: storedQuery.page.size } }
+      : storedQuery,
+  );
+  const { sorting, joinOperator } = query;
+
+  const lastPageIndex =
+    isServer && pageCount !== undefined && pageCount >= 0
+      ? Math.max(pageCount, 1) - 1
+      : Number.POSITIVE_INFINITY;
+  const pageIndex = Math.min(query.page.index, lastPageIndex);
+
+  const pagination = React.useMemo<PaginationState>(
+    () => ({ pageIndex, pageSize: query.page.size }),
+    [pageIndex, query.page.size],
+  );
+
+  const setQueryRef = React.useRef(setQuery);
+  useIsomorphicLayoutEffect(() => {
+    setQueryRef.current = setQuery;
+  });
+
+  React.useEffect(() => {
+    if (query.page.index === pageIndex) return;
+    setQueryRef.current({ page: { index: pageIndex } });
+  }, [query.page.index, pageIndex]);
 
   const getNextPagination = useChainedUpdate(pagination);
 
   function onPaginationChange(updater: Updater<PaginationState>) {
     const next = getNextPagination(updater);
-    if (next.pageIndex !== pagination.pageIndex) {
-      void setQueryState({ page: next.pageIndex + 1 });
+    if (
+      next.pageIndex === pagination.pageIndex &&
+      next.pageSize === pagination.pageSize
+    ) {
+      return;
     }
-    if (next.pageSize !== pagination.pageSize) {
-      void setQueryState({ perPage: next.pageSize });
-    }
+    setQuery({
+      page: {
+        index:
+          next.pageIndex === pagination.pageIndex ? undefined : next.pageIndex,
+        size: next.pageSize === pagination.pageSize ? undefined : next.pageSize,
+      },
+    });
   }
 
   const getNextSorting = useChainedUpdate(sorting);
@@ -213,7 +371,7 @@ function useDataTable<TData extends RowData>({
   function onSortingChange(updater: Updater<SortingState>) {
     const next = getNextSorting(updater);
     if (JSON.stringify(next) === JSON.stringify(sorting)) return;
-    void setQueryState({ sort: next, page: null });
+    setQuery({ sorting: next }, { resetsPage: true });
   }
 
   const getNextJoinOperator = useChainedUpdate(joinOperator);
@@ -221,21 +379,442 @@ function useDataTable<TData extends RowData>({
   function onJoinOperatorChange(updater: Updater<JoinOperator>) {
     const next = getNextJoinOperator(updater);
     if (next === joinOperator) return;
-    void setQueryState({ joinOperator: next, page: null });
+    setQuery({ joinOperator: next }, { resetsPage: true });
   }
 
-  const globalFilter = enableGlobalFilter ? search : "";
+  const globalFilter = enableGlobalFilter ? query.search : "";
   const getNextGlobalFilter = useChainedUpdate<unknown>(globalFilter);
 
   function onGlobalFilterChange(updater: Updater<unknown>) {
     if (!enableGlobalFilter) return;
     const value = getGlobalFilterValue(getNextGlobalFilter(updater));
-    if (value === search) return;
-    void setQueryState(
-      { search: value, page: null },
-      getUrlUpdateOptions(value === ""),
+    if (value === query.search) return;
+    setQuery(
+      { search: value },
+      { resetsPage: true, isDebounced: true, isClearing: value === "" },
     );
   }
+
+  const queryFilters = query.filters;
+  const filtersKey = getColumnFiltersKey(queryFilters);
+
+  const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(
+    null,
+  );
+  const columnFilters =
+    filtersDraft?.filtersKey === filtersKey
+      ? filtersDraft.filters
+      : queryFilters;
+
+  const getNextColumnFilters = useChainedUpdate(columnFilters);
+
+  function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
+    const filters = getNextColumnFilters(updater);
+    const activeFilters = getActiveFilters(asFilterItems(filters)).filter(
+      (filter) => Object.hasOwn(filterVariants, filter.id),
+    );
+    const nextFiltersKey = getColumnFiltersKey(activeFilters);
+
+    setFiltersDraft({ filters, filtersKey: nextFiltersKey });
+    if (
+      nextFiltersKey === filtersKey &&
+      getFilterColumnOrder(activeFilters) === getFilterColumnOrder(queryFilters)
+    ) {
+      return;
+    }
+
+    setQuery(
+      { filters: activeFilters },
+      {
+        resetsPage: true,
+        isDebounced: true,
+        isClearing: activeFilters.length < queryFilters.length,
+      },
+    );
+  }
+
+  const fetched = useFetcher(
+    data === undefined && resultProp === undefined ? fetcher : undefined,
+    query,
+    isCursor,
+  );
+  const result = fetched ? fetched.result : resultProp;
+  const status = fetched ? fetched.status : statusProp;
+  const error = fetched ? fetched.error : errorProp;
+  const onRetry = fetched ? fetched.refetch : onRetryProp;
+  const rows = data ?? result?.rows ?? EMPTY_ROWS;
+
+  const table = useTable(
+    {
+      ...props,
+      data: rows,
+      features: dataTableFeatures,
+      columns: tableColumns,
+      enableGlobalFilter,
+      pageSizeOptions,
+      initialState: initialTableState,
+      pageCount: isServer && !isResult ? pageCount : undefined,
+      rowCount: isResult ? result?.rowCount : rowCount,
+      state: {
+        pagination,
+        sorting,
+        columnFilters,
+        joinOperator,
+        globalFilter,
+      },
+      onPaginationChange,
+      onSortingChange,
+      onColumnFiltersChange,
+      onJoinOperatorChange,
+      onGlobalFilterChange,
+      manualPagination: isServer,
+      autoResetPageIndex: false,
+      manualSorting: isServer,
+      manualFiltering: isServer,
+      status,
+      error,
+      onRetry,
+      loadMore: fetched?.loadMore,
+    },
+    selectTableState,
+  );
+
+  return {
+    table,
+    query,
+    status,
+    error,
+    refetch: onRetry ?? noop,
+    loadMore: fetched?.loadMore,
+  };
+}
+
+interface UseDataTableQueryProps<TData extends RowData> {
+  config?: DataTableConfigInput;
+  columns?: TableOptions<DataTableFeatures, TData>["columns"];
+}
+
+function useDataTableQuery<TData extends RowData>({
+  config: configProp,
+  columns = [],
+}: UseDataTableQueryProps<TData>): DataQuery {
+  const { config } = useConfig(configProp, columns);
+  const { query } = useUrlQueryStore({
+    config,
+    query: undefined,
+    onQueryChange: undefined,
+    urlOptions: { urlKeys: config.urlKeys },
+    debounceMs: undefined,
+  });
+  return query;
+}
+
+function useQueryStore(
+  isControlled: boolean,
+  options: QueryStoreOptions,
+): QueryStore {
+  // oxlint-disable-next-line react/rules-of-hooks -- `isControlled` is fixed at mount, so the same hooks run on every render.
+  return (isControlled ? useControlledQueryStore : useUrlQueryStore)(options);
+}
+
+function useControlledQueryStore({
+  query: queryProp,
+  onQueryChange,
+  config,
+}: QueryStoreOptions): QueryStore {
+  const query = useStableQuery(queryProp ?? config.defaultQuery);
+  const pendingRef = React.useRef<{ base: DataQuery; next: DataQuery } | null>(
+    null,
+  );
+
+  function setQuery(patch: QueryPatch, options: QueryUpdateOptions = {}) {
+    const pending = pendingRef.current;
+    const base = pending?.base === query ? pending.next : query;
+    const next = mergeQuery(
+      base,
+      patch.filters
+        ? {
+            ...patch,
+            filters: normalizeColumnFilters(
+              patch.filters,
+              config.filterVariants,
+            ),
+          }
+        : patch,
+      options,
+    );
+    pendingRef.current = { base: query, next };
+    onQueryChange?.(next);
+  }
+
+  return { query, setQuery };
+}
+
+function useUrlQueryStore({
+  config,
+  urlOptions,
+  debounceMs,
+}: QueryStoreOptions): QueryStore {
+  const [{ page, perPage, sort, joinOperator, search }, setQueryState] =
+    useQueryStates(config.stateParsers, urlOptions);
+  const [filterParams, setFilterParams] = useQueryStates(
+    config.filterParsers,
+    urlOptions,
+  );
+  const { filterableIds, urlFilters } = useUrlFilters(config, filterParams);
+
+  const query = useStableQuery({
+    sorting: sort,
+    filters: urlFilters,
+    joinOperator,
+    search: config.enableGlobalFilter ? search : "",
+    page: { index: page - 1, size: perPage },
+  });
+
+  function setQuery(patch: QueryPatch, options: QueryUpdateOptions = {}) {
+    const updateOptions =
+      options.isDebounced && debounceMs !== undefined && !options.isClearing
+        ? { limitUrlUpdates: debounce(debounceMs) }
+        : undefined;
+
+    if (patch.filters) {
+      const params: Record<string, ColumnFilterItem[] | null> = {};
+      for (const filter of patch.filters) {
+        params[filter.id] = [...(params[filter.id] ?? []), filter];
+      }
+      for (const id of filterableIds) params[id] ??= null;
+      void setFilterParams(params, updateOptions);
+    }
+
+    const pageIndex = patch.page?.index;
+    void setQueryState(
+      {
+        sort: patch.sorting,
+        joinOperator: patch.joinOperator,
+        search: patch.search,
+        page: options.resetsPage
+          ? null
+          : pageIndex === undefined
+            ? undefined
+            : pageIndex + 1,
+        perPage: patch.page?.size,
+      },
+      updateOptions,
+    );
+  }
+
+  return { query, setQuery };
+}
+
+function useFetcher<TData>(
+  fetcher: DataFetcher<TData> | undefined,
+  query: DataQuery,
+  isCursor: boolean,
+) {
+  const [state, dispatch] = React.useReducer(
+    fetchReducer<TData>,
+    INITIAL_FETCH_STATE,
+  );
+  const fetcherRef = React.useRef(fetcher);
+  const queryRef = React.useRef(query);
+  const stateRef = React.useRef(state);
+  const requestIdRef = React.useRef(0);
+  const moreRequestRef = React.useRef<LoadMoreRequest | null>(null);
+  const isEnabled = fetcher !== undefined;
+  const { attempt } = state;
+
+  useIsomorphicLayoutEffect(() => {
+    fetcherRef.current = fetcher;
+    queryRef.current = query;
+    stateRef.current = state;
+  });
+
+  React.useEffect(() => {
+    const fetchRows = fetcherRef.current;
+    if (!isEnabled || !fetchRows) return;
+
+    const request = { query, attempt };
+    const requestId = ++requestIdRef.current;
+    const controller = new AbortController();
+
+    function getIsCurrent() {
+      return !controller.signal.aborted && requestId === requestIdRef.current;
+    }
+
+    new Promise<DataResult<TData>>((resolve) => {
+      resolve(fetchRows(query, { signal: controller.signal }));
+    }).then(
+      (result) => {
+        if (getIsCurrent()) dispatch({ type: "settle", request, result });
+      },
+      (error: unknown) => {
+        if (getIsCurrent()) dispatch({ type: "fail", request, error });
+      },
+    );
+
+    return () => {
+      controller.abort();
+      moreRequestRef.current?.controller.abort();
+      moreRequestRef.current = null;
+    };
+  }, [isEnabled, query, attempt]);
+
+  const refetch = React.useCallback(() => dispatch({ type: "retry" }), []);
+
+  const loadMore = React.useCallback(() => {
+    const fetchRows = fetcherRef.current;
+    const { request, result } = stateRef.current;
+    const nextCursor = getIsSettled(stateRef.current, queryRef.current)
+      ? result?.nextCursor
+      : undefined;
+    if (!fetchRows || !request || !result || !nextCursor) return;
+    if (moreRequestRef.current) return;
+
+    const controller = new AbortController();
+    const moreRequest = { controller };
+    moreRequestRef.current = moreRequest;
+    dispatch({ type: "loadMoreStart", request });
+
+    function getIsCurrent() {
+      return (
+        !controller.signal.aborted && moreRequestRef.current === moreRequest
+      );
+    }
+
+    new Promise<DataResult<TData>>((resolve) => {
+      resolve(
+        fetchRows(
+          { ...request.query, cursor: nextCursor },
+          { signal: controller.signal },
+        ),
+      );
+    }).then(
+      (page) => {
+        if (!getIsCurrent()) return;
+        moreRequestRef.current = null;
+        const rows = [...result.rows, ...page.rows];
+        const rowCount = page.rowCount ?? result.rowCount;
+        dispatch({
+          type: "settle",
+          request,
+          result: { rows, rowCount, nextCursor: page.nextCursor ?? null },
+        });
+      },
+      (error: unknown) => {
+        if (!getIsCurrent()) return;
+        moreRequestRef.current = null;
+        dispatch({ type: "loadMoreFail", request, error });
+      },
+    );
+  }, []);
+
+  const isSettled = getIsSettled(state, query);
+  const moreStatus: DataLoadMoreStatus =
+    isSettled && state.more?.request === state.request
+      ? state.more.status
+      : "idle";
+  const moreError = moreStatus === "error" ? state.more?.error : undefined;
+  const hasMore = Boolean(isSettled && state.result?.nextCursor);
+
+  const loadMoreState = React.useMemo(
+    () =>
+      isCursor
+        ? {
+            hasMore,
+            status: moreStatus,
+            error: moreError,
+            onLoadMore: loadMore,
+          }
+        : undefined,
+    [isCursor, hasMore, moreStatus, moreError, loadMore],
+  );
+
+  if (!isEnabled) return null;
+
+  return {
+    result: state.result,
+    status: isSettled
+      ? state.status
+      : state.result
+        ? ("refreshing" as const)
+        : ("loading" as const),
+    error: isSettled ? state.error : undefined,
+    refetch,
+    loadMore: loadMoreState,
+  };
+}
+
+function fetchReducer<TData>(
+  state: FetchState<TData>,
+  action: FetchAction<TData>,
+): FetchState<TData> {
+  switch (action.type) {
+    case "retry":
+      return { ...state, attempt: state.attempt + 1 };
+    case "settle":
+      return {
+        ...state,
+        request: action.request,
+        result: action.result,
+        status: "idle",
+        error: undefined,
+        more: null,
+      };
+    case "fail":
+      return {
+        ...state,
+        request: action.request,
+        result: undefined,
+        status: "error",
+        error: action.error,
+        more: null,
+      };
+    case "loadMoreStart":
+      return {
+        ...state,
+        more: { request: action.request, status: "loading", error: undefined },
+      };
+    case "loadMoreFail":
+      return {
+        ...state,
+        more: { request: action.request, status: "error", error: action.error },
+      };
+  }
+}
+
+function getIsSettled<TData>(state: FetchState<TData>, query: DataQuery) {
+  return (
+    state.request?.query === query && state.request.attempt === state.attempt
+  );
+}
+
+function useConfig<TData extends RowData>(
+  configProp: DataTableConfigInput | undefined,
+  columns: TableOptions<DataTableFeatures, TData>["columns"],
+) {
+  const builtConfig = getIsDataTableConfig(configProp) ? configProp : undefined;
+  const configInputKey = builtConfig
+    ? ""
+    : getConfigInputKey(columns, configProp);
+  const config = React.useMemo(
+    () => builtConfig ?? createConfigFromInputKey(configInputKey),
+    [builtConfig, configInputKey],
+  );
+
+  return { config, builtConfig };
+}
+
+function useUrlFilters(
+  {
+    filterVariants,
+    urlKeys,
+  }: Pick<DataTableConfig, "filterVariants" | "urlKeys">,
+  filterParams: Partial<Record<string, unknown>>,
+) {
+  const filterableIds = React.useMemo(
+    () => Object.keys(filterVariants),
+    [filterVariants],
+  );
 
   const locationSearch = React.useSyncExternalStore(
     subscribeToHistory,
@@ -259,77 +838,46 @@ function useDataTable<TData extends RowData>({
       ),
     [filterableIds, filterParams, filterOrderKey],
   );
-  const urlFiltersKey = getColumnFiltersKey(urlFilters);
 
-  const [filtersDraft, setFiltersDraft] = React.useState<FiltersDraft | null>(
-    null,
-  );
-  const columnFilters =
-    filtersDraft?.urlFiltersKey === urlFiltersKey
-      ? filtersDraft.filters
-      : urlFilters;
-
-  const getNextColumnFilters = useChainedUpdate(columnFilters);
-
-  function onColumnFiltersChange(updater: Updater<ColumnFiltersState>) {
-    const filters = getNextColumnFilters(updater);
-    const activeFilters = getActiveFilters(asFilterItems(filters)).filter(
-      (filter) => Object.hasOwn(filterVariants, filter.id),
-    );
-    const nextUrlFiltersKey = getColumnFiltersKey(activeFilters);
-
-    setFiltersDraft({ filters, urlFiltersKey: nextUrlFiltersKey });
-    if (
-      nextUrlFiltersKey === urlFiltersKey &&
-      getFilterColumnOrder(activeFilters) === getFilterColumnOrder(urlFilters)
-    ) {
-      return;
-    }
-
-    const params: Record<string, ColumnFilterItem[] | null> = {};
-    for (const filter of activeFilters) {
-      params[filter.id] = [...(params[filter.id] ?? []), filter];
-    }
-    for (const id of filterableIds) params[id] ??= null;
-
-    const options = getUrlUpdateOptions(
-      activeFilters.length < urlFilters.length,
-    );
-    void setFilterParams(params, options);
-    void setQueryState({ page: null }, options);
-  }
-
-  const table = useTable(
-    {
-      ...props,
-      features: dataTableFeatures,
-      columns: tableColumns,
-      enableGlobalFilter,
-      pageSizeOptions,
-      initialState: initialTableState,
-      pageCount: isServer ? pageCount : undefined,
-      state: {
-        pagination,
-        sorting,
-        columnFilters,
-        joinOperator,
-        globalFilter,
-      },
-      onPaginationChange,
-      onSortingChange,
-      onColumnFiltersChange,
-      onJoinOperatorChange,
-      onGlobalFilterChange,
-      manualPagination: isServer,
-      autoResetPageIndex: false,
-      manualSorting: isServer,
-      manualFiltering: isServer,
-    },
-    selectTableState,
-  );
-
-  return { table };
+  return { filterableIds, urlFilters };
 }
+
+function useStableQuery({
+  joinOperator,
+  search,
+  ...query
+}: DataQuery): DataQuery {
+  const sorting = useStableValue(query.sorting);
+  const filters = useStableValue(query.filters);
+  const page = useStableValue(query.page);
+  return React.useMemo(
+    () => ({ sorting, filters, joinOperator, search, page }),
+    [sorting, filters, joinOperator, search, page],
+  );
+}
+
+function useStableValue<TValue>(value: TValue): TValue {
+  const key = JSON.stringify(value);
+  return React.useMemo(() => JSON.parse(key), [key]);
+}
+
+function mergeQuery(
+  query: DataQuery,
+  patch: QueryPatch,
+  { resetsPage }: QueryUpdateOptions,
+): DataQuery {
+  const { page, ...rest } = patch;
+  return {
+    ...query,
+    ...rest,
+    page: {
+      index: resetsPage ? 0 : (page?.index ?? query.page.index),
+      size: page?.size ?? query.page.size,
+    },
+  };
+}
+
+function noop() {}
 
 function subscribeToHistory(onChange: () => void) {
   window.addEventListener("popstate", onChange);
@@ -378,4 +926,9 @@ function useChainedUpdate<TValue>(value: TValue) {
   };
 }
 
-export { useDataTable, type UseDataTableProps };
+export {
+  useDataTable,
+  type UseDataTableProps,
+  useDataTableQuery,
+  type UseDataTableQueryProps,
+};

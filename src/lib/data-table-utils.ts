@@ -12,6 +12,7 @@ import type {
   ColumnFilterItem,
   ColumnNumberOptions,
   ColumnSelectOption,
+  DataLoadMore,
   DataTableColumnMeta,
   FilterOperator,
   FilterOperatorOption,
@@ -47,6 +48,8 @@ export const FILTER_OPERATORS = {
 export const JOIN_OPERATORS = ["and", "or"] as const;
 
 export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 30, 40, 50] as const;
+
+const MAX_SKELETON_ROWS = 10;
 
 export const SORT_ORDERS = [
   { label: "Asc", value: "asc" },
@@ -493,6 +496,36 @@ export function getVisibleSelectedRows<TData extends RowData>(
   return table.getRowModel().rows.filter((row) => row.getIsSelected());
 }
 
+export function getResultStatusText<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+  pageIndex: number,
+) {
+  const status = table.options.status ?? "idle";
+  if (status === "loading" || status === "error") return "";
+
+  if (table.options.loadMore) {
+    const loadedCount = table.getRowModel().rows.length;
+    const totalCount = table.options.rowCount;
+    if (loadedCount === 0) return "No results";
+    if (totalCount === undefined) {
+      return `${pluralize(loadedCount, "result")} loaded`;
+    }
+    return `${loadedCount.toLocaleString()} of ${pluralize(totalCount, "result")} loaded`;
+  }
+
+  const pageCount = table.getPageCount();
+  const rowCount =
+    table.options.rowCount ??
+    (!table.options.manualPagination || pageCount <= 1
+      ? table.getRowCount()
+      : null);
+  if (rowCount === 0 || pageCount === 0) return "No results";
+  const page = `${(pageIndex + 1).toLocaleString()} of ${pageCount.toLocaleString()}`;
+  if (rowCount === null) return `Page ${page}`;
+  if (pageCount <= 1) return pluralize(rowCount, "result");
+  return `${pluralize(rowCount, "result")}, page ${page}`;
+}
+
 export function getColumnPinningStyle<TData extends RowData>(
   column: Column<DataTableFeatures, TData>,
   isPinned = column.getIsPinned(),
@@ -533,6 +566,29 @@ export function getColumnSizingStyle<TData extends RowData>(
   }
 
   return style;
+}
+
+export function getStatusErrorMessage(error: unknown) {
+  if (typeof error === "string") return error.trim() || null;
+  if (error instanceof Error) return error.message.trim() || null;
+  return null;
+}
+
+export function getLoadMoreRowCount<TData extends RowData>(
+  table: Table<DataTableFeatures, TData>,
+  loadMore: DataLoadMore,
+  headerRowCount: number,
+) {
+  if (table.options.status === "loading") return -1;
+  if (!loadMore.hasMore) {
+    return headerRowCount + table.getRowModel().rows.length;
+  }
+  const { rowCount } = table.options;
+  return rowCount === undefined ? -1 : headerRowCount + rowCount;
+}
+
+export function getSkeletonRowCount(pageSize: number) {
+  return Math.max(1, Math.min(pageSize, MAX_SKELETON_ROWS));
 }
 
 export function getIsEditableTarget(target: EventTarget | null) {
@@ -609,4 +665,8 @@ function getFilterValueStringifier(variant: FilterVariant) {
 function stringifyFilterDate(value: unknown) {
   const date = parseFilterDate(value);
   return date ? formatFilterDate(date) : "";
+}
+
+function pluralize(count: number, noun: string) {
+  return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
 }

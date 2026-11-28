@@ -2,6 +2,7 @@ import { type ColumnDef, type RowData } from "@tanstack/react-table";
 import {
   createLoader,
   createParser,
+  createSerializer,
   type LoaderInput,
   parseAsInteger,
   parseAsString,
@@ -10,7 +11,9 @@ import {
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type {
+  ColumnFilterItem,
   ColumnSortItem,
+  DataQuery,
   DataTableColumnConfig,
   DataTableColumnConfigs,
   DataTableQuery,
@@ -86,7 +89,9 @@ export interface DataTableConfig<
   readonly stateParsers: ReturnType<typeof getStateParsers>;
   readonly filterParsers: Record<string, ColumnFilterParser<string>>;
   readonly urlKeys: Record<DataTableKey | FilterableColumnId<TColumns>, string>;
+  readonly defaultQuery: DataQuery;
   parse(search: LoaderInput): ConfigQuery<TColumns>;
+  serialize(query: DataQuery): string;
 }
 
 export type DataTableConfigInput = Omit<
@@ -143,6 +148,10 @@ export function createDataTableConfig<
   );
 
   const load = createLoader({ ...stateParsers, ...filterParsers }, { urlKeys });
+  const serializeSearch = createSerializer(
+    { ...stateParsers, ...filterParsers },
+    { urlKeys },
+  );
 
   return Object.freeze({
     id,
@@ -156,6 +165,13 @@ export function createDataTableConfig<
     stateParsers,
     filterParsers,
     urlKeys,
+    defaultQuery: {
+      sorting: defaultSorting,
+      filters: [],
+      joinOperator: defaultJoinOperator,
+      search: "",
+      page: { index: 0, size: defaultPageSize },
+    },
     parse(search: LoaderInput) {
       const values = load(search);
       return {
@@ -168,6 +184,22 @@ export function createDataTableConfig<
         joinOperator: values.joinOperator,
         globalFilter: enableGlobalFilter ? values.search : "",
       };
+    },
+    serialize(query: DataQuery) {
+      const filtersById: Record<string, ColumnFilterItem[]> = {};
+      for (const filter of query.filters) {
+        if (!getIsOneOf(filterableIds, filter.id)) continue;
+        filtersById[filter.id] = [...(filtersById[filter.id] ?? []), filter];
+      }
+
+      return serializeSearch({
+        ...filtersById,
+        page: query.page.index + 1,
+        perPage: query.page.size,
+        sort: query.sorting,
+        joinOperator: query.joinOperator,
+        search: enableGlobalFilter ? query.search : null,
+      });
     },
   });
 }
