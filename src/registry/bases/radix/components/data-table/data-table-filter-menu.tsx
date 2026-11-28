@@ -190,6 +190,13 @@ function DataTableFilterMenuContent<TData extends RowData>({
     onFilterRemove(lastFilter.filterId);
   }
 
+  const isDraggingRef = React.useRef(false);
+
+  function onEscapeKeyDown(event: KeyboardEvent) {
+    props.onEscapeKeyDown?.(event);
+    if (isDraggingRef.current) event.preventDefault();
+  }
+
   return (
     <Sortable
       value={filters}
@@ -199,6 +206,15 @@ function DataTableFilterMenuContent<TData extends RowData>({
         columns.find((column) => column.id === item.id)?.columnDef.meta
           ?.label ?? item.id
       }
+      onDragStart={() => {
+        isDraggingRef.current = true;
+      }}
+      onDragEnd={() => {
+        isDraggingRef.current = false;
+      }}
+      onDragCancel={() => {
+        isDraggingRef.current = false;
+      }}
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -233,6 +249,7 @@ function DataTableFilterMenuContent<TData extends RowData>({
           aria-labelledby={labelId}
           className="flex w-full max-w-(--radix-popover-content-available-width) flex-col gap-3.5 p-4 sm:min-w-95"
           {...props}
+          onEscapeKeyDown={onEscapeKeyDown}
         >
           <div className="flex flex-col gap-1">
             <h4 id={labelId} className="leading-none font-medium">

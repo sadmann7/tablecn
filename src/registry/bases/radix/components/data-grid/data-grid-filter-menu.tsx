@@ -210,12 +210,28 @@ function DataGridFilterMenuContent<TData extends RowData>({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  const isDraggingRef = React.useRef(false);
+
+  function onEscapeKeyDown(event: KeyboardEvent) {
+    props.onEscapeKeyDown?.(event);
+    if (isDraggingRef.current) event.preventDefault();
+  }
+
   return (
     <Sortable
       value={columnFilters}
       onValueChange={table.setColumnFilters}
       getItemValue={(item) => item.id}
       getItemLabel={(item) => columnLabels.get(item.id) ?? item.id}
+      onDragStart={() => {
+        isDraggingRef.current = true;
+      }}
+      onDragEnd={() => {
+        isDraggingRef.current = false;
+      }}
+      onDragCancel={() => {
+        isDraggingRef.current = false;
+      }}
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -253,6 +269,7 @@ function DataGridFilterMenuContent<TData extends RowData>({
             className,
           )}
           {...props}
+          onEscapeKeyDown={onEscapeKeyDown}
         >
           <div className="flex flex-col gap-1">
             <h2 id={labelId} className="leading-none font-medium">

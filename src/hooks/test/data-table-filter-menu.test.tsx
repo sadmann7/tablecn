@@ -153,6 +153,20 @@ describe.each(bases.map((base) => ({ name: base[0], base })))(
         screen.getByLabelText("Title filter operator").textContent,
       ).toContain("Contains");
     });
+
+    it("keeps the menu open when Escape cancels a drag", async () => {
+      renderFilterMenu(base, [titleFilter, statusFilter]);
+      openMenu();
+
+      const handle = screen.getByLabelText("Reorder Title filter");
+      handle.focus();
+      await pressKey(handle, "Enter");
+      await pressKey(handle, "Escape");
+      expect(screen.queryByLabelText("Reorder Title filter")).not.toBeNull();
+
+      await pressKey(screen.getByLabelText("Reorder Title filter"), "Escape");
+      expect(screen.queryByLabelText("Reorder Title filter")).toBeNull();
+    });
   },
 );
 
@@ -321,4 +335,12 @@ function renderFilterMenu(
 
 function openMenu() {
   fireEvent.click(screen.getByRole("button", { name: /^filter/i }));
+}
+
+async function pressKey(element: Element, key: string) {
+  await act(async () => {
+    fireEvent.keyDown(element, { key, code: key });
+    fireEvent.keyUp(element, { key, code: key });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
