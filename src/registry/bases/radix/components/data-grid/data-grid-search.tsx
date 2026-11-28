@@ -227,9 +227,7 @@ function DataGridSearchContentImpl<TData extends RowData>({
         className="flex items-center gap-1 text-xs whitespace-nowrap text-muted-foreground"
       >
         {matchCount > 0 ? (
-          <span>
-            {matchIndex + 1} of {matchCount}
-          </span>
+          <span>{`${matchIndex + 1} of ${matchCount}`}</span>
         ) : hasQuery ? (
           <span>No results</span>
         ) : (

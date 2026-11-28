@@ -240,6 +240,24 @@ for (const base of GRID_BASES) {
       await expectSpokenAnnouncements(page, ["polite: Row 1 selected"]);
     });
 
+    test("speaks each search match count once", async ({ page }) => {
+      await page.getByRole("gridcell").nth(1).click();
+      await page.keyboard.press("ControlOrMeta+f");
+      const search = page.getByRole("textbox", { name: "Find in table" });
+      await startScreenReader(page);
+
+      await search.fill("ab");
+      await expect
+        .poll(() => readSpokenPhrases(page))
+        .toContain("polite: 1 of 44");
+      await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
+      expect(
+        (await readSpokenPhrases(page)).filter(
+          (phrase) => phrase === "polite: 1 of 44",
+        ),
+      ).toHaveLength(1);
+    });
+
     test("exposes row selection on the row, cells and checkboxes", async ({
       page,
     }) => {
@@ -316,17 +334,18 @@ async function startScreenReader(page: Page) {
   }, SCREEN_READER_SOURCE);
 }
 
-async function expectSpokenAnnouncements(page: Page, expected: string[]) {
-  const readAnnouncements = () =>
-    page.evaluate(async () => {
-      const { screenReader } = window as unknown as ScreenReaderWindow;
-      const phrases = await screenReader.spokenPhraseLog();
-      return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
-    });
+function readSpokenPhrases(page: Page) {
+  return page.evaluate(async () => {
+    const { screenReader } = window as unknown as ScreenReaderWindow;
+    const phrases = await screenReader.spokenPhraseLog();
+    return phrases.filter((phrase) => /^(polite|assertive): /.test(phrase));
+  });
+}
 
-  await expect.poll(readAnnouncements).toEqual(expected);
+async function expectSpokenAnnouncements(page: Page, expected: string[]) {
+  await expect.poll(() => readSpokenPhrases(page)).toEqual(expected);
   await page.waitForTimeout(ANNOUNCEMENT_SETTLE_MS);
-  expect(await readAnnouncements()).toEqual(expected);
+  expect(await readSpokenPhrases(page)).toEqual(expected);
 
   await page.evaluate(() =>
     (
