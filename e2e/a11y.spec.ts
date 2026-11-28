@@ -179,6 +179,38 @@ for (const base of GRID_BASES) {
       await expect(header).toHaveAttribute("aria-sort", "ascending");
       await expect(sortedHeaders(page)).toHaveCount(1);
     });
+
+    test("exposes row selection on the row, cells and checkboxes", async ({
+      page,
+    }) => {
+      const grid = page.getByRole("grid");
+      const headerRow = grid.getByRole("row").first();
+      const firstRow = grid.getByRole("row").nth(1);
+
+      await expect(firstRow).toMatchAriaSnapshot(`
+        - row [selected=false]:
+          - gridcell "Select row 1":
+            - checkbox "Select row 1" [checked=false]
+          - gridcell [selected=false]
+      `);
+
+      await grid
+        .getByRole("gridcell", { name: "Select row 1", exact: true })
+        .click();
+
+      await expect(announcer(page)).toHaveText("Row 1 selected");
+      await expect(firstRow).toMatchAriaSnapshot(`
+        - row [selected]:
+          - gridcell "Select row 1":
+            - checkbox "Select row 1" [checked]
+          - gridcell [selected]
+      `);
+      await expect(headerRow).toMatchAriaSnapshot(`
+        - row:
+          - columnheader "Select all":
+            - checkbox "Select all" [checked=mixed]
+      `);
+    });
   });
 }
 
