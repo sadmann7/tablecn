@@ -668,8 +668,12 @@ function useDataGrid<TData extends RowData>({
       onCellScroll: (cell) =>
         revealCell(cell, { shouldFocus: false, shouldScroll: true }),
       onCellFocus: (cell) => focusCellElement(cell),
-      onClipboardNotice: (notice) =>
-        (propsRef.current.onClipboardNotice ?? toastClipboardNotice)(notice),
+      onClipboardNotice: (notice) => {
+        if (notice.paste) {
+          announce(messagesRef.current.cellsPasted(notice.paste));
+        }
+        (propsRef.current.onClipboardNotice ?? toastClipboardNotice)(notice);
+      },
       features: dataGridFeatures,
       data,
       onDataChange,
@@ -686,6 +690,7 @@ function useDataGrid<TData extends RowData>({
   }, [
     stableProps,
     propsRef,
+    messagesRef,
     revealCell,
     focusCellElement,
     data,
@@ -2185,8 +2190,9 @@ function selectTableState(state: TableState<DataGridFeatures>) {
   };
 }
 
-function toastClipboardNotice({ variant, message }: ClipboardNotice) {
+function toastClipboardNotice({ variant, message, paste }: ClipboardNotice) {
   if (variant === "error") toast.error(message);
+  else if (paste) toastSilently("success", message);
   else toast.success(message);
 }
 

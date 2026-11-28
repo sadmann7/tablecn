@@ -1,5 +1,7 @@
 import type { SortingState } from "@tanstack/react-table";
 
+import type { PasteResult } from "@/lib/data-grid-types";
+
 type Assertiveness = "polite" | "assertive";
 
 export interface AnnounceOptions {
@@ -50,6 +52,7 @@ export interface DataGridMessages {
   rowsDeleted: (count: number) => string;
   undone: (change: string) => string;
   redone: (change: string) => string;
+  cellsPasted: (result: PasteResult) => string;
 }
 
 const ANNOUNCE_DELAY_MS = 150;
@@ -96,6 +99,14 @@ export const defaultDataGridMessages: DataGridMessages = {
   rowsDeleted: (count) => `${pluralize(count, "row")} deleted`,
   undone: (change) => `Undo: ${change}`,
   redone: (change) => `Redo: ${change}`,
+  cellsPasted: ({ cellCount, addedRowCount, skippedCount }) =>
+    [
+      `${pluralize(cellCount, "cell")} pasted`,
+      skippedCount > 0 ? `${skippedCount.toLocaleString()} skipped` : "",
+      addedRowCount > 0 ? `${pluralize(addedRowCount, "row")} added` : "",
+    ]
+      .filter(Boolean)
+      .join(", "),
 };
 
 export function getHistoryMessage(

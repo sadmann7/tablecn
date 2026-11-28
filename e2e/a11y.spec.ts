@@ -240,6 +240,35 @@ for (const base of GRID_BASES) {
       await expectSpokenAnnouncements(page, ["polite: Row 1 selected"]);
     });
 
+    test("speaks each paste once, with what it skipped and added", async ({
+      page,
+      context,
+    }) => {
+      await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+      const grid = page.getByRole("grid");
+      const toast = page.locator("[data-sonner-toast]").first();
+      await startScreenReader(page);
+
+      await grid
+        .locator("[role=row][aria-rowindex='2'] [role=gridcell]")
+        .nth(1)
+        .click();
+      await writeClipboard(page, "Ada Lovelace\t36\nGrace Hopper\t85");
+      await page.keyboard.press("ControlOrMeta+v");
+      await expectSpokenOnce(page, "4 cells pasted");
+      await expect(toast).toHaveText("4 cells pasted");
+
+      await writeClipboard(page, "Ada Lovelace\tnot a number");
+      await page.keyboard.press("ControlOrMeta+v");
+      await expectSpokenOnce(page, "1 cell pasted, 1 skipped");
+
+      await page.keyboard.press("ControlOrMeta+ArrowDown");
+      await writeClipboard(page, "Ada Lovelace\nGrace Hopper\nAlan Turing");
+      await page.keyboard.press("ControlOrMeta+v");
+      await page.getByRole("button", { name: "Continue" }).click();
+      await expectSpokenOnce(page, "3 cells pasted, 2 rows added");
+    });
+
     test("speaks each search match count once", async ({ page }) => {
       await page.getByRole("gridcell").nth(1).click();
       await page.keyboard.press("ControlOrMeta+f");
@@ -354,6 +383,10 @@ async function expectSpokenOnce(page: Page, message: string) {
   ).toHaveLength(1);
   await cdp.detach();
   await clearSpokenPhraseLog(page);
+}
+
+function writeClipboard(page: Page, text: string) {
+  return page.evaluate((value) => navigator.clipboard.writeText(value), text);
 }
 
 async function expectHiddenFromTree(page: Page, text: string) {

@@ -10,6 +10,7 @@ import {
 import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { startTransition, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -6195,6 +6196,127 @@ describe("useDataGrid", () => {
       act(() => getNameCell()?.setValue("Bird"));
       act(() => getNameCell()?.setValue(""));
       act(() => result.current.table.stopEditing());
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(getAnnouncement()).toBe("");
+    });
+
+    function renderPasteGrid(
+      options: Partial<UseDataGridProps<TestData>> = {},
+    ) {
+      let nextId = 4;
+      return renderAnnouncedGrid({
+        columns: [
+          { id: "name", accessorKey: "name", header: "Name" },
+          { id: "trick", accessorKey: "trick", header: "Trick" },
+          {
+            id: "score",
+            accessorKey: "score",
+            header: "Score",
+            meta: { variant: "number" },
+          },
+        ],
+        createRow: () => ({
+          id: String(nextId++),
+          name: "",
+          trick: "",
+          score: 0,
+        }),
+        ...options,
+      });
+    }
+
+    async function paste(
+      result: { current: ReturnType<typeof useDataGrid<TestData>> },
+      rowId: string,
+      columnId: string,
+      text: string,
+      options?: { expandRows: boolean },
+    ) {
+      mockClipboard.readText.mockResolvedValue(text);
+      act(() => {
+        result.current.table.setFocusedCell(rowId, columnId);
+      });
+      await act(async () => {
+        await result.current.table.pasteCells(options);
+      });
+    }
+
+    it("announces a paste once and keeps its toast silent", async () => {
+      const { result } = renderPasteGrid();
+
+      await paste(result, "1", "name", "Bob\tOllie\nEric\tNollie");
+
+      await waitFor(() => expect(getAnnouncement()).toBe("4 cells pasted"));
+      const title = vi.mocked(toast.success).mock.lastCall?.[0];
+      expect(title).toMatchObject({
+        props: { "aria-hidden": true, children: "4 cells pasted" },
+      });
+    });
+
+    it("announces the rows a paste added with its cells", async () => {
+      const { result } = renderPasteGrid();
+
+      await paste(result, "3", "name", "Bob\nEric\nChad", {
+        expandRows: true,
+      });
+
+      await waitFor(() =>
+        expect(getAnnouncement()).toBe("3 cells pasted, 2 rows added"),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(
+        document.querySelectorAll('[data-live-announcer="polite"] > div'),
+      ).toHaveLength(1);
+    });
+
+    it("announces the cells a paste skipped", async () => {
+      const { result } = renderPasteGrid();
+
+      await paste(result, "1", "trick", "Ollie\tnope");
+
+      await waitFor(() =>
+        expect(getAnnouncement()).toBe("1 cell pasted, 1 skipped"),
+      );
+    });
+
+    it("counts only the cells a cut moved to", async () => {
+      const { result } = renderPasteGrid();
+
+      act(() => {
+        fireCellEvent(result, "onMouseDown", "1", "name");
+      });
+      act(() => {
+        fireCellEvent(result, "onMouseOver", "1", "trick");
+      });
+      await act(async () => {
+        await result.current.table.cutSelectedCells();
+      });
+      await paste(result, "2", "name", "Tony Hawk\t900");
+
+      await waitFor(() => expect(getAnnouncement()).toBe("2 cells pasted"));
+    });
+
+    it("leaves the error toast to speak when a paste skips every cell", async () => {
+      const { result } = renderPasteGrid();
+
+      await paste(result, "3", "score", "nope\nnope", { expandRows: true });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(getAnnouncement()).toBe("");
+      expect(toast.error).toHaveBeenLastCalledWith(
+        "2 cells skipped pasting for invalid data",
+      );
+
+      await paste(result, "1", "name", "Bob");
+      await waitFor(() => expect(getAnnouncement()).toBe("1 cell pasted"));
+    });
+
+    it("stays quiet on a paste when its message is empty", async () => {
+      const { result } = renderPasteGrid({
+        messages: { cellsPasted: () => "" },
+      });
+
+      await paste(result, "1", "name", "Bob");
 
       await new Promise((resolve) => setTimeout(resolve, 300));
       expect(getAnnouncement()).toBe("");
