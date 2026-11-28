@@ -1,5 +1,6 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -7,7 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 import type { DataStatus } from "@/lib/data-table-types";
@@ -75,6 +76,10 @@ interface HarnessProps {
 }
 
 describe.each(bases)("DataTable status ($name)", (ui) => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders rows without aria-busy when idle", () => {
     const { container } = renderTable(ui);
 
@@ -167,27 +172,33 @@ describe.each(bases)("DataTable status ($name)", (ui) => {
   });
 
   it("reads the result count once loading finishes", () => {
+    vi.useFakeTimers();
     const { rerender } = renderTable(ui, { status: "loading" });
     expect(getResultCount()).toBe("");
 
     rerender({ status: "idle", data: tasks.slice(0, 7) });
+    settleResultStatus();
     expect(getResultCount()).toBe("7 results");
   });
 
   it("keeps the result count while refreshing", () => {
+    vi.useFakeTimers();
     const { rerender } = renderTable(ui, { status: "refreshing" });
-    expect(getResultCount()).toBe("25 results");
+    expect(getResultCount()).toBe("25 results, page 1 of 3");
 
     rerender({ status: "idle" });
-    expect(getResultCount()).toBe("25 results");
+    settleResultStatus();
+    expect(getResultCount()).toBe("25 results, page 1 of 3");
   });
 
   it("alerts a failure and clears the result count", () => {
+    vi.useFakeTimers();
     const { rerender } = renderTable(ui, { status: "idle" });
     expect(screen.queryByRole("alert")).toBeNull();
 
     rerender({ status: "error", error: "Network down" });
     expect(screen.getByRole("alert").textContent).toBe("Network down");
+    settleResultStatus();
     expect(getResultCount()).toBe("");
   });
 
@@ -283,4 +294,8 @@ function getResultCount() {
     document.querySelector('[data-slot="data-table"] > [role="status"]')
       ?.textContent ?? null
   );
+}
+
+function settleResultStatus() {
+  act(() => vi.advanceTimersByTime(500));
 }

@@ -1,7 +1,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { NuqsTestingAdapter } from "nuqs/adapters/testing";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DataTableFeatures } from "@/lib/data-table-features";
 
@@ -64,6 +64,10 @@ const bases = [
 type Base = (typeof bases)[number];
 
 describe.each(bases)("DataTable accessibility ($name)", (ui) => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("names the table element", () => {
     const { container } = renderTable(ui);
 
@@ -116,47 +120,56 @@ describe.each(bases)("DataTable accessibility ($name)", (ui) => {
 
     const statuses = screen.getAllByRole("status");
     expect(statuses.map((status) => status.textContent)).toEqual([
-      "30 results",
+      "30 results, page 1 of 3",
       "0 rows selected.",
-      "Page 1 of 3",
     ]);
 
+    vi.useFakeTimers();
     act(() => {
       table.toggleAllPageRowsSelected(true);
       table.nextPage();
     });
+    settleResultStatus();
     expect(statuses.map((status) => status.textContent)).toEqual([
-      "30 results",
+      "30 results, page 2 of 3",
       "10 rows selected (10 not shown).",
-      "Page 2 of 3",
     ]);
   });
 
-  it("reads the result count after a client filter", () => {
+  it("reads the result count once a client filter settles", () => {
     const { table } = renderTable(ui);
+    vi.useFakeTimers();
 
-    expect(getResultCount()).toBe("30 results");
+    expect(getResultStatus()).toBe("30 results, page 1 of 3");
 
+    act(() => table.setColumnFilters([{ id: "status", value: ["todo"] }]));
     act(() => table.setColumnFilters([{ id: "status", value: ["done"] }]));
-    expect(getResultCount()).toBe("15 results");
+    expect(getResultStatus()).toBe("30 results, page 1 of 3");
+    settleResultStatus();
+    expect(getResultStatus()).toBe("15 results, page 1 of 2");
 
     act(() => table.setColumnFilters([{ id: "status", value: ["archived"] }]));
-    expect(getResultCount()).toBe("No results");
+    settleResultStatus();
+    expect(getResultStatus()).toBe("No results");
   });
 
   it("reads the server result count once new data arrives", () => {
     const { table, rerender } = renderServerTable(ui, data.slice(0, 10), 3);
+    vi.useFakeTimers();
 
-    expect(getResultCount()).toBe("3 pages of results");
+    expect(getResultStatus()).toBe("Page 1 of 3");
 
     act(() => table.setColumnFilters([{ id: "status", value: ["done"] }]));
-    expect(getResultCount()).toBe("3 pages of results");
+    settleResultStatus();
+    expect(getResultStatus()).toBe("Page 1 of 3");
 
     rerender(data.slice(0, 1), 1);
-    expect(getResultCount()).toBe("1 result");
+    settleResultStatus();
+    expect(getResultStatus()).toBe("1 result");
 
     rerender([], 0);
-    expect(getResultCount()).toBe("No results");
+    settleResultStatus();
+    expect(getResultStatus()).toBe("No results");
   });
 
   it("keeps the filter clear icon out of the trigger's focus and accessibility tree", () => {
@@ -275,10 +288,14 @@ function renderServerTable(ui: Base, rows: Task[], pageCount: number) {
   };
 }
 
-function getResultCount() {
+function getResultStatus() {
   return screen
     .getAllByRole("status")
-    .find((status) => /results?$/.test(status.textContent ?? ""))?.textContent;
+    .find((status) => !/selected/.test(status.textContent ?? ""))?.textContent;
+}
+
+function settleResultStatus() {
+  act(() => vi.advanceTimersByTime(500));
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();

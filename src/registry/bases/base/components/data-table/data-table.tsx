@@ -22,7 +22,7 @@ import {
   getColumnPinningStyle,
   getColumnSizingStyle,
   getLoadMoreRowCount,
-  getResultCountText,
+  getResultStatusText,
   getSkeletonRowCount,
   getStatusErrorMessage,
   getVisibleSelectedRows,
@@ -40,6 +40,8 @@ import {
   TableRow,
 } from "@/registry/bases/base/ui/table";
 import { IconPlaceholder } from "@/registry/icons/icon-placeholder";
+
+const RESULT_STATUS_DELAY = 500;
 
 interface DataTableProps<
   TData extends RowData,
@@ -129,7 +131,7 @@ export function DataTable<TData extends RowData>({
           <DataTableBody table={table} />
         </DataTableLayout>
       </div>
-      <DataTableResultCount table={table} />
+      <DataTableResultStatus table={table} />
       <div className="flex flex-col gap-2.5">
         {loadMore ? null : <DataTablePagination table={table} />}
         {actionBar ? (
@@ -503,20 +505,20 @@ function DataTableSkeletonBody<TData extends RowData>({
   );
 }
 
-interface DataTableResultCountProps<TData extends RowData> {
+interface DataTableResultStatusProps<TData extends RowData> {
   table: ReactTable<DataTableFeatures, TData, unknown>;
 }
 
-function DataTableResultCount<TData extends RowData>({
+function DataTableResultStatus<TData extends RowData>({
   table,
-}: DataTableResultCountProps<TData>) {
+}: DataTableResultStatusProps<TData>) {
   return (
-    <table.Subscribe selector={() => getResultCountText(table)}>
-      {(resultCountText) => (
-        <div role="status" className="sr-only">
-          {resultCountText}
-        </div>
-      )}
+    <table.Subscribe
+      selector={(state) =>
+        getResultStatusText(table, state.pagination.pageIndex)
+      }
+    >
+      {(text) => <DataTableResultStatusText text={text} />}
     </table.Subscribe>
   );
 }
@@ -531,6 +533,25 @@ function DataTableProgress() {
       <div className="relative h-0.5 overflow-hidden bg-primary/20">
         <div className="absolute inset-y-0 -start-1/3 w-1/3 animate-out bg-primary duration-1000 ease-in-out repeat-infinite slide-out-to-end-[400%] motion-reduce:start-0 motion-reduce:w-full motion-reduce:animate-none motion-reduce:opacity-60" />
       </div>
+    </div>
+  );
+}
+
+interface DataTableResultStatusTextProps {
+  text: string;
+}
+
+function DataTableResultStatusText({ text }: DataTableResultStatusTextProps) {
+  const [settledText, setSettledText] = React.useState(text);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setSettledText(text), RESULT_STATUS_DELAY);
+    return () => clearTimeout(timer);
+  }, [text]);
+
+  return (
+    <div role="status" className="sr-only">
+      {settledText}
     </div>
   );
 }

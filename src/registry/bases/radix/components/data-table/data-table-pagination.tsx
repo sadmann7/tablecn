@@ -140,10 +140,7 @@ function DataTablePaginationContent<TData extends RowData>({
             </SelectContent>
           </Select>
         </div>
-        <div
-          role="status"
-          className="flex items-center justify-center text-sm font-medium"
-        >
+        <div className="flex items-center justify-center text-sm font-medium">
           Page {pageIndex + 1}
           {isDisabled ? null : ` of ${pageCount}`}
         </div>

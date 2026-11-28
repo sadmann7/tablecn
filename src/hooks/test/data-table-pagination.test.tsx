@@ -113,9 +113,7 @@ describe.each(bases)(
       (mode) => {
         renderTable("", [], mode);
 
-        expect(
-          screen.getByText("Page 1 of 1", { selector: '[role="status"]' }),
-        ).toBeTruthy();
+        expect(screen.getByText("Page 1 of 1")).toBeTruthy();
       },
     );
   },

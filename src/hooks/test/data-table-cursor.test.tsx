@@ -132,12 +132,14 @@ describe.each(bases)("DataTable cursor pagination ($name)", (ui) => {
 
     screen.getByRole("button", { name: "Load more" }).focus();
     clickLoadMore();
+    settleResultStatus();
     expect(getResultCount()).toBe("2 of 6 results loaded");
     await act(async () => requests[1]?.resolve(getPage(["c", "d"], "c2", 6)));
 
     const rows = getTable(container).querySelectorAll("tbody tr");
     expect(document.activeElement).toBe(rows[2]);
     expect(rows[2]?.getAttribute("aria-rowindex")).toBe("4");
+    settleResultStatus();
     expect(getResultCount()).toBe("4 of 6 results loaded");
   });
 
@@ -155,6 +157,7 @@ describe.each(bases)("DataTable cursor pagination ($name)", (ui) => {
     const retry = screen.getByRole("button", { name: "Retry" });
     expect(retry).toBe(button);
     expect(document.activeElement).toBe(retry);
+    settleResultStatus();
     expect(getResultCount()).toBe("2 of 6 results loaded");
     expect(getTitles(container)).toEqual(["a", "b"]);
 
@@ -296,4 +299,8 @@ function getResultCount() {
     document.querySelector('[data-slot="data-table"] > [role="status"]')
       ?.textContent ?? null
   );
+}
+
+function settleResultStatus() {
+  act(() => vi.advanceTimersByTime(500));
 }

@@ -317,6 +317,9 @@ importers:
       '@faker-js/faker':
         specifier: ^10.6.0
         version: 10.6.0
+      '@guidepup/virtual-screen-reader':
+        specifier: ^0.33.0
+        version: 0.33.0
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
@@ -1260,6 +1263,10 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@guidepup/virtual-screen-reader@0.33.0':
+    resolution: {integrity: sha512-CXMkIx19oFZ7BS7TcvDibXn6A2RsEs8nVX9IijHW7HQ0qTGHgc2WErkaMi12YPQi1Zypxr36NfRYWgBxUNvMtQ==}
+    engines: {node: '>=20'}
 
   '@hookform/resolvers@5.9.1':
     resolution: {integrity: sha512-7b7vsbraJxKgjVSA1Nur9tLwj539WGJUBLA7QNvXnFoT2pM5Z7G+6rlukk4B2/QrTZy6huRtH6wKeESPKuIr6w==}
@@ -2989,6 +2996,12 @@ packages:
       '@types/react-dom':
         optional: true
 
+  '@testing-library/user-event@14.6.13':
+    resolution: {integrity: sha512-2LVZGptuB5un1Cu/u31o9adkCwbsUTMp4B4p04xupI7uobvTIpgKidSdShqZiReo/mQmvR9xjgdgTgge4oAbYA==}
+    engines: {node: '>=12', npm: '>=6'}
+    peerDependencies:
+      '@testing-library/dom': '>=7.21.4'
+
   '@ts-morph/common@0.27.0':
     resolution: {integrity: sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ==}
 
@@ -3529,6 +3542,9 @@ packages:
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
 
+  dom-accessibility-api@0.7.1:
+    resolution: {integrity: sha512-vdnCeZD+3wZ+8h8xXL/ZtBlvvoobOFyPzSiIfO6sGOZDqjFx4aLMAjZhl4rawj5xYz3UwP6Tgvyh0iH4IOCVnQ==}
+
   dot-prop@6.0.1:
     resolution: {integrity: sha512-tE7ztYzXHIeyvc7N+hR3oi7FIbf/NIjVP9hmAt3yMXzrQ072/fpjGLx2GxNxGxUl5V73MEqYzioOMoVhGMJ5cA==}
     engines: {node: '>=10'}
@@ -3912,6 +3928,9 @@ packages:
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
+
+  html-aria@0.5.3:
+    resolution: {integrity: sha512-2SkCacsjXJu0e6D5vLSHlLs7KEdPZ7pIJqLh9EFedPqrAaywthe7jJWQ+PjEyB7bpmWMMOsBJuV4WlYd9WRiug==}
 
   html-encoding-sniffer@6.0.0:
     resolution: {integrity: sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==}
@@ -6096,6 +6115,13 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
+  '@guidepup/virtual-screen-reader@0.33.0':
+    dependencies:
+      '@testing-library/dom': 10.4.2
+      '@testing-library/user-event': 14.6.13(@testing-library/dom@10.4.2)
+      dom-accessibility-api: 0.7.1
+      html-aria: 0.5.3
+
   '@hookform/resolvers@5.9.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(effect@3.22.4)(react-hook-form@7.88.0(react@19.3.0))(zod@4.6.7)':
     dependencies:
       '@standard-schema/utils': 0.3.0
@@ -7503,6 +7529,10 @@ snapshots:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)
 
+  '@testing-library/user-event@14.6.13(@testing-library/dom@10.4.2)':
+    dependencies:
+      '@testing-library/dom': 10.4.2
+
   '@ts-morph/common@0.27.0':
     dependencies:
       fast-glob: 3.3.3
@@ -7944,6 +7974,8 @@ snapshots:
 
   dom-accessibility-api@0.5.16: {}
 
+  dom-accessibility-api@0.7.1: {}
+
   dot-prop@6.0.1:
     dependencies:
       is-obj: 2.0.0
@@ -8352,6 +8384,8 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
     optional: true
+
+  html-aria@0.5.3: {}
 
   html-encoding-sniffer@6.0.0(@noble/hashes@1.8.0):
     dependencies:
