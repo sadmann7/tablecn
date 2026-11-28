@@ -1,5 +1,6 @@
 "use client";
 
+import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { Column, ReactTable, RowData } from "@tanstack/react-table";
 
 import { cn } from "cn";
@@ -190,13 +191,44 @@ function DataTableFilterMenuContent<TData extends RowData>({
     onFilterRemove(lastFilter.filterId);
   }
 
+  const isDraggingRef = React.useRef(false);
+
+  function onOpenChange(
+    open: boolean,
+    eventDetails: PopoverPrimitive.Root.ChangeEventDetails,
+  ) {
+    if (
+      !open &&
+      eventDetails.reason === "escape-key" &&
+      isDraggingRef.current
+    ) {
+      eventDetails.cancel();
+      eventDetails.allowPropagation();
+      return;
+    }
+    setOpen(open);
+  }
+
   return (
     <Sortable
       value={filters}
       onValueChange={(value) => table.setColumnFilters(value)}
       getItemValue={(item) => item.filterId}
+      getItemLabel={(item) =>
+        columns.find((column) => column.id === item.id)?.columnDef.meta
+          ?.label ?? item.id
+      }
+      onDragStart={() => {
+        isDraggingRef.current = true;
+      }}
+      onDragEnd={() => {
+        isDraggingRef.current = false;
+      }}
+      onDragCancel={() => {
+        isDraggingRef.current = false;
+      }}
     >
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={onOpenChange}>
         <PopoverTrigger
           render={
             <Button

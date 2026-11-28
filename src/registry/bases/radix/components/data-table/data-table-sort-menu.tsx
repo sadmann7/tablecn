@@ -190,11 +190,28 @@ function DataTableSortMenuContent<TData extends RowData>({
     [sorting.length, onSortingReset],
   );
 
+  const isDraggingRef = React.useRef(false);
+
+  function onEscapeKeyDown(event: KeyboardEvent) {
+    props.onEscapeKeyDown?.(event);
+    if (isDraggingRef.current) event.preventDefault();
+  }
+
   return (
     <Sortable
       value={sorting}
       onValueChange={onSortingChange}
       getItemValue={(item) => item.id}
+      getItemLabel={(item) => columnLabels.get(item.id) ?? item.id}
+      onDragStart={() => {
+        isDraggingRef.current = true;
+      }}
+      onDragEnd={() => {
+        isDraggingRef.current = false;
+      }}
+      onDragCancel={() => {
+        isDraggingRef.current = false;
+      }}
     >
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -232,6 +249,7 @@ function DataTableSortMenuContent<TData extends RowData>({
             className,
           )}
           {...props}
+          onEscapeKeyDown={onEscapeKeyDown}
         >
           <div className="flex flex-col gap-1">
             <h4 id={labelId} className="leading-none font-medium">
