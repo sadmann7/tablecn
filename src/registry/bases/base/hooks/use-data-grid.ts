@@ -1,5 +1,7 @@
 import type { Virtualizer, VirtualizerOptions } from "@tanstack/react-virtual";
 
+import { useIsHydrated } from "@base-ui/utils/hydration";
+import { platform } from "@base-ui/utils/platform";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import {
@@ -660,11 +662,7 @@ function useDataGrid<TData extends RowData>({
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- the table is stable, so its columns and sizing state invalidate the sizes
   }, [tableColumns, table.state.columnResizing, table.state.columnSizing]);
 
-  const isFirefox = React.useSyncExternalStore(
-    React.useCallback(() => () => {}, []),
-    React.useCallback(() => navigator.userAgent.includes("Firefox"), []),
-    React.useCallback(() => false, []),
-  );
+  const isFirefox = useIsHydrated() && platform.engine.gecko;
 
   const adjustLayout = React.useMemo(() => {
     const columnPinning = table.state.columnPinning;
