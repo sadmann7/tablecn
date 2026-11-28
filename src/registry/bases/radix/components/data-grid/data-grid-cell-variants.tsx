@@ -480,7 +480,7 @@ export function BooleanCell<TData extends RowData>(
   }, []);
 
   const onControlMouseDown = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
       event.preventDefault();
       cell.table.setFocusedCell(cell.row.id, cell.column.id);
@@ -490,7 +490,7 @@ export function BooleanCell<TData extends RowData>(
   );
 
   const onControlDoubleClick = React.useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
+    (event: React.MouseEvent<HTMLElement>) => {
       event.stopPropagation();
     },
     [],

@@ -2,7 +2,7 @@
   "base": {
     "components/data-grid/data-grid-actions-column.tsx": "65e56396154c",
     "components/data-grid/data-grid-cell-preview.tsx": "identical",
-    "components/data-grid/data-grid-cell-variants.tsx": "de1627bd8bdd",
+    "components/data-grid/data-grid-cell-variants.tsx": "c34f4706c292",
     "components/data-grid/data-grid-cell.tsx": "identical",
     "components/data-grid/data-grid-column-header.tsx": "37846d66badd",
     "components/data-grid/data-grid-context-menu.tsx": "60acddda5b2d",
@@ -13,7 +13,7 @@
     "components/data-grid/data-grid-row-height-menu.tsx": "cbb747fac77c",
     "components/data-grid/data-grid-row.tsx": "identical",
     "components/data-grid/data-grid-search.tsx": "identical",
-    "components/data-grid/data-grid-select-column.tsx": "e82629b68520",
+    "components/data-grid/data-grid-select-column.tsx": "e77280ac435c",
     "components/data-grid/data-grid-skeleton.tsx": "identical",
     "components/data-grid/data-grid-sort-menu.tsx": "a2fe7c3fbcd0",
     "components/data-grid/data-grid-view-menu.tsx": "5c953462c1b8",
