@@ -622,7 +622,7 @@ function FacetedCommandItem({
           id={optionId}
           aria-selected={selected}
           aria-disabled={disabled || undefined}
-          className="contents group-data-selected/command-item:*:[svg]:text-foreground"
+          className="justify-[inherit] flex min-w-0 flex-1 items-center gap-[inherit] group-data-selected/command-item:*:[svg]:text-foreground"
         >
           {children}
         </div>

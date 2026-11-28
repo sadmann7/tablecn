@@ -125,7 +125,7 @@
     "ui/direction.tsx": "18cbc6424411",
     "ui/drawer.tsx": "a19545815abd",
     "ui/dropdown-menu.tsx": "63ebb8c48d1d",
-    "ui/faceted.tsx": "2bf35c2beab9",
+    "ui/faceted.tsx": "3d6803a27df3",
     "ui/form.tsx": "radix-only",
     "ui/fps.tsx": "radix-only",
     "ui/hover-card.tsx": "aria-only",
