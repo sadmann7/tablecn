@@ -158,7 +158,7 @@ function getPairs(base: string): Pair[] {
   });
 }
 
-export function listFiles(dir: string, prefix = ""): string[] {
+function listFiles(dir: string, prefix = ""): string[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap((name) => {
     const relativePath = prefix ? `${prefix}/${name}` : name;

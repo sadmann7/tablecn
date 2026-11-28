@@ -51,22 +51,11 @@ const facetedSelectors = {
   value: (state: FacetedState) => state.value,
   items: (state: FacetedState) => state.items,
   multiple: (state: FacetedState) => state.multiple,
-  isSelected: (state: FacetedState, itemValue: string) =>
-    getIsValueSelected(state.value, state.multiple, itemValue),
   hasSelection: (state: FacetedState) =>
     getSelectedValues(state.value).length > 0,
 };
 
 type FacetedStore = ReturnType<typeof createFacetedStore>;
-
-function getIsValueSelected(
-  value: string | string[] | undefined,
-  multiple: boolean,
-  itemValue: string,
-) {
-  if (multiple) return Array.isArray(value) && value.includes(itemValue);
-  return value === itemValue;
-}
 
 const labelsCache = new WeakMap<FacetedOption[], Map<string, string>>();
 
