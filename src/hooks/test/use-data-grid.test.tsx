@@ -6133,6 +6133,73 @@ describe("useDataGrid", () => {
       await waitFor(() => expect(getAnnouncement()).toBe("Skater updated"));
     });
 
+    it("announces an edit once editing ends, not on saves while typing", async () => {
+      const { result } = renderAnnouncedGrid();
+      const getNameCell = () =>
+        result.current.table.getRow("1").getAllCellsByColumnId().name;
+
+      act(() => startEditing(result.current.table, "1", "name"));
+      act(() => getNameCell()?.setValue("Bird"));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(getAnnouncement()).toBe("");
+
+      act(() => getNameCell()?.setValue("Birdman"));
+      act(() => result.current.table.stopEditing());
+      await waitFor(() => expect(getAnnouncement()).toBe("Skater updated"));
+    });
+
+    it("stays quiet when an edit returns to its starting value", async () => {
+      const { result } = renderAnnouncedGrid();
+      const getNameCell = () =>
+        result.current.table.getRow("1").getAllCellsByColumnId().name;
+
+      act(() => startEditing(result.current.table, "1", "name"));
+      act(() => getNameCell()?.setValue("Bird"));
+      act(() => getNameCell()?.setValue("Tony Hawk"));
+      act(() => result.current.table.stopEditing());
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(getAnnouncement()).toBe("");
+    });
+
+    it("announces a toggle of a boolean cell left in edit mode", async () => {
+      const { result } = renderAnnouncedGrid({
+        columns: [
+          { id: "name", accessorKey: "name", header: "Name" },
+          {
+            id: "score",
+            accessorKey: "score",
+            header: "Score",
+            meta: { variant: "boolean" },
+          },
+        ],
+      });
+      const getScoreCell = () =>
+        result.current.table.getRow("1").getAllCellsByColumnId().score;
+
+      act(() => startEditing(result.current.table, "1", "score"));
+      act(() => getScoreCell()?.setValue(true));
+      await waitFor(() => expect(getAnnouncement()).toBe("Score updated"));
+    });
+
+    it("stays quiet when an emptied cell is edited back to empty", async () => {
+      const { result } = renderAnnouncedGrid({
+        data: [
+          { id: "1", name: null as unknown as string, trick: "", score: 0 },
+        ],
+      });
+      const getNameCell = () =>
+        result.current.table.getRow("1").getAllCellsByColumnId().name;
+
+      act(() => startEditing(result.current.table, "1", "name"));
+      act(() => getNameCell()?.setValue("Bird"));
+      act(() => getNameCell()?.setValue(""));
+      act(() => result.current.table.stopEditing());
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(getAnnouncement()).toBe("");
+    });
+
     it("uses overridden messages", async () => {
       const { result } = renderAnnouncedGrid({
         messages: { sorted: () => "Ordenado" },

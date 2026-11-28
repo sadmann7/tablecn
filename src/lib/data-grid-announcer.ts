@@ -1,3 +1,5 @@
+import type { SortingState } from "@tanstack/react-table";
+
 type Assertiveness = "polite" | "assertive";
 
 export interface AnnounceOptions {
@@ -101,9 +103,16 @@ export function getRowSelectionMessage(
   return messages.rowsSelected(selectedCount);
 }
 
-export function getSortingKey(
-  sorting: readonly { id: string; desc: boolean }[],
-) {
+export function getIsSameCellValue(a: unknown, b: unknown) {
+  if (Object.is(a, b)) return true;
+  if (getIsEmptyCellValue(a) && getIsEmptyCellValue(b)) return true;
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  return (
+    a.length === b.length && a.every((item, index) => Object.is(item, b[index]))
+  );
+}
+
+export function getSortingKey(sorting: SortingState) {
   return sorting.map(({ id, desc }) => `${id}:${desc ? "d" : "a"}`).join(",");
 }
 
@@ -176,4 +185,13 @@ function getSortedMessage(sorting: SortDescription[]) {
 
 function pluralize(count: number, noun: string) {
   return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+function getIsEmptyCellValue(value: unknown) {
+  return (
+    value === null ||
+    value === undefined ||
+    value === "" ||
+    (Array.isArray(value) && value.length === 0)
+  );
 }

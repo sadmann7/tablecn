@@ -172,6 +172,23 @@ describe.each(bases)("DataTable accessibility ($name)", (ui) => {
     expect(getResultStatus()).toBe("No results");
   });
 
+  it("reads only the page when the server doesn't know the page count", () => {
+    const { rerender } = renderServerTable(ui, data.slice(0, 10), -1);
+    vi.useFakeTimers();
+
+    expect(getResultStatus()).toBe("Page 1");
+
+    rerender([], -1);
+    settleResultStatus();
+    expect(getResultStatus()).toBe("No results");
+  });
+
+  it("keeps a known row count when the page count is unknown", () => {
+    renderServerTable(ui, data.slice(0, 10), -1, 120);
+
+    expect(getResultStatus()).toBe("120 results, page 1");
+  });
+
   it("keeps the filter clear icon out of the trigger's focus and accessibility tree", () => {
     const { table } = renderTable(ui, "?status=todo");
 
@@ -248,7 +265,12 @@ function renderTable(ui: Base, search = "") {
   return { ...view, table };
 }
 
-function renderServerTable(ui: Base, rows: Task[], pageCount: number) {
+function renderServerTable(
+  ui: Base,
+  rows: Task[],
+  pageCount: number,
+  rowCount?: number,
+) {
   const { DataTable, useDataTable } = ui;
   const columns = getColumns(ui);
   const tableRef: {
@@ -260,6 +282,7 @@ function renderServerTable(ui: Base, rows: Task[], pageCount: number) {
       config,
       data: props.rows,
       pageCount: props.pageCount,
+      rowCount,
       columns,
       getRowId: (row) => row.id,
     });
@@ -295,7 +318,9 @@ function getResultStatus() {
 }
 
 function settleResultStatus() {
-  act(() => vi.advanceTimersByTime(500));
+  act(() => {
+    vi.advanceTimersByTime(500);
+  });
 }
 
 const columnHelper = createColumnHelper<DataTableFeatures, Task>();
