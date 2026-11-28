@@ -19,7 +19,7 @@ import {
   type DataTableLaunchScene,
   type DataTableLaunchSceneId,
   FILTER_SHORTCUT_KEYS,
-  LAUNCH_DURATION,
+  LAUNCH_DURATION_MS,
   SCENES,
 } from "../lib/script";
 import {
@@ -141,7 +141,7 @@ export function DataTableLaunchDemo() {
         data-paused={playback.isPaused}
         data-scene={scene.id}
         data-cycle={playback.cycle}
-        data-duration={LAUNCH_DURATION}
+        data-duration={LAUNCH_DURATION_MS}
         className="launch-stage relative h-270 w-480 shrink-0 overflow-hidden bg-[#09090b] font-sans"
       >
         <DataTableLaunchBackdrop />
