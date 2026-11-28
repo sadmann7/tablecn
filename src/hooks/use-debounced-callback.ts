@@ -1,4 +1,5 @@
 import { useStableCallback } from "@base-ui/utils/useStableCallback";
+import { useTimeout } from "@base-ui/utils/useTimeout";
 import * as React from "react";
 
 export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
@@ -6,28 +7,13 @@ export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
   delay: number,
 ) {
   const onCallback = useStableCallback(callback);
-
-  const debounceTimerRef = React.useRef(0);
-
-  React.useEffect(
-    () => () => window.clearTimeout(debounceTimerRef.current),
-    [],
-  );
+  const timeout = useTimeout();
 
   return React.useMemo(() => {
-    function cancel() {
-      window.clearTimeout(debounceTimerRef.current);
-    }
-
     function debounced(...args: Parameters<T>) {
-      cancel();
-      debounceTimerRef.current = window.setTimeout(
-        () => onCallback(...args),
-        delay,
-      );
+      timeout.start(delay, () => onCallback(...args));
     }
 
-    debounced.cancel = cancel;
-    return debounced;
-  }, [delay, onCallback]);
+    return Object.assign(debounced, { cancel: timeout.clear });
+  }, [delay, onCallback, timeout]);
 }

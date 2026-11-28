@@ -2,6 +2,7 @@
 
 import type { Column, RowData } from "@tanstack/react-table";
 
+import { useTimeout } from "@base-ui/utils/useTimeout";
 import { cn } from "cn";
 import * as React from "react";
 
@@ -50,24 +51,16 @@ export function DataTableRangeFilter<TData extends RowData>({
   ]);
   const [startInput, endInput] = getInputValues(drafts);
   const [showInvalid, setShowInvalid] = React.useState(false);
-  const invalidTimeoutRef = React.useRef<number | undefined>(undefined);
-
-  React.useEffect(
-    () => () => window.clearTimeout(invalidTimeoutRef.current),
-    [],
-  );
+  const invalidTimeout = useTimeout();
 
   function onInvalidChange(isInvalid: boolean) {
-    window.clearTimeout(invalidTimeoutRef.current);
+    invalidTimeout.clear();
     if (!isInvalid) {
       setShowInvalid(false);
       return;
     }
     if (showInvalid) return;
-    invalidTimeoutRef.current = window.setTimeout(
-      () => setShowInvalid(true),
-      INVALID_RING_DELAY_MS,
-    );
+    invalidTimeout.start(INVALID_RING_DELAY_MS, () => setShowInvalid(true));
   }
 
   function getInputValues(

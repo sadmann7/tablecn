@@ -5,6 +5,7 @@ import type { RowData } from "@tanstack/react-table";
 import type { ExternalToast } from "sonner";
 
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useTimeout } from "@base-ui/utils/useTimeout";
 import { cn } from "cn";
 import * as React from "react";
 import { toast } from "sonner";
@@ -955,7 +956,7 @@ export function FileCell<TData extends RowData>(
     setDraftValue: setError,
     clearDraft: clearError,
   } = useCellDraft<string | null>({ key: cellValue, fallback: null });
-  const errorTimeoutRef = React.useRef<number | undefined>(undefined);
+  const errorTimeout = useTimeout();
 
   const files = React.useMemo(
     () => (uploadingFiles ? [...cellValue, ...uploadingFiles] : cellValue),
@@ -972,16 +973,13 @@ export function FileCell<TData extends RowData>(
     [accept],
   );
 
-  React.useEffect(() => () => window.clearTimeout(errorTimeoutRef.current), []);
-
   const flashError = React.useCallback(
     (message: string, toastOptions?: ExternalToast) => {
       setError(message);
       toast(message, toastOptions);
-      window.clearTimeout(errorTimeoutRef.current);
-      errorTimeoutRef.current = window.setTimeout(clearError, 2000);
+      errorTimeout.start(2000, clearError);
     },
-    [setError, clearError],
+    [setError, clearError, errorTimeout],
   );
 
   const addFiles = React.useCallback(

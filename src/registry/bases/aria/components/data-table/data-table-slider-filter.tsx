@@ -1,5 +1,6 @@
 "use client";
 
+import { useTimeout } from "@base-ui/utils/useTimeout";
 import { type Column, type RowData, Subscribe } from "@tanstack/react-table";
 import * as React from "react";
 
@@ -99,24 +100,16 @@ function DataTableSliderFilterContent<TData extends RowData>({
     null,
   ]);
   const [showInvalid, setShowInvalid] = React.useState(false);
-  const invalidTimeoutRef = React.useRef<number | undefined>(undefined);
-
-  React.useEffect(
-    () => () => window.clearTimeout(invalidTimeoutRef.current),
-    [],
-  );
+  const invalidTimeout = useTimeout();
 
   function onInvalidChange(isInvalid: boolean) {
-    window.clearTimeout(invalidTimeoutRef.current);
+    invalidTimeout.clear();
     if (!isInvalid) {
       setShowInvalid(false);
       return;
     }
     if (showInvalid) return;
-    invalidTimeoutRef.current = window.setTimeout(
-      () => setShowInvalid(true),
-      INVALID_RING_DELAY_MS,
-    );
+    invalidTimeout.start(INVALID_RING_DELAY_MS, () => setShowInvalid(true));
   }
 
   const formatValue = React.useCallback((value: number) => {
