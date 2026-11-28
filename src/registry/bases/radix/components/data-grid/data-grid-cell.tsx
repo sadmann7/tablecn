@@ -2,8 +2,9 @@
 
 import type { Cell, RowData } from "@tanstack/react-table";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { cn } from "cn";
-import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
@@ -54,9 +55,9 @@ export function DataGridCell<TData extends RowData>({
   const rowId = cell.row.id;
   const columnId = cell.column.id;
   const cellRef = React.useRef<HTMLDivElement>(null);
-  const composedRef = useComposedRefs(ref, cellRef);
+  const composedRef = useMergedRefs(ref, cellRef);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     if (!isFocused || isEditing) return;
     const element = cellRef.current;
     const grid = element?.closest('[role="grid"]');

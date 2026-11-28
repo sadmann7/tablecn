@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { cn } from "cn";
 import * as React from "react";
 import {
@@ -207,7 +208,7 @@ function Faceted<Multiple extends boolean = false>({
     createFacetedStore({ value: value ?? defaultValue, items, multiple }),
   );
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     store.setController({
       isValueControlled: value !== undefined,
       onValueChange(nextValue) {
@@ -223,7 +224,7 @@ function Faceted<Multiple extends boolean = false>({
 
   const wasValueControlledRef = React.useRef(value !== undefined);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const isValueControlled = value !== undefined;
     store.sync(
       isValueControlled || wasValueControlledRef.current

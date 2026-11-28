@@ -1,5 +1,6 @@
 import type { Virtualizer, VirtualizerOptions } from "@tanstack/react-virtual";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import {
   type CellSelectionState,
@@ -1553,7 +1554,7 @@ function useDataGrid<TData extends RowData>({
     };
   }, [pasteDialogAtom, cellSelectionAtom, focusCellElement]);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const pending = pendingFocusRef.current;
     if (!pending) return;
 

@@ -1,13 +1,11 @@
 "use client";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
 import { Slot } from "radix-ui";
-import {
-  composeEventHandlers,
-  useComposedRefs,
-  useLayoutEffect,
-} from "radix-ui/internal";
+import { composeEventHandlers } from "radix-ui/internal";
 import * as React from "react";
 
 import {
@@ -231,7 +229,7 @@ function Faceted<Multiple extends boolean = false>({
     }),
   );
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     store.setController({
       isValueControlled: value !== undefined,
       onValueChange(nextValue) {
@@ -247,7 +245,7 @@ function Faceted<Multiple extends boolean = false>({
 
   const wasValueControlledRef = React.useRef(value !== undefined);
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const isValueControlled = value !== undefined;
     store.sync(
       isValueControlled || wasValueControlledRef.current
@@ -450,7 +448,7 @@ function FacetedInput({
   const store = useFacetedStore("FacetedInput");
   const label = props["aria-label"] ?? props.placeholder;
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const composedRef = useComposedRefs(ref, inputRef);
+  const composedRef = useMergedRefs(ref, inputRef);
 
   React.useEffect(() => {
     const input = inputRef.current;
@@ -482,7 +480,7 @@ function FacetedInput({
     return () => observer.disconnect();
   }, []);
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     store.sync({ label });
     return () => store.sync({ label: undefined });
   }, [store, label]);

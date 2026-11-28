@@ -4,6 +4,7 @@ import type { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import type { RowData } from "@tanstack/react-table";
 import type { ExternalToast } from "sonner";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { cn } from "cn";
 import * as React from "react";
 import { toast } from "sonner";
@@ -1610,7 +1611,7 @@ function useEditableText<TData extends RowData>({
   const textRef = React.useRef<HTMLDivElement>(null);
   const prevIsEditingRef = React.useRef(false);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const element = textRef.current;
     if (!isEditing && element && element.textContent !== initialValue) {
       element.textContent = initialValue;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { type Cell, flexRender, type RowData } from "@tanstack/react-table";
 import * as React from "react";
 
@@ -186,7 +187,7 @@ function DataGridWrittenCell<TData extends RowData>({
   const columnId = props.cell.column.id;
   const ref = React.useRef<HTMLDivElement>(null);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
     const write = () => {

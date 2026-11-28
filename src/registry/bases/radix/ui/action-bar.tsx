@@ -1,12 +1,13 @@
 "use client";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import { cn } from "cn";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { useComposedRefs, useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { Button } from "@/registry/bases/radix/ui/button";
 import { useDirection } from "@/registry/bases/radix/ui/direction";
 
@@ -152,7 +153,7 @@ function ActionBar(props: ActionBarProps) {
   );
 
   const rootRef = React.useRef<RootElement>(null);
-  const composedRef = useComposedRefs(ref, rootRef);
+  const composedRef = useMergedRefs(ref, rootRef);
 
   const propsRef = useValueAsRef({
     onEscapeKeyDown,
@@ -269,7 +270,7 @@ function ActionBarGroup(props: DivProps) {
   const [focusableItemCount, setFocusableItemCount] = React.useState(0);
 
   const groupRef = React.useRef<HTMLDivElement>(null);
-  const composedRef = useComposedRefs(ref, groupRef);
+  const composedRef = useMergedRefs(ref, groupRef);
   const isClickFocusRef = React.useRef(false);
   const itemsRef = React.useRef<Map<string, ItemData>>(new Map());
 
@@ -439,7 +440,7 @@ function ActionBarItem(props: ActionBarItemProps) {
   } = props;
 
   const itemRef = React.useRef<ItemElement>(null);
-  const composedRef = useComposedRefs(ref, itemRef);
+  const composedRef = useMergedRefs(ref, itemRef);
   const isMouseClickRef = React.useRef(false);
 
   const { onOpenChange, dir, orientation, loop } =
@@ -449,7 +450,7 @@ function ActionBarItem(props: ActionBarItemProps) {
   const itemId = React.useId();
   const isTabStop = focusContext.tabStopId === itemId;
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     focusContext.onItemRegister({
       id: itemId,
       ref: itemRef,

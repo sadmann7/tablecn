@@ -1,13 +1,11 @@
+import { useStableCallback } from "@base-ui/utils/useStableCallback";
 import * as React from "react";
 
 export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
   callback: T,
   delay: number,
 ) {
-  const callbackRef = React.useRef(callback);
-  React.useLayoutEffect(() => {
-    callbackRef.current = callback;
-  });
+  const onCallback = useStableCallback(callback);
 
   const debounceTimerRef = React.useRef(0);
 
@@ -24,12 +22,12 @@ export function useDebouncedCallback<T extends (...args: never[]) => unknown>(
     function debounced(...args: Parameters<T>) {
       cancel();
       debounceTimerRef.current = window.setTimeout(
-        () => callbackRef.current(...args),
+        () => onCallback(...args),
         delay,
       );
     }
 
     debounced.cancel = cancel;
     return debounced;
-  }, [delay]);
+  }, [delay, onCallback]);
 }

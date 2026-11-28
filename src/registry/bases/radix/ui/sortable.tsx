@@ -1,5 +1,6 @@
 "use client";
 
+import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import {
   type Active,
   type Announcements,
@@ -40,7 +41,6 @@ import {
 import { CSS, isKeyboardEvent } from "@dnd-kit/utilities";
 import { cn } from "cn";
 import { Slot as SlotPrimitive } from "radix-ui";
-import { useComposedRefs } from "radix-ui/internal";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
@@ -435,7 +435,7 @@ function SortableItem(props: SortableItemProps) {
     [disabled, asHandle, setNodeRef, setActivatorNodeRef],
   );
 
-  const composedRef = useComposedRefs(ref, onNodeRefChange);
+  const composedRef = useMergedRefs(ref, onNodeRefChange);
 
   const composedStyle = React.useMemo<React.CSSProperties>(() => {
     return {
@@ -510,7 +510,7 @@ function SortableItemHandle(props: SortableItemHandleProps) {
     [isDisabled, setActivatorNodeRef],
   );
 
-  const composedRef = useComposedRefs(ref, onActivatorNodeRef);
+  const composedRef = useMergedRefs(ref, onActivatorNodeRef);
 
   const HandlePrimitive = asChild ? SlotPrimitive.Slot : "button";
 

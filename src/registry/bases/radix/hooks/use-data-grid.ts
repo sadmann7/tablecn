@@ -1,5 +1,7 @@
 import type { Virtualizer, VirtualizerOptions } from "@tanstack/react-virtual";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import {
   type CellSelectionState,
   type ColumnDef,
@@ -25,7 +27,6 @@ import type {
   NavigationDirection,
 } from "@/lib/data-grid-types";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   type DataGridFeatures,
   dataGridFeatures,
@@ -1553,7 +1554,7 @@ function useDataGrid<TData extends RowData>({
     };
   }, [pasteDialogAtom, cellSelectionAtom, focusCellElement]);
 
-  React.useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const pending = pendingFocusRef.current;
     if (!pending) return;
 

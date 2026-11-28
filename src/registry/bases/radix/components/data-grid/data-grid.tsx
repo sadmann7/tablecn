@@ -1,5 +1,7 @@
 "use client";
 
+import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import {
   type Column,
   flexRender,
@@ -15,14 +17,12 @@ import {
   type Virtualizer,
 } from "@tanstack/react-virtual";
 import { cn } from "cn";
-import { useLayoutEffect } from "radix-ui/internal";
 import * as React from "react";
 
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { ColumnWindow } from "@/lib/data-grid-types";
 import type { useDataGrid } from "@/registry/bases/radix/hooks/use-data-grid";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import {
   getColumnBorderVisibility,
   getColumnPinningStyle,
@@ -188,7 +188,7 @@ function DataGridViewport<TData extends RowData>({
       ? `overflow:${hasFooter}`
       : `${rows.length}:${rowSize}:${hasFooter}`;
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const dataGrid = dataGridRef.current;
     if (!dataGrid) return;
     const header = headerRef.current;
@@ -338,13 +338,13 @@ function DataGridViewport<TData extends RowData>({
           : rowVirtualizer.options.overscan * 2);
   const deferredIsScrolling = React.useDeferredValue(isScrolling);
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     if (isScrollJumpingRef.current && !isScrollJumping) {
       setJumpEndCount((count) => count + 1);
     }
   }, [isScrollJumping]);
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     committedScrollRef.current = {
       offset: scrollOffset,
       isJumping: isScrollJumping,
@@ -367,7 +367,7 @@ function DataGridViewport<TData extends RowData>({
     [columnWindowKey],
   );
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     columnVirtualizerRef.current = columnVirtualizer;
     return () => {
       if (columnVirtualizerRef.current === columnVirtualizer) {
@@ -376,7 +376,7 @@ function DataGridViewport<TData extends RowData>({
     };
   }, [columnVirtualizerRef, columnVirtualizer]);
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     rowVirtualizerRef.current = rowVirtualizer;
     return () => {
       if (rowVirtualizerRef.current === rowVirtualizer) {
@@ -385,7 +385,7 @@ function DataGridViewport<TData extends RowData>({
     };
   }, [rowVirtualizerRef, rowVirtualizer]);
 
-  useLayoutEffect(() => {
+  useIsoLayoutEffect(() => {
     const rafId = requestAnimationFrame(() => {
       rowVirtualizer.measure();
       columnVirtualizer.measure();

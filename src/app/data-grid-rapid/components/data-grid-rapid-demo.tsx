@@ -1,5 +1,6 @@
 "use client";
 
+import { useValueAsRef } from "@base-ui/utils/useValueAsRef";
 import { createColumnHelper } from "@tanstack/react-table";
 import { cn } from "cn";
 import {
@@ -22,7 +23,6 @@ import * as React from "react";
 import type { DataGridFeatures } from "@/lib/data-grid-features";
 import type { DataGridColumnMeta, RowUpdate } from "@/lib/data-grid-types";
 
-import { useValueAsRef } from "@/hooks/use-value-as-ref";
 import { useWindowSize } from "@/hooks/use-window-size";
 import { DataGrid } from "@/registry/bases/radix/components/data-grid/data-grid";
 import { DataGridSortMenu } from "@/registry/bases/radix/components/data-grid/data-grid-sort-menu";

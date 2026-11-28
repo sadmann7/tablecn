@@ -187,11 +187,22 @@ function withImportedDependencies(
     "zod",
   ] as const) {
     if (contents.some((content) => importsPackage(content, pkg))) {
-      if (!next.includes(pkg)) next.push(pkg);
+      const dependency = getPinnedDependency(pkg);
+      if (!next.includes(dependency)) next.push(dependency);
     }
   }
 
   return next.length > 0 ? next : dependencies;
+}
+
+// A 0.x package can break in a minor release, and registry users would
+// otherwise install the latest one.
+function getPinnedDependency(pkg: string) {
+  if (pkg !== "@base-ui/utils") return pkg;
+  const manifest = JSON.parse(
+    readFileSync(path.join(ROOT, "package.json"), "utf8"),
+  ) as { dependencies: Record<string, string> };
+  return `${pkg}@${manifest.dependencies[pkg]}`;
 }
 
 // A bare prefix would make `"react-aria` match `"react-aria-components`.
