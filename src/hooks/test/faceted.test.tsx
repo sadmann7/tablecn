@@ -57,6 +57,20 @@ describe.each([
     expect(getActiveChecked(itemRole)).toBe("true");
   });
 
+  it("stays open when the parent keeps a controlled open state", () => {
+    const onOpenChange = vi.fn();
+    render(<OpenSelect ui={ui} onOpenChange={onOpenChange} />);
+
+    act(() => {
+      fireEvent.keyDown(screen.getByRole(itemRole, { name: "Active" }), {
+        key: "Escape",
+      });
+    });
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(screen.getByRole(itemRole, { name: "Active" })).toBeTruthy();
+  });
+
   it("follows a new controlled value without calling onValueChange", () => {
     const onValueChange = vi.fn();
     const { rerender } = render(
@@ -187,6 +201,43 @@ function SingleSelect({
       onValueChange={isControlled ? props.onValueChange : setValue}
       items={items}
     >
+      <FacetedTrigger>
+        <FacetedValue placeholder="Pick a status" />
+      </FacetedTrigger>
+      <FacetedContent>
+        <FacetedList>
+          <FacetedGroup>
+            {items.map((item) => (
+              <FacetedItem key={item.value} value={item.value}>
+                {item.label}
+              </FacetedItem>
+            ))}
+          </FacetedGroup>
+        </FacetedList>
+      </FacetedContent>
+    </Faceted>
+  );
+}
+
+function OpenSelect({
+  ui,
+  onOpenChange,
+}: {
+  ui: FacetedModule;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const {
+    Faceted,
+    FacetedContent,
+    FacetedGroup,
+    FacetedItem,
+    FacetedList,
+    FacetedTrigger,
+    FacetedValue,
+  } = ui;
+
+  return (
+    <Faceted open onOpenChange={onOpenChange} items={items}>
       <FacetedTrigger>
         <FacetedValue placeholder="Pick a status" />
       </FacetedTrigger>

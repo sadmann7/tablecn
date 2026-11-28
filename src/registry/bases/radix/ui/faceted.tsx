@@ -1,6 +1,8 @@
 "use client";
 
+import { EMPTY_ARRAY } from "@base-ui/utils/empty";
 import { ReactStore, useStore } from "@base-ui/utils/store";
+import { useControlled } from "@base-ui/utils/useControlled";
 import { useIsoLayoutEffect } from "@base-ui/utils/useIsoLayoutEffect";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import { Command as CommandPrimitive } from "cmdk";
@@ -32,8 +34,6 @@ interface FacetedOption {
   label: string;
   value: string;
 }
-
-const NO_ITEMS: FacetedOption[] = [];
 
 interface FacetedState {
   value: string | string[] | undefined;
@@ -195,12 +195,16 @@ function Faceted<Multiple extends boolean = false>({
   value,
   defaultValue,
   onValueChange,
-  items = NO_ITEMS,
+  items = EMPTY_ARRAY,
   multiple = false as Multiple,
   ...props
 }: FacetedProps<Multiple>) {
-  const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
-  const open = openProp ?? internalOpen;
+  const [open, setOpen] = useControlled({
+    controlled: openProp,
+    default: defaultOpen,
+    name: "Faceted",
+    state: "open",
+  });
 
   const [store] = React.useState(() =>
     createFacetedStore({
@@ -224,7 +228,7 @@ function Faceted<Multiple extends boolean = false>({
       },
       onOpenChange(nextOpen) {
         onOpenChange?.(nextOpen);
-        if (openProp === undefined) setInternalOpen(nextOpen);
+        setOpen(nextOpen);
       },
     });
   });
