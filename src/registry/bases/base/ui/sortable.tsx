@@ -4,6 +4,7 @@ import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { useMergedRefs } from "@base-ui/utils/useMergedRefs";
 import {
+  type Active,
   type Announcements,
   closestCenter,
   closestCorners,
@@ -18,6 +19,7 @@ import {
   type DropAnimation,
   KeyboardSensor,
   MouseSensor,
+  type Over,
   type ScreenReaderInstructions,
   TouchSensor,
   type UniqueIdentifier,
@@ -38,7 +40,7 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { CSS, isKeyboardEvent } from "@dnd-kit/utilities";
 import { cn } from "cn";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
@@ -59,6 +61,12 @@ const orientationConfig = {
     strategy: undefined,
     collisionDetection: closestCorners,
   },
+};
+
+const orientationKeys = {
+  vertical: "up and down arrow keys",
+  horizontal: "left and right arrow keys",
+  mixed: "arrow keys",
 };
 
 const ROOT_NAME = "Sortable";
@@ -107,6 +115,7 @@ type SortableProps<T> = DndContextProps &
     strategy?: SortableContextProps["strategy"];
     orientation?: "vertical" | "horizontal" | "mixed";
     flatCursor?: boolean;
+    getItemLabel?: (item: T) => string;
   };
 
 function Sortable<T>(props: SortableProps<T>) {
@@ -120,6 +129,7 @@ function Sortable<T>(props: SortableProps<T>) {
     orientation = "vertical",
     flatCursor = false,
     getItemValue: getItemValueProp,
+    getItemLabel: getItemLabelProp,
     accessibility,
     onDragStart: onDragStartProp,
     onDragEnd: onDragEndProp,
@@ -129,10 +139,16 @@ function Sortable<T>(props: SortableProps<T>) {
 
   const id = React.useId();
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
+  const isKeyboardDragRef = React.useRef(false);
+  const overIndexRef = React.useRef<number | undefined>(undefined);
 
   const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor),
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 4 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 250, tolerance: 5 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -164,8 +180,7 @@ function Sortable<T>(props: SortableProps<T>) {
     (event: DragStartEvent) => {
       onDragStartProp?.(event);
 
-      if (event.activatorEvent.defaultPrevented) return;
-
+      isKeyboardDragRef.current = isKeyboardEvent(event.activatorEvent);
       setActiveId(event.active.id);
     },
     [onDragStartProp],
@@ -174,25 +189,24 @@ function Sortable<T>(props: SortableProps<T>) {
   const onDragEnd = React.useCallback(
     (event: DragEndEvent) => {
       onDragEndProp?.(event);
-
-      if (event.activatorEvent.defaultPrevented) return;
+      setActiveId(null);
 
       const { active, over } = event;
-      if (over && active.id !== over?.id) {
-        const activeIndex = value.findIndex(
-          (item) => getItemValue(item) === active.id,
-        );
-        const overIndex = value.findIndex(
-          (item) => getItemValue(item) === over.id,
-        );
+      if (!over || active.id === over.id) return;
 
-        if (onMove) {
-          onMove({ ...event, activeIndex, overIndex });
-        } else {
-          onValueChange?.(arrayMove(value, activeIndex, overIndex));
-        }
+      const activeIndex = value.findIndex(
+        (item) => getItemValue(item) === active.id,
+      );
+      const overIndex = value.findIndex(
+        (item) => getItemValue(item) === over.id,
+      );
+      if (activeIndex === -1 || overIndex === -1) return;
+
+      if (onMove) {
+        onMove({ ...event, activeIndex, overIndex });
+      } else {
+        onValueChange?.(arrayMove(value, activeIndex, overIndex));
       }
-      setActiveId(null);
     },
     [value, onValueChange, onMove, getItemValue, onDragEndProp],
   );
@@ -200,64 +214,57 @@ function Sortable<T>(props: SortableProps<T>) {
   const onDragCancel = React.useCallback(
     (event: DragEndEvent) => {
       onDragCancelProp?.(event);
-
-      if (event.activatorEvent.defaultPrevented) return;
-
       setActiveId(null);
     },
     [onDragCancelProp],
   );
 
-  const announcements: Announcements = React.useMemo(
-    () => ({
+  const announcements: Announcements = React.useMemo(() => {
+    const total = value.length;
+
+    function getLabel(id: UniqueIdentifier) {
+      const item = value.find((item) => getItemValue(item) === id);
+      if (item === undefined || !getItemLabelProp) return String(id);
+      return getItemLabelProp(item);
+    }
+
+    function getIndex(entry: Active | Over | null): number | undefined {
+      return entry?.data.current?.sortable?.index;
+    }
+
+    return {
       onDragStart({ active }) {
-        const activeValue = active.id.toString();
-        return `Grabbed sortable item "${activeValue}". Current position is ${active.data.current?.sortable.index + 1} of ${value.length}. Use arrow keys to move, space to drop.`;
+        const index = getIndex(active) ?? 0;
+        overIndexRef.current = index;
+        const message = `Grabbed ${getLabel(active.id)}, position ${index + 1} of ${total}.`;
+        if (!isKeyboardDragRef.current) return message;
+        return `${message} Use the ${orientationKeys[orientation]} to move it, Space or Enter to drop it, or Escape to cancel.`;
       },
       onDragOver({ active, over }) {
-        if (over) {
-          const overIndex = over.data.current?.sortable.index ?? 0;
-          const activeIndex = active.data.current?.sortable.index ?? 0;
-          const moveDirection = overIndex > activeIndex ? "down" : "up";
-          const activeValue = active.id.toString();
-          return `Sortable item "${activeValue}" moved ${moveDirection} to position ${overIndex + 1} of ${value.length}.`;
+        const overIndex = getIndex(over);
+        if (overIndex === overIndexRef.current) return undefined;
+        overIndexRef.current = overIndex;
+        if (overIndex === undefined) {
+          return `${getLabel(active.id)} is outside the list.`;
         }
-        return "Sortable item is no longer over a droppable area. Press escape to cancel.";
+        return `${getLabel(active.id)}, position ${overIndex + 1} of ${total}.`;
       },
       onDragEnd({ active, over }) {
-        const activeValue = active.id.toString();
-        if (over) {
-          const overIndex = over.data.current?.sortable.index ?? 0;
-          return `Sortable item "${activeValue}" dropped at position ${overIndex + 1} of ${value.length}.`;
+        const overIndex = getIndex(over);
+        if (overIndex === undefined) {
+          return `Dropped ${getLabel(active.id)}. It stays at position ${(getIndex(active) ?? 0) + 1} of ${total}.`;
         }
-        return `Sortable item "${activeValue}" dropped. No changes were made.`;
+        return `Dropped ${getLabel(active.id)} at position ${overIndex + 1} of ${total}.`;
       },
       onDragCancel({ active }) {
-        const activeIndex = active.data.current?.sortable.index ?? 0;
-        const activeValue = active.id.toString();
-        return `Sorting cancelled. Sortable item "${activeValue}" returned to position ${activeIndex + 1} of ${value.length}.`;
+        return `Cancelled. ${getLabel(active.id)} is back at position ${(getIndex(active) ?? 0) + 1} of ${total}.`;
       },
-      onDragMove({ active, over }) {
-        if (over) {
-          const overIndex = over.data.current?.sortable.index ?? 0;
-          const activeIndex = active.data.current?.sortable.index ?? 0;
-          const moveDirection = overIndex > activeIndex ? "down" : "up";
-          const activeValue = active.id.toString();
-          return `Sortable item "${activeValue}" is moving ${moveDirection} to position ${overIndex + 1} of ${value.length}.`;
-        }
-        return "Sortable item is no longer over a droppable area. Press escape to cancel.";
-      },
-    }),
-    [value],
-  );
+    };
+  }, [value, getItemValue, getItemLabelProp, orientation]);
 
   const screenReaderInstructions: ScreenReaderInstructions = React.useMemo(
     () => ({
-      draggable: `
-        To pick up a sortable item, press space or enter.
-        While dragging, use the ${orientation === "vertical" ? "up and down" : orientation === "horizontal" ? "left and right" : "arrow"} keys to move the item.
-        Press space or enter again to drop the item in its new position, or press escape to cancel.
-      `,
+      draggable: `To pick up an item, press Space or Enter. Use the ${orientationKeys[orientation]} to move it, Space or Enter to drop it, or Escape to cancel.`,
     }),
     [orientation],
   );
@@ -426,9 +433,8 @@ function SortableItem(props: SortableItemProps) {
 
   const onNodeRefChange = React.useCallback(
     (node: HTMLElement | null) => {
-      if (disabled) return;
       setNodeRef(node);
-      if (asHandle) setActivatorNodeRef(node);
+      if (asHandle && !disabled) setActivatorNodeRef(node);
     },
     [disabled, asHandle, setNodeRef, setActivatorNodeRef],
   );
@@ -484,8 +490,8 @@ function SortableItem(props: SortableItemProps) {
     render,
     state: {
       slot: "sortable-item",
-      ...(disabled && { disabled: "" }),
-      ...(isDragging && { dragging: "" }),
+      disabled: !!disabled,
+      dragging: isDragging,
     },
   });
 
@@ -545,8 +551,8 @@ function SortableItemHandle(props: SortableItemHandleProps) {
     render,
     state: {
       slot: "sortable-item-handle",
-      ...(isDisabled && { disabled: "" }),
-      ...(itemContext.isDragging && { dragging: "" }),
+      disabled: !!isDisabled,
+      dragging: !!itemContext.isDragging,
     },
   });
 }
