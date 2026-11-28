@@ -6200,6 +6200,82 @@ describe("useDataGrid", () => {
       expect(getAnnouncement()).toBe("");
     });
 
+    it("announces what undo and redo changed", async () => {
+      const { result } = renderAnnouncedGrid();
+
+      act(() => {
+        result.current.table
+          .getRow("1")
+          .getAllCellsByColumnId()
+          .name?.setValue("Birdman");
+      });
+      await waitFor(() => expect(getAnnouncement()).toBe("Skater updated"));
+
+      act(() => {
+        result.current.table.undo();
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("Undo: Skater updated"),
+      );
+
+      act(() => {
+        result.current.table.redo();
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("Redo: Skater updated"),
+      );
+    });
+
+    it("announces the row adds and deletes that undo and redo reverse", async () => {
+      const { result } = renderAnnouncedGrid();
+
+      act(() => {
+        result.current.table.deleteRows(["1", "2"]);
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toBe("Undo: 2 rows deleted"),
+      );
+
+      act(() => {
+        result.current.table.redo();
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("Redo: 2 rows deleted"),
+      );
+
+      act(() => {
+        result.current.table.addRows([
+          { id: "4", name: "New", trick: "", score: 0 },
+        ]);
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toContain("Undo: 1 row added"),
+      );
+    });
+
+    it("counts the cells an undo changes across columns", async () => {
+      const { result } = renderAnnouncedGrid();
+
+      act(() => {
+        result.current.table.updateCells([
+          { rowId: "1", columnId: "name", value: "Birdman" },
+          { rowId: "2", columnId: "trick", value: "Impossible" },
+        ]);
+      });
+      act(() => {
+        result.current.table.undo();
+      });
+      await waitFor(() =>
+        expect(getAnnouncement()).toBe("Undo: 2 cells updated"),
+      );
+    });
+
     it("uses overridden messages", async () => {
       const { result } = renderAnnouncedGrid({
         messages: { sorted: () => "Ordenado" },

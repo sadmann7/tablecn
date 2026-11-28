@@ -258,6 +258,29 @@ for (const base of GRID_BASES) {
       ).toHaveLength(1);
     });
 
+    test("speaks an edit, its undo and its redo", async ({ page }) => {
+      const nameCell = page
+        .getByRole("grid")
+        .getByRole("row")
+        .nth(1)
+        .getByRole("gridcell")
+        .nth(1);
+      await nameCell.click();
+      await startScreenReader(page);
+
+      await page.keyboard.press("Enter");
+      await page.keyboard.press("ControlOrMeta+a");
+      await page.keyboard.type("Edited");
+      await page.keyboard.press("Enter");
+      await expectSpokenAnnouncements(page, ["polite: Name updated"]);
+
+      await page.keyboard.press("ControlOrMeta+z");
+      await expectSpokenAnnouncements(page, ["polite: Undo: Name updated"]);
+
+      await page.keyboard.press("ControlOrMeta+Shift+z");
+      await expectSpokenAnnouncements(page, ["polite: Redo: Name updated"]);
+    });
+
     test("exposes row selection on the row, cells and checkboxes", async ({
       page,
     }) => {

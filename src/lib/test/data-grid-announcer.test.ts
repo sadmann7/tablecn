@@ -4,6 +4,7 @@ import {
   announce,
   defaultDataGridMessages,
   destroyAnnouncer,
+  getHistoryMessage,
   getRowSelectionMessage,
 } from "@/lib/data-grid-announcer";
 
@@ -189,6 +190,52 @@ describe("getRowSelectionMessage", () => {
         base,
       ),
     ).toBe("Fila 3 seleccionada");
+  });
+});
+
+describe("getHistoryMessage", () => {
+  const base = {
+    cellCount: 0,
+    columnLabel: null,
+    addedRowCount: 0,
+    removedRowCount: 0,
+  };
+
+  it("names the column of a single undone or redone cell", () => {
+    const change = { ...base, cellCount: 1, columnLabel: "Name" };
+    expect(getHistoryMessage(defaultDataGridMessages, "undo", change)).toBe(
+      "Undo: Name updated",
+    );
+    expect(getHistoryMessage(defaultDataGridMessages, "redo", change)).toBe(
+      "Redo: Name updated",
+    );
+  });
+
+  it("counts cells and rows together", () => {
+    expect(
+      getHistoryMessage(defaultDataGridMessages, "redo", {
+        ...base,
+        cellCount: 3,
+        addedRowCount: 2,
+      }),
+    ).toBe("Redo: 3 cells updated, 2 rows added");
+    expect(
+      getHistoryMessage(defaultDataGridMessages, "undo", {
+        ...base,
+        removedRowCount: 1,
+      }),
+    ).toBe("Undo: 1 row deleted");
+  });
+
+  it("stays quiet when nothing changed or the messages are silenced", () => {
+    expect(getHistoryMessage(defaultDataGridMessages, "undo", base)).toBeNull();
+    expect(
+      getHistoryMessage(
+        { ...defaultDataGridMessages, rowsAdded: () => "" },
+        "undo",
+        { ...base, addedRowCount: 1 },
+      ),
+    ).toBeNull();
   });
 });
 
