@@ -31,7 +31,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: ["**/record-data-table-launch.spec.ts", "**/a11y.spec.ts"],
+      testIgnore: [
+        "**/record-data-table-launch.spec.ts",
+        "**/a11y.spec.ts",
+        "**/voiceover.spec.ts",
+      ],
       use: { ...devices["Desktop Chrome"] },
     },
     {

@@ -1,0 +1,59 @@
+name: VoiceOver
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/voiceover.yml"
+      - "e2e/**"
+      - "playwright.voiceover.config.ts"
+      - "src/lib/data-grid-announcer.ts"
+      - "src/registry/bases/radix/components/data-grid/**"
+      - "src/registry/bases/radix/components/data-table/**"
+      - "src/registry/bases/radix/hooks/use-data-grid.ts"
+      - "src/registry/bases/radix/hooks/use-data-table.ts"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FORCE_COLOR: 3
+  GUIDEPUP_SETUP: "@guidepup/setup@0.29.3"
+
+jobs:
+  voiceover:
+    runs-on: macos-latest
+    name: VoiceOver
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgresql://tablecn:securepassword@localhost:5432/tablecn
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+      - uses: ./.github/setup
+
+      - name: Set up VoiceOver
+        run: npx -y "$GUIDEPUP_SETUP" setup --ci
+
+      - name: Install VoiceOver assets
+        run: npx -y "$GUIDEPUP_SETUP" install voiceover
+
+      - name: Install Playwright
+        run: pnpm exec playwright install chromium
+
+      - name: Test
+        run: pnpm test:voiceover
+
+      - name: Upload spoken phrase logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: voiceover-spoken-phrase-logs
+          path: test-results/
+          retention-days: 14
